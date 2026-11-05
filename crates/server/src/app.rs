@@ -478,6 +478,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::card_picks::upload_card_picks),
     ),
+    // api/proficiency.rs (R3013001)
+    (
+        "GET",
+        "/api/proficiency",
+        AuthLevel::Active,
+        h!(api::proficiency::get_proficiency),
+    ),
+    (
+        "PUT",
+        "/api/proficiency/stamp",
+        AuthLevel::Active,
+        h!(api::proficiency::put_proficiency_stamp),
+    ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),
     (

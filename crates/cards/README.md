@@ -26,7 +26,8 @@ crates/cards
 │                       and pending/ (one fragment per patch being built)
 ├── build.rs            generates the registry from src/scripts/**, compiles the catalog version in,
 │                       cuts every card's code block from its script (R1183004), and counts every
-│                       script's code lines into the BUSTED and complicated lists (R1846000)
+│                       script's code lines into the BUSTED and complicated lists (R1846000), and
+│                       lists the scripts that owe an extra turn (#3116)
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
@@ -250,7 +251,9 @@ line, cut to the engine's `CODE_BLOCK_MAX_LINES`, which `register_all` hands to 
 Meditative+ #25's code Discover), and the card metrics into `$OUT_DIR/card_metrics.rs` (R1846000:
 `CODE_LINES`, every script's lines above its tests that hold code, comments and blank lines left out;
 `BUSTED`, the ids over the engine's `BUSTED_CODE_LINES`, and `COMPLICATED`, over its
-`COMPLICATED_CODE_LINES`, which the catalog query's `busted` and `complicated` read). There is nothing to wire and nothing to
+`COMPLICATED_CODE_LINES`, which the catalog query's `busted` and `complicated` read; and
+`EXTRA_TURN_CARDS`, the ids whose script's code names `take_extra_turn` (#3116), which the AI prices in
+hand, R846). There is nothing to wire and nothing to
 regenerate by hand: drop the file in its folder and build. The folders are the ones that hold card
 files, each its set's id segment with `_` between its words (`classic_plus`), so a new set's folder is
 listed nowhere (R3114000). The build fails, naming the path, on a file

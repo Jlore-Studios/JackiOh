@@ -61,7 +61,6 @@ export function commandPages(): CommandEntry[] {
     { id: "page-home", kind: "page", label: t("Home"), path: paths.landing },
     { id: "page-decks", kind: "page", label: t("Decks"), path: paths.decks },
     { id: "page-collection", kind: "page", label: t("Collection"), path: paths.collection },
-    { id: "page-creator", kind: "page", label: t("Card builder"), path: paths.creator },
     { id: "page-shop", kind: "page", label: t("Shop"), path: paths.shop },
     { id: "page-purchases", kind: "page", label: t("Purchases"), path: paths.purchases },
     { id: "page-almanac", kind: "page", label: t("Card almanac"), path: paths.almanac },

@@ -178,9 +178,10 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-cards` | `jackioh-engine` | `jackioh-engine` with `features = ["testkit"]` |
 | `jackioh-ai` | `jackioh-engine` | `jackioh-cards`, `jackioh-engine` with `testkit` |
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
-| `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | `jackioh-engine` with `testkit` |
+| `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
+| `jackioh-shared` | `jackioh-engine` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | — (`serde_json`) |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
@@ -190,7 +191,8 @@ on a crate that depends on you is legal for integration tests (`tests/`), which 
 
 ## 3. Purity (CLAUDE.md rule 4, in Rust)
 
-`jackioh-engine`, `jackioh-cards` and `jackioh-ai` are pure: no clock, no I/O, no environment, no
+`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-luau`, `jackioh-run` and `jackioh-shared` are pure
+(CLAUDE.md rule 4 has what each takes): no clock, no I/O, no environment, no
 threads, no OS randomness, no hash-ordered collections, **no mutable statics**. Two mechanisms
 enforce it, and nothing else is needed (the ESLint purity rules go):
 
@@ -198,7 +200,7 @@ enforce it, and nothing else is needed (the ESLint purity rules go):
    behind the engine's off-by-default `ts` feature.** No `rand`, no `getrandom`, no `tokio`, no
    `time`. A crate you cannot name, you cannot call.
 2. **Each has the same `clippy.toml`** (clippy reads the one in the crate's own directory;
-   `crates/tools/tests/acceptance.rs` holds the four byte for byte the same and runs clippy over a
+   `crates/tools/tests/acceptance.rs` holds the six byte for byte the same and runs clippy over a
    fixture with one use of each entry) and CI runs `cargo clippy --workspace --all-targets -- -D
    warnings`. `crates/engine/clippy.toml` is the list (#1600): the hash-ordered collections and
    `RandomState`, the clock, the disk (`File`, `OpenOptions`, `DirBuilder`, the `std::fs` functions,
@@ -762,7 +764,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;
     // call ∈ validateDeck | validateTrio | validateLoadout | checkDeckDraft | checkTrioDraft | checkImportRoom | trioConflicts | normalizeName;
     // the input and output are those TS functions' argument and result, as JSON
-#[wasm_bindgen] pub fn constants() -> String;                                      // { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK } for practice, the tutorial harness, the lean toggle (R1370) and their tests
+#[wasm_bindgen] pub fn constants() -> String;
+    // one flat object of every rules, AI and run number a client reads (#3093): AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK (practice, the tutorial harness, the lean toggle, R1370, and their tests),
+    // RUN (run_constants's object) and each constant of engineConfig.ts (§5.1) under its own name (DECK_SIZE, …), so a host that is not the web restates none (CLAUDE.md rule 9)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
@@ -772,6 +776,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> String;
     // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false;
     // prompt_json is the open prompt's { craftMode, craftOffer } (either absent), so the verdict is its answer's (R1563007)
+#[wasm_bindgen] pub fn series(call_json: &str) -> String;
+    // #3098: jackioh-shared's Conquest series rules (SPEC §9.5, R330–R337). A SeriesCall in ({ call: "pickDeck", series, seat, slot, now, gameNo? }), a SeriesAnswer out
+    // ({ row } | { refused } | { seats } | { picked } | { view } | { score }); the host holds the row and hands it back (crates/shared/README.md, the host contract)
 ```
 
 ### 10.2 Build
@@ -782,7 +789,8 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 `wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
 `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
 (`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
-the web build.
+the web build. `JACKIOH_WASM_C=1` also builds the C module (§10.5) and checks that it imports nothing;
+no CI job sets it yet.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
@@ -825,6 +833,23 @@ sources from `packages/shared/src/` into `apps/web/src/wire/{catalog,codes,emote
 unchanged. The Rust server needs the same functions; part 5 ports them to `crates/engine/src/wire/`.
 Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-cases.json` (from
 `packages/shared/test/fixtures/code-input-cases.ts`, part 5), so they cannot drift.
+
+### 10.5 The C module (`crates/wasm/c`, #3093)
+
+`jackioh-wasm-c` exports every binding of §10.1 (and `learned_parity` and the `duos_*` bindings the
+browser module also binds) as an `extern "C"` function over JSON strings, built as a plain
+`wasm32-unknown-unknown` `cdylib`: no wasm-bindgen glue, no JavaScript, no system interface, so its
+import section is empty and a host that is not JavaScript instantiates it with no imports. It is a third
+wrapper over `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau`
+(the same C names through emscripten, with the Luau VM; #2956 part 5 deletes it), and
+`crates/wasm/tests/export_parity.rs` holds its exports to the browser module's, so a binding added for
+the web reaches such a host by itself. A string crosses as a pointer and a length into the module's
+memory, which the module's `jackioh_alloc`, `jackioh_free`, `jackioh_result_ptr` and `jackioh_result_len`
+give a host to read and write; every binding returns a status (0 ok, 1 failed) and leaves its JSON text,
+or the failure's message, in the result buffer. The module reads no clock, so `ai_decide` and
+`lethal_hint` take `deadline_ms` for the browser's signature and ignore it: the search ends at its
+`budget`. `crates/wasm/c/README.md` is the contract. `JACKIOH_WASM_C=1 sh scripts/build-wasm.sh`
+builds it (§10.2) and checks that it imports nothing.
 
 ## 11. The server
 
@@ -1000,7 +1025,12 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
-  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:
+  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3013 (R3013002): a frozen loadout
+  holds `stamps` (`[{ cardId, stamp }]`, each dealt card's proficiency stamp), and a `cardLoadouts`
+  frame and a replay page's entry carry the stamps of the cards they send, `{ seat, cards, stamps? }`,
+  `stamps` left out when none, by the same send rule; two more `Active` routes, `GET /api/proficiency`
+  → `{ cards }` (`{ cardId, plays, level, stamp }`) and `PUT /api/proficiency/stamp` `{ cardId, stamp }`
+  (`api/proficiency.rs`, over `public.card_proficiency`, migration 0081; R3013000, R3013001). Three routes, all `Active`:
   `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
   fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, `full-art-…` or `animated-…`, R2655000, R2715000) and `POST /api/card-picks/upload` `{ cards }`
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in

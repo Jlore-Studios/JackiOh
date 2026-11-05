@@ -1,0 +1,32 @@
+[package]
+name = "jackioh-wasm-c"
+description = "The engine's C boundary (#3093): the browser module's bindings as extern \"C\" functions over JSON strings, for a plain wasm32-unknown-unknown link with no imports (docs/v0.3.0/SURFACE.md §10.5), so a host that is not JavaScript runs it as it is."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# A `cdylib`, not a binary: a `wasm32-unknown-unknown` link needs no `main`, and the module imports
+# nothing from its host (no wasm-bindgen glue, no JavaScript, no WASI). It is a third wrapper over
+# `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau` (emscripten).
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = []
+# R1420's preview, as `crates/wasm`'s `preview`: a module built with it can preview sets that do not ship
+# yet, any other refuses one. The build script's flag (`JACKIOH_WASM_C=1`) builds without it.
+preview = ["jackioh-wasm-core/preview"]
+# #936's Duos bodies, as `crates/wasm`'s `duos`: without it each `duos_*` binding answers the reason.
+duos = ["jackioh-wasm-core/duos"]
+
+[dependencies]
+jackioh-engine = { workspace = true }
+jackioh-cards = { workspace = true }
+# By path, not through the workspace: the crate sits inside `crates/wasm`.
+jackioh-wasm-core = { path = "../core" }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+# The tests read the shared logic's numbers from `constants` by name (#3098).
+jackioh-shared = { workspace = true }

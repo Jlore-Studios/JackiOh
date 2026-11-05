@@ -22,7 +22,7 @@ export type CollectionPart = "cards" | "wallet" | "tracks";
 /** R1579000: the hub's sections that open in place, by `?section=`. */
 export const COLLECTION_SECTIONS = ["cards", "cosmetics"] as const;
 export type CollectionSection = (typeof COLLECTION_SECTIONS)[number];
-export type CollectionDoor = "decks" | "cards" | "cosmetics" | "builder";
+export type CollectionDoor = "decks" | "cards" | "cosmetics";
 
 /** The section `?section=` names, or null for the hub: an unknown name opens the hub. */
 export function collectionSectionOf(search: string): CollectionSection | null {
@@ -74,6 +74,12 @@ export const collectionTestid = {
   previewScrim: "collection-preview-scrim",
   previewClose: "collection-preview-close",
   previewStatus: "collection-preview-status",
+  // R3013001: a card's proficiency in its card view (ProficiencyPanel), its level, its plays and its stamps.
+  proficiency: "collection-proficiency",
+  proficiencyLevel: "collection-proficiency-level",
+  proficiencyPlays: "collection-proficiency-plays",
+  stamp: (level: number) => `collection-stamp-${String(level)}`,
+  stampNone: "collection-stamp-none",
 } as const;
 
 export const COLLECTED_DEFS: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && setShips(def.set));

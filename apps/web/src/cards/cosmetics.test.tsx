@@ -12,6 +12,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { PROFICIENCY_LEVELS } from "@jackioh/server-config";
 
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
 import { CosmeticLook } from "../collection/CosmeticLook.tsx";
@@ -1452,6 +1453,17 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
       expect(markup, id).not.toBe("");
       for (const hex of hexes(markup)) expect(inRadiantGold(hex), `${id}'s particles: #${hex}`).toBe(false);
     }
+  });
+
+  it("R3013002 no stamp colour falls in Radiant's gold window", () => {
+    // A proficiency stamp's fill, ink and accent at every level (stamps.css), and every other colour it draws.
+    const stampsCss = sheet("stamps.css");
+    const colors = rules(stampsCss).flatMap((rule) => colorsOf(rule.body).map((hex) => [rule.selector, hex] as const));
+    expect(colors.length).toBeGreaterThan(0);
+    for (const [selector, hex] of colors) expect(inRadiantGold(hex), `${selector}: #${hex}`).toBe(false);
+    // Each level's pair is its own.
+    const levels = rules(stampsCss).filter((rule) => /\[data-stamp="\d"\]$/.test(rule.selector));
+    expect(levels.length).toBe(PROFICIENCY_LEVELS - 1);
   });
 
   it("R2949000 the Signature look's colours are clear of the Radiant gold window", () => {

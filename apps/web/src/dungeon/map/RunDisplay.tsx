@@ -18,14 +18,14 @@ import { TIER_LABEL } from "../fight/ArtifactTray.tsx";
 /** What every screen below sends to the run: part D's `Dungeon.act` behind it. */
 export type SendRunAction = (action: RunAction) => void;
 
-/** The compiled-in catalog's definition of a card, or undefined for a custom card it lacks. */
+/** The compiled-in catalog's definition of a card, or undefined for a card it lacks. */
 export function catalogDef(id: string): CardDef | undefined {
   return currentCatalog().cards[id];
 }
 
 /**
  * A card's name as the reader reads it: the catalog's, else the run pool's, else its id, so a
- * custom card of the Sandbox pool names itself instead of crashing (DR1).
+ * card the catalog lacks names itself instead of crashing (DR1).
  */
 export function cardName(content: RunContent, id: string): string {
   const def = catalogDef(id);
@@ -77,8 +77,8 @@ type RunCardFaceProps = {
 
 /**
  * One card on the deck builder's full face (`faceModel` over the catalog, `CardFace`), in a real
- * button only when it does something. A missing catalog definition still draws (a custom card's
- * pool name), never crashes.
+ * button only when it does something. A missing catalog definition still draws (its pool name),
+ * never crashes.
  */
 export function RunCardFace({
   id,

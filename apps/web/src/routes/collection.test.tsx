@@ -214,7 +214,7 @@ describe("R1579000 the Collection hub", () => {
 
   const READS = [getCollection, getWallet, getPacks, getCosmeticPacks, getTracks, getQuests, getOwnedCosmetics];
 
-  it("R1579000 offers four doors to the decks, the cards, the cosmetics and the card builder, and reads nothing", () => {
+  it("R1579000 offers three doors to the decks, the cards and the cosmetics, and reads nothing", () => {
     answerAll();
     render(<CollectionRoute token={TOKEN} />);
 
@@ -223,11 +223,7 @@ describe("R1579000 the Collection hub", () => {
     expect(screen.getByTestId(T.door("decks"))).toHaveAttribute("href", paths.decks);
     expect(screen.getByTestId(T.door("cards"))).toHaveAttribute("href", paths.collectionSection("cards"));
     expect(screen.getByTestId(T.door("cosmetics"))).toHaveAttribute("href", paths.collectionSection("cosmetics"));
-    expect(screen.getByTestId(T.door("builder"))).toHaveAttribute("href", paths.creator);
     for (const read of READS) expect(read).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByTestId(T.door("builder")));
-    expect(window.location.pathname).toBe(paths.creator);
 
     window.history.replaceState(null, "", paths.collection);
     fireEvent.click(screen.getByTestId(navTestid.back));

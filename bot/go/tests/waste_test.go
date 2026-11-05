@@ -230,6 +230,29 @@ func TestWaste_TheProbeStopsARunWhoseThreadClosed(t *testing.T) {
 	assertEqual(t, [2]string{reason, kind}, [2]string{"#5 was closed", "stop"})
 }
 
+// An after-merge spot-check's thread is the pull request it reviews, closed by its merge: the probe
+// stopped every one at its first step, so all 12 recorded `failed` (#3133).
+func TestWaste_TheProbeLetsASpotCheckOfAMergedPullRequestGoOn(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	gh.AddPull(30, "bot/issue-20").Update(pyjson.New("state", "closed", "merged", true, "merge_commit_sha", "m1"))
+	ctx := testsupport.MakeCtx(gh)
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		state.Item(s, 30).Update(pyjson.New("action", "review", "spot_check", true))
+		return nil
+	}, "claim the spot-check of #30")
+	number := 30
+	reason, _, stop := cli.MakeProbe(ctx, &number, nil, nil)(nil)
+	assertFalse(t, stop, reason)
+	// It still stops when a person asks it to.
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		state.Item(s, 30).Update(pyjson.New("stop_requested", true, "stopped_by", "jgoetzmann"))
+		return nil
+	}, "stop")
+	reason, kind, stop := cli.MakeProbe(ctx, &number, nil, nil)(nil)
+	assertTrue(t, stop)
+	assertEqual(t, [2]string{reason, kind}, [2]string{"stopped by @jgoetzmann", "stop"})
+}
+
 func TestWaste_GithubFailingToAnswerDoesNotStopIt(t *testing.T) {
 	ctx := testsupport.MakeCtx(fakes.NewFakeGitHub())
 	number := 404

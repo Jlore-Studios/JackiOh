@@ -31,8 +31,8 @@ use crate::cosmetics::CosmeticRarity;
 // takes these (#2160).
 // ---------------------------------------------------------------------------------------------
 
-/// Milliseconds in a second.
-pub const MS_PER_SECOND: i64 = 1000;
+/// Milliseconds in a second: `jackioh-shared`'s (#3098), where the series' pick clock converts.
+pub use jackioh_shared::config::MS_PER_SECOND;
 /// Milliseconds in a day, a UTC day included (an epoch-ms timestamp has no leap seconds).
 pub const MS_PER_DAY: i64 = 86_400_000;
 /// Nanoseconds in a millisecond: `time::OffsetDateTime` counts the one, the port the other.
@@ -229,7 +229,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-31/2026-11-01";
+pub const TERMS_VERSION: &str = "2026-11-05/2026-11-05";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -826,18 +826,9 @@ pub const CUSTOM_CARDS_PER_ACCOUNT: usize = 50;
 // Queue modes and the Conquest series (SPEC §9.5, R257–R264, R330–R338).
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R330: game wins that take a Conquest series — one with each deck of a trio, since a deck
-/// that has won is locked. `tests/api/series_rules.rs` asserts it equals the validator's
-/// `TRIO_DECKS`. (R259's Best of 3 needed 2.)
-pub const SERIES_WINS_NEEDED: i32 = 3;
-/// SPEC §11 R334: the most games a series plays, drawn games included. Without a draw a series is
-/// decided by its fifth game at the latest (2 × `SERIES_WINS_NEEDED` − 1: a side is then at three
-/// wins), so the cap leaves room for two drawn games in the longest series and stops a run of draws
-/// from holding both players for ever. At the cap more wins takes the series and equal wins is a
-/// series draw. (R259's Best of 3 played at most 3.)
-pub const SERIES_MAX_GAMES: i32 = 7;
-/// SPEC §11 R333: how long both players have to pick their deck for the next game of a series.
-pub const SERIES_PICK_SECONDS: i64 = 60;
+/// R330, R333, R334: the series' wins needed, its most games and its pick clock are `jackioh-shared`'s
+/// since #3098, which holds the rules that read them.
+pub use jackioh_shared::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
 /// SPEC §11 R263: how often the series sweeper runs (pick clocks, and games a restart left unstarted).
 pub const SERIES_SWEEP_INTERVAL_SECONDS: i64 = 5;
 /// SPEC §11 R263: how long a series game may sit unstarted before the sweeper starts it. Longer
@@ -2745,6 +2736,12 @@ pub const SET_TRACK_LEVELS: u32 = 100;
 pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
 /// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
 pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
+/// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
+/// reach each of its proficiency levels, lowest first (#3013: the first comes in a game or two, the
+/// last after 200 plays, a season's commitment to one card). Level n unlocks stamp n (R3013001).
+pub const PROFICIENCY_LEVEL_PLAYS: [i64; 5] = [3, 15, 40, 100, 200];
+/// SPEC §14.14, R3013000: a card's proficiency levels, one stamp each (R3013001).
+pub const PROFICIENCY_LEVELS: usize = PROFICIENCY_LEVEL_PLAYS.len();
 /// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
 pub const JLORE_LADDER_WIN: i32 = 20;
 /// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves

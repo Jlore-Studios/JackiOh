@@ -1,7 +1,8 @@
-//! `jackioh-wasm-core`: the bodies both browser modules bind (#1505). JSON strings in and out, nothing
-//! else crosses: the state is the `GameState` JSON object, which the client keeps behind its opaque
-//! `EngineState` brand (CLAUDE.md rule 7) and hands back on every call. `crates/wasm` wraps each body
-//! for wasm-bindgen, `crates/wasm/luau` for C; the exports stay identical.
+//! `jackioh-wasm-core`: the bodies the three wrappers bind (#1505, #3093). JSON strings in and out,
+//! nothing else crosses: the state is the `GameState` JSON object, which the client keeps behind its
+//! opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call. `crates/wasm` wraps each
+//! body for wasm-bindgen, `crates/wasm/luau` for C through emscripten, and `crates/wasm/c` for C on a
+//! plain `wasm32-unknown-unknown` link; the exports stay identical.
 //!
 //! The state cache: the client hands the same state over and over, so the bodies keep the few states
 //! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text. A text that differs by
@@ -9,7 +10,7 @@
 //!
 //! Errors are `String`s, each module's own failure. The clock is the caller's (`ai_decide` takes
 //! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3), and so is the setup check
-//! (`CheckSetup`): the normal module refuses a game with custom cards (R915009), the Luau module
+//! (`CheckSetup`): the normal and C modules refuse a game with custom cards (R915009), the Luau module
 //! judges them (R915005, R915006).
 
 use std::cell::RefCell;
@@ -26,6 +27,9 @@ use jackioh_run::{RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
+
+mod constants;
+pub use constants::constants;
 
 // JSON in, JSON out
 
@@ -543,20 +547,6 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
-/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
-/// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
-/// fixtures were dealt.
-pub fn constants() -> Result<String, String> {
-    to_json(&json!({
-        "AI_BUDGET": jackioh_ai::AI_BUDGET,
-        "AI_GATE_BUDGET": jackioh_ai::AI_GATE_BUDGET,
-        "SHADOW_BAN_IDS": jackioh_ai::SHADOW_BAN_IDS,
-        "FIXTURE_BANNED_IDS": jackioh_ai::FIXTURE_BANNED_IDS,
-        "AI_DECK": jackioh_ai::AI_DECK,
-    }))
-}
-
 /// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`) as
 /// this build computes it: its integer network's correction for each case, in order. The web's tests hold
 /// the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` does the native one.
@@ -753,6 +743,19 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
         }
         other => Err(format!("validator: no such call {other:?}")),
     }
+}
+
+// The Conquest series rules (SPEC §9.5, R330 to R337; #3098)
+
+/// One call of `jackioh_shared::series`, the Conquest series rules the server calls natively: the input
+/// is a `SeriesCall` (`{ "call": "pickDeck", "series": …, "seat": "p1", "slot": 2, "now": … }`), the
+/// output a `SeriesAnswer` (`{ "row": … }`, `{ "refused": … }`, or the read). The host holds the
+/// `SeriesRow` and hands it back on every call, and passes the time in (`crates/shared/README.md`, the
+/// host contract). A rules refusal is the returned `refused`, never an error: only a call that does not
+/// parse is one. No decision is made here.
+pub fn series(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::series::SeriesCall = parse("series: the call", call_json)?;
+    to_json(&jackioh_shared::series::apply(&call))
 }
 
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
@@ -1174,5 +1177,58 @@ mod run_body_tests {
             serde_json::from_str::<String>(&text).unwrap(),
             jackioh_run::run_daily_seed("2026-11-01", 2)
         );
+    }
+}
+
+#[cfg(test)]
+mod series_body_tests {
+    use super::*;
+
+    const NEW_SERIES: &str = r#"{
+        "call": "newSeries",
+        "now": 1700000000000,
+        "input": {
+            "seriesId": "series-1",
+            "firstMatchId": "match-1",
+            "sides": [
+                { "profileId": "alice", "trio": { "name": "a", "decks": [
+                    { "name": "a0", "cards": ["x"] }, { "name": "a1", "cards": ["x"] }, { "name": "a2", "cards": ["x"] } ] } },
+                { "profileId": "bob", "trio": { "name": "b", "decks": [
+                    { "name": "b0", "cards": ["y"] }, { "name": "b1", "cards": ["y"] }, { "name": "b2", "cards": ["y"] } ] } }
+            ],
+            "seedBase": "seed",
+            "catalogVersion": "v1",
+            "ranked": false
+        }
+    }"#;
+
+    /// The body is `jackioh_shared::series::apply` over JSON: the row it answers is the next call's input.
+    #[test]
+    fn series_body_answers_a_row_and_takes_it_back() {
+        let started: Value = serde_json::from_str(&series(NEW_SERIES).unwrap()).unwrap();
+        assert_eq!(started["row"]["status"], "picking");
+        assert_eq!(started["row"]["version"], 1);
+
+        let pick = json!({
+            "call": "pickDeck", "series": started["row"], "seat": "p1", "slot": 1, "now": 1_700_000_000_001_i64,
+        });
+        let picked: Value = serde_json::from_str(&series(&pick.to_string()).unwrap()).unwrap();
+        assert_eq!(picked["row"]["sides"][0]["pick"], 1);
+        assert_eq!(picked["row"]["version"], 2);
+
+        // A pick is final: the second is a refusal the host reads, not an error.
+        let again = json!({
+            "call": "pickDeck", "series": picked["row"], "seat": "p1", "slot": 0, "now": 1_700_000_000_002_i64,
+        });
+        let refused: Value = serde_json::from_str(&series(&again.to_string()).unwrap()).unwrap();
+        assert_eq!(refused["refused"]["reason"], "pick_sealed");
+    }
+
+    #[test]
+    fn series_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
+            let error = series(call).unwrap_err();
+            assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
     }
 }

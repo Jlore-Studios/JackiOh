@@ -5,9 +5,8 @@
 // the view after an event's animation, so the board renders the view the events were planned against) and
 // `shown` (that held-back view). Everything else is `props.view` and `props.legal`; `onAction` goes straight
 // to the caller, the only thing that talks to the engine (CLAUDE.md rule 7). The chrome holds no rule either:
-// Concede asks first (ConfirmConcede.tsx), and the draw offer's notices, R915004's script-failed notice
-// (ScriptFailedNotice.tsx), R1838000's Trade control (TradeControl.tsx) and R1853003's Marketplace shop
-// (Marketplace.tsx, #2645) come from the view, each live as `legal` lists its moves. `legal` belongs to
+// Concede asks first (ConfirmConcede.tsx), and the draw offer's notices, R1838000's Trade control
+// (TradeControl.tsx) and R1853003's Marketplace shop (Marketplace.tsx, #2645) come from the view, each live as `legal` lists its moves. `legal` belongs to
 // `props.view`, so every consumer gets none until the board SHOWS that view: else the newer position's moves
 // lit End turn before the player saw the turn was theirs.
 // One intent is sent once per view: `dispatch` drops an endTurn, answer or mulligan equal to the last one sent
@@ -36,7 +35,6 @@ import type { ChoiceHover } from "./choiceHover.ts";
 import Board from "./Board.tsx";
 import { useMarkBoardShown } from "./boardShown.ts";
 import ConfirmConcede from "./ConfirmConcede.tsx";
-import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import { TradeBar } from "./TradeControl.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
@@ -813,8 +811,6 @@ export default function Game({
                 {t("You have lethal")}
               </p>
             ) : null}
-            {/* R915004: a custom card's script that failed, from the newest view; a replay's log says it. */}
-            {replay ? null : <ScriptFailedNotice view={view} />}
             {/* `view` is newest for this notice: it changes no board position, and its actions use
                 the same held-back legal list as every other board control. */}
             <DrawOfferNotice

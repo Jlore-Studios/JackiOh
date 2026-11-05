@@ -112,7 +112,7 @@ describe("#1307 the collection screen fits a phone", () => {
       serveFixtures();
       cy.mount(<CollectionRoute token="token-1" />);
 
-      for (const door of ["decks", "cards", "cosmetics", "builder"] as const) {
+      for (const door of ["decks", "cards", "cosmetics"] as const) {
         cy.get(byTestid(collectionTestid.door(door))).should("be.visible");
       }
       expectNoHorizontalOverflow(viewport);

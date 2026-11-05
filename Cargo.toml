@@ -2,7 +2,7 @@
 # here and named with `{ workspace = true }` by the crates; nobody adds one that is not on this
 # list during Waves 1–3.
 [workspace]
-members = ["crates/*", "crates/wasm/core", "crates/wasm/luau"]
+members = ["crates/*", "crates/wasm/core", "crates/wasm/luau", "crates/wasm/c"]
 resolver = "3"
 
 [workspace.package]
@@ -18,6 +18,7 @@ jackioh-cards = { path = "crates/cards" }
 jackioh-ai = { path = "crates/ai" }
 jackioh-luau = { path = "crates/luau" }
 jackioh-run = { path = "crates/run" }
+jackioh-shared = { path = "crates/shared" }
 
 # Third-party crates (SURFACE §2), versions as written; `=` for wasm-bindgen and mlua.
 serde = { version = "1.0.229", features = ["derive"] }

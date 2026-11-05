@@ -10,7 +10,10 @@
     <!-- Cloudflare serves this file, with a 404 status, for any path that is no file and that
          public/_redirects does not route to the app (wrangler.jsonc `not_found_handling`). It stands
          alone, so its styles are inline: the tavern frame of the app's own 404 panel (main.tsx
-         NotFound, auth/tavern.css), with no script. -->
+         NotFound, auth/tavern.css), with no script.
+         #3119, R3119000: three of the brand's card backs (public/brand) deal in stacked, fan out and
+         turn over into 4, 0 and 4, then float. CSS alone: every rule below is the dealt, face-up
+         hand, and the animations only run toward it, so under prefers-reduced-motion it simply lies there. -->
     <style>
       html,
       body {
@@ -32,6 +35,17 @@
         font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
         color-scheme: dark;
       }
+      @media (pointer: fine) {
+        body {
+          cursor: url("/cursors/glove.svg") 4 3, auto;
+        }
+        a {
+          cursor: url("/cursors/glove-point.svg") 4 3, pointer;
+        }
+        a:active {
+          cursor: url("/cursors/glove-press.svg") 4 3, pointer;
+        }
+      }
       main {
         width: 100%;
         max-width: 420px;
@@ -43,6 +57,143 @@
         background: linear-gradient(180deg, #2b170c, #1a0e07);
         box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(251, 231, 176, 0.12);
       }
+
+      /* ---- the hand: 4, 0, 4 ---- */
+      .hand {
+        --card-w: 76px;
+        --card-h: calc(var(--card-w) * 1120 / 820);
+        position: relative;
+        height: calc(var(--card-h) * 1.35);
+        margin: 0 auto 8px;
+        animation: float 6s ease-in-out 2s infinite;
+      }
+      /* The hearth light the hand is held over. */
+      .hand::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        width: calc(var(--card-w) * 4.4);
+        max-width: 100%;
+        height: calc(var(--card-h) * 0.5);
+        transform: translateX(-50%);
+        border-radius: 50%;
+        background: radial-gradient(ellipse at 50% 55%, rgba(255, 170, 70, 0.28), transparent 70%);
+      }
+      .slot {
+        --turn: 0deg;
+        --deal-at: 0ms;
+        position: absolute;
+        left: 50%;
+        bottom: calc(var(--card-h) * 0.1);
+        width: var(--card-w);
+        height: var(--card-h);
+        margin-left: calc(var(--card-w) / -2);
+        transform-origin: 50% 320%;
+        transform: rotate(var(--turn));
+        perspective: 600px;
+        animation: fan 520ms cubic-bezier(0.2, 0.9, 0.25, 1.1) calc(var(--deal-at) + 520ms) backwards;
+      }
+      .slot:nth-child(1) { --turn: -15deg; --deal-at: 0ms; }
+      .slot:nth-child(2) { --turn: 0deg; --deal-at: 90ms; }
+      .slot:nth-child(3) { --turn: 15deg; --deal-at: 180ms; }
+      .card {
+        position: absolute;
+        inset: 0;
+        transform-style: preserve-3d;
+        transform: rotateY(180deg);
+        transition: translate 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        animation:
+          deal 480ms cubic-bezier(0.18, 0.9, 0.25, 1.05) var(--deal-at) backwards,
+          flip 460ms cubic-bezier(0.2, 0.9, 0.25, 1.1) calc(var(--deal-at) * 2 + 1180ms) backwards;
+      }
+      .side {
+        position: absolute;
+        inset: 0;
+        border-radius: 7px;
+        backface-visibility: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 10px 22px rgba(0, 0, 0, 0.6);
+      }
+      .back {
+        background: url("/brand/jackioh-card-back.svg") center / 100% 100% no-repeat;
+      }
+      .face {
+        display: grid;
+        place-items: center;
+        transform: rotateY(180deg);
+        border: 2px solid #c9953f;
+        box-sizing: border-box;
+        background:
+          radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255, 246, 214, 0.9), transparent 75%),
+          linear-gradient(180deg, #efe0bf, #d9c08f);
+        color: #24160c;
+        font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+        font-weight: 700;
+      }
+      .face .rank {
+        font-size: 46px;
+        line-height: 1;
+        color: #7a4a17;
+        text-shadow: 0 1px 0 rgba(255, 246, 214, 0.8);
+      }
+      .face .pip {
+        position: absolute;
+        font-size: 14px;
+        line-height: 1;
+      }
+      .face .pip:first-child {
+        top: 6px;
+        left: 7px;
+      }
+      .face .pip:last-child {
+        right: 7px;
+        bottom: 6px;
+        transform: rotate(180deg);
+      }
+      @media (hover: hover) {
+        .slot:hover {
+          z-index: 1;
+        }
+        .slot:hover .card {
+          translate: 0 -10%;
+        }
+      }
+      /* The deal moves translate and scale, the flip transform, so the two never fight over one property. */
+      @keyframes deal {
+        from {
+          opacity: 0;
+          translate: 0 -40%;
+          scale: 0.7;
+        }
+      }
+      @keyframes fan {
+        from {
+          transform: rotate(0deg);
+        }
+      }
+      @keyframes flip {
+        from {
+          transform: rotateY(0deg);
+        }
+      }
+      @keyframes float {
+        0%,
+        100% {
+          translate: 0 0;
+        }
+        50% {
+          translate: 0 -4px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hand,
+        .slot,
+        .card {
+          animation: none;
+          transition: none;
+        }
+      }
+
       h1 {
         margin: 0 0 12px;
         font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
@@ -71,6 +222,11 @@
   </head>
   <body>
     <main>
+      <div class="hand" aria-hidden="true">
+        <div class="slot"><div class="card"><div class="side back"></div><div class="side face"><span class="pip">4</span><span class="rank">4</span><span class="pip">4</span></div></div></div>
+        <div class="slot"><div class="card"><div class="side back"></div><div class="side face"><span class="pip">0</span><span class="rank">0</span><span class="pip">0</span></div></div></div>
+        <div class="slot"><div class="card"><div class="side back"></div><div class="side face"><span class="pip">4</span><span class="rank">4</span><span class="pip">4</span></div></div></div>
+      </div>
       <h1>JackiOh</h1>
       <p>That page doesn&rsquo;t exist. The link may be wrong or out of date.</p>
       <a href="/">Back to the start</a>

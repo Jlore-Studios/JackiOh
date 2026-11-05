@@ -54,6 +54,7 @@ deployment decision that can be made later without touching the code.
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays, and the watchers of a person's seat (§5.4, R2881000) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
+| `crates/shared` | Linked into the HTTP routes, and into the WASM module the clients load | No (pure) | The logic the server and the client share (#2956): first, the Conquest series rules (SPEC §9.5, R330–R337) |
 
 ---
 
@@ -138,6 +139,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `series` | **none** | no policy | none — holds both frozen trios and the hidden picks (R259) |
 | `tutorial_progress` | own row | `profile_id = auth.uid()` | none — the server merges a device's progress into it, never removing a lesson (R320) |
 | `card_cosmetic_picks` | own rows | `profile_id = auth.uid()` | **none** — every write is the server's, through `/api/card-picks`, which checks a pick's kind and ownership (R1834000, R1834001) |
+| `card_proficiency` | own rows | `profile_id = auth.uid()` | **none** — every write is the server's: a game's pay counts its plays and levels (R3013000), and `/api/proficiency/stamp` picks a stamp the card's level has unlocked (R3013001) |
 | `game_records` | **none** | no policy | none — holds both hands and both decklists of every recorded game (R376) |
 | `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
 | `emote_events` | **none** | no policy | none (R1442) |
@@ -252,8 +254,8 @@ things in it are not obvious:
   the patch history and every migration are compiled into the binary, so nothing at run time needs
   Node, pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds
   the catalog and serves. `wrangler deploy` builds it on the deploy job's runner (Docker), with the
-  repository root as its context, because the server crate builds against the engine, cards and AI
-  crates beside it.
+  repository root as its context, because the server crate builds against the engine, cards, AI and
+  shared-logic crates beside it.
 - **A deploy restarts the server.** A container keeps the image it started with, so the first
   request after a deploy compares the running server's `/healthz` `x-deployed-commit` with the
   commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one; live matches

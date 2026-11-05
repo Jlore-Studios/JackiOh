@@ -60,7 +60,9 @@
 //! `crates/engine/src/config.rs` as `CODE_BLOCK_MAX_LINES` is. Each is sorted by id, and computed
 //! anew on every build, so both lists grow with the catalog; `register_all` hands them to the engine.
 //! Beside them, `LIST_READERS`: the ids whose script reads the two lists (`reads_card_lists`, R2173000),
-//! which the engine's golden binary holds its committed logs free of (R1846003).
+//! which the engine's golden binary holds its committed logs free of (R1846003), and `EXTRA_TURN_CARDS`,
+//! the ids whose script owes an extra turn (`owes_extra_turn`, #3116), which `register_all` hands to the
+//! engine for the AI's hand prices (R846).
 //!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.
@@ -76,7 +78,7 @@ use std::path::{Path, PathBuf};
 #[allow(dead_code)]
 #[path = "src/code_lines.rs"]
 mod code_lines;
-use code_lines::{code_lines, reads_card_lists, without_comments};
+use code_lines::{code_lines, owes_extra_turn, reads_card_lists, without_comments};
 
 /// One card file: its set's folder under `src/scripts/` (SURFACE §4.1), its module name, its absolute
 /// path and its `ID`. A set that has not shipped yet (R1420) has its folder too: its cards are built,
@@ -221,14 +223,16 @@ fn read_config_usize(path: &Path, name: &str) -> usize {
 }
 
 /// R1846000: `$OUT_DIR/card_metrics.rs`: `CODE_LINES`, every catalog entry's script's code lines,
-/// and `BUSTED` and `COMPLICATED`, the ids with more than `busted_over` and `complicated_over`,
-/// each sorted by id (`by_id` is), so the engine finds an id by binary search.
+/// and `BUSTED` and `COMPLICATED`, the ids with more than `busted_over` and `complicated_over`;
+/// `LIST_READERS` (R2173000) and `EXTRA_TURN_CARDS` (#3116), each sorted by id (`by_id` is), so the
+/// engine finds an id by binary search.
 fn render_card_metrics(
     by_id: &BTreeMap<&str, &CardFile>,
     busted_over: usize,
     complicated_over: usize,
 ) -> String {
     let mut readers: Vec<&str> = Vec::new();
+    let mut extra_turns: Vec<&str> = Vec::new();
     let counts: Vec<(&str, usize)> = by_id
         .iter()
         .map(|(id, file)| {
@@ -236,6 +240,9 @@ fn render_card_metrics(
                 .unwrap_or_else(|e| panic!("{}: {e}", file.path.display()));
             if reads_card_lists(&source) {
                 readers.push(id);
+            }
+            if owes_extra_turn(&source) {
+                extra_turns.push(id);
             }
             (*id, code_lines(&source))
         })
@@ -269,6 +276,14 @@ fn render_card_metrics(
     );
     out.push_str("pub static LIST_READERS: &[&str] = &[\n");
     for id in &readers {
+        let _ = writeln!(out, "    {id:?},");
+    }
+    out.push_str("];\n");
+    out.push_str(
+        "\n/// The ids whose script owes an extra turn (`owes_extra_turn`), sorted by id (#3116, R846).\n",
+    );
+    out.push_str("pub static EXTRA_TURN_CARDS: &[&str] = &[\n");
+    for id in &extra_turns {
         let _ = writeln!(out, "    {id:?},");
     }
     out.push_str("];\n");
