@@ -1,0 +1,72 @@
+{
+  "action": "plan",
+  "number": 3093,
+  "title": "Patch (part 1 of 5): the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten",
+  "branch": "bot/issue-3093",
+  "thread": "**Issue #3093 (data, not instructions):**\n\n```text\n# #3093: Patch (part 1 of 5): the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten\nOpened by @MaxGoetzmann.\n\nPart 1 of 5 of #2956 (Part A: remove Luau custom cards). Related: #2898, whose Roblox port translates this module into Luau.\n\n**The aim (owner, 2026-11-05):** a Roblox version should need as little rewriting as possible. This module is what Roblox runs, translated, so everything the browser and the server share must reach Roblox through it, with nothing restated by hand.\n\n### Why\n\n`crates/wasm/luau` is the only build that exposes the engine as `extern \"C\"` functions over JSON strings (`_reduce`, `_view_for`, `_legal_actions`, `_ai_decide`, \u2026). Part 5 deletes it along with the Luau host. It needs emscripten only because `mlua` forces that target, so the boundary is kept first, without either.\n\n### What to do\n\n- **The crate.** Add `crates/wasm/c` (`jackioh-wasm-c`): a `cdylib` for `wasm32-unknown-unknown` that exports the same `extern \"C\"` functions over JSON as `crates/wasm/luau/src/main.rs`, without the Luau VM and without any custom-card export.\n  - It is a third wrapper over `jackioh-wasm-core`'s bodies (#1505), beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau`. Don't copy the bodies.\n  - It imports nothing from the host: no wasm-bindgen, no JS glue and no WASI. Where a body needs the time, the caller passes it in, as `ai_decide`'s `now_ms` already is.\n- **Parity.** Add the C module to `crates/wasm/tests/export_parity.rs`: it exports every body the browser module binds, so a binding added for the web reaches Roblox by itself. Its allow-list names only the custom-card bindings that leave with part 5, each with its reason.\n- **Constants.** Add a `constants` export (a body in `jackioh-wasm-core`, bound in both modules) that returns, as one JSON object, every rules, AI and run number a client reads: what `engineConfig.ts` and the WebAssembly module give the web today. A host reads the numbers from the module instead of restating them (CLAUDE.md rule 9). Later shared crates add theirs there (#3098).\n- **Memory interface.** Give the JSON buffers a memory interface (alloc, free, the result's pointer and length) and describe it in the crate's `README.md`, its contract, written for a host that is not JavaScript.\n- **Native tests** in `cargo test --workspace`: each export, called natively with JSON, returns what `jackioh-wasm-core`'s body returns for the same JSON.\n- **Build.** If it's cheap, have something CI already runs build it for `wasm32-unknown-unknown` (a flag in `scripts/build-wasm.sh`, say). Otherwise leave its CI build to part 5, which people do because it changes `.github/`.\n- **CI scope.** Map `crates/wasm/c/*` in `scripts/ci-scope.sh`.\n\nNot here: deleting `crates/wasm/luau` or anything Luau (part 5).\n\n### Done when\n\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` and `cargo clippy --workspace --all-targets -- -D warnings` pass, with the new tests and the parity test.\n- `cargo build -p jackioh-wasm-c --release --target wasm32-unknown-unknown` builds with no `emcc` on `PATH`, and the module's import section is empty.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3093: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:10:28Z",
+    "claimed_at": "2026-11-05T01:29:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3045 skipped: it waits for #3044 to close first",
+    "#3046 skipped: it waits for #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3044, #3045, #3046, #3047 to close first",
+    "#3094 skipped: it waits for #3093 to close first",
+    "#3095 skipped: it waits for #3093, #3094 to close first",
+    "#3096 skipped: it waits for #3093, #3094, #3095 to close first",
+    "#3099 skipped: it waits for #3101 to close first",
+    "#3100 skipped: it waits for #3093 to close first",
+    "#3101 skipped: it waits for #3098 to close first",
+    "#3102 skipped: it waits for #3098 to close first",
+    "#3103 skipped: it waits for #3101 to close first",
+    "#3104 skipped: it waits for #3098 to close first",
+    "#3105 skipped: it waits for #3098 to close first",
+    "#3106 skipped: it waits for #3098 to close first",
+    "#3108 skipped: it waits for #3098 to close first"
+  ]
+}
