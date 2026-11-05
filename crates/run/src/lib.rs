@@ -323,6 +323,12 @@ impl RunNodeKind {
                 | RunNodeKind::Boss
         )
     }
+
+    /// A mini-boss or a boss: the fights `cargo jackioh run-sim` (#3165) tallies a run's health
+    /// against.
+    pub fn is_boss(self) -> bool {
+        matches!(self, RunNodeKind::MiniBoss | RunNodeKind::Boss)
+    }
 }
 
 /// A number for each kind of fight (`config.rs`'s tables).
