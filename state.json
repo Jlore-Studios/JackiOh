@@ -15421,6 +15421,13 @@
     "3063": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-05T00:09:24Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "One test file (crates/tools/tests/acceptance.rs) that reads source text. It changes no engine rule or AI decision, needs no design across crates, no migration, and is far under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
