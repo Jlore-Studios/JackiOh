@@ -31979,12 +31979,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:999cbcd3-1793854086",
+        "run_id": "",
         "sha": "b60666c6b030d31157d55d04993657c2b5b38622",
         "started_at": "2026-11-05T04:48:42Z",
         "status": "queued",
         "title": "Patch: the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 65
