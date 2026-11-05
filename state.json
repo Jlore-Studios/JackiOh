@@ -19413,10 +19413,10 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-05T01:20:00Z",
-          "utilization": 0.42
+          "resets_at": "2026-11-05T06:30:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-05T00:31:02Z",
+        "observed_at": "2026-11-05T01:38:13Z",
         "status": "allowed"
       }
     },
@@ -31573,6 +31573,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-05T01:31:16Z,claude-1,ping,before,41948836032,0,2026-11-05T06:30:00Z,,,allowed,40,,"
+    ]
   },
   "version": 1
 }
