@@ -320,6 +320,7 @@ complicated: boolean?,
 everySet: boolean?,
 dealsDamage: boolean?,
 keywords: {KeywordKind}?,
+turnHook: TurnHookFilter?,
 }
 
 export type CellScope = {
@@ -647,6 +648,7 @@ player: PlayerSpec?,
 
 export type DiscardHandAtTurnEndArgs = {
 turn: DiscardHandTurn,
+count: number?,
 }
 
 export type DiscardHandTurn = "this" | "next"
@@ -2713,6 +2715,8 @@ delta: number,
 } | {
 ["kind"]: "none",
 }
+
+export type TurnHookFilter = "start" | "end" | "either"
 
 export type TurnView = {
 number: number,

@@ -1,27 +1,40 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
-//!   Base:    "Draw your deck. At the end of this turn, discard your hand."
-//!   Radiant: "Draw your deck. At the end of your next turn, discard your hand."
+//!   Base:    "Draw your deck. At the end of this turn, discard {discard|card|cards}." (discard 6)
+//!   Radiant: "Draw your deck. At the end of your next turn, discard {discard|card|cards}." (discard 6)
+//!   Through v0.5.11o: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
 //!
 //! "Draw your deck" is R58's "draw your whole library": as many draws as the library holds when the
 //! effect starts, each an ordinary §2.4 draw — a cast-on-draw card is cast (R58), a card past the hand
 //! cap of 10 burns (R4, R317), and a draw a draw limit stops does not happen (§2.4). An empty library
 //! means no draws, so no fatigue.
-//! Then a delayed effect (§10.1, `discardHandAtTurnEnd`) discards the whole hand, with no prompt, in
-//! the end-of-turn delayed-effect step (R62): at the end of this turn on the base face, of its
-//! controller's next turn on the Radiant face, taking the hand held then. It is a discard (§6.3), so
-//! C #64 Malzahar's Recycler sees each card. By design a fatigue clock.
+//! Then a delayed effect (§10.1, `discardHandAtTurnEnd`) discards `discard` random cards of the hand
+//! (R682, R3134000), with no prompt, in the end-of-turn delayed-effect step (R62): at the end of this
+//! turn on the base face, of its controller's next turn on the Radiant face, taking the hand held then;
+//! a hand of fewer cards loses them all. `discard` is read as the card is played (`param`, R386), and
+//! the count rides in the delayed entry. It is a discard (§6.3), so C #64 Malzahar's Recycler sees each
+//! card. By design a fatigue clock.
 
-use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{discard_hand_at_turn_end, draw};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-037";
 
-fn last_hurrah(turn: &'static str) -> Script {
+/// The declared number both faces print: how many cards the delayed discard takes (R3134000).
+const DISCARD: &str = "discard";
+
+/// One face: draw the deck, then the delayed discard at `turn`'s end (R458); `counted` is whether it
+/// takes `discard` cards (R3134000) rather than the whole hand, as v0.5.11o's did.
+fn last_hurrah(turn: &'static str, counted: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
+            let delayed = if counted {
+                json!({ "turn": turn, "count": param(ctx, DISCARD) })
+            } else {
+                json!({ "turn": turn })
+            };
             vec![
                 draw(json_as(json!({ "count": zone_count(ctx.state, ctx.controller, OffFieldZone::Library) }))),
-                discard_hand_at_turn_end(json_as(json!({ "turn": turn }))),
+                discard_hand_at_turn_end(json_as(delayed)),
             ]
         })),
         ..Script::default()
@@ -29,24 +42,37 @@ fn last_hurrah(turn: &'static str) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = last_hurrah("this");
+    let base = last_hurrah("this", true);
 
-    let radiant = last_hurrah("next");
+    let radiant = last_hurrah("next", true);
 
     CardScripts { base, radiant }
 }
 
+/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: the delayed
+/// discard took the whole hand, both faces.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts { base: last_hurrah("this", false), radiant: last_hurrah("next", false) }
+}
+
 // C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
-// fatigue; the hand is discarded at the end of this turn (R62), a discard (C #64 sees it); radiant:
+// fatigue; 6 random cards of the hand are discarded at the end of this turn (R62, R682, R3134000), each a
+// discard (C #64 sees it), all of a smaller hand; radiant: at the end of the controller's next turn, the
+// hand held then; `discard` is a declared number (R386); the kept script discards the whole hand (R767000).
 #[cfg(test)]
 mod tests {
-    use crate::merged;
+    use std::collections::BTreeSet;
+
+    use super::script_v0_5_11o;
     use crate::def_ids;
+    use crate::merged;
+    use crate::scenario;
     use jackioh_engine::testkit::*;
 
     const HURRAH: &str = "classic-037";
     const PALANTIR: &str = "classic-004";
+    const RECYCLER: &str = "classic-064"; // Field Spell: whenever you discard cards, draw that many.
     const FILLER: &str = "core-005"; // (1) Spell.
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
@@ -65,8 +91,35 @@ mod tests {
         }))
     }
 
+    /// Last Hurrah and Rapid Draw, then two more cards: with the five the deck draws, a hand of 8.
+    fn eight_cards(radiant_face: bool) -> Scenario {
+        setup(
+            json!({ "hand": [{ "def": HURRAH, "radiant": radiant_face }, "core-010", FILLER, FILLER] }),
+            json!({}),
+            radiant_face,
+        )
+    }
+
     fn count(events: &[GameEvent], type_: &str) -> usize {
         events.iter().map(js).filter(|event| event["type"] == type_).count()
+    }
+
+    /// The instance ids p1 discarded, in order, over the events so far.
+    fn discarded(s: &Scenario) -> Vec<String> {
+        s.last_events()
+            .iter()
+            .map(js)
+            .filter(|event| event["type"] == "discarded" && event["owner"] == "p1")
+            .filter_map(|event| event["instanceId"].as_str().map(str::to_string))
+            .collect()
+    }
+
+    fn hand_ids(s: &Scenario) -> Vec<String> {
+        s.hand(PlayerId::P1).iter().map(|card| card.id.clone()).collect()
+    }
+
+    fn grave_ids(s: &Scenario) -> Vec<String> {
+        s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.id.clone()).collect()
     }
 
     fn contains_all(have: &[String], want: &[String]) -> bool {
@@ -85,9 +138,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn declares_no_tuned_numbers() {
+        fn r3134000_declares_discard_6_on_both_faces_a_number_whose_better_is_down() {
             crate::register_all();
-            assert!(crate::card_def(HURRAH).params.is_none());
+            let def = js(&crate::card_def(HURRAH));
+            assert_eq!(
+                def["params"],
+                json!([{ "key": "discard", "base": 6, "radiant": 6, "better": "down", "step": 1, "min": 1 }]),
+            );
+            for face in ["base", "radiant"] {
+                assert!(def[face]["text"].as_str().unwrap_or_default().contains("discard {discard|card|cards}."));
+            }
         }
 
         mod base {
@@ -95,7 +155,6 @@ mod tests {
 
             #[test]
             fn r58_draws_your_whole_deck_as_many_draws_as_it_holds_when_the_effect_starts() {
-                crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
                 s.play(HURRAH, json!({}));
@@ -111,7 +170,6 @@ mod tests {
 
             #[test]
             fn r4_r317_the_cards_past_the_hand_cap_of_10_burn_into_the_graveyard_both_players_reading_which() {
-                crate::register_all();
                 let eight = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
                 let mut hand = vec![HURRAH, "core-010"];
                 hand.extend(eight);
@@ -143,7 +201,6 @@ mod tests {
 
             #[test]
             fn s2_4_a_draw_limit_stops_the_rest_those_draws_do_not_happen_at_all() {
-                crate::register_all();
                 let mut s = setup(
                     json!({ "hand": [{ "def": HURRAH, "costMod": 2 }, "core-010"] }),
                     json!({ "backrow": [{ "def": PALANTIR, "faceUp": true }] }),
@@ -160,7 +217,6 @@ mod tests {
 
             #[test]
             fn an_empty_deck_draws_nothing_and_takes_no_fatigue() {
-                crate::register_all();
                 let mut s = setup(json!({ "library": [] }), json!({}), false);
 
                 s.play(HURRAH, json!({}));
@@ -172,7 +228,6 @@ mod tests {
 
             #[test]
             fn r97_the_drawn_cards_are_never_named_in_the_opponents_view() {
-                crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
                 s.play(HURRAH, json!({}));
@@ -184,17 +239,19 @@ mod tests {
             }
 
             #[test]
-            fn r62_at_the_end_of_this_turn_the_whole_hand_is_discarded_with_no_prompt_before_the_next_turn_starts() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+            fn r3134000_r62_at_the_end_of_this_turn_6_of_8_cards_are_discarded_with_no_prompt_before_the_next_turn_starts() {
+                let mut s = eight_cards(false);
                 s.play(HURRAH, json!({}));
-                let held: Vec<String> = s.hand(PlayerId::P1).iter().map(|card| card.id.clone()).collect();
+                let held = hand_ids(&s);
+                assert_eq!(held.len(), 8);
 
                 s.end_turn();
 
-                assert_eq!(s.hand(PlayerId::P1).len(), 0);
-                let grave: Vec<String> = s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.id.clone()).collect();
-                assert!(contains_all(&grave, &held));
+                assert_eq!(s.hand(PlayerId::P1).len(), 2);
+                let gone = discarded(&s);
+                assert_eq!(gone.len(), 6);
+                assert!(contains_all(&held, &gone));
+                assert!(contains_all(&grave_ids(&s), &gone));
                 // R62: `turnEnded` closes the end-of-turn triggers; the trap window and then the end-of-turn
                 // delayed effects follow it, all before the next turn starts.
                 let types: Vec<String> = s
@@ -213,45 +270,136 @@ mod tests {
 
             #[test]
             fn s6_3_each_card_goes_as_a_discard_with_its_own_discarded_event() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = eight_cards(false);
                 s.play(HURRAH, json!({}));
-                let held = s.hand(PlayerId::P1).len();
 
                 s.end_turn();
 
-                assert_eq!(
-                    s.last_events()
-                        .iter()
-                        .map(js)
-                        .filter(|event| event["type"] == "discarded" && event["owner"] == "p1")
-                        .count(),
-                    held,
+                assert_eq!(discarded(&s).len(), 6);
+                assert_eq!(count(s.last_events(), "discarded"), 6);
+            }
+
+            #[test]
+            fn r458_c_64_malzahars_recycler_sees_each_card_and_draws_that_many() {
+                let mut s = setup(
+                    json!({ "hand": [HURRAH, "core-010", FILLER, FILLER], "backrow": [RECYCLER] }),
+                    json!({}),
+                    false,
                 );
+                s.play(HURRAH, json!({}));
+                // The deck is drawn; Recycler (base) draws as many as the effect discarded, here from
+                // the empty deck: one fatigue hit each.
+                s.end_turn();
+
+                assert_eq!(discarded(&s).len(), 6);
+                assert_eq!(count(s.last_events(), "fatigue"), 6);
+            }
+
+            #[test]
+            fn r682_which_6_go_is_random_each_card_of_the_hand_is_discarded_under_some_seed() {
+                let mut kept_sets: BTreeSet<Vec<String>> = BTreeSet::new();
+                let mut ever_gone: BTreeSet<String> = BTreeSet::new();
+                for n in 0..8 {
+                    let mut s = scenario(json!({
+                        "seed": format!("hurrah-random-{n}"),
+                        "p1": { "hand": [HURRAH, "core-010", FILLER, FILLER], "library": DECK },
+                        "p2": { "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER, FILLER] },
+                    }));
+                    s.play(HURRAH, json!({}));
+                    s.end_turn();
+                    kept_sets.insert(hand_ids(&s));
+                    ever_gone.extend(discarded(&s));
+                }
+                assert!(kept_sets.len() > 1, "the same 2 cards stayed under every seed");
+                assert!(ever_gone.len() > 6, "the same 6 cards went under every seed");
+            }
+
+            #[test]
+            fn r3134000_a_hand_of_exactly_6_loses_all_6() {
+                let mut s = setup(json!({}), json!({}), false);
+                s.play(HURRAH, json!({}));
+                assert_eq!(s.hand(PlayerId::P1).len(), 6);
+
+                s.end_turn();
+
+                assert_eq!(s.hand(PlayerId::P1).len(), 0);
+                assert_eq!(discarded(&s).len(), 6);
+            }
+
+            #[test]
+            fn r682_a_hand_of_fewer_than_6_discards_all_there_are() {
+                let mut s = setup(json!({}), json!({}), false);
+                s.play(HURRAH, json!({}));
+                s.play(TIMMY, json!({ "zone": 1 }));
+                let held = hand_ids(&s);
+                assert_eq!(held.len(), 5);
+
+                s.end_turn();
+
+                assert_eq!(s.hand(PlayerId::P1).len(), 0);
+                let gone = discarded(&s);
+                assert_eq!(gone.len(), 5);
+                assert!(contains_all(&gone, &held));
             }
 
             #[test]
             fn it_discards_only_its_controllers_hand() {
-                crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 s.play(HURRAH, json!({}));
 
                 s.end_turn();
 
                 assert!(s.hand(PlayerId::P2).len() >= 2);
+                assert!(!s
+                    .last_events()
+                    .iter()
+                    .map(js)
+                    .any(|event| event["type"] == "discarded" && event["owner"] == "p2"));
             }
 
             #[test]
-            fn the_discard_takes_the_hand_as_it_is_then_cards_played_in_between_are_not_discarded() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+            fn the_discard_takes_the_hand_as_it_is_then_cards_played_in_between_are_not_counted() {
+                let mut s = eight_cards(false);
                 s.play(HURRAH, json!({}));
                 s.play(TIMMY, json!({ "zone": 1 }));
+                assert_eq!(s.hand(PlayerId::P1).len(), 7);
 
                 s.end_turn();
 
                 s.expect_in_zone(TIMMY, "field");
-                assert_eq!(s.hand(PlayerId::P1).len(), 0);
+                // 6 of the 7 cards still held, not 6 of 8: one stays.
+                assert_eq!(s.hand(PlayerId::P1).len(), 1);
+                assert_eq!(discarded(&s).len(), 6);
+            }
+
+            #[test]
+            fn r386_discard_reads_through_param_an_upgrade_discards_5_and_a_degrade_7() {
+                let mut s = eight_cards(false);
+                assert_eq!(crate::upgrade_number(&mut s, HURRAH, "discard"), 5);
+                s.play(HURRAH, json!({}));
+                s.end_turn();
+                assert_eq!(discarded(&s).len(), 5);
+                assert_eq!(s.hand(PlayerId::P1).len(), 3);
+
+                let mut s = eight_cards(false);
+                assert_eq!(crate::degrade_number(&mut s, HURRAH, "discard"), 7);
+                s.play(HURRAH, json!({}));
+                s.end_turn();
+                assert_eq!(discarded(&s).len(), 7);
+                assert_eq!(s.hand(PlayerId::P1).len(), 1);
+            }
+
+            #[test]
+            fn r386_discard_cannot_go_below_1() {
+                let mut s = eight_cards(false);
+                for step in (1..=5).rev() {
+                    assert_eq!(crate::upgrade_number(&mut s, HURRAH, "discard"), step);
+                }
+                assert!(!crate::can_upgrade_number(&s, HURRAH, "discard"));
+                s.play(HURRAH, json!({}));
+                s.end_turn();
+                assert_eq!(discarded(&s).len(), 1);
+                assert_eq!(s.hand(PlayerId::P1).len(), 7);
             }
         }
 
@@ -260,7 +408,6 @@ mod tests {
 
             #[test]
             fn r58_draws_your_whole_deck() {
-                crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
 
                 s.play(HURRAH, json!({}));
@@ -271,7 +418,6 @@ mod tests {
 
             #[test]
             fn nothing_is_discarded_at_this_turns_end() {
-                crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
                 s.play(HURRAH, json!({}));
                 let held = s.hand(PlayerId::P1).len();
@@ -279,31 +425,68 @@ mod tests {
                 s.end_turn();
 
                 assert_eq!(s.hand(PlayerId::P1).len(), held);
-                assert!(!s
-                    .last_events()
-                    .iter()
-                    .map(js)
-                    .any(|event| event["type"] == "discarded" && event["owner"] == "p1"));
+                assert!(discarded(&s).is_empty());
             }
 
             #[test]
-            fn r62_at_the_end_of_your_next_turn_it_discards_the_hand_you_hold_then() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), true);
+            fn r3134000_r62_at_the_end_of_your_next_turn_it_discards_6_of_the_hand_you_hold_then() {
+                let mut s = eight_cards(true);
                 s.play(HURRAH, json!({}));
                 s.play(TIMMY, json!({ "zone": 1 }));
                 s.end_turn();
                 s.end_turn();
                 assert_eq!(s.state().active, PlayerId::P1);
-                let held: Vec<String> = s.hand(PlayerId::P1).iter().map(|card| card.id.clone()).collect();
-                assert!(!held.is_empty());
+                let held = hand_ids(&s);
+                assert_eq!(held.len(), 7);
+
+                s.end_turn();
+
+                assert_eq!(s.hand(PlayerId::P1).len(), 1);
+                let gone = discarded(&s);
+                assert_eq!(gone.len(), 6);
+                assert!(contains_all(&held, &gone));
+                assert!(contains_all(&grave_ids(&s), &gone));
+                s.expect_in_zone(TIMMY, "field");
+            }
+
+            #[test]
+            fn r682_a_hand_of_fewer_than_6_then_loses_all_there_are() {
+                let mut s = setup(json!({}), json!({}), true);
+                s.play(HURRAH, json!({}));
+                s.play(TIMMY, json!({ "zone": 1 }));
+                s.end_turn();
+                s.end_turn();
+                let held = hand_ids(&s);
+                assert_eq!(held.len(), 5);
 
                 s.end_turn();
 
                 assert_eq!(s.hand(PlayerId::P1).len(), 0);
-                let grave: Vec<String> = s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.id.clone()).collect();
-                assert!(contains_all(&grave, &held));
-                s.expect_in_zone(TIMMY, "field");
+                let gone = discarded(&s);
+                assert_eq!(gone.len(), 5);
+                assert!(contains_all(&gone, &held));
+            }
+        }
+
+        mod through_v0_5_11o {
+            use super::*;
+
+            #[test]
+            fn r767000_r458_the_kept_script_discards_the_whole_hand_on_both_faces() {
+                for radiant_face in [false, true] {
+                    crate::under_kept(HURRAH, script_v0_5_11o(), || {
+                        let mut s = eight_cards(radiant_face);
+                        s.play(HURRAH, json!({}));
+                        s.end_turn();
+                        if radiant_face {
+                            assert_eq!(s.hand(PlayerId::P1).len(), 8);
+                            s.end_turn();
+                            s.end_turn();
+                        }
+                        assert_eq!(s.hand(PlayerId::P1).len(), 0);
+                        assert_eq!(discarded(&s).len(), 8);
+                    });
+                }
             }
         }
     }

@@ -592,3 +592,142 @@ mod r1878000_the_keywords_filter_reads_the_printed_base_face {
         );
     }
 }
+
+/// R3134001 (Meditative #9 Joint Filing's "a random card with a Start of turn or an End of turn effect"):
+/// `turnHook` keeps the cards whose registered base-face script sets `startOfTurn`, `endOfTurn` or either,
+/// read without state, as `tribute` reads its flag.
+mod r3134001_the_turn_hook_filter_reads_the_registered_base_face_script {
+    use super::*;
+
+    fn hook_defs() -> Vec<CardDef> {
+        vec![
+            card("core-501", "Core", "501", json!({})),
+            card("core-502", "Core", "502", json!({})),
+            card("core-503", "Core", "503", json!({})),
+            card("core-504", "Core", "504", json!({})),
+            card("core-505", "Core", "505", json!({ "type": "Field Spell" })),
+            card("core-506", "Core", "506", json!({})),
+            card("core-507", "Core", "507", json!({})),
+            card("classic-508", "Classic", "508", json!({})),
+            token("core-509-1", "Core", "509.1", &[]),
+            card("boss-510", "Boss", "510", json!({})),
+        ]
+    }
+
+    /// 501 Start; 502 End; 503 both; 504 neither; 505 Start (a Field Spell); 506 only its Radiant face
+    /// has a Start of turn; 507 has no script at all; Classic 508 End; the token 509.1 Start; Boss 510 (a
+    /// set that has not shipped) Start.
+    fn hook_scripts() -> IndexMap<String, CardScripts> {
+        let start = || Some(hook(|_ctx| vec![]));
+        let script = |start_of_turn: Option<Hook>, end_of_turn: Option<Hook>| Script {
+            start_of_turn,
+            end_of_turn,
+            ..Script::default()
+        };
+        let same = |face: Script| CardScripts {
+            base: face.clone(),
+            radiant: face,
+        };
+        IndexMap::from([
+            ("core-501".to_string(), same(script(start(), None))),
+            ("core-502".to_string(), same(script(None, start()))),
+            ("core-503".to_string(), same(script(start(), start()))),
+            ("core-504".to_string(), same(script(None, None))),
+            ("core-505".to_string(), same(script(start(), None))),
+            (
+                "core-506".to_string(),
+                CardScripts {
+                    base: script(None, None),
+                    radiant: script(start(), None),
+                },
+            ),
+            ("classic-508".to_string(), same(script(None, start()))),
+            ("core-509-1".to_string(), same(script(start(), None))),
+            ("boss-510".to_string(), same(script(start(), None))),
+        ])
+    }
+
+    fn setup_hooks() {
+        register_catalog(catalog_of(hook_defs()));
+        register_scripts(hook_scripts());
+    }
+
+    #[test]
+    fn r3134001_start_end_and_either_keep_the_cards_whose_base_face_has_that_hook() {
+        setup_hooks();
+        assert_eq!(
+            pool(json!({ "turnHook": "start" })),
+            vec!["core-501", "core-503", "core-505"]
+        );
+        assert_eq!(
+            pool(json!({ "turnHook": "end" })),
+            vec!["core-502", "core-503", "classic-508"]
+        );
+        assert_eq!(
+            pool(json!({ "turnHook": "either" })),
+            vec!["core-501", "core-502", "core-503", "core-505", "classic-508"]
+        );
+    }
+
+    #[test]
+    fn r3134001_only_the_base_face_counts_and_a_card_with_no_script_has_neither_hook() {
+        setup_hooks();
+        let either = pool(json!({ "turnHook": "either" }));
+        // 506 sets a Start of turn on its Radiant face only; 507 registers no script; 504 sets neither.
+        for id in ["core-504", "core-506", "core-507"] {
+            assert!(!either.contains(&id.to_string()), "{id}");
+        }
+    }
+
+    #[test]
+    fn r3134001_tokens_and_unshipped_sets_stay_out_unless_the_pool_asks_for_them() {
+        setup_hooks();
+        // R380, R1420: the non-token cards of the sets that ship.
+        let start = pool(json!({ "turnHook": "start" }));
+        assert!(!start.contains(&"core-509-1".to_string()));
+        assert!(!start.contains(&"boss-510".to_string()));
+        assert_eq!(
+            pool(json!({ "turnHook": "start", "withTokens": true })),
+            vec!["core-501", "core-503", "core-505", "core-509-1"]
+        );
+        assert_eq!(
+            pool(json!({ "turnHook": "start", "set": "Boss" })),
+            vec!["boss-510"]
+        );
+    }
+
+    #[test]
+    fn r3134001_it_composes_with_set_type_and_exclude_def_id() {
+        setup_hooks();
+        assert_eq!(
+            pool(json!({ "turnHook": "either", "set": "Classic" })),
+            vec!["classic-508"]
+        );
+        assert_eq!(
+            pool(json!({ "turnHook": "start", "type": "Field Spell" })),
+            vec!["core-505"]
+        );
+        assert_eq!(
+            pool(json!({ "turnHook": "either", "excludeDefId": "core-503" })),
+            vec!["core-501", "core-502", "core-505", "classic-508"]
+        );
+        // The running card's own definition is added to what a caller excludes (R387).
+        let excluded = excluding_def_id(None, &q(json!({ "turnHook": "either" })), Some("core-501"));
+        assert_eq!(
+            ids_of_defs(&query(&excluded)),
+            vec!["core-502", "core-503", "core-505", "classic-508"]
+        );
+    }
+
+    #[test]
+    fn r3134001_unasked_it_filters_nothing_and_it_serializes_under_its_own_name() {
+        setup_hooks();
+        assert_eq!(pool(json!({})).len(), 8);
+        for which in ["start", "end", "either"] {
+            assert_eq!(
+                as_json(&q(json!({ "turnHook": which }))),
+                json!({ "turnHook": which })
+            );
+        }
+    }
+}
