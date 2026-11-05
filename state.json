@@ -31272,12 +31272,12 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:edeccef1-1793842858",
+        "run_id": "",
         "sha": "6c1483f9fcc0928d7c2b7e4b9fe67bee7b109cbb",
         "started_at": "2026-11-05T01:41:25Z",
         "status": "queued",
         "title": "Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 62
