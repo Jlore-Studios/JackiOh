@@ -17200,8 +17200,16 @@
     "what": "revise #3253 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-05T23:11:37Z",
-    "notes": [],
+    "at": "2026-11-05T23:13:31Z",
+    "notes": [
+      "#3253 no longer waits its turn",
+      "delivered plan #3254 on claude-7 (run 42123694763): planned",
+      "delivered build #3244 on claude-8 (run 42115400072): built",
+      "started review #3255 on claude-8 (run 42128487499)",
+      "started build #3254 on claude-7 (run 42128598406)",
+      "started revise #3253 on claude-4 (run 42128715530)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17906,7 +17914,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-05T22:58:09Z",
+  "loop_tick": "2026-11-05T23:13:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
