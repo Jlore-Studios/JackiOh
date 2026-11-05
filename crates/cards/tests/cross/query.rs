@@ -212,22 +212,15 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             )))
             .contains(&"core-096".to_string())
         );
-        // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker and #87 Tatches the Totem
-        // (§8.8) are (1) KY cards too since the set ships (R1420). Re-pinned for v0.3.15 (Meditative+
-        // ships, #1187): M+ #25 KY's Intuition (§8.9) is a (1) KY card too. C+ #62 KY's Papaya costs (2)
-        // since #1704, and Core #82 KY's Trial since #3136.
+        // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker (§8.8) is a (1) KY card too
+        // since the set ships (R1420). Meditative #87 Tatches the Totem costs (0) and M+ #25 KY's
+        // Intuition (§8.9) costs (2) since #3138; C+ #62 KY's Papaya costs (2) since #1704, and Core #82
+        // KY's Trial since #3136.
         assert_eq!(
             ids_of_defs(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
             ))),
-            strings(&[
-                "core-051",
-                "classicplus-041",
-                "classicplus-042",
-                "meditative-045",
-                "meditative-087",
-                "meditativeplus-025",
-            ])
+            strings(&["core-051", "classicplus-041", "classicplus-042", "meditative-045",])
         );
     }
 

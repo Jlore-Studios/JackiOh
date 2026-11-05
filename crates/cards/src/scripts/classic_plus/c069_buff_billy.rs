@@ -1,8 +1,9 @@
 //! C+ #69 Buff Billy (SPEC §8.7 row 69, R348, R386, R396; BUILD M9 row C+ 69). (X) Unit, Human, Rare.
-//!   Base:    "This is a 3X/3X. / Cry: Buff this X times."
-//!   Radiant: "This is a 6X/6X. / Cry: Buff this 2X times." (7X/7X until patch v0.3.10, #831)
+//!   Base:    "This is a 2X/3X. / Cry: Buff this X times." (3X/3X until issue #3138)
+//!   Radiant: "This is a 4X/6X. / Cry: Buff this 2X times." (7X/7X until patch v0.3.10, #831; 6X/6X
+//!            until issue #3138)
 //!
-//! The 3X/3X (6X/6X) is the catalog's `xStats` (E40), read by the engine's layer 1 off the X the card
+//! The 2X/3X (4X/6X) is the catalog's `xStats` (E40), read by the engine's layer 1 off the X the card
 //! was played for (at least 1, R348); a Recruit or a summon has no X and arrives 0/0 to die at the
 //! state check. The Cry is X (2X) separate Upgrades of itself (R386), each drawn from what fits it on
 //! the field: its X has resolved there, so only the stats and keyword rows remain (R396).
@@ -108,6 +109,20 @@ mod tests {
         })
     }
 
+    /// Issue #3138: 2X/3X, Radiant 4X/6X, from 3X/3X and 6X/6X: X = 2 and X = 4 before the Cry's Buffs.
+    #[test]
+    fn issue_3138_x_2_and_x_4_are_a_4_6_and_an_8_12_radiant_an_8_12_and_a_16_24_before_the_buffs() {
+        crate::register_all();
+        for (radiant, x, attack, health) in [(false, 2, 4, 6), (false, 4, 8, 12), (true, 2, 8, 12), (true, 4, 16, 24)] {
+            let (mut s, unit) = billy(x, radiant, None);
+            let (added_attack, added_health) = stats_added(s.events());
+            s.expect_stats(
+                &unit.id,
+                json!({ "attack": attack + added_attack, "maxHealth": health + added_health }),
+            );
+        }
+    }
+
     mod base {
         use super::*;
 
@@ -129,14 +144,14 @@ mod tests {
         }
 
         #[test]
-        fn r386_played_for_x_2_it_is_a_6_6_and_its_cry_upgrades_it_twice_each_its_own_draw_landing_on_its_stats() {
+        fn r386_played_for_x_2_it_is_a_4_6_and_its_cry_upgrades_it_twice_each_its_own_draw_landing_on_its_stats() {
             crate::register_all();
             let (mut s, unit) = billy(2, false, None);
             let events = upgrades(s.events());
             assert_eq!(events.len(), 2);
             assert!(events.iter().all(|(id, _)| *id == unit.id));
             let (attack, health) = stats_added(s.events());
-            s.expect_stats(&unit.id, json!({ "attack": 6 + attack, "maxHealth": 6 + health }));
+            s.expect_stats(&unit.id, json!({ "attack": 4 + attack, "maxHealth": 6 + health }));
             assert_eq!(s.card(&unit.id).x, Some(2));
         }
 
@@ -219,12 +234,12 @@ mod tests {
         }
 
         #[test]
-        fn r396_a_buff_billy_played_for_1_is_a_3_3_with_one_upgrade_costing_1_on_the_field() {
+        fn r396_a_buff_billy_played_for_1_is_a_2_3_with_one_upgrade_costing_1_on_the_field() {
             crate::register_all();
             let (mut s, unit) = billy(1, false, None);
             assert_eq!(upgrades(s.events()).len(), 1);
             let (attack, health) = stats_added(s.events());
-            s.expect_stats(&unit.id, json!({ "attack": 3 + attack, "maxHealth": 3 + health }));
+            s.expect_stats(&unit.id, json!({ "attack": 2 + attack, "maxHealth": 3 + health }));
             assert_eq!(cost_now(s.state(), s.card(&unit.id)), 1);
         }
     }
@@ -233,12 +248,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn played_for_x_2_it_is_a_12_12_and_its_cry_upgrades_it_2x_4_times() {
+        fn played_for_x_2_it_is_an_8_12_and_its_cry_upgrades_it_2x_4_times() {
             crate::register_all();
             let (mut s, unit) = billy(2, true, None);
             assert_eq!(upgrades(s.events()).len(), 4);
             let (attack, health) = stats_added(s.events());
-            s.expect_stats(&unit.id, json!({ "attack": 12 + attack, "maxHealth": 12 + health }));
+            s.expect_stats(&unit.id, json!({ "attack": 8 + attack, "maxHealth": 12 + health }));
         }
 
         #[test]

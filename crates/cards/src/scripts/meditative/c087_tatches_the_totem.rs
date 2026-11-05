@@ -1,5 +1,5 @@
-//! M #87 Tatches the Totem (SPEC §8.8 row 87): (1) Unit, All Tribes (Human, Felinor, KY, CN,
-//! Jlockeed), Legendary, 0/3 → 0/6.
+//! M #87 Tatches the Totem (SPEC §8.8 row 87): (0) Unit ((1) until issue #3138), All Tribes (Human,
+//! Felinor, KY, CN, Jlockeed), Legendary, 0/3 → 0/6.
 //!
 //! Base:    "While in your deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand or deck."
@@ -132,6 +132,34 @@ mod tests {
 
     mod m87_tatches_the_totem {
         use super::*;
+
+        /// Issue #3138: it costs (0), from (1), on both faces: played with no mana at all, and summoned
+        /// from the deck as ever (a summon pays nothing).
+        #[test]
+        fn issue_3138_it_costs_0_plays_for_no_mana_and_is_summoned_from_the_deck_on_both_faces() {
+            for (radiant, health) in [(false, 3), (true, 6)] {
+                let mut s = scenario(json!({
+                    "p1": { "mana": 0, "hand": [{ "def": TATCHES, "radiant": radiant }, FILLER] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                s.state_mut().players.p1.mana.current = 0;
+                s.play(TATCHES, json!({}));
+                s.expect_mana(P1, 0);
+                s.expect_stats(TATCHES, json!({ "attack": 0, "health": health, "maxHealth": health }));
+                assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(TATCHES.to_string()));
+
+                let mut s = scenario(json!({
+                    "p1": {
+                        "mana": 10,
+                        "hand": [VANILLA],
+                        "library": [FILLER, { "def": TATCHES, "radiant": radiant }, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                s.play(VANILLA, json!({}));
+                assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(TATCHES.to_string()), "radiant {radiant}");
+            }
+        }
 
         #[test]
         fn r1162_its_tags_are_the_five_tribal_tags() {

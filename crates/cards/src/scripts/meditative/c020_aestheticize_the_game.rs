@@ -1,7 +1,10 @@
 //! Meditative #20 Aestheticize the Game (SPEC §8.8 row 20). (0) Spell, Quickdraw, Wincon, Mythic.
-//!   Base:    "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard
+//!   Base:    "Tradable / Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard
 //!             has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
 //!   Radiant: the same with 90s, then: "Draw {draw}."
+//!
+//! Tradable on both faces (issue #3138) is catalog data (§6.1, R1838000): the engine Trades it from the
+//! hand, which is no play (R1838002), so no condition is installed. Quickdraw puts it in the opening hand.
 //!
 //! ME-WIN's chosen condition (R848–R850): the three modes are declared (R81), and the chosen one
 //! installs a rest-of-game player effect on the caster, `altWin { condition, threshold }` (never
@@ -92,6 +95,41 @@ mod tests {
             }
             _ => None,
         }).collect()
+    }
+
+    /// Issue #3138: Tradable on both faces. From the opening hand, a Trade puts it into the deck under the top
+    /// card and draws a card, at no mana, once a turn (R1838000), and it is no play (R1838002): no
+    /// condition is installed and the Radiant draw rider does not run.
+    #[test]
+    fn issue_3138_both_faces_are_tradable_from_the_opening_hand_once_a_turn() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "seed": "aestheticize-trade",
+                "p1": {
+                    "hand": [{ "def": GAME, "radiant": radiant }, { "def": GAME, "radiant": radiant }, FILLER],
+                    "library": [FILLER, FILLER, FILLER, FILLER],
+                    "mana": 0,
+                },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            let copies: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| card.def_id == GAME).collect();
+            for copy in &copies {
+                assert!(is_tradable(s.state(), copy), "radiant {radiant}: the face prints Tradable");
+            }
+            let (hand, deck) = (s.hand(P1).len(), s.pile(P1, "library").len());
+
+            s.trade(&copies[0].id);
+
+            s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+            assert_eq!(s.hand(P1).len(), hand, "one card went in and one came out");
+            assert_eq!(s.pile(P1, "library").len(), deck);
+            assert!(s.pile(P1, "library").iter().any(|card| card.id == copies[0].id), "it is in the deck now");
+            s.expect_mana(P1, 0);
+            assert_eq!(trades_left(s.state(), P1), 0, "the turn's one Trade is made");
+            s.expect_refused(|s| s.trade(&copies[1].id));
+            assert!(conditions(&s).is_empty(), "a Trade is no play: no win condition, no draw rider");
+            assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
+        }
     }
 
     mod base {

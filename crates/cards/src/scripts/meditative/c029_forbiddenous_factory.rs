@@ -1,4 +1,4 @@
-//! M #29 Forbiddenous Factory (SPEC §8.8 row 29): (3) Field Spell, Plague, Rare.
+//! M #29 Forbiddenous Factory (SPEC §8.8 row 29): (2) Field Spell ((3) until issue #3138), Plague, Rare.
 //!
 //! Base and Radiant: "Cry: Place {counters|Plague Counter|Plague Counters} on this.
 //! End of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses}
@@ -63,6 +63,7 @@ mod tests {
 
     const FACTORY: &str = "meditative-029";
     const FILLER: &str = "core-005";
+    const FREE: &str = "core-010"; // a (0) Spell: keeps the turn from ending by itself with no mana left
 
     /// The `counterChanged` events, as JSON.
     fn changes(s: &Scenario) -> Vec<Value> {
@@ -113,6 +114,22 @@ mod tests {
 
     mod m29_forbiddenous_factory {
         use super::*;
+
+        /// Issue #3138: it costs (2), from (3), on both faces: refused with 1 mana, played with 2.
+        #[test]
+        fn issue_3138_it_costs_2_on_both_faces() {
+            for radiant in [false, true] {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": FACTORY, "radiant": radiant }, FREE], "library": filler(6) },
+                    "p2": { "hand": [FILLER], "library": filler(6) },
+                }));
+                crate::expect_costs(&mut s, FACTORY, 2, json!({}));
+                s.state_mut().players.p1.mana.current = 2;
+                s.play(FACTORY, json!({}));
+                s.expect_mana(PlayerId::P1, 0);
+                assert_eq!(s.card(FACTORY).counters.plague, Some(3), "radiant {radiant}");
+            }
+        }
 
         mod base {
             use super::*;

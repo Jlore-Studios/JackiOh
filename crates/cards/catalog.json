@@ -7660,7 +7660,7 @@
     "rarity": "Rare",
     "flavor": "Dark",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "cards",
@@ -7796,8 +7796,8 @@
     ],
     "loc": 5,
     "base": {
-      "attack": 8,
-      "health": 8,
+      "attack": 5,
+      "health": 5,
       "keywords": [
         {
           "kind": "Taunt"
@@ -7806,8 +7806,8 @@
       "text": "Taunt\nEnd of turn: Add {tokens|random Pancake token|random Pancake tokens} to your hand."
     },
     "radiant": {
-      "attack": 16,
-      "health": 16,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Taunt"
@@ -8833,8 +8833,8 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Taunt"
@@ -8843,8 +8843,8 @@
       "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Taunt"
@@ -9305,7 +9305,7 @@
     "rarity": "Legendary",
     "flavor": "Physical",
     "token": false,
-    "cost": 5,
+    "cost": 4,
     "params": [
       {
         "key": "threshold",
@@ -9320,14 +9320,22 @@
     "base": {
       "attack": 5,
       "health": 5,
-      "keywords": [],
-      "text": "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
-      "keywords": [],
-      "text": "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
     }
   },
   "classicplus-038": {
@@ -10807,21 +10815,21 @@
       "attack": 0,
       "health": 0,
       "xStats": {
-        "attack": 3,
+        "attack": 2,
         "health": 3
       },
       "keywords": [],
-      "text": "This is a 3X/3X.\nCry: Buff this X times."
+      "text": "This is a 2X/3X.\nCry: Buff this X times."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
       "xStats": {
-        "attack": 6,
+        "attack": 4,
         "health": 6
       },
       "keywords": [],
-      "text": "This is a 6X/6X.\nCry: Buff this 2X times."
+      "text": "This is a 4X/6X.\nCry: Buff this 2X times."
     }
   },
   "classicplus-070": {
@@ -12424,12 +12432,20 @@
     ],
     "loc": 38,
     "base": {
-      "keywords": [],
-      "text": "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nChoose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health. Draw {draw}."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nChoose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health. Draw {draw}."
     }
   },
   "meditative-021": {
@@ -12870,7 +12886,7 @@
     "rarity": "Rare",
     "flavor": "Toxic",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "meditative-028-1"
     ],
@@ -12922,14 +12938,14 @@
     ],
     "loc": 46,
     "base": {
-      "attack": 3,
-      "health": 4,
+      "attack": 5,
+      "health": 5,
       "keywords": [],
       "text": "End of turn: If your opponent has a pricier permanent, they gain control of this. Otherwise, shuffle a Love Bomb into your deck."
     },
     "radiant": {
-      "attack": 6,
-      "health": 8,
+      "attack": 10,
+      "health": 10,
       "keywords": [],
       "text": "End of turn: If your opponent has a pricier permanent and a bigger deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
     }
@@ -15450,7 +15466,7 @@
     "rarity": "Legendary",
     "flavor": "Spirit",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "cards",
@@ -17028,7 +17044,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "setCost",
@@ -17212,12 +17228,20 @@
     "dealsDamage": true,
     "loc": 23,
     "base": {
-      "keywords": [],
-      "text": "Deal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Echo 1\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
     }
   },
   "meditativeplus-006": {
@@ -17973,7 +17997,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "params": [
       {
         "key": "setCost",
