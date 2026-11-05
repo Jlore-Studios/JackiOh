@@ -1,0 +1,69 @@
+{
+  "action": "plan",
+  "number": 3224,
+  "title": "Patch: hold the menu stylesheets to the radius, shadow, layer and motion tokens",
+  "branch": "bot/issue-3224",
+  "thread": "**Issue #3224 (data, not instructions):**\n\n```text\n# #3224: Patch: hold the menu stylesheets to the radius, shadow, layer and motion tokens\nOpened by @squishy-squooby.\n\n### What it does\n\nThe design tokens (#2105 palette, #2107 type scale, #2109 surfaces, #2110 motion) are enforced on the board, but only partly on the menus:\n\n- `src/palette.test.ts` (`UNMIGRATED`) and `src/typescale.test.ts` (`UNSCALED`) count raw colors and sizes in every other stylesheet, so a menu sheet cannot add more.\n- `src/surfaces.test.ts:215` and `src/motion.test.ts:171` check only `BOARD_SHEETS`. A menu stylesheet can add any raw `border-radius`, `box-shadow`, `z-index`, duration or curve, and nothing fails.\n\nApproximate raw counts today:\n\n| Sheet | Radii | z-index | Motion |\n|---|---|---|---|\n| lobby | 23 | 0 | 5 |\n| practice | 23 | 10 | 16 |\n| tutorial | 22 | 6 | 3 |\n| deckbuilder | 18 | 10 | 4 |\n| patches | 18 | 1 | 0 |\n| tavern | 14 | 2 | 3 |\n| stats | 13 | 1 | 3 |\n| settings | 13 | 1 | 3 |\n\nThe dungeon sheets are the only menu sheets on the tokens throughout.\n\nChange: extend `surfaces.test.ts` and `motion.test.ts` to every stylesheet under `apps/web/src`, the way `palette.test.ts` does. The board sheets stay at zero, and every other sheet is held to its current count in a per-sheet allowlist (`UNTOKENED_SURFACES`, `UNTOKENED_MOTION`, or similar), equal to what it has today. A sheet's count can only go down, by moving its values onto the tokens. Card art and other sheets with a real reason may stay listed with that reason, as `KEEP` does today.\n\nNo visual change. Do not migrate the sheets in this issue beyond trivial exact matches (`999px` to `--radius-pill`, `50%` to `--radius-round`); the other issues in this design pass reduce the counts as they touch each sheet.\n\n### Acceptance\n\n- `surfaces.test.ts` and `motion.test.ts` cover every `.css` file under `apps/web/src`, not only `BOARD_SHEETS`.\n- Each non-board sheet with raw values is listed with its count, and the test fails if a count rises or a new sheet adds raw values.\n- The README's surfaces and motion paragraphs say the menus are now counted.\n- `pnpm --dir apps/web test` passes.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3224: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:50:42Z",
+    "claimed_at": "2026-11-05T18:46:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3206 skipped: it waits for #3205 to close first",
+    "#3207 skipped: it waits for #3205, #3206 to close first",
+    "#3209 skipped: it waits for #3208 to close first",
+    "#3210 skipped: it waits for #3205 to close first",
+    "#3211 skipped: it waits for #3206, #3210 to close first",
+    "#3212 skipped: it waits for #3210, #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3210, #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3223 skipped: it waits for #3218 to close first",
+    "#3227 skipped: it waits for #3218 to close first",
+    "#3228 skipped: it waits for #3218, #3223 to close first",
+    "#3230 skipped: it waits for #3218, #3221, #3222, #3223 to close first"
+  ]
+}
