@@ -26,7 +26,6 @@ import type { ActionBody } from "@jackioh/shared";
 import type { RunAction } from "@jackioh/run";
 
 import "../../auth/tavern.css";
-import { customCardsOfDeck } from "../../creator/useCustomCards.ts";
 import Game from "../../game/Game.tsx";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
@@ -85,13 +84,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const setupRef = useRef(setup);
   setupRef.current = setup;
 
-  // §12.9, R915006: in the Sandbox the run's pool holds the creator's custom cards (DR1, B21), which
-  // the game must carry when either deck names one: the run's own copy, kept since it started.
-  const decks = useMemo(() => (setup === null ? [] : [...setup.humanDeck, ...setup.enemyDeck]), [setup]);
-  const cards = useMemo(() => customCardsOfDeck(decks, dungeon.customCards).cards, [decks, dungeon.customCards]);
-  const cardsRef = useRef(cards);
-  cardsRef.current = cards;
-
   // Read when a fight starts, so a prop change mid-game does not tear it down.
   const factory = useRef(hostFactory ?? defaultHostFactory);
   factory.current = hostFactory ?? defaultHostFactory;
@@ -106,7 +98,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     if (fight === null) return;
     const next = createPracticeController({ host: factory.current(), pacing: pace.current });
     setController(next);
-    const carried = cardsRef.current;
     // B22: the AI plays the enemy at p2; `run` replaces the deck, the difficulty's handicap and the seed.
     void next.start({
       seed: fight.seed,
@@ -114,7 +105,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       humanSeat: "p1",
       deck: { kind: "random" },
       run: fight,
-      ...(carried.length === 0 ? {} : { customCards: carried }),
     });
     return () => {
       next.dispose();

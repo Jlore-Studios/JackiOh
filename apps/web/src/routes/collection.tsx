@@ -1,4 +1,4 @@
-// `/collection`: the hub of what the account owns and makes (SPEC §14, #1307, #1579, R1579000): four
+// `/collection`: the hub of what the account owns and makes (SPEC §14, #1307, #1579, R1579000): three
 // doors. Cards and Cosmetics open in place by `?section=`, so Back and Forward move between them and
 // the hub. Gated like `/account` (main.tsx). Every panel renders what the server answered and decides
 // nothing (CLAUDE.md rule 7); each reads for itself, so one refused read never blanks the others (#1691).
@@ -179,7 +179,7 @@ export default function CollectionRoute({ token }: { token: string }): ReactElem
   );
 }
 
-/** The four doors; each text is its own literal, so the translation guard sees it. */
+/** The three doors; each text is its own literal, so the translation guard sees it. */
 function Hub(): ReactElement {
   return (
     <>
@@ -208,14 +208,6 @@ function Hub(): ReactElement {
           onClick={followInApp(paths.collectionSection("cosmetics"))}
         >
           <span className="collection-door__title">{t("Cosmetics")}</span>
-        </a>
-        <a
-          className="collection-door"
-          href={paths.creator}
-          data-testid={collectionTestid.door("builder")}
-          onClick={followInApp(paths.creator)}
-        >
-          <span className="collection-door__title">{t("Card builder")}</span>
         </a>
       </nav>
     </>

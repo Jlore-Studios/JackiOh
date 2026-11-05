@@ -8,20 +8,17 @@
 // replays a kept run, `runScore` and `runEmbers` price a finished one. This store holds their results.
 //
 // A run is kept as its `RunFile`: its setup, the unlocks it started from and every action taken (B19).
-// A reload folds it back; the custom cards its pool held when it started are kept beside it, so a later
-// edit of the creator's cards never changes a run that is under way (B21). A run that reaches `won` or
+// A reload folds it back. A run that reaches `won` or
 // `dead` settles once (B20): a `RunRecord` joins the history, what it extracted joins the unlocks and its
 // Embers join the balance, and the kept run is cleared. The finished state stays in memory, for the
 // run-over screen (part F), until `abandon()` leaves it; a reload finds the start screen.
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
-import type { CustomCard } from "@jackioh/shared";
 import type { RunAction, RunContent, RunFile, RunSetup, RunState, RunStats, RunUnlocks } from "@jackioh/run";
 
 import { t } from "../i18n/i18n.ts";
 import { messageOf } from "../net/errors.ts";
-import { useAccount } from "../net/gate.ts";
 import { getStored, removeStored, setStored } from "../net/storage.ts";
 import {
   runCheckSetup,
@@ -47,7 +44,6 @@ import {
   DUNGEON_RUN_STEP,
   DUNGEON_STORAGE_VERSION,
 } from "./config.ts";
-import { useSandboxCustomCards } from "./customCards.ts";
 import { todayDate } from "./seed.ts";
 
 export type DungeonMode = "sandbox" | "campaign";
@@ -72,11 +68,6 @@ export type RunRecord = {
 
 export type Dungeon = {
   content: RunContent;
-  /**
-   * The custom cards `content`'s pool holds, as a game carries them: the run's kept copy while a run
-   * stands, so its fights deal the cards its pool was dealt from (B21), else the account's.
-   */
-  customCards: CustomCard[];
   progress: DungeonProgress;
   run: RunState | null;
   /** `Date.now()` when the run started, for the timer. */
@@ -96,7 +87,7 @@ export type Dungeon = {
 type DailyCount = { date: string; started: number };
 
 /** The run on its way, as the device keeps it. */
-type KeptRun = { file: RunFile; customCards: CustomCard[]; startedAt: number; daily: boolean };
+type KeptRun = { file: RunFile; startedAt: number; daily: boolean };
 
 /** The run the page plays: the kept one folded, with the content it folded on. */
 type Live = KeptRun & { run: RunState; content: RunContent };
@@ -156,10 +147,9 @@ function parseFile(raw: unknown): RunFile | null {
 function parseKept(raw: unknown): KeptRun | null {
   if (!isRecord(raw) || raw.v !== DUNGEON_STORAGE_VERSION) return null;
   const file = parseFile(raw.file);
-  const { customCards, startedAt, daily } = raw;
-  if (file === null || !Array.isArray(customCards) || !customCards.every(isRecord)) return null;
-  if (!isCount(startedAt) || typeof daily !== "boolean") return null;
-  return { file, customCards: customCards as unknown as CustomCard[], startedAt, daily };
+  const { startedAt, daily } = raw;
+  if (file === null || !isCount(startedAt) || typeof daily !== "boolean") return null;
+  return { file, startedAt, daily };
 }
 
 function parseDaily(raw: unknown): DailyCount | null {
@@ -217,24 +207,19 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
-// The content a run is dealt from: built once per list of custom cards
+// The content a run is dealt from: the compiled-in catalog's, built once
 
-const contents = new WeakMap<readonly CustomCard[], RunContent>();
+let compiled: RunContent | null = null;
 
-/** B21: `runContent` of these custom cards, built once for the same list. */
-function contentFor(customCards: CustomCard[]): RunContent {
-  let content = contents.get(customCards);
-  if (content === undefined) {
-    content = runContent(customCards);
-    contents.set(customCards, content);
-  }
-  return content;
+function contentOf(): RunContent {
+  compiled ??= runContent();
+  return compiled;
 }
 
 /** B19: the kept run folded back on the content it started on, or null when it will not fold. */
 function foldKept(kept: KeptRun): Live | null {
   try {
-    const content = runContent(kept.customCards);
+    const content = contentOf();
     const folded = runFold(kept.file, content);
     return "error" in folded ? null : { ...kept, run: folded.state, content };
   } catch {
@@ -257,7 +242,7 @@ function loadCore(): Core {
 }
 
 function keptOf(live: Live): KeptRun {
-  return { file: live.file, customCards: live.customCards, startedAt: live.startedAt, daily: live.daily };
+  return { file: live.file, startedAt: live.startedAt, daily: live.daily };
 }
 
 function persistProgress(core: Core): void {
@@ -320,6 +305,7 @@ function subscribe(listener: () => void): () => void {
 /** Tests: forget everything read, so the next read finds the storage as the test left it. */
 export function __resetDungeonForTests(): void {
   core = null;
+  compiled = null;
   listeners.clear();
   if (storageListening) window.removeEventListener("storage", onStorage);
   storageListening = false;
@@ -380,11 +366,11 @@ function settle(from: Core, live: Live, now: number): Core {
   };
 }
 
-function startRun(setup: RunSetup, customCards: CustomCard[]): string | null {
+function startRun(setup: RunSetup): string | null {
   const from = current();
   if (from.live !== null && !runFinished(from.live.run)) return t("Finish or abandon the run in progress first.");
   try {
-    const content = contentFor(customCards);
+    const content = contentOf();
     const { unlocks } = from.progress;
     const refusal = runCheckSetup(setup, unlocks, content);
     if (refusal !== null) return refusal;
@@ -395,7 +381,6 @@ function startRun(setup: RunSetup, customCards: CustomCard[]): string | null {
     const daily = setup.seed === runDailySeed(date, dailyRunNumber(date));
     const live: Live = {
       file: { setup, unlocks, log: [] },
-      customCards,
       startedAt: Date.now(),
       daily,
       run: created.state,
@@ -485,30 +470,22 @@ function snapshot(): Core {
 }
 
 /**
- * The Dungeon Run's state and verbs. In the Sandbox a run's pool takes the custom cards an active
- * account has saved (B21); a run under way keeps the cards it started with. Each verb answers the
- * run's own refusal, word for word, or null.
+ * The Dungeon Run's state and verbs. Each verb answers the run's own refusal, word for word, or null.
  */
 export function useDungeon(): Dungeon {
-  const account = useAccount();
-  const customCards = useSandboxCustomCards(account);
   const { progress, live } = useSyncExternalStore(subscribe, snapshot, snapshot);
-  const fresh = useMemo(() => contentFor(customCards), [customCards]);
-  const start = useCallback((setup: RunSetup) => startRun(setup, customCards), [customCards]);
-  const content = live === null ? fresh : live.content;
-  const cards = live === null ? customCards : live.customCards;
+  const content = live === null ? contentOf() : live.content;
   return useMemo(
     () => ({
       content,
-      customCards: cards,
       progress,
       run: live === null ? null : live.run,
       startedAt: live === null ? null : live.startedAt,
-      start,
+      start: startRun,
       act: actOn,
       abandon: abandonRun,
       buyLevel: buyNextLevel,
     }),
-    [content, cards, progress, live, start],
+    [content, progress, live],
   );
 }

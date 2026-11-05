@@ -1,0 +1,129 @@
+/*
+ * R3013002: a card's proficiency stamp (ProficiencyStamp.tsx, SPEC §14.14). Each level is filled and inked in its
+ * own pair of the palette's colours, none in Radiant's gold window (R2725004), and the top level's ribbon tails
+ * take a cool silver accent.
+ *
+ * The slot mirrors the set mark (setmark.css) across the face: in the band between the name ribbon and the rules
+ * box, left of the rarity gem, so it clears the cost gem (top left), the crest (top centre), the name, the gem,
+ * the set mark, the rules box, the type line, the stats (bottom corners) and every Radiant mark (the gold text and
+ * stats). It moves with the band in the long, longest and compact layouts, as the set mark does. A small face (a
+ * hand card; 149 mirrors FACE_TEXT_MIN_HEIGHT_PX) has no band: the stamp sits at the foot's centre, between a
+ * Unit's attack and health, under the name. A full-art face has no band either: it sits under the cost gem. The
+ * board minion carries it at its right edge just over the name plate, outside the portrait's oval and clear of
+ * the state rail centred over the plate. It never moves and takes no pointer.
+ */
+
+.cf-stamp {
+  --stamp-fill: var(--pal-slate-800);
+  --stamp-ink: var(--pal-slate-400);
+  --stamp-accent: var(--pal-slate-100);
+
+  display: block;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+.cf-stamp[data-stamp="2"] {
+  --stamp-fill: var(--pal-green-900);
+  --stamp-ink: var(--pal-green-400);
+}
+
+.cf-stamp[data-stamp="3"] {
+  --stamp-fill: var(--pal-blue-900);
+  --stamp-ink: var(--pal-sky-300);
+}
+
+.cf-stamp[data-stamp="4"] {
+  --stamp-fill: var(--pal-violet-700);
+  --stamp-ink: var(--pal-violet-300);
+}
+
+.cf-stamp[data-stamp="5"] {
+  --stamp-fill: var(--pal-red-900);
+  --stamp-ink: var(--pal-red-300);
+}
+
+.cf-stamp > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.cf-stamp-rim {
+  fill: var(--stamp-fill);
+  stroke: var(--stamp-ink);
+}
+
+path.cf-stamp-rim {
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.cf-stamp-inner {
+  fill: none;
+  stroke: var(--stamp-ink);
+}
+
+.cf-stamp-star {
+  fill: var(--stamp-ink);
+}
+
+.cf-stamp-tail {
+  fill: var(--stamp-accent);
+  stroke: var(--stamp-fill);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+/* The slot on a face: in the band between the name ribbon and the rules box, mirroring the set mark. */
+.cf .cf-stamp {
+  position: absolute;
+  z-index: 3;
+  top: 49.9cqh;
+  left: 11cqw;
+  height: 5.2cqh;
+}
+
+/* The long layouts move the band up after the shorter art window; the stamp goes with it, as the set mark does. */
+.cf[data-long="true"] .cf-stamp {
+  top: 32.9cqh;
+}
+
+.cf[data-longest="true"] .cf-stamp {
+  top: 23.4cqh;
+}
+
+/* A face-up backrow card at a size that has room: level with its gem. */
+.cf[data-layout="compact"] .cf-stamp {
+  top: 70.7cqh;
+}
+
+/* A full-art face: under the cost gem, on the art's left edge, clear of the banner at the foot. */
+.cf[data-full-art="true"] .cf-stamp {
+  top: 25cqh;
+  left: 3cqw;
+  height: 7cqh;
+}
+
+/* A small face: at the foot's centre, between a Unit's attack and health, under the name. */
+@container cardface (max-height: 149px) {
+  .cf:not([data-full-art="true"]):not([data-layout="minion"]) .cf-stamp {
+    top: auto;
+    bottom: 0.5cqh;
+    left: 50%;
+    height: 8.5cqh;
+    translate: -50% 0;
+  }
+}
+
+/* The board minion: at its right edge, just over the name plate. */
+.cf[data-layout="minion"] .cf-stamp {
+  top: auto;
+  right: 0.5cqw;
+  bottom: calc(var(--mf-stat, 26cqh) + var(--mf-plate, 11cqh) + 1cqh);
+  left: auto;
+  width: 12cqw;
+  height: auto;
+  translate: none;
+}

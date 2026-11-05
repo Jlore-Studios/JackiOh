@@ -23,7 +23,7 @@ export function settledThroughAiTurn(): void {
 
 /**
  * R9: select every mulligan card, then confirm. `bootTimeout` is how long the spec gives the practice
- * worker to boot before the mulligan shows (spec 40's also loads the Luau module).
+ * worker to boot before the mulligan shows.
  */
 export function keepWholeHand(bootTimeout: number): void {
   cy.get(promptOf("mulligan"), { timeout: bootTimeout }).should("be.visible");

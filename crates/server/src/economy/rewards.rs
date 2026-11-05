@@ -12,6 +12,8 @@
 //!   UTC day the game ended in ([[R1483000]]): the game that crosses it is paid the part that fits, the
 //!   ones after it no Jlore (and no Jlore row); XP and quests are paid in full. Quest and track Jlore
 //!   neither count nor stop.
+//! - A ladder, unranked or Conquest game also counts the cards each seat played toward its proficiency
+//!   (§14.14, `proficiency::add_plays`, [[R3013000]]).
 //! - A new account starts with its tracks' first rewards ([`pay_starting_rewards`], [[R1310000]]); an
 //!   older set's track pays its first level when it unlocks ([`pay_xp`], [[R1302003]]).
 //!
@@ -24,6 +26,7 @@ use jackioh_engine::{ActionBody, PlayerId};
 use serde::{Deserialize, Serialize};
 
 use super::math::{level_for_xp, level_span_xp, xp_to_next_level};
+use super::proficiency::{add_plays, counts_proficiency};
 use super::quests::{GameTally, QuestDef, move_quests, quest_xp};
 use super::store::{
     EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, SetTrack, TrackGrant,
@@ -72,6 +75,9 @@ pub struct GameSummary {
     pub bot: bool,
     /// What the seat did, as the quests count it (§14.9).
     pub tally: GameTally,
+    /// [[R3013000]]: the cards the seat played that count toward its proficiency, one id per play
+    /// (`proficiency::proficiency_plays`); counted only in a mode that counts them.
+    pub proficiency: Vec<String>,
 }
 
 /// Where one set track stands (§14.7), as `GET /api/tracks` spells it (`api::economy::get_tracks`):
@@ -291,6 +297,10 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     )
     .await?;
     let completed = move_quests(tx, summary).await?;
+    // [[R3013000]]: the game's plays, in this transaction, so they go with the game's record.
+    if counts_proficiency(summary.mode) {
+        add_plays(tx, &summary.profile_id, &summary.proficiency, summary.at).await?;
+    }
     let after = tx.economy_tracks_get(&summary.profile_id).await?;
     Ok(GameEconomy {
         jlore,
@@ -687,6 +697,7 @@ mod tests {
             at: 42,
             bot: false,
             tally: GameTally::default(),
+            proficiency: Vec::new(),
         };
         assert_eq!(summary.player, PlayerId::P1);
         assert_eq!(summary.won, Some(true));

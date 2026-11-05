@@ -11,7 +11,8 @@
 //! opening card packs (#1301); `tokens`, the token bars and their tokens (§14.5, #1305); `cosmetic_packs`,
 //! cosmetic packs and the Chase Shard bar (§14.6, #1306); `idempotency`, a spend's `Idempotency-Key`
 //! (§14.11, #2124, R2124000); `spend_slots`, one spend at a time per account (§14.11, #2378, R2378000);
-//! and `news`, the news entries and the reward each pays once (§14.13, #2875, R2875000).
+//! `news`, the news entries and the reward each pays once (§14.13, #2875, R2875000); and `proficiency`,
+//! each card's plays and level, counted with a game's pay (§14.14, #3013, R3013000).
 
 pub mod cosmetic_packs;
 pub mod idempotency;
@@ -19,6 +20,7 @@ pub mod math;
 pub mod news;
 pub mod packs;
 pub mod practice;
+pub mod proficiency;
 pub mod quests;
 pub mod rewards;
 pub mod roll;

@@ -80,7 +80,6 @@ export const routeChunks = {
   collection: routeChunk(() => import("./collection.tsx")),
   shop: routeChunk(() => import("./shop.tsx")),
   stats: routeChunk(() => import("./stats.tsx")),
-  creator: routeChunk(() => import("./creator.tsx")),
   together: routeChunk(() => import("../together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute }))),
   watch: routeChunk(() => import("../together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute }))),
 };

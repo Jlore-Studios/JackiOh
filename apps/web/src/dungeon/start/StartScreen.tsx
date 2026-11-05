@@ -57,7 +57,7 @@ function toggled(held: readonly string[], id: string): string[] {
   return held.includes(id) ? held.filter((one) => one !== id) : [...held, id];
 }
 
-/** One pool card drawn as the deck builder draws it, from the catalog; a custom card, with none, by its name and type. */
+/** One pool card drawn as the deck builder draws it, from the catalog; a card with none, by its name and type. */
 function PoolFace({ card }: { card: RunPoolCard }): ReactElement {
   const def = CATALOG[card.id];
   return (
@@ -201,7 +201,7 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
   const [pickedCards, setPickedCards] = useState<string[]>([]);
   const [pickedRelics, setPickedRelics] = useState<string[]>([]);
   const [pickedCurses, setPickedCurses] = useState<string[]>([]);
-  // A pick the pool no longer offers (the custom cards changed) is no pick.
+  // A pick the pool no longer offers is no pick.
   const cards = useMemo(() => pickedCards.filter((id) => offered.some((card) => card.id === id)), [pickedCards, offered]);
   const taken = useMemo(() => pickedRelics.filter((id) => relics.some((relic) => relic.id === id)), [pickedRelics, relics]);
   const curses = useMemo(
@@ -233,7 +233,7 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
             <input type="radio" name="dungeon-mode" checked readOnly data-testid={dungeonTestid.modeSandbox} />
             <span>
               <span className="dungeon-choice__name">{t("Sandbox")}</span>
-              <span className="dungeon-choice__note">{t("Offline, on this device. Your custom cards join the pool.")}</span>
+              <span className="dungeon-choice__note">{t("Offline, on this device.")}</span>
             </span>
           </label>
           <label className="dungeon-choice" data-selected="false" data-disabled="true">

@@ -2,12 +2,14 @@
 //! feature vectors derived from `redact(state, seat)` (R185, R1006000).
 //! Dense features include life, mana, unit stats through §10.4 layers (`unit_view`), keywords,
 //! and hand distribution with Radiant counts (R1012004, #1143).
-//! Sparse features track board, hand, and readable backrow card counts.
+//! Sparse features track board, hand, and readable backrow card counts, and the keys of what each such
+//! card is (`attributes`, R3112000).
 //! `FEATURES_VERSION` tracks the layout version. Pure (CLAUDE.md rule 4).
 
 use jackioh_engine::{
-    GameState, Keyword, KeywordKind, PlayerId, Position, active_units_of, backrow_is_public, cannot_attack,
-    effective_life, find_def, has_keyword, hero_armor_of, owed_mana_of, query_cost, unit_view,
+    CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, active_units_of, backrow_is_public,
+    cannot_attack, card_type_of_face, effective_life, find_def, has_keyword, hero_armor_of, owed_mana_of,
+    query_cost, running_face, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +18,20 @@ use crate::observe::redact;
 
 /// The layout `features` writes. Bump it with any change to what a feature means or where it sits.
 /// 2: a Radiant card in the seat's own hand (R1012004).
-pub const FEATURES_VERSION: u32 = 2;
+/// 3: what each card the seat can name is, beside its id (R3112000).
+pub const FEATURES_VERSION: u32 = 3;
+
+/// R3112001: the oldest version whose networks read this layout as they were fitted. Every version since
+/// then only added sparse key families, which such a network has no row for, so they are no input to it.
+/// Raise it to `FEATURES_VERSION` with any change to the dense layout or to an existing key's meaning.
+pub const FEATURES_READ_SINCE: u32 = 2;
+
+/// R3112000: the highest cost, attack or health an attribute key names; a card's number at or above it
+/// names it.
+pub const ATTRIBUTE_TOP: i32 = 10;
+
+/// The zones of the keys that name a card by id, `<zone>:<side>:<card id>`.
+const ID_ZONES: [&str; 4] = ["board", "hand", "backrow", "hand_radiant"];
 
 /// The highest own-hand cost bin: a card costing this or more counts in the last bin.
 pub const HAND_COST_BINS: i32 = 8;
@@ -267,27 +282,68 @@ fn readable_by(view: &GameState, card: &jackioh_engine::CardInstance, seat: Play
 }
 
 /// Every card the seat can name on the board, in its own hand and readable in a backrow, one key per
-/// copy (`tally` adds them up).
+/// copy (`tally` adds them up), and the keys of what each such card is (`attributes`, R3112000).
 fn sparse_cards(view: &GameState, public: &GameState, seat: PlayerId, out: &mut Vec<(String, i32)>) {
     for (player, side) in [(seat, SIDES[0]), (seat.opponent(), SIDES[1])] {
         for unit in active_units_of(public, player) {
             if find_def(Some(view), &unit.def_id).is_some() {
                 out.push((format!("board:{side}:{}", unit.def_id), 1));
+                attributes(view, unit, "board", side, out);
             }
         }
         for card in view.players[player].backrow.iter().flatten() {
             if readable_by(view, card, seat) {
                 out.push((format!("backrow:{side}:{}", card.def_id), 1));
+                attributes(view, card, "backrow", side, out);
             }
         }
     }
     for card in &view.players[seat].hand {
         if find_def(Some(view), &card.def_id).is_some() {
             out.push((format!("hand:{}:{}", SIDES[0], card.def_id), 1));
+            attributes(view, card, "hand", SIDES[0], out);
         }
     }
     for card in radiant_in_hand(view, seat) {
         out.push((format!("hand_radiant:{}:{}", SIDES[0], card.def_id), 1));
+    }
+}
+
+/// R3112000: the keys of what `card` is, for a card the seat can name in `zone` on `side`, so a card the
+/// network has no id row for still shares what it learned of cards like it: its running face's type
+/// (§5.2), its printed cost (R65's `query_cost`) and tags, its running face's keywords (each counted as
+/// `keyword_weight` counts it) and printed attack and health, and whether it is Radiant. A number is
+/// clamped to `[0, ATTRIBUTE_TOP]`. `card` must have a definition in `view`; a placeholder gives none.
+fn attributes(view: &GameState, card: &CardInstance, zone: &str, side: &str, out: &mut Vec<(String, i32)>) {
+    let Some(def) = find_def(Some(view), &card.def_id) else {
+        return;
+    };
+    let face = running_face(view, card);
+    let kind = card_type_of_face(view, &card.def_id, card.radiant);
+    out.push((format!("{zone}.type:{side}:{}", kind.as_str()), 1));
+    out.push((
+        format!("{zone}.cost:{side}:{}", query_cost(def).clamp(0, ATTRIBUTE_TOP)),
+        1,
+    ));
+    for tag in &def.tags {
+        out.push((format!("{zone}.tag:{side}:{}", tag.as_str()), 1));
+    }
+    for keyword in &face.keywords {
+        out.push((
+            format!("{zone}.kw:{side}:{}", keyword.kind().as_str()),
+            keyword_weight(keyword),
+        ));
+    }
+    for (stat, value) in [("attack", face.attack), ("health", face.health)] {
+        if let Some(value) = value {
+            out.push((
+                format!("{zone}.{stat}:{side}:{}", value.clamp(0, ATTRIBUTE_TOP)),
+                1,
+            ));
+        }
+    }
+    if card.radiant {
+        out.push((format!("{zone}.face:{side}:Radiant"), 1));
     }
 }
 
@@ -297,6 +353,14 @@ fn radiant_in_hand(view: &GameState, seat: PlayerId) -> impl Iterator<Item = &ja
         .hand
         .iter()
         .filter(move |card| card.radiant && find_def(Some(view), &card.def_id).is_some())
+}
+
+/// The zone and the card id of a key that names a card by id (`<zone>:<side>:<card id>`), or `None` for
+/// any other key, an attribute key among them (R3112000).
+pub fn card_id_of_key(key: &str) -> Option<(&str, &str)> {
+    let mut parts = key.splitn(3, ':');
+    let (zone, _side, id) = (parts.next()?, parts.next()?, parts.next()?);
+    ID_ZONES.contains(&zone).then_some((zone, id))
 }
 
 /// `pairs` sorted by key with each key's counts added: one entry per key.
@@ -328,6 +392,18 @@ mod tests {
         sorted.sort();
         sorted.dedup();
         assert_eq!(sorted.len(), names.len(), "every dense name is unique");
+    }
+
+    #[test]
+    fn card_id_of_key_reads_only_the_keys_that_name_a_card() {
+        assert_eq!(card_id_of_key("board:own:core-011"), Some(("board", "core-011")));
+        assert_eq!(
+            card_id_of_key("hand_radiant:own:core-008"),
+            Some(("hand_radiant", "core-008"))
+        );
+        assert_eq!(card_id_of_key("board.cost:own:1"), None);
+        assert_eq!(card_id_of_key("board:own"), None);
+        assert_eq!(card_id_of_key("own.life"), None);
     }
 
     #[test]

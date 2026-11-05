@@ -1,6 +1,6 @@
 [package]
 name = "jackioh-wasm-core"
-description = "The bodies both browser modules bind (#1505): JSON strings in and out, the state cache and each binding's work, which `crates/wasm` wraps for wasm-bindgen and `crates/wasm/luau` for C."
+description = "The bodies the three wrappers bind (#1505, #3093): JSON strings in and out, the state cache and each binding's work, which `crates/wasm` wraps for wasm-bindgen, `crates/wasm/luau` for C through emscripten and `crates/wasm/c` for C on a plain wasm32-unknown-unknown link."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

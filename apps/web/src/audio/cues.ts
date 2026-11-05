@@ -613,7 +613,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   secretChosen: { sfx: "trapSet", cues: () => [sfx("trapSet")] },
   secretRevealed: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   predicted: { sfx: "notify", cues: () => [sfx("notify")] },
-  // R915004: a custom card's script failed: the board's notice.
+  // A hook that failed and did nothing.
   scriptFailed: { sfx: "notify", cues: () => [sfx("notify")] },
   // R831003: KY's Papaya's curve sweeps across the board.
   curveDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },

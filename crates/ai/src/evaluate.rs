@@ -33,18 +33,19 @@ use jackioh_engine::{
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
     card_type_of_face, credit_lapsing, death_hook_of, effective_cost, effective_life, exit_mark, face_of,
     find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
-    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
-    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back,
-    trigger_holders_with_hook, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering, is_standing_unit,
+    is_starship_piece, is_temporary_card, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
+    query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES, AI_DEATH_PROBE_NODES,
-    AI_EVAL, AI_EXTRA_TURN_CARDS, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_EVAL, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -544,8 +545,8 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     } else {
         temporary
     };
-    // #1886: a card that owes an extra turn once cast (R846).
-    let turn = if AI_EXTRA_TURN_CARDS.contains(&card.def_id.as_str()) {
+    // #1886: a card that owes an extra turn once cast (R846), as the build finds it (#3116).
+    let turn = if is_extra_turn_card(&card.def_id) {
         w.extra_turn_in_hand * w.extra_turn
     } else {
         0.0

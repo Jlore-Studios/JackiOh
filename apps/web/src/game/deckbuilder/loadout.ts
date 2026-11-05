@@ -3,16 +3,10 @@
 // `@jackioh/validator`'s alone (SPEC §9.4, R253), called from workshop.ts; this module only turns
 // `GET /api/collection` into the validator's `Collection` and lists the cards a deck could hold.
 
-import { setShips, type SetName } from "@jackioh/shared";
+import { setShips } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { isGlitch } from "../../cards/glitch.ts";
-
-/**
- * §12.1, R915000: a custom card's set, which never ships. The deck builder shelves the account's own
- * custom cards beside the catalog (R915005: a deck may hold them, and then plays only in practice).
- */
-export const CUSTOM_SET: SetName = "Custom";
 
 /** `GET /api/collection`'s entries, as the validator wants them. */
 export function collectionFrom(
@@ -36,8 +30,8 @@ export function poolFrom(catalog: CatalogSnapshot, collection: Collection | null
     if (def.token || def.tags.includes("Token")) return false;
     // R674: Glitch is never in a pool, a token or not.
     if (isGlitch(id)) return false;
-    // R1420: nor is a card of a set that has not shipped yet; R915005: the player's own custom card is.
-    if (!setShips(def.set) && def.set !== CUSTOM_SET) return false;
+    // R1420: nor is a card of a set that has not shipped yet.
+    if (!setShips(def.set)) return false;
     if (collection === null) return true;
     return (collection[id] ?? 0) > 0;
   });

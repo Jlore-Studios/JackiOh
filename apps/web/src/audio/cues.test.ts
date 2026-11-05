@@ -226,7 +226,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
-  scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
+  scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "core-001", message: "cry failed on line 3: boom" },
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },

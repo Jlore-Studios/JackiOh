@@ -7,8 +7,8 @@
 //! `face_threat` is pinned exactly where its surface text fixes the arithmetic.
 
 use jackioh_ai::{
-    AI_EVAL, AI_EXTRA_TURN_CARDS, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, Prices, evaluate, face_threat,
-    face_threat_with, redact, unit_worth,
+    AI_EVAL, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, Prices, evaluate, face_threat, face_threat_with, redact,
+    unit_worth,
 };
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardInstance, CardType, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword,
@@ -653,8 +653,9 @@ mod duos_life_r964000 {
 mod banked_state_1086 {
     use super::*;
 
+    use jackioh_ai::EvalWeights;
     use jackioh_engine::config::CALL_TO_CHAOS_RADIANT_EFFECTS;
-    use jackioh_engine::testkit::{JADE_ASCEND_AT, JADE_BEAUTY_AT, Scenario, active_units_of};
+    use jackioh_engine::testkit::{JADE_ASCEND_AT, JADE_BEAUTY_AT, Scenario, active_units_of, card_metrics};
 
     const JADE: &str = "meditative-039-2"; // (0) Spell token: add 1 to your Jade Counter, gain 1 mana
     const BEAUTY: &str = "meditative-039-5"; // the 20/20 the counter's fifth step summons (R962)
@@ -875,6 +876,8 @@ mod banked_state_1086 {
     /// #1886: S #4.3 Event Horizon and S #4.1 Farewell, two (4) Terminus Spells Olivian Expanse offers.
     const EVENT_HORIZON: &str = "stinkyscape-004-3";
     const FAREWELL: &str = "stinkyscape-004-1";
+    /// #3116: S #4.4 Last Word, a Trap that owes its turn as it reveals.
+    const LAST_WORD: &str = "stinkyscape-004-4";
 
     #[test]
     fn r846_a_card_that_owes_an_extra_turn_counts_its_share_in_hand() {
@@ -894,7 +897,12 @@ mod banked_state_1086 {
     #[test]
     fn r846_every_card_priced_as_an_extra_turn_owes_one_when_cast() {
         register_cards();
-        for &card in AI_EXTRA_TURN_CARDS {
+        let cards = card_metrics().extra_turn_cards;
+        assert!(
+            !cards.is_empty(),
+            "setup: the build finds the cards that owe an extra turn"
+        );
+        for &card in cards {
             let def = registered_catalog()[card].clone();
             let mut s = scenario(json!({
                 "seed": "evaluate-extra-turn-cards",
@@ -910,6 +918,32 @@ mod banked_state_1086 {
                 s.state().players[AI].extra_turns.unwrap_or(0) >= 1,
                 "{card}: priced as an extra turn, but its cast owes none"
             );
+        }
+    }
+
+    /// #3116: the hand price reads the build's list (`jackioh_engine::is_extra_turn_card`), so every card
+    /// whose script owes an extra turn counts its share with no list in the AI's config to join, a Trap
+    /// that owes it on its reveal (S #4.4 Last Word) included, and a card that owes none counts nothing.
+    #[test]
+    fn r846_every_card_the_build_finds_owing_an_extra_turn_counts_its_share_in_hand() {
+        register_cards();
+        let unpriced = EvalWeights {
+            extra_turn_in_hand: 0.0,
+            ..AI_EVAL
+        };
+        let share = |card: &str| {
+            let s = board(json!({ "p1": { "hand": [card] }, "p2": { "hand": [VANILLA] } }));
+            eval(&s, AI) - evaluate(&s, AI, NextSwing::Enemy, &unpriced)
+        };
+        let cards = card_metrics().extra_turn_cards;
+        for card in [RIFT, EVENT_HORIZON, LAST_WORD] {
+            assert!(cards.contains(&card), "{card}: its script owes an extra turn");
+        }
+        for &card in cards {
+            assert_close(share(card), AI_EVAL.extra_turn_in_hand * AI_EVAL.extra_turn, 9);
+        }
+        for card in [VANILLA, FAREWELL] {
+            assert_eq!(share(card), 0.0, "{card}: owes no extra turn");
         }
     }
 
