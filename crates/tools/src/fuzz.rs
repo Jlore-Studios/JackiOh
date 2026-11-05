@@ -14,13 +14,14 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I13 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I14 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
 //! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
 //! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
 //! R2975000). Only the costly I6 (no card a seat may not read in its view or legal actions, §10.8) and I8
 //! (no unlisted play, attack, switch or activation `reduce` accepts, §4.1, §4.2, §10.2, §10.5) are sampled,
-//! by their strides; I13 reads I6's view and listing, so it rides I6's stride.
+//! by their strides; I13 reads I6's view and listing, so it rides I6's stride. I14 (every action `legalActions`
+//! lists is accepted by `reduce`, §10.2) is sampled too, at setup and by its stride.
 //!
 //! And after every action, GROWTH (#1254): each action is weighed by the events `reduce` returned, the
 //! largest number on any card instance and the instances in play, and a seed fails in the "growth" stage
@@ -103,8 +104,8 @@ use anyhow::{Context, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
-    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, malformed_actions, malformed_answers,
-    preview_every_set, prompt_blocked_action, set_ships,
+    I6_GATE_STRIDE, I8_GATE_STRIDE, I14_GATE_STRIDE, create_invariant_monitor, malformed_actions,
+    malformed_answers, preview_every_set, prompt_blocked_action, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
@@ -220,6 +221,11 @@ pub fn hidden_stride() -> usize {
 /// handicapped wave.
 pub fn unlisted_stride() -> usize {
     if is_whole_suite_sweep() { 1 } else { I8_GATE_STRIDE }
+}
+
+/// I14's stride: I14_GATE_STRIDE in the gate, the handicapped wave and the test sweep alike.
+pub fn listed_stride() -> usize {
+    I14_GATE_STRIDE
 }
 
 /// How many seeds this run plays from `first_seed()`: `--seeds 25` narrows it while chasing a failure,
@@ -895,6 +901,7 @@ fn play_game(
     let mut monitor = create_invariant_monitor(&state);
     let stride = hidden_stride();
     let unlisted_stride = unlisted_stride();
+    let listed_stride = listed_stride();
     let probe_stride = probe_stride();
     let max_actions = max_actions_per_game();
     let mut heaviest = Heaviest::default();
@@ -906,6 +913,7 @@ fn play_game(
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut opening = monitor.after(&begun.events, &state);
     opening.extend(monitor.hidden(&state));
+    opening.extend(monitor.listed(&state, probe));
     if let Some(first) = opening.first() {
         return Err(FuzzFailure::new(
             FailureStage::Invariant,
@@ -1036,6 +1044,9 @@ fn play_game(
         }
         if log.len().is_multiple_of(unlisted_stride) {
             broken.extend(monitor.unlisted(&state));
+        }
+        if log.len().is_multiple_of(listed_stride) {
+            broken.extend(monitor.listed(&state, probe));
         }
         if let Some(first) = broken.first() {
             return Err(FuzzFailure::new(
@@ -2530,7 +2541,7 @@ impl Wave {
             ("M4 fuzz", "FULL GATE", "the gate", "cargo jackioh fuzz")
         };
         let mut text = format!(
-            "[{label}] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} failed a probe, {} checkpoint mismatch(es)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  checkpoints: {} paused, {} mid-game fallback; slowest {}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s), probes every {} state(s); {}s\n",
+            "[{label}] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} failed a probe, {} checkpoint mismatch(es)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  checkpoints: {} paused, {} mid-game fallback; slowest {}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s), I14 every {} state(s), probes every {} state(s); {}s\n",
             if self.ran >= WAVE_SEEDS {
                 full.to_string()
             } else {
@@ -2561,6 +2572,7 @@ impl Wave {
             POOL_EXCLUSIONS.len(),
             hidden_stride(),
             unlisted_stride(),
+            listed_stride(),
             probe_stride(),
             round(self.elapsed_ms / MS_PER_SECOND),
         );
@@ -3624,12 +3636,16 @@ pub(crate) mod tests {
     mod fuzz_probe_stage {
         use super::*;
         use jackioh_engine::testkit::{
-            ANSWERED_MULLIGAN_ACTION, PROMPT_OPEN_END_TURN_ACTION, PROMPT_OPEN_PLAY_ACTION,
+            ANSWERED_MULLIGAN_ACTION, I14_NONCE, PROMPT_OPEN_END_TURN_ACTION, PROMPT_OPEN_PLAY_ACTION,
             UNDEALT_KEEP_ACTION,
         };
 
-        /// A reducer that ignores who sent an action and answers for the seat the game waits on.
+        /// A reducer that ignores who sent a probe's forged action and answers for the seat the game waits on.
+        /// Any other action (I14's listed ones, each sent as its own seat) reduces as sent.
         pub(super) fn seatless(state: &GameState, action: &Action) -> ReduceResult {
+            if !action.nonce.starts_with("fuzz-probe-") {
+                return reduce(state, action);
+            }
             let seat = seat_to_act(state).unwrap_or(state.active);
             reduce(
                 state,
@@ -3674,6 +3690,19 @@ pub(crate) mod tests {
             reduce(state, action)
         }
 
+        /// A reducer that refuses the concede I14 sends: every listing holds one, so the planted refusal is
+        /// reached whatever the game's deal is.
+        fn refuses_the_listed_concede(state: &GameState, action: &Action) -> ReduceResult {
+            if action.nonce == I14_NONCE && matches!(action.body, ActionBody::Concede) {
+                return ReduceResult {
+                    state: state.clone(),
+                    events: Vec::new(),
+                    error: Some("planted refusal".to_string()),
+                };
+            }
+            reduce(state, action)
+        }
+
         /// A reducer that takes any play its seat is not listed as the seat's first listed play.
         fn forgiving(state: &GameState, action: &Action) -> ReduceResult {
             if matches!(action.body, ActionBody::Play { .. }) {
@@ -3701,6 +3730,30 @@ pub(crate) mod tests {
             for (seed, probe, name) in cases {
                 assert_caught(seed, probe, name);
             }
+        }
+
+        #[test]
+        fn a_reducer_that_refuses_a_listed_action_fails_the_seed_in_the_invariant_stage() {
+            register_all();
+            let Some(failure) = fuzz_deal_probed(1, decks_for_seed(1), refuses_the_listed_concede).err()
+            else {
+                panic!("a reducer that refuses a listed action must fail seed 1 (I14, #3062)");
+            };
+            assert_eq!(failure.stage, FailureStage::Invariant, "{}", failure.message);
+            assert!(
+                failure.message.starts_with("I14 listed action refused"),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("planted refusal"), "{}", failure.message);
+            assert!(
+                failure.message.contains("seed jackioh-fuzz-1"),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[invariant]"), "{text}");
         }
 
         /// A reducer that accepts the prompt-open probe's forged actions, which the real game
