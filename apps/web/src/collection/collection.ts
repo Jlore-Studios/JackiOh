@@ -77,6 +77,11 @@ export const collectionTestid = {
   previewScrim: "collection-preview-scrim",
   previewClose: "collection-preview-close",
   previewStatus: "collection-preview-status",
+  // R3016000: a card's look as the card, in hand and on the board (LookViews), its Radiant toggle, and the hover panel that shows them (LookHover).
+  look: "collection-look",
+  lookView: (view: string) => `collection-look-${view}`,
+  lookRadiant: "collection-look-radiant",
+  lookHover: "collection-look-hover",
   // R3013001: a card's proficiency in its card view (ProficiencyPanel), its level, its plays and its stamps.
   proficiency: "collection-proficiency",
   proficiencyLevel: "collection-proficiency-level",

@@ -4219,5 +4219,8 @@
   "Guaranteed within": "保底上限",
   "Your progress": "你的进度",
   "{count} packs": "{count} 包",
-  "The percentage under a tier is how much of the card's Adjusted range lies inside that tier.": "梯队下方的百分比是这张牌的校正胜率区间落在该梯队内的比例。"
+  "The percentage under a tier is how much of the card's Adjusted range lies inside that tier.": "梯队下方的百分比是这张牌的校正胜率区间落在该梯队内的比例。",
+  "The card": "卡牌本身",
+  "In your hand": "在你的手牌中",
+  "On the board": "在棋盘上"
 }

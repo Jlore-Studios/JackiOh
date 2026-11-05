@@ -27,51 +27,9 @@ use crate::deck::DeckSlots;
 
 // The loadout
 
-/// R2655000: a card's own full-art pick: `false` (no full art), `true` (its Epic full art, as every
-/// pick before #2655 named it) or a full art's registry id, which travels as the id's text. An id
-/// is kept as written and judged where it is worn, as a foil's is (`cosmetics::full_art_picked`).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(untagged)]
-pub enum FullArtPick {
-    On(bool),
-    Id(String),
-}
-
-impl From<bool> for FullArtPick {
-    fn from(on: bool) -> FullArtPick {
-        FullArtPick::On(on)
-    }
-}
-
-impl FullArtPick {
-    /// Whether the pick prints a full art at all: `true` or any id.
-    pub fn prints(&self) -> bool {
-        !matches!(self, FullArtPick::On(false))
-    }
-
-    /// The id the pick names, if it names one rather than a switch.
-    pub fn id(&self) -> Option<&str> {
-        match self {
-            FullArtPick::Id(id) => Some(id),
-            FullArtPick::On(_) => None,
-        }
-    }
-
-    /// The pick a row of `public.card_cosmetic_picks` holds: its `full_art` switch, and the id
-    /// migration 0072 keeps beside a switch that is on.
-    pub fn of_row(full_art: Option<bool>, id: Option<String>) -> Option<FullArtPick> {
-        match (full_art, id) {
-            (Some(true), Some(id)) => Some(FullArtPick::Id(id)),
-            (Some(on), _) => Some(FullArtPick::On(on)),
-            (None, _) => None,
-        }
-    }
-}
+/// R2655000: a card's own full-art pick, the cosmetics registry's (`cosmetics::FullArtPick`, where its home
+/// is, beside `full_art_picked` that judges it): re-exported here, so `loadout::FullArtPick` still names it.
+pub use crate::cosmetics::FullArtPick;
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
 /// wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may

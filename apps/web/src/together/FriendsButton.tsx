@@ -45,6 +45,7 @@ import { attempt, messageOf } from "../net/errors.ts";
 import "../auth/tavern.css";
 import "../routes/lobby.css";
 import "./together.css";
+import "../routes/top-bar.css";
 
 /** What the server says to a challenge from a player in a game (`in_game`, `crates/server/src/api/decks.rs`), by kind of game. */
 const IN_GAME_WORDS: Readonly<Record<LiveGame["kind"], string>> = {
@@ -298,13 +299,15 @@ export function FriendsButton({ placement }: { placement: "game" | "nav" | "menu
   if (readSession() === null || reads.challengeReads === 0 || reads.refused) return null;
 
   const count = friendsBadgeCount(reads);
+  // The top bar's round control (routes/top-bar.css); the board's control bar and the match menu draw their own.
+  const bar = placement === "nav" ? " top-bar-button top-bar-button--round" : "";
 
   return (
     <>
       <button
         ref={button}
         type="button"
-        className={`friends-button friends-button--${placement}`}
+        className={`friends-button friends-button--${placement}${bar}`}
         data-testid={friendsTestid.button}
         aria-label={count > 0 ? t("Friends, {count} waiting for you", { count }) : t("Friends")}
         aria-haspopup="dialog"

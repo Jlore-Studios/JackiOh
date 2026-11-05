@@ -27,6 +27,11 @@ const _: () = assert!(PACK_SLOTS >= TRACKED_RARITIES);
 /// since a pack held its rarity, whatever that slot then granted. All three count every card
 /// pack the account opens, global and per-set alike.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 pub struct PityCounters {
     pub epic: usize,
     pub legendary: usize,
@@ -139,9 +144,9 @@ mod tests {
         COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK, COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE, PACK_FLOOR_RARITY,
         TIER_WEIGHT_TOTAL,
     };
+    use crate::economy::bars::card_bar_points;
     use crate::economy::roll::slot_tiers;
     use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds};
-    use crate::economy::tokens::card_bar_points;
     use jackioh_engine::rng::Rng;
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
 

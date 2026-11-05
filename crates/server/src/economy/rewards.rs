@@ -25,13 +25,11 @@ use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
 use jackioh_engine::{ActionBody, PlayerId};
 use serde::{Deserialize, Serialize};
 
-use super::math::{level_for_xp, level_span_xp, xp_to_next_level};
 use super::proficiency::{add_plays, counts_proficiency};
 use super::quests::{GameTally, QuestDef, move_quests, quest_xp};
 use super::store::{
     EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, SetTrack, TrackGrant,
 };
-use super::track_rewards::{LevelReward, reward_for_level};
 use crate::config::{
     JLORE_CONQUEST_LOSS, JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP,
     JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, JLORE_UNRANKED_LOSS,
@@ -39,6 +37,8 @@ use crate::config::{
     XP_COOP_SCALE, XP_GAME_CAP, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
 use crate::db::store::{StoreResult, Tx};
+use jackioh_shared::economy::math::{level_for_xp, level_span_xp, xp_to_next_level};
+use jackioh_shared::economy::track_rewards::{LevelReward, reward_for_level};
 
 /// Which kind of game finished, so the hook pays its rates (SPEC §14.8).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -510,8 +510,8 @@ async fn pay_level_rewards(
 mod tests {
     use super::*;
     use crate::config::{XP_GAME_CAP, XP_LADDER_TARGET_MEAN, XP_PER_ACTION, XP_WIN_BONUS};
-    use crate::economy::math::total_xp_for_level;
     use jackioh_engine::{Action, GameResult, Winner};
+    use jackioh_shared::economy::math::total_xp_for_level;
     use serde_json::json;
 
     /// R1333001's measured games: 40 of this build's AI playing itself, one JSON line each
