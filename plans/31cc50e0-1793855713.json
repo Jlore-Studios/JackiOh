@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3113,
+  "title": "Patch: every pull request fuzzes the cards it changes, and the fuzz samples grow with the catalog",
+  "branch": "bot/issue-3113",
+  "thread": "**Issue #3113 (data, not instructions):**\n\n```text\n# #3113: Patch: every pull request fuzzes the cards it changes, and the fuzz samples grow with the catalog\nOpened by @MaxGoetzmann.\n\n### Kind\n\nCI\n\n### Why\n\nThe game expects hundreds of new cards a month (owner, 2026-11-05), and fuzz coverage per card falls as the catalog grows:\n\n- CI's fuzz gate plays a fixed `fuzz --seeds 200` (`ci.yml`, step \"fuzz, seeds 1-200\"). `docs/ADDING_CARDS.md` \u00a74 already says a plain wave deals any one card \"in fewer than one seed in ten\", and that rate falls with every card added. A new card is fuzzed in its own pull request only if its author remembers `--cards`.\n- `cargo jackioh classify` already names \"the cards that play differently\" (R1365000).\n- The fused-pair sweep (`cargo jackioh fused-pairs`, #2381) grows as texts \u00d7 bodies, so its stride sample covers a shrinking share of the pairs.\n\n### What to change\n\nHigh level; the planner decides the details:\n\n- The pull request fuzz gate also plays the cards `classify` names, in both decks (#2387's `--cards`), in addition to the plain wave.\n- The fused-pair sample a pull request plays includes every pair with a changed card in it.\n- The daily sweeps (`super.yml`) scale their seed counts or pair samples to keep per-card coverage steady as the catalog grows, rather than playing fixed counts.\n- **Constraint:** `.github/` is a path the night bot may not change. Put the logic in `cargo jackioh`, or in a file outside `.github/` that the existing steps already read (as #3072 does for shard counts). If a one-line workflow change is truly needed, stop with `human_required` and name that line.\n- Stay within `ci.yml`'s five-minute job budget.\n\n### Acceptance\n\n- A pull request that changes one card's script shows that card dealt in its fuzz gate's games (in the log).\n- A pull request that changes no card plays the same wave as today.\n- The job stays within its budget.\n- The daily run's coverage per card is reported and does not fall when cards are added.\n\n### Blocked by, part of\n\nRelated: #2387, #2381, #3071 (classify's base), #3072 (CI config outside .github/).\n\n### Difficulty (a guess)\n\nmedium\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3113: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:19Z",
+    "claimed_at": "2026-11-05T05:15:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
