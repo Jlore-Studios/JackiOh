@@ -48,9 +48,10 @@ string_union! {
 
 string_union! {
     /// What a `craft` prompt asks for, beyond Meditative #17's free crafter (no mode): `scratch` is
-    /// Scratch Pad's empty canvas (Meditative+ #26, R1182002) — the same recipes and budget, the
-    /// client showing no presets, tooltips or hints — and `potion` and `hugePotion` the potion frame
-    /// (R1182000, R1182001), whose answer must carry that frame.
+    /// Scratch Pad's empty canvas (Meditative+ #26, R1182002) — the same recipes, on the crafter's
+    /// whole budget where #17's prompt has about 20% fewer points (R3043000), the client showing no
+    /// presets, tooltips or hints — and `potion` and `hugePotion` the potion frame (R1182000,
+    /// R1182001), whose answer must carry that frame.
     pub enum CraftMode {
         Scratch = "scratch",
         Potion = "potion",

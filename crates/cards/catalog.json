@@ -92,9 +92,12 @@
         },
         {
           "kind": "Reborn"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn"
+      "text": "Taunt, Divine Shield, Reborn, Can't Defend"
     },
     "radiant": {
       "attack": 2,
@@ -108,9 +111,12 @@
         },
         {
           "kind": "Reborn"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn\nDeath: Summon a base Right-house defender."
+      "text": "Taunt, Divine Shield, Reborn, Can't Defend\nDeath: Summon a base Right-house defender."
     }
   },
   "core-004": {
@@ -473,13 +479,13 @@
     "loc": 10,
     "base": {
       "attack": 6,
-      "health": 10,
+      "health": 8,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
       "attack": 12,
-      "health": 20,
+      "health": 16,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     }
@@ -500,8 +506,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -698,19 +704,25 @@
     "cost": 2,
     "loc": 3,
     "base": {
-      "attack": 7,
+      "attack": 6,
       "health": 1,
       "keywords": [
+        {
+          "kind": "Rush"
+        },
         {
           "kind": "First Strike"
         }
       ],
-      "text": "First Strike"
+      "text": "Rush, First Strike"
     },
     "radiant": {
-      "attack": 14,
+      "attack": 12,
       "health": 2,
       "keywords": [
+        {
+          "kind": "Rush"
+        },
         {
           "kind": "First Strike"
         },
@@ -718,7 +730,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "First Strike, Divine Shield"
+      "text": "Rush, First Strike, Divine Shield"
     }
   },
   "core-021": {
@@ -771,7 +783,7 @@
     "rarity": "Epic",
     "flavor": "Toxic",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "copies",
@@ -785,14 +797,14 @@
     ],
     "loc": 85,
     "base": {
-      "attack": 4,
-      "health": 6,
+      "attack": 2,
+      "health": 4,
       "keywords": [],
       "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon {copies|copy|copies} of it."
     },
     "radiant": {
-      "attack": 8,
-      "health": 12,
+      "attack": 4,
+      "health": 8,
       "keywords": [],
       "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Fill your board with copies of it."
     }
@@ -1405,7 +1417,7 @@
     "params": [
       {
         "key": "chance",
-        "base": 30,
+        "base": 50,
         "radiant": 100,
         "better": "up",
         "step": 10,
@@ -1437,18 +1449,29 @@
     "flavor": "Beast",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "destroys",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 8,
     "base": {
       "attack": 3,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Destroy all non-Felinor Units."
+      "text": "Cry: Destroy {destroys|random non-Felinor Unit|random non-Felinor Units}."
     },
     "radiant": {
       "attack": 6,
       "health": 20,
       "keywords": [],
-      "text": "Cry: Destroy all enemy non-Felinor Units."
+      "text": "Cry: Destroy {destroys|random enemy non-Felinor Unit|random enemy non-Felinor Units}."
     }
   },
   "core-044": {
@@ -1642,15 +1665,15 @@
     "rarity": "Rare",
     "flavor": "Dark",
     "token": false,
-    "cost": 4,
+    "cost": 5,
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit."
+      "text": "Float reduces cost.\nSteal an enemy card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Make it Radiant."
+      "text": "Float reduces cost.\nSteal an enemy card. Make it Radiant."
     }
   },
   "core-050": {
@@ -1766,16 +1789,24 @@
     "cost": 4,
     "loc": 14,
     "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Crater"
+        }
+      ],
+      "text": "Crater\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Crater"
+        }
+      ],
+      "text": "Crater\nCry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
     }
   },
   "core-053": {
@@ -2055,11 +2086,11 @@
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
     }
   },
   "core-060": {
@@ -2262,16 +2293,24 @@
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "downsides",
+        "base": 6,
+        "radiant": 6,
+        "better": "down",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow.\nAfter you take {downsides|downside|downsides} from this, make your hand Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow.\nAfter you take {downsides|downside|downsides} from this, make your hand Radiant."
     }
   },
   "core-065-1": {
@@ -2872,7 +2911,7 @@
       {
         "key": "echoGain",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -2881,11 +2920,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
+      "text": "Activate: The next Spell you play this turn gains Echo +{echoGain}. Then this goes to the graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
+      "text": "Activate: The next Spell you play this turn gains Echo +{echoGain}."
     }
   },
   "core-080": {
@@ -2983,7 +3022,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "params": [
       {
         "key": "setCost",
@@ -3081,7 +3120,7 @@
     "rarity": "Legendary",
     "flavor": "Dark",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 58,
     "base": {
       "keywords": [],
@@ -3190,9 +3229,13 @@
       "keywords": [
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
         }
       ],
-      "text": "Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies."
+      "text": "Rush, Brittle 1\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     },
     "radiant": {
       "attack": 4,
@@ -3203,9 +3246,13 @@
         },
         {
           "kind": "Divine Shield"
+        },
+        {
+          "kind": "Brittle",
+          "n": 3
         }
       ],
-      "text": "Rush, Divine Shield\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush, Divine Shield, Brittle 3\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     }
   },
   "core-090": {
@@ -3701,7 +3748,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
+      "text": "Indestructible\nCry: Discover one of 13 powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
     },
     "radiant": {
       "keywords": [
@@ -3709,7 +3756,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nCry: Discover one of 13 powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
     }
   },
   "core-099": {
@@ -4139,11 +4186,11 @@
     "loc": 43,
     "base": {
       "keywords": [],
-      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (1) Cost Spell, Tribute this to steal and cast it."
+      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (2) Cost Spell, Tribute this to steal and cast it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (1) Cost Spell, steal and cast it. Once it has stolen {threshold}, Tribute this."
+      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (2) Cost Spell, steal and cast it. Once it has stolen {threshold}, Tribute this."
     }
   },
   "classic-005": {
@@ -4538,7 +4585,7 @@
     "rarity": "Common",
     "flavor": "Holy",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "setCost",
@@ -5006,8 +5053,8 @@
     "params": [
       {
         "key": "draw",
-        "base": 4,
-        "radiant": 5,
+        "base": 5,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5386,14 +5433,24 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 0,
+    "params": [
+      {
+        "key": "discard",
+        "base": 6,
+        "radiant": 6,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Draw your deck. At the end of this turn, discard your hand."
+      "text": "Draw your deck. At the end of this turn, discard {discard|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw your deck. At the end of your next turn, discard your hand."
+      "text": "Draw your deck. At the end of your next turn, discard {discard|card|cards}."
     }
   },
   "classic-038": {
@@ -5512,8 +5569,8 @@
     "params": [
       {
         "key": "threshold",
-        "base": 4,
-        "radiant": 4,
+        "base": 5,
+        "radiant": 5,
         "better": "down",
         "step": 1,
         "min": 1,
@@ -6125,14 +6182,17 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 1,
+    "refs": [
+      "core-t-coin"
+    ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "This has the text of the last Spell either player played."
+      "text": "This has the text of the last Spell either player played, or of The Coin if none has been."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nThis has the text of the last Spell either player played."
+      "text": "Echo 1\nThis has the text of the last Spell either player played, or of The Coin if none has been."
     }
   },
   "classic-058": {
@@ -6299,15 +6359,15 @@
     "rarity": "Rare",
     "flavor": "Toxic",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
+      "text": "Cry: Place a Plague Counter.\nAt the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
+      "text": "Activate: Place a Plague Counter.\nAt the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
     }
   },
   "classic-063": {
@@ -6583,16 +6643,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters}."
+      "text": "Choose one: Place {tokens|Plague Counter|Plague Counters}, or add {cards|random Plague card|random Plague cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters}."
+      "text": "Choose one: Place {tokens|Plague Counter|Plague Counters}, or add {cards|random Radiant Plague card|random Radiant Plague cards} to your hand."
     }
   },
   "classic-071": {
@@ -6655,7 +6723,7 @@
     "loc": 3,
     "base": {
       "attack": 3,
-      "health": 6,
+      "health": 4,
       "keywords": [
         {
           "kind": "Rush"
@@ -6671,7 +6739,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 12,
+      "health": 8,
       "keywords": [
         {
           "kind": "Charge"
@@ -7175,14 +7243,14 @@
     ],
     "loc": 7,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 7,
+      "health": 7,
       "keywords": [],
       "text": "Cry: Swap decks with your opponent."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 14,
+      "health": 14,
       "keywords": [],
       "text": "Cry: Swap decks with your opponent. Then Recruit {recruits|card|cards}."
     }
@@ -7378,7 +7446,7 @@
     "rarity": "Epic",
     "flavor": "Nature",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 11,
     "base": {
       "keywords": [
@@ -7637,7 +7705,7 @@
     "rarity": "Rare",
     "flavor": "Dark",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "cards",
@@ -7773,8 +7841,8 @@
     ],
     "loc": 5,
     "base": {
-      "attack": 8,
-      "health": 8,
+      "attack": 5,
+      "health": 5,
       "keywords": [
         {
           "kind": "Taunt"
@@ -7783,8 +7851,8 @@
       "text": "Taunt\nEnd of turn: Add {tokens|random Pancake token|random Pancake tokens} to your hand."
     },
     "radiant": {
-      "attack": 16,
-      "health": 16,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Taunt"
@@ -8197,10 +8265,19 @@
       {
         "key": "keywords",
         "base": 3,
-        "radiant": 3,
+        "radiant": 5,
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "tails",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "tokens",
@@ -8215,7 +8292,7 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon a Rush Token. Flip a coin: it gains {keywords|random combat keyword|random combat keywords} on heads, {tails} on tails."
     },
     "radiant": {
       "keywords": [],
@@ -8810,8 +8887,8 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Taunt"
@@ -8820,8 +8897,8 @@
       "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Taunt"
@@ -9282,7 +9359,7 @@
     "rarity": "Legendary",
     "flavor": "Physical",
     "token": false,
-    "cost": 5,
+    "cost": 4,
     "params": [
       {
         "key": "threshold",
@@ -9297,14 +9374,22 @@
     "base": {
       "attack": 5,
       "health": 5,
-      "keywords": [],
-      "text": "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
-      "keywords": [],
-      "text": "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
     }
   },
   "classicplus-038": {
@@ -9737,7 +9822,7 @@
       {
         "key": "casts",
         "base": 10,
-        "radiant": 10,
+        "radiant": 20,
         "better": "up",
         "step": 2,
         "min": 1
@@ -9746,11 +9831,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Cast {casts|random Spell|random Spells}."
+      "text": "Cast {casts|random Spell|random Spells}. End the turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nCast {casts|random Spell|random Spells}."
+      "text": "Cast {casts|random Spell|random Spells}. End the turn."
     }
   },
   "classicplus-048": {
@@ -9902,9 +9987,12 @@
         },
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Ranged, Flying, Rush\nCan't be attacked."
+      "text": "Ranged, Flying, Rush, Can't Defend\nCan't be attacked."
     },
     "radiant": {
       "attack": 14,
@@ -9921,9 +10009,12 @@
         },
         {
           "kind": "Divine Shield"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Ranged, Flying, Rush, Divine Shield\nCan't be attacked."
+      "text": "Ranged, Flying, Rush, Divine Shield, Can't Defend\nCan't be attacked."
     }
   },
   "classicplus-052": {
@@ -10778,21 +10869,21 @@
       "attack": 0,
       "health": 0,
       "xStats": {
-        "attack": 3,
+        "attack": 2,
         "health": 3
       },
       "keywords": [],
-      "text": "This is a 3X/3X.\nCry: Buff this X times."
+      "text": "This is a 2X/3X.\nCry: Buff this X times."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
       "xStats": {
-        "attack": 6,
+        "attack": 4,
         "health": 6
       },
       "keywords": [],
-      "text": "This is a 6X/6X.\nCry: Buff this 2X times."
+      "text": "This is a 4X/6X.\nCry: Buff this 2X times."
     }
   },
   "classicplus-070": {
@@ -11719,7 +11810,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+      "text": "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after paying for this."
     },
     "radiant": {
       "keywords": [
@@ -11730,7 +11821,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Echo X, Lifesteal, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+      "text": "Echo X, Lifesteal, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after paying for this."
     }
   },
   "meditative-006": {
@@ -11814,11 +11905,11 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "Start of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "Start of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     }
   },
   "meditative-008": {
@@ -11920,11 +12011,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+      "text": "Cry: Add a random card with a Start of turn or an End of turn effect to your hand.\nAura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+      "text": "Cry: Add a random card with a Start of turn effect and a random card with an End of turn effect to your hand.\nAura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
     }
   },
   "meditative-010": {
@@ -12395,12 +12486,20 @@
     ],
     "loc": 38,
     "base": {
-      "keywords": [],
-      "text": "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nChoose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health. Draw {draw}."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nChoose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health. Draw {draw}."
     }
   },
   "meditative-021": {
@@ -12841,7 +12940,7 @@
     "rarity": "Rare",
     "flavor": "Toxic",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "meditative-028-1"
     ],
@@ -12893,14 +12992,14 @@
     ],
     "loc": 46,
     "base": {
-      "attack": 3,
-      "health": 4,
+      "attack": 5,
+      "health": 5,
       "keywords": [],
       "text": "End of turn: If your opponent has a pricier permanent, they gain control of this. Otherwise, shuffle a Love Bomb into your deck."
     },
     "radiant": {
-      "attack": 6,
-      "health": 8,
+      "attack": 10,
+      "health": 10,
       "keywords": [],
       "text": "End of turn: If your opponent has a pricier permanent and a bigger deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
     }
@@ -13000,11 +13099,11 @@
     "loc": 43,
     "base": {
       "keywords": [],
-      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card, which costs (1). Summon {units} random CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card. Summon {units} random CN Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card, which costs (1). Summon {units} random Radiant CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card. Summon {units} random Radiant CN Units."
     }
   },
   "meditative-033": {
@@ -13489,25 +13588,18 @@
     "rarity": "Legendary",
     "flavor": "Nature",
     "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "luck",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
+    "cost": 3,
+    "refs": [
+      "meditative-039-1"
     ],
     "loc": 35,
     "base": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished. You have Luck {luck}.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily. You have Luck {luck}.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     }
   },
   "meditative-041": {
@@ -13777,16 +13869,16 @@
     "cost": 4,
     "loc": 29,
     "base": {
-      "attack": 2,
-      "health": 2,
+      "attack": 0,
+      "health": 1,
       "keywords": [],
-      "text": "End of turn: Fuse a random enemy permanent into this."
+      "text": "End of turn: Fuse a random enemy Unit into this."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 0,
+      "health": 2,
       "keywords": [],
-      "text": "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck into this."
+      "text": "End of turn: Fuse a random enemy Unit and a random card from your opponent's deck into this."
     }
   },
   "meditative-048": {
@@ -14177,11 +14269,11 @@
     "loc": 52,
     "base": {
       "keywords": [],
-      "text": "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin into your deck."
+      "text": "Cry: Add a The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
+      "text": "Cry: Add a Radiant The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
     }
   },
   "meditative-055": {
@@ -14475,11 +14567,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Summon {units|random Unit|random Units} from your hand."
+      "text": "End of turn: Summon {units|random Unit|random Units} from your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
+      "text": "End of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
     }
   },
   "meditative-064": {
@@ -15204,7 +15296,7 @@
     "token": false,
     "cost": {
       "base": 0,
-      "embiggen": 2
+      "embiggen": 1
     },
     "params": [
       {
@@ -15219,21 +15311,20 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 1,
+        "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw}.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
     }
   },
   "meditative-082": {
@@ -15421,7 +15512,7 @@
     "rarity": "Legendary",
     "flavor": "Spirit",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "cards",
@@ -15961,11 +16052,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 5 Armor and you heal it 5; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 5 Armor and you heal it 5; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     }
   },
   "meditative-095-1": {
@@ -16999,7 +17090,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "setCost",
@@ -17183,12 +17274,20 @@
     "dealsDamage": true,
     "loc": 23,
     "base": {
-      "keywords": [],
-      "text": "Deal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Echo 1\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
     }
   },
   "meditativeplus-006": {
@@ -17842,11 +17941,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
+      "text": "Cry: Add a random Embiggen card to your hand.\nAura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
+      "text": "Cry: Add a random Embiggen card to your hand. It costs (0).\nAura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
     }
   },
   "meditativeplus-023": {
@@ -17944,7 +18043,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "params": [
       {
         "key": "setCost",
@@ -18348,7 +18447,7 @@
     "rarity": "Legendary",
     "flavor": "Hustle",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "stinkyscape-t-anomaly-found"
     ],
@@ -18737,7 +18836,7 @@
     "rarity": "Epic",
     "flavor": "Dark",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "stinkyscape-012-1",
       "stinkyscape-012-2",
@@ -18837,7 +18936,7 @@
     "printedRarity": "Epic",
     "flavor": "Dark",
     "token": true,
-    "cost": 3,
+    "cost": 4,
     "params": [
       {
         "key": "surcharge",
@@ -18874,15 +18973,7 @@
       {
         "key": "damage",
         "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -18893,18 +18984,18 @@
     "base": {
       "keywords": [
         {
-          "kind": "Poisonous"
+          "kind": "Flashback"
         }
       ],
-      "text": "Poisonous\nYour next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
+      "text": "Flashback\nDeal {damage} damage to all enemies. Your next Spell this turn has Poisonous."
     },
     "radiant": {
       "keywords": [
         {
-          "kind": "Poisonous"
+          "kind": "Flashback"
         }
       ],
-      "text": "Echo 1, Poisonous\nYour next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
+      "text": "Flashback\nDeal {damage} damage to all enemies. Your next Spell this turn has Poisonous."
     }
   },
   "stinkyscape-014": {
@@ -18988,9 +19079,7 @@
     "name": "Rod of Ages",
     "set": "Stinkyscape",
     "type": "Field Spell",
-    "tags": [
-      "Quickdraw"
-    ],
+    "tags": [],
     "rarity": "Mythic",
     "flavor": "Physical",
     "token": false,
@@ -19010,12 +19099,9 @@
       "keywords": [
         {
           "kind": "Animated"
-        },
-        {
-          "kind": "Flying"
         }
       ],
-      "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
+      "text": "Animated\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 12 keywords, make this Radiant."
     },
     "radiant": {
       "keywords": [
@@ -19023,13 +19109,10 @@
           "kind": "Animated"
         },
         {
-          "kind": "Flying"
-        },
-        {
           "kind": "Indestructible"
         }
       ],
-      "text": "Animated, Flying, Indestructible\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
+      "text": "Animated, Indestructible\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-017": {
@@ -19105,12 +19188,11 @@
     "params": [
       {
         "key": "keywords",
-        "base": 3,
+        "base": 1,
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 76,
@@ -19120,7 +19202,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of turn: Vote to remove you if your opponent has more Units than you.\nActivate: Discover a combat keyword. Give it to each of your Units."
+      "text": "Indestructible\nStart of turn: Vote to remove you if your opponent has more Units than you.\nActivate: Give each of your Units {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [
@@ -19504,15 +19586,15 @@
     "loc": 104,
     "base": {
       "attack": 2,
-      "health": 9,
+      "health": 7,
       "keywords": [],
-      "text": "Cry: Choose one: summon a University, or this gains \"Activate: Summon a random Starship Piece.\""
+      "text": "Cry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
-      "health": 18,
+      "health": 14,
       "keywords": [],
-      "text": "Cry: Choose one: summon a Radiant University, or this gains \"Activate: Summon a random Radiant Starship Piece.\""
+      "text": "Cry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
     }
   },
   "stinkyscape-027": {
@@ -19713,7 +19795,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 4,
+    "cost": 5,
     "refs": [
       "stinkyscape-t-drone-interceptor",
       "stinkyscape-t-drone-corvette"
@@ -19731,11 +19813,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Summon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
+      "text": "Float reduces cost.\nSummon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}."
+      "text": "Float reduces cost.\nSummon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}."
     }
   },
   "stinkyscape-034": {
@@ -20061,14 +20143,14 @@
     ],
     "loc": 19,
     "base": {
-      "attack": 4,
-      "health": 5,
+      "attack": 3,
+      "health": 3,
       "keywords": [],
       "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     },
     "radiant": {
-      "attack": 8,
-      "health": 10,
+      "attack": 6,
+      "health": 6,
       "keywords": [],
       "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     }
@@ -20155,38 +20237,18 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "cards",
-        "base": 6,
-        "radiant": 6,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "cry": true
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "cry": true
-      }
-    ],
     "loc": 20,
     "base": {
       "attack": 8,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Add {cards|random Drone Core card|random Drone Core cards} to your hand. Each costs ({discount}) less."
+      "text": "Cry: Fill your hand with random Drone Core cards."
     },
     "radiant": {
       "attack": 16,
       "health": 24,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand. Each costs ({discount}) less."
+      "text": "Cry: Fill your hand with random Radiant Drone Core cards."
     }
   },
   "stinkyscape-046": {
@@ -20199,7 +20261,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
@@ -20223,7 +20285,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
@@ -20361,7 +20423,7 @@
     "loc": 52,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20374,7 +20436,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20412,7 +20474,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20425,7 +20487,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20463,7 +20525,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20476,7 +20538,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20522,7 +20584,7 @@
     "loc": 27,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20535,7 +20597,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20577,7 +20639,7 @@
     "loc": 52,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20590,7 +20652,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20628,7 +20690,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20641,7 +20703,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20679,7 +20741,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20692,7 +20754,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20738,7 +20800,7 @@
     "loc": 32,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20751,7 +20813,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20793,7 +20855,7 @@
     "loc": 52,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20806,7 +20868,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20844,7 +20906,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20857,7 +20919,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20895,7 +20957,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20908,7 +20970,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20954,7 +21016,7 @@
     "loc": 37,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20967,7 +21029,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21664,8 +21726,8 @@
     },
     "loc": 28,
     "base": {
-      "attack": 8,
-      "health": 8,
+      "attack": 3,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21677,8 +21739,8 @@
       "text": "Starship Piece, Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (5): The Miners offered are Radiant."
     },
     "radiant": {
-      "attack": 16,
-      "health": 16,
+      "attack": 6,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21703,8 +21765,8 @@
     "cost": 4,
     "loc": 46,
     "base": {
-      "attack": 10,
-      "health": 10,
+      "attack": 5,
+      "health": 5,
       "keywords": [
         {
           "kind": "Flying"
@@ -21713,8 +21775,8 @@
       "text": "Tribute 2, Flying\nCry: Discover 2 Radiant Miners and Equip them into this."
     },
     "radiant": {
-      "attack": 20,
-      "health": 20,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Flying"
@@ -22145,7 +22207,7 @@
     "loc": 21,
     "base": {
       "attack": 3,
-      "health": 4,
+      "health": 3,
       "keywords": [
         {
           "kind": "Rush"
@@ -22155,7 +22217,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 8,
+      "health": 6,
       "keywords": [
         {
           "kind": "Rush"
@@ -22228,8 +22290,8 @@
     "cost": 3,
     "loc": 23,
     "base": {
-      "attack": 9,
-      "health": 9,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Rush"
@@ -22238,8 +22300,8 @@
       "text": "Rush\nAfter this destroys a Unit, it may attack again."
     },
     "radiant": {
-      "attack": 18,
-      "health": 18,
+      "attack": 16,
+      "health": 16,
       "keywords": [
         {
           "kind": "Rush"
@@ -22294,7 +22356,7 @@
     "rarity": "Rare",
     "flavor": "Brute",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 18,
     "base": {
       "attack": 6,
@@ -23282,12 +23344,26 @@
     ],
     "loc": 30,
     "base": {
-      "keywords": [],
-      "text": "Add your choice of a Core System, a Secure System, an Unsecure System or a Wild System to your hand."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        },
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Tradable, Flashback\nAdd your choice of a Core System, a Secure System, an Unsecure System or a Wild System to your hand."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Add your choice of a Radiant Core System, Secure System, Unsecure System or Wild System to your hand."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        },
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Tradable, Flashback\nAdd your choice of a Radiant Core System, Secure System, Unsecure System or Wild System to your hand."
     }
   },
   "stinkyscape-122": {
@@ -23585,13 +23661,13 @@
       "attack": 2,
       "health": 1,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
     },
     "radiant": {
       "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
     }
   },
   "stinkyscape-130": {
@@ -23720,7 +23796,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "per",
@@ -23831,19 +23907,26 @@
     "base": {
       "attack": 0,
       "health": 4,
-      "keywords": [],
-      "text": "When this leaves the field, summon the Unit stuffed into it."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nWhen this leaves the field, summon the Unit stuffed into it."
     },
     "radiant": {
       "attack": 0,
       "health": 8,
       "keywords": [
         {
+          "kind": "Can't Defend"
+        },
+        {
           "kind": "Brittle",
           "n": 1
         }
       ],
-      "text": "Brittle 1\nWhen this leaves the field, summon the Unit stuffed into it."
+      "text": "Can't Defend, Brittle 1\nWhen this leaves the field, summon the Unit stuffed into it."
     }
   },
   "stinkyscape-136": {
@@ -24137,7 +24220,7 @@
     "loc": 62,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24150,7 +24233,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24178,7 +24261,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24191,7 +24274,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24233,7 +24316,7 @@
     "loc": 40,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24246,7 +24329,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24274,7 +24357,7 @@
     "loc": 62,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24287,7 +24370,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24634,9 +24717,6 @@
       "health": 10,
       "keywords": [
         {
-          "kind": "Starship Piece"
-        },
-        {
           "kind": "Flying"
         },
         {
@@ -24646,16 +24726,13 @@
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Flying, Ranged, Rush"
+      "text": "Flying, Ranged, Rush"
     },
     "radiant": {
       "attack": 20,
       "health": 20,
       "keywords": [
         {
-          "kind": "Starship Piece"
-        },
-        {
           "kind": "Flying"
         },
         {
@@ -24665,7 +24742,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Flying, Ranged, Rush"
+      "text": "Flying, Ranged, Rush"
     }
   },
   "stinkyscape-151": {
@@ -24702,11 +24779,11 @@
     "loc": 77,
     "base": {
       "keywords": [],
-      "text": "One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random Call to Chaos."
+      "text": "One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 2 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 3 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 3 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Replace your side of the field with a random Anomaly, any of the ten; summon 2 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 3 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 3 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random Call to Chaos."
     }
   },
   "stinkyscape-152": {
@@ -24786,7 +24863,7 @@
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Gain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Stimmycheck to your hand. Its Inflation chance goes up by 10%."
+      "text": "Gain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Stimmycheck to your hand. Its Inflation chance goes up by 5%."
     },
     "radiant": {
       "keywords": [
@@ -24795,7 +24872,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nGain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Radiant Stimmycheck to your hand. Its Inflation chance goes up by 10%."
+      "text": "Lucky 1\nGain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Radiant Stimmycheck to your hand. Its Inflation chance goes up by 5%."
     }
   },
   "stinkyscape-154": {
@@ -24970,7 +25047,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "stinkyscape-006",
       "stinkyscape-020",
@@ -25260,18 +25337,18 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Summon a Drone Interceptor."
+      "text": "Activate: Summon a Drone Interceptor."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon a Radiant Drone Interceptor."
+      "text": "Activate: Summon a Radiant Drone Interceptor."
     }
   },
   "stinkyscape-169": {
@@ -25733,7 +25810,9 @@
     "name": "Dormant Starship",
     "set": "Stinkyscape",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Starship"
+    ],
     "rarity": "Legendary",
     "flavor": "Tech",
     "token": false,
@@ -25743,14 +25822,28 @@
     "base": {
       "attack": 0,
       "health": 0,
-      "keywords": [],
-      "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
+      "keywords": [
+        {
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
+        }
+      ],
+      "text": "Flying, Ranged\nDormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (4) to launch this."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
-      "keywords": [],
-      "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
+      "keywords": [
+        {
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
+        }
+      ],
+      "text": "Flying, Ranged\nDormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (4) to launch this."
     }
   },
   "stinkyscape-t-drone-interceptor": {
@@ -25877,7 +25970,10 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
@@ -25890,14 +25986,17 @@
           "n": 4
         }
       ],
-      "text": "Starship, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Flying, Ranged, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 24,
       "health": 24,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
@@ -25910,7 +26009,7 @@
           "n": 8
         }
       ],
-      "text": "Starship, Can't attack, Taunt, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Flying, Ranged, Can't attack, Taunt, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "stinkyscape-t-propagation-layer": {
@@ -25937,26 +26036,32 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
         }
       ],
-      "text": "Starship, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone Corvette."
+      "text": "Flying, Ranged, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone Corvette."
     },
     "radiant": {
       "attack": 24,
       "health": 24,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
         }
       ],
-      "text": "Starship, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a Radiant Drone Corvette."
+      "text": "Flying, Ranged, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a Radiant Drone Corvette."
     }
   },
   "stinkyscape-t-meltdown-layer": {
@@ -25989,7 +26094,10 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Charge"
@@ -26005,14 +26113,17 @@
           "n": 3
         }
       ],
-      "text": "Starship, Charge, Windfury, First Strike, Brittle 3\nEnd of turn: This takes {selfDamage} damage."
+      "text": "Flying, Ranged, Charge, Windfury, First Strike, Brittle 3\nEnd of turn: This takes {selfDamage} damage."
     },
     "radiant": {
       "attack": 24,
       "health": 24,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Charge"
@@ -26028,7 +26139,7 @@
           "n": 6
         }
       ],
-      "text": "Starship, Charge, Windfury, First Strike, Brittle 6\nEnd of turn: This takes {selfDamage} damage."
+      "text": "Flying, Ranged, Charge, Windfury, First Strike, Brittle 6\nEnd of turn: This takes {selfDamage} damage."
     }
   },
   "stinkyscape-t-reknite": {
@@ -27157,15 +27268,15 @@
     "rarity": "Common",
     "flavor": "Hustle",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "core-t-rush"
     ],
     "params": [
       {
         "key": "tokens",
-        "base": 3,
-        "radiant": 3,
+        "base": 4,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -27965,14 +28076,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
       }
     ],
     "loc": 22,
@@ -27980,13 +28083,13 @@
       "attack": 4,
       "health": 16,
       "keywords": [],
-      "text": "Cry: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand. They cost ({discount}) less.\nDeath: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand. They cost ({discount}) less."
+      "text": "Cry & Death: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand."
     },
     "radiant": {
       "attack": 8,
       "health": 32,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand. They cost ({discount}) less.\nDeath: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand. They cost ({discount}) less."
+      "text": "Cry & Death: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand."
     }
   },
   "traininggrounds-039": {
@@ -28016,11 +28119,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 4 mana; add 4 random Training Grounds cards to your hand, which cost (0); gain 8 mana and draw 2 cards; summon 6 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (0); summon 5 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; add a random Call to Chaos to your hand, which costs (0), now and at the start of every second turn of yours for the rest of the game; cast a random Call to Chaos."
+      "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 4 mana; add 4 random Training Grounds cards to your hand, which cost (0); gain 8 mana and draw 2 cards; summon 6 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (0); summon 5 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; add a random Call to Chaos to your hand, which costs (0), now and at the start of every second turn of yours for the rest of the game; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
     }
   },
   "traininggrounds-039-1": {
@@ -28250,8 +28353,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -28260,11 +28363,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} Attack and Rush."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} Attack and Rush."
     }
   },
   "traininggrounds-046": {
@@ -28354,13 +28457,13 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 6,
+      "attack": 4,
       "health": 10,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 12,
+      "attack": 8,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
@@ -28445,13 +28548,13 @@
     "cost": 4,
     "loc": 15,
     "base": {
-      "attack": 3,
+      "attack": 1,
       "health": 10,
       "keywords": [],
       "text": "Cry: Destroy all non-Felinor Units."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 2,
       "health": 20,
       "keywords": [],
       "text": "Cry: Destroy all enemy non-Felinor Units."
@@ -28473,11 +28576,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit."
+      "text": "Steal an enemy Unit. Set its stats to 4/4."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Make it Radiant."
+      "text": "Steal an enemy card."
     }
   },
   "traininggrounds-053": {
@@ -28605,27 +28708,20 @@
     "cost": 4,
     "loc": 39,
     "base": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies."
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "While this is in your hand, it gains the attack and health of each Unit that dies."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Rush"
-        },
-        {
-          "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Divine Shield\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
     }
   },
   "traininggrounds-057": {

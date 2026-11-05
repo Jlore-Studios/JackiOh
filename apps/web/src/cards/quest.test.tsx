@@ -293,14 +293,14 @@ describe("R404 In Too Deep through the real engine", () => {
     for (const viewer of ["p1", "p2"] as const) {
       const view = game.view(viewer);
       const entry = must(questCardIn(view, "p1"), `In Too Deep on ${viewer}'s board`);
-      expect(entry.quest?.open.map((quest) => [quest.id, quest.text, quest.progress, quest.goal])).toEqual([["1", "Draw 2 cards", 0, 2]]);
+      expect(entry.quest?.open.map((quest) => [quest.id, quest.text, quest.progress, quest.goal])).toEqual([["1", "Draw 3 cards", 0, 3]]);
       render(withCatalog(<Board view={view} />, catalog));
       const [badge] = badges(screen.getByTestId(testid.card(entry.instanceId)));
-      expect(must(badge, "the quest badge").textContent).toBe("0/2");
-      expect(badge?.getAttribute("aria-label")).toBe("Quest: Draw 2 cards (0/2)");
+      expect(must(badge, "the quest badge").textContent).toBe("0/3");
+      expect(badge?.getAttribute("aria-label")).toBe("Quest: Draw 3 cards (0/3)");
       // R2450000: on either seat the face prints the open quest and its rewards.
       expect(questFaceText(must(listedFace(catalog, view, entry), "the face"))?.full).toContain(
-        "\nQuest: Draw 2 cards (0/2). Rewards: Heal your hero 6; Deal 3 damage to a target.",
+        "\nQuest: Draw 3 cards (0/3). Rewards: Heal your hero 6; Deal 3 damage to a target.",
       );
       cleanup();
     }
@@ -308,10 +308,10 @@ describe("R404 In Too Deep through the real engine", () => {
     until(game, () => progressOf(game) === 1);
     const view = game.view("p1");
     render(withCatalog(<Board view={view} />, catalog));
-    expect(badges(screen.getByTestId(testid.card(itd.instanceId))).map((badge) => badge.textContent)).toEqual(["1/2"]);
+    expect(badges(screen.getByTestId(testid.card(itd.instanceId))).map((badge) => badge.textContent)).toEqual(["1/3"]);
     cleanup();
     render(withCatalog(<Log view={view} />, catalog));
-    expect(screen.getByTestId(testid.log).textContent).toContain("Your In Too Deep quest: Draw 2 cards, 1/2");
+    expect(screen.getByTestId(testid.log).textContent).toContain("Your In Too Deep quest: Draw 3 cards, 1/3");
     cleanup();
 
     until(game, () => {
@@ -331,7 +331,7 @@ describe("R404 In Too Deep through the real engine", () => {
     expect(modal.getAttribute("data-prompt-kind")).toBe("reward");
     expect(screen.queryByTestId("prompt-quest-complete")).toBeNull();
     expect(modal.querySelector(".prompt-title")).toBeNull();
-    expect(modal.getAttribute("aria-label")).toBe("Quest complete! Draw 2 cards");
+    expect(modal.getAttribute("aria-label")).toBe("Quest complete! Draw 3 cards");
     const tiles = Array.from(modal.querySelectorAll<HTMLElement>("[data-testid^='prompt-option-']"));
     // #2646: each reward is a choice card, its words its text.
     expect(tiles.map((tile) => tile.querySelector(".choice-card-text")?.textContent)).toEqual(["Heal your hero 6", "Deal 3 damage to a target"]);
@@ -347,11 +347,11 @@ describe("R404 In Too Deep through the real engine", () => {
     const entry = must(questCardIn(after, "p1"), "In Too Deep after the reward");
     render(withCatalog(<Board view={after} />, catalog));
     expect(badges(screen.getByTestId(testid.card(entry.instanceId))).map((badge) => badge.getAttribute("aria-label"))).toEqual([
-      "Quest: Destroy 2 enemy permanents (0/2)",
+      "Quest: Destroy 3 enemy permanents (0/3)",
     ]);
     const face = must(questFaceText(must(listedFace(catalog, after, entry), "the face after the reward")), "the quest face");
-    expect(face.full).toContain("\nQuest: Destroy 2 enemy permanents (0/2). Rewards: ");
-    expect(face.full).not.toContain("Draw 2 cards (");
+    expect(face.full).toContain("\nQuest: Destroy 3 enemy permanents (0/3). Rewards: ");
+    expect(face.full).not.toContain("Draw 3 cards (");
   });
 });
 

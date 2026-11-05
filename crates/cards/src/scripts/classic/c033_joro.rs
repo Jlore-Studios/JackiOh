@@ -70,7 +70,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
     const BIG_FELINOR: &str = "core-043"; // (4) Unit: "Cry: Destroy all non-Felinor Units."
     const MOTHS: &str = "core-009"; // (2) Unit 1/14: "Start of turn: Every enemy Unit attacks this."
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
+    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
     const TOXINS: &str = "classic-042"; // (2) Field Spell: "Activate: Place a Plague Counter on each of 2 random Units."
     const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
     const SPECIESIST: &str = "core-002"; // (2) Unit: "Cry: Destroy an enemy non-Human Unit.", a declared target.
@@ -267,6 +267,7 @@ mod tests {
                 let joro = s.card(JORO).id.clone();
                 let menace = s.card(MENACE).id.clone();
                 s.play(TWINSPELL, json!({}));
+                s.activate(TWINSPELL, json!({}));
                 s.play(ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                 assert_eq!(js(&s.state().pending)["kind"], "target");
                 s.answer(json!([{ "pick": "instance", "instanceId": menace }]));

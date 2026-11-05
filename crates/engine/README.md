@@ -179,9 +179,9 @@ R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`T
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
 `trade::trades_per_turn_of`), the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
 R1840000–R1840002, `resources.rs`), the Marketplace's (`MARKETPLACE_TABLE`, the set's own, S21's, R1881006,
-its cycle, its price rule, its spread and its Radiant chance and premium, R1853001–R1853005,
-`marketplace.rs`; a test registers a fixture table with `testkit::register_marketplace_table`) and
-#1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
+its offers a turn, its price rule, its spread, its Radiant chance and premium and its Buff and Nerf
+chances, steps and bound, R1853001–R1853005, R3047000–R3047002, `marketplace.rs`; a test registers a
+fixture table with `testkit::register_marketplace_table`) and #1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
 that remove a player (R1843000), and `LOSER_DRAWS_REASONS`, the endings that leave the winner's
 opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004),
 and the Anomalies' (`ANOMALY_*`: a scan's chances, their steps per miss and its roll, R1855003).
@@ -213,7 +213,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 | `rules` | `tests/rules.rs`, `tests/rules/<x>.rs` from `a` to `o` (`rules/mod.rs`) | one module per rule area; needs `--features testkit` |
 | `rules_2` | `tests/rules_2.rs`, `tests/rules/<x>.rs` from `p` through `r` (`rules/mod_2.rs`) | the same, apart so CI compiles the three side by side (#2090, #2957); all three take `rules/fixtures/` |
 | `rules_3` | `tests/rules_3.rs`, `tests/rules/<x>.rs` from `s` on (`rules/mod_3.rs`) | the same, apart so CI compiles the three side by side (#2957); all three take `rules/fixtures/` |
-| `golden` | `tests/golden.rs`, `tests/golden/` | the hotseat fixture's fold to `972f5b85` (as `cargo jackioh golden check` folds it), the pre-Equip log (R781000), and both logs folded alike with every card or none in the card metrics' lists (R1846003); the 240 traces recorded from the TypeScript engine were retired in #2578; needs `--features testkit` |
+| `golden` | `tests/golden.rs`, `tests/golden/` | the hotseat fixture's fold to `512357ea` (as `cargo jackioh golden check` folds it), the pre-Equip log (R781000), and both logs folded alike with every card or none in the card metrics' lists (R1846003); the 240 traces recorded from the TypeScript engine were retired in #2578; needs `--features testkit` |
 | `export_config` | `tests/export_config.rs` | writes `engineConfig.ts` |
 
 A test that proves a ruling is named after it: `fn r58_…` (CLAUDE.md rule 3).

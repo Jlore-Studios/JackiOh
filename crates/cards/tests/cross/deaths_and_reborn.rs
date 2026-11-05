@@ -623,3 +623,90 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
         assert_eq!(killer_of(&s, &vanilla), Some(Some(sting.id.clone())));
     }
 }
+
+// R3039000 (issue #3039): an awakening is for good, so an awakened Dormant Starship that returns is not
+// Dormant. Its hull starts a fresh memory as any arrival does (R1852005): awake, holding no pieces, not
+// launched and with no name, so the next piece to die starts a new Dormant Starship (R1852000).
+
+mod r3039000_an_awakened_dormant_starship_that_returns_is_not_dormant {
+    use super::*;
+    use jackioh_engine::prelude::{
+        STARSHIP_LAUNCH_ABILITY, dormant_starship_of, is_launched_starship, starship_pieces_of,
+    };
+
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+
+    /// p1 plays a Hit Job on `id`, mana to spare.
+    fn hit(g: &mut Scenario, id: &str) {
+        g.state_mut().players.p1.mana.current = 10;
+        g.play(HIT_JOB, json!({ "targets": pick::id(id) }));
+    }
+
+    #[test]
+    fn r3039000_launched_given_reborn_and_killed_it_returns_awake_and_the_next_dying_piece_fuses_into_a_new_one()
+     {
+        let mut g = scenario(json!({
+            "active": "p1",
+            "p1": {
+                "hand": [HIT_JOB, HIT_JOB, HIT_JOB, VANILLA],
+                "field": [{ "def": AP_ROUNDS, "lane": 1 }, { "def": AP_ROUNDS, "lane": 2 }],
+                "library": LIBRARY,
+            },
+            "p2": { "hand": [STOCKPILE], "library": LIBRARY },
+        }));
+        g.state_mut().players.p1.auto_end_turn = Some(false);
+        // A dying piece summons p1 a Dormant Starship holding its copy (R1852000), which launches.
+        let first = g.unit_at(P1, 1).id;
+        hit(&mut g, &first);
+        let ship = must(dormant_starship_of(g.state(), P1), "p1's Dormant Starship")
+            .id
+            .clone();
+        g.state_mut().players.p1.mana.current = 10;
+        g.activate(&ship, json!({ "ability": STARSHIP_LAUNCH_ABILITY }));
+        assert!(is_launched_starship(g.card(&ship)));
+        assert_eq!(g.card(&ship).awakened, Some(true), "its launch is its awakening");
+
+        // Given Reborn and destroyed, it returns awake, its memory afresh.
+        g.card_mut(&ship).granted_keywords.push(Keyword::Reborn);
+        hit(&mut g, &ship);
+        let back = g.card(&ship).clone();
+        assert_eq!(back.reborn_spent, Some(true), "back by its Reborn");
+        assert!(
+            matches!(back.zone, Zone::Field { player: P1, .. }),
+            "{:?}",
+            back.zone
+        );
+        assert_eq!(back.slumber, None, "not Dormant");
+        let memory = must(back.starship.clone(), "its hull's memory");
+        assert!(memory.pieces.is_empty(), "it holds no pieces");
+        assert_eq!(
+            (memory.launched, memory.name),
+            (None, None),
+            "not launched, no name"
+        );
+        assert!(!is_launched_starship(&back));
+        assert!(
+            !legal_actions(g.state(), P1).iter().any(
+                |action| matches!(action, ActionBody::Activate { instance_id, .. } if *instance_id == ship)
+            ),
+            "no launch offered: it is not Dormant"
+        );
+        assert!(
+            dormant_starship_of(g.state(), P1).is_none(),
+            "p1 has no Dormant Starship"
+        );
+
+        // The next piece to die fuses into a new Dormant Starship, Dormant as any is.
+        let second = g.unit_at(P1, 2).id;
+        hit(&mut g, &second);
+        let fresh = must(dormant_starship_of(g.state(), P1), "a new Dormant Starship").clone();
+        assert_ne!(fresh.id, ship);
+        assert_eq!(fresh.slumber, Some(Slumber { turns: None }));
+        assert_eq!(fresh.awakened, None);
+        assert_eq!(starship_pieces_of(&fresh).len(), 1);
+        assert!(
+            starship_pieces_of(g.card(&ship)).is_empty(),
+            "nothing fused into the returned one"
+        );
+    }
+}

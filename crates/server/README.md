@@ -1169,6 +1169,9 @@ grants, the two functions that wrote it (`app.create_custom_card`, `app.update_c
 `tests/sql/48_drop_custom_cards.sql` checks that none is left, that the file deletes the cards a database
 held (0037 re-applied for the test) and keeps their owner, and the re-apply.
 
+Migration 0083 widens the `cards` tag check once more, as 0070 did, with #3038's Starship tag (R3038000),
+so `seed-catalog` can write the Dormant Starship as the catalog now tags it.
+
 ## Tests
 
 ```

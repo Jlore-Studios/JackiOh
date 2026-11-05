@@ -50,6 +50,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const MR_TOKEN: &str = "core-015"; // (1) 1/1.
     const ENEMY_HERO: &str = "hero-p2";
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
 
     fn played(radiant: bool, p2: Value, seed: &str) -> Scenario {
         let mut s = crate::scenario(json!({
@@ -193,6 +194,62 @@ mod tests {
             s.end_turn().end_turn();
             s.attack(ID, "hero");
             s.expect_health(P2, HERO_HEALTH - 10 - 10);
+        }
+
+        /// R3039000: awake, then destroyed by p2's Hit Job, Reborn given it first if `reborn`.
+        fn killed_after_its_awakening(reborn: bool) -> (Scenario, String) {
+            let mut s = played(false, json!({ "hand": [HIT_JOB, FILLER] }), "cosmality-again");
+            let cosmality = s.card(ID).id.clone();
+            to_its_awakening(&mut s);
+            assert_eq!(s.card(&cosmality).awakened, Some(true), "awakened for good");
+            if reborn {
+                s.card_mut(&cosmality).granted_keywords.push(Keyword::Reborn);
+            }
+            s.end_turn();
+            s.state_mut().players[P2].mana.current = 10;
+            s.play(HIT_JOB, json!({ "targets": pick::id(&cosmality) }));
+            (s, cosmality)
+        }
+
+        fn awake_on_the_field(s: &Scenario, cosmality: &str) {
+            assert!(matches!(s.card(cosmality).zone, Zone::Field { player: P1, row: Row::Units, .. }));
+            assert_eq!(s.card(cosmality).slumber, None, "not Dormant");
+            assert_eq!(hits(s).len(), 10, "it awakens no more, so its 10 hits were dealt once");
+        }
+
+        #[test]
+        fn r3039000_awakened_killed_and_reborn_it_comes_back_awake() {
+            let (s, cosmality) = killed_after_its_awakening(true);
+            assert_eq!(s.card(&cosmality).reborn_spent, Some(true), "back by its Reborn");
+            awake_on_the_field(&s, &cosmality);
+        }
+
+        #[test]
+        fn r3039000_awakened_killed_and_played_again_from_the_graveyard_it_enters_awake() {
+            let (mut s, cosmality) = killed_after_its_awakening(false);
+            s.expect_in_zone(&cosmality, "graveyard");
+            // A Flashback given it lets it be played from there (R783012).
+            s.card_mut(&cosmality).granted_keywords.push(Keyword::Flashback);
+            s.end_turn();
+            s.act(
+                ActionBody::Play {
+                    instance_id: cosmality.clone(),
+                    zone: Some(ZoneChoice { row: Row::Units, lane: 3 }),
+                    x: None,
+                    embiggen: None,
+                    equip: None,
+                    tributes: None,
+                    targets: None,
+                    modes: None,
+                    plague: None,
+                    face_down: None,
+                },
+                P1,
+                "play the Cosmality from the graveyard",
+            );
+            awake_on_the_field(&s, &cosmality);
+            s.end_turn().end_turn().end_turn().end_turn();
+            awake_on_the_field(&s, &cosmality);
         }
 
         #[test]

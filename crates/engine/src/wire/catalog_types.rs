@@ -195,6 +195,9 @@ string_union! {
     /// tag no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources:
     /// Reknite, Korrelite, Gellium, Axnit, Narcor and Red Narcor, tokens all) and Faction (the five
     /// Faction cards, #95 and #159 to #162), which the server admits from migration 0070.
+    /// Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
+    /// Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
+    /// Ranged through the layers (R3038000), which the server admits from migration 0080.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -225,6 +228,7 @@ string_union! {
         Legacy = "Legacy",
         Resource = "Resource",
         Faction = "Faction",
+        Starship = "Starship",
         Token = "Token",
     }
 }
@@ -677,8 +681,9 @@ pub enum Keyword {
     /// card that is not one, so an Equip does not pass it on (R1852001).
     #[serde(rename = "Starship Piece")]
     StarshipPiece,
-    /// R1852003: what a launched Starship takes as it launches. No rule of its own; the cards that
-    /// name "your Starship" read it.
+    /// R3038001: kept for the shipped catalog snapshots (`crates/cards/patches/*.json`), which
+    /// print it on the Drone Battleships, and the replays that fold under them (R767000). No current
+    /// card prints or gains it: a launched Starship takes the Starship tag (R3038000) instead.
     Starship,
     /// R2657000: a Unit that can't be in Defense Position, by its own switch or an effect's, the
     /// keyword that took over from "Can't be in Defense Position" (`StaticFlags::never_defense`).

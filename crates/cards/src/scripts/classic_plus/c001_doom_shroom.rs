@@ -1,4 +1,4 @@
-//! C+ #1 Doom Shroom (SPEC §8.7 row 1). (3) Trap, Epic. "Crater\nReveals when an enemy Unit attacks
+//! C+ #1 Doom Shroom (SPEC §8.7 row 1). (4) Trap, Epic. "Crater\nReveals when an enemy Unit attacks
 //! your hero: Exile all Units." (Radiant: all enemy Units.)
 //! Fires in §4.2 step 4's trap window (as Core #96 My Pawn) when an enemy Unit declares an attack on
 //! your hero. Its Crater Locks its own backrow zone (E20) as it is revealed (R783011, before its

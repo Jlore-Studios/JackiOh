@@ -1698,16 +1698,17 @@ mod own_prompt_lookahead {
         evaluate(state, AI, NextSwing::Enemy, &AI_EVAL)
     }
 
-    /// Craft a Card beside four 1-cost Spells that do nothing on this board (Book of Plague, Ancient
-    /// Acquisition, Divine Favor, Rewind: no permanent, an empty graveyard, a hand bigger than the
-    /// opponent's), at the default 4 crystals. The cast and its 0-cost fused Unit is the turn's best
+    /// Craft a Card beside four 1-cost Spells that do nothing on this board (Magic Jammed, Ancient
+    /// Acquisition, Divine Favor, Rewind: no backrow card, an empty graveyard, a hand bigger than the
+    /// opponent's, no Unit), at the default 4 crystals. Book of Plague stood here until issue #3139 gave it a
+    /// mode that adds cards. The cast and its 0-cost fused Unit is the turn's best
     /// use, but at its first Discover the cast reads as a spent 4-cost card, worse than any Spell.
     fn craft_turn() -> GameState {
         jackioh_cards::register_all();
         scenario(json!({
             "seed": "search-own-prompt",
             "p1": {
-                "hand": [CRAFT, "classic-070", "classic-034", "classic-046", "classic-054"],
+                "hand": [CRAFT, "core-036", "classic-034", "classic-046", "classic-054"],
                 "library": ["core-053", "core-011", "core-008"],
             },
             "p2": { "hand": ["core-005"], "library": ["core-053", "core-011"] },

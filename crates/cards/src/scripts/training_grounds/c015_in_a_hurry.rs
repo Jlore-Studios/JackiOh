@@ -1,7 +1,7 @@
-//! TG #15 In a hurry (SPEC §8.11 row TG 15; §2.2, §3.2, §4.2, §7, R11, R64, R174, R350, R2198002): (2)
+//! TG #15 In a hurry (SPEC §8.11 row TG 15; §2.2, §3.2, §4.2, §7, R11, R64, R174, R350, R2198002): (3)
 //! Spell, Common, a card of the held Training Grounds set (R1420, R2194000).
-//!   Base:    "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them." — 3.
-//!   Radiant: "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. …" — 3.
+//!   Base:    "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them." — 4.
+//!   Radiant: "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. …" — 4.
 //! C+ #15 summon leftmost open zones (R64; fewer if full, §3.2; rememberAs, R1126; §4.2, §7).
 //! End-of-turn delay destroys at §2.2 (R2198002, R350; off field forgotten, R11, R174; stolen still destroyed; END_OF_TURN_MARK, R437, R2321001; TG6 row 10).
 
@@ -111,10 +111,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn three_rush_tokens_in_the_leftmost_open_unit_zones() {
+        fn four_rush_tokens_in_the_leftmost_open_unit_zones() {
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 2 }]), json!([]));
             s.play(HURRY, json!({}));
-            assert_eq!(lanes(&s, P1), vec![1, 3, 4]);
+            assert_eq!(lanes(&s, P1), vec![1, 3, 4, 5]);
             for (_, token) in tokens(&s, P1) {
                 s.expect_stats(&token, json!({ "attack": 3, "health": 3 }));
                 assert!(!token.radiant);
@@ -123,6 +123,10 @@ mod tests {
 
         #[test]
         fn fewer_on_a_nearly_full_board_none_on_a_full_one() {
+            let mut s = board(false, json!([VANILLA, VANILLA]), json!([]));
+            s.play(HURRY, json!({}));
+            assert_eq!(lanes(&s, P1), vec![3, 4, 5], "three open zones, three tokens");
+
             let mut s = board(false, json!([VANILLA, VANILLA, VANILLA, VANILLA]), json!([]));
             s.play(HURRY, json!({}));
             assert_eq!(lanes(&s, P1), vec![5]);
@@ -160,7 +164,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([]));
             s.play(HURRY, json!({}));
             let made: Vec<CardInstance> = tokens(&s, P1).into_iter().map(|(_, card)| card).collect();
-            assert_eq!(made.len(), 3);
+            assert_eq!(made.len(), 4);
             s.end_turn();
             assert!(tokens(&s, P1).is_empty());
             let destroyed: Vec<String> = s
@@ -194,7 +198,7 @@ mod tests {
             let first = tokens(&s, P1)[0].1.clone();
             s.attack(&first, &greaser);
             s.expect_in_zone(&first, "gone");
-            assert_eq!(tokens(&s, P1).len(), 2);
+            assert_eq!(tokens(&s, P1).len(), 3);
             s.end_turn();
             assert!(tokens(&s, P1).is_empty());
             s.expect_in_zone(&rock, "field");
@@ -202,23 +206,20 @@ mod tests {
         }
 
         #[test]
-        fn r2198002_they_are_destroyed_after_the_end_of_turn_triggers_and_traps() {
-            // p1's Support Loser (lane 5) heals each of p1's Units at the end of the turn, and p1's Radiant
-            // Ace in the Hole Recruits in the end-of-turn trap window whatever its coin (R62). Both must
-            // still find the tokens standing in lanes 1 to 3: the heal reaches the damaged one, and the
-            // recruited Vanilla lands in lane 4, the only open zone, not in lane 1.
+        fn r2198002_they_are_destroyed_after_the_end_of_turn_triggers() {
+            // p1's Support Loser (lane 5) heals each of p1's Units at the end of the turn, and must still
+            // find the tokens standing in lanes 1 to 4: the heal reaches the damaged one.
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HURRY],
                     "field": [{ "def": SUPPORT_LOSER, "lane": 5 }],
-                    "backrow": [{ "def": ACE, "radiant": true, "faceUp": false }],
                     "mana": 10,
                     "library": [VANILLA, VANILLA, VANILLA, VANILLA],
                 },
                 "p2": { "hand": filler(2), "library": filler(4) },
             }));
             s.play(HURRY, json!({}));
-            assert_eq!(lanes(&s, P1), vec![1, 2, 3]);
+            assert_eq!(lanes(&s, P1), vec![1, 2, 3, 4]);
             let first = tokens(&s, P1)[0].1.clone();
             s.card_mut(&first).damage = 1;
             s.end_turn();
@@ -227,20 +228,50 @@ mod tests {
             let healed = events.iter().position(
                 |event| matches!(event, GameEvent::Healed { target_id, .. } if *target_id == first.id),
             );
+            let destroyed = events.iter().position(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == first.id),
+            );
+            let (Some(healed), Some(destroyed)) = (healed, destroyed) else {
+                panic!("a heal and a destroy: {healed:?} {destroyed:?}");
+            };
+            assert!(healed < destroyed);
+            assert!(tokens(&s, P1).is_empty());
+            assert_eq!(s.unit(P1, 5).map(|card| card.def_id).as_deref(), Some(SUPPORT_LOSER));
+        }
+
+        #[test]
+        fn r2198002_they_are_destroyed_after_the_end_of_turn_traps() {
+            // p1's Radiant Ace in the Hole Recruits in the end-of-turn trap window whatever its coin (R62).
+            // It must still find the tokens standing in lanes 1 to 4: the recruited Vanilla lands in lane 5,
+            // the only open zone, not in lane 1.
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [HURRY],
+                    "backrow": [{ "def": ACE, "radiant": true, "faceUp": false }],
+                    "mana": 10,
+                    "library": [VANILLA, VANILLA, VANILLA, VANILLA],
+                },
+                "p2": { "hand": filler(2), "library": filler(4) },
+            }));
+            s.play(HURRY, json!({}));
+            assert_eq!(lanes(&s, P1), vec![1, 2, 3, 4]);
+            let first = tokens(&s, P1)[0].1.clone();
+            s.end_turn();
+
+            let events = s.last_events().to_vec();
             let recruited = events.iter().position(|event| {
                 matches!(event, GameEvent::Summoned { def_id, .. } if def_id == VANILLA)
             });
             let destroyed = events.iter().position(
                 |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == first.id),
             );
-            let (Some(healed), Some(recruited), Some(destroyed)) = (healed, recruited, destroyed) else {
-                panic!("a heal, a recruit and a destroy: {healed:?} {recruited:?} {destroyed:?}");
+            let (Some(recruited), Some(destroyed)) = (recruited, destroyed) else {
+                panic!("a recruit and a destroy: {recruited:?} {destroyed:?}");
             };
-            assert!(healed < destroyed && recruited < destroyed);
+            assert!(recruited < destroyed);
             assert!(tokens(&s, P1).is_empty());
-            assert_eq!(s.unit(P1, 4).map(|card| card.def_id).as_deref(), Some(VANILLA));
-            assert!((1..=3).all(|lane| s.unit(P1, lane).is_none()));
-            assert_eq!(s.unit(P1, 5).map(|card| card.def_id).as_deref(), Some(SUPPORT_LOSER));
+            assert_eq!(s.unit(P1, 5).map(|card| card.def_id).as_deref(), Some(VANILLA));
+            assert!((1..=4).all(|lane| s.unit(P1, lane).is_none()));
         }
 
         #[test]
@@ -254,7 +285,7 @@ mod tests {
             }));
             crate::run_as(&mut s, jackioh_engine::effects::cast_new(json_as(json!({ "def": HURRY }))), P1);
             assert_eq!(s.state().active, P2);
-            assert_eq!(tokens(&s, P1).len(), 3);
+            assert_eq!(tokens(&s, P1).len(), 4);
             s.end_turn();
             assert_eq!(s.state().active, P1);
             assert!(tokens(&s, P1).is_empty());
@@ -314,17 +345,17 @@ mod tests {
             );
             assert_eq!(
                 s.state().marks.clone().unwrap_or_default().len(),
-                2,
-                "the two left standing still wear theirs"
+                3,
+                "the three left standing still wear theirs"
             );
         }
 
         #[test]
         fn tokens_reads_through_param() {
             let mut s = board(false, json!([]), json!([]));
-            assert_eq!(upgrade_number(&mut s, HURRY, "tokens"), 4);
+            assert_eq!(upgrade_number(&mut s, HURRY, "tokens"), 5);
             s.play(HURRY, json!({}));
-            assert_eq!(tokens(&s, P1).len(), 4);
+            assert_eq!(tokens(&s, P1).len(), 5);
             s.end_turn();
             assert!(tokens(&s, P1).is_empty());
         }
@@ -334,11 +365,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn three_radiant_rush_tokens_six_six_rush_and_cleave() {
+        fn four_radiant_rush_tokens_six_six_rush_and_cleave() {
             let mut s = board(true, json!([]), json!([]));
             s.play(HURRY, json!({}));
             let made = tokens(&s, P1);
-            assert_eq!(made.len(), 3);
+            assert_eq!(made.len(), 4);
             for (_, token) in made {
                 assert!(token.radiant);
                 s.expect_stats(&token, json!({ "attack": 6, "health": 6 }));

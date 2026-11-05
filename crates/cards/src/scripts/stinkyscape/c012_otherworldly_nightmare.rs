@@ -1,4 +1,4 @@
-//! S #12 Otherworldly Nightmare (SPEC §8.10 row S 12; §2.4, ST8, R1837000): (1) Spell,
+//! S #12 Otherworldly Nightmare (SPEC §8.10 row S 12; §2.4, ST8, R1837000): (3) Spell,
 //! Otherworldly, Epic.
 //!   Base:    "Add a Shadow Word Death, a Shadow Word Pain and a Psychic Scream to your hand."
 //!   Radiant: "Add a Radiant Shadow Word Death, a Radiant Shadow Word Pain and a Radiant Psychic
@@ -57,6 +57,18 @@ mod tests {
     const PAIN: &str = "stinkyscape-012-2";
     const SCREAM: &str = "stinkyscape-012-3";
     const FILLER: &str = "core-005";
+
+    /// #3142: it costs (3) on both faces, where it cost (2).
+    #[test]
+    fn it_costs_3_on_both_faces() {
+        for radiant in [false, true] {
+            let s = scenario(json!({
+                "p1": { "hand": [{ "def": NIGHTMARE, "radiant": radiant }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            assert_eq!(effective_cost(s.state(), s.card(NIGHTMARE), Default::default()), 3, "radiant {radiant}");
+        }
+    }
 
     mod base {
         use super::*;

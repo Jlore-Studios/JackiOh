@@ -289,6 +289,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             def_id,
                             former_id,
                             on_draw,
+                            from,
                             ..
                         } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
@@ -300,7 +301,11 @@ mod summarize_game_over_real_cards_s9_11 {
                             // (summary-cards-28, #2280). R831001: nor is a card a Counter sent to a hand in
                             // this step, its countering player's cast, even when a second Counter sends it
                             // back to the hand it was played from (summary-cards-87, #2657).
+                            // A play from the graveyard is no cast from the hand the card stood in as the step
+                            // began: a (0) Spell played again from there, step after step of one action, is the
+                            // graveyard's (R454; summary-cards-55 plays one 13 times).
                             } else if *on_draw != Some(true)
+                                && from.is_none()
                                 && !stolen_here.contains(&instance_id.as_str())
                                 && let Some(card) = state.players[*caster]
                                     .hand
@@ -606,8 +611,8 @@ mod summarize_game_over_real_cards_s9_11 {
 mod r831001_a_stolen_cast_is_no_play {
     use super::*;
 
-    const BOOK: &str = "classic-024"; // (1) Spell, Book: Draw 3.
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals the opponent's (1) Cost Spell and casts it.
+    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (3) Cost or less.
+    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals the opponent's (2) Cost Spell and casts it (R3139000).
 
     fn act(state: &GameState, log: &mut Vec<Action>, body: Value) -> GameState {
         let mut action = body;
@@ -672,19 +677,19 @@ mod r831001_a_stolen_cast_is_no_play {
             json!({ "type": "play", "instanceId": palantir, "zone": { "row": "backrow", "lane": 1 }, "playerId": "p2" }),
         );
         state = end_turn(state, &mut log, PlayerId::P2);
-        let book = first_of(&state, PlayerId::P1, BOOK)?;
+        let call = first_of(&state, PlayerId::P1, CALL)?;
         state = act(
             &state,
             &mut log,
-            json!({ "type": "play", "instanceId": book, "playerId": "p1" }),
+            json!({ "type": "play", "instanceId": call, "playerId": "p1" }),
         );
         assert!(
-            state.players.p2.graveyard.iter().any(|card| card.id == book),
+            state.players.p2.graveyard.iter().any(|card| card.id == call),
             "{seed}"
         );
         state = act(&state, &mut log, json!({ "type": "concede", "playerId": "p1" }));
         assert!(state.result.is_some());
-        Some((log, book))
+        Some((log, call))
     }
 
     #[test]
@@ -704,13 +709,13 @@ mod r831001_a_stolen_cast_is_no_play {
                 .chain(units.iter().cloned())
                 .collect()
         };
-        let decks = (deck(BOOK), deck(PALANTIR));
+        let decks = (deck(CALL), deck(PALANTIR));
         let found = (0..300).find_map(|n| {
             let seed = format!("summary-palantir-{n}");
             game(&seed, &decks).map(|(log, _)| (seed, log))
         });
         let Some((seed, log)) = found else {
-            panic!("a seed below 300 deals the Book and Palantir in time");
+            panic!("a seed below 300 deals the Call to Arms and Palantir in time");
         };
 
         let Some(summary) = summarize_game(&FoldArgs {
