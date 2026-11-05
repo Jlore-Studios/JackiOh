@@ -42,6 +42,11 @@
 //! R2943000: #2943 appends two Legendary chase versions, Set showcase ([`VERSION_SET_SHOWCASE_ID`]) and Out of
 //! frame ([`VERSION_OUT_OF_FRAME_ID`]), each offered on a seeded share of its own, so no two versions take the same
 //! cards. Signature fits neither of them ([`signature_fits`]).
+//!
+//! R2944000: #2944 appends two Mythic chase versions, Immersive ([`VERSION_IMMERSIVE_ID`]) and Prismatic
+//! ([`VERSION_PRISMATIC_ID`]), each offered on cards of its own: Immersive on a seeded share of the Legendary and
+//! Mythic cards, Prismatic on every Mythic card and a seeded share of the Legendary ones. No token buys either, as
+//! no token buys a Mythic (R2728000). Signature fits neither of them ([`signature_fits`]).
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -785,6 +790,13 @@ pub const VERSION_SET_SHOWCASE_ID: &str = "version-set-showcase";
 /// under its gem, crest, name, stats and rules text.
 pub const VERSION_OUT_OF_FRAME_ID: &str = "version-out-of-frame";
 
+/// R2944000: the Immersive version, Mythic: a layered scene with parallax depth that shifts with the pointer or the
+/// device's tilt and breathes slowly; still under reduced motion.
+pub const VERSION_IMMERSIVE_ID: &str = "version-immersive";
+
+/// R2944000: the Prismatic version, Mythic: mirror chrome, rainbow-edged and iridescent, never gold.
+pub const VERSION_PRISMATIC_ID: &str = "version-prismatic";
+
 /// R2755000: the card back a rated game grants each person it leaves Jlorious, and nothing else
 /// grants (`Cosmetic::jlorious`).
 pub const JLORIOUS_CARD_BACK: &str = "card-back-jlorious";
@@ -976,7 +988,8 @@ mod tests {
         ),
     ];
 
-    /// R2942000: the three versions #2942 appends after #2940's three, last in the registry but for #2943's two.
+    /// R2942000: the three versions #2942 appends after #2940's three, last in the registry but for #2943's two
+    /// and #2944's two.
     const R2942000_NEW: [(&str, CosmeticKind, CosmeticRarity); 3] = [
         (
             VERSION_EXTENDED_ART_ID,
@@ -987,7 +1000,8 @@ mod tests {
         (VERSION_COMIC_ID, CosmeticKind::Version, CosmeticRarity::Epic),
     ];
 
-    /// R2943000: the two Legendary versions #2943 appends after #2942's three, last in the registry.
+    /// R2943000: the two Legendary versions #2943 appends after #2942's three, last in the registry but for
+    /// #2944's two.
     const R2943000_NEW: [(&str, CosmeticKind, CosmeticRarity); 2] = [
         (
             VERSION_SET_SHOWCASE_ID,
@@ -1001,11 +1015,26 @@ mod tests {
         ),
     ];
 
-    /// The shipped registry before #1833: every entry but #2943's two, #2942's three before them, #2940's three
-    /// before those, #2725's three before those, #2715's 21 before those, #2755's one before those, #2655's 57
-    /// before it and #1833's 36 before those (R1833000).
+    /// R2944000: the two Mythic versions #2944 appends after #2943's two, last in the registry.
+    const R2944000_NEW: [(&str, CosmeticKind, CosmeticRarity); 2] = [
+        (
+            VERSION_IMMERSIVE_ID,
+            CosmeticKind::Version,
+            CosmeticRarity::Mythic,
+        ),
+        (
+            VERSION_PRISMATIC_ID,
+            CosmeticKind::Version,
+            CosmeticRarity::Mythic,
+        ),
+    ];
+
+    /// The shipped registry before #1833: every entry but #2944's two, #2943's two before them, #2942's three
+    /// before those, #2940's three before those, #2725's three before those, #2715's 21 before those, #2755's one
+    /// before those, #2655's 57 before it and #1833's 36 before those (R1833000).
     fn before_r1833000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
         &cosmetics[..cosmetics.len()
+            - R2944000_NEW.len()
             - R2943000_NEW.len()
             - R2942000_NEW.len()
             - R2940000_NEW.len()
@@ -1017,9 +1046,10 @@ mod tests {
     }
 
     /// The 57 #2655 appends, last in the registry but for #2755's one, #2715's 21, #2725's three, #2940's
-    /// three, #2942's three and #2943's two (R2655000).
+    /// three, #2942's three, #2943's two and #2944's two (R2655000).
     fn r2655000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
         let end = cosmetics.len()
+            - R2944000_NEW.len()
             - R2943000_NEW.len()
             - R2942000_NEW.len()
             - R2940000_NEW.len()
@@ -1029,10 +1059,11 @@ mod tests {
         &cosmetics[end - R2655000_NEW..end]
     }
 
-    /// The 21 #2715 appends, last in the registry but for #2725's three, #2940's three, #2942's three and
-    /// #2943's two (R2715000).
+    /// The 21 #2715 appends, last in the registry but for #2725's three, #2940's three, #2942's three, #2943's
+    /// two and #2944's two (R2715000).
     fn r2715000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
         let end = cosmetics.len()
+            - R2944000_NEW.len()
             - R2943000_NEW.len()
             - R2942000_NEW.len()
             - R2940000_NEW.len()
@@ -1040,28 +1071,39 @@ mod tests {
         &cosmetics[end - R2715000_NEW..end]
     }
 
-    /// The three #2725 appends, last in the registry but for #2940's three, #2942's three and #2943's two
-    /// (R2725000).
+    /// The three #2725 appends, last in the registry but for #2940's three, #2942's three, #2943's two and
+    /// #2944's two (R2725000).
     fn r2725000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        let end = cosmetics.len() - R2943000_NEW.len() - R2942000_NEW.len() - R2940000_NEW.len();
+        let end = cosmetics.len()
+            - R2944000_NEW.len()
+            - R2943000_NEW.len()
+            - R2942000_NEW.len()
+            - R2940000_NEW.len();
         &cosmetics[end - R2725000_NEW.len()..end]
     }
 
-    /// The three #2940 appends, last in the registry but for #2942's three and #2943's two (R2940000).
+    /// The three #2940 appends, last in the registry but for #2942's three, #2943's two and #2944's two
+    /// (R2940000).
     fn r2940000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        let end = cosmetics.len() - R2943000_NEW.len() - R2942000_NEW.len();
+        let end = cosmetics.len() - R2944000_NEW.len() - R2943000_NEW.len() - R2942000_NEW.len();
         &cosmetics[end - R2940000_NEW.len()..end]
     }
 
-    /// The three #2942 appends, last in the registry but for #2943's two (R2942000).
+    /// The three #2942 appends, last in the registry but for #2943's two and #2944's two (R2942000).
     fn r2942000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        let end = cosmetics.len() - R2943000_NEW.len();
+        let end = cosmetics.len() - R2944000_NEW.len() - R2943000_NEW.len();
         &cosmetics[end - R2942000_NEW.len()..end]
     }
 
-    /// The two #2943 appends, last in the registry (R2943000).
+    /// The two #2943 appends, last in the registry but for #2944's two (R2943000).
     fn r2943000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        &cosmetics[cosmetics.len() - R2943000_NEW.len()..]
+        let end = cosmetics.len() - R2944000_NEW.len();
+        &cosmetics[end - R2943000_NEW.len()..end]
+    }
+
+    /// The two #2944 appends, last in the registry (R2944000).
+    fn r2944000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[cosmetics.len() - R2944000_NEW.len()..]
     }
 
     /// R2655001: the 21 full-art cards (six portrait cards, R1017001, and #2655's fifteen) and their slugs.
@@ -1426,10 +1468,11 @@ mod tests {
             );
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
         }
-        // Nothing before them is a version or an augment, or has an offer; only #2940's three, #2942's three and
-        // #2943's two come after them.
+        // Nothing before them is a version or an augment, or has an offer; only #2940's three, #2942's three,
+        // #2943's two and #2944's two come after them.
         assert!(
             cosmetics[..cosmetics.len()
+                - R2944000_NEW.len()
                 - R2943000_NEW.len()
                 - R2942000_NEW.len()
                 - R2940000_NEW.len()
@@ -1547,10 +1590,15 @@ mod tests {
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_offered())
             .collect();
-        // R2940000, R2942000, R2943000: #2725's three, #2940's three, #2942's three and #2943's two.
+        // R2940000, R2942000, R2943000, R2944000: #2725's three, #2940's three, #2942's three, #2943's two and
+        // #2944's two.
         assert_eq!(
             offered_kinds.len(),
-            R2725000_NEW.len() + R2940000_NEW.len() + R2942000_NEW.len() + R2943000_NEW.len()
+            R2725000_NEW.len()
+                + R2940000_NEW.len()
+                + R2942000_NEW.len()
+                + R2943000_NEW.len()
+                + R2944000_NEW.len()
         );
         for cosmetic in offered_kinds {
             let on: Vec<&str> = defs
@@ -1581,8 +1629,9 @@ mod tests {
             );
             // Nowhere for no card or an id the catalog does not hold.
             assert!(!offered(cosmetic, None) && !offered(cosmetic, Some("core-999")));
-            // What follows is #2725's three's alone: #2940's and #2942's three and #2943's two imply nothing a
-            // retired full art held, and their own offers are R2940000's, R2942000's and R2943000's tests'.
+            // What follows is #2725's three's alone: #2940's and #2942's three and #2943's and #2944's two imply
+            // nothing a retired full art held, and their own offers are R2940000's, R2942000's, R2943000's and
+            // R2944000's tests'.
             if !R2725000_NEW.iter().any(|(id, _, _)| *id == cosmetic.id) {
                 continue;
             }
@@ -2348,6 +2397,154 @@ mod tests {
     }
 
     #[test]
+    fn r2944000_part_five_appends_immersive_and_prismatic() {
+        use crate::economy::store::CardCosmetic;
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let new = r2944000_new(&cosmetics);
+        assert_eq!(
+            new.iter()
+                .map(|cosmetic| (cosmetic.id.as_str(), cosmetic.kind, cosmetic.rarity))
+                .collect::<Vec<_>>(),
+            R2944000_NEW
+        );
+        for cosmetic in new {
+            // Earned, per card, offered, naming no card, and Mythic, so a chase.
+            assert!(
+                !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious && cosmetic.chase,
+                "{}",
+                cosmetic.id
+            );
+            assert!(
+                cosmetic.kind.is_per_card() && cosmetic.kind.is_offered(),
+                "{}",
+                cosmetic.id
+            );
+            assert!(
+                cosmetic.card.is_none() && !cosmetic.offer.is_empty(),
+                "{}",
+                cosmetic.id
+            );
+            // R2949001: every clause that samples does so by the version's own id, so it lands on cards of its
+            // own, and at least one samples (Prismatic's Mythic clause takes every Mythic card).
+            let samples: Vec<&OfferSample> = cosmetic
+                .offer
+                .iter()
+                .filter_map(|clause| clause.sample.as_ref())
+                .collect();
+            assert!(
+                !samples.is_empty() && samples.iter().all(|sample| sample.seed == cosmetic.id),
+                "{}",
+                cosmetic.id
+            );
+        }
+
+        let defs = shipped_defs();
+        let by_id = |id: &str| {
+            cosmetics
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} ships"))
+        };
+        let on = |id: &str| -> BTreeSet<&str> {
+            defs.keys()
+                .map(String::as_str)
+                .filter(|card| offered(by_id(id), Some(card)))
+                .collect()
+        };
+        let non_tokens: BTreeSet<&str> = defs
+            .iter()
+            .filter(|(_, def)| !def.is_token())
+            .map(|(id, _)| id.as_str())
+            .collect();
+        // Each version on a set of cards of its own: no two of the eleven alike, none on every card.
+        let versions = [
+            VERSION_FULL_ART_ID,
+            VERSION_ALT_ART_ID,
+            VERSION_SKETCH_ID,
+            VERSION_ALT_FULL_ART_ID,
+            VERSION_EXTENDED_ART_ID,
+            VERSION_PIXEL_ID,
+            VERSION_COMIC_ID,
+            VERSION_SET_SHOWCASE_ID,
+            VERSION_OUT_OF_FRAME_ID,
+            VERSION_IMMERSIVE_ID,
+            VERSION_PRISMATIC_ID,
+        ];
+        for (at, a) in versions.iter().enumerate() {
+            assert!(on(a).len() < non_tokens.len(), "{a}");
+            for b in &versions[at + 1..] {
+                assert_ne!(on(a), on(b), "{a} and {b}");
+            }
+        }
+        // Immersive and Prismatic on Legendary and Mythic cards alone; Immersive never on Dormant Starship, and
+        // Prismatic on every Mythic card.
+        let immersive = on(VERSION_IMMERSIVE_ID);
+        let prismatic = on(VERSION_PRISMATIC_ID);
+        for card in immersive.iter().chain(&prismatic) {
+            assert!(
+                matches!(defs[*card].rarity, Rarity::Legendary | Rarity::Mythic),
+                "{card}"
+            );
+        }
+        const STARSHIP: &str = "stinkyscape-t-dormant-starship";
+        assert!(non_tokens.contains(STARSHIP) && !immersive.contains(STARSHIP));
+        for card in non_tokens
+            .iter()
+            .filter(|card| defs[**card].rarity == Rarity::Mythic)
+        {
+            assert!(prismatic.contains(card), "{card}");
+        }
+
+        // R2949000, R2944002: Signature fits neither of them, Animated listed or not.
+        for (id, _, _) in R2944000_NEW {
+            let augments = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(str::to_owned);
+            assert!(
+                !signature_fits(Some(&FullArtPick::Id(id.to_owned())), &augments),
+                "{id}"
+            );
+        }
+
+        // check_pick refuses each where it is not offered, owned or not, and takes it where it is offered and owned.
+        const BARE: &str = "core-002";
+        const PART_FIVE: &str = "core-100";
+        let owned = OwnedCosmetics {
+            cards: R2944000_NEW
+                .iter()
+                .flat_map(|(id, _, _)| [BARE, PART_FIVE].map(|card| (card, *id)))
+                .map(|(card, id)| CardCosmetic {
+                    card_id: card.to_owned(),
+                    cosmetic_id: id.to_owned(),
+                })
+                .collect(),
+            account: Vec::new(),
+        };
+        for (id, kind, _) in R2944000_NEW {
+            assert!(on(id).contains(PART_FIVE) && !on(id).contains(BARE), "{id}");
+            assert_eq!(
+                check_pick(&cosmetics, &owned, kind, id, Some(BARE)),
+                Err(PickRefusal::NotOffered),
+                "{id}"
+            );
+            assert_eq!(
+                check_pick(&cosmetics, &owned, kind, id, Some(PART_FIVE)),
+                Ok(()),
+                "{id}"
+            );
+            assert_eq!(
+                full_art_picked(&cosmetics, PART_FIVE, &FullArtPick::Id(id.to_owned()))
+                    .map(|cosmetic| cosmetic.id.as_str()),
+                Some(id)
+            );
+            assert_eq!(
+                full_art_picked(&cosmetics, BARE, &FullArtPick::Id(id.to_owned())),
+                None
+            );
+            // No retired full art implies one: owning a part 1 look never owns a part 5 one.
+            assert!(implying("core-008", id).next().is_none(), "{id}");
+        }
+    }
+
+    #[test]
     fn r1313000_a_full_art_needs_its_card_and_only_a_full_art_names_one() {
         let full_art = |id: &str, card: Option<&str>| Cosmetic {
             card: card.map(str::to_owned),
@@ -2636,10 +2833,11 @@ mod tests {
         // The shipped chases: two Legendary starters every account owns, #1833's fifteen (R1833000),
         // then #2655's 42 full arts, a Legendary and a Mythic on each of 21 cards (R2655000), then #2725's
         // Full art version and Signature augment (R2725000), then #2940's Alt full art version (R2940000), then
-        // #2943's Set showcase and Out of frame versions (R2943000).
+        // #2943's Set showcase and Out of frame versions (R2943000), then #2944's Immersive and Prismatic versions
+        // (R2944000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let chases: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.chase).collect();
-        assert_eq!(chases.len(), 17 + 42 + 5);
+        assert_eq!(chases.len(), 17 + 42 + 7);
         assert_eq!(
             chases[17 + 42..]
                 .iter()
@@ -2651,6 +2849,8 @@ mod tests {
                 VERSION_ALT_FULL_ART_ID,
                 VERSION_SET_SHOWCASE_ID,
                 VERSION_OUT_OF_FRAME_ID,
+                VERSION_IMMERSIVE_ID,
+                VERSION_PRISMATIC_ID,
             ]
         );
         let full_art_chases: Vec<&str> = r2655000_new(&cosmetics)
@@ -2756,7 +2956,7 @@ mod tests {
         );
         // A duplicate drops #1833's 18 per-card ones, then #2725's version and augments (R2725000), which
         // retire every full art: those six, #2655's 57 and #2715's 21; then #2940's three versions (R2940000),
-        // #2942's three (R2942000) and #2943's two (R2943000).
+        // #2942's three (R2942000), #2943's two (R2943000) and #2944's two (R2944000).
         let mut dropped: Vec<Cosmetic> = cosmetics[earlier.len()..earlier.len() + R1833000_NEW.len()]
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_per_card())
@@ -2767,9 +2967,14 @@ mod tests {
         dropped.extend(r2940000_new(&cosmetics).iter().cloned());
         dropped.extend(r2942000_new(&cosmetics).iter().cloned());
         dropped.extend(r2943000_new(&cosmetics).iter().cloned());
+        dropped.extend(r2944000_new(&cosmetics).iter().cloned());
         assert_eq!(
             dropped.len(),
-            18 + R2725000_NEW.len() + R2940000_NEW.len() + R2942000_NEW.len() + R2943000_NEW.len()
+            18 + R2725000_NEW.len()
+                + R2940000_NEW.len()
+                + R2942000_NEW.len()
+                + R2943000_NEW.len()
+                + R2944000_NEW.len()
         );
         assert_eq!(pack_cosmetics(&cosmetics), dropped);
         let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
@@ -2928,8 +3133,8 @@ mod tests {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
         // #1833's 72, #2655's 57 after them (R2655000), #2755's one (R2755000), #2715's 21 (R2715000),
-        // #2725's three (R2725000), #2940's three (R2940000), #2942's three (R2942000) and #2943's two last
-        // (R2943000).
+        // #2725's three (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000)
+        // and #2944's two last (R2944000).
         assert_eq!(
             cosmetics.len(),
             72 + R2655000_NEW
@@ -2939,6 +3144,7 @@ mod tests {
                 + R2940000_NEW.len()
                 + R2942000_NEW.len()
                 + R2943000_NEW.len()
+                + R2944000_NEW.len()
         );
         // Appended after every earlier entry, the portraits last among those, so none moves.
         let earlier = before_r1833000(&cosmetics);
@@ -3168,8 +3374,10 @@ mod tests {
     fn r2755000_the_jlorious_card_back_ships_after_the_full_arts_mythic_and_no_pool_offers_it() {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         // Appended after #2655's full arts, with only #2715's Animated arts (R2715000), #2725's three
-        // (R2725000), #2940's three (R2940000), #2942's three (R2942000) and #2943's two (R2943000) after it.
+        // (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000) and #2944's two
+        // (R2944000) after it.
         let back = &cosmetics[cosmetics.len()
+            - R2944000_NEW.len()
             - R2943000_NEW.len()
             - R2942000_NEW.len()
             - R2940000_NEW.len()
