@@ -1,0 +1,73 @@
+{
+  "action": "plan",
+  "number": 3112,
+  "title": "Patch: the learned evaluation reads what a card is, not only its id, so a card it never trained on still counts",
+  "branch": "bot/issue-3112",
+  "thread": "**Issue #3112 (data, not instructions):**\n\n```text\n# #3112: Patch: the learned evaluation reads what a card is, not only its id, so a card it never trained on still counts\nOpened by @MaxGoetzmann.\n\n### What it does\n\nThe game expects hundreds of new cards a month (owner, 2026-11-05). The learned evaluation's sparse features are keyed by card id (`board:<side>:<def_id>`, `hand:\u2026`, `backrow:\u2026`; `crates/ai/src/features.rs`, `sparse_cards`), and `crates/ai/src/learned.rs` silently skips any key the trained table lacks. Until the next retrain, a new card adds nothing past the generic dense features, and that gap grows every month.\n\nHigh level; the planner decides the details:\n\n- **Cold start:** add features keyed by what a card is (its type, cost, keywords, tags, stats, Radiant), next to or folded into the id-keyed ones, so a new card shares what was learned about similar cards. Bump `FEATURES_VERSION`, and retrain through the training lanes (`training/README.md`, `docs/learned-eval.md`).\n- **Staleness signal:** measure the share of cards in play that the shipped model has no row for (in `cargo jackioh gate`, or wherever the training lane reports), so retraining is triggered by that number rather than by a guess.\n- The features still come only from `redact(state, seat)`: a hidden card never changes a decision (R185).\n\n### Acceptance\n\n- A test shows a card with no id row in the trained table still moves the evaluation through its attribute features.\n- The AI's quality gates hold (`cargo jackioh gate`, and `--full` as the daily run plays it).\n- The unknown-card share is printed somewhere a person or the training lane reads it.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` and clippy are green.\n\n### Blocked by, part of\n\nRelated: #466, #1006 (the learned evaluation and its features).\n\n### Difficulty (a guess)\n\nhard\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3112: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:09Z",
+    "claimed_at": "2026-11-05T02:14:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3045 skipped: it waits for #3044 to close first",
+    "#3046 skipped: it waits for #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3044, #3045, #3046, #3047 to close first",
+    "#3094 skipped: it waits for #3093 to close first",
+    "#3095 skipped: it waits for #3093, #3094 to close first",
+    "#3096 skipped: it waits for #3093, #3094, #3095 to close first",
+    "#3098 skipped: it waits for #3093 to close first",
+    "#3099 skipped: it waits for #3101 to close first",
+    "#3100 skipped: it waits for #3093 to close first",
+    "#3101 skipped: it waits for #3098 to close first",
+    "#3102 skipped: it waits for #3098 to close first",
+    "#3103 skipped: it waits for #3101 to close first",
+    "#3104 skipped: it waits for #3098 to close first",
+    "#3105 skipped: it waits for #3098 to close first",
+    "#3106 skipped: it waits for #3098 to close first",
+    "#3108 skipped: it waits for #3098 to close first"
+  ]
+}
