@@ -15043,8 +15043,22 @@
       "taken_asks": []
     },
     "3044": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "live": "building",
       "onto": "bot/issue-3000",
-      "part_of": 3000
+      "owner": "claude-1",
+      "owner_since": "2026-11-05T00:22:47Z",
+      "owner_why": "it took it up",
+      "part_of": 3000,
+      "pending_request": false,
+      "provider": "claude-1",
+      "run_id": "pending:408ab7fb-1793838139",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-05T00:22:47Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3045": {
       "onto": "bot/issue-3000",
@@ -16166,9 +16180,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T00:22:05Z",
+    "at": "2026-11-05T00:22:47Z",
     "url": "",
-    "what": "review #3087 on claude-6"
+    "what": "build #3044 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T00:07:35Z",
