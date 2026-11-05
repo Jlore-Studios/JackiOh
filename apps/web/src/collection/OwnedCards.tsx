@@ -3,7 +3,9 @@
 // locked silhouette that still opens its view (R1655000), so a player sees what they miss. R1953001,
 // R2730000: `token` lets a held token's offer show in a locked item's fullscreen preview, which a hold
 // or the inspect key opens: a card token on an unowned card of the grid, a cosmetic token in the
-// card's view. R1956000: an owned tile wears the viewer's picks.
+// card's view. R1956000: an owned tile wears the viewer's picks. R3016000: a mouse resting on a card, or the
+// keyboard's focus, opens its hover preview (LookHover.tsx), its look as the card, in hand and on the board
+// with a Radiant toggle; the fullscreen preview shows the same views.
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -18,22 +20,30 @@ import { quantitiesOf } from "../shop/shop.ts";
 import CardCosmeticsView from "./CardCosmeticsView.tsx";
 import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.ts";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
+import { LookHoverPanel, useLookHover, type LookHoverTrigger } from "./LookHover.tsx";
+import LookViews, { RadiantToggle } from "./LookViews.tsx";
 import TokenOffer, { useHeldTokens, type HeldTokens } from "./TokenOffer.tsx";
 
 type Inspected = { def: CardDef; owned: boolean };
 
-/** R2730000: one grid card: a hold or the inspect key previews it fullscreen, a click opens its view. */
+/**
+ * R2730000: one grid card: a hold or the inspect key previews it fullscreen, a click opens its view.
+ * R3016000: a resting mouse or the keyboard's focus opens its hover preview; a press closes it first.
+ */
 function CollectionCardTile({
   def,
   owned,
+  hover,
   onOpen,
   onPreview,
 }: {
   def: CardDef;
   owned: boolean;
+  hover: LookHoverTrigger;
   onOpen: () => void;
   onPreview: () => void;
 }): ReactElement {
+  const hold = usePreviewHold(`card-${def.id}`, onPreview);
   return (
     <button
       type="button"
@@ -42,7 +52,12 @@ function CollectionCardTile({
       data-owned={String(owned)}
       aria-label={owned ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
       aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
-      {...usePreviewHold(`card-${def.id}`, onPreview)}
+      {...hold}
+      {...hover}
+      onPointerDown={(event) => {
+        hover.onPointerDown();
+        hold.onPointerDown(event);
+      }}
       onClick={() => {
         closeInspect();
         onOpen();
@@ -72,6 +87,9 @@ export default function OwnedCards({
   const [openSet, setOpenSet] = useState<SetName | null>(null);
   const [inspected, setInspected] = useState<Inspected | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
+  // R3016000: the fullscreen preview's Radiant toggle, base whenever a preview opens.
+  const [previewRadiant, setPreviewRadiant] = useState(false);
+  const hover = useLookHover();
   // R2730000: a redeemed card token re-reads the collection here, so the grid moves with the preview.
   const [reread, setReread] = useState<{ from: CollectionResponse; value: CollectionResponse } | null>(null);
   const shown = reread !== null && reread.from === collection ? reread.value : collection;
@@ -79,7 +97,10 @@ export default function OwnedCards({
   const idBase = useId();
   // `held` names a card's ownership in the grid below; the tokens are `tokens`.
   const [tokens, setTokens] = useHeldTokens(completions.some((set) => set.owned < set.total) ? token : null);
-  const previewed = completions.flatMap((set) => set.cards).find((card) => card.def.id === previewing) ?? null;
+  const shownCards = completions.flatMap((set) => set.cards);
+  const previewed = shownCards.find((card) => card.def.id === previewing) ?? null;
+  const hoveredId = hover.hovered?.id;
+  const hovered = shownCards.find((card) => card.def.id === hoveredId) ?? null;
 
   const redeemed = (answer: HeldTokens): void => {
     setTokens(answer);
@@ -123,10 +144,14 @@ export default function OwnedCards({
                     <CollectionCardTile
                       def={def}
                       owned={held}
+                      hover={hover.trigger(def.id)}
                       onOpen={() => {
+                        hover.close();
                         setInspected({ def, owned: held });
                       }}
                       onPreview={() => {
+                        hover.close();
+                        setPreviewRadiant(false);
                         setPreviewing(def.id);
                       }}
                     />
@@ -137,6 +162,9 @@ export default function OwnedCards({
           </div>
         );
       })}
+      {hovered === null || hover.hovered === null || inspected !== null || previewed !== null ? null : (
+        <LookHoverPanel key={hovered.def.id} def={hovered.def} owned={hovered.owned} anchor={hover.hovered.anchor} hover={hover} />
+      )}
       {inspected === null ? null : (
         <CardCosmeticsView
           key={inspected.def.id}
@@ -155,10 +183,14 @@ export default function OwnedCards({
           name={readerName(previewed.def)}
           rarity={previewed.def.rarity}
           owned={previewed.owned}
-          picture={
-            <span className="collection-preview__card">
-              <CardFace face={faceModel({ defId: previewed.def.id, def: previewed.def, radiant: false })} layout="full" worn={previewed.owned} />
-            </span>
+          picture={<LookViews def={previewed.def} radiant={previewRadiant} worn={previewed.owned} />}
+          controls={
+            <RadiantToggle
+              radiant={previewRadiant}
+              onToggle={() => {
+                setPreviewRadiant((shown) => !shown);
+              }}
+            />
           }
           offer={
             previewed.owned || token === null || tokens === null || tokens.card < 1 ? null : (

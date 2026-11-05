@@ -411,6 +411,9 @@ describe("B23 the way out", () => {
     expect(await screen.findByTestId(navTestid.back)).toBeInTheDocument();
     expect(await screen.findByTestId(inviteTestid.accountEmail)).toHaveTextContent(EMAIL);
     expect(await screen.findByTestId(inviteTestid.signOut)).toBeInTheDocument();
+    // #3189: Back and Sign out are the bar's pills, drawn by routes/top-bar.css.
+    expect(screen.getByTestId(navTestid.back)).toHaveClass("top-bar-button", "top-bar-button--text");
+    expect(screen.getByTestId(inviteTestid.signOut)).toHaveClass("top-bar-button", "top-bar-button--text");
   });
 
   it("B23 the way out stays after a rate-limited refusal", async () => {
