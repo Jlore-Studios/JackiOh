@@ -15704,6 +15704,13 @@
     "3196": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-05T18:03:28Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Test-only edits to two Cypress component specs under e2e/cypress/component; none of the five hard lines holds (no engine, AI, cross-crate, migration or 40-file change)."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
