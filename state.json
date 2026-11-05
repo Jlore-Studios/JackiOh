@@ -14827,7 +14827,11 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-8",
+      "merge_owner_gave_up": {
+        "at": "2026-11-05T03:52:32Z",
+        "provider": "claude-8",
+        "sha": "08cca0c1ca9fa16f5fa51b19f9252a4a9e024ff8"
+      },
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
