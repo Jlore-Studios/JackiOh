@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3117,
+  "title": "Patch: a check that one more card in every pool leaves the tests green, so no test leans on where a roll lands",
+  "branch": "bot/issue-3117",
+  "thread": "**Issue #3117 (data, not instructions):**\n\n```text\n# #3117: Patch: a check that one more card in every pool leaves the tests green, so no test leans on where a roll lands\nOpened by @MaxGoetzmann.\n\n### Kind\n\nArchitecture\n\n### Why\n\nOne more card shifts every random draw from a pool (R380). #848 moved the card tests to finding their roll at run time (`seed_where`, `cursor_where`), but `docs/ADDING_CARDS.md` \u00a74 still tells a card's author to re-pin seeds elsewhere: Heroic Power's tests (`crates/cards/src/scripts/core/c098_heroic_power.rs`) and `crates/ai/tests/ai/shadow_ban.rs`, whose comment says its games are \"re-pinned when the deals\" change. At hundreds of new cards a month (owner, 2026-11-05), every such test breaks every month, in a pull request about some other card.\n\n### What to change\n\nHigh level; the planner decides the details:\n\n- Find the remaining tests whose pass depends on where a pool roll lands, and convert them to a run-time search or a setup that doesn't depend on the pool.\n- Add a guard that catches the next one before a real card does. For example, a testkit switch that registers a synthetic card in every pool, with the affected suites run under it (per pull request if it fits the budget, otherwise daily in `super.yml`, with a cheaper per-PR check named in its `daily:` reason).\n- The synthetic card exists only under the testkit; the pure crates stay pure (CLAUDE.md rule 4).\n- **Constraint:** `.github/` is a path the night bot may not change. If a workflow change is needed, stop with `human_required` and name the line.\n\n### Acceptance\n\n- The guard runs and passes.\n- Adding a test that leans on a pool roll makes the guard fail.\n- `docs/ADDING_CARDS.md` \u00a74's re-pin instructions shrink to match.\n- The workspace tests are green.\n\n### Blocked by, part of\n\nFollows #848.\n\n### Difficulty (a guess)\n\nmedium\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3117: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:51Z",
+    "claimed_at": "2026-11-05T06:54:39Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
