@@ -5,8 +5,8 @@
 //! run on a small registry of their own, so what they hold is the rule and not the shipped data.
 
 use jackioh_shared::cosmetics::{
-    CardCosmetic, Cosmetic, CosmeticKind, CosmeticRarity, LevelAdds, OfferClause, OwnedCosmetics, VERSION_FULL_ART_ID,
-    VariantLevel, registry,
+    CardCosmetic, Cosmetic, CosmeticKind, CosmeticRarity, LevelAdds, OfferClause, OwnedCosmetics,
+    VERSION_FULL_ART_ID, VariantLevel, registry,
 };
 use jackioh_shared::deck::DeckSlots;
 use jackioh_shared::loadout::{
