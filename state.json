@@ -32527,7 +32527,7 @@
     "issue": 148
   },
   "secrets": {
-    "at": "2026-11-05T10:27:32Z",
+    "at": "2026-11-05T11:00:16Z",
     "set": [
       "CLAUDE_CODE_OAUTH_TOKEN",
       "CLAUDE_CODE_OAUTH_TOKEN_2",
