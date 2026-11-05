@@ -1,0 +1,291 @@
+/* #3119, R3119000: the 404 panel's play (NotFoundPlay.tsx), inside the shell's tavern board
+   (auth/tavern.css). The lost card beside a hand of three face-down ways out, its flavour under both.
+   Every color, size, face, radius and shadow is a token, and every time is the motion vocabulary's
+   (motion.css) times --anim-scale, so Reduce motion stills it all: dealt, face up and settled. */
+
+.not-found-play {
+  /* One card's width: four fit across a phone's board, and the row stays low on a short screen. */
+  --nf-card-w: clamp(52px, min(16vw, 10vh), 76px);
+  --nf-card-h: calc(var(--nf-card-w) * 7 / 5);
+  --nf-gap: clamp(6px, 2vw, 12px);
+  --nf-deal: calc(var(--motion-slow) * var(--anim-scale));
+  --nf-stagger: calc(var(--motion-fast) * var(--anim-scale));
+  --nf-flip: calc(var(--motion-slow) * var(--anim-scale));
+  --nf-float: calc(var(--motion-slow) * 12 * var(--anim-scale));
+
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "lost ways"
+    "flavour flavour";
+  justify-content: center;
+  align-items: end;
+  gap: 8px calc(var(--nf-gap) * 2);
+}
+
+/* ---- the lost card -------------------------------------------------------------------------- */
+
+.not-found-lost {
+  display: contents;
+}
+
+.not-found-lost__card {
+  grid-area: lost;
+  position: relative;
+  width: var(--nf-card-w);
+  height: var(--nf-card-h);
+  border-radius: var(--radius-sm);
+  cursor: var(--cursor-glove-point, pointer);
+  animation:
+    nf-deal var(--nf-deal) var(--ease-overshoot) both,
+    nf-float var(--nf-float) var(--ease-in-out) var(--nf-deal) infinite;
+}
+
+/* Glitch's blob (cards/GlitchBlob.tsx) seeps out from behind the card: it lost its page. */
+.not-found-lost__card > .cf-glitch {
+  inset: -35% -60% -15%;
+  z-index: var(--z-below);
+  opacity: 0.6;
+}
+
+.not-found-lost__card > .cf {
+  position: relative;
+  height: 100%;
+  box-shadow: var(--shadow-2);
+  transition: scale var(--nf-flip) var(--ease-overshoot);
+}
+
+.not-found-lost__card[data-speaking="true"] > .cf {
+  scale: 1.08;
+  box-shadow: var(--shadow-2), 0 0 16px color-mix(in srgb, var(--tavern-gold) 70%, transparent);
+}
+
+.not-found-lost__card:focus-visible {
+  outline: 3px solid var(--tavern-gold);
+  outline-offset: 3px;
+}
+
+.not-found-lost__flavour {
+  grid-area: flavour;
+  margin: 0;
+  color: var(--tavern-text-dim);
+  font-family: var(--font-display);
+  font-size: var(--type-sm);
+  font-style: italic;
+  text-align: center;
+}
+
+.not-found-lost__flavour::before {
+  content: "\201C";
+}
+
+.not-found-lost__flavour::after {
+  content: "\201D";
+}
+
+/* ---- the three ways out --------------------------------------------------------------------- */
+
+.not-found-ways {
+  grid-area: ways;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.not-found-ways__hint {
+  margin: 0;
+  color: var(--tavern-text-dim);
+  font-size: var(--type-xs);
+}
+
+.not-found-ways__hand {
+  display: flex;
+  gap: var(--nf-gap);
+  perspective: 600px;
+}
+
+.not-found-way {
+  --nf-deal-at: 0ms;
+  position: relative;
+  display: block;
+  width: var(--nf-card-w);
+  height: var(--nf-card-h);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  cursor: var(--cursor-glove-point, pointer);
+  animation: nf-deal var(--nf-deal) var(--ease-overshoot) var(--nf-deal-at) both;
+}
+
+.not-found-way:nth-child(1) { --nf-deal-at: calc(var(--nf-stagger) * 1); }
+.not-found-way:nth-child(2) { --nf-deal-at: calc(var(--nf-stagger) * 2); }
+.not-found-way:nth-child(3) { --nf-deal-at: calc(var(--nf-stagger) * 3); }
+
+.not-found-way:focus-visible {
+  outline: 3px solid var(--tavern-gold);
+  outline-offset: 3px;
+}
+
+/* The card turns over in place: the back and the face are its two sides. */
+.not-found-way__card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition:
+    transform var(--nf-flip) var(--ease-overshoot),
+    translate var(--nf-flip) var(--ease-out);
+}
+
+.not-found-way[data-face="up"] .not-found-way__card {
+  transform: rotateY(180deg);
+}
+
+@media (hover: hover) {
+  .not-found-way:hover .not-found-way__card {
+    translate: 0 -8%;
+  }
+}
+
+.not-found-way__side {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-2);
+  backface-visibility: hidden;
+}
+
+.not-found-way__side--face {
+  transform: rotateY(180deg);
+}
+
+/* A spark of gold the moment a card turns over. */
+.not-found-way[data-face="up"]::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  border-radius: var(--radius-round);
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--tavern-gold) 65%, transparent), transparent 65%);
+  opacity: 0;
+  animation: nf-spark calc(var(--nf-flip) * 1.5) var(--ease-out);
+}
+
+/* The choice card (game/ChoiceCard.tsx) as prompt.css draws it in the card picker, whose sheet only
+   the game loads. */
+.not-found-way .choice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4%;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 6%;
+  overflow: hidden;
+  border: 1px solid var(--tavern-brass);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--tavern-brass) 18%, var(--tavern-wood-deep));
+  container-type: inline-size;
+}
+
+.not-found-way .choice-card-art {
+  flex: 0 0 46%;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 70%, var(--pal-black));
+  border-radius: var(--radius-sm);
+}
+
+.not-found-way .choice-card-name {
+  flex: none;
+  color: var(--tavern-gold);
+  font-family: var(--font-display);
+  font-size: max(var(--type-2xs), 14cqw);
+  font-weight: 750;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+.not-found-way .choice-card-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--tavern-text-dim);
+  font-size: max(var(--type-3xs), 10cqw);
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* ---- the glitched path ---------------------------------------------------------------------- */
+
+/* The path's own words stay in the element (a reader and a copy get them); while it settles they are
+   hidden under the glyphs `data-glitch` carries, drawn with no alt text so nothing reads them twice. */
+.not-found-path {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.not-found-path[data-settling="true"] {
+  color: transparent;
+}
+
+.not-found-path[data-settling="true"]::after {
+  content: attr(data-glitch);
+  content: attr(data-glitch) / "";
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--tavern-gold-pale);
+  text-shadow:
+    -0.08em 0 color-mix(in srgb, var(--pal-red-400) 80%, transparent),
+    0.08em 0 color-mix(in srgb, var(--pal-cyan-400) 80%, transparent);
+}
+
+/* ---- motion --------------------------------------------------------------------------------- */
+
+@keyframes nf-deal {
+  from {
+    opacity: 0;
+    transform: translateY(-60%) rotate(-14deg) scale(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nf-float {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+
+  50% {
+    translate: 0 -5%;
+    rotate: -2deg;
+  }
+}
+
+@keyframes nf-spark {
+  0% {
+    opacity: 0.9;
+    scale: 0.4;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.3;
+  }
+}
