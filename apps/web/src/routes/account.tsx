@@ -39,6 +39,7 @@ import ChangeEmail from "../settings/ChangeEmail.tsx";
 import DevTools from "./DevTools.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
+import LinkedAccounts from "../auth/LinkedAccounts.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
 import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
@@ -477,6 +478,7 @@ function AccountManage({
           <ChangeEmail />
           {/* R665: an authenticator app for this account. */}
           <TwoStepSettings token={token} />
+          <LinkedAccounts token={token} />
           <DeleteAccount token={token} />
         </div>
       ) : null}

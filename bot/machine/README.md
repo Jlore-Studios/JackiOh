@@ -122,11 +122,13 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## The training box
 
-**Since 2026-10-25 only `jackioh-train@gather` runs here.** #682's audit
+**Since 2026-11-04 no training lane runs here.** #682's audit
 (`reviews/2026-10-22-issue-682-subscriptions.md`) found that the two LLM lanes made no fair promotion
 in about 427 hours, and that on Muse's plan they spent most of the night bot's week. So
-`jackioh-train@improve` and `@unban` are disabled (`disabled; inactive (dead)`), and `setup.sh
---training` keeps their users and checkouts but starts neither again. The AI improves through the
+`jackioh-train@improve` and `@unban` were disabled on 2026-10-25, and `jackioh-train@gather` on
+2026-11-04: it filed its games into staging's database alone, while `gather.yml` files every
+patch's into both (R1933001). All three are `disabled; inactive (dead)`, and `setup.sh --training`
+keeps their users and checkouts but starts none again. The AI improves through the
 `learn` lane on the owner's PC instead (The local runner, below). Whether this box becomes a second
 night box or is stopped was #1677's question: it is the Muse box now ([The Muse box](#the-muse-box)).
 

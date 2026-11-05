@@ -1,9 +1,8 @@
 /* The patch history (R388, R507): the Patch notes page (routes/patch-notes.tsx, inside `.tavern`)
    and the History section of the card detail view (patches/CardHistory.tsx, inside the inspect
    dialog, which is portalled outside `.tavern`). The change marks are shared, so their colors are
-   tokens of their own that read on both dark panels. Nothing here moves but a major's artwork
-   (`.patch__art-img[data-major="true"]`, #2681), which sits behind the one gate at the end of the
-   page rules: the system's reduced motion or the app's Reduce motion on <html> holds it still. */
+   tokens of their own that read on both dark panels. Nothing here moves (#2681, R3012001): a major's
+   poster and a patch's art are still pictures, and a legend jump scrolls at once (R3012000). */
 
 :root {
   /* The patch mark: teal, never the Radiant gold (R277) or a reference's dotted line (R279). The ink
@@ -319,7 +318,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-width: 960px;
+  max-width: var(--tavern-content);
 }
 
 .tavern.app-shell .patch-notes__head {
@@ -545,8 +544,8 @@
   color: var(--tavern-text-dim);
 }
 
-/* #2681: a patch's artwork, a 16:9 full-screen canvas at the panel's width, clipped to its frame. The
-   gradient shows while the file loads, and if it never does. */
+/* #2681, R3012001: a major's poster or a patch's art, a 16:9 full-screen canvas at the panel's width,
+   clipped to its frame. The gradient shows while the file loads, and if it never does. */
 .tavern.app-shell .patch__art {
   position: relative;
   width: 100%;
@@ -801,28 +800,266 @@
   }
 }
 
-/* #2681: only a major's artwork moves, a slow drift of the whole picture inside its frame (it loads the
-   still file, whose own SVG cannot see the app's setting). It stops under the system's reduced motion
-   and under the settings' Reduce motion on <html> (`data-reduce-motion`), and then holds the complete
-   picture. `--patch-art-cycle` is the constant's seconds (RELEASE_ART_MAJOR_CYCLE_SECONDS). */
-@keyframes patch-art-drift {
-  0%,
-  100% {
-    transform: scale(1.06) translateX(0);
-  }
+/* ---- R3012000: the legend on the side, and the micro patches inside their patch -------------- */
 
-  25% {
-    transform: scale(1.06) translateX(-2%);
-  }
+/* Two columns: the legend, sticky at the top of the page's own scroll, and the release lines. */
+.tavern.app-shell .patch-notes__layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
 
-  75% {
-    transform: scale(1.06) translateX(2%);
+.tavern.app-shell .patch-notes__main {
+  min-width: 0;
+}
+
+/* A jump scrolls an entry to the top, below the sticky legend on a phone (`--patch-legend-offset`). */
+.tavern.app-shell .patch,
+.tavern.app-shell .patch-micro,
+.tavern.app-shell .patch-set {
+  scroll-margin-top: var(--patch-legend-offset, 12px);
+}
+
+.tavern.app-shell .patch:focus-visible,
+.tavern.app-shell .patch-micro:focus-visible,
+.tavern.app-shell .patch-set:focus-visible {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 3px;
+}
+
+.tavern.app-shell .patch-legend {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding: 12px 10px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  color: var(--tavern-parchment);
+  font-size: 14px;
+}
+
+.tavern.app-shell .patch-legend ol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-legend__lines {
+  gap: 12px;
+}
+
+.tavern.app-shell .patch-legend__entries {
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(201, 149, 63, 0.35);
+}
+
+.tavern.app-shell .patch-legend__micros {
+  padding-left: 12px;
+}
+
+.tavern.app-shell .patch-legend__micros[hidden] {
+  display: none;
+}
+
+/* The line is a heading of the list, the entries and micros links under it; the one in view carries
+   a gold bar and bold text, so it does not rest on color alone. `link-button` keeps the tavern's
+   prose-link rule (a gold underline) off them, as it does for the line's heading above. */
+.tavern.app-shell .patch-notes .patch-legend__link {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  color: var(--tavern-parchment);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.tavern.app-shell .patch-notes .patch-legend__link--line {
+  color: var(--tavern-gold);
+  font-family: var(--tavern-serif);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tavern.app-shell .patch-notes .patch-legend__link:hover {
+  color: var(--tavern-gold-pale);
+  background: rgba(201, 149, 63, 0.14);
+}
+
+.tavern.app-shell .patch-notes .patch-legend__link[aria-current="location"] {
+  border-left-color: var(--tavern-gold);
+  background: rgba(201, 149, 63, 0.2);
+  color: var(--tavern-gold-pale);
+  font-weight: 800;
+}
+
+.tavern.app-shell .patch-notes .patch-legend__link:focus-visible,
+.tavern.app-shell .patch-legend__micros-toggle:focus-visible,
+.tavern.app-shell .patch-legend__toggle:focus-visible {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 2px;
+}
+
+/* A patch's micros: a small control under its link that shows or hides them. */
+.tavern.app-shell .patch-notes .patch-legend__micros-toggle,
+.tavern.app-shell .patch-notes .patch-legend__toggle {
+  display: flex;
+  align-items: center;
+  /* WCAG 2.5.8 (e2e spec 38): 13px text with 2px padding measures about 22px, under the 24px a mouse's target needs
+     beside the link above it. The touch block below makes it 44px (R2122000). */
+  min-height: 32px;
+  gap: 6px;
+  padding: 2px 8px 2px 11px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--tavern-text-dim);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.tavern.app-shell .patch-notes .patch-legend__micros-toggle::before {
+  content: "▸";
+}
+
+.tavern.app-shell .patch-notes .patch-legend__micros-toggle[aria-expanded="true"]::before {
+  content: "▾";
+}
+
+.tavern.app-shell .patch-notes .patch-legend__micros-toggle:hover {
+  color: var(--tavern-gold-pale);
+  background: none;
+}
+
+/* The phone's drawer button: the legend's one visible control until it opens. */
+.tavern.app-shell .patch-notes .patch-legend__toggle {
+  width: 100%;
+  min-height: 44px;
+  justify-content: space-between;
+  padding: 0 8px;
+  color: var(--tavern-gold);
+  font-family: var(--tavern-serif);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.tavern.app-shell .patch-notes .patch-legend__toggle::after {
+  content: "▾";
+  color: var(--tavern-brass);
+}
+
+.tavern.app-shell .patch-notes .patch-legend__toggle[aria-expanded="true"]::after {
+  content: "▴";
+}
+
+.tavern.app-shell .patch-legend__body[hidden] {
+  display: none;
+}
+
+/* The micro patches under their patch: compact, no art, a brass bar down their left. */
+.tavern.app-shell .patch-micros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-micro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--tavern-brass);
+  border-radius: 4px 10px 10px 4px;
+  background: rgba(14, 9, 5, 0.55);
+}
+
+.tavern.app-shell .patch-micro > * {
+  max-width: 100%;
+}
+
+.tavern.app-shell .patch-micro__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+
+.tavern.app-shell .patch-micro__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 16px;
+  line-height: 1.25;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch-micro__title .patch-version {
+  padding: 1px 8px;
+  border: 1px solid var(--tavern-teal);
+  border-radius: 999px;
+  color: var(--patch-mark-ink);
+  font-size: 0.8em;
+}
+
+/* A finger's 44 px target on a touch screen or a narrow window (R2122000). */
+@media (pointer: coarse), (max-width: 600px) {
+  .tavern.app-shell .patch-notes .patch-legend__link,
+  .tavern.app-shell .patch-notes .patch-legend__micros-toggle,
+  .tavern.app-shell .patch-notes .patch-legend__toggle {
+    min-height: 44px;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-reduce-motion="true"]) .tavern.app-shell .patch__art-img[data-major="true"] {
-    will-change: transform;
-    animation: patch-art-drift var(--patch-art-cycle) ease-in-out infinite;
+/* A phone (`PATCH_LEGEND_PHONE_QUERY`, constants.ts): one column, the legend a drawer that sticks to
+   the top of the page, and every long word wrapping so the page never scrolls sideways. */
+@media (max-width: 760px) {
+  .tavern.app-shell .patch-notes {
+    max-width: 100%;
+    --patch-legend-offset: 64px;
+  }
+
+  .tavern.app-shell .patch-notes__layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .tavern.app-shell .patch-legend {
+    z-index: 3;
+    max-width: 100%;
+    max-height: none;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    padding: 4px 10px;
+  }
+
+  .tavern.app-shell .patch-legend__body {
+    max-height: 60dvh;
+    overflow-y: auto;
+    padding-bottom: 8px;
   }
 }

@@ -11,7 +11,7 @@ use jackioh_engine::wire::{
     Action, ActionBody, CustomCard, DeckMark, PerPlayerOpt, PlayerId, Rarity, SHIPPED_SETS, Selection,
 };
 
-fn catalog_content() -> RunContent {
+pub(crate) fn catalog_content() -> RunContent {
     jackioh_cards::register_all();
     run_catalog_content(registered_catalog(), &[])
 }
@@ -411,7 +411,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
 }
 
 /// A fight's setup as the `createGame` options the caller builds from it.
-fn fight_options(setup: &RunFightSetup) -> CreateGameOptions {
+pub(crate) fn fight_options(setup: &RunFightSetup) -> CreateGameOptions {
     CreateGameOptions {
         seed: setup.seed.clone(),
         decks: (setup.human_deck.clone(), setup.enemy_deck.clone()),
@@ -428,7 +428,7 @@ fn fight_options(setup: &RunFightSetup) -> CreateGameOptions {
 }
 
 /// The engine's verdict on a fight's setup, as `createGame` would take it.
-fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
+pub(crate) fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
     let options = fight_options(setup);
     validate_setup(
         &options,

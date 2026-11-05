@@ -1,8 +1,11 @@
 // Patch notes (brief B4.2 item 5; R388, R507): opened snapshots load lazily, large additions limit
 // their faces. Patches sit in their release line, the newest open (R724000), each with its player
-// note, never its record's source or notes (R724001). Public patch data only (CLAUDE.md rule 7).
+// note, never its record's source or notes (R724001). A major or a patch is an entry with its art
+// (R3012001), the micro patches that follow it nested inside it, and a legend on the side jumps to
+// any entry, opening its line and its cards (R3012000); an address hash does the same. Public patch
+// data only (CLAUDE.md rule 7).
 
-import { useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
@@ -15,13 +18,14 @@ import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
 import { Skeleton, useShownAfterDelay } from "../skeleton/Skeleton.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
-import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD, RELEASE_ART_MAJOR_CYCLE_SECONDS } from "./constants.ts";
+import { PATCHES_OPEN_ON_LOAD, PATCH_LEGEND_BAND_MARGIN, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
 import { cardCount, countsLine, currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
+import { PatchLegend, legendHref, type LegendLine } from "./PatchLegend.tsx";
 import { releaseArtPath } from "./releaseArt.ts";
-import { NOTE_SECTIONS, RELEASES, majors, playerTitle, releaseGroups, technicalLines, type Release } from "./releases.ts";
+import { NOTE_SECTIONS, RELEASES, nestMicros, playerTitle, releaseGroups, technicalLines, tiers, type PatchNest, type Release } from "./releases.ts";
 import type { Patch, PlayerNote } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -210,15 +214,16 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   );
 }
 
-/** R724001: a patch's note under the page's fixed headings. */
-function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElement | null {
+/** R724001: a patch's note under the page's fixed headings, one level lower under a micro patch's own title (R3012000). */
+function PlayerNoteView({ note, nested = false }: { note: PlayerNote | undefined; nested?: boolean }): ReactElement | null {
   const sections = note === undefined ? [] : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0);
   if (note === undefined || sections.length === 0) return null;
+  const Heading = nested ? "h5" : "h4";
   return (
     <div className="patch-note" data-testid={patchTestid.note}>
       {sections.map(({ key, heading }) => (
         <section key={key} className="patch-note__section" data-testid={patchTestid.noteSection} data-section={key}>
-          <h4 className="patch-note__heading">{t(heading)}</h4>
+          <Heading className="patch-note__heading">{t(heading)}</Heading>
           <ul className="patch-note__lines">
             {note[key].map((line, at) => (
               <li key={at}>{line}</li>
@@ -231,12 +236,13 @@ function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElemen
 }
 
 /** R1369000: the lines players read of the technical log of a patch, the X they were logged on. */
-function TechnicalLog({ lines }: { lines: readonly string[] }): ReactElement | null {
+function TechnicalLog({ lines, nested = false }: { lines: readonly string[]; nested?: boolean }): ReactElement | null {
   if (lines.length === 0) return null;
+  const Heading = nested ? "h5" : "h4";
   return (
     <div className="patch-note">
       <section className="patch-note__section" data-testid={patchTestid.technicalLog}>
-        <h4 className="patch-note__heading">{t("Technical changes")}</h4>
+        <Heading className="patch-note__heading">{t("Technical changes")}</Heading>
         <ul className="patch-note__lines">
           {lines.map((line, at) => (
             <li key={at}>{line}</li>
@@ -249,17 +255,34 @@ function TechnicalLog({ lines }: { lines: readonly string[] }): ReactElement | n
 
 const NO_LINES: readonly string[] = [];
 
+/** What the page's entries share: the history, the technical log, which snapshots are open and how to open a card. */
+type Page = {
+  readonly patches: readonly Patch[];
+  readonly technical: ReadonlyMap<string, readonly string[]>;
+  /** R507, R3012000: the versions whose cards are open; a snapshot loads when its version joins. */
+  readonly openCards: ReadonlySet<string>;
+  readonly toggleCards: (version: string) => void;
+  readonly onOpenCard: OpenCard;
+};
+
+const PageContext = createContext<Page | null>(null);
+
+function usePage(): Page {
+  const page = useContext(PageContext);
+  if (page === null) throw new Error("patch notes: an entry is drawn outside its page");
+  return page;
+}
+
 /**
- * #2681: a patch's artwork (releaseArt.ts), decorative: the title above it names the patch. A major
- * loads its `still` file, and patches.css moves the image while the system and the app's Reduce motion
- * allow it: an image's own SVG cannot see the app's setting. Every other patch's file does not move.
+ * #2681, R3012001: the artwork of a major or a patch (releaseArt.ts), decorative: the title above it
+ * names the patch. A still picture in both cases, so nothing here moves.
  */
 function ReleaseArtwork({ patch, major }: { patch: Patch; major: boolean }): ReactElement {
   return (
-    <div className="patch__art" style={major ? ({ "--patch-art-cycle": `${String(RELEASE_ART_MAJOR_CYCLE_SECONDS)}s` } as CSSProperties) : undefined}>
+    <div className="patch__art">
       <img
         className="patch__art-img"
-        src={releaseArtPath(patch.version, major ? "still" : "animated")}
+        src={releaseArtPath(patch.version)}
         alt=""
         loading="lazy"
         decoding="async"
@@ -272,27 +295,83 @@ function ReleaseArtwork({ patch, major }: { patch: Patch; major: boolean }): Rea
   );
 }
 
-function PatchEntry({
-  patch,
-  patches,
-  technical,
-  major,
-  initiallyOpen,
-  onOpen,
-}: {
-  patch: Patch;
-  patches: readonly Patch[];
-  technical: readonly string[];
-  major: boolean;
-  initiallyOpen: boolean;
-  onOpen: OpenCard;
-}): ReactElement {
-  const [open, setOpen] = useState(initiallyOpen);
-  const titleId = useId();
+/** R507: a patch's counts line, its Show / Hide the cards control and its lazily loaded panel. */
+function PatchCardsToggle({ patch }: { patch: Patch }): ReactElement {
+  const { patches, openCards, toggleCards, onOpenCard } = usePage();
   const panelId = useId();
-  const counts = countsLine(patch);
+  const open = openCards.has(patch.version);
+  if (patch.changes.length === 0) return <p className="patch__counts">{t("No card changed.")}</p>;
   return (
-    <article className="patch" data-testid={patchTestid.patch} data-version={patch.version} aria-labelledby={titleId}>
+    <>
+      <p className="patch__counts">{countsLine(patch)}</p>
+      <button
+        type="button"
+        className="patch__toggle"
+        aria-expanded={open}
+        aria-controls={panelId}
+        data-testid={patchTestid.toggle}
+        onClick={() => {
+          toggleCards(patch.version);
+        }}
+      >
+        {open ? t("Hide the cards") : t("Show the {cards}", { cards: cardCount(patch.changes.length) })}
+      </button>
+      <div id={panelId} className="patch__panel" hidden={!open}>
+        {open ? <PatchCardsPanel patch={patch} patches={patches} onOpen={onOpenCard} /> : null}
+      </div>
+    </>
+  );
+}
+
+/** R3012000: a micro patch inside the entry of the patch it follows: its version, date and notes, with no art. */
+function MicroEntry({ patch }: { patch: Patch }): ReactElement {
+  const { technical } = usePage();
+  const titleId = useId();
+  return (
+    <article
+      className="patch-micro"
+      id={patch.version}
+      tabIndex={-1}
+      data-entry={patch.version}
+      data-testid={patchTestid.micro}
+      data-version={patch.version}
+      aria-labelledby={titleId}
+    >
+      <header className="patch-micro__head">
+        <h4 className="patch-micro__title" id={titleId}>
+          <span className="patch-version">{patch.version}</span> <span className="patch__name">{playerTitle(patch)}</span>
+        </h4>
+        <time className="patch-date" dateTime={patch.date}>
+          {formatDay(patch.date)}
+        </time>
+      </header>
+      <PlayerNoteView note={patch.player} nested />
+      <TechnicalLog lines={technical.get(patch.version) ?? NO_LINES} nested />
+      <PatchCardsToggle patch={patch} />
+    </article>
+  );
+}
+
+/**
+ * R3012000, R3012001: a major's or a patch's entry, with its art and the micro patches that follow it
+ * inside it, oldest first. A micro patch with no major or patch before it in its line is an entry of
+ * its own, with no art.
+ */
+function PatchEntry({ nest }: { nest: PatchNest }): ReactElement {
+  const { technical } = usePage();
+  const { patch, tier, micros } = nest;
+  const titleId = useId();
+  return (
+    <article
+      className="patch"
+      id={patch.version}
+      tabIndex={-1}
+      data-entry={patch.version}
+      data-testid={patchTestid.patch}
+      data-version={patch.version}
+      data-tier={tier}
+      aria-labelledby={titleId}
+    >
       <header className="patch__head">
         <h3 className="patch__title" id={titleId}>
           <span className="patch-version">{patch.version}</span> <span className="patch__name">{playerTitle(patch)}</span>
@@ -303,30 +382,18 @@ function PatchEntry({
           </time>
         </p>
       </header>
-      <ReleaseArtwork patch={patch} major={major} />
+      {tier === "micro" ? null : <ReleaseArtwork patch={patch} major={tier === "major"} />}
       <PlayerNoteView note={patch.player} />
-      <TechnicalLog lines={technical} />
-      {patch.changes.length === 0 ? (
-        <p className="patch__counts">{t("No card changed.")}</p>
-      ) : (
-        <>
-          <p className="patch__counts">{counts}</p>
-          <button
-            type="button"
-            className="patch__toggle"
-            aria-expanded={open}
-            aria-controls={panelId}
-            data-testid={patchTestid.toggle}
-            onClick={() => {
-              setOpen((was) => !was);
-            }}
-          >
-            {open ? t("Hide the cards") : t("Show the {cards}", { cards: cardCount(patch.changes.length) })}
-          </button>
-          <div id={panelId} className="patch__panel" hidden={!open}>
-            {open ? <PatchCardsPanel patch={patch} patches={patches} onOpen={onOpen} /> : null}
-          </div>
-        </>
+      <TechnicalLog lines={technical.get(patch.version) ?? NO_LINES} />
+      <PatchCardsToggle patch={patch} />
+      {micros.length === 0 ? null : (
+        <ol className="patch-micros" aria-label={t("Micro patches")}>
+          {micros.map((micro) => (
+            <li key={micro.version}>
+              <MicroEntry patch={micro} />
+            </li>
+          ))}
+        </ol>
       )}
     </article>
   );
@@ -378,34 +445,37 @@ function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Pa
   return <OpeningCard read={read} onClose={onClose} />;
 }
 
-/** R724000: one release line as a bubble. */
+/** R3012000: the id of a release line's heading, which the legend and an address hash jump to; a version's own is the version. */
+const lineAnchor = (releaseId: string): string => `line-${releaseId}`;
+
+/** R724000: one release line as a bubble. Its open state is the page's, so a jump can open it (R3012000). */
 function ReleaseBubble({
   release,
   group,
-  patches,
-  technical,
-  opened,
-  majorVersions,
-  initiallyOpen,
-  onOpen,
+  nests,
+  open,
+  onToggle,
 }: {
   release: Release;
+  /** Every patch of the line, micros included, newest first: its span and count. */
   group: readonly Patch[];
-  patches: readonly Patch[];
-  technical: ReadonlyMap<string, readonly string[]>;
-  opened: ReadonlySet<string>;
-  /** #2681, R1369000: the versions of the history that are majors. */
-  majorVersions: ReadonlySet<string>;
-  initiallyOpen: boolean;
-  onOpen: OpenCard;
+  nests: readonly PatchNest[];
+  open: boolean;
+  onToggle: () => void;
 }): ReactElement {
-  const [open, setOpen] = useState(initiallyOpen);
   const headingId = useId();
   const panelId = useId();
   const newest = group[0]?.version ?? "";
   const oldest = group.at(-1)?.version ?? "";
   return (
-    <section className="patch-set" data-testid={patchTestid.set} data-set={release.id} aria-labelledby={headingId}>
+    <section
+      className="patch-set"
+      id={lineAnchor(release.id)}
+      tabIndex={-1}
+      data-testid={patchTestid.set}
+      data-set={release.id}
+      aria-labelledby={headingId}
+    >
       <h2 className="patch-set__heading" id={headingId}>
         <button
           type="button"
@@ -413,9 +483,7 @@ function ReleaseBubble({
           data-testid={patchTestid.setToggle}
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => {
-            setOpen((was) => !was);
-          }}
+          onClick={onToggle}
         >
           <span className="patch-set__name">{t(release.name)}</span>
           <span className="patch-set__span">{oldest === newest ? newest : `${oldest} – ${newest}`}</span>
@@ -437,16 +505,9 @@ function ReleaseBubble({
               </section>
             )}
             <ol className="patch-list">
-              {group.map((patch) => (
-                <li key={patch.version}>
-                  <PatchEntry
-                    patch={patch}
-                    patches={patches}
-                    technical={technical.get(patch.version) ?? NO_LINES}
-                    major={majorVersions.has(patch.version)}
-                    initiallyOpen={opened.has(patch.version)}
-                    onOpen={onOpen}
-                  />
+              {nests.map((nest) => (
+                <li key={nest.patch.version}>
+                  <PatchEntry nest={nest} />
                 </li>
               ))}
             </ol>
@@ -455,6 +516,20 @@ function ReleaseBubble({
       </div>
     </section>
   );
+}
+
+/** What an address or a legend link can name: a release line or a version, the line it sits in, and whether it has cards to open. */
+type Anchor = { readonly line: string; readonly version: boolean; readonly cards: boolean };
+
+/** R3012000: the entry the address's hash names, when this page has one; a hash that is no entry (or no valid escape) names none. */
+function hashedAnchor(anchors: ReadonlyMap<string, Anchor>): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const anchor = decodeURIComponent(window.location.hash.slice(1));
+    return anchors.has(anchor) ? anchor : null;
+  } catch {
+    return null;
+  }
 }
 
 function PatchList({ patches, releases }: { patches: readonly Patch[]; releases: readonly Release[] }): ReactElement {
@@ -467,27 +542,156 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   // Until the technical log loads, or if it fails, the page reads without its lines.
   const log = useLoaded("technical", () => source.technical());
   const technical = technicalLines(log.status === "ready" ? log.value : []);
-  const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));
-  const majorFlags = majors(patches);
-  const majorVersions = new Set(patches.filter((_patch, at) => majorFlags[at] === true).map((patch) => patch.version));
+
+  // R3012000: the release lines, each patch's micros nested under it, and what the legend and the address can name.
+  const { groups, nests, anchors, legend } = useMemo(() => {
+    const tierList = tiers(patches);
+    const tierOf = new Map(patches.map((patch, at) => [patch.version, tierList[at] ?? "patch"] as const));
+    const lines = releaseGroups(patches, releases);
+    const nested = lines.map((line) => nestMicros(line.patches, tierOf));
+    const named = new Map<string, Anchor>();
+    const entries: LegendLine[] = lines.map((line, at) => {
+      named.set(lineAnchor(line.release.id), { line: line.release.id, version: false, cards: false });
+      for (const patch of line.patches) named.set(patch.version, { line: line.release.id, version: true, cards: patch.changes.length > 0 });
+      return {
+        id: line.release.id,
+        anchor: lineAnchor(line.release.id),
+        name: line.release.name,
+        entries: (nested[at] ?? []).map((nest) => ({ version: nest.patch.version, tier: nest.tier, micros: nest.micros.map((micro) => micro.version) })),
+      };
+    });
+    return { groups: lines, nests: nested, anchors: named, legend: entries };
+  }, [patches, releases]);
+
+  // R724000, R507: the newest line and the newest patch's cards open on arrival; a hash in the address opens its entry too.
+  const [openLines, setOpenLines] = useState<ReadonlySet<string>>(() => {
+    const open = new Set(groups.slice(0, RELEASES_OPEN_ON_LOAD).map((group) => group.release.id));
+    const hashed = hashedAnchor(anchors);
+    if (hashed !== null) open.add(anchors.get(hashed)?.line ?? "");
+    return open;
+  });
+  const [openCards, setOpenCards] = useState<ReadonlySet<string>>(() => {
+    const open = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));
+    const hashed = hashedAnchor(anchors);
+    if (hashed !== null && anchors.get(hashed)?.cards === true) open.add(hashed);
+    return open;
+  });
+  const [jump, setJump] = useState<{ readonly anchor: string } | null>(() => {
+    const hashed = hashedAnchor(anchors);
+    return hashed === null ? null : { anchor: hashed };
+  });
+  const [current, setCurrent] = useState<string | null>(() => {
+    const hashed = hashedAnchor(anchors);
+    return hashed !== null && anchors.get(hashed)?.version === true ? hashed : null;
+  });
+
+  /** Opens the entry or line an anchor names, then asks the page to scroll to it. */
+  const reveal = useCallback(
+    (anchor: string): boolean => {
+      const target = anchors.get(anchor);
+      if (target === undefined) return false;
+      setOpenLines((was) => (was.has(target.line) ? was : new Set(was).add(target.line)));
+      if (target.cards) setOpenCards((was) => (was.has(anchor) ? was : new Set(was).add(anchor)));
+      if (target.version) setCurrent(anchor);
+      setJump({ anchor });
+      return true;
+    },
+    [anchors],
+  );
+  const onJump = (anchor: string): void => {
+    if (reveal(anchor)) window.history.replaceState(null, "", legendHref(anchor));
+  };
+
+  useEffect(() => {
+    const onHash = (): void => {
+      const hashed = hashedAnchor(anchors);
+      if (hashed !== null) reveal(hashed);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+    };
+  }, [anchors, reveal]);
+
+  // The jump itself, once the entry's line is open in the document: scrolls at once (nothing here moves) and focuses it.
+  useEffect(() => {
+    if (jump === null) return;
+    const target = document.getElementById(jump.anchor);
+    if (target !== null) {
+      if (typeof target.scrollIntoView === "function") target.scrollIntoView({ block: "start" });
+      target.focus({ preventScroll: true });
+    }
+    setJump(null);
+  }, [jump]);
+
+  // R3012000: the entry in view is the last one, in document order (so a micro before its patch), that touches the top band of the viewport.
+  const openKey = [...openLines].join("|");
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const entries = Array.from(document.querySelectorAll<HTMLElement>("[data-entry]"));
+    if (entries.length === 0) return;
+    const touching = new Set<string>();
+    const observer = new IntersectionObserver(
+      (records) => {
+        for (const record of records) {
+          const version = (record.target as HTMLElement).dataset.entry;
+          if (version === undefined) continue;
+          if (record.isIntersecting) touching.add(version);
+          else touching.delete(version);
+        }
+        const inView = entries.map((entry) => entry.dataset.entry ?? "").filter((version) => touching.has(version));
+        const last = inView.at(-1);
+        if (last !== undefined) setCurrent(last);
+      },
+      { rootMargin: PATCH_LEGEND_BAND_MARGIN },
+    );
+    for (const entry of entries) observer.observe(entry);
+    return () => {
+      observer.disconnect();
+    };
+  }, [openKey, groups]);
+
+  const page: Page = {
+    patches,
+    technical,
+    openCards,
+    toggleCards: (version) => {
+      setOpenCards((was) => {
+        const next = new Set(was);
+        if (!next.delete(version)) next.add(version);
+        return next;
+      });
+    },
+    onOpenCard: setOpenId,
+  };
   return (
     <CardDefsProvider defs={defs.status === "ready" ? (defs.value ?? NO_DEFS) : NO_DEFS}>
-      <ol className="patch-sets">
-        {releaseGroups(patches, releases).map(({ release, patches: group }, at) => (
-          <li key={release.id}>
-            <ReleaseBubble
-              release={release}
-              group={group}
-              patches={patches}
-              technical={technical}
-              opened={opened}
-              majorVersions={majorVersions}
-              initiallyOpen={at < RELEASES_OPEN_ON_LOAD}
-              onOpen={setOpenId}
-            />
-          </li>
-        ))}
-      </ol>
+      <PageContext.Provider value={page}>
+        <div className="patch-notes__layout">
+          <PatchLegend lines={legend} current={current} onJump={onJump} />
+          <div className="patch-notes__main">
+            <ol className="patch-sets">
+              {groups.map(({ release, patches: group }, at) => (
+                <li key={release.id}>
+                  <ReleaseBubble
+                    release={release}
+                    group={group}
+                    nests={nests[at] ?? []}
+                    open={openLines.has(release.id)}
+                    onToggle={() => {
+                      setOpenLines((was) => {
+                        const next = new Set(was);
+                        if (!next.delete(release.id)) next.add(release.id);
+                        return next;
+                      });
+                    }}
+                  />
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </PageContext.Provider>
       {openId === null ? null : (
         <OpenedCard
           key={openId}

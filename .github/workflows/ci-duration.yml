@@ -20,7 +20,8 @@
 # other workflow, so the label queues it directly (the planner reads its queue from the labels). A
 # run of a fork's pull request is reported but never handed over: its branch and job names are
 # outside text, and the bot would read them as its task. The bot cannot change .github/, so the
-# issue tells it what it can do when the split itself needs ci.yml.
+# issue tells it what it can split alone (a count in scripts/ci-shards.toml, or a new test binary
+# that a group's pattern runs, #3072) and what to hand a person.
 #
 # A job is timed by its steps, the first one's start to the last one's end, not by the job's own
 # completed_at, which GitHub can stamp minutes after the runner finished: on 2026-10-19 seven jobs
@@ -100,9 +101,9 @@ jobs:
             "|---|---|---|" \
             "$slow" \
             "" \
-            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\` (\`web (unit k/K)\`, \`e2e smoke (k/K)\`, or \`rust (test <group>)\`, whose crate groups split further, a crate's test binaries apart with \`--lib\`/\`--test <name>\`); for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`. Anything that cannot be made fast belongs in the daily \`.github/workflows/super.yml\`, not in CI." \
+            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom. Most splits are a count in \`scripts/ci-shards.toml\` (#3072): \`web (unit k/K)\`, \`e2e smoke (k/K)\` (for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`), or a \`rust (test <group>)\` group, whose count runs its tests in that many jobs, split by name. A count splits the run, not the compile: a group slow to compile needs its tests in more binaries (the engine's \`rules_<n>\` each get a job by themselves). Anything that cannot be made fast belongs in the daily \`.github/workflows/super.yml\`, not in CI." \
             "" \
-            "Night bot: you cannot change \`.github/\`. Make the part of the fix that lives elsewhere (the e2e \`WEIGHTS\`, a slow test made faster or split across files), and when the split needs \`ci.yml\`'s matrix, give the exact lines to change there and ask a person to make them." \
+            "Night bot: you cannot change \`.github/\`, and a count or a new \`rules_<n>\` needs no change there. When the split needs a new group or other flags in \`.github/ci/rust-test.toml\`, or any other change under \`.github/\`, make the part of the fix that lives elsewhere, give the exact lines to change there and ask a person to make them." \
             "" \
             "---" \
             "_Posted by \`.github/workflows/ci-duration.yml\`._")

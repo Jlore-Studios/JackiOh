@@ -136,12 +136,23 @@ pub async fn dev_give_quest(app: &Arc<App>, req: Req) -> ApiResult {
     let held: Vec<String> = book.held.iter().map(|quest| quest.quest_id.clone()).collect();
     let (_, grant) = arrival(&profile.id, &held, fresh_seed(), EconomyReason::Dev, now).ok_or_else(full)?;
     tx.economy_quests_change(&grant).await?;
-    tx.commit().await?;
     let quest = quest_view(&HeldQuest {
         quest_id: grant.quest_id,
         progress: 0,
         arrived_at: now,
     });
+    // R3074000: every dev tool writes its audit row in its own transaction.
+    crate::api::admin::audit(
+        &mut tx,
+        &profile.id,
+        "POST /api/dev/quests".to_string(),
+        json!({}),
+        json!({ "held": held }),
+        json!({ "quest": quest }),
+        now,
+    )
+    .await?;
+    tx.commit().await?;
     Ok(json(200, json!({ "quest": quest })))
 }
 
@@ -162,9 +173,18 @@ pub async fn dev_complete_quest(app: &Arc<App>, req: Req) -> ApiResult {
     if !complete_quest(&mut tx, &profile.id, def, EconomyReason::Dev, None, true, now).await? {
         return Err(not_held());
     }
+    let answer = json!({ "completed": def.id, "jlore": def.jlore, "xp": quest_xp(def) });
+    // R3074000: every dev tool writes its audit row in its own transaction.
+    crate::api::admin::audit(
+        &mut tx,
+        &profile.id,
+        format!("POST /api/dev/quests/{}/complete", def.id),
+        json!({ "questId": def.id }),
+        json!({ "held": def.id }),
+        answer.clone(),
+        now,
+    )
+    .await?;
     tx.commit().await?;
-    Ok(json(
-        200,
-        json!({ "completed": def.id, "jlore": def.jlore, "xp": quest_xp(def) }),
-    ))
+    Ok(json(200, answer))
 }

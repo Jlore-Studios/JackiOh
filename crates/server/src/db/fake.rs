@@ -212,6 +212,9 @@ pub struct FakeTables {
     /// Economy (SPEC §14, #1299), §14.11: migration 0045's holdings and their ledgers. Their store
     /// methods are `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
+    /// The dev dashboard (#3074): migration 0080's audit, hand-set ratings, rating ledger and
+    /// posts. Their store methods are `crate::admin::store`'s.
+    pub admin: crate::admin::store::AdminTables,
     /// R1523000: migration 0054's `app.seat_epoch`, its one row's epoch (0 in an empty store).
     pub seat_epoch: i64,
 }
@@ -2836,6 +2839,10 @@ pub fn game_records_unfiled(
 
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
     call(f, "statsTotals.load")?;
+    if query.patch.is_none() {
+        // R3067000: every patch's totals, counted apart from one patch's load.
+        call(f, "statsTotals.loadAllPatches")?;
+    }
     Ok(f.tables().stats_totals.select(
         &sources_of(query.source),
         query.mode,
@@ -3395,6 +3402,9 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
     // Economy (#1299): 0045's holdings and ledgers cascade with the profile.
     crate::economy::store::remove_economy_rows(&mut tables.economy, profile_id);
+    // The dev dashboard (#3074): 0080's hand-set ratings and rating ledger cascade with the
+    // profile; its audit rows and posts stay and forget it (`on delete set null`).
+    crate::admin::store::remove_admin_rows(&mut tables.admin, profile_id);
     true
 }
 
@@ -3578,8 +3588,8 @@ pub fn ranked_standings_subset(
     }))
 }
 
-/// The season's rows that `keep` keeps, each with its player's rating and `bot` flag, in profile-id
-/// order: what both standings reads answer.
+/// The season's rows that `keep` keeps, each with its player's rating, its `bot` flag and its
+/// `hand_set` flag (R3074001), in profile-id order: what both standings reads answer.
 fn season_standings(
     tables: &FakeTables,
     season_id: &str,
@@ -3602,10 +3612,16 @@ fn season_standings(
                         .find(|rating| rating.bot_id == profile.id && rating.format == ladder)
                 })
                 .flatten();
+            let hand_set = tables
+                .admin
+                .hand_set
+                .iter()
+                .any(|held| held.profile_id == profile.id && held.ladder == ladder);
             Some(SeasonStanding {
                 rank: row.clone(),
                 rating: own.map_or(profile.glicko(ladder).rating, |rating| rating.glicko.rating),
                 bot,
+                hand_set,
             })
         })
         .collect();

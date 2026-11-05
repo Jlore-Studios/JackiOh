@@ -428,25 +428,28 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved, un
     const putBack = (): void => {
       replace(withCardAt(latestCards.current, card, at));
     };
-    // `hold` first, since it sends any deletion held before this one.
-    hold({
-      words: () => t("Card deleted"),
-      send: (keepalive) => {
-        const now = latestToken.current;
-        const sent = keepalive ? api.remove(now, id, { keepalive: true }) : api.remove(now, id);
-        removing.current = sent.then(
-          () => undefined,
-          (cause: unknown) => {
-            putBack();
-            setSave({ kind: "refused", message: messageOf(cause), issues: [] });
-          },
-        );
-      },
-      restore: () => {
-        putBack();
-        setDraft((current) => (isUntouchedNew(current) ? draftOf(card) : current));
-      },
-    });
+    // `hold` first, since it sends any deletion held before this one; R3059000: it refuses a double click's second.
+    if (
+      !hold({
+        words: () => t("Card deleted"),
+        send: (keepalive) => {
+          const now = latestToken.current;
+          const sent = keepalive ? api.remove(now, id, { keepalive: true }) : api.remove(now, id);
+          removing.current = sent.then(
+            () => undefined,
+            (cause: unknown) => {
+              putBack();
+              setSave({ kind: "refused", message: messageOf(cause), issues: [] });
+            },
+          );
+        },
+        restore: () => {
+          putBack();
+          setDraft((current) => (isUntouchedNew(current) ? draftOf(card) : current));
+        },
+      })
+    )
+      return;
     replace(cards.filter((held) => held.id !== id));
     setDraft(newDraft());
     setSave({ kind: "idle" });

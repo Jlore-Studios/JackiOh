@@ -24,6 +24,8 @@
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
 //!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
 //!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
+//!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
+//!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -338,9 +340,9 @@ fn v28_no_typescript_is_left_where_the_rust_replaced_it() {
     );
 }
 
-/// ci.yml's `rust-test` groups by their `scripts/ci-scope.sh` line, in its order, each with the
-/// packages its `cargo test` names. The empty list is the last group's `--workspace --exclude …`:
-/// every package no other group names.
+/// ci.yml's `rust-test` groups (.github/ci/rust-test.toml) by their `scripts/ci-scope.sh` line, in
+/// its order, each with the packages its `cargo test` names. The empty list is the last group's
+/// `--workspace --exclude …`: every package no other group names.
 const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_engine_rules", &["jackioh-engine"]),
     ("rust_engine", &["jackioh-engine"]),
@@ -572,7 +574,7 @@ fn ci_scope_runs_each_rust_group_for_every_crate_it_builds_on() {
     let mismatches = rust_group_mismatches(&packages);
     assert!(
         mismatches.is_empty(),
-        "update the crate map in scripts/ci-scope.sh (and ci.yml's rust-test groups for a new crate): {mismatches:#?}"
+        "update the crate map in scripts/ci-scope.sh (and .github/ci/rust-test.toml's groups for a new crate): {mismatches:#?}"
     );
 }
 
@@ -1909,4 +1911,309 @@ fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
 fn dungeon_the_table_scan_reads_each_rows_first_cell() {
     let section = "| Constant | What | Where |\n| --- | --- | --- |\n| `RUN_A` | One | [[§15.1]] |\n| `RUN_B` | Two, see `RUN_A` | [[§15.2]] |\nProse naming `RUN_C`.\n";
     assert_eq!(spec_table_constants(section), ["RUN_A", "RUN_B"]);
+}
+
+/// CLAUDE.md rule 4's list of statics, as (file from the repository's root, name): the only `thread_local!`
+/// statics, `static mut`s and statics holding a `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` the pure crates
+/// may declare. The catalog's and the script registry's `OnceLock`s and `LazyLock`s hold none of those and
+/// need no entry. The entries are `jackioh-luau`'s thread-local VM (#442 L8) and the engine's three
+/// thread-locals, each set for one call and put back after it: the shipped catalog a replay folds under
+/// (R767000), the custom-script host (R915002) and whether the step in flight holds its game's random pools
+/// (R2201001). Change rule 4 and this list in one pull request (#3063).
+const RULE_4_STATICS: &[(&str, &str)] = &[
+    ("crates/engine/src/catalog.rs", "FOLDING"),
+    ("crates/engine/src/catalog.rs", "POOL_HOLD"),
+    ("crates/engine/src/custom.rs", "HOST"),
+    ("crates/luau/src/vm.rs", "VM"),
+];
+
+/// The types that make a static's type interior-mutable, besides any `Atomic*`.
+const INTERIOR_TYPES: &[&str] = &["Cell", "RefCell", "UnsafeCell"];
+
+/// Where the item at the start of `code` ends: its `;`, or the `}` that closes its first `{`, outside any
+/// `(…)` or `[…]`. Braces inside a string or char literal are not told apart, so a literal with an
+/// unbalanced one can end the item early or late.
+fn item_end(code: &str) -> usize {
+    let mut brackets = 0_i32;
+    let mut braces = 0_i32;
+    for (at, c) in code.char_indices() {
+        match c {
+            '(' | '[' => brackets += 1,
+            ')' | ']' => brackets -= 1,
+            '{' => braces += 1,
+            '}' => {
+                braces -= 1;
+                if braces == 0 {
+                    return at + 1;
+                }
+            }
+            ';' if brackets == 0 && braces == 0 => return at + 1,
+            _ => {}
+        }
+    }
+    code.len()
+}
+
+/// `code` without each item that follows an exact `#[cfg(test)]` (a `mod tests { … }`, a `use`, a helper
+/// `fn`), the lines kept as blanks so a line number still counts from the top. `#[cfg(any(test, …))]`
+/// compiles outside tests, so it stays.
+fn without_test_items(code: &str) -> String {
+    const ATTRIBUTE: &str = "#[cfg(test)]";
+    let mut kept = String::new();
+    let mut rest = code;
+    while let Some(at) = rest.find(ATTRIBUTE) {
+        kept.push_str(&rest[..at]);
+        let item = &rest[at + ATTRIBUTE.len()..];
+        let (skipped, after) = item.split_at(item_end(item));
+        kept.push_str(&"\n".repeat(skipped.matches('\n').count()));
+        rest = after;
+    }
+    kept.push_str(rest);
+    kept
+}
+
+fn is_identifier(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// The (1-based line, name) of each `static` in `code` (comments already cut) that rule 4 lists: one inside
+/// a `thread_local!`, a `static mut`, or one whose type, up to its `=`, names an INTERIOR_TYPES type or an
+/// `Atomic*`. A `'static` lifetime and `static_flags` are not declarations.
+fn interior_statics(code: &str) -> Vec<(usize, String)> {
+    let thread_locals: Vec<(usize, usize)> = code
+        .match_indices("thread_local!")
+        .map(|(at, _)| (at, at + item_end(&code[at..])))
+        .collect();
+    code.match_indices("static")
+        .filter_map(|(at, _)| {
+            if code[..at]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c == '\'' || is_identifier(c))
+            {
+                return None;
+            }
+            let rest = code[at + "static".len()..]
+                .strip_prefix(char::is_whitespace)?
+                .trim_start();
+            let (is_mut, rest) = match rest.strip_prefix("mut ") {
+                Some(after) => (true, after.trim_start()),
+                None => (false, rest),
+            };
+            let name: String = rest.chars().take_while(|&c| is_identifier(c)).collect();
+            let declared = rest[name.len()..].trim_start().strip_prefix(':')?;
+            if name.is_empty() {
+                return None;
+            }
+            let mut depth = 0_i32;
+            let mut previous = ' ';
+            let end = declared
+                .char_indices()
+                .find(|&(_, c)| {
+                    let stop = match c {
+                        '<' => {
+                            depth += 1;
+                            false
+                        }
+                        '>' if previous != '-' => {
+                            depth -= 1;
+                            false
+                        }
+                        '=' | ';' => depth <= 0,
+                        _ => false,
+                    };
+                    previous = c;
+                    stop
+                })
+                .map_or(declared.len(), |(end, _)| end);
+            let interior = declared[..end].split(|c: char| !is_identifier(c)).any(|word| {
+                INTERIOR_TYPES.contains(&word) || (word.starts_with("Atomic") && word.len() > "Atomic".len())
+            });
+            let in_thread_local = thread_locals.iter().any(|&(from, to)| from < at && at < to);
+            (is_mut || in_thread_local || interior).then(|| (code[..at].matches('\n').count() + 1, name))
+        })
+        .collect()
+}
+
+/// What is wrong with the statics under `root`'s `crates/{engine,cards,ai,luau,run}/src`, against `allowed`:
+/// each one it does not list as `<file>:<line>: `<name>``, and each entry that names a static no longer
+/// declared. `src/testkit/` and the out-of-line test modules (`tests.rs`, `*_tests.rs`, which
+/// `crates/run/src/lib.rs` declares under `#[cfg(test)]`) are not read.
+fn static_problems(root: &Path, allowed: &[(&str, &str)]) -> Vec<String> {
+    let mut found: Vec<(String, String)> = Vec::new();
+    let mut problems = Vec::new();
+    for crate_dir in ["engine", "cards", "ai", "luau", "run"] {
+        let src = root.join("crates").join(crate_dir).join("src");
+        let mut files = Vec::new();
+        rust_sources(&src, &mut files);
+        files.sort();
+        for file in files {
+            let stem = file.file_stem().and_then(|stem| stem.to_str()).unwrap_or("");
+            if file
+                .strip_prefix(&src)
+                .is_ok_and(|inside| inside.starts_with("testkit"))
+                || stem == "tests"
+                || stem.ends_with("_tests")
+            {
+                continue;
+            }
+            let relative = file
+                .strip_prefix(root)
+                .unwrap_or(&file)
+                .to_string_lossy()
+                .replace('\\', "/");
+            let text = fs::read_to_string(&file).unwrap_or_default();
+            let code = without_test_items(&without_line_comments(&text));
+            for (line, name) in interior_statics(&code) {
+                if !allowed.contains(&(relative.as_str(), name.as_str())) {
+                    problems.push(format!("{relative}:{line}: `{name}`"));
+                }
+                found.push((relative.clone(), name));
+            }
+        }
+    }
+    for (file, name) in allowed {
+        if !found.iter().any(|(at, found)| at == file && found == name) {
+            problems.push(format!(
+                "RULE_4_STATICS lists `{name}` in {file}, which declares none"
+            ));
+        }
+    }
+    problems
+}
+
+/// The failure message when `static_problems` finds any, else `None`.
+fn static_failure(root: &Path, allowed: &[(&str, &str)]) -> Option<String> {
+    let problems = static_problems(root, allowed);
+    (!problems.is_empty()).then(|| {
+        format!(
+            "CLAUDE.md rule 4 allows the pure crates only the statics it names, and RULE_4_STATICS in crates/tools/tests/acceptance.rs mirrors them: a `thread_local!`, a `static mut` or a static holding a `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` anywhere else can make a game depend on what ran before it (#3063). Change rule 4 and RULE_4_STATICS in one pull request, or take the static out: {problems:#?}"
+        )
+    })
+}
+
+#[test]
+fn statics_the_pure_crates_hold_only_the_statics_rule_4_allows() {
+    if let Some(message) = static_failure(&repo(), RULE_4_STATICS) {
+        panic!("{message}");
+    }
+}
+
+#[test]
+fn statics_the_scan_finds_each_interior_static() {
+    let text = [
+        "thread_local! {",                                                                  // 1
+        "    static A: Cell<u32> = const { Cell::new(0) };",                                // 2
+        "    pub(crate) static B: Vm = Vm::new();",                                         // 3
+        "}",                                                                                // 4
+        "static mut C: u32 = 0;",                                                           // 5
+        "static D: AtomicU32 = AtomicU32::new(0);",                                         // 6
+        "pub static E: [AtomicBool; 2] = [AtomicBool::new(false), AtomicBool::new(true)];", // 7
+        "static F: OnceLock<u32> = OnceLock::new();",                                       // 8
+        "static G: LazyLock<Vec<u32>> = LazyLock::new(|| {",                                // 9
+        "    let c = Cell::new(1);",                                                        // 10
+        "    vec![c.get()]",                                                                // 11
+        "});",                                                                              // 12
+        "static H: [GridCell; 2] = [GridCell, GridCell];",                                  // 13
+        "static I: LazyLock<Box<dyn Fn() -> u32 + Send + Sync>> = LazyLock::new(|| Box::new(|| 1));", // 14
+        "fn f(x: &'static str) -> &'static mut u32 { todo!() }",                            // 15
+        "let t = face.static_flags; let u = Static::new();",                                // 16
+        "static J: &[AtomicU8] = &[];",                                                     // 17
+        "std::thread_local!(static K: Cell<u32> = Cell::new(0));",                          // 18
+    ]
+    .join("\n");
+    let found = interior_statics(&text);
+    let names: Vec<&str> = found.iter().map(|(_, name)| name.as_str()).collect();
+    assert_eq!(names, ["A", "B", "C", "D", "E", "J", "K"]);
+    let lines: Vec<usize> = found.iter().map(|(line, _)| *line).collect();
+    assert_eq!(lines, [2, 3, 5, 6, 7, 17, 18]);
+}
+
+#[test]
+fn statics_the_scan_skips_test_items_and_keeps_the_lines() {
+    let text = [
+        "#[cfg(test)]",                                         // 1
+        "use std::cell::Cell;",                                 // 2
+        "thread_local! {",                                      // 3
+        "    static KEPT: Cell<u32> = const { Cell::new(0) };", // 4
+        "}",                                                    // 5
+        "#[cfg(test)]",                                         // 6
+        "mod tests {",                                          // 7
+        "    static SKIPPED: AtomicU32 = AtomicU32::new(0);",   // 8
+        "    fn f() -> [u8; 2] {",                              // 9
+        "        [0; 2]",                                       // 10
+        "    }",                                                // 11
+        "}",                                                    // 12
+        "static AFTER: AtomicU32 = AtomicU32::new(0);",         // 13
+        "#[cfg(any(test, feature = \"testkit\"))]",             // 14
+        "static GATED: AtomicU32 = AtomicU32::new(0);",         // 15
+    ]
+    .join("\n");
+    assert_eq!(
+        interior_statics(&without_test_items(&text)),
+        [
+            (4, "KEPT".to_string()),
+            (13, "AFTER".to_string()),
+            (15, "GATED".to_string())
+        ]
+    );
+}
+
+#[test]
+fn statics_the_check_refuses_an_unlisted_static_in_each_pure_crate() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-statics-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(path, text).expect("the file");
+    };
+    let local = "thread_local! {\n    static PLANTED: Cell<u32> = const { Cell::new(0) };\n}\n";
+    let mut expected = Vec::new();
+    for crate_dir in ["engine", "cards", "ai", "luau", "run"] {
+        let src = format!("crates/{crate_dir}/src");
+        write(
+            &format!("{src}/counter.rs"),
+            "static COUNTER: AtomicU32 = AtomicU32::new(0);\n",
+        );
+        write(&format!("{src}/mutable.rs"), "static mut PLANTED: u32 = 0;\n");
+        write(&format!("{src}/planted.rs"), local);
+        write(
+            &format!("{src}/once.rs"),
+            "static ONCE: OnceLock<u32> = OnceLock::new();\n",
+        );
+        write(
+            &format!("{src}/held.rs"),
+            &format!("fn held() {{}}\n\n#[cfg(test)]\nmod tests {{\n{local}}}\n"),
+        );
+        write(&format!("{src}/testkit/seam.rs"), local);
+        write(&format!("{src}/walk_tests.rs"), local);
+        expected.extend([
+            format!("{src}/counter.rs:1: `COUNTER`"),
+            format!("{src}/mutable.rs:1: `PLANTED`"),
+            format!("{src}/planted.rs:2: `PLANTED`"),
+        ]);
+    }
+    assert_eq!(static_problems(root, &[]), expected);
+    let message = static_failure(root, &[]).expect("the planted statics fail the check");
+    assert!(
+        message.contains("CLAUDE.md rule 4") && message.contains("RULE_4_STATICS"),
+        "{message}"
+    );
+    let listed = [
+        ("crates/engine/src/planted.rs", "PLANTED"),
+        ("crates/engine/src/gone.rs", "GONE"),
+    ];
+    let mut with_list = expected.clone();
+    with_list.remove(2);
+    with_list
+        .push("RULE_4_STATICS lists `GONE` in crates/engine/src/gone.rs, which declares none".to_string());
+    let problems = static_problems(root, &listed);
+    drop(scratch);
+    assert_eq!(problems, with_list);
 }

@@ -1,5 +1,5 @@
-// PKCE for the emailed links (R323, R324; an email change's, R663), the email sign-in link (R664) and
-// OAuth (R666): only the browser holding the verifier can exchange the returned code, so no token is in a
+// PKCE for the emailed links (R323, R324; an email change's, R663), the email sign-in link (R664),
+// OAuth (R666) and linking a provider to the signed-in account (R3025000): only the browser holding the verifier can exchange the returned code, so no token is in a
 // URL. Verifiers live in `localStorage`, since a link usually opens in a new tab, which `sessionStorage`
 // would not reach; a code with no verifier here was asked for elsewhere (R324).
 
@@ -14,10 +14,10 @@ const PKCE_VERIFIER_MIN_LENGTH = 43;
 const PKCE_VERIFIER_MAX_LENGTH = 128;
 export const PKCE_METHOD = "s256";
 
-/** Link flows (R663, R664, R666); exchange only with this browser's verifier to prevent R193 login CSRF. */
-export type PkceFlow = "signup" | "recovery" | "email_change" | "magiclink" | "oauth";
+/** Link flows (R663, R664, R666, R3025000); exchange only with this browser's verifier to prevent R193 login CSRF. */
+export type PkceFlow = "signup" | "recovery" | "email_change" | "magiclink" | "oauth" | "link";
 
-const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change", "magiclink", "oauth"];
+const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change", "magiclink", "oauth", "link"];
 
 type Stored = { verifier: string; at: number };
 type StoredValue = { v: number } & Partial<Record<PkceFlow, Stored>>;

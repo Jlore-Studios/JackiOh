@@ -1,0 +1,41 @@
+# How many jobs share each sharded CI job (#3072). .github/ci/matrix.py reads it, in ci.yml's
+# `changes` job, from the pull request's own copy. Every test or spec lands in exactly one of a job's
+# shards for any count, so a count can make CI slower or faster but never skip anything, which is why
+# this file sits outside .github/: the night bot may change it, as it may e2e's WEIGHTS
+# (e2e/scripts/shard-specs.mjs).
+#
+# When ci-duration.yml reports a job over seven minutes, raise its count until each shard should
+# finish under five, with headroom. A count is a whole number from 1 to 8 (matrix.py's MAX_SHARDS),
+# and a name the generator does not know fails the `changes` job, and with it every check.
+#
+# A count splits a job's run, not its compile: each shard compiles what the job compiles. A
+# `rust (test <group>)` group slow to compile needs its tests in more binaries instead (a new
+# `rules_<n>` of the engine runs in a job of its own by itself, .github/ci/rust-test.toml's `tests`).
+
+# `rust (test <group>)`, by the group's name in .github/ci/rust-test.toml: K jobs, `<group> k/K`,
+# each the tests whose names hash to it. A group not named here runs as one job.
+[rust-test]
+"engine rules" = 1
+"engine" = 1
+"engine golden" = 1
+"cards lib" = 1
+"cards" = 1
+"server" = 1
+"server api" = 1
+"server practice" = 1
+"server practice rulings" = 1
+"ai" = 1
+"ai slow" = 1
+"luau" = 1
+"tools fuzz" = 1
+"tools duos, selfplay" = 1
+"tools, wasm" = 1
+
+# `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tests.
+[web]
+unit = 4
+
+# `e2e smoke (k/K)`: the smoke specs (e2e/scripts/shard-specs.mjs SMOKE) by their WEIGHTS. A
+# dispatch with `e2e: all` runs every spec in super.yml's eight shards instead.
+[e2e]
+smoke = 2

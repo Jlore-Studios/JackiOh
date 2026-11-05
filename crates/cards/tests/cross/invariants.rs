@@ -1,5 +1,5 @@
 //! Invariants I2 (R44, R386, R636, #874), I6 hidden information (SPEC §10.8, issue #348, R177, R227,
-//! R312, R466), and I8 (issues #1192, #1574). Test paths: SURFACE §4.1, §8.
+//! R312, R466), I8 (issues #1192, #1574) and I14 (#3062). Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::testkit::*;
 
@@ -1419,6 +1419,139 @@ mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
             assert!(result.state == *g.state(), "{name} moved the state");
         }
         assert!(malformed_actions(g.state(), PlayerId::P1, &ActionBody::EndTurn).is_empty());
+    }
+}
+
+/// I14 (#3062): every action `legal_actions` lists, `reduce` accepts. The real reducer refuses none, so a
+/// forged listing and a planted reducer stand in for the bug the check hunts.
+mod i14_a_listed_action_reduce_refuses {
+    use std::cell::Cell;
+
+    use super::*;
+
+    fn board() -> Scenario {
+        scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }))
+    }
+
+    fn refuses_everything(state: &GameState, _: &Action) -> ReduceResult {
+        ReduceResult {
+            state: state.clone(),
+            events: Vec::new(),
+            error: Some("planted refusal".to_string()),
+        }
+    }
+
+    #[test]
+    fn i14_is_clean_when_reduce_accepts_every_listed_action() {
+        let g = board();
+        assert_eq!(
+            listed_refused(
+                g.state(),
+                PlayerId::P1,
+                &legal_actions(g.state(), PlayerId::P1),
+                reduce
+            ),
+            no_violations()
+        );
+        assert_eq!(
+            create_invariant_monitor(g.state()).listed(g.state(), reduce),
+            no_violations()
+        );
+    }
+
+    #[test]
+    fn i14_fires_once_on_a_listed_action_reduce_refuses() {
+        let g = board();
+        let mut legal = legal_actions(g.state(), PlayerId::P1);
+        legal.push(ActionBody::SwitchPosition {
+            instance_id: "i14-no-such-unit".to_string(),
+        });
+        let found = listed_refused(g.state(), PlayerId::P1, &legal, reduce);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 listed action refused"), "{}", found[0]);
+        assert!(found[0].contains("i14-no-such-unit"), "{}", found[0]);
+        assert!(found[0].contains("switchPosition"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
+        );
+        assert!(found[0].contains("§10.2"), "{}", found[0]);
+    }
+
+    #[test]
+    fn i14_reports_a_reducer_that_panics_as_a_finding_not_a_panic() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |_: &GameState, _: &Action| -> ReduceResult { panic!("planted panic") },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 listed action panicked"), "{}", found[0]);
+        assert!(found[0].contains("planted panic"), "{}", found[0]);
+        assert!(found[0].contains("endTurn"), "{}", found[0]);
+    }
+
+    #[test]
+    fn i14_sends_at_most_the_cap_spread_over_a_longer_list() {
+        let g = board();
+        let legal: Vec<ActionBody> = (0..I14_ACTION_CAP * 3 + 1)
+            .map(|n| ActionBody::SwitchPosition {
+                instance_id: format!("i14-unit-{n}"),
+            })
+            .collect();
+        let sent = Cell::new(0usize);
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &legal,
+            |state: &GameState, action: &Action| {
+                sent.set(sent.get() + 1);
+                reduce(state, action)
+            },
+        );
+        assert_eq!(sent.get(), I14_ACTION_CAP);
+        assert_eq!(found.len(), I14_ACTION_CAP, "{found:?}");
+        let distinct: IndexSet<&String> = found.iter().collect();
+        assert_eq!(
+            distinct.len(),
+            I14_ACTION_CAP,
+            "each finding names its own action"
+        );
+        let last = legal
+            .iter()
+            .rposition(|body| {
+                let sent = serde_json::to_string(body).expect("an action is JSON");
+                found.iter().any(|finding| finding.contains(&sent))
+            })
+            .expect("a finding names a listed action");
+        assert!(
+            last >= legal.len() / 2,
+            "the sample reaches the back half of the list, not only its first {I14_ACTION_CAP}: last index {last}"
+        );
+    }
+
+    #[test]
+    fn i14_sends_the_listing_of_each_seat_as_that_seat() {
+        let g = board();
+        let found = create_invariant_monitor(g.state()).listed(g.state(), refuses_everything);
+        assert!(
+            found
+                .iter()
+                .any(|finding| finding.starts_with("I14 listed action refused: p1 sent")),
+            "{found:?}"
+        );
+        assert!(
+            found
+                .iter()
+                .any(|finding| finding.starts_with("I14 listed action refused: p2 sent")),
+            "{found:?}"
+        );
     }
 }
 
