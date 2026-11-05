@@ -3,7 +3,9 @@
 // locked silhouette that still opens its view (R1655000), so a player sees what they miss. R1953001,
 // R2730000: `token` lets a held token's offer show in a locked item's fullscreen preview, which a hold
 // or the inspect key opens: a card token on an unowned card of the grid, a cosmetic token in the
-// card's view. R1956000: an owned tile wears the viewer's picks.
+// card's view. R1956000: an owned tile wears the viewer's picks. R3016000: a card resting under a mouse
+// or a keyboard's focus previews its look as a card, in hand and on the board (LookPreview.tsx), and its
+// fullscreen preview draws the same three with a Radiant toggle.
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -17,12 +19,16 @@ import { getCollection, type CollectionResponse } from "../net/api.ts";
 import { quantitiesOf } from "../shop/shop.ts";
 import CardCosmeticsView from "./CardCosmeticsView.tsx";
 import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.ts";
-import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
+import ItemPreview, { usePreviewTrigger } from "./ItemPreview.tsx";
+import { LookHover, LookViews, RadiantToggle } from "./LookPreview.tsx";
 import TokenOffer, { useHeldTokens, type HeldTokens } from "./TokenOffer.tsx";
 
 type Inspected = { def: CardDef; owned: boolean };
 
-/** R2730000: one grid card: a hold or the inspect key previews it fullscreen, a click opens its view. */
+/**
+ * R2730000: one grid card: a hold or the inspect key previews it fullscreen, a click opens its view. R3016000: a
+ * resting mouse or a keyboard's focus opens its look's hover preview, which leaving closes.
+ */
 function CollectionCardTile({
   def,
   owned,
@@ -34,29 +40,67 @@ function CollectionCardTile({
   onOpen: () => void;
   onPreview: () => void;
 }): ReactElement {
+  const { handlers, overlay } = usePreviewTrigger(`card-${def.id}`, onPreview, (anchor) => <LookHover def={def} worn={owned} anchor={anchor} />);
   return (
-    <button
-      type="button"
-      className="collection-card"
-      data-testid={collectionTestid.card(def.id)}
-      data-owned={String(owned)}
-      aria-label={owned ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
-      aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
-      {...usePreviewHold(`card-${def.id}`, onPreview)}
-      onClick={() => {
-        closeInspect();
-        onOpen();
-      }}
-    >
-      <span className="collection-card__face">
-        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} />
-      </span>
-      {owned ? null : (
-        <span className="collection-card__lock" aria-hidden="true">
-          {t("Locked")}
+    <>
+      <button
+        type="button"
+        className="collection-card"
+        data-testid={collectionTestid.card(def.id)}
+        data-owned={String(owned)}
+        aria-label={owned ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
+        aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
+        {...handlers}
+        onClick={() => {
+          closeInspect();
+          onOpen();
+        }}
+      >
+        <span className="collection-card__face">
+          <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} />
         </span>
-      )}
-    </button>
+        {owned ? null : (
+          <span className="collection-card__lock" aria-hidden="true">
+            {t("Locked")}
+          </span>
+        )}
+      </button>
+      {overlay}
+    </>
+  );
+}
+
+/** R3016000: a grid card's fullscreen preview (R2730000): its look three ways, base until the Radiant toggle turns it. */
+function CardLookPreview({
+  def,
+  owned,
+  offer,
+  onClose,
+}: {
+  def: CardDef;
+  owned: boolean;
+  offer: ReactElement | null;
+  onClose: () => void;
+}): ReactElement {
+  const [radiant, setRadiant] = useState(false);
+  return (
+    <ItemPreview
+      id={def.id}
+      name={readerName(def)}
+      rarity={def.rarity}
+      owned={owned}
+      picture={<LookViews def={def} worn={owned} radiant={radiant} />}
+      controls={
+        <RadiantToggle
+          radiant={radiant}
+          onToggle={() => {
+            setRadiant((shown) => !shown);
+          }}
+        />
+      }
+      offer={offer}
+      onClose={onClose}
+    />
   );
 }
 
@@ -150,16 +194,10 @@ export default function OwnedCards({
         />
       )}
       {previewed === null ? null : (
-        <ItemPreview
-          id={previewed.def.id}
-          name={readerName(previewed.def)}
-          rarity={previewed.def.rarity}
+        <CardLookPreview
+          key={previewed.def.id}
+          def={previewed.def}
           owned={previewed.owned}
-          picture={
-            <span className="collection-preview__card">
-              <CardFace face={faceModel({ defId: previewed.def.id, def: previewed.def, radiant: false })} layout="full" worn={previewed.owned} />
-            </span>
-          }
           offer={
             previewed.owned || token === null || tokens === null || tokens.card < 1 ? null : (
               <TokenOffer

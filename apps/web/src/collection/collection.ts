@@ -74,6 +74,11 @@ export const collectionTestid = {
   previewScrim: "collection-preview-scrim",
   previewClose: "collection-preview-close",
   previewStatus: "collection-preview-status",
+  // R3016000: a card's look three ways (LookPreview.tsx), its hover preview and its Radiant toggle.
+  look: "collection-look",
+  lookView: (view: string) => `collection-look-${view}`,
+  lookHover: "collection-look-hover",
+  lookRadiant: "collection-look-radiant",
   // R3013001: a card's proficiency in its card view (ProficiencyPanel), its level, its plays and its stamps.
   proficiency: "collection-proficiency",
   proficiencyLevel: "collection-proficiency-level",
