@@ -14,7 +14,7 @@ import type { Friend } from "../net/social.ts";
 import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { COOP_DECK_KEY, CoopPanel, defaultCoopDeck } from "./CoopPanel.tsx";
 import { COOP_ROOM_POLL_MS } from "./config.ts";
-import { setVisibility } from "../test/setup.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 
 const SLOW = { timeout: 5_000 } as const;
 /** SPEC S6/S8 give the host's wait for the guest no interval; the host's way on comes well inside this. */
@@ -309,6 +309,34 @@ describe("B60 creating a room", () => {
       expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
       expect(window.location.pathname).toBe("/together");
       expect(screen.getByTestId("coop-code")).toHaveTextContent(CODE);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3205000 the host's room wait keeps reading while the tab is hidden, for the room expires",
+    async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+      try {
+        const server = serve({ created: false, guestJoined: false });
+        await renderPanel();
+        await createRoom(server);
+        const rooms = (): number => server.to("GET", `/api/duos/rooms/${CODE}`).length;
+        const first = rooms();
+        expect(first).toBeGreaterThan(0);
+
+        setVisibility("hidden");
+        for (const read of [1, 2]) {
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(COOP_ROOM_POLL_MS);
+          });
+          await flush();
+          expect(rooms()).toBe(first + read);
+        }
+        expect(window.location.pathname).toBe("/together");
+      } finally {
+        resetVisibility();
+      }
     },
     TEST_MS,
   );

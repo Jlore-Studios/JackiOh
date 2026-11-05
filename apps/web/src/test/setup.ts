@@ -2,8 +2,8 @@
 // starts on an empty read cache (R2125000: never on another's kept answers). The Rust engine
 // (docs/v0.3.0/SURFACE.md §10.3) loads synchronously from the bytes `scripts/build-wasm.sh` (run by
 // `pretest`) writes, as jsdom cannot fetch a file URL, before any test file is imported. A test imports
-// from here the page-state switches (`setReducedMotion`, `setVisibility`) and `readSheet` (a stylesheet
-// as text).
+// from here the page-state switches (`setReducedMotion`, `setVisibility`, `resetVisibility`) and
+// `readSheet` (a stylesheet as text).
 
 import "@testing-library/jest-dom/vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -35,6 +35,11 @@ export function setReducedMotion(on: boolean): void {
 export function setVisibility(state: "hidden" | "visible"): void {
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
   document.dispatchEvent(new Event("visibilitychange"));
+}
+
+/** Put the page's own `visibilityState` back after `setVisibility`, with no event: a test's `afterEach`. */
+export function resetVisibility(): void {
+  Reflect.deleteProperty(document, "visibilityState");
 }
 
 /**

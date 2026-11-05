@@ -756,53 +756,53 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   return (
     <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
       <header className="db-header">
-        <BackLink to={paths.collection} />
-        <h1 className="db-title">{t("Decks")}</h1>
-        {openDeck === null ? null : (
-          <div className="ws-history">
-            <button
-              type="button"
-              className="ws-history-button"
-              data-testid={DECK_UNDO}
-              aria-label={t("Undo")}
-              title={shortcutTitle(t("Undo"), SHORTCUTS.undo, hints)}
-              aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.undo)}
-              disabled={history.past.length === 0}
-              onClick={undo}
-            >
-              <span className="ws-cosmetics-button__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d={UNDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="ws-history-button"
-              data-testid={DECK_REDO}
-              aria-label={t("Redo")}
-              title={shortcutTitle(t("Redo"), SHORTCUTS.redo, hints)}
-              aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.redo)}
-              disabled={history.future.length === 0}
-              onClick={redo}
-            >
-              <span className="ws-cosmetics-button__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d={REDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </button>
-          </div>
-        )}
-        {openDeck === null ? null : (
-          <DeckCosmeticsPicker
-            deck={openDeck}
-            onCosmetic={(kind, id) => {
-              editDeck(openDeck.id, deckCosmeticPatch(kind, id));
-            }}
-          />
-        )}
-        <SyncStatusLine status={snapshot.status} />
+        <BackLink to={paths.collection} title={<h1 className="db-title">{t("Decks")}</h1>}>
+          {openDeck === null ? null : (
+            <div className="ws-history">
+              <button
+                type="button"
+                className="ws-history-button"
+                data-testid={DECK_UNDO}
+                aria-label={t("Undo")}
+                title={shortcutTitle(t("Undo"), SHORTCUTS.undo, hints)}
+                aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.undo)}
+                disabled={history.past.length === 0}
+                onClick={undo}
+              >
+                <span className="ws-cosmetics-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d={UNDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="ws-history-button"
+                data-testid={DECK_REDO}
+                aria-label={t("Redo")}
+                title={shortcutTitle(t("Redo"), SHORTCUTS.redo, hints)}
+                aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.redo)}
+                disabled={history.future.length === 0}
+                onClick={redo}
+              >
+                <span className="ws-cosmetics-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d={REDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+            </div>
+          )}
+          {openDeck === null ? null : (
+            <DeckCosmeticsPicker
+              deck={openDeck}
+              onCosmetic={(kind, id) => {
+                editDeck(openDeck.id, deckCosmeticPatch(kind, id));
+              }}
+            />
+          )}
+          <SyncStatusLine status={snapshot.status} />
+        </BackLink>
       </header>
 
       <div className="ws-layout">

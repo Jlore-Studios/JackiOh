@@ -9,6 +9,7 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type R
 import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
+import { pollWhileVisible } from "../game/net.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
@@ -109,10 +110,11 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     };
     readNow.current = read;
     read();
-    const handle = window.setInterval(read, CHAT_POLL_MS);
+    // R3205000: a hidden tab reads nothing, and reads once when it shows again.
+    const stopPolling = pollWhileVisible(read, CHAT_POLL_MS);
     return () => {
       canceled = true;
-      window.clearInterval(handle);
+      stopPolling();
     };
   }, [friendId]);
 
