@@ -8,8 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { PlayerId } from "@jackioh/shared";
 
-import { PRACTICE_LETHAL_HINT_CLOCK_MS } from "./config.ts";
-import { createPracticeCore } from "./core.ts";
+import { practiceConstants } from "../wasm/index.ts";
+import { createPracticeDriver } from "./driver.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeStartConfig } from "./protocol.ts";
@@ -43,7 +43,7 @@ const HUMAN: PlayerId = "p2";
 type Driver = { send(body: PracticeRequestBody): PracticeResponse };
 
 function driver(now = 0): Driver {
-  const core = createPracticeCore({ now: () => now, dev: true, budget: AI_GATE_BUDGET });
+  const core = createPracticeDriver({ now: () => now, dev: true, budget: AI_GATE_BUDGET });
   let id = 0;
   return {
     send(body) {
@@ -125,7 +125,7 @@ describe("R2102000 the practice core's lethal hint", () => {
   it("R2102000 the check runs under its own clock when the worker has one, and under none when it has not", () => {
     plan.mode = "yes";
     driver(1_000).send({ type: "start", config: config() });
-    expect(plan.deadlines).toEqual([1_000 + PRACTICE_LETHAL_HINT_CLOCK_MS]);
+    expect(plan.deadlines).toEqual([1_000 + practiceConstants().PRACTICE_LETHAL_HINT_CLOCK_MS]);
     plan.deadlines = [];
     driver().send({ type: "start", config: config() });
     expect(plan.deadlines).toEqual([undefined]);

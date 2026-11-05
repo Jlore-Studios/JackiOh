@@ -8,10 +8,17 @@ publish.workspace = true
 
 [dependencies]
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
-# the cards, the AI and the run, never jackioh-luau, and none of them takes it.
+# the cards, the AI and the run, never jackioh-luau, and none of them takes it. The host machine's and the
+# loadout's tests play whole games under the real catalog, which these dependencies carry.
 jackioh-engine = { workspace = true }
 # The host machine asks the AI who owes a move (`ai_to_act`) and reads a panic's text (`panic_message`).
 jackioh-ai = { workspace = true }
+# The practice session names a kept game's catalog as the cards crate does (`version_name_from`, R1371000)
+# and reads a dungeon run's fight (`run_fight_report`, R2706000); `serde_json` carries the cosmetics of a
+# saved deck, which only the page reads.
+jackioh-cards = { workspace = true }
+jackioh-run = { workspace = true }
+serde_json = { workspace = true }
 serde = { workspace = true }
 indexmap = { workspace = true }
 # Off by default, as the engine's and the run's `ts` are: the types that cross the boundary (README.md, the
@@ -20,12 +27,4 @@ indexmap = { workspace = true }
 ts-rs = { workspace = true, optional = true }
 
 [features]
-ts = ["dep:ts-rs", "jackioh-engine/ts"]
-
-[dev-dependencies]
-serde_json = { workspace = true }
-# The loadout tests deal a real game from the shipped cards (`tests/loadout.rs`), and the host machine's tests
-# play whole games under the real catalog; dev-dependencies are not the crate's own, which stay the pure
-# crates' (CLAUDE.md rule 4).
-jackioh-cards = { workspace = true }
-jackioh-ai = { workspace = true }
+ts = ["dep:ts-rs", "jackioh-engine/ts", "jackioh-run/ts"]

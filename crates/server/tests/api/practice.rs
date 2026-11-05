@@ -6,9 +6,9 @@
 //! (R1303000–R1303003, whose proving tests live here). A paid game moves the account's quests by
 //! what it did, as a ladder game does (R1304001).
 //!
-//! The games are played for real, on the shipped catalog (no `install_test_cards`), through
-//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI; the fixture test
-//! plays one the browser's worker recorded instead. Every amount is read through its constant and
+//! The games are played for real, on the shipped catalog (no `install_test_cards`), on the practice
+//! session's machine (`jackioh_shared::host::practice`) with the AI deciding at `AI_BUDGET`, as the
+//! worker runs it; the fixture test plays one the browser's worker recorded instead. Every amount is read through its constant and
 //! the hook's own math, so the tests hold whatever #1333 sets.
 
 use std::collections::BTreeMap;
@@ -19,9 +19,9 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use jackioh_ai::{AiOptions, ai_to_act, decide};
+use jackioh_ai::AI_BUDGET;
 use jackioh_engine::wire::newest_shipped_set;
-use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, Rng, SandboxOp};
+use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, SandboxOp};
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::api::practice::{Swept, sweep_unsettled};
 use jackioh_server::app::{App, now_ms, serve_until};
@@ -42,7 +42,7 @@ use jackioh_server::economy::store::{
     PracticeSeed, PracticeSettled, PracticeSetup, QuestChange, QuestGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
-use jackioh_shared::host::bot::r188_forbidden;
+use jackioh_shared::host::practice::{AiAsk, PracticeEvent, PracticeHost, PracticeOutput, ai_never_takes};
 
 use crate::support::deps::{RecordingLogger, add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};
@@ -196,92 +196,76 @@ enum Human {
     Ai,
 }
 
-/// The action the practice AI takes in `state` from `seat` under `nonce`, as the worker's `aiStep`
-/// takes it: `decide`'s choice, unless R188 forbids it or the engine refuses it, else the first
-/// legal action the engine accepts, `endTurn` first; `None` when the AI owes nothing. `rng` is the
-/// AI's stream, left where the decision left it. The server does not run this on a claim
-/// (R2560000): it plays the games these tests claim.
-fn ai_move(
-    pinned: Pinned,
-    state: &GameState,
-    seat: PlayerId,
-    nonce: &str,
-    rng: &mut Rng,
-) -> Option<ActionBody> {
-    let accepted = |body: &ActionBody| {
-        !r188_forbidden(body)
-            && !matches!(body, ActionBody::Sandbox { .. })
-            && engine::reduce(pinned, state, &Action::new(body.clone(), seat, nonce))
-                .error
-                .is_none()
-    };
-    let chosen = pinned.run(|| {
-        if !ai_to_act(state, seat) {
-            return None;
-        }
-        let mut options = AiOptions::new(rng.clone());
-        let decision = decide(state, seat, &mut options);
-        *rng = options.rng;
-        Some(decision.map(|decision| decision.action))
-    })?;
-    if let Some(body) = chosen.filter(|body| accepted(body)) {
-        return Some(body);
-    }
-    let legal = engine::legal_actions(pinned, state, seat);
-    let (end_turn, rest): (Vec<ActionBody>, Vec<ActionBody>) = legal
-        .into_iter()
-        .partition(|body| matches!(body, ActionBody::EndTurn));
-    end_turn.into_iter().chain(rest).find(|body| accepted(body))
-}
-
-/// A practice game played out from `setup` on `seed` as the worker plays it: the AI moves whenever
-/// it owes one, through `ai_move`, and the human otherwise, each under its own nonces
-/// from the seat it plays then (R677). The log, the human's result and the final state.
+/// A practice game played out from `setup` on `seed` as the worker plays it, on the practice session's
+/// own machine (`jackioh_shared::host::practice`, the one `economy::practice::verify` steps over a
+/// claim): the AI moves whenever it owes one, decided as the worker decides it, and the human otherwise,
+/// each under its own nonces from the seat it plays then (R677). The log, the human's result and the
+/// final state.
 fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, ClaimedResult, GameState) {
-    let pinned = pinned();
-    let mut state = practice::opening(pinned, seed, setup).expect("the setup begins a game");
-    let (human_home, ai_home) = (setup.human_seat, setup.human_seat.opponent());
-    let mut ai_rng = Rng::new(&format!("{seed}:ai"), 0);
-    let mut human_rng = Rng::new(&format!("{seed}:human"), 0);
-    let (mut humans, mut ais) = (0, 0);
-    let mut log = Vec::new();
-    while state.result.is_none() {
-        assert!(
-            log.len() < MOVE_CAP,
-            "the game on {seed} ends within {MOVE_CAP} actions"
-        );
-        let ai_seat = engine::seat_played_by(&state, ai_home);
-        let ai_nonce = format!("a{ais}");
-        let action = match ai_move(pinned, &state, ai_seat, &ai_nonce, &mut ai_rng) {
-            Some(body) => {
-                ais += 1;
-                Action::new(body, ai_seat, ai_nonce)
+    let config = practice::config_of(seed, setup);
+    engine::run_pinned(pinned(), || {
+        let (mut host, _) =
+            PracticeHost::start(&config, catalog_version(), None, 0).expect("the setup begins a game");
+        let mut human_cursor = 0;
+        while !host.is_over() {
+            assert!(
+                host.log().len() < MOVE_CAP,
+                "the game on {seed} ends within {MOVE_CAP} actions"
+            );
+            let asked = host.step(PracticeEvent::AiTurn, 0);
+            if let Some(ask) = asked.iter().find_map(|output| match output {
+                PracticeOutput::Decide { ask } => Some(ask.clone()),
+                _ => None,
+            }) {
+                let moved = host.decide(&ask, AI_BUDGET);
+                host.step(PracticeEvent::Decided { moved }, 0);
+                continue;
             }
-            None => {
-                let seat = engine::seat_played_by(&state, human_home);
-                let nonce = format!("h{humans}");
-                let body = match human {
-                    Human::Concede => ActionBody::Concede,
-                    Human::Ai => ai_move(pinned, &state, seat, &nonce, &mut human_rng)
-                        .expect("the human owes an action whenever the AI owes none"),
-                };
-                humans += 1;
-                Action::new(body, seat, nonce)
-            }
+            let seat = host.human_seat();
+            let mut candidates = match human {
+                Human::Concede => vec![ActionBody::Concede],
+                Human::Ai => {
+                    // Plays as the practice AI does, on its own stream `"{seed}:human"`.
+                    let ask = AiAsk {
+                        seat,
+                        rng_seed: format!("{seed}:human"),
+                        rng_cursor: human_cursor,
+                        clock_ms: 0,
+                    };
+                    let moved = host.decide(&ask, AI_BUDGET);
+                    human_cursor = moved.rng_cursor;
+                    moved
+                        .body
+                        .into_iter()
+                        .filter(|body| !ai_never_takes(body))
+                        .collect::<Vec<_>>()
+                }
+            };
+            // Else the first legal action the engine accepts, `endTurn` first.
+            let (end_turn, rest): (Vec<ActionBody>, Vec<ActionBody>) =
+                engine::legal_actions(pinned(), host.game(), seat)
+                    .into_iter()
+                    .filter(|body| !ai_never_takes(body))
+                    .partition(|body| matches!(body, ActionBody::EndTurn));
+            candidates.extend(end_turn.into_iter().chain(rest));
+            let accepted = candidates.into_iter().any(|body| {
+                let outputs = host.step(PracticeEvent::Act { body }, 0);
+                outputs.iter().any(|output| match output {
+                    PracticeOutput::Snapshot { snapshot } => snapshot.error.is_none(),
+                    _ => false,
+                })
+            });
+            assert!(accepted, "the human owes an action whenever the AI owes none");
+        }
+        let result = host.game().result.as_ref().expect("the game ended");
+        let human_now = host.human_seat();
+        let claimed = match result.winner {
+            jackioh_engine::Winner::Draw => ClaimedResult::Draw,
+            winner if winner == jackioh_engine::Winner::from(human_now) => ClaimedResult::Win,
+            _ => ClaimedResult::Loss,
         };
-        let next = engine::reduce(pinned, &state, &action);
-        assert!(next.error.is_none(), "{action:?} is refused: {:?}", next.error);
-        state = next.state;
-        log.push(action);
-    }
-    let result = state.result.as_ref().expect("the game ended");
-    let human_now = engine::seat_played_by(&state, human_home);
-    let claimed = match result.winner {
-        jackioh_engine::Winner::Draw => ClaimedResult::Draw,
-        winner if winner == jackioh_engine::Winner::from(human_now) => ClaimedResult::Win,
-        _ => ClaimedResult::Loss,
-    };
-    (log, claimed, state)
+        (host.log().to_vec(), claimed, host.game().clone())
+    })
 }
 
 /// A won game: its seed, setup, log and final state.

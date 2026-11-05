@@ -55,9 +55,10 @@ No clock, no I/O, no environment, no threads, no OS randomness, no hash-ordered 
 static. Two things hold it, as in the other pure crates:
 
 - `Cargo.toml` takes `serde`, `indexmap`, the engine and the AI (the host machine asks it who owes a
-  move) and, behind the off-by-default `ts` feature, `ts-rs` (`serde_json` and the cards only as
-  dev-dependencies: the machine's tests play on the real catalog). It may also take `serde_json`, the
-  cards and the run, never `jackioh-luau`, and none of them takes it.
+  move), `serde_json` (a saved deck's cosmetics, which only the page reads), the cards (the practice
+  session names a kept game's catalog as they do, and the machine's tests play on the real catalog), the
+  run (a dungeon run's fight report, R2706000) and, behind the off-by-default `ts` feature, `ts-rs`. It
+  never takes `jackioh-luau`, and none of them takes it.
 - `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
   the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
@@ -81,7 +82,8 @@ ratings (`BOT_STRENGTHS`, `SKILL_ELO_TABLE`, R747000, R748000), think times and 
 `BOT_CONCEDE_FIT`, `BOT_REMATCH_FIT` and the other fits of R639000, R1442), emote personas (`AI_PERSONAS`,
 `AI_EMOTE`, R645), pool, schedule and grind (`BOT_POOL_*`, `BOT_GRIND_*`, R1454, R1555000), fallback and
 pick numbers (`BOT_FALLBACK_*`, `BOT_PICK_*`, R1453, R641000) and username shapes (`BOT_NAME_*`, R1454).
-The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name them as
+The practice session's are `PRACTICE_AI_CLOCK_MS` (R2575000), `PRACTICE_LETHAL_HINT_CLOCK_MS` (R2102000) and
+`PRACTICE_REPLAYS_KEPT` (R768). The server re-exports the others from its own `config.rs` (so `serverConfig.ts` and its code name them as
 before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
 (`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file.
 
@@ -236,7 +238,8 @@ Notes for a host:
 
 The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
 `checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
-holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`). The practice session's calls ride the same
+export (below).
 
 The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
 `DecideRequest` a `decide` output made) in, the `BotChoice` to feed back as `decided` out. A host with a clock
@@ -275,6 +278,61 @@ finished match's window, the offer that completes the pair makes the game, one t
 on it (the claim is a number, and the host keeps the wake-up under it), and a failed create gives the claim
 back. The boundary's `HostCall` carries the Duos host (`newDuos`, `stepDuos`, `duosSeatView`) and the book
 (`againWindow`, `againClaim`, `againSeen`, `againRelease`, `againMade`).
+
+### The practice session (#3099)
+
+`host/practice/` is practice as a mode of the host machine: a game against the AI seat, with practice's own
+setup and rules (SPEC §9.9, §9.10), in place of the web's practice core and the server's copy of it. The
+web's practice worker (`apps/web/src/practice/driver.ts`) runs it through `crates/wasm`, the server checks a
+claim by stepping it natively over the claimed game (`check_claim`), and a Roblox server runs it through
+`crates/wasm/c`: one body for all three. It rides `host(call)` as `{ "call": "practice", "op": … }` (a
+`PracticeCall`, answered as `{ "answer": "practice", "reply": … }`), so no export is added.
+
+```
+PracticeHost::start(config, catalog, kept, now) -> (host, outputs)       PracticeHost::resume(config, save, build, kept, now)
+step(host, event, now) -> (host, outputs)
+```
+
+| Event | What it is |
+| --- | --- |
+| `act` | the human's action, minted `h<n>` and sent from the seat the human plays now (R677) |
+| `aiTurn` | the host's pacing says the AI's turn: the machine answers `decide` if the AI owes a move, else just the snapshot |
+| `decided` | the AI's move as the host decided it, with the cursor of the AI's stream (`"{seed}:ai"`); a move R188 forbids, or the engine refuses, falls back on `endTurn` first |
+| `fold` | an action of a game already played, under its own nonce and seat: a save resumed (R668), a claim checked (R2560000) |
+| `replays`, `claim`, `runReport`, `debug` | kept games are listed and opened only once the game is over (R768); the finished game's claim (R1303000); a run fight's report (DR14); the raw game, dev builds only |
+
+| Output | What the host does |
+| --- | --- |
+| `began` | the game is on: the seat the AI plays |
+| `snapshot` | what the page is told (CLAUDE.md rule 7): `view_for` and the legal actions of the human's seat, whether the AI owes a move, the engine's last refusal, the last board of a finished game (R508), the kept game's number (R768000), a lesson's combat forecast (R3100000) |
+| `lethal` | R2102000: ask the lethal check for that seat under `PRACTICE_LETHAL_HINT_CLOCK_MS`; when it says yes, the snapshot says `lethal`. A host without the check leaves it out |
+| `decide` | the AI owes a move: search for it under `PRACTICE_AI_CLOCK_MS` (the node budget stays the real bound, R2560000) on `ai.seat`, from `rng_seed` at `rng_cursor`, and feed `decided`: one separate, deadline-bounded step |
+| `save` | R668: write the save of a free game in progress, or clear it (a lesson, a finished game); a run fight leaves it as it was |
+| `keep` | R768: append a finished free game to the kept ones, keep the newest `keep` of them (`PRACTICE_REPLAYS_KEPT`) |
+| `finished`, `voided` | the game's end with what a store must record: the human's result, turns, the human's actions (for the economy's XP, R1302004), the AI's moves, the board the human takes (R508), the final hash; or R679's void, which records nothing |
+| `claim`, `runReport`, `debug`, `failed` | the answers to the events of those names, and the reason an event was refused (nothing changed) |
+
+What the machine decides: how the game is dealt (`deal.rs`: the human's deck, a list or the random deck dealt
+on `"{seed}:human-deck"` leaning as asked and counted dealt, R433, R1373, R924000; the AI's on
+`"{seed}:ai-deck"`; the tier's handicap on the AI's seat alone, R180; a lesson's decks under
+`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000; the human's last board,
+R508; a sandbox, R923000), the nonces (`h<n>`, `a<n>`, each counting only accepted actions, so a refused
+action spends nothing and the log folds exactly: R187, R433, R508), the seat each action is sent from, what
+the AI may never take (R188, R923000), the snapshot, the save and its resume, the kept game and its number,
+the game's end and the claim. What stays the host's: the store the saves and kept games go to, the AI's
+search and the lethal check under their clocks (the pure crates read none), the pacing of the AI's turn, the
+public card data, and the web's own content a config names, which the host puts in the config before the
+machine reads it: a preset's cards (`PracticeDeckChoice::Preset { cards }`) and a lesson's decks
+(`PracticeConfig::lesson_deal`).
+
+`replays.rs` holds the kept games, which are stateless calls over what the host read from its store
+(`list_replays`, `page_replay`): which fold on this build (R767000), the `ReplayOpen` a first page answers with
+(the host keeps it for the next page), and the seat the human played at each step (R677). `claim.rs` is the
+server's check: `check_claim(config, catalog, claimed, log)` starts the machine on the setup its seed was
+issued for, feeds each logged action as `fold`, and answers `ClaimRefusal` (`DoesNotFold`, `NotFinished`,
+`Voided`, `ResultMismatch`) or what the game recorded; it re-runs no AI move (R2560000). The server maps its
+stored `PracticeSetup` to a `PracticeConfig` (`economy::practice::config_of`) and keeps its refusals
+as its store counts them.
 
 ## `src/loadout.rs`: the loadout visibility rule
 
@@ -427,7 +485,8 @@ the think time), `tests/bots_signals.rs`, `tests/bots_persona.rs`, `tests/bots_p
 `tests/bots_boundary.rs`, moved from the server's bot tests; the bot seat of the machine is in `tests/duel.rs`. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
-book) and `tests/host_boundary.rs`. The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
+book) and `tests/host_boundary.rs`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
+standing in for a host). The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
 with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.
 

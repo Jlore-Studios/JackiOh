@@ -1344,6 +1344,7 @@ dependencies = [
  "jackioh-ai",
  "jackioh-cards",
  "jackioh-engine",
+ "jackioh-run",
  "serde",
  "serde_json",
  "ts-rs",

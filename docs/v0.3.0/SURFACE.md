@@ -368,7 +368,7 @@ for state, views and events; the server's tests prove it for REST and WebSocket 
 ### 5.2 The state hash
 
 `hash_state(state)` reproduces TS's `hashState` (`packages/engine/src/replay.ts:12-37`) **exactly**,
-because practice saves on players' devices store it (`apps/web/src/practice/core.ts:279` refuses a
+because practice saves on players' devices store it (the practice session, `crates/shared`'s `host/practice`, refuses a
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 

@@ -915,7 +915,7 @@ account, with the game's setup (the AI tier, the human's seat, the deck, the las
 and the catalog version), when it was issued and when it was claimed. It is server-only like
 `match_checkpoints` (RLS on, no policy, no grant), since a seed is what lets a claim pay, and it goes
 with its account (on delete cascade). A claim burns its seed in one transaction, then
-`economy::practice::verify` folds the log off the runtime, at most
+`economy::practice::verify` steps the practice session's machine (`jackioh_shared::host::practice`, #3099) over the log off the runtime, at most
 `PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
 transaction pays and keeps the board, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store fails it (R1688000). An issue counts the account's unclaimed seeds issued within `PRACTICE_SEED_TTL_SECONDS` under its economy lock and refuses past `PRACTICE_SEEDS_OPEN_MAX` (R1483000); `practice_seeds_profile_issued` leads that count and the prune, so it needs no migration. Measured in release before #2560 took the AI re-run out (2026-10-20): the recorded game, 46 actions
 of which 29 the AI's, verified in 680–700 ms, about 20–45 ms per AI move; the fold alone remains.

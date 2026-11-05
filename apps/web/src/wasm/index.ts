@@ -41,6 +41,8 @@ import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosTeamRules } from "../wire/generated/DuosTeamRules.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
+import type { PracticeAnswer } from "../wire/generated/PracticeAnswer.ts";
+import type { PracticeCall } from "../wire/generated/PracticeCall.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
 import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
 import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
@@ -481,6 +483,34 @@ export function duosLegalActions(state: DuosState, seat: DuosSeat): DuosActionBo
 /** The seat's `DuosView`: its own duel, its teammate's from the teammate's seat, both teams' life (B23). */
 export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
   return call("duosViewFor", () => parsed<DuosView>(normal.duos_view_for(duosStateJson(state), seat)));
+}
+
+// the practice session (#3099)
+
+/**
+ * One call of the practice session, `jackioh-shared`'s machine behind `host(call)` (the host contract,
+ * `crates/shared/README.md`): a game against the AI seat as a `PracticeHost` the caller holds as JSON and
+ * hands back on every call, and the outputs to carry out. A refusal of a start or a resume is the
+ * returned `refused`, never thrown; only a call that does not parse is.
+ */
+export function practiceCall(practice: PracticeCall): PracticeAnswer {
+  return call("host", () => parsed<PracticeAnswer>(normal.host(json({ call: "practice", ...practice }))));
+}
+
+/** The practice session's numbers (`crates/shared/src/config.rs`, #3099): the caps its asks carry and the games it keeps. */
+export type PracticeConstants = {
+  PRACTICE_AI_CLOCK_MS: number;
+  PRACTICE_LETHAL_HINT_CLOCK_MS: number;
+  PRACTICE_REPLAYS_KEPT: number;
+};
+
+let practiceConstantsCache: PracticeConstants | null = null;
+
+export function practiceConstants(): PracticeConstants {
+  return call("constants", () => {
+    practiceConstantsCache ??= parsed<PracticeConstants>(normal.constants());
+    return practiceConstantsCache;
+  });
 }
 
 // the AI (SURFACE §9)

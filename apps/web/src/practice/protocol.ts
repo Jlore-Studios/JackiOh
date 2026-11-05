@@ -8,22 +8,18 @@
 // run's fight answers the run's `FightOver` once it is over (R2706000), never its log.
 
 import { LEAN_NEWEST } from "@jackioh/shared";
-import type {
-  Action,
-  ActionBody,
-  CardDefs,
-  CombatForecast,
-  DistributiveOmit,
-  LeanPick,
-  PlayerId,
-  PlayerView,
-  PortraitId,
-} from "@jackioh/shared";
-import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { Difficulty, Handicap } from "@jackioh/engine/config";
+import type { ActionBody, CardDefs, DistributiveOmit, LeanPick, PlayerId, PortraitId } from "@jackioh/shared";
+import type { ReplayStep } from "@jackioh/engine";
+import type { Difficulty } from "@jackioh/engine/config";
 import type { RunAction, RunFightSetup } from "@jackioh/run";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
+import type { LastBoardEntry } from "../wire/generated/LastBoardEntry.ts";
+import type { PracticeClaim } from "../wire/generated/PracticeClaim.ts";
+import type { PracticeDebug } from "../wire/generated/PracticeDebug.ts";
+import type { PracticeReplayListing } from "../wire/generated/PracticeReplayListing.ts";
+import type { PracticeReplaySummary } from "../wire/generated/PracticeReplaySummary.ts";
+import type { PracticeSnapshot } from "../wire/generated/PracticeSnapshot.ts";
 
 export type PracticeDeckChoice =
   /**
@@ -83,80 +79,15 @@ export type PracticeStartConfig = {
   run?: RunFightSetup;
 };
 
-/** R1303000: a finished game on a server seed, as the server checks it; the human's result is read from the seat it ended in (R677). */
-export type PracticeClaim = { seed: string; result: "win" | "loss" | "draw"; log: Action[] };
+/**
+ * What the machine tells the page, as `crates/shared`'s practice session writes it (#3099,
+ * `wire/generated/`): the snapshot (rule 7, everything the main thread ever gets about the game), a kept
+ * game's summary, the claim the server folds (R1303000) and the dev-only debug answer.
+ */
+export type { PracticeClaim, PracticeDebug, PracticeReplayListing, PracticeReplaySummary, PracticeSnapshot };
 
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
-export type LastBoardCard = { defId: string; radiant: boolean };
-
-/** Rule 7: everything the main thread ever gets about the game. */
-export type PracticeSnapshot = {
-  /** viewFor(state, humanSeat) */
-  view: PlayerView;
-  /** legalActions(state, humanSeat) */
-  legal: ActionBody[];
-  /** aiToAct(state, aiSeat) */
-  aiToAct: boolean;
-  /** The engine's refusal of the last human action. */
-  error: string | null;
-  /** R508: once a free game is over, the field as the human saw it, the AI's face-down cards left out. */
-  lastBoard?: LastBoardCard[];
-  /** R768000: once a free game is over and kept, its number and step count, which "Watch the replay" opens. */
-  replay?: Pick<PracticeReplaySummary, "game" | "steps">;
-  /**
-   * R2102000: present only while the human of a game against the AI (R2291000) has a sure win this turn
-   * by what they can see (`lethalHint`), shown only with the Lethal hint setting on. It never says how.
-   */
-  lethal?: true;
-  /**
-   * R3100000: present only in a tutorial lesson, whose coach names its attacks by it: what each of the
-   * human's legal attacks would do, as the board shows it (`combatForecast`). It reads nothing the human
-   * cannot see.
-   */
-  forecast?: CombatForecast;
-};
-
-/** R768: one kept practice game as the replay list shows it: never its log, seed or decks. */
-export type PracticeReplaySummary = {
-  /** The number a `replay` request names: 1, 2, 3… on this device. */
-  game: number;
-  /** When it ended, as the worker's clock read it (`PracticeCoreEnv.now`). */
-  endedAt: number;
-  /** The result for the human, read from the seat it ended in (R677). */
-  result: "win" | "loss" | "draw";
-  /** The state's turn when it ended. */
-  turns: number;
-  /** The replay's steps: step 0 and one per accepted action. */
-  steps: number;
-  portraits: { p1: PortraitId; p2: PortraitId };
-};
-
-/**
- * R768: `unavailable` is part 1's reason it cannot be replayed: `earlier_patch` from its catalog alone,
- * `rules_changed` once a `replay` of it found so, since the list folds no game.
- */
-export type PracticeReplayListing = PracticeReplaySummary & { unavailable?: ReplayRefusal };
-
-/** Dev builds only (MODE !== "production"); the one message that carries the raw state. */
-export type PracticeDebug = {
-  seed: string;
-  decks: [string[], string[]];
-  handicaps: Partial<Record<PlayerId, Handicap>>;
-  log: Action[];
-  state: unknown;
-  hash: string;
-  difficulty: Difficulty;
-  humanSeat: PlayerId;
-  lesson?: string;
-  /** R417: the last boards `createGame` had, seat ordered, when the human brought one. */
-  lastBoards?: [LastBoardCard[], LastBoardCard[]];
-  /** R433: the seats `createGame` was told were dealt; absent when none was. */
-  dealt?: PlayerId[];
-  /** R2706000: a run fight's deck marks, which its fold must be given; absent when it has none. */
-  deckMarks?: Partial<Record<PlayerId, RunFightSetup["humanMarks"]>>;
-  /** R923000: present when the game is a sandbox, which its fold must be told. */
-  sandbox?: true;
-};
+export type LastBoardCard = LastBoardEntry;
 
 export type PracticeRequest =
   | { id: number; type: "start"; config: PracticeStartConfig }

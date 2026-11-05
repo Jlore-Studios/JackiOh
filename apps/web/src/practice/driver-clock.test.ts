@@ -11,8 +11,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { PlayerId } from "@jackioh/shared";
 
-import { PRACTICE_AI_CLOCK_MS } from "./config.ts";
-import { createPracticeCore } from "./core.ts";
+import { practiceConstants } from "../wasm/index.ts";
+import { createPracticeDriver } from "./driver.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
@@ -44,7 +44,7 @@ const NOW = 1_000;
 type Driver = { send(body: PracticeRequestBody): PracticeResponse };
 
 function driver(saves?: PracticeSaveStore): Driver {
-  const core = createPracticeCore({ now: () => NOW, dev: true, budget: AI_GATE_BUDGET, ...(saves === undefined ? {} : { saves }) });
+  const core = createPracticeDriver({ now: () => NOW, dev: true, budget: AI_GATE_BUDGET, ...(saves === undefined ? {} : { saves }) });
   let id = 0;
   return {
     send(body) {
@@ -85,7 +85,7 @@ describe("R2208000 R2560000 an earning practice game's AI clock", () => {
       const d = driver();
       expect(d.send({ type: "start", config: start }).type, name).toBe("started");
       expect(d.send({ type: "aiStep" }).type, name).toBe("snapshot");
-      expect(plan.deadlines[0], name).toBe(NOW + PRACTICE_AI_CLOCK_MS);
+      expect(plan.deadlines[0], name).toBe(NOW + practiceConstants().PRACTICE_AI_CLOCK_MS);
     }
   });
 

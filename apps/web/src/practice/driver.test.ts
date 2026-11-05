@@ -1,6 +1,6 @@
 // The practice core, for real: B34, B35, B38 and B39 of docs/polish/3-ai.md, and R187 / R188.
 //
-// It drives the REAL `createPracticeCore` with a frozen clock (`now: () => 0`, so every decision is a
+// It drives the REAL `createPracticeDriver` with a frozen clock (`now: () => 0`, so every decision is a
 // pure function of the node budget) and the gates' smaller budget, so a whole game fits a test. The only
 // door into the true state is `debug`; comparing a response with its `viewFor` / `legalActions` is
 // CLAUDE.md rule 7 stated as a test.
@@ -29,13 +29,13 @@ import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 
-import { createPracticeCore } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { PRACTICE_PRESETS } from "./decks.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
 import { seedWhere } from "../test/seedSearch.ts";
-import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
+import type { PracticeDriver, PracticeDriverEnv } from "./driver.ts";
 import type {
   PracticeDebug,
   PracticeRequest,
@@ -48,7 +48,7 @@ import { snapshotOf } from "../test/fixtures.ts";
 
 // the driver
 
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 
 /** Most requests one walk sends before it gives up on the game ending by itself. */
 const WALK_CAP = 200;
@@ -56,13 +56,13 @@ const WALK_CAP = 200;
 type Exchange = { request: PracticeRequest; response: PracticeResponse };
 
 type Driver = {
-  core: PracticeCore;
+  core: PracticeDriver;
   send(body: PracticeRequestBody): PracticeResponse;
   exchanges: Exchange[];
 };
 
-function driver(env: PracticeCoreEnv = ENV): Driver {
-  const core = createPracticeCore(env);
+function driver(env: PracticeDriverEnv = ENV): Driver {
+  const core = createPracticeDriver(env);
   const exchanges: Exchange[] = [];
   let id = 0;
   return {
