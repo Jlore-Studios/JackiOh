@@ -16709,14 +16709,14 @@
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "",
-      "owner_since": "2026-11-05T02:44:41Z",
-      "owner_why": "released from its hold: `claude-8` has no runner free where it runs",
+      "owner": "claude-3",
+      "owner_since": "2026-11-05T02:54:57Z",
+      "owner_why": "it plans it; released from its hold: `claude-8` has no runner free where it runs",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-3",
       "queued_at": "2026-11-05T01:44:33Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41955107643",
+      "run_id": "pending:30a45540-1793847271",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -16735,7 +16735,7 @@
         "provider": "claude-8",
         "run": "41955107643"
       },
-      "started_at": "2026-11-05T02:25:24Z",
+      "started_at": "2026-11-05T02:54:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6648218890
@@ -17021,9 +17021,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T02:54:17Z",
+    "at": "2026-11-05T02:54:57Z",
     "url": "",
-    "what": "review #3037 on claude-8"
+    "what": "plan #3114 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T02:36:31Z",
