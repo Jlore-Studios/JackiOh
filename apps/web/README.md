@@ -83,6 +83,11 @@ the replays and the deck screens are not `.tavern`, and the tavern's wood-button
 `top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
 draws its own buttons.
 
+The dungeon map's node icons are drawn SVGs (`dungeon/map/NodeIcon.tsx`): single color in `currentColor` on a
+24-unit grid, colored by `data-kind` in `dungeon/map/run.css` from the palette. No system emoji appears
+anywhere under `dungeon/`, held by `dungeon/noEmoji.test.ts`; add a node kind's glyph there, never a
+character.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
