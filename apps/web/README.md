@@ -983,7 +983,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - `src/wasm/index.ts` is the module's only caller. `main.tsx` starts `loadWasm()` at boot, and its
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
-  `test/setup.ts` loads it synchronously for jsdom.
+  `test/setup.ts` loads it synchronously for jsdom. A card's face is worked out by the module (#3106),
+  so a screen that does not wait for it (the landing, the shop, `/replays`) draws a face only through
+  `useEngineReady` or `WhenEngineReady` (`src/wasm/`), the way the landing's fan, "Your table" showcase and
+  the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match

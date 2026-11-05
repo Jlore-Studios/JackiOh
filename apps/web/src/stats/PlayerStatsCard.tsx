@@ -8,6 +8,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, type ReactElement } from 
 import { landingTestid } from "../auth/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { RandomSource } from "../routes/landingFan.ts";
+import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { loadPocketPick, type PocketPick } from "./pocketPick.ts";
 import { pocketStat, recordLine, showcaseStats } from "./showcase.ts";
 import { usePlayerStats } from "./store.ts";
@@ -59,9 +60,14 @@ export function PlayerStatsCard({ reduced, random }: PlayerStatsCardProps): Reac
       {showcase.length === 0 ? (
         record
       ) : (
-        <Suspense fallback={record}>
-          <StatShowcase stats={showcase} reduced={reduced} random={random} />
-        </Suspense>
+        // The showcase draws a card's face, which the module works out: the record stands until it is in (#778).
+        <WhenEngineReady fallback={record}>
+          {() => (
+            <Suspense fallback={record}>
+              <StatShowcase stats={showcase} reduced={reduced} random={random} />
+            </Suspense>
+          )}
+        </WhenEngineReady>
       )}
     </section>
   );

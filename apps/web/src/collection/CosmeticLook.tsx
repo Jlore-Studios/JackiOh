@@ -23,6 +23,7 @@ import { portraitOfCosmetic } from "../emotes/ownedPortraits.ts";
 import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import Backdrop from "../game/Backdrop.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { useEngineReady } from "../wasm/useEngineReady.ts";
 
 import "../game/table.css";
 import "./collection.css";
@@ -120,6 +121,8 @@ export function hasLook(id: string, cardId: string | null): boolean {
 /** `id`'s look (`cardId` the card a per-card one is on), or nothing where `hasLook` says it has none. */
 export function CosmeticLook({ id, cardId }: { id: string; cardId: string | null }): ReactElement | null {
   const { rarityFoil } = useCardSettings();
+  // A card's look is a face, which the module works out; the shop draws one before the module may be in (#778).
+  const engineReady = useEngineReady();
   const cosmetic = entryOf(id);
   if (cosmetic === undefined || !hasLook(id, cardId)) return null;
   const { kind } = cosmetic;
@@ -128,6 +131,7 @@ export function CosmeticLook({ id, cardId }: { id: string; cardId: string | null
   if (kind === "portrait" && portrait !== null) return <PortraitArt portrait={portrait} className="pack-slot__portrait" />;
   let look: ReactElement | null = null;
   if (isCardSlot(kind) && cardId !== null) {
+    if (!engineReady) return null;
     const face = faceModel({ defId: cardId, def: CATALOG[cardId], radiant: false });
     // What the card wears in a game with this pick and the defaults: a Mythic face wearing its
     // rarity foil (R2721000) keeps its own foil.

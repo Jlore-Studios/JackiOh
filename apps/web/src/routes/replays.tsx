@@ -32,6 +32,7 @@ import type { ReplayJsonGame } from "../replay/download.ts";
 import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
@@ -292,16 +293,21 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     return (
       <CatalogContext.Provider value={lookup}>
         <FullArtOwned owned={FULL_ART_GATED && !practice ? NO_FULL_ART : "every"}>
-          {"duos" in open ? (
-            <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
-          ) : (
-            <ReplayPlayer
-              key={open.key}
-              source={open.source}
-              onLeave={() => setOpen(null)}
-              {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
-            />
-          )}
+          {/* This screen does not wait for the module (#778), and the board's cards are faces it works out. */}
+          <WhenEngineReady fallback={<Skeleton variant="panel" label={t("Loading the replay…")} />}>
+            {() =>
+              "duos" in open ? (
+                <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
+              ) : (
+                <ReplayPlayer
+                  key={open.key}
+                  source={open.source}
+                  onLeave={() => setOpen(null)}
+                  {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
+                />
+              )
+            }
+          </WhenEngineReady>
         </FullArtOwned>
       </CatalogContext.Provider>
     );
