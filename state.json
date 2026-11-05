@@ -15462,6 +15462,13 @@
     "3188": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-05T14:41:55Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Web-only change (one route, its CSS and tests, an i18n dictionary, three doc notes), about 9 files, no engine, AI, cross-crate or migration work, so none of the rule's five lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
