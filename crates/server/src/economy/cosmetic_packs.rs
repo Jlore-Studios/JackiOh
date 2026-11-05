@@ -30,13 +30,13 @@ use crate::api::collection::{caller_profile, owned_in};
 use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok_of, optional_str, str};
 use crate::app::App;
-use crate::config::{CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY};
+use crate::config::{CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, LEVEL_SKIP_WEIGHT, TIER_WEIGHT_TOTAL};
 use crate::cosmetics::Cosmetic;
 use crate::db::store::Tx;
 use crate::economy::grants::{Writing, counters_of, grant_counter, internal_refusal, write_grants};
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::store::{CosmeticGrant, EconomyReason};
-use crate::economy::tokens::{choice_of, conflict, held, unsold};
+use crate::economy::tokens::{choice_of, conflict, held, next_level_only, unsold};
 
 /// What opening a cosmetic pack answers: its slots in order, the Chase Shard bar's points before
 /// it and the bar after it, the cosmetic packs still held and what the opening did to both token
@@ -54,12 +54,19 @@ pub struct OpenedCosmeticPack {
 }
 
 /// A cosmetic pack's odds as `GET /api/cosmetic-packs` shows them (R1339000): one roll of a slot
-/// and of the floored slot on `COSMETIC_TIER_WEIGHTS`, the fallback included.
+/// and of the floored slot on `COSMETIC_TIER_WEIGHTS`, the fallback included. R3015003: and `level_skip`, the
+/// chance a slot that finds a level past the next one open grants that level and every level below it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticPackOdds {
     pub slot: TierOdds,
     pub floored_slot: TierOdds,
+    pub level_skip: f64,
+}
+
+/// R3015003: the chance an out-of-order pull is taken where one is open, as both odds `GET`s list it.
+pub fn level_skip_chance() -> f64 {
+    f64::from(LEVEL_SKIP_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL)
 }
 
 /// What `GET /api/cosmetic-packs` reads back (R1306002, R1339000).
@@ -228,6 +235,7 @@ pub async fn buy_chase_once(
     let owned = owned_in(&mut tx, profile_id).await?;
     let cosmetics = tx.economy_cosmetics_get(profile_id).await?;
     let choice = choice_of(cosmetic, card_id, &owned, &cosmetics);
+    next_level_only(registry, cosmetic, card_id, &cosmetics)?;
     if bar < CHASE_SHARD_PACKS {
         return Err(conflict("the Chase Shard bar is not full"));
     }
@@ -297,6 +305,7 @@ async fn cosmetic_packs_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<Cosmetic
         odds: CosmeticPackOdds {
             slot: cosmetic_odds(None),
             floored_slot: cosmetic_odds(Some(COSMETIC_PACK_FLOOR_RARITY)),
+            level_skip: level_skip_chance(),
         },
     })
 }
