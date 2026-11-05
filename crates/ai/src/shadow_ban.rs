@@ -69,7 +69,8 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
 /// itself every card of every set, #2452). `cargo jackioh sweep --write` leaves their rows out of
 /// `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding its id
 /// here and running `cargo jackioh sweep --write`; a new sweep of a set drops its own ids from this
-/// list. An id may be any card of a set the ban takes (`BAN_SETS` in `crates/tools/src/sweep.rs`).
+/// list. An id may be any card of a set the ban takes: one whose row of the set table gives it a
+/// shadow-ban share (`shadow_ban_share`, `crates/engine/src/wire/catalog_types.rs`, R3114001).
 pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-006",
     "meditative-016",

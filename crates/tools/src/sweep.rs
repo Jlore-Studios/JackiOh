@@ -41,13 +41,13 @@ use indexmap::IndexSet;
 use serde_json::Value;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH, STINKYSCAPE_BAN_CEILING,
-    SlowDecision, SweepFlag, SweepOptions, SweepPass2, SweepResult, SweepStats, ai_generation, at_risk_ids,
-    pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
+    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH, SlowDecision, SweepFlag,
+    SweepOptions, SweepPass2, SweepResult, SweepStats, ai_generation, at_risk_ids, pass2_keep_out,
+    pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::testkit::preview_every_set;
-use jackioh_engine::wire::{SHIPPED_SETS, SetName};
+use jackioh_engine::wire::{SET_TABLE, SHIPPED_SETS, SetName, set_row, shadow_ban_ceiling};
 use jackioh_engine::{CardInstance, PlayerId, legal_actions};
 
 use crate::arena::utc_date;
@@ -99,26 +99,20 @@ const TABLE_CLOSE: &str = "];";
 /// The line that closes a table of one row, whose tuple rustfmt opens on the table's own line.
 const LONE_ROW_CLOSE: &str = ")];";
 
-/// R732000, R1186000, R1885000, R2203000: the sets whose cards the shadow ban holds.
-const BAN_SETS: [SetName; 4] = [
-    SetName::Meditative,
-    SetName::MeditativePlus,
-    SetName::Stinkyscape,
-    SetName::TrainingGrounds,
-];
+/// R732000, R1186000, R1885000, R2203000, R3114001: whether the shadow ban holds `set`'s cards,
+/// i.e. whether its row of the set table gives it a share (half of each Meditative set's and the
+/// Training Grounds set's non-token cards, a fifth of Stinkyscape's).
+fn ban_takes(set: SetName) -> bool {
+    set_row(set).shadow_ban_share.is_some()
+}
 
-/// R732000, R1186000, R2203000: the shadow ban holds at most each of the Meditative sets' and the
-/// Training Grounds set's non-token cards divided by this: half. Stinkyscape's ceiling is
-/// `STINKYSCAPE_BAN_CEILING` (R1885000).
-const BAN_DIVISOR: usize = 2;
-
-/// R732000, R1186000, R1885000, R2203000: the most cards of `set`, which has `cards` non-token cards, the
-/// shadow ban may hold.
-fn ban_ceiling(set: SetName, cards: usize) -> usize {
-    match set {
-        SetName::Stinkyscape => STINKYSCAPE_BAN_CEILING,
-        _ => cards / BAN_DIVISOR,
-    }
+/// The sets whose cards the shadow ban holds (`ban_takes`), in the set table's order.
+fn ban_sets() -> Vec<SetName> {
+    SET_TABLE
+        .iter()
+        .map(|row| row.set)
+        .filter(|set| ban_takes(*set))
+        .collect()
 }
 
 /// `cargo jackioh sweep …`.
@@ -746,10 +740,10 @@ struct Record {
 /// `SHADOW_BAN` (R600), and a card a later report cleared has no row in either (R1675000). Each sweep
 /// of record covered some cards alone, so each keeps the earlier reports' rows for the rest: the
 /// 2026-10-12 sweep the Meditative set (R732000), #1186's the Meditative+ set (R1186000), #1675's the
-/// 17 Meditative cards banned then (R1675000). `SHADOW_BAN` holds `BAN_SETS`' cards only, an older
+/// 17 Meditative cards banned then (R1675000). `SHADOW_BAN` holds `ban_sets`' cards only, an older
 /// sweep's bans of the earlier sets left out (R732000), less `unbanned`, the unban lane's removals
 /// (R732001). Refuses an unsorted list, a report that both clears and lists a card (R1675000), a ban
-/// in the newest report outside `BAN_SETS`, a set banned past its ceiling (`ban_ceiling`) and an
+/// in the newest report outside `ban_sets`, a set banned past its ceiling (`shadow_ban_ceiling`) and an
 /// `unbanned` id no report of record bans.
 fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
     let Some((newest_path, newest)) = reports.last() else {
@@ -797,7 +791,7 @@ fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
     ban.retain(|id, _| {
         jackioh_cards::CATALOG
             .get(id.as_str())
-            .is_some_and(|def| BAN_SETS.contains(&def.set))
+            .is_some_and(|def| ban_takes(def.set))
     });
     within_ceilings(&ban)?;
     if let Some(id) = unbanned.iter().find(|id| !ban.contains_key(**id)) {
@@ -825,23 +819,36 @@ fn ascending<'a>(ids: impl IntoIterator<Item = &'a str>, what: &str) -> Result<(
     }
 }
 
-/// R732000, R1186000, R1885000, R2203000: a card `path` bans is one of `BAN_SETS`'.
+/// R732000, R1186000, R1885000, R2203000: a card `path` bans is one of `ban_sets`'.
 fn in_ban_sets(id: &str, path: &str) -> Result<()> {
     match jackioh_cards::CATALOG.get(id) {
-        Some(def) if BAN_SETS.contains(&def.set) => Ok(()),
+        Some(def) if ban_takes(def.set) => Ok(()),
         other => bail!(
-            "{path} bans {id}, {}: the shadow ban holds Meditative, Meditative+, Stinkyscape and Training Grounds cards only (R732000, R1186000, R1885000, R2203000)",
+            "{path} bans {id}, {}: the shadow ban holds {} cards only (R732000, R1186000, R1885000, R2203000, R3114001)",
             other.map_or_else(
                 || "no catalog card".to_string(),
                 |def| format!("a {:?} card", def.set)
-            )
+            ),
+            ban_sets_named()
         ),
     }
 }
 
-/// R732000, R1186000, R1885000, R2203000: `ban` holds no more of each of `BAN_SETS`' cards than its ceiling.
+/// `ban_sets`' names as a sentence lists them: "Meditative, Meditative+, Stinkyscape and Training
+/// Grounds".
+fn ban_sets_named() -> String {
+    let names: Vec<&str> = ban_sets().into_iter().map(SetName::as_str).collect();
+    match names.split_last() {
+        Some((last, [])) => (*last).to_string(),
+        Some((last, rest)) => format!("{} and {last}", rest.join(", ")),
+        None => String::new(),
+    }
+}
+
+/// R732000, R1186000, R1885000, R2203000, R3114001: `ban` holds no more of each of `ban_sets`' cards
+/// than its ceiling, its share of its non-token cards (`shadow_ban_ceiling`).
 fn within_ceilings(ban: &BTreeMap<String, String>) -> Result<()> {
-    for set in BAN_SETS {
+    for set in ban_sets() {
         let cards = jackioh_cards::CATALOG
             .values()
             .filter(|def| def.set == set && !def.token)
@@ -854,10 +861,10 @@ fn within_ceilings(ban: &BTreeMap<String, String>) -> Result<()> {
                     .is_some_and(|def| def.set == set)
             })
             .count();
-        let most = ban_ceiling(set, cards);
+        let most = shadow_ban_ceiling(set, cards).unwrap_or(0);
         if banned > most {
             bail!(
-                "the reports of record ban {banned} {set:?} cards of its {cards}, more than its ceiling (R732000, R1186000, R1885000, R2203000: at most {most})"
+                "the reports of record ban {banned} {set:?} cards of its {cards}, more than its ceiling (R732000, R1186000, R1885000, R2203000, R3114001: at most {most})"
             );
         }
     }
@@ -1061,7 +1068,7 @@ fn run_check(reports: &[String]) -> Result<()> {
 }
 
 /// R1678000: the ids a sweep is due over. When the AI changed (`ai_changed`), every card `ban` holds
-/// and every card of `BAN_SETS` that `watch` holds: the cards a sweep may ban, or take off the ban,
+/// and every card of `ban_sets` that `watch` holds: the cards a sweep may ban, or take off the ban,
 /// whose rows the AI that wrote them no longer plays. And every non-token card of each of
 /// `new_sets`, the sets that ship now and did not. Sorted, each once.
 fn due_ids(
@@ -1073,7 +1080,7 @@ fn due_ids(
     let in_ban_sets = |id: &str| {
         jackioh_cards::CATALOG
             .get(id)
-            .is_some_and(|def| BAN_SETS.contains(&def.set))
+            .is_some_and(|def| ban_takes(def.set))
     };
     let ai = ban
         .iter()
@@ -1663,7 +1670,7 @@ mod tests {
     fn r1186000_write_holds_meditative_plus_to_half_of_its_own_set() {
         jackioh_cards::register_all();
         let ids = meditative_plus_ids();
-        let most = ids.len() / BAN_DIVISOR;
+        let most = shadow_ban_ceiling(SetName::MeditativePlus, ids.len()).expect("Meditative+ takes bans");
         let mut over = ids[..=most].to_vec();
         over.sort();
         let error = compose_one(block_of(&over, &[]), &[]).unwrap_err();
@@ -1714,26 +1721,55 @@ mod tests {
     fn r1885000_write_admits_stinkyscape_bans_up_to_its_ceiling() {
         jackioh_cards::register_all();
         let ids = stinkyscape_ids();
-        assert!(ids.len() > STINKYSCAPE_BAN_CEILING * 4, "{} cards", ids.len());
-        let mut over = ids[..=STINKYSCAPE_BAN_CEILING].to_vec();
+        let ceiling = shadow_ban_ceiling(SetName::Stinkyscape, ids.len()).expect("Stinkyscape takes bans");
+        assert!(ids.len() > ceiling * 4, "{} cards", ids.len());
+        let mut over = ids[..=ceiling].to_vec();
         over.sort();
         let error = compose_one(block_of(&over, &[]), &[]).unwrap_err();
         assert!(error.to_string().contains("more than its ceiling"), "{error}");
         assert!(error.to_string().contains("R1885000"), "{error}");
-        let mut most = ids[..STINKYSCAPE_BAN_CEILING].to_vec();
+        let mut most = ids[..ceiling].to_vec();
         most.sort();
-        assert_eq!(
-            compose_one(block_of(&most, &[]), &[]).unwrap().ban.len(),
-            STINKYSCAPE_BAN_CEILING
-        );
+        assert_eq!(compose_one(block_of(&most, &[]), &[]).unwrap().ban.len(), ceiling);
         // A Stinkyscape sweep keeps the earlier sets' bans beside its own, each set to its own ceiling.
         let both = [
             ("a.md".to_string(), block_of(&meditative_ids(1, 51), &[])),
             ("b.md".to_string(), block_of(&most, &[])),
         ];
+        assert_eq!(compose(&both, &[]).unwrap().ban.len(), 51 + ceiling);
+    }
+
+    // R3114001: the shadow ban takes the sets whose row of the set table gives them a share, and
+    // holds each to that share of its non-token cards; a refusal names the sets and the ruling.
+    #[test]
+    fn r3114001_the_ban_sets_are_the_rows_with_a_share_and_each_is_held_to_it() {
+        jackioh_cards::register_all();
         assert_eq!(
-            compose(&both, &[]).unwrap().ban.len(),
-            51 + STINKYSCAPE_BAN_CEILING
+            ban_sets(),
+            [
+                SetName::Meditative,
+                SetName::MeditativePlus,
+                SetName::Stinkyscape,
+                SetName::TrainingGrounds
+            ]
+        );
+        assert_eq!(
+            ban_sets_named(),
+            "Meditative, Meditative+, Stinkyscape and Training Grounds"
+        );
+        let ids = stinkyscape_ids();
+        let fifth = ids.len() / 5;
+        let mut over = ids[..=fifth].to_vec();
+        over.sort();
+        let error = compose_one(block_of(&over, &[]), &[]).unwrap_err().to_string();
+        assert!(error.contains("R3114001"), "{error}");
+        assert!(error.contains(&format!("at most {fifth})")), "{error}");
+        let error = compose_one(block_of(&["core-002".to_string()], &[]), &[])
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("holds Meditative, Meditative+, Stinkyscape and Training Grounds cards only"),
+            "{error}"
         );
     }
 
@@ -1746,7 +1782,8 @@ mod tests {
             .map(|def| def.id.clone())
             .collect();
         ids.sort();
-        let half = ids.len() / BAN_DIVISOR;
+        let half =
+            shadow_ban_ceiling(SetName::TrainingGrounds, ids.len()).expect("Training Grounds takes bans");
         assert!(half > 0, "{} cards", ids.len());
         let error = compose_one(block_of(&ids[..=half], &[]), &[]).unwrap_err();
         assert!(error.to_string().contains("more than its ceiling"), "{error}");
@@ -1986,7 +2023,7 @@ mod tests {
         }
         for id in &due {
             let set = jackioh_cards::CATALOG[id.as_str()].set;
-            assert!(BAN_SETS.contains(&set), "{id}: {set:?}");
+            assert!(ban_takes(set), "{id}: {set:?}");
         }
         assert!(due.windows(2).all(|pair| pair[0] < pair[1]), "{due:?}");
     }

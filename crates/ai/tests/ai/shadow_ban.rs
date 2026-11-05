@@ -1616,6 +1616,7 @@ mod v12 {
 
 mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     use super::*;
+    use jackioh_engine::{SET_TABLE, set_row, shadow_ban_ceiling};
 
     /// The Meditative set's non-token cards.
     const MEDITATIVE_CARDS: usize = 102;
@@ -1632,13 +1633,7 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         assert_eq!(in_set(SetName::MeditativePlus), MEDITATIVE_PLUS_CARDS);
         for &(def_id, _) in SHADOW_BAN {
             assert!(
-                matches!(
-                    def_of(None, def_id).set,
-                    SetName::Meditative
-                        | SetName::MeditativePlus
-                        | SetName::Stinkyscape
-                        | SetName::TrainingGrounds
-                ),
+                set_row(def_of(None, def_id).set).shadow_ban_share.is_some(),
                 "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000, R2203000)"
             );
         }
@@ -1657,17 +1652,52 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         }
     }
 
-    #[test]
-    fn r1885000_the_shadow_ban_holds_at_most_stinkyscape_ban_ceiling_stinkyscape_cards() {
-        jackioh_cards::register_all();
-        let banned = SHADOW_BAN
+    /// A set's non-token cards in the catalog, as `cargo jackioh sweep --write` counts them.
+    fn non_token_cards(set: SetName) -> usize {
+        jackioh_cards::CATALOG
+            .values()
+            .filter(|def| def.set == set && !def.token)
+            .count()
+    }
+
+    /// The cards of `set` the shadow ban holds.
+    fn banned_in(set: SetName) -> usize {
+        SHADOW_BAN
             .iter()
-            .filter(|(def_id, _)| def_of(None, def_id).set == SetName::Stinkyscape)
-            .count();
+            .filter(|(def_id, _)| def_of(None, def_id).set == set)
+            .count()
+    }
+
+    #[test]
+    fn r1885000_the_shadow_ban_holds_at_most_a_fifth_of_the_stinkyscape_cards() {
+        jackioh_cards::register_all();
+        let cards = non_token_cards(SetName::Stinkyscape);
+        let ceiling = shadow_ban_ceiling(SetName::Stinkyscape, cards).expect("Stinkyscape takes bans");
+        assert_eq!(ceiling, cards / 5, "a fifth of its {cards} cards (R3114001)");
+        let banned = banned_in(SetName::Stinkyscape);
         assert!(
-            banned <= STINKYSCAPE_BAN_CEILING,
-            "{banned} Stinkyscape cards banned, more than {STINKYSCAPE_BAN_CEILING} (R1885000)"
+            banned <= ceiling,
+            "{banned} Stinkyscape cards banned, more than {ceiling} (R1885000)"
         );
+    }
+
+    // R3114001: each set the shadow ban takes holds at most its share of its non-token cards, and a
+    // set without a share holds none.
+    #[test]
+    fn r3114001_each_ban_set_holds_at_most_its_share_of_its_cards() {
+        jackioh_cards::register_all();
+        for row in SET_TABLE {
+            let cards = non_token_cards(row.set);
+            let banned = banned_in(row.set);
+            match shadow_ban_ceiling(row.set, cards) {
+                Some(most) => assert!(
+                    banned <= most,
+                    "{banned} of the {cards} {:?} cards banned, more than its share, {most} (R3114001)",
+                    row.set
+                ),
+                None => assert_eq!(banned, 0, "{:?}: the shadow ban takes none of its cards", row.set),
+            }
+        }
     }
 
     #[test]
@@ -1688,14 +1718,15 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         );
     }
 
-    /// R2521010: the sets whose cards the shadow ban may hold (`BAN_SETS` in the tools' sweep), so the
-    /// unban lane may lift a card of any of them.
-    const BAN_SETS: [SetName; 4] = [
-        SetName::Meditative,
-        SetName::MeditativePlus,
-        SetName::Stinkyscape,
-        SetName::TrainingGrounds,
-    ];
+    /// R2521010: the sets whose cards the shadow ban may hold (each with a shadow-ban share in the set
+    /// table, R3114001), so the unban lane may lift a card of any of them.
+    fn ban_sets() -> Vec<SetName> {
+        SET_TABLE
+            .iter()
+            .filter(|row| row.shadow_ban_share.is_some())
+            .map(|row| row.set)
+            .collect()
+    }
 
     #[test]
     fn r732000_r2521010_the_unbanned_ids_are_sorted_cards_of_the_ban_sets_out_of_the_ban() {
@@ -1706,7 +1737,7 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         );
         for &def_id in SHADOW_UNBANNED {
             assert!(
-                BAN_SETS.contains(&def_of(None, def_id).set),
+                ban_sets().contains(&def_of(None, def_id).set),
                 "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
             );
             assert!(

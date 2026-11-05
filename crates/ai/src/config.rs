@@ -969,11 +969,6 @@ pub const AI_EXTRA_TURN_CARDS: &[&str] = &["meditative-019-1", "stinkyscape-004-
 /// ending the turn, so the AI cast it until the match's action cap (#1885).
 pub const AI_SAME_CARD_PLAYS_PER_TURN: usize = 3;
 
-/// R1885000: the most Stinkyscape cards the shadow ban (R186) may hold, 20% of the set's 175 non-token
-/// cards (`docs/stinkyscape-set.md` ST6, fullsend 2). `cargo jackioh sweep --write` refuses reports of
-/// record that ban more; the Meditative and Meditative+ sets keep R732000's half.
-pub const STINKYSCAPE_BAN_CEILING: usize = 35;
-
 /// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the compiled win-rate table.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AiWinRate {

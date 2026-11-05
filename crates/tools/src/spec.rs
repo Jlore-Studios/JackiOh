@@ -44,6 +44,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
+use jackioh_engine::wire::{CATALOG_SETS, set_row};
 
 use crate::patches::repo_root;
 
@@ -116,21 +117,22 @@ const UNRESOLVED_MARKERS: &[&str] = &[concat!("proposed", " ruling"), concat!("n
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
 
 /// The set names a card in a note's `cards` may carry before its `#` (`C+ #12.1`, `Meditative #40`),
-/// each with the catalog `set` it names (#2047).
-const SET_PREFIXES: &[(&str, &str)] = &[
-    ("Core", "Core"),
-    ("C", "Classic"),
-    ("Classic", "Classic"),
-    ("C+", "Classic+"),
-    ("Classic+", "Classic+"),
-    ("M", "Meditative"),
-    ("Meditative", "Meditative"),
-    ("M+", "Meditative+"),
-    ("Meditative+", "Meditative+"),
-    ("S", "Stinkyscape"),
-    ("Stinkyscape", "Stinkyscape"),
-    ("TG", "Training Grounds"),
-];
+/// each with the catalog `set` it names (#2047): every set the catalog orders, by its name and by its
+/// abbreviation, both read from the set table (R3114000). A name of two words (`Training Grounds`)
+/// is never the one word before a `#`; its abbreviation (`TG`) is.
+fn set_prefixes() -> Vec<(&'static str, &'static str)> {
+    CATALOG_SETS
+        .iter()
+        .flat_map(|set| {
+            let name = set.as_str();
+            std::iter::once((name, name)).chain(
+                set_row(*set)
+                    .abbreviation
+                    .map(|abbreviation| (abbreviation, name)),
+            )
+        })
+        .collect()
+}
 
 /// The set of a card in `cards` that neither a set name nor a card before it places: Core's cards
 /// are written `#<n>` (`spec/README.md`, Note format).
@@ -295,7 +297,7 @@ enum CardsRef {
 
 /// The rulings (`R<n>` as a word, as `citations` reads code), sections (`§<n>`, `§<n>.<m>`) and
 /// cards (`#<n>`, `#<n>.<k>`) a note's `cards` names, in that order. A card's set is the
-/// `SET_PREFIXES` name written right before its `#` (`C+ #12.1`), else that of the card before it in
+/// `set_prefixes` name written right before its `#` (`C+ #12.1`), else that of the card before it in
 /// the same `cards` (`C+ #12.1–#12.8`), else `DEFAULT_SET`; an `ISSUE_WORD` before the `#` makes it
 /// an issue's number, no card. The rest is prose and names nothing (`B47`, `CLAUDE.md rule 4`).
 fn cards_refs(cards: &str) -> Vec<CardsRef> {
@@ -313,6 +315,7 @@ fn cards_refs(cards: &str) -> Vec<CardsRef> {
             refs.push(CardsRef::Section(id.to_string()));
         }
     }
+    let prefixes = set_prefixes();
     let mut set = DEFAULT_SET;
     for (at, _) in cards.match_indices('#') {
         if at > 0 && is_word_byte(cards.as_bytes()[at - 1]) {
@@ -341,7 +344,7 @@ fn cards_refs(cards: &str) -> Vec<CardsRef> {
         if word == ISSUE_WORD {
             continue;
         }
-        if let Some(&(_, named)) = SET_PREFIXES.iter().find(|(prefix, _)| *prefix == word) {
+        if let Some(&(_, named)) = prefixes.iter().find(|(prefix, _)| *prefix == word) {
             set = named;
         }
         refs.push(CardsRef::Card {

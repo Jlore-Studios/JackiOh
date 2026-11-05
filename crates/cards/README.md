@@ -251,7 +251,9 @@ Meditative+ #25's code Discover), and the card metrics into `$OUT_DIR/card_metri
 `CODE_LINES`, every script's lines above its tests that hold code, comments and blank lines left out;
 `BUSTED`, the ids over the engine's `BUSTED_CODE_LINES`, and `COMPLICATED`, over its
 `COMPLICATED_CODE_LINES`, which the catalog query's `busted` and `complicated` read). There is nothing to wire and nothing to
-regenerate by hand: drop the file in its folder and build. The build fails, naming the path, on a file
+regenerate by hand: drop the file in its folder and build. The folders are the ones that hold card
+files, each its set's id segment with `_` between its words (`classic_plus`), so a new set's folder is
+listed nowhere (R3114000). The build fails, naming the path, on a file
 without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outside a set folder, a
 file name that is not a Rust identifier, a file outside its `ID`'s set's folder or named for another
 card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSION`, the newest entry

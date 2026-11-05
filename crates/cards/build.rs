@@ -1,9 +1,10 @@
 //! The card registry, generated at compile time (SURFACE §7.4). Replaces `gen-registry.ts`,
 //! `_generated.ts`, `missing-tests.ts` and `registry.test.ts`'s completeness checks.
 //!
-//! Walks `src/scripts/<set>/<file>.rs` (`<set>` one of `core`, `classic`, `classic_plus`,
-//! `meditative`, `meditative_plus`, `stinkyscape`, `training_grounds`, the last a held set's, R2194000), reads each
-//! file's `pub const ID: &str = "…";` line, and writes `$OUT_DIR/registry.rs`:
+//! Walks `src/scripts/<set>/<file>.rs` (`<set>` a set's folder, its id segment with `_` between its
+//! words: `core`, `classic_plus`, `training_grounds`; whichever folders are there, so a new set adds
+//! its folder and nothing here, R3114000), reads each file's `pub const ID: &str = "…";` line, and
+//! writes `$OUT_DIR/registry.rs`:
 //!
 //! ```text
 //! pub mod scripts {
@@ -77,23 +78,13 @@ use std::path::{Path, PathBuf};
 mod code_lines;
 use code_lines::{code_lines, reads_card_lists, without_comments};
 
-/// The set directories under `src/scripts/`, in SPEC §5 order (SURFACE §4.1). A set that has not
-/// shipped yet (R1420) has its folder too: its cards are built, tested and registered like any other.
-/// `stinkyscape` is the Stinkyscape set's (issue #1836, R1857000), and `training_grounds` the held
-/// Training Grounds set's (issue #2193, R2194000).
-const SETS: [&str; 7] = [
-    "core",
-    "classic",
-    "classic_plus",
-    "meditative",
-    "meditative_plus",
-    "stinkyscape",
-    "training_grounds",
-];
-
-/// One card file: its set, its module name, its absolute path and its `ID`.
+/// One card file: its set's folder under `src/scripts/` (SURFACE §4.1), its module name, its absolute
+/// path and its `ID`. A set that has not shipped yet (R1420) has its folder too: its cards are built,
+/// tested and registered like any other. The folders are read off the disk, not listed here
+/// (R3114000): a set's folder is its id segment (the set table's, `catalog_types.rs`) with `_`
+/// between its words, which `home_of` holds every file's `ID` to.
 struct CardFile {
-    set: &'static str,
+    set: String,
     module: String,
     path: PathBuf,
     id: String,
@@ -132,6 +123,9 @@ fn main() {
     let mut problems: Vec<String> = Vec::new();
     check_win_rates(&win_rates_path, &mut problems);
     let files = find_card_files(&scripts_dir, &mut problems);
+    let mut folders: Vec<&str> = files.iter().map(|file| file.set.as_str()).collect();
+    folders.sort_unstable();
+    folders.dedup();
 
     // Every ID names a catalog card, its file sits in its set's folder under its number, and no two
     // files claim one.
@@ -143,7 +137,7 @@ fn main() {
                 file.path.display(),
                 file.id
             ));
-        } else if let Some(problem) = misfiled(file, &catalog_ids) {
+        } else if let Some(problem) = misfiled(file, &catalog_ids, &folders) {
             problems.push(problem);
         }
         if let Some(first) = by_id.insert(&file.id, file) {
@@ -180,7 +174,7 @@ fn main() {
     }
 
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR"));
-    std::fs::write(out_dir.join("registry.rs"), render(&files, &by_id)).expect("write registry.rs");
+    std::fs::write(out_dir.join("registry.rs"), render(&files, &by_id, &folders)).expect("write registry.rs");
     let catalog_text =
         std::fs::read_to_string(&catalog_path).unwrap_or_else(|e| panic!("{}: {e}", catalog_path.display()));
     std::fs::write(out_dir.join("catalog.json"), compact_json(&catalog_text)).expect("write catalog.json");
@@ -609,14 +603,13 @@ fn find_card_files(scripts_dir: &Path, problems: &mut Vec<String>) -> Vec<CardFi
             .map(|c| c.as_os_str().to_string_lossy().into_owned())
             .collect();
         let set = match parts.as_slice() {
-            [set, _file] => SETS.iter().find(|s| **s == set.as_str()).copied(),
+            [set, _file] if is_identifier(set) => Some(set.clone()),
             _ => None,
         };
         let Some(set) = set else {
             problems.push(format!(
-                "{}: a card file lives at src/scripts/<set>/<file>.rs, <set> one of {}",
-                path.display(),
-                SETS.join(", ")
+                "{}: a card file lives at src/scripts/<set>/<file>.rs, <set> its set's id segment with `_` between its words (`classic_plus`)",
+                path.display()
             ));
             continue;
         };
@@ -684,10 +677,13 @@ fn is_identifier(name: &str) -> bool {
 /// CLAUDE.md rule 6: where a card's file is filed, its `ID`'s set's folder and the prefix its number
 /// spells: `core-051-1` → `core`, `c051_1`; `classicplus-t-ai-01` → `classic_plus`, `t_ai_01`. An id
 /// spells its set's folder without the underscore (`classicplus-…`). `None` for an id whose set has no
-/// folder in `SETS`.
-fn home_of(id: &str) -> Option<(&'static str, String)> {
+/// folder among `folders`.
+fn home_of<'a>(id: &str, folders: &[&'a str]) -> Option<(&'a str, String)> {
     let (segment, number) = id.split_once('-')?;
-    let set = SETS.iter().copied().find(|set| set.replace('_', "") == segment)?;
+    let set = folders
+        .iter()
+        .copied()
+        .find(|set| set.replace('_', "") == segment)?;
     let stem = number.replace('-', "_");
     let prefix = if number.starts_with("t-") {
         stem
@@ -702,19 +698,19 @@ fn home_of(id: &str) -> Option<(&'static str, String)> {
 /// `c025_4_mana_7_7` is #25's, as no `core-025-4` exists). The slug after the prefix is free: some
 /// differ from the card's name on purpose (`core/c097_zephyrs.rs` for Zephrys). The problem, naming
 /// where the file belongs, or `None` when it is filed right.
-fn misfiled(file: &CardFile, catalog_ids: &[String]) -> Option<String> {
-    let Some((set, prefix)) = home_of(&file.id) else {
+fn misfiled(file: &CardFile, catalog_ids: &[String], folders: &[&str]) -> Option<String> {
+    let Some((set, prefix)) = home_of(&file.id, folders) else {
         return Some(format!(
             "{}: ID \"{}\" names no set with a folder under src/scripts/ ({})",
             file.path.display(),
             file.id,
-            SETS.join(", ")
+            folders.join(", ")
         ));
     };
     let carries = |stem: &str| file.module == stem || file.module.starts_with(&format!("{stem}_"));
     let owner = catalog_ids
         .iter()
-        .filter_map(|id| home_of(id).map(|home| (id, home)))
+        .filter_map(|id| home_of(id, folders).map(|home| (id, home)))
         .filter(|(_, (folder, stem))| *folder == file.set && carries(stem))
         .max_by_key(|(_, (_, stem))| stem.len())
         .map(|(id, _)| id.as_str());
@@ -727,11 +723,11 @@ fn misfiled(file: &CardFile, catalog_ids: &[String]) -> Option<String> {
     })
 }
 
-fn render(files: &[CardFile], by_id: &BTreeMap<&str, &CardFile>) -> String {
+fn render(files: &[CardFile], by_id: &BTreeMap<&str, &CardFile>, folders: &[&str]) -> String {
     let mut out = String::new();
     out.push_str("// Generated by crates/cards/build.rs (SURFACE §7.4). Do not edit.\n\n");
     out.push_str("pub mod scripts {\n");
-    for set in SETS {
+    for &set in folders {
         let _ = writeln!(out, "    pub mod {set} {{");
         for file in files.iter().filter(|file| file.set == set) {
             let _ = writeln!(

@@ -238,7 +238,9 @@ export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (ty
 // ---------------------------------------------------------------------------------------------
 
 // The catalog vocabulary's runtime half. Its types are the generated ones above; `./catalog.ts`
-// declares its own copies only for its functions' signatures, which are the same shapes.
+// declares its own copies only for its functions' signatures, which are the same shapes, but for
+// `SetName`, which it takes from the generated file, and `SHIPPED_SETS`, which it takes from
+// `./engineConfig.ts` (both read from the engine's set table, R3114000).
 export {
   KEYWORD_KINDS,
   LEAN_NEWEST,

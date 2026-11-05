@@ -1035,7 +1035,10 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
             at(SetName::TrainingGrounds),
             at(SetName::Stinkyscape).map(|at| at + 1)
         );
-        assert_eq!(CATALOG_SETS.last(), Some(&SetName::TrainingGrounds));
+        // A set the catalog orders after it is held, not shipped (R3114000: a set is added as a held
+        // row), so it stays the newest shipped set (R1371).
+        let after = at(SetName::TrainingGrounds).map_or(CATALOG_SETS.len(), |at| at + 1);
+        assert!(CATALOG_SETS[after..].iter().all(|set| !set_ships(*set)));
         assert!(set_ships(SetName::TrainingGrounds));
         assert_eq!(SHIPPED_SETS.last(), Some(&SetName::TrainingGrounds));
         assert!(set_is_open(SetName::TrainingGrounds));

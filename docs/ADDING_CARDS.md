@@ -59,6 +59,25 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
   `tests/cross/catalog.rs`, R1857000). `docs/training-grounds-set.md` TG3 says the rest (`docs/stinkyscape-set.md`,
   `docs/meditative-plus-set.md` MP3 and `docs/meditative-set.md` M3 for the earlier held sets' builds).
 
+### A new set
+
+A set is one row of the set table (`set_table!` in `crates/engine/src/wire/catalog_types.rs`, R3114000), which every per-set list
+reads: `SetName`, the catalog order, the sets that ship, the deck codes' set offsets, `spec check`'s set names, the client's
+`SetName` and `SHIPPED_SETS`, and the shadow ban's sets and ceilings (R3114001). To add one:
+- Append its row at the table's end, `stage: Held`, with its name, its id segment (the name lowercased, `+` written `plus`, spaces
+  and `-` taken out), the abbreviation ruling notes write before a `#` (`TG #12`), and its shadow-ban share, `(part, whole)`, or
+  `None` while the ban takes none of its cards. Never move or remove a row: its place is the set's in the catalog order (R1420)
+  and in the deck codes (R1410).
+- Add its census entry (`crates/cards/src/census.rs`) after the last one, and its scripts folder, `src/scripts/<segment with _
+  between its words>/`, with its first card.
+- Run the workspace tests, which regenerate `apps/web/src/wire/generated/SetName.ts` (and `engineConfig.ts` when the set ships),
+  and `cargo test -p jackioh-luau --features ts --test export_api`, which regenerates `crates/cards/luau/jackioh.luau`; commit
+  both.
+- The release that ships it changes its row's `Held` to `Shipped`, nothing else of the table.
+
+Its cards still need their own files, row by row above: the catalog entries, the fixture rows, the FX table
+(`apps/web/src/fx/cards/<set>.json5`), the art, the sounds and the text.
+
 ## 2. Templates
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written

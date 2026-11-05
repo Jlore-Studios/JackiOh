@@ -94,8 +94,8 @@ const USAGE =
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 /** Found from the script, not from `--root`, so a temp copy of the web dir is still checked against it. */
 const CATALOG = path.resolve(SCRIPT_DIR, "../../../crates/cards/catalog.json");
-// R1420: the client's mirror of the engine's SHIPPED_SETS, read from this script's own tree.
-const WIRE_CATALOG = path.resolve(SCRIPT_DIR, "../src/wire/catalog.ts");
+// R1420, R3114000: the engine's SHIPPED_SETS, generated into this script's own tree from the set table.
+const ENGINE_CONFIG = path.resolve(SCRIPT_DIR, "../src/wire/engineConfig.ts");
 const POWERSHELL_WSL = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
 
 function usage(message) {
@@ -332,11 +332,11 @@ function catalogProblems(catalog, table, expected) {
   return problems;
 }
 
-/** R1420: the sets that ship, as `src/wire/catalog.ts` lists them. */
+/** R1420: the sets that ship, as `src/wire/engineConfig.ts` lists them (generated, R3114000). */
 function shippedSets() {
-  const text = fs.readFileSync(WIRE_CATALOG, "utf8");
-  const match = /export const SHIPPED_SETS = (\[[^\]]*\])/.exec(text);
-  if (!match) throw new Error(`${WIRE_CATALOG}: no SHIPPED_SETS`);
+  const text = fs.readFileSync(ENGINE_CONFIG, "utf8");
+  const match = /export const SHIPPED_SETS = (\[[^\]]*\]) as const satisfies readonly SetName\[\];/.exec(text);
+  if (!match) throw new Error(`${ENGINE_CONFIG}: no SHIPPED_SETS`);
   return new Set(JSON.parse(match[1]));
 }
 

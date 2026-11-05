@@ -302,8 +302,32 @@ pub(crate) fn family(id: &str) -> String {
     }
 }
 
-/// The sets `SHIPPED_SETS` names in one side's `catalog_types.rs`.
+/// The line that opens the set table in `catalog_types.rs` (#3114, R3114000).
+const SET_TABLE_OPEN: &str = "\nset_table![\n";
+
+/// The set whose `SetName` variant's name (`ClassicPlus`) starts `text`.
+fn set_named(text: &str) -> Result<SetName> {
+    let name: String = text.chars().take_while(char::is_ascii_alphanumeric).collect();
+    SetName::ALL
+        .iter()
+        .find(|set| format!("{set:?}") == name)
+        .copied()
+        .with_context(|| format!("`SetName::{name}` is no set"))
+}
+
+/// The sets that ship in one side's `catalog_types.rs`: its set table's `stage: Shipped` rows, in
+/// their order (R3114000), or, in a revision from before the table, the list `SHIPPED_SETS` names.
 pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
+    if let Some(start) = source.find(SET_TABLE_OPEN) {
+        let table = &source[start + SET_TABLE_OPEN.len()..];
+        let close = table.find("\n];").context("the set table does not close")?;
+        return table[..close]
+            .lines()
+            .map(str::trim)
+            .filter(|row| row.contains("stage: Shipped,"))
+            .map(set_named)
+            .collect();
+    }
     let start = source
         .find("pub const SHIPPED_SETS")
         .context("no `pub const SHIPPED_SETS`")?;
@@ -315,14 +339,7 @@ pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
     list[open..open + close]
         .split("SetName::")
         .skip(1)
-        .map(|rest| {
-            let name: String = rest.chars().take_while(char::is_ascii_alphanumeric).collect();
-            SetName::ALL
-                .iter()
-                .find(|set| format!("{set:?}") == name)
-                .copied()
-                .with_context(|| format!("`SetName::{name}` is no set"))
-        })
+        .map(set_named)
         .collect()
 }
 
@@ -1653,6 +1670,65 @@ mod tests {
             shipped_sets(&here).expect("sets"),
             jackioh_engine::wire::SHIPPED_SETS.to_vec()
         );
+    }
+
+    // R3114000: the shipped sets are the set table's `Shipped` rows; a held row is left out, and a
+    // revision from before the table still reads by its list.
+    #[test]
+    fn r3114000_shipped_sets_reads_the_set_table_and_the_older_list() {
+        let table = "pub const SHIPPED_SETS: [SetName; count_in(SHIPPED_STAGES)] = sets_in(SHIPPED_STAGES);\n\n\
+            // The set table.\n\
+            set_table![\n\
+            \x20   Core = \"Core\" { stage: Shipped, segment: \"core\", abbreviation: None, shadow_ban_share: None },\n\
+            \x20   Classic = \"Classic\" { stage: Held, segment: \"classic\", abbreviation: Some(\"C\"), shadow_ban_share: None },\n\
+            \x20   Stinkyscape = \"Stinkyscape\" { stage: Shipped, segment: \"stinkyscape\", abbreviation: Some(\"S\"), shadow_ban_share: Some((1, 5)) },\n\
+            \x20   Boss = \"Boss\" { stage: SinglePlayer, segment: \"boss\", abbreviation: None, shadow_ban_share: None },\n\
+            ];\n";
+        assert_eq!(
+            shipped_sets(table).expect("sets"),
+            vec![SetName::Core, SetName::Stinkyscape]
+        );
+        let older =
+            "pub const SHIPPED_SETS: [SetName; 2] = [\n    SetName::Core,\n    SetName::Meditative,\n];\n";
+        assert_eq!(
+            shipped_sets(older).expect("sets"),
+            vec![SetName::Core, SetName::Meditative]
+        );
+        let unknown = table
+            .replace("    Boss = ", "    Nope = ")
+            .replace("SinglePlayer", "Shipped");
+        assert!(shipped_sets(&unknown).is_err());
+    }
+
+    // R3114000, R1678000: the sweep workflow's range (`sed -n '/^pub const SHIPPED_SETS/,/^];/p'`)
+    // over the live file holds the whole set table, so a row that changes stage starts a sweep.
+    #[test]
+    fn r3114000_the_sweep_workflow_s_range_holds_the_whole_set_table() {
+        let here = fs::read_to_string(repo_root().join(SETS_PATH)).expect("catalog_types.rs");
+        let mut range = Vec::new();
+        for line in here.lines() {
+            if range.is_empty() && !line.starts_with("pub const SHIPPED_SETS") {
+                continue;
+            }
+            range.push(line);
+            if line.starts_with("];") {
+                break;
+            }
+        }
+        let range = range.join("\n");
+        assert!(range.contains("\nset_table![\n"), "{range}");
+        for row in jackioh_engine::wire::SET_TABLE {
+            let opening = format!(
+                "{:?} = {:?} {{ stage: {:?},",
+                row.set,
+                row.set.as_str(),
+                row.stage
+            );
+            assert!(
+                range.contains(&opening),
+                "{opening} is not in the range:\n{range}"
+            );
+        }
     }
 
     #[test]

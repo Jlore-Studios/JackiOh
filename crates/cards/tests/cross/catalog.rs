@@ -7844,6 +7844,33 @@ mod catalog_membership_build_m4_t1_b2_1 {
         }
     }
 
+    // R3114000: the census names each set the catalog orders once, by its name, and writes its id
+    // segment as the set's row of the set table does: a new set is its row and its census entry.
+    #[test]
+    fn r3114000_every_census_set_has_a_table_row_with_its_segment() {
+        use jackioh_engine::{CATALOG_SETS, SetStage, set_row};
+        for census in CENSUS {
+            let set: SetName = census
+                .set
+                .parse()
+                .unwrap_or_else(|error| panic!("{}: {error}", census.set));
+            let row = set_row(set);
+            assert!(
+                matches!(row.stage, SetStage::Shipped | SetStage::Held),
+                "{}: the census holds a set the catalog orders, not a {:?} one",
+                census.set,
+                row.stage
+            );
+            assert_eq!(census.segment, row.segment, "{}'s segment", census.set);
+        }
+        let named: Vec<&str> = CENSUS.iter().map(|census| census.set).collect();
+        let ordered: Vec<&str> = CATALOG_SETS.iter().map(|set| set.as_str()).collect();
+        assert_eq!(
+            named, ordered,
+            "one census entry per set the catalog orders, in its order"
+        );
+    }
+
     #[test]
     fn has_each_set_s_indices_1_n_present_exactly_once_none_of_them_a_token() {
         let by_key = by_key();

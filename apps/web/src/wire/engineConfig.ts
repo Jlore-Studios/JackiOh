@@ -76,6 +76,7 @@ export const SANDBOX_ARMOR_MAX = 99;
 export const SANDBOX_DRAW_MAX = 10;
 export const SANDBOX_HERO_HEALTH_MAX = 99;
 export const SANDBOX_MANA_MAX = 10;
+export const SHIPPED_SETS = ["Core","Classic","Classic+","Meditative","Meditative+","Stinkyscape","Training Grounds"] as const satisfies readonly SetName[];
 export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;
 export const TUTORIAL_BARRED_RARITIES: readonly Rarity[] = ["Legendary","Mythic"];

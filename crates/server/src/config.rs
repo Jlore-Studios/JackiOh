@@ -20,7 +20,7 @@
 //! collection are `usize`; game and ladder quantities are `i32`; ratings and Glicko numbers are
 //! `f64`.
 
-use jackioh_engine::wire::{CodeFormat, EmoteId, PrintedRarity};
+use jackioh_engine::wire::{CATALOG_SETS, CodeFormat, EmoteId, PrintedRarity, SetName};
 use serde::{Deserialize, Serialize};
 
 use crate::cosmetics::CosmeticRarity;
@@ -752,7 +752,7 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 /// issues are capped the same way (R915008): a frame of junk keywords breaks §12.2 once per keyword.
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
-/// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
+/// writes each card's set with its number (`catalog_number_set_offset`); a code naming a version
 /// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused. A set that ships later takes an
 /// offset of its own and leaves the version alone (R1410), so every code minted before still reads.
 pub const DECK_CODE_VERSION: i32 = 2;
@@ -760,44 +760,27 @@ pub const DECK_CODE_VERSION: i32 = 2;
 /// is a version 1 code, and its numbers are Core's (the only set there was).
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
-/// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`, `"Stinkyscape"`,
-/// `"Training Grounds"`).
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CatalogNumberSetOffsets {
-    #[serde(rename = "Core")]
-    pub core: i32,
-    #[serde(rename = "Classic")]
-    pub classic: i32,
-    #[serde(rename = "Classic+")]
-    pub classic_plus: i32,
-    #[serde(rename = "Meditative")]
-    pub meditative: i32,
-    #[serde(rename = "Meditative+")]
-    pub meditative_plus: i32,
-    #[serde(rename = "Stinkyscape")]
-    pub stinkyscape: i32,
-    #[serde(rename = "Training Grounds")]
-    pub training_grounds: i32,
-}
-
 /// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
-/// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
-/// 3000 + n, Meditative+ 4000 + n, Stinkyscape 5000 + n, Training Grounds 6000 + n — still written
-/// as LEB128. No set holds 1000 cards, so a number names one set and one card. Meditative's offset
-/// is the next thousand in catalog order (R1420), and so is Meditative+'s after it (v0.3.15, issue
-/// #1187, R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
-/// Stinkyscape's (issue #2204); none moved another set's, so a code minted before a set shipped
-/// reads as it always did.
-pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
-    core: 0,
-    classic: 1000,
-    classic_plus: 2000,
-    meditative: 3000,
-    meditative_plus: 4000,
-    stinkyscape: 5000,
-    training_grounds: 6000,
-};
+/// its §5 index plus its set's offset, a stride for each place its set holds in the catalog order —
+/// Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative 3000 + n, Meditative+ 4000 + n,
+/// Stinkyscape 5000 + n, Training Grounds 6000 + n — still written as LEB128. No set holds 1000
+/// cards, so a number names one set and one card.
+pub const CATALOG_NUMBER_SET_STRIDE: i32 = 1000;
+
+/// SPEC §11 R255, R339, R1410, R3114000: a set's offset in a version 2 deck or trio code, its place in
+/// the catalog order (`CATALOG_SETS`, the set table's order) times `CATALOG_NUMBER_SET_STRIDE`, or
+/// `None` for a set the catalog does not order (Boss, Boss-X, Custom). Meditative's offset was the
+/// next thousand in catalog order (R1420), and so was Meditative+'s after it (v0.3.15, issue #1187,
+/// R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
+/// Stinkyscape's (issue #2204); a set's row is appended to the table and never moved, so none moves
+/// another set's, and a code minted before a set shipped reads as it always did. The client reads
+/// the shipped sets' offsets (`CATALOG_NUMBER_SET_OFFSETS` in `serverConfig.ts`).
+pub fn catalog_number_set_offset(set: SetName) -> Option<i32> {
+    let place = CATALOG_SETS.iter().position(|listed| *listed == set)?;
+    i32::try_from(place)
+        .ok()
+        .map(|place| place * CATALOG_NUMBER_SET_STRIDE)
+}
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a
 /// chat client wraps around a pasted code.
@@ -816,7 +799,7 @@ pub const DECK_VERSIONS_KEPT: usize = 20;
 /// replacing save moves on.
 pub const DECK_VERSION_DEBOUNCE_MS: i64 = 60_000;
 /// SPEC §11 R339: the trio-code format's version. Version 2 writes each deck as a version 2 deck code
-/// does (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version other than this one or
+/// does (`catalog_number_set_offset`); a code naming a version other than this one or
 /// `TRIO_CODE_CORE_ONLY_VERSION` is refused.
 pub const TRIO_CODE_VERSION: i32 = 2;
 /// SPEC §11 R339: the one older trio-code version still read, whose decks carry Core numbers.
