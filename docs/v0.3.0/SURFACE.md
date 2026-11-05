@@ -167,7 +167,6 @@ on this list during Waves 1–3.
 | unicode-properties | 0.1.4 | — | server (username checks, R1432–R1434) |
 | unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
 | unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
-| mlua | =0.12.2 | luau, serde (default-features = false) | luau (#442 L3; nothing depends on the crate yet) |
 | yaml_serde | 0.10.7 | — | tools (tests only: `export_card_text.rs` reads `crates/cards/card-text.yaml`, #2498; no pure crate takes it, CLAUDE.md rule 4) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
@@ -180,7 +179,6 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
-| `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
 | `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
@@ -191,7 +189,7 @@ on a crate that depends on you is legal for integration tests (`tests/`), which 
 
 ## 3. Purity (CLAUDE.md rule 4, in Rust)
 
-`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-luau`, `jackioh-run` and `jackioh-shared` are pure
+`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-run` and `jackioh-shared` are pure
 (CLAUDE.md rule 4 has what each takes): no clock, no I/O, no environment, no
 threads, no OS randomness, no hash-ordered collections, **no mutable statics**. Two mechanisms
 enforce it, and nothing else is needed (the ESLint purity rules go):
@@ -768,7 +766,7 @@ keeps behind its opaque `EngineState` brand.
     // one flat object of every rules, AI and run number a client reads (#3093): AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK (practice, the tutorial harness, the lean toggle, R1370, and their tests),
     // RUN (run_constants's object) and each constant of engineConfig.ts (§5.1) under its own name (DECK_SIZE, …), so a host that is not the web restates none (CLAUDE.md rule 9)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
-#[wasm_bindgen] pub fn combat_forecast(state_json: &str, seat: &str) -> String;      // R3100000: CombatForecast { attacks: AttackForecast[], lethal } (query.rs's combat_forecast): what each attack `seat` may declare would do, as the board shows it, for the tutorial's coach; the normal and C modules bind it (the Luau module has no copy)
+#[wasm_bindgen] pub fn combat_forecast(state_json: &str, seat: &str) -> String;      // R3100000: CombatForecast { attacks: AttackForecast[], lethal } (query.rs's combat_forecast): what each attack `seat` may declare would do, as the board shows it, for the tutorial's coach; the browser and C modules bind it
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
@@ -843,11 +841,11 @@ Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-ca
 `jackioh-wasm-c` exports every binding of §10.1 (and `learned_parity` and the `duos_*` bindings the
 browser module also binds) as an `extern "C"` function over JSON strings, built as a plain
 `wasm32-unknown-unknown` `cdylib`: no wasm-bindgen glue, no JavaScript, no system interface, so its
-import section is empty and a host that is not JavaScript instantiates it with no imports. It is a third
-wrapper over `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau`
-(the same C names through emscripten, with the Luau VM; #2956 part 5 deletes it), and
+import section is empty and a host that is not JavaScript instantiates it with no imports. It is a second
+wrapper over `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen), and
 `crates/wasm/tests/export_parity.rs` holds its exports to the browser module's, so a binding added for
-the web reaches such a host by itself. A string crosses as a pointer and a length into the module's
+the web reaches such a host by itself. It is the module a Roblox port translates (#2898), so ci.yml's
+`web (wasm c module)` job builds it and fails on any import (#3097). A string crosses as a pointer and a length into the module's
 memory, which the module's `jackioh_alloc`, `jackioh_free`, `jackioh_result_ptr` and `jackioh_result_len`
 give a host to read and write; every binding returns a status (0 ok, 1 failed) and leaves its JSON text,
 or the failure's message, in the result buffer. The module reads no clock, so `ai_decide` and

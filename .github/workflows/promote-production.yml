@@ -56,8 +56,8 @@
 # cannot sign in never goes live. The server's image is scripts/server-image.sh's, as
 # deploy-staging.yml's header says: named by its inputs in Cloudflare's registry, where staging has
 # almost always pushed it already, so a promotion builds no server; else CI's `deploy-image` of the
-# promoted main commit, else a build on CI's layer cache. The WASM modules come from the cache
-# deploy-staging.yml fills (WASM_CACHE) when nothing they are built from changed. The Worker hands
+# promoted main commit, else a build on CI's layer cache. The WASM module comes from the cache
+# deploy-staging.yml fills (WASM_CACHE) when nothing it is built from changed. The Worker hands
 # the container the commit it was deployed from (DEPLOYED_COMMIT), which the server reports as
 # `x-deployed-commit`.
 # Cloudflare's own Git builds failed on every commit after the first, with logs only the dashboard
@@ -266,7 +266,7 @@ jobs:
     env:
       # The install covers the whole workspace, e2e/ included; no browser is needed here.
       CYPRESS_INSTALL_BINARY: "0"
-      # deploy-staging.yml's: the cache key's prefix of the WASM modules' production build, and the
+      # deploy-staging.yml's: the cache key's prefix of the WASM module's production build, and the
       # layer cache CI's deploy image jobs write.
       WASM_CACHE: wasm-player-v1
       IMAGE_CACHE_FROM: type=gha,scope=deploy-rehearsal
@@ -283,8 +283,8 @@ jobs:
           # Its second parent, the promoted commit of main, names the CI run whose image it may use.
           fetch-depth: 2
 
-      # The production build of both WASM modules, when nothing they are built from changed.
-      - name: the WASM modules, if cached
+      # The production build of the WASM module, when nothing it is built from changed.
+      - name: the WASM module, if cached
         id: wasm
         uses: actions/cache@v4
         with:
@@ -292,8 +292,7 @@ jobs:
           key: ${{ env.WASM_CACHE }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'crates/**', 'scripts/build-wasm.sh') }}
 
       # The Node half installs apps/edge's wrangler; the Rust half is for the build's prebuild,
-      # scripts/build-wasm.sh, which a cached pair of modules skips. The setup action caches the
-      # emsdk the Luau module links with (#442 L12, #450).
+      # scripts/build-wasm.sh, which a cached module skips.
       - uses: ./.github/actions/setup
         with:
           rust: ${{ steps.wasm.outputs.cache-hit == 'true' && 'false' || 'true' }}
@@ -323,7 +322,7 @@ jobs:
         env:
           WASM_CACHED: ${{ steps.wasm.outputs.cache-hit }}
         run: |
-          # With the modules cached, `build` runs without `prebuild`, the WASM build.
+          # With the module cached, `build` runs without `prebuild`, the WASM build.
           if [ "$WASM_CACHED" = true ]; then
             pnpm --dir apps/web exec vite build
           else

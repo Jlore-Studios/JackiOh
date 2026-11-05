@@ -165,7 +165,7 @@ func triageDecide(step string, form bool, f triageFields) *triage.Plan {
 
 func TestTriage_TheTitlePrefixNamesTheTypeLabel(t *testing.T) {
 	for _, c := range [][2]string{{"Patch v0.3.X: a card", "patch"}, {"Patch v0.3.Y: a fix", "patch"},
-		{"v0.4.0 (part 1 of 3): Luau", "major version"},
+		{"v0.4.0 (part 1 of 3): the first part", "major version"},
 		{"Night bot: the queue", "night bot"},
 		{"Architecture: the build", "architecture"},
 		{"CI: a slow job", "architecture"}, {"Make it faster", ""}} {

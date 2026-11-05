@@ -1399,7 +1399,7 @@ describe("R2718000: set watermarks", () => {
     expect(new Set(prints).size).toBe(sets.length);
     expect(new Set(onDark).size).toBe(sets.length);
     expect(prints).not.toContain(undefined);
-    for (const none of [null, "Boss", "Boss-X", "Custom", "Nonesuch", "constructor"]) expect(watermarkOf(none), String(none)).toBeNull();
+    for (const none of [null, "Boss", "Boss-X", "Nonesuch", "constructor"]) expect(watermarkOf(none), String(none)).toBeNull();
 
     const mark = setMarkOf("Meditative+");
     expect(mark.kind).toBe("meditative-plus");
@@ -1479,7 +1479,7 @@ describe("R2718000: set watermarks", () => {
     expect(back.querySelector("img")).toBeNull();
     expect(back.querySelector(".cf-watermark")).toBeNull();
     cleanup();
-    for (const set of ["Boss", "Custom"] as const) {
+    for (const set of ["Boss", "Boss-X"] as const) {
       const card: CardDef = { ...def("core-002"), set };
       const cf = renderFace({ defId: card.id, def: card, radiant: false });
       expect(cf.querySelector(".card-text"), set).not.toBeNull();

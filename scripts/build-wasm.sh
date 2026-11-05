@@ -1,11 +1,9 @@
 #!/bin/sh
 # Builds crates/wasm into apps/web/src/wasm/pkg, the module the web client loads
-# (docs/v0.3.0/SURFACE.md §10.2), then crates/wasm/luau into apps/web/src/wasm/pkg/luau, the Luau
-# module (#919, SPEC §12.10), unless JACKIOH_WASM_LUAU=0. apps/web/package.json's `predev`,
-# `prebuild`, `prebuild:staging`, `prebuild:e2e` and `pretest` run it, so `pnpm --filter
-# @jackioh/web dev|build|build:staging|build:e2e|test` always has both fresh. The Luau module sits inside pkg/ so everything
-# that handles the normal module's output (.gitignore, eslint's ignores, CI's `web-build` artifact)
-# carries it too. JACKIOH_WASM_NORMAL=0 builds the Luau module alone (below).
+# (docs/v0.3.0/SURFACE.md §10.2). apps/web/package.json's `predev`, `prebuild`, `prebuild:staging`,
+# `prebuild:e2e` and `pretest` run it, so `pnpm --filter @jackioh/web
+# dev|build|build:staging|build:e2e|test` always has it fresh. JACKIOH_WASM_C=1 builds the C module
+# too (below).
 #
 # Idempotent, and it installs nothing that is present:
 #   - the wasm32-unknown-unknown target, added through rustup only when it is missing;
@@ -13,21 +11,16 @@
 #     never compiled, and skipped when .cache/bin/wasm-bindgen already prints the pinned version.
 #     It must be the very version of the `wasm-bindgen` crate (Cargo.toml pins `=0.2.129`), or it
 #     refuses the module;
-#   - the wasm32-unknown-emscripten target and the pinned emsdk (EMSDK_VERSION below), cloned into
-#     .cache/emsdk (gitignored) and installed there when missing: `emsdk install` fetches the
-#     toolchain once, `emsdk activate` rewrites its `.emscripten` config. CI's setup action caches
-#     .cache/emsdk keyed on the EMSDK_VERSION line;
 #   - cargo rebuilds only what changed, and wasm-bindgen rewrites the same pkg. Both deploys build on
-#     GitHub's runners, whose setup action restores target/ (Swatinem/rust-cache) and .cache/emsdk,
-#     so nothing here keeps the built modules.
+#     GitHub's runners, whose setup action restores target/ (Swatinem/rust-cache), so nothing here
+#     keeps the built module.
 #
 # The output is apps/web/src/wasm/pkg/{jackioh_wasm.js, jackioh_wasm.d.ts, jackioh_wasm_bg.wasm,
 # jackioh_wasm_bg.wasm.d.ts}, gitignored; `--target web` makes the glue an ES module whose default
 # export fetches the .wasm and whose `initSync` takes its bytes (apps/web/src/wasm/index.ts).
 #
-# Needs a Rust toolchain (rust-toolchain.toml pins it), and for the Luau module git and python3 (the
-# emsdk's). A shell that installed rustup in an earlier step but never re-read its profile is covered
-# by sourcing ~/.cargo/env below.
+# Needs a Rust toolchain (rust-toolchain.toml pins it). A shell that installed rustup in an earlier
+# step but never re-read its profile is covered by sourcing ~/.cargo/env below.
 
 # JACKIOH_WASM_PREVIEW: 1 (the default) builds the module with crates/wasm's `preview` feature, R1420's
 # `previewSets` (the engine's testkit), which the hotseat route's E2E injection uses to play a set
@@ -38,38 +31,32 @@
 # JACKIOH_WASM_DUOS: 0 (the default) builds stubs in place of crates/wasm's `duos` feature, #936's
 # Duos bindings; 1 builds them, as apps/web's `predev` does, since only `/dev/duos` calls them and
 # only the dev server serves it. A networked co-op game needs none (the server plays it), so every
-# other module (`build:e2e`'s, `test`'s, the production bundle's) leaves them out. The Luau module
-# never carries them. Switching recompiles the bindings crate only.
+# other module (`build:e2e`'s, `test`'s, the production bundle's) leaves them out. Switching
+# recompiles the bindings crate only.
 #
-# JACKIOH_WASM_NORMAL: 1 (the default) builds the normal module; 0 skips it, with its target and
-# wasm-bindgen, and builds the Luau module alone. CI builds each module in a job of its own, side by
-# side (ci.yml's `web (wasm module)` and `web (wasm luau module)`): one after the other they took
-# over seven minutes (#959). With JACKIOH_WASM_LUAU=0 it would build nothing, so that pair fails, unless
-# JACKIOH_WASM_C=1 builds the C module.
+# JACKIOH_WASM_NORMAL: 1 (the default) builds the browser module; 0 skips it, with its wasm-bindgen,
+# and builds the C module alone (JACKIOH_WASM_C=1; with it still 0 nothing is built, and the script
+# fails). CI builds each module in a job of its own, side by side (ci.yml's `web (wasm module)` and
+# `web (wasm c module)`).
 #
 # JACKIOH_WASM_C: 0 (the default) skips the C module; 1 builds it, #3093's `crates/wasm/c`, the engine's
 # C boundary as a plain `wasm32-unknown-unknown` cdylib with no host imports, with neither `preview` nor
 # `duos`, and checks with node that its import section is empty. It needs no emcc and no wasm-bindgen,
 # and nothing in apps/web loads it (a host that is not JavaScript does: crates/wasm/c/README.md), so
 # it writes nothing into pkg/: the module is `jackioh_wasm_c.wasm` in cargo's release directory for
-# that target. No CI job sets it yet (part 5 of #2956 adds that, since it changes .github/).
-# JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 JACKIOH_WASM_LUAU=0 builds it alone.
+# that target. ci.yml's `web (wasm c module)` job sets it, with JACKIOH_WASM_NORMAL=0, so the module a
+# Roblox port translates (#2898) cannot rot, and records its size.
 #
 # CARGO_TARGET_DIR: where cargo builds, which is where the modules are read from; unset, target/
 # under the root. Cargo runs from the root, so a relative one is the root's. JACKIOH_CACHE_DIR: where
-# wasm-bindgen (bin/) and the emsdk (emsdk/) are kept; unset, .cache/ under the root. The night bot's
-# model job sets both, so every item's worktree builds into the checkout's cached target/ and uses
-# the one emsdk the job restored, instead of starting from nothing each time (#1263).
+# wasm-bindgen (bin/) is kept; unset, .cache/ under the root. The night bot's model job sets both, so
+# every item's worktree builds into the checkout's cached target/ and uses the one wasm-bindgen the
+# job restored, instead of starting from nothing each time (#1263).
 
 set -eu
 
 WASM_BINDGEN_VERSION="0.2.129"
 WASM_TARGET="wasm32-unknown-unknown"
-# emsdk 5.0.7's clang is 23.0.0 against Rust 1.97.0's LLVM 22.1.6. The skew is one major, and the
-# link holds: Rust's thin LTO stays inside `rustc`, so `emcc` links plain wasm objects. Pinned
-# exactly; changing it changes every byte built. CI's setup action reads this line.
-EMSDK_VERSION="5.0.7"
-LUAU_TARGET="wasm32-unknown-emscripten"
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
@@ -78,10 +65,6 @@ BIN_DIR="$TOOLS_DIR/bin"
 WASM_BINDGEN="$BIN_DIR/wasm-bindgen"
 OUT_DIR="$ROOT/apps/web/src/wasm/pkg"
 MODULE="$TARGET_DIR/$WASM_TARGET/release/jackioh_wasm.wasm"
-EMSDK_DIR="$TOOLS_DIR/emsdk"
-LUAU_OUT_DIR="$OUT_DIR/luau"
-LUAU_JS="$TARGET_DIR/$LUAU_TARGET/release/jackioh-wasm-luau.js"
-LUAU_WASM="$TARGET_DIR/$LUAU_TARGET/release/jackioh_wasm_luau.wasm"
 C_MODULE="$TARGET_DIR/$WASM_TARGET/release/jackioh_wasm_c.wasm"
 
 cd "$ROOT"
@@ -109,8 +92,8 @@ case "${JACKIOH_WASM_C:-0}" in
     exit 1
     ;;
 esac
-if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ] && [ "${JACKIOH_WASM_C:-0}" != 1 ]; then
-  echo "build-wasm: JACKIOH_WASM_NORMAL=0 with JACKIOH_WASM_LUAU=0 builds nothing" >&2
+if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_C:-0}" != 1 ]; then
+  echo "build-wasm: JACKIOH_WASM_NORMAL=0 without JACKIOH_WASM_C=1 builds nothing" >&2
   exit 1
 fi
 
@@ -203,137 +186,3 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
   node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
   echo "build-wasm: built $C_MODULE, which imports nothing"
 fi
-
-# R915009, #919: the Luau module, the engine with the card kit, which the web loads only for a
-# practice game with a custom card and for the creator (apps/web/src/wasm/luau.ts). JACKIOH_WASM_LUAU
-# 1 (the default) builds it, so every `dev`, `build`, `build:e2e` and `test` has both; 0 skips it,
-# for a quick rebuild of the normal module alone (the creator and a practice game with a custom card
-# then cannot load). `crates/wasm/luau` is a binary: `cargo` drives the one `emcc` link (its `-s`
-# flags live in `.cargo/config.toml`), which emits the MODULARIZE factory `jackioh-wasm-luau.js`
-# beside `jackioh_wasm_luau.wasm`; both are copied into pkg/luau/, with a small
-# `jackioh_wasm_luau.d.ts` for the factory's types (written here, since `emcc` emits none).
-case "${JACKIOH_WASM_LUAU:-1}" in
-  1) ;;
-  0) exit 0 ;;
-  *)
-    echo "build-wasm: JACKIOH_WASM_LUAU is 1 (the default) or 0, not \"$JACKIOH_WASM_LUAU\"" >&2
-    exit 1
-    ;;
-esac
-
-if command -v rustup >/dev/null 2>&1; then
-  if ! rustup target list --installed | grep -qx "$LUAU_TARGET"; then
-    echo "build-wasm: adding the $LUAU_TARGET target"
-    rustup target add "$LUAU_TARGET"
-  fi
-fi
-
-# emsdk, cloned and installed once into .cache/emsdk. A .cache/emsdk without the `emsdk` script is
-# no clone, only part of one a cache gave back, and `git clone` refuses the non-empty directory.
-# Only this script writes there, so it starts over. So does an installed emsdk that cannot activate
-# this pin: one shared through JACKIOH_CACHE_DIR, or restored from a cache, can be another pin's,
-# from the branch the job started on (#1263).
-if [ -x "$EMSDK_DIR/emsdk" ] && [ -d "$EMSDK_DIR/upstream/emscripten" ] \
-  && ! (cd "$EMSDK_DIR" && ./emsdk activate "$EMSDK_VERSION" >/dev/null 2>&1); then
-  echo "build-wasm: $EMSDK_DIR cannot activate emsdk $EMSDK_VERSION; cloning it again"
-  rm -rf "$EMSDK_DIR"
-fi
-if [ ! -x "$EMSDK_DIR/emsdk" ]; then
-  rm -rf "$EMSDK_DIR"
-  echo "build-wasm: cloning emsdk $EMSDK_VERSION into $EMSDK_DIR"
-  git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$EMSDK_DIR"
-fi
-if [ ! -d "$EMSDK_DIR/upstream/emscripten" ]; then
-  echo "build-wasm: installing emsdk $EMSDK_VERSION (one download, then cached)"
-  (cd "$EMSDK_DIR" && ./emsdk install "$EMSDK_VERSION")
-fi
-(cd "$EMSDK_DIR" && ./emsdk activate "$EMSDK_VERSION" >/dev/null)
-
-# The toolchain on PATH for `cargo` (which calls `emcc` as its linker) and for the C++ `mlua`
-# compiles (`cc` picks `emcc`/`em++` up from PATH for this target). `emsdk_env.sh` is not sourced:
-# it assumes bash, and these three variables plus PATH are all `emcc` reads.
-NODE_BIN=""
-for dir in "$EMSDK_DIR"/node/*_64bit/bin; do
-  if [ -x "$dir/node" ]; then NODE_BIN="$dir"; fi
-done
-if [ -z "$NODE_BIN" ]; then
-  echo "build-wasm: no node under $EMSDK_DIR/node; reinstall the emsdk" >&2
-  exit 1
-fi
-export EMSDK="$EMSDK_DIR"
-export EM_CONFIG="$EMSDK_DIR/.emscripten"
-export EMSDK_NODE="$NODE_BIN/node"
-export PATH="$EMSDK_DIR:$EMSDK_DIR/upstream/emscripten:$NODE_BIN:$PATH"
-# The C++ for this target is explicit, so a host `CXX`/`CC` never leaks into it; the plain ones
-# stay as the host build's fallback, which wants a compiler but takes any.
-export CC_wasm32_unknown_emscripten="emcc"
-export CXX_wasm32_unknown_emscripten="em++"
-
-case "${JACKIOH_WASM_PREVIEW:-1}" in
-  1) cargo build -p jackioh-wasm-luau --release --target "$LUAU_TARGET" --features preview ;;
-  0) cargo build -p jackioh-wasm-luau --release --target "$LUAU_TARGET" ;;
-  *)
-    echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
-    exit 1
-    ;;
-esac
-mkdir -p "$LUAU_OUT_DIR"
-cp "$LUAU_JS" "$LUAU_OUT_DIR/jackioh_wasm_luau.js"
-cp "$LUAU_WASM" "$LUAU_OUT_DIR/jackioh_wasm_luau.wasm"
-cat > "$LUAU_OUT_DIR/jackioh_wasm_luau.d.ts" <<'TYPES'
-// Written by scripts/build-wasm.sh: the types of emscripten's MODULARIZE factory
-// (docs/v0.3.0/SURFACE.md §10.2), which emits no types of its own. `apps/web/src/wasm/luau.ts` is
-// the only importer.
-export interface JackiohWasmLuauModule {
-  _init(): void;
-  _catalog(): number;
-  _catalog_version(): number;
-  _carried_versions(): number;
-  _run_content(): number;
-  _run_check_setup(setup: number, unlocks: number, content: number): number;
-  _run_create(setup: number, unlocks: number, content: number): number;
-  _run_reduce(state: number, content: number, action: number): number;
-  _run_fold(file: number, content: number): number;
-  _run_fight_setup(state: number, content: number): number;
-  _run_fight_report(game: number, human: number): number;
-  _run_score(state: number, content: number): number;
-  _run_embers(score: number): number;
-  _run_max_hp(state: number, content: number): number;
-  _run_level_cost(level: number): number;
-  _run_constants(): number;
-  _run_seed(source: number): number;
-  _run_daily_seed(date: number, n: number): number;
-  _create_game(args: number): number;
-  _begin_game(state: number): number;
-  _reduce(state: number, action: number): number;
-  _legal_actions(state: number, player: number): number;
-  _view_for(state: number, player: number): number;
-  _seat_to_act(state: number): number;
-  _hash_state(state: number): number;
-  _fold(args: number): number;
-  _replay_open(args: number, record: number): number;
-  _replay_page(checkpoints: number, seat: number, from: number, count: number): number;
-  _last_board_for(state: number, seat: number): number;
-  _seat_played_by(state: number, home: number): number;
-  _find_instance(state: number, instance: number): number;
-  _deal_emote_hand(seed: number, seat: number): number;
-  _preview_sets(sets: number): number;
-  _ai_to_act(state: number, seat: number): number;
-  _ai_decide(state: number, seat: number, options: number, deadlineMs: number): number;
-  _lethal_hint(state: number, seat: number, deadlineMs: number): number;
-  _build_ai_deck(options: number): number;
-  _choose_action(state: number, seat: number, rngSeed: number, rngCursor: number): number;
-  _constants(): number;
-  _craft_preview(recipe: number, cost: number, prompt: number): number;
-  _engine_tables(): number;
-  _validator(call: number, input: number): number;
-  _check_custom_card(card: number): number;
-  _jackioh_free(text: number): void;
-  _jackioh_last_error(): number;
-  UTF8ToString(ptr: number): string;
-  stringToNewUTF8(str: string): number;
-}
-declare const createModule: (options?: { wasmBinary?: BufferSource }) => Promise<JackiohWasmLuauModule>;
-export default createModule;
-TYPES
-echo "build-wasm: wrote $LUAU_OUT_DIR"

@@ -1,7 +1,7 @@
 // scripts/build-wasm.sh's directories: where it builds (CARGO_TARGET_DIR) and where it keeps
-// wasm-bindgen and the emsdk (JACKIOH_CACHE_DIR), which caches restore, sometimes from another pin.
-// Each case runs the real script in a throwaway tree with stand-ins for cargo, rustup, wasm-bindgen
-// and the emsdk, which write a module that names the run that built it.
+// wasm-bindgen (JACKIOH_CACHE_DIR), which caches restore, sometimes from another pin. Each case runs
+// the real script in a throwaway tree with stand-ins for cargo, rustup and wasm-bindgen, which write a
+// module that names the run that built it.
 
 import { spawnSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -46,11 +46,10 @@ function world(): string {
       '      *" jackioh-wasm-c "*) echo "c $RUN" > "$dir/jackioh_wasm_c.wasm" ;;',
       '      *) echo "normal $RUN" > "$dir/jackioh_wasm.wasm" ;;',
       "    esac ;;",
-      '  wasm32-unknown-emscripten) echo "luau $RUN" > "$dir/jackioh-wasm-luau.js"; echo "luau $RUN" > "$dir/jackioh_wasm_luau.wasm" ;;',
       "esac",
     ].join("\n"),
   );
-  sh(join(root, "bin/rustup"), "printf '%s\\n' wasm32-unknown-unknown wasm32-unknown-emscripten");
+  sh(join(root, "bin/rustup"), "printf '%s\\n' wasm32-unknown-unknown");
   sh(
     join(root, ".cache/bin/wasm-bindgen"),
     [
@@ -59,9 +58,6 @@ function world(): string {
       'for f in jackioh_wasm.js jackioh_wasm.d.ts jackioh_wasm_bg.wasm jackioh_wasm_bg.wasm.d.ts; do cp "$module" "$out/$f"; done',
     ].join("\n"),
   );
-  sh(join(root, ".cache/emsdk/emsdk"), "exit 0");
-  mkdirSync(join(root, ".cache/emsdk/upstream/emscripten"), { recursive: true });
-  sh(join(root, ".cache/emsdk/node/22.16.0_64bit/bin/node"), "exit 0");
   return root;
 }
 
@@ -106,7 +102,7 @@ function files(dir: string): Record<string, string> {
 const pkg = (root: string): string => join(root, "apps/web/src/wasm/pkg");
 
 describe("scripts/build-wasm.sh's directories", () => {
-  it("builds into CARGO_TARGET_DIR and keeps wasm-bindgen and the emsdk in JACKIOH_CACHE_DIR, as the night bot's model job sets them (#1263)", () => {
+  it("builds into CARGO_TARGET_DIR and keeps wasm-bindgen in JACKIOH_CACHE_DIR, as the night bot's model job sets them (#1263)", () => {
     const root = world();
     const shared = mkdtempSync(join(tmpdir(), "build-wasm-shared-"));
     roots.push(shared);
@@ -116,7 +112,6 @@ describe("scripts/build-wasm.sh's directories", () => {
     run(root, "shared", { CARGO_TARGET_DIR: join(shared, "target"), JACKIOH_CACHE_DIR: join(shared, "cache") });
     const built = files(pkg(root));
     expect(built["jackioh_wasm_bg.wasm"]).toBe("normal shared\n");
-    expect(built["luau/jackioh_wasm_luau.wasm"]).toBe("luau shared\n");
     expect(existsSync(join(root, "target"))).toBe(false);
     expect(existsSync(join(root, ".cache"))).toBe(false);
   });
@@ -125,9 +120,9 @@ describe("scripts/build-wasm.sh's directories", () => {
     const root = world();
     // The check runs node on the module; the stand-in finds none.
     sh(join(root, "bin/node"), "exit 0");
-    const skipped = run(root, "default", { JACKIOH_WASM_LUAU: "0" });
+    const skipped = run(root, "default");
     expect(skipped.builds.filter((line) => line.includes("jackioh-wasm-c"))).toEqual([]);
-    const asked = run(root, "asked", { JACKIOH_WASM_LUAU: "0", JACKIOH_WASM_C: "1" });
+    const asked = run(root, "asked", { JACKIOH_WASM_C: "1" });
     expect(asked.builds.filter((line) => line.includes("jackioh-wasm-c"))).toEqual([
       "build -p jackioh-wasm-c --release --target wasm32-unknown-unknown",
     ]);
@@ -149,7 +144,6 @@ describe("scripts/build-wasm.sh's directories", () => {
         RUN: "imports",
         JACKIOH_WASM_PREVIEW: "0",
         JACKIOH_WASM_NORMAL: "0",
-        JACKIOH_WASM_LUAU: "0",
         JACKIOH_WASM_C: "1",
       },
     });
@@ -157,39 +151,20 @@ describe("scripts/build-wasm.sh's directories", () => {
     expect(result.stderr).toContain("the C module imports");
   });
 
-  it("refuses a JACKIOH_WASM_C that is neither 0 nor 1, and still builds nothing for the two modules off (#3093)", () => {
+  it("builds the C module alone with JACKIOH_WASM_NORMAL=0, as CI's C job does, and refuses a JACKIOH_WASM_C that is neither 0 nor 1 or builds nothing for both off (#3093)", () => {
     const root = world();
     const env = { PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`, HOME: root, CARGO_LOG: join(root, "cargo.log") };
     const script = join(root, "scripts/build-wasm.sh");
     const odd = spawnSync("sh", [script], { encoding: "utf8", env: { ...env, JACKIOH_WASM_C: "2" } });
     expect(odd.status).toBe(1);
     expect(odd.stderr).toContain("JACKIOH_WASM_C is 0 (the default) or 1");
-    const nothing = spawnSync("sh", [script], {
-      encoding: "utf8",
-      env: { ...env, JACKIOH_WASM_NORMAL: "0", JACKIOH_WASM_LUAU: "0" },
-    });
+    const nothing = spawnSync("sh", [script], { encoding: "utf8", env: { ...env, JACKIOH_WASM_NORMAL: "0" } });
     expect(nothing.status).toBe(1);
     expect(nothing.stderr).toContain("builds nothing");
-  });
-
-  it("clones the emsdk again when the one it finds cannot activate the pin", () => {
-    const root = world();
-    // Another pin's emsdk, as a shared or restored one can be: it refuses to activate this one.
-    sh(join(root, ".cache/emsdk/emsdk"), '[ "$1" = activate ] && exit 1; exit 0');
-    // git clones an emsdk that activates, and marks it.
-    sh(
-      join(root, "bin/git"),
-      [
-        'for a in "$@"; do dir=$a; done',
-        'mkdir -p "$dir/upstream/emscripten" "$dir/node/22.16.0_64bit/bin"',
-        'printf "#!/bin/sh\\nexit 0\\n" > "$dir/emsdk"; chmod +x "$dir/emsdk"',
-        'printf "#!/bin/sh\\nexit 0\\n" > "$dir/node/22.16.0_64bit/bin/node"; chmod +x "$dir/node/22.16.0_64bit/bin/node"',
-        'touch "$dir/cloned"',
-      ].join("\n"),
-    );
-    const repinned = run(root, "repinned");
-    expect(repinned.out).toContain("cannot activate emsdk");
-    expect(existsSync(join(root, ".cache/emsdk/cloned"))).toBe(true);
-    expect(files(pkg(root))["luau/jackioh_wasm_luau.wasm"]).toBe("luau repinned\n");
+    // The C module alone: no wasm-bindgen module is built or written, and the C build is the only one.
+    sh(join(root, "bin/node"), "exit 0");
+    const alone = run(root, "alone", { JACKIOH_WASM_NORMAL: "0", JACKIOH_WASM_C: "1" });
+    expect(alone.builds).toEqual(["build -p jackioh-wasm-c --release --target wasm32-unknown-unknown"]);
+    expect(files(pkg(root))).toEqual({});
   });
 });

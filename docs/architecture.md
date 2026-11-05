@@ -46,7 +46,7 @@ deployment decision that can be made later without touching the code.
 
 | Component | Where it runs | Stateful? | Owns |
 | --- | --- | --- | --- |
-| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server, and a practice game with custom cards and the card creator load a second module, `crates/wasm/luau`, with the card kit (SPEC §12.10, R915009) |
+| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server |
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
@@ -65,7 +65,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Channel | Credential | What it carries |
 | --- | --- | --- |
 | Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
-| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own custom cards, own tickets, own results, own tutorial progress, the `cards` projection |
+| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
 | Browser → server WebSocket | the user's JWT, offered as the `jackioh.bearer.` subprotocol (R1379000) | intent: one `Action` at a time; receives `viewFor` and nothing else |

@@ -282,12 +282,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
         guess: t(SECRET_WORDS[event.guess]),
         outcome: t(PREDICTED_WORDS[event.outcome]),
       });
-    case "scriptFailed":
-      // A hook that failed and did nothing; the engine's words say why.
-      return t("{card}'s script failed: {message}", {
-        card: event.instanceId === null ? named(event.defId) : namedCard(event.instanceId, event.defId),
-        message: event.message,
-      });
     case "healthLost":
       return t("{seat} lost {amount} health", { seat: name.seat(event.player), amount: event.amount });
     case "healed":

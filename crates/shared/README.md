@@ -17,8 +17,7 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first: a
-   binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them, with no list to edit. A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -53,9 +52,9 @@ static. Two things hold it, as in the other pure crates:
 - `Cargo.toml` takes `serde`, `indexmap`, the engine and the AI (the host machine asks it who owes a
   move) and, behind the off-by-default `ts` feature, `ts-rs` (`serde_json` and the cards only as
   dev-dependencies: the machine's tests play on the real catalog). It may also take `serde_json`, the
-  cards and the run, never `jackioh-luau`, and none of them takes it.
-- `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
-  the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
+  cards and the run, and none of them takes it.
+- `clippy.toml` is the other four pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
+  the five the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
 
 A transition never reads a clock: it takes `now`, and the host passes the time it read.
@@ -211,7 +210,7 @@ Notes for a host:
 
 The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `checkOffer`, `rematchWindow`, `offer`,
 `seen`, `release` and `sweep`; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
-holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+holds it to the functions it names.
 
 Duos co-op (`crates/server/src/duos/actor.rs`) runs on the same event and output shapes in a second
 part of #3101; until then its clocks and grace are the server's.

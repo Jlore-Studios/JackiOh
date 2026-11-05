@@ -290,8 +290,7 @@ string_union! {
     /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
     /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
     /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
-    /// reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
-    /// shipped, so no pool or random deck finds one.
+    /// reserved.
     pub enum SetName {
         Core = "Core",
         Classic = "Classic",
@@ -302,7 +301,6 @@ string_union! {
         TrainingGrounds = "Training Grounds",
         Boss = "Boss",
         BossX = "Boss-X",
-        Custom = "Custom",
     }
 }
 
@@ -1134,7 +1132,7 @@ pub struct CardDef {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub printed_rarity: Option<PrintedRarity>,
     /// R1437000: what kind of thing the card is, for its animations only: no rule, pool, query,
-    /// validator or AI reads it. A transient or custom definition carries none, so a state that
+    /// validator or AI reads it. A transient definition carries none, so a state that
     /// holds one serializes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -1830,7 +1828,7 @@ mod tests {
         );
     }
 
-    // R1437000: a def with no flavor (every transient and custom one) reads and writes as before.
+    // R1437000: a def with no flavor (every transient one) reads and writes as before.
     #[test]
     fn r1437000_a_def_with_no_flavor_reads_and_writes_without_the_key() {
         let def = def_with("Draw a card.", vec![]);

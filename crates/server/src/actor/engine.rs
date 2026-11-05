@@ -89,8 +89,6 @@ pub fn create_game_args(
         sandbox: None,
         // R2702000: nor deck marks, which only the dungeon run deals.
         deck_marks: None,
-        // The rest of the setup is the engine's default, which holds no custom card.
-        ..CreateGameOptions::default()
     }
 }
 
@@ -115,7 +113,6 @@ pub fn fold_args(
         // R923000, R2702000: as `create_game_args`, never a sandbox and no deck mark.
         sandbox: None,
         deck_marks: None,
-        ..FoldArgs::default()
     }
 }
 

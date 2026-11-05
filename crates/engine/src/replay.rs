@@ -782,7 +782,7 @@ mod direct {
 }
 
 /// What a fold starts from. Each optional field is setup, exactly as the live `create_game` had it
-/// (R923000's sandbox flag and R915006's custom cards among them).
+/// (R923000's sandbox flag among them).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplayInput {
@@ -801,8 +801,6 @@ pub struct ReplayInput {
     pub glitch_boards: Option<LastBoardInput>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub custom_cards: Option<Vec<crate::wire::CustomCard>>,
     /// R2702000: the same deck marks the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck_marks: Option<PerPlayerOpt<Vec<crate::wire::DeckMark>>>,
@@ -860,7 +858,6 @@ fn opening(input: &ReplayInput) -> GameState {
         last_boards: input.last_boards.clone(),
         glitch_boards: input.glitch_boards.clone(),
         sandbox: input.sandbox,
-        custom_cards: input.custom_cards.clone(),
         deck_marks: input.deck_marks.clone(),
     });
     crate::reduce::begin_game(&start).state

@@ -33,29 +33,24 @@ trap backrow. This file binds every agent, not only Claude.
    `spec-fold.yml` folds both files on `main` daily, since every ruling's branch conflicted on them. Section and
    ruling notes are edited in the PR as ever. `cargo jackioh spec check` fails on any mismatch between the
    notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`, comments included.
-4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/luau`, `crates/run` (the dungeon run) and
+4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/run` (the dungeon run) and
    `crates/shared` (the logic the server and the client share, #2956; its `README.md` holds the host contract)
    are pure:
    no clock, I/O, environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
    the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
-   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the six (no game
-   crate takes `jackioh-luau`: it is the custom-card host, #902 V4, and `jackioh-shared` does not either;
-   none of the others takes `jackioh-shared`, which takes the engine, the cards, the AI and the run),
-   `mlua` (`jackioh-luau`'s) and, behind a
-   `ts` feature (the engine's, and `jackioh-luau`'s, `jackioh-run`'s and `jackioh-shared`'s own, off by default), `ts-rs`; its `clippy.toml` bans
+   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five (none of
+   the others takes `jackioh-shared`, which takes the engine, the cards, the AI and the run) and, behind a
+   `ts` feature (the engine's, `jackioh-run`'s and `jackioh-shared`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
    `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
-   among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled
-   chunks and scripts and no game state (#442 L8), and three thread-locals of the engine's, each set for one
-   call and put back after it (the shipped catalog a replay is folding under, R767000; the custom-script host
-   `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight holds its game's random
-   pools, `catalog::with_pool_hold`, R2201001). A Luau script is kept pure by its host's sandbox, integer
-   boundary and lint (`crates/luau/README.md`, L5 to L7). Data reaches a pure crate only at compile time
+   among them, each built once on first use), and two thread-locals of the engine's, each set for one
+   call and put back after it (the shipped catalog a replay is folding under, R767000; and whether the
+   step in flight holds its game's random pools, `catalog::with_pool_hold`, R2201001). Data reaches a pure
+   crate only at compile time
    (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
    reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
-   `EffectContext` and the engine's read helpers and returns effects. (A custom card's Luau script does the
-   same through the card kit, `docs/custom-cards.md`, which `crates/luau` turns into the same effects.)
+   `EffectContext` and the engine's read helpers and returns effects.
 6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its
    header comment and `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`)
    covering base and Radiant behavior per its spec §8 row (BUILD's must-pass tables stop at M13: a later
@@ -93,8 +88,7 @@ Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules 
 
 ## Commands
 
-`crates/luau` needs a C++ compiler (`mlua` builds Luau from source); `rust-toolchain.toml`, `package.json` and
-`bot/go/go.mod` pin the toolchains. `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
+`rust-toolchain.toml`, `package.json` and `bot/go/go.mod` pin the toolchains. `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
 
 ```
 cargo fmt --check
@@ -110,8 +104,8 @@ cargo jackioh golden check         # the hotseat fixture's fold (cargo test fold
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
 cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
-cargo test -p jackioh-luau --features ts --test export_api   # regenerates crates/cards/luau/jackioh.luau, the host's typed `J` (commit any diff)
 sh scripts/build-wasm.sh           # the engine as WebAssembly into apps/web/src/wasm/pkg (the web's dev, build, build:e2e and test run it first)
+JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh   # the C module (crates/wasm/c, the one a Roblox port translates) alone; fails on any import; CI's `web (wasm c module)`
 pnpm --dir apps/web dev            # http://localhost:5173: hotseat at /dev/hotseat, the AI at /practice
 pnpm --dir apps/web build          # the production bundle
 pnpm --dir apps/web typecheck
@@ -124,8 +118,8 @@ sh crates/server/tests/db/run.sh           # the server's store against postgres
 cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--handicap for the handicapped wave)
 ```
 
-The rest are in `crates/tools/README.md` (every `cargo jackioh` command), `crates/luau/README.md`
-(`luau-analyze`), `docs/ADDING_CARDS.md` (`gen:voice`, `gen:music`), `analysis/README.md` and the crates' READMEs.
+The rest are in `crates/tools/README.md` (every `cargo jackioh` command), `docs/ADDING_CARDS.md`
+(`gen:voice`, `gen:music`), `analysis/README.md` and the crates' READMEs.
 
 ### Running a subset
 
@@ -174,7 +168,7 @@ the five-minute budget of every job.
 
 ## Architecture
 
-- `crates/engine` depends on neither `crates/cards` nor `crates/luau`; its tests use fixture scripts and the
+- `crates/engine` does not depend on `crates/cards`; its tests use fixture scripts and the
   `testkit` feature (`scenario()` and its verbs). Read `work.rs`'s header before touching anything that can
   open a prompt.
 - `crates/cards`: a script reads state only through the prelude's read helpers, never `state.players[…]`; a

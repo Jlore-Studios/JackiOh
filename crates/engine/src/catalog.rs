@@ -216,10 +216,6 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     if let Some(def) = state.and_then(|state| state.transient_defs.get(def_id)) {
         return Some(def);
     }
-    // R915000: a custom card's definition is the game's own, never the catalog's.
-    if crate::custom::is_custom_id(def_id) {
-        return state.and_then(|state| state.custom_defs.get(def_id));
-    }
     if let Some(shipped) = folding() {
         return shipped.find(def_id);
     }
@@ -1123,12 +1119,8 @@ fn build_card_metrics() -> CardMetrics {
 }
 
 /// R1846000: a card's code lines, or `None` for a definition with no script of its own in the
-/// catalog: a fused or crafted card, a fixture the metrics do not list, or a custom card, whatever a
-/// table lists (R1846002: its Luau script is not the game's code).
+/// catalog: a fused or crafted card, or a fixture the metrics do not list.
 pub fn code_lines_of(def_id: &str) -> Option<usize> {
-    if crate::custom::is_custom_id(def_id) {
-        return None;
-    }
     let lines = card_metrics().code_lines;
     lines
         .binary_search_by(|(id, _)| (*id).cmp(def_id))
@@ -1136,21 +1128,19 @@ pub fn code_lines_of(def_id: &str) -> Option<usize> {
         .map(|at| lines[at].1)
 }
 
-/// R1846000: whether a definition is BUSTED, its script over `BUSTED_CODE_LINES` code lines; a
-/// custom card never is (R1846002).
+/// R1846000: whether a definition is BUSTED, its script over `BUSTED_CODE_LINES` code lines.
 pub fn is_busted(def_id: &str) -> bool {
-    !crate::custom::is_custom_id(def_id) && card_metrics().busted.binary_search(&def_id).is_ok()
+    card_metrics().busted.binary_search(&def_id).is_ok()
 }
 
 /// R1846000: whether a definition is complicated, its script over `COMPLICATED_CODE_LINES` code
-/// lines; a custom card never is (R1846002).
+/// lines.
 pub fn is_complicated(def_id: &str) -> bool {
-    !crate::custom::is_custom_id(def_id) && card_metrics().complicated.binary_search(&def_id).is_ok()
+    card_metrics().complicated.binary_search(&def_id).is_ok()
 }
 
 /// #3116, R846: whether a definition's script owes an extra turn (`CardMetrics::extra_turn_cards`), the
-/// build's list whatever a replay folds under. A custom card's Luau script is not the build's, so the
-/// list never holds one.
+/// build's list whatever a replay folds under.
 pub fn is_extra_turn_card(def_id: &str) -> bool {
     build_card_metrics()
         .extra_turn_cards

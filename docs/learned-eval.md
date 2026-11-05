@@ -251,8 +251,8 @@ so inference must cost microseconds.
 | **C. A set network:** a small MLP per unit (its card's embedding, its stats, its keywords), pooled per side, then a head | per unit | about 10× B's | yes, and per-unit interactions |
 
 **Recommendation: B.** It is the smallest shape that can learn what the hand eval cannot see. C is
-the step up if B's per-card worth is too coarse. A card id the weights do not know (a new card, or
-a custom card, #915) gets no sparse feature and is valued by its dense stats alone, so a new card
+the step up if B's per-card worth is too coarse. A card id the weights do not know (a new card)
+gets no sparse feature and is valued by its dense stats alone, so a new card
 never breaks the AI. Since `FEATURES_VERSION` 3 (#3112, R3112000) it also has keys for what it is
 (its type, cost, tags, keywords, printed stats and Radiant face), so it shares what the network
 learned of cards like it.

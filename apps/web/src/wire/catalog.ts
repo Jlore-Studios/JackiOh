@@ -77,8 +77,7 @@ export type SetName =
   | "Stinkyscape"
   | "Training Grounds"
   | "Boss"
-  | "Boss-X"
-  | "Custom";
+  | "Boss-X";
 
 /**
  * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
