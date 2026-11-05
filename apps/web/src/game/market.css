@@ -287,6 +287,22 @@
   cursor: var(--cursor-glove-point, pointer);
 }
 
+/* R3047002: a Buffed or Nerfed offer's mark beside its price, in words and a count so it does not rest
+   on color alone. */
+.market-tuned {
+  margin-inline-start: 0.4rem;
+  font-size: var(--type-md);
+  white-space: nowrap;
+}
+
+.market-tuned[data-tuned="buff"] {
+  color: var(--pal-green-400);
+}
+
+.market-tuned[data-tuned="nerf"] {
+  color: var(--pal-red-400);
+}
+
 /* A lot an effect added for the rest of the game, the viewer's alone (R1853005). */
 .marketplace-offer[data-fixed="true"] {
   border-color: var(--pal-gold-300);

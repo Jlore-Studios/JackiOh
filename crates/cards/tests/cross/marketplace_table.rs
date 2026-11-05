@@ -1,7 +1,7 @@
 //! Stinkyscape's Marketplace table, S21's data (`config::MARKETPLACE_TABLE`; R1853001, R1881006,
-//! R2250002, docs/stinkyscape-set.md ST3): every lot's pool resolves to cards the catalog holds, each
-//! the kind ST3 names, each weighted by its ST3 count, and a player's offers rolled from it are three
-//! different cards of its lots, one copy each, and no Resource.
+//! R2250002, R3047000, docs/stinkyscape-set.md ST3): every lot's pool resolves to cards the catalog
+//! holds, each the kind ST3 names, each weighted by its ST3 count, and a player's offers rolled from it
+//! are four different cards of its lots, one copy each, and no Resource.
 
 use jackioh_cards::{card_def, register_all};
 use jackioh_engine::config::{
@@ -12,7 +12,7 @@ use jackioh_engine::config::{
 use jackioh_engine::testkit::scenario;
 use jackioh_engine::{
     DORMANT_STARSHIP_DEF_ID, KeywordKind, PlayerId, Rng, SetName, Tag, find_def, has_keyword, made_by_a_rule,
-    registered_catalog, roll_offers,
+    market_card_price, registered_catalog, roll_offers, tuned_price,
 };
 use serde_json::json;
 
@@ -120,7 +120,7 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
 }
 
 #[test]
-fn r1881006_r2250002_a_roll_from_it_offers_three_different_cards_of_its_lots() {
+fn r1881006_r2250002_r3047000_a_roll_from_it_offers_four_different_cards_of_its_lots() {
     register_all();
     let s = scenario(json!({ "seed": "s21-table" }));
     let state = s.state();
@@ -142,6 +142,15 @@ fn r1881006_r2250002_a_roll_from_it_offers_three_different_cards_of_its_lots() {
             assert_eq!(offer.stock, MARKETPLACE_OFFER_STOCK, "{offer:?}");
             assert_eq!(offer.owner, Some(PlayerId::P1));
             assert_eq!(offer.bought[PlayerId::P1], 0);
+            // R3047000, R3047002: its price is the designer's by its printed cost, Buffed or Nerfed, and
+            // it is never both.
+            assert!(offer.buffs.is_none() || offer.nerfs.is_none(), "{offer:?}");
+            let designer = market_card_price(&card_def(&offer.def_id), offer.radiant == Some(true));
+            assert_eq!(
+                offer.base,
+                tuned_price(designer, offer.buffs.unwrap_or(0), offer.nerfs.unwrap_or(0)),
+                "{offer:?}"
+            );
         }
     }
 }

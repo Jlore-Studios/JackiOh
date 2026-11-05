@@ -1420,24 +1420,41 @@ pub const MARKETPLACE_TABLE: &[MarketLot] = &[
     card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_AI_CARDS), 1),
 ];
-/// R2250002: the offers the Marketplace rolls a player at the start of each of their turns.
-pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 3;
+/// R2250002, R3047000: the offers the Marketplace rolls a player at the start of each of their turns.
+pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 4;
 /// R2250002: the copies of each rolled offer, its owner's to buy.
 pub const MARKETPLACE_OFFER_STOCK: i32 = 1;
-/// R1853002: the Credits a lot asks for each mana of its cost up to `MARKETPLACE_FULL_PRICE_MANA`.
+/// R1853002, R3047000: the Credits a lot asks for each mana of its cost up to
+/// `MARKETPLACE_FULL_PRICE_MANA`.
 pub const MARKETPLACE_CREDITS_PER_MANA: i32 = 10;
 /// R1853002: the cost up to which each mana is priced at `MARKETPLACE_CREDITS_PER_MANA`.
 pub const MARKETPLACE_FULL_PRICE_MANA: i32 = 4;
-/// R1853002: the Credits a lot asks for each mana of its cost past `MARKETPLACE_FULL_PRICE_MANA`.
-pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 5;
-/// R1853002: the price of a (0) card.
-pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 5;
+/// R1853002, R3047000: the Credits a lot asks for each mana of its cost past `MARKETPLACE_FULL_PRICE_MANA`.
+pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 15;
+/// R3047000: the Credits every priced card (a cost of (1) or more) asks before its mana: (1) is
+/// 5 + 10 = 15.
+pub const MARKETPLACE_PRICE_BASE: i32 = 5;
+/// R1853002, R3047000: the price of a (0) card.
+pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 8;
+/// R3047001: the cost a card bought at the Marketplace has, whatever it printed (a cost override,
+/// R65): it is paid for in Credits already.
+pub const MARKETPLACE_BOUGHT_COST: i32 = 0;
 /// R1853001: the chance a lot is rolled Radiant.
 pub const MARKETPLACE_RADIANT_CHANCE: f64 = 0.2;
 /// R1853002: a Radiant lot's price, as a multiple of its base face's.
 pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
 /// R1853002: a price moves each turn within a tenth of its base: the base divided by this, rounded down.
 pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
+/// R3047002: the chance a rolled offer is Buffed, rolled again for each Buff that lands.
+pub const MARKETPLACE_BUFF_CHANCE: f64 = 0.2;
+/// R3047002: the chance a rolled offer with no Buff is Nerfed, rolled again for each Nerf that lands.
+pub const MARKETPLACE_NERF_CHANCE: f64 = 0.1;
+/// R3047002: the most Buffs, and the most Nerfs, one offer takes: the repeat of a roll stops here.
+pub const MARKETPLACE_TUNE_MAX: i32 = 8;
+/// R3047002: a Buffed offer's price, in percent of what it was before the Buff, for each Buff.
+pub const MARKETPLACE_BUFF_PRICE_PERCENT: i32 = 120;
+/// R3047002: a Nerfed offer's price, in percent of what it was before the Nerf, for each Nerf.
+pub const MARKETPLACE_NERF_PRICE_PERCENT: i32 = 85;
 /// R1853005, R2250002: the copies a lot an effect added for the rest of the game holds, renewed at its
 /// owner's turn start.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;

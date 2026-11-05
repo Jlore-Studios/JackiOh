@@ -1249,6 +1249,8 @@
   "New stock on turn {turn}": "第{turn}回合补货",
   "{n} Credits": "{n}点信用点",
   "{left} left": "剩余{left}张",
+  "Buffed ×{n}": "已增强×{n}",
+  "Nerfed ×{n}": "已削弱×{n}",
   "Buy {name} for {n} Credits": "以{n}点信用点购买{name}",
   "Sell {name} for {n} Credits": "以{n}点信用点出售{name}",
   "Nothing on offer": "暂无商品",

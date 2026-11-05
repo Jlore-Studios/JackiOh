@@ -87,7 +87,7 @@ field on a seat's view (R1223), so the Credits' identifiers are named apart from
 the identifiers around both.
 
 **`MAX_MANA` is 4.** Drone Core VIII to X (6, 6 and 8) are played through "Float reduces cost", as the list
-intends, and the Marketplace prices a card past (4) at 5 Credits a mana (ST3).
+intends, and the Marketplace prices a card past (4) at 15 Credits a mana (ST3).
 
 ## ST3. The new systems
 
@@ -159,10 +159,14 @@ Built on the night market's shop prompt (M #42, R1000):
   Scanning Probes (stock 6 and 3), two Drone Cores, one Launcher, two Starship Pieces, two Stinkyscape
   cards and one of the 10 AI cards (stock 1–3 for the rest). The table is the set's data (S21); the
   mechanic reads any table.
-- **Prices** (ST9 Q6): a card of cost c costs **10 × min(c, 4) + 5 × max(c − 4, 0)** Credits, and a
-  (0) card 5, so (4) is 40 and (5) 45. A lot is Radiant 20% of the time, at twice the price. Prices move
-  every turn, drawn around that price with a spread of a tenth of it; Resources' buy prices never move,
-  and their sell prices move within their printed ranges.
+- **Prices** (ST9 Q6; #3000's pass, [[R3047000]]): a card of cost c costs **5 + 10 × min(c, 4) + 15 ×
+  max(c − 4, 0)** Credits, and a (0) card 8, so (1) is 15, (4) is 45 and (5) 60. A lot is Radiant 20% of
+  the time, at twice the price; Buffed 20% of the time (again while it lands), each Buff 120% of the
+  price, or, with no Buff, Nerfed 10% of the time (again while it lands), each Nerf 85% of it
+  ([[R3047002]]). Prices move when rolled, drawn around that price with a spread of a tenth of it;
+  Resources' buy prices never move, and their sell prices move within their printed ranges. A player is
+  offered four lots a turn, and a card bought costs (0) in the hand and carries its lot's Buffs and Nerfs
+  ([[R3047001]], [[R3047003]]).
 - A lot can be added for the rest of the game at a fixed price (Call to Chaos (Scape Edition): a Call to
   Chaos at 20).
 
@@ -642,11 +646,11 @@ face doubling a number or adding a rider ([[R275]]).
 
 **The constraints.**
 
-1. **Cost (0) to (2)**, so the Marketplace prices one at 5, 10 or 20 Credits (twice that Radiant, ST3).
+1. **Cost (0) to (2)**, so the Marketplace prices one at 8, 15 or 25 Credits (twice that Radiant, ST3).
 2. **No Credits.** None makes Credits or sells a Resource, and none gains a Resource worth more than it
-   costs: a card bought for 5 to 20 that returns more would be a money pump in the shared Marketplace. So
+   costs: a card bought for 8 to 25 that returns more would be a money pump in the shared Marketplace. So
    T-AI-2 Mining Subroutine gains only a Common or Rare Resource, whose average sale is about 4 Credits
-   (Radiant 8) against its price of 5 (Radiant 10).
+   (Radiant 8) against its price of 8 (Radiant 16).
 3. **Verbs on main or in the S parts S21 waits for** (S03, S04, S06, S07, S15, S20): a drone summoned, a
    Resource gained, a Starship Piece Discovered or added, the launch price, Cancel an attack and Freeze, a
    Scanning Probe, a random Combat Keyword, a keyword given.
@@ -3553,7 +3557,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Gain a random Common or Rare Stinkyscape Resource.
 - **Radiant:** Gain a random Radiant Common or Rare Stinkyscape Resource.
-- **Engine:** Gain a Resource ([[§6.3]], `gain_resources`, [[R1840002]]) from a pool of the Common and Rare Resources, named by id (Reknite, Korrelite, Gellium): the rarity roll over those two (55 against 25), then one of the rolled rarity; into the tray, never the hand, one past 8 sold at once ([[R1840001]]); Radiant: a Radiant one. It makes no Credits: its average sale, about 4 Credits (Radiant 8), is below its Marketplace price, 5 (Radiant 10). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Engine:** Gain a Resource ([[§6.3]], `gain_resources`, [[R1840002]]) from a pool of the Common and Rare Resources, named by id (Reknite, Korrelite, Gellium): the rarity roll over those two (55 against 25), then one of the rolled rarity; into the tray, never the hand, one past 8 sold at once ([[R1840001]]); Radiant: a Radiant one. It makes no Credits: its average sale, about 4 Credits (Radiant 8), is below its Marketplace price, 8 (Radiant 16). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
 - **Rulings:** ST-S21-2: the pool leaves Axnit, Narcor and Red Narcor out, so buying it to sell its Resource loses Credits. Built by S21 (#1881) as [[R1881000]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: a Radiant Resource (2× its effect and its price).

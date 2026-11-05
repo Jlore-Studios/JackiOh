@@ -177,9 +177,9 @@ R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`T
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
 `trade::trades_per_turn_of`), the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
 R1840000–R1840002, `resources.rs`), the Marketplace's (`MARKETPLACE_TABLE`, the set's own, S21's, R1881006,
-its cycle, its price rule, its spread and its Radiant chance and premium, R1853001–R1853005,
-`marketplace.rs`; a test registers a fixture table with `testkit::register_marketplace_table`) and
-#1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
+its offers a turn, its price rule, its spread, its Radiant chance and premium and its Buff and Nerf
+chances, steps and bound, R1853001–R1853005, R3047000–R3047002, `marketplace.rs`; a test registers a
+fixture table with `testkit::register_marketplace_table`) and #1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
 that remove a player (R1843000), and `LOSER_DRAWS_REASONS`, the endings that leave the winner's
 opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004),
 and the Anomalies' (`ANOMALY_*`: a scan's chances, their steps per miss and its roll, R1855003).

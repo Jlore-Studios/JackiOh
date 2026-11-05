@@ -1,9 +1,10 @@
-// The Marketplace (R1853000–R1853003, R2250002, SPEC §10.10): Stinkyscape's shop, open for the rest of
-// the game once either player gains a Resource or Credits.
+// The Marketplace (R1853000–R1853003, R2250002, R3047002, SPEC §10.10): Stinkyscape's shop, open for the
+// rest of the game once either player gains a Resource or Credits.
 //
 // A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits, the
-// offers rolled for them at the start of their turn, and each card in their hand that sells from
-// there (R1861000) with its quote. "Buy" is live exactly when `legal` lists that lot's `marketBuy`,
+// offers rolled for them at the start of their turn, each marked with how many times it was Buffed or
+// Nerfed (R3047002) beside its price, and each card in their hand that sells from there (R1861000) with
+// its quote. "Buy" is live exactly when `legal` lists that lot's `marketBuy`,
 // and a sale exactly when `legal` lists its `marketSell`; each sends the listed body. Otherwise the
 // button is greyed, a lot's tooltip the engine's reason, and sends nothing. Every number shown is the
 // view's: nothing here prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while
@@ -41,6 +42,30 @@ function readerName(defId: string, english: string, def: CardDef | undefined): s
 }
 
 /**
+ * R3047002: the mark of a Buffed or Nerfed offer, "Buffed ×2", beside its price; nothing for an offer with
+ * neither. The view carries one of the two counts at most, and the client reads them as they come.
+ */
+function TuneMark(props: { offer: MarketOfferView }): ReactElement | null {
+  useLocale();
+  const { buffs, nerfs } = props.offer;
+  if (buffs !== undefined && buffs > 0) {
+    return (
+      <span className="market-tuned" data-tuned="buff" data-count={buffs}>
+        {t("Buffed ×{n}", { n: buffs })}
+      </span>
+    );
+  }
+  if (nerfs !== undefined && nerfs > 0) {
+    return (
+      <span className="market-tuned" data-tuned="nerf" data-count={nerfs}>
+        {t("Nerfed ×{n}", { n: nerfs })}
+      </span>
+    );
+  }
+  return null;
+}
+
+/**
  * Like the night market's lot (MarketPrompt.tsx), the face opens the hover preview and, on a phone,
  * the long-press sheet, so a lot can be read before it is bought; "Buy" is its own button, so a greyed
  * one never stops the face from being read.
@@ -61,7 +86,10 @@ function Offer(props: { offer: MarketOfferView; listed: MarketBuy | undefined; o
       </span>
       {inspect.overlay}
       <span className="market-caption">{name}</span>
-      <span className="market-price">{t("{n} Credits", { n: offer.price })}</span>
+      <span className="market-price">
+        {t("{n} Credits", { n: offer.price })}
+        <TuneMark offer={offer} />
+      </span>
       <span className="marketplace-left">{t("{left} left", { left: offer.left })}</span>
       <button
         type="button"

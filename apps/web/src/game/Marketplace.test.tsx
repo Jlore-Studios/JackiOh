@@ -2,7 +2,8 @@
 // `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it, the
 // viewer's priced hand cards that sell among it (R1861000); the shop must send exactly the `marketBuy`
 // or `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
-// R2127000: Back closes the open shop, as Escape does.
+// R3047002: a Buffed or Nerfed offer carries its count beside its price. R2127000: Back closes the open
+// shop, as Escape does.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -142,6 +143,45 @@ describe("R1853003 the Marketplace's shop", () => {
     expect(greyed.disabled).toBe(true);
     fireEvent.click(greyed);
     expect(marketSent(unlisted)).toEqual([]);
+  });
+});
+
+describe("R3047002 a Buffed or Nerfed offer is marked beside its price", () => {
+  /** A Buffed twice, a Nerfed once and a plain offer, as the engine's `marketplace_view` builds them. */
+  const TUNED: MarketplaceView = {
+    offers: [
+      { offer: 0, defId: "core-008", price: 64, left: 1, buffs: 2 },
+      { offer: 1, defId: "core-080", price: 38, left: 1, nerfs: 1 },
+      { offer: 2, defId: "core-005", price: 45, left: 1 },
+    ],
+    sales: [],
+  };
+
+  it("R3047002 each mark reads its count beside the price, and a plain offer has none", () => {
+    renderGame(marketView(TUNED), [END_TURN]);
+    openShop();
+    const buffed = button(testid.marketBuy(0)).closest("li");
+    const buff = buffed?.querySelector(".market-price .market-tuned");
+    expect(buff).toHaveTextContent("Buffed ×2");
+    expect(buff?.getAttribute("data-tuned")).toBe("buff");
+    expect(buff?.getAttribute("data-count")).toBe("2");
+    expect(buffed?.querySelector(".market-price")).toHaveTextContent("64 Credits");
+    const nerfed = button(testid.marketBuy(1)).closest("li");
+    const nerf = nerfed?.querySelector(".market-price .market-tuned");
+    expect(nerf).toHaveTextContent("Nerfed ×1");
+    expect(nerf?.getAttribute("data-tuned")).toBe("nerf");
+    expect(nerfed?.querySelector(".market-price")).toHaveTextContent("38 Credits");
+    const plain = button(testid.marketBuy(2)).closest("li");
+    expect(plain?.querySelector(".market-tuned")).toBeNull();
+    expect(plain?.querySelector(".market-price")).toHaveTextContent("45 Credits");
+  });
+
+  it("R3047002 the marks change nothing the shop sends: Buy sends the listed marketBuy as before", () => {
+    const buy: ActionBody = { type: "marketBuy", offer: 0 };
+    const onAction = renderGame(marketView(TUNED), [buy, END_TURN]);
+    openShop();
+    fireEvent.click(button(testid.marketBuy(0)));
+    expect(marketSent(onAction)).toEqual([buy]);
   });
 });
 
