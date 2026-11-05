@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { SERVER_PORT, containerEnv, forServer, isServerPath } from "./routing.ts";
+import {
+  MODULE_ROUTES,
+  SERVER_PORT,
+  SERVER_ROUTES,
+  WORKER_ROUTES,
+  containerEnv,
+  forServer,
+  isModulePath,
+  isServerPath,
+  precompressedModule,
+} from "./routing.ts";
 
 describe("isServerPath", () => {
   it("sends the API and the sockets to the server", () => {
@@ -74,5 +84,41 @@ describe("containerEnv", () => {
   it("leaves out an optional secret that is unset or empty, and anything that is not a server setting", () => {
     const settings = { CREATE_ISSUES_TOKEN: "", SERVER: "a binding" } as Parameters<typeof containerEnv>[0];
     expect(Object.keys(containerEnv(settings)).sort()).toEqual(["NODE_ENV", "PORT"]);
+  });
+});
+
+describe("#3183 the engine's brotli-compressed module", () => {
+  it("is the Worker's for Vite's name of a brotli'd WebAssembly module alone", () => {
+    for (const path of ["/assets/jackioh_wasm_bg.wasm-BIXTgzSO.br", "/assets/jackioh_wasm_bg.wasm-a_b-C.br"]) {
+      expect(isModulePath(path), path).toBe(true);
+    }
+    for (const path of ["/assets/jackioh_wasm_bg-abc.wasm", "/assets/index-abc.js", "/assets/x.br", "/jackioh_wasm_bg.wasm-abc.br", "/api/x.wasm-a.br"]) {
+      expect(isModulePath(path), path).toBe(false);
+    }
+  });
+
+  it("matches what wrangler.jsonc routes: the Worker's routes are the server's and the module's", () => {
+    expect(WORKER_ROUTES).toEqual([...SERVER_ROUTES, ...MODULE_ROUTES]);
+    expect(MODULE_ROUTES).toEqual(["/assets/*.wasm-*.br"]);
+  });
+
+  it("serves the stored bytes as they are, labelled brotli and WebAssembly, its other headers kept", async () => {
+    const stored = new Response(new Uint8Array([0x1b, 0x2a, 0x00]), {
+      headers: { "Content-Type": "application/octet-stream", ETag: '"v1"', "Cache-Control": "public, max-age=31536000, immutable" },
+    });
+    const served = precompressedModule(stored);
+    expect(served.status).toBe(200);
+    expect(served.headers.get("Content-Type")).toBe("application/wasm");
+    expect(served.headers.get("Content-Encoding")).toBe("br");
+    expect(served.headers.get("ETag")).toBe('"v1"');
+    expect(served.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    expect([...new Uint8Array(await served.arrayBuffer())]).toEqual([0x1b, 0x2a, 0x00]);
+  });
+
+  it("passes on an answer with no file to send: a 304 for a held copy, and a 404", () => {
+    for (const status of [304, 404]) {
+      const stored = new Response(null, { status });
+      expect(precompressedModule(stored)).toBe(stored);
+    }
   });
 });

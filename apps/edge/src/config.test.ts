@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { HEALTH_PATH, READY_PATH, SERVER_ROUTES, SERVER_SECRETS, SERVER_VARS } from "./routing.ts";
+import { HEALTH_PATH, MODULE_CACHE_CONTROL, READY_PATH, SERVER_SECRETS, SERVER_VARS, WORKER_ROUTES } from "./routing.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -15,7 +15,7 @@ interface WorkerConfig {
   name: string;
   workers_dev: boolean;
   preview_urls: boolean;
-  assets: { directory: string; run_worker_first: string[] };
+  assets: { directory: string; binding: string; run_worker_first: string[] };
   containers: { name: string; class_name: string; image: string; image_build_context: string; max_instances: number }[];
   durable_objects: { bindings: { name: string; class_name: string }[] };
   migrations: { tag: string; new_sqlite_classes: string[] }[];
@@ -38,8 +38,12 @@ describe.each(ENVIRONMENTS)("wrangler.jsonc, $label", ({ worker, name, origin })
     expect(worker.assets.directory).toBe("./apps/web/dist");
   });
 
-  it("runs the Worker for the server's paths alone", () => {
-    expect(worker.assets.run_worker_first).toEqual([...SERVER_ROUTES]);
+  it("runs the Worker for the server's paths and the engine's compressed module alone", () => {
+    expect(worker.assets.run_worker_first).toEqual([...WORKER_ROUTES]);
+  });
+
+  it("#3183 binds the web build's files as ASSETS, which the Worker serves the module from", () => {
+    expect(worker.assets.binding).toBe("ASSETS");
   });
 
   it("runs exactly one container, of the server's image, behind the Server object", () => {
@@ -78,5 +82,14 @@ describe("the server's probes the Worker calls", () => {
 
   it.each([HEALTH_PATH, READY_PATH])("the server routes %s, unauthenticated", (path) => {
     expect(routes).toContain(`("GET", "${path}", AuthLevel::None,`);
+  });
+});
+
+describe("#3183 the module's cache rule", () => {
+  // The Worker gives the module `_headers`' rule for every built file should the binding's answer lack it.
+  it("is the one public/_headers gives /assets/*", () => {
+    const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
+    const rule = /^\/assets\/\*\n\s+Cache-Control: (.+)$/mu.exec(headers)?.[1];
+    expect(rule).toBe(MODULE_CACHE_CONTROL);
   });
 });
