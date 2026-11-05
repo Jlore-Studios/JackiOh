@@ -1287,6 +1287,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
                 />
                 <button
                   type="submit"
+                  className="button-secondary"
                   ref={joinSubmit}
                   data-testid={playTestid.joinSubmit}
                   disabled={busy || noChoice || locked}

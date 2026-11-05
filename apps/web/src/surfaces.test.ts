@@ -30,7 +30,10 @@ const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//
 
 /** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
-  (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
+  (sheet) =>
+    sheet === "index.css" ||
+    sheet === "buttons.css" ||
+    (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
 const RADII = [...read("surfaces.css").matchAll(/^\s*--radius-([\w-]+):\s*([\d.]+px|[\d.]+%);$/gm)].map((match) => [

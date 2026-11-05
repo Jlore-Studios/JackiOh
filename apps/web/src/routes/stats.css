@@ -658,8 +658,8 @@
   color: var(--text-dim, #9aa1b8);
 }
 
-/* Show Radiant is the tavern's wood button and View in Almanac its wood link (tavern.css,
-   `a.button-secondary`): one above the other under one face, side by side under two. */
+/* Show Radiant is a button with no role and View in Almanac a `button-secondary` link, both the
+   secondary (buttons.css): one above the other under one face, side by side under two. */
 .stats-drilldown-actions {
   display: flex;
   flex-wrap: wrap;
@@ -670,7 +670,7 @@
   flex: 1 1 auto;
 }
 
-/* Pressed, it wears the Radiant gold. As long as the tavern's wood button rule, and later, so it wins. */
+/* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */
 .tavern.app-shell.stats-page .stats-drilldown-actions button.stats-drilldown-action[aria-pressed="true"] {
   border-color: var(--radiant, #ffd24a);
   color: var(--radiant, #ffd24a);

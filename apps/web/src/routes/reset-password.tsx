@@ -332,7 +332,7 @@ export default function ResetPasswordRoute(): ReactElement {
               />
               <button
                 type="button"
-                className="affix-button"
+                className="affix-button button-secondary"
                 data-testid={resetTestid.togglePassword}
                 // One toggle shows or hides both fields, so the two can be compared by eye.
                 aria-label={showPassword ? t("Hide passwords") : t("Show passwords")}
@@ -373,7 +373,7 @@ export default function ResetPasswordRoute(): ReactElement {
               </p>
             ) : null}
 
-            <button type="submit" data-testid={resetTestid.submit} disabled={busy}>
+            <button type="submit" className="button-primary" data-testid={resetTestid.submit} disabled={busy}>
               {busy ? t("Saving…") : t("Save new password")}
             </button>
           </form>

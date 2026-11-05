@@ -589,7 +589,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
           <div className="account-actions">
             <button
               type="submit"
-              className="account-delete__confirm"
+              className="account-delete__confirm button-danger"
               data-testid={accountTestid.deleteConfirm}
               disabled={!confirmed || busy}
               aria-busy={busy}

@@ -2137,9 +2137,8 @@ button.modifier-badge[data-open="true"] {
   display: none;
 }
 
-/* End turn is the one big button, Hearthstone's amber. It glows green (highlights.css) once
-   nothing else is left to do. `:not(:disabled)` outranks src/index.css's `.app-shell button`
-   hover and active rules, which would otherwise repaint it grey. */
+/* End turn is the one big button, a `button-primary` (buttons.css, which also turns it green once
+   nothing else is left to do, B15, and sinks it in the opponent's turn). This rule is its size. */
 .board .control.control-end-turn {
   position: relative;
   width: 100%;
@@ -2147,18 +2146,6 @@ button.modifier-badge[data-open="true"] {
   font-weight: 800;
   letter-spacing: 0.03em;
   transition: translate var(--motion-instant) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), filter var(--motion-fast) var(--ease-standard);
-}
-
-.board .control.control-end-turn:not(:disabled) {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-  box-shadow: var(--primary-shadow);
-}
-
-.board .control.control-end-turn:not(:disabled):hover {
-  background: var(--primary-face-hover);
 }
 
 .board .control.control-end-turn[data-turn-state="ready"] {
@@ -2170,9 +2157,6 @@ button.modifier-badge[data-open="true"] {
 }
 
 .board .control.control-end-turn[data-turn-state="enemy"] {
-  border-color: var(--pal-wood-800);
-  background: var(--bg-sunken);
-  color: color-mix(in srgb, var(--text) 52%, var(--pal-grey-500));
   box-shadow: var(--shadow-inset-top);
   cursor: not-allowed;
   filter: saturate(0.54);

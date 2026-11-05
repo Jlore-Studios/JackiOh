@@ -117,8 +117,8 @@
 }
 
 /* The path sits in the practice lobby, a tavern screen (auth/tavern.css), whose Start game is the
-   screen's one gold "go". So Continue and every lesson's Start or Replay are the tavern's wood
-   secondary button, which tavern.css draws; the coach's lavender stays on the board. */
+   screen's one gold "go". So Continue and every lesson's Start or Replay are the secondary button
+   (buttons.css), which tavern.css sizes; the coach's lavender stays on the board. */
 
 /* Five stops along a path: each lesson's node sits on its card's top edge, and a line runs from
    node to node behind the cards, showing through the gaps between them. */

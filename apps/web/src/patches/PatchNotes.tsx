@@ -39,7 +39,7 @@ function patchCount(count: number): string {
   return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
 }
 
-/** A card's name that opens its history; `link-button` keeps the wood-button rule off it (patches.css draws the gold link). */
+/** A card's name that opens its history; `link-button` keeps the bare-button size rule off it (patches.css draws the gold link). */
 function NameButton({ def, onOpen }: { def: CardDef; onOpen: OpenCard }): ReactElement {
   return (
     <button

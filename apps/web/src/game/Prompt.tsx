@@ -1658,6 +1658,7 @@ function PromptModal(props: {
           {folded || readOnly || oneTap ? null : (
             <button
               type="button"
+              className="button-primary"
               data-testid="prompt-submit"
               aria-disabled={!inRange}
               onClick={() => {

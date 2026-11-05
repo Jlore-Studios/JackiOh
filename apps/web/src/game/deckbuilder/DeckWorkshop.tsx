@@ -171,7 +171,7 @@ function Rail(props: RailProps): ReactElement {
           <div className="ws-group-actions">
             <button
               type="button"
-              className="ws-action ws-action--primary"
+              className="ws-action button-primary"
               data-testid={DECK_NEW}
               disabled={decksAtCap}
               aria-describedby={decksAtCap ? deckReason : undefined}
@@ -181,7 +181,7 @@ function Rail(props: RailProps): ReactElement {
             </button>
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={DECK_IMPORT_OPEN}
               aria-current={open?.kind === "import" ? "true" : undefined}
               onClick={() => {
@@ -233,7 +233,7 @@ function Rail(props: RailProps): ReactElement {
           <div className="ws-group-actions">
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={TRIO_NEW}
               disabled={triosAtCap}
               aria-describedby={triosAtCap ? trioReason : undefined}
@@ -244,7 +244,7 @@ function Rail(props: RailProps): ReactElement {
             {/* R340: never off at a cap — the panel says exactly how many slots an import needs. */}
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={TRIO_IMPORT_OPEN}
               aria-current={open?.kind === "trio-import" ? "true" : undefined}
               onClick={() => {
@@ -762,7 +762,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           <div className="ws-history">
             <button
               type="button"
-              className="ws-history-button"
+              className="ws-history-button button-secondary"
               data-testid={DECK_UNDO}
               aria-label={t("Undo")}
               title={shortcutTitle(t("Undo"), SHORTCUTS.undo, hints)}
@@ -778,7 +778,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
             </button>
             <button
               type="button"
-              className="ws-history-button"
+              className="ws-history-button button-secondary"
               data-testid={DECK_REDO}
               aria-label={t("Redo")}
               title={shortcutTitle(t("Redo"), SHORTCUTS.redo, hints)}

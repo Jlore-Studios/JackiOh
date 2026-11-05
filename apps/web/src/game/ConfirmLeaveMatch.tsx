@@ -75,7 +75,7 @@ export default function ConfirmLeaveMatch({ onStay, onLeave, body }: ConfirmLeav
           <button
             ref={stay}
             type="button"
-            className="concede-dialog__stay"
+            className="concede-dialog__stay button-primary"
             data-testid={leaveMatchTestid.stay}
             onClick={onStay}
           >
@@ -83,7 +83,7 @@ export default function ConfirmLeaveMatch({ onStay, onLeave, body }: ConfirmLeav
           </button>
           <button
             type="button"
-            className="concede-dialog__concede"
+            className="concede-dialog__concede button-danger"
             data-testid={leaveMatchTestid.leave}
             onClick={onLeave}
           >

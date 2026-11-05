@@ -9,10 +9,6 @@
   border-top: 1px solid rgba(201, 149, 63, 0.22);
 }
 
-.tavern.app-shell .account-delete .account-delete__start {
-  color: var(--tavern-danger-text);
-}
-
 .tavern.app-shell .account-delete__form {
   display: flex;
   flex-direction: column;
@@ -20,12 +16,6 @@
 }
 
 .tavern.app-shell .account-delete__form > p {
-  color: var(--tavern-parchment);
-}
-
-.tavern.app-shell .account-actions > button.account-delete__confirm {
-  border: 1px solid var(--tavern-danger);
-  background: linear-gradient(180deg, rgba(232, 102, 79, 0.32), rgba(232, 102, 79, 0.14));
   color: var(--tavern-parchment);
 }
 

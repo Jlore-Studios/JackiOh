@@ -200,7 +200,7 @@ export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelP
           </select>
           <button
             type="button"
-            className="sandbox-panel__button"
+            className="sandbox-panel__button button-secondary"
             data-testid={practiceTestid.sandboxSpawn}
             disabled={picked === null || place === undefined}
             onClick={() => {
@@ -251,7 +251,7 @@ export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelP
           />
           <button
             type="button"
-            className="sandbox-panel__button"
+            className="sandbox-panel__button button-secondary"
             data-testid={practiceTestid.sandboxSetHero}
             disabled={healthValue === null && armorValue === null}
             onClick={() =>
@@ -300,7 +300,7 @@ export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelP
           />
           <button
             type="button"
-            className="sandbox-panel__button"
+            className="sandbox-panel__button button-secondary"
             data-testid={practiceTestid.sandboxSetMana}
             disabled={currentValue === null && maxValue === null}
             onClick={() =>
@@ -336,7 +336,7 @@ export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelP
           />
           <button
             type="button"
-            className="sandbox-panel__button"
+            className="sandbox-panel__button button-secondary"
             data-testid={practiceTestid.sandboxDraw}
             disabled={drawValue === null}
             onClick={() => {
@@ -373,7 +373,7 @@ export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelP
           </select>
           <button
             type="button"
-            className="sandbox-panel__button"
+            className="sandbox-panel__button button-secondary"
             data-testid={practiceTestid.sandboxDestroy}
             disabled={chosen?.where !== "field"}
             onClick={() => {
@@ -384,7 +384,7 @@ export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelP
           </button>
           <button
             type="button"
-            className="sandbox-panel__button"
+            className="sandbox-panel__button button-secondary"
             data-testid={practiceTestid.sandboxRemove}
             disabled={chosen === undefined}
             onClick={() => {

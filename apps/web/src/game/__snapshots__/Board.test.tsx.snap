@@ -3569,7 +3569,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </span>
       <button
         aria-disabled="true"
-        class="power-button"
+        class="power-button button-secondary"
         data-instance-id="power-1"
         data-legal="false"
         data-testid="power"
@@ -4052,7 +4052,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     >
       <button
         aria-disabled="true"
-        class="control control-end-turn"
+        class="control control-end-turn button-primary"
         data-legal="false"
         data-testid="end-turn"
         data-turn-state="locked"

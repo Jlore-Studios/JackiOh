@@ -76,7 +76,6 @@
 .sandbox-panel__input,
 .sandbox-panel__select,
 .sandbox-panel__number,
-.sandbox-panel__button,
 .sandbox-panel__close {
   min-height: 32px;
   padding: 4px 8px;
@@ -84,6 +83,14 @@
   border-radius: 6px;
   background: var(--bg-sunken, #1a1612);
   color: inherit;
+  font: inherit;
+}
+
+/* A `button-secondary` (buttons.css); this is its size. */
+.sandbox-panel__button {
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 6px;
   font: inherit;
 }
 
