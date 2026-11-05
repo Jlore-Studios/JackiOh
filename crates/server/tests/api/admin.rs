@@ -264,6 +264,7 @@ async fn r3074000_every_dev_and_admin_write_leaves_its_audit_row_and_a_read_none
     )
     .await;
     expect(&app, "POST", "/api/dev/fill", dev, json!({}), 200).await;
+    expect(&app, "POST", "/api/dev/cosmetics", dev, json!({}), 200).await;
     expect(&app, "POST", "/api/dev/bar/card", dev, json!({}), 200).await;
     let quest = expect(&app, "POST", "/api/dev/quests", dev, json!({}), 200).await;
     let quest_id = quest["quest"]["questId"]
@@ -345,6 +346,7 @@ async fn r3074000_every_dev_and_admin_write_leaves_its_audit_row_and_a_read_none
             "POST /api/dev/jlore".to_string(),
             "POST /api/dev/xp".to_string(),
             "POST /api/dev/fill".to_string(),
+            "POST /api/dev/cosmetics".to_string(),
             "POST /api/dev/bar/card".to_string(),
             "POST /api/dev/quests".to_string(),
             format!("POST /api/dev/quests/{quest_id}/complete"),
