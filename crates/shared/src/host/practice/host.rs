@@ -34,6 +34,9 @@ use jackioh_engine::{
     VERSIONS_SCHEME, outcome_for,
 };
 
+use super::super::clock::{ClockExpiry, MatchClock};
+use super::super::snapshot::{clock_view_for, snapshot as match_snapshot};
+use super::super::timer::{Fx, TimerCommand, TimerKey};
 use super::deal::deal;
 use super::types::{
     AiAsk, AiMove, KeptAs, LethalAsk, PracticeClaim, PracticeConfig, PracticeDebug, PracticeRecord,
@@ -69,6 +72,9 @@ pub enum PracticeEvent {
     /// Refused while this game is in progress, whose fold would stall the host; a game that is over
     /// lets it.
     Replays,
+    /// A timer the machine set came due (`Timer` output): R1563006's sequence window. A stale one, taken
+    /// back or replaced since, does nothing.
+    TimerFired { key: TimerKey, id: u32 },
     /// R1303000: the finished game's claim. Refused before the end (CLAUDE.md rule 7: the log names the
     /// AI's hidden cards while the game runs) and for a game not on a server seed.
     Claim,
@@ -101,6 +107,9 @@ pub enum PracticeOutput {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         at: i64,
     },
+    /// R1563006: set or take back a timer; its firing comes back as `timerFired` with the same key and id.
+    /// Only the human's question sequence has one (practice keeps no turn clock, SPEC §9.9).
+    Timer { command: TimerCommand },
     /// What the page is told (rule 7).
     Snapshot { snapshot: Box<PracticeSnapshot> },
     /// R2102000: ask the lethal check for `seat` under a clock; when it says yes, the snapshot above
@@ -148,6 +157,9 @@ pub struct PracticeHost {
     kept_games: Option<Vec<u32>>,
     /// R768000: the number and step count it was kept under, once kept.
     kept_as: Option<KeptAs>,
+    /// R1563006: the match clock, of which only the question sequence's window runs here, and its timers.
+    clock: MatchClock,
+    fx: Fx,
     #[serde(skip)]
     #[cfg_attr(feature = "ts", ts(skip))]
     out: Vec<PracticeOutput>,
@@ -264,6 +276,8 @@ impl PracticeHost {
             ended: false,
             kept_games: kept,
             kept_as: None,
+            clock: MatchClock::new(0),
+            fx: Fx::default(),
             out: Vec::new(),
         })
     }
@@ -277,6 +291,7 @@ impl PracticeHost {
             }
             PracticeEvent::AiTurn => self.on_ai_turn(now),
             PracticeEvent::Decided { moved } => self.on_decided(moved, now),
+            PracticeEvent::TimerFired { key, id } => self.on_timer(key, id, now),
             PracticeEvent::Fold { action } => match self.fold(&action) {
                 Ok(()) => self.end_of_game(now, false),
                 Err(message) => self.emit(PracticeOutput::Failed { message }),
@@ -427,14 +442,16 @@ impl PracticeHost {
     fn answered(&mut self, now: i64) {
         self.save();
         self.end_of_game(now, true);
+        self.sync_clock(now);
         self.snapshot();
     }
 
     /// The game is on: its first answer.
-    fn began(&mut self, _now: i64) {
+    fn began(&mut self, now: i64) {
         let ai_seat = self.ai_seat;
         self.emit(PracticeOutput::Began { ai_seat });
         self.save();
+        self.sync_clock(now);
         self.snapshot();
     }
 
@@ -469,6 +486,8 @@ impl PracticeHost {
             return;
         }
         self.ended = true;
+        self.clock.stop(&mut self.fx);
+        self.flush_timers();
         // R679: the one ending that records nothing.
         if result.reason == GameOverReason::Voided {
             self.emit(PracticeOutput::Voided { at: now });
@@ -586,6 +605,44 @@ impl PracticeHost {
                 .is_lesson()
                 .then(|| jackioh_engine::combat_forecast(&self.game, human)),
         }
+    }
+
+    // The sequence clock (R1563006)
+
+    /// R1563006: a sequence's first question for the human (Meditative+ #20 KY's Competition) arms the
+    /// window `KY_COMPETITION_SECONDS` long, a later question keeps it, none open clears it. What the 1v1
+    /// match clock decides (`host::clock`, `sync_sequence`) is read here as it is there; only the human's
+    /// own questions run it, as the AI answers its own without a clock. The page is told as a `timer` output.
+    fn sync_clock(&mut self, now: i64) {
+        if self.clock.is_stopped() {
+            return;
+        }
+        let mut view = clock_view_for(&match_snapshot(&self.game));
+        let human = self.human_seat();
+        view.sequence = view.sequence.filter(|question| question.player == human);
+        self.clock.sync_sequence(&view, now, &mut self.fx);
+        self.flush_timers();
+    }
+
+    fn flush_timers(&mut self) {
+        for command in self.fx.take() {
+            self.emit(PracticeOutput::Timer { command });
+        }
+    }
+
+    /// R1563006: the window lapsed with a question of its sequence still open for the human: it is
+    /// answered Stop (R1184001's answer, as a timeout gives), like the 1v1 machine's clock action, and
+    /// logged as the human's action, `h<n>`, so a claim's log still folds under the nonces it knows.
+    fn on_timer(&mut self, key: TimerKey, id: u32, now: i64) {
+        if let Some(ClockExpiry::Sequence { player }) = self.clock.fire(key, id) {
+            let open = match_snapshot(&self.game)
+                .sequence
+                .is_some_and(|question| question.player == player && player == self.human_seat());
+            if open && let Some(stop) = jackioh_engine::prompts::stop_answer(&self.game) {
+                self.error = self.apply(stop, true).err();
+            }
+        }
+        self.answered(now);
     }
 
     // The AI's turn
