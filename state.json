@@ -17603,6 +17603,8 @@
       }
     },
     "3153": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-05T03:30:20Z",
@@ -17616,8 +17618,11 @@
         "trail": " Starting step 14, the dry run with a throwaway held set \"Scratch\":\n- Bash: {\"command\": \"git diff --stat > /tmp/dry/stat-before.txt; git status --porcelain > /tmp/dry/status-before.txt; cp crates/engine/src/wire/catalog_types.rs /tmp/dry/catalog_types.rs; cp crates/cards/src\u2026\n- Bash: {\"command\": \"git ls-files -co --exclude-standard -z | xargs -0 md5sum > /tmp/dry/md5-before.txt 2>/dev/null; wc -l /tmp/dry/md5-before.txt\", \"description\": \"Snapshot hashes of every tracked file befo\u2026\n- Bash: {\"command\": \"{\\necho \\\"=== workspace tests\\\"; cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E '^test result|FAILED|panicked|^error|could not compile|^failure\u2026\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nst=s[i:j]\\nst=st.replace(\\\"- Running: checks.log (fmt, spec/catalog/patches check, clip\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"ALLDONE\\\" dryrun.log; do sleep 15; done'; cat dryrun.log | head -50\", \"description\": \"Wait for the dry-run workspace tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"ALLDONE\\\" dryrun.log; do sleep 15; done'; cat dryrun.log | head -50\", \"description\": \"Keep waiting for the dry-run tests\", \"timeout\": 600000}\n- said: The dry run's full workspace test run is still going, about 20 minutes in. So far: every targeted test, fmt, clippy, spec/catalog/patches checks and the typecheck are green on the real change.\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"ALLDONE\\\" dryrun.log; do sleep 15; done'; cat dryrun.log | head -60; ps aux | grep -c '[r]ustc'\", \"description\": \"Keep waiting for the dry-run tests\"\u2026\n- Bash: {\"command\": \"ps aux --sort=-%cpu | grep -v grep | head -6 | cut -c1-220\", \"description\": \"See what is running now\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"ALLDONE\\\" dryrun.log; do sleep 15; done'; cat dryrun.log | head -60\", \"description\": \"Keep waiting for the dry-run tests\", \"timeout\": 600000}\n- said: With the throwaway set in place, the workspace tests, catalog check, spec check and typecheck all pass. Now checking which files the run changed:\n- Bash: {\"command\": \"git ls-files -co --exclude-standard -z | xargs -0 md5sum > /tmp/dry/md5-after.txt 2>/dev/null; diff /tmp/dry/md5-before.txt /tmp/dry/md5-after.txt; echo \\\"---\\\"; for f in crates/engine/s\u2026\n- said: Adding the set changed exactly three files: the table row, the census entry, and the generated `SetName.ts`. Nothing else needed an edit. Reverting the dry run:\n- Bash: {\"command\": \"cp /tmp/dry/catalog_types.rs crates/engine/src/wire/catalog_types.rs; cp /tmp/dry/census.rs crates/cards/src/census.rs; cp /tmp/dry/SetName.ts apps/web/src/wire/generated/SetName.ts; git\u2026\n- Bash: {\"command\": \"grep -n Scratch crates/cards/src/census.rs\", \"description\": \"Check the Scratch mention in census.rs\"}\n- said: The revert is complete: the diff and status match what they were before the dry run. Now the full workspace tests on the real state, then golden, fuzz and gate.\n- Bash: {\"command\": \"echo \\\"- dry run done and reverted: changed only catalog_types.rs, census.rs, generated SetName.ts; workspace tests exit 0, catalog check (lists Scratch), spec check, pnpm typecheck gree\u2026\n- tool error: Exit code 128 fatal: Needed a single revision\n- Bash: {\"command\": \"git branch -a 2>&1 | head; git log --oneline -1; sed -n '/^## State/,/^## Log/p' .bot-notes.md | tail -8\", \"description\": \"Check refs and notes\"}\n- Bash: {\"command\": \"grep -n 'Step 14 dry run DONE\\\\|Next: full workspace' .bot-notes.md\", \"description\": \"Verify notes updated\"}\n- Bash: {\"command\": \"{\\necho \\\"=== workspace tests\\\"; cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E '^test result|FAILED|^error|could not compile|^failures:|^ [a-z\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"=== wire status\\\" real.log; do sleep 15; done'; cat real.log\", \"description\": \"Wait for the real-state workspace tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"=== wire status\\\" real.log; do sleep 15; done'; cat real.log\", \"description\": \"Keep waiting for the workspace tests\", \"timeout\": 600000}\n- said: The dry run is done and reverted. The real-state workspace tests are running (about 30 minutes, judging by the dry run), with golden check, 200 fuzz seeds and the AI gate queued after them.\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"=== wire status\\\" real.log; do sleep 15; done'; cat real.log\", \"description\": \"Keep waiting for the workspace tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"=== wire status\\\" real.log; do sleep 15; done'; cat real.log\", \"description\": \"Keep waiting for the workspace tests\", \"timeout\": 600000}\n- said: On the real state the workspace tests exit 0. The only changes under `apps/web/src/wire` are my three intended files, and `SetName.ts` and `serverConfig.ts` come out byte for byte the same.\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"ALLDONE\\\" real.log; do sleep 15; done'; sed -n '/=== golden/,$p' real.log\", \"description\": \"Wait for golden, fuzz and gate\", \"timeout\": 600000}\n- said: Everything is green: golden check (folds to 972f5b85), 200 fuzz seeds, and the AI smoke gate. Final review of the server diff:\n- Bash: {\"command\": \"git diff crates/server/src/config.rs | head -80\", \"description\": \"Review the server config diff\"}\n- Bash: {\"command\": \"rm -f targeted.log targeted2.log checks.log webtests.log dryrun.log real.log wasm-build.log\\npython3 - <<'PY'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## L\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a set is one row of set data, not edits across the engine, the AI, the tools and the server\"} --> Each set is now one row of a set table, `set_table![\u2026]` in `crates/engine/src/wire/catalog_types.rs`. Each row holds the set's name, its stage (`Shipped`, \u2026"
       },
       "issue": 3114,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T06:43:32Z",
         "from_run": "41962011249",
         "gates": [
           {
@@ -17709,7 +17714,11 @@
         "source": "build",
         "until": "2026-11-05T07:12:12Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-05T06:42:12Z",
+      "run_id": "pending:6a5e2619-1793860977",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17728,6 +17737,9 @@
         "provider": "claude-6",
         "run": "41962011249"
       },
+      "started_at": "2026-11-05T06:43:32Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17741,9 +17753,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T06:33:14Z",
+    "at": "2026-11-05T06:43:32Z",
     "url": "",
-    "what": "review #3152 on claude-3"
+    "what": "review #3153 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T06:30:27Z",
