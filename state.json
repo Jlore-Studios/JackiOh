@@ -16774,11 +16774,11 @@
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "42101546460",
+            "run": "42123457231",
             "tier": "strong"
           }
         ],
-        "sha": "c22fdfd87168aa2e09fe87e43673273e6b6e7c89",
+        "sha": "464cb6fbf5aa7a9658ab68c3d36675dc21f6248f",
         "tiers": {
           "claude": "strong"
         }
