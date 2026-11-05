@@ -13562,7 +13562,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-05T14:06:14Z",
+      "feedback_since": "2026-11-05T18:21:40Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-05T15:49:21Z",
@@ -13606,11 +13606,11 @@
         "provider": "claude-7",
         "run": "42055237603"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-05T18:21:40Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 6,
+      "verdict_rounds": 7,
       "votes": {
         "approvals": [
           "claude"
