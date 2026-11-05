@@ -178,9 +178,10 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-cards` | `jackioh-engine` | `jackioh-engine` with `features = ["testkit"]` |
 | `jackioh-ai` | `jackioh-engine` | `jackioh-cards`, `jackioh-engine` with `testkit` |
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
-| `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | `jackioh-engine` with `testkit` |
+| `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
+| `jackioh-shared` | `jackioh-engine` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | — (`serde_json`) |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
@@ -190,7 +191,8 @@ on a crate that depends on you is legal for integration tests (`tests/`), which 
 
 ## 3. Purity (CLAUDE.md rule 4, in Rust)
 
-`jackioh-engine`, `jackioh-cards` and `jackioh-ai` are pure: no clock, no I/O, no environment, no
+`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-luau`, `jackioh-run` and `jackioh-shared` are pure
+(CLAUDE.md rule 4 has what each takes): no clock, no I/O, no environment, no
 threads, no OS randomness, no hash-ordered collections, **no mutable statics**. Two mechanisms
 enforce it, and nothing else is needed (the ESLint purity rules go):
 
@@ -198,7 +200,7 @@ enforce it, and nothing else is needed (the ESLint purity rules go):
    behind the engine's off-by-default `ts` feature.** No `rand`, no `getrandom`, no `tokio`, no
    `time`. A crate you cannot name, you cannot call.
 2. **Each has the same `clippy.toml`** (clippy reads the one in the crate's own directory;
-   `crates/tools/tests/acceptance.rs` holds the four byte for byte the same and runs clippy over a
+   `crates/tools/tests/acceptance.rs` holds the six byte for byte the same and runs clippy over a
    fixture with one use of each entry) and CI runs `cargo clippy --workspace --all-targets -- -D
    warnings`. `crates/engine/clippy.toml` is the list (#1600): the hash-ordered collections and
    `RandomState`, the clock, the disk (`File`, `OpenOptions`, `DirBuilder`, the `std::fs` functions,
@@ -772,6 +774,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> String;
     // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false;
     // prompt_json is the open prompt's { craftMode, craftOffer } (either absent), so the verdict is its answer's (R1563007)
+#[wasm_bindgen] pub fn series(call_json: &str) -> String;
+    // #3098: jackioh-shared's Conquest series rules (SPEC §9.5, R330–R337). A SeriesCall in ({ call: "pickDeck", series, seat, slot, now, gameNo? }), a SeriesAnswer out
+    // ({ row } | { refused } | { seats } | { picked } | { view } | { score }); the host holds the row and hands it back (crates/shared/README.md, the host contract)
 ```
 
 ### 10.2 Build

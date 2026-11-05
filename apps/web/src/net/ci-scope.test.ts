@@ -248,6 +248,9 @@ describe("scripts/ci-scope.sh", () => {
       "crates/server/tests/deploy/rehearse.sh",
       "crates/server/tests/store/contract.rs",
       "crates/server/Cargo.toml",
+      // The shared crate's series rows and frozen decks are what the store writes, and the image builds it (#3098).
+      "crates/shared/src/series.rs",
+      "crates/shared/Cargo.toml",
       "Cargo.lock",
     ]) {
       expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: true });
@@ -262,6 +265,7 @@ describe("scripts/ci-scope.sh", () => {
       "crates/server/tests/server.rs",
       "crates/server/tests/support/deps.rs",
       "crates/server/tests/support/engine.rs",
+      "crates/shared/tests/series.rs",
       "crates/server/src/dbx.rs",
       "crates/server/Dockerfile.dev",
       "crates/server-db/x.rs",
@@ -377,6 +381,7 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/catalog.json",
         "crates/ai/src/decide.rs",
         "crates/wasm/src/lib.rs",
+        "crates/shared/src/series.rs",
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
         "crates/luau/Cargo.toml",
@@ -406,6 +411,7 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/tests/cross/catalog.rs",
         "crates/ai/tests/ai/shadow_ban.rs",
         "crates/wasm/tests/x.rs",
+        "crates/shared/tests/series.rs",
         "crates/server/README.md",
         "crates/engine/README.md",
         "docs/architecture.md",
@@ -541,6 +547,8 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
+    // The shared crate (#3098) is built by the server and by the WASM bodies, and no other group tests it.
+    ["crates/shared/src/series.rs", ["rust_server", "rust_tools_wasm"]],
     ["crates/luau/src/lib.rs", ["rust_luau", "rust_tools_wasm"]],
     ["crates/scratch/src/lib.rs", [...RUST]],
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],

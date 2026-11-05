@@ -29,7 +29,6 @@ pub mod replays;
 pub mod results;
 pub mod retention;
 pub mod series;
-pub mod series_rules;
 pub mod settings;
 pub mod stats;
 pub mod tutorial;

@@ -67,7 +67,9 @@
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
 #    all three; tests/sql/ the sql invariants; the store (src/db/), the Supabase bootstrap
 #    (tests/db/bootstrap.sql), the server's manifest and Cargo.lock the store contract and the deploy
-#    rehearsal; the rest of tests/db/, tests/store/ and what they compile with (tests/server_store.rs
+#    rehearsal, and so do the shared crate's source and manifest (`jackioh-shared`, whose series rows
+#    and frozen decks the store writes and whose build the image copies, #3098); the rest of tests/db/,
+#    tests/store/ and what they compile with (tests/server_store.rs
 #    and tests/support/test_app.rs, the one support module it takes) and what its seed test reads
 #    (the real catalog.json and the shipped sets, catalog_types.rs) the store contract; the server's
 #    boot path (main.rs, app.rs, env.rs, the catalog's seeding, and its route, which the deploys'
@@ -83,7 +85,8 @@
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine or
 #    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
 #    runs its two groups (ai and ai slow), server and tools, wasm; the server runs
-#    server; tools and wasm run tools, wasm; luau runs luau and tools, wasm (the tools build on it).
+#    server; tools and wasm run tools, wasm; luau runs luau and tools, wasm (the tools build on it);
+#    the shared crate (`jackioh-shared`, which the server builds on, #3098) runs server and tools, wasm.
 #    A crate the map does not know runs every group. A crate's Cargo.toml also runs tools, wasm,
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
 #    on the pull request that adds it.
@@ -119,7 +122,7 @@
 #    the Dockerfile, tests/deploy/, the practice claim fixture,
 #    tests/fixtures/practice-claim.json, which the worker's claim test plays, and the quest pool,
 #    quests.json, whose titles the quests panel's test holds to zh-CN), every crate's README, the
-#    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
+#    engine's, the cards', the AI's, the shared crate's and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), docs/, training/, reviews/, analysis/, infra/ and the top-level
 #    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
@@ -238,7 +241,8 @@ for file in $files; do
   case "$file" in
     crates/server/migrations/*) on db_sql db_store db_deploy ;;
     crates/server/tests/sql/*) on db_sql ;;
-    crates/server/tests/db/bootstrap.sql | crates/server/src/db/* | crates/server/Cargo.toml | Cargo.lock) on db_store db_deploy ;;
+    crates/server/tests/db/bootstrap.sql | crates/server/src/db/* | crates/server/Cargo.toml | Cargo.lock | \
+      crates/shared/src/* | crates/shared/Cargo.toml) on db_store db_deploy ;;
     crates/server/tests/db/* | crates/server/tests/store/* | crates/server/tests/support/test_app.rs | crates/server/tests/server_store.rs) on db_store ;;
     crates/cards/catalog.json | crates/engine/src/wire/catalog_types.rs) on db_store ;;
     crates/server/src/env.rs | crates/server/src/main.rs | crates/server/src/app.rs | crates/server/src/cli/seed_catalog.rs | \
@@ -260,6 +264,7 @@ for file in $files; do
       crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/luau/*) on rust_luau rust_tools_wasm ;;
+    crates/shared/*) on rust_server rust_tools_wasm ;;
     crates/run/* | crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
     crates/*)
       echo "ci-scope: $file is in no crate the map knows, running every Rust group" >&2
@@ -286,7 +291,7 @@ for file in $files; do
     crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
     crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json | crates/server/quests.json) on web ;;
     crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
-    crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
+    crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;

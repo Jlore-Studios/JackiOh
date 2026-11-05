@@ -57,21 +57,19 @@ pub fn setting_key(kind: CosmeticKind) -> &'static str {
 }
 
 /// R1834002: a deck's playmat, backdrop and card back as a ticket, a room or a trio freezes them
-/// with the deck, each an id or absent (the account's pick, then the kind's default).
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct DeckSlots {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub table: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub field: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub card_back: Option<String>,
+/// with the deck: `jackioh-shared`'s (#3098), which the frozen decks of the series rules hold.
+pub use jackioh_shared::deck::DeckSlots;
+
+/// What the server reads of a deck's [`DeckSlots`].
+pub trait DeckSlotsExt {
+    /// A saved deck's three picks, or `None` when it carries none.
+    fn of_deck(deck: &SavedDeck) -> Option<DeckSlots>;
+    /// The pick of a kind: the playmat, the backdrop or the card back, absent for any other kind.
+    fn get(&self, kind: CosmeticKind) -> Option<&str>;
 }
 
-impl DeckSlots {
-    /// A saved deck's three picks, or `None` when it carries none.
-    pub fn of_deck(deck: &SavedDeck) -> Option<DeckSlots> {
+impl DeckSlotsExt for DeckSlots {
+    fn of_deck(deck: &SavedDeck) -> Option<DeckSlots> {
         let slots = DeckSlots {
             table: deck.table_cosmetic.clone(),
             field: deck.field_cosmetic.clone(),
@@ -80,7 +78,7 @@ impl DeckSlots {
         (slots != DeckSlots::default()).then_some(slots)
     }
 
-    pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
+    fn get(&self, kind: CosmeticKind) -> Option<&str> {
         match kind {
             CosmeticKind::Table => self.table.as_deref(),
             CosmeticKind::Field => self.field.as_deref(),
