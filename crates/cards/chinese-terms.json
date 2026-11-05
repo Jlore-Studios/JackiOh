@@ -88,6 +88,7 @@
   "labels": {
     "Cry:": "战吼：",
     "Death:": "亡语：",
+    "Cry & Death:": "战吼与亡语：",
     "Start of turn:": "回合开始时：",
     "End of turn:": "回合结束时：",
     "Aura:": "光环：",

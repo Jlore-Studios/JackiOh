@@ -372,7 +372,7 @@ mod tests {
     mod r831008_only_an_empty_lane {
         use super::*;
 
-        const PALANTIR: &str = "classic-004"; // C #4: steals a (1) Spell and casts it at random.
+        const PALANTIR: &str = "classic-004"; // C #4: steals a (2) Cost Spell and casts it at random.
         const TRAP: &str = "core-096"; // My Pawn, a Trap, set face down.
 
         /// p1 (Showdown on the Radiant face on `radiant`) faces p2's Vanillas in lanes 2 and 3 and a
@@ -458,7 +458,8 @@ mod tests {
                     },
                     "p2": {
                         "mana": 10,
-                        "hand": [{ "def": SHOWDOWN }, FILLER],
+                        // At (2) by a `costMod` of 1: the Spell Palantir steals and casts (R3139000).
+                        "hand": [{ "def": SHOWDOWN, "costMod": 1 }, FILLER],
                         "field": [
                             { "def": VANILLA, "lane": 2 },
                             { "def": VANILLA, "lane": 3 },

@@ -13,6 +13,8 @@ use jackioh_engine::testkit::*;
 
 const MAGIC_JAMMED: &str = "core-036";
 const MIND_CONTROL: &str = "core-049";
+/// Issue #3139: Snom Bunny Mind Control costs (5), past the 4 mana a turn gives, so a game gives p1 the mana.
+const MIND_CONTROL_COST: i32 = 5;
 const KPOP: &str = "core-050";
 const SILAS: &str = "core-052";
 const MROW: &str = "core-086";
@@ -110,7 +112,7 @@ mod r171_with_the_cards_that_change_control {
     fn r171_c49_a_stolen_unit_with_neither_rush_nor_charge_cannot_attack_that_turn_and_attacks_on_the_thiefs_next_turn()
      {
         let mut g = setup(json!({
-            "p1": { "hand": [MIND_CONTROL, VANILLA], "library": LIBRARY },
+            "p1": { "hand": [MIND_CONTROL, VANILLA], "mana": MIND_CONTROL_COST, "library": LIBRARY },
             "p2": {
                 "hand": [VANILLA],
                 "field": [{ "def": SEVEN_SEVEN, "lane": 3 }, { "def": VANILLA, "lane": 5 }],
@@ -155,7 +157,7 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c56_base_a_stolen_rush_unit_may_attack_an_enemy_unit_that_turn_but_not_the_hero() {
         let mut g = setup(json!({
-            "p1": { "hand": [MIND_CONTROL, VANILLA] },
+            "p1": { "hand": [MIND_CONTROL, VANILLA], "mana": MIND_CONTROL_COST },
             "p2": { "field": [{ "def": JILLIAX, "lane": 2 }, { "def": VANILLA, "lane": 4, "damage": 1 }] },
         }));
         let jilliax = g.unit_at("p2", 2);
@@ -176,7 +178,7 @@ mod r171_with_the_cards_that_change_control {
         let mut g = setup(json!({
             "active": "p2",
             "turn": 8,
-            "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
+            "p1": { "hand": [MIND_CONTROL, VANILLA], "mana": MIND_CONTROL_COST, "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": DUELIST, "lane": 1 }], "library": LIBRARY },
         }));
         let duelist = g.unit_at("p2", 1);
@@ -184,6 +186,8 @@ mod r171_with_the_cards_that_change_control {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         assert!(g.card(&duelist).exertion.attacked);
+        // p1's turn gives the 4 mana a turn gives, a Snom Bunny short (issue #3139).
+        g.state_mut().players.p1.mana.current = MIND_CONTROL_COST;
 
         g.play(MIND_CONTROL, json!({ "targets": pick::instance(&duelist) }));
 
@@ -200,7 +204,7 @@ mod r171_with_the_cards_that_change_control {
         let mut g = setup(json!({
             "active": "p2",
             "turn": 8,
-            "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
+            "p1": { "hand": [MIND_CONTROL, VANILLA], "mana": MIND_CONTROL_COST, "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 3 }, { "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
         }));
         let switcher = g.unit_at("p2", 3);
@@ -208,6 +212,8 @@ mod r171_with_the_cards_that_change_control {
         assert_eq!(g.card(&switcher).position, Some(Position::Def));
         g.end_turn();
         assert!(g.card(&switcher).exertion.switched);
+        // p1's turn gives the 4 mana a turn gives, a Snom Bunny short (issue #3139).
+        g.state_mut().players.p1.mana.current = MIND_CONTROL_COST;
 
         g.play(MIND_CONTROL, json!({ "targets": pick::instance(&switcher) }));
 
@@ -411,7 +417,7 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c14_a_stolen_unit_gets_rush_from_the_thiefs_aura_at_once_which_lets_it_attack_units_only() {
         let mut g = setup(json!({
-            "p1": { "hand": [MIND_CONTROL, VANILLA], "backrow": [{ "def": WEAPONS, "lane": 1 }] },
+            "p1": { "hand": [MIND_CONTROL, VANILLA], "mana": MIND_CONTROL_COST, "backrow": [{ "def": WEAPONS, "lane": 1 }] },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }, { "def": VANILLA, "lane": 5 }] },
         }));
         let prey = g.unit_at("p2", 3);
@@ -461,9 +467,9 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c49_radiant_making_a_stolen_c11_radiant_gives_it_charge_so_it_may_attack_the_hero_at_once() {
         let mut g = setup(json!({
-            // #49 costs (4): a fifth mana keeps Mr. Vanilla playable, so the turn does not auto-end
+            // #49 costs (5): a sixth mana keeps Mr. Vanilla playable, so the turn does not auto-end
             // (R82) and hand p2 a fatigue draw before the hero is read.
-            "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": true }, VANILLA], "mana": 5 },
+            "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": true }, VANILLA], "mana": MIND_CONTROL_COST + 1 },
             "p2": { "field": [{ "def": TIMMY, "lane": 2 }, { "def": VANILLA, "lane": 4 }] },
         }));
         let timmy = g.unit_at("p2", 2);
@@ -570,7 +576,7 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
     fn r172_r2618000_radiant_c3_a_stolen_right_house_defenders_death_summons_its_base_copy_on_the_thiefs_side()
      {
         let mut g = setup(json!({
-            "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
+            "p1": { "hand": [MIND_CONTROL, VANILLA], "mana": MIND_CONTROL_COST, "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
             "p2": {
                 "hand": [VANILLA],
                 "field": [

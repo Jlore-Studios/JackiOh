@@ -1,8 +1,17 @@
-//! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
+//! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89, R3139004).
 //!
-//! Base: "Rush. While in your hand: whenever a unit on either side dies, this gains its attack and
-//! max health". Radiant: "Rush, Divine Shield; gains double". §8's Conventions: both keyword lists
-//! are printed in `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
+//! Base: "Rush, Brittle 1. While in your hand: whenever a unit on either side dies, this gains its attack and
+//! max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Divine Shield, Brittle 3;
+//! gains double". §8's Conventions: both keyword lists are printed in `catalog.json` (§10.4 layer 1), so no
+//! script grants them and only the gain doubles.
+//!
+//! "After this attacks a Unit, it may attack again" (since issue #3139, R3139004) is an `after_attack` hook,
+//! Tmack Trav's (R2285001, R2521002): it runs only for an attacker that survived its combat, and when the
+//! target was a Unit and no hero it is `may_attack_again` itself, a fresh exertion with `keepSick`, so on the
+//! turn it arrives its Rush still allows a Unit and never the hero. There is no cap on the repeats: each
+//! attack on a Unit it survives gives another. A printed Brittle starts on arrival and first ticks at its
+//! controller's start of turn t + 2 or later, so Brittle 1 destroys it at its controller's next turn start
+//! and Brittle 3 at the third. `script_v0_5_11o` keeps the Corpse Eater with neither, for replays (R767000).
 //!
 //! A hand-zone trigger: "while in your hand" and "stops once on the field" are the registry's doing
 //! (§10.3, R68). It reads the event, not the instance (R78 resets an instance leaving the field): R89's
@@ -50,7 +59,40 @@ fn feed(factor: i32) -> TriggerDef {
     })
 }
 
+/// A hero target is `hero-<player>` in the combat's facts.
+const HERO_TARGET: &str = "hero-";
+
+/// "After this attacks a Unit, it may attack again": `keepSick`, as Tmack Trav's (R2521002). The hook runs
+/// for a survivor only (R2285001); the check on `survived` and on the target is the card's own words.
+fn attack_again() -> Hook {
+    hook(|ctx| {
+        let Some(combat) = after_attack_of(ctx) else {
+            return Vec::new();
+        };
+        if !combat.survived || combat.target_id.starts_with(HERO_TARGET) {
+            return Vec::new();
+        }
+        vec![may_attack_again(json_as(json!({ "target": { "of": "self" }, "keepSick": true })))]
+    })
+}
+
 pub fn script() -> CardScripts {
+    let base = Script {
+        hand_triggers: vec![feed(1)],
+        after_attack: Some(attack_again()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        hand_triggers: vec![feed(2)],
+        after_attack: Some(attack_again()),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
+
+/// R767000: the script v0.5.11o and the versions before it ran, the hand growth alone with no repeat
+/// attack; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
         hand_triggers: vec![feed(1)],
         ..Script::default()
@@ -74,6 +116,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const EATER: &str = "core-089"; // 2/2 → 4/4 (6/6 before patch v0.3.10), cost 4
+
+    const FENDER: &str = "core-001"; // 0/7: a Unit to attack that hits back for nothing.
+    const MENACE: &str = "core-019"; // 9/9: a Unit that kills the Eater.
 
     // Inert fixtures: each unit's only text is a Cry, which `field` never fires.
     const GARY: &str = "core-004"; // 1/1
@@ -103,15 +148,19 @@ mod tests {
     mod n89_corpse_eater_printed_faces_s8_conventions {
         use super::*;
 
+        /// Issue #3139: both faces gain Brittle, 1 on the base and 3 on the Radiant face.
         #[test]
-        fn the_radiant_keyword_cell_lists_no_plus_so_rush_and_divine_shield_are_the_complete_list() {
+        fn the_keyword_cells_list_rush_and_brittle_and_the_radiant_one_divine_shield_and_brittle_3() {
             crate::register_all();
             let def = crate::card_def(ID);
-            assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Rush]);
+            assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
             assert_eq!(
                 kinds(&def.radiant.keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield]
+                vec![KeywordKind::Rush, KeywordKind::DivineShield, KeywordKind::Brittle]
             );
+            let brittle = |keywords: &[Keyword]| keywords.iter().find(|keyword| keyword.kind() == KeywordKind::Brittle).and_then(Keyword::n);
+            assert_eq!(brittle(&def.base.keywords), Some(1));
+            assert_eq!(brittle(&def.radiant.keywords), Some(3));
         }
     }
 
@@ -324,7 +373,7 @@ mod tests {
             s.play(EATER, json!({}));
             assert_eq!(
                 kinds(&s.stats(EATER).keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield]
+                vec![KeywordKind::Rush, KeywordKind::DivineShield, KeywordKind::Brittle]
             );
             assert!(s.card(EATER).granted_keywords.is_empty());
 
@@ -332,6 +381,178 @@ mod tests {
 
             s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
         }
+    }
+
+    /// An Eater on p1's field (`radiant`'s face) facing `enemy` Units in p2's lanes 1.., p2's turn waiting.
+    fn fielded(radiant: bool, enemy: &[&str]) -> Scenario {
+        let enemy: Vec<Value> = enemy.iter().enumerate().map(|(at, def)| json!({ "def": def, "lane": at + 1 })).collect();
+        scenario(json!({
+            "seed": SEED,
+            "p1": { "hand": [FILLER], "field": [{ "def": EATER, "radiant": radiant }], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "field": enemy, "library": crate::filler(4) },
+        }))
+    }
+
+    /// p1 holds an Eater to play this turn, p2 has `enemy` Units in lanes 1...
+    fn in_hand(radiant: bool, enemy: &[&str]) -> Scenario {
+        let enemy: Vec<Value> = enemy.iter().enumerate().map(|(at, def)| json!({ "def": def, "lane": at + 1 })).collect();
+        scenario(json!({
+            "seed": SEED,
+            "p1": { "hand": [{ "def": EATER, "radiant": radiant }, FILLER], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "field": enemy, "library": crate::filler(4) },
+        }))
+    }
+
+    /// Whether `legal_actions` offers the Eater an attack on `target`.
+    fn offers(s: &Scenario, target: &str) -> bool {
+        let eater = s.card(EATER).id.clone();
+        legal_actions(s.state(), P1).iter().any(|action| {
+            matches!(
+                action,
+                ActionBody::Attack { attacker_id, target_id, .. } if *attacker_id == eater && target_id == target
+            )
+        })
+    }
+
+    mod n89_corpse_eater_attacks_again_r3139004 {
+        use super::*;
+
+        /// Issue #3139, R3139004: an attack on a Unit it survives gives another attack, with no cap: the Eater
+        /// hits the 0/7 fender, which hits back for nothing, as often as it likes while the fender lives.
+        #[test]
+        fn r3139004_an_attack_on_a_unit_it_survives_frees_it_to_attack_again_with_no_cap() {
+            for radiant in [false, true] {
+                let mut s = fielded(radiant, &[FENDER, FENDER, FENDER]);
+                let first = s.unit_at(P2, 1);
+                let second = s.unit_at(P2, 2);
+                let third = s.unit_at(P2, 3);
+
+                s.attack(EATER, &first);
+                assert!(!s.card(EATER).exertion.attacked, "radiant {radiant}: a fresh exertion after the first");
+                s.attack(EATER, &second);
+                assert!(!s.card(EATER).exertion.attacked, "radiant {radiant}: and after the second");
+                s.attack(EATER, &third);
+                assert!(!s.card(EATER).exertion.attacked, "radiant {radiant}: and after the third");
+                // The same Unit may be attacked again too, and nothing ever ends the chain but a death or the hero.
+                s.attack(EATER, &first);
+                assert!(!s.card(EATER).exertion.attacked, "radiant {radiant}");
+            }
+        }
+
+        #[test]
+        fn r3139004_a_kill_also_frees_it_to_attack_again() {
+            let mut s = fielded(true, &[GARY, GARY]);
+            let (first, second) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
+
+            s.attack(EATER, &first);
+            s.expect_in_zone(&first, "graveyard");
+            assert!(!s.card(EATER).exertion.attacked);
+            s.attack(EATER, &second);
+
+            s.expect_in_zone(&second, "graveyard");
+            assert!(!s.card(EATER).exertion.attacked);
+        }
+
+        /// The hero is no Unit: an attack on it ends the Eater's attacks for the turn.
+        #[test]
+        fn r3139004_an_attack_on_the_hero_gives_no_other() {
+            for radiant in [false, true] {
+                let mut s = fielded(radiant, &[FENDER]);
+
+                s.attack(EATER, "hero");
+
+                assert!(s.card(EATER).exertion.attacked, "radiant {radiant}");
+                let fender = s.unit_at(P2, 1);
+                assert!(!offers(&s, &fender.id), "radiant {radiant}");
+                s.expect_refused(|s| s.attack(EATER, &fender));
+            }
+        }
+
+        /// A dead attacker runs no `after_attack` (R2285001): the Eater that dies in its combat attacks no more.
+        #[test]
+        fn r3139004_an_eater_that_dies_in_the_combat_attacks_no_more() {
+            let mut s = fielded(false, &[MENACE, FENDER]);
+
+            s.attack(EATER, s.unit_at(P2, 1));
+
+            s.expect_in_zone(EATER, "graveyard");
+        }
+
+        /// The turn it arrives its Rush still allows a Unit only (§6.1): the repeat keeps its summoning sickness.
+        #[test]
+        fn r3139004_r2521002_on_its_summon_turn_the_extra_attack_hits_a_unit_and_never_the_hero() {
+            for radiant in [false, true] {
+                let mut s = in_hand(radiant, &[FENDER, FENDER]);
+                s.play(EATER, json!({ "zone": 1 }));
+                let (first, second) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
+                assert!(!offers(&s, "hero-p2"), "radiant {radiant}: Rush, a Unit and not the hero");
+
+                s.attack(EATER, &first);
+                assert!(!s.card(EATER).exertion.attacked, "radiant {radiant}");
+                assert!(!offers(&s, "hero-p2"), "radiant {radiant}: still summoning sick");
+                s.expect_refused_with(|s| s.attack(EATER, "hero"), "Rush cannot hit the hero");
+                s.attack(EATER, &second);
+                assert!(!s.card(EATER).exertion.attacked, "radiant {radiant}");
+            }
+        }
+    }
+
+    mod n89_corpse_eater_brittle_r3139004 {
+        use super::*;
+
+        /// Issue #3139: a printed Brittle starts on arrival and first ticks at its controller's start of turn
+        /// t + 2 or later, so Brittle 1 destroys it at its controller's next turn start (R638).
+        #[test]
+        fn r3139004_brittle_1_destroys_the_base_face_at_its_controllers_next_turn_start() {
+            let mut s = in_hand(false, &[FENDER]);
+            s.play(EATER, json!({ "zone": 1 }));
+            s.expect_in_zone(EATER, "field");
+            s.end_turn();
+            s.expect_in_zone(EATER, "field");
+
+            s.end_turn();
+
+            assert_eq!(s.state().active, P1);
+            s.expect_in_zone(EATER, "graveyard");
+        }
+
+        #[test]
+        fn r3139004_brittle_3_destroys_the_radiant_face_at_its_controllers_third_turn_start() {
+            let mut s = in_hand(true, &[FENDER]);
+            s.play(EATER, json!({ "zone": 1 }));
+            for _ in 0..2 {
+                s.end_turn();
+                s.end_turn();
+                assert_eq!(s.state().active, P1);
+                s.expect_in_zone(EATER, "field");
+            }
+
+            s.end_turn();
+            s.end_turn();
+
+            s.expect_in_zone(EATER, "graveyard");
+        }
+    }
+
+    /// R767000: through v0.5.11o it had neither Brittle nor a repeat attack; the kept script is the hand growth
+    /// alone, and the catalog it folds under (v0.5.11o's) prints no Brittle.
+    #[test]
+    fn r767000_the_script_kept_for_v0_5_11o_grows_in_hand_and_never_attacks_again() {
+        let kept = script_v0_5_11o();
+        assert!(kept.base.after_attack.is_none() && kept.radiant.after_attack.is_none());
+        assert_eq!(kept.base.hand_triggers.len(), 1);
+        assert_eq!(kept.radiant.hand_triggers.len(), 1);
+        let now = script();
+        assert!(now.base.after_attack.is_some() && now.radiant.after_attack.is_some());
+        let old = |def: &mut CardDef| {
+            def.base.keywords.retain(|keyword| keyword.kind() != KeywordKind::Brittle);
+            def.radiant.keywords.retain(|keyword| keyword.kind() != KeywordKind::Brittle);
+        };
+        crate::under_kept_as(ID, kept, old, || {
+            let mut s = fielded(false, &[FENDER]);
+            s.attack(EATER, s.unit_at(P2, 1));
+            assert!(s.card(EATER).exertion.attacked, "no second attack");
+        });
     }
 
     mod n89_corpse_eater_r219 {

@@ -9,8 +9,10 @@
 // Stinkyscape (R1857000, docs/stinkyscape-set.md ST13): Call to Chaos #150 and #151 take "colon", every face its
 // rows put over the limit clamps unless the card's part wrote its own; #4.5's and #26's base faces take lines or a
 // colon (#2067); Quests #7 and #112 print one stage (questFace.ts, R2450000). The held Training Grounds set
-// (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant faces of #16 and #38 clamp.
-// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Only a face printing its catalog text takes a
+// (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant face of #16 clamps
+// (#38's did until issue #3139 made its text one short line).
+// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Issue #3139: Core #65 and #89, whose new last lines put
+// both their faces over the limit. Only a face printing its catalog text takes a
 // short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
 // only its header and the next Ascent line (#814, R280, c008_reach_the_summit.rs); a face in play past the
 // preview's limit clamps rather than shrinking its art.
@@ -28,6 +30,8 @@ export type ShortForm = number | "colon" | "clamp";
 
 export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: ShortForm }>> = {
   "core-093": { base: 2, radiant: 2 },
+  "core-065": { base: "clamp", radiant: "clamp" },
+  "core-089": { base: "clamp", radiant: "clamp" },
   "core-095": { base: "colon", radiant: "colon" },
   "core-098": { base: 2, radiant: 2 },
   "classic-005": { base: 2, radiant: 2 },
@@ -83,7 +87,6 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
   // R2194000: the held Training Grounds set's rows.
   "traininggrounds-016": { radiant: "clamp" },
-  "traininggrounds-038": { radiant: "clamp" },
   "traininggrounds-039": { base: "colon", radiant: "colon" },
 };
 

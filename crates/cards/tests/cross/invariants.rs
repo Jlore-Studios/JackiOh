@@ -2377,7 +2377,7 @@ mod r1279000_opponent_held_prompt_off_turn {
         scenario(setup)
     }
 
-    /// p1's Palantir steals what p2 plays and casts it as p1 (R831001): p2 is active, and p1 the card's
+    /// p1's Palantir steals what p2 plays, a (2) Cost Spell, and casts it as p1 (R831001, R3139000): p2 is active, and p1 the card's
     /// controller, so what its Cry asks p2 for, p2 holds on its own turn.
     fn palantir_board(p1: Value, p2: Value) -> Scenario {
         let mut p1 = p1;
@@ -2584,10 +2584,11 @@ mod r1279000_opponent_held_prompt_off_turn {
             assert!(w.is_clean(), "{caster}: {:?}", w.found);
         }
 
-        // Stolen and cast by p1's Palantir on p2's turn, it asks p2 at once, who is active.
+        // Stolen and cast by p1's Palantir on p2's turn, it asks p2 at once, who is active. A `costMod` of 1
+        // makes the (1) Cost Pickle the (2) Cost Spell Palantir answers (R3139000).
         let mut w = Watched::new(palantir_board(
             json!({ "hand": [STOCKPILE], "library": CASTER_DECK }),
-            json!({ "hand": [PICKLE, STOCKPILE], "library": HOLDER_DECK }),
+            json!({ "hand": [{ "def": PICKLE, "costMod": 1 }, STOCKPILE], "library": HOLDER_DECK }),
         ));
         w.act(|g| {
             g.play(PICKLE, json!({}));
@@ -2610,11 +2611,12 @@ mod r1279000_opponent_held_prompt_off_turn {
             assert!(w.is_clean(), "{drawer}: {:?}", w.found);
         }
 
-        // p1's Palantir has p1 draw on p2's turn: the keep is p1's, so it waits for p1's turn.
+        // p1's Palantir has p1 draw on p2's turn: the keep is p1's, so it waits for p1's turn. The Stockpile is
+        // a (2) Cost one by a `costMod` of 1 (R3139000).
         let mut w = Watched::new(palantir_board(
             json!({ "hand": [VANILLA, MENACE], "library": [FELINORS, SEVEN, TIMMY] }),
             json!({
-                "hand": [STOCKPILE, VANILLA],
+                "hand": [{ "def": STOCKPILE, "costMod": 1 }, VANILLA],
                 "backrow": [{ "def": INCOME_TAX, "faceUp": false, "radiant": true }],
                 "library": [VANILLA, VANILLA],
             }),

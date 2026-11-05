@@ -146,7 +146,7 @@ mod tests {
 
     const SHADOWSTEP: &str = "classic-014";
     const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10: "Cry: Destroy all non-Felinor Units."
-    const MIND_CONTROL: &str = "core-049"; // (4) Spell: "Steal target enemy permanent."
+    const MIND_CONTROL: &str = "core-049"; // (5) Spell: "Float reduces cost. Steal an enemy card."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const TIMMY: &str = "core-011"; // (1) Unit 3/3
@@ -319,7 +319,7 @@ mod tests {
                     "backrow": [{ "def": SHADOWSTEP, "faceUp": false }],
                     "library": [STOCKPILE],
                 },
-                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();
             s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
@@ -366,7 +366,7 @@ mod tests {
         #[test]
         fn r2618000_a_stolen_unit_of_theirs_you_control_that_dies_returns_to_your_hand() {
             let mut s = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
+                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
                 "p2": { "hand": [BIG_FELINOR, STOCKPILE], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();

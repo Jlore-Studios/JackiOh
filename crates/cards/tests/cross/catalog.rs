@@ -13,6 +13,7 @@
 //!                   C+ #64, M #19.1), #1151 (#57, #82, #83, #85), #2280 (C+ #74, S #16; R2280000).
 //!   issue #2521   — §8's rows: Core #84, M #80, C+ #34, S #11, #39, #68, #95, #137, #159 to #162, #163,
 //!                   #164, #176, #177 and M+ #1.5 (§8.9, §8.10, §7).
+//!   issue #3139   — Core #49 Snom Bunny Mind Control's cost (5) and Classic #62 Living Bomb's cost (2).
 //!   others        — radiant faces (§5.2, R276, R349), the census (#2581), tags (§5, §6, M4-T1, R278, B2.4).
 //!
 //! Not asserted: `keywords`, `text`, `params`, `refs` and `loc` (per-card tests and references.rs prove the
@@ -544,7 +545,7 @@ const CORE: &[SpecRow] = &[
     row(
         "49",
         "Snom Bunny Mind Control",
-        c(4),
+        c(5),
         T::Spell,
         &[],
         R::Rare,
@@ -1688,7 +1689,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "62",
         "Living Bomb",
-        c(1),
+        c(2),
         T::FieldSpell,
         &[G::Plague],
         R::Rare,
