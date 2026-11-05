@@ -759,7 +759,9 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -769,7 +771,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-theme="unit"
                   data-art-variant="base"
@@ -888,8 +890,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
             data-taunt="true"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -899,7 +903,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-theme="unit"
                   data-art-variant="base"
@@ -1205,7 +1209,9 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -1215,7 +1221,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-theme="unit"
                   data-art-variant="base"
@@ -1317,9 +1323,11 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             data-card-type="Unit"
             data-flying="true"
             data-foil="animated"
+            data-full-art="true"
             data-layout="minion"
             data-radiant-face="true"
             data-taunt="true"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -1329,7 +1337,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-theme="unit"
                   data-art-variant="radiant"

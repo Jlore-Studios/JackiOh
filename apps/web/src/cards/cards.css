@@ -1494,8 +1494,9 @@
     height: 50cqh;
   }
 
-  /* R1017001: a full-art face keeps its art across the whole face at hand size too. */
-  .cf[data-full-art="true"]:not([data-layout="minion"])[data-card-type] .cf-art-frame {
+  /* R1017001: a full-art face keeps its art across the whole face at hand size too. R3046000: a compact face keeps
+     its name in a band below the art (compact full art, below). */
+  .cf[data-full-art="true"]:not([data-layout="minion"]):not([data-layout="compact"])[data-card-type] .cf-art-frame {
     inset: 0;
     height: auto;
   }
@@ -1591,6 +1592,81 @@
   .cf:not([data-layout="minion"]) .cf-num {
     font-size: 16cqw;
   }
+}
+
+/* ------------------------------------------- compact full art: a face-up backrow card (R3046000) --- */
+
+/* R3046000: a full-art card (fullArt.ts) face-up in the backrow prints its art across the face, as a full face does,
+   and its name in a band below the art: the band is the foot of the face, `--cf-band` tall, and holds the name on two
+   lines at most; the art fills the face above it, inside the rarity rim. The cost gem keeps its corner, the rarity gem
+   and the set mark take the top right as a small face's do, the crest stays, and the state rail runs along the art's
+   lower edge. There is no type line (a full-art face prints none, R1017001) and no stats (a compact face has none). A
+   scrim darkens the art's top, behind the gems. The selectors carry the face's layout, art flag and type, so they
+   outrank the compact and small-face rules above whatever the source order; the finish bands of cosmetics.css and the
+   hand's full-art rules above apply as on a full face. */
+.cf[data-layout="compact"][data-full-art="true"] {
+  --cf-band: 24cqh;
+}
+
+.cf[data-layout="compact"][data-full-art="true"][data-card-type] .cf-art-frame {
+  inset: 0 0 var(--cf-band) 0;
+  height: auto;
+}
+
+.cf[data-layout="compact"][data-full-art="true"] .cf-art-frame::after {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 24%, transparent 80%, rgb(0 0 0 / 0.3));
+}
+
+.cf[data-layout="compact"][data-full-art="true"][data-card-type] .card-name {
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  height: var(--cf-band);
+  padding: 0 4cqw;
+  border-radius: 0;
+  white-space: normal;
+  line-height: 1.04;
+  font-size: calc(9cqh * var(--cf-fit, 1));
+  letter-spacing: 0;
+  clip-path: none;
+  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+}
+
+/* Two lines, then an ellipsis, if even FIT_MIN will not fit. */
+.cf[data-layout="compact"][data-full-art="true"][data-card-type] .card-name[data-clamped="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cf[data-layout="compact"][data-full-art="true"][data-card-type] .cf-gem {
+  top: 2.2cqh;
+  right: 4.5cqw;
+  left: auto;
+  width: 7.5cqh;
+  height: 7.5cqh;
+  translate: none;
+}
+
+.cf[data-layout="compact"][data-full-art="true"][data-card-type] .cf-set {
+  top: 12cqh;
+  right: 4.5cqw;
+  width: 7.5cqh;
+  height: 7.5cqh;
+}
+
+.cf[data-layout="compact"][data-full-art="true"][data-card-type] .cf-states {
+  --cf-state-size: max(20cqw, 12px);
+
+  top: auto;
+  right: 4.5cqw;
+  bottom: calc(var(--cf-band) + 1.5cqh);
+  flex-direction: row-reverse;
+  gap: 1cqw;
 }
 
 /* ------------------------------------------------------------------------------- minion ----- */
@@ -1694,6 +1770,59 @@
     0 0.4cqh 0.8cqh rgb(0 0 0 / 0.55),
     inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
   clip-path: none;
+}
+
+/* R3046000: a full-art unit (fullArt.ts `boardLookOf`; MinionFace's `data-full-art`) lays its art across the face and
+   keeps its name in a band below the art. Bottom up: the name plate is the band, `--mf-plate` tall, full width at the
+   foot of the panel; the art (`.cf-portrait`, no longer an oval) fills the panel above it, edge to edge; the attack and
+   health gems ride the art's lower corners just over the band, and the cost gem, the chips, the marks and the state
+   rail stay where the oval face puts them, over the art, so what the chip column and the counters clear is unchanged.
+   The panel takes the full face's rim, so the rarity edge (or a worn border, cosmetics.css) shows round the art as it
+   does on a full face; the art sits at z 0, under a finish's band (cosmetics.css, z 1). A scrim darkens the art's top
+   and foot behind the gems, and a Taunt's steel ring is drawn over the art's edge, since the shield it stands behind
+   is hidden by it (keywords.css). The selectors carry the layout and the art flag, so they outrank the oval face's rules
+   above and the full face's `data-full-art` rules whatever the source order. */
+.cf[data-layout="minion"][data-full-art="true"] .cf-scale {
+  inset: 1.2% 1.7%;
+  border-radius: 10.7% / 8%;
+}
+
+.cf[data-layout="minion"][data-full-art="true"] .cf-portrait {
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: var(--mf-plate);
+  left: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cf[data-layout="minion"][data-full-art="true"] .cf-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+  pointer-events: none;
+}
+
+.cf[data-layout="minion"][data-full-art="true"][data-taunt="true"] .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 4.4cqmin #c3cad8,
+    inset 0 0 0 5.4cqmin #2b303b;
+}
+
+.cf[data-layout="minion"][data-full-art="true"] .card-name {
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+}
+
+.cf[data-layout="minion"][data-full-art="true"] .stats {
+  bottom: var(--mf-plate);
 }
 
 /* R243's Vanilla marker: a plain paper stamp at the portrait's top right, clear of the cost gem and
@@ -1997,6 +2126,19 @@
   );
   box-shadow: 0 0 2.5cqmin rgb(255 220 120 / 0.75);
   pointer-events: none;
+}
+
+/* R3046000: over a full-art unit's art the bubble is the art's edge glowing gold, above the name band. */
+.cf[data-layout="minion"][data-full-art="true"] .shield-icon {
+  top: 0;
+  right: 0;
+  bottom: var(--mf-plate);
+  left: 0;
+  border-radius: 0;
+  background: radial-gradient(farthest-corner, transparent 66%, rgb(255 236 150 / 0.4));
+  box-shadow:
+    inset 0 0 0 0.7cqmin rgb(255 244 190 / 0.95),
+    inset 0 0 6cqmin 1cqmin rgb(255 220 120 / 0.85);
 }
 
 /* ------------------------------------------------------------------------------ foil ------- */

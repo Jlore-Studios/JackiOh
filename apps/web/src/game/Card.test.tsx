@@ -22,6 +22,7 @@ import {
   writeCardSettings,
 } from "../cards/index.ts";
 import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
+import { isFullArtCard } from "../cards/fullArt.ts";
 import { KEYWORD_VISUALS } from "../cards/keywordVisuals.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
@@ -566,7 +567,7 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
 /* B18 */
 
 describe("B18: Card picks its form from its props", () => {
-  it("B18 a unit is the minion form, with an oval CardArt in .cf-portrait", () => {
+  it("B18 a unit is the minion form, with an oval CardArt in .cf-portrait, or R3046000 the full-art card's art across the face", () => {
     const view = fullBoardView();
     renderBoard(view);
     for (const u of allUnits(view)) {
@@ -574,8 +575,32 @@ describe("B18: Card picks its form from its props", () => {
       expect(root.getAttribute("data-face"), u.defId).toBe("minion");
       const cf = inside(root, ".cf");
       expect(cf.getAttribute("data-layout"), u.defId).toBe("minion");
-      inside(cf, ".cf-portrait > .cf-art.cf-art--oval");
+      // R3046000: a full-art card (the fixture's core-004, -008, -011 and -013) prints its art across the face.
+      const fullArt = isFullArtCard(u.defId);
+      expect(cf.getAttribute("data-full-art"), u.defId).toBe(fullArt ? "true" : null);
+      inside(cf, `.cf-portrait > .cf-art.cf-art--${fullArt ? "full" : "oval"}`);
+      expect(cf.querySelector(`.cf-art--${fullArt ? "oval" : "full"}`), u.defId).toBeNull();
       expect(cf.querySelector(".card-text"), u.defId).toBeNull();
+    }
+  });
+
+  it("R3046000 the board's full-art Units print the art across the face with the name after it, and the others keep the oval", () => {
+    const view = fullBoardView();
+    renderBoard(view);
+    const full = allUnits(view).filter((u) => isFullArtCard(u.defId));
+    // The fixture board has Gary, Tempo Timmy, Mr. Vanilla and Jlockeed Shredder-10 among its units.
+    expect(full.map((u) => u.defId)).toEqual(expect.arrayContaining(["core-004", "core-008", "core-011", "core-013"]));
+    expect(full.length).toBeLessThan(allUnits(view).length);
+    for (const u of allUnits(view)) {
+      const cf = inside(cardRoot(u.instanceId), ".cf");
+      const art = inside(cf, ".cf-portrait > .cf-art");
+      const name = inside(cf, ".card-name");
+      expect(art.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING, u.defId).not.toBe(0);
+      expect(name.textContent, u.defId).toBe(nameOf(u.defId));
+      expect(art.classList.contains("cf-art--full"), u.defId).toBe(isFullArtCard(u.defId));
+      // Its stats, cost and chips stay on the face, full art or not.
+      expect(inside(cf, ".stat-attack").getAttribute("data-attack"), u.defId).toBe(String(u.attack));
+      inside(cf, ".cost-gem");
     }
   });
 
@@ -597,6 +622,24 @@ describe("B18: Card picks its form from its props", () => {
 
   it("B18 a face-up backrow card with the catalog is compact, typed and named from its def", () => {
     const base = fullBoardView();
+    const sheepish = faceUpBackrow("p1", { defId: "core-041", type: "Trap" }) as FaceUpBackrow;
+    const view: PlayerView = {
+      ...base,
+      you: { ...base.you, backrow: [sheepish, ...base.you.backrow.slice(1)] },
+    };
+    renderBoard(view);
+    const root = cardRoot(sheepish.instanceId);
+    expect(root.getAttribute("data-face")).toBe("compact");
+    expect(inside(root, ".card-type").textContent).toBe("Trap");
+    expect(inside(root, ".card-name").textContent).toBe("Sheepish");
+    expect(root.querySelector(".card-text")).toBeNull();
+    // A card that prints no full art keeps its window (R3046000).
+    expect(inside(root, ".cf").hasAttribute("data-full-art")).toBe(false);
+    expect(root.querySelector(".cf-art--full")).toBeNull();
+  });
+
+  it("R3046000 a full-art face-up backrow card is compact, prints its art across the face and its name after the art, with no type line", () => {
+    const base = fullBoardView();
     const breadAndButter = faceUpBackrow("p1", { defId: "core-018", type: "Field Trap" }) as FaceUpBackrow;
     const view: PlayerView = {
       ...base,
@@ -605,9 +648,17 @@ describe("B18: Card picks its form from its props", () => {
     renderBoard(view);
     const root = cardRoot(breadAndButter.instanceId);
     expect(root.getAttribute("data-face")).toBe("compact");
-    expect(inside(root, ".card-type").textContent).toBe("Field Trap");
-    expect(inside(root, ".card-name").textContent).toBe("Bread and Butter");
-    expect(root.querySelector(".card-text")).toBeNull();
+    expect(root.getAttribute("data-card-type")).toBe("Field Trap");
+    const cf = inside(root, ".cf");
+    expect(cf.getAttribute("data-layout")).toBe("compact");
+    expect(cf.getAttribute("data-full-art")).toBe("true");
+    const art = inside(cf, ".cf-art-frame > .cf-art.cf-art--full");
+    const name = inside(cf, ".card-name");
+    expect(art.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(name.textContent).toBe("Bread and Butter");
+    expect(cf.querySelector(".card-type")).toBeNull();
+    expect(cf.querySelector(".card-text")).toBeNull();
+    inside(cf, ".cost-gem");
   });
 
   it("B18 with the catalog loaded, .card-type still reads the BackrowView.type where the def's type differs", () => {

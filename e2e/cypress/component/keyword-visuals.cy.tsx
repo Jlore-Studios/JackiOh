@@ -26,7 +26,11 @@ const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 /** Overhang a box may have past the card; the card clips it. */
 const EDGE_SLACK_PX = 1;
 
-const DEF_ID = "core-004";
+/** A card that prints no full art, so the treatments are drawn round the oval portrait as R438 laid them out. */
+const DEF_ID = "core-002";
+
+/** Gary the Gambler, a full-art card: R3046000 draws a Unit's art across its face, which the same treatments must clear. */
+const FULL_ART_DEF_ID = "core-004";
 
 /** R2577000: the kinds a unit on the field draws; the rest have no treatment there. */
 const FIELD_KINDS = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].onField);
@@ -64,11 +68,11 @@ const GRID_SLACK_PX = 100;
 const VIEWPORT_MAX_PX = 4000;
 const GRID_VIEWPORT = { width: 1000, height: Math.min(VIEWPORT_MAX_PX, ROWS.length * GRID_ROW_PX + GRID_SLACK_PX) } as const;
 
-function Minion({ row, width, height }: { row: Row; width: number; height: number }) {
-  const u = unit("p1", { defId: DEF_ID, attack: 3, health: 4, maxHealth: 4, ...row.unit });
+function Minion({ row, width, height, defId }: { row: Row; width: number; height: number; defId: string }) {
+  const u = unit("p1", { defId, attack: 3, health: 4, maxHealth: 4, ...row.unit });
   const face = faceModel({
-    defId: DEF_ID,
-    def: CATALOG[DEF_ID],
+    defId,
+    def: CATALOG[defId],
     radiant: false,
     live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
   });
@@ -79,16 +83,16 @@ function Minion({ row, width, height }: { row: Row; width: number; height: numbe
   );
 }
 
-type GridProps = { zoom?: number; rows?: readonly Row[]; sizes?: readonly (typeof SIZES)[number][] };
+type GridProps = { zoom?: number; rows?: readonly Row[]; sizes?: readonly (typeof SIZES)[number][]; defId?: string };
 
-function Grid({ zoom = 1, rows = ROWS, sizes = SIZES }: GridProps) {
+function Grid({ zoom = 1, rows = ROWS, sizes = SIZES, defId = DEF_ID }: GridProps) {
   return (
     <div style={{ background: "#1b1f2b", padding: 8, zoom }}>
       {rows.map((row) => (
         <div key={row.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 6 }}>
           <div style={{ width: 110, color: "#dfe4ee", font: "9px sans-serif" }}>{row.id}</div>
           {sizes.map((size) => (
-            <Minion key={size.label} row={row} width={size.width} height={size.height} />
+            <Minion key={size.label} row={row} width={size.width} height={size.height} defId={defId} />
           ))}
         </div>
       ))}
@@ -232,4 +236,67 @@ describe("R438 keyword visuals on the board minion", () => {
       });
     }
   }
+});
+
+describe("R3046000 keyword visuals on a full-art board minion", () => {
+  beforeEach(() => {
+    __resetSettingsForTests();
+    cy.viewport(GRID_VIEWPORT.width, GRID_VIEWPORT.height);
+  });
+
+  after(() => {
+    __resetSettingsForTests();
+  });
+
+  it("R3046000 every keyword's treatment is drawn inside the card at every size, the art filling the face", () => {
+    cy.mount(<Grid defId={FULL_ART_DEF_ID} />);
+    cy.get("[data-row] .cf").should("have.length", ROWS.length * SIZES.length);
+    cy.document().should((doc) => {
+      const problems: string[] = [];
+      for (const cell of doc.querySelectorAll<HTMLElement>("[data-row]")) {
+        const where = `${cell.getAttribute("data-row") ?? "?"} at ${cell.getAttribute("data-size") ?? "?"}`;
+        const card = cell.getBoundingClientRect();
+        if (cell.querySelector(".cf")?.getAttribute("data-full-art") !== "true") problems.push(`${where}: not full art`);
+        for (const fx of cell.querySelectorAll<HTMLElement>("[data-keyword-fx]")) {
+          if (getComputedStyle(fx).display === "none") continue;
+          const box = fx.getBoundingClientRect();
+          if (box.left < card.left - EDGE_SLACK_PX || box.right > card.right + EDGE_SLACK_PX) {
+            problems.push(`${where}: ${fx.getAttribute("data-keyword-fx") ?? "?"} outside the card`);
+          }
+        }
+      }
+      expect(problems).to.deep.equal([]);
+    });
+  });
+
+  it("R3046000 no treatment covers the attack, the health or the name of a full-art unit", () => {
+    cy.mount(
+      <>
+        <HitTestable />
+        <Grid defId={FULL_ART_DEF_ID} />
+      </>,
+    );
+    cy.get("[data-row] .cf").should("have.length", ROWS.length * SIZES.length);
+    cy.document().should((doc) => {
+      const problems: string[] = [];
+      for (const cell of doc.querySelectorAll<HTMLElement>("[data-row]")) {
+        const where = `${cell.getAttribute("data-row") ?? "?"} at ${cell.getAttribute("data-size") ?? "?"}`;
+        for (const selector of [".stat-attack", ".stat-health", ".card-name"]) {
+          const el = cell.querySelector<HTMLElement>(selector);
+          if (el === null) {
+            problems.push(`${where}: no ${selector}`);
+            continue;
+          }
+          el.scrollIntoView({ block: "center", inline: "center" });
+          const r = el.getBoundingClientRect();
+          const hit = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          if (hit === null || !(hit === el || el.contains(hit))) {
+            const cover = hit?.closest("[data-keyword-fx]")?.getAttribute("data-keyword-fx") ?? hit?.className ?? "nothing";
+            problems.push(`${where}: ${selector} is covered by ${String(cover)}`);
+          }
+        }
+      }
+      expect(problems).to.deep.equal([]);
+    });
+  });
 });

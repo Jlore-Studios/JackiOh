@@ -62,6 +62,10 @@
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
 // 2–5") under its text.
 //
+// R3046000: a compact face (a face-up backrow card) prints full art too: the art across the face, still, and its name in
+// a band below the art, with the cost gem, the rarity gem and set mark, the crest and the states over it and no type line
+// (`data-full-art` on a compact face, cards.css; fullArt.ts `boardLookOf`). A compact face that is not full art keeps its window.
+//
 // R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
 // (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
 // it has no name banner, signature, rarity gem, set mark or crest. Its name stays in its words,
@@ -89,7 +93,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
@@ -325,8 +329,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const textRef = useRef<HTMLSpanElement>(null);
 
   const full = layout === "full";
-  // R1017001: a full-art card fills its full face with its art, and prints no words.
-  const fullArt = full && showsFullArt(face, fullArtOn);
+  // R1017001: a full-art card fills its full face with its art, and prints no words. R3046000: a compact face (a face-up
+  // backrow card) fills itself with its art too, still, and prints its name in a band below the art.
+  const fullArt = showsFullArt(face, fullArtOn);
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
@@ -356,9 +361,10 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const glitch = isGlitch(face.defId);
   // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
   const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
-  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none.
-  const look = full ? cardLook : NORMAL_LOOK;
-  const tier = tierOfLook(look);
+  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none but
+  // (R3046000) the version a full-art one prints, still, and no tier.
+  const look = full ? cardLook : (boardLookOf(face, cardLook) ?? NORMAL_LOOK);
+  const tier = full ? tierOfLook(look) : null;
   const augments = augmentsOf(look);
   // R2725003: Animated on full art lays the band over it and drifts it. R2949000: Signature shows the Signature look,
   // its own picture and motion, on Full art alone, and signs the name there but in the viewer's own hand.

@@ -34,7 +34,10 @@ afterEach(() => {
 
 /* Rendering */
 
-const DEF_ID = "core-004";
+/** A card that prints no full art, so the unit keeps the oval the treatments were drawn round (R3046000). */
+const DEF_ID = "core-002";
+/** Gary the Gambler, a full-art card (R1017001): its unit's art fills the face (R3046000). */
+const FULL_ART_DEF_ID = "core-004";
 
 /** A keyword of `kind`, with a number where the kind carries one. */
 function keywordOf(kind: KeywordKind, n = 2): Keyword {
@@ -49,11 +52,11 @@ function keywordOf(kind: KeywordKind, n = 2): Keyword {
   }
 }
 
-function renderUnit(over: Partial<UnitView>): HTMLElement {
-  const u = unit("p1", { defId: DEF_ID, ...over });
+function renderUnit(over: Partial<UnitView>, defId: string = DEF_ID): HTMLElement {
+  const u = unit("p1", { defId, ...over });
   const face = faceModel({
-    defId: DEF_ID,
-    def: CATALOG[DEF_ID],
+    defId,
+    def: CATALOG[defId],
     radiant: false,
     live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
   });
@@ -204,6 +207,17 @@ describe("R438 the keyword visuals map", () => {
 });
 
 /* One keyword at a time */
+
+describe("R3046000 a full-art unit draws each keyword's treatment too", () => {
+  for (const kind of FIELD_KINDS) {
+    it(`R3046000 ${kind}: the same treatment on a unit whose art fills the face`, () => {
+      const cf = renderUnit({ keywords: [keywordOf(kind, 3)], armor: kind === "Armor" ? 3 : 0 }, FULL_ART_DEF_ID);
+      expect(cf.getAttribute("data-full-art")).toBe("true");
+      expect(treatments(cf).map((el) => el.getAttribute("data-keyword-fx"))).toEqual([kind]);
+      expect(cf.querySelectorAll(`.keywords > [data-keyword="${kind}"]`)).toHaveLength(1);
+    });
+  }
+});
 
 describe("R438 a unit with each keyword renders its treatment", () => {
   for (const kind of FIELD_KINDS) {
