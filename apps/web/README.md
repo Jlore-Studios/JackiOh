@@ -761,6 +761,10 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
+- In a lesson the snapshot also adds `forecast`, the engine's `combatForecast(state, human)` (R3100000): what
+  each of the human's legal attacks would do, as the board shows it, and whether the attackers that reach the
+  enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
+  (`tutorial/advice.ts`), so the client does no combat maths.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
 - A free game in progress survives a reload (R668). After every answer the core writes its save
@@ -838,6 +842,8 @@ src/tutorial/
                             R2205000: moments, discoveries, escalating hints)
   discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
+  advice.ts                 the coach's own line (the next play, trade, hit or End turn), picked among the
+                            engine's combat forecast of each legal attack (R3100000)
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
   Coach.tsx layout.ts       the ring round what it points at, and the bubble docked to a corner, never the middle of the
                             board (R2434003; a panel above the board on phones)
@@ -857,8 +863,9 @@ src/tutorial/
   config.ts testids.ts devHandle.ts   the numbers, the testids (mirrored in e2e), `window.__jackiohTutorial`
 ```
 
-- The coach reads the snapshot the page already holds (`view`, `legal`, `aiToAct`) and nothing
-  else, and never sends an action (rule 7). A step points at a board element by its testid and
+- The coach reads the snapshot the page already holds (`view`, `legal`, `aiToAct`, and a lesson's
+  engine `forecast` of its attacks, R3100000) and nothing else, and never sends an action (rule 7).
+  `advice.ts` names the coach's own line by that forecast and computes no damage, Armor or shield itself. A step points at a board element by its testid and
   completes when the view shows it done. There is no Skip step, and nothing needs one (R314): only
   a tip or an `info` step holds the AI, and each shows "Got it"; an action step never holds it; a
   step expires after `TUTORIAL_STEP_TURNS_MAX` of the player's own turns (the lesson's `final` step

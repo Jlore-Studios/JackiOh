@@ -123,6 +123,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `hash_state(state)`, `fold(args)` | strings | the state's hash, a log folded |
 | `replay_open(args, record)`, `replay_page(checkpoints, seat, from, count)` | strings, then `from: u32`, `count: u32` | a replay opened, a page of it |
 | `last_board_for(state, seat)`, `seat_played_by(state, home)`, `find_instance(state, instance_id)` | strings | as the engine's |
+| `combat_forecast(state, seat)` | strings | R3100000: `{ attacks, lethal }`, what each attack the seat may declare would do, as the board shows it |
 | `deal_emote_hand(seed, seat)` | strings | `EmoteId[]` |
 | `ai_to_act(state, seat)` | strings | `true` or `false` |
 | `ai_decide(state, seat, options, deadline_ms)` | strings, then `deadline_ms: f64` | `{ decision, rngCursor }` |

@@ -19,6 +19,7 @@ import {
   motifRing,
   motifShake,
   motifShot,
+  otherSide,
   placeOf,
   readEvents,
   timesOf,
@@ -101,10 +102,6 @@ export const offering: MotifPlanner = {
 };
 
 const SHIFT_READS = ["swapped", "rotated", "positionSwitched", "flickered"] as const;
-
-function otherSide(side: Side): Side {
-  return side === "you" ? "opponent" : "you";
-}
 
 type BoardZone = { side: Side; lane: number };
 
