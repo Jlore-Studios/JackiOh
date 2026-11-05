@@ -2,13 +2,18 @@
 // the open challenges and the unread counts, each every `SOCIAL_POLL_MS`. The shell's toast and Play
 // together poll (`useSocialPoll`); the Friends button's badge only reads what they published
 // (`useSocialReads`). Nothing here is a rule (CLAUDE.md rule 7): a list is the server's answer, and a
-// session it refuses outright is not asked again until the tab holds another one.
+// session it refuses outright is not asked again until the tab holds another one. R3205000: the poll
+// sends nothing while the tab is hidden and reads once when it shows again, unless a challenge of the
+// player's own is open or just sent: that room expires, and the follow that takes the challenger to
+// the board rides this poll (`ChallengeToast.tsx`, `follow.ts`).
 
 import { useEffect, useSyncExternalStore } from "react";
 
+import { pollWhileVisible } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
 import { getChallenges, getUnread, type Challenge } from "../net/social.ts";
 import { SOCIAL_POLL_MS } from "./config.ts";
+import { followingChallenge } from "./follow.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
 import { isQueueMode } from "../net/api.ts";
 
@@ -41,7 +46,7 @@ let reads: SocialReads = EMPTY;
 const listeners = new Set<() => void>();
 /** Screens polling now: the interval runs while there is one. */
 let pollers = 0;
-let handle: number | null = null;
+let stopPolling: (() => void) | null = null;
 /** Counts the times polling started over, so an answer to a read made before is dropped. */
 let generation = 0;
 let refusedToken: string | null = null;
@@ -108,12 +113,12 @@ function tick(): void {
 
 function start(): void {
   tick();
-  handle = window.setInterval(tick, SOCIAL_POLL_MS);
+  stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, () => reads.outgoing.length > 0 || followingChallenge());
 }
 
 function stop(): void {
-  if (handle !== null) window.clearInterval(handle);
-  handle = null;
+  stopPolling?.();
+  stopPolling = null;
   generation += 1;
   refusedToken = null;
   publish(EMPTY);
