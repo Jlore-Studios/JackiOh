@@ -130,6 +130,8 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `build_ai_deck(options)` | string | `{ deck, rngCursor }` |
 | `choose_action(state, seat, rng_seed, rng_cursor)` | strings, then `rng_cursor: f64` | `{ action, rngCursor }` |
 | `validator(call, input)` | strings | one validator function's result |
+| `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
+| `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; the rematch book's calls answer its next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
@@ -156,8 +158,9 @@ that differs by one byte is parsed again, so an answer never depends on the cach
 **Constants.** `constants()` is one flat JSON object: `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`,
 `FIXTURE_BANNED_IDS` and `AI_DECK`; `RUN`, the dungeon run's numbers; and each constant of
 `apps/web/src/wire/engineConfig.ts` under its own name (`DECK_SIZE`, `MAX_COPIES`, `DIFFICULTIES`, …),
-so a host reads `constants.DECK_SIZE` as the web does. A host restates none of them. Later shared crates
-add theirs here (#3098).
+so a host reads `constants.DECK_SIZE` as the web does; and each constant of `jackioh-shared`'s `config.rs`
+(`SERIES_WINS_NEEDED`, `SERIES_MAX_GAMES`, `SERIES_PICK_SECONDS`, `MS_PER_SECOND`, #3098). A host restates
+none of them. Later shared modules add theirs here.
 
 ## Determinism, the clock and threading
 

@@ -11,15 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  CHALLENGE_TTL_MS,
-  DUOS_ROOM_TTL_MS,
-  MATCH_ACTION_RETENTION_DAYS,
-  MIN_ACCOUNT_AGE_YEARS,
-  PLAY_TELEMETRY_RETENTION_DAYS,
-  SPECTATE_DELAY_MS,
-  TERMS_VERSION,
-} from "@jackioh/server-config";
+import { MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION } from "@jackioh/server-config";
 
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { consentTestid } from "../auth/testids.ts";
@@ -51,7 +43,7 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
   "2026-10-31/2026-10-31": "5ac8a025c4405ca53208415c1aa5af89e7c6dceae143d442c3e36d5d5b3fc0a3",
   "2026-10-31/2026-11-01": "b21cb121e8ed21750bf3a141392ed8f0238f8cb657b05833d802e55094387dd2",
-  "2026-11-05/2026-11-05": "4e9706b5c12ecb1e327e8545d3369560ef6db2e3c03c69b86b3610e726cf62c4",
+  "2026-11-05/2026-11-05": "85285ca4c01ff4e3e39548d8795ffe6709cc7b58ea2538b557fca1b4dd7cfabb",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -68,6 +60,12 @@ function agreedText(): string {
 function canonical(): string | null {
   return document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href ?? null;
 }
+
+/** A rendered page's section by its heading, which the page names as its region. */
+const region = (name: string): HTMLElement => screen.getByRole("region", { name });
+
+/** The headings of the rendered page's sections, in order. */
+const headings = (): string[] => [...document.querySelectorAll("h3")].map((heading) => heading.textContent ?? "");
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -94,23 +92,17 @@ describe("the privacy policy", () => {
     expect(PRIVACY_LAST_UPDATED).toBe("2026-11-05");
   });
 
-  it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
+  it("R757000 R3110000 both pages name the minimum age, and the policy keeps only confirmation of it", () => {
+    const age = String(MIN_ACCOUNT_AGE_YEARS);
+    render(<TermsRoute />);
+    expect(screen.getByTestId(termsTestid.screen)).toHaveTextContent(`You must be ${age} or older.`);
+    cleanup();
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
     expect(page.querySelector("[data-owner-slot]"), "no slot left for the owner").toBeNull();
-    const section = (name: RegExp): string =>
-      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
-    const children = section(/children/i);
-    expect(children).toContain(`at least ${String(MIN_ACCOUNT_AGE_YEARS)} years old`);
-    expect(children).toMatch(/we keep only that you passed/);
-    expect(children).toMatch(/delete it the way .Delete my account. does/);
-    const collected = section(/what we collect/i);
-    expect(collected).toMatch(/passed the age check, when, and the minimum age/);
-    expect(collected).toMatch(/don.t keep your date of birth/);
-    expect(collected).toMatch(/version of the Terms and of this policy you agreed to/);
-    expect(section(/what stays on your device/i)).toMatch(/month and year of birth you gave/);
-    expect(section(/what stays on your device/i)).toMatch(/no cookies/i);
-    expect(section(/deleting your account/i)).toMatch(/record of your age check and of the terms you agreed to/);
+    expect(region("What we collect")).toHaveTextContent(`confirmation that you’re ${age} or older`);
+    expect(region("Children")).toHaveTextContent(`You must be ${age} or older to have an account.`);
+    expect(page.textContent).not.toMatch(/date of birth|month and year/);
   });
 
   it("R757001 R970001 TERMS_VERSION is the terms' date, then the privacy policy's, each with a letter for a second change that day", () => {
@@ -128,154 +120,57 @@ describe("the privacy policy", () => {
     ).toBe(digest);
   });
 
-  it("names what is collected, who handles it, and how to delete an account", () => {
+  it("R3110000 the policy names what it collects, why, who sees it, the browser, how long and the choices", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
-    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Cloudflare/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
-      expect(page.textContent).toMatch(fact);
-    }
-    expect(within(page).getByRole("link", { name: CONTACT_EMAIL })).toHaveAttribute("href", CONTACT_URL);
+    expect(headings()).toEqual([
+      "Who we are",
+      "What we collect",
+      "Why",
+      "Who sees it",
+      "Your browser",
+      "How long",
+      "Your choices",
+      "Children",
+      "Changes",
+    ]);
+    expect(region("What we collect")).toHaveTextContent("technical info like your IP address and browser");
+    expect(region("Your browser")).toHaveTextContent("We store your settings and sign-in in your browser.");
+    expect(region("How long")).toHaveTextContent("We keep your data while you have an account.");
+    expect(region("How long")).toHaveTextContent("Card statistics that don’t identify you may be kept indefinitely.");
+    expect(region("Your choices")).toHaveTextContent("Delete your account at any time from the Account page.");
+    expect(region("Your choices")).toHaveTextContent("Email us for a copy of your data.");
+    expect(region("Changes")).toHaveTextContent("we’ll update the date and ask you to agree again");
+    // The owner left the providers, the retention periods and how it works inside out of the words.
+    expect(page.textContent).not.toMatch(/Supabase|Cloudflare|Render|Vercel|Do Not Track.*days/);
+    expect(within(region("Who we are")).getByRole("link", { name: CONTACT_EMAIL })).toHaveAttribute("href", CONTACT_URL);
   });
 
-    it("names the two services that run JackiOh: Supabase, and Cloudflare for the website and the game server", () => {
-      render(<PrivacyRoute />);
-      const page = screen.getByTestId(privacyTestid.screen);
-      const section = within(page).getByRole("heading", { name: /who handles it/i }).closest("section");
-      const items = [...(section?.querySelectorAll("li") ?? [])].map((item) => item.textContent ?? "");
-      expect(items).toEqual([
-        "Supabase runs sign-in and our database, in the United States (Ohio). It also sends the sign-up and password-reset emails.",
-        // wrangler.jsonc places the server's container in Cloudflare's ENAM region, which is all it promises.
-        "Cloudflare hosts this website at jackioh.com. It also runs our game server, in eastern North America.",
-      ]);
-      expect(section?.textContent).toMatch(/We use two services to run JackiOh:/);
-      // Neither host is used any more (docs/deploy-cloudflare.md).
-      expect(page.textContent).not.toMatch(/Render|Vercel/);
-    });
-
-  it("R1442 names the play telemetry, how long it is kept, and that deleting an account deletes it", () => {
+  it("R3110000 the policy does not sell, show ads or track, and says what Do Not Track does", () => {
     render(<PrivacyRoute />);
-    const page = screen.getByTestId(privacyTestid.screen);
-    const section = (name: RegExp): string =>
-      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
-    const collected = section(/what we collect/i);
-    for (const fact of [
-      /how long each of your moves took/,
-      /clock was left/,
-      /emotes/,
-      /clock ran out/,
-      /conceded/,
-      /draw/,
-      /rematch/,
-    ]) {
-      expect(collected).toMatch(fact);
-    }
-    expect(collected).toMatch(/kept by match and seat and names\s+no account itself/);
-    expect(section(/why we collect it/i)).toMatch(/computer opponents play at a human pace/);
-    expect(section(/what we don.t do/i)).toMatch(/no third-party analytics/);
-    expect(section(/how long we keep it/i)).toContain(
-      `how you played a finished match: ${PLAY_TELEMETRY_RETENTION_DAYS} days after the match ends`,
+    const sees = region("Who sees it");
+    expect(sees).toHaveTextContent("We don’t sell your data, show ads or use third-party trackers.");
+    expect(sees).toHaveTextContent(
+      "We don’t track you across sites, so a browser’s “Do Not Track” setting changes nothing here.",
     );
-    expect(section(/deleting your account/i)).toMatch(/the records of how you played/);
   });
 
-  it("#936 says what Play together and co-op show, keep and delete, as the server does", () => {
+  it("R1442 the policy says it collects how you play and uses it to improve the AI opponents", () => {
     render(<PrivacyRoute />);
-    const page = screen.getByTestId(privacyTestid.screen);
-    const section = (name: RegExp): string =>
-      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
-    const minutes = (ms: number): number => ms / 60_000;
-
-    const collected = section(/what we collect/i);
-    expect(collected).toMatch(/co-op \(Duos\)/);
-    expect(collected).toMatch(/the co-op rooms you make or join/);
-    expect(collected).toMatch(/every player.s deck, every move, and the result/);
-
-    const handled = section(/who handles it/i);
-    expect(handled).toMatch(/your teammate sees your hand, your face-down cards and the choices in front of you/);
-    expect(handled).toMatch(/from your opponent.s seat, which shows your moves as your opponent sees them/);
-    expect(handled).toMatch(/a replay your opponent shares shows the game from their seat, your moves included/);
-
-    // No "until you or the other player removes them" for what only one side may remove.
-    const kept = section(/how long we keep it/i);
-    expect(kept).toContain(`co-op games included: ${String(MATCH_ACTION_RETENTION_DAYS)} days after the match ends`);
-    expect(kept).toContain(`A challenge: about ${String(minutes(CHALLENGE_TTL_MS))} minutes after it was sent`);
-    expect(kept).toMatch(/accepted, declined, cancelled or left unanswered/);
-    expect(kept).toContain(`A co-op room: about ${String(minutes(DUOS_ROOM_TTL_MS))} minutes after it was made`);
-    expect(kept).toMatch(/the player who shared it takes it back \(only they can\)/);
-    expect(kept).toMatch(/removes the friendship or blocks the other, which deletes every share between you for good/);
-    expect(kept).toMatch(/A block: until the player who made it lifts it/);
-    expect(kept).not.toMatch(/until you or the other player removes them/);
-
-    // R1497000: a finished co-op game stays for the teammate.
-    const deleting = section(/deleting your account/i);
-    expect(deleting).toMatch(/and so does a finished co-op game in your teammate.s, its moves and its result included/);
-    expect(deleting).not.toMatch(/deletes the whole co-op game/);
-    expect(deleting).toMatch(/during a match, a co-op game or a Conquest series that hasn.t finished/);
-    expect(deleting).toMatch(/challenges, co-op rooms and replay shares/);
+    expect(region("What we collect")).toHaveTextContent(/how you play/);
+    expect(region("Why")).toHaveTextContent(/improve our AI opponents/);
   });
 
-  it("R2615000 R2615001 says friends may always watch, that online play's data has no opt-out, and that the player statistics are public", () => {
+  it("R2615000 the policy says friends, and the opponent’s friends, can watch, and removing or blocking stops it", () => {
     render(<PrivacyRoute />);
-    const page = screen.getByTestId(privacyTestid.screen);
-    const section = (name: RegExp): string =>
-      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
-    const seconds = (ms: number): number => ms / 1_000;
-
-    // R2615000: watching has no switch; the friendship is the way out, for your friends and your opponent's.
-    const handled = section(/who handles it/i);
-    expect(handled).toContain(
-      `Any friend can watch your ranked and unranked online games from your seat, ${String(seconds(SPECTATE_DELAY_MS))} seconds behind.`,
+    expect(region("Who sees it")).toHaveTextContent(
+      "Your friends, and your opponent’s friends, can watch your online games, remove or block someone to stop that.",
     );
-    expect(handled).toMatch(/There.s no setting to turn this off: to stop someone watching, remove them as a friend or block them\./);
-    expect(handled).toMatch(/Your opponent.s friends can see your moves too: they can watch a ranked or unranked game/);
-    expect(handled).not.toMatch(/Let friends watch my games|If your opponent lets friends watch/);
-    expect(section(/what we collect/i)).not.toMatch(/whether you let friends watch/);
-
-    // R2615001: online play is recorded with no opt-out, and the policy says why.
-    expect(section(/why we collect it/i)).toMatch(
-      /Playing online means your games are recorded as described above\. There.s no setting to turn that off/,
-    );
-
-    // R2000000, R639: the player statistics, practice games' counts among them, are public with no switch.
-    const collected = section(/what we collect/i);
-    expect(collected).toMatch(/Your player statistics: how many games you have finished, won, lost and drawn/);
-    expect(collected).toMatch(/from the online and practice games you finish/);
-    expect(collected).toMatch(/Its moves are not sent to us; only what it adds to your player statistics is, while you are signed in\./);
-    expect(handled).toMatch(/Your player statistics are public: anyone can see them, with your username, on the Players tab/);
-    expect(handled).toMatch(/There.s no setting to hide them/);
-    expect(section(/deleting your account/i)).toMatch(/your tutorial progress, your player statistics, the records of how you played/);
   });
 
-  it("#970 names the presence heartbeat, and says nothing of custom cards, which are gone", () => {
+  it("R2615001 the policy says the player stats are public", () => {
     render(<PrivacyRoute />);
-    const page = screen.getByTestId(privacyTestid.screen);
-    const section = (name: RegExp): string =>
-      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
-    const items = (name: RegExp): string[] =>
-      [...(within(page).getByRole("heading", { name }).closest("section")?.querySelectorAll("li") ?? [])].map(
-        (item) => item.textContent ?? "",
-      );
-
-    expect(page.textContent).not.toMatch(/custom card/i);
-    // R970002: every signed-in session beats, once its account has agreed; not only Play together's.
-    const online = items(/what we collect/i).filter((item) => /told us you were online/.test(item));
-    expect(online).toHaveLength(1);
-    expect(online[0]).toMatch(/^While you are signed in, .* once you have agreed\s+to the Terms and this policy\./u);
-    expect(items(/what we collect/i).find((item) => item.startsWith("If you use Play together"))).not.toMatch(/online/);
-    expect(section(/why we collect it/i)).toMatch(/To save your decks and tutorial progress so they follow your account\./);
-    expect(section(/how long we keep it/i)).toMatch(/your account and game data, your age check/i);
-    expect(section(/deleting your account/i)).toMatch(/trios and cards, your\s+tutorial progress/);
-  });
-
-  it("R632 says the sign-in session lasts only as long as the tab, not as a stored sign-in", () => {
-    render(<PrivacyRoute />);
-    const page = screen.getByTestId(privacyTestid.screen);
-    const device = within(page).getByRole("heading", { name: /what stays on your device/i }).closest("section");
-    const lists = [...(device?.querySelectorAll("li") ?? [])].map((item) => item.textContent ?? "");
-    const tabOnly = lists.find((item) => /open tab only/i.test(item)) ?? "";
-    expect(tabOnly).toMatch(/sign-in session/);
-    expect(lists.filter((item) => /sign-in session/.test(item))).toEqual([tabOnly]);
-    expect(device?.textContent).toMatch(/sign in again in a new tab/i);
+    expect(region("Who sees it")).toHaveTextContent("Your player stats are public.");
   });
 
   it("is served at /privacy, with no account needed", async () => {
@@ -294,34 +189,21 @@ describe("the legal pages", () => {
       </>,
     );
     expect(screen.getByTestId(termsTestid.updated)).toHaveTextContent(`Last updated ${TERMS_LAST_UPDATED}`);
+    expect(TERMS_LAST_UPDATED).toBe("2026-11-05");
     expect(screen.getByTestId(accessibilityTestid.updated)).toHaveTextContent(
       `Last updated ${ACCESSIBILITY_LAST_UPDATED}`,
     );
   });
 
-  it("R640001 R2614000 the terms say when ranked seats an AI opponent, what it looks like and does, and that nothing marks it", () => {
+  it("R640001 R2614000 R3110000 the terms say ranked may match an AI opponent, and that nothing marks it", () => {
     render(<TermsRoute />);
-    const ai = screen.getByRole("region", { name: "AI opponents" });
-    // When, and why: the empty-queue fallback, in every queue mode and at any rank (R1453, R1555000).
+    const ai = region("AI opponents");
     expect(ai).toHaveTextContent(
-      "If no one near your rating is free to play after a short wait, ranked may pair you with an AI opponent that our server plays, so you still get a game.",
+      "When no one near your rank is available, ranked may match you against an AI opponent.",
     );
-    expect(ai).toHaveTextContent("It can happen at any rank, in Best of 1, All Random and Conquest.");
-    // What it looks like: drawn as a person's (R1454, R1834005), on the ladder but never Jlorious (R640000).
-    expect(ai).toHaveTextContent(
-      "An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, as a player does, though never in Jlorious.",
-    );
-    // What it does: a person's pace and habits (R1452, R639000).
-    expect(ai).toHaveTextContent(
-      "It plays at a person’s pace, and may emote, concede, answer a draw offer, let a turn run out or offer a rematch.",
-    );
-    // Nothing labels its seat (R1452), and that is said in so many words.
     expect(ai).toHaveTextContent("Nothing in the game marks which opponents are AI.");
-    // It reads what the AI may read (R185), and is rated as a person is (R610).
-    expect(ai).toHaveTextContent("It sees only what a player in its seat could see.");
-    expect(ai).toHaveTextContent("A game against one counts toward your rank and rating like any other ranked game.");
-    // Only the queue seats one: a challenge never does.
-    expect(ai).toHaveTextContent("A challenge you send to a friend, or accept from one, is always played against that friend.");
+    // The owner dropped what it looks like, how it plays and the friend challenge (R3110000).
+    expect(ai.textContent).not.toMatch(/portrait|cosmetic|leaderboard|pace|friend|Jlorious/);
     expect(screen.queryByRole("region", { name: "Ranked play" })).toBeNull();
   });
 
@@ -339,37 +221,20 @@ describe("the legal pages", () => {
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/copyright</loc>`);
   });
 
-  it("the terms name the minimum age, what a player submits, and link the copyright page", () => {
+  it("R3110000 the terms license what a player submits and link Privacy Policy and Copyright", () => {
     render(<TermsRoute />);
-    expect(screen.getByRole("region", { name: "Who can have an account" })).toHaveTextContent(
-      `You must be at least ${String(MIN_ACCOUNT_AGE_YEARS)} years old to have an account.`,
-    );
-    expect(screen.getByRole("region", { name: "Agreeing to these terms" })).toHaveTextContent(/ticking the box/);
-    const submitted = screen.getByRole("region", { name: "What you submit" });
-    expect(submitted).toHaveTextContent(/We remove content that infringes/);
-    expect(within(submitted).getByRole("link", { name: "Copyright" })).toHaveAttribute("href", paths.copyright);
+    const content = region("Your content");
+    expect(content).toHaveTextContent("You let us store it and show it to the players it’s meant for.");
+    expect(within(content).getByRole("link", { name: "Copyright" })).toHaveAttribute("href", paths.copyright);
+    expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);
   });
 
-  it("#970 the terms license what a player submits, each with who sees it, and set the rules of chat", () => {
+  it("R3110000 the terms' sections are the owner's, in order", () => {
     render(<TermsRoute />);
-    const submitted = screen.getByRole("region", { name: "What you submit" });
-    expect(submitted).toHaveTextContent(/you let us store it, and show it to the people named below/);
-    const items = within(submitted)
-      .getAllByRole("listitem")
-      .map((item) => item.textContent ?? "");
-    expect(items).toEqual([
-      "Your username, which other players see.",
-      expect.stringMatching(/^Your chat messages, which the friend you send them to sees, and the reason you give when you\s+report one, which only we see\.$/u),
-      "The names of your decks, which only you see.",
-      "The replays you share, which the friends you share them with see.",
-    ]);
-    expect(within(submitted).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);
-    const chat = screen.getByRole("region", { name: "Chat" });
-    for (const rule of [/harass, threaten or bully/, /hate speech/, /spam/, /personal details/, /your own included/]) {
-      expect(chat).toHaveTextContent(rule);
-    }
-    expect(chat).toHaveTextContent(/replace each word on our filter list with asterisks/);
-    expect(chat).toHaveTextContent(/abuse in chat can get an account suspended or banned/);
+    expect(headings()).toEqual(["Play fair", "Your content", "AI opponents", "No guarantees", "Changes", "Contact"]);
+    expect(region("Play fair")).toHaveTextContent("use bots");
+    expect(region("No guarantees")).toHaveTextContent("provided “as is.”");
+    expect(region("Changes")).toHaveTextContent("we’ll ask you to agree again");
   });
 
   it("#970 the copyright page names a username as something a notice can be about", () => {
@@ -394,7 +259,7 @@ describe("the legal pages", () => {
   it("name the contact email, and no GitHub issue tracker, on every page", () => {
     for (const [Page, name] of [
       [TermsRoute, "Contact"],
-      [PrivacyRoute, "Contact"],
+      [PrivacyRoute, "Who we are"],
       [CopyrightRoute, "Contact"],
       [AccessibilityRoute, "Report an issue"],
     ] as const) {

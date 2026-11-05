@@ -28,3 +28,5 @@ jackioh-wasm-core = { path = "../core" }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+# The tests read the shared logic's numbers from `constants` by name (#3098).
+jackioh-shared = { workspace = true }

@@ -31,7 +31,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | --- | --- | --- |
 | Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
-| Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
+| Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. The 1v1 actor decides no clock, reconnect or rematch rule (#3101): `jackioh_shared::host`'s pure machine does (`step(host, event, now) -> (host, outputs)`: which clock runs and what an expiry becomes, the disconnect grace, the order every view is sent in, the aim relay, a bot's turn, what a rematch offer meets), and the actor feeds it events and carries out its outputs: a tokio timer (`clock.rs` is only that), a socket send, a store write; Duos' actor still decides its own (the second part of #3101). `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
@@ -57,7 +57,9 @@ decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set 
 fold on an async path (a rebuild's three, a replay's opening, the reaper's, a finished match's one, before its result's transaction, which its quests and its game record share (#2213), a refiled game record's and `timing-backfill`'s) runs there too,
 one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
-no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
+no rule is restated here. The Conquest series' transitions and projection are `jackioh_shared::series`
+(R330–R337), which `api/series.rs`, `api/queue.rs`, `actor/rooms.rs` and `bots/pick.rs` call; `db/store.rs` and
+`loadout.rs` re-export its types. A co-op match calls the engine's Duos functions (`duos_create`,
 `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
 `duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§13). The
 catalog and its version are compiled in from `crates/cards`.
@@ -753,14 +755,18 @@ series still makes its picks.
   earned one's wear on the card it is owned on (of the people who own it there and play the card),
   each full art's wear rate and each non-starter's ownership rate. Aggregates only, no
   account id or username; it takes no option.
-- `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
+- `bots::calibrate` measures the seed ratings the skill curve holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
   `decide_styled` or the skill miss, and no clock), fits each strength's Elo offset from the
-  strongest and prints the two config rows; it reads no database, and its anchor is the seed of
-  record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`. The
-  seeds in `BOT_SEED_RATINGS` are the skill curve's (R747000, "Skill to Elo" below), which the
-  calibration checks for the strengths as built; a row pasted over them goes over the curve's too. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
+  strongest and prints the items to put in config; it reads no database, and its anchor is the seed
+  of record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`.
+  The curve (`SKILL_ELO_TABLE`, R747000, "Skill to Elo" below) is the one home of the seeds:
+  `BOT_SEED_RATINGS` is read off its Elo column in `const`. Printing is the default; with `--write`
+  (run from the repository root) it rewrites `BOT_CALIBRATION_GENERATION`, `SKILL_ELO_ANCHOR` and
+  the rows of `SKILL_ELO_TABLE` in `crates/server/src/config.rs` in place, as `cargo jackioh sweep
+  --write` does the shadow ban's, and a person reads the diff in the pull request. The same
+  calibration written again leaves no diff. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
   rated games against people (`ranked_bot_games_since`) and prints the rating they say it performs
   at, to give `bot-calibrate` as `--anchor`. Run it again after each AI promotion.
 
@@ -817,9 +823,9 @@ the table's +120).
    gap is the mean of the gaps it has: its games against the reference, and its games against
    random plus the random policy's gap.
 3. A row's Elo is `SKILL_ELO_ANCHOR` plus the gap, rounded to the nearest 10. Paste the rows over
-   `SKILL_ELO_TABLE` and `BOT_SEED_RATINGS`, the strengths' `seed_rating`s (the test
-   `r747000_strength_seed_ratings_match_skill_curve` fails until they agree), and the new numbers
-   over this table.
+   `SKILL_ELO_TABLE`; `BOT_SEED_RATINGS`, the strengths' `seed_rating`s, is read off it, and
+   `r747000_strength_seed_ratings_match_skill_curve` still holds each strength's seed to the curve
+   at its skill. Put the new numbers over this table.
 
 A run of 200 games near an even match is good to about ±50 Elo (95%), and a run of 50 to about ±95,
 which is as fast a check that an AI change moved the curve as is worth running; a shut-out run

@@ -285,6 +285,11 @@ export function holdLinkResult(result: LinkResult): void {
   setStored(LINK_RESULT_STORAGE_KEY, result, sessionStorageOrNull());
 }
 
+/** Whether a link's outcome waits to be said, without taking it: `/account` opens where it is said. */
+export function hasLinkResult(): boolean {
+  return getStored(LINK_RESULT_STORAGE_KEY, sessionStorageOrNull()) !== null;
+}
+
 /** Read once: a reload of `/account` says nothing again. */
 export function takeLinkResult(): LinkResult | null {
   const raw = getStored(LINK_RESULT_STORAGE_KEY, sessionStorageOrNull());

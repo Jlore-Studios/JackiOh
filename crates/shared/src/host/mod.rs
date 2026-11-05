@@ -1,0 +1,25 @@
+//! The match host's decisions (#3101, #2956 Part B), pure: which clock runs and what an expiry becomes,
+//! what a disconnect and a reconnect do, what a rematch offer meets, what an aim may show, and the order
+//! every view and clock is sent in. `README.md` is the contract; this file is the map.
+//!
+//!  - [`duel`] is the 1v1 machine: [`DuelHost`], [`DuelEvent`], [`DuelOutput`] and [`step`]. The Duos
+//!    machine joins it under the same event and output shapes (#3101's second part).
+//!  - [`clock`] is its clock, [`relay`] its aim and choice-hover rules, [`snapshot`] the public
+//!    bookkeeping both read, [`timer`] the timers it asks its host to keep, and [`bot`] what it decides of
+//!    a seat the host plays.
+//!  - [`rematch`] is the rematch book, which a host holds beside the machine because an offer outlives
+//!    the host that played the match.
+//!  - [`boundary`] is the one JSON call the browser and Roblox make.
+
+pub mod bot;
+pub mod boundary;
+pub mod clock;
+pub mod duel;
+pub mod relay;
+pub mod rematch;
+pub mod snapshot;
+pub mod timer;
+pub mod types;
+
+pub use duel::{DuelHost, DuelSetup, step};
+pub use types::*;

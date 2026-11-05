@@ -8,14 +8,20 @@
 //! decks. R1638000: a match on another catalog version
 //! is `409 update_required` before any offer is recorded (§9.4). R2685000: an offer counts only
 //! within `REMATCH_OFFER_TTL_MS` of the match's `finished_at`, as a co-op Play again's (R1398000).
-//! Offers live in memory, one map per `App`: a restart drops them and both clients re-offer.
+//! Offers live in memory, one book per `App`: a restart drops them and both clients re-offer.
 //! Responses carry only stakes, presence booleans and ids (CLAUDE.md rule 7).
+//!
+//! The rules are `jackioh_shared::host::rematch`'s, pure (#3101): which stakes are asked, which offers
+//! are refused before they are recorded, the window an offer is taken in, what two equal offers make and
+//! who is answered what. This module is the request's shape, the store reads the facts come from, the
+//! start of the game and the telling of a live actor.
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use indexmap::IndexMap;
 use jackioh_engine::{LeanPick, PlayerId};
+use jackioh_shared::host::rematch::{
+    OfferFacts, OfferOutcome, RematchBook, RematchRefusal, check_offer, stakes_of as stakes_requested,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -25,18 +31,11 @@ use crate::api::decks::{already_in_match, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
-use crate::config::REMATCH_OFFER_TTL_MS;
-use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
-use crate::loadout::DeckSlots;
+use crate::db::store::{MatchRow, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
 use crate::seats::Seat;
 
-/// R672: a normal rematch moves the rating once; a double-or-nothing moves it twice.
-pub const STAKE_NORMAL: RematchStakes = 1;
-/// R672: a double-or-nothing rematch. Ranked matches only (`double_requires_ranked`).
-pub const STAKE_DOUBLE: RematchStakes = 2;
-
-/// `STAKE_NORMAL` or `STAKE_DOUBLE`, nothing else.
-pub type RematchStakes = i32;
+// R672: the stakes of an offer are the rematch host's (`jackioh_shared::host::rematch`, #3101).
+pub use jackioh_shared::host::rematch::{RematchStakes, STAKE_DOUBLE, STAKE_NORMAL};
 
 /// `POST /api/matches/:matchId/rematch`: the created game, or null while the seats disagree.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -58,29 +57,13 @@ pub struct RematchStatusBody {
     pub mode: QueueMode,
 }
 
-struct OfferEntry {
-    /// Seat -> the stakes it offered.
-    offers: IndexMap<PlayerId, RematchStakes>,
-    /// R1372, R924000: seat -> its latest offer's "More cards from" pick.
-    leans: IndexMap<PlayerId, Option<LeanPick>>,
-    /// `now` of the latest offer; the sweep reads this. It is not the offer window: R2685000 counts
-    /// that from the finished match's `finished_at`, and `offer_as` takes no offer past it.
-    at: i64,
-    /// The game equal stakes made, once made.
-    match_id: Option<String>,
-    /// Which entry this is: a swept-and-remade entry must not be mistaken for it after a failed create.
-    generation: u64,
-}
-
 /// R672's offers, by the finished match's id: rendezvous state for two sockets, not rows. One per
 /// `App` (`App::rematch_offers`), like `QueuePresence`, so parallel tests never share offers and one
 /// test's sweep never reaches another's.
 #[derive(Default)]
-pub struct RematchOffers(Mutex<IndexMap<String, OfferEntry>>);
+pub struct RematchOffers(Mutex<RematchBook>);
 
-static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
-
-fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
+fn offers(app: &App) -> MutexGuard<'_, RematchBook> {
     app.rematch_offers
         .0
         .lock()
@@ -94,10 +77,7 @@ pub fn rematch_offer_count(app: &App) -> usize {
 
 /// Sweeps expired rematch offers older than `REMATCH_OFFER_TTL_MS` with no live actor.
 pub fn sweep_rematch_offers(app: &App, now: i64) -> usize {
-    let mut map = offers(app);
-    let before = map.len();
-    map.retain(|match_id, entry| now - entry.at <= REMATCH_OFFER_TTL_MS || app.matches.has(match_id));
-    before - map.len()
+    offers(app).sweep(now, |match_id| app.matches.has(match_id))
 }
 
 // Small private copies (fullsend rule 5): the error shapes
@@ -123,46 +103,35 @@ pub(crate) fn cards_changed(app: &App, played_on: &str) -> ApiError {
     )
 }
 
-/// R1285000, R2685000: whether a finished match's rematch window is open at `now`: at most
-/// `REMATCH_OFFER_TTL_MS` since its end. A finished row with no end is outside it.
-pub(crate) fn in_rematch_window(finished_at: Option<i64>, now: i64) -> bool {
-    finished_at.is_some_and(|finished_at| now - finished_at <= REMATCH_OFFER_TTL_MS)
-}
+// R1285000, R2685000: whether a finished match's rematch window is open at `now` is the rematch host's
+// rule, and so is the co-op Play again's and the reaper's.
+pub(crate) use jackioh_shared::host::rematch::in_rematch_window;
 
 // Offers
 
 fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
-    let stakes = body.get("stakes").and_then(Value::as_f64);
-    if stakes == Some(STAKE_NORMAL as f64) {
-        return Ok(STAKE_NORMAL);
-    }
-    if stakes == Some(STAKE_DOUBLE as f64) {
-        return Ok(STAKE_DOUBLE);
-    }
-    Err(ApiError::new(
-        ApiErrorCode::BadRequest,
-        "\"stakes\" must be 1 (rematch) or 2 (double-or-nothing)",
-    ))
+    stakes_requested(body.get("stakes").and_then(Value::as_f64)).ok_or_else(|| {
+        ApiError::new(
+            ApiErrorCode::BadRequest,
+            "\"stakes\" must be 1 (rematch) or 2 (double-or-nothing)",
+        )
+    })
 }
 
-/// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
-/// game is never swept here: the id is how a late poller finds the game, until the reaper's
-/// `sweep_rematch_offers`. This reads the latest offer's `at`; the window an offer is taken in is the
-/// finished match's, which `offer_as` checks first (R2685000).
-fn live_entry<'a>(
-    offers: &'a mut IndexMap<String, OfferEntry>,
-    match_id: &str,
-    now: i64,
-) -> Option<&'a mut OfferEntry> {
-    let stale = {
-        let entry = offers.get(match_id)?;
-        entry.match_id.is_none() && now - entry.at > REMATCH_OFFER_TTL_MS
-    };
-    if stale {
-        offers.shift_remove(match_id);
-        return None;
+/// The error a refusal before the offer is recorded answers with.
+fn refusal_error(app: &App, refusal: RematchRefusal, played_on: &str) -> ApiError {
+    match refusal {
+        RematchRefusal::DoubleRequiresRanked => ApiError::new(
+            ApiErrorCode::DoubleRequiresRanked,
+            "double-or-nothing needs a ranked match",
+        ),
+        RematchRefusal::MatchNotFinished => ApiError::new(
+            ApiErrorCode::MatchNotFinished,
+            "offer a rematch once the match is over",
+        ),
+        RematchRefusal::SeriesGame => series_game(),
+        RematchRefusal::UpdateRequired => cards_changed(app, played_on),
     }
-    offers.get_mut(match_id)
 }
 
 fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
@@ -186,68 +155,27 @@ async fn create_rematch(
 ) -> Result<(), ApiError> {
     let random = mode == QueueMode::Random;
     let seed = new_seed();
-    let portrait_of = |at: usize| -> Option<String> {
-        finished
-            .portraits
-            .as_ref()
-            .map(|portraits| (if at == 0 { &portraits.0 } else { &portraits.1 }).to_string())
-    };
-    let dealt_portrait = |seat: &str| -> Option<String> {
-        Some(jackioh_engine::wire::pick_portrait_from_seed(&format!("{seed}:portrait:{seat}")).to_string())
-    };
-    // R1834002: a Best-of-1 rematch plays the same decks under the slots their seats wore, which the
-    // new loadout judges again; All Random deals new decks and wears the accounts' slots.
-    let slots_of = |at: usize| -> Option<DeckSlots> {
-        if random {
-            return None;
-        }
-        finished.loadouts.as_ref().map(|loadouts| {
-            (if at == 0 { &loadouts.0 } else { &loadouts.1 })
-                .seat
-                .deck_slots()
-        })
-    };
-    // R1989000: the seats swap — the finished match's P2 takes P1 with that profile's deck,
-    // portrait, slots and lean, and its P1 takes P2 with theirs. `leans` is still keyed by the
-    // finished match's seats, so the new P1 leans on the old P2's pick.
-    let seats = (
-        MatchSeat {
-            profile_id: finished.players.1.clone(),
-            player: PlayerId::P1,
-            deck: if random {
-                crate::actor::engine::deal_random_deck(
-                    &format!("{seed}:p1-deck"),
-                    crate::actor::engine::lean_of(leans.1),
-                )
-            } else {
-                finished.decks.1.clone()
+    // R1989000, R1834002: the seats swap, and the finished match's slots are judged again by the new
+    // loadout (`jackioh_shared::host::rematch::next_seats`).
+    let seats = crate::actor::engine::run_pinned(Default::default(), || {
+        jackioh_shared::host::rematch::next_seats(
+            &jackioh_shared::host::rematch::FinishedSeats {
+                players: finished.players.clone(),
+                decks: finished.decks.clone(),
+                portraits: finished
+                    .portraits
+                    .as_ref()
+                    .map(|portraits| (portraits.0.to_string(), portraits.1.to_string())),
+                slots: finished
+                    .loadouts
+                    .as_ref()
+                    .map(|loadouts| (loadouts.0.seat.deck_slots(), loadouts.1.seat.deck_slots())),
             },
-            portrait: if random {
-                dealt_portrait("p1")
-            } else {
-                portrait_of(1)
-            },
-            deck_slots: slots_of(1),
-        },
-        MatchSeat {
-            profile_id: finished.players.0.clone(),
-            player: PlayerId::P2,
-            deck: if random {
-                crate::actor::engine::deal_random_deck(
-                    &format!("{seed}:p2-deck"),
-                    crate::actor::engine::lean_of(leans.0),
-                )
-            } else {
-                finished.decks.0.clone()
-            },
-            portrait: if random {
-                dealt_portrait("p2")
-            } else {
-                portrait_of(0)
-            },
-            deck_slots: slots_of(0),
-        },
-    );
+            random,
+            &seed,
+            leans,
+        )
+    });
 
     // Refuse before minting anything: a seat that found another game meanwhile keeps that game.
     // R1523000: both seats, or neither, reserved in one step; a seat that holds a match, a series
@@ -489,95 +417,51 @@ async fn offer_as(
     stakes: RematchStakes,
     lean: Option<LeanPick>,
 ) -> Result<Option<String>, ApiError> {
-    // R672: only a ranked match can spawn a double-or-nothing.
-    if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
-        return Err(ApiError::new(
-            ApiErrorCode::DoubleRequiresRanked,
-            "double-or-nothing needs a ranked match",
-        ));
-    }
-    if match_row.status != MatchStatus::Finished {
-        return Err(ApiError::new(
-            ApiErrorCode::MatchNotFinished,
-            "offer a rematch once the match is over",
-        ));
-    }
-    if is_series_game(app, &match_row.id).await? {
-        return Err(series_game());
-    }
-    // R1638000: refused before the offer is recorded, so nothing is kept and no rematch is made.
-    if match_row.catalog_version != app.catalog.version {
-        return Err(cards_changed(app, &match_row.catalog_version));
-    }
+    // R672, R1638000: refused before the offer is recorded, so nothing is kept and no rematch is made.
+    // Whether the match was a series game is read only for a match that is over, as it always was.
+    let finished = match_row.status == MatchStatus::Finished;
+    let series_game = finished && is_series_game(app, &match_row.id).await?;
+    check_offer(&OfferFacts {
+        stakes,
+        ranked: match_row.ranked,
+        finished,
+        series_game,
+        catalog_current: match_row.catalog_version == app.catalog.version,
+    })
+    .map_err(|refusal| refusal_error(app, refusal, &match_row.catalog_version))?;
 
     let now = now_ms();
-    // R2685000: the window is the finished match's, not an offer's. A finished row with no end is
-    // outside it, as it is for its socket (R1285000). The offer lapses silently, recording nothing,
-    // telling no actor and making no game; an entry that already made one keeps its id, so a seat
-    // that offers or polls late still learns where to go, and any other entry is dropped.
-    if !in_rematch_window(match_row.finished_at, now) {
-        let mut map = offers(app);
-        let answered = match map.get(&match_row.id) {
-            Some(entry) if entry.match_id.is_some() => entry.match_id.clone(),
-            _ => {
-                map.shift_remove(&match_row.id);
-                None
-            }
-        };
-        return Ok(answered);
-    }
-    // One new game per pair of equal offers: check and claim run under one lock, so two offers
-    // landing together cannot mint two games; a failed create clears the claim.
-    let (claimed, answered) = {
-        let mut map = offers(app);
-        if live_entry(&mut map, &match_row.id, now).is_none() {
-            let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
-            map.insert(
-                match_row.id.clone(),
-                OfferEntry {
-                    offers: IndexMap::new(),
-                    leans: IndexMap::new(),
-                    at: now,
-                    match_id: None,
-                    generation,
-                },
-            );
-        }
-        let Some(entry) = map.get_mut(&match_row.id) else {
-            return Err(ApiError::internal(
-                "the rematch offer vanished while it was being written",
-            ));
-        };
-        entry.at = now;
-        entry.offers.insert(seat, stakes);
-        entry.leans.insert(seat, lean);
-        if entry.offers.get(&seat.opponent()) == Some(&stakes) && entry.match_id.is_none() {
-            let new_id = new_uuid();
-            entry.match_id = Some(new_id.clone());
-            let lean_of = |at: PlayerId| entry.leans.get(&at).copied().flatten();
-            let leans = (lean_of(PlayerId::P1), lean_of(PlayerId::P2));
-            (Some((new_id, entry.generation, leans)), None)
-        } else {
-            (None, entry.match_id.clone())
-        }
-    };
+    // One new game per pair of equal offers: the check and the claim are one step under one lock, so two
+    // offers landing together cannot mint two games; a failed create clears the claim. R2685000: an
+    // offer past the finished match's window lapses silently.
+    let outcome = offers(app).offer(
+        &match_row.id,
+        match_row.finished_at,
+        seat,
+        stakes,
+        lean,
+        now,
+        &new_uuid(),
+    );
 
-    let made = claimed.is_some();
-    let match_id = match claimed {
-        None => answered,
-        Some((new_id, generation, leans)) => {
+    let made = matches!(outcome, OfferOutcome::Claimed { .. });
+    let match_id = match outcome {
+        // R2685000: a lapsed offer records nothing, tells no actor and makes no game: the entry that
+        // already made one is how a seat that offers or polls late still learns where to go.
+        OfferOutcome::Lapsed { answered } => return Ok(answered),
+        OfferOutcome::Waiting { answered } => answered,
+        OfferOutcome::Claimed {
+            match_id: new_id,
+            generation,
+            leans,
+        } => {
             let created = async {
                 let mode = rematch_mode(app, match_row).await?;
                 create_rematch(app, match_row, mode, stakes, leans, &new_id).await
             }
             .await;
             if let Err(error) = created {
-                let mut map = offers(app);
-                if let Some(entry) = map.get_mut(&match_row.id)
-                    && entry.generation == generation
-                {
-                    entry.match_id = None;
-                }
+                offers(app).release(&match_row.id, generation);
                 return Err(error);
             }
             Some(new_id)
@@ -606,44 +490,20 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
         return Err(series_game());
     }
 
-    let (you_offered, opponent_offer, created) = {
-        let mut map = offers(app);
-        match live_entry(&mut map, &match_row.id, now_ms()) {
-            None => (None, None, None),
-            Some(entry) => (
-                entry.offers.get(&seat).copied(),
-                entry.offers.get(&seat.opponent()).copied(),
-                entry.match_id.clone(),
-            ),
-        }
-    };
+    let seen = offers(app).seen(&match_row.id, seat, now_ms());
     let presence = app.matches.presence_of(&match_row.id);
     // R1372: the mode a rematch would play, read as the rematch itself reads it.
     let mode = rematch_mode(app, &match_row).await?;
     let status = RematchStatusBody {
-        you_offered,
-        opponent_offer,
+        you_offered: seen.you_offered,
+        opponent_offer: seen.opponent_offer,
         // Gone whenever no live actor holds the match or the opponent's socket closed.
         opponent_here: presence.is_some_and(|presence| presence[seat.opponent()]),
-        match_id: created,
+        match_id: seen.match_id,
         mode,
     };
     Ok(json(
         200,
         serde_json::to_value(status).map_err(|error| ApiError::internal(error.to_string()))?,
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_rematch_window_runs_from_the_end_to_the_ttl_inclusive_and_never_without_an_end() {
-        let end = REMATCH_OFFER_TTL_MS;
-        assert!(!in_rematch_window(None, end));
-        assert!(in_rematch_window(Some(end), end));
-        assert!(in_rematch_window(Some(end), end + REMATCH_OFFER_TTL_MS));
-        assert!(!in_rematch_window(Some(end), end + REMATCH_OFFER_TTL_MS + 1));
-    }
 }

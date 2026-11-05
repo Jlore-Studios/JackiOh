@@ -86,6 +86,10 @@ export const loginTestid = {
   // R666: one button per configured OAuth provider (`data-provider` names it).
   oauth: "login-oauth",
   oauthError: "login-oauth-error",
+  // R3147000: beside the Roblox button, how a player who has an account already brings Roblox to it.
+  robloxHint: "login-roblox-hint",
+  // R3147002: the sign-in that follows removing a new account, to link its provider to the old one.
+  linkAfter: "login-link-after",
   // R2983000: the slot Google's own button is drawn in.
   googleButton: "login-google-button",
 } as const;
@@ -132,6 +136,8 @@ export const inviteTestid = {
   resendNotice: "invite-resend-notice",
   checkAgain: "invite-check-again",
   checkResult: "invite-check-result",
+  /** R3147001: an account with no address adds one before its code. */
+  addEmail: "invite-add-email",
   /** #1691: the account read behind the screen failed, and Try again reads it again. */
   accountError: "invite-account-error",
   accountRetry: "invite-account-retry",

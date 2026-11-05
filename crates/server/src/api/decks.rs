@@ -36,7 +36,7 @@ use crate::db::store::{
     DeckVersion, FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx,
     UpsertOutcome,
 };
-use crate::loadout::DeckSlots;
+use crate::loadout::{DeckSlots, DeckSlotsExt};
 use crate::seats::{Seat, Taken};
 
 // Ids
