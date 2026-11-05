@@ -1,12 +1,16 @@
 // R2119000: a deletion is undone, not asked. Deleting a deck, a trio or a custom card, or removing a
 // friend, takes the item off the screen at once and holds its request for `UNDO_WINDOW_MS` behind the
-// undo toast (`UndoToast.tsx`), one at a time. Nothing here is a rule (CLAUDE.md rule 7): the server
-// still decides every deletion.
+// undo toast (`UndoToast.tsx`), one at a time. A second deletion within `UNDO_REPEAT_MS` of the first is a
+// double click and is refused (R3059000). Nothing here is a rule (CLAUDE.md rule 7): the server still
+// decides every deletion.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /** How long a deletion waits, its Undo offered, before its request goes. */
 export const UNDO_WINDOW_MS = 8000;
+
+/** A deletion this soon after the last one taken is a double click, and is refused (R3059000). */
+export const UNDO_REPEAT_MS = 500;
 
 /** The timers the window runs on; a test hands a manual one (`game/deckbuilder/testkit.ts`). */
 export type UndoTimer = {
@@ -34,8 +38,12 @@ export type HeldDeletion = {
 export type UndoHold = {
   /** The deletion the toast offers to undo, if any. */
   held: HeldDeletion | null;
-  /** Holds a deletion, sending any held before it at once. */
-  hold: (deletion: HeldDeletion) => void;
+  /**
+   * Holds a deletion, sending any held before it at once, and returns `true`. Returns `false`, sending and
+   * holding nothing, when it comes within `UNDO_REPEAT_MS` of the last one taken: the caller then leaves
+   * its item where it is.
+   */
+  hold: (deletion: HeldDeletion) => boolean;
   undo: () => void;
   /** Sends the held deletion at once, before something that needs it gone (a new deck at the cap). */
   sendNow: () => void;
@@ -45,6 +53,8 @@ export function useUndoHold(timer: UndoTimer = BROWSER_TIMER): UndoHold {
   const [held, setHeld] = useState<HeldDeletion | null>(null);
   const current = useRef<HeldDeletion | null>(null);
   const handle = useRef<unknown>(null);
+  /** The repeat guard's timer: non-null while a deletion was just taken. */
+  const repeat = useRef<unknown>(null);
   const timerRef = useRef(timer);
   timerRef.current = timer;
 
@@ -55,6 +65,10 @@ export function useUndoHold(timer: UndoTimer = BROWSER_TIMER): UndoHold {
     if (handle.current !== null) {
       timerRef.current.clearTimeout(handle.current);
       handle.current = null;
+    }
+    if (repeat.current !== null) {
+      timerRef.current.clearTimeout(repeat.current);
+      repeat.current = null;
     }
     current.current = null;
     setHeld(null);
@@ -69,7 +83,8 @@ export function useUndoHold(timer: UndoTimer = BROWSER_TIMER): UndoHold {
   );
 
   const hold = useCallback(
-    (deletion: HeldDeletion): void => {
+    (deletion: HeldDeletion): boolean => {
+      if (repeat.current !== null) return false;
       send(false);
       current.current = deletion;
       setHeld(deletion);
@@ -77,6 +92,11 @@ export function useUndoHold(timer: UndoTimer = BROWSER_TIMER): UndoHold {
         handle.current = null;
         send(false);
       }, UNDO_WINDOW_MS);
+      // A refused call leaves this timer as it is, so a third press after the guard ends is taken.
+      repeat.current = timerRef.current.setTimeout(() => {
+        repeat.current = null;
+      }, UNDO_REPEAT_MS);
+      return true;
     },
     [send],
   );
