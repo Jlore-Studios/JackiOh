@@ -53,6 +53,42 @@ describe("R2170000: the Stinkyscape set draws its own families", () => {
     expect([...STARSHIP_PIECES].sort()).toEqual(printed.sort());
   });
 
+  it("R3142002 the Stinkyscape Golem is no Starship Piece and is drawn as the fleet's golem, not as a fighter or a crew member", () => {
+    const golem = byName("Stinkyscape Golem");
+    expect(keywordsOf(golem)).not.toContain("Starship Piece");
+    expect(STARSHIP_PIECES.has(golem.id)).toBe(false);
+    for (const keyword of ["Flying", "Ranged", "Rush"]) expect(keywordsOf(golem)).toContain(keyword);
+    expect(subjectOf(golem)).toMatchObject({ family: "fleet", kind: "golem" });
+    // Its own painter: a stone-plated body, a cockpit visor, wing fins and two engine nozzles, so it is not
+    // the picture the fighter hull draws for the same seed.
+    const fighter = stinkyscapeSvg(golem.id, "Falcon", [], "Unit", false);
+    expect(svgOf(golem, false)).not.toBe(fighter);
+    expect(svgOf(golem, false)).toContain('fill="url(#vz)"');
+    // The Training Grounds Golem is `traininggrounds.ts`'s, never this file's.
+    expect(isStinkyscapeArt("traininggrounds-039-1")).toBe(false);
+    // The ships that never printed the keyword keep their look.
+    expect(subjectOf(byName("Dormant Starship"))).toMatchObject({ family: "fleet", kind: "dormant" });
+    expect(subjectOf(byName("Falcon"))).toMatchObject({ family: "fleet", kind: "fighter" });
+  });
+
+  it("R3142002 a Human Unit is a crew figure whatever its name holds: the Drone Commander is crew, a Drone Interceptor stays a drone", () => {
+    const commander = byName("Drone Commander");
+    expect(commander.tags).toContain("Human");
+    expect(subjectOf(commander)).toMatchObject({ family: "crew", kind: "commander" });
+    for (const name of ["Drone Interceptor", "Drone Corvette", "Drone Hanger", "Drone Battleship (Shield Layer)"]) {
+      expect(subjectOf(byName(name)).family, name).toBe("drone");
+    }
+    // Every other Human Unit is classified as it was: only a name holding "drone" moved.
+    const moved = SET.filter((card) => card.type === "Unit" && card.tags.includes("Human") && /(^|[^a-z])drone([^a-z]|$)/i.test(card.name));
+    expect(moved.map((card) => card.name)).toEqual(["Drone Commander"]);
+    // Both faces draw the officer's drone hovering behind her: a drone's glowing eye and the crew visor.
+    for (const radiant of [false, true]) {
+      const svg = svgOf(commander, radiant);
+      expect(svg).toContain('fill="url(#vz)"');
+      expect(svg).toContain('fill="url(#dr)"');
+    }
+  });
+
   it("R2170000 every Drone Core is the bare drone core, its mark the count of its nodes, and every drone shares the drone", () => {
     const cores = SET.filter((card) => card.tags.includes("Drone Core"));
     expect(cores).toHaveLength(10);
@@ -206,7 +242,9 @@ describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it w
   // The hash of `stinkyscapeSvg`'s output on each face, recorded as the set shipped (v0.5.0, #1884),
   // as `core-art-v0.1.json` records Core's: a change to the set's art fails here, entry by entry.
   // #2521 recorded S #176 Preemptive Strike and S #177 Cloaking Module as they ship, and S #137 again:
-  // renamed Starfleet Commander, a Human, it draws from its new name.
+  // renamed Starfleet Commander, a Human, it draws from its new name. #3142 recorded S #45 Drone Commander
+  // (a Human officer, no longer a hive ship) and S #150.1 Stinkyscape Golem (no longer a fighter hull)
+  // again (R3142002, R2529000).
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
 
   it("R503 the fixture covers every Stinkyscape entry", () => {

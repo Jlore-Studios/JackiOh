@@ -47,7 +47,12 @@ asset tests out).
 
 The Stinkyscape set's entries (`stinkyscape-…`) draw `stinkyscape.ts`'s procedural art instead of
 `procedural.ts`'s: a space backdrop under one subject per family, each weapon the weapon its name says
-(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins.
+(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins. Two
+cards have a look of their own (R3142002): a Human Unit whose name holds "drone" (the Drone Commander) is the
+`crew` family's `commander`, an officer with a drone hovering behind her, where its name alone sends a card to
+the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
+a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
+and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's.
 
 ## The Training Grounds set's own art
 
