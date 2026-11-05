@@ -14817,6 +14817,7 @@
         "by": "`claude` (strong)",
         "sha": "08cca0c1ca9fa16f5fa51b19f9252a4a9e024ff8"
       },
+      "closed_at": "2026-11-05T04:01:59Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -14832,6 +14833,7 @@
         "provider": "claude-8",
         "sha": "08cca0c1ca9fa16f5fa51b19f9252a4a9e024ff8"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
