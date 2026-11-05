@@ -12672,8 +12672,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-6",
-      "owner_since": "2026-11-05T14:17:24Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-05T18:10:00Z; it can start again only in 3h 52m, more than the 120 minutes an item waits for its owner",
+      "owner_since": "2026-11-05T16:14:17Z",
+      "owner_why": "its turn came (#3193, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-05T12:14:05Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -15660,12 +15660,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3015,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-11-05T15:38:01Z",
+      "queued_at": "2026-11-05T16:14:17Z",
       "run_id": "42057168103",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15686,9 +15686,17 @@
         "provider": "claude-6",
         "run": "42043575686"
       },
+      "source": "conflict",
       "started_at": "2026-11-05T15:39:15Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-05T16:14:17Z",
+        "until": "2026-11-05T16:44:17Z",
+        "why": "#3193, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -15708,17 +15716,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3193
-        ],
-        "ends": "2026-11-05T18:04:29Z",
-        "from_run": "42057168103",
-        "head": "3c344f370200bc4bd250ad0d54048a7f697b7e9b",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-05T16:04:29Z"
       }
     },
     "3197": {
