@@ -1,6 +1,7 @@
 //! `jackioh`, the project's command-line tools (SURFACE §12), run as `cargo jackioh <cmd>`, one
 //! subcommand per row of §12's table. Exit codes: 0 on success, 1 on a failed check (a `run` that
-//! returns `Err`), 2 on bad usage (clap). Output goes to stdout; nothing is interactive.
+//! returns `Err`), 2 on bad usage (clap). Output goes to stdout (a fuzz wave's progress lines go to
+//! stderr, `seed_watch.rs`); nothing is interactive.
 
 mod agent;
 mod arena;
@@ -26,6 +27,7 @@ mod replay;
 mod retcon;
 mod run_sim;
 mod sample_size;
+mod seed_watch;
 mod selfplay;
 mod selfplay_records;
 mod spec;
