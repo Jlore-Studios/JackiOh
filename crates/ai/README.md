@@ -14,8 +14,8 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-The Death, the turn-hook, the activation and the attack-hook prices of a decision (R2424000, R2477000,
-R2564000, R2688000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
+The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
+R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them; a call outside a decision passes `Prices::NONE` (plain
 `evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
@@ -121,6 +121,12 @@ target `legal_actions` lists, beside the same attack by the unit's hookless twin
 keywords granted, its text given back before scoring), and prices the controller's evaluation after the
 one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
+A Dormant card's "When this awakens" counts by its awakening (R3064000): `awaken_prices` wakes each Dormant
+card with a wake trigger on either field, and each Unit with one in the seat's own hand, placed first
+(R923001), on a sandbox copy within `AI_AWAKEN_PROBE_NODES`, beside the same wake of its hookless twin, and
+prices the controller's evaluation after the one wake less after the other, each crystal gained at
+`next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
+share, and `GREEDY_EVAL` keeps 0.
 A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
 Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a

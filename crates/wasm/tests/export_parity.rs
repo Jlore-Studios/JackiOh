@@ -1,7 +1,9 @@
-//! #1505: the two browser modules wrap one set of bodies, so a binding cannot be added to one
-//! side and forgotten in the other. This test compares each module's export list to a declared
-//! allow-list: a binding bound in only one module fails it, unless the allow-list says so with the
-//! reason. It uses `std` only and reads files at run time.
+//! #1505: the browser modules wrap one set of bodies, so a binding cannot be added to one side and
+//! forgotten in the other. This test compares each module's export list to a declared allow-list: a
+//! binding bound in only one module fails it, unless the allow-list says so with the reason. #3093 adds
+//! a third wrapper, the C module (`crates/wasm/c`): it exports every binding the browser module binds,
+//! so a binding added for the web reaches a host that is not JavaScript by itself. It uses `std` only
+//! and reads files at run time.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -68,6 +70,31 @@ const NORMAL_ONLY: &[&str] = &[
 /// boundary's strings.
 const LUAU_ONLY: &[&str] = &["check_custom_card", "jackioh_free", "jackioh_last_error"];
 
+/// What only the C module exports, and why: its memory interface, since a host that is not JavaScript
+/// reads and writes the module's memory itself.
+const C_ONLY: &[(&str, &str)] = &[
+    ("jackioh_alloc", C_MEMORY),
+    ("jackioh_free", C_MEMORY),
+    ("jackioh_result_ptr", C_MEMORY),
+    ("jackioh_result_len", C_MEMORY),
+];
+
+const C_MEMORY: &str = "the C module's memory interface (`crates/wasm/c/README.md`)";
+
+/// What the Luau module binds and the C module does not, and why: the custom-card bindings and the
+/// Luau module's own error channel, which leave with part 5 of #2956 (the Luau host's removal).
+const LUAU_NOT_IN_C: &[(&str, &str)] = &[
+    (
+        "check_custom_card",
+        "the creator's check needs the Luau VM, which the C module holds none of; leaves with part 5",
+    ),
+    (
+        "jackioh_last_error",
+        "the Luau module's NUL-terminated error string; the C module answers a failure's message in its \
+         result buffer instead; leaves with part 5",
+    ),
+];
+
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -105,6 +132,10 @@ fn normal_exports() -> BTreeSet<String> {
 
 fn luau_exports() -> BTreeSet<String> {
     exported(&read("crates/wasm/luau/src/main.rs"), "#[unsafe(no_mangle)]")
+}
+
+fn c_exports() -> BTreeSet<String> {
+    exported(&read("crates/wasm/c/src/lib.rs"), "#[unsafe(no_mangle)]")
 }
 
 /// One message for every export the allow-list does not account for: a name a module binds that
@@ -163,6 +194,112 @@ fn parity_problems(normal: &BTreeSet<String>, luau: &BTreeSet<String>) -> Vec<St
 fn the_two_modules_export_the_shared_bindings_and_their_own_alone() {
     let problems = parity_problems(&normal_exports(), &luau_exports());
     assert!(problems.is_empty(), "export parity:\n{}", problems.join("\n"));
+}
+
+/// One message for every difference between the C module and the other two: a browser binding it
+/// lacks, an export of its own that `C_ONLY` does not name, a Luau binding it neither has nor
+/// `LUAU_NOT_IN_C` explains, and a listed name that no longer holds.
+fn c_parity_problems(
+    normal: &BTreeSet<String>,
+    c: &BTreeSet<String>,
+    luau: &BTreeSet<String>,
+) -> Vec<String> {
+    let c_only: BTreeSet<&str> = C_ONLY.iter().map(|(name, _)| *name).collect();
+    let luau_not_in_c: BTreeSet<&str> = LUAU_NOT_IN_C.iter().map(|(name, _)| *name).collect();
+    let mut problems = Vec::new();
+    for name in normal {
+        if !c.contains(name) {
+            problems.push(format!(
+                "`{name}` is bound in crates/wasm/src/lib.rs but the C module does not export it: \
+                 export it in crates/wasm/c/src/lib.rs (and crates/wasm/c/src/tests.rs's test of it), \
+                 or drop the binding"
+            ));
+        }
+    }
+    for name in c {
+        if !normal.contains(name) && !c_only.contains(name.as_str()) {
+            problems.push(format!(
+                "`{name}` is exported in crates/wasm/c/src/lib.rs only: bind it in \
+                 crates/wasm/src/lib.rs too, or list it in C_ONLY with the reason"
+            ));
+        }
+    }
+    for (name, _) in C_ONLY {
+        if !c.contains(*name) {
+            problems.push(format!(
+                "`{name}` is listed in C_ONLY but crates/wasm/c/src/lib.rs does not export it"
+            ));
+        }
+    }
+    for name in luau {
+        if !c.contains(name) && !luau_not_in_c.contains(name.as_str()) {
+            problems.push(format!(
+                "`{name}` is bound in crates/wasm/luau/src/main.rs but the C module does not export it: \
+                 export it in crates/wasm/c/src/lib.rs, or list it in LUAU_NOT_IN_C with the reason"
+            ));
+        }
+    }
+    for (name, _) in LUAU_NOT_IN_C {
+        if !luau.contains(*name) {
+            problems.push(format!(
+                "`{name}` is listed in LUAU_NOT_IN_C but crates/wasm/luau/src/main.rs does not bind it"
+            ));
+        }
+    }
+    problems
+}
+
+#[test]
+fn the_c_module_exports_every_browser_binding_and_its_memory_interface_alone() {
+    let problems = c_parity_problems(&normal_exports(), &c_exports(), &luau_exports());
+    assert!(problems.is_empty(), "C export parity:\n{}", problems.join("\n"));
+}
+
+/// The acceptance criterion as a test: a browser binding the C module lacks fails parity.
+#[test]
+fn a_browser_binding_the_c_module_lacks_fails_c_parity() {
+    let text = read("crates/wasm/src/lib.rs") + "\n#[wasm_bindgen]\npub fn only_here() {}\n";
+    let normal = exported(&text, "#[wasm_bindgen]");
+    let problems = c_parity_problems(&normal, &c_exports(), &luau_exports());
+    assert!(
+        problems.iter().any(|problem| problem.contains("only_here")),
+        "expected a C parity problem for only_here, got: {problems:?}"
+    );
+}
+
+/// The C module is one plain `wasm32-unknown-unknown` link with an empty import section (#3093):
+/// nothing it depends on or calls comes from the host. `scripts/build-wasm.sh` checks the built
+/// module's imports when it builds it; this holds the sources to the same, where no build runs.
+#[test]
+fn the_c_module_imports_nothing_from_the_host() {
+    // Comments may name what the module avoids; code and manifest lines may not.
+    let code = |path: &str, comment: &str| -> String {
+        read(path)
+            .lines()
+            .filter(|line| !line.trim_start().starts_with(comment))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let manifest = code("crates/wasm/c/Cargo.toml", "#");
+    for banned in ["wasm-bindgen", "js-sys", "console_error_panic_hook", "wasi"] {
+        assert!(
+            !manifest.to_lowercase().contains(banned),
+            "crates/wasm/c/Cargo.toml names {banned}, which the C module may not take"
+        );
+    }
+    let source = code("crates/wasm/c/src/lib.rs", "//");
+    for banned in [
+        "extern \"C\" {",
+        "wasm_bindgen",
+        "js_sys",
+        "SystemTime",
+        "Instant::now",
+    ] {
+        assert!(
+            !source.contains(banned),
+            "crates/wasm/c/src/lib.rs uses {banned}, which the C module may not"
+        );
+    }
 }
 
 /// The emscripten link and the factory types name every C binding: `.cargo/config.toml`'s

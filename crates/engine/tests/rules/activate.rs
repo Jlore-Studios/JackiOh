@@ -2000,7 +2000,7 @@ mod r3061000_an_activate_that_is_not_listed_says_why {
         }
     }
 
-    /// The one finding I14 makes of `view`, which must lead with `lead`.
+    /// The one finding I15 makes of `view`, which must lead with `lead`.
     fn only_finding(state: &GameState, view: &PlayerView, id: &str, lead: &str) -> String {
         let found = activation_reason_violations(state, P1, view, &legal_actions(state, P1));
         assert_eq!(found.len(), 1, "{found:?}");
@@ -2068,7 +2068,7 @@ mod r3061000_an_activate_that_is_not_listed_says_why {
     }
 
     #[test]
-    fn r3061000_i14_reports_exactly_one_finding_for_a_view_that_disagrees_with_the_listing() {
+    fn r3061000_i15_reports_exactly_one_finding_for_a_view_that_disagrees_with_the_listing() {
         let (state, id, _) = pair_board("r3061000-i14", 2, 3);
         let view = view_for(&state, P1);
         let legal = legal_actions(&state, P1);
@@ -2076,21 +2076,21 @@ mod r3061000_an_activate_that_is_not_listed_says_why {
             activation_reason_violations(&state, P1, &view, &legal),
             Vec::<String>::new()
         );
-        // `hidden` runs I14 beside I6 and I13 (a hand-built state may trip I6 on its own, so filter).
+        // `hidden` runs I15 beside I6 and I13 (a hand-built state may trip I6 on its own, so filter).
         let i14: Vec<String> = create_invariant_monitor(&state)
             .hidden(&state)
             .into_iter()
-            .filter(|finding| finding.starts_with("I14"))
+            .filter(|finding| finding.starts_with("I15"))
             .collect();
         assert_eq!(i14, Vec::<String>::new());
 
         let mut unlisted = view.clone();
         doctor(&mut unlisted, &id, true, None);
-        only_finding(&state, &unlisted, &id, "I14 usable but unlisted");
+        only_finding(&state, &unlisted, &id, "I15 usable but unlisted");
 
         let mut silent = view.clone();
         doctor(&mut silent, &id, false, None);
-        only_finding(&state, &silent, &id, "I14 silent ability");
+        only_finding(&state, &silent, &id, "I15 silent ability");
 
         let (paid, paid_id, _) = pair_board("r3061000-i14-paid", 2, 4);
         let paid_view = view_for(&paid, P1);
@@ -2100,11 +2100,11 @@ mod r3061000_an_activate_that_is_not_listed_says_why {
         );
         let mut unusable = paid_view.clone();
         doctor(&mut unusable, &paid_id, false, Some("not now"));
-        only_finding(&paid, &unusable, &paid_id, "I14 listed but unusable");
+        only_finding(&paid, &unusable, &paid_id, "I15 listed but unusable");
 
         let mut stray = paid_view.clone();
         doctor(&mut stray, &paid_id, true, Some("stray"));
-        only_finding(&paid, &stray, &paid_id, "I14 stray reason");
+        only_finding(&paid, &stray, &paid_id, "I15 stray reason");
 
         // Off p1's turn nothing is asked (I13's window).
         let mut theirs = state.clone();

@@ -11,7 +11,7 @@ import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
-import { UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
+import { UNDO_REPEAT_MS, UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
@@ -713,6 +713,24 @@ describe("R2119000 removing a friend is undone, not asked", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
     await tick(UNDO_WINDOW_MS - 1);
     expect(server.to("DELETE", ANN_PATH)).toHaveLength(0);
+  });
+
+  it("R3059000 two quick Remove presses remove one friend", async () => {
+    const { server, tick } = await removeAnn();
+    await tick(UNDO_REPEAT_MS - 1);
+    fireEvent.click(within(rowOf(BOB)).getByRole("button", { name: /^remove/i }));
+    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(screen.getAllByTestId(UNDO_TOAST)).toHaveLength(1);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Friend removed · Undo");
+    expect(server.to("DELETE", ANN_PATH)).toHaveLength(0);
+    expect(server.to("DELETE", "/api/friends/f-bob")).toHaveLength(0);
+
+    await tick(UNDO_WINDOW_MS - UNDO_REPEAT_MS + 1);
+    await waitFor(() => {
+      expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
+    }, SLOW);
+    expect(server.to("DELETE", "/api/friends/f-bob")).toHaveLength(0);
+    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
   });
 
   it("R2119000 Undo puts the friend back in their place and sends nothing", async () => {
