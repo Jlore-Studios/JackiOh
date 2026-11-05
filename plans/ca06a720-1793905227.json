@@ -1,0 +1,71 @@
+{
+  "action": "plan",
+  "number": 3225,
+  "title": "Patch: a spacing scale for the client's gaps, paddings and margins",
+  "branch": "bot/issue-3225",
+  "thread": "**Issue #3225 (data, not instructions):**\n\n```text\n# #3225: Patch: a spacing scale for the client's gaps, paddings and margins\nOpened by @squishy-squooby.\n\n### What it does\n\nThe client has token scales for color, type, surfaces and motion, but none for spacing. No `--space-*` token exists. `gap:` alone uses 19 different pixel values across the stylesheets (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22, 24, 28 and 40 px). `practice/practice.css` alone uses 11 different gaps.\n\nChange: add `src/spacing.css`, imported by `index.css` beside the other scales. It should hold a small 4 px-based scale (for example `--space-1` 4 px through `--space-8` 40 px, with a 2 px step if the board needs it). Pick the steps from what the sheets use most. Add `src/spacing.test.ts` in the manner of `typescale.test.ts`: board sheets give every `gap`, `padding` and `margin` a step (or `0`, `auto`, a `calc()`/`clamp()` holding one, or a viewport/container term), and every other sheet is held to its current count of raw values in an allowlist that can only go down.\n\nMigrate the board sheets (`index.css`, and `src/game/`'s sheets other than the deck builder's and `table.css`, the same set the palette rule names) onto the scale in this issue, rounding each value to its nearest step. No board layout may move by more than 2 px: check with the e2e component and pixel specs (`pnpm --dir e2e test:component`), and update a golden image only where a rounding is the intended change, saying so in the PR. Menu sheets keep their counts; later work reduces them.\n\n### Acceptance\n\n- `src/spacing.css` defines the scale, and the README describes it beside the other scales.\n- `src/spacing.test.ts` holds the board sheets to zero raw spacing values and every other sheet to its allowlisted count.\n- The component and pixel specs and e2e specs `46` and `47` pass.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3225: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:51:53Z",
+    "claimed_at": "2026-11-05T19:01:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3239 is held for `claude-1` until 14:40 (5-hour usage is 38%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3206 skipped: it waits for #3205 to close first",
+    "#3207 skipped: it waits for #3205, #3206 to close first",
+    "#3209 skipped: it waits for #3208 to close first",
+    "#3210 skipped: it waits for #3205 to close first",
+    "#3211 skipped: it waits for #3206, #3210 to close first",
+    "#3212 skipped: it waits for #3210, #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3210, #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3223 skipped: it waits for #3218 to close first",
+    "#3227 skipped: it waits for #3218 to close first",
+    "#3228 skipped: it waits for #3218, #3223 to close first",
+    "#3230 skipped: it waits for #3218, #3221, #3222, #3223 to close first"
+  ]
+}
