@@ -69,7 +69,7 @@ trap backrow. This file binds every agent, not only Claude.
    (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`, the shared logic's in `crates/shared/src/config.rs`
    (the server re-exports the ones its code or `serverConfig.ts` name). The client
    restates none: it reads the engine's and the server's (the shared ones it re-exports among them) from the
-   generated `apps/web/src/wire/engineConfig.ts` and `serverConfig.ts`, the AI's and the run's from the WebAssembly module, and names only its own numbers.
+   generated `apps/web/src/wire/engineConfig.ts` and `serverConfig.ts`, the AI's, the run's and the shared logic's from the WebAssembly module, and names only its own numbers.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
     it is): **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or more,

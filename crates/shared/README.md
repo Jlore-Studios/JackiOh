@@ -16,7 +16,8 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them. A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first: a
+   binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its `NORMAL_ONLY`). A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -36,7 +37,8 @@ Every Part B issue follows it, and review holds each one to it.
 6. **Data is compiled in** (`include_str!`, rule 4): quest pools, registries and translations. The
    module carries it, and no host loads files.
 7. **Its numbers** are named constants in `src/config.rs` (rule 9) and join the `constants` export of
-   `jackioh-wasm-core`, so no host restates them.
+   `jackioh-wasm-core` under their own names, so no host restates them; that module's test holds its
+   list to `config.rs`.
 8. **Integers:** new types use `i32` or `u32` where the value fits, because `i64` is emulated once
    translated to Luau (#2898, risk 1). An existing type's width is not changed only for this: the series
    row keeps the `i64` its stored shape has, and a time in epoch milliseconds (`now`) does not fit 32 bits
@@ -60,7 +62,8 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 
 `MS_PER_SECOND`, `SERIES_WINS_NEEDED` (R330), `SERIES_MAX_GAMES` (R334) and `SERIES_PICK_SECONDS`
 (R333). The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name
-them as before), and `jackioh-wasm-core`'s `constants` carries them.
+them as before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
+(`crates/wasm/c`) both bind.
 
 ## `src/series.rs`: the Conquest series
 
