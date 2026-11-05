@@ -15,6 +15,7 @@ import {
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
   QUEUE_ENDED_AFTER_READS,
+  SERIES_POLL_SECONDS,
 } from "@jackioh/server-config";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import {
@@ -55,7 +56,7 @@ import PlayRoute, {
   queuedStatus,
   roomLinkStatus,
 } from "./play.tsx";
-import { setVisibility } from "../test/setup.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -284,6 +285,27 @@ describe("the lobby's match watch", () => {
     } finally {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
+    }
+  });
+
+  it("R3205000 the queue wait on /play keeps reading the account while the tab is hidden", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const period = SERIES_POLL_SECONDS * 1000;
+    try {
+      rememberQueued("bo1");
+      render(<PlayRoute token={TOKEN} />);
+      await settle({ advance: 0 });
+      expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+
+      // Its reads keep the queue ticket alive (R897000): a hidden tab sends them as a visible one does.
+      setVisibility("hidden");
+      await settle({ advance: period });
+      expect(vi.mocked(getMe)).toHaveBeenCalledTimes(2);
+      await settle({ advance: period });
+      expect(vi.mocked(getMe)).toHaveBeenCalledTimes(3);
+    } finally {
+      resetVisibility();
+      vi.useRealTimers();
     }
   });
 
