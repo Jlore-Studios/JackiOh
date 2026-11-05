@@ -3,15 +3,148 @@
 //! Winning with each of three decks locks them (R330). Simultaneous sealed picks (R331);
 //! single remaining deck auto-picked (R332). State changes advance `version` for CAS updates (R263).
 //! Deck win history is derived from `games` (R259, R337).
+//!
+//! The server stores the rows (`db/store.rs` re-exports them) and calls the transitions; a client
+//! reaches the same functions through [`SeriesCall`] and [`SeriesAnswer`], the one JSON in and out of
+//! `jackioh-wasm-core`'s `series` body (README.md, the host contract).
 
 use indexmap::IndexSet;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{MS_PER_SECOND, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
-use crate::db::store::{
-    FrozenDeck, FrozenTrio, MatchSeat, SeriesEnd, SeriesGame, SeriesRow, SeriesSeat, SeriesSide, SeriesStatus,
-};
+use crate::deck::{FrozenDeck, FrozenTrio, MatchSeat};
+
+// The row
+
+/// A series seat. Index 0 of `SeriesRow.sides` is `p1`; it is not the seat a game's match uses.
+pub type SeriesSeat = PlayerId;
+
+/// `picking` — both players are choosing the next game's deck (R331, R333);
+/// `playing` — the game `next_match_id` names is being played (or about to be started);
+/// `over` — decided, played out, forfeited or abandoned (R334).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+pub enum SeriesStatus {
+    #[serde(rename = "picking")]
+    Picking,
+    #[serde(rename = "playing")]
+    Playing,
+    #[serde(rename = "over")]
+    Over,
+}
+
+/// Why a series ended (R334): a side won with every deck, `SERIES_WINS_NEEDED` wins
+/// (`decided`, R330); `SERIES_MAX_GAMES` were played without that (`exhausted`); a side left
+/// between games (`forfeit`); or neither side picked before the pick clock ran out, or a game
+/// could not be started (`abandoned`, unrated, R333, R263).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+pub enum SeriesEnd {
+    #[serde(rename = "decided")]
+    Decided,
+    #[serde(rename = "exhausted")]
+    Exhausted,
+    #[serde(rename = "forfeit")]
+    Forfeit,
+    #[serde(rename = "abandoned")]
+    Abandoned,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SeriesGame {
+    /// 1-based.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub game_no: i64,
+    pub match_id: String,
+    /// The trio slot each side played, index 0 being series `p1`.
+    #[cfg_attr(feature = "ts", ts(type = "[number, number]"))]
+    pub slots: (i64, i64),
+    /// Which side went first — was the match's `p1` (R335: odd games p1, even games p2).
+    pub first: SeriesSeat,
+    /// Null while the game is being played.
+    pub winner: Option<Winner>,
+    pub reason: Option<GameOverReason>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SeriesSide {
+    pub profile_id: String,
+    pub trio: FrozenTrio,
+    /// Games this side has won. Each win locks the deck it was won with (R330), so this is also
+    /// how many of its decks have won; which ones is read off `games`.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub wins: i64,
+    /// The trio slot this side picked for the next game, or null. Sealed: final once in, and
+    /// hidden from the other side until both have picked (R331): it leaves the server only in its
+    /// owner's projection. Set by the server when one deck is left (R332).
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub pick: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SeriesRow {
+    pub id: String,
+    pub sides: (SeriesSide, SeriesSide),
+    pub catalog_version: String,
+    /// R604: a series the queue paired is ranked and moves the rating when it ends; a room's is
+    /// not. Carried on `series.ranked` (migration 0022), a false flag read back as an absent one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub ranked: Option<bool>,
+    /// Each game's seed is `{seed_base}:{game_no}` (R335). The server mints it; R143's e2e
+    /// override feeds it.
+    pub seed_base: String,
+    pub status: SeriesStatus,
+    pub games: Vec<SeriesGame>,
+    /// The match id of the game being picked for or played. Minted when the pick phase opens — for
+    /// game 1, when the series is made — so a restart finds the same id (R263).
+    pub next_match_id: String,
+    /// Epoch ms the pick phase closes (R333); null outside it.
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub pick_deadline: Option<i64>,
+    pub winner: Option<Winner>,
+    pub end_reason: Option<SeriesEnd>,
+    /// R262: the one rating move a series makes, recorded when it ends; null until then, when
+    /// abandoned and for an unranked series (R604).
+    pub rating_before: Option<(f64, f64)>,
+    pub rating_after: Option<(f64, f64)>,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub created_at: i64,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub updated_at: i64,
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub ended_at: Option<i64>,
+    /// Optimistic concurrency: `series_update` writes only over the version before this one.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub version: i64,
+}
 
 /// Games are numbered from one (`SeriesGame.game_no`).
 const FIRST_GAME: i32 = 1;
@@ -22,6 +155,11 @@ const SEATS: [SeriesSeat; 2] = [SeriesSeat::P1, SeriesSeat::P2];
 
 /// What `GET /api/series/:id` answers: client wire representation of a series.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesView {
     pub id: String,
@@ -33,8 +171,10 @@ pub struct SeriesView {
     /// R334: the most games a series plays.
     pub max_games: i32,
     /// Epoch ms the pick clock runs out (R333), or null outside the pick phase.
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
     pub pick_deadline: Option<i64>,
     /// The server's clock when it answered, so a countdown does not depend on the device's.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub now: i64,
     /// The match to open while `status` is `playing`.
     pub current_match_id: Option<String>,
@@ -51,6 +191,11 @@ pub struct SeriesView {
 
 /// `SeriesView.you`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesViewYou {
     pub seat: SeriesSeat,
@@ -66,6 +211,11 @@ pub struct SeriesViewYou {
 
 /// One of `SeriesView.you.decks`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesViewDeck {
     pub slot: usize,
@@ -77,6 +227,11 @@ pub struct SeriesViewDeck {
 
 /// `SeriesView.opponent`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesViewOpponent {
     pub wins: i32,
@@ -88,6 +243,11 @@ pub struct SeriesViewOpponent {
 
 /// One of `SeriesView.opponent.decks`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesViewOpponentDeck {
     pub slot: usize,
@@ -96,6 +256,11 @@ pub struct SeriesViewOpponentDeck {
 
 /// `"win" | "loss" | "draw"`: one game's result as the viewer reads it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum GameOutcome {
     Win,
@@ -105,6 +270,11 @@ pub enum GameOutcome {
 
 /// `"win" | "loss" | "draw" | "abandoned"`: the series' outcome as the viewer reads it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum SeriesOutcome {
     Win,
@@ -115,6 +285,11 @@ pub enum SeriesOutcome {
 
 /// One of `SeriesView.games`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesViewGame {
     pub game_no: i32,
@@ -128,6 +303,11 @@ pub struct SeriesViewGame {
 
 /// `SeriesView.result`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesViewResult {
     pub outcome: SeriesOutcome,
@@ -137,10 +317,15 @@ pub struct SeriesViewResult {
 
 // Refusals
 
-/// Why a transition did not apply. The first five reach a player (`series.rs` maps them to 409 or
+/// Why a transition did not apply. The first five reach a player (the server's `api/series.rs` maps them to 409 or
 /// 400); the rest are the server calling a transition out of turn — a CAS retry that re-read a row
 /// another writer had already moved, which the caller treats as "nothing to do".
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "snake_case")]
 pub enum SeriesRefusalReason {
     /// A game is being played, so there is nothing to pick and no series to forfeit.
@@ -184,7 +369,12 @@ impl SeriesRefusalReason {
 }
 
 /// The reason and the sentence a player can read.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 pub struct SeriesRefusal {
     pub reason: SeriesRefusalReason,
     pub message: String,
@@ -463,14 +653,24 @@ fn assert_picking(series: &SeriesRow, not_picking_message: &str) -> Result<(), S
 }
 
 /// One side of `NewSeriesInput.sides`.
-#[derive(serde::Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct NewSeriesSide {
     pub profile_id: String,
     pub trio: FrozenTrio,
 }
 
-#[derive(serde::Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct NewSeriesInput {
     pub series_id: String,
@@ -516,7 +716,7 @@ pub fn new_series(input: &NewSeriesInput, now: i64) -> SeriesRow {
 }
 
 /// R331: `seat` picks trio slot `slot` for the next game. A pick is final once in (`pick_sealed`, checked
-/// first; `series.rs` answers a repeat of the same slot as a success) and the other side learns only that
+/// first; the server's `api/series.rs` answers a repeat of the same slot as a success) and the other side learns only that
 /// it is in. A `game_no` other than the one being picked for is `stale_pick`, so game n's late duplicate
 /// never becomes game n + 1's. The pick that completes both begins the game. Refused after the clock ran
 /// out (R333), for a slot the trio lacks, and for a won deck (R330).
@@ -730,14 +930,20 @@ pub fn forfeit_series(series: &SeriesRow, seat: SeriesSeat, now: i64) -> Result<
 }
 
 /// R262's one rating move of a series: series p1's rating then p2's, before and after.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
 pub struct RatingMove {
     pub before: (f64, f64),
     pub after: (f64, f64),
 }
 
 /// R262: records the series' one rating move on a row that has just ended: series p1's rating, then
-/// p2's, before and after (`series.rs` rates it, R603). Not a transition — it rides on the ending's
+/// p2's, before and after (the server's `api/series.rs` rates it, R603). Not a transition — it rides on the ending's
 /// own write, so the version is left alone. An abandoned or unranked series keeps both fields null.
 pub fn rate_series(series: &SeriesRow, rating_move: Option<RatingMove>) -> SeriesRow {
     let mut next = copy(series);
@@ -757,7 +963,13 @@ pub fn rate_series(series: &SeriesRow, rating_move: Option<RatingMove>) -> Serie
 // The game in play
 
 /// `game_seats`'s answer.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
 pub struct GameSeats {
     pub seats: (MatchSeat, MatchSeat),
     pub seed: String,
@@ -802,7 +1014,7 @@ pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
 
 /// R331: whether `slot` is the pick `seat` already made — for game `game_no` when the request named
 /// one, else for the game now picked for or in play — which is what a retried pick request finds
-/// after its first attempt landed. `series.rs` answers such a retry as the success it was, rather
+/// after its first attempt landed. The server's `api/series.rs` answers such a retry as the success it was, rather
 /// than as a refusal the player did nothing to earn.
 pub fn already_picked(series: &SeriesRow, seat: SeriesSeat, slot: i32, game_no: Option<i32>) -> bool {
     let wanted = if slot < 0 { None } else { Some(slot as usize) };
@@ -948,4 +1160,176 @@ pub fn project_series(series: &SeriesRow, viewer_profile_id: &str, now: i64) -> 
             _ => None,
         },
     })
+}
+
+// The boundary
+
+/// One call of this module as a host makes it through `jackioh-wasm-core`'s `series` body: the function
+/// and its arguments as one JSON object, `{ "call": "pickDeck", "series": …, "seat": "p1", … }`. A host
+/// holds the [`SeriesRow`] and hands it back on every call (README.md, the host contract), and passes in
+/// the time (`now`, epoch ms). The server calls the functions themselves.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "call", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum SeriesCall {
+    /// [`new_series`].
+    NewSeries {
+        input: NewSeriesInput,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`pick_deck`].
+    PickDeck {
+        series: SeriesRow,
+        seat: SeriesSeat,
+        slot: i32,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        game_no: Option<i32>,
+    },
+    /// [`begin_game`].
+    BeginGame {
+        series: SeriesRow,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`game_ended`].
+    GameEnded {
+        series: SeriesRow,
+        winner: Winner,
+        reason: GameOverReason,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+        new_match_id: String,
+    },
+    /// [`timeout_picks`].
+    TimeoutPicks {
+        series: SeriesRow,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`abandon_unstarted`].
+    AbandonUnstarted {
+        series: SeriesRow,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`forfeit_series`].
+    ForfeitSeries {
+        series: SeriesRow,
+        seat: SeriesSeat,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`rate_series`].
+    RateSeries {
+        series: SeriesRow,
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        rating_move: Option<RatingMove>,
+    },
+    /// [`game_seats`].
+    GameSeats { series: SeriesRow },
+    /// [`already_picked`].
+    AlreadyPicked {
+        series: SeriesRow,
+        seat: SeriesSeat,
+        slot: i32,
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        game_no: Option<i32>,
+    },
+    /// [`project_series`].
+    ProjectSeries {
+        series: SeriesRow,
+        viewer_profile_id: String,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`series_score`].
+    SeriesScore { series: SeriesRow },
+}
+
+/// What a [`SeriesCall`] answers, as one JSON object with one key: the host writes a `row` back over
+/// the one it sent (R263), or tells the player the `refused` sentence, and the rest are reads.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum SeriesAnswer {
+    /// A transition applied (`newSeries`, `pickDeck`, `beginGame`, `gameEnded`, `timeoutPicks`,
+    /// `abandonUnstarted`, `forfeitSeries`, `rateSeries`): the next row, to write.
+    Row(Box<SeriesRow>),
+    /// A transition did not apply: nothing to write.
+    Refused(SeriesRefusal),
+    /// `gameSeats`: the two seats and the seed of the game in play.
+    Seats(GameSeats),
+    /// `alreadyPicked`.
+    Picked(bool),
+    /// `projectSeries`: null for a profile that is not one of the two players.
+    View(Option<SeriesView>),
+    /// `seriesScore`: null while the series is not over and when it was abandoned.
+    Score(Option<f64>),
+}
+
+/// A transition's result as the answer a host reads.
+fn transition(result: Result<SeriesRow, SeriesRefusal>) -> SeriesAnswer {
+    match result {
+        Ok(row) => SeriesAnswer::Row(Box::new(row)),
+        Err(refusal) => SeriesAnswer::Refused(refusal),
+    }
+}
+
+/// Makes `call`: the function it names, over its arguments, answered as data. Nothing is read but the
+/// call, and nothing is kept: the next call carries the row this one answered.
+pub fn apply(call: &SeriesCall) -> SeriesAnswer {
+    match call {
+        SeriesCall::NewSeries { input, now } => SeriesAnswer::Row(Box::new(new_series(input, *now))),
+        SeriesCall::PickDeck {
+            series,
+            seat,
+            slot,
+            now,
+            game_no,
+        } => transition(pick_deck(series, *seat, *slot, *now, *game_no)),
+        SeriesCall::BeginGame { series, now } => transition(begin_game(series, *now)),
+        SeriesCall::GameEnded {
+            series,
+            winner,
+            reason,
+            now,
+            new_match_id,
+        } => transition(game_ended(series, *winner, *reason, *now, new_match_id)),
+        SeriesCall::TimeoutPicks { series, now } => transition(timeout_picks(series, *now)),
+        SeriesCall::AbandonUnstarted { series, now } => transition(abandon_unstarted(series, *now)),
+        SeriesCall::ForfeitSeries { series, seat, now } => transition(forfeit_series(series, *seat, *now)),
+        SeriesCall::RateSeries { series, rating_move } => {
+            SeriesAnswer::Row(Box::new(rate_series(series, *rating_move)))
+        }
+        SeriesCall::GameSeats { series } => match game_seats(series) {
+            Ok(seats) => SeriesAnswer::Seats(seats),
+            Err(refusal) => SeriesAnswer::Refused(refusal),
+        },
+        SeriesCall::AlreadyPicked {
+            series,
+            seat,
+            slot,
+            game_no,
+        } => SeriesAnswer::Picked(already_picked(series, *seat, *slot, *game_no)),
+        SeriesCall::ProjectSeries {
+            series,
+            viewer_profile_id,
+            now,
+        } => SeriesAnswer::View(project_series(series, viewer_profile_id, *now)),
+        SeriesCall::SeriesScore { series } => SeriesAnswer::Score(series_score(series)),
+    }
 }

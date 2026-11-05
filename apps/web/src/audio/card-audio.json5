@@ -15,7 +15,8 @@
 //            gain trims it (0-2), and params passes the recipe its own options (amount, timbre,
 //            mine, mythic, urgent, release). Each play varies the pitch a little.
 //   cards    one entry per catalog card, in catalog order, with the card's name in a comment on
-//            the line of its id. The name is for people; a test checks it against the catalog.
+//            the line of its id. The name is for people; `cargo jackioh names` writes it from the
+//            catalog, and a test checks it.
 //   emotes   the six hero portraits' emote voices (R644), one entry per portrait id, each a voice
 //            from the voices bank, which speaks the portrait's five lines in card-text.yaml
 //            (greetings, wellPlayed, oops, thanks, threaten).
@@ -32,12 +33,12 @@
 // card-text.yaml (a trigger's list of lines), an effect, { effect: "<an effect>" }, or both in one
 // object; with both, the effect starts first. No hook here writes its words: a text or lines fails.
 //
-// To add a card: copy a neighbour's entry to where the catalog puts the card, change the id and the
-// name comment, and give a Unit a play, an attack and a death voice (R1448), anything else a cast
-// voice, writing the lines in the card's card-text.yaml entry. A new or changed line, or a line's new
-// voice, has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or on
-// Windows (or WSL) for a SAPI voice, or a push whose commit message holds `[gen:voice]`, which renders
-// both on GitHub's runners (.github/workflows/voice.yml). Effects render nothing.
+// To add a card: copy a neighbour's entry to where the catalog puts the card, change the id, and give
+// a Unit a play, an attack and a death voice (R1448), anything else a cast voice, writing the lines in
+// the card's card-text.yaml entry; `cargo jackioh names` then writes the name comment. A new or
+// changed line, or a line's new voice, has to be rendered: `pnpm --filter @jackioh/web gen:voice` on
+// macOS, or on Windows (or WSL) for a SAPI voice, or a push whose commit message holds `[gen:voice]`,
+// which renders both on GitHub's runners (.github/workflows/voice.yml). Effects render nothing.
 {
   voices: {
     alien: { say: "Trinoids", rate: 170, pbas: 45, pmod: 20, web: { pitch: 0.5, rate: 0.9 }, gain: 1.66 },

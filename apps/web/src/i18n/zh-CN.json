@@ -4187,5 +4187,16 @@
   "Read every card.": "查看每一张卡牌。",
   "Hear {name}": "聆听{name}",
   "Ways out": "出路",
-  "Pick a card, any card.": "随便抽一张牌。"
+  "Pick a card, any card.": "随便抽一张牌。",
+  "Link {provider} below to finish: from then on it signs in to this account.": "在下方关联 {provider} 即可完成：此后它会登录到这个账号。",
+  "Signing in with {provider} made this new account. To sign in with {provider} to the account you already have, this new one is removed first. Then sign in to your account and link {provider} on its account page.": "使用 {provider} 登录创建了这个新账号。要用 {provider} 登录你已有的账号，需要先删除这个新账号。然后登录你的账号，并在账户页面关联 {provider}。",
+  "Removing…": "正在删除…",
+  "Remove this new account": "删除这个新账号",
+  "Already have a JackiOh account?": "已经有 JackiOh 账号了？",
+  "This account has no email address yet. An invite code needs a confirmed one: add it here, open the link we email you, then check again.": "这个账号还没有邮箱地址。使用邀请码需要已确认的邮箱：请在这里添加，打开我们发给你的链接，然后再次检查。",
+  "Sign in to the account you already have, then link {provider} to it on your account page.": "请登录你已有的账号，然后在账户页面关联 {provider}。",
+  "Played before without Roblox? Sign in the way you did then, and link Roblox on your account page.": "以前玩过但没用 Roblox？请用当时的方式登录，然后在账户页面关联 Roblox。",
+  "Add an email address": "添加邮箱地址",
+  "Email address": "邮箱地址",
+  "We emailed a confirmation link to {address}. Open it, then press Check again here.": "我们已向 {address} 发送了确认链接。打开它，然后在这里点击“再次检查”。"
 }

@@ -19,5 +19,6 @@ jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 jackioh-run = { workspace = true }
+jackioh-shared = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

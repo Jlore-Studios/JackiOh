@@ -1,6 +1,6 @@
 // R1563006: Meditative+ #20 KY's Competition's sequence clock, as the client keeps it. A sequence has
 // `KY_COMPETITION_SECONDS` from its first question; then its host answers Stop. The server's match
-// clock is the authority online (`crates/server/src/actor/clock.rs`); the practice host is this
+// clock is the authority online (`crates/shared/src/host/clock.rs`, run by the server's actor); the practice host is this
 // client, so its controller answers Stop itself (practice/controller.ts). The prompt shows the seconds
 // left either way, counted from the moment this client first saw the sequence's first question.
 

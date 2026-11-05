@@ -10,7 +10,7 @@ import { ApiRequestError, previewUsername, saveUsername, skipUsernamePrompt, typ
 import { announceAccountChange } from "../net/gate.ts";
 import { usernameTestid } from "./testids.ts";
 import { nextChangeSentence, USERNAME_CHANGED, USERNAME_SAVE_FAILED } from "./UsernameField.tsx";
-import UsernamePrompt, { USERNAME_SKIP_FAILED } from "./UsernamePrompt.tsx";
+import UsernamePrompt, { USERNAME_SKIP_FAILED, providerUsername } from "./UsernamePrompt.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -258,5 +258,60 @@ describe("R1435 the username prompt", () => {
     expect(screen.getByTestId(usernameTestid.promptSkip)).toBeEnabled();
     expect(announceAccountChange).not.toHaveBeenCalled();
     expect(onAnswered).not.toHaveBeenCalled();
+  });
+});
+
+describe("R3147003 the prompt starts from the provider's username", () => {
+  function base64url(text: string): string {
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function tokenWith(userMetadata: Record<string, unknown>): string {
+    const claims = { sub: "user-1", app_metadata: { provider: "custom:roblox" }, user_metadata: userMetadata };
+    return `${base64url(JSON.stringify({ alg: "none" }))}.${base64url(JSON.stringify(claims))}.sig`;
+  }
+
+  it("R3147003 reads the provider's own username before its nickname, and nothing else", () => {
+    expect(providerUsername(tokenWith({ preferred_username: "Builderman", nickname: "Builder Man" }))).toBe("Builderman");
+    expect(providerUsername(tokenWith({ user_name: "octocat" }))).toBe("octocat");
+    expect(providerUsername(tokenWith({ nickname: " Noob_42 " }))).toBe("Noob_42");
+    // A full name or an address is not a username to start from.
+    expect(providerUsername(tokenWith({ name: "Jane Doe", full_name: "Jane Doe", email: "jane@example.test" }))).toBe("");
+    expect(providerUsername(tokenWith({ preferred_username: 42 }))).toBe("");
+    expect(providerUsername(TOKEN)).toBe("");
+  });
+
+  it("R3147003 fills the box with it and asks the server at once, so keeping it is one press", async () => {
+    const token = tokenWith({ preferred_username: "Builderman" });
+    vi.mocked(previewUsername).mockResolvedValue({ ok: true, base: "Builderman", username: "Builderman", tagged: false });
+    vi.mocked(saveUsername).mockResolvedValue({ name: "Builderman", nextChangeAt: 1_900_000_000_000, promptOwed: false });
+    render(<UsernamePrompt token={token} name="Player#7" onAnswered={onAnswered} />);
+    expect(screen.getByTestId(usernameTestid.input)).toHaveValue("Builderman");
+    await waitFor(() => {
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You'd be Builderman");
+    }, PREVIEW);
+    expect(previewUsername).toHaveBeenCalledWith(token, "Builderman", expect.any(AbortSignal));
+
+    fireEvent.click(screen.getByTestId(usernameTestid.save));
+    await waitFor(() => {
+      expect(saveUsername).toHaveBeenCalledWith(token, "Builderman");
+    });
+  });
+
+  it("R3147003 a refused name shows why, and the box stays the player's to change", async () => {
+    const token = tokenWith({ preferred_username: "x" });
+    vi.mocked(previewUsername).mockResolvedValue({ ok: false, reason: "too_short", message: "Use at least 3 characters." });
+    render(<UsernamePrompt token={token} name="Player#7" onAnswered={onAnswered} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(usernameTestid.preview)).toHaveAttribute("data-ok", "false");
+    }, PREVIEW);
+    expect(screen.getByTestId(usernameTestid.save)).toBeDisabled();
+    expect(screen.getByTestId(usernameTestid.input)).toBeEnabled();
+  });
+
+  it("R3147003 an account with no provider username starts from an empty box, as before", () => {
+    prompt();
+    expect(screen.getByTestId(usernameTestid.input)).toHaveValue("");
+    expect(previewUsername).not.toHaveBeenCalled();
   });
 });

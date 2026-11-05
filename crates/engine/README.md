@@ -64,8 +64,8 @@ mutable static. Two things hold it:
 
 - `Cargo.toml` depends on `serde`, `serde_json`, `indexmap` and, behind the off-by-default `ts`
   feature, `ts-rs`, and nothing else. A crate it cannot name it cannot call.
-- `clippy.toml` (the same file sits in `crates/cards`, `crates/ai` and `crates/luau`, and
-  `crates/tools/tests/acceptance.rs` holds the four byte for byte the same) bans `HashMap`, `HashSet`
+- `clippy.toml` (the same file sits in `crates/cards`, `crates/ai`, `crates/luau`, `crates/run` and
+  `crates/shared`, and `crates/tools/tests/acceptance.rs` holds the six byte for byte the same) bans `HashMap`, `HashSet`
   and `RandomState`; the clock (`Instant`, `SystemTime`); the disk (`File`, `OpenOptions`, `DirBuilder`,
   the `std::fs` functions and `Path`'s disk reads such as `exists` and `read_dir`); the environment and
   the command line; stdin, stdout and stderr; the network; processes (`Command`, `exit`, `abort`, `id`);

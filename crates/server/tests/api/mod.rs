@@ -49,7 +49,6 @@ pub mod rewards;
 pub mod season;
 pub mod seats;
 pub mod series;
-pub mod series_rules;
 pub mod settings;
 pub mod shares;
 pub mod stats;

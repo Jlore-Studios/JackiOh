@@ -169,3 +169,22 @@ export function forgetPendingAddresses(): void {
   forgetPendingEmail();
   forgetPendingReset();
 }
+
+// R3147002: the provider a removed new account signed in with, which the player means to link to the
+// account they already had. Kept across the sign-in (which may leave for a provider and come back) for
+// `AUTH_PENDING_ADDRESS_TTL_SECONDS`; it only words `/login` and opens `/account`'s linking, and a sign-out
+// forgets it.
+
+export const LINK_AFTER_SIGN_IN_STORAGE_KEY = "jackioh.auth.linkAfterSignIn";
+
+export function rememberLinkAfterSignIn(provider: string): void {
+  rememberAddress(LINK_AFTER_SIGN_IN_STORAGE_KEY, provider);
+}
+
+export function linkAfterSignIn(): string | null {
+  return rememberedAddress(LINK_AFTER_SIGN_IN_STORAGE_KEY);
+}
+
+export function forgetLinkAfterSignIn(): void {
+  forgetAddress(LINK_AFTER_SIGN_IN_STORAGE_KEY);
+}

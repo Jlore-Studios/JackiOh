@@ -1,18 +1,20 @@
-//! Admin script: the ladder bots' seed ratings, measured, to paste into config (SPEC §9.12, R748000;
+//! Admin script: the ladder bots' seed ratings, measured, to write into config (SPEC §9.12, R748000;
 //! docs/bot-calibration.md).
 //!
 //! ```text
 //! jackioh-server bot-calibrate [--games=<n>] [--seed=<text>] [--anchor=<rating>]
-//!                              [--history=<dir>] [--threads=<n>]
+//!                              [--history=<dir>] [--threads=<n>] [--write]
 //! jackioh-server bot-calibrate-live [--since=<epoch ms>]
 //! ```
 //!
 //! `bot-calibrate` plays every pair of `BOT_STRENGTHS` against each other (`bots::calibrate`), fits
-//! each strength's Elo offset from the strongest, and prints the `BOT_SEED_RATINGS` and
-//! `BOT_CALIBRATION_GENERATION` rows to paste into `crates/server/src/config.rs` by hand, as
-//! `timing-fit` prints its rows (CLAUDE.md rule 9): no number reaches a ladder bot without a person
-//! reading it first. Its anchor, the rating the reference is given, is `--anchor` or else the seed
-//! of record shifted by the Elo of each AI promotion since `BOT_CALIBRATION_GENERATION`
+//! each strength's Elo offset from the strongest, and prints the `BOT_CALIBRATION_GENERATION`,
+//! `SKILL_ELO_ANCHOR` and `SKILL_ELO_TABLE` items of `crates/server/src/config.rs`, as `timing-fit`
+//! prints its rows (CLAUDE.md rule 9); `BOT_SEED_RATINGS` is read off the table. With `--write` it
+//! rewrites those items in place, as `cargo jackioh sweep --write` does the shadow ban's; without
+//! it a person pastes them. Either way a change reaches a ladder bot only through a pull request,
+//! which a person reads. Its anchor, the rating the reference is given, is `--anchor` or else the
+//! seed of record shifted by the Elo of each AI promotion since `BOT_CALIBRATION_GENERATION`
 //! (`training/history/*.jsonl`, run from the repository root).
 
 use std::path::{Path, PathBuf};
@@ -33,12 +35,13 @@ use crate::config::{
 use crate::env::quoted;
 
 const USAGE: &str = "Usage: jackioh-server bot-calibrate [--games=<n>] [--seed=<text>] [--anchor=<rating>]
-                                    [--history=<dir>] [--threads=<n>]
+                                    [--history=<dir>] [--threads=<n>] [--write]
        jackioh-server bot-calibrate-live [--since=<epoch ms>]
 
   bot-calibrate plays every pair of ladder bot strengths against each other and prints the
-  BOT_SEED_RATINGS and BOT_CALIBRATION_GENERATION rows to paste into crates/server/src/config.rs
-  (R748000). It reads no database and takes about an hour in release.
+  BOT_CALIBRATION_GENERATION, SKILL_ELO_ANCHOR and SKILL_ELO_TABLE items to paste into
+  crates/server/src/config.rs (R748000); BOT_SEED_RATINGS is read off the table. It reads no database
+  and takes about an hour in release.
 
   --games=<n>        Games each pair plays, at least 30. Default: 100.
   --seed=<text>      The seed the games are drawn from. Default: bot-calibration:gen<generation>.
@@ -46,6 +49,9 @@ const USAGE: &str = "Usage: jackioh-server bot-calibrate [--games=<n>] [--seed=<
                      promotions since it was measured (read from --history).
   --history=<dir>    The training lanes' history. Default: training/history.
   --threads=<n>      Games played at once. Default: the machine's cores.
+  --write            Rewrite BOT_CALIBRATION_GENERATION, SKILL_ELO_ANCHOR and the SKILL_ELO_TABLE rows
+                     in crates/server/src/config.rs (run from the repository root) after printing the
+                     report. Default: print only.
 
   bot-calibrate-live reads the strongest bot's rated games against people (DATABASE_URL) and prints
   the rating they say it performs at, to give bot-calibrate as --anchor.
@@ -70,6 +76,7 @@ pub struct CalibrateOptions {
     pub anchor: Option<f64>,
     pub history: PathBuf,
     pub threads: Option<usize>,
+    pub write: bool,
 }
 
 fn number<T: std::str::FromStr>(name: &str, raw: &str) -> anyhow::Result<T> {
@@ -84,8 +91,13 @@ pub fn parse_calibrate_args(argv: &[String]) -> anyhow::Result<CalibrateOptions>
         anchor: None,
         history: PathBuf::from("training/history"),
         threads: None,
+        write: false,
     };
     for arg in argv {
+        if arg == "--write" {
+            options.write = true;
+            continue;
+        }
         let Some((name, raw)) = flag(arg) else {
             bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
         };
@@ -197,7 +209,8 @@ pub struct CalibrationReport {
     pub seeds: Vec<f64>,
 }
 
-/// The report as Markdown for `docs/bot-calibration.md`, ending in the two config rows to paste.
+/// The report as Markdown for `docs/bot-calibration.md`, ending in the config items to paste (what
+/// `--write` writes).
 pub fn render_calibration(report: &CalibrationReport) -> String {
     let mut out = String::from("## Ladder bot calibration (R748000)\n\n");
     out.push_str(&format!(
@@ -232,23 +245,121 @@ pub fn render_calibration(report: &CalibrationReport) -> String {
         ));
     }
     out.push_str(
-        "\n// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs\n",
+        "\n// jackioh-server bot-calibrate: paste over the items of these names, crates/server/src/config.rs, \
+         or run again with --write (BOT_SEED_RATINGS follows from the table)\n",
     );
-    let seeds: Vec<String> = report.seeds.iter().map(|seed| format!("{seed:.1}")).collect();
-    out.push_str(&format!(
-        "pub const BOT_SEED_RATINGS: [f64; {}] = [{}];\n",
-        report.seeds.len(),
-        seeds.join(", ")
-    ));
-    out.push_str(&format!(
-        "pub const BOT_CALIBRATION_GENERATION: i64 = {};\n",
-        report.generation
-    ));
+    for (_, text) in config_items(&report.seeds, report.generation) {
+        out.push_str(&text);
+    }
     out
+}
+
+/// The file `--write` rewrites, from the repository root, as `--history` is read.
+pub const CONFIG_RS: &str = "crates/server/src/config.rs";
+
+/// The items of `crates/server/src/config.rs` a calibration owns, as `(const name, its text)` in the
+/// order the file holds them: the generation, the anchor (the reference's seed, the last) and the
+/// curve's rows, one per strength at its skill. `BOT_SEED_RATINGS` is not among them: it is read off
+/// the table in `const`.
+pub fn config_items(seeds: &[f64], generation: i64) -> Vec<(&'static str, String)> {
+    let anchor = seeds.last().copied().unwrap_or(0.0);
+    let mut table = String::from("pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[\n");
+    for (index, (strength, seed)) in BOT_STRENGTHS.iter().zip(seeds).enumerate() {
+        if index + 1 == seeds.len() {
+            table.push_str(&format!("    ({:?}, SKILL_ELO_ANCHOR),\n", strength.skill));
+        } else {
+            table.push_str(&format!("    ({:?}, {seed:.1}),\n", strength.skill));
+        }
+    }
+    table.push_str("];\n");
+    vec![
+        (
+            "BOT_CALIBRATION_GENERATION",
+            format!("pub const BOT_CALIBRATION_GENERATION: i64 = {generation};\n"),
+        ),
+        (
+            "SKILL_ELO_ANCHOR",
+            format!("pub const SKILL_ELO_ANCHOR: f64 = {anchor:.1};\n"),
+        ),
+        ("SKILL_ELO_TABLE", table),
+    ]
+}
+
+/// `text` with the item `pub const <name>:` (up to the first line that ends in `;`) replaced by
+/// `new`. An item that is not there exactly once, or never ends, is an error: the file is never
+/// edited on a guess.
+fn replace_item(text: &str, name: &str, new: &str) -> anyhow::Result<String> {
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let opening = format!("pub const {name}:");
+    let mut starts = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| line.starts_with(&opening))
+        .map(|(index, _)| index);
+    let (Some(start), None) = (starts.next(), starts.next()) else {
+        bail!("{CONFIG_RS} must hold `{opening}` at the start of exactly one line");
+    };
+    let Some(end) = (start..lines.len()).find(|&index| lines[index].trim_end().ends_with(';')) else {
+        bail!("`{opening}` in {CONFIG_RS} never ends in `;`");
+    };
+    Ok(format!(
+        "{}{new}{}",
+        lines[..start].concat(),
+        lines[end + 1..].concat()
+    ))
+}
+
+/// R748000: `config_text` (`crates/server/src/config.rs`) with the calibration's items rewritten to
+/// hold `seeds` (weakest strength first, the reference last) and `generation`. The curve's rows rise
+/// with skill (R747000), so seeds that are not one per strength, finite and strictly ascending are an
+/// error, and so is an item the file does not hold as `config_items` spells it.
+pub fn rewrite_config(config_text: &str, seeds: &[f64], generation: i64) -> anyhow::Result<String> {
+    if seeds.len() != BOT_STRENGTHS.len() {
+        bail!(
+            "a calibration holds one seed per strength: {} strengths, {} seeds",
+            BOT_STRENGTHS.len(),
+            seeds.len()
+        );
+    }
+    if let Some(seed) = seeds.iter().find(|seed| !seed.is_finite()) {
+        bail!("a seed must be a finite number (got {seed})");
+    }
+    if seeds.windows(2).any(|pair| pair[0] >= pair[1]) {
+        bail!("the seeds must rise with the strengths (R747000's curve), got {seeds:?}");
+    }
+    let mut text = config_text.to_owned();
+    for (name, item) in config_items(seeds, generation) {
+        text = replace_item(&text, name, &item)?;
+    }
+    Ok(text)
+}
+
+/// Rewrite the file at `path` as `rewrite_config` says. Returns whether the file changed: the same
+/// calibration written again leaves it untouched.
+pub fn write_config(path: &Path, seeds: &[f64], generation: i64) -> anyhow::Result<bool> {
+    let before = std::fs::read_to_string(path).map_err(|error| {
+        anyhow!(
+            "cannot read {}: {error} (run from the repository root)",
+            path.display()
+        )
+    })?;
+    let after = rewrite_config(&before, seeds, generation)?;
+    if after == before {
+        return Ok(false);
+    }
+    std::fs::write(path, after).map_err(|error| anyhow!("cannot write {}: {error}", path.display()))?;
+    Ok(true)
 }
 
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_calibrate_args(&args)?;
+    if options.write {
+        // Fail now, not after the hour of games, if the file cannot be rewritten as it stands.
+        let text = std::fs::read_to_string(CONFIG_RS).map_err(|error| {
+            anyhow!("--write cannot read {CONFIG_RS}: {error} (run from the repository root)")
+        })?;
+        rewrite_config(&text, &BOT_SEED_RATINGS, BOT_CALIBRATION_GENERATION)?;
+    }
     let generation = compiled_generation()?;
     let seed_base = options
         .seed
@@ -303,6 +414,13 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         seeds,
     };
     print!("{}", render_calibration(&report));
+    if options.write {
+        if write_config(Path::new(CONFIG_RS), &report.seeds, report.generation)? {
+            eprintln!("bot-calibrate: rewrote {CONFIG_RS}");
+        } else {
+            eprintln!("bot-calibrate: {CONFIG_RS} already holds these rows");
+        }
+    }
     Ok(())
 }
 

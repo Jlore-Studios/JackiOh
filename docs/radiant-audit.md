@@ -4,7 +4,8 @@
 
 Every card's Radiant face held against one standard, and the ones below it raised. SPEC §8 (and §7
 for the tokens) is where the result lives; this document is the record of the judgement, one row
-per catalog entry, which `crates/cards/tests/cross/radiant_standard.rs` holds to the catalog.
+per catalog entry (a card added since the sections below has one id-keyed row in the last section instead),
+which `crates/cards/tests/cross/radiant_standard.rs` holds to the catalog.
 
 ## The standard (R275)
 
@@ -979,3 +980,10 @@ The Training Grounds set's cards #1–#40 and its token #39.1 (SPEC §8.11, §7)
 | 58 | Legacy: True Strike | Spell | Pierce / Deal {damage} damage. Exile this. | Pierce / Deal {damage} damage. Exile this. | Meets | The snapshot of Core #44, its faces Core's at the foundation's commit (R2195003), so Core's verdict holds: 2×. |
 | 59 | Legacy: Fig of Life | Spell | Heal a target {heal}. | Heal a target {heal}. | Meets | The snapshot of Core #47, its faces Core's at the foundation's commit (R2195003), so Core's verdict holds: 2×. |
 | 60 | Legacy: Rush Token Farm | Field Spell | Start of turn: Summon a Rush Token. | Start of turn: Summon a Rush Token. / Aura: Your Rush Tokens have +{buff}/+{buff}. | Meets | The snapshot of Core #58, its faces Core's at the foundation's commit (R2195003), so Core's verdict holds. |
+
+## Cards added since (#3111)
+
+A card added after the sections above has one row here, keyed by its id. A person writes its `Verdict` ("Meets", "Raised" or "Designer's word (effect half)") and its `Reasoning` against R275, the standard above; `cargo jackioh names` writes its `Card` cell from the catalog. The face texts are the catalog's, so none is copied here. `crates/cards/tests/cross/radiant_standard.rs` fails a card with no row, and a row with an empty verdict or reasoning.
+
+| Id | Card | Verdict | Reasoning |
+| --- | --- | --- | --- |

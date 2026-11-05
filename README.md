@@ -26,6 +26,7 @@ engine and the AI as WebAssembly.
 | [`crates/engine`](crates/engine/README.md) | the rules, the wire types and the deck validator: pure and seeded |
 | [`crates/cards`](crates/cards/README.md) | `catalog.json`, one script per card with its tests, the patch history |
 | [`crates/ai`](crates/ai/README.md) | the practice opponent |
+| [`crates/shared`](crates/shared/README.md) | the logic the server and the clients share, pure; its README is the host contract (first: the Conquest series rules) |
 | [`crates/wasm`](crates/wasm/README.md) | the engine, cards and AI as WebAssembly for the browser |
 | [`crates/server`](crates/server/README.md) | the HTTP API and the match actors, one binary in a Docker image |
 | [`crates/tools`](crates/tools/README.md) | `jackioh`: fuzz, replay, the catalog and spec checks, the AI's gates, the training arena |

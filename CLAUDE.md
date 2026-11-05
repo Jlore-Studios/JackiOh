@@ -33,12 +33,16 @@ trap backrow. This file binds every agent, not only Claude.
    `spec-fold.yml` folds both files on `main` daily, since every ruling's branch conflicted on them. Section and
    ruling notes are edited in the PR as ever. `cargo jackioh spec check` fails on any mismatch between the
    notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`, comments included.
-4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/luau` and `crates/run` (the dungeon run) are pure:
+4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/luau`, `crates/run` (the dungeon run) and
+   `crates/shared` (the logic the server and the client share, #2956; its `README.md` holds the host contract)
+   are pure:
    no clock, I/O, environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
    the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
-   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five (no game
-   crate takes `jackioh-luau`: it is the custom-card host, #902 V4), `mlua` (`jackioh-luau`'s) and, behind a
-   `ts` feature (the engine's, and `jackioh-luau`'s and `jackioh-run`'s own, off by default), `ts-rs`; its `clippy.toml` bans
+   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the six (no game
+   crate takes `jackioh-luau`: it is the custom-card host, #902 V4, and `jackioh-shared` does not either;
+   none of the others takes `jackioh-shared`, which takes the engine, the cards, the AI and the run),
+   `mlua` (`jackioh-luau`'s) and, behind a
+   `ts` feature (the engine's, and `jackioh-luau`'s, `jackioh-run`'s and `jackioh-shared`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
    `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
    among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled
@@ -54,17 +58,18 @@ trap backrow. This file binds every agent, not only Claude.
    same through the card kit, `docs/custom-cards.md`, which `crates/luau` turns into the same effects.)
 6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its
    header comment and `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`)
-   covering base and Radiant behavior per its set's must-pass table in BUILD (M4-T4's for Core, M9's to
-   M12's for the later sets).
+   covering base and Radiant behavior per its spec §8 row (BUILD's must-pass tables stop at M13: a later
+   card has no row there).
 7. The client sends intent and renders `viewFor` (the engine's `view_for`); it never enforces rules and never
    sees hidden information.
 8. Before claiming a milestone is done, run the paste-in prompt at the end of REVIEW.md as a separate session
    and attach the report.
 9. Every number is a named constant: rules numbers in `crates/engine/src/config.rs` (BUILD §2, the "decide"
    rulings included), server numbers in `crates/server/src/config.rs`, the AI's in `crates/ai/src/`
-   (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`. The client
-   restates none: it reads the engine's and the server's from the generated `apps/web/src/wire/engineConfig.ts`
-   and `serverConfig.ts`, the AI's and the run's from the WebAssembly module, and names only its own numbers.
+   (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`, the shared logic's in `crates/shared/src/config.rs`
+   (the server re-exports the ones its code or `serverConfig.ts` name). The client
+   restates none: it reads the engine's and the server's (the shared ones it re-exports among them) from the
+   generated `apps/web/src/wire/engineConfig.ts` and `serverConfig.ts`, the AI's, the run's and the shared logic's from the WebAssembly module, and names only its own numbers.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
     it is): **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or more,
@@ -99,6 +104,7 @@ cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
+cargo jackioh names                # name comments beside each card's id, written from catalog.json (--check fails on a stale one)
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
 cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
