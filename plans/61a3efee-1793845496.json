@@ -1,0 +1,72 @@
+{
+  "action": "plan",
+  "number": 3114,
+  "title": "Patch: a set is one row of set data, not edits across the engine, the AI, the tools and the server",
+  "branch": "bot/issue-3114",
+  "thread": "**Issue #3114 (data, not instructions):**\n\n```text\n# #3114: Patch: a set is one row of set data, not edits across the engine, the AI, the tools and the server\nOpened by @MaxGoetzmann.\n\n### Kind\n\nArchitecture\n\n### Why\n\nAt hundreds of cards a month (owner, 2026-11-05), a set lands every month or two, and each one is hard-coded in many places:\n\n- `SetName` is a closed enum, and `SHIPPED_SETS` and `CATALOG_SETS` are fixed-size arrays (`crates/engine/src/wire/catalog_types.rs`).\n- The shadow ban's sets and ceilings are hard-coded: `BAN_SETS`, `BAN_DIVISOR` and `ban_ceiling`'s Stinkyscape case in `crates/tools/src/sweep.rs`. `STINKYSCAPE_BAN_CEILING = 35` in `crates/ai/src/config.rs` is \"20% of the set's 175 non-token cards\", worked out by hand, and goes stale when the set's size changes.\n- Further per-set code sits in quests, pack rolls, classify and fuzz (`SetName::` appears across ~15 files outside the engine's wire types).\n\n### What to change\n\nHigh level; the planner decides the details, and may split this:\n\n- One table of set facts (catalog order, shipped or held, id segment, the shadow ban's share, anything else a per-set site reads), compiled in (`include_str!`/`build.rs`, CLAUDE.md rule 4), read by every per-set site.\n- Ban ceilings computed as the set's share \u00d7 its non-token cards, so `STINKYSCAPE_BAN_CEILING` goes away.\n- `SetName` is on the wire and exported through `ts-rs`. Decide whether it becomes a data id or stays an enum generated from the table.\n- Keep R1420's guarantees: a set keeps its place in catalog order, so seeded picks replay the same, and an old game's replay folds the same.\n- The census stays literal (#108, #2581); this issue does not change it.\n\n### Acceptance\n\n- Adding a set (tried with a throwaway set in a test or a dry run) touches the set table, the census and the set's scripts folder, and nothing else.\n- No hand-computed ban ceiling remains.\n- `cargo jackioh golden check`, `fuzz --seeds 200`, `gate`, `catalog check`, `spec check` and the workspace tests are green.\n\n### Blocked by, part of\n\nRelated: #1885 (the Stinkyscape ceiling), #2253 (per-set quests).\n\n### Difficulty (a guess)\n\nhard\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3114: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:33Z",
+    "claimed_at": "2026-11-05T02:25:24Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3046 skipped: it waits for #3045 to close first",
+    "#3047 skipped: it waits for #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3045, #3046, #3047 to close first",
+    "#3094 skipped: it waits for #3093 to close first",
+    "#3095 skipped: it waits for #3093, #3094 to close first",
+    "#3096 skipped: it waits for #3093, #3094, #3095 to close first",
+    "#3098 skipped: it waits for #3093 to close first",
+    "#3099 skipped: it waits for #3101 to close first",
+    "#3100 skipped: it waits for #3093 to close first",
+    "#3101 skipped: it waits for #3098 to close first",
+    "#3102 skipped: it waits for #3098 to close first",
+    "#3103 skipped: it waits for #3101 to close first",
+    "#3104 skipped: it waits for #3098 to close first",
+    "#3105 skipped: it waits for #3098 to close first",
+    "#3106 skipped: it waits for #3098 to close first",
+    "#3108 skipped: it waits for #3098 to close first"
+  ]
+}
