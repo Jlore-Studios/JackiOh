@@ -459,6 +459,10 @@ pub struct EvalWeights {
     /// (`evaluate::attack_hook_price`) that `unit_worth` adds, inside the Brittle share, while the unit
     /// may attack, the seat's units and the enemy's alike.
     pub attack_hook: f64,
+    /// R3064000: the share of what a Dormant card's awakening gives its controller through its wake
+    /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
+    /// sleepers and the enemy's alike.
+    pub awaken: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -614,6 +618,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // R2688000: an untuned start for the training lanes, as R2564000's is. At 0.5 the smoke gate read
     // 20, 20 and 20 of 20; at 0, 20, 20 and 20.
     attack_hook: 0.5,
+    // R3064000: 1.0, not the untuned starts' 0.5: the slumber share already discounts the wait, and no
+    // effect reaches a Dormant card, so its wake comes. At 0.5, as at 0, Medium ends its turn rather than
+    // play a lone Imprisoned Ship Smith and plays a Felinor Token over Imprisoned Cosmality. At 1.0 the
+    // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
+    awaken: 1.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -664,6 +673,11 @@ pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
 /// attack hook, on either field.
 pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
+
+/// R3064000: the most nodes a decision's awakening probes (`evaluate::awaken_prices`) spend: two wakes
+/// (the card's and its hookless twin's) for each Dormant card with a wake trigger on either field and
+/// each own hand Unit with one, and a spawn more per such hand Unit (one node, two on a full unit row).
+pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -799,6 +813,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     turn_hook: 0.0,
     activation: 0.0,
     attack_hook: 0.0,
+    awaken: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

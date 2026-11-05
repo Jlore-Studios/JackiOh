@@ -70,6 +70,16 @@ func ownReviewBuild(t *testing.T, h *flowHarness, provider string, labels ...str
 	return pr, result
 }
 
+// ownReviewLaneState is what a test of its reserved lane prints when it fails (#3031: these two
+// failed once on `main`'s CI and never again, and the assertion alone did not say why): the pull
+// request's and its issue's records, the labels on both, and the lanes as `plan.ReadLanes` read them.
+func ownReviewLaneState(h *flowHarness, pr int, lanes *plan.Lanes) string {
+	items := h.ctx.Store.Load().Obj("items")
+	return fmt.Sprintf("\nnow %s\n#%d record: %s\n#%d labels: %v\n#12 record: %s\n#12 labels: %v\nlanes: %s",
+		clock.ISO(h.ctx.Now()), pr, pyjson.Dumps(items.Obj(strconv.Itoa(pr))), pr, h.gh.LabelNames(pr),
+		pyjson.Dumps(items.Obj("12")), h.gh.LabelNames(12), lanes.Describe())
+}
+
 // Muse builds a medium item, and its deliver opens the pull request as a draft, so CI starts, and
 // hands Muse's lane to its own review run: the next run is Muse's own review, a fresh adversarial
 // session of Muse's reviewer, which approves it; its deliver records the votes (Muse built it,
@@ -193,7 +203,7 @@ func TestOwnReview_TheReservedLaneIsNotTakenByAnotherItem(t *testing.T) {
 	pr, _ := ownReviewBuild(t, h, "agy")
 	h.gh.AddIssue(14, fakes.Issue{Title: "Something else", Labels: []string{config.LabelBuild}})
 	lanes := plan.ReadLanes(h.ctx, h.ctx.Store.Load())
-	assertEqual(t, []any{lanes.Held[pr], lanes.Reserved[pr]}, []any{"agy", true})
+	assertEqual(t, []any{lanes.Held[pr], lanes.Reserved[pr]}, []any{"agy", true}, ownReviewLaneState(h, pr, lanes))
 	assertIn(t, "(reserved for its own review)", lanes.Describe())
 	builds := plan.Make(h.ctx, false, nil, "build", nil)
 	assertEqual(t, builds.Get("action"), "none")
@@ -215,9 +225,10 @@ func TestOwnReview_AReservationThatRunsOutStillLeavesItsOwnReviewFirst(t *testin
 	testsupport.ClockOf(h.ctx).At = testsupport.Day.Add(31 * time.Minute)
 	lanes := plan.ReadLanes(h.ctx, h.ctx.Store.Load())
 	assertEqual(t, len(lanes.Held), 0)
+	before := ownReviewLaneState(h, pr, lanes)
 	planned := flowMake(h.ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("number"), planned.Get("provider")},
-		[]any{"review", pr, "agy"})
+		[]any{"review", pr, "agy"}, before+"\nplanned: "+pyjson.Dumps(planned))
 }
 
 // A run that died while it reviewed puts its own review back on its lane: the next run of that

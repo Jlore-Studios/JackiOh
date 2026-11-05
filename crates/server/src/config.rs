@@ -2934,3 +2934,27 @@ pub const GLOBAL_PACK_NAME: &str = "global";
 /// ids (`env.rs` reads it at boot, `seed-catalog` for R1300001's exemption). A name, not a number,
 /// and never exported: the client learns only whether its own caller is one (`isDev`).
 pub const DEV_PROFILE_IDS: &str = "DEV_PROFILE_IDS";
+/// §14.10, R3074000: the environment variable that sets the dev dashboard's strict mode, `on` or
+/// `off`, unset meaning `on`. Strict, every `/api/admin/*` route needs the two-step code (`aal2`)
+/// and a hand-set rating is off the public ladder until it is reset (R3074001). Production leaves it
+/// unset; staging's `wrangler.jsonc` vars and end-to-end mode set `off`. A name, never exported.
+pub const DEV_STRICT: &str = "DEV_STRICT";
+/// §14.10, R3074000: the most Jlore one `POST /api/dev/jlore` gives. Exported to `serverConfig.ts`.
+pub const DEV_JLORE_PER_REQUEST_MAX: i64 = 1_000_000;
+/// §14.10, R3074000: the most XP one `POST /api/dev/xp` gives a track. Exported to
+/// `serverConfig.ts`.
+pub const DEV_XP_PER_REQUEST_MAX: i64 = 1_000_000;
+/// §14.10, R3074001: the lowest rating a dev account may hand-set itself on a ladder. Exported to
+/// `serverConfig.ts`.
+pub const DEV_RATING_MIN: f64 = 100.0;
+/// §14.10, R3074001: the highest rating a dev account may hand-set itself on a ladder, past every
+/// bot's (`SKILL_ELO_TABLE`). Exported to `serverConfig.ts`.
+pub const DEV_RATING_MAX: f64 = 3000.0;
+/// §14.10, R3074000: the newest audit rows `GET /api/admin/audit` answers.
+pub const ADMIN_AUDIT_PAGE: i64 = 200;
+/// §14.13, R3074003: the newest posts `GET /api/admin/news` answers, taken down or not.
+pub const NEWS_POSTS_PAGE: i64 = 100;
+/// §14.13, R3074003: the most characters a post's title holds. Exported to `serverConfig.ts`.
+pub const NEWS_POST_TITLE_MAX_CHARS: usize = 80;
+/// §14.13, R3074003: the most characters a post's summary holds. Exported to `serverConfig.ts`.
+pub const NEWS_POST_SUMMARY_MAX_CHARS: usize = 400;

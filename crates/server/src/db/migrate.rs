@@ -332,6 +332,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0079_card_versions.sql",
         include_str!("../../migrations/0079_card_versions.sql"),
     ),
+    (
+        "0080_dev_dashboard.sql",
+        include_str!("../../migrations/0080_dev_dashboard.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

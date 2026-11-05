@@ -9,19 +9,22 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::app::{App, now_ms};
 use crate::economy::idempotency::RequestKey;
-use crate::economy::news::{board, claim_news_once};
+use crate::economy::news::{board, claim_news_once, posts_live_from};
 
 /// The claim's route, as its `Idempotency-Key` is kept under (R2124000).
 const CLAIM_ROUTE: &str = "/api/news/:newsId/claim";
 
-/// `GET /api/news` (`AuthLevel::Active`): `{ news }`, the entries live now ([[R2875001]]), each
-/// marked `claimed` ([[R2875002]]). A read: no turn, no lock.
+/// `GET /api/news` (`AuthLevel::Active`): `{ news }`, the entries live now ([[R2875001]]) and the
+/// dev dashboard's posts standing now ([[R3074003]]), each marked `claimed` ([[R2875002]]). A read:
+/// no turn, no lock.
 pub async fn get_news(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
+    let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let claimed = tx.economy_news_claims_get(&profile.id).await?;
+    let posts = tx.admin_posts_standing(posts_live_from(now), now).await?;
     tx.commit().await?;
-    Ok(json(200, board(&app.news, &claimed, now_ms())))
+    Ok(json(200, board(&app.news, &posts, &claimed, now)))
 }
 
 /// `POST /api/news/:newsId/claim` (`AuthLevel::Active`): [`claim_news_once`] ([[R2875000]]), with an

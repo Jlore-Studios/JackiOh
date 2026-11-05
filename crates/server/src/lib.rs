@@ -21,8 +21,12 @@
 //!   picks may be sent (#1834, R1834002, R1834003).
 //! - `economy`: the economy's holdings and ledgers (SPEC §14.11, #1299), its math, level curve and pity
 //!   (#1298), and the card packs (#1301).
+//! - `admin`: the dev dashboard's store (#3074): the audit of every dev and admin action, the
+//!   hand-set ratings and their ledger, and the news posts (R3074000, R3074001, R3074003).
 
 pub mod actor;
+// The dev dashboard (SPEC §14.10, §14.13; #3074): its audit, hand-set ratings and posts.
+pub mod admin;
 pub mod api;
 pub mod app;
 pub mod auth;

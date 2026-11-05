@@ -1499,7 +1499,9 @@ mod migrate_on_a_wake {
     }
 
     /// The probe database's committed transactions once nothing is connected to it and the count has
-    /// stopped moving (a backend's counters reach the view when it exits).
+    /// stopped moving (a backend's counters reach the view when it exits). Only a server with
+    /// autovacuum off measures cleanly, as tests/db/run.sh starts it: a worker's visit commits in the
+    /// probe too, and one counted 28 of them into a second migrate on 2026-11-04.
     async fn commits(admin: &PgPool) -> i64 {
         let mut last = None;
         for _ in 0..100 {

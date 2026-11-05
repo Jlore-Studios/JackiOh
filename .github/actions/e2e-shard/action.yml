@@ -68,6 +68,9 @@ runs:
         echo "catalog $CATALOG_VERSION"
         nohup pnpm --dir apps/web exec vite preview --port 5173 --strictPort \
           > "$RUNNER_TEMP/client.log" 2>&1 &
+        # Spec 49 (R3074000): the dev dashboard's client on :5174, proxying /api to the server
+        # (apps/admin/vite.config.ts).
+        nohup pnpm --dir apps/admin exec vite preview > "$RUNNER_TEMP/admin.log" 2>&1 &
         nohup target/release/jackioh-server > "$RUNNER_TEMP/server.log" 2>&1 &
 
     # /api/catalog is the one route R163 makes unauthenticated, so a 200 means the catalog really
@@ -77,12 +80,13 @@ runs:
     - name: wait for both to answer
       shell: bash
       run: |
-        for url in http://localhost:5173 http://localhost:8787/api/catalog; do
+        for url in http://localhost:5173 http://localhost:5174 http://localhost:8787/api/catalog; do
           for i in $(seq 1 120); do
             if curl -fs -o /dev/null "$url"; then echo "up: $url (${i}s)"; break; fi
             if [ "$i" -eq 120 ]; then
               echo "never answered: $url"
               echo "--- client.log ---"; cat "$RUNNER_TEMP/client.log" || true
+              echo "--- admin.log ---"; cat "$RUNNER_TEMP/admin.log" || true
               echo "--- server.log ---"; cat "$RUNNER_TEMP/server.log" || true
               exit 1
             fi
@@ -118,5 +122,6 @@ runs:
         path: |
           e2e/artifacts/screenshots
           ${{ runner.temp }}/client.log
+          ${{ runner.temp }}/admin.log
           ${{ runner.temp }}/server.log
         if-no-files-found: warn

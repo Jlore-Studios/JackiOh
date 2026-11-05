@@ -991,4 +991,13 @@ describe("R3012000 micro patches nested under their patch", () => {
     const touch = /@media \(pointer: coarse\), \(max-width: 600px\) \{([\s\S]*?)\n\}/gu;
     expect([...css.matchAll(touch)].some((block) => (block[1] ?? "").includes(".patch-legend__link") && (block[1] ?? "").includes("min-height: 44px"))).toBe(true);
   });
+
+  it("R3012000 the legend's micro patches button is at least 24 px tall with a mouse (WCAG 2.5.8, e2e spec 38)", () => {
+    const MIN_TARGET_PX = 24;
+    const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "patches.css"), "utf8");
+    const rule = /\.patch-legend__micros-toggle,\s*\.tavern\.app-shell \.patch-notes \.patch-legend__toggle \{([^}]*)\}/u.exec(css);
+    expect(rule).not.toBeNull();
+    const height = Number(/min-height:\s*(\d+)px/u.exec(rule?.[1] ?? "")?.[1] ?? 0);
+    expect(height).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+  });
 });

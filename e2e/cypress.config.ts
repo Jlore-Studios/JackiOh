@@ -44,6 +44,8 @@ export default defineConfig({
     expose: {
       apiUrl: process.env.E2E_API_URL ?? "http://localhost:8787",
       wsUrl: process.env.E2E_WS_URL ?? "ws://localhost:8787/ws/match",
+      // Spec 49: the dev dashboard's client (apps/admin), served apart from the player site.
+      adminUrl: process.env.E2E_ADMIN_URL ?? "http://localhost:5174",
       // 99-online-smoke.cy.ts only. It drives the DEPLOYED stack with real accounts, so it is
       // skipped unless `online` is "true" and every value comes from the environment — nothing
       // here is committed, and CI (which sets none of them) runs the spec as a skip.

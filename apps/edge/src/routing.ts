@@ -32,7 +32,7 @@ export const HEALTH_PATH = "/healthz";
 export const READY_PATH = "/readyz";
 
 /** The server's settings that wrangler.jsonc's `vars` hold, one set per environment. */
-export const SERVER_VARS = ["PUBLIC_ORIGINS", "SUPABASE_URL", "TRUSTED_PROXY_HOPS", "LADDER_BOTS"] as const;
+export const SERVER_VARS = ["PUBLIC_ORIGINS", "SUPABASE_URL", "TRUSTED_PROXY_HOPS", "LADDER_BOTS", "DEV_STRICT"] as const;
 
 /** The server's secrets, set with `wrangler secret put` (apps/edge/README.md); the first three are required. */
 export const SERVER_SECRETS = [
