@@ -16685,7 +16685,7 @@
       "started_at": "2026-11-05T03:04:25Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3117": {
       "failures": 0,
