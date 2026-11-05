@@ -918,6 +918,9 @@
 .tavern.app-shell .patch-notes .patch-legend__toggle {
   display: flex;
   align-items: center;
+  /* WCAG 2.5.8 (e2e spec 38): 13px text with 2px padding measures about 22px, under the 24px a mouse's target needs
+     beside the link above it. The touch block below makes it 44px (R2122000). */
+  min-height: 32px;
   gap: 6px;
   padding: 2px 8px 2px 11px;
   border: 0;

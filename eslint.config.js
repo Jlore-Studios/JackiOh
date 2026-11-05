@@ -29,7 +29,7 @@ export default defineConfig(
     // A test that proves something did not happen moves a fake clock past the moment it would
     // have (`vi.useFakeTimers`, `vi.advanceTimersByTimeAsync`); a wait in real time passes whenever
     // the bug comes a little later or the machine runs slow (#1490). A zero-delay flush stays.
-    files: ["apps/web/**/*.test.{ts,tsx}"],
+    files: ["apps/web/**/*.test.{ts,tsx}", "apps/admin/**/*.test.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": [
         "error",

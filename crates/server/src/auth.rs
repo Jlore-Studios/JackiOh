@@ -44,6 +44,11 @@ pub struct AuthUser {
     /// Provider-controlled claims only. Never read user-controlled metadata for an authorization
     /// decision: in Supabase `user_metadata` is user-editable, `app_metadata` is not.
     pub app_metadata: IndexMap<String, Value>,
+    /// R3074000: the verified token's own level is `aal2`: its session proved the account's second
+    /// factor (R665). Read off the token whose signature was checked, never off the user; the dev
+    /// dashboard's strict routes need it.
+    #[serde(default)]
+    pub second_factor: bool,
 }
 
 /// A signed-in session.
@@ -244,7 +249,13 @@ fn to_auth_user(user: &AuthApiUser) -> AuthUser {
         email: user.email.clone(),
         email_verified: is_email_confirmed(user),
         app_metadata: user.app_metadata.clone(),
+        second_factor: false,
     }
+}
+
+/// R3074000: whether a verified token's `aal` claim is the second factor's level.
+fn is_second_factor(aal: Option<&str>) -> bool {
+    aal == Some(SECOND_FACTOR_LEVEL)
 }
 
 fn trim_trailing_slash(url: &str) -> String {
@@ -966,6 +977,7 @@ impl SupabaseAuth {
                             email: authoritative.email.or(claims.email),
                             email_verified: authoritative.email_verified,
                             app_metadata: claims.app_metadata,
+                            second_factor: is_second_factor(claims.aal.as_deref()),
                         });
                     }
                     // `Remembered` or `Unavailable`: the admin lookup below decides the email. A provider
@@ -982,6 +994,7 @@ impl SupabaseAuth {
             if self.missing_second_factor(&claims.sub, claims.aal.as_deref()) {
                 return None;
             }
+            let second_factor = is_second_factor(claims.aal.as_deref());
             return match lookup {
                 AdminLookup::Ok(user) => {
                     let authoritative = to_auth_user(&user);
@@ -991,6 +1004,7 @@ impl SupabaseAuth {
                         email_verified: authoritative.email_verified,
                         // From the verified token's provider-controlled claim, not from the lookup.
                         app_metadata: claims.app_metadata,
+                        second_factor,
                     })
                 }
                 // Fail closed on the security-relevant field: the signature proved who this is, but
@@ -1000,6 +1014,7 @@ impl SupabaseAuth {
                     email: claims.email,
                     email_verified: false,
                     app_metadata: claims.app_metadata,
+                    second_factor,
                 }),
             };
         }
@@ -1021,7 +1036,10 @@ impl SupabaseAuth {
         if self.missing_second_factor(&user.id, aal) {
             return None;
         }
-        Some(to_auth_user(&user))
+        Some(AuthUser {
+            second_factor: is_second_factor(aal),
+            ..to_auth_user(&user)
+        })
     }
 
     /// No sign-in by email here (`/api/auth/signin`): every caller is told where sign-in actually
@@ -1147,6 +1165,9 @@ struct E2eState {
     users: IndexMap<String, E2eUser>,
     /// bearer token -> userId.
     tokens: IndexMap<String, String>,
+    /// R3074000: the tokens whose session proved a second factor (`aal2`), which a test mints with
+    /// `add_second_factor_token`. No fixture account's token is one.
+    second_factor_tokens: IndexSet<String>,
     deletion: E2eDeletion,
 }
 
@@ -1172,6 +1193,7 @@ impl E2eAuth {
             state: Mutex::new(E2eState {
                 users: IndexMap::new(),
                 tokens: IndexMap::new(),
+                second_factor_tokens: IndexSet::new(),
                 deletion: E2eDeletion::Unsupported,
             }),
         };
@@ -1202,6 +1224,7 @@ impl E2eAuth {
                     email: Some(email.to_string()),
                     email_verified,
                     app_metadata: IndexMap::new(),
+                    second_factor: false,
                 },
                 password: password.map(str::to_string),
             },
@@ -1216,6 +1239,19 @@ impl E2eAuth {
         token
     }
 
+    /// R3074000: a second bearer token for `user_id`, a registered user, whose session proved a second
+    /// factor (`aal2`), as a token after the authenticator app's code is. None for an unknown user.
+    pub fn add_second_factor_token(&self, user_id: &str) -> Option<String> {
+        let mut state = self.lock();
+        if !state.users.contains_key(user_id) {
+            return None;
+        }
+        let token = format!("token-aal2-{user_id}");
+        state.tokens.insert(token.clone(), user_id.to_string());
+        state.second_factor_tokens.insert(token.clone());
+        Some(token)
+    }
+
     /// Chooses what `delete_user` does (see `E2eDeletion`).
     pub fn set_deletion(&self, deletion: E2eDeletion) {
         self.lock().deletion = deletion;
@@ -1228,7 +1264,11 @@ impl E2eAuth {
     pub fn verify_access_token(&self, token: &str) -> Option<AuthUser> {
         let state = self.lock();
         let user_id = state.tokens.get(token)?;
-        state.users.get(user_id).map(|entry| entry.user.clone())
+        let second_factor = state.second_factor_tokens.contains(token);
+        state.users.get(user_id).map(|entry| AuthUser {
+            second_factor,
+            ..entry.user.clone()
+        })
     }
 
     pub fn sign_in_with_password(&self, email: &str, password: &str) -> Result<Session, AuthError> {

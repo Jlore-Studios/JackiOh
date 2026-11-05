@@ -577,7 +577,9 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         let standings = tx.ranked_standings(&season_id, ladder).await?;
         let people: Vec<f64> = standings
             .iter()
-            .filter(|standing| !standing.bot && standing.rank.ladder.is_some())
+            .filter(|standing| {
+                crate::api::ranked::counts(standing, app.env.dev_strict) && standing.rank.ladder.is_some()
+            })
             .map(|standing| standing.rating)
             .collect();
         for bot in plan_grind(&bots, &people, ladder) {
