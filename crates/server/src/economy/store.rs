@@ -122,17 +122,10 @@ pub struct CounterEntry {
 /// cosmetics registry's, re-exported above.
 pub use jackioh_shared::loadout::CardPicks;
 
-/// R1834005: how many people own a cosmetic, on one card for a per-card one (`card_id`) or on the
-/// account (`None`), and when one was first granted it (epoch ms; `None` when no grant row shows
-/// it, as for a portrait migration 0057 handed out). A ladder bot's profile is never counted.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct CosmeticOwners {
-    pub cosmetic_id: String,
-    pub card_id: Option<String>,
-    pub owners: i64,
-    pub first_granted_at: Option<i64>,
-}
+/// R1834005: how many people own a cosmetic, on one card for a per-card one or on the account, and when one
+/// was first granted it: `jackioh-shared`'s (#3103), which the bots' wardrobes are drawn from. A ladder bot's
+/// profile is never counted.
+pub use jackioh_shared::bots::cosmetics::CosmeticOwners;
 
 /// The human's deck of a practice game (§9.9), as its seed was issued for it: a list of card ids
 /// (a preset's or a saved deck's), or the random deck the game deals from its seed, leaning on
@@ -255,15 +248,9 @@ pub struct NewsClaim {
 
 /// R3013000: one row of `public.card_proficiency` (migration 0081): how often the account played
 /// the card from hand in games that pay rewards, the level those plays reached (§14.14), and the
-/// stamp the card wears, one its level unlocked (R3013001), `None` for none.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct CardProficiency {
-    pub card_id: String,
-    pub plays: i64,
-    pub level: i64,
-    pub stamp: Option<i64>,
-}
+/// stamp the card wears, one its level unlocked (R3013001), `None` for none: `jackioh-shared`'s (#3103),
+/// which decides the stamps a seat wears from it.
+pub use jackioh_shared::loadout::CardProficiency;
 
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
 // whether a dev tool wrote it (`dev`, §14.10).

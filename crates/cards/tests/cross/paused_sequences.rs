@@ -2789,8 +2789,18 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
             .memory
             .insert(subsystems::POWER_KEY.to_string(), json!("discover"));
 
-        // p1 plays its Heroic Power (which uses nothing, R752), and p2's #85 fuses it onto p2's own.
+        // p1 plays its Heroic Power (which uses nothing but its Cry, R752, R3134002), answers the Cry's
+        // Discover of its power, and p2's #85 fuses it onto p2's own.
         g.play(&played.id, json!({ "zone": 1 }));
+        let first_power = must(
+            g.state()
+                .pending
+                .as_ref()
+                .and_then(|pending| pending.options.first())
+                .cloned(),
+            "an offered power",
+        );
+        g.answer(json!(first_power.key));
         let fused = g.card(&kept.id).clone();
         assert!(fused.def_id.starts_with("t-"));
         assert_eq!(

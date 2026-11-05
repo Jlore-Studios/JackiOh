@@ -80,7 +80,7 @@ mod tests {
     const LIKELY: &str = "meditative-006";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const FODDER: &str = "core-015"; // (1) 1/1 Unit.
-    const BILLY: &str = "classicplus-069"; // (X) Unit 3X/3X.
+    const BILLY: &str = "classicplus-069"; // (X) Unit 2X/3X.
     const FILLER: &str = "core-005"; // (1) Spell.
 
     use crate::js;

@@ -109,7 +109,7 @@ mod tests {
     const ARGUSLAND: &str = "classic-075";
     const VITAL_KILL: &str = "classic-029"; // C #29 Book of Vital Kill: set a hero's health to 13.
     const VANILLA: &str = "core-008"; // 4/4
-    const POINTMASTER: &str = "core-020"; // 7/1 First Strike
+    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack hitter (Pointmaster is a 6/1 since issue #3136)
     const MENACE: &str = "core-019"; // 9/9 Taunt
     const PANTHER: &str = "core-032"; // 5/4 Rush: whenever this attacks, draw 2 for each Unit that attack destroyed.
     const GARY: &str = "core-004"; // 1/1
@@ -210,7 +210,7 @@ mod tests {
             #[test]
             fn a_hit_that_leaves_the_hero_at_exactly_0_is_lethal() {
                 crate::register_all();
-                let mut s = lethal_attack(json!({ "attacker": POINTMASTER, "health": 7 }));
+                let mut s = lethal_attack(json!({ "attacker": SEVEN_SEVEN, "health": 7 }));
                 assert_eq!(fired(&s).len(), 1);
                 s.expect_health(PlayerId::P2, 30);
                 s.expect_health(PlayerId::P1, 17);
@@ -235,9 +235,9 @@ mod tests {
             #[test]
             fn s4_4_it_is_judged_after_armor_going_longs_2_off_a_7_is_a_5_lethal_at_5_not_at_6() {
                 crate::register_all();
-                let at5 = lethal_attack(json!({ "attacker": POINTMASTER, "health": 5, "p1Backrow": [GOING_LONG] }));
+                let at5 = lethal_attack(json!({ "attacker": SEVEN_SEVEN, "health": 5, "p1Backrow": [GOING_LONG] }));
                 assert_eq!(fired(&at5).len(), 1);
-                let mut at6 = lethal_attack(json!({ "attacker": POINTMASTER, "health": 6, "p1Backrow": [GOING_LONG] }));
+                let mut at6 = lethal_attack(json!({ "attacker": SEVEN_SEVEN, "health": 6, "p1Backrow": [GOING_LONG] }));
                 assert!(fired(&at6).is_empty());
                 at6.expect_health(PlayerId::P1, 1);
             }
@@ -245,9 +245,9 @@ mod tests {
             #[test]
             fn s4_4_it_is_judged_after_the_hero_damage_multipliers_argusland_halves_a_7_to_4_lethal_at_4_not_at_5() {
                 crate::register_all();
-                let at4 = lethal_attack(json!({ "attacker": POINTMASTER, "health": 4, "p1Backrow": [ARGUSLAND] }));
+                let at4 = lethal_attack(json!({ "attacker": SEVEN_SEVEN, "health": 4, "p1Backrow": [ARGUSLAND] }));
                 assert_eq!(fired(&at4).len(), 1);
-                let mut at5 = lethal_attack(json!({ "attacker": POINTMASTER, "health": 5, "p1Backrow": [ARGUSLAND] }));
+                let mut at5 = lethal_attack(json!({ "attacker": SEVEN_SEVEN, "health": 5, "p1Backrow": [ARGUSLAND] }));
                 assert!(fired(&at5).is_empty());
                 at5.expect_health(PlayerId::P1, 1);
             }
@@ -574,7 +574,7 @@ mod tests {
                 kept(|| {
                     crate::register_all();
                     let mut s = lethal_attack(json!({
-                        "attacker": POINTMASTER,
+                        "attacker": SEVEN_SEVEN,
                         "health": 4,
                         "p2": { "backrow": [GOING_LONG, ARGUSLAND] },
                     }));

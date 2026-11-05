@@ -1,4 +1,4 @@
-//! Stinkyscape #143 Book Launcher (SPEC §8.10 row 143). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
+//! Stinkyscape #143 Book Launcher (SPEC §8.10 row 143). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Choose a target. If it's an enemy, cast a random harmful Book, on it if it can
 //!            be. If it's an ally, cast a random helpful Book, on it if it can be."
@@ -299,7 +299,7 @@ mod tests {
         fn its_health_is_doubled() {
             let s = board("s143", true);
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, 12));
+            assert_eq!((view.attack, view.health), (0, 6));
         }
     }
 }

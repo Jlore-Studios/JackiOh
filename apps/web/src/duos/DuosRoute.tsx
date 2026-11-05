@@ -20,7 +20,7 @@ import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
 import { connectionWords } from "../game/connectionWords.ts";
-import { awaitsYou, installDevHandle, pageWake, remainingMs, viewDerivedState } from "../game/net.ts";
+import { awaitsYou, installDevHandle, pollWhileVisible, remainingMs, viewDerivedState } from "../game/net.ts";
 import { readPlayLean } from "../game/playLean.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
@@ -125,12 +125,11 @@ function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
         });
     };
     read();
-    const timer = window.setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
-    const stopWake = pageWake(read);
+    // R3205000: a hidden tab reads nothing, and reads once when it shows again.
+    const stopPolling = pollWhileVisible(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
     return () => {
       canceled = true;
-      stopWake();
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [matchId, reading]);
 

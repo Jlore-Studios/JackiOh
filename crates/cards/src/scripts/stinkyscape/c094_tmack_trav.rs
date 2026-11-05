@@ -1,4 +1,4 @@
-//! S #94 Tmack Trav (SPEC §8.10 row 94): (3) Unit, Human, Epic, 9/9 → 18/18, of the Stinkyscape
+//! S #94 Tmack Trav (SPEC §8.10 row 94): (3) Unit, Human, Epic, 8/8 → 16/16, of the Stinkyscape
 //! set. Not Tnack Trav, S #20 (ST9).
 //!   Base:    "Rush / After this destroys a Unit, it may attack again."
 //!   Radiant: "Rush, Pierce / After this destroys a Unit, it may attack again."
@@ -75,6 +75,7 @@ mod tests {
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    const GRUNT: &str = "core-001"; // (2) 0/7 Big D-fender: dies to Tmack's 8, and strikes back for nothing.
     const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
 
     fn fauci() -> Value {
@@ -88,11 +89,11 @@ mod tests {
         }))
     }
 
-    /// p1 holds Tmack Trav (`radiant` its face) to play this turn; p2 has two Vanillas, in lanes 1 and 2.
+    /// p1 holds Tmack Trav (`radiant` its face) to play this turn; p2 has two Big D-fenders, in lanes 1 and 2.
     fn in_hand(radiant: bool) -> Scenario {
         crate::scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": crate::filler(4) },
-            "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "field": [GRUNT, GRUNT], "library": crate::filler(4) },
         }))
     }
 
@@ -138,8 +139,15 @@ mod tests {
             s.attack(&tmack, s.unit_at(P2, 1));
             assert!(s.unit(P2, 1).is_none(), "the Vanilla died");
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 9);
+            s.expect_health(P2, HERO_HEALTH - 8);
             s.expect_refused(|s| s.attack(&tmack, "hero"));
+        }
+
+        #[test]
+        fn is_8_8_with_rush() {
+            let mut s = board(false, json!([]));
+            let tmack = s.unit_at(P1, 1);
+            s.expect_stats(&tmack, json!({ "attack": 8, "health": 8 }));
         }
 
         #[test]
@@ -169,10 +177,10 @@ mod tests {
             s.end_turn();
             assert_eq!(s.state().active, P1);
             s.attack(&tmack, s.unit_at(P2, 2));
-            assert!(s.unit(P2, 2).is_none(), "the second Vanilla died");
+            assert!(s.unit(P2, 2).is_none(), "the second Big D-fender died");
             assert!(offers(&s, &tmack, "hero-p2"));
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 9);
+            s.expect_health(P2, HERO_HEALTH - 8);
         }
 
         /// R767000: the script kept for the replays of v0.5.11 and before, whose kill lifted the sickness.
@@ -185,7 +193,7 @@ mod tests {
                 s.attack(&tmack, s.unit_at(P2, 1));
                 assert!(offers(&s, &tmack, "hero-p2"));
                 s.attack(&tmack, "hero");
-                s.expect_health(P2, HERO_HEALTH - 9);
+                s.expect_health(P2, HERO_HEALTH - 8);
             });
         }
 
@@ -195,7 +203,7 @@ mod tests {
             let tmack = s.unit_at(P1, 1);
             let fauci = s.unit_at(P2, 1);
             s.attack(&tmack, &fauci);
-            s.expect_stats(&fauci, json!({ "health": 3 }));
+            s.expect_stats(&fauci, json!({ "health": 4 }));
             s.expect_refused(|s| s.attack(&tmack, "hero"));
         }
 
@@ -231,13 +239,13 @@ mod tests {
 
         #[test]
         fn two_kills_three_attacks() {
-            let mut s = board(false, json!([VANILLA, VANILLA]));
+            let mut s = board(false, json!([GRUNT, GRUNT]));
             let tmack = s.unit_at(P1, 1);
             s.attack(&tmack, s.unit_at(P2, 1));
             s.attack(&tmack, s.unit_at(P2, 2));
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 9);
-            s.expect_stats(&tmack, json!({ "health": 1 }));
+            s.expect_health(P2, HERO_HEALTH - 8);
+            s.expect_stats(&tmack, json!({ "health": 8 }));
             s.expect_refused(|s| s.attack(&tmack, "hero"));
         }
     }
@@ -246,15 +254,15 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_18_18_with_pierce() {
+        fn is_16_16_with_pierce() {
             let mut s = board(true, json!([VANILLA]));
             let tmack = s.unit_at(P1, 1);
-            s.expect_stats(&tmack, json!({ "attack": 18, "health": 18 }));
+            s.expect_stats(&tmack, json!({ "attack": 16, "health": 16 }));
             let keywords = s.stats(&tmack).keywords;
             assert!(has_keyword(&keywords, KeywordKind::Rush) && has_keyword(&keywords, KeywordKind::Pierce));
             s.attack(&tmack, s.unit_at(P2, 1));
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 18);
+            s.expect_health(P2, HERO_HEALTH - 16);
         }
 
         #[test]

@@ -566,7 +566,7 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
 /// block editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
 /// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (either absent), so the verdict is the
-/// one its answer gets: the mode's frame and the offer's blocks (R1563007).
+/// one its answer gets: the mode's frame and points (R3043000) and the offer's blocks (R1563007).
 pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, String> {
     let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
     if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
@@ -1346,6 +1346,30 @@ mod loadout_body_tests {
         });
         let again: Value = serde_json::from_str(&loadout(&again.to_string()).unwrap()).unwrap();
         assert_eq!(again["due"]["cards"], json!([]));
+    }
+
+    /// R1834002: a seat's loadout as its match starts is the body too: the picks the host read in, the loadout out.
+    #[test]
+    fn loadout_body_freezes_a_seat_from_the_picks_a_host_read() {
+        let call = json!({
+            "call": "freezeSeat", "deckCards": ["core-001", "core-002"],
+            "picks": { "stamps": [{ "cardId": "core-001", "stamp": 2 }, { "cardId": "core-009", "stamp": 4 }] },
+        });
+        let frozen: Value = serde_json::from_str(&loadout(&call.to_string()).unwrap()).unwrap();
+        // Only a card the deck deals wears its stamp; a seat that owns nothing wears the defaults.
+        assert_eq!(
+            frozen["frozen"]["stamps"],
+            json!([{ "cardId": "core-001", "stamp": 2 }])
+        );
+        let defaults: Value =
+            serde_json::from_str(&loadout(r#"{"call":"defaultLoadout"}"#).unwrap()).unwrap();
+        assert_eq!(frozen["frozen"]["seat"], defaults["frozen"]["seat"]);
+        let rows = json!({ "call": "wornStamps", "rows": [
+            { "cardId": "core-001", "plays": 20, "level": 2, "stamp": 2 },
+            { "cardId": "core-002", "plays": 3, "level": 1, "stamp": 4 },
+        ] });
+        let worn: Value = serde_json::from_str(&loadout(&rows.to_string()).unwrap()).unwrap();
+        assert_eq!(worn["stamps"], json!([{ "cardId": "core-001", "stamp": 2 }]));
     }
 
     #[test]

@@ -154,6 +154,7 @@ mod tests {
             json!({}),
         );
         s.play(TWINSPELL, json!({}));
+        s.activate(TWINSPELL, json!({}));
         let menace = s.unit(P1, 1).expect("the menace");
         s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&menace) }));
         s.answer(hero(P2));

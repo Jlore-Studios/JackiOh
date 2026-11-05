@@ -219,6 +219,8 @@ fn with_market(p1: Value, p2: Value, offers: &[&str]) -> GameState {
         bought: PerPlayer::new(0, 0),
         owner: Some(AI),
         fixed: None,
+        buffs: None,
+        nerfs: None,
     };
     state.marketplace = Some(Marketplace {
         offers: offers.iter().map(offer).collect(),
@@ -240,4 +242,20 @@ fn r2660000_the_marketplace_neither_hides_nor_makes_the_lethal() {
         "PREMISE: the bot can buy the offer"
     );
     assert!(!unstoppable_lethal(&buys_a_wall, AI, None));
+}
+
+/// R3047001: a card bought at the Marketplace costs (0), so a bot with no mana left still buys the
+/// offered Mr. Vanilla (a (1) card) and plays it in Defense Position this turn: the wall it holds is
+/// real, and the lethal is not unstoppable. The same bot with nothing to buy is doomed.
+#[test]
+fn r3047001_a_card_bought_costs_nothing_so_a_bot_without_mana_still_walls_the_lethal() {
+    let broke = |offers: &[&str]| with_market(json!({ "health": 6, "mana": 0 }), json!({}), offers);
+    let walled = broke(&["core-008"]);
+    assert_eq!(walled.players[AI].mana.current, 0, "PREMISE: no mana");
+    assert!(
+        legal_actions(&walled, AI).contains(&ActionBody::MarketBuy { offer: 0 }),
+        "PREMISE: the bot can buy the offer with Credits"
+    );
+    assert!(!unstoppable_lethal(&walled, AI, None));
+    assert!(unstoppable_lethal(&broke(&[]), AI, None));
 }

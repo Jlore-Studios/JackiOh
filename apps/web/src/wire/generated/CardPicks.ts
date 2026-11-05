@@ -6,8 +6,8 @@ import type { FullArtPick } from "./FullArtPick";
  * wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may
  * name a version, and the augments layered on it (migration 0079, R2725000). A kind
  * with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
- * id is kept as written, an unknown one too, and judged only where it is worn (the server's
- * `loadout::freeze_loadout`, R1834002).
+ * id is kept as written, an unknown one too, and judged only where it is worn ([`freeze_loadout`],
+ * R1834002).
  */
 export type CardPicks = { cardId: string, foil?: string, finish?: string, border?: string, fullArt?: FullArtPick, 
 /**

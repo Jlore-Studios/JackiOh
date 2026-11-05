@@ -19,6 +19,10 @@
 // until the board catches up (game/awakening.ts's `data-awakening`). R2647000: a token unit wears no
 // mark and no Created badge (CardStates.tsx); its hover preview says "Token Unit" (R1177001).
 // R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics (CardFace.tsx, cosmetics.ts).
+// R3046000: a full-art unit (fullArt.ts `boardLookOf`: the card, its owner's pick and the setting say so, as they do for
+// a full face) lays its art across the face, `data-full-art`, still, with the name plate a band below the art, the
+// attack and health gems on the art's lower corners and the cost gem, chips, marks and states over it (cards.css).
+// A unit that is not full art keeps its oval window.
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
 
 import { useRef, type ReactElement } from "react";
@@ -33,6 +37,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
+import { boardLookOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
@@ -42,6 +47,7 @@ import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
 import { useCardSettings } from "./settings.ts";
+import { artPictureOf } from "./versions.ts";
 import { useCardStamp } from "./stamps.ts";
 
 import "./cards.css";
@@ -125,6 +131,9 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const stamp = useCardStamp(face, worn);
   const plan = keywordFxPlan(unit);
+  // R3046000: the look a full-art unit wears, still (null: the oval window).
+  const cardLook = useCardLook(face.defId, worn);
+  const look = boardLookOf(face, cardLook);
   const dormant = dormantAttr(face.dormant);
   const nameRef = useRef<HTMLSpanElement>(null);
   useFitText(nameRef, face.name);
@@ -140,6 +149,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-rarity={frameRarity(face) ?? undefined}
       data-foil={foilFor(face, settings.animatedFoil, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
+      data-full-art={look === null ? undefined : "true"}
+      data-version={look?.version ?? undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
@@ -155,8 +166,9 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             radiant={face.radiant}
             tags={face.tags}
             type={face.type}
-            shape="oval"
+            shape={look === null ? "oval" : "full"}
             starship={face.starship}
+            picture={look === null ? "normal" : artPictureOf(look.version, face.set)}
           />
         </span>
 

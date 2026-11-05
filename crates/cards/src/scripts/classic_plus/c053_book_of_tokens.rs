@@ -155,18 +155,17 @@ mod tests {
         }
 
         #[test]
-        fn r987_feng_shui_s_luck_adds_a_roll() {
+        fn r987_a_given_lucky_adds_a_roll() {
             crate::register_all();
-            let twos = |judge: bool| -> i32 {
+            let twos = |lucky: bool| -> i32 {
                 let mut found = 0;
                 for n in 0..40 {
-                    let mut p1 = json!({ "hand": [{ "def": BOOK }, FILLER] });
-                    if judge {
-                        p1["backrow"] = json!(["meditative-040"]);
-                    }
-                    let mut opts = json!({ "p1": p1, "p2": { "hand": [FILLER] } });
+                    let mut opts = json!({ "p1": { "hand": [{ "def": BOOK }, FILLER] }, "p2": { "hand": [FILLER] } });
                     opts["seed"] = json!(format!("book-of-tokens-luck-{n}"));
                     let mut s = scenario(opts);
+                    if lucky {
+                        crate::give_lucky(&mut s, BOOK, 1);
+                    }
                     s.play(BOOK, json!({}));
                     if tokens(&s).len() == 2 {
                         found += 1;
@@ -174,7 +173,7 @@ mod tests {
                 }
                 found
             };
-            // With Luck 1 it keeps the better of two rolls, so 2 comes up more often on the same seeds.
+            // With Lucky 1 it keeps the better of two rolls, so 2 comes up more often on the same seeds.
             assert!(twos(true) > twos(false));
         }
 
