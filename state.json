@@ -31862,6 +31862,7 @@
         "every": 5,
         "head": "2a91f708ea0d901defa2d7daf41accf488f3f6c3",
         "issue": 3093,
+        "last_why": "stopped: #3126 was closed",
         "merged_at": "2026-11-05T04:08:36Z",
         "n": 65,
         "pr": 3126,
@@ -31872,12 +31873,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:3b2a97e3-1793852602",
+        "run_id": "",
         "sha": "b60666c6b030d31157d55d04993657c2b5b38622",
         "started_at": "2026-11-05T04:23:49Z",
         "status": "queued",
         "title": "Patch: the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 65
