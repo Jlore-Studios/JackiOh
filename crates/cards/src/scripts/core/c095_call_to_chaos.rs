@@ -248,14 +248,20 @@ mod tests {
         s
     }
 
-    /// R380: cursor whose base roll casts #95 itself from all Call to Chaos editions.
-    fn recast_of_core_cursor() -> u32 {
+    /// R380: cursor whose base roll casts #95 itself from all Call to Chaos editions, and whose cast, rolling
+    /// for itself in turn (at chain count `chain`), neither casts on nor sends itself anywhere but the
+    /// graveyard (R87): the nested roll is another random pick, so it is searched for like the first (#848).
+    fn recast_of_core_cursor(chain: Option<i32>) -> u32 {
         for cursor in 0..CURSOR_SEARCH {
             if rolled_at(cursor).as_deref() != Some("recast") {
                 continue;
             }
-            let s = chaos(None, ChaosOpts { cursor: Some(cursor), ..ChaosOpts::default() });
-            if events_of(&s, "cardPlayed").get(1).is_some_and(|event| event["defId"] == CHAOS) {
+            let s = chaos(None, ChaosOpts { cursor: Some(cursor), chain, ..ChaosOpts::default() });
+            let plays = chaos_plays(&s);
+            if events_of(&s, "cardPlayed").get(1).is_some_and(|event| event["defId"] == CHAOS)
+                && plays.len() == 2
+                && s.pile(P1, "graveyard").iter().any(|card| card.id == id_of(&plays[1]))
+            {
                 return cursor;
             }
         }
@@ -263,7 +269,7 @@ mod tests {
     }
 
     fn recast_of_core(opts: ChaosOpts) -> Scenario {
-        chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor()), ..opts })
+        chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor(opts.chain)), ..opts })
     }
 
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {

@@ -508,8 +508,8 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     }
 
     // One test per tier, each with its own 300 s. Both deal from the frozen fixture pool (issue #1113), so
-    // a shadow-ban change re-deals neither; each plays the games its card needs, re-pinned when the deals
-    // move (#2380, #1675, #2521, #2278, #2511, R2511001, #2542, #2490, R2490000, #817, R817000, #1884).
+    // neither a shadow-ban change nor a card joining a pool (the pool probe passes them, #3117) re-deals
+    // them; each plays the games its card needs.
     //
     // Easy's check plays one game: game 1 draws Ceaseless Void (100), never at four crystals. A card a
     // discount brings to four crystals will not do: GIGA Glowy Jelly Bean with the Floats of R1563000,

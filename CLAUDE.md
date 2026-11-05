@@ -134,6 +134,7 @@ cargo test -p jackioh-engine --features testkit --test 'rules*'     # the engine
 cargo test -p jackioh-cards c002_speciesist                         # one card's tests
 cargo test -p jackioh-engine --features testkit --test 'rules*' r58 # by ruling: every test whose name holds r58
 cargo test -p jackioh-server --test server actor::                  # one area of the server suite
+sh scripts/pool-probe.sh                                            # the cards', AI's, server's and tools' tests with every random pool rotated one place (#3117)
 pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web test file
 pnpm exec vitest run --project edge                                 # the Worker's tests (apps/edge)
 ```

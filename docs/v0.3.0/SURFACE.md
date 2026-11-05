@@ -783,6 +783,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn host(call_json: &str) -> String;
     // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
     // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn loadout(call_json: &str) -> String;
+    // #3102: jackioh-shared's loadout visibility rule (SPEC §10.8, R1834003, R3013002). A LoadoutCall in ({ call: "dealtCards", state } | { call: "shownDefs", view, dealt }
+    // | { call: "cardsDue", shown, loadouts, sent? }), a LoadoutAnswer out ({ dealt } | { shown } | { due: { cards, sent } }); the host holds the deal and each receiver's sent set
 #[wasm_bindgen] pub fn bots(call_json: &str) -> String;
     // #3103: jackioh-shared's ladder bots (SPEC §9.12, R1453, R1454, R641000, R1555000). A BotCall in ({ call: "chooseBot", ticket, bots, recent, busy, hour, catalogVersion } | { call: "planPool" | "planGrind" | "newBot" | "drawDecks" | "drawTrio" | "fallbackDue" | "pickIsDue" | "botPick" | … }),
     // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | …); the host reads its store into plain records and writes what comes out
@@ -1031,7 +1034,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a
   Mythic's or an Animated art's id, R2655000, R2715000), goes after the first view to a socket that shows a card that seat's deck
-  dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
+  dealt, once per socket (`jackioh_shared::loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and

@@ -1151,8 +1151,7 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
         }
     }
 
-    // Printed apart from `[gate perf]`, which `luau.rs`'s `slowest_decision` reads against a parent
-    // build that has no pinned positions.
+    // Printed apart from `[gate perf]`, which a parent build with no pinned positions prints too.
     let pinned_limit = AI_GATE.pinned_decision_ms;
     for (name, text) in PINNED {
         let timed = pinned_position(text)

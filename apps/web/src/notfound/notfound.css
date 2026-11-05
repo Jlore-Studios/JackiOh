@@ -289,3 +289,123 @@
     scale: 1.3;
   }
 }
+
+/* ---- the static 404 page's hand: 4, 0, 4 ---------------------------------------------------- */
+
+/* #3127, R3127000: the script-free fallback in the built 404.html (static-pages.ts `notFoundBody`) holds
+   three real card faces (cards/CardFace.tsx, drawn at build time as static markup): Error 4, Not 0, Found 4,
+   read off the cost gems. They deal in stacked, fan out, turn over from the brand's card back into the face
+   and float. Every rule below is the dealt, face-up hand and the animations only run toward it, so under
+   Reduce motion (--anim-scale 0, and the block at the end) it simply lies there. */
+.nf-hand {
+  --nf-card-w: clamp(52px, min(16vw, 10vh), 76px);
+  --nf-card-h: calc(var(--nf-card-w) * 7 / 5);
+  --nf-hand-deal: calc(var(--motion-slow) * var(--anim-scale));
+  --nf-hand-stagger: calc(var(--motion-fast) * var(--anim-scale));
+  --nf-hand-float: calc(var(--motion-slow) * 12 * var(--anim-scale));
+
+  position: relative;
+  height: calc(var(--nf-card-h) * 1.35);
+  margin: 0 auto 8px;
+  animation: nf-hand-float var(--nf-hand-float) var(--ease-in-out) calc(var(--nf-hand-deal) * 4) infinite;
+}
+
+/* The hearth light the hand is held over. */
+.nf-hand::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(var(--nf-card-w) * 4.4);
+  max-width: 100%;
+  height: calc(var(--nf-card-h) * 0.5);
+  transform: translateX(-50%);
+  border-radius: var(--radius-round);
+  background: radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--tavern-gold) 28%, transparent), transparent 70%);
+}
+
+.nf-hand__slot {
+  --turn: 0deg;
+  --deal-at: 0ms;
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--nf-card-h) * 0.1);
+  width: var(--nf-card-w);
+  height: var(--nf-card-h);
+  margin-left: calc(var(--nf-card-w) / -2);
+  transform-origin: 50% 320%;
+  transform: rotate(var(--turn));
+  perspective: 600px;
+  animation: nf-hand-fan var(--nf-hand-deal) var(--ease-overshoot) calc(var(--deal-at) + var(--nf-hand-deal)) backwards;
+}
+
+.nf-hand__slot:nth-child(1) { --turn: -15deg; --deal-at: calc(var(--nf-hand-stagger) * 0); }
+.nf-hand__slot:nth-child(2) { --turn: 0deg; --deal-at: calc(var(--nf-hand-stagger) * 1); }
+.nf-hand__slot:nth-child(3) { --turn: 15deg; --deal-at: calc(var(--nf-hand-stagger) * 2); }
+
+/* The card rests face up. The deal moves opacity, translate and scale and the flip the transform, so the two
+   never fight over one property. */
+.nf-hand__card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg);
+  animation:
+    nf-hand-deal var(--nf-hand-deal) var(--ease-overshoot) var(--deal-at) backwards,
+    nf-hand-flip var(--nf-hand-deal) var(--ease-overshoot) calc(var(--deal-at) * 2 + var(--nf-hand-deal) * 2.5) backwards;
+}
+
+.nf-hand__side {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  backface-visibility: hidden;
+  box-shadow: var(--shadow-2);
+}
+
+.nf-hand__side--back {
+  background: url("/brand/jackioh-card-back.svg") center / 100% 100% no-repeat;
+}
+
+.nf-hand__side--face {
+  transform: rotateY(180deg);
+}
+
+@keyframes nf-hand-deal {
+  from {
+    opacity: 0;
+    translate: 0 -40%;
+    scale: 0.7;
+  }
+}
+
+@keyframes nf-hand-fan {
+  from {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes nf-hand-flip {
+  from {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes nf-hand-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-hand,
+  .nf-hand__slot,
+  .nf-hand__card {
+    animation: none;
+  }
+}

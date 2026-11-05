@@ -37,7 +37,7 @@ use crate::config::{
     REPLAY_REQUESTS_PER_MINUTE,
 };
 use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
-use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
+use crate::loadout::{Loadout, LoadoutExt, SeatCards, SeatLoadout, cards_due, shown_defs};
 
 /// Unit conversion, not configuration.
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;

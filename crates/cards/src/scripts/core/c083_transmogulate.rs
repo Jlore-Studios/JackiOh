@@ -176,20 +176,23 @@ mod tests {
         pool_of(json!({ "rarity": "Legendary", "type": "Field Spell" }))
     }
 
-    /// The Legendary Trap this seed draws: #85 Unlicensed Experimentation, since a Field Trap counts as a
-    /// Trap. There are two Legendary Traps of any set (#85 and Classic #9 Income Tax); the
-    /// "transmogulate-1" seed draws #85 for both trap slots.
-    const LEGENDARY_TRAP: &str = "core-085";
+    /// The Legendary Traps in the pool, every set's (Core #85 Unlicensed Experimentation and Classic #9 Income
+    /// Tax): a Field Trap counts as a Trap (R35), so each Trap slot, a Field Trap's included, takes one.
+    fn legendary_traps() -> Vec<String> {
+        pool_of(json!({ "rarity": "Legendary", "type": "Trap" }))
+    }
 
     /// Board fixtures: #11 Tempo Timmy (Unit), a Radiant #19 Midrange Menace (Immutable Unit), #73
     ///  (Field Spell), #41 Sheepish (Trap), #18 Bread and Butter (Field Trap).
     const IMMUTABLE: &str = "core-019";
 
     fn board(radiant_face: bool) -> Scenario {
+        board_on(&clean_seed(), radiant_face)
+    }
+
+    fn board_on(seed: &str, radiant_face: bool) -> Scenario {
         let mut s = scenario(json!({
-            // Pinned: this seed draws #85 for both trap slots and no replacement casts (a Spell Tyrant
-            // draw cascades under other seeds).
-            "seed": "transmogulate-1",
+            "seed": seed,
             "p1": {
                 "hand": [TRANSMOGULATE, "core-056"],
                 "field": ["core-011", { "def": IMMUTABLE, "radiant": true }],
@@ -210,6 +213,28 @@ mod tests {
             find_instance_mut(s.state_mut(), &id).expect("Transmogulate in hand").radiant = true;
         }
         s
+    }
+
+    /// The first seed whose Embiggened play, on either face, replaces the board as R35 says and casts
+    /// nothing else: a replacement that casts (a Legendary Spell Tyrant draw) cascades under some seeds and
+    /// changes the board the tests read. Searched at run time (#848), so a card joining the pool moves it.
+    fn clean_seed() -> String {
+        crate::register_all();
+        seed_where("transmogulate", |seed| {
+            [false, true].into_iter().all(|radiant_face| {
+                let mut s = board_on(seed, radiant_face);
+                s.play(TRANSMOGULATE, embiggened());
+                legendary_units().contains(&unit_def(&s, P1, 1))
+                    && legendary_field_spells().contains(&backrow_def(&s, P1, 1))
+                    && legendary_traps().contains(&backrow_def(&s, P1, 2))
+                    && legendary_traps().contains(&backrow_def(&s, P1, 3))
+                    && unit_def(&s, P1, 2) == IMMUTABLE
+                    && s.hand(Some(P1)).len() == 1
+                    && s.pile(P1, "library").len() == 2
+                    && unit_def(&s, P2, 1) == "core-011"
+                    && def_ids(&s.pile(P2, "library")) == ["core-020"]
+            })
+        })
     }
 
     /// The Embiggened version (4), which reaches the board too (#2179).
@@ -240,17 +265,17 @@ mod tests {
             assert!(legendary_units().contains(&unit_def(&s, P1, 1)));
             // A Field Spell becomes the Legendary Field Spell; a Trap becomes the Legendary Trap.
             assert!(legendary_field_spells().contains(&backrow_def(&s, P1, 1)));
-            assert_eq!(backrow_def(&s, P1, 2), LEGENDARY_TRAP);
+            assert!(legendary_traps().contains(&backrow_def(&s, P1, 2)));
             s.expect_events(json!(["cardPlayed", "transformed"]));
         }
 
         #[test]
-        fn r35_field_trap_counts_as_trap_a_field_trap_becomes_unlicensed_experimentation() {
+        fn r35_field_trap_counts_as_trap_a_field_trap_becomes_a_legendary_trap() {
             crate::register_all();
             let mut s = board(false);
             s.play(TRANSMOGULATE, embiggened());
 
-            assert_eq!(backrow_def(&s, P1, 3), LEGENDARY_TRAP);
+            assert!(legendary_traps().contains(&backrow_def(&s, P1, 3)));
         }
 
         #[test]
@@ -521,7 +546,7 @@ mod tests {
 
             assert!(legendary_units().contains(&unit_def(&s, P1, 1)));
             assert!(legendary_field_spells().contains(&backrow_def(&s, P1, 1)));
-            assert_eq!(backrow_def(&s, P1, 3), LEGENDARY_TRAP);
+            assert!(legendary_traps().contains(&backrow_def(&s, P1, 3)));
             let pool = pool_ids();
             for card in s.pile(P1, "library") {
                 assert!(pool.contains(&card.def_id));
@@ -547,8 +572,9 @@ mod tests {
 
         #[test]
         fn r767000_a_game_on_v0_5_2_replaces_the_board_graveyard_and_exile_at_its_one_price() {
+            let seed = clean_seed();
             crate::under_kept(TRANSMOGULATE, script_v0_5_2(), || {
-                let mut s = board(false);
+                let mut s = board_on(&seed, false);
                 let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
                 let exile: Vec<String> = s.pile(P1, "exile").into_iter().map(|card| card.id).collect();
                 s.play(TRANSMOGULATE, json!({}));

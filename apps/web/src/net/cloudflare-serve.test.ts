@@ -1,18 +1,20 @@
 // How Cloudflare answers a path that is no file of the build: public/_redirects rewrites the app's
 // screens, wrangler.jsonc's `run_worker_first` hands the server's paths to the Worker, and everything
-// else gets public/404.html with a 404 status (`not_found_handling`). A rewrite targets `/`, not
+// else gets the 404.html the build writes, with a 404 status (`not_found_handling`). A rewrite targets `/`, not
 // `/index.html`, which Cloudflare answers with a 307 to `/` that would drop the path, and a page the
 // build writes (static-pages.ts) is rewritten to its own folder: a rule wins over a file, and its
 // slashed path is the file itself. deploy-routes.test.ts holds the rules to the route table and to
-// the Worker's paths.
+// the Worker's paths. #3127, R3127000: the 404 page is the client itself (static-pages.ts `notFoundHtml`), so it
+// loads the entry script; static-pages.test.ts holds its fallback and its hand.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { PUBLIC_PAGES } from "../../static-pages.ts";
+import { PUBLIC_PAGES, notFoundHtml } from "../../static-pages.ts";
+import { SITE_ORIGIN } from "./navigate.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(HERE, "../../public");
@@ -57,21 +59,16 @@ describe("public/_redirects", () => {
   });
 });
 
-describe("public/404.html", () => {
-  it("ships a page that stands alone for not_found_handling 404-page, with a link home and no script", () => {
-    const page = readFileSync(join(PUBLIC, "404.html"), "utf8");
-    expect(page.trim()).not.toBe("");
-    expect(page).toContain('href="/"');
-    expect(page).not.toMatch(/<script/u);
-    expect(page).toContain('<meta name="robots" content="noindex" />');
+describe("the build's 404.html", () => {
+  it("R3127000 ships no public/404.html: the build writes the page not_found_handling 404-page serves", () => {
+    expect(existsSync(join(PUBLIC, "404.html"))).toBe(false);
   });
 
-  it("R3119000 deals the brand's card backs into 4, 0 and 4 in CSS alone, and stills them under reduced motion", () => {
-    const page = readFileSync(join(PUBLIC, "404.html"), "utf8");
-    expect(page).toContain('url("/brand/jackioh-card-back.svg")');
-    const ranks = [...page.matchAll(/<span class="rank">(\d)<\/span>/gu)].map((match) => match[1]);
-    expect(ranks).toEqual(["4", "0", "4"]);
-    expect(page).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none;/u);
-    expect(page).not.toMatch(/<script/u);
+  it("R3127000 is the client's page: its entry script, noindex and a link home", () => {
+    const page = notFoundHtml(readFileSync(join(HERE, "../../index.html"), "utf8"), SITE_ORIGIN);
+    expect(page).toContain('src="/src/main.tsx"');
+    expect(page).toContain('href="/"');
+    expect(page).toContain('<meta name="robots" content="noindex" />');
+    expect(page).not.toContain('rel="canonical"');
   });
 });

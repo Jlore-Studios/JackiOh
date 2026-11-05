@@ -17,7 +17,6 @@ pub mod consent;
 pub mod cors;
 pub mod cosmetic_packs;
 pub mod cosmetics;
-pub mod custom_cards;
 pub mod decks;
 pub mod dev;
 pub mod duos_again;
