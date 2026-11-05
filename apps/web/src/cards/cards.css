@@ -1520,7 +1520,7 @@
     border-radius: 2.2cqh;
     white-space: normal;
     line-height: 1.04;
-    font-size: calc(10.4cqh * var(--cf-fit, 1));
+    font-size: calc(10.4cqh * var(--cf-band-scale, 1) * var(--cf-fit, 1));
     letter-spacing: 0;
     clip-path: none;
   }
@@ -1630,7 +1630,9 @@
   border-radius: 0;
   white-space: normal;
   line-height: 1.04;
-  font-size: calc(9cqh * var(--cf-fit, 1));
+  /* 9cqh, on both size rules' declarations (#2107: no sheet gains a size of its own). */
+  --cf-name-scale: calc(9 / 6.2);
+  --cf-band-scale: calc(9 / 10.4);
   letter-spacing: 0;
   clip-path: none;
   box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
