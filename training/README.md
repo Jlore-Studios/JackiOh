@@ -454,7 +454,7 @@ The ladder bots' strengths are measured against each other on the AI on `main` (
 `docs/bot-calibration.md`), beside the skill curve their seed ratings are read from (R747000), so a
 merged promotion is followed by that document's re-calibration: `cargo run --release -p
 jackioh-server -- bot-calibrate`, run by a person or the night bot, whose report is compared with the
-curve and, where it should win, pasted into `crates/server/src/config.rs` in a pull request. A lane
+curve and, where it should win, written into `crates/server/src/config.rs` with `--write` in a pull request. A lane
 never edits `crates/server`, and a promotion does not wait for it.
 
 ## Where the numbers go
