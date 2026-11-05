@@ -17850,6 +17850,14 @@
           "claude": "medium"
         }
       }
+    },
+    "3172": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-05T09:12:33Z",
+      "issue": 3158,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
