@@ -20,7 +20,7 @@ use crate::classify::{Classification, family};
 use crate::patches::git;
 use crate::patches::patches_io::{NamedFragment, PendingFragment};
 
-const PENDING_DIR: &str = "crates/cards/patches/pending";
+pub(crate) const PENDING_DIR: &str = "crates/cards/patches/pending";
 
 /// The pending fragments `rev` holds, by file name. A file that is no fragment is left to `patches
 /// check`, which names it.

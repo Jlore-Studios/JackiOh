@@ -36,6 +36,8 @@ import {
   type RandomSource,
 } from "./landingFan.ts";
 import { siteFooterTestid } from "./SiteFooter.tsx";
+import { devButtonTestid } from "./DevButton.tsx";
+import { DEV_PANEL_HIDDEN_QUERY } from "./devPanel.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -51,7 +53,7 @@ const SLOW = { timeout: 5_000 } as const;
 
 // Stubbed server
 
-type MeAnswer = "active" | "unauthorized" | "hang";
+type MeAnswer = "active" | "dev" | "unauthorized" | "hang";
 
 function serve(answer: MeAnswer): void {
   vi.stubGlobal(
@@ -72,6 +74,7 @@ function serve(answer: MeAnswer): void {
             emailVerified: true,
             currentMatchId: null,
             email: "player@example.test",
+            ...(answer === "dev" ? { isDev: true } : {}),
           }),
         );
       }
@@ -80,6 +83,14 @@ function serve(answer: MeAnswer): void {
         jsonResponse(404, { error: { code: "not_found", message: `no stub for ${url}` } }),
       );
     }),
+  );
+}
+
+/** R3156000: this window is a computer's, no phone's or tablet's (`DEV_PANEL_HIDDEN_QUERY`). */
+function onComputer(): void {
+  const original = window.matchMedia;
+  vi.stubGlobal("matchMedia", (query: string) =>
+    query === DEV_PANEL_HIDDEN_QUERY ? ({ ...original(query), media: query, matches: false } as MediaQueryList) : original(query),
   );
 }
 
@@ -183,6 +194,8 @@ describe("B37 the corner slot", () => {
     const signIn = await screen.findByTestId(landingTestid.signIn, undefined, SLOW);
     expect(screen.queryByTestId(landingTestid.account)).toBeNull();
     expect(landing()).toHaveAttribute("data-account", "anonymous");
+    // #3189: the corner link wears the top bar's pill, the one BackLink's Back wears (routes/top-bar.css).
+    expect(signIn).toHaveClass("top-bar-button", "top-bar-button--text");
     await expectLeadsTo(signIn, paths.login);
   });
 
@@ -193,7 +206,25 @@ describe("B37 the corner slot", () => {
     const account = await screen.findByTestId(landingTestid.account, undefined, SLOW);
     expect(screen.queryByTestId(landingTestid.signIn)).toBeNull();
     expect(landing()).toHaveAttribute("data-account", "signed-in");
+    expect(account).toHaveClass("top-bar-button", "top-bar-button--text");
     await expectLeadsTo(account, paths.account);
+  });
+
+  it("R3156000 a dev account on a computer gets the Dev button beside Account", async () => {
+    onComputer();
+    serve("dev");
+    signIn();
+    render(<LandingRoute />);
+    await screen.findByTestId(landingTestid.account, undefined, SLOW);
+    expect(await screen.findByTestId(devButtonTestid.button, undefined, SLOW)).toHaveTextContent("Dev");
+  });
+
+  it("R3156000 a player the server does not call a dev account gets no Dev button, on a computer too", async () => {
+    onComputer();
+    signIn();
+    render(<LandingRoute />);
+    await screen.findByTestId(landingTestid.account, undefined, SLOW);
+    expect(screen.queryByTestId(devButtonTestid.button)).toBeNull();
   });
 
   it("B37 loading: the slot holds nothing while /api/auth/me is unanswered", async () => {

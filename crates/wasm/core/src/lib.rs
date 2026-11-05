@@ -195,13 +195,9 @@ pub fn carried_versions() -> Result<String, String> {
 // refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never a
 // module error: only JSON that does not parse is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
-pub fn run_content(custom_cards_json: &str) -> Result<String, String> {
-    let custom: Vec<engine::CustomCard> = parse("runContent: the custom cards", custom_cards_json)?;
-    to_json(&jackioh_run::run_catalog_content(
-        engine::registered_catalog(),
-        &custom,
-    ))
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
+pub fn run_content() -> Result<String, String> {
+    to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -739,16 +735,6 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
             let raw: String = parse(call, input_json)?;
             to_json(&validator::normalize_name(&raw))
         }
-        // R915001, R915000: a custom card's frame judged, and the definition it builds, with no Luau:
-        // the script is the Luau module's to check.
-        "validateCustomCard" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::validate_custom_card(&card))
-        }
-        "customDef" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::custom_def(&card))
-        }
         other => Err(format!("validator: no such call {other:?}")),
     }
 }
@@ -791,6 +777,53 @@ pub fn host(call_json: &str) -> Result<String, String> {
     let call: jackioh_shared::host::boundary::HostCall = parse("host: the call", call_json)?;
     jackioh_cards::register_all();
     to_json(&jackioh_shared::host::boundary::apply(call))
+}
+
+// The ranked ladder (SPEC §9.12, R603–R612; #3105)
+
+/// One call of `jackioh_shared::ranked`, the ranked ladder's rules the server calls natively: the input is a
+/// `RankedCall` (`{ "call": "rateGame", "game": { "standings": …, "sides": …, … } }`, `planSeason`, `softReset`,
+/// `visibleRank`, `peakBadge` or `jloriousOrder`), the output a `RankedAnswer` (`{ "game": … }`, `{ "season":
+/// … }`, …). The host holds the ladder's records, passes the time and the season's dates in, and writes what
+/// the answer says (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn ranked(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::ranked::RankedCall = parse("ranked: the call", call_json)?;
+    to_json(&jackioh_shared::ranked::apply(&call))
+}
+
+// The ladder bots (SPEC §9.12, R1452; #3103)
+
+/// One call of `jackioh_shared::bots`, the decisions around a ladder bot the server calls natively: the
+/// pool's size, who grinds, a new bot, its decks and trio, the empty-queue pairing and a series pick. The
+/// input is a `BotCall` (`{ "call": "chooseBot", "ticket": …, "bots": …, … }`), the output a `BotAnswer`.
+/// The host reads its store into plain records and writes what comes out (`crates/shared/README.md`, the
+/// host contract). The deals read the catalog this module registered. No decision is made here.
+pub fn bots(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::bots::boundary::BotCall = parse("bots: the call", call_json)?;
+    jackioh_cards::register_all();
+    to_json(&jackioh_shared::bots::boundary::apply(call))
+}
+
+/// The move a ladder bot owes: the input is a `DecideCall` (`{ "host": <the DuelHost>, "request": <the
+/// DecideRequest the machine made> }`), the output the `BotChoice` to feed the machine back as
+/// `{ "event": "decided", … }`. Once `now_ms()` passes `deadline_ms` the search answers with its best so far;
+/// `deadline_ms <= 0` means no clock, so the decision depends only on its inputs and the strength's budget.
+pub fn bot_decide(call_json: &str, deadline_ms: f64, now_ms: fn() -> f64) -> Result<String, String> {
+    let call: jackioh_shared::host::boundary::DecideCall = parse("botDecide: the call", call_json)?;
+    jackioh_cards::register_all();
+    let clock = move || now_ms() >= deadline_ms;
+    let should_stop = if deadline_ms > 0.0 {
+        Some(&clock as &dyn Fn() -> bool)
+    } else {
+        None
+    };
+    match jackioh_shared::host::boundary::decide(&call, should_stop) {
+        Some(choice) => to_json(&choice),
+        None => Err(format!(
+            "botDecide: no bot plays at {} in this host",
+            call.request.home
+        )),
+    }
 }
 
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
@@ -945,10 +978,10 @@ pub use duos_bodies::{duos_begin, duos_create, duos_legal_actions, duos_reduce, 
 mod run_body_tests {
     use super::*;
 
-    /// The content Part B's tests deal from: the catalog's, no custom card.
+    /// The content Part B's tests deal from: the catalog's.
     fn content() -> RunContent {
         jackioh_cards::register_all();
-        jackioh_run::run_catalog_content(engine::registered_catalog(), &[])
+        jackioh_run::run_catalog_content(engine::registered_catalog())
     }
 
     /// Unlocks at the ladder's top, so any Common/Rare ordering of the starter is valid.
@@ -996,7 +1029,7 @@ mod run_body_tests {
     #[test]
     fn run_content_body_serializes_content() {
         let content = content();
-        let text = run_content("[]").unwrap();
+        let text = run_content().unwrap();
         assert_eq!(serde_json::from_str::<RunContent>(&text).unwrap(), content);
     }
 
@@ -1311,6 +1344,50 @@ mod loadout_body_tests {
         ] {
             let error = loadout(call).unwrap_err();
             assert!(error.starts_with("loadout: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod ranked_body_tests {
+    use super::*;
+
+    /// The body is `jackioh_shared::ranked::apply` over JSON.
+    #[test]
+    fn ranked_body_plans_a_season_and_rates_a_game() {
+        let plan = json!({ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [], "nowMs": 1_700_000_000_000_i64 });
+        let planned: Value = serde_json::from_str(&ranked(&plan.to_string()).unwrap()).unwrap();
+        assert_eq!(planned["season"]["plan"], "new");
+        assert_eq!(planned["season"]["first"], true);
+        assert_eq!(planned["season"]["season"]["id"], "v0.3");
+
+        let side = |id: &str| {
+            json!({
+                "side": { "kind": "player", "profileId": id },
+                "glicko": { "rating": 1000.0, "deviation": 350.0, "volatility": 0.06 },
+            })
+        };
+        let game = json!({
+            "call": "rateGame",
+            "game": {
+                "standings": [], "sides": [side("a"), side("b")], "winnerSide": 0, "reason": "hero-death",
+                "season": planned["season"]["season"], "ladder": "constructed", "nowMs": 1_700_000_000_000_i64,
+            },
+        });
+        let rated: Value = serde_json::from_str(&ranked(&game.to_string()).unwrap()).unwrap();
+        let after = &rated["game"]["sides"];
+        assert!(after[0]["after"]["rating"].as_f64().unwrap() > 1000.0);
+        assert!(after[1]["after"]["rating"].as_f64().unwrap() < 1000.0);
+        // Both season rows were made from nothing, a game each.
+        assert_eq!(rated["game"]["ranks"][0]["games"], 1);
+        assert_eq!(rated["game"]["ranks"][1]["losses"], 1);
+    }
+
+    #[test]
+    fn ranked_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"rateGame"}"#] {
+            let error = ranked(call).unwrap_err();
+            assert!(error.starts_with("ranked: the call"), "{call:?}: {error}");
         }
     }
 }

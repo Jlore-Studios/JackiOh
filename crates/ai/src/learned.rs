@@ -10,7 +10,7 @@
 //! decision whose root holds a Starship (R3038003), which the network never saw. The float
 //! network is `f64`, every loop in one fixed order, ReLU written as comparisons and no libm function:
 //! the determinism the hand eval's own `f64` rests on (D7). A feature key the weights' table lacks is
-//! no input, so a new or custom card's (#915) id key is none (D5), but the keys of what it is are
+//! no input, so a new card's id key is none (D5), but the keys of what it is are
 //! (R3112000): its type, cost, tags, keywords, printed stats and Radiant face share what was learned of
 //! cards like it.
 

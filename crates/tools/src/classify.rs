@@ -23,6 +23,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command as Process, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
@@ -35,7 +36,6 @@ use serde_json::Value;
 use crate::card_lists::{self, CardLists, Scripts};
 use crate::catalog::{code_lines, code_lines_with_uses};
 use crate::golden::{record_seeds, text_at};
-use crate::luau::{parent_check, temp_traces};
 use crate::patches::patches_io::{Catalog, ChangeKind, diff_catalogs};
 use crate::patches::{git, repo_root};
 
@@ -54,7 +54,7 @@ const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs
 /// Stage 2: forced games per card a script change claims. A refactor diverges in none of them.
 const FORCED_GAMES: u32 = 40;
 
-/// Stage 2: the unforced games a change to play code replays, `luau diff`'s count.
+/// Stage 2: the unforced games a change to play code replays.
 const UNFORCED_GAMES: u32 = 200;
 
 /// R2455000: the unforced games that must hold a divergence touching no card for it to be a rule
@@ -99,7 +99,7 @@ pub(crate) fn system_named(issue: u32) -> bool {
     SYSTEM_RELEASES.iter().any(|(named, _)| *named == issue)
 }
 
-const CATALOG_PATH: &str = "crates/cards/catalog.json";
+pub(crate) const CATALOG_PATH: &str = "crates/cards/catalog.json";
 pub(crate) const SETS_PATH: &str = "crates/engine/src/wire/catalog_types.rs";
 
 #[derive(clap::Args, Debug)]
@@ -277,7 +277,7 @@ fn area(path: &str) -> Area {
 /// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
 /// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
 /// can change which code runs (R2050000); any other file byte for byte.
-fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
+pub(crate) fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
     let lines: fn(&str) -> Vec<String> = if area(path) == Area::Script {
         code_lines
     } else {
@@ -302,8 +302,32 @@ pub(crate) fn family(id: &str) -> String {
     }
 }
 
-/// The sets `SHIPPED_SETS` names in one side's `catalog_types.rs`.
+/// The line that opens the set table in `catalog_types.rs` (#3114, R3114000).
+const SET_TABLE_OPEN: &str = "\nset_table![\n";
+
+/// The set whose `SetName` variant's name (`ClassicPlus`) starts `text`.
+fn set_named(text: &str) -> Result<SetName> {
+    let name: String = text.chars().take_while(char::is_ascii_alphanumeric).collect();
+    SetName::ALL
+        .iter()
+        .find(|set| format!("{set:?}") == name)
+        .copied()
+        .with_context(|| format!("`SetName::{name}` is no set"))
+}
+
+/// The sets that ship in one side's `catalog_types.rs`: its set table's `stage: Shipped` rows, in
+/// their order (R3114000), or, in a revision from before the table, the list `SHIPPED_SETS` names.
 pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
+    if let Some(start) = source.find(SET_TABLE_OPEN) {
+        let table = &source[start + SET_TABLE_OPEN.len()..];
+        let close = table.find("\n];").context("the set table does not close")?;
+        return table[..close]
+            .lines()
+            .map(str::trim)
+            .filter(|row| row.contains("stage: Shipped,"))
+            .map(set_named)
+            .collect();
+    }
     let start = source
         .find("pub const SHIPPED_SETS")
         .context("no `pub const SHIPPED_SETS`")?;
@@ -315,14 +339,7 @@ pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
     list[open..open + close]
         .split("SetName::")
         .skip(1)
-        .map(|rest| {
-            let name: String = rest.chars().take_while(char::is_ascii_alphanumeric).collect();
-            SetName::ALL
-                .iter()
-                .find(|set| format!("{set:?}") == name)
-                .copied()
-                .with_context(|| format!("`SetName::{name}` is no set"))
-        })
+        .map(set_named)
         .collect()
 }
 
@@ -806,6 +823,45 @@ fn games_in(traces: &Path) -> Result<HashMap<String, Value>> {
         .collect())
 }
 
+/// A path in the temporary directory for one run's recorded traces.
+fn temp_traces() -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos())
+        .unwrap_or(0);
+    std::env::temp_dir().join(format!("jackioh-classify-{}-{stamp}.jsonl", std::process::id()))
+}
+
+/// The parent build's `golden check --file` over `traces`: how many games diverged, and its report; an
+/// error when the parent could not check the file at all (R1365000).
+fn parent_check(parent_bin: &Path, traces: &Path) -> Result<(u64, String)> {
+    let parent = parent_bin.display();
+    let output = Process::new(parent_bin)
+        .args(["golden", "check", "--file"])
+        .arg(traces)
+        .output()
+        .with_context(|| format!("running {parent} golden check"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    match summary_counts(&stdout) {
+        Some((_, diverged)) if output.status.success() || diverged > 0 => Ok((diverged, stdout)),
+        _ => bail!(
+            "{parent} could not check {}: {}",
+            traces.display(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ),
+    }
+}
+
+/// `(steps, diverged)` from `golden check`'s summary line, `golden check: N of M games replayed
+/// identically (S steps), D diverged`.
+fn summary_counts(stdout: &str) -> Option<(u64, u64)> {
+    let line = stdout.lines().find(|line| line.starts_with("golden check: "))?;
+    let (_, after) = line.split_once('(')?;
+    let (steps, rest) = after.split_once(" steps), ")?;
+    let (diverged, _) = rest.split_once(" diverged")?;
+    Some((steps.parse().ok()?, diverged.parse().ok()?))
+}
+
 /// Whether `id`'s own play diverges from the parent's in `FORCED_GAMES` games with it forced in: a
 /// divergence that touches its family, or one that touches no card at all. The other cards of those
 /// games are random, so a divergence one of them explains says nothing of `id`.
@@ -1185,6 +1241,22 @@ fn print_classification(classification: &Classification) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn the_golden_summary_gives_the_steps_and_the_divergences() {
+        assert_eq!(
+            summary_counts("golden check: 240 of 240 games replayed identically (22571 steps), 0 diverged\n"),
+            Some((22571, 0))
+        );
+        assert_eq!(
+            summary_counts(
+                "seed jackioh-fuzz-1 step 0: `s` expected 00000000, Rust has 1a2b3c4d\n\
+                 golden check: 1 of 2 games replayed identically (95 steps), 1 diverged\n"
+            ),
+            Some((95, 1))
+        );
+        assert_eq!(summary_counts("hotseat fixture: folds to a798906b"), None);
+    }
 
     fn card(id: &str, set: &str, cost: i64, text: &str) -> (String, crate::patches::js::Object) {
         let entry = json!({ "id": id, "name": id, "set": set, "cost": cost, "base": { "text": text } });
@@ -1694,6 +1766,65 @@ mod tests {
             shipped_sets(&here).expect("sets"),
             jackioh_engine::wire::SHIPPED_SETS.to_vec()
         );
+    }
+
+    // R3114000: the shipped sets are the set table's `Shipped` rows; a held row is left out, and a
+    // revision from before the table still reads by its list.
+    #[test]
+    fn r3114000_shipped_sets_reads_the_set_table_and_the_older_list() {
+        let table = "pub const SHIPPED_SETS: [SetName; count_in(SHIPPED_STAGES)] = sets_in(SHIPPED_STAGES);\n\n\
+            // The set table.\n\
+            set_table![\n\
+            \x20   Core = \"Core\" { stage: Shipped, segment: \"core\", abbreviation: None, shadow_ban_share: None },\n\
+            \x20   Classic = \"Classic\" { stage: Held, segment: \"classic\", abbreviation: Some(\"C\"), shadow_ban_share: None },\n\
+            \x20   Stinkyscape = \"Stinkyscape\" { stage: Shipped, segment: \"stinkyscape\", abbreviation: Some(\"S\"), shadow_ban_share: Some((1, 5)) },\n\
+            \x20   Boss = \"Boss\" { stage: SinglePlayer, segment: \"boss\", abbreviation: None, shadow_ban_share: None },\n\
+            ];\n";
+        assert_eq!(
+            shipped_sets(table).expect("sets"),
+            vec![SetName::Core, SetName::Stinkyscape]
+        );
+        let older =
+            "pub const SHIPPED_SETS: [SetName; 2] = [\n    SetName::Core,\n    SetName::Meditative,\n];\n";
+        assert_eq!(
+            shipped_sets(older).expect("sets"),
+            vec![SetName::Core, SetName::Meditative]
+        );
+        let unknown = table
+            .replace("    Boss = ", "    Nope = ")
+            .replace("SinglePlayer", "Shipped");
+        assert!(shipped_sets(&unknown).is_err());
+    }
+
+    // R3114000, R1678000: the sweep workflow's range (`sed -n '/^pub const SHIPPED_SETS/,/^];/p'`)
+    // over the live file holds the whole set table, so a row that changes stage starts a sweep.
+    #[test]
+    fn r3114000_the_sweep_workflow_s_range_holds_the_whole_set_table() {
+        let here = fs::read_to_string(repo_root().join(SETS_PATH)).expect("catalog_types.rs");
+        let mut range = Vec::new();
+        for line in here.lines() {
+            if range.is_empty() && !line.starts_with("pub const SHIPPED_SETS") {
+                continue;
+            }
+            range.push(line);
+            if line.starts_with("];") {
+                break;
+            }
+        }
+        let range = range.join("\n");
+        assert!(range.contains("\nset_table![\n"), "{range}");
+        for row in jackioh_engine::wire::SET_TABLE {
+            let opening = format!(
+                "{:?} = {:?} {{ stage: {:?},",
+                row.set,
+                row.set.as_str(),
+                row.stage
+            );
+            assert!(
+                range.contains(&opening),
+                "{opening} is not in the range:\n{range}"
+            );
+        }
     }
 
     #[test]

@@ -8,12 +8,12 @@ use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::state::{CreateGameOptions, SetupKind, create_recorded_game, validate_setup};
 use jackioh_engine::wire::{
-    Action, ActionBody, CustomCard, DeckMark, PerPlayerOpt, PlayerId, Rarity, SHIPPED_SETS, Selection,
+    Action, ActionBody, DeckMark, PerPlayerOpt, PlayerId, Rarity, SHIPPED_SETS, Selection,
 };
 
 pub(crate) fn catalog_content() -> RunContent {
     jackioh_cards::register_all();
-    run_catalog_content(registered_catalog(), &[])
+    run_catalog_content(registered_catalog())
 }
 
 /// A run on the catalog's content, its starting deck the first `RUN_STARTER_SIZE` starting cards.
@@ -36,24 +36,19 @@ fn fight_at(content: &RunContent, col: usize) -> RunState {
 }
 
 #[test]
-fn b5_catalog_content_pools_every_shipped_card_and_the_custom_ones_and_no_boss_card() {
+fn b5_catalog_content_pools_every_shipped_card_and_no_boss_card() {
     // B5: every non-token card of the sets that ship, as `deckable` reads it (so no card only a rule
-    // makes, such as Dormant Starship, which `createGame` would refuse), then the custom cards given,
-    // and no boss card while the Boss set has none.
+    // makes, such as Dormant Starship, which `createGame` would refuse), and no boss card while the
+    // Boss set has none.
     jackioh_cards::register_all();
     let catalog = registered_catalog();
-    let custom: CustomCard = serde_json::from_str(
-        r#"{"id":"custom-run-test","version":1,"frame":{"name":"Run Test","type":"Unit","cost":1,"rarity":"Rare","attack":1,"health":1}}"#,
-    )
-    .unwrap();
-    let content = run_catalog_content(catalog, std::slice::from_ref(&custom));
+    let content = run_catalog_content(catalog);
 
-    let mut expected: Vec<&str> = catalog
+    let expected: Vec<&str> = catalog
         .values()
         .filter(|def| deckable(def))
         .map(|def| def.id.as_str())
         .collect();
-    expected.push("custom-run-test");
     let ids: Vec<&str> = content.pool.iter().map(|card| card.id.as_str()).collect();
     assert_eq!(ids, expected);
     for set in SHIPPED_SETS {
@@ -63,7 +58,7 @@ fn b5_catalog_content_pools_every_shipped_card_and_the_custom_ones_and_no_boss_c
         );
     }
 
-    for card in &content.pool[..content.pool.len() - 1] {
+    for card in &content.pool {
         let def = &catalog[&card.id];
         assert!(SHIPPED_SETS.contains(&card.set), "{} ships", card.id);
         assert!(!def.is_token(), "{} is no token", card.id);
@@ -74,19 +69,6 @@ fn b5_catalog_content_pools_every_shipped_card_and_the_custom_ones_and_no_boss_c
         let tags: Vec<&str> = def.tags.iter().map(|tag| tag.as_str()).collect();
         assert_eq!(card.tags, tags);
     }
-    let last = content.pool.last().unwrap();
-    assert_eq!(
-        last,
-        &RunPoolCard {
-            id: "custom-run-test".into(),
-            name: "Run Test".into(),
-            rarity: PrintedRarity::Rare,
-            set: SetName::Custom,
-            card_type: CardType::Unit,
-            tags: Vec::new(),
-        }
-    );
-
     assert!(!content.pool.iter().any(is_boss_card), "no boss card");
     assert!(
         content.enemies.iter().all(|enemy| enemy.deck.is_empty()),
@@ -362,7 +344,8 @@ fn b10_a_finished_game_reports_the_winner_health_damage_healing_draws_and_turns(
 
 #[test]
 fn b10_an_unfinished_game_and_a_setup_the_engine_refuses_are_refused() {
-    // B10: only a finished game reports, and a setup `createGame` refuses is an error, not a panic.
+    // B10: only a finished game reports, and a setup `createGame` refuses is an error, not a panic: a
+    // deck that names a custom card among them, since a run gives the game none.
     let mut unfinished = scripted_game();
     unfinished.log.pop();
     assert!(run_fight_report(&unfinished, PlayerId::P1).is_err());
@@ -371,6 +354,11 @@ fn b10_an_unfinished_game_and_a_setup_the_engine_refuses_are_refused() {
     refused.decks.0.pop();
     let error = run_fight_report(&refused, PlayerId::P1).unwrap_err();
     assert!(error.contains("deck"), "{error}");
+
+    let mut custom = scripted_game();
+    custom.decks.0[0] = "custom-anything".to_string();
+    let error = run_fight_report(&custom, PlayerId::P1).unwrap_err();
+    assert!(error.contains("custom card"), "{error}");
 }
 
 #[test]

@@ -74,6 +74,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
 
+The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
+Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
+worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
+a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
+in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
+the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
+`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
+draws its own buttons.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
@@ -530,9 +539,10 @@ routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-read
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
                         read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
-                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds GET
-                        /api/packs and GET /api/cosmetic-packs state, the global roll's line (R1661001) and
-                        the account's pity counters, shown as the server answers them; a visitor sees the
+                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
+                        (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
+                        /api/packs and GET /api/cosmetic-packs state, and the pity table with the account's
+                        counters, shown as the server answers them (a zero rate as a dash); a visitor sees the
                         disclaimer and a link to sign in
 economy/                #1651: the economy's shared pieces: `wallet.ts`, the balance the Jlore pill shows
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
@@ -806,8 +816,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
   whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
   its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
-  and leaves no last board, and resumes only as a sandbox. A sandbox game whose deck names custom
-  cards carries them, and its panel offers them first (R962000).
+  and leaves no last board, and resumes only as a sandbox.
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.

@@ -1,9 +1,11 @@
 // The Worker in front of the site and its game server (wrangler.jsonc, apps/edge/README.md).
 //
-// Static files never reach this code: wrangler.jsonc's `run_worker_first` sends only `/api/*` and
-// `/ws/*` here. They go to one container running crates/server's image, through the `Server`
-// Durable Object, which starts it on the first request and stops it once nothing has reached it for
-// `SLEEP_AFTER`. An open WebSocket counts as a request in flight, so a live match keeps it awake.
+// Static files never reach this code but one: wrangler.jsonc's `run_worker_first` sends only `/api/*`,
+// `/ws/*` and the engine's brotli-compressed module here. The first two go to one container running
+// crates/server's image, through the `Server` Durable Object, which starts it on the first request and
+// stops it once nothing has reached it for `SLEEP_AFTER`. An open WebSocket counts as a request in
+// flight, so a live match keeps it awake. #3183: the module is the stored file, served with its
+// `Content-Encoding` (routing.ts `precompressedModule`).
 
 import { Container } from "@cloudflare/containers";
 
@@ -13,7 +15,9 @@ import {
   SERVER_PORT,
   containerEnv,
   forServer,
+  isModulePath,
   isServerPath,
+  precompressedModule,
   type ServerSettings,
 } from "./routing.ts";
 
@@ -36,6 +40,8 @@ const RETIRE_POLL_MS = 500;
 
 export interface Env extends ServerSettings {
   SERVER: DurableObjectNamespace<Server>;
+  /** The web build's files (wrangler.jsonc `assets.binding`): the module this Worker serves is one. */
+  ASSETS: Fetcher;
 }
 
 export class Server extends Container<Env> {
@@ -103,6 +109,7 @@ function server(env: Env): DurableObjectStub<Server> {
 export default {
   async fetch(request, env): Promise<Response> {
     const { pathname } = new URL(request.url);
+    if (isModulePath(pathname)) return precompressedModule(await env.ASSETS.fetch(request));
     if (!isServerPath(pathname)) return new Response("Not found", { status: 404 });
     return server(env).fetch(forServer(request));
   },
