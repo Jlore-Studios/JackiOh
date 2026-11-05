@@ -8,10 +8,15 @@
 //! The body (a `FUSABLE_UNITS` card: no token, no Immutable card, R23) takes the text as R77 has it
 //! (`fused_into`, R179), plays a fixed script then `PAIR_TURNS` random-policy turns under the invariant
 //! monitor and the fuzz's growth bounds, and fails on a panic, an engine cap, a breach, runaway growth,
-//! an unanswerable prompt or `PAIR_STEP_BOUND` actions. The daily run plays `DAILY_PAIRS` drawn from the
-//! day's number; a pull request a stride sample of `PR_PAIRS`, the pinned pairs and a planted looping
-//! text that must fail. The clock only picks the day's pairs: a pair's game comes from its ids alone, so
-//! `--pair` plays a failure again on any day.
+//! an unanswerable prompt or `PAIR_STEP_BOUND` actions. The daily run plays `daily_pair_count` pairs,
+//! `DAILY_PAIR_CYCLE_DAYS` days to the whole walk, drawn from the day's number; a pull request a stride
+//! sample of `PR_PAIRS`, the pinned pairs and a planted looping text that must fail. The clock only
+//! picks the day's pairs: a pair's game comes from its ids alone, so `--pair` plays a failure again on
+//! any day.
+//!
+//! The pairs grow as texts times bodies, so a sample of fixed size covers a shrinking share of them. A
+//! pull request's `fuzz` gate therefore also plays every pair with a card it changed as its body or its
+//! text (`play_changed`, #3113), and the daily sample is a fixed share of the pairs (`daily_pair_count`).
 //!
 //! ```text
 //! cargo jackioh fused-pairs                                    # today's sample
@@ -22,6 +27,7 @@
 //! cargo test -p jackioh-tools --bin jackioh fused_pairs -- --ignored --nocapture   # the daily one
 //! ```
 
+use std::collections::BTreeSet;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -40,6 +46,7 @@ use jackioh_engine::{
 use rayon::prelude::*;
 
 use crate::agent::panic_message;
+use crate::classify::family;
 use crate::fuzz::{FUSABLE_UNITS, acting_card, growth_breach, is_immutable, weigh};
 
 /// The random-policy turns a pair plays after its fixed script.
@@ -49,8 +56,21 @@ const PAIR_TURNS: i32 = 6;
 /// a turn that never ends, like R1884003's loop.
 const PAIR_STEP_BOUND: usize = PAIR_TURNS as usize * AI_PLAYOUT_STEP_CAP;
 
-/// Pairs a day's sample plays (#2381).
-const DAILY_PAIRS: usize = 2_000;
+/// Days the daily samples take to cover every pair once, in expectation (#3113): 55,476 pairs were
+/// 28 days of the 2,000 a day #2381 played. The pairs grow as texts times bodies, so the day's sample
+/// is this share of them, not a count.
+const DAILY_PAIR_CYCLE_DAYS: usize = 28;
+
+/// Pairs a day's sample plays out of `total` (#2381, #3113): a fixed share, so a card joining the
+/// walk does not lengthen the days between one pair's turns.
+fn daily_pair_count(total: usize) -> usize {
+    total.div_ceil(DAILY_PAIR_CYCLE_DAYS)
+}
+
+/// The most pairs a pull request plays for the cards it changed (#3113), about 20 seconds on the
+/// gate's runner: one changed card has 200-odd pairs and plays them all, and a change of more than a few
+/// plays a stride sample of its pairs.
+const CHANGED_PAIRS_MAX: usize = 600;
 
 /// The seconds in a day, which `today` counts the clock in.
 const SECONDS_PER_DAY: u64 = 86_400;
@@ -126,6 +146,59 @@ fn all_pairs() -> Vec<(String, String)> {
                 .any(|open| open.body == body && open.text == text)
         })
         .collect()
+}
+
+/// Every pair with a card of `changed` as its body or its text, a token as its own family and any
+/// other card as itself (R1365000), in `all_pairs`' order (#3113).
+fn pairs_holding(changed: &[String]) -> Vec<(String, String)> {
+    let families: BTreeSet<String> = changed.iter().map(|id| family(id)).collect();
+    all_pairs()
+        .into_iter()
+        .filter(|(body, text)| families.contains(&family(body)) || families.contains(&family(text)))
+        .collect()
+}
+
+/// `pairs` as they are, or every `k`th of them when more than `max`, the fewest `k` that leaves at most `max`.
+fn at_most(pairs: Vec<(String, String)>, max: usize) -> Vec<(String, String)> {
+    if pairs.len() <= max {
+        return pairs;
+    }
+    let stride = pairs.len().div_ceil(max.max(1));
+    pairs.into_iter().step_by(stride).collect()
+}
+
+/// The pairs a pull request plays for its changed cards (#3113): `pairs_holding`, at most `max`, and how
+/// many pairs hold a changed card in all.
+fn changed_pairs(changed: &[String], max: usize) -> (Vec<(String, String)>, usize) {
+    let holding = pairs_holding(changed);
+    let total = holding.len();
+    (at_most(holding, max), total)
+}
+
+/// Plays the fused pairs of the cards a pull request changed (#3113), up to `CHANGED_PAIRS_MAX`: prints
+/// how many it played (or that there were none) and, when a pair failed, its report, and fails.
+pub(crate) fn play_changed(changed: &[String]) -> anyhow::Result<()> {
+    register_all();
+    let (sample, total) = changed_pairs(changed, CHANGED_PAIRS_MAX);
+    if sample.is_empty() {
+        println!("changed fused pairs: none, no changed card is a fusable Unit or has a text to fuse");
+        return Ok(());
+    }
+    let (failures, actions) = play_pairs(&sample);
+    println!(
+        "changed fused pairs: played {} of {total} ({actions} actions), {} failed",
+        sample.len(),
+        failures.len()
+    );
+    if !failures.is_empty() {
+        println!("{}", report(&failures));
+        bail!(
+            "{} of {} changed fused pairs failed",
+            failures.len(),
+            sample.len()
+        );
+    }
+    Ok(())
 }
 
 /// `size` of the pairs, in the order `day` shuffles them to: one day's sample, the same on every call.
@@ -430,8 +503,8 @@ pub struct Args {
     /// same day draws the same pairs.
     #[arg(long)]
     pub day: Option<u64>,
-    /// How many pairs the sample holds: `DAILY_PAIRS` by default. A number past the pairs there are
-    /// plays every one.
+    /// How many pairs the sample holds: `daily_pair_count`, a 28th of the pairs, by default. A number
+    /// past the pairs there are plays every one.
     #[arg(long)]
     pub pairs: Option<usize>,
 }
@@ -454,7 +527,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         None => {
             let day = args.day.unwrap_or_else(today);
             println!("day {day}");
-            daily_sample(day, args.pairs.unwrap_or(DAILY_PAIRS))
+            daily_sample(
+                day,
+                args.pairs.unwrap_or_else(|| daily_pair_count(all_pairs().len())),
+            )
         }
     };
     let (failures, actions) = play_pairs(&sample);
@@ -673,6 +749,67 @@ mod tests {
     }
 
     #[test]
+    fn the_changed_pairs_hold_every_pair_with_a_changed_card_as_body_or_text_and_stop_at_the_cap() {
+        let ids = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<Vec<String>>();
+        let changed = ids(&["stinkyscape-112"]);
+        let (all, total) = changed_pairs(&changed, usize::MAX);
+        assert_eq!(all.len(), total);
+        assert!(
+            all.len() >= FUSABLE_UNITS.len(),
+            "the text is fused onto every body: {} of {}",
+            all.len(),
+            FUSABLE_UNITS.len()
+        );
+        assert!(
+            all.iter()
+                .all(|(body, text)| body == "stinkyscape-112" || text == "stinkyscape-112"),
+            "a pair without the changed card: {all:?}"
+        );
+        // A body is changed as much as a text: every pair it is in.
+        let (body, _) = changed_pairs(&ids(&["traininggrounds-030"]), usize::MAX);
+        assert!(body.len() >= FUSED_TEXTS.len(), "{}", body.len());
+        assert!(body.iter().any(|(b, _)| b == "traininggrounds-030"));
+        let (capped, capped_total) = changed_pairs(&changed, 5);
+        assert!((1..=5).contains(&capped.len()), "{}", capped.len());
+        assert_eq!(
+            capped_total, total,
+            "the cap leaves the count of pairs held alone"
+        );
+        assert!(changed_pairs(&[], usize::MAX).0.is_empty());
+        assert!(changed_pairs(&ids(&["no-such-card"]), usize::MAX).0.is_empty());
+        // The cap holds when every body is changed.
+        let (sample, _) = changed_pairs(&FUSABLE_UNITS, CHANGED_PAIRS_MAX);
+        assert!(
+            (1..=CHANGED_PAIRS_MAX).contains(&sample.len()),
+            "{}",
+            sample.len()
+        );
+
+        let (failures, _) = play_pairs(&changed_pairs(&ids(&["traininggrounds-030"]), 3).0);
+        assert!(failures.is_empty(), "{}", report(&failures));
+    }
+
+    #[test]
+    fn the_daily_sample_is_a_fixed_share_of_the_pairs_whatever_their_number() {
+        let share = 1_981;
+        assert_eq!(daily_pair_count(DAILY_PAIR_CYCLE_DAYS * share), share);
+        assert_eq!(daily_pair_count(4 * DAILY_PAIR_CYCLE_DAYS * share), 4 * share);
+        assert_eq!(
+            daily_pair_count(55_476),
+            share + 1,
+            "a share rounds up, never to nothing"
+        );
+        assert_eq!(daily_pair_count(0), 0);
+        assert_eq!(daily_pair_count(1), 1);
+        let today = daily_pair_count(all_pairs().len());
+        assert!(
+            (1..=all_pairs().len()).contains(&today),
+            "the daily sample is {today} of {}",
+            all_pairs().len()
+        );
+    }
+
+    #[test]
     fn the_command_plays_one_pair_and_refuses_a_malformed_one() {
         let one = Args {
             pair: Some("traininggrounds-030+stinkyscape-112".into()),
@@ -689,10 +826,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "daily: DAILY_PAIRS fused pairs, a new random sample each day; the pull request's stride sample, the pinned pairs and the planted loop hold the sweep per pull request"]
+    #[ignore = "daily: daily_pair_count fused pairs, a new random sample each day; the pull request's stride sample, the pinned pairs, the planted loop and the changed cards' pairs hold the sweep per pull request"]
     fn the_days_sample_of_fused_pairs_settles() {
         let day = today();
-        let sample = daily_sample(day, DAILY_PAIRS);
+        let sample = daily_sample(day, daily_pair_count(all_pairs().len()));
         let (failures, actions) = play_pairs(&sample);
         println!(
             "day {day}: played {} of {} fused pairs, {actions} actions",

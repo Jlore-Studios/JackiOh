@@ -86,6 +86,30 @@
 //! (a token through the card whose `refs` name it, R279; a Core card and its Legacy card are two,
 //! R2511001). The streams are untouched, so a wave without `--cards` plays as it always did.
 //!
+//! # Changed cards (#3113)
+//!
+//! The pull request's gate, bare `cargo jackioh fuzz --seeds 200` (no `--from`, `--handicap`, `--cards`
+//! or `--json`), plays the plain wave as above and then, when the change touches cards, two more
+//! things. The cards come from `changed::changed_cards`: the card scripts and catalog entries the
+//! pull request moved against its base, and the pending fragments' claims, a held set's new card
+//! (R1420) among them (a card no deck can hold is left out). Then `CHANGED_DEALS_PER_CARD` games deal
+//! each of them into both decks, seeds `1..=rotation_seeds(..)` at most `CHANGED_WAVE_MAX_SEEDS`, forced
+//! as `--cards` forces and failing as the gate does, its `reproduce:` line naming the slice; and
+//! `fused_pairs::play_changed` plays every fused pair with one of them as its body or its text, up to
+//! `CHANGED_PAIRS_MAX`. A change with no card plays and prints what it always did, and so does any run
+//! that names its own seeds, wave or cards.
+//!
+//! # The daily top-up (#3113)
+//!
+//! The daily 1v1 run plays a fixed `FUZZ_SEEDS` (super.yml's, 10,000), so each card the pool gains
+//! would be dealt in a smaller share of its games. The tests' `fuzz_daily_top_up` keeps each pool card's
+//! deck slots over the day at `DAILY_DEALS_PER_CARD`: `daily_seeds(pool)` is the seeds that takes,
+//! and its daily test plays the seeds past `DAILY_FUZZ_SEEDS` (`extra_daily_seeds`, none while the pool
+//! is today's) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own `FUZZ_SEEDS` must
+//! grow, which a person edits, and the test fails to say so. Each wave's summary reports the fewest
+//! and most games any pool card was dealt in (`Coverage::deals_line`), so the daily log shows what
+//! each card got.
+//!
 //! # Pool coverage (#2426)
 //!
 //! A card dealt into many decks may never have its rules run, when the policy never plays it. Each wave
@@ -121,8 +145,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::agent::panic_message;
+use crate::changed;
+use crate::fused_pairs;
 use crate::gate::MS_PER_SECOND;
-use crate::golden::{force_into, resolve_force};
+use crate::golden::{carrier_of, force_into, resolve_force};
 
 /// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress] [--cards ids|set]`
 /// (SURFACE §12).
@@ -162,7 +188,7 @@ pub struct Args {
 
 /// Runs the gate, or with `--handicap` the handicapped wave, or with `--duos` the Duos wave, or with
 /// `--regress` the regression corpus; prints its numbers and, when a seed failed, the report, and fails
-/// (exit 1).
+/// (exit 1). The bare gate then also plays the cards the change touches (#3113, `play_changed_cards`).
 pub fn run(args: Args) -> anyhow::Result<()> {
     if args.regress {
         return run_regress();
@@ -183,18 +209,87 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     } else {
         print!("{}", wave.summary());
     }
+    let mut failed: Vec<String> = Vec::new();
     if !wave.failures.is_empty() {
         if !args.json {
             println!("{}", report(&wave.failures, ran, wave.elapsed_ms));
         }
-        bail!(
+        failed.push(format!(
             "{}: {} of {} seeds failed",
             wave_name(args.handicap),
             wave.failures.len(),
             ran
-        );
+        ));
+    }
+    if plays_changed(&args) {
+        failed.extend(play_changed_cards(&crate::patches::repo_root()));
+    }
+    if !failed.is_empty() {
+        bail!("{}", failed.join("; "));
     }
     Ok(())
+}
+
+/// Whether this run plays the changed cards after its wave (#3113): only the bare gate does. A run that
+/// names its seeds, its wave or its cards, or asks for JSON, plays what it names and nothing more.
+fn plays_changed(args: &Args) -> bool {
+    args.from.is_none() && !args.handicap && !args.json && args.cards.is_empty()
+}
+
+/// The changed cards' wave and fused pairs (#3113), after the plain wave; the messages of what failed.
+/// A change with no card (or none a deck can hold) prints and plays nothing here.
+fn play_changed_cards(root: &Path) -> Vec<String> {
+    let changed = changed::changed_cards(root);
+    if let Some(warning) = &changed.warning {
+        println!("warning: {warning}");
+    }
+    if changed.ids.is_empty() {
+        return Vec::new();
+    }
+    println!("changed by this pull request: {}", changed.notes.join("; "));
+    let mut failed = Vec::new();
+    let forcing = Forcing::from_changed(&changed.ids);
+    if forcing.cards.is_empty() {
+        println!("changed cards: none a deck can hold, so no wave");
+    } else {
+        let seeds = rotation_seeds(forcing.cards.len(), forcing.per_seed, CHANGED_DEALS_PER_CARD)
+            .min(CHANGED_WAVE_MAX_SEEDS);
+        println!(
+            "changed cards: {} forced ({} a seed) over seeds 1..{seeds}: {}",
+            forcing.cards.len(),
+            forcing.per_seed,
+            shown_ids(&forcing.cards)
+        );
+        let wave = play_wave(1, seeds, &forcing);
+        print!("{}", wave.summary());
+        if !wave.failures.is_empty() {
+            println!("{}", report(&wave.failures, seeds, wave.elapsed_ms));
+            failed.push(format!(
+                "the changed cards' wave: {} of {seeds} seeds failed",
+                wave.failures.len()
+            ));
+        }
+    }
+    if let Err(error) = fused_pairs::play_changed(&changed.ids) {
+        failed.push(format!("{error:#}"));
+    }
+    failed
+}
+
+/// How many ids `shown_ids` names before it counts the rest.
+const CHANGED_IDS_SHOWN: usize = 40;
+
+/// `ids` joined, the first `CHANGED_IDS_SHOWN` of them and a count of the rest.
+fn shown_ids(ids: &[String]) -> String {
+    if ids.len() > CHANGED_IDS_SHOWN {
+        format!(
+            "{}, … (+{} more)",
+            ids[..CHANGED_IDS_SHOWN].join(", "),
+            ids.len() - CHANGED_IDS_SHOWN
+        )
+    } else {
+        ids.join(", ")
+    }
 }
 
 // Wave size
@@ -366,6 +461,37 @@ pub(crate) fn deal_deck(shuffled: &mut impl Iterator<Item = String>, size: usize
 /// cards than a deck, so seed k takes the k-th slice of this many in `FUZZ_POOL`'s order, wrapping round.
 pub const FORCED_SET_CARDS_PER_SEED: usize = 10;
 
+/// How many games deal each changed card into both decks (#3113): the pull request's wave plays this
+/// many, or `CHANGED_WAVE_MAX_SEEDS` seeds when that is fewer. A plain wave deals a card in about one
+/// seed in ten; this is a wave of its own, so one changed card meets its own rules in every game it is in.
+pub const CHANGED_DEALS_PER_CARD: u32 = 20;
+
+/// The most seeds the changed cards' wave plays (#3113), about 22 seconds on the gate's runner: a change
+/// of more than `CHANGED_WAVE_MAX_SEEDS * FORCED_SET_CARDS_PER_SEED / CHANGED_DEALS_PER_CARD` cards deals
+/// each fewer than `CHANGED_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
+pub const CHANGED_WAVE_MAX_SEEDS: u32 = 100;
+
+/// The greatest common divisor of `a` and `b`.
+fn gcd(a: usize, b: usize) -> usize {
+    if b == 0 { a } else { gcd(b, a % b) }
+}
+
+/// The fewest seeds, counted from seed 1, after which `Forcing::for_seed`'s windows of `per_seed` of
+/// `count` cards have dealt every card the same number of times, and at least `deals` of them (#3113):
+/// the windows start `per_seed` further on each seed and wrap, so the cards come round after
+/// `count / gcd(per_seed, count)` seeds, each dealt `per_seed / gcd(per_seed, count)` times in that
+/// round. 0 when there is nothing to deal.
+pub(crate) fn rotation_seeds(count: usize, per_seed: usize, deals: u32) -> u32 {
+    if count == 0 || per_seed == 0 {
+        return 0;
+    }
+    let per_seed = per_seed.min(count);
+    let divisor = gcd(per_seed, count);
+    let (round, per_round) = (count / divisor, per_seed / divisor);
+    let rounds = usize::try_from(deals).unwrap_or(usize::MAX).div_ceil(per_round);
+    u32::try_from(round.saturating_mul(rounds)).unwrap_or(u32::MAX)
+}
+
 /// What `--cards` deals into both decks of every seed (#2387); the default forces nothing.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Forcing {
@@ -420,6 +546,26 @@ impl Forcing {
             cards: cards.clone(),
             per_seed: cards.len(),
         })
+    }
+
+    /// What the changed cards `ids` force (#3113): each id as `--cards` forces it (a token through the
+    /// card whose `refs` name it), a held set's card included (R1420), and only what `FUZZ_POOL` can deal.
+    /// An id the catalog lacks (a card the change removed), a token no card's `refs` name and a card a
+    /// rule makes (R1857001) are passed over; nothing left forces nothing.
+    pub(crate) fn from_changed(ids: &[String]) -> Forcing {
+        let _preview = preview_every_set();
+        let mut cards: Vec<String> = ids
+            .iter()
+            .filter_map(|id| carrier_of(id, CATALOG.get(id.as_str())?).ok())
+            .filter(|card| FUZZ_POOL.binary_search(card).is_ok())
+            .collect();
+        cards.sort();
+        cards.dedup();
+        Forcing {
+            named: cards.clone(),
+            per_seed: FORCED_SET_CARDS_PER_SEED.min(cards.len()),
+            cards,
+        }
     }
 
     /// The cards seed `seed` forces: the whole list, or the seed's slice of a set's, in turn.
@@ -2220,13 +2366,18 @@ struct Coverage {
     dealt: IndexSet<String>,
     /// Every id `note_played` found, cards no deck held (a token, a copy an effect made) included.
     played: IndexSet<String>,
+    /// For each id dealt, how many games dealt it into either deck (#3113), once a game however many
+    /// copies or decks held it.
+    deals: IndexMap<String, u32>,
 }
 
 impl Coverage {
     /// One game's coverage: its two decks and the ids its events show played.
     fn of_game(decks: &(Vec<String>, Vec<String>), played: IndexSet<String>) -> Coverage {
+        let dealt: IndexSet<String> = decks.0.iter().chain(&decks.1).cloned().collect();
         Coverage {
-            dealt: decks.0.iter().chain(&decks.1).cloned().collect(),
+            deals: dealt.iter().map(|id| (id.clone(), 1)).collect(),
+            dealt,
             played,
         }
     }
@@ -2235,6 +2386,33 @@ impl Coverage {
     fn merge(&mut self, other: Coverage) {
         self.dealt.extend(other.dealt);
         self.played.extend(other.played);
+        for (id, games) in other.deals {
+            *self.deals.entry(id).or_insert(0) += games;
+        }
+    }
+
+    /// The pool card dealt in the fewest games and the one dealt in the most, each with its count; a
+    /// card no game dealt counts 0, and a tie goes to the smaller id (#3113).
+    fn fewest_and_most(&self) -> ((&str, u32), (&str, u32)) {
+        let mut cards = FUZZ_POOL
+            .iter()
+            .map(|id| (id.as_str(), self.deals.get(id).copied().unwrap_or(0)));
+        let Some(first) = cards.next() else {
+            return (("", 0), ("", 0));
+        };
+        cards.fold((first, first), |(fewest, most), card| {
+            (
+                if card.1 < fewest.1 { card } else { fewest },
+                if card.1 > most.1 { card } else { most },
+            )
+        })
+    }
+
+    /// The summary's line of how often the pool's cards were dealt: the fewest games and the most,
+    /// with the card each (#3113). The daily run's log shows what each card got.
+    fn deals_line(&self) -> String {
+        let ((least_id, least), (most_id, most)) = self.fewest_and_most();
+        format!("  deals per pool card: fewest {least} ({least_id}), most {most} ({most_id})\n")
     }
 
     /// The dealt ids no game played, sorted by id.
@@ -2587,6 +2765,7 @@ impl Wave {
             text.push_str(&line);
         }
         text.push_str(&self.coverage.line());
+        text.push_str(&self.coverage.deals_line());
         text.push_str(&heaviest_lines(&self.heaviest));
         text
     }
@@ -5111,6 +5290,241 @@ pub(crate) mod tests {
         }
     }
 
+    /// #3113: the pull request's gate also plays the cards its change touches.
+    mod fuzz_changed_cards {
+        use super::*;
+
+        fn ids(ids: &[&str]) -> Vec<String> {
+            ids.iter().map(|id| id.to_string()).collect()
+        }
+
+        fn args() -> Args {
+            Args {
+                from: None,
+                seeds: None,
+                handicap: false,
+                duos: false,
+                cards: Vec::new(),
+                regress: false,
+                json: false,
+            }
+        }
+
+        /// #3113: after `rotation_seeds` seeds the windows have dealt every one of `count` cards the same
+        /// number of times, and at least the asked number, for counts that divide by the window and counts
+        /// that do not.
+        #[test]
+        fn a_rotation_deals_every_card_equally_and_at_least_the_asked_times() {
+            for (count, per_seed) in [
+                (1, 1),
+                (3, 3),
+                (11, 10),
+                (25, 10),
+                (30, 10),
+                (101, 10),
+                (630, 10),
+                (633, 10),
+            ] {
+                let forcing = Forcing {
+                    named: Vec::new(),
+                    cards: (0..count).map(|n| format!("card-{n}")).collect(),
+                    per_seed: per_seed.min(count),
+                };
+                let seeds = rotation_seeds(count, per_seed, CHANGED_DEALS_PER_CARD);
+                let mut dealt: IndexMap<String, u32> = IndexMap::new();
+                for seed in 1..=seeds {
+                    for id in forcing.for_seed(seed) {
+                        *dealt.entry(id).or_insert(0) += 1;
+                    }
+                }
+                assert_eq!(
+                    dealt.len(),
+                    count,
+                    "{count} cards, {per_seed} a seed, {seeds} seeds"
+                );
+                let first = dealt["card-0"];
+                assert!(
+                    dealt.values().all(|n| *n == first),
+                    "{count} cards, {per_seed} a seed, {seeds} seeds: {dealt:?}"
+                );
+                assert!(
+                    first >= CHANGED_DEALS_PER_CARD,
+                    "{count} cards, {per_seed} a seed, {seeds} seeds: {first} deals"
+                );
+            }
+            assert_eq!(rotation_seeds(0, 10, CHANGED_DEALS_PER_CARD), 0);
+            assert_eq!(rotation_seeds(5, 0, CHANGED_DEALS_PER_CARD), 0);
+            assert_eq!(
+                rotation_seeds(2, 2, CHANGED_DEALS_PER_CARD),
+                CHANGED_DEALS_PER_CARD
+            );
+        }
+
+        /// #3113: what a deck can hold is forced, a token through its carrier, once; an id the catalog
+        /// lacks is passed over.
+        #[test]
+        fn the_changed_wave_forces_what_a_deck_can_hold_and_passes_over_the_rest() {
+            register_all();
+            let forcing =
+                Forcing::from_changed(&ids(&["core-090", "core-t-felinor", "no-such-card", "core-090"]));
+            assert_eq!(forcing.cards, ["classic-032", "core-090"]);
+            assert_eq!(forcing.per_seed, 2);
+            assert!(Forcing::from_changed(&[]).cards.is_empty());
+            assert!(Forcing::from_changed(&ids(&["no-such-card"])).cards.is_empty());
+            assert!(Forcing::from_changed(&[]).for_seed(1).is_empty());
+        }
+
+        /// #3113: a changed card is in both decks of every seed of its wave, and the summary counts the
+        /// games that dealt each pool card.
+        #[test]
+        fn a_changed_card_is_dealt_in_every_seed_of_its_wave_and_the_summary_counts_its_deals() {
+            let wave = play_wave(1, 3, &Forcing::from_changed(&ids(&["core-090"])));
+            assert!(
+                wave.failures.is_empty(),
+                "{}",
+                report(&wave.failures, 3, wave.elapsed_ms)
+            );
+            assert_eq!(wave.coverage.deals.get("core-090"), Some(&3));
+            let summary = wave.summary();
+            assert!(summary.contains("deals per pool card: fewest "), "{summary}");
+            assert!(
+                summary.contains("forced (--cards core-090): core-090 into both decks"),
+                "{summary}"
+            );
+        }
+
+        /// #3113: only the bare gate plays the changed cards.
+        #[test]
+        fn the_gate_plays_the_changed_wave_only_when_nothing_else_is_asked() {
+            assert!(plays_changed(&args()));
+            assert!(plays_changed(&Args {
+                seeds: Some(20),
+                ..args()
+            }));
+            assert!(!plays_changed(&Args {
+                from: Some(700),
+                ..args()
+            }));
+            assert!(!plays_changed(&Args {
+                handicap: true,
+                ..args()
+            }));
+            assert!(!plays_changed(&Args {
+                cards: ids(&["core-090"]),
+                ..args()
+            }));
+            assert!(!plays_changed(&Args { json: true, ..args() }));
+        }
+
+        /// #3113: a change with no card, or a base that cannot be read, plays and prints nothing extra;
+        /// the long id list is cut.
+        #[test]
+        fn a_change_with_no_card_plays_nothing_and_a_long_list_is_cut() {
+            let nowhere = std::env::temp_dir().join(format!("jackioh-fuzz-changed-{}", std::process::id()));
+            assert!(play_changed_cards(&nowhere).is_empty());
+            let few = ids(&["core-001", "core-002"]);
+            assert_eq!(shown_ids(&few), "core-001, core-002");
+            let many: Vec<String> = (0..CHANGED_IDS_SHOWN + 3)
+                .map(|n| format!("core-{n:03}"))
+                .collect();
+            let shown = shown_ids(&many);
+            assert!(shown.starts_with("core-000, core-001, "), "{shown}");
+            assert!(shown.ends_with("core-039, … (+3 more)"), "{shown}");
+        }
+    }
+
+    /// #3113: the daily run's seeds grow with the pool, so a card's deals do not fall as cards join it.
+    mod fuzz_daily_top_up {
+        use super::*;
+
+        /// The seeds the daily 1v1 run plays, as super.yml's `FUZZ_SEEDS` says it: `daily_seeds` is what
+        /// the pool needs, and a test holds the two together.
+        const DAILY_FUZZ_SEEDS: u32 = 10_000;
+
+        /// The deck slots each pool card gets over the daily run's seeds, kept as the pool grows: the
+        /// run's `DAILY_FUZZ_SEEDS` seeds deal two decks of `DECK_SIZE` each from `FUZZ_POOL`, which at
+        /// 633 cards is 790 slots a card, rounded down.
+        const DAILY_DEALS_PER_CARD: u64 = 780;
+
+        /// The most seeds past `DAILY_FUZZ_SEEDS` the daily test plays, about 15 minutes of games on the
+        /// daily run's runner. A pool that needs more has outgrown super.yml's `FUZZ_SEEDS`, which a
+        /// person edits (the bot may not change `.github/`).
+        const DAILY_TOP_UP_MAX: u32 = 4_000;
+
+        /// The seeds that deal each pool card `DAILY_DEALS_PER_CARD` deck slots when the pool holds
+        /// `pool` cards.
+        fn daily_seeds(pool: usize) -> u32 {
+            let slots_a_seed = 2 * u64::try_from(DECK_SIZE).unwrap_or(1);
+            let needed = (DAILY_DEALS_PER_CARD * pool as u64).div_ceil(slots_a_seed);
+            u32::try_from(needed).unwrap_or(u32::MAX)
+        }
+
+        /// The seeds `pool` cards need past what super.yml plays: 0 while `DAILY_FUZZ_SEEDS` is enough.
+        fn extra_daily_seeds(pool: usize) -> u32 {
+            daily_seeds(pool).saturating_sub(DAILY_FUZZ_SEEDS)
+        }
+
+        /// super.yml's `FUZZ_SEEDS`, the 1v1 daily run's seeds.
+        fn workflow_seeds() -> u32 {
+            let path = crate::patches::repo_root().join(".github/workflows/super.yml");
+            let text =
+                fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+            text.lines()
+                .find_map(|line| {
+                    line.trim_start()
+                        .strip_prefix("FUZZ_SEEDS: \"")?
+                        .strip_suffix('"')?
+                        .parse()
+                        .ok()
+                })
+                .expect("super.yml sets FUZZ_SEEDS: \"<seeds>\"")
+        }
+
+        #[test]
+        fn daily_seeds_grow_with_the_pool_and_super_yml_plays_the_baseline() {
+            assert_eq!(workflow_seeds(), DAILY_FUZZ_SEEDS, "super.yml's FUZZ_SEEDS moved");
+            // The pool super.yml's count was sized for needs no top-up, and the first card past it does.
+            assert_eq!(extra_daily_seeds(633), 0);
+            assert_eq!(extra_daily_seeds(641), 0);
+            assert_eq!(extra_daily_seeds(642), 16);
+            let today = daily_seeds(633);
+            assert!(today <= DAILY_FUZZ_SEEDS, "{today}");
+            assert!(
+                daily_seeds(2 * 633).abs_diff(2 * today) <= 1,
+                "twice the pool, twice the seeds"
+            );
+            assert!(daily_seeds(0) == 0 && daily_seeds(1) >= 1);
+        }
+
+        /// The seeds past super.yml's, in both waves: a card the pool gained since is dealt as often as
+        /// before it.
+        #[test]
+        #[ignore = "daily: the seeds the pool needs past super.yml's FUZZ_SEEDS, in both waves; the per-pull-request test of daily_seeds and the workflow's count holds the rule"]
+        fn the_days_extra_seeds_keep_every_pool_card_s_deals_as_the_pool_grows() {
+            let extra = extra_daily_seeds(FUZZ_POOL.len());
+            if extra == 0 {
+                return;
+            }
+            assert!(
+                extra <= DAILY_TOP_UP_MAX,
+                "the pool of {} cards needs {extra} seeds past super.yml's {DAILY_FUZZ_SEEDS}, over the {DAILY_TOP_UP_MAX} this test plays: a person must widen FUZZ_SEEDS in .github/workflows/super.yml (and its fuzz job's shards and timeout)",
+                FUZZ_POOL.len()
+            );
+            let from = DAILY_FUZZ_SEEDS + 1;
+            for wave in [
+                play_wave(from, extra, &Forcing::default()),
+                play_handicap_wave(from, extra, &Forcing::default()),
+            ] {
+                println!("{}", wave.summary());
+                assert!(
+                    wave.failures.is_empty(),
+                    "{}",
+                    report(&wave.failures, extra, wave.elapsed_ms)
+                );
+            }
+        }
+    }
+
     mod fuzz_coverage {
         use super::*;
 
@@ -5198,6 +5612,7 @@ pub(crate) mod tests {
             let coverage = Coverage {
                 dealt: ids(&["core-003", "core-001", "core-002"]),
                 played: ids(&["core-002", "fuzz-token"]),
+                ..Coverage::default()
             };
             assert_eq!(coverage.never_played(), vec!["core-001", "core-003"]);
             assert_eq!(
@@ -5228,6 +5643,7 @@ pub(crate) mod tests {
                     .map(|n| format!("core-{n:03}"))
                     .collect(),
                 played: IndexSet::new(),
+                ..Coverage::default()
             };
             let line = many.line();
             assert!(line.contains(": core-000, core-001, "), "{line}");
@@ -5235,6 +5651,49 @@ pub(crate) mod tests {
             assert_eq!(
                 many.json()["neverPlayed"].as_array().map(Vec::len),
                 Some(COVERAGE_SHOWN + 2)
+            );
+        }
+
+        /// #3113: a card counts once for each game that dealt it, whichever deck or both held it, and the
+        /// line names the pool's fewest and most dealt, an undealt card counting 0 and a tie going to the
+        /// smaller id.
+        #[test]
+        fn the_deals_line_counts_the_games_that_dealt_each_pool_card() {
+            let deck = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<Vec<String>>();
+            let mut coverage = Coverage::default();
+            coverage.merge(Coverage::of_game(
+                &(deck(&["core-001", "core-002"]), deck(&["core-001"])),
+                IndexSet::new(),
+            ));
+            coverage.merge(Coverage::of_game(
+                &(deck(&["core-001"]), deck(&["core-003"])),
+                IndexSet::new(),
+            ));
+            assert_eq!(coverage.deals.get("core-001"), Some(&2));
+            assert_eq!(coverage.deals.get("core-002"), Some(&1));
+            assert_eq!(coverage.deals.get("core-003"), Some(&1));
+            let ((fewest, least), (most, many)) = coverage.fewest_and_most();
+            assert_eq!(least, 0, "{fewest}: a pool card no game dealt counts 0");
+            assert_eq!(
+                FUZZ_POOL
+                    .iter()
+                    .filter(|id| !coverage.deals.contains_key(*id))
+                    .min()
+                    .map(String::as_str),
+                Some(fewest),
+                "the smallest id of the undealt"
+            );
+            assert_eq!((most, many), ("core-001", 2));
+            assert_eq!(
+                coverage.deals_line(),
+                format!("  deals per pool card: fewest 0 ({fewest}), most 2 (core-001)\n")
+            );
+            assert_eq!(
+                Coverage::default().deals_line(),
+                format!(
+                    "  deals per pool card: fewest 0 ({0}), most 0 ({0})\n",
+                    FUZZ_POOL[0]
+                )
             );
         }
     }

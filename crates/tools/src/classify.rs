@@ -99,7 +99,7 @@ pub(crate) fn system_named(issue: u32) -> bool {
     SYSTEM_RELEASES.iter().any(|(named, _)| *named == issue)
 }
 
-const CATALOG_PATH: &str = "crates/cards/catalog.json";
+pub(crate) const CATALOG_PATH: &str = "crates/cards/catalog.json";
 pub(crate) const SETS_PATH: &str = "crates/engine/src/wire/catalog_types.rs";
 
 #[derive(clap::Args, Debug)]
@@ -277,7 +277,7 @@ fn area(path: &str) -> Area {
 /// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
 /// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
 /// can change which code runs (R2050000); any other file byte for byte.
-fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
+pub(crate) fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
     let lines: fn(&str) -> Vec<String> = if area(path) == Area::Script {
         code_lines
     } else {

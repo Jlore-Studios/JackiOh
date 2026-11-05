@@ -223,7 +223,7 @@ cargo jackioh fuzz --seeds 200 --cards core-006           # your card in both de
 pnpm --dir apps/web test                                  # the voice lines and the flavour line
 ```
 
-A plain wave deals any one card in fewer than one seed in ten, so for card work run the `--cards` wave too, with `--handicap` as well. Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`, or a `--cards` failure with its `reproduce:` line.
+A plain wave deals any one card in fewer than one seed in ten, so CI's `fuzz --seeds 200` also plays the cards your pull request changes (#3113): each card whose script code or catalog entry moved, or that a pending fragment claims, goes into both decks of a wave of its own, and its fused pairs are played, in the log as `changed cards:` and `changed fused pairs:`. A card of a set that has not shipped is included, and a wording or flavor edit is not. Run the `--cards` wave by hand too, with `--handicap` as well, to see it before you push: the gate plays only the 1v1 wave. Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`, or a `--cards` failure with its `reproduce:` line.
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
