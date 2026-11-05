@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The thirteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
+//! The fourteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
 //! bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -48,6 +48,10 @@
 //!      R2975000): while it may act, each hand card, and each graveyard card a permission admits, carries
 //!      `playReason` exactly when no play of it is listed; read off I6's view and listing in `hidden`, so
 //!      sampled with it; a seat barred to the tutorial's cards (R2533000) is not asked.
+//!   I14 every Activate ability a seat may see is held to the listing (§10.8, R384, R3061000): while it may
+//!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
+//!      lists an `activate` of it and carries `reason` exactly when not; read off I6's view and listing in
+//!      `hidden`, as I13 is; a carried Unit is not asked.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -64,10 +68,10 @@ use crate::prompts::prompt_owner_of;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
-    Action, ActionBody, CardType, CardView, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat,
-    DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind, PLAYER_IDS, PerPlayer, Phase,
-    PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team,
-    TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
+    Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
+    DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
+    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row,
+    Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -1039,6 +1043,78 @@ pub fn play_reason_violations(
     found
 }
 
+/// I14 for one seat on one state (§10.8, R384, R3061000): while it may act (I13's window), each Activate
+/// ability its view shows on a unit or a public backrow top of either side is `usable` exactly when
+/// `legal` lists an `activate` of it, and carries `reason` exactly when it is not. A carried Unit (R446)
+/// is not asked: the listing never walks one, and I8 holds what `reduce` accepts of it.
+pub fn activation_reason_violations(
+    state: &GameState,
+    viewer: PlayerId,
+    view: &PlayerView,
+    legal: &[ActionBody],
+) -> Vec<String> {
+    if state.result.is_some()
+        || state.phase != Phase::Main
+        || state.pending.is_some()
+        || state.active != viewer
+    {
+        return Vec::new();
+    }
+    let listed: IndexSet<(&str, &str)> = legal
+        .iter()
+        .filter_map(|action| match action {
+            ActionBody::Activate {
+                instance_id,
+                ability: Some(ability),
+                ..
+            } => Some((instance_id.as_str(), ability.as_str())),
+            _ => None,
+        })
+        .collect();
+    let mut shown: Vec<(&str, &str, &ActivationView)> = Vec::new();
+    for side in [&view.you, &view.opponent] {
+        for unit in side.units.iter().flatten() {
+            for activation in unit.activations.iter().flatten() {
+                shown.push((unit.instance_id.as_str(), unit.def_id.as_str(), activation));
+            }
+        }
+        for top in side.backrow.iter().flatten() {
+            if let BackrowView::Public(card) = top {
+                for activation in card.activations.iter().flatten() {
+                    shown.push((card.instance_id.as_str(), card.def_id.as_str(), activation));
+                }
+            }
+        }
+    }
+    let mut found: Vec<String> = Vec::new();
+    for (instance_id, def_id, activation) in shown {
+        let ability = activation.ability.as_str();
+        let is_listed = listed.contains(&(instance_id, ability));
+        let what = format!("{viewer}'s view of {instance_id} ({def_id}) ability \"{ability}\"");
+        let turn = state.turn;
+        match (activation.usable, is_listed, activation.reason.as_deref()) {
+            (true, false, _) => found.push(format!(
+                "I14 usable but unlisted: {what} is usable though no activate of it is listed on turn {turn} \
+                 (§10.8, R384, R3061000)"
+            )),
+            (false, true, _) => found.push(format!(
+                "I14 listed but unusable: {what} is not usable though an activate of it is listed on turn \
+                 {turn} (§10.8, R384, R3061000)"
+            )),
+            (false, false, None) => found.push(format!(
+                "I14 silent ability: {what} is not usable and has no reason on turn {turn} \
+                 (§10.8, R384, R3061000)"
+            )),
+            (true, true, Some(reason)) => found.push(format!(
+                "I14 stray reason: {what} carries reason \"{reason}\" though an activate of it is listed on \
+                 turn {turn} (§10.8, R384, R3061000)"
+            )),
+            _ => {}
+        }
+    }
+    found
+}
+
 /// I8's cards on one side: every card on that side's field, each pile's top and the cards dormant
 /// under it in both rows, and a Unit a carrier holds (§3.2, R13, R446).
 fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
@@ -1668,7 +1744,7 @@ fn name_of(card: &CardInstance) -> String {
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 and I13 for both
+/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6, I13 and I14 for both
 /// seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
@@ -2740,17 +2816,18 @@ impl InvariantMonitor {
         found
     }
 
-    /// I6 and I13 for both seats on a state the fuzz reached, setup's included. Empty when clean. A panic
-    /// in `view_for` or `legal_actions` is reported, not raised.
+    /// I6, I13 and I14 for both seats on a state the fuzz reached, setup's included. Empty when clean. A
+    /// panic in `view_for` or `legal_actions` is reported, not raised.
     pub fn hidden(&self, state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         for viewer in PLAYER_IDS {
             let checked = catch_unwind(AssertUnwindSafe(|| {
                 let view = crate::view_for::view_for(state, viewer);
                 let legal = crate::reduce::legal_actions(state, viewer);
-                // I13 reads the same view and listing (R2975000).
+                // I13 and I14 read the same view and listing (R2975000, R3061000).
                 let mut violations = hidden_information_violations(state, viewer, &view, &legal);
                 violations.extend(play_reason_violations(state, viewer, &view, &legal));
+                violations.extend(activation_reason_violations(state, viewer, &view, &legal));
                 violations
             }));
             match checked {
@@ -2912,7 +2989,7 @@ impl DuosInvariantMonitor {
         found
     }
 
-    /// I6 and I13 for all seats: both duels' 1v1 checks, plus `duos_view_for` redaction for each seat.
+    /// I6, I13 and I14 for all seats: both duels' 1v1 checks, plus `duos_view_for` redaction for each seat.
     pub fn hidden(&self, state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         for (duel, monitor) in self.monitors.iter().enumerate() {

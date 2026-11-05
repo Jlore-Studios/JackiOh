@@ -1959,3 +1959,159 @@ mod r2246000_a_frozen_card_uses_no_activate {
         assert_eq!(state.players.p1.mana.current, before + 1);
     }
 }
+
+mod r3061000_an_activate_that_is_not_listed_says_why {
+    use super::*;
+    use jackioh_engine::subsystems::activate::activation_views_for;
+
+    use crate::rules::fixtures::activate::pairer;
+
+    /// p1's pairer in its backrow lane 1, `ghosts` Ghosts on p2's unit lanes from 1 (each costs 2 discards
+    /// to target, R450), and `held` spare cards as p1's whole hand.
+    fn pair_board(seed: &str, ghosts: i32, held: i32) -> (GameState, String, Vec<String>) {
+        let mut state = playing(seed);
+        let pairer_card = put(&mut state, &pairer.id, slot(P1, Row::Backrow, 1), json!({}));
+        let ghost_ids: Vec<String> = (1..=ghosts)
+            .map(|lane| put(&mut state, &ghost.id, slot(P2, Row::Units, lane), json!({})).id)
+            .collect();
+        state.players.p1.hand = Vec::new();
+        in_hand(&mut state, &sentry.id, P1, held);
+        (state, pairer_card.id, ghost_ids)
+    }
+
+    /// The pairer's one ability as p1's view shows it.
+    fn pair_view(state: &GameState, id: &str) -> ActivationView {
+        let views = activation_views_for(state, P1, card(state, id)).expect("the pairer shows its ability");
+        assert_eq!(views.len(), 1, "{views:?}");
+        views.into_iter().next().expect("one ability")
+    }
+
+    /// The view with the pairer's abilities rewritten, as a drifted `view_for` would send them.
+    fn doctor(view: &mut PlayerView, id: &str, usable: bool, reason: Option<&str>) {
+        for top in view.you.backrow.iter_mut().flatten() {
+            if let BackrowView::Public(shown) = top
+                && shown.instance_id == id
+            {
+                for activation in shown.activations.iter_mut().flatten() {
+                    activation.usable = usable;
+                    activation.reason = reason.map(str::to_string);
+                }
+            }
+        }
+    }
+
+    /// The one finding I14 makes of `view`, which must lead with `lead`.
+    fn only_finding(state: &GameState, view: &PlayerView, id: &str, lead: &str) -> String {
+        let found = activation_reason_violations(state, P1, view, &legal_actions(state, P1));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with(lead) && found[0].contains(id) && found[0].contains("R3061000"),
+            "{found:?}"
+        );
+        found[0].clone()
+    }
+
+    #[test]
+    fn r3061000_a_required_target_the_board_cannot_answer_is_unusable_and_says_why() {
+        let (state, id, _) = pair_board("r3061000-bare", 0, 0);
+        let said = "pairer (activate) cannot be played without 2 legal targets";
+        // The ability's own gate passes it; only its targets keep it off the list (R703).
+        assert_eq!(why_not(&state, P1, &id, Some("pair")), None);
+        assert!(activate_actions_for(&state, P1, card(&state, &id)).is_empty());
+        assert!(listed_abilities(&state, &id).is_empty());
+        let view = pair_view(&state, &id);
+        assert!(!view.usable, "{view:?}");
+        assert_eq!(view.reason.as_deref(), Some(said));
+        // The reducer refuses it in the same words.
+        assert_eq!(
+            act_result(&state, activate(P1, &id, json!({ "ability": "pair" })))
+                .error
+                .as_deref(),
+            Some(said)
+        );
+    }
+
+    #[test]
+    fn r3061000_discards_the_hand_cannot_pay_together_make_it_unusable_and_say_why() {
+        // R450, R682: each Ghost alone is a legal target, but the two cost 4 discards and p1 holds 3.
+        let (state, id, ghosts) = pair_board("r3061000-dear", 2, 3);
+        let said = "targeting that costs 4 discards, and you hold 3 cards";
+        assert_eq!(why_not(&state, P1, &id, Some("pair")), None);
+        assert!(activate_actions_for(&state, P1, card(&state, &id)).is_empty());
+        assert!(listed_abilities(&state, &id).is_empty());
+        let view = pair_view(&state, &id);
+        assert!(!view.usable, "{view:?}");
+        assert_eq!(view.reason.as_deref(), Some(said));
+        let targets: Vec<Value> = ghosts
+            .iter()
+            .map(|ghost_id| json!({ "pick": "instance", "instanceId": ghost_id }))
+            .collect();
+        assert_eq!(
+            act_result(
+                &state,
+                activate(P1, &id, json!({ "ability": "pair", "targets": targets }))
+            )
+            .error
+            .as_deref(),
+            Some(said)
+        );
+    }
+
+    #[test]
+    fn r3061000_discards_the_hand_can_pay_list_it_and_say_nothing() {
+        let (state, id, _) = pair_board("r3061000-paid", 2, 4);
+        assert_eq!(activate_actions_for(&state, P1, card(&state, &id)).len(), 1);
+        assert_eq!(listed_abilities(&state, &id), vec![Some("pair".to_string())]);
+        let view = pair_view(&state, &id);
+        assert!(view.usable, "{view:?}");
+        assert_eq!(view.reason, None);
+    }
+
+    #[test]
+    fn r3061000_i14_reports_exactly_one_finding_for_a_view_that_disagrees_with_the_listing() {
+        let (state, id, _) = pair_board("r3061000-i14", 2, 3);
+        let view = view_for(&state, P1);
+        let legal = legal_actions(&state, P1);
+        assert_eq!(
+            activation_reason_violations(&state, P1, &view, &legal),
+            Vec::<String>::new()
+        );
+        // `hidden` runs I14 beside I6 and I13 (a hand-built state may trip I6 on its own, so filter).
+        let i14: Vec<String> = create_invariant_monitor(&state)
+            .hidden(&state)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I14"))
+            .collect();
+        assert_eq!(i14, Vec::<String>::new());
+
+        let mut unlisted = view.clone();
+        doctor(&mut unlisted, &id, true, None);
+        only_finding(&state, &unlisted, &id, "I14 usable but unlisted");
+
+        let mut silent = view.clone();
+        doctor(&mut silent, &id, false, None);
+        only_finding(&state, &silent, &id, "I14 silent ability");
+
+        let (paid, paid_id, _) = pair_board("r3061000-i14-paid", 2, 4);
+        let paid_view = view_for(&paid, P1);
+        assert_eq!(
+            activation_reason_violations(&paid, P1, &paid_view, &legal_actions(&paid, P1)),
+            Vec::<String>::new()
+        );
+        let mut unusable = paid_view.clone();
+        doctor(&mut unusable, &paid_id, false, Some("not now"));
+        only_finding(&paid, &unusable, &paid_id, "I14 listed but unusable");
+
+        let mut stray = paid_view.clone();
+        doctor(&mut stray, &paid_id, true, Some("stray"));
+        only_finding(&paid, &stray, &paid_id, "I14 stray reason");
+
+        // Off p1's turn nothing is asked (I13's window).
+        let mut theirs = state.clone();
+        theirs.active = P2;
+        assert_eq!(
+            activation_reason_violations(&theirs, P1, &unlisted, &legal_actions(&theirs, P1)),
+            Vec::<String>::new()
+        );
+    }
+}
