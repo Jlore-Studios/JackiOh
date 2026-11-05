@@ -1,7 +1,10 @@
 // Coach advice for the coach's own line (SPEC §9.10, R292, R293): one legal action from the human
-// view, never a rule (CLAUDE.md rule 7).
+// view, never a rule (CLAUDE.md rule 7). It does no combat maths: what an attack would do (the damage
+// after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether
+// the board is lethal) is the engine's `combatForecast`, which the practice worker asks beside the view
+// (R3100000); this file only picks among those facts.
 
-import type { ActionBody, UnitView } from "@jackioh/shared";
+import type { ActionBody, AttackForecast, UnitView } from "@jackioh/shared";
 
 import type { CoachAnchor, CoachCtx } from "./coach.ts";
 import { heroTargetId, unitsOf } from "./steps.ts";
@@ -9,16 +12,16 @@ import { heroTargetId, unitsOf } from "./steps.ts";
 export type Attack = Extract<ActionBody, { type: "attack" }>;
 export type Play = Extract<ActionBody, { type: "play" }>;
 
-export type Trade = {
+/**
+ * One attack on a unit with the engine's forecast of it: `dealt` and `taken` are the damage each way,
+ * `kills` and `survives` what becomes of the target and the attacker, `pops` that the blow breaks the
+ * target's Divine Shield (it deals nothing, but the next hit lands), and the two sizes the measure the
+ * coach ranks by.
+ */
+export type Trade = AttackForecast & {
   action: Attack;
   attacker: UnitView;
   target: UnitView;
-  dealt: number;
-  taken: number;
-  kills: boolean;
-  survives: boolean;
-  /** The blow breaks the target's Divine Shield (it deals nothing, but the next hit lands). */
-  pops: boolean;
 };
 
 export function legalAttacksOf(ctx: CoachCtx): Attack[] {
@@ -37,10 +40,9 @@ export function hasKeyword(unit: UnitView, keyword: string): boolean {
   return unit.keywords.some((entry) => entry.kind === keyword);
 }
 
-/** One unit's blow on another, as the view shows them: its attack less the target's Armor, none into a shield. */
-export function blow(from: UnitView, to: UnitView): number {
-  if (hasKeyword(to, "Divine Shield")) return 0;
-  return Math.max(0, from.attack - to.armor);
+/** The engine's forecast of this attack, or none in a game that was not asked for one. */
+export function forecastOf(ctx: CoachCtx, action: Attack): AttackForecast | undefined {
+  return ctx.forecast?.attacks.find((entry) => entry.attackerId === action.attackerId && entry.targetId === action.targetId);
 }
 
 export function trades(ctx: CoachCtx): Trade[] {
@@ -48,34 +50,30 @@ export function trades(ctx: CoachCtx): Trade[] {
   for (const action of legalAttacksOf(ctx)) {
     const attacker = myUnit(ctx, action.attackerId);
     const target = enemyUnit(ctx, action.targetId);
-    if (attacker === undefined || target === undefined) continue;
-    const dealt = blow(attacker, target);
-    const kills = dealt >= target.health;
-    const strikesFirst = hasKeyword(attacker, "First Strike") && !hasKeyword(target, "First Strike");
-    const taken = kills && strikesFirst ? 0 : blow(target, attacker);
-    const pops = hasKeyword(target, "Divine Shield") && attacker.attack > 0;
-    out.push({ action, attacker, target, dealt, taken, kills, survives: taken < attacker.health, pops });
+    const forecast = forecastOf(ctx, action);
+    if (attacker === undefined || target === undefined || forecast === undefined) continue;
+    out.push({ ...forecast, action, attacker, target });
   }
   return out;
 }
 
-const size = (unit: UnitView): number => unit.attack + unit.health;
-
 /** Favor the biggest destroyed target, then the smallest surviving attacker. */
 export function goodTrade(ctx: CoachCtx): Trade | undefined {
   const good = trades(ctx).filter((trade) => trade.kills && trade.survives);
-  good.sort((a, b) => size(b.target) - size(a.target) || size(a.attacker) - size(b.attacker));
+  good.sort((a, b) => b.targetSize - a.targetSize || a.attackerSize - b.attackerSize);
   return good[0];
 }
 
+/** The hit on the enemy hero that deals the most, its first ready attacker among equals. */
 export function heroAttack(ctx: CoachCtx): { action: Attack; attacker: UnitView } | undefined {
   const hero = heroTargetId(ctx.view, "opponent");
   const options = legalAttacksOf(ctx)
     .filter((action) => action.targetId === hero)
-    .map((action) => ({ action, attacker: myUnit(ctx, action.attackerId) }))
-    .filter((entry): entry is { action: Attack; attacker: UnitView } => entry.attacker !== undefined);
-  options.sort((a, b) => b.attacker.attack - a.attacker.attack);
-  return options[0];
+    .map((action) => ({ action, attacker: myUnit(ctx, action.attackerId), dealt: forecastOf(ctx, action)?.dealt ?? 0 }))
+    .filter((entry): entry is { action: Attack; attacker: UnitView; dealt: number } => entry.attacker !== undefined);
+  options.sort((a, b) => b.dealt - a.dealt);
+  const best = options[0];
+  return best === undefined ? undefined : { action: best.action, attacker: best.attacker };
 }
 
 /** Against an uncleared Taunt, preserve an attacker while making the best lasting dent. */
@@ -83,31 +81,20 @@ export function chip(ctx: CoachCtx): Trade | undefined {
   if (heroAttack(ctx) !== undefined) return undefined;
   // Spend the smallest surviving attacker to pop Divine Shield for the next hit.
   const options = trades(ctx).filter((trade) => trade.survives && (trade.dealt > 0 || trade.pops));
-  options.sort((a, b) => b.dealt - a.dealt || a.taken - b.taken || size(a.attacker) - size(b.attacker));
+  options.sort((a, b) => b.dealt - a.dealt || a.taken - b.taken || a.attackerSize - b.attackerSize);
   return options[0];
 }
 
 export function clearTaunt(ctx: CoachCtx): Trade | undefined {
   if (heroAttack(ctx) !== undefined) return undefined;
   const options = trades(ctx).filter((trade) => trade.kills && hasKeyword(trade.target, "Taunt"));
-  options.sort((a, b) => Number(b.survives) - Number(a.survives) || size(a.attacker) - size(b.attacker));
+  options.sort((a, b) => Number(b.survives) - Number(a.survives) || a.attackerSize - b.attackerSize);
   return options[0];
 }
 
-/** Sum distinct attackers' view-visible damage after Armor; traps can still answer the plan. */
+/** The engine's verdict that the attackers who can reach the hero finish it; traps can still answer the plan. */
 export function lethalOnBoard(ctx: CoachCtx): boolean {
-  const hero = heroTargetId(ctx.view, "opponent");
-  const armor = ctx.view.opponent.hero.armor;
-  const attackers = new Set<string>();
-  let damage = 0;
-  for (const action of legalAttacksOf(ctx)) {
-    if (action.targetId !== hero || attackers.has(action.attackerId)) continue;
-    const attacker = myUnit(ctx, action.attackerId);
-    if (attacker === undefined) continue;
-    attackers.add(action.attackerId);
-    damage += Math.max(0, attacker.attack - armor);
-  }
-  return attackers.size > 0 && damage >= ctx.view.opponent.hero.health;
+  return ctx.forecast?.lethal === true;
 }
 
 export function aimsAtOwnSide(ctx: CoachCtx, play: Play): boolean {

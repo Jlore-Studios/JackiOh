@@ -222,6 +222,15 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
           expectOnScreen(viewport, ONE_SCREEN);
         });
+
+        // R3127000: the page Cloudflare serves for it, as a visitor sees it when the client's script never starts.
+        it("R1581000 R3127000 the static 404 page, its script blocked", () => {
+          cy.intercept({ method: "GET", url: "**/assets/*.js" }, { forceNetworkError: true });
+          cy.visit("/404.html");
+          cy.get(ts(shellTestid.notFoundStatic), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(shellTestid.notFound)).should("not.exist");
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
       });
 
       describe("signed in", () => {

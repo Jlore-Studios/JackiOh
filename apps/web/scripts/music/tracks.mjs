@@ -2648,6 +2648,3 @@ export const TRACKS = [
   // R1352: each Legendary's and Mythic's own intro, a sting that plays once.
   ...INTRO_CARDS.map((card) => ({ id: introTrack(card.card), loop: false, build: () => cardIntro(card) })),
 ];
-
-/** R1352: which card each intro is, for music-cards.json's `intro` and the license record. */
-export const INTRO_TRACKS = INTRO_CARDS.map((card) => ({ card: card.card, name: card.name, track: introTrack(card.card), family: introFamily(card) }));

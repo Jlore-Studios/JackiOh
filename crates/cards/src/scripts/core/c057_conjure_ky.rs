@@ -80,12 +80,20 @@ mod tests {
     ];
 
     /// The def ids `crate::query::pool` returns (SPEC §5.1).
+    // The two helpers below read a pool as it is, not as the pool probe (#3117) rotates it: the tests that
+    // call them are about its content and order.
     fn pool_ids(own_id: &str, args: Value) -> Vec<String> {
-        crate::query::pool(own_id, &json_as(args)).iter().map(|def| def.id.clone()).collect()
+        jackioh_engine::testkit::with_pool_shift(0, || crate::query::pool(own_id, &json_as(args)))
+            .iter()
+            .map(|def| def.id.clone())
+            .collect()
     }
 
     fn query_ids(args: Value) -> Vec<String> {
-        crate::query::query(&json_as(args)).iter().map(|def| def.id.clone()).collect()
+        jackioh_engine::testkit::with_pool_shift(0, || crate::query::query(&json_as(args)))
+            .iter()
+            .map(|def| def.id.clone())
+            .collect()
     }
 
     fn in_ky_pool(def_id: &str) -> bool {

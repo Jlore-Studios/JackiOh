@@ -683,13 +683,7 @@ mod fake {
 
     /// Fault-injection and race hooks for fake calls (`db::fake`).
     fn call<'t>(f: &'t mut FakeTx<'_>, method: &str) -> Result<&'t mut DuosTables, StoreError> {
-        let data = f.data();
-        if let Some(hook) = data.on_call.clone() {
-            hook(method)?;
-        }
-        if let Some(hook) = data.before_call.clone() {
-            hook(method, &mut data.tables);
-        }
+        crate::db::fake::call(f, method)?;
         Ok(&mut f.tables().duos)
     }
 

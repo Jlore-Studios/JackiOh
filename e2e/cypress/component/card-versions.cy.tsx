@@ -16,6 +16,10 @@
 // a foil under it), on two Units offered both and a Spell offered Set showcase, base and Radiant: every part shows and
 // none signs, Set showcase's picture is its set's own, Out of frame's subject rises out of its window inside the face
 // and leaves the cost gem and the stats as they were, and a Radiant face keeps its gold frame.
+// R2944001, R2944002: part 5's versions, Immersive and Prismatic, each bare and with Animated (the Unit with a foil under
+// it), on a Unit and a Spell offered both, base and Radiant: every part shows and none signs, Immersive's near layer
+// fills its window and follows the pointer (and rests under Reduce motion), Prismatic's base frame is its rainbow and
+// chrome, each picture is its own, and a Radiant face keeps its gold frame.
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) shown in a look by `FullArtShown`, as the Collection's preview
 // shows one, so the looks stand side by side with no pick written. No `FullArtOwned` is mounted, so every cosmetic
@@ -25,6 +29,7 @@ import { CATALOG } from "@jackioh/cards";
 import { CardFace, FACE_ASPECT, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { resetCosmeticsForTests, writeCardPick } from "../../../apps/web/src/cards/cosmetics.ts";
 import { FullArtShown, OwnCopy } from "../../../apps/web/src/cards/fullArt.ts";
+import { IMMERSIVE_SHIFT_PCT } from "../../../apps/web/src/cards/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import {
   AUGMENT_ANIMATED_ID,
@@ -34,8 +39,10 @@ import {
   VERSION_COMIC_ID,
   VERSION_EXTENDED_ART_ID,
   VERSION_FULL_ART_ID,
+  VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
+  VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
   VERSION_SKETCH_ID,
   artPictureOf,
@@ -143,6 +150,32 @@ const PART_FOUR_LOOKS = [
 
 /** R2943001: the looks the screenshot compares, Out of frame with its stack too (Animated + the first Unit's foil). */
 const PART_FOUR_SHOT_LOOKS = PART_FOUR_LOOKS.filter((look) => ["normal", "showcase", "out", "out-stack"].includes(look.name));
+
+/** R2944001: a Unit and a Spell offered both of part 5's versions and Animated. */
+const PART_FIVE_CARDS = [
+  { id: "stinkyscape-006", why: "a Unit (Tylannt: Stinkyscape's painter, stats in the bottom corners, a Mythic crest)" },
+  { id: "core-097", why: "a Spell (Zephrys: the procedural painter, no stats, a Mythic crest)" },
+] as const;
+
+/** R2944002: the normal face to compare with, then each of part 5's versions bare and with Animated, Signature on none. */
+const PART_FIVE_LOOKS = [
+  { name: "normal", pick: false, augments: [] },
+  { name: "immersive", pick: VERSION_IMMERSIVE_ID, augments: [] },
+  { name: "immersive-stack", pick: VERSION_IMMERSIVE_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "prismatic", pick: VERSION_PRISMATIC_ID, augments: [] },
+  { name: "prismatic-stack", pick: VERSION_PRISMATIC_ID, augments: [AUGMENT_ANIMATED_ID] },
+] as const;
+
+/** R2944001: the looks the screenshot compares, Prismatic with its stack too (Animated + the Unit's foil). */
+const PART_FIVE_SHOT_LOOKS = PART_FIVE_LOOKS.filter((look) => ["normal", "immersive", "prismatic", "prismatic-stack"].includes(look.name));
+
+/** R2944001: Prismatic's base bezel, palette.css's `--pal-slate-100`, and the first colour of its edge, `--pal-red-400`. */
+const PRISMATIC_BEZEL = "#e8eaf2";
+const PRISMATIC_EDGE_RED = "#f87171";
+/** The Mythic rarity foil's yellow edge stop (cards.css), which Prismatic's base edge replaces. */
+const MYTHIC_EDGE_YELLOW = "#ffe66d";
+/** How far apart two boxes' edges or middles may lie and count as one place, in CSS pixels. */
+const SAME_PLACE_PX = 0.5;
 
 type Card = { readonly id: string; readonly why: string };
 type Look = { readonly name: string; readonly pick: false | string; readonly augments: readonly string[] };
@@ -767,6 +800,158 @@ describe("R2725003 a card's versions and augments on real faces", () => {
       }
       expect(Object.keys(shares).length, "every card and face sampled").to.eq(PART_FOUR_CARDS.length * 2 + units.length * 2 * 3);
       cy.task("layout:report", { spec: "card-versions-part-4", shares });
+    });
+  });
+
+  for (const width of WIDTHS) {
+    it(`R2725003 R2944002 each of part 5's versions keeps every part, and signs nowhere, at ${width}px`, () => {
+      writeCardPick(PART_FIVE_CARDS[0].id, "foil", FOIL);
+      cy.mount(<OfferedFaces width={width} cards={PART_FIVE_CARDS} looks={PART_FIVE_LOOKS} />);
+      cy.document().should((doc) => {
+        let layers = 0;
+        for (const { id, why } of PART_FIVE_CARDS) {
+          const unit = CATALOG[id]?.type === "Unit";
+          expect(offeredOn(VERSION_IMMERSIVE_ID, id), `${id}: Immersive`).to.eq(true);
+          expect(offeredOn(VERSION_PRISMATIC_ID, id), `${id}: Prismatic`).to.eq(true);
+          for (const look of offeredLooks(id, PART_FIVE_LOOKS)) {
+            for (const radiant of [false, true]) {
+              const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
+              const cf = faceIn(doc, id, look.name, radiant);
+              const face = cf.getBoundingClientRect();
+              const version = look.pick === false ? null : look.pick;
+              expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
+              expect(cf.getAttribute("data-version"), where).to.eq(version);
+              expect(cf.getAttribute("data-full-art"), where).to.eq(null);
+              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
+              if (id === PART_FIVE_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
+              const picture = artPictureOf(version);
+              const art = cf.querySelector<HTMLElement>(".cf-art-frame > .cf-art");
+              expect(art?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
+              // R2949000: Signature on neither.
+              expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
+              // Every version keeps the cost gem, the crest, the name, the type line, the rules box and a Unit's stats.
+              const kept = [".cost-gem", ".cf-crest", ".card-name", ".card-type", ".card-text", ...(unit ? [".cf-atk", ".cf-hp"] : [])];
+              for (const selector of kept) expect(boxes(cf, selector).length, `${where}: ${selector}`).to.be.greaterThan(0);
+              // Immersive's near layer is its window's own box, and takes no ground and no foil.
+              const layer = cf.querySelector<HTMLElement>(".cf-art-frame > .cf-immersive");
+              const near = layer?.querySelector<HTMLElement>(".cf-art--near");
+              expect(layer !== null, `${where}: the near layer`).to.eq(version === VERSION_IMMERSIVE_ID);
+              if (layer !== null && near !== null && near !== undefined && art !== null) {
+                layers += 1;
+                const opening = art.getBoundingClientRect();
+                const box = layer.getBoundingClientRect();
+                for (const side of ["left", "top", "right", "bottom"] as const) {
+                  expect(Math.abs(box[side] - opening[side]), `${where}: the near layer's ${side} is its window's`).to.be.at.most(SAME_PLACE_PX);
+                }
+                expect(getComputedStyle(layer).overflow, `${where}: the near layer clips to its window`).to.eq("hidden");
+                expect(getComputedStyle(near).backgroundColor, `${where}: the near layer's ground`).to.eq("rgba(0, 0, 0, 0)");
+                expect(getComputedStyle(near, "::after").content, `${where}: no foil on the near layer`).to.eq("none");
+                expect(near.getAttribute("data-art-part"), where).to.eq("subject");
+              }
+              // R2725004: the gold-foil frame and the art's Radiant paint on a Radiant face alone; Prismatic's rainbow edge
+              // and chrome bezel on a base face, in place of the Mythic foil's.
+              expect(cf.getAttribute("data-radiant-face"), where).to.eq(radiant ? "true" : null);
+              for (const each of cf.querySelectorAll(".cf-art")) expect(each.getAttribute("data-art-variant"), where).to.eq(radiant ? "radiant" : "base");
+              const style = getComputedStyle(cf);
+              const bezel = style.getPropertyValue("--cf-bezel").trim();
+              const edge = style.getPropertyValue("--cf-edge").toLowerCase();
+              expect(bezel === "#f6d77a", `${where}: the gold bezel`).to.eq(radiant);
+              const chrome = version === VERSION_PRISMATIC_ID && !radiant;
+              expect(bezel === PRISMATIC_BEZEL, `${where}: the chrome bezel (${bezel})`).to.eq(chrome);
+              expect(edge.includes("conic-gradient") && edge.includes(PRISMATIC_EDGE_RED), `${where}: the rainbow edge`).to.eq(chrome);
+              if (chrome) expect(edge, `${where}: no gold in the edge`).to.not.contain(MYTHIC_EDGE_YELLOW);
+            }
+          }
+        }
+        expect(layers, "every Immersive face measured").to.eq(PART_FIVE_CARDS.length * 2 * 2);
+      });
+    });
+  }
+
+  it("R2944001 each part 5 version prints its look, on a Unit and a Spell, base and Radiant", () => {
+    // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
+    writeCardSettings({ animatedFoil: false });
+    writeCardPick(PART_FIVE_CARDS[0].id, "foil", FOIL);
+    cy.mount(<OfferedFaces width={SHOT_WIDTH} cards={PART_FIVE_CARDS} looks={PART_FIVE_SHOT_LOOKS} />);
+    cy.get('.cf[data-immersive-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", PART_FIVE_CARDS.length * 2);
+    cy.get('.cf[data-art-motion="static"]').should("have.length", PART_FIVE_CARDS.length * 2);
+    cy.get('[data-art-moving="true"]').should("not.exist");
+    cy.get("[data-face] .cf-art[data-art-pending]").should("not.exist");
+    cy.get('.cf-immersive > .cf-art--near[data-art-part="subject"]').should("have.length", PART_FIVE_CARDS.length * 2);
+    cy.document().its("fonts.status").should("eq", "loaded");
+    const taken: { boxes?: Map<string, Record<string, DOMRect>> } = {};
+    cy.document().then((doc) => {
+      const found = new Map<string, Record<string, DOMRect>>();
+      for (const { id } of PART_FIVE_CARDS) {
+        for (const radiant of [false, true]) {
+          const box = (look: string): DOMRect => {
+            const at = faceIn(doc, id, look, radiant).querySelector(".cf-art-frame > .cf-art")?.getBoundingClientRect();
+            if (at === undefined) throw new Error(`no window for ${id} ${look}`);
+            return at;
+          };
+          found.set(`${id} ${radiant ? "Radiant" : "base"}`, { normal: box("normal"), immersive: box("immersive"), prismatic: box("prismatic"), stack: box("prismatic-stack") });
+        }
+      }
+      taken.boxes = found;
+    });
+    screenshot("card-versions-part-5").then((shot) => {
+      const shares: Record<string, number> = {};
+      for (const [where, found] of taken.boxes ?? new Map<string, Record<string, DOMRect>>()) {
+        const { normal } = found;
+        if (normal === undefined) throw new Error(`${where}: the normal window is missing`);
+        for (const box of Object.values(found)) expect(Math.ceil(box.bottom * shot.scale), `${where}: inside the shot`).to.be.at.most(shot.height);
+        const offsets = windowOffsets(normal);
+        expect(offsets.length, `${where}: sampled points`).to.be.greaterThan(20);
+        // Each version's window prints a picture of its own, apart from the normal one, in the same window.
+        for (const look of ["immersive", "prismatic", "stack"] as const) {
+          const other = found[look];
+          if (other === undefined) throw new Error(`${where}: the ${look} window is missing`);
+          expect(Math.round(normal.width), `${where}: the ${look} window matches`).to.eq(Math.round(other.width));
+          const share = differingShare(shot, normal, other, offsets);
+          shares[`${where} ${look}`] = share;
+          expect(share, `${where}: ${look} differs`).to.be.at.least(PICTURE_SHARE_MIN);
+        }
+      }
+      expect(Object.keys(shares).length, "every card and face sampled").to.eq(PART_FIVE_CARDS.length * 2 * 3);
+      cy.task("layout:report", { spec: "card-versions-part-5", shares });
+    });
+  });
+
+  it("R2944002 Immersive's near layer follows the pointer and holds still under Reduce motion", () => {
+    const [unit] = PART_FIVE_CARDS;
+    const width = WIDTHS[0];
+    const looks = PART_FIVE_LOOKS.filter((look) => look.name === "immersive");
+    /** The middles of the near layer and of its window on the Unit's base face. */
+    const middles = (doc: Document): { near: Point; rest: Point } => {
+      const cf = faceIn(doc, unit.id, "immersive", false);
+      const near = cf.querySelector(".cf-immersive > .cf-art--near")?.getBoundingClientRect();
+      const rest = cf.querySelector(".cf-immersive")?.getBoundingClientRect();
+      if (near === undefined || rest === undefined) throw new Error("no near layer");
+      return { near: { x: near.left + near.width / 2, y: near.top + near.height / 2 }, rest: { x: rest.left + rest.width / 2, y: rest.top + rest.height / 2 } };
+    };
+    cy.mount(<Faces width={width} cards={[unit]} looks={looks} />);
+    cy.get('.cf[data-immersive-motion="animated"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", 2);
+    // The pointer at the viewport's right edge, halfway down: the near layer shifts right, most of its far shift.
+    cy.window().then((win) => {
+      win.dispatchEvent(new win.PointerEvent("pointermove", { clientX: win.innerWidth, clientY: win.innerHeight / 2 }));
+    });
+    cy.document().should((doc) => {
+      const { near, rest } = middles(doc);
+      const span = faceIn(doc, unit.id, "immersive", false).querySelector(".cf-immersive")?.getBoundingClientRect().width ?? 0;
+      expect(near.x - rest.x, "the near layer follows the pointer right").to.be.greaterThan((span * IMMERSIVE_SHIFT_PCT) / 200);
+    });
+    // Under Reduce motion it rests in its window, and the pointer moves it no more.
+    cy.then(() => writeSettings({ reduceMotion: true }));
+    cy.get('.cf[data-immersive-motion="static"]').should("have.length", 2);
+    cy.window().then((win) => {
+      win.dispatchEvent(new win.PointerEvent("pointermove", { clientX: 0, clientY: 0 }));
+    });
+    cy.document().should((doc) => {
+      const { near, rest } = middles(doc);
+      expect(Math.abs(near.x - rest.x), "at rest across").to.be.at.most(SAME_PLACE_PX);
+      expect(Math.abs(near.y - rest.y), "at rest up and down").to.be.at.most(SAME_PLACE_PX);
+      const cf = faceIn(doc, unit.id, "immersive", false);
+      expect(cf.getAnimations({ subtree: true }).filter((animation) => animation.playState === "running").length, "nothing moves").to.eq(0);
     });
   });
 });

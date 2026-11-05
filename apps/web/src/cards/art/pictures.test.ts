@@ -5,6 +5,8 @@
 // faces wearing them are versionLooks.test.tsx's. R2942001: Pixel's and Comic's, the normal picture restyled; the
 // faces wearing them are versionLooks3.test.tsx's. R2943001: Set showcase's, the normal picture in its set's treatment,
 // and Out of frame's, the picture's backdrop and subject drawn apart; the faces wearing them are versionLooks4.test.tsx's.
+// R2944001: Immersive's, the picture's backdrop hazed as far off, and Prismatic's, the normal picture in chrome under a
+// sheen; the faces wearing them are versionLooks5.test.tsx's.
 
 import { createElement } from "react";
 import { cleanup, render } from "@testing-library/react";
@@ -21,7 +23,9 @@ import {
   SHOWCASE_FAMILIES,
   artSeedOf,
   comicSvg,
+  depthSvg,
   pixelSvg,
+  prismaticSvg,
   restyledSvg,
   restyleOf,
   showcaseFamilyOf,
@@ -420,6 +424,105 @@ describe("R2943001 Set showcase's and Out of frame's pictures", () => {
     for (const part of ["backdrop", "subject"] as const) {
       expect(drawnArt(LEGACY, false, "normal", { part }), part).toEqual(drawnArt(LEGACY, false, "normal"));
       expect(drawnArt("core-008", false, "normal", { ...ship, part }), part).toEqual(drawnArt("core-008", false, "normal", ship));
+    }
+  });
+});
+
+describe("R2944001 Immersive's and Prismatic's pictures", () => {
+  const BANNED = ["href", "<text", "<title", "NaN", "undefined"] as const;
+
+  it("R2944001 both restyle the normal picture, seeded by the card's id, and restyledSvg draws each", () => {
+    const picture = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#123456"/></svg>';
+    for (const restyle of ["depth", "prismatic"] as const) {
+      expect(restyleOf(restyle), restyle).toBe(restyle);
+      expect(artSeedOf("core-022", restyle), restyle).toBe("core-022");
+    }
+    for (const radiant of [false, true]) {
+      const depth = depthSvg(picture, radiant);
+      const prismatic = prismaticSvg(picture, radiant);
+      expect(restyledSvg(picture, "depth", radiant, "core-008")).toBe(depth);
+      expect(restyledSvg(picture, "prismatic", radiant, "core-008")).toBe(prismatic);
+      expect(depth).not.toBe(prismatic);
+      for (const drawn of [depth, prismatic]) {
+        expect(drawn).toContain('<rect width="100" height="100" fill="#123456"/>');
+        expect(drawn).not.toContain('viewBox="0 0 100 100"><rect');
+      }
+      expect(depth).not.toContain('id="pr-chrome"');
+      expect(prismatic).not.toContain('id="dp-haze"');
+    }
+  });
+
+  /** Two Mythic Units (a procedural one and a Stinkyscape one), two Mythic Spells (a procedural one and a Training Grounds one) and a Legacy card, whose painter draws one picture. */
+  const CHROMED = ["core-097", "stinkyscape-006", "traininggrounds-040", "traininggrounds-044"] as const;
+
+  it("R2944001 each card's Prismatic draws its normal picture in chrome under a sheen, apart from every other picture, base and Radiant", () => {
+    for (const id of CHROMED) {
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        const normal = drawnArt(id, radiant, "normal");
+        const prismatic = drawnArt(id, radiant, "prismatic");
+        const others = (["sketch", "pixel", "comic"] as const).map((picture) => drawnArt(id, radiant, picture).picture);
+        const drawn = prismatic.picture ?? "";
+        expect(new Set([normal.picture, drawn, ...others]).size, where).toBe(5);
+        expect(prismatic.marked, where).toBe("prismatic");
+        expect([prismatic.motif, prismatic.family], where).toEqual([normal.motif, normal.family]);
+        expect(drawn, where).toContain('filter id="pr-chrome"');
+        expect(drawn, where).toContain('filter="url(#pr-chrome)"');
+        expect(drawn, where).toContain('fill="url(#pr-sheen)"');
+        expect(drawn, where).toContain(inner(normal.picture ?? ""));
+        expect(drawn.match(/<svg[\s>]/g) ?? [], where).toHaveLength(1);
+        for (const banned of BANNED) expect(drawn, `${where} ${banned}`).not.toContain(banned);
+        // R2725004: a Radiant face's painted picture washes back over the chrome.
+        expect(drawn.includes('result="pr-wash"'), where).toBe(radiant);
+      }
+    }
+  });
+
+  /** Cards of each painter Immersive lifts the subject of: two procedural ones (a Spell, a Unit), a Stinkyscape one and a Training Grounds one. */
+  const HAZED = ["core-097", "core-100", "stinkyscape-006", "traininggrounds-040"] as const;
+
+  it("R2944001 each card's Immersive window draws its backdrop hazed as far off, apart from the plain backdrop and the whole picture, base and Radiant", () => {
+    for (const id of HAZED) {
+      expect(hasArtParts(id, null), id).toBe(true);
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        const whole = drawnArt(id, radiant, "normal");
+        const backdrop = drawnArt(id, radiant, "normal", { part: "backdrop" });
+        const subject = drawnArt(id, radiant, "normal", { part: "subject" });
+        const far = drawnArt(id, radiant, "depth", { part: "backdrop" });
+        const drawn = far.picture ?? "";
+        expect(new Set([whole.picture, backdrop.picture, subject.picture, drawn]).size, where).toBe(4);
+        expect([far.marked, far.part], where).toEqual(["depth", "backdrop"]);
+        expect([far.motif, far.family], where).toEqual([whole.motif, whole.family]);
+        expect(drawn, where).toContain('filter id="dp-haze"');
+        expect(drawn, where).toContain('filter="url(#dp-haze)"');
+        // The backdrop alone under the haze: the subject is the near layer's (CardFace).
+        expect(drawn, where).toContain(inner(backdrop.picture ?? ""));
+        expect(drawn, where).not.toContain(inner(whole.picture ?? ""));
+        expect(drawn.match(/<svg[\s>]/g) ?? [], where).toHaveLength(1);
+        for (const banned of BANNED) expect(drawn, `${where} ${banned}`).not.toContain(banned);
+        expect(drawn.includes('result="dp-wash"'), where).toBe(radiant);
+        // The whole picture hazed, as a tile draws it, is a picture of its own too.
+        const tile = drawnArt(id, radiant, "depth").picture ?? "";
+        expect(tile, where).toContain(inner(whole.picture ?? ""));
+        expect(new Set([tile, drawn, whole.picture]).size, where).toBe(3);
+      }
+    }
+  });
+
+  it("R2944002 an animated far layer moves, and so does its near subject", () => {
+    for (const id of HAZED) {
+      const motion = artMotionOf(id);
+      expect(motion, id).not.toBeNull();
+      const far = drawnArt(id, false, "depth", { part: "backdrop", motion }).picture ?? "";
+      const near = drawnArt(id, false, "normal", { part: "subject", motion }).picture ?? "";
+      expect(far, id).toContain("art-m-");
+      expect(far, id).toContain('filter="url(#dp-haze)"');
+      expect(far, id).not.toBe(drawnArt(id, false, "depth", { part: "backdrop" }).picture);
+      expect(near, id).toContain("art-m-subject");
+      const chrome = drawnArt(id, false, "prismatic", { motion }).picture ?? "";
+      expect(chrome, id).toContain("art-m-");
+      expect(chrome, id).toContain('fill="url(#pr-sheen)"');
     }
   });
 });

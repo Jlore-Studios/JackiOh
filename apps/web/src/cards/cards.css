@@ -1306,6 +1306,82 @@
   content: none;
 }
 
+/* --------------------------------------------------------------------------- immersive --- */
+
+/* R2944001: the Immersive version: the picture's backdrop (CardArt's `part` "backdrop") hazed as far off in the window
+   (pictures.ts `depthSvg`), and its subject ("subject", drawn as it is) on a near layer over it (`.cf-immersive`), the
+   window's own box and shape, so the subject never leaves the window. The near layer takes no ground, ring or foil (its
+   foil would lay a second sheen over the window's), and no pointer. The window keeps its bezel, a worn border its edge
+   and bezel, and a Radiant face its gold-foil frame and gold bezel: Immersive draws no frame of its own. */
+.cf[data-version="version-immersive"] .cf-art-frame > .cf-immersive {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cf[data-version="version-immersive"] .cf-immersive > .cf-art {
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.cf[data-version="version-immersive"] .cf-immersive > .cf-art[data-art-pending="true"] {
+  background-image: none;
+}
+
+.cf[data-version="version-immersive"] .cf-immersive > .cf-art::before,
+.cf[data-version="version-immersive"] .cf-immersive > .cf-art::after {
+  content: none;
+}
+
+/* R2944002: the near layer's breath, IMMERSIVE_BREATH_SCALE at its top (constants.ts). */
+@keyframes cf-immersive-breathe {
+  from {
+    scale: 1;
+  }
+
+  to {
+    scale: 1.04;
+  }
+}
+
+/* R2944002: the near layer's shift and breath are in the sheet's one motion gate (the foil sweep's, below). */
+
+/* --------------------------------------------------------------------------- prismatic --- */
+
+/* R2944001: the Prismatic version: the picture in mirror chrome under an iridescent sheen (pictures.ts
+   `prismaticSvg`) and, on a base face, a rainbow edge of its sheen's colours (pictures.ts `PRISMATIC_SHEEN`, there and
+   back), a chrome bezel and a chrome name banner: the palette's, and never gold, so it reads as Radiant's no more than
+   any face. It replaces the Mythic rarity foil's rainbow edge, whose yellow and orange are gold's. A Radiant face keeps
+   its gold-foil frame, gold bezel and gilded banner, and R2944002 a worn border its own edge and bezel. The panel
+   (`--cf-frame`) stays the type's. */
+.cf[data-version="version-prismatic"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-slate-100);
+  --cf-edge: conic-gradient(
+    from 200deg,
+    var(--pal-red-400),
+    var(--pal-purple-400),
+    var(--pal-violet-500),
+    var(--pal-sky-400),
+    var(--pal-cyan-400),
+    var(--pal-green-400),
+    var(--pal-cyan-400),
+    var(--pal-sky-400),
+    var(--pal-violet-500),
+    var(--pal-purple-400),
+    var(--pal-red-400)
+  );
+}
+
+.cf[data-version="version-prismatic"]:not([data-radiant-face="true"]) .card-name {
+  background: linear-gradient(180deg, var(--pal-slate-100), var(--pal-slate-400) 50%, var(--pal-slate-100));
+  color: var(--pal-slate-900);
+  text-shadow: none;
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {
@@ -2107,6 +2183,17 @@
   :root:not([data-reduce-motion="true"]) .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
   :root:not([data-reduce-motion="true"]) .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
     bottom: 45%;
+  }
+
+  /* R2944002: while the face's depth holds a motion slot (`data-immersive-motion="animated"`, CardFace), the near
+     layer shifts IMMERSIVE_SHIFT_PCT of the window each way at the pointer's or the tilt's far edge (immersive.ts's
+     `--cf-immersive-x` and `--cf-immersive-y`, -1 to 1) and breathes over IMMERSIVE_BREATH_S each way; by transform
+     alone, inside this gate, the sheet's one (cards/foil.test.ts). Under reduced motion, with Animated foil off and on
+     a lazy face it rests. */
+  :root:not([data-reduce-motion="true"]) .cf[data-immersive-motion="animated"] .cf-immersive > .cf-art {
+    translate: calc(var(--cf-immersive-x, 0) * 6%) calc(var(--cf-immersive-y, 0) * 6%);
+    transition: translate 160ms ease-out;
+    animation: cf-immersive-breathe 7s ease-in-out infinite alternate;
   }
 }
 

@@ -2,11 +2,17 @@
 // Tests import self-mounting `main.tsx`, stub `fetch`, and assert URL and storage outcomes.
 // Fixture sessions omit refresh tokens, so R194 renewal cannot determine these panels.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRoot } from "react-dom/client";
+
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { notFoundHtml } from "../../static-pages.ts";
 import { inviteTestid, landingTestid, shellTestid } from "../auth/testids.ts";
-import { paths } from "../net/navigate.ts";
+import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
 import { at, jsonResponse, meBody, signIn } from "../test/stubServer.ts";
 
@@ -306,6 +312,49 @@ describe("B40 the 404 panel", () => {
 
     expect(await screen.findByTestId(landingTestid.root, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByTestId(shellTestid.notFound)).toBeNull();
+  });
+
+  it("R3127000 a cold load of an unknown path draws not-found on the first render: no wait, no sign-in", () => {
+    at("/nope");
+    render(<App />);
+
+    // Synchronously: nothing before the 404 (the gate's wait, the engine's, a sign-in prompt).
+    expect(screen.getByTestId(shellTestid.notFound)).toBeInTheDocument();
+    expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
+    expect(screen.queryByTestId(shellTestid.engineLoading)).toBeNull();
+    expect(screen.queryByText("Sign in to continue.")).toBeNull();
+    expect(meCalls).toBe(0);
+  });
+
+  it("R3127000 the client replaces the static fallback in #root", async () => {
+    // The page Cloudflare serves, whose #root holds the fallback until the entry script starts.
+    const built = new DOMParser().parseFromString(
+      notFoundHtml(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../index.html"), "utf8"), SITE_ORIGIN),
+      "text/html",
+    );
+    const host = document.createElement("div");
+    host.id = "root";
+    host.innerHTML = built.querySelector("#root")?.innerHTML ?? "";
+    document.body.append(host);
+    expect(host.querySelector(`[data-testid="${shellTestid.notFoundStatic}"]`)).not.toBeNull();
+    expect(host.querySelectorAll(".cf")).toHaveLength(3);
+
+    at("/nope");
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<App />);
+    });
+    try {
+      await screen.findByTestId(shellTestid.notFound, undefined, SLOW);
+      expect(host.querySelector(`[data-testid="${shellTestid.notFoundStatic}"]`)).toBeNull();
+      expect(host.querySelectorAll(".shell-panel")).toHaveLength(1);
+      expect(host.querySelector(".not-found-path")?.textContent).toBe("/nope");
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+      host.remove();
+    }
   });
 });
 

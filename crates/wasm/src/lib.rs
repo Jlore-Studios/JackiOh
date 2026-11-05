@@ -238,6 +238,13 @@ pub fn find_instance(state_json: &str, instance_id: &str) -> Result<String, JsEr
     js(wasm_core::find_instance(state_json, instance_id))
 }
 
+/// R3100000: `CombatForecast`, `{ attacks: AttackForecast[], lethal }`: what each attack `seat` may declare
+/// would do, as the board shows it, for the tutorial's coach (`engine::combat_forecast`).
+#[wasm_bindgen]
+pub fn combat_forecast(state_json: &str, seat: &str) -> Result<String, JsError> {
+    js(wasm_core::combat_forecast(state_json, seat))
+}
+
 /// `EmoteId[]`: emote hand `seat` is dealt for `seed` (R1341), matching the match actor (R1342).
 #[wasm_bindgen]
 pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, JsError> {
@@ -400,6 +407,16 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn series(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::series(call_json))
+}
+
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn loadout(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::loadout(call_json))
 }
 
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)

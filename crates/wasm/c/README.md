@@ -123,6 +123,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `hash_state(state)`, `fold(args)` | strings | the state's hash, a log folded |
 | `replay_open(args, record)`, `replay_page(checkpoints, seat, from, count)` | strings, then `from: u32`, `count: u32` | a replay opened, a page of it |
 | `last_board_for(state, seat)`, `seat_played_by(state, home)`, `find_instance(state, instance_id)` | strings | as the engine's |
+| `combat_forecast(state, seat)` | strings | R3100000: `{ attacks, lethal }`, what each attack the seat may declare would do, as the board shows it |
 | `deal_emote_hand(seed, seat)` | strings | `EmoteId[]` |
 | `ai_to_act(state, seat)` | strings | `true` or `false` |
 | `ai_decide(state, seat, options, deadline_ms)` | strings, then `deadline_ms: f64` | `{ decision, rngCursor }` |
@@ -132,6 +133,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
 | `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; the rematch book's calls answer its next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
+| `loadout(call)` | string | #3102: one call of `jackioh-shared`'s loadout visibility rule, a `LoadoutCall` in and a `LoadoutAnswer` out (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`); the host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |

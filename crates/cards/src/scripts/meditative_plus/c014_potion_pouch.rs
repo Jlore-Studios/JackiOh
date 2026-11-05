@@ -101,8 +101,13 @@ mod tests {
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): with no preview the Potion pool is the
         // non-token Potion cards of the sets that ship (R1179003), M+ #11 to #13, so the Pouch adds
         // two of them rather than fizzling.
-        let pool: Vec<String> =
-            crate::query::query(&json_as(json!({ "tags": ["Potion"] }))).iter().map(|def| def.id.clone()).collect();
+        // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+        let pool: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
+            crate::query::query(&json_as(json!({ "tags": ["Potion"] })))
+        })
+        .iter()
+        .map(|def| def.id.clone())
+        .collect();
         assert_eq!(pool, POTIONS.map(String::from).to_vec());
         let mut s = scenario(json!({
             "seed": "m+014-shipped",

@@ -64,7 +64,9 @@ import {
   AUGMENT_SIGNATURE_ID,
   VERSION_ALT_FULL_ART_ID,
   VERSION_FULL_ART_ID,
+  VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
+  VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
   offeredOn,
 } from "./versions.ts";
@@ -1336,8 +1338,11 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
           break;
         case "version":
           // R2725000: the Full art version is still, as the Epic full art was; Animated moves it (R2725003). R2940002:
-          // so is Alt full art, which Animated moves as it does Full art; R2943002: and Set showcase and Out of frame.
-          expect([VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID]).toContain(id);
+          // so is Alt full art, which Animated moves as it does Full art; R2943002: and Set showcase and Out of frame;
+          // R2944002: and Prismatic. Immersive's depth moves by itself, by its attribute, which CardFace sets on every
+          // full face wearing it (versionLooks5.test.tsx).
+          if (id === VERSION_IMMERSIVE_ID) expect(animates(cardsCss, '.cf[data-immersive-motion="animated"] '), id).toBe(true);
+          else expect([VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PRISMATIC_ID]).toContain(id);
           break;
         case "augment":
           // R2725000: the Signature signs itself wherever it is worn, by its class on the face.
@@ -1556,5 +1561,44 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
       ...Array.from({ length: 11 }, (_, at) => along(pictures.SHOWCASE_SPACE, pictures.SHOWCASE_SPACE_LIGHT, at / 10)),
     ];
     for (const color of toned) expect(inRadiantGold(color), `#${color}`).toBe(false);
+  });
+
+  it("R2944001 Immersive's and Prismatic's colours keep out of the Radiant gold window", () => {
+    const hex = (level: number): string => Math.round(Math.min(1, Math.max(0, level)) * 255).toString(16).padStart(2, "0");
+    /** The colour `level` of the way from `from` to `to`, as a tone map or a gradient draws it. */
+    const along = (from: string, to: string, level: number): string =>
+      `#${[1, 3, 5].map((at) => hex(((1 - level) * parseInt(from.slice(at, at + 2), 16) + level * parseInt(to.slice(at, at + 2), 16)) / 255)).join("")}`;
+    const steps = Array.from({ length: 11 }, (_, at) => at / 10);
+    // Their rules in cards.css: Immersive's layer and Prismatic's edge, bezel and banner, the palette's, no gold.
+    const partFive = rules(cardsCss).filter((rule) => /\[data-version="version-(immersive|prismatic)"\]|\[data-immersive-motion=/.test(rule.selector));
+    expect(partFive.length).toBeGreaterThan(5);
+    let drawn = 0;
+    for (const rule of partFive) {
+      const colors = colorsOf(rule.body);
+      drawn += colors.length;
+      for (const color of colors) expect(inRadiantGold(color), `${rule.selector}: #${color}`).toBe(false);
+    }
+    expect(drawn).toBeGreaterThan(10);
+    // The filters' and the sheen's own colours, on both faces.
+    for (const radiant of [false, true]) {
+      const colors = [...hexes(pictures.depthSvg("<svg></svg>", radiant)), ...hexes(pictures.prismaticSvg("<svg></svg>", radiant))];
+      expect(colors.length).toBeGreaterThan(pictures.PRISMATIC_SHEEN.length);
+      for (const color of colors) expect(inRadiantGold(color), `#${color}`).toBe(false);
+    }
+    // Every DEPTH_* and PRISMATIC_* colour, its lists' among them.
+    const constants = Object.entries(pictures)
+      .filter(([name]) => name.startsWith("DEPTH_") || name.startsWith("PRISMATIC_"))
+      .flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter((each): each is string => typeof each === "string").map((each) => [name, each] as const));
+    expect(constants.length).toBeGreaterThan(pictures.PRISMATIC_SPECTRUM.length + pictures.PRISMATIC_SHEEN.length);
+    for (const [name, value] of constants) expect(inRadiantGold(value.slice(1)), `${name}: ${value}`).toBe(false);
+    // Every colour a base face's chrome draws: the chrome all along it, each sheen's colour and all the way between its
+    // neighbours, and the sheen laid over the chrome at its opacity.
+    const chrome = steps.map((level) => along(pictures.PRISMATIC_CHROME_DARK, pictures.PRISMATIC_CHROME_LIGHT, level));
+    const sheen = pictures.PRISMATIC_SHEEN.slice(1).flatMap((color, at) => steps.map((level) => along(pictures.PRISMATIC_SHEEN[at] ?? color, color, level)));
+    const lit = chrome.flatMap((tone) => sheen.map((color) => along(tone, color, pictures.PRISMATIC_SHEEN_OPACITY)));
+    for (const color of [...chrome, ...sheen, ...lit]) expect(inRadiantGold(color.slice(1)), color).toBe(false);
+    // The sheen there and back: a palindrome of the spectrum.
+    expect([...pictures.PRISMATIC_SHEEN].reverse()).toEqual([...pictures.PRISMATIC_SHEEN]);
+    expect(pictures.PRISMATIC_SHEEN.slice(0, pictures.PRISMATIC_SPECTRUM.length)).toEqual([...pictures.PRISMATIC_SPECTRUM]);
   });
 });

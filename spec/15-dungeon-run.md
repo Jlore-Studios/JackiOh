@@ -274,6 +274,8 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill and prints each kind of fight's win rate and HP cost, the HP at each boss, the rows reached, the score and the Embers (#3065): a guide to tuning the strawmen, not a target.
+
 ### 15.13 Open questions
 
 These are the plan's DR13 open questions, not decided here:
@@ -283,4 +285,4 @@ These are the plan's DR13 open questions, not decided here:
 - the starting cards and starter artifacts;
 - the prestige artifacts;
 - ghost snapshots;
-- tuning the strawmen.
+- tuning the strawmen, against [[§15.12]]'s `cargo jackioh run-sim`.

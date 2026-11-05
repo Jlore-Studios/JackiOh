@@ -104,6 +104,12 @@ mod tests {
         crate::query::query(&json_as::<CardQuery>(args)).iter().map(|def| def.id.clone()).collect()
     }
 
+    /// `query_ids` of a pool as it is, not as the pool probe (#3117) rotates it, for a test of a pool's
+    /// content and order.
+    fn unshifted_query_ids(args: Value) -> Vec<String> {
+        jackioh_engine::testkit::with_pool_shift(0, || query_ids(args))
+    }
+
     /// The radiant face's pool: every trap of every set, Core #85 (Cost (2)) included.
     fn radiant_trap_pool() -> Vec<String> {
         query_ids(json!({ "type": TRAP_TYPES }))
@@ -148,8 +154,8 @@ mod tests {
         #[test]
         fn build_row_67_r380_the_base_pool_is_every_sets_cost_1_traps_and_the_radiant_pool_every_trap() {
             // #85 costs 2, so only the radiant query reaches it.
-            assert_eq!(query_ids(json!({ "type": TRAP_TYPES, "cost": 1 })), TRAP_POOL);
-            let every_trap = query_ids(json!({ "type": TRAP_TYPES }));
+            assert_eq!(unshifted_query_ids(json!({ "type": TRAP_TYPES, "cost": 1 })), TRAP_POOL);
+            let every_trap = unshifted_query_ids(json!({ "type": TRAP_TYPES }));
             for id in TRAP_POOL.iter().chain(["core-085"].iter()) {
                 assert!(every_trap.iter().any(|entry| entry == id), "{id} in {every_trap:?}");
             }
