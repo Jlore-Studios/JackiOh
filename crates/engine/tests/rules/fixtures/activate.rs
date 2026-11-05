@@ -337,6 +337,10 @@ pub static high_teller: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// R3061000, R703: "Activate: Deal 1 damage to two enemy Units", both picks required: fewer than two
+/// enemy Units offer nothing, and two Ghosts (B5 E5, R450) cost 4 discards together.
+pub static pairer: LazyLock<CardDef> = LazyLock::new(|| def("pairer", 4122, "Field Spell", json!({})));
+
 /// The tellers' script: "Activate: ask; the answer notes {tell}", read by the step it re-enters.
 fn teller() -> CardScripts {
     faces(Script {
@@ -377,6 +381,7 @@ pub static ACTIVATE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         spark.clone(),
         low_teller.clone(),
         high_teller.clone(),
+        pairer.clone(),
     ]
 });
 
@@ -646,6 +651,24 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
         (spark.id.clone(), faces(Script::default())),
         (low_teller.id.clone(), teller()),
         (high_teller.id.clone(), teller()),
+        (
+            pairer.id.clone(),
+            faces(Script {
+                activations: vec![ActivationDecl {
+                    targets: vec![TargetDecl {
+                        required: Some(true),
+                        ..TargetDecl::target(2, 2, json!({ "side": "enemy", "of": ["unit"] }))
+                    }],
+                    ..ability(
+                        "pair",
+                        "Deal 1 damage to two enemy Units",
+                        ActivationUses::Count(1),
+                        hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]),
+                    )
+                }],
+                ..Script::default()
+            }),
+        ),
     ])
 });
 

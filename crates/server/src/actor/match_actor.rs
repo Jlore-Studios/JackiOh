@@ -1,34 +1,39 @@
-//! One actor per match (SPEC §9.2, §9.3, §9.5): it holds the state, one socket per player and the
-//! clock, and appends every resolved action to the log; it owns no rules, no timer and no socket
-//! library. The rules are `actor::engine`'s (SURFACE §11.3) under the match's pinned catalog (R388,
-//! R767000), and a refusal is relayed verbatim, never re-derived. Every clock expiry (R79; R268's
-//! mulligan clock times out each seat still owing) is a server action on a client's path, since
-//! "(seed, log) reconstructs any match" (§9.3). A socket is only sent `view_for` its player (§9.1,
-//! §10.8). R1452, R639000: a ladder bot's seat has no socket; the actor plays it (`drive_bots`).
-//! Every task runs on one serialized queue, so two `reduce` calls or log appends never interleave; a
-//! panicking `reduce` is caught (R1253000). The lock is never held across an `.await` nor while a
-//! socket is closed (a close calls back into the actor).
+//! One actor per match (SPEC §9.2, §9.3, §9.5): it holds a socket per player and carries out what the
+//! match host's machine asks of it, and appends every resolved action to the log. It decides no rule and
+//! owns no clock: the decisions are `jackioh_shared::host`'s (#3101) — which clock runs and what an
+//! expiry becomes (R79; R268's mulligan clock times out each seat still owing), what a disconnect and a
+//! reconnect do (§9.5, R744), what a rematch offer meets (R672), what an aim may show (R738), the order
+//! every view is sent in — and the actor feeds the machine its events (a frame, a socket gone, a timer
+//! that fired, a row written) and does what it answers with: a tokio timer, a socket send, a store write.
+//! The rules are `actor::engine`'s (SURFACE §11.3) under the match's pinned catalog (R388, R767000), and
+//! a refusal is relayed verbatim, never re-derived. Every clock expiry is a server action on a client's
+//! path, since "(seed, log) reconstructs any match" (§9.3). A socket is only sent `view_for` its player
+//! (§9.1, §10.8). R1452, R639000: a ladder bot's seat has no socket; the machine asks for its moves and
+//! the actor plays it. Every task runs on one serialized queue, so two `reduce` calls or log appends never
+//! interleave; a panicking `reduce` is caught (R1253000). The lock is never held across an `.await` nor
+//! while a socket is closed (a close calls back into the actor).
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
 
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexMap;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, EmoteId, GameEvent, GameOverReason, HandView, PLAYER_IDS, PendingView,
-    PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, Rng, aim_key, deal_emote_hand, emote_gate,
-    emote_gate_within, hand_holds, portrait_or_default,
+    ActionBody, EmoteId, PLAYER_IDS, PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, Rng,
+    deal_emote_hand, emote_gate, emote_gate_within, hand_holds, portrait_or_default,
+};
+use jackioh_shared::host::bot::BotSeat;
+use jackioh_shared::host::timer::{TimerCommand, TimerKey};
+use jackioh_shared::host::{
+    ActionAnswer, ActionBy, DecideRequest, DuelEvent, DuelHost, DuelOutput, DuelSetup, GreetingPart,
+    HostNote, LetGo, Played, RecordRequest, SeatMessage,
 };
 
 use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
-use crate::actor::clock::{Timer, after, create_match_clock};
-use crate::actor::contracts::{
-    ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput,
-    SequenceClockView, SocketHandlers, VoidMatchInput, one_tx,
-};
+use crate::actor::clock::{Timer, after};
+use crate::actor::contracts::{ActorDeps, RecordResultInput, SocketHandlers, VoidMatchInput, one_tx};
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
@@ -37,20 +42,18 @@ use crate::actor::protocol::{
     clock_message, emote_relay_message, encode, error_message, loadouts_message, parse_client_message,
     portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
-use crate::actor::registry::panic_text;
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
-use crate::api::rematch::{RematchStakes, STAKE_NORMAL, offer_for_bot};
+use crate::api::rematch::{RematchStakes, offer_for_bot};
 use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
-use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
-use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
+use crate::bots::seat::{self, BotJob, BotMove};
+use crate::bots::signals::rematch_plan;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
-    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_CHECKPOINT_MIN_ACTIONS,
-    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS,
-    MATCH_VOIDED_CLOSE_CODE,
+    AI_EMOTE, BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT,
+    BOT_REMATCH_FIT, BOT_STRENGTHS, BOT_TIMEOUT_FIT, MATCH_CHECKPOINT_MIN_ACTIONS,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
@@ -61,8 +64,8 @@ use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
 
-/// R639000: a bot home's rematch answer on its way (`Core::bot_rematch_replying`), taken off when
-/// the task that sends it ends.
+/// R639000: a bot home's rematch answer on its way (the machine's `bot_rematch_replying`), taken off when
+/// the task that sends it ends, however it ends.
 struct Replying {
     actor: Weak<Shared>,
     home: PlayerId,
@@ -71,7 +74,10 @@ struct Replying {
 impl Drop for Replying {
     fn drop(&mut self) {
         if let Some(shared) = self.actor.upgrade() {
-            MatchActor { shared }.lock().bot_rematch_replying[self.home] = false;
+            let actor = MatchActor { shared };
+            let mut core = actor.lock();
+            let outputs = actor.step_in(&mut core, DuelEvent::RematchSent { home: self.home });
+            actor.exec_now(&mut core, outputs);
         }
     }
 }
@@ -165,7 +171,7 @@ pub fn bot_moved_turns_from(
 
 /// One task on the actor's serialized queue.
 enum Task {
-    /// The clock has to be armed before the first action (R79).
+    /// The machine is armed: the clocks are brought up to date and the opening is driven (R79).
     Arm,
     Hello {
         home: PlayerId,
@@ -190,7 +196,11 @@ enum Task {
         body: ActionBody,
         reply: oneshot::Sender<ServerMessage>,
     },
-    Expire(ClockExpiry),
+    /// A clock's timer came due (R79): the machine says which clock ran out.
+    Timer {
+        key: TimerKey,
+        id: u32,
+    },
     Disconnect {
         home: PlayerId,
     },
@@ -203,7 +213,7 @@ enum Task {
     Checkpoint(oneshot::Sender<()>),
     /// R1452: the move a bot home's `seat::play` came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
-    BotMove {
+    Decided {
         home: PlayerId,
         version: i64,
         turn: i32,
@@ -219,83 +229,56 @@ impl Task {
             Task::Hello { .. } => "hello".to_string(),
             Task::Action { body, .. } | Task::Submit { body, .. } => format!("action:{}", body.action_type()),
             Task::Emote { .. } => "emote".to_string(),
-            Task::Expire(expiry) => format!("expiry:{}", expiry.kind()),
+            Task::Timer { key, .. } => format!("timer:{}", timer_name(*key)),
             Task::Disconnect { .. } => "disconnect".to_string(),
             Task::Attach { .. } => "attach".to_string(),
             Task::Idle(_) => "idle".to_string(),
             Task::Checkpoint(_) => "checkpoint".to_string(),
-            Task::BotMove { .. } => "bot-move".to_string(),
+            Task::Decided { .. } => "bot-move".to_string(),
         }
     }
 }
 
-/// R738: one seat's aim relay (see `Core::aims`).
-struct AimSlot {
-    /// Newest aim received: `None` if none, `Some(None)` if aim ended.
-    pending: Option<Option<Aim>>,
-    /// The one wait armed to relay it.
-    timer: Option<Timer>,
-    /// Timestamp of last relay, or `None` if never sent.
-    last_at: Option<i64>,
-    /// What the opponent was last told, so a repeat is never sent and a seat that leaves mid-aim has
-    /// its arrow cleared.
-    relayed: Option<Aim>,
-}
-
-fn empty_aim_slot() -> AimSlot {
-    AimSlot {
-        pending: None,
-        timer: None,
-        last_at: None,
-        relayed: None,
+/// The word a timer is named by in a log label.
+fn timer_name(key: TimerKey) -> &'static str {
+    match key {
+        TimerKey::Turn => "turn",
+        TimerKey::Prompt => "prompt",
+        TimerKey::Mulligan => "mulligan",
+        TimerKey::Sequence => "sequence",
+        TimerKey::Ceiling => "ceiling",
+        TimerKey::Grace { .. } => "grace",
+        TimerKey::Aim { .. } => "aim",
+        TimerKey::Hover { .. } => "hover",
+        TimerKey::BotOffer { .. } => "bot-offer",
+        TimerKey::BotReply { .. } => "bot-reply",
+        TimerKey::BotRetry => "bot-retry",
     }
 }
 
-/// R2739001: one seat's choice-hover relay (see `Core::hovers`), `AimSlot`'s shape.
-struct HoverSlot {
-    /// Newest index received: `None` if none, `Some(None)` if the hover ended.
-    pending: Option<Option<i32>>,
-    timer: Option<Timer>,
-    last_at: Option<i64>,
-    /// What the opponent was last told, so a repeat is never sent and an answered prompt, a seat that
-    /// leaves or the game's end has its outline cleared.
-    relayed: Option<i32>,
-    /// The id of the seat's own prompt the index points into, so a hover never outlives it.
-    prompt: Option<String>,
+/// Whether a timer's firing is a task on the queue (the clocks', which act on the match) or answered at
+/// once (the relays' and the bots', which never touch the log).
+fn queued_timer(key: TimerKey) -> bool {
+    matches!(
+        key,
+        TimerKey::Turn
+            | TimerKey::Prompt
+            | TimerKey::Mulligan
+            | TimerKey::Sequence
+            | TimerKey::Ceiling
+            | TimerKey::Grace { .. }
+    )
 }
 
-fn empty_hover_slot() -> HoverSlot {
-    HoverSlot {
-        pending: None,
-        timer: None,
-        last_at: None,
-        relayed: None,
-        prompt: None,
-    }
-}
-
-/// R2739001: the id of the prompt `player` holds now, or `None`.
-fn open_prompt_of(state: &EngineState, player: PlayerId) -> Option<&str> {
-    state
-        .pending
-        .as_ref()
-        .filter(|pending| pending.player_id == player)
-        .map(|pending| pending.id.as_str())
-}
-
-/// The actor's in-memory state (§9.2) and the append-only log's bookkeeping (§9.3).
+/// The actor's in-memory state (§9.2): the machine's, and what is the actor's own — its sockets and the
+/// abuse guards on them, the emote relay, the bots' personas, the telemetry and the watchers.
 struct Core {
-    state: EngineState,
-    next_seq: i64,
-    /// §9.3: each nonce's ack, so a resend writes no second row or view; rebuilt from the log.
-    acks: IndexMap<String, ServerMessage>,
-    /// R1253000: nonces whose reduce panicked, answered `panicked_answer` again. Not `acks`, whose
-    /// last `write_checkpoint` reads as the newest row's.
-    panicked: IndexSet<String>,
+    /// The match host's machine (#3101): the game, the clocks, the log's bookkeeping, who is here.
+    host: DuelHost,
+    /// The timers the machine asked for, by key, each with the id it was asked under.
+    timers: IndexMap<TimerKey, (u32, Timer)>,
     /// Keyed by the seat each account BEGAN in (`home`).
     sockets: PerPlayer<Option<Socket>>,
-    /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
-    attached_once: PerPlayer<bool>,
     /// R137, R835000, R835002, R2686000: abuse guard per home seat (flood window, refusals, malformed
     /// frames, last answered hello).
     guards: PerPlayer<SeatGuard>,
@@ -308,55 +291,21 @@ struct Core {
     emote_history: PerPlayer<Vec<i64>>,
     /// R1351000: mutes emotes if either blocks the other; never cleared until the next match.
     emotes_blocked: bool,
-    /// R738: each seat's aim relay.
-    aims: PerPlayer<AimSlot>,
-    /// R2739001: each seat's choice-hover relay.
-    hovers: PerPlayer<HoverSlot>,
-    /// R679: set once a Glitch voided the match; nothing more is sent, written or attached.
-    voided: bool,
-    /// Nothing left to record; a rebuilt actor still `live` heals its missing result on arming (§9.5).
-    finished: bool,
     /// R1483000: daily Jlore cap status per seat.
     jlore_capped: PerPlayer<bool>,
     /// #1657: what the result's write paid each seat; `None` when nothing was, so nothing is told.
     economy: PerPlayer<Option<GameEconomy>>,
-    /// R672: when the rematch window opened; `Registry::reap_finished` counts its TTL from here.
-    finished_at: Option<i64>,
-    stopped: bool,
-    persisted_clocks: MatchClocks,
-    /// R744: stored grace deadlines until the first attach; clock writes keep them meanwhile.
-    stored_grace: Option<PerPlayer<Option<i64>>>,
-    /// R677: whether Glitch swapped the seats; only the engine's state sets it, never a frame.
-    swapped: bool,
-    last_pending_for: Option<PlayerId>,
-    /// R265: which seats owed a mulligan at the last push, so a `prompt` frame goes out on a change.
-    last_mulligan_owed: String,
     /// R1442: the match's play telemetry, written once its result has landed.
     telemetry: Recorder,
     /// R1442: each player's ladder tier as the actor armed (seat order, `MatchRow.players`), the
     /// telemetry's rank bucket; `None` until then, or when it could not be read.
     tiers: Option<PerPlayer<RankTier>>,
-    /// R1452: whether each bot home's move is being decided now (`seat::play` in flight), by home.
-    bot_thinking: PerPlayer<bool>,
-    /// R1452: where each bot home's two streams stand: the search's and the think time's. A rebuilt
-    /// actor starts both again, which nothing replays.
-    bot_cursors: PerPlayer<(u32, u32)>,
-    /// R1452: the turn each bot home last moved in, so a think time knows a turn's first move.
-    bot_moved_turn: PerPlayer<Option<i32>>,
     /// R645, R1344: each bot home's persona, reading the bot seat's own view.
     personas: PerPlayer<Option<EmotePersona>>,
     /// The bot seat's view as its persona last read it (`on_events`' `prev`).
     bot_views: PerPlayer<Option<PlayerView>>,
     /// R645: the long-turn wait each bot home's persona keeps on the person's turn.
     bot_long_turn: PerPlayer<Option<Timer>>,
-    /// R639000: each bot home's plan for the end of a ranked match, drawn as the game ends, and when
-    /// its linger ends (epoch ms); `None` while the game is on, and for a match it offers nothing in.
-    bot_rematch: PerPlayer<Option<(RematchPlan, i64)>>,
-    /// R639000: whether each bot home has already answered a person's rematch offer.
-    bot_rematch_answered: PerPlayer<bool>,
-    /// R639000: whether each bot home's answer is on its way, which keeps it on the match until it
-    /// lands, past its linger if need be.
-    bot_rematch_replying: PerPlayer<bool>,
     /// Social (#939): B50's watchers and the delayed views they are sent (`Spectate`).
     spectate: Spectate,
     /// R1834003: card picks sent to each socket; every hello and attach empties it.
@@ -379,13 +328,10 @@ struct Shared {
     /// sockets, dealt once from the match seed when the actor is built — the same eight after a
     /// restart, a reconnect or a Glitch's swap (R677), since a hand belongs to the player.
     emote_hands: PerPlayer<Vec<EmoteId>>,
-    clock: MatchClock,
     inbox: mpsc::UnboundedSender<Task>,
     on_voided: Option<Box<dyn Fn() + Send + Sync>>,
     /// R1452: the ladder bot at each home seat, played by this actor; `None` for a person.
     bots: PerPlayer<Option<BotRow>>,
-    /// R641000: a game of a Conquest series (`MatchActorInput::series_game`).
-    series_game: bool,
     /// R388, R767000: the catalog the match is played under.
     pinned: Pinned,
     core: Mutex<Core>,
@@ -408,14 +354,7 @@ impl std::fmt::Debug for MatchActor {
 /// R677: the seat the account that began in `home` plays now — and, read the other way, the account
 /// (by its home) that plays engine seat `seat`; a swap is its own inverse.
 fn playing(core: &Core, home: PlayerId) -> PlayerId {
-    if core.swapped { home.opponent() } else { home }
-}
-
-fn mulligan_key(owed: &[PlayerId]) -> String {
-    owed.iter()
-        .map(|player| player.as_str())
-        .collect::<Vec<_>>()
-        .join(",")
+    core.host.playing(home)
 }
 
 /// R645: the persona of the bot that began in `home`, playing engine seat `seat`: its own rng stream
@@ -442,9 +381,40 @@ fn persona_for(
     )
 }
 
+/// What the machine is told of the ladder bot at `home` (R639000): its fits, and its plan for the end of
+/// a ranked match, drawn on the match's seed so every call agrees.
+fn bot_seat_for(seed: &str, home: PlayerId, bot: Option<&BotRow>) -> Option<BotSeat> {
+    bot.map(|_| BotSeat {
+        idle_chance_per_turn: BOT_TIMEOUT_FIT.chance_per_turn,
+        aim_lead_ms: (BOT_AIM_LEAD_MIN_MS, BOT_AIM_LEAD_MAX_MS),
+        rematch: rematch_plan(seed, home, &BOT_REMATCH_FIT),
+    })
+}
+
 /// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
 fn panicked_answer(nonce: &str) -> ServerMessage {
     error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
+}
+
+/// The frame the machine's answer to an action is sent as (§9.3).
+fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
+    match answer {
+        ActionAnswer::Ack { seq } => ack_message(nonce, seq),
+        ActionAnswer::Illegal { reason } => {
+            error_message(SocketErrorCode::IllegalAction, &reason, Some(nonce))
+        }
+        ActionAnswer::MatchOver => error_message(
+            SocketErrorCode::MatchOver,
+            "this match already has a result",
+            Some(nonce),
+        ),
+        ActionAnswer::Panicked => panicked_answer(nonce),
+        ActionAnswer::NotRecorded => error_message(
+            SocketErrorCode::Internal,
+            "the action could not be recorded; try again",
+            Some(nonce),
+        ),
+    }
 }
 
 fn panic_message(error: tokio::task::JoinError) -> String {
@@ -499,9 +469,9 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     );
 
     let next_seq = log.iter().fold(0, |highest, row| highest.max(row.seq)) + 1;
-    let acks: IndexMap<String, ServerMessage> = log
+    let acked: Vec<(String, i64)> = log
         .iter()
-        .map(|row| (row.action.nonce.clone(), ack_message(&row.action.nonce, row.seq)))
+        .map(|row| (row.action.nonce.clone(), row.seq))
         .collect();
 
     let portraits = match_row
@@ -548,58 +518,49 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     };
     let bot_views = PerPlayer::new(bot_view(PlayerId::P1, &bots.p1), bot_view(PlayerId::P2, &bots.p2));
 
-    let core = Core {
-        state,
+    let setup = DuelSetup {
+        match_id: match_row.id.clone(),
+        seed: match_row.seed.clone(),
+        created_at: match_row.created_at,
+        game: state,
+        ranked: match_row.ranked == Some(true),
+        series_game,
+        finished: matches!(match_row.status, MatchStatus::Finished),
         next_seq,
-        acks,
-        panicked: IndexSet::new(),
+        acked,
+        clocks: match_row.clocks.clone(),
+        bots: PerPlayer::new(
+            bot_seat_for(&match_row.seed, PlayerId::P1, bots.p1.as_ref()),
+            bot_seat_for(&match_row.seed, PlayerId::P2, bots.p2.as_ref()),
+        ),
+        bot_moved_turn,
+    };
+    // R79: the turn clock runs when the match opens, and the ceiling from its start; both armed
+    // synchronously so callers see them armed, while the queued task persists the clocks and resolves a
+    // finished match.
+    let (host, opening_outputs) = engine::run_pinned(pinned, || DuelHost::new(setup, now_ms()));
+
+    let core = Core {
+        host,
+        timers: IndexMap::new(),
         sockets: PerPlayer::new(None, None),
-        // R1452: a bot's seat is never away, so R744's grace never starts for it.
-        attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
         guards: PerPlayer::new(SeatGuard::default(), SeatGuard::default()),
         hello_pending: PerPlayer::new(None, None),
         socket_generation: PerPlayer::new(0, 0),
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
         emotes_blocked: false,
-        aims: PerPlayer::new(empty_aim_slot(), empty_aim_slot()),
-        hovers: PerPlayer::new(empty_hover_slot(), empty_hover_slot()),
-        voided: false,
-        finished: matches!(match_row.status, MatchStatus::Finished),
         jlore_capped: PerPlayer::new(false, false),
         economy: PerPlayer::new(None, None),
-        finished_at: matches!(match_row.status, MatchStatus::Finished).then(now_ms),
-        stopped: false,
-        persisted_clocks: match_row.clocks.clone(),
-        stored_grace: Some(match_row.clocks.grace_deadline.clone()),
-        swapped: opening.seats_swapped,
-        last_pending_for: opening.pending_for,
-        last_mulligan_owed: mulligan_key(&mulligan_window(&opening)),
         telemetry,
         tiers: None,
-        bot_thinking: PerPlayer::new(false, false),
-        bot_cursors: PerPlayer::new((0, 0), (0, 0)),
-        bot_moved_turn,
         personas,
         bot_views,
         bot_long_turn: PerPlayer::new(None, None),
-        bot_rematch: PerPlayer::new(None, None),
-        bot_rematch_answered: PerPlayer::new(false, false),
-        bot_rematch_replying: PerPlayer::new(false, false),
         spectate: Spectate::new(),
         card_picks_sent: PerPlayer::new(BTreeSet::new(), BTreeSet::new()),
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
-    let expiries = inbox.downgrade();
-    let on_expire: ExpiryHandler = Arc::new(move |expiry: ClockExpiry| {
-        if let Some(inbox) = expiries.upgrade() {
-            let _ = inbox.send(Task::Expire(expiry));
-        }
-    });
-    let clock = create_match_clock(CreateMatchClockInput {
-        started_at: match_row.created_at,
-        on_expire,
-    });
 
     let shared = Arc::new(Shared {
         deps,
@@ -609,19 +570,17 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         loadouts,
         dealt_cards,
         emote_hands,
-        clock,
         inbox,
         on_voided,
         bots,
-        series_game,
         pinned,
         core: Mutex::new(core),
     });
     let actor = MatchActor { shared };
-
-    // R79: turn clock runs when the match opens; arm clock synchronously so callers
-    // see it armed, while queued task persists clocks and resolves finished matches.
-    actor.shared.clock.sync(&clock_view_for(&opening));
+    {
+        let mut core = actor.lock();
+        actor.exec_now(&mut core, opening_outputs);
+    }
     // Social (#939): B50's record starts with the state the actor opens on.
     actor.spectate_record();
     actor.enqueue(Task::Arm);
@@ -647,55 +606,7 @@ impl MatchActor {
 
     async fn run(&self, task: Task) {
         match task {
-            Task::Arm => {
-                let snapshot = engine::snapshot(&self.lock().state);
-                self.shared.clock.sync(&clock_view_for(&snapshot));
-                // R744, R1452: a bot's seat is here from the start, as an opponent whose socket has
-                // attached, so a person who has not opened the match yet is away from now.
-                if snapshot.result.is_none() && PLAYERS.iter().any(|home| self.shared.bots[*home].is_some()) {
-                    let mut core = self.lock();
-                    self.start_absent_grace(&mut core);
-                }
-                self.persist_clocks().await;
-                // R1351000: a block either way between the two accounts mutes their emotes; one made after
-                // this read reaches the actor through `mute_emotes_between`, and `|=` never undoes it.
-                let (first, second) = &self.shared.match_row.players;
-                match one_tx!(self.shared.deps.db, |t| t.blocks_between(first, second).await?) {
-                    Ok(blocked) => self.lock().emotes_blocked |= blocked,
-                    Err(error) => {
-                        tracing::warn!(event = "match.emote.blocks_failed", matchId = %self.match_id_str(), message = %error);
-                    }
-                }
-                // R1442: the rank bucket is the tier each player holds as the match arms.
-                if !self.lock().finished {
-                    let tiers = telemetry::ladder_tiers_or_none(
-                        &self.shared.deps,
-                        &self.shared.match_row.id,
-                        &self.shared.match_row.players,
-                    )
-                    .await;
-                    self.lock().tiers = tiers;
-                }
-                if snapshot.result.is_some() {
-                    // R1483000: an actor rebuilt on a match whose result is already in learns what
-                    // the cap held back from the ledger; one that is about to write it does so below.
-                    if self.lock().finished {
-                        self.load_jlore_caps(false).await;
-                    }
-                    self.on_terminal(&snapshot).await;
-                } else {
-                    // R1452: a bot that owes the match a move, as it opens or after a restart, makes it.
-                    {
-                        let mut core = self.lock();
-                        for home in PLAYERS {
-                            if let Some(view) = core.bot_views[home].clone() {
-                                self.rearm_long_turn(&mut core, home, &view);
-                            }
-                        }
-                    }
-                    self.drive_bots();
-                }
-            }
+            Task::Arm => self.on_arm().await,
             Task::Hello { home, generation } => {
                 // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: the flag is
                 // cleared only for the generation that set it, so a newer socket's queued Hello is
@@ -706,23 +617,13 @@ impl MatchActor {
                         core.hello_pending[home] = None;
                     }
                 }
-                let mut core = self.lock();
-                let player = playing(&core, home);
-                // R1834003: the seats' loadouts ride before the view, and the cards' picks after it
-                // anew: the page may have lost what it was sent.
-                core.card_picks_sent[home].clear();
-                self.send_to_home(&core, home, &loadouts_message(&self.shared.loadouts));
-                self.push_view(&mut core, player);
-                self.push_clock(&core, player);
-                // R642: portraits ride again on a reconnect, as on join, with the account's hand (R1342).
-                self.send_to_home(&core, home, &self.portraits_for(home));
+                self.drive(DuelEvent::Hello { home }).await;
             }
             Task::Action { home, nonce, body } => {
                 // R677: the seat is the one this account plays when the action runs — a swap queued
                 // ahead of it has already moved the account — and the reply goes to the account that
                 // sent it.
-                let player = playing(&self.lock(), home);
-                let reply = self.apply_action(player, nonce, body).await;
+                let reply = self.answer_action(ActionBy::Home { home }, nonce, body).await;
                 let core = self.lock();
                 self.send_to_home(&core, home, &reply);
             }
@@ -732,58 +633,31 @@ impl MatchActor {
                 body,
                 reply,
             } => {
-                let answer = self.apply_action(player, nonce, body).await;
+                let answer = self
+                    .answer_action(ActionBy::Seat { seat: player }, nonce, body)
+                    .await;
                 let _ = reply.send(answer);
             }
             Task::Emote { home, emote } => {
-                // MD-D29, R1127: mints `Emote` action only if a card hears it; otherwise the relay
-                // suffices (R643). The sender showed it already, so the reply is dropped.
-                let player = playing(&self.lock(), home);
-                let wanted = ActionBody::Emote { emote };
-                let nonce = {
-                    let core = self.lock();
-                    if engine::legal_actions(self.shared.pinned, &core.state, player).contains(&wanted) {
-                        Some(format!("{SERVER_NONCE_PREFIX}emote-{}", core.next_seq))
-                    } else {
-                        None
-                    }
-                };
-                if let Some(nonce) = nonce {
-                    let _ = self.apply_action(player, nonce, wanted).await;
-                }
+                // MD-D29, R1127: the machine mints an `Emote` action only if a card hears it; otherwise
+                // the relay suffices (R643). The sender showed it already, so the reply is dropped.
+                self.drive(DuelEvent::Emote { home, emote }).await;
             }
-            Task::Expire(expiry) => self.on_expire(expiry).await,
+            Task::Timer { key, id } => {
+                {
+                    // The timer that reported is spent; a newer one under the same key is not.
+                    let mut core = self.lock();
+                    if core.timers.get(&key).is_some_and(|(held, _)| *held == id) {
+                        core.timers.shift_remove(&key);
+                    }
+                }
+                self.drive(DuelEvent::TimerFired { key, id }).await;
+            }
             Task::Disconnect { home } => {
-                // §9.5: grace starts, and "the clock keeps running while a player is disconnected" — on
-                // the seat this account plays (R677).
-                let player = playing(&self.lock(), home);
-                self.shared.clock.start_grace(player, None);
-                self.persist_clocks().await;
-                let core = self.lock();
-                self.push_clock(&core, player.opponent());
+                self.drive(DuelEvent::Disconnected { home }).await;
             }
             Task::Attach { home } => {
-                let player = {
-                    let mut core = self.lock();
-                    let player = playing(&core, home);
-                    self.shared.clock.clear_grace(player);
-                    // R744: an account that has not been here yet is away from now.
-                    self.start_absent_grace(&mut core);
-                    player
-                };
-                self.persist_clocks().await;
-                // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it, and
-                // R1342 the account's own emote hand with them. R1834003: the seats' loadouts before
-                // the view, the cards' picks after it.
-                let mut core = self.lock();
-                core.card_picks_sent[home].clear();
-                self.send_to_home(&core, home, &loadouts_message(&self.shared.loadouts));
-                self.push_view(&mut core, player);
-                self.push_clock(&core, player);
-                self.send_to_home(&core, home, &self.portraits_for(home));
-                self.push_clock(&core, player.opponent());
-                // Social (#939): B51's count, which a socket that was away missed.
-                self.push_watchers_to(&core, home);
+                self.drive(DuelEvent::Attached { home }).await;
             }
             Task::Idle(done) => {
                 let _ = done.send(());
@@ -792,13 +666,317 @@ impl MatchActor {
                 self.write_checkpoint().await;
                 let _ = done.send(());
             }
-            Task::BotMove {
+            Task::Decided {
                 home,
                 version,
                 turn,
                 played,
-            } => self.on_bot_move(home, version, turn, played).await,
+            } => {
+                let played = Played {
+                    aimed: played.aim.is_some(),
+                    body: played.body,
+                    ai_cursor: played.ai_cursor,
+                    timing_cursor: played.timing_cursor,
+                };
+                self.drive(DuelEvent::Decided {
+                    home,
+                    version,
+                    turn,
+                    played,
+                })
+                .await;
+            }
         }
+    }
+
+    /// Arms the machine (R79): the opening's reads the actor makes first, then the machine brings the
+    /// clocks up to date and drives the opening or ends a game that is over.
+    async fn on_arm(&self) {
+        let (snapshot, was_finished) = {
+            let core = self.lock();
+            (engine::snapshot(core.host.game()), core.host.is_finished())
+        };
+        // R1351000: a block either way between the two accounts mutes their emotes; one made after
+        // this read reaches the actor through `mute_emotes_between`, and `|=` never undoes it.
+        let (first, second) = &self.shared.match_row.players;
+        match one_tx!(self.shared.deps.db, |t| t.blocks_between(first, second).await?) {
+            Ok(blocked) => self.lock().emotes_blocked |= blocked,
+            Err(error) => {
+                tracing::warn!(event = "match.emote.blocks_failed", matchId = %self.match_id_str(), message = %error);
+            }
+        }
+        // R1442: the rank bucket is the tier each player holds as the match arms.
+        if !was_finished {
+            let tiers = telemetry::ladder_tiers_or_none(
+                &self.shared.deps,
+                &self.shared.match_row.id,
+                &self.shared.match_row.players,
+            )
+            .await;
+            self.lock().tiers = tiers;
+        }
+        if snapshot.result.is_none() {
+            // R1452: a bot that owes the match a move, as it opens or after a restart, makes it.
+            let mut core = self.lock();
+            for home in PLAYERS {
+                if let Some(view) = core.bot_views[home].clone() {
+                    self.rearm_long_turn(&mut core, home, &view);
+                }
+            }
+        }
+        self.drive(DuelEvent::Arm).await;
+        // R1483000: an actor rebuilt on a match whose result is already in learns what the cap held back
+        // from the ledger; one that is about to write it does so as the result lands.
+        if snapshot.result.is_some() && was_finished {
+            self.load_jlore_caps(false).await;
+        }
+    }
+
+    // The machine: events in, outputs carried out
+
+    /// Steps the machine under the match's pinned catalog (R388, R767000).
+    fn step_in(&self, core: &mut Core, event: DuelEvent) -> Vec<DuelOutput> {
+        let now = now_ms();
+        engine::run_pinned(self.shared.pinned, || core.host.step(event, now))
+    }
+
+    /// Feeds the machine one event and carries out what it answers with, the awaits included, in order.
+    /// The answers it gave to actions, by nonce.
+    async fn drive(&self, event: DuelEvent) -> Vec<(String, ActionAnswer)> {
+        let outputs = {
+            let mut core = self.lock();
+            self.step_in(&mut core, event)
+        };
+        let mut answers = Vec::new();
+        self.exec(outputs, &mut answers).await;
+        answers
+    }
+
+    /// One action for a seat, through the machine (§9.3): the frame its sender is answered with.
+    async fn answer_action(&self, by: ActionBy, nonce: String, body: ActionBody) -> ServerMessage {
+        let answers = self
+            .drive(DuelEvent::Action {
+                by,
+                nonce: nonce.clone(),
+                body,
+            })
+            .await;
+        match answers.into_iter().find(|(answered, _)| *answered == nonce) {
+            Some((nonce, answer)) => answer_message(&nonce, answer),
+            None => answer_message(&nonce, ActionAnswer::NotRecorded),
+        }
+    }
+
+    /// Carries out `outputs` in order: what needs no await under the lock as it comes, the rest apart.
+    async fn exec(&self, outputs: Vec<DuelOutput>, answers: &mut Vec<(String, ActionAnswer)>) {
+        for output in outputs {
+            let deferred = {
+                let mut core = self.lock();
+                self.run_sync(&mut core, output, answers)
+            };
+            if let Some(output) = deferred {
+                Box::pin(self.run_async(output, answers)).await;
+            }
+        }
+    }
+
+    /// Carries out `outputs` that need no await (those of a frame, a relay's timer, a socket's arrival),
+    /// under the lock the caller holds.
+    fn exec_now(&self, core: &mut Core, outputs: Vec<DuelOutput>) {
+        let mut ignored = Vec::new();
+        for output in outputs {
+            if let Some(output) = self.run_sync(core, output, &mut ignored) {
+                tracing::error!(event = "match.output.deferred", matchId = %self.match_id_str(), output = ?output);
+            }
+        }
+    }
+
+    /// One output that needs no await; `Some(output)` back when it does.
+    fn run_sync(
+        &self,
+        core: &mut Core,
+        output: DuelOutput,
+        answers: &mut Vec<(String, ActionAnswer)>,
+    ) -> Option<DuelOutput> {
+        match output {
+            DuelOutput::Send { home, message } => self.send_seat(core, home, message),
+            DuelOutput::Timer { command } => self.apply_timer(core, command),
+            DuelOutput::Answer { nonce, answer } => answers.push((nonce, answer)),
+            DuelOutput::Greeting { home, part } => match part {
+                // R1834003: the seats' loadouts ride before the view, and the cards' picks after it
+                // anew: the page may have lost what it was sent.
+                GreetingPart::Before => {
+                    core.card_picks_sent[home].clear();
+                    self.send_to_home(core, home, &loadouts_message(&self.shared.loadouts));
+                }
+                // R642: portraits ride again on a reconnect, as on join, with the account's hand (R1342).
+                GreetingPart::After => self.send_to_home(core, home, &self.portraits_for(home)),
+                // Social (#939): B51's count, which a socket that was away missed.
+                GreetingPart::Watchers => self.push_watchers_to(core, home),
+            },
+            DuelOutput::Refused { home } => {
+                // R835000: reducer refusals count toward the unusual-rejection alert; dedupes and store
+                // failures never count.
+                if let Some((profile_id, rejected)) = self.note_rejection(core, home, now_ms()) {
+                    alert_unusual_rejections(self.match_id_str(), &profile_id, rejected);
+                }
+            }
+            DuelOutput::Panicked { action, seq, message } => {
+                self.on_reduce_panicked(&action, seq, &message);
+            }
+            DuelOutput::Applied {
+                before,
+                action,
+                seq,
+                at,
+                clock_left_ms,
+                last_event,
+            } => {
+                // R1442: the move as it arrived, on the state it was made in.
+                if let Some(before) = before {
+                    core.telemetry
+                        .on_action(&before, &action, seq, at, clock_left_ms, last_event);
+                }
+            }
+            DuelOutput::SeatsSwapped { swapped } => {
+                // R645: a bot's persona reads the seat its bot plays now, from a fresh start: the view it
+                // read last is the other seat's, and no difference between the two is anything that
+                // happened.
+                for home in PLAYERS {
+                    let seat = playing(core, home);
+                    if let Some(persona) = core.personas[home].as_mut() {
+                        persona.set_seat(seat);
+                        core.bot_views[home] = None;
+                    }
+                }
+                tracing::info!(event = "match.seats.swapped", matchId = %self.match_id_str(), swapped = swapped);
+            }
+            DuelOutput::Changed { fresh } => self.feed_personas(core, fresh),
+            DuelOutput::Pushed { snapshot } => {
+                // R1442: a seat's think time runs from this push.
+                core.telemetry.on_pushed(&snapshot, now_ms());
+                // Social (#939): B50, the watchers' record of the change, sent SPECTATE_DELAY_MS on.
+                self.spectate_record_in(core);
+            }
+            DuelOutput::Decide { request } => self.spawn_bot(core, request),
+            DuelOutput::OfferRematch { home, stakes, reply } => {
+                self.spawn_rematch_offer(home, stakes, reply);
+            }
+            DuelOutput::Note { note } => self.log_note(note),
+            other => return Some(other),
+        }
+        None
+    }
+
+    /// One output that awaits: a write to the store, or the end of the match.
+    async fn run_async(&self, output: DuelOutput, answers: &mut Vec<(String, ActionAnswer)>) {
+        match output {
+            DuelOutput::PersistClocks { clocks } => self.persist_clocks(clocks).await,
+            DuelOutput::Append { seq, action, at } => {
+                // §9.3: row before state, so a failed write never leaves the state ahead of the log.
+                let row = MatchActionRow {
+                    match_id: self.shared.match_row.id.clone(),
+                    seq,
+                    action,
+                    at,
+                };
+                let appended = one_tx!(self.shared.deps.db, |t| t
+                    .matches_append_actions(std::slice::from_ref(&row))
+                    .await?);
+                let outcome = match appended {
+                    Ok(()) => jackioh_shared::host::LogOutcome::Written,
+                    Err(error) => {
+                        tracing::error!(event = "match.append.failed", matchId = %self.match_id_str(), seq = seq, message = %error);
+                        if matches!(error, StoreError::SeqClash(_)) {
+                            jackioh_shared::host::LogOutcome::Diverged
+                        } else {
+                            jackioh_shared::host::LogOutcome::Failed
+                        }
+                    }
+                };
+                let outputs = {
+                    let mut core = self.lock();
+                    self.step_in(&mut core, DuelEvent::Logged { outcome })
+                };
+                self.exec(outputs, answers).await;
+            }
+            DuelOutput::Record { request } => self.on_record(request, answers).await,
+            DuelOutput::Voided { at } => self.on_void(at).await,
+            DuelOutput::CeilingDraw { at } => self.end_as_ceiling_draw(at).await,
+            DuelOutput::LetGo { reason } => match reason {
+                LetGo::Diverged => self.let_go_diverged(),
+            },
+            other => {
+                tracing::error!(event = "match.output.unhandled", matchId = %self.match_id_str(), output = ?other);
+            }
+        }
+    }
+
+    fn log_note(&self, note: HostNote) {
+        match note {
+            HostNote::ClockExpired { kind, player } => {
+                tracing::info!(event = "match.clock.expired", matchId = %self.match_id_str(), kind = %kind, player = %player);
+            }
+            HostNote::ClockRetrying { kind, player, in_ms } => {
+                tracing::warn!(event = "match.clock.retrying", matchId = %self.match_id_str(), kind = %kind, player = %player, inMs = in_ms);
+            }
+            HostNote::ActionRejected {
+                player,
+                action_type,
+                reason,
+            } => {
+                // §9.8: "Every rejected action is logged with its reason."
+                tracing::warn!(
+                    event = "match.action.rejected",
+                    matchId = %self.match_id_str(),
+                    player = %player,
+                    "type" = %action_type,
+                    reason = %reason,
+                );
+            }
+            HostNote::BotMoveRefused { player, answer } => {
+                if let ServerMessage::Error { code, message, .. } = answer_message("", answer) {
+                    tracing::warn!(event = "bot.move.refused", matchId = %self.match_id_str(), player = %player, code = ?code, message = %message);
+                }
+            }
+        }
+    }
+
+    /// Carries out a timer the machine asked for: a tokio wait that comes back as the machine's own
+    /// `TimerFired` (the clocks' on the queue, the relays' at once).
+    fn apply_timer(&self, core: &mut Core, command: TimerCommand) {
+        match command {
+            TimerCommand::Set { key, id, at } => {
+                let actor = Arc::downgrade(&self.shared);
+                let timer = after(at - now_ms(), move |_| {
+                    let Some(shared) = actor.upgrade() else { return };
+                    let actor = MatchActor { shared };
+                    if queued_timer(key) {
+                        actor.enqueue(Task::Timer { key, id });
+                    } else {
+                        actor.on_relay_timer(key, id);
+                    }
+                });
+                core.timers.insert(key, (id, timer));
+            }
+            TimerCommand::Cancel { key, id } => {
+                if core.timers.get(&key).is_some_and(|(held, _)| *held == id) {
+                    core.timers.shift_remove(&key);
+                }
+            }
+        }
+    }
+
+    /// A relay's or a bot's timer came due: answered at once, off the queue, as the relays always were.
+    fn on_relay_timer(&self, key: TimerKey, id: u32) {
+        let mut core = self.lock();
+        if core.timers.get(&key).is_some_and(|(held, _)| *held == id)
+            && let Some((_, timer)) = core.timers.shift_remove(&key)
+        {
+            timer.fired();
+        }
+        let outputs = self.step_in(&mut core, DuelEvent::TimerFired { key, id });
+        self.exec_now(&mut core, outputs);
     }
 
     // Sending. §10.8: a socket only ever carries this player's own view.
@@ -826,158 +1004,65 @@ impl MatchActor {
         socket.send(encode(message));
     }
 
+    /// §10.8: the seat's view, its clock filled in (R79), read under the match's catalog (R388, R767000).
     fn view_of(&self, core: &Core, player: PlayerId) -> PlayerView {
-        // R79: the engine never reads a clock, so the view's `clockMs` is filled in here from the one
-        // component that knows. Nothing else about the view is touched.
-        let view = engine::view_for(self.shared.pinned, &core.state, player);
-        PlayerView {
-            clock_ms: self
-                .shared
-                .clock
-                .remaining_for(player)
-                .map(|ms| i32::try_from(ms).unwrap_or(i32::MAX)),
-            ..view
-        }
+        engine::run_pinned(self.shared.pinned, || core.host.view_for(player, now_ms()))
     }
 
-    /// §10.8 view and legal actions, both for `player`: the opponent's would name its hand (§9.1).
-    /// One lock reads both, so actions match the view. R1834003: then new card picks (`cards_due`).
-    fn push_view(&self, core: &mut Core, player: PlayerId) {
-        let home = playing(core, player);
-        let view = self.view_of(core, player);
-        let shown = shown_defs(&view, &self.shared.dealt_cards);
-        let message = view_message(
-            view,
-            &engine::legal_actions(self.shared.pinned, &core.state, player),
-            core.jlore_capped[home],
-            core.economy[home].clone(),
-        );
-        self.send(core, player, &message);
-        if !core.sockets[home].as_ref().is_some_and(Socket::is_open) {
-            return;
-        }
-        for cards in cards_due(&shown, &self.shared.loadouts, &mut core.card_picks_sent[home]) {
-            self.send_to_home(core, home, &card_loadouts_message(cards));
-        }
-    }
-
-    fn push_clock(&self, core: &Core, player: PlayerId) {
-        self.send(
-            core,
-            player,
-            &clock_message(now_ms(), self.shared.clock.snapshot()),
-        );
-    }
-
-    // The clock (R79, §9.5)
-
-    /// R79: clock expiries (turn, prompt, grace, ceiling) and R268 mulligans become logged server
-    /// actions, since `(seed, log)` must reconstruct the match (§9.3).
-    fn server_actions_for(&self, core: &Core, expiry: ClockExpiry) -> Vec<(PlayerId, ActionBody)> {
-        let snapshot = engine::snapshot(&core.state);
-        match expiry {
-            ClockExpiry::Turn { player } | ClockExpiry::Prompt { player } => {
-                vec![(player, ActionBody::Timeout)]
-            }
-            // R268: seats still owing as this runs (one may have answered since the alarm), in seat
-            // order; R146: stamped with own seat.
-            ClockExpiry::Mulligan => mulligan_window(&snapshot)
-                .into_iter()
-                .map(|player| (player, ActionBody::Timeout))
-                .collect(),
-            // SPEC §11 R146: disconnect timeout stamped with the disconnected player (§10.2).
-            ClockExpiry::Grace { player } => vec![(player, ActionBody::DisconnectExpired { player })],
-            // SPEC §11 R146: the ceiling is no seat's, stamped with the active one by convention;
-            // R79 draw, R112 reaper draw.
-            ClockExpiry::Ceiling => vec![(snapshot.active, ActionBody::CeilingReached)],
-            // R1563006: the question still open for that player is answered Stop (R1184001's answer),
-            // read when the expiry runs, since the player may have stopped or missed in between.
-            ClockExpiry::Sequence { player } => match &snapshot.sequence {
-                Some(question) if question.player == player => {
-                    jackioh_engine::prompts::stop_answer(&core.state)
-                        .map(|stop| vec![(player, stop)])
-                        .unwrap_or_default()
-                }
-                _ => Vec::new(),
-            },
-        }
-    }
-
-    async fn on_expire(&self, expiry: ClockExpiry) {
-        let actions = {
-            let core = self.lock();
-            if core.stopped || core.finished {
-                return;
-            }
-            self.server_actions_for(&core, expiry)
-        };
-        for (player, body) in actions {
-            // `stop()` sets `stopped` from outside the queue, so it can land between two of R268's
-            // timeouts; nothing is dispatched into an actor that is going away or a match that is over.
-            let next_seq = {
-                let core = self.lock();
-                if core.stopped || core.finished {
+    /// A message of the machine's, framed for the account's socket. §10.8: the view and its legal
+    /// actions are both for the seat — the opponent's would name its hand (§9.1). R1834003: then new card
+    /// picks (`cards_due`).
+    fn send_seat(&self, core: &mut Core, home: PlayerId, message: SeatMessage) {
+        match message {
+            SeatMessage::View { view, legal } => {
+                let view = *view;
+                let shown = shown_defs(&view, &self.shared.dealt_cards);
+                let frame = view_message(view, &legal, core.jlore_capped[home], core.economy[home].clone());
+                self.send_to_home(core, home, &frame);
+                if !core.sockets[home].as_ref().is_some_and(Socket::is_open) {
                     return;
                 }
-                core.next_seq
-            };
-            tracing::info!(event = "match.clock.expired", matchId = %self.match_id_str(), kind = expiry.kind(), player = %player);
-            // The nonce is derived from the seq this action will occupy: unique, and stable across a
-            // rebuild, so a rebuilt actor cannot collide with a nonce already in the log. Its prefix is
-            // one no client may send (R270), so no client can pre-empt it.
-            let nonce = format!("{SERVER_NONCE_PREFIX}{}-{next_seq}", expiry.kind());
-            let reply = self.apply_action(player, nonce.clone(), body).await;
-            // R1253000: `reduce` is pure, so a retry would panic again: the match ends now, as the
-            // reaper would end it at the ceiling, and nothing is retried.
-            if self.lock().panicked.contains(&nonce) {
-                self.end_as_ceiling_draw().await;
-                return;
+                for cards in cards_due(&shown, &self.shared.loadouts, &mut core.card_picks_sent[home]) {
+                    self.send_to_home(core, home, &card_loadouts_message(cards));
+                }
             }
-            // R776000: a row the store did not take. The clock that ran out runs out again, and the
-            // action is derived again then, under the same nonce while no other row has taken its seq.
-            // The `return` ends R268's loop: the retried mulligan expiry derives the seats still owing.
-            if matches!(
-                reply,
-                ServerMessage::Error {
-                    code: SocketErrorCode::Internal,
-                    ..
-                }
-            ) {
-                if !self.lock().stopped {
-                    tracing::warn!(event = "match.clock.retrying", matchId = %self.match_id_str(), kind = expiry.kind(), player = %player, inMs = MATCH_SERVER_ACTION_RETRY_MS);
-                    self.shared.clock.retry(expiry, MATCH_SERVER_ACTION_RETRY_MS);
-                }
-                return;
+            SeatMessage::Clock { now, clocks } => {
+                self.send_to_home(core, home, &clock_message(now, clocks));
+            }
+            SeatMessage::PromptForYou {
+                player,
+                choice_id,
+                kind,
+                deadline,
+            } => {
+                self.send_to_home(core, home, &prompt_for_you(player, &choice_id, kind, deadline));
+            }
+            SeatMessage::PromptForOpponent {
+                pending_for,
+                deadline,
+            } => {
+                self.send_to_home(core, home, &prompt_for_opponent(pending_for, deadline));
+            }
+            SeatMessage::Aim { from, aim } => {
+                self.send_to_home(core, home, &aim_relay_message(from, aim));
+            }
+            SeatMessage::ChoiceHover { from, index } => {
+                self.send_to_home(core, home, &choice_hover_relay_message(from, index));
             }
         }
     }
 
-    /// The clocks as stored: the clock's own, plus any stored grace not yet handed to it (R744).
-    fn clocks_to_store(&self, core: &Core) -> MatchClocks {
-        let clocks = self.shared.clock.snapshot();
-        let Some(stored) = &core.stored_grace else {
-            return clocks;
-        };
-        let grace = PerPlayer::new(
-            clocks.grace_deadline.p1.or(stored.p1),
-            clocks.grace_deadline.p2.or(stored.p2),
-        );
-        MatchClocks {
-            grace_deadline: grace,
-            ..clocks
-        }
+    /// The seat's view and legal actions, sent anew to the account that plays it.
+    fn push_view(&self, core: &mut Core, player: PlayerId) {
+        let home = playing(core, player);
+        let view = Box::new(self.view_of(core, player));
+        let legal = engine::run_pinned(self.shared.pinned, || core.host.legal(player));
+        self.send_seat(core, home, SeatMessage::View { view, legal });
     }
 
-    async fn persist_clocks(&self) {
-        let clocks = {
-            let mut core = self.lock();
-            let clocks = self.clocks_to_store(&core);
-            if clocks == core.persisted_clocks {
-                return;
-            }
-            core.persisted_clocks = clocks.clone();
-            clocks
-        };
+    // The clock's stored copy (§9.5)
+
+    async fn persist_clocks(&self, clocks: MatchClocks) {
         // §9.5: "the grace countdown is stored on the match so both clients show it".
         let written = one_tx!(self.shared.deps.db, |t| t
             .matches_set_clocks(self.match_id_str(), &clocks)
@@ -987,119 +1072,35 @@ impl MatchActor {
         }
     }
 
-    // Applying an action
+    // The end of the match
 
-    /// Pushes everything the clients need after a state change, in one order for both seats. `fresh`
-    /// is how many events the change produced, which the bots' personas read (R645).
-    async fn after_change(&self, fresh: usize) {
-        let snapshot = {
+    /// R679: match voided with no result, ratings, or records. Closes sockets with
+    /// `MATCH_VOIDED_CLOSE_CODE`, drops the actor, and `void_match` deletes it from the store.
+    async fn on_void(&self, at: i64) {
+        let sockets = {
             let mut core = self.lock();
-            let snapshot = engine::snapshot(&core.state);
-            if snapshot.seats_swapped != core.swapped {
-                self.on_seats_swapped(&mut core, snapshot.seats_swapped);
-            }
-            self.shared.clock.sync(&clock_view_for(&snapshot));
-            self.feed_personas(&mut core, fresh);
-            snapshot
+            PLAYERS.map(|home| core.sockets[home].take())
         };
-        self.persist_clocks().await;
-
-        {
-            let mut core = self.lock();
-            // R2739001: a hover on a prompt the change answered or replaced is cleared before the view
-            // that shows it gone.
-            self.end_stale_hovers(&mut core);
-            for player in PLAYERS {
-                self.push_view(&mut core, player);
-            }
-            self.push_prompts(&mut core, &snapshot);
-            for player in PLAYERS {
-                self.push_clock(&core, player);
-            }
-            // R1442: a seat's think time runs from this push.
-            core.telemetry.on_pushed(&snapshot, now_ms());
-            // Social (#939): B50, the watchers' record of the change, sent SPECTATE_DELAY_MS on.
-            self.spectate_record_in(&mut core);
-        }
-
-        if snapshot.result.is_some() {
-            self.on_terminal(&snapshot).await;
-        } else {
-            self.drive_bots();
-        }
-    }
-
-    /// The `prompt` frames for a change in who owes an answer. Each is built off that seat's own
-    /// `view_for`, so a frame never carries more than the view it travels with (§10.8).
-    fn push_prompts(&self, core: &mut Core, snapshot: &MatchSnapshot) {
-        let deadline = self.shared.clock.snapshot().prompt_deadline;
-
-        // R265, R266: no seat holds `pending` here: an owing seat gets its prompt, one that answered
-        // learns the other still owes, and neither names the sealed answer.
-        let owed = mulligan_window(snapshot);
-        let owed_key = mulligan_key(&owed);
-        if !owed.is_empty() && owed_key != core.last_mulligan_owed {
-            for player in PLAYERS {
-                if !owed.contains(&player) {
-                    self.send(core, player, &prompt_for_opponent(player.opponent(), deadline));
-                    continue;
-                }
-                let view = engine::view_for(self.shared.pinned, &core.state, player);
-                if let Some(PendingView::ForYou(pending)) = &view.pending {
-                    self.send(
-                        core,
-                        player,
-                        &prompt_for_you(player, &pending.choice_id, pending.kind, deadline),
-                    );
-                }
+        for socket in sockets.into_iter().flatten() {
+            if socket.is_open() {
+                socket.close(Some(MATCH_VOIDED_CLOSE_CODE), Some(MATCH_VOIDED_CLOSE_REASON));
             }
         }
-        core.last_mulligan_owed = owed_key;
-
-        // §10.6: one prompt at a time; the player who does not hold it learns only that it is open.
-        let pending_for = snapshot.pending_for;
-        if let Some(holder) = pending_for
-            && Some(holder) != core.last_pending_for
-        {
-            let view = engine::view_for(self.shared.pinned, &core.state, holder);
-            if let Some(PendingView::ForYou(pending)) = &view.pending {
-                self.send(
-                    core,
-                    holder,
-                    &prompt_for_you(holder, &pending.choice_id, pending.kind, deadline),
-                );
-            }
-            self.send(core, holder.opponent(), &prompt_for_opponent(holder, deadline));
+        // Social (#939): the watchers go with the match.
+        self.spectate_close(MATCH_VOIDED_CLOSE_CODE, MATCH_VOIDED_CLOSE_REASON);
+        if let Some(on_voided) = &self.shared.on_voided {
+            on_voided();
         }
-        core.last_pending_for = pending_for;
-    }
-
-    /// R677: a Glitch swapped the seats. From here every socket reads the view of, and acts for, the
-    /// other seat. A disconnect grace belongs to the account, so one running moves with it to the seat
-    /// it plays now (restarted there: the clock keeps one deadline per seat, not per account).
-    fn on_seats_swapped(&self, core: &mut Core, now: bool) {
-        // R1452: a bot has no socket and is never away.
-        let away: Vec<PlayerId> = PLAYERS
-            .into_iter()
-            .filter(|home| core.sockets[*home].is_none() && self.shared.bots[*home].is_none())
-            .collect();
-        for home in &away {
-            self.shared.clock.clear_grace(playing(core, *home));
+        let input = VoidMatchInput {
+            match_id: self.shared.match_row.id.clone(),
+            players: self.shared.match_row.players.clone(),
+            at,
+        };
+        if let Err(error) = crate::api::results::void_match(&self.shared.deps, input).await {
+            // The row stays live, so the next socket for it rebuilds this actor, folds to the same void
+            // and tries again.
+            tracing::error!(event = "match.void.failed", matchId = %self.match_id_str(), message = %error);
         }
-        core.swapped = now;
-        for home in &away {
-            self.shared.clock.start_grace(playing(core, *home), None);
-        }
-        // R645: a bot's persona reads the seat its bot plays now, from a fresh start: the view it read
-        // last is the other seat's, and no difference between the two is anything that happened.
-        for home in PLAYERS {
-            let seat = playing(core, home);
-            if let Some(persona) = core.personas[home].as_mut() {
-                persona.set_seat(seat);
-                core.bot_views[home] = None;
-            }
-        }
-        tracing::info!(event = "match.seats.swapped", matchId = %self.match_id_str(), swapped = core.swapped);
     }
 
     /// R677: the seats as the results writer credits them — engine seat p1 with the account that plays
@@ -1126,79 +1127,24 @@ impl MatchActor {
         )
     }
 
-    /// R679: match voided with no result, ratings, or records. Closes sockets with
-    /// `MATCH_VOIDED_CLOSE_CODE`, drops the actor, and `void_match` deletes it from the store.
-    async fn on_void(&self) {
-        let sockets = {
-            let mut core = self.lock();
-            core.voided = true;
-            core.stopped = true;
-            PLAYERS.map(|home| core.sockets[home].take())
-        };
-        for socket in sockets.into_iter().flatten() {
-            if socket.is_open() {
-                socket.close(Some(MATCH_VOIDED_CLOSE_CODE), Some(MATCH_VOIDED_CLOSE_REASON));
-            }
-        }
-        // Social (#939): the watchers go with the match.
-        self.spectate_close(MATCH_VOIDED_CLOSE_CODE, MATCH_VOIDED_CLOSE_REASON);
-        if let Some(on_voided) = &self.shared.on_voided {
-            on_voided();
-        }
-        let input = VoidMatchInput {
-            match_id: self.shared.match_row.id.clone(),
-            players: self.shared.match_row.players.clone(),
-            at: now_ms(),
-        };
-        if let Err(error) = crate::api::results::void_match(&self.shared.deps, input).await {
-            // The row stays live, so the next socket for it rebuilds this actor, folds to the same void
-            // and tries again.
-            tracing::error!(event = "match.void.failed", matchId = %self.match_id_str(), message = %error);
-        }
-    }
-
     /// §9.5: "Every ending records a result and clears both players' in-match state." Once.
-    async fn on_terminal(&self, snapshot: &MatchSnapshot) {
-        let Some(result) = snapshot.result else { return };
-        let at = now_ms();
-        let (swapped, last_boards, final_hash) = {
-            let mut core = self.lock();
-            if core.finished {
-                return;
-            }
-            core.finished = true;
-            core.finished_at = Some(at);
-            self.shared.clock.stop();
-            // R738, R2739001: no aim or choice hover outlives the game.
-            for player in PLAYERS {
-                self.end_aim(&mut core, player);
-                self.end_hover(&mut core, player);
-            }
-            // R639000: under the lock that ends the game, so a bot never reads as gone while the
-            // result is written and then as present again.
-            if result.reason != GameOverReason::Voided {
-                self.plan_bot_rematches(&mut core, at);
-            }
-            (
-                core.swapped,
-                engine::last_boards(&core.state),
-                engine::hash_state(&core.state),
-            )
-        };
-        // R679: the one ending that records nothing. Only the engine's state reaches it.
-        if result.reason == GameOverReason::Voided {
-            self.on_void().await;
-            return;
-        }
-
+    async fn on_record(&self, request: RecordRequest, answers: &mut Vec<(String, ActionAnswer)>) {
+        let RecordRequest {
+            outcome,
+            turns,
+            at,
+            seats_swapped,
+            last_boards,
+            final_hash,
+        } = request;
         // The results row, the rating move and clearing `inMatchId` are `api/results.rs` (M7-T2); the
         // actor never writes them itself.
         let input = RecordResultInput {
             match_id: self.shared.match_row.id.clone(),
             // R677: credited by who plays each seat now, not by who began in it.
-            seats: self.credited_seats(swapped),
-            outcome: result,
-            turns: snapshot.turn,
+            seats: self.credited_seats(seats_swapped),
+            outcome,
+            turns,
             at,
             // R417, R565: each seat's board as the game ended, from its own side.
             last_boards: Some(last_boards),
@@ -1237,14 +1183,19 @@ impl MatchActor {
             core.telemetry.finish(&pilots, core.tiers.as_ref())
         };
         telemetry::record(&self.shared.deps, &played).await;
-        self.send_bot_rematch_offers(at);
+        // R639000: the bots' rematch offers, once the result has landed.
+        let outputs = {
+            let mut core = self.lock();
+            self.step_in(&mut core, DuelEvent::ResultRecorded)
+        };
+        self.exec(outputs, answers).await;
 
         tracing::info!(
             event = "match.over",
             matchId = %self.match_id_str(),
-            winner = %result.winner,
-            reason = %result.reason,
-            turns = snapshot.turn,
+            winner = %outcome.winner,
+            reason = %outcome.reason,
+            turns = turns,
         );
     }
 
@@ -1270,86 +1221,29 @@ impl MatchActor {
         }
     }
 
-    /// R639000, R672: plans bot rematch and post-game linger in ranked games. Dropped if
-    /// result fails to land (`let_go_unrecorded`).
-    fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
-        // R641000: a series game offers no rematch, so its bot stays for none. R1555000: nor do two
-        // bots offer each other one.
-        if self.shared.match_row.ranked != Some(true)
-            || self.shared.series_game
-            || PLAYERS.iter().all(|home| self.shared.bots[*home].is_some())
-        {
-            return;
-        }
-        for home in PLAYERS {
-            if self.shared.bots[home].is_some() {
-                let plan = rematch_plan(&self.shared.match_row.seed, home, &BOT_REMATCH_FIT);
-                core.bot_rematch[home] = Some((plan, at + plan.linger_ms));
-            }
-        }
-    }
-
-    /// R639000, R672: once the result landed, each bot home whose plan offers makes a normal rematch
-    /// offer `offer_after_ms` after the game's end (`at`).
-    fn send_bot_rematch_offers(&self, at: i64) {
-        for home in PLAYERS {
-            let planned = self.lock().bot_rematch[home];
-            if let Some((plan, _)) = planned
-                && plan.offers
-            {
-                self.bot_offers_rematch_after(home, at + plan.offer_after_ms - now_ms(), STAKE_NORMAL);
-            }
-        }
-    }
-
-    /// R639000: the bot home offers a rematch at `stakes` once `ms` have passed, through the route a
-    /// person's offer takes (`api::rematch::offer_for_bot`), off the queue.
-    fn bot_offers_rematch_after(&self, home: PlayerId, ms: i64, stakes: RematchStakes) {
+    /// R639000: the bot home offers a rematch at `stakes` through the route a person's offer takes
+    /// (`api::rematch::offer_for_bot`), off the queue. A reply keeps the bot on the match until it lands.
+    fn spawn_rematch_offer(&self, home: PlayerId, stakes: RematchStakes, reply: bool) {
         let deps = Arc::clone(&self.shared.deps);
         let match_id = self.shared.match_row.id.clone();
-        let wait = Duration::from_millis(u64::try_from(ms).unwrap_or(0));
+        let replying = reply.then(|| Replying {
+            actor: Arc::downgrade(&self.shared),
+            home,
+        });
         tokio::spawn(async move {
-            tokio::time::sleep(wait).await;
+            // Dropped however the task ends, a panic included, so the bot never stays for good.
+            let _replying = replying;
             if let Err(error) = offer_for_bot(&deps, &match_id, home, stakes).await {
                 tracing::warn!(event = "bot.rematch.failed", matchId = %match_id, home = %home, message = %error.message);
             }
         });
     }
 
-    /// R639000, R672: bot accepts human rematch offer if plan permits, still lingering,
-    /// and not yet answered, replying after `plan.reply_ms` at matching stakes.
+    /// R639000, R672: the person at `from` offered a rematch at `stakes`: the bot opposite may meet it.
     pub fn on_rematch_offer(&self, from: PlayerId, stakes: RematchStakes) {
-        let bot = from.opponent();
-        if self.shared.bots[bot].is_none() {
-            return;
-        }
-        let reply_ms = {
-            let mut core = self.lock();
-            let Some((plan, until)) = core.bot_rematch[bot] else {
-                return;
-            };
-            if !plan.accepts || core.bot_rematch_answered[bot] || now_ms() >= until {
-                return;
-            }
-            core.bot_rematch_answered[bot] = true;
-            core.bot_rematch_replying[bot] = true;
-            plan.reply_ms
-        };
-        let deps = Arc::clone(&self.shared.deps);
-        let match_id = self.shared.match_row.id.clone();
-        let replying = Replying {
-            actor: Arc::downgrade(&self.shared),
-            home: bot,
-        };
-        let wait = Duration::from_millis(u64::try_from(reply_ms).unwrap_or(0));
-        tokio::spawn(async move {
-            // Dropped however the task ends, a panic included, so the bot never stays for good.
-            let _replying = replying;
-            tokio::time::sleep(wait).await;
-            if let Err(error) = offer_for_bot(&deps, &match_id, bot, stakes).await {
-                tracing::warn!(event = "bot.rematch.failed", matchId = %match_id, home = %bot, message = %error.message);
-            }
-        });
+        let mut core = self.lock();
+        let outputs = self.step_in(&mut core, DuelEvent::RematchOffered { from, stakes });
+        self.exec_now(&mut core, outputs);
     }
 
     /// R1437: retries `record_result` with exponential backoff; idempotent, as a write that finds the
@@ -1388,17 +1282,7 @@ impl MatchActor {
     /// R1253000, R112: a clock action whose `reduce` panicked ends the match as a ceiling draw with
     /// turns=0 and ratings unchanged, written as R1437 writes any ending. Halts the actor without
     /// waiting on the queue; unrecorded writes invoke `let_go_unrecorded`.
-    async fn end_as_ceiling_draw(&self) {
-        let at = now_ms();
-        {
-            let mut core = self.lock();
-            if core.finished || core.stopped {
-                return;
-            }
-            core.finished = true;
-            core.finished_at = Some(at);
-            self.shared.clock.stop();
-        }
+    async fn end_as_ceiling_draw(&self, at: i64) {
         let input = crate::api::results::ceiling_draw_input(&self.shared.match_row, at);
         if self.record_result_with_retries(input, false).await.is_none() {
             self.let_go_unrecorded();
@@ -1418,19 +1302,16 @@ impl MatchActor {
     }
 
     /// R776000: the log holds this actor's next seq already, so it lets go as `let_go_unrecorded`
-    /// does, unless stopped: the registry may hold its rebuilt successor.
+    /// does (the machine says so unless it is stopped: the registry may hold its rebuilt successor).
     fn let_go_diverged(&self) {
-        if self.lock().stopped {
-            return;
-        }
         self.shared.deps.matches.forget(self.match_id_str());
         self.halt();
         tracing::warn!(event = "match.log.diverged", matchId = %self.match_id_str());
     }
 
-    /// R1253000: pure `reduce` panicked; state and log stand untouched. Caches the panicked
-    /// nonce and files a bug report with seq and action type (omitting private panic text).
-    fn on_reduce_panicked(&self, action: &Action, seq: i64, message: &str) -> ServerMessage {
+    /// R1253000: pure `reduce` panicked; state and log stand untouched. Files a bug report with seq and
+    /// action type (omitting private panic text); the machine remembers the nonce.
+    fn on_reduce_panicked(&self, action: &jackioh_engine::Action, seq: i64, message: &str) {
         tracing::error!(
             event = "match.action.panicked",
             matchId = %self.match_id_str(),
@@ -1439,7 +1320,6 @@ impl MatchActor {
             "type" = %action.action_type(),
             message = %message,
         );
-        self.lock().panicked.insert(action.nonce.clone());
         self.shared.deps.bug_reports.file(
             self.shared.deps.env.deployed_commit.as_deref(),
             Finding {
@@ -1453,286 +1333,90 @@ impl MatchActor {
                 )],
             },
         );
-        panicked_answer(&action.nonce)
-    }
-
-    /// The one path every action takes — a client's and the clock's alike. Reduce, append exactly one
-    /// log row at the next gapless seq, then push.
-    async fn apply_action(&self, player: PlayerId, nonce: String, body: ActionBody) -> ServerMessage {
-        let (action, result, seq) = {
-            let core = self.lock();
-            if let Some(existing) = core.acks.get(&nonce) {
-                return existing.clone();
-            }
-            if core.panicked.contains(&nonce) {
-                return panicked_answer(&nonce);
-            }
-            if core.finished {
-                return error_message(
-                    SocketErrorCode::MatchOver,
-                    "this match already has a result",
-                    Some(&nonce),
-                );
-            }
-            // §9.1: the seat is the server's, never the client's.
-            let action = Action::new(body, player, nonce.clone());
-            // R1253000: `reduce` takes `&state` and returns a new one, so a panic leaves nothing
-            // half-applied, as the rebuild's folds rely on.
-            let reduced = catch_unwind(AssertUnwindSafe(|| {
-                engine::reduce(self.shared.pinned, &core.state, &action)
-            }));
-            let seq = core.next_seq;
-            // Before `on_reduce_panicked`, which takes the lock again.
-            drop(core);
-            match reduced {
-                Ok(result) => (action, result, seq),
-                Err(payload) => return self.on_reduce_panicked(&action, seq, &panic_text(payload)),
-            }
-        };
-
-        if let Some(reason) = &result.error {
-            // §9.8: "Every rejected action is logged with its reason."
-            tracing::warn!(
-                event = "match.action.rejected",
-                matchId = %self.match_id_str(),
-                player = %player,
-                "type" = %action.action_type(),
-                reason = %reason,
-            );
-            // R835000: reducer refusals count toward unusual-rejection alert; maps engine
-            // seat back to account home (R677). Dedupes and store failures never count.
-            let alert = {
-                let mut core = self.lock();
-                let home = playing(&core, player);
-                self.note_rejection(&mut core, home, now_ms())
-            };
-            if let Some((profile_id, rejected)) = alert {
-                alert_unusual_rejections(self.match_id_str(), &profile_id, rejected);
-            }
-            return error_message(SocketErrorCode::IllegalAction, reason, Some(&nonce));
-        }
-
-        // §9.3: row before state, so a failed write never leaves the state ahead of the log.
-        let row = MatchActionRow {
-            match_id: self.shared.match_row.id.clone(),
-            seq,
-            action,
-            at: now_ms(),
-        };
-        let appended = one_tx!(self.shared.deps.db, |t| t
-            .matches_append_actions(std::slice::from_ref(&row))
-            .await?);
-        if let Err(error) = appended {
-            tracing::error!(event = "match.append.failed", matchId = %self.match_id_str(), seq = seq, message = %error);
-            if matches!(error, StoreError::SeqClash(_)) {
-                self.let_go_diverged();
-            }
-            return error_message(
-                SocketErrorCode::Internal,
-                "the action could not be recorded; try again",
-                Some(&nonce),
-            );
-        }
-
-        let ack = ack_message(&nonce, seq);
-        {
-            let mut guard = self.lock();
-            let core = &mut *guard;
-            let before = std::mem::replace(&mut core.state, result.state);
-            core.next_seq = seq + 1;
-            core.acks.insert(nonce, ack.clone());
-            // R1442: the move as it arrived, on the state it was made in, once the state has moved on
-            // with the log, so nothing the telemetry does can leave the two apart.
-            core.telemetry.on_action(
-                &before,
-                &row.action,
-                seq,
-                row.at,
-                self.shared.clock.remaining_for(player),
-                result.events.last().map(GameEvent::event_type),
-            );
-        }
-
-        self.after_change(result.events.len()).await;
-        ack
     }
 
     // The bot seat (R1452)
 
-    /// R1452: launches asynchronous moves for bots owing actions on their current seat (R677).
-    /// Think time is waited off-queue; clocks can still expire. R639000: if `idles_turn` (drawn on the
-    /// turn's stream, so every call agrees), no move starts and turn clock times out (R79).
-    fn drive_bots(&self) {
-        let mut core = self.lock();
-        if core.finished || core.stopped {
-            return;
-        }
-        for home in PLAYERS {
-            let Some(bot) = &self.shared.bots[home] else {
-                continue;
-            };
-            if core.bot_thinking[home] {
-                continue;
-            }
-            let player = playing(&core, home);
-            if !self
-                .shared
-                .pinned
-                .run(|| jackioh_ai::ai_to_act(&core.state, player))
-            {
-                continue;
-            }
-            let Some(strength) = BOT_STRENGTHS.get(bot.strength).or(BOT_STRENGTHS.last()).copied() else {
-                continue;
-            };
-            let seed = &self.shared.match_row.seed;
-            let turn = core.state.turn;
-            let first_in_turn = core.bot_moved_turn[home] != Some(turn);
-            let own_turn_start = first_in_turn
-                && core.state.active == player
-                && core.state.mulligan.is_none()
-                && core.state.pending.is_none();
-            let clock_left_ms = self.shared.clock.remaining_for(player);
-            // Only a running clock can time the bot out; with none, an idle turn would never end.
-            if own_turn_start && clock_left_ms.is_some() && idles_turn(seed, home, turn, &BOT_TIMEOUT_FIT) {
-                continue;
-            }
-            let (ai_cursor, timing_cursor) = core.bot_cursors[home];
-            let version = core.next_seq;
-            let job = BotJob {
-                state: core.state.clone(),
-                seat: player,
-                home,
-                seed: seed.clone(),
-                strength,
-                speed: bot.speed,
-                ai_rng: Rng::new(&format!("{seed}:bot-ai:{home}"), ai_cursor),
-                timing_rng: Rng::new(&format!("{seed}:bot-timing:{home}"), timing_cursor),
-                first_in_turn,
-                own_turn_start,
-                aim_lead_ms: aim_lead_ms(seed, home, version),
-                clock_left_ms,
-                pinned: self.shared.pinned,
-            };
-            core.bot_thinking[home] = true;
-            let actor = Arc::downgrade(&self.shared);
-            tokio::spawn(async move {
-                let played = seat::play(job).await;
-                if let Some(aim) = played.aim {
-                    // R738: the aim shows a beat before the move, through the relay a person's goes by.
-                    let Some(shared) = actor.upgrade() else { return };
-                    let strong = MatchActor { shared };
-                    {
-                        let mut core = strong.lock();
-                        let player = playing(&core, home);
-                        strong.receive_aim(&mut core, player, Some(aim));
-                    }
-                    // Not held across the wait, so the actor can still go meanwhile.
-                    drop(strong);
-                    tokio::time::sleep(Duration::from_millis(
-                        u64::try_from(played.aim_lead_ms).unwrap_or(0),
-                    ))
-                    .await;
-                }
-                if let Some(shared) = actor.upgrade() {
-                    MatchActor { shared }.enqueue(Task::BotMove {
-                        home,
-                        version,
-                        turn,
-                        played,
-                    });
-                }
-            });
-        }
-    }
-
-    /// R1452: applies decided bot move with R270 prefix (bypassing R1442 think telemetry).
-    /// R639000: concedes and answers draws as `seat::play` drew them, offers one too (R2660001), never
-    /// an emote, and tears down relayed aim after move. A move on a stale state still goes in the same
-    /// turn if the engine takes it. A refused fresh move falls back to `fallback_action` once; a failed
-    /// write is decided again after `BOT_WRITE_RETRY_MS`.
-    async fn on_bot_move(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
-        let aimed = played.aim.is_some();
-        self.on_bot_move_inner(home, version, turn, played).await;
-        if aimed {
-            let mut core = self.lock();
-            let player = playing(&core, home);
-            self.receive_aim(&mut core, player, None);
-        }
-    }
-
-    async fn on_bot_move_inner(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
-        let (player, body, stale, previous_turn, nonce) = {
-            let mut core = self.lock();
-            core.bot_thinking[home] = false;
-            core.bot_cursors[home] = (played.ai_cursor, played.timing_cursor);
-            if core.finished || core.stopped {
-                return;
-            }
-            let player = playing(&core, home);
-            let stale = core.next_seq != version;
-            let body = played.body.filter(|body| !never_played(body));
-            let body = if !stale {
-                body.or_else(|| fallback_action(self.shared.pinned, &core.state, player))
-            } else if core.state.turn == turn {
-                body
-            } else {
-                None
-            };
-            let Some(body) = body else {
-                drop(core);
-                if stale {
-                    self.drive_bots();
-                }
-                return;
-            };
-            // Set before the move goes, since the move's own push already starts the next one.
-            let now_turn = core.state.turn;
-            let nonce = format!("{SERVER_NONCE_PREFIX}bot-{}", core.next_seq);
-            (
-                player,
-                body,
-                stale,
-                core.bot_moved_turn[home].replace(now_turn),
-                nonce,
-            )
-        };
-        let mut reply = self.apply_action(player, nonce.clone(), body).await;
-        let refused = matches!(
-            &reply,
-            ServerMessage::Error {
-                code: SocketErrorCode::IllegalAction,
-                ..
-            }
-        );
-        let retry = if refused && !stale {
-            fallback_action(self.shared.pinned, &self.lock().state, player)
-        } else {
-            None
-        };
-        if let Some(body) = retry {
-            reply = self.apply_action(player, format!("{nonce}-r"), body).await;
-        }
-        if let ServerMessage::Error { code, message, .. } = &reply {
-            self.lock().bot_moved_turn[home] = previous_turn;
-            tracing::warn!(event = "bot.move.refused", matchId = %self.match_id_str(), player = %player, code = ?code, message = %message);
-            if *code != SocketErrorCode::IllegalAction {
-                self.drive_bots_after(BOT_WRITE_RETRY_MS);
-            } else if stale {
-                self.drive_bots();
-            }
-        }
-    }
-
-    /// `drive_bots` once `ms` have passed: a bot whose move could not be written decides again at
-    /// that pace (`BOT_WRITE_RETRY_MS`).
-    fn drive_bots_after(&self, ms: i64) {
+    /// R1452: launches the asynchronous move the machine asked for. The think time is waited off the
+    /// queue; clocks can still expire. The move comes back as a `Decided` task.
+    fn spawn_bot(&self, core: &mut Core, request: DecideRequest) {
+        let DecideRequest {
+            home,
+            seat,
+            version,
+            turn,
+            first_in_turn,
+            own_turn_start,
+            aim_lead_ms,
+            clock_left_ms,
+            ai_cursor,
+            timing_cursor,
+        } = request;
         let actor = Arc::downgrade(&self.shared);
-        let wait = Duration::from_millis(u64::try_from(ms).unwrap_or(0));
+        let strength = self.shared.bots[home].as_ref().and_then(|bot| {
+            BOT_STRENGTHS
+                .get(bot.strength)
+                .or(BOT_STRENGTHS.last())
+                .copied()
+                .map(|s| (s, bot.speed))
+        });
+        let Some((strength, speed)) = strength else {
+            // No bot or no strength to play it with: nothing to decide, and the machine is told so.
+            self.enqueue(Task::Decided {
+                home,
+                version,
+                turn,
+                played: BotMove {
+                    body: None,
+                    ai_cursor,
+                    timing_cursor,
+                    aim: None,
+                    aim_lead_ms,
+                },
+            });
+            return;
+        };
+        let seed = &self.shared.match_row.seed;
+        let job = BotJob {
+            state: core.host.game().clone(),
+            seat,
+            home,
+            seed: seed.clone(),
+            strength,
+            speed,
+            ai_rng: Rng::new(&format!("{seed}:bot-ai:{home}"), ai_cursor),
+            timing_rng: Rng::new(&format!("{seed}:bot-timing:{home}"), timing_cursor),
+            first_in_turn,
+            own_turn_start,
+            aim_lead_ms,
+            clock_left_ms,
+            pinned: self.shared.pinned,
+        };
         tokio::spawn(async move {
-            tokio::time::sleep(wait).await;
+            let played = seat::play(job).await;
+            if let Some(aim) = played.aim {
+                // R738: the aim shows a beat before the move, through the relay a person's goes by.
+                let Some(shared) = actor.upgrade() else { return };
+                let strong = MatchActor { shared };
+                {
+                    let mut core = strong.lock();
+                    let outputs = strong.step_in(&mut core, DuelEvent::Aim { home, aim: Some(aim) });
+                    strong.exec_now(&mut core, outputs);
+                }
+                // Not held across the wait, so the actor can still go meanwhile.
+                drop(strong);
+                tokio::time::sleep(Duration::from_millis(
+                    u64::try_from(played.aim_lead_ms).unwrap_or(0),
+                ))
+                .await;
+            }
             if let Some(shared) = actor.upgrade() {
-                MatchActor { shared }.drive_bots();
+                MatchActor { shared }.enqueue(Task::Decided {
+                    home,
+                    version,
+                    turn,
+                    played,
+                });
             }
         });
     }
@@ -1747,9 +1431,9 @@ impl MatchActor {
                 continue;
             }
             let seat = playing(core, home);
-            let view = engine::view_for(self.shared.pinned, &core.state, seat);
+            let view = engine::view_for(self.shared.pinned, core.host.game(), seat);
             // R2652000: less the face-down rolls this seat's view leaves out of the change.
-            let fresh = engine::viewed_of_newest(&core.state, seat, fresh);
+            let fresh = engine::viewed_of_newest(core.host.game(), seat, fresh);
             let from = view.events.len().saturating_sub(fresh);
             let prev = core.bot_views[home].take();
             let intents = match core.personas[home].as_mut() {
@@ -1769,7 +1453,11 @@ impl MatchActor {
         if let Some(timer) = core.bot_long_turn[home].take() {
             timer.cancel();
         }
-        if core.finished || core.stopped || view.result.is_some() || view.active == view.viewer {
+        if core.host.is_finished()
+            || core.host.is_stopped()
+            || view.result.is_some()
+            || view.active == view.viewer
+        {
             return;
         }
         let actor = Arc::downgrade(&self.shared);
@@ -1784,7 +1472,7 @@ impl MatchActor {
                 if let Some(timer) = core.bot_long_turn[home].take() {
                     timer.fired();
                 }
-                if core.finished || core.stopped {
+                if core.host.is_finished() || core.host.is_stopped() {
                     return;
                 }
                 let Some(view) = core.bot_views[home].clone() else {
@@ -1809,7 +1497,7 @@ impl MatchActor {
                 let Some(shared) = actor.upgrade() else { return };
                 let actor = MatchActor { shared };
                 let mut core = actor.lock();
-                if !core.stopped {
+                if !core.host.is_stopped() {
                     actor.relay_emote(&mut core, home, intent.emote);
                 }
             });
@@ -1842,8 +1530,8 @@ impl MatchActor {
         }
         self.send(core, player.opponent(), &emote_relay_message(player, emote));
         // R1442: recorded until the result, which the telemetry is written with.
-        if !core.finished {
-            let turn = core.state.turn;
+        if !core.host.is_finished() {
+            let turn = core.host.game().turn;
             core.telemetry.on_emote(home, emote, turn, now);
         }
         // MD-D29, R1127: after the relay, the emote also runs as a task, so a card that hears it
@@ -1905,8 +1593,20 @@ impl MatchActor {
                 }
             }
             Ok(ClientMessage::Emote(emote)) => self.relay_emote(&mut core, home, emote.emote),
-            Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
-            Ok(ClientMessage::ChoiceHover(hover)) => self.receive_hover(&mut core, player, hover.index),
+            Ok(ClientMessage::Aim(aim)) => {
+                let outputs = self.step_in(&mut core, DuelEvent::Aim { home, aim: aim.aim });
+                self.exec_now(&mut core, outputs);
+            }
+            Ok(ClientMessage::ChoiceHover(hover)) => {
+                let outputs = self.step_in(
+                    &mut core,
+                    DuelEvent::Hover {
+                        home,
+                        index: hover.index,
+                    },
+                );
+                self.exec_now(&mut core, outputs);
+            }
             Ok(ClientMessage::Action(action)) => {
                 let now = now_ms();
                 if !core.guards[home].action_allowed(now) {
@@ -1937,190 +1637,6 @@ impl MatchActor {
         }
     }
 
-    // The opponent's aim (R738)
-
-    /// R738: an aim is relayed to the opponent at most once per `AIM_RELAY_INTERVAL_MS` per seat.
-    /// Faster ones are coalesced, not dropped outright: the newest waits out the interval and goes
-    /// alone, so the opponent's arrow always ends where the sender's did. Nothing is answered.
-    fn receive_aim(&self, core: &mut Core, player: PlayerId, aim: Option<Aim>) {
-        if core.finished || core.stopped {
-            return;
-        }
-        let slot = &mut core.aims[player];
-        slot.pending = Some(aim);
-        if slot.timer.is_some() {
-            return;
-        }
-        let wait = match slot.last_at {
-            None => -1,
-            Some(last_at) => last_at + AIM_RELAY_INTERVAL_MS - now_ms(),
-        };
-        if wait <= 0 {
-            self.flush_aim(core, player);
-            return;
-        }
-        let actor = Arc::downgrade(&self.shared);
-        slot.timer = Some(after(wait, move |id| {
-            let Some(shared) = actor.upgrade() else { return };
-            let actor = MatchActor { shared };
-            let mut core = actor.lock();
-            if core.aims[player].timer.as_ref().map(Timer::id) != Some(id) {
-                return;
-            }
-            if let Some(timer) = core.aims[player].timer.take() {
-                timer.fired();
-            }
-            actor.flush_aim(&mut core, player);
-        }));
-    }
-
-    /// Relays the seat's pending aim, checked against the state as it stands NOW rather than when the
-    /// frame arrived: an aim whose ends name anything the opponent may not see is dropped silently,
-    /// and the opponent's arrow is cleared instead if it showed one (R738, R97). A repeat of what
-    /// the opponent was last told is not sent again.
-    fn flush_aim(&self, core: &mut Core, player: PlayerId) {
-        let Some(aim) = core.aims[player].pending.take() else {
-            return;
-        };
-        if core.finished || core.stopped {
-            return;
-        }
-        let receiver = player.opponent();
-        let shown = match aim {
-            None => None,
-            Some(aim) => {
-                if aim_is_public(
-                    &aim,
-                    player,
-                    &engine::view_for(self.shared.pinned, &core.state, receiver),
-                ) {
-                    Some(aim)
-                } else {
-                    None
-                }
-            }
-        };
-        if aim_key(shown.as_ref()) == aim_key(core.aims[player].relayed.as_ref()) {
-            return;
-        }
-        core.aims[player].last_at = Some(now_ms());
-        core.aims[player].relayed = shown;
-        self.send(core, receiver, &aim_relay_message(player, shown));
-    }
-
-    /// A seat that leaves, or a match that ends, takes its arrow with it.
-    fn end_aim(&self, core: &mut Core, player: PlayerId) {
-        let slot = &mut core.aims[player];
-        if let Some(timer) = slot.timer.take() {
-            timer.cancel();
-        }
-        slot.pending = None;
-        if slot.relayed.is_none() {
-            return;
-        }
-        slot.relayed = None;
-        self.send(core, player.opponent(), &aim_relay_message(player, None));
-    }
-
-    // The opponent's choice hover (R2739001)
-
-    /// R2739001: a hover on an option of the seat's own open prompt, relayed to the opponent with
-    /// `receive_aim`'s coalescing, at most once per `AIM_RELAY_INTERVAL_MS` per seat. One while the
-    /// seat holds no prompt is dropped silently; nothing is answered.
-    fn receive_hover(&self, core: &mut Core, player: PlayerId, index: Option<i32>) {
-        if core.finished || core.stopped {
-            return;
-        }
-        let open = open_prompt_of(&core.state, player).map(str::to_string);
-        if core.hovers[player].prompt != open {
-            self.end_hover(core, player);
-            core.hovers[player].prompt = open;
-        }
-        let slot = &mut core.hovers[player];
-        if slot.prompt.is_none() {
-            return;
-        }
-        slot.pending = Some(index);
-        if slot.timer.is_some() {
-            return;
-        }
-        let wait = match slot.last_at {
-            None => -1,
-            Some(last_at) => last_at + AIM_RELAY_INTERVAL_MS - now_ms(),
-        };
-        if wait <= 0 {
-            self.flush_hover(core, player);
-            return;
-        }
-        let actor = Arc::downgrade(&self.shared);
-        slot.timer = Some(after(wait, move |id| {
-            let Some(shared) = actor.upgrade() else { return };
-            let actor = MatchActor { shared };
-            let mut core = actor.lock();
-            if core.hovers[player].timer.as_ref().map(Timer::id) != Some(id) {
-                return;
-            }
-            if let Some(timer) = core.hovers[player].timer.take() {
-                timer.fired();
-            }
-            actor.flush_hover(&mut core, player);
-        }));
-    }
-
-    /// Relays the seat's pending hover, checked against the state as it stands NOW: an index into a
-    /// prompt no longer open, or one the opponent's view draws no back for (`hover_is_shown`), is
-    /// dropped silently, and the opponent's outline cleared instead if it showed one. A repeat of what
-    /// the opponent was last told is not sent again.
-    fn flush_hover(&self, core: &mut Core, player: PlayerId) {
-        let Some(index) = core.hovers[player].pending.take() else {
-            return;
-        };
-        if core.finished || core.stopped {
-            return;
-        }
-        let receiver = player.opponent();
-        let current = core.hovers[player].prompt.as_deref() == open_prompt_of(&core.state, player);
-        let shown = index.filter(|index| {
-            current
-                && hover_is_shown(
-                    *index,
-                    player,
-                    &engine::view_for(self.shared.pinned, &core.state, receiver),
-                )
-        });
-        if shown == core.hovers[player].relayed {
-            return;
-        }
-        core.hovers[player].last_at = Some(now_ms());
-        core.hovers[player].relayed = shown;
-        self.send(core, receiver, &choice_hover_relay_message(player, shown));
-    }
-
-    /// An answered prompt, a seat that leaves or a match that ends takes its outline with it.
-    fn end_hover(&self, core: &mut Core, player: PlayerId) {
-        let slot = &mut core.hovers[player];
-        if let Some(timer) = slot.timer.take() {
-            timer.cancel();
-        }
-        slot.pending = None;
-        slot.prompt = None;
-        if slot.relayed.is_none() {
-            return;
-        }
-        slot.relayed = None;
-        self.send(core, player.opponent(), &choice_hover_relay_message(player, None));
-    }
-
-    /// R2739001: ends each seat's hover whose prompt the state no longer holds open for it.
-    fn end_stale_hovers(&self, core: &mut Core) {
-        for player in PLAYERS {
-            let prompt = core.hovers[player].prompt.as_deref();
-            if prompt.is_some() && prompt != open_prompt_of(&core.state, player) {
-                self.end_hover(core, player);
-            }
-        }
-    }
-
     fn on_socket_gone(&self, home: PlayerId) {
         {
             let mut core = self.lock();
@@ -2130,32 +1646,17 @@ impl MatchActor {
                 return;
             }
             core.sockets[home] = None;
-            if core.stopped || core.finished {
-                return;
-            }
             // R738, R2739001: the aim and the choice hover of the seat this account plays (R677) end
             // with its socket.
+            let outputs = self.step_in(&mut core, DuelEvent::Left { home });
+            self.exec_now(&mut core, outputs);
+            if core.host.is_stopped() || core.host.is_finished() {
+                return;
+            }
             let player = playing(&core, home);
-            self.end_aim(&mut core, player);
-            self.end_hover(&mut core, player);
             tracing::info!(event = "match.socket.closed", matchId = %self.match_id_str(), player = %player, home = %home);
         }
         self.enqueue(Task::Disconnect { home });
-    }
-
-    /// R744: starts grace for unattached accounts when the first socket connects, on the seat
-    /// played (R677), from the stored deadline or afresh; a bot's as the actor arms (R1452). Nothing
-    /// starts at boot, so unreturned matches stay reaper draws (R112); repeat-safe (R147).
-    fn start_absent_grace(&self, core: &mut Core) {
-        for home in PLAYERS {
-            if core.attached_once[home] {
-                continue;
-            }
-            let player = playing(core, home);
-            let stored = core.stored_grace.as_ref().and_then(|grace| grace[player]);
-            self.shared.clock.start_grace(player, stored);
-        }
-        core.stored_grace = None;
     }
 
     // The actor's surface
@@ -2197,11 +1698,13 @@ impl MatchActor {
     pub fn attach(&self, home: PlayerId, socket: Socket) {
         let previous = {
             let mut core = self.lock();
-            if core.voided {
+            if core.host.is_voided() {
                 None
             } else {
                 let previous = core.sockets[home].replace(socket.clone());
-                core.attached_once[home] = true;
+                // R744: the account has now been here, so no grace starts for it as another attaches.
+                let outputs = self.step_in(&mut core, DuelEvent::Connected { home });
+                self.exec_now(&mut core, outputs);
                 // R835001: every attach — the first included — moves the seat to a new socket
                 // generation, so a Hello from this socket is never absorbed by an older one's
                 // queued Hello.
@@ -2296,19 +1799,23 @@ impl MatchActor {
     async fn write_checkpoint(&self) {
         let (seq, nonce, body) = {
             let core = self.lock();
-            let seq = core.next_seq - 1;
-            if core.finished || core.voided || core.stopped || seq < MATCH_CHECKPOINT_MIN_ACTIONS {
+            let seq = core.host.next_seq() - 1;
+            if core.host.is_finished()
+                || core.host.is_voided()
+                || core.host.is_stopped()
+                || seq < MATCH_CHECKPOINT_MIN_ACTIONS
+            {
                 return;
             }
-            let Some((nonce, _)) = core.acks.last() else {
+            let Some(nonce) = core.host.last_nonce() else {
                 return;
             };
             let body = CheckpointBody {
-                state: core.state.clone(),
+                state: core.host.game().clone(),
                 telemetry: core.telemetry.clone(),
-                bot_moved_turn: core.bot_moved_turn.clone(),
+                bot_moved_turn: core.host.bot_moved_turn().clone(),
             };
-            (seq, nonce.clone(), body)
+            (seq, nonce.to_string(), body)
         };
         let match_id = self.match_id_str();
         let row = match checkpoint_row(&self.shared.match_row, seq, &nonce, &body, now_ms()) {
@@ -2340,16 +1847,16 @@ impl MatchActor {
     }
 
     pub fn snapshot(&self) -> MatchSnapshot {
-        engine::snapshot(&self.lock().state)
+        engine::snapshot(self.lock().host.game())
     }
 
     /// For the registry's hash checks and the reaper; never sent to a socket.
     pub fn engine_state(&self) -> EngineState {
-        self.lock().state.clone()
+        self.lock().host.game().clone()
     }
 
     pub fn clocks(&self) -> MatchClocks {
-        self.shared.clock.snapshot()
+        self.lock().host.clocks()
     }
 
     /// Drops the actor: stops the clock and lets both sockets go, leaving the log alone.
@@ -2362,15 +1869,10 @@ impl MatchActor {
     fn halt(&self) {
         let sockets = {
             let mut core = self.lock();
-            core.stopped = true;
-            self.shared.clock.stop();
+            // The machine stops its clocks and relays, and takes their timers back.
+            let outputs = self.step_in(&mut core, DuelEvent::Stop);
+            self.exec_now(&mut core, outputs);
             for player in PLAYERS {
-                if let Some(timer) = core.aims[player].timer.take() {
-                    timer.cancel();
-                }
-                if let Some(timer) = core.hovers[player].timer.take() {
-                    timer.cancel();
-                }
                 if let Some(timer) = core.bot_long_turn[player].take() {
                     timer.cancel();
                 }
@@ -2387,27 +1889,24 @@ impl MatchActor {
     }
 
     /// R672: seats with an open socket, read by the registry's `presence_of`. R1452: bot seats are
-    /// present during play; R639000: post-game they linger until rematch plans or pending
-    /// replies finish, after which they report as absent.
+    /// present during play; R639000: post-game they linger until rematch plans or pending replies
+    /// finish, after which they report as absent.
     pub fn presence(&self) -> PerPlayer<bool> {
         let core = self.lock();
-        let playing_on = !core.finished && !core.voided;
-        let now = now_ms();
-        let lingering = |home: PlayerId| {
-            core.finished
-                && (core.bot_rematch_replying[home]
-                    || core.bot_rematch[home].is_some_and(|(_, until)| now < until))
-        };
-        let open = |home: PlayerId| {
-            core.sockets[home].as_ref().is_some_and(Socket::is_open)
-                || (self.shared.bots[home].is_some() && (playing_on || lingering(home)))
-        };
-        PerPlayer::new(open(PlayerId::P1), open(PlayerId::P2))
+        // A socket the machine has not heard of closing is closed all the same: the actor's is the
+        // truth about its socket, the machine's the truth about a bot.
+        let machine = core.host.presence(now_ms());
+        PerPlayer::new(
+            machine.p1
+                && (self.shared.bots.p1.is_some() || core.sockets.p1.as_ref().is_some_and(Socket::is_open)),
+            machine.p2
+                && (self.shared.bots.p2.is_some() || core.sockets.p2.as_ref().is_some_and(Socket::is_open)),
+        )
     }
 
-    /// When this actor's rematch window opened (`Core::finished_at`), or `None` while the game is on.
+    /// When this actor's rematch window opened, or `None` while the game is on.
     pub fn finished_at(&self) -> Option<i64> {
-        self.lock().finished_at
+        self.lock().host.finished_at()
     }
 
     /// A handle that does not keep the actor alive, for a test to watch it go.
@@ -2448,94 +1947,7 @@ impl MatchActor {
     }
 }
 
-fn clock_view_for(snapshot: &MatchSnapshot) -> ClockView {
-    ClockView {
-        turn: snapshot.turn,
-        active: snapshot.active,
-        pending_for: snapshot.pending_for,
-        mulligan_owed: snapshot.mulligan_owed.clone(),
-        over: snapshot.result.is_some() || snapshot.phase == jackioh_engine::Phase::Over,
-        sequence: snapshot.sequence.as_ref().map(|question| SequenceClockView {
-            player: question.player,
-            streak: question.streak,
-            prompt_id: question.prompt_id.clone(),
-        }),
-    }
-}
-
-/// R738, R97, R177: checks whether aim endpoints are visible to the receiving viewer (hero/zone
-/// are public, a face-down card named by its zone; hand cards checked by index in sender's hand).
-pub fn aim_is_public(aim: &Aim, sender: PlayerId, view: &PlayerView) -> bool {
-    match &aim.source {
-        AimEnd::Hand { player, index } => {
-            if *player != sender {
-                return false;
-            }
-            let hand = if sender == view.viewer {
-                &view.you.hand
-            } else {
-                &view.opponent.hand
-            };
-            let count = match hand {
-                HandView::Cards(cards) => cards.len(),
-                HandView::Count { count } => usize::try_from(*count).unwrap_or(0),
-            };
-            if *index >= count {
-                return false;
-            }
-        }
-        source => {
-            if !end_is_public(source, view) {
-                return false;
-            }
-        }
-    }
-    match &aim.target {
-        None => true,
-        Some(AimEnd::Hand { .. }) => false,
-        Some(target) => end_is_public(target, view),
-    }
-}
-
-fn end_is_public(end: &AimEnd, view: &PlayerView) -> bool {
-    match end {
-        AimEnd::Hand { .. } => false,
-        AimEnd::Hero { .. } => true,
-        AimEnd::Zone { player, row, lane } => {
-            let side = if *player == view.viewer {
-                &view.you
-            } else {
-                &view.opponent
-            };
-            i64::from(*lane) <= side.locks.row(*row).len() as i64
-        }
-    }
-}
-
-/// R2739001, R2739000: whether `view` draws a back at `index` for `sender`'s open card picker: the
-/// prompt is the sender's, its view carries the option count, and the index is under it.
-pub fn hover_is_shown(index: i32, sender: PlayerId, view: &PlayerView) -> bool {
-    match &view.pending {
-        Some(PendingView::Elsewhere(elsewhere)) => {
-            elsewhere.pending_for == sender
-                && elsewhere
-                    .option_count
-                    .is_some_and(|count| (0..count).contains(&index))
-        }
-        _ => false,
-    }
-}
-
-/// R265: the seats that owe a mulligan while the window is open — both mulligans open and no other
-/// prompt in front of them — and nothing otherwise. The engine never reports both at once; the
-/// clock (`clock.rs`) reads the window the same way.
-fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
-    if snapshot.pending_for.is_none() && snapshot.result.is_none() {
-        snapshot.mulligan_owed.clone()
-    } else {
-        Vec::new()
-    }
-}
+pub use jackioh_shared::host::relay::{aim_is_public, hover_is_shown};
 
 // Social: watching and shared replays (#939, #940)
 //
@@ -2679,7 +2091,7 @@ impl MatchActor {
         let hand = deal_spectator_emote_hand(&self.shared.match_row.seed, profile_id);
         let (id, replaced, done) = {
             let mut core = self.lock();
-            if core.stopped || core.voided || core.spectate.closed {
+            if core.host.is_stopped() || core.host.is_voided() || core.spectate.closed {
                 return Err(WatchRefused::Closed);
             }
             let at = core
@@ -2789,7 +2201,7 @@ impl MatchActor {
                     friend_of(watcher.home).is_some_and(|friend| revoked(&watcher.profile_id, friend))
                 });
             core.spectate.watchers = kept;
-            if !gone.is_empty() && !core.stopped {
+            if !gone.is_empty() && !core.host.is_stopped() {
                 tracing::info!(event = "match.watcher.revoked", matchId = %self.match_id_str(), revoked = gone.len(), watchers = core.spectate.watchers.len());
                 self.push_watchers(&core);
             }
@@ -2818,7 +2230,7 @@ impl MatchActor {
     /// `WATCH_HELLO_INTERVAL_MS`; a hello that finds no view to send starts no interval.
     fn answer_watcher_hello(&self, id: u64) {
         let mut core = self.lock();
-        if core.stopped || core.spectate.closed {
+        if core.host.is_stopped() || core.spectate.closed {
             return;
         }
         let Spectate {
@@ -2849,7 +2261,7 @@ impl MatchActor {
     fn note_watcher_junk(&self, id: u64, answer: Option<&str>) {
         let socket = {
             let mut core = self.lock();
-            if core.stopped || core.spectate.closed {
+            if core.host.is_stopped() || core.spectate.closed {
                 return;
             }
             let Some(watcher) = core.spectate.watchers.iter_mut().find(|watcher| watcher.id == id) else {
@@ -2881,7 +2293,7 @@ impl MatchActor {
     fn relay_spectator_emote(&self, id: u64, emote: EmoteId) {
         let (sender_id, frame, recipients) = {
             let mut core = self.lock();
-            if core.stopped || core.spectate.closed {
+            if core.host.is_stopped() || core.spectate.closed {
                 return;
             }
             let Some(watcher) = core.spectate.watchers.iter().find(|watcher| watcher.id == id) else {
@@ -2934,7 +2346,7 @@ impl MatchActor {
         let mut core = self.lock();
         let before = core.spectate.watchers.len();
         core.spectate.watchers.retain(|watcher| watcher.id != id);
-        if core.spectate.watchers.len() == before || core.stopped {
+        if core.spectate.watchers.len() == before || core.host.is_stopped() {
             return;
         }
         tracing::info!(event = "match.watcher.detached", matchId = %self.match_id_str(), watchers = core.spectate.watchers.len());
@@ -3078,7 +2490,7 @@ impl MatchActor {
     /// after each `spectate_flush` that can send that view.
     #[must_use]
     fn spectate_let_go_finished(&self, core: &mut Core) -> Vec<Watcher> {
-        if !core.finished || core.spectate.closed {
+        if !core.host.is_finished() || core.spectate.closed {
             return Vec::new();
         }
         let records = &core.spectate.records;
@@ -3090,7 +2502,7 @@ impl MatchActor {
                     .is_some_and(|last| watcher.sent == Some(last.seq))
             });
         core.spectate.watchers = kept;
-        if !done.is_empty() && !core.stopped {
+        if !done.is_empty() && !core.host.is_stopped() {
             tracing::info!(event = "match.watcher.finished", matchId = %self.match_id_str(), finished = done.len(), watchers = core.spectate.watchers.len());
             self.push_watchers(core);
         }

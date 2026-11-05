@@ -12,13 +12,11 @@
 use std::collections::BTreeMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use serde::{Deserialize, Serialize};
-
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
-    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, Handicap,
-    LastBoardEntry, LeanPick, Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage,
-    ReplayRecord, ReplayRefusal, Rng, SetName, ShippedCatalog, WinRateTable,
+    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameState, GameSummary, Handicap, LastBoardEntry,
+    LeanPick, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal,
+    Rng, SetName, ShippedCatalog, WinRateTable,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -34,29 +32,9 @@ pub type LastBoards = (Vec<LastBoardEntry>, Vec<LastBoardEntry>);
 /// The engine's own `CreateGameOptions`.
 pub type CreateGameArgs = CreateGameOptions;
 
-/// The public bookkeeping the clock (`actor/clock.rs`) and the results writer (`api/results.rs`)
-/// need. Nothing here is hidden information: both clients already see all of it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct MatchSnapshot {
-    /// Player-turn counter (§2.5).
-    pub turn: i32,
-    pub active: PlayerId,
-    /// Who owes the open prompt an answer, or null (§10.6).
-    pub pending_for: Option<PlayerId>,
-    /// R265: while both mulligans are open (phase `mulligan`, `pending_for` null), the seats that
-    /// still owe theirs, in seat order; empty otherwise. Public (R266: that a seat is ready is
-    /// public, what it kept is not), and the mulligan clock (R268) and its expiry read nothing else.
-    pub mulligan_owed: Vec<PlayerId>,
-    pub phase: Phase,
-    pub result: Option<GameResult>,
-    /// R677: whether a Glitch has left the accounts holding each other's seat (an odd number of
-    /// swaps, the engine's `seats_swapped`). Public: the `glitched` event announced every swap. The
-    /// account that began the match in p1 plays p2 while this is true, and the other way round.
-    pub seats_swapped: bool,
-    /// R1563006: the question of a sequence open now, the sequence clock's input (public).
-    pub sequence: Option<jackioh_engine::prompts::SequenceQuestion>,
-}
+/// The public bookkeeping the match host's clock and the results writer (`api/results.rs`) need
+/// (`jackioh_shared::host::snapshot`, #3101): nothing here is hidden information.
+pub use jackioh_shared::host::snapshot::{MatchSnapshot, snapshot};
 
 fn registered() {
     jackioh_cards::register_all();
@@ -209,6 +187,13 @@ pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnc
     jackioh_engine::with_shipped(shipped, run)
 }
 
+/// Runs `run` — a call into `jackioh_shared::host`'s machine, which reads the catalog as the engine does —
+/// under the match's `Pinned` catalog (R388, R767000), with the cards registered.
+pub fn run_pinned<T>(pinned: Pinned, run: impl FnOnce() -> T) -> T {
+    registered();
+    pinned.run(run)
+}
+
 /// R388, R767000: the catalog a match is played, rebuilt and replayed under: this build's own
 /// (`Pinned::default()`), or the shipped catalog of the version it began on. Every function here
 /// that reads a card takes one; a caller with no match (`bots::calibrate`, a test) passes the default.
@@ -248,22 +233,6 @@ pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize,
 /// R677: the seat the account that began the match in `home` plays in `state`.
 pub fn seat_played_by(state: &EngineState, home: PlayerId) -> PlayerId {
     jackioh_engine::seat_played_by(state, home)
-}
-
-/// Public bookkeeping read off state fields and engine queries.
-pub fn snapshot(state: &EngineState) -> MatchSnapshot {
-    MatchSnapshot {
-        turn: state.turn,
-        active: state.active,
-        pending_for: state.pending.as_ref().map(|pending| pending.player_id),
-        // R265: the engine's own answer to "who still owes a mulligan", not a read of its fields.
-        mulligan_owed: jackioh_engine::mulligan_owed(state),
-        phase: state.phase,
-        result: state.result,
-        // R677: the engine's own answer to "do the accounts hold each other's seat".
-        seats_swapped: jackioh_engine::seats_swapped(state),
-        sequence: jackioh_engine::prompts::sequence_question_of(state),
-    }
 }
 
 /// SPEC §11 R258: All Random deck in library order, seeded so the same seed deals the same deck.
