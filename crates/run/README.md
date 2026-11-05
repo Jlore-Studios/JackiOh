@@ -23,7 +23,7 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 | `run_max_hp`, `run_curse_points`, `run_artifact_points` | the run's max HP, its curse points, an artifact's points |
 | `run_score`, `run_embers` | the score so far, and the Embers a score pays (DR9) |
 | `run_placeholder_content()` | pseudo cards and temporary bosses, artifacts, blessings, events and curses (`src/placeholder.json`) until the designer's lists land |
-| `run_catalog_content(&CardDefs, &[CustomCard])` | the content a run on the cards that ship deals from: every card a deck may hold (`deckable`) and the custom cards given, the starting cards `RUN_STARTER_CARDS`, and the placeholder's enemies (their pseudo boss cards dropped), passives, events and curses (DR14) |
+| `run_catalog_content(&CardDefs)` | the content a run on the cards that ship deals from: every card a deck may hold (`deckable`), the starting cards `RUN_STARTER_CARDS`, and the placeholder's enemies (their pseudo boss cards dropped), passives, events and curses (DR14) |
 | `run_fight_setup(&RunState, &RunContent) -> Option<RunFightSetup>` | in `RunPhase::Fight`, the game to start: its seed (`"{run seed}-{row}-{col}"`), both decks, the human's marks (Radiant and buffed cards) and both handicaps, the human's with the run's HP and each Combat artifact held, once per level, the enemy's its Presence's tier with its health and each curse taken (DR5, R2922001); `None` in any other phase |
 | `run_fight_report(&ReplayInput, PlayerId) -> Result<RunAction, _>` | the `RunAction::FightOver` a finished game sends for that seat, folded from its record: the win, the hero's final health, the damage dealt to the enemy's side, the healing on its own, its draws and the turns; a game with no result, or a setup the engine refuses, is refused |
 | `run_level_cost(level)` | the Embers from `level` to the next (`RUN_LEVEL_EMBERS`), `None` at the ladder's top |
@@ -34,15 +34,14 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 - **Refusals.** A refusal is a sentence the Sandbox's screens show word for word, so it says "relic"
   where the code says artifact (`apps/web/WRITING.md`'s Plain table).
 - **Content.** The caller passes a `RunContent`: the pool, the starting cards, the enemies, the passives,
-  the events and the curses. A Sandbox caller adds the player's custom cards to the pool.
+  the events and the curses.
 - **Unlocks.** The caller keeps `RunUnlocks` (the level, the extracted cards and artifacts, and in the
   Campaign the account's collection) and adds a finished run's `extracted_cards` and
   `extracted_artifacts` to it, and its `run_embers(run_score(…))`.
 - **Fights.** In `RunPhase::Fight` the caller starts the game from `run_fight_setup` (the human P1, the
   enemy P2), plays it against `run_enemy`, and sends the `RunAction::FightOver` that `run_fight_report`
   folds from the finished game: the hero's health at the end and what the score reads (damage dealt,
-  healing done, cards drawn, turns). A game with scripted custom cards is reported under the host that
-  lends their scripts, as it is folded.
+  healing done, cards drawn, turns). A game whose decks name a custom card is refused: a run plays none.
 
 ## What it does not do yet
 

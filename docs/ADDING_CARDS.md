@@ -235,8 +235,8 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   within a few hundred tries. `sh scripts/pool-probe.sh` (daily, in `super.yml`) runs the cards', AI's, server's and tools' tests with
   every random pool rotated one place (#3117); a test it fails leans on a roll, so convert it. A test of a pool's content or order reads
   it under `with_pool_shift(0, …)`.
-- **The cross-build replay** (`cargo jackioh luau diff --parent-bin <base build's jackioh> --cards <ids>`, and `rust (classify)` on the pull
-  request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
+- **The cross-build replay** (`cargo jackioh classify --base origin/main --parent-bin <base build's jackioh>`, which `rust (classify)`
+  runs on the pull request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
   a divergence names the seed, the step and the hash. Nothing is committed (the 240 golden traces were retired in #2578), so nothing is
   re-recorded.
 - **The fuzz waves** play seeded games and may now draw a game nobody has played. Four latent bugs came out this way, all fixed: a fused
