@@ -154,51 +154,7 @@
   gap: 10px;
 }
 
-/* The settings gear (settings/SettingsButton.tsx), last in the corner as it is last in every other
-   screen's top bar: a round brass button beside the Sign in / Account pill. */
-.landing .landing-corner .settings-gear {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 1px solid var(--tavern-brass);
-  border-radius: 50%;
-  background: rgba(18, 11, 7, 0.65);
-  color: var(--tavern-gold-pale);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
-  cursor: var(--cursor-glove-point, pointer);
-  transition: background-color 140ms, border-color 140ms, box-shadow 140ms;
-}
-
-.landing .landing-corner .settings-gear:hover {
-  border-color: var(--tavern-gold);
-  background: rgba(90, 52, 27, 0.75);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.2), 0 0 18px rgba(243, 201, 105, 0.3);
-}
-
-.landing a.landing-corner-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border: 1px solid var(--tavern-brass);
-  border-radius: 999px;
-  background: rgba(18, 11, 7, 0.65);
-  color: var(--tavern-gold-pale);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-decoration: none;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
-  transition: background-color 140ms, border-color 140ms, box-shadow 140ms;
-}
-
-.landing a.landing-corner-link:hover {
-  color: var(--tavern-gold-pale);
-  border-color: var(--tavern-gold);
-  background: rgba(90, 52, 27, 0.75);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.2), 0 0 18px rgba(243, 201, 105, 0.3);
-}
+/* The corner's links, Friends, language and gear buttons wear routes/top-bar.css, as BackLink's do. */
 
 /* --- layout of the hero ---------------------------------------------------------------------- */
 

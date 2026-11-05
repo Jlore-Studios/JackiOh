@@ -415,7 +415,7 @@ function InviteScreen({ account }: { account: Account }) {
             ) : null}
             <button
               type="button"
-              className="link-button"
+              className="link-button top-bar-button top-bar-button--text"
               data-testid={inviteTestid.signOut}
               disabled={leaving}
               aria-busy={leaving}

@@ -8,6 +8,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { FriendsButton } from "../together/FriendsButton.tsx";
+import "./top-bar.css";
 
 export const navTestid = {
   back: "nav-back",
@@ -44,7 +45,7 @@ export function BackLink({
     <nav className="row screen-nav">
       <button
         type="button"
-        className="link-button"
+        className="link-button top-bar-button top-bar-button--text"
         data-testid={navTestid.back}
         data-route={to}
         onClick={() => {
