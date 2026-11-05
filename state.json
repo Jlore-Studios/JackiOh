@@ -15491,6 +15491,13 @@
     "3065": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-05T00:08:40Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 3 (design across crates) and the doubt clause: the change spans `crates/ai` (a new `MatchSetup` field passed through `play_match` and the fold), `crates/tools` (a new dependency on `jackioh-run`) and \u00a715, and the issue itself asks for hard. It touches no engine rule and no AI decision or search"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
