@@ -53,8 +53,8 @@ core-003: # Right-house defender
     death: Be right back.
   zh:
     name: 对门守卫者
-    base: 嘲讽，圣盾，复生
-    radiant: "嘲讽，圣盾，复生\n亡语：召唤一个基础版对门守卫者。"
+    base: 嘲讽，圣盾，复生，无法守备
+    radiant: "嘲讽，圣盾，复生，无法守备\n亡语：召唤一个基础版对门守卫者。"
 core-004: # Gary the Gambler
   flavour: Heads, he wins. Tails, he also wins. He thinks this is how coins work.
   voice:
@@ -212,8 +212,8 @@ core-020: # Pointmaster
     death: Pointless.
   zh:
     name: 锋芒大师
-    base: 先攻
-    radiant: 先攻，圣盾
+    base: 突袭，先攻
+    radiant: 突袭，先攻，圣盾
 core-021: # Hinder
   flavour: Sorry, you were saying something about your plan?
   voice:
@@ -420,8 +420,8 @@ core-043: # Big Felinor
     death: Landed on my back?
   zh:
     name: 大猫族
-    base: 战吼：消灭所有非猫族单位。
-    radiant: 战吼：消灭所有敌方非猫族单位。
+    base: 战吼：消灭{destroys}个随机非猫族单位。
+    radiant: 战吼：消灭{destroys}个随机敌方非猫族单位。
 core-044: # True Strike
   flavour: Aim once. Hit once. Leave.
   voice:
@@ -470,8 +470,8 @@ core-049: # Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: Snom兔精神控制
-    base: 夺取一个敌方单位。
-    radiant: 夺取一个敌方单位。使其变为光辉。
+    base: "结余减费。\n夺取一张敌方牌。"
+    radiant: "结余减费。\n夺取一张敌方牌。使其变为光辉。"
 core-050: # K-Pop Fanatic
   flavour: She knows every lyric, every member, and where your stuff is.
   voice:
@@ -506,8 +506,8 @@ core-052: # Silly Silas
     death: So... dizzy...
   zh:
     name: 憨憨塞拉斯
-    base: 战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。
-    radiant: 战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。
+    base: "陨坑\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。"
+    radiant: "陨坑\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。"
 core-053: # Reno
   flavour: Bring it back. Bring it all back.
   voice:
@@ -570,8 +570,8 @@ core-059: # Unbiased Immigration
     cast: Welcome in, whoever you are!
   zh:
     name: 无偏见移民
-    base: "回合开始时：将一张随机牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
-    radiant: "回合开始时：将一张随机光辉牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
+    base: "激活：将一张随机牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
+    radiant: "激活：将一张随机光辉牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
 core-060: # Bear Honeypot
   flavour: Sweet bait, fuzzy teeth.
   voice:
@@ -620,8 +620,8 @@ core-065: # Masochism Mask
     cast: Hurts so good.
   zh:
     name: 受虐面具
-    base: 回合开始时：抉择：放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。
-    radiant: 回合开始时：抉择两次：什么都不做，放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。
+    base: "回合开始时：抉择：放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。\n在你受到此牌的{downsides}个负面效果后，使你的手牌变为光辉。"
+    radiant: "回合开始时：抉择两次：什么都不做，放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。\n在你受到此牌的{downsides}个负面效果后，使你的手牌变为光辉。"
 core-065-1: # Spikey Pillow
   flavour: It looks comfortable. Do not sit on it.
   voice:
@@ -752,8 +752,8 @@ core-079: # Twinspell
     cast: Say it twice. Say it twice.
   zh:
     name: 双生法术
-    base: 你的下一个法术获得回响+{echoGain}。然后这张牌进入墓地。
-    radiant: 你的下一个法术获得回响+{echoGain}。然后这张牌进入墓地。
+    base: 激活：在本回合中，你的下一个法术获得回响+{echoGain}。然后这张牌进入墓地。
+    radiant: 激活：在本回合中，你的下一个法术获得回响+{echoGain}。
 core-080: # Zao Gao
   flavour: A plate of rice cakes and a reckless idea.
   voice:
@@ -838,8 +838,8 @@ core-089: # Corpse Eater
     death: Finally... full.
   zh:
     name: 噬尸者
-    base: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。"
-    radiant: "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
+    base: "突袭，易碎1\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
+    radiant: "突袭，圣盾，易碎3\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
 core-090: # Super-Virus Injection
   flavour: Spread it around. Let them shuffle it themselves.
   voice:
@@ -945,8 +945,8 @@ core-098: # Heroic Power
     cast: With great power... whatever.
   zh:
     name: 英雄之力
-    base: "不可摧毁\n对战开始时：随机获得13种能力中的一种。每种能力都是花费其(X)的激活能力。\n(3)探险地图：招募一个永久物。\n(1)生命分流：抽{tapDraw}张牌。受到{tapDamage}点伤害。\n(1)稳固射击：对敌方英雄造成{shot}点伤害。\n(2)牧场：召唤一个突袭衍生物。\n(1)猫咖：召唤一个猫族衍生物。\n(1)点射：穿透。造成{ping}点伤害。\n(2)见证价值：发现一张单位牌。\n(2)缝合：发现两张法力值消耗为({stitchCost})或更低的单位牌。将它们融合。\n(1)全副武装：直到你的下个回合，你的英雄获得{armor}点护甲。\n(2)死吧，虫子：对一个随机敌人造成{insect}点伤害。\n(2)KY头脑风暴：将一张随机KY牌置入你的手牌。使你手牌中所有法术的法力值消耗减少({discount})点。\n(2)采摘：将一张随机水果牌置入你的手牌。其法力值消耗为({fruitCost})。\n(3)终点诡计：发现一张陷阱牌并召唤它。"
-    radiant: "不可摧毁\n对战开始时：随机获得13种能力中的一种。每种能力都是花费其(X)的激活能力。\n(3)探险地图：招募一个永久物。使其变为光辉。\n(1)生命分流：从每名玩家的牌库中各抽{tapDraw}张牌。\n(1)稳固射击：对敌方英雄造成{shot}点伤害。永久强化此能力，使其伤害+2。\n(2)牧场：召唤一个光辉突袭衍生物。\n(1)猫咖：召唤一个随机猫族。\n(1)点射：穿透。造成{ping}点伤害。如果此能力杀死了一个单位，召唤一个具有其属性的食尸鬼衍生物。\n(2)见证价值：发现一张光辉单位牌。\n(2)缝合：发现两张法力值消耗为({stitchCost})或更低的光辉单位牌。将它们融合。\n(1)铜墙铁壁：你的英雄获得{armor}点护甲，然后此能力刷新。\n(2)死吧，虫子：幸运1。对一个随机敌人造成{insect}点伤害。\n(2)KY头脑风暴：将一张光辉KY牌置入你的手牌。使你手牌中所有法术的法力值消耗减少({discount})点。\n(2)采摘：将一张随机光辉水果牌置入你的手牌。其法力值消耗为({fruitCost})。\n(3)终点诡计：发现一张光辉陷阱牌并召唤它。"
+    base: "不可摧毁\n战吼：从13种能力中发现一种。每种能力都是花费其(X)的激活能力。\n(3)探险地图：招募一个永久物。\n(1)生命分流：抽{tapDraw}张牌。受到{tapDamage}点伤害。\n(1)稳固射击：对敌方英雄造成{shot}点伤害。\n(2)牧场：召唤一个突袭衍生物。\n(1)猫咖：召唤一个猫族衍生物。\n(1)点射：穿透。造成{ping}点伤害。\n(2)见证价值：发现一张单位牌。\n(2)缝合：发现两张法力值消耗为({stitchCost})或更低的单位牌。将它们融合。\n(1)全副武装：直到你的下个回合，你的英雄获得{armor}点护甲。\n(2)死吧，虫子：对一个随机敌人造成{insect}点伤害。\n(2)KY头脑风暴：将一张随机KY牌置入你的手牌。使你手牌中所有法术的法力值消耗减少({discount})点。\n(2)采摘：将一张随机水果牌置入你的手牌。其法力值消耗为({fruitCost})。\n(3)终点诡计：发现一张陷阱牌并召唤它。"
+    radiant: "不可摧毁\n战吼：从13种能力中发现一种。每种能力都是花费其(X)的激活能力。\n(3)探险地图：招募一个永久物。使其变为光辉。\n(1)生命分流：从每名玩家的牌库中各抽{tapDraw}张牌。\n(1)稳固射击：对敌方英雄造成{shot}点伤害。永久强化此能力，使其伤害+2。\n(2)牧场：召唤一个光辉突袭衍生物。\n(1)猫咖：召唤一个随机猫族。\n(1)点射：穿透。造成{ping}点伤害。如果此能力杀死了一个单位，召唤一个具有其属性的食尸鬼衍生物。\n(2)见证价值：发现一张光辉单位牌。\n(2)缝合：发现两张法力值消耗为({stitchCost})或更低的光辉单位牌。将它们融合。\n(1)铜墙铁壁：你的英雄获得{armor}点护甲，然后此能力刷新。\n(2)死吧，虫子：幸运1。对一个随机敌人造成{insect}点伤害。\n(2)KY头脑风暴：将一张光辉KY牌置入你的手牌。使你手牌中所有法术的法力值消耗减少({discount})点。\n(2)采摘：将一张随机光辉水果牌置入你的手牌。其法力值消耗为({fruitCost})。\n(3)终点诡计：发现一张光辉陷阱牌并召唤它。"
 core-099: # Craft a Card
   flavour: Two cards walk in, one card walks out. Glue optional.
   voice:
@@ -1057,8 +1057,8 @@ classic-004: # Palantir
     cast: The seeing stone shows me everything.
   zh:
     name: 帕兰提尔
-    base: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(1)的法术时，献祭这张牌以夺取它，并由你施放它。"
-    radiant: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(1)的法术时，夺取它并由你施放它。一旦这张牌已夺取{threshold}张法术，献祭这张牌。"
+    base: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(2)的法术时，献祭这张牌以夺取它，并由你施放它。"
+    radiant: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(2)的法术时，夺取它并由你施放它。一旦这张牌已夺取{threshold}张法术，献祭这张牌。"
     previews:
       Once it has stolen {threshold}: 已夺取{threshold}张法术
 classic-005: # Tesla
@@ -1346,8 +1346,8 @@ classic-037: # Last Hurrah
     cast: One last hurrah, together!
   zh:
     name: 最后的狂欢
-    base: 抽光你的牌库。在本回合结束时，弃掉你的手牌。
-    radiant: 抽光你的牌库。在你的下个回合结束时，弃掉你的手牌。
+    base: 抽光你的牌库。在本回合结束时，弃掉{discard}张牌。
+    radiant: 抽光你的牌库。在你的下个回合结束时，弃掉{discard}张牌。
 classic-038: # Jackiestan Auctioneer
   flavour: Going once, going twice, sold to the player in lane three.
   voice:
@@ -1532,8 +1532,8 @@ classic-057: # Echo
     cast: Again... again... again...
   zh:
     name: 回响
-    base: 这张牌具有任意一名玩家打出的上一张法术的文本。
-    radiant: "回响1\n这张牌具有任意一名玩家打出的上一张法术的文本。"
+    base: 这张牌具有任意一名玩家打出的上一张法术的文本；如果还没有法术被打出，则具有幸运币的文本。
+    radiant: "回响1\n这张牌具有任意一名玩家打出的上一张法术的文本；如果还没有法术被打出，则具有幸运币的文本。"
 classic-058: # Common Resources
   flavour: What's yours is shared, from the bottom up.
   voice:
@@ -1578,8 +1578,8 @@ classic-062: # Living Bomb
     cast: Tick, tock. Tick, tock.
   zh:
     name: 活动炸弹
-    base: 在每名玩家的回合开始时：消灭该玩家控制的所有带有瘟疫指示物的永久物。
-    radiant: 在你对手的回合开始时：消灭其控制的所有带有瘟疫指示物的永久物。
+    base: "战吼：放置一个瘟疫指示物。\n在每名玩家的回合开始时：消灭该玩家控制的所有带有瘟疫指示物的永久物。"
+    radiant: "激活：放置一个瘟疫指示物。\n在你对手的回合开始时：消灭其控制的所有带有瘟疫指示物的永久物。"
 classic-063: # Crop Dusting
   flavour: Low flight, fine mist, wide spread.
   voice:
@@ -1650,8 +1650,8 @@ classic-070: # Book of Plague
     cast: Do not lick the pages.
   zh:
     name: 瘟疫之书
-    base: 放置{tokens}个瘟疫指示物。
-    radiant: 放置{tokens}个瘟疫指示物。
+    base: 抉择：放置{tokens}个瘟疫指示物，或者将{cards}张随机瘟疫牌置入你的手牌。
+    radiant: 抉择：放置{tokens}个瘟疫指示物，或者将{cards}张随机光辉瘟疫牌置入你的手牌。
 classic-071: # Lane Eater
   flavour: It eats the lane, the plates and the floor.
   voice:
@@ -2050,7 +2050,7 @@ classicplus-016: # Conjure Rush Token+
     cast: More helpers, even quicker!
   zh:
     name: 变出突袭衍生物+
-    base: 召唤一个突袭衍生物。它获得{keywords}个随机战斗关键词。
+    base: 召唤一个突袭衍生物。抛一枚硬币：正面时它获得{keywords}个随机战斗关键词，反面时获得{tails}个。
     radiant: 召唤{tokens}个突袭衍生物。每个都获得{keywords}个随机战斗关键词。
 classicplus-017: # Conjure Rush Token++
   flavour: Same sprinter, best shoes, extra attitude.
@@ -2318,8 +2318,8 @@ classicplus-037: # Wardrum
     death: The drum falls silent.
   zh:
     name: 战鼓
-    base: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
-    radiant: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
+    base: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
+    radiant: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
     previews:
       non-Units in a turn: 在你一个回合内打出的法术、场地法术和陷阱
       non-Unit you played this turn: 你在本回合打出的
@@ -2443,8 +2443,8 @@ classicplus-047: # Jogg's Box
     cast: What's in the box? Surprise!
   zh:
     name: 约格的谜匣
-    base: 施放{casts}个随机法术。
-    radiant: "回响1\n施放{casts}个随机法术。"
+    base: 施放{casts}个随机法术。结束回合。
+    radiant: 施放{casts}个随机法术。结束回合。
 classicplus-048: # Jlockeed's Lobbyist
   flavour: He works for the contract, and the contract always pays.
   voice:
@@ -2481,8 +2481,8 @@ classicplus-051: # Jlockeed's J15 Fighter
     death: Mayday, mayday!
   zh:
     name: Jlockeed的歼15战斗机
-    base: "远程，飞行，突袭\n无法被攻击。"
-    radiant: "远程，飞行，突袭，圣盾\n无法被攻击。"
+    base: "远程，飞行，突袭，无法守备\n无法被攻击。"
+    radiant: "远程，飞行，突袭，圣盾，无法守备\n无法被攻击。"
 classicplus-052: # Jlockeed's Permanent Defense Contract
   flavour: A contract for life, with free shipping every morning.
   voice:
@@ -2669,8 +2669,8 @@ classicplus-069: # Buff Billy
     death: Skipped leg day.
   zh:
     name: 肌肉比利
-    base: "此单位为3X/3X。\n战吼：强化此单位X次。"
-    radiant: "此单位为6X/6X。\n战吼：强化此单位2X次。"
+    base: "此单位为2X/3X。\n战吼：强化此单位X次。"
+    radiant: "此单位为4X/6X。\n战吼：强化此单位2X次。"
 classicplus-070: # Chaos Machine
   flavour: The machine hums, and everything near it gets bigger.
   voice:
@@ -2912,8 +2912,8 @@ meditative-005: # Death by 1000 cuts
     cast: One little cut. Then another.
   zh:
     name: 千刀万剐
-    base: "回响X，穿透\n对一个单位造成{damage}点伤害。X等于你的法力值上限的{echo}倍。"
-    radiant: "回响X，吸血，穿透\n对一个单位造成{damage}点伤害。X等于你的法力值上限的{echo}倍。"
+    base: "回响X，穿透\n对一个单位造成{damage}点伤害。X等于支付此牌后你剩余法力值的{echo}倍。"
+    radiant: "回响X，吸血，穿透\n对一个单位造成{damage}点伤害。X等于支付此牌后你剩余法力值的{echo}倍。"
 meditative-006: # Me no Likey
   flavour: Regifting is a love language, and the receipt pays well.
   voice:
@@ -2928,8 +2928,8 @@ meditative-007: # Introspection
     cast: Breathe in. Look within.
   zh:
     name: 内省
-    base: 回合结束时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
-    radiant: 回合结束时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
+    base: 回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
+    radiant: 回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
 meditative-008: # Reach the Summit
   flavour: Every summit is only the floor of the next sky.
   voice:
@@ -2946,8 +2946,8 @@ meditative-009: # Joint Filing
     cast: Filed twice, just to be sure.
   zh:
     name: 联合报税
-    base: 光环：你的回合开始时和回合结束时效果会额外触发{extra}次。
-    radiant: 光环：你的回合开始时和回合结束时效果会额外触发{extra}次。
+    base: "战吼：将一张具有回合开始时或回合结束时效果的随机牌置入你的手牌。\n光环：你的回合开始时和回合结束时效果会额外触发{extra}次。"
+    radiant: "战吼：将一张具有回合开始时效果的随机牌和一张具有回合结束时效果的随机牌置入你的手牌。\n光环：你的回合开始时和回合结束时效果会额外触发{extra}次。"
 meditative-010: # Double Counting
   flavour: The books balance if you count every entry twice.
   voice:
@@ -3050,8 +3050,8 @@ meditative-020: # Aestheticize the Game
     cast: A win, but make it beautiful.
   zh:
     name: 美学化游戏
-    base: 抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。
-    radiant: 抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。抽{draw}张牌。
+    base: "可交易\n抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。"
+    radiant: "可交易\n抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。抽{draw}张牌。"
 meditative-021: # API Key Fishing
   flavour: Dear valued user, please confirm your password to keep your cards.
   voice:
@@ -3182,8 +3182,8 @@ meditative-032: # Spiritually 中国
     cast: Lesson one. Repeat after me.
   zh:
     name: 精神中国人
-    base: 准备好学中文！将你手牌中的每张牌变形为同一张随机的中国牌，它们的法力值消耗为(1)。召唤{units}个随机的中国单位。
-    radiant: 准备好学中文！将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(1)。召唤{units}个随机的光辉中国单位。
+    base: 准备好学中文！将你手牌中的每张牌变形为同一张随机的中国牌。召唤{units}个随机的中国单位。
+    radiant: 准备好学中文！将你手牌中的每张牌变形为同一张随机的光辉中国牌。召唤{units}个随机的光辉中国单位。
 meditative-033: # First Day of 学校
   flavour: New backpack, new pencils, new alphabet.
   voice:
@@ -3290,8 +3290,8 @@ meditative-040: # Feng Shui
     cast: Water feeds wood. Wood feeds fire.
   zh:
     name: 风水
-    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。你的幸运为{luck}。\n你的上一个元素，你的对手的上一个元素。"
-    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。你的幸运为{luck}。\n你的上一个元素，你的对手的上一个元素。"
+    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。\n激活：将一张鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
+    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。\n激活：将一张光辉鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
     previews:
       Your last element: 你的上一个元素
       your opponent's last element: 你的对手的上一个元素
@@ -3365,8 +3365,8 @@ meditative-047: # 饕餮
     death: Still hungry. Always hungry.
   zh:
     name: 饕餮
-    base: 回合结束时：将一张随机敌方永久物融合进本牌。
-    radiant: 回合结束时：将一张随机敌方永久物和你对手牌库中的一张随机牌融合进本牌。
+    base: 回合结束时：将一个随机敌方单位融合进本牌。
+    radiant: 回合结束时：将一个随机敌方单位和你对手牌库中的一张随机牌融合进本牌。
 meditative-048: # Tranquility
   flavour: Breathe in. The storm waits its turn.
   voice:
@@ -3455,8 +3455,8 @@ meditative-054: # Money Machine
     cast: Cha-ching! Everybody gets a little something.
   zh:
     name: 印钞机
-    base: "回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张幸运币洗入你的牌库。"
-    radiant: "回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张光辉幸运币洗入你的牌库。"
+    base: "战吼：将一张幸运币置入你的手牌。\n回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张幸运币洗入你的牌库。"
+    radiant: "战吼：将一张光辉幸运币置入你的手牌。\n回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张光辉幸运币洗入你的牌库。"
 meditative-055: # Dragon Fruit
   flavour: Scaly outside, speckled inside, and a little smug about both.
   voice:
@@ -3543,8 +3543,8 @@ meditative-063: # Skull of J'Nari
       - Good units are hard to find.
   zh:
     name: 纳里之颅
-    base: 回合开始时：从你的手牌中召唤{units}个随机单位。
-    radiant: 回合开始时：从你的手牌中召唤{units}个随机单位。使其变为光辉。
+    base: 回合结束时：从你的手牌中召唤{units}个随机单位。
+    radiant: 回合结束时：从你的手牌中召唤{units}个随机单位。使其变为光辉。
 meditative-064: # Traitorous Blood
   flavour: Blood is thicker than orders.
   voice:
@@ -3721,8 +3721,8 @@ meditative-081: # Deadman's Hand
     cast: Aces and eights. Deal me back in.
   zh:
     name: 死人之手
-    base: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。\n加码(2)：每个复制都有{chance}%的几率变为光辉。"
-    radiant: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。然后抽{draw}张牌。\n加码(2)：每个复制都有{chance}%的几率变为光辉。"
+    base: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。然后抽{draw}张牌。\n加码(1)：每个复制都有{chance}%的几率变为光辉。"
+    radiant: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。然后抽{draw}张牌。\n加码(1)：每个复制都有{chance}%的几率变为光辉。"
 meditative-082: # Medina Outfitter
   flavour: "Every stall in the bazaar gets the same pitch: a little more."
   voice:
@@ -3897,8 +3897,8 @@ meditative-095: # Call to Chaos (Meditative Edition)
     cast: Breathe in. Now roll the dice!
   zh:
     name: 混沌召唤（冥想版）
-    base: 一个随机效果：将你的手牌融合为一张牌，并将它的2张复制置入你的手牌，这三张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得6点护甲，并为其恢复6点生命值；召唤一个玉美人；召唤3张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：将你的手牌融合为一张牌，并将它的2张复制置入你的手牌，这三张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得6点护甲，并为其恢复6点生命值；召唤一个玉美人；召唤3张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
+    base: 一个随机效果：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得5点护甲，并为其恢复5点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得5点护甲，并为其恢复5点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
 meditative-095-1: # CN Golem
   flavour: Assembled overnight, smashing by noon.
   voice:
@@ -4149,8 +4149,8 @@ meditativeplus-005: # Spirit Lash
     cast: Feel the sting on both sides now.
   zh:
     name: 灵魂鞭笞
-    base: "对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
-    radiant: "回响1\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
+    base: "闪回\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
+    radiant: "回响1，闪回\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
 meditativeplus-006: # Bloodbloom
   flavour: It blooms brightest in the moment you can least afford it.
   voice:
@@ -4323,8 +4323,8 @@ meditativeplus-022: # Mountaintop Garden
     cast: Up here, everything grows bigger.
   zh:
     name: 山顶花园
-    base: 光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。
-    radiant: 光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。
+    base: "战吼：将一张随机加码牌置入你的手牌。\n光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。"
+    radiant: "战吼：将一张随机加码牌置入你的手牌。其法力值消耗为(0)。\n光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。"
 meditativeplus-023: # Enormous Elderberry
   flavour: Picked by a crew of six on ladders. Eaten by one brave soul.
   voice:
@@ -4595,8 +4595,8 @@ stinkyscape-013: # Asphyxiants Cloud
     cast: Hold your breath. Forever.
   zh:
     name: 窒息毒云
-    base: "剧毒\n你在本回合中的下一张法术具有剧毒。对所有敌人造成{damage}点伤害。抽{draw}张牌。"
-    radiant: "回响1，剧毒\n你在本回合中的下一张法术具有剧毒。对所有敌人造成{damage}点伤害。抽{draw}张牌。"
+    base: "闪回\n对所有敌人造成{damage}点伤害。你在本回合中的下一张法术具有剧毒。"
+    radiant: "闪回\n对所有敌人造成{damage}点伤害。你在本回合中的下一张法术具有剧毒。"
 stinkyscape-014: # Arm of the Jempire
   flavour: The Jempire never sends a hand when an arm will do.
   voice:
@@ -4623,8 +4623,8 @@ stinkyscape-016: # Rod of Ages
     cast: The ages remember every hand that held it.
   zh:
     name: 万古之杖
-    base: "活化，飞行\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。\n当此牌拥有10个关键词时，使其变为光辉。"
-    radiant: "活化，飞行，不可摧毁\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。"
+    base: "活化\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。\n当此牌拥有12个关键词时，使其变为光辉。"
+    radiant: "活化，不可摧毁\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。"
 stinkyscape-017: # Imprisoned Ship Smith
   flavour: Chains on his wrists, a forge in his head.
   voice:
@@ -4649,7 +4649,7 @@ stinkyscape-018-1: # MELCHIOR
     cast: Melchior. Analysis complete.
   zh:
     name: 梅尔基奥尔
-    base: "不可摧毁\n回合开始时：如果你的对手拥有的单位比你多，投票将你移出游戏。\n激活：发现一个战斗关键词，并使你的每个单位获得该关键词。"
+    base: "不可摧毁\n回合开始时：如果你的对手拥有的单位比你多，投票将你移出游戏。\n激活：使你的每个单位获得{keywords}个随机战斗关键词。"
     radiant: "不可摧毁\n回合开始时：如果你的对手拥有的单位比你多，投票将你移出游戏。\n激活：使你的每个单位获得{keywords}个随机战斗关键词。"
 stinkyscape-018-2: # BALTHASAR
   flavour: The mother in her worries about your health, and she will say so in a vote.
@@ -4739,8 +4739,8 @@ stinkyscape-026: # ZolarKeth
     death: Office hours are over.
   zh:
     name: ZolarKeth
-    base: 战吼：抉择：召唤一个大学；或此单位获得“激活：随机召唤一个星舰部件。”
-    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“激活：随机召唤一个光辉星舰部件。”
+    base: 战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”
+    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”
 stinkyscape-027: # Drone Core I
   flavour: The cheapest core on the market. It eats a card, but the drone works fine.
   voice:
@@ -4795,8 +4795,8 @@ stinkyscape-033: # Drone Core VII
     cast: Corvette and escorts, forming up.
   zh:
     name: 无人机核心VII
-    base: 召唤一个无人护卫舰和{interceptors}个无人截击机。
-    radiant: 召唤一个光辉无人护卫舰和{interceptors}个光辉无人截击机。
+    base: "结余减费。\n召唤一个无人护卫舰和{interceptors}个无人截击机。"
+    radiant: "结余减费。\n召唤一个光辉无人护卫舰和{interceptors}个光辉无人截击机。"
 stinkyscape-034: # Drone Core VIII
   flavour: Leftover energy, poured straight into the assembly line.
   voice:
@@ -4903,8 +4903,8 @@ stinkyscape-045: # Drone Commander
     death: Drones, avenge me.
   zh:
     name: 无人机指挥官
-    base: 战吼：将{cards}张随机无人机核心牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
-    radiant: 战吼：将{cards}张随机光辉无人机核心牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
+    base: 战吼：用随机无人机核心牌填满你的手牌。
+    radiant: 战吼：用随机光辉无人机核心牌填满你的手牌。
 stinkyscape-046: # Circadian Halfcycler
   flavour: Half asleep, half autopilot, fully caffeinated.
   voice:
@@ -5655,8 +5655,8 @@ stinkyscape-121: # System Schematic
     cast: Select your system. Choose wisely.
   zh:
     name: 系统图纸
-    base: 选择一张核心系统、安全系统、不安全系统或狂野系统，将其置入你的手牌。
-    radiant: 选择一张光辉核心系统、光辉安全系统、光辉不安全系统或光辉狂野系统，将其置入你的手牌。
+    base: "可交易，闪回\n选择一张核心系统、安全系统、不安全系统或狂野系统，将其置入你的手牌。"
+    radiant: "可交易，闪回\n选择一张光辉核心系统、光辉安全系统、光辉不安全系统或光辉狂野系统，将其置入你的手牌。"
 stinkyscape-122: # Vamp Rounds
   flavour: Each round drinks a little from whatever it hits and sends the change home.
   voice:
@@ -5729,8 +5729,8 @@ stinkyscape-129: # Jlockeed's Missile Pod
     death: Pod's empty.
   zh:
     name: Jlockeed的导弹舱
-    base: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向下取整的伤害。\n加码(2)：星舰部件和装备。"
-    radiant: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向下取整的伤害。\n加码(2)：星舰部件和装备。"
+    base: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向上取整的伤害。\n加码(2)：星舰部件和装备。"
+    radiant: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向上取整的伤害。\n加码(2)：星舰部件和装备。"
 stinkyscape-130: # Jlockeed's Starship Retrofitting Program
   flavour: New fins, new paint, the same invoice. Now with a launch clause.
   voice:
@@ -5793,8 +5793,8 @@ stinkyscape-135-1: # Sack
     death: Free at last!
   zh:
     name: 麻袋
-    base: 当这张牌离开场上时，召唤装在其中的单位。
-    radiant: "易碎1\n当这张牌离开场上时，召唤装在其中的单位。"
+    base: "无法守备\n当这张牌离开场上时，召唤装在其中的单位。"
+    radiant: "无法守备，易碎1\n当这张牌离开场上时，召唤装在其中的单位。"
     previews:
       the Unit stuffed into it: 装在其中的单位
 stinkyscape-136: # Magic Module
@@ -5997,16 +5997,16 @@ stinkyscape-150-1: # Stinkyscape Golem
     death: Back to stardust.
   zh:
     name: 臭臭星景魔像
-    base: 星舰部件，飞行，远程，突袭
-    radiant: 星舰部件，飞行，远程，突袭
+    base: 飞行，远程，突袭
+    radiant: 飞行，远程，突袭
 stinkyscape-151: # Call to Chaos (Scape Edition)
   flavour: The whole starscape rolls the dice at once, and you are standing on the table.
   voice:
     cast: Strap in. The cosmos rolls the dice!
   zh:
     name: 混沌召唤（星景版）
-    base: 一个随机效果：将你这一侧的场面替换为一个随机异常，十种中任意一种；召唤3个无人护卫舰；召唤无人战列舰；从核心系统、安全系统、不安全系统和狂野系统中随机施放2张不同的牌；将4张随机星舰部件牌置入你的手牌，它们的法力值消耗为(0)；在你的每个单位区召唤一个无人截击机，堆叠在其中已有的单位之上；将4张随机星舰部件牌融合进你的休眠星舰，然后将其发射；将2张随机光辉武器牌置入你的手牌，它们的法力值消耗为(0)；在本局对战的剩余时间内，市场每回合都会以20信用点向你出售一张混沌召唤；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：将你这一侧的场面替换为一个随机异常，十种中任意一种；召唤3个无人护卫舰；召唤无人战列舰；从核心系统、安全系统、不安全系统和狂野系统中随机施放2张不同的牌；将4张随机星舰部件牌置入你的手牌，它们的法力值消耗为(0)；在你的每个单位区召唤一个无人截击机，堆叠在其中已有的单位之上；将4张随机星舰部件牌融合进你的休眠星舰，然后将其发射；将2张随机光辉武器牌置入你的手牌，它们的法力值消耗为(0)；在本局对战的剩余时间内，市场每回合都会以20信用点向你出售一张混沌召唤；施放一张随机混沌召唤。
+    base: 一个随机效果：将你这一侧的场面替换为一个随机异常，十种中任意一种；召唤2个无人护卫舰；召唤无人战列舰；从核心系统、安全系统、不安全系统和狂野系统中随机施放2张不同的牌；将3张随机星舰部件牌置入你的手牌，它们的法力值消耗为(0)；在你的每个单位区召唤一个无人截击机，堆叠在其中已有的单位之上；将3张随机星舰部件牌融合进你的休眠星舰，然后将其发射；将2张随机光辉武器牌置入你的手牌，它们的法力值消耗为(0)；在本局对战的剩余时间内，市场每回合都会以20信用点向你出售一张混沌召唤；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：将你这一侧的场面替换为一个随机异常，十种中任意一种；召唤2个无人护卫舰；召唤无人战列舰；从核心系统、安全系统、不安全系统和狂野系统中随机施放2张不同的牌；将3张随机星舰部件牌置入你的手牌，它们的法力值消耗为(0)；在你的每个单位区召唤一个无人截击机，堆叠在其中已有的单位之上；将3张随机星舰部件牌融合进你的休眠星舰，然后将其发射；将2张随机光辉武器牌置入你的手牌，它们的法力值消耗为(0)；在本局对战的剩余时间内，市场每回合都会以20信用点向你出售一张混沌召唤；施放一张随机混沌召唤。
 stinkyscape-152: # Sanctum
   flavour: Nothing in here is ever truly finished.
   voice:
@@ -6021,8 +6021,8 @@ stinkyscape-153: # Stimmycheck
     cast: Free money! Read the fine print later.
   zh:
     name: 刺激支票
-    base: "获得{mana}点法力值。通货膨胀：你手牌和牌库中的每张牌都有{chance}%的几率使其法力值消耗增加(1)点。\n在本回合结束时，将一张刺激支票置入你的手牌。其通货膨胀几率提高10%。"
-    radiant: "幸运1\n获得{mana}点法力值。通货膨胀：你手牌和牌库中的每张牌都有{chance}%的几率使其法力值消耗增加(1)点。\n在本回合结束时，将一张光辉刺激支票置入你的手牌。其通货膨胀几率提高10%。"
+    base: "获得{mana}点法力值。通货膨胀：你手牌和牌库中的每张牌都有{chance}%的几率使其法力值消耗增加(1)点。\n在本回合结束时，将一张刺激支票置入你的手牌。其通货膨胀几率提高5%。"
+    radiant: "幸运1\n获得{mana}点法力值。通货膨胀：你手牌和牌库中的每张牌都有{chance}%的几率使其法力值消耗增加(1)点。\n在本回合结束时，将一张光辉刺激支票置入你的手牌。其通货膨胀几率提高5%。"
     previews:
       "{chance}% chance": "{chance}%的几率"
 stinkyscape-154: # Dice of Doom
@@ -6149,8 +6149,8 @@ stinkyscape-168: # Drone Hanger
     cast: Hangar doors open. Interceptor away.
   zh:
     name: 无人机机库
-    base: 回合开始时：召唤一个无人截击机。
-    radiant: 回合开始时：召唤一个光辉无人截击机。
+    base: 激活：召唤一个无人截击机。
+    radiant: 激活：召唤一个光辉无人截击机。
 stinkyscape-169: # Tiny Asteroid
   flavour: Small enough to mine before lunch.
   voice:
@@ -6257,8 +6257,8 @@ stinkyscape-t-dormant-starship: # Dormant Starship
     death: The ship is lost.
   zh:
     name: 休眠星舰
-    base: "休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(3)发射此单位。"
-    radiant: "休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(3)发射此单位。"
+    base: "飞行，远程\n休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(4)发射此单位。"
+    radiant: "飞行，远程\n休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(4)发射此单位。"
 stinkyscape-t-drone-interceptor: # Drone Interceptor
   flavour: Small, fast, and programmed to find out what it's good at.
   voice:
@@ -6287,8 +6287,8 @@ stinkyscape-t-shield-layer: # Drone Battleship (Shield Layer)
     death: Shields down. Next layer exposed.
   zh:
     name: 无人战列舰（护盾层）
-    base: "星舰，无法攻击，嘲讽，护甲4\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
-    radiant: "星舰，无法攻击，嘲讽，护甲8\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
+    base: "飞行，远程，无法攻击，嘲讽，护甲4\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
+    radiant: "飞行，远程，无法攻击，嘲讽，护甲8\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
 stinkyscape-t-propagation-layer: # Drone Battleship (Propagation Layer)
   flavour: A shipyard inside a warship, printing escorts on demand.
   voice:
@@ -6297,8 +6297,8 @@ stinkyscape-t-propagation-layer: # Drone Battleship (Propagation Layer)
     death: Bay destroyed. Core exposed.
   zh:
     name: 无人战列舰（繁衍层）
-    base: "星舰，无法攻击\n激活2：召唤一个无人截击机。\n激活：召唤一个无人护卫舰。"
-    radiant: "星舰，无法攻击\n激活2：召唤一个光辉无人截击机。\n激活：召唤一个光辉无人护卫舰。"
+    base: "飞行，远程，无法攻击\n激活2：召唤一个无人截击机。\n激活：召唤一个无人护卫舰。"
+    radiant: "飞行，远程，无法攻击\n激活2：召唤一个光辉无人截击机。\n激活：召唤一个光辉无人护卫舰。"
 stinkyscape-t-meltdown-layer: # Drone Battleship (Meltdown Layer)
   flavour: The reactor at the heart of the battleship is not stable. It was never meant to be.
   voice:
@@ -6307,8 +6307,8 @@ stinkyscape-t-meltdown-layer: # Drone Battleship (Meltdown Layer)
     death: Meltdown complete.
   zh:
     name: 无人战列舰（熔毁层）
-    base: "星舰，冲锋，风怒，先攻，易碎3\n回合结束时：此单位受到{selfDamage}点伤害。"
-    radiant: "星舰，冲锋，风怒，先攻，易碎6\n回合结束时：此单位受到{selfDamage}点伤害。"
+    base: "飞行，远程，冲锋，风怒，先攻，易碎3\n回合结束时：此单位受到{selfDamage}点伤害。"
+    radiant: "飞行，远程，冲锋，风怒，先攻，易碎6\n回合结束时：此单位受到{selfDamage}点伤害。"
 stinkyscape-t-reknite: # Reknite
   flavour: A dull gray ore that hardens into plating at the first sign of trouble.
   voice:
@@ -6582,7 +6582,7 @@ traininggrounds-014: # Explosive Trap
     base: "践踏\n当你的对手打出一个单位时揭示：在其结算后，对其造成{damage}点伤害。"
     radiant: "践踏，穿透\n当你的对手打出一个单位时揭示：在其结算后，对其造成{damage}点伤害。"
 traininggrounds-015: # In a hurry
-  flavour: Three volunteers, one turn, no return tickets.
+  flavour: Four volunteers, one turn, no return tickets.
   voice:
     cast: Go go go, no time!
   zh:
@@ -6801,16 +6801,16 @@ traininggrounds-038: # Tutorial Master
     death: Class dismissed.
   zh:
     name: 教程大师
-    base: "战吼：将{cards}张随机训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。\n亡语：将{cards}张随机训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。"
-    radiant: "战吼：将{cards}张随机光辉训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。\n亡语：将{cards}张随机光辉训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。"
+    base: 战吼与亡语：将{cards}张随机训练场牌置入你的手牌。
+    radiant: 战吼与亡语：将{cards}张随机光辉训练场牌置入你的手牌。
 traininggrounds-039: # Call to Chaos (Training-Grounds Edition)
   flavour: The final exam, graded by dice.
   voice:
     cast: Class is chaos! Roll the dice!
   zh:
     name: 混沌召唤（训练场版）
-    base: 一个随机效果：召唤3个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并刷新4点法力值；将4张随机训练场牌置入你的手牌，它们的法力值消耗为(0)；获得8点法力值并抽2张牌；召唤6个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(0)；召唤5个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；现在以及在本局对战剩余时间内你的每第二个回合开始时，将一张随机混沌召唤置入你的手牌，其法力值消耗为(0)；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：召唤3个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并刷新4点法力值；将4张随机训练场牌置入你的手牌，它们的法力值消耗为(0)；获得8点法力值并抽2张牌；召唤6个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(0)；召唤5个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；现在以及在本局对战剩余时间内你的每第二个回合开始时，将一张随机混沌召唤置入你的手牌，其法力值消耗为(0)；施放一张随机混沌召唤。
+    base: 一个随机效果：召唤3个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并刷新3点法力值；将4张随机训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得2点法力值；获得6点法力值并抽2张牌；召唤5个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得1点法力值；召唤3个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；在本局对战的剩余时间内，你的每个回合开始时，将一张随机混沌召唤置入你的手牌；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：召唤3个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并刷新3点法力值；将4张随机训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得2点法力值；获得6点法力值并抽2张牌；召唤5个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得1点法力值；召唤3个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；在本局对战的剩余时间内，你的每个回合开始时，将一张随机混沌召唤置入你的手牌；施放一张随机混沌召唤。
 traininggrounds-039-1: # Training-Grounds Golem
   flavour: Built to be hit in training. Nobody told it to stop hitting back.
   voice:
@@ -6873,8 +6873,8 @@ traininggrounds-045: # Legacy: Jlockeed's Weapons
     cast: Defense contract approved.
   zh:
     name: 传统：Jlockeed军火
-    base: 光环：你的单位拥有+{attack}攻击力、突袭和先攻。
-    radiant: 光环：你的单位拥有+{attack}攻击力、突袭和先攻。
+    base: 光环：你的单位拥有+{attack}攻击力和突袭。
+    radiant: 光环：你的单位拥有+{attack}攻击力和突袭。
 traininggrounds-046: # Legacy: Hit Job
   flavour: Clean, quiet, and billed by the hour.
   voice:
@@ -6935,8 +6935,8 @@ traininggrounds-052: # Legacy: Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: 传统：Snom兔精神控制
-    base: 夺取一个敌方单位。
-    radiant: 夺取一个敌方单位。使其变为光辉。
+    base: 夺取一个敌方单位。将其攻击力和生命值变为4/4。
+    radiant: 夺取一张敌方牌。
 traininggrounds-053: # Legacy: Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
   voice:
@@ -6973,8 +6973,8 @@ traininggrounds-056: # Legacy: Corpse Eater
     death: Finally... full.
   zh:
     name: 传统：噬尸者
-    base: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。"
-    radiant: "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
+    base: 当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。
+    radiant: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
 traininggrounds-057: # Legacy: Recycling Initiative
   flavour: Reduce, reuse, recast.
   voice:

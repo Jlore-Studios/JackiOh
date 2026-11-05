@@ -36,6 +36,7 @@
     "Legacy": "传统",
     "Resource": "资源",
     "Faction": "阵营",
+    "Starship": "星舰",
     "Token": "衍生物"
   },
   "rarities": {
@@ -87,6 +88,7 @@
   "labels": {
     "Cry:": "战吼：",
     "Death:": "亡语：",
+    "Cry & Death:": "战吼与亡语：",
     "Start of turn:": "回合开始时：",
     "End of turn:": "回合结束时：",
     "Aura:": "光环：",
@@ -143,7 +145,7 @@
     "Flashback": { "label": "闪回", "rule": "可以从你的墓地以其法力值消耗打出一次" },
     "Tradable": { "label": "可交易", "rule": "在你的主要阶段，将其从你的手牌洗入你的牌库并抽一张牌，不消耗法力值。每回合一次交易" },
     "Starship Piece": { "label": "星舰部件", "rule": "死亡时，它的一个复制融合进你的休眠星舰；若你没有，先召唤一艘" },
-    "Starship": { "label": "星舰", "rule": "一艘已发射的星舰，由融合进它的星舰部件建造而成" },
+    "Starship": { "label": "星舰", "rule": "一个标签：你的星舰，无论休眠还是已发射，由融合进它的星舰部件建造而成。每艘星舰都具有飞行和远程" },
     "Can't Defend": { "label": "无法守备", "rule": "永远不会处于守备表示" },
     "Can't be attacked": { "label": "无法被攻击", "rule": "任何攻击都不能以其为目标" },
     "Only Units in this lane can attack this": { "label": "只有这一纵列的单位可以攻击这个单位", "rule": "只有从其所在纵列的敌方单位区发起的攻击才是合法的" },
@@ -155,7 +157,6 @@
     "Death": { "label": "亡语", "rule": "从场上被送入墓地时触发" },
     "Start of turn": { "label": "回合开始时", "rule": "在控制者的回合开始时，抽牌之前" },
     "End of turn": { "label": "回合结束时", "rule": "在控制者的回合结束时，清理之前" },
-    "Start of game": { "label": "对战开始时", "rule": "在调度之后，第1回合之前" },
     "Once per turn": { "label": "每回合一次", "rule": "主动能力的次数限制" },
     "Aura": { "label": "光环", "rule": "在场上时生效的效果" },
     "Combo": { "label": "连击", "rule": "如果本回合之前已打出X张或更多的牌，获得额外效果" },

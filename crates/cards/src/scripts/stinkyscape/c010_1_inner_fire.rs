@@ -62,7 +62,7 @@ mod tests {
 
     const INNER_FIRE: &str = "stinkyscape-010-1";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // (4) Field Spell: your units have +3 Attack.
+    const WEAPONS: &str = "core-014"; // (4) Field Spell: your units have +2 Attack.
     const IMMUNE: &str = "classicplus-019-1"; // Radiant: Immune to Spells.
     const FILLER: &str = "core-005";
 
@@ -103,7 +103,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let unit = s.unit_at(P1, 1);
-            s.expect_stats(&unit, json!({ "attack": 7 }));
+            s.expect_stats(&unit, json!({ "attack": 6 }));
 
             s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));
 

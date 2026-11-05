@@ -13,12 +13,13 @@ import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKin
 
 import { useInspectTrigger } from "../cards/index.ts";
 import { chineseName, drawnInChinese, listSeparator, readerKeyword } from "../cards/chinese.ts";
+import { DORMANT_STARSHIP_NAME, holdsDormantStarship } from "../cards/fused.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { rollBatchOf, rollWords } from "../fx/rolls.ts";
-import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
+import { CatalogContext, withMatchDefs, type CardInfo, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { faceDownCost, sideOf, testid } from "./contract.ts";
 import { curveEquation } from "./curveEquation.ts";
@@ -602,10 +603,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
 }
 
 function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
+  // R3045000: a fusion holding the Dormant Starship is named for it, not for all it was fused of (the engine joins the names).
+  const englishOf = (defId: string, info: CardInfo | undefined): string => {
+    if (info === undefined) return defId;
+    return info.def !== undefined && holdsDormantStarship(info.def, (id) => lookup?.(id, false)?.def) ? DORMANT_STARSHIP_NAME : info.name;
+  };
   const def = (defId: string): string => {
     if (defId === HIDDEN_CARD) return t("a hidden card");
     const info = lookup?.(defId, false);
-    const english = info?.name ?? defId;
+    const english = englishOf(defId, info);
     return drawnInChinese(false) ? chineseName(defId, english, info?.def) : english;
   };
   const known = (instanceId: string): string | null => {
@@ -615,7 +621,7 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
     const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
     if (defId === undefined) return null;
     const info = lookup?.(defId, false);
-    const english = info?.name ?? defId;
+    const english = englishOf(defId, info);
     // ME-CN, R1301, R711000: a card the view shows in Chinese is named in Chinese.
     return drawnInChinese(cardInView(view, instanceId)?.chinese === true) ? chineseName(defId, english, info?.def) : english;
   };
@@ -626,7 +632,7 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
       const isZh = drawnInChinese(cardInView(view, instanceId)?.chinese === true);
       if (!isZh) return def(defId);
       const info = lookup?.(defId, false);
-      return chineseName(defId, info?.name ?? defId, info?.def);
+      return chineseName(defId, englishOf(defId, info), info?.def);
     },
     instance: (instanceId, unknown) => known(instanceId) ?? unknown ?? t("a unit"),
     known,

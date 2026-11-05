@@ -2,7 +2,7 @@
 // for an account with an authenticator app (R665), a username in place of the email (R1443, issue
 // #645), the OAuth providers (R666) and Google's own button (R2983000), against a stubbed `fetch`.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GIS_BUTTON, GIS_SCRIPT_URL, type GisButtonConfiguration, type GisIdConfiguration } from "../auth/googleIdentity.ts";
@@ -482,6 +482,39 @@ describe("R3147000 Roblox on the sign-in screen", () => {
     serve({});
     render(<LoginRoute />);
     expect(screen.queryByTestId(loginTestid.robloxHint)).toBeNull();
+  });
+});
+
+describe("R3217000 Google's and Roblox's buttons, one row", () => {
+  it("R3217000 with Google and Roblox named, both sit in one row, Google first", () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    serve({});
+    render(<LoginRoute />);
+    const row = screen.getByTestId(loginTestid.oauthRow);
+    expect(screen.getAllByTestId(loginTestid.oauthRow)).toHaveLength(1);
+    const inRow = within(row).getAllByTestId(loginTestid.oauth);
+    expect(inRow.map((button) => button.getAttribute("data-provider"))).toEqual(["google", "custom:roblox"]);
+    expect(screen.getAllByTestId(loginTestid.oauth)).toHaveLength(2);
+    // R3147000's hint stays under the row, not inside it.
+    expect(row).not.toContainElement(screen.getByTestId(loginTestid.robloxHint));
+  });
+
+  for (const provider of ["custom:roblox", "google"]) {
+    it(`R3217000 with ${provider} alone named, it renders alone`, () => {
+      vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", provider);
+      serve({});
+      render(<LoginRoute />);
+      const row = screen.getByTestId(loginTestid.oauthRow);
+      const inRow = within(row).getAllByTestId(loginTestid.oauth);
+      expect(inRow).toHaveLength(1);
+      expect(inRow[0]).toHaveAttribute("data-provider", provider);
+    });
+  }
+
+  it("R3217000 a build that names no provider draws no row", () => {
+    serve({});
+    render(<LoginRoute />);
+    expect(screen.queryByTestId(loginTestid.oauthRow)).toBeNull();
   });
 });
 

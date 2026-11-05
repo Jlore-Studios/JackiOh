@@ -676,13 +676,18 @@ fn b5_red_narcor_s_mana_is_this_turn_s_and_leaves_the_max_where_it_was_even_past
 
 // B6–B8: the Factions and Swear Loyalities
 
+/// What a Faction card costs: (2) since #2521, and (1) for ETHICS since #3142.
+fn faction_cost(id: &str) -> i32 {
+    if id == ETHICS { 1 } else { 2 }
+}
+
 #[test]
-fn b6_the_five_faction_cards_are_named_faction_colon_tagged_faction_and_cost_2() {
+fn b6_the_five_faction_cards_are_named_faction_colon_tagged_faction_and_cost_2_ethics_1() {
     for (id, name, _) in FACTIONS {
         let def = card_def(id);
         assert_eq!(def.name, name, "{id}");
         assert_eq!(def.tags, vec![Tag::Faction], "{id}");
-        assert_eq!(query_cost(&def), 2, "{id}");
+        assert_eq!(query_cost(&def), faction_cost(id), "{id}");
     }
 }
 
@@ -715,13 +720,14 @@ fn b6_each_faction_card_still_adds_its_cards_on_the_face_it_was_cast_on() {
 }
 
 #[test]
-fn b6_a_faction_card_is_refused_at_1_mana() {
+fn b6_a_faction_card_is_refused_one_mana_short_of_its_cost() {
     for (id, name, _) in FACTIONS {
+        let cost = faction_cost(id);
         let mut s = game(json!({
-            "p1": { "hand": [id, ANCHOR], "mana": 1, "library": filler(3) },
+            "p1": { "hand": [id, ANCHOR], "mana": cost - 1, "library": filler(3) },
             "p2": { "hand": [ANCHOR], "library": filler(3) },
         }));
-        s.expect_refused_with(|s| s.play(id, json!({})), "costs 2");
+        s.expect_refused_with(|s| s.play(id, json!({})), &format!("costs {cost}"));
         assert!(
             s.hand(P1).iter().any(|card| card.def_id == id),
             "{name} stays in hand"

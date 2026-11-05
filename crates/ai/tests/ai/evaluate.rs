@@ -382,9 +382,9 @@ mod evaluate_the_strength_passs_terms {
 mod face_threat_b13 {
     use super::*;
 
-    /// 3 and 7 attack, both in Attack Position.
+    /// 3 and 7 attack, both in Attack Position (a 4-mana 7/7: Pointmaster is a 6/1 since issue #3136).
     fn enemy() -> Value {
-        json!(["core-011", "core-020"])
+        json!(["core-011", "core-025"])
     }
 
     #[test]
@@ -446,7 +446,7 @@ mod face_threat_b13 {
     fn b13_a_small_taunt_with_divine_shield_soaks_the_smallest_attacker_plus_one_more_and_the_rest_get_through()
      {
         let state = board(
-            json!({ "p1": { "field": ["core-056"] }, "p2": { "field": ["core-011", "core-008", "core-020"] } }),
+            json!({ "p1": { "field": ["core-056"] }, "p2": { "field": ["core-011", "core-008", "core-025"] } }),
         );
         assert_eq!(face_threat(&state, PlayerId::P2), 7);
     }

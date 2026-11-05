@@ -9,8 +9,12 @@
 // Stinkyscape (R1857000, docs/stinkyscape-set.md ST13): Call to Chaos #150 and #151 take "colon", every face its
 // rows put over the limit clamps unless the card's part wrote its own; #4.5's and #26's base faces take lines or a
 // colon (#2067); Quests #7 and #112 print one stage (questFace.ts, R2450000). The held Training Grounds set
-// (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant faces of #16 and #38 clamp.
-// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Only a face printing its catalog text takes a
+// (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant face of #16 clamps
+// (#38's did until issue #3139 made its text one short line).
+// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Issue #3139: Core #65 and #89, whose new last lines put
+// both their faces over the limit. Issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry
+// and draw lines put them over. Issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose new
+// keyword line (Divine Shield, Tradable) makes a seventh line. Only a face printing its catalog text takes a
 // short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
 // only its header and the next Ascent line (#814, R280, c008_reach_the_summit.rs); a face in play past the
 // preview's limit clamps rather than shrinking its art.
@@ -27,7 +31,10 @@ const ASCENT_LINE = /^Ascent (\d+):/;
 export type ShortForm = number | "colon" | "clamp";
 
 export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: ShortForm }>> = {
+  "core-052": { radiant: "clamp" },
   "core-093": { base: 2, radiant: 2 },
+  "core-065": { base: "clamp", radiant: "clamp" },
+  "core-089": { base: "clamp", radiant: "clamp" },
   "core-095": { base: "colon", radiant: "colon" },
   "core-098": { base: 2, radiant: 2 },
   "classic-005": { base: 2, radiant: 2 },
@@ -36,15 +43,21 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "classicplus-019-2": { base: "clamp", radiant: "clamp" },
   "classicplus-042-1": { radiant: "clamp" },
   "classicplus-034": { base: "clamp" },
+  "classicplus-037": { base: "clamp", radiant: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
+  // R3134001: its Radiant Cry and Aura run to seven lines.
+  "meditative-009": { radiant: "clamp" },
+  "meditative-020": { base: "clamp", radiant: "clamp" },
   "meditative-022": { base: 1, radiant: 1 },
   "meditative-022-1": { base: 3, radiant: 2 },
   "meditative-039-5": { base: 3, radiant: 3 },
-  "meditative-040": { radiant: "clamp" },
+  "meditative-040": { base: "clamp", radiant: "clamp" },
   "meditative-045": { base: "clamp", radiant: "clamp" },
   "meditative-049-1": { base: "clamp", radiant: "clamp" },
   "meditative-049-2": { base: "clamp", radiant: "clamp" },
+  "meditative-054": { base: "clamp", radiant: "clamp" },
+  "meditative-081": { base: "clamp", radiant: "clamp" },
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
@@ -52,6 +65,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditativeplus-001": { base: "clamp", radiant: "clamp" },
   "meditativeplus-004": { base: "clamp", radiant: "clamp" },
   "meditativeplus-020": { radiant: "clamp" },
+  "meditativeplus-022": { base: "clamp", radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-4": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-5": { base: "colon", radiant: "clamp" },
@@ -83,7 +97,6 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
   // R2194000: the held Training Grounds set's rows.
   "traininggrounds-016": { radiant: "clamp" },
-  "traininggrounds-038": { radiant: "clamp" },
   "traininggrounds-039": { base: "colon", radiant: "colon" },
 };
 

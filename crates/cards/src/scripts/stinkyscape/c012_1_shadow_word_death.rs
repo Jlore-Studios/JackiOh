@@ -68,7 +68,7 @@ mod tests {
 
     const DEATH: &str = "stinkyscape-012-1";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // (4) Field Spell: your units have +3 Attack.
+    const WEAPONS: &str = "core-014"; // (4) Field Spell: your units have +2 Attack.
     const ROCK: &str = "core-066"; // (10) 10/10 Indestructible.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const FILLER: &str = "core-005";
@@ -159,7 +159,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [VANILLA], "backrow": [WEAPONS] },
             }));
             let target = s.unit_at(P2, 1);
-            s.expect_stats(&target, json!({ "attack": 7 }));
+            s.expect_stats(&target, json!({ "attack": 6 }));
 
             s.play(DEATH, json!({ "targets": pick::instance(&target) }));
 

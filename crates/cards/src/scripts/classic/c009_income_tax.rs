@@ -361,7 +361,8 @@ mod tests {
 
         #[test]
         fn r1279000_firing_on_your_turn_defers_the_keep_to_their_next_turn_start() {
-            // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on p2's turn.
+            // p1's Palantir steals p2's Stockpile, made a (2) Cost one by a `costMod` of 1, and casts it
+            // (R831001, R3139000), so p1 draws 2 on p2's turn.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -370,7 +371,7 @@ mod tests {
                     "library": [FELINORS, SEVEN, TIMMY],
                 },
                 "p2": {
-                    "hand": [STOCKPILE, VANILLA],
+                    "hand": [{ "def": STOCKPILE, "costMod": 1 }, VANILLA],
                     "backrow": [{ "def": TAX, "faceUp": false, "radiant": true }],
                     "library": [VANILLA, VANILLA],
                 },
@@ -477,7 +478,7 @@ mod tests {
 
         #[test]
         fn sec2_4_a_draw_a_limit_stops_does_not_happen_and_does_not_count_under_palantir_s_limit_of_1_it_never_fires() {
-            let mut s = tax_board(json!({ "p2Backrow": [PALANTIR], "p1Hand": [{ "def": STOCKPILE, "costMod": 1 }, MENACE] }));
+            let mut s = tax_board(json!({ "p2Backrow": [PALANTIR], "p1Hand": [STOCKPILE, MENACE] }));
             s.start_turn(); // the one draw p1 may make this turn
             s.play(STOCKPILE, json!({})); // both draws stopped
             assert!(!fired(&s));

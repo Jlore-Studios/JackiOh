@@ -4,8 +4,10 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SERIES_MAX_GAMES, SERIES_WINS_NEEDED } from "@jackioh/server-config";
+import { SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
+import { settle } from "../test/settle.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { SeriesBanner, SeriesContinue, nextStep, seriesBannerTestid, useMatchSeries } from "./SeriesBanner.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -70,6 +72,8 @@ function Harness({ gameOver }: { gameOver: boolean }) {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  vi.useRealTimers();
+  resetVisibility();
 });
 
 describe("the series banner", () => {
@@ -154,5 +158,32 @@ describe("the series banner", () => {
     expect(screen.queryByTestId(seriesBannerTestid.banner)).toBeNull();
     expect(screen.getByTestId("panel")).toBeEmptyDOMElement();
     expect(vi.mocked(getSeriesForMatch)).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("R3205000 the series banner in a hidden tab", () => {
+  const PERIOD = SERIES_POLL_SECONDS * 1000;
+
+  it("R3205000 reads nothing while the tab is hidden, once when it shows, and goes on at its pace", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    vi.mocked(getSeriesForMatch).mockResolvedValue({ series: series() });
+    render(<Harness gameOver />);
+    // The first answer turns the poll on, which reads again as its effect starts over.
+    await settle({ advance: 0 });
+    await settle({ advance: 0 });
+    const reads = (): number => vi.mocked(getSeriesForMatch).mock.calls.length;
+    const first = reads();
+    expect(first).toBeGreaterThan(0);
+
+    setVisibility("hidden");
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(first);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads()).toBe(first + 1);
+
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(first + 2);
   });
 });

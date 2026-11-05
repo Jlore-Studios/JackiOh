@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
-use crate::effects::move_::{DiscardHandArgs, discard_hand};
+use crate::effects::move_::{DiscardHandArgs, DiscardRandomArgs, discard_hand, discard_random};
 use crate::effects::radiant::{RadiantTarget, set_radiant};
 use crate::effects::steal::{StealOtherwise, StealTarget, steal};
 use crate::effects::targets::{
@@ -528,27 +528,39 @@ impl DiscardHandTurn {
     }
 }
 
+/// R3134000: the `Resume.data` key where a counted delayed discard keeps its number of cards. Absent,
+/// the entry discards the whole hand, as every entry made before the count existed does.
+pub const DISCARD_COUNT_KEY: &str = "count";
+
 /// `discardHandAtTurnEnd`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscardHandAtTurnEndArgs {
     pub turn: DiscardHandTurn,
+    /// R3134000: discard this many random cards (R682) instead of the whole hand, all there are when the
+    /// hand holds fewer (Classic #37 Last Hurrah's "discard 6 cards"). Absent: the whole hand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
 }
 
-/// B5 E27, R458 (Classic #37 Last Hurrah): the controller discards their whole hand at the end of
-/// `this` turn, whoever's (R350), or of their `next` turn (Radiant). A discard (§6.3), so "whenever you
-/// discard" sees each card.
+/// B5 E27, R458, R3134000 (Classic #37 Last Hurrah): the controller discards their whole hand, or with
+/// a `count` that many random cards of it, at the end of `this` turn, whoever's (R350), or of their
+/// `next` turn (Radiant). A discard (§6.3), so "whenever you discard" sees each card.
 pub fn discard_hand_at_turn_end(args: DiscardHandAtTurnEndArgs) -> Effect {
     Effect::new("discardHandAtTurnEnd", move |ctx| {
         let (def_id, radiant) = maker_of(ctx);
+        let mut data = IndexMap::new();
+        if let Some(count) = args.count {
+            data.insert(DISCARD_COUNT_KEY.to_string(), Value::from(count));
+        }
         let resume = Resume {
             def_id,
             hook: DELAYED_DISCARD_HAND_HOOK.to_string(),
             step: args.turn.as_str().to_string(),
             radiant,
             instance_id: None,
-            data: IndexMap::new(),
+            data,
         };
         let controller = ctx.controller;
         if args.turn == DiscardHandTurn::This {
@@ -650,9 +662,17 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
             true
         }
         DELAYED_DISCARD_HAND_HOOK => {
-            let discard = discard_hand(DiscardHandArgs {
-                player: Some(PlayerSpec::SelfSide),
-            });
+            // R3134000: a counted entry discards that many random cards through `discard_random`, the
+            // path of every "discard N" (R682); one with no count discards the whole hand.
+            let discard = match data.get(DISCARD_COUNT_KEY).and_then(Value::as_i64) {
+                Some(count) => discard_random(DiscardRandomArgs {
+                    count: Some(i32::try_from(count).unwrap_or(i32::MAX)),
+                    player: Some(PlayerSpec::SelfSide),
+                }),
+                None => discard_hand(DiscardHandArgs {
+                    player: Some(PlayerSpec::SelfSide),
+                }),
+            };
             (discard.apply)(&mut ctx);
             true
         }

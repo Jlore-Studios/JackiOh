@@ -208,7 +208,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const CUBE: &str = "core-022"; // 4/6, radiant 8/12, cost 3.
+    const CUBE: &str = "core-022"; // 2/4, radiant 4/8, cost 2 (4/6, 8/12 and cost 3 until issue #3136).
     const TIMMY: &str = "core-011"; // Tempo Timmy, a plain 3/3 unit.
     const MANA_WELL: &str = "core-006"; // A Field Spell: a backrow permanent.
     const HITTER: &str = "core-025"; // 4-mana 7/7.
@@ -234,6 +234,23 @@ mod tests {
     }
 
     use crate::matches_object;
+
+    /// Issue #3136: it costs (2) and is a 2/4, radiant 4/8, from (3) and 4/6, 8/12.
+    #[test]
+    fn issue_3136_costs_2_and_enters_as_a_2_4_radiant_a_4_8() {
+        for (radiant, attack, health) in [(false, 2, 4), (true, 4, 8)] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": CUBE, "radiant": radiant }, FILLER], "field": [TIMMY] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let meal = s.card(TIMMY).id.clone();
+            let play = json!({ "targets": [{ "pick": "instance", "instanceId": meal }] });
+            crate::expect_costs(&mut s, CUBE, 2, play.clone());
+            s.state_mut().players.p1.mana.current = 2;
+            s.play(CUBE, play);
+            s.expect_stats(CUBE, json!({ "attack": attack, "health": health, "maxHealth": health }));
+        }
+    }
 
     mod n22_carnivorous_cube {
         use super::*;
@@ -291,7 +308,7 @@ mod tests {
                 let cube = s.card(CUBE).clone();
 
                 s.end_turn();
-                s.attack(HITTER, &cube); // 7 through a 4/6.
+                s.attack(HITTER, &cube); // 7 through a 2/4.
 
                 s.expect_in_zone(&cube, "graveyard");
                 // R64: laneless summons take the leftmost free zones.
@@ -435,17 +452,17 @@ mod tests {
                 let mut s = scenario(json!({
                     "seed": "cube-radiant-fill",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER], "field": [TIMMY] },
-                    // 7 + 6 = 13 gets through the radiant Cube's 12 health in one turn.
+                    // 7 + 6 = 13 gets through the radiant Cube's 8 health in one turn (7 alone leaves it on 1).
                     "p2": { "hand": [FILLER], "field": [HITTER, { "def": SPECIESIST, "statsOverride": { "attack": 6, "health": 1 } }] },
                 }));
                 let timmy = s.card(TIMMY).id.clone();
                 s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": timmy }] }));
                 let cube = s.card(CUBE).clone();
-                s.expect_stats(&cube, json!({ "attack": 8, "maxHealth": 12 }));
+                s.expect_stats(&cube, json!({ "attack": 4, "maxHealth": 8 }));
 
                 s.end_turn();
                 s.attack(HITTER, &cube);
-                s.expect_in_zone(&cube, "field"); // 7 of 12.
+                s.expect_in_zone(&cube, "field"); // 7 of 8.
                 s.attack(SPECIESIST, &cube);
 
                 s.expect_in_zone(&cube, "graveyard");

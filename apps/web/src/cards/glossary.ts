@@ -18,7 +18,6 @@ export type TriggerTermId =
   | "Death"
   | "Start of turn"
   | "End of turn"
-  | "Start of game"
   | "Once per turn"
   | "Aura"
   | "Combo"
@@ -183,18 +182,24 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Flying: keyword("Flying", "Only Units with Flying or Ranged can attack it, unless it is in Defense Position. It may be played into your backrow as well as into a unit zone"),
   Cloaked: keyword("Cloaked", "Can be played face-down as a Trap. Activate: Reveal"),
   Crater: keyword("Crater", "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap"),
+  // R783013, upheld by R3039001: a play by it spends it, so a card is flashed back once.
   Flashback: keyword("Flashback", "Can be played from your graveyard once, at its cost"),
   // #1838, R1838000: Tradable, Meditative #53 and #98's keyword, Stinkyscape's too.
   Tradable: keyword(
     "Tradable",
     "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
   ),
-  // #1852 (R1852000–R1852007): Stinkyscape's two keywords, and When launched and Launch below.
+  // #1852 (R1852000–R1852007): Stinkyscape's two keywords, and When launched and Launch below. R3038000:
+  // Starship is a tag since #3038, which the Starship term names; the keyword kind stays for the shipped
+  // snapshots (R3038001), so the term keeps its §6.1 row.
   "Starship Piece": keyword(
     "Starship Piece",
     "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
   ),
-  Starship: keyword("Starship", "A launched Starship, built from the Starship Pieces fused into it"),
+  Starship: keyword(
+    "Starship",
+    "A tag: your Starship, Dormant or launched, built from the Starship Pieces fused into it. Every Starship has Flying and Ranged",
+  ),
   // Issue #2657 (R2657000): the successor to the status "Cannot be in Defense Position".
   "Can't Defend": keyword("Can't Defend", "Never in Defense Position"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
@@ -209,11 +214,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Frozen",
     "Can't attack, switch position or use its Activate until it thaws: it loses its next chance to attack or switch, and thaws at the end of the turn it could have done it",
   ),
-  // R1839000 (#1839): Stinkyscape's status, which no effect reaches until it awakens. A card under a
-  // Stack pile's top is "buried" to a player, never Dormant (§3.2).
+  // R1839000 (#1839): Stinkyscape's status, which no effect reaches until it awakens, and never again once
+  // it has (R3039000). A card under a Stack pile's top is "buried" to a player, never Dormant (§3.2).
   Dormant: status(
     "Dormant",
-    "On the field and filling its zone, but out of play until it awakens: it can't attack, be attacked or be targeted, no effect reaches it, and its auras and triggers are off",
+    "On the field and filling its zone, but out of play until it awakens: it can't attack, be attacked or be targeted, no effect reaches it, and its auras and triggers are off. An awakened card is never Dormant again",
   ),
   // R781005: the pool's name, printed lower-case ("random combat keywords"); Armor 1 and Spell Damage
   // +1 are out of it (R1025000), and Charge and Indestructible (#1615, R1615000).
@@ -236,7 +241,6 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "End of turn": trigger("End of turn", "Controller's turn end, before cleanup", {
     aliases: ["end of turn"],
   }),
-  "Start of game": trigger("Start of game", "After mulligan, before turn 1", { row: "Start of Game" }),
   "Once per turn": trigger("Once per turn", "Activated ability limit", { row: "Once per Turn" }),
   Aura: trigger("Aura", "Effect while in play"),
   Combo: trigger("Combo", "Extra effect if X or more cards were played earlier this turn", { row: "Combo X" }),

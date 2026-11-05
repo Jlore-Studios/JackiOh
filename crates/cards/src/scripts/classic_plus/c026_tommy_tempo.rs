@@ -1,4 +1,4 @@
-//! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 5/5 → 10/10. Taunt, cast on draw;
+//! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 4/4 → 8/8 (5/5 → 10/10 until issue #3138). Taunt, cast on draw;
 //! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
 //! uncast (R560). "Cry: Lose all your mana. Gain +{per}/+{per} for each mana lost" (#831): played or
 //! cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and grows
@@ -143,12 +143,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_3_5_5_taunt_human_unit_radiant_10_10_that_casts_itself_on_draw_on_both_faces() {
+        fn is_a_3_4_4_taunt_human_unit_radiant_8_8_that_casts_itself_on_draw_on_both_faces() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!(
                 [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                [Some(5), Some(5), Some(10), Some(10)]
+                [Some(4), Some(4), Some(8), Some(8)]
             );
             assert_eq!(def.base.keywords, vec![Keyword::Taunt]);
             let scripts = script();
@@ -181,34 +181,34 @@ mod tests {
             }
 
             #[test]
-            fn r831010_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_a_9_9() {
+            fn r831010_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_an_8_8() {
                 let mut s = drawn_at_start(false, json!({}));
                 s.end_turn();
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 9, "health": 9 }));
+                s.expect_stats(&tommy, json!({ "attack": 8, "health": 8 }));
                 assert_eq!(s.state().players[P1].mana.current, 0);
             }
 
             #[test]
-            fn r831010_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_6_6() {
+            fn r831010_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_5_5() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 6, "health": 6 }));
+                s.expect_stats(TOMMY, json!({ "attack": 5, "health": 5 }));
             }
 
             #[test]
-            fn r831010_with_no_mana_left_it_stays_a_5_5_and_nothing_is_lost() {
+            fn r831010_with_no_mana_left_it_stays_a_4_4_and_nothing_is_lost() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK, "mana": 3 },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 5, "health": 5 }));
+                s.expect_stats(TOMMY, json!({ "attack": 4, "health": 4 }));
             }
 
             #[test]
@@ -219,7 +219,7 @@ mod tests {
                 }));
                 step_param(s.card_mut(TOMMY), "per", 1);
                 s.play(TOMMY, json!({}));
-                s.expect_stats(TOMMY, json!({ "attack": 7, "health": 7 }));
+                s.expect_stats(TOMMY, json!({ "attack": 6, "health": 6 }));
             }
 
             #[test]
@@ -259,9 +259,9 @@ mod tests {
                 assert_eq!(s.card(&menace).damage, 0);
                 assert_eq!(s.state().active, P2);
                 s.expect_health(P1, 22);
-                // R831010: the 3 mana Stockpile left are lost and grow it to 8/8.
+                // R831010: the 3 mana Stockpile left are lost and grow it to 7/7.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&tommy, json!({ "attack": 7, "health": 7 }));
             }
 
             #[test]
@@ -356,7 +356,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 18, "health": 18 }));
+                s.expect_stats(&tommy, json!({ "attack": 16, "health": 16 }));
                 s.expect_mana(P1, 0);
                 s.play(FREE, json!({}));
                 assert!(cut_short(&s));
@@ -374,7 +374,7 @@ mod tests {
                 }));
                 s.end_turn();
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 18, "health": 18 }));
+                s.expect_stats(&tommy, json!({ "attack": 16, "health": 16 }));
                 assert!(!has_turn_ends(&s, P1));
                 assert!(!has_turn_ends(&s, P2));
                 let card = first_in_hand(&s, P2);
@@ -470,7 +470,7 @@ mod tests {
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 12, "health": 12 }));
+                s.expect_stats(TOMMY, json!({ "attack": 10, "health": 10 }));
             }
 
             #[test]
