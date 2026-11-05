@@ -22,21 +22,31 @@ export type BackLinkProps = {
   onLeave?: () => void;
   /** Replaces release-and-navigate on a guarded exit; drops the Jlore pill, a way past the guard (R1651000). */
   onPress?: () => void;
-  /** Extra top-bar content; settings remains the top-right control. */
+  /** The screen's title, drawn after Back; the bar adds none. */
+  title?: ReactNode;
+  /** The screen's own extras, drawn before the Jlore pill; settings remains the top-right control. */
   children?: ReactNode;
+  /** Back's test id; the replay player has its own. */
+  testId?: string;
   /** The board supplies settings separately. */
   showSettings?: boolean;
   /** The Jlore pill; off on signed-out screens, where a session only lands as the screen leaves. */
   showWallet?: boolean;
 };
 
-/** Uses `navigate`, not history, so direct links stay in the app. */
+/**
+ * The top bar's one layout (R3218000, routes/top-bar.css): Back, the title and the extras, a flexible
+ * spacer, then the end group (the Jlore pill, Friends, language, the gear), the gear always last.
+ * Uses `navigate`, not history, so direct links stay in the app.
+ */
 export function BackLink({
   to = paths.landing,
   label,
   onLeave,
   onPress,
+  title,
   children,
+  testId = navTestid.back,
   showSettings = true,
   showWallet = true,
 }: BackLinkProps): ReactElement {
@@ -46,7 +56,7 @@ export function BackLink({
       <button
         type="button"
         className="link-button top-bar-button top-bar-button--text"
-        data-testid={navTestid.back}
+        data-testid={testId}
         data-route={to}
         onClick={() => {
           if (onPress !== undefined) {
@@ -59,12 +69,21 @@ export function BackLink({
       >
         {label === undefined ? t("← Back") : t(label)}
       </button>
-      {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
-      {showSettings && showWallet && onPress === undefined ? <JlorePill /> : null}
-      {/* #1831: friends are one press away on every signed-in screen, as the pill and settings are. */}
-      {showSettings && showWallet ? <FriendsButton placement="nav" /> : null}
-      {showSettings ? <LanguageButton placement="nav" /> : null}
-      {showSettings ? <SettingsButton placement="nav" /> : null}
+      {title === undefined && children === undefined ? null : (
+        <div className="screen-nav__line">
+          {title}
+          {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
+        </div>
+      )}
+      {showSettings ? (
+        <div className="screen-nav__end">
+          {showWallet && onPress === undefined ? <JlorePill /> : null}
+          {/* #1831: friends are one press away on every signed-in screen, as the pill and settings are. */}
+          {showWallet ? <FriendsButton placement="nav" /> : null}
+          <LanguageButton placement="nav" />
+          <SettingsButton placement="nav" />
+        </div>
+      ) : null}
     </nav>
   );
 }

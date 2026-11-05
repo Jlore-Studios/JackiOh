@@ -424,6 +424,22 @@ describe("the co-op replay screen", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
+
+  it("R3218000 the replay's Back is the top bar's pill, on the failure screen and on the board's rail", async () => {
+    vi.mocked(getDuosReplay).mockRejectedValue(new ApiRequestError(410, { code: "gone", message: "expired" }));
+    await open();
+    expect(screen.getByTestId(replayTestid.failure)).toBeInTheDocument();
+    const failed = screen.getByTestId(replayTestid.back);
+    expect(failed).toHaveClass("top-bar-button", "top-bar-button--text");
+    expect(failed.closest("nav")).toHaveClass("screen-nav");
+    cleanup();
+
+    serve();
+    await open();
+    const played = screen.getByTestId(replayTestid.back);
+    expect(played).toHaveClass("top-bar-button", "top-bar-button--text");
+    expect(played.closest("nav")).toHaveClass("screen-nav");
+  });
 });
 
 describe("opening a co-op replay", () => {

@@ -12,6 +12,7 @@ pub mod moderate;
 pub mod payout_race;
 pub mod postgres;
 pub mod redeem_race;
+pub mod round_trips;
 pub mod season_start;
 pub mod seed_accounts;
 pub mod seed_catalog;

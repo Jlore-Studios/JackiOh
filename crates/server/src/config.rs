@@ -449,6 +449,23 @@ pub const SHUTDOWN_DRAIN_SECONDS: i64 = 20;
 pub const SHUTDOWN_SOCKETS_POLL_MS: i64 = 50;
 
 // ---------------------------------------------------------------------------------------------
+// The Postgres pool (`db/pg.rs`, #3208). Not in SPEC, and no R-row.
+// ---------------------------------------------------------------------------------------------
+
+/// A pooled connection idle this long is pinged before a request gets it (`pg::pool_options`'s
+/// `before_acquire`); one checked out sooner is not, which saves a round trip on most requests. Half
+/// `pg.rs`'s 10 s idle timeout (`POOL_IDLE_TIMEOUT_MS`), which already sits under Supavisor's cut.
+pub const POOL_PING_AFTER_IDLE_MS: i64 = 5_000;
+/// The connections the pool keeps open while the server is quiet, so a request after a quiet minute
+/// does not pay for TCP, TLS and the Postgres login. The pool still connects lazily: it keeps warm the
+/// connections requests opened, up to this many, and refills to it when a burst's are retired. A u32,
+/// as sqlx takes it.
+pub const POOL_MIN_CONNECTIONS: u32 = 2;
+/// How often `pg::heartbeat` pings the warm connections: under `POOL_PING_AFTER_IDLE_MS`, so a warm
+/// connection is never pinged at checkout, and so also under the idle timeout, which never retires one.
+pub const POOL_HEARTBEAT_MS: i64 = 4_000;
+
+// ---------------------------------------------------------------------------------------------
 // Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
 // the client reads the list's page and the routes' allowance.
 // ---------------------------------------------------------------------------------------------
