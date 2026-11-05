@@ -15579,6 +15579,7 @@
     "3065": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-05T01:39:29Z",
         "difficulty": "hard",
