@@ -594,6 +594,19 @@ describe("leaving, paging and failing", () => {
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
 
+  it("R3218000 the replay's Back is the top bar's pill, in the player and on the failure screen", async () => {
+    await open();
+    const played = screen.getByTestId(replayTestid.back);
+    expect(played).toHaveClass("top-bar-button", "top-bar-button--text");
+    expect(played.closest("nav")).toHaveClass("screen-nav");
+    cleanup();
+
+    await open(fakeReplaySource(steps, { failFrom: 0, failure: new ReplayFailure("expired") }));
+    const failed = screen.getByTestId(replayTestid.back);
+    expect(failed).toHaveClass("top-bar-button", "top-bar-button--text");
+    expect(failed.closest("nav")).toHaveClass("screen-nav");
+  });
+
   it("each failure shows its message", async () => {
     for (const reason of ["earlier_patch", "rules_changed", "expired"] as const) {
       const onLeave = vi.fn();

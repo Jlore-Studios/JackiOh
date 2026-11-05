@@ -1,9 +1,9 @@
-/* The top bar's one skin (#3189): the dark, brass-edged controls of BackLink's `.screen-nav`
-   (routes/nav.tsx) and of the landing's `.landing-corner` (routes/landing.tsx). Back, the account
-   link, Friends, the language button and the settings gear all wear it, on the class `top-bar-button`,
-   so the two bars cannot drift apart again. A control keeps its own shape, margins and place in the
-   bar in its own sheet and never a second copy of the skin; the Jlore pill (economy/jlore-pill.css)
-   is drawn alike and sits beside them.
+/* The top bar's one skin (#3189) and its one layout (#3218): the dark, brass-edged controls of
+   BackLink's `.screen-nav` (routes/nav.tsx) and of the landing's `.landing-corner`
+   (routes/landing.tsx). Back, the account link, Friends, the language button and the settings gear
+   all wear it, on the class `top-bar-button`, so the two bars cannot drift apart again. A control
+   keeps its own shape in its own sheet and never a second copy of the skin; its place is the bar's
+   layout, below. The Jlore pill (economy/jlore-pill.css) is drawn alike and sits beside them.
 
    Deliberately not under `.tavern`: the replays and the deck screens are `.app-shell` pages with no
    `.tavern` root, and their bar is the same one (the nav carries the brass colors itself,
@@ -12,17 +12,17 @@
    outweigh it, so they skip `.top-bar-button` through a `:where(:not(...))` that adds no weight. */
 
 :is(.screen-nav, .landing-corner) .top-bar-button {
-  min-height: 44px;
+  min-height: var(--hit-min);
   border: 1px solid var(--tavern-brass);
-  border-radius: 999px;
-  background: rgba(18, 11, 7, 0.65);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--pal-wood-900) 65%, transparent);
   color: var(--tavern-gold-pale);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-shadow: none;
   cursor: var(--cursor-glove-point, pointer);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
-  transition: background-color 140ms, border-color 140ms, box-shadow 140ms;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--tavern-gold-pale) 15%, transparent), 0 4px 14px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 :is(.screen-nav, .landing-corner) .top-bar-button:disabled {
@@ -31,18 +31,18 @@
 
 :is(.screen-nav, .landing-corner) .top-bar-button:hover:not(:disabled) {
   border-color: var(--tavern-gold);
-  background: rgba(90, 52, 27, 0.75);
+  background: color-mix(in srgb, var(--pal-wood-700) 75%, transparent);
   color: var(--tavern-gold-pale);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.2), 0 0 18px rgba(243, 201, 105, 0.3);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--tavern-gold-pale) 20%, transparent), 0 0 18px color-mix(in srgb, var(--tavern-gold) 30%, transparent);
 }
 
-/* An icon (Friends, the gear): a 44 px circle. */
+/* An icon (Friends, the gear): a --hit-min circle. */
 :is(.screen-nav, .landing-corner) .top-bar-button--round {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  min-width: var(--hit-min);
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 /* A word or two in a pill (Back, Sign in and Account, the invite screen's Sign out): no underline, and
@@ -54,4 +54,74 @@
   padding: 0 18px;
   text-decoration: none;
   white-space: nowrap;
+}
+
+/* The layout (#3218, R3218000): BackLink's nav has fixed slots, in this order, and only this sheet
+   places the controls in them (no other sheet sets a margin or an `order` on the gear, the language
+   button, the Jlore pill or Friends inside `.screen-nav`):
+     1. start: Back, the first child;
+     2. the title: `.screen-nav__line` takes the room between Back and the end group, the screen's
+        title (an `h1`, when the bar holds it) first and its extras (`.screen-nav__extra`, the
+        workshop's save status, the invite screen's Sign out) after it, pushed to the line's end;
+     3. the flexible spacer: the line's `flex: 1 1 0`, and the end group's `margin-left: auto` when the
+        screen has no line;
+     4. the end group, `.screen-nav__end`: the Jlore pill, Friends, the language button, the gear, in
+        this order, a missing one dropping out (R1651000, R1916000), the gear always last.
+   A phone (the same 600 px as index.css's touch rule) puts the line on a row of its own under Back and
+   the end group, so Back stays top left and the gear top right. */
+.screen-nav__line {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  min-width: 0;
+}
+
+.screen-nav__extra {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.screen-nav__end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+}
+
+/* A phone, 320 to 600 px: the line takes a row of its own. A fifth control in the bar left no room for
+   Back, the pill, the button and the gear on one row, so the language button steps aside (the gear's
+   Gameplay tab holds Language, #785), the gaps close, and Back and the landing's link give up some of
+   their side padding. */
+@media (max-width: 600px) {
+  .screen-nav__line {
+    order: 1;
+    flex: 1 1 100%;
+  }
+
+  .screen-nav:has(.friends-button),
+  .landing .landing-corner:has(> .friends-button) {
+    gap: 6px;
+  }
+
+  .screen-nav__end:has(> .friends-button) {
+    gap: 6px;
+  }
+
+  .screen-nav:has(.friends-button) .language-button,
+  .landing .landing-corner:has(> .friends-button) .language-button {
+    display: none;
+  }
+
+  .screen-nav:has(.friends-button) .top-bar-button--text,
+  .landing .landing-corner:has(> .friends-button) .top-bar-button--text {
+    padding: 0 10px;
+  }
 }
