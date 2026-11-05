@@ -17721,14 +17721,17 @@
     "what": "build #3065 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-05T07:32:47Z",
+    "at": "2026-11-05T07:47:57Z",
     "notes": [
       "#3127 is held for `claude-3` until 01:50 (it refused a call)",
-      "delivered build #3065 on claude-3 (run 41985758875): interrupted",
-      "delivered review #3154 on claude-8 (run 41985665827): approved",
-      "started plan #3158 on claude-7 (run 41988416140)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-05T07:50:00Z; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 87h 22m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 45h 22m; waiting for their owners: #3065 held for `claude-3` until 01:50 (it refused a call); #3127 held for `claude-3` until 01:50 (it refused a call)",
-      "#3158: typed it Bug"
+      "#3065 is held for `claude-3` until 01:50 (it refused a call)",
+      "delivered review #3157 on claude-8 (run 41987120001): approved",
+      "delivered plan #3117 on claude-1 (run 41983579747): planned",
+      "started build #3117 on claude-1 (run 41990224666)",
+      "started plan #3127 on claude-3 (run 41990322219)",
+      "started build #3065 on claude-3 (run 41990422680)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18434,7 +18437,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-05T07:32:47Z",
+  "loop_tick": "2026-11-05T07:47:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
