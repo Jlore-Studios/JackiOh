@@ -50,7 +50,7 @@ const ENGINE_MODES: readonly { id: string; faces: readonly Face[]; options: read
   { id: "stinkyscape-148-1", faces: ["radiant"], options: ["Draw", "Loss"] },
   // crates/engine/src/subsystems/ky_test.rs: KY_TEST_DIFFICULTIES.
   { id: "classicplus-042", faces: ["base", "radiant"], options: ["Easy", "Medium", "Hard"] },
-  // crates/cards/src/scripts/stinkyscape/c018_1_melchior.rs: three of RANDOM_KEYWORD_POOL (config.rs), the base Discover of v0.5.11o and before, kept for its replays (R3142001).
+  // crates/cards/src/scripts/stinkyscape/c018_1_melchior.rs: three of RANDOM_KEYWORD_POOL (config.rs), the base Discover of v0.5.11p and before, kept for its replays (R3142001).
   {
     id: "stinkyscape-018-1",
     faces: ["base"],

@@ -49,13 +49,14 @@ use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
 };
 use crate::scripts::stinkyscape::{
-    c013_asphyxiants_cloud, c016_rod_of_ages, c026_zolarketh, c034_drone_core_viii, c035_drone_core_ix,
-    c036_drone_core_x, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
-    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
-    c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c115_scornboi, c116_megabase,
-    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar,
-    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
-    c172_huge_asteroid, c173_abandoned_spice_tower, t_narcor, t_red_narcor,
+    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c026_zolarketh, c033_drone_core_vii,
+    c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
+    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
+    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
+    c086_prototype_x2, c094_tmack_trav, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod,
+    c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck, c163_swear_loyalities,
+    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
 use crate::scripts::training_grounds::c036_training_dummy;
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -70,7 +71,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
-/// #3044, #3048).
+/// #3044, #3048) and #3128's (#3142).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -509,6 +510,22 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c005_death_by_1000_cuts::ID,
         "v0.5.11p",
         c005_death_by_1000_cuts::script_v0_5_11o,
+    ),
+    (
+        c045_drone_commander::ID,
+        "v0.5.11p",
+        c045_drone_commander::script_v0_5_11o,
+    ),
+    (
+        c033_drone_core_vii::ID,
+        "v0.5.11p",
+        c033_drone_core_vii::script_v0_5_11o,
+    ),
+    (c018_1_melchior::ID, "v0.5.11p", c018_1_melchior::script_v0_5_11o),
+    (
+        c153_stimmycheck::ID,
+        "v0.5.11p",
+        c153_stimmycheck::script_v0_5_11o,
     ),
 ];
 

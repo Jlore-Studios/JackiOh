@@ -147,7 +147,7 @@ pub fn next_inflation_chance(chance: i32) -> i32 {
 }
 
 /// R3142000, R767000: `next_inflation_chance` with the step given, for the Stimmycheck script kept for
-/// the versions through v0.5.11o, whose step was `INFLATION_CHANCE_STEP_V0_5_11O`.
+/// the versions through v0.5.11p, whose step was `INFLATION_CHANCE_STEP_V0_5_11O`.
 pub fn next_inflation_chance_by(chance: i32, step: i32) -> i32 {
     chance.saturating_add(step).clamp(0, INFLATION_ROLL_SIDES)
 }

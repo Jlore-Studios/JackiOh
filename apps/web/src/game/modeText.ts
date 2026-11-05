@@ -178,7 +178,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "give Indestructible": { label: "Indestructible too", detail: "Freeze the Unit forever, and give it Indestructible." },
     "freeze only": { label: "Freeze only", detail: "Freeze the Unit forever." },
   },
-  // S #18.1 MELCHIOR (R21's pool): the base Activate's Discover through v0.5.11o, kept for its replays (R3142001).
+  // S #18.1 MELCHIOR (R21's pool): the base Activate's Discover through v0.5.11p, kept for its replays (R3142001).
   "stinkyscape-018-1": combatKeywords(),
   // S #26 ZolarKeth (#2657, #3041): `universities` is v0.5.9f's Activate's other option, kept for its replays.
   "stinkyscape-026": {

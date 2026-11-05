@@ -6,7 +6,7 @@
 //! Engine: "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464) as
 //!   S #34 Drone Core VIII has it, and none in the deck (R2657002): each Float of its owner's lowers its cost
 //!   by that much, a `costMod` kept until a graveyard or exile (R766), so at (5), past `MAX_MANA`, it is played
-//!   only so or with mana gained. Through v0.5.11o it cost (4) and had no hand trigger (`script_v0_5_11o`,
+//!   only so or with mana gained. Through v0.5.11p it cost (4) and had no hand trigger (`script_v0_5_11o`,
 //!   kept, R767000). Two kinds of summon, the Corvette first, then one per Interceptor, each into the caster's
 //!   leftmost open unit zone in turn (R64), then the backrow's once the unit row is full, where each stands
 //!   (R2248000), no Cry (R1), as many as fit; the Interceptors' count is the
@@ -49,7 +49,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o it cost (4) and had no Float trigger; `KEPT_SCRIPTS` folds those replays under it.
+/// R767000: through v0.5.11p it cost (4) and had no Float trigger; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: face(false, false),
@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(price_of(&s, &hand), 5);
     }
 
-    /// R767000: through v0.5.11o it cost (4) and a Float lowered nothing.
+    /// R767000: through v0.5.11p it cost (4) and a Float lowered nothing.
     #[test]
     fn r767000_the_kept_script_has_no_float_trigger() {
         under_kept_as(CORE, script_v0_5_11o(), |def| def.cost = json_as(json!(4)), || {

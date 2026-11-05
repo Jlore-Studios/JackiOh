@@ -13,7 +13,7 @@
 //! End of turn trigger, the card being in the graveyard by then: `delay` re-enters this script's
 //! `resume` step (R62), whose data carries the copy's chance, 5 higher and never past 100
 //! (`next_inflation_chance`, `INFLATION_CHANCE_STEP`), written into the copy's memory as `add_to_hand`
-//! makes it. Through v0.5.11o the step was 10 (R3142000, `script_v0_5_11o`, kept, R767000).
+//! makes it. Through v0.5.11p the step was 10 (R3142000, `script_v0_5_11o`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -75,7 +75,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o the copy's chance went up by 10 (R3142000); `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.11p the copy's chance went up by 10 (R3142000); `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -226,7 +226,7 @@ mod tests {
             assert_eq!(copy_chance(&s), Some(25));
         }
 
-        /// R3142000, R767000: through v0.5.11o the step was 10: the copy rolled at 25 and its copy at 35.
+        /// R3142000, R767000: through v0.5.11p the step was 10: the copy rolled at 25 and its copy at 35.
         #[test]
         fn r3142000_the_kept_script_rolls_at_25_and_35() {
             assert_eq!(INFLATION_CHANCE_STEP_V0_5_11O, 10);

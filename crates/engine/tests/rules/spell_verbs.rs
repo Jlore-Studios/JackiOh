@@ -942,7 +942,7 @@ mod r1848006_inflation_rolls_each_card_of_a_hand_and_a_deck_and_raises_its_price
         );
     }
 
-    /// R3142000: the step a copy's chance grows by is 5, and was 10 through v0.5.11o, whose kept script reads
+    /// R3142000: the step a copy's chance grows by is 5, and was 10 through v0.5.11p, whose kept script reads
     /// `INFLATION_CHANCE_STEP_V0_5_11O` through `next_inflation_chance_by`.
     #[test]
     fn r3142000_the_step_is_5_and_through_v0_5_11o_it_was_10() {

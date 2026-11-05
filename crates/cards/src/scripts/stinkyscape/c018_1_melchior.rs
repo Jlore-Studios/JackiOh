@@ -10,7 +10,7 @@
 //! controller's opponent has strictly more Units than they do, as `active_units_of` counts them, so a
 //! Dormant card is no Unit (R1839000) (R1843000). Activate (R384, once a turn): each of its controller's
 //! Units draws its own `keywords` random combat keywords from R21's pool (`grant_random_keywords`), 1 on
-//! the base face and 3 on the Radiant one, asking nothing (R3142001). Through v0.5.11o the base face
+//! the base face and 3 on the Radiant one, asking nothing (R3142001). Through v0.5.11p the base face
 //! Discovered one combat keyword, a `mode` prompt of three different ones drawn from the pool (R781005),
 //! and gave the pick to each Unit as the answer resolved (`script_v0_5_11o`, kept, R767000).
 
@@ -18,7 +18,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-018-1";
 
-/// The step the Discover's answer re-enters (§10.6); only the script kept for v0.5.11o and before has it.
+/// The step the Discover's answer re-enters (§10.6); only the script kept for v0.5.11p and before has it.
 const PICKED: &str = "picked";
 
 /// R1866001: "votes to remove you if your opponent has more Units than you".
@@ -40,7 +40,7 @@ fn instance(id: &str) -> Value {
     json!({ "of": "instance", "instanceId": id })
 }
 
-/// The base Activate through v0.5.11o: three different combat keywords on offer (§6.3 Discover).
+/// The base Activate through v0.5.11p: three different combat keywords on offer (§6.3 Discover).
 fn discover(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if your_units(ctx).is_empty() {
         return vec![];
@@ -54,7 +54,7 @@ fn discover(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     })))]
 }
 
-/// The pick of the base Activate through v0.5.11o, given to each Unit its controller has as the answer
+/// The pick of the base Activate through v0.5.11p, given to each Unit its controller has as the answer
 /// resolves.
 fn give_picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(picked) = chosen_options(ctx).into_iter().next() else {
@@ -75,7 +75,7 @@ fn give_random(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         .collect()
 }
 
-/// One face. `discovers` is the base face as it was through v0.5.11o (R3142001): it Discovers a keyword.
+/// One face. `discovers` is the base face as it was through v0.5.11p (R3142001): it Discovers a keyword.
 fn melchior(radiant: bool, discovers: bool) -> Script {
     let activate = ActivationDecl {
         // One id on both faces, so a face changed mid-turn keeps the turn's use (R384).
@@ -113,7 +113,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o the base face Discovered a combat keyword and gave it to each Unit
+/// R767000: through v0.5.11p the base face Discovered a combat keyword and gave it to each Unit
 /// (R3142001); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -276,7 +276,7 @@ mod tests {
             assert_eq!(keywords(&s, &unit).len(), 2);
         }
 
-        /// R767000: through v0.5.11o the base Activate Discovered three different combat keywords from
+        /// R767000: through v0.5.11p the base Activate Discovered three different combat keywords from
         /// R21's pool and gave the pick to each of its controller's Units.
         #[test]
         fn r767000_the_kept_script_discovers_a_combat_keyword_and_gives_the_pick_to_each_of_your_units() {

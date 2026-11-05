@@ -8,7 +8,7 @@
 //!   Core, R380), one draw of the match rng per card (R60), each at its printed price: nothing is
 //!   discounted. A full hand adds nothing and draws nothing from the rng, as Meditative #77 Bulk Booster
 //!   and Stinkyscape #96 Ocean Tsunami fill one. Declares no numbers: the Cry's six cards and one mana
-//!   off were `cards` and `discount` through v0.5.11o (`script_v0_5_11o`, kept, R767000). The pool names
+//!   off were `cards` and `discount` through v0.5.11p (`script_v0_5_11o`, kept, R767000). The pool names
 //!   no set, so it reaches the set's Drone Cores because the set ships (R1420). Radiant: added Radiant.
 
 use jackioh_engine::effects::add_random_from_catalog;
@@ -40,7 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// One face as it was through v0.5.11o: `cards` of them, each `discount` less.
+/// One face as it was through v0.5.11p: `cards` of them, each `discount` less.
 fn face_v0_5_11o(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -55,7 +55,7 @@ fn face_v0_5_11o(radiant: bool) -> Script {
     }
 }
 
-/// R767000: through v0.5.11o the Cry added `cards` (6) random Drone Core cards, each costing `discount`
+/// R767000: through v0.5.11p the Cry added `cards` (6) random Drone Core cards, each costing `discount`
 /// (1) less; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -162,7 +162,7 @@ mod tests {
         assert!(cores(&s).is_empty());
     }
 
-    /// The definition through v0.5.11o: `cards` 6 and `discount` 1 on both faces.
+    /// The definition through v0.5.11p: `cards` 6 and `discount` 1 on both faces.
     fn old_definition(def: &mut CardDef) {
         def.params = Some(vec![
             json_as(json!({ "key": "cards", "base": 6, "radiant": 6, "better": "up", "step": 2, "min": 1, "cry": true })),
@@ -170,7 +170,7 @@ mod tests {
         ]);
     }
 
-    /// R767000: through v0.5.11o the Cry added 6 random Drone Core cards, each costing 1 less.
+    /// R767000: through v0.5.11p the Cry added 6 random Drone Core cards, each costing 1 less.
     #[test]
     fn r767000_the_kept_script_adds_six_each_costing_one_less() {
         under_kept_as(COMMANDER, script_v0_5_11o(), old_definition, || {
