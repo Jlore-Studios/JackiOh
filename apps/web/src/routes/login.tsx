@@ -47,6 +47,7 @@ import {
   exchangeAuthCode,
   followEmailLink,
   googleClientId,
+  oauthProviderLabel,
   oauthProviders,
   refreshSession,
   requestEmailSignIn,
@@ -70,6 +71,7 @@ import { t } from "../i18n/i18n.ts";
 import { loginModeOf, loginReasonOf, navigate, paths } from "../net/navigate.ts";
 import {
   forgetPendingEmail,
+  linkAfterSignIn,
   pendingEmail,
   pendingEmailEntry,
   pendingReset,
@@ -392,6 +394,8 @@ export default function LoginRoute(): ReactElement {
   const codeWait = codeCooldown.secondsFor(email);
   const secondStep = useRef<SecondStep | null>(null);
   const [providers] = useState(oauthProviders);
+  // R3147002: the new account this device removed signed in with this provider, to link it to an older one.
+  const [linkAfter] = useState(() => oauthProviderLabel(linkAfterSignIn()));
   const [googleClient] = useState(googleClientId);
   const [oauthFailed, setOauthFailed] = useState(entry.oauthFailed);
   const noticeRef = useRef<HTMLParagraphElement>(null);
@@ -610,9 +614,10 @@ export default function LoginRoute(): ReactElement {
   function keepSession(session: Session, to: string = paths.landing): void {
     // Replaces (and revokes) any other session this browser held (R194).
     adoptSession(session);
-    // To the main menu (issue #479), or `/account` after linking a provider (R3025000); `main.tsx`'s
-    // gate handles a pending account. A fixed `paths` value, never a URL from the query (B35).
-    navigate(to, { replace: true });
+    // To the main menu (issue #479), or `/account` after linking a provider (R3025000) or to link one
+    // (R3147002); `main.tsx`'s gate handles a pending account. A fixed `paths` value, never a URL from the
+    // query (B35).
+    navigate(to === paths.landing && linkAfterSignIn() !== null ? paths.account : to, { replace: true });
   }
 
   /** R665: the session is kept at once, or held for its authenticator code first. */
@@ -1123,6 +1128,14 @@ export default function LoginRoute(): ReactElement {
             </p>
           ) : null}
 
+          {signingIn && linkAfter !== null ? (
+            <p className="notice" data-testid={loginTestid.linkAfter} role="status">
+              {t("Sign in to the account you already have, then link {provider} to it on your account page.", {
+                provider: linkAfter,
+              })}
+            </p>
+          ) : null}
+
           {signingIn && linkOutcome === "emailChanged" ? (
             <p className="notice" data-testid={loginTestid.emailChanged} role="status">
               {t(AUTH_NOTICES.emailChanged)}
@@ -1490,6 +1503,12 @@ export default function LoginRoute(): ReactElement {
                   );
                 })}
               </div>
+              {signingIn && linkAfter === null && providers.includes("custom:roblox") ? (
+                // R3147000: Roblox names no address, so it never finds an account by one by itself.
+                <p className="auth-hint" data-testid={loginTestid.robloxHint}>
+                  {t("Played before without Roblox? Sign in the way you did then, and link Roblox on your account page.")}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
