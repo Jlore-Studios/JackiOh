@@ -10,6 +10,8 @@
 // print full art by the setting alone; any other card wears a version only by its own pick. A retired full art's pick
 // looks as it did (`tierOfLook` gives its tier back). R2940001: Alt full art prints the full-art layout as Full art
 // does (`isFullBleed`), on any card it is offered.
+// R3046000: a board face prints full art too, a Unit's `MinionFace` and a face-up backrow card's compact `CardFace`: the
+// art across the face, still, with the name in a band below it (`boardLookOf`).
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -165,7 +167,8 @@ export function fullArtPickOf(defId: string, id: string): boolean | string {
 /**
  * Whether `face`'s full layout prints full art: with no `fullArtOn`, a full-art card's (`isFullArtCard`) while the
  * Full-art cards setting is on; R2725000: given the caller's `useFullArt(defId)`, any card that may wear it
- * (`wearsFullArt`). A compact face and a board minion never do (CardFace, MinionFace).
+ * (`wearsFullArt`). R3046000: a compact face and a board minion do too, as a full face does, with the name below the
+ * art (CardFace, MinionFace).
  */
 export function showsFullArt(face: FaceModel, fullArtOn?: boolean): boolean {
   return fullArtOn === undefined ? readCardSettings().fullArt && isFullArtCard(face.defId) : fullArtOn && wearsFullArt(face.defId);
@@ -328,6 +331,18 @@ export function useCardLook(defId: string, worn: boolean = false): CardLook {
 export function tierOfLook(look: CardLook): FullArtTier | null {
   if (look.version === VERSION_FULL_ART_ID) return look.animated ? (look.signed ? "Mythic" : "Legendary") : "Epic";
   return look.version === null && look.animated ? "Animated" : null;
+}
+
+/**
+ * R3046000: the look a board face wears (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) given the
+ * `look` its full face would (`useCardLook`): where the full face prints full art (`showsFullArt`, the Full art or Alt
+ * full art version), the same version, still: the Animated and Signature augments move and sign the art of a full face
+ * alone (R2715000), so a board face lays the picture across itself and keeps its name in a band below it. Null where
+ * the full face prints none, so a board face that is not full art keeps its window.
+ */
+export function boardLookOf(face: FaceModel, look: CardLook): CardLook | null {
+  if (!showsFullArt(face, isFullBleed(look.version))) return null;
+  return { version: look.version, animated: false, signed: false };
 }
 
 /** R2655000: the tier of full art a copy of `defId` prints, or null: its look's (`useCardLook`, `tierOfLook`). */
