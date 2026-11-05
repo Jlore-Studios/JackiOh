@@ -15369,6 +15369,7 @@
       "planned_at": "2026-11-05T12:13:26Z",
       "planned_by": "`claude-8` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-8",
+      "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-8",
       "run_id": "42022183327",
