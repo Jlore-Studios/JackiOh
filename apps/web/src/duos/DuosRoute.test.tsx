@@ -20,6 +20,7 @@ import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { writeSettings } from "../settings/index.ts";
 import { sidelineTestid } from "../sideline/testids.ts";
 import { baseView, duosTeamView, duosView, pendingFor } from "../test/fixtures.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { DuosAgainStatus } from "../net/duos.ts";
@@ -374,6 +375,36 @@ describe("R2092000 Play again on the co-op result", () => {
     await flush();
     expect(server.to("GET", AGAIN)).toHaveLength(2);
     expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Your teammate wants to play again");
+  });
+
+  it("R3205000 a hidden tab's Play again status reads nothing, reads once when the tab shows, and goes on at its pace", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const period = SERIES_POLL_SECONDS * MS_PER_SECOND;
+    const server = serve(() => HERE);
+    try {
+      finished();
+      await flush();
+      expect(server.to("GET", AGAIN)).toHaveLength(1);
+
+      setVisibility("hidden");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3 * period + 1);
+      });
+      await flush();
+      expect(server.to("GET", AGAIN)).toHaveLength(1);
+
+      setVisibility("visible");
+      await flush();
+      expect(server.to("GET", AGAIN)).toHaveLength(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(period);
+      });
+      await flush();
+      expect(server.to("GET", AGAIN)).toHaveLength(3);
+    } finally {
+      resetVisibility();
+    }
   });
 });
 

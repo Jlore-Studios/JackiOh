@@ -32,7 +32,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
     const MENACE: &str = "core-019"; // Radiant: Taunt, Immutable.
-    const MIND_CONTROL: &str = "core-049"; // (4) Steal target enemy permanent.
+    const MIND_CONTROL: &str = "core-049"; // (5) Float reduces cost. Steal an enemy card.
     const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
@@ -135,7 +135,7 @@ mod tests {
         fn s6_3_replace_each_copy_keeps_the_old_card_s_owner_and_controller() {
             crate::register_all();
             let mut s = setup(
-                json!({ "hand": [MIND_CONTROL, { "def": JUHAN }], "mana": 7 }),
+                json!({ "hand": [MIND_CONTROL, { "def": JUHAN }], "mana": 8 }),
                 false,
                 json!({ "field": [VANILLA] }),
             );

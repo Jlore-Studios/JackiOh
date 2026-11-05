@@ -184,18 +184,17 @@ mod tests {
             }
 
             #[test]
-            fn r987_feng_shui_s_luck_adds_a_roll() {
+            fn r987_a_given_lucky_adds_a_roll() {
                 crate::register_all();
-                let flips = |judge: bool| -> u32 {
-                    let mut p1 = json!({ "hand": [MID, FILLER], "library": DECK });
-                    if judge {
-                        p1["backrow"] = json!(["meditative-040"]);
-                    }
+                let flips = |lucky: bool| -> u32 {
                     let mut s = scenario(json!({
                         "seed": "mid-loser-luck",
-                        "p1": p1,
+                        "p1": { "hand": [MID, FILLER], "library": DECK },
                         "p2": { "hand": [FILLER], "library": DECK },
                     }));
+                    if lucky {
+                        crate::give_lucky(&mut s, MID, 1);
+                    }
                     let cursor = s.state().rng_cursor;
                     s.play(MID, json!({}));
                     s.state().rng_cursor - cursor

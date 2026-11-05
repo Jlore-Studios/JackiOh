@@ -1169,7 +1169,10 @@ grants, the two functions that wrote it (`app.create_custom_card`, `app.update_c
 `tests/sql/48_drop_custom_cards.sql` checks that none is left, that the file deletes the cards a database
 held (0037 re-applied for the test) and keeps their owner, and the re-apply.
 
-Migration 0083 turns the card looks into variants, each a ladder of levels (R3015000, R3015006), and only
+Migration 0083 widens the `cards` tag check once more, as 0070 did, with #3038's Starship tag (R3038000),
+so `seed-catalog` can write the Dormant Starship as the catalog now tags it.
+
+Migration 0084 turns the card looks into variants, each a ladder of levels (R3015000, R3015006), and only
 inserts: the fifteen new levels' `cosmetics` rows, as `cosmetics.json` has them, ahead of `seed-catalog`
 since the grants need them; then, per account and card, the levels each combination it holds covers,
 read off three flags (full art: `version-full-art` or any `full-art-…`; animated: `augment-animated`, an
@@ -1178,7 +1181,7 @@ read off three flags (full art: `version-full-art` or any `full-art-…`; animat
 `version-full-art-signed` as full art, animated and signed stack, `version-alt-art` beside a held
 `version-alt-full-art` and `version-alt-full-art-animated` with animated too, and each one-art version's
 `version-<v>-animated` beside `version-<v>` with animated, never a moving level on a Legacy card. Each row
-inserted gets its `cosmetic_grants` row on its card, +1, reason `launch`, ref `levels:0083`; a row already
+inserted gets its `cosmetic_grants` row on its card, +1, reason `launch`, ref `levels:0084`; a row already
 held gets none. Nothing is deleted or rewritten: the retired full arts and augments stay with their owners
 and still own their levels where the server reads them (`cosmetics::implied_by`), and Signature without
 both Full art and Animated owns none. `card_cosmetic_picks` is untouched: a pick of an older shape is read

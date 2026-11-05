@@ -826,7 +826,7 @@ mod tests {
         ];
         let owned = OwnedCosmetics {
             cards: vec![
-                // The version and Animated, and the levels migration 0083 wrote for them (R3015006).
+                // The version and Animated, and the levels migration 0084 wrote for them (R3015006).
                 row(cube, VERSION_FULL_ART_ID),
                 row(cube, AUGMENT_ANIMATED_ID),
                 row(cube, VERSION_FULL_ART_ANIMATED_ID),
@@ -915,7 +915,7 @@ mod tests {
         let version = || level(VERSION_FULL_ART_ID);
         let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
         // The version and both augments on Carnivorous Cube and on Mr. Vanilla, whose still Epic is owned too, and
-        // the levels migration 0083 wrote for them (R3015006).
+        // the levels migration 0084 wrote for them (R3015006).
         let owned = OwnedCosmetics {
             cards: [cube, vanilla]
                 .into_iter()

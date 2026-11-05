@@ -1,12 +1,12 @@
 //! Echo's repeats, the state check between them, and a Spell that exiles itself (SPEC §4.5,
-//! §6.2 Echo, §10.5 steps 4 to 7, R30, R59, R178). Found by the polish-4 edge-case hunt
+//! §6.2 Echo, §10.5 steps 4 to 7, R59, R178, R3044000). Found by the polish-4 edge-case hunt
 //! (docs/polish/4-edge-cases.md, lens L7).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!  - §4.5: the state check runs after a Spell's first resolution, before its Echo repeat asks
 //!    anything, so a unit it killed is not offered again and a hero it killed ends the game.
 //!  - R178: "exile this" is where §10.5 step 7 sends a Spell, so a self-exiling Spell still takes
-//!    Twinspell's Echo and still resolves its repeat; and the Echo is gained as the Spell is played,
-//!    so a Spell that moves Twinspell away (#87's board swap) has already taken it.
+//!    Twinspell's Echo and still resolves its repeat; and the Echo its Activate gave is its player's
+//!    (R3044000), so a Spell that moves a Radiant Twinspell away (#87's board swap) still takes it.
 //!  - Round 9, lens "card by card". R119: an Echo repeat is the same play resolving again, so its
 //!    granted Combo parts count neither a Quickstriker the first resolution summoned (#95) nor a
 //!    Combo modifier the play itself installed (#78's own "Combo: draw 1").
@@ -73,6 +73,7 @@ mod section_4_5_the_state_check_between_an_echos_resolutions {
         let mrow = g.unit_at(P2, 1);
 
         g.play(TWINSPELL, json!({}));
+        g.activate(TWINSPELL, json!({}));
         g.play(HIT_JOB, json!({ "targets": pick::instance(&mrow) }));
 
         assert_eq!(
@@ -92,6 +93,7 @@ mod section_4_5_the_state_check_between_an_echos_resolutions {
         }));
 
         g.play(TWINSPELL, json!({}));
+        g.activate(TWINSPELL, json!({}));
         g.play(
             LUNAR_ECLIPSE,
             json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
@@ -112,7 +114,7 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
     use super::*;
 
     #[test]
-    fn r178_r30_a_self_exiling_spell_takes_twinspells_echo_resolves_twice_and_lands_in_exile_6_2() {
+    fn r178_r3044000_a_self_exiling_spell_takes_twinspells_echo_resolves_twice_and_lands_in_exile_6_2() {
         let mut g = scenario(json!({
             "p1": { "hand": [TWINSPELL, TRUE_STRIKE, RENO], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
@@ -121,13 +123,14 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
         let strike = g.card(TRUE_STRIKE).clone();
 
         g.play(TWINSPELL, json!({}));
+        g.activate(TWINSPELL, json!({}));
+        g.expect_in_zone(&twin.id, "graveyard");
         g.play(
             TRUE_STRIKE,
             json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
         );
         // Still resolving, and still itself, while its repeat asks (R98).
         assert_eq!(g.card(&strike.id).zone.z(), ZoneName::Resolving);
-        g.expect_in_zone(&twin.id, "graveyard");
         g.answer(json!([{ "pick": "hero", "player": "p2" }]));
 
         g.expect_health(P2, 22);
@@ -137,16 +140,22 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
     }
 
     #[test]
-    fn r178_r30_twinspell_is_consumed_by_the_next_spell_played_even_when_that_spell_swaps_it_away_and_exiles_itself()
+    fn r178_r3044000_a_radiant_twinspells_grant_is_taken_by_the_next_spell_even_when_that_spell_swaps_it_away_and_exiles_itself()
      {
         let mut g = scenario(json!({
-            "p1": { "hand": [TWINSPELL, CHAOS, RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "mana": 8, "library": LIBRARY },
+            "p1": {
+                "hand": [{ "def": TWINSPELL, "radiant": true }, CHAOS, RENO],
+                "field": [{ "def": SEVEN_SEVEN, "lane": 2 }],
+                "mana": 8,
+                "library": LIBRARY
+            },
             "p2": { "hand": [RENO], "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },
         }));
         let twin = g.card(TWINSPELL).clone();
         let chaos = g.card(CHAOS).clone();
 
         g.play(TWINSPELL, json!({}));
+        g.activate(TWINSPELL, json!({}));
         g.play(CHAOS, json!({ "modes": ["board"] }));
         // The repeat's fresh mode prompt (§10.6: an Echo repeat asks again).
         assert_eq!(
@@ -155,7 +164,8 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
         );
         answer_first_selections(&mut g);
 
-        g.expect_in_zone(&twin.id, "graveyard");
+        // The Radiant Twinspell stays on the field, wherever the swaps left it; the grant was p1's.
+        g.expect_in_zone(&twin.id, "field");
         g.expect_in_zone(&chaos.id, "exile");
         assert_eq!(echo_mods(&g, P1), 0);
         assert_eq!(echo_mods(&g, P2), 0);
@@ -236,8 +246,10 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
                 .filter(|modifier| matches!(modifier.kind, ModifierKind::ComboDraw { .. }))
                 .count()
         };
-        // Twinspell is a card played earlier this turn, so every later card meets "Combo" (§6.2).
+        // Twinspell is a card played earlier this turn, so every later card meets "Combo" (§6.2); its
+        // Activate is no play (R384), and gives the next Spell Echo +1 (R3044000).
         s.play(TWINSPELL, json!({}));
+        s.activate(TWINSPELL, json!({}));
         assert_eq!(combo_draws(&s), 0);
 
         s.play(FULLSEND, json!({}));
@@ -269,6 +281,7 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
         }));
         s.play(TEMPO_TIMMY, json!({ "zone": 1 }));
         s.play(TWINSPELL, json!({}));
+        s.activate(TWINSPELL, json!({}));
         assert!(quickstrikers_of(&s, P1).is_empty());
         let call = s.card(CALL_TO_CHAOS).clone();
 

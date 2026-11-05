@@ -11,7 +11,8 @@
  * (#1833) add a ring of their own inside it. A finish is the print: a weave, fibres or fine lines
  * over the face, a panel in black ink, steel, velvet or obsidian, leaded panes, a starred midnight,
  * or a gold hairline round the edge. R2720000: a full-art face's art covers the panel, so there each
- * finish also paints a band of itself round the art's edge, lightly, under everything the face prints.
+ * finish also paints a band of itself round the art's edge, lightly, under everything the face prints;
+ * R3046000: a full-art board face (a Unit, a face-up backrow card) is one of them.
  * A foil is a sheen over the art window only, two of them with a second layer under it.
  *
  * Every look comes first as its still version. The moving ones move only inside the one motion gate
@@ -156,8 +157,10 @@
 /* The minion's panel fills its root and covers the edge, so its border is a ring laid over the panel:
    the face's own `--cf-edge`, the gradient, grain or traces a full face wears, masked down to a ring
    as wide as that face's edge (1.7% of its width). The ring sits over the panel's inner shadow, which
-   stays as cards.css draws it, and under what the panel prints (the gems, the plate, the chips). */
-.cf[data-layout="minion"][data-frame] .cf-scale::before {
+   stays as cards.css draws it, and under what the panel prints (the gems, the plate, the chips).
+   R3046000: a full-art minion's panel is inset as a full face's is (cards.css), so the edge shows round
+   the art as it does there and draws no ring, leaving `.cf-scale::before` to the finish's band below. */
+.cf[data-layout="minion"][data-frame]:not([data-full-art="true"]) .cf-scale::before {
   content: "";
   position: absolute;
   inset: 0;

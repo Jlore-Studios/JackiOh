@@ -488,7 +488,7 @@ mod tests {
             VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
         };
         // Carnivorous Cube, offered Full art's ladder, owning the version and both augments, and the levels
-        // migration 0083 wrote for them (R3015006).
+        // migration 0084 wrote for them (R3015006).
         let cube = "core-022";
         let row = |id: &str| CardCosmetic {
             card_id: cube.to_string(),

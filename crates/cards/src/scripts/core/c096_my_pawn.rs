@@ -358,7 +358,7 @@ mod tests {
     const RIGHT_HOUSE: &str = "core-003";
     /// #89 Corpse Eater: in hand, it gains the attack and max health of each unit that dies (R38).
     const CORPSE_EATER: &str = "core-089";
-    /// #20 Pointmaster: its radiant face is a 14/4 with First Strike and Divine Shield, and no Reborn.
+    /// #20 Pointmaster: its radiant face is a 12/2 with Rush, First Strike and Divine Shield, and no Reborn.
     const POINTMASTER: &str = "core-020";
 
     /// p1 swings `attacker` from lane 1 at p2's hero, which is at `health` behind a face-down My Pawn of
@@ -482,10 +482,10 @@ mod tests {
                 .collect();
             assert!(printed.contains(&json!("Divine Shield")));
             assert!(!printed.contains(&json!("Reborn")));
-            let (mut s, attacker) = pawn_game(json!({ "def": POINTMASTER, "radiant": true }), 14, "radiant");
+            let (mut s, attacker) = pawn_game(json!({ "def": POINTMASTER, "radiant": true }), 12, "radiant");
 
-            // Canceled: the 14 never landed.
-            s.expect_health(P2, 14);
+            // Canceled: the 12 never landed.
+            s.expect_health(P2, 12);
             assert!(!any_event(&s, "damage"));
 
             // Destroyed after the cancel and collected before the AI's turn, the shield never spent.
@@ -606,7 +606,7 @@ mod tests {
     mod n96_my_pawn_glows_while_an_enemy_unit_could_swing_for_lethal_r662_r44 {
         use super::*;
 
-        const POINTMASTER: &str = "core-020"; // 7/1 First Strike
+        const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack swing (Pointmaster is a 6/1 since issue #3136)
 
         fn face_of(radiant: bool) -> &'static str {
             if radiant { "radiant" } else { "base" }
@@ -619,13 +619,13 @@ mod tests {
                 "seed": format!("r662-096-{face}-on"),
                 "active": "p2",
                 "p1": { "backrow": [{ "def": "core-096", "radiant": radiant }], "health": 7 },
-                "p2": { "field": [POINTMASTER], "hand": ["core-010"] },
+                "p2": { "field": [SEVEN_SEVEN], "hand": ["core-010"] },
             }));
             assert!(backrow_glows(&s, 1, P1));
             assert!(!opponent_sees_glow(&s, 1, P1));
 
             // The rest of the turn is played at random afterwards, so the cancel is what is read here.
-            s.attack(POINTMASTER, "hero");
+            s.attack(SEVEN_SEVEN, "hero");
             assert!(any_event(&s, "trapFired"));
         }
 
@@ -636,11 +636,11 @@ mod tests {
                 "seed": format!("r662-096-{face}-off"),
                 "active": "p2",
                 "p1": { "backrow": [{ "def": "core-096", "radiant": radiant }], "health": 8 },
-                "p2": { "field": [POINTMASTER], "hand": ["core-010"] },
+                "p2": { "field": [SEVEN_SEVEN], "hand": ["core-010"] },
             }));
             assert!(!backrow_glows(&s, 1, P1));
 
-            s.attack(POINTMASTER, "hero");
+            s.attack(SEVEN_SEVEN, "hero");
             assert!(!any_event(&s, "trapFired"));
             s.expect_health(P1, 1);
         }
@@ -651,7 +651,7 @@ mod tests {
             let s = scenario(json!({
                 "seed": format!("r662-096-{face}-mine"),
                 "p1": { "backrow": [{ "def": "core-096", "radiant": radiant }], "health": 7, "hand": ["core-010"] },
-                "p2": { "field": [POINTMASTER] },
+                "p2": { "field": [SEVEN_SEVEN] },
             }));
             assert!(backrow_glows(&s, 1, P1));
         }

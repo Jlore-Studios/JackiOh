@@ -9,7 +9,7 @@ import type { MarketSaleView } from "./MarketSaleView";
  */
 export type MarketplaceView = { 
 /**
- * The viewer's own offers (R2250002): the three rolled at the start of their turn, then the lots
- * an effect added for them (R1853005).
+ * The viewer's own offers (R2250002, R3047000): the four rolled at the start of their turn, then
+ * the lots an effect added for them (R1853005).
  */
 offers: Array<MarketOfferView>, sales: Array<MarketSaleView>, };

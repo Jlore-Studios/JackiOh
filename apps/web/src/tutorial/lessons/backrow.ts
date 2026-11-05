@@ -1,7 +1,8 @@
 // Lesson 4 data (SPEC §9.10, R291, R2434001, R2533001); ../lessons.ts defines its fields and
 // ../scripts/backrow.ts is the coach: units the first lessons taught, spells, Field Spells and Traps,
 // no Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal
-// (`scripts/lesson-deal.ts backrow`).
+// (`scripts/lesson-deal.ts backrow`). Seed "-47" until #3128, whose costs left the AI's Trap unsprung
+// there; on "-25" it springs, and the coach's line wins within 10.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -11,7 +12,7 @@ export const lesson: TutorialLesson = {
   title: "Field Spells and Traps",
   summary: "Cards that wait face-down in the backrow, and cards that keep working there.",
   discoveries: ["trap", "enemy-backrow", "field-spell", "field-trap"],
-  seed: "tg-backrow-47",
+  seed: "tg-backrow-25",
   humanSeat: "p1",
   poolHold: true,
   humanDeck: [

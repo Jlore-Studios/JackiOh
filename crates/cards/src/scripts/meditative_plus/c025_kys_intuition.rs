@@ -1,4 +1,4 @@
-//! M+ #25 KY's Intuition (SPEC §8.9 row 25; R380, R387, R1183004, R1183005): (1) Spell, KY, Rare.
+//! M+ #25 KY's Intuition (SPEC §8.9 row 25; R380, R387, R1183004, R1183005): (2) Spell ((1) until issue #3138), KY, Rare.
 //!
 //! Base:    "Discover one of 3 blocks of card code. Add the Radiant card with that code to your hand."
 //! Radiant: "Discover one of 3 blocks of card code. Add the Radiant card with that code to your hand.
@@ -96,6 +96,20 @@ mod tests {
 
     mod mp25_kys_intuition {
         use super::*;
+
+        /// Issue #3138: it costs (2), from (1), on both faces: refused with 1 mana, played with 2, and
+        /// the Discover opens as before.
+        #[test]
+        fn issue_3138_it_costs_2_on_both_faces() {
+            for radiant in [false, true] {
+                let mut s = holding("kys-intuition-cost", radiant, 1);
+                crate::expect_costs(&mut s, ID, 2, json!({}));
+                s.state_mut().players.p1.mana.current = 2;
+                s.play(ID, json!({}));
+                s.expect_mana(P1, 0);
+                assert_eq!(offered(&s).len(), 3, "radiant {radiant}: the Discover is open");
+            }
+        }
 
         #[test]
         fn r1183005_offers_3_distinct_non_token_cards_each_as_its_code_block() {
