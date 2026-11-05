@@ -5,7 +5,7 @@
 //!
 //! R1372, R924000: an All Random rematch deals fresh decks on each seat's latest "More cards from"
 //! pick (`leanSet`, or R1372's `leanNewest` from an older client); a Best-of-1 one replays its frozen
-//! decks, which R915005 asks the validator's L7 first. R1638000: a match on another catalog version
+//! decks. R1638000: a match on another catalog version
 //! is `409 update_required` before any offer is recorded (§9.4). R2685000: an offer counts only
 //! within `REMATCH_OFFER_TTL_MS` of the match's `finished_at`, as a co-op Play again's (R1398000).
 //! Offers live in memory, one book per `App`: a restart drops them and both clients re-offer.
@@ -27,7 +27,7 @@ use serde_json::{Value, json};
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{already_in_match, assert_no_custom_cards, lean_of};
+use crate::api::decks::{already_in_match, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -154,12 +154,6 @@ async fn create_rematch(
     match_id: &str,
 ) -> Result<(), ApiError> {
     let random = mode == QueueMode::Random;
-    // R915005: a deck with a custom card plays only in practice, so the frozen decks a Best-of-1
-    // rematch would replay are asked the validator's L7, as the queue asks it, before anything is
-    // claimed. All Random deals from the catalog, which holds no custom card.
-    if !random {
-        assert_no_custom_cards(&[&finished.decks.0, &finished.decks.1])?;
-    }
     let seed = new_seed();
     // R1989000, R1834002: the seats swap, and the finished match's slots are judged again by the new
     // loadout (`jackioh_shared::host::rematch::next_seats`).

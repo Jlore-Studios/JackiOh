@@ -10,7 +10,7 @@
 //! time; `redeem` runs §9.4's six steps in order; claims are single-shot (§9.4 step 6, §9.5); the match log
 //! is append-only (§9.3, R776000); `tickets_insert` refuses a second open ticket per profile
 //! (`tickets_profile_queued_key`, which `queue.rs` relies on). So are the decks, trios and Conquest series
-//! (R250–R263), tutorial progress (R320), player settings (R633, R634), custom cards (R915008), deck versions
+//! (R250–R263), tutorial progress (R320), player settings (R633, R634), deck versions
 //! (R2100000), ranked tables (R608, R609, R611) and game records (R376, R378).
 //!
 //! R111 IS A DATABASE TRIGGER, so `profiles_set_status` carries it rather than a handler (SPEC §11 R111),
@@ -27,7 +27,7 @@ use jackioh_engine::wire::stats::{
     CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, ListTotal, PilotFilter, StatsTotals,
     record_matches, sources_of,
 };
-use jackioh_engine::wire::{CustomCard, PLAYER_IDS, PlayerId};
+use jackioh_engine::wire::{PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::bots::cosmetics::BotCosmetics;
@@ -39,15 +39,14 @@ use crate::config::{
 };
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CodeAttemptResult,
-    CollectionEntry, CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome,
-    CustomCardWrite, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow, FavoriteCard, FoldedRecords,
-    FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode, LastBoardEntry, LastBoardKind,
-    LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow, MatchSeats,
-    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow,
-    ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck,
+    CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
+    FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
+    MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
+    ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
     SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
@@ -155,8 +154,6 @@ pub struct FakeTables {
     pub trios: Vec<SavedTrio>,
     // R2100000: migration 0066's `public.deck_versions`, a deck's earlier versions.
     pub deck_versions: Vec<DeckVersion>,
-    // The table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
-    pub custom_cards: Vec<SavedCustomCard>,
     pub series: Vec<SeriesRow>,
     pub matches: Vec<MatchRow>,
     pub match_actions: Vec<MatchActionRow>,
@@ -464,11 +461,6 @@ impl<'a> FakeTx<'a> {
         FakeTx { guard, snapshot }
     }
 
-    /// The whole store, for a test helper that runs inside a transaction.
-    pub fn data(&mut self) -> &mut FakeData {
-        &mut self.guard
-    }
-
     pub fn tables(&mut self) -> &mut FakeTables {
         &mut self.guard.tables
     }
@@ -500,8 +492,9 @@ pub fn commit(mut f: FakeTx<'_>) {
     f.snapshot = None;
 }
 
-/// Charges `method` to the fault-injection hook, then runs the race hook, if either is set.
-fn call(f: &mut FakeTx<'_>, method: &str) -> Result<(), StoreError> {
+/// Charges `method` to the fault-injection hook, then runs the race hook, if either is set. The admin,
+/// duos and economy fakes' `call`s charge theirs here too.
+pub(crate) fn call(f: &mut FakeTx<'_>, method: &str) -> Result<(), StoreError> {
     call_cas(f, method).map(|_| ())
 }
 
@@ -2191,107 +2184,6 @@ pub fn deck_versions_keep(
     Ok(outcome)
 }
 
-// Custom cards on the account (R915008, migration 0037)
-
-pub fn custom_cards_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedCustomCard>, StoreError> {
-    call(f, "customCards.list")?;
-    let mut rows: Vec<SavedCustomCard> = f
-        .tables()
-        .custom_cards
-        .iter()
-        .filter(|row| row.profile_id == profile_id)
-        .cloned()
-        .collect();
-    rows.sort_by(|a, b| by_creation(a.created_at, &a.card.id, b.created_at, &b.card.id));
-    Ok(rows)
-}
-
-pub fn custom_cards_get(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    card_id: &str,
-) -> Result<Option<SavedCustomCard>, StoreError> {
-    call(f, "customCards.get")?;
-    Ok(f.tables()
-        .custom_cards
-        .iter()
-        .find(|row| row.card.id == card_id && row.profile_id == profile_id)
-        .cloned())
-}
-
-/// A new card at version 1, as `app.create_custom_card` (0037) writes it: the cap first, then the
-/// id, which is unique (`custom_cards_pkey`).
-pub fn custom_cards_create(
-    f: &mut FakeTx<'_>,
-    card: &CustomCardWrite,
-    max_cards: i64,
-) -> Result<CustomCardCreateOutcome, StoreError> {
-    let max_cards = usize::try_from(max_cards).unwrap_or(0);
-    call(f, "customCards.create")?;
-    let rows = &mut f.tables().custom_cards;
-    let held = rows
-        .iter()
-        .filter(|row| row.profile_id == card.profile_id)
-        .count();
-    if held >= max_cards {
-        return Ok(CustomCardCreateOutcome::Limit);
-    }
-    if rows.iter().any(|row| row.card.id == card.id) {
-        return Err(StoreError::from(format!(
-            "custom_cards.id is unique: {}",
-            card.id
-        )));
-    }
-    rows.push(SavedCustomCard {
-        profile_id: card.profile_id.clone(),
-        card: CustomCard {
-            id: card.id.clone(),
-            version: 1,
-            frame: card.frame.clone(),
-            source: card.source.clone(),
-            builder: card.builder.clone(),
-        },
-        created_at: card.at,
-        updated_at: card.at,
-    });
-    Ok(CustomCardCreateOutcome::Created)
-}
-
-pub fn custom_cards_update(
-    f: &mut FakeTx<'_>,
-    card: &CustomCardWrite,
-    replaces: i32,
-) -> Result<CustomCardUpdateOutcome, StoreError> {
-    call(f, "customCards.update")?;
-    let Some(row) = f
-        .tables()
-        .custom_cards
-        .iter_mut()
-        .find(|row| row.card.id == card.id && row.profile_id == card.profile_id)
-    else {
-        return Ok(CustomCardUpdateOutcome::Missing);
-    };
-    if row.card.version != replaces {
-        return Ok(CustomCardUpdateOutcome::Stale);
-    }
-    // Postgres's `int` raises past its range, as this does.
-    row.card.version = replaces
-        .checked_add(1)
-        .ok_or_else(|| StoreError::from("custom_cards.version is out of range"))?;
-    row.card.frame = card.frame.clone();
-    row.card.source = card.source.clone();
-    row.card.builder = card.builder.clone();
-    row.updated_at = card.at;
-    Ok(CustomCardUpdateOutcome::Updated)
-}
-
-pub fn custom_cards_remove(f: &mut FakeTx<'_>, profile_id: &str, card_id: &str) -> Result<bool, StoreError> {
-    call(f, "customCards.remove")?;
-    Ok(keep_only(&mut f.tables().custom_cards, |row| {
-        !(row.card.id == card_id && row.profile_id == profile_id)
-    }) == 1)
-}
-
 pub fn series_create(f: &mut FakeTx<'_>, row: &SeriesRow) -> Result<(), StoreError> {
     call(f, "series.create")?;
     if f.tables().series.iter().any(|existing| existing.id == row.id) {
@@ -3370,8 +3262,6 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.trios, |row| row.profile_id != profile_id);
     // 0066, R2100000: a deck's versions cascade with the deck.
     keep_only(&mut tables.deck_versions, |row| row.profile_id != profile_id);
-    // 0037, R915008: a profile's custom cards cascade with it.
-    keep_only(&mut tables.custom_cards, |row| row.profile_id != profile_id);
     keep_only(&mut tables.tutorial, |row| row.profile_id != profile_id);
     keep_only(&mut tables.player_settings, |row| row.profile_id != profile_id);
     keep_only(&mut tables.last_boards, |row| row.profile_id != profile_id);

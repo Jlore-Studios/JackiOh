@@ -32,7 +32,6 @@ import {
   NO_FULL_ART,
   OwnCopy,
   fullArtGated,
-  ownsFullArt,
 } from "./fullArt.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { closeInspect } from "./inspect/store.ts";
@@ -116,10 +115,6 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     expect(fullArtGated(true, "development")).toBe(false);
     expect(fullArtGated(true, "test")).toBe(false);
     expect(FULL_ART_GATED).toBe(false);
-    expect(ownsFullArt("every", NOT_OWNED, false)).toBe(true);
-    expect(ownsFullArt(owningFullArt([OWNED]), OWNED, true)).toBe(true);
-    expect(ownsFullArt(owningFullArt([OWNED]), OWNED, false)).toBe(false);
-    expect(ownsFullArt(owningFullArt([OWNED]), NOT_OWNED, true)).toBe(false);
   });
 
   it("R1310004 a development build gates full art only when the e2e key asks", () => {

@@ -5,7 +5,18 @@ import { beforeAll, expect, it } from "vitest";
 
 import { aiToAct } from "@jackioh/ai";
 import { TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET } from "@jackioh/engine/config";
-import { beginGame, createGame, fold, hashState, legalActions, reduce, registeredCatalog, viewFor, type GameState } from "@jackioh/engine";
+import {
+  beginGame,
+  combatForecast,
+  createGame,
+  fold,
+  hashState,
+  legalActions,
+  reduce,
+  registeredCatalog,
+  viewFor,
+  type GameState,
+} from "@jackioh/engine";
 import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "../../game/animations.ts";
@@ -57,6 +68,7 @@ export function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } 
     const ctx: CoachCtx = {
       view,
       legal: legalActions(state, human),
+      forecast: combatForecast(state, human),
       fresh: previous === null ? [] : newEventsSince(previous.events, view.events),
       aiToAct: aiToAct(state, ai),
       defOf: (defId) => catalog[defId],

@@ -225,14 +225,13 @@ A plain wave deals any one card in fewer than one seed in ten, so for card work 
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
-- **Seed-pinned tests** ("the first Discover offers Speciesist, the second Twisted Sorcerer"): `crates/cards/tests/cross/` pins no
-  pool's roll (#848). A test that needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or
-  `cursor_where(seed, accept)` (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), and
-  a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a
-  search within a few hundred tries; past that, build the position directly. A seed pinned anywhere else (look in #98 Heroic
-  Power's own tests, `src/scripts/core/c098_heroic_power.rs`, and `crates/ai/tests/ai/shadow_ban.rs`) is re-pinned by looping seeds
-  in a throwaway test (`for n in 0.. { let mut s = scenario(json!({ "seed": format!("craft-{n}"), … })); … }`) until the offers
-  match, and the comment beside the seed updated; better, convert it to a search.
+- **Seed-pinned tests** ("the first Discover offers Speciesist, the second Twisted Sorcerer"): pin no pool's roll (#848). A test that
+  needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or `cursor_where(seed, accept)`
+  (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), or builds the position directly, and
+  a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a search
+  within a few hundred tries. `sh scripts/pool-probe.sh` (daily, in `super.yml`) runs the cards', AI's, server's and tools' tests with
+  every random pool rotated one place (#3117); a test it fails leans on a roll, so convert it. A test of a pool's content or order reads
+  it under `with_pool_shift(0, …)`.
 - **The cross-build replay** (`cargo jackioh luau diff --parent-bin <base build's jackioh> --cards <ids>`, and `rust (classify)` on the pull
   request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
   a divergence names the seed, the step and the hash. Nothing is committed (the 240 golden traces were retired in #2578), so nothing is

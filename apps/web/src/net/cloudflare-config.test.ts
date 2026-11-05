@@ -47,7 +47,7 @@ describe("wrangler.jsonc", () => {
     }
   });
 
-  it("answers an unrouted path with public/404.html and a 404 in both environments", () => {
+  it("answers an unrouted path with the build's 404.html and a 404 in both environments", () => {
     for (const [name, environment] of ENVIRONMENTS) expect(environment.assets?.not_found_handling, name).toBe("404-page");
   });
 

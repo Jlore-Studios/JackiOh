@@ -1,0 +1,21 @@
+{
+  "title": "Patch: Immersive and Prismatic card versions",
+  "sources": "#2944",
+  "notes": "Part 5 of #2725's ten new card versions (tracker #2729), the last: two Mythic versions, the top chases, each per card, granted to no account, and offered on a share of the marquee cards of its own; no cosmetic token buys one (R2944000). Immersive (50 cards: a seeded share of the Legendary and Mythic cards but the Starship) lays the card's subject on a near layer over its backdrop hazed as far off, the near layer shifting with the pointer or the device's tilt and breathing slowly; Prismatic (48 cards: every Mythic card and a seeded share of the Legendary ones) draws the picture in mirror chrome under an iridescent sheen and on a base face a rainbow edge, a chrome bezel and a chrome name banner, chrome and never gold (R2944001). Animated, a foil, a finish and a border layer on each; Signature on neither, by R2949000's rule; Immersive's depth takes a motion slot, the one Animated shares on its face, and holds still under reduced motion, with Animated foil off and on a lazy face (R2944002). A Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Immersive and Prismatic",
+    "new": [
+      "Immersive: the card's subject stands out in front of a hazy backdrop, shifting with your pointer or your phone's tilt and breathing slowly. On some Legendary and Mythic cards.",
+      "Prismatic: the top chase, the picture in mirror chrome under a rainbow sheen, with a rainbow edge. Chrome, never gold, so it never looks Radiant. On every Mythic card and some Legendary ones."
+    ],
+    "balance": [],
+    "changes": [
+      "Each new version goes to its own mix of cards, so cards differ in what they can wear. Animated, foils, finishes and borders work on both; Signature stays on Full art with Animated.",
+      "Immersive holds still when you reduce motion or turn Animated foil off."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

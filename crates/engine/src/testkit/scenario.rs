@@ -201,7 +201,8 @@ pub fn marketplace_table_override() -> Option<&'static [crate::config::MarketLot
 }
 
 /// #1035: one thread's registry overrides (`thread_overrides`), for another thread to `install`, so
-/// work a test hands to a blocking pool reads the test's own cards. Nothing is copied.
+/// work a test hands to a blocking pool reads the test's own cards (and, #3117, draws from the pools
+/// it does: its pool shift goes along). Nothing is copied.
 #[derive(Clone, Copy)]
 pub struct ThreadOverrides {
     catalog: Option<&'static CardDefs>,
@@ -212,6 +213,7 @@ pub struct ThreadOverrides {
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
     card_metrics: Option<crate::catalog::CardMetrics>,
     marketplace_table: Option<&'static [crate::config::MarketLot]>,
+    pool_shift: usize,
 }
 
 impl ThreadOverrides {
@@ -226,6 +228,7 @@ impl ThreadOverrides {
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
         CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
         MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(self.marketplace_table));
+        crate::testkit::pool_probe::install_pool_shift(self.pool_shift);
     }
 }
 
@@ -240,6 +243,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         shipped: shipped_override(),
         card_metrics: card_metrics_override(),
         marketplace_table: marketplace_table_override(),
+        pool_shift: crate::testkit::pool_probe::pool_shift(),
     }
 }
 
@@ -645,7 +649,11 @@ fn where_label(scope: Where) -> &'static str {
 /// deck is `query`'s first DECK_SIZE ids in §5 index order (no token, R674's Glitch in no pool). Both
 /// libraries are emptied right afterwards and `nextId` reset, so a scenario's ids start at `c1`.
 fn filler_deck() -> Result<Vec<String>, String> {
-    let defs: Vec<&CardDef> = crate::catalog::query(&crate::catalog::CatalogQueryArgs::default());
+    // Read unshifted (#3117): a rotated pool would drop its first card from the deck and the AI's decks
+    // built from it would hold another twice.
+    let defs: Vec<&CardDef> = crate::testkit::pool_probe::with_pool_shift(0, || {
+        crate::catalog::query(&crate::catalog::CatalogQueryArgs::default())
+    });
     let size = DECK_SIZE.max(0) as usize;
     if defs.len() < size {
         return Err(format!(

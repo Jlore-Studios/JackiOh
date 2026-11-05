@@ -9,7 +9,9 @@
 // R2942001: Extended art draws the normal picture past its window (CardFace), and Pixel and Comic restyle it
 // (`artPictureOf`). R2943000: #2943 adds the Set showcase and Out of frame versions; R2943001: Set showcase restyles
 // the picture in its set's own treatment (`artPictureOf` by the card's set), and Out of frame draws its subject apart
-// from its backdrop (`artPartOf`, CardFace). Presentation only: nothing here reaches the engine, an action,
+// from its backdrop (`artPartOf`, CardFace). R2944000: #2944 adds the Immersive and Prismatic versions; R2944001:
+// Immersive draws its backdrop hazed under a near layer of its subject (`artPictureOf`, CardFace), and Prismatic its
+// picture in mirror chrome under an iridescent sheen. Presentation only: nothing here reaches the engine, an action,
 // `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
@@ -63,6 +65,15 @@ export const VERSION_SET_SHOWCASE_ID = "version-set-showcase";
  */
 export const VERSION_OUT_OF_FRAME_ID = "version-out-of-frame";
 
+/**
+ * R2944000: the Immersive version, Mythic: a layered scene, its subject on a near layer over a hazed backdrop, the near
+ * layer shifting with the pointer or the device's tilt and breathing slowly; still under reduced motion.
+ */
+export const VERSION_IMMERSIVE_ID = "version-immersive";
+
+/** R2944000: the Prismatic version, Mythic: mirror chrome, rainbow-edged and iridescent, the top chase; never gold. */
+export const VERSION_PRISMATIC_ID = "version-prismatic";
+
 /** R2940001: whether a face wearing `version` lays its art across the whole face: Full art and Alt full art. */
 export function isFullBleed(version: string | null): boolean {
   return version === VERSION_FULL_ART_ID || version === VERSION_ALT_FULL_ART_ID;
@@ -72,6 +83,7 @@ export function isFullBleed(version: string | null): boolean {
  * R2940001: the picture a face wearing `version` draws (pictures.ts): Alt art's for Alt art and Alt full art, the
  * Sketch for Sketch. R2942001: Pixel's and Comic's for those; Extended art draws the normal one. R2943001: Set showcase
  * its set's own treatment, a card of `set` (the normal picture for a set with none); Out of frame the normal one.
+ * R2944001: Immersive its hazed depth (its window's backdrop, CardFace) and Prismatic its chrome.
  */
 export function artPictureOf(version: string | null, set: string | null = null): ArtPicture {
   if (version === VERSION_ALT_ART_ID || version === VERSION_ALT_FULL_ART_ID) return "alt";
@@ -81,12 +93,15 @@ export function artPictureOf(version: string | null, set: string | null = null):
     const family = showcaseFamilyOf(set);
     return family === null ? "normal" : `showcase-${family}`;
   }
+  if (version === VERSION_IMMERSIVE_ID) return "depth";
+  if (version === VERSION_PRISMATIC_ID) return "prismatic";
   return version === VERSION_COMIC_ID ? "comic" : "normal";
 }
 
 /**
  * R2943001: the part of its picture a face wearing `version` draws in its window: Out of frame's subject, which a
- * picker's tile shows alone; every other version the whole picture.
+ * picker's tile shows alone; every other version the whole picture (R2944001: Immersive's tile its whole picture in
+ * haze, its window drawing the backdrop under its near layer, CardFace).
  */
 export function artPartOf(version: string | null): ArtPart {
   return version === VERSION_OUT_OF_FRAME_ID ? "subject" : "whole";
@@ -181,11 +196,6 @@ export function lookOf(fullArt: boolean | string | null | undefined, augments: r
 /** R2725000: the augment ids a look layers on its version, in the registry's order: what a card pick's `augments` holds. */
 export function augmentsOf(look: CardLook): string[] {
   return [look.animated && AUGMENT_ANIMATED_ID, look.signed && AUGMENT_SIGNATURE_ID].filter((id): id is string => typeof id === "string");
-}
-
-/** Whether two looks wear the same version and augments. */
-export function sameLook(a: CardLook, b: CardLook): boolean {
-  return a.version === b.version && a.animated === b.animated && a.signed === b.signed;
 }
 
 /**

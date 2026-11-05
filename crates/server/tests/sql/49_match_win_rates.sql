@@ -1,4 +1,4 @@
--- A match keeps the win-rate snapshot it started with (migration 0082, SPEC §8.8 row 50; R3049000;
+-- A match keeps the win-rate snapshot it started with (migration 0083, SPEC §8.8 row 50; R3049000;
 -- issue #3049). Runs after 47_card_proficiency.sql; profiles 1 and 2 (11111111-…, 22222222-…) exist by
 -- then.
 \set ON_ERROR_STOP on
@@ -59,7 +59,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R3049000: 0082 re-applies over its own rows and changes none ###'
+\echo '### R3049000: 0083 re-applies over its own rows and changes none ###'
 begin;
 insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                             catalog_version, started_at, ceiling_at, win_rates)
@@ -68,22 +68,22 @@ values ('e3049000-0000-4000-8000-000000000002', 'live', 'seed-3049-again',
         '[]', '[]', 'core-1', now(), now() + interval '1 hour', '{"patch": "v0.5.11o", "cards": []}');
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0082_match_win_rates.sql
+\i /tmp/0083_match_win_rates.sql
 set local client_min_messages = notice;
 do $$
 begin
   if (select win_rates ->> 'patch' from public.matches where id = 'e3049000-0000-4000-8000-000000000002')
      is distinct from 'v0.5.11o' then
-    raise exception 'FAIL (R3049000): re-applying 0082 changed a match''s snapshot';
+    raise exception 'FAIL (R3049000): re-applying 0083 changed a match''s snapshot';
   end if;
   begin
     update public.matches set win_rates = '[]'
      where id = 'e3049000-0000-4000-8000-000000000002';
-    raise exception 'FAIL (R3049000): after re-applying 0082, an array was accepted';
+    raise exception 'FAIL (R3049000): after re-applying 0083, an array was accepted';
   exception when check_violation then
     null;
   end;
-  raise notice 'OK (R3049000): 0082 re-applies over its own rows and changes none';
+  raise notice 'OK (R3049000): 0083 re-applies over its own rows and changes none';
 end $$;
 rollback;
 

@@ -7,7 +7,7 @@
 //! It mirrors the browser's worker (`apps/web/src/practice/core.ts`): [`opening`] is its `startGame` (the
 //! human's deck, a list or the random deck dealt on `"{seed}:human-deck"` and counted dealt, R433; the AI's
 //! on `"{seed}:ai-deck"`; the tier's handicap on the AI's seat alone, R180; the human's last board,
-//! [[R1303003]]; no sandbox or custom card, R923000, R915005: `create_game_args`), and [`verify`] its
+//! [[R1303003]]; no sandbox, R923000: `create_game_args`), and [`verify`] its
 //! `apply`, under the worker's nonces (`h<n>` the human's, `a<n>` the AI's, each counting only accepted
 //! actions), each action sent as the seat its player plays then (a Glitch swap moves both, R677), and a game
 //! that passes read once by `summarize_game` ([[R1304001]]). Every engine call goes through `actor::engine`
@@ -251,9 +251,9 @@ pub fn verify(
             last_boards: args.last_boards,
             glitch_boards: args.glitch_boards,
             sandbox: args.sandbox,
-            custom_cards: args.custom_cards,
             deck_marks: args.deck_marks,
             win_rates: args.win_rates,
+            ..FoldArgs::default()
         },
     );
     Ok(Verified {

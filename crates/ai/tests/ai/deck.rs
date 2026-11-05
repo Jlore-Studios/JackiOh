@@ -16,7 +16,7 @@ use jackioh_ai::{
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardDef, CardType, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, Difficulty, MAX_MANA,
     PerPlayerOpt, Tag, Value, create_game, create_rng, def_of, json, json_as, query, query_cost,
-    registered_catalog, validate_deck,
+    registered_catalog, validate_deck, with_pool_shift,
 };
 
 use super::support::{ai_pool, register_cards};
@@ -820,19 +820,24 @@ mod r1370_a_deck_that_leans_on_a_set {
                 ],
             ),
         ];
-        for (seed, size, literal, cursor, expected) in pins {
-            for literal in [literal.clone(), {
-                let mut with_null = literal.clone();
-                with_null["leanSet"] = Value::Null;
-                with_null
-            }] {
-                let mut rng = create_rng(seed, 0);
-                let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
-                assert_eq!(traced.deck, expected, "{seed} {literal}");
-                assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
-                assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+        // These pins are recorded deals, so they read the pools as they are, not as the pool probe (#3117)
+        // rotates them: `gatedSets` (R1390) and R1420 keep a later set out of the pool they name, and a
+        // set's release re-pins them by design, so a pool roll is not what they guard.
+        with_pool_shift(0, || {
+            for (seed, size, literal, cursor, expected) in pins {
+                for literal in [literal.clone(), {
+                    let mut with_null = literal.clone();
+                    with_null["leanSet"] = Value::Null;
+                    with_null
+                }] {
+                    let mut rng = create_rng(seed, 0);
+                    let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
+                    assert_eq!(traced.deck, expected, "{seed} {literal}");
+                    assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
+                    assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+                }
             }
-        }
+        });
         assert_eq!(AiDeckOptions::default().lean_set, None);
         assert_eq!(
             serde_json::to_value(AiDeckOptions::default()).ok(),

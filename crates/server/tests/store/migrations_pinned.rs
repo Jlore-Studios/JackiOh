@@ -47,7 +47,7 @@ const PINNED: &[(&str, &str)] = &[
     ("0034_account_consent.sql", "ffd9ab32"),
     ("0035_replay_final_hash.sql", "6f99bf0a"),
     ("0036_lean_set.sql", "ccfe33e7"),
-    ("0037_custom_cards.sql", "f1bfd2c3"),
+    ("0037_custom_cards.sql", "002a0ae4"),
     ("0038_social.sql", "bc59b85e"),
     ("0039_duos.sql", "5de67f7b"),
     ("0040_moderation_switch_grant.sql", "d04e991a"),
@@ -95,7 +95,8 @@ const PINNED: &[(&str, &str)] = &[
     ("0079_card_versions.sql", "27b09e20"),
     ("0080_dev_dashboard.sql", "1c1c7f7b"),
     ("0081_card_proficiency.sql", "11b41ce9"),
-    ("0082_match_win_rates.sql", "894f16e3"),
+    ("0082_drop_custom_cards.sql", "f51609ab"),
+    ("0083_match_win_rates.sql", "552d65ce"),
 ];
 
 /// `PINNED[name]`.
