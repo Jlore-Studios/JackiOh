@@ -4,9 +4,8 @@
 //! R747000: skill roll vs miss; R2214000: beginner misses vs §10.7 random policy.
 
 use jackioh_ai::{
-    AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, DeterminizeOptions, GREEDY_EVAL, NextSwing,
-    candidate_set, decide_styled, determinize, evaluate, one_ply_scores, plays_best, random_action, redact,
-    skill_miss_action, unstoppable_lethal,
+    AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, GREEDY_EVAL, NextSwing, candidate_set, decide_styled,
+    evaluate, one_ply_scores, plays_best, random_action, skill_miss_action, unstoppable_lethal,
 };
 use jackioh_engine::testkit::{Value, json, scenario};
 use jackioh_engine::wire::PLAYER_IDS;
@@ -867,18 +866,12 @@ fn miss_tally(game: usize) -> MissTally {
             .iter()
             .any(|body| matches!(body, ActionBody::Play { .. }));
         let candidates = candidate_set(state, seat);
-        let det = determinize(
-            &redact(state, seat),
-            seat,
-            &mut Rng::new(&format!("{position}:det"), 0),
-            DeterminizeOptions {
-                match_shown_cost: Some(false),
-            },
-        );
-        let standing = evaluate(&det, seat, NextSwing::Enemy, &GREEDY_EVAL);
+        // Both pickers are graded on the board as it is. A third deal of what the seat cannot see
+        // set Traps the board does not hold, and a lethal the miss read right scored as a mistake.
+        let standing = evaluate(state, seat, NextSwing::Enemy, &GREEDY_EVAL);
         let bad: Vec<&ActionBody> = candidates
             .iter()
-            .zip(one_ply_scores(&det, seat, &candidates))
+            .zip(one_ply_scores(state, seat, &candidates))
             .filter(|(body, score)| matches!(body, ActionBody::Attack { .. }) && *score < standing)
             .map(|(body, _)| body)
             .collect();
