@@ -13632,11 +13632,11 @@
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "42020726035",
+            "run": "42041780822",
             "tier": "strong"
           }
         ],
-        "sha": "9ae08f7fae211d8c1b565791a73802563a41d197",
+        "sha": "219de4d84d4f5e0ab8503782aeeafd53e0c66741",
         "tiers": {
           "claude": "strong"
         }
