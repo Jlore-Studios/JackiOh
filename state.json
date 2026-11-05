@@ -16465,13 +16465,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-4",
       "queued_at": "2026-11-05T18:57:00Z",
-      "run_id": "42089665451",
+      "run_id": "pending:b335ba8d-1793918432",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 85,
-      "started_at": "2026-11-05T19:00:09Z",
+      "started_at": "2026-11-05T22:41:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16994,9 +16995,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T22:40:18Z",
+    "at": "2026-11-05T22:41:09Z",
     "url": "",
-    "what": "revise #3245 on claude-8"
+    "what": "spot-check #3238 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-05T22:21:51Z",
@@ -32539,7 +32540,15 @@
         "n": 85,
         "pr": 3238,
         "queued_at": "2026-11-05T22:37:05Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:b335ba8d-1793918432",
         "sha": "80115f257d6a38835fa8b8d158b15c7dd4200567",
+        "started_at": "2026-11-05T22:41:09Z",
         "status": "queued",
         "title": "Patch: the component specs for R2803000's shift ghosts and phone frame budget hold up on a loaded runner",
         "tries": 0
