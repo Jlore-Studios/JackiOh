@@ -21069,5 +21069,34 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11q",
+    "date": "2026-11-05",
+    "title": "Patch: an Activate the game won't let you use says why, and the fuzz holds every ability to it",
+    "source": "#3061",
+    "notes": "View only: an Activate ability legalActions does not list now shows usable false and a reason in viewFor (R3061000), and the fuzz monitor's I15 holds every shown ability to the listing. No state, event, replay, listing or AI decision changes. The classifier's forced games read the changed view as a different play for these cards: classicplus-019, stinkyscape-039, stinkyscape-141 and stinkyscape-t-dormant-starship, the cards acting at each game's first diverging step on golden seeds that reach S #112 Job Application's Upload Resume with an empty hand.",
+    "player": {
+      "title": "A greyed-out Activate button says why",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "An Activate button you can't use now says why, such as Job Application's Upload Resume with an empty hand, instead of only \"Not now\". The abilities themselves are unchanged."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "2d7d2fffdeb59301398368256ac58a0ae8114ef1"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-019",
+      "stinkyscape-039",
+      "stinkyscape-141",
+      "stinkyscape-t-dormant-starship"
+    ],
+    "changes": []
   }
 ]
