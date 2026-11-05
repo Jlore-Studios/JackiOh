@@ -16764,15 +16764,8 @@
       "verdict_rounds": 1
     },
     "3117": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41983579747",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-05T07:50:28Z",
-        "until": "2026-11-05T08:20:28Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16784,10 +16777,9 @@
         "reason": "planned on sonnet",
         "trail": "|fn \\\\|prime-3\\\\|PRIME\\\" $f | sed -n 1,60p | cut -c1-160; sed\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 92,106p crates/cards/src/scripts/core/c051_1_kys_empty_notebook.rs; echo -----; sed -n 125,146p crates/cards/src/scripts/core/c051_1_kys\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 255,278p crates/cards/src/scripts/meditative/c058_permanent_underclassman.rs; echo ---C007; sed -n 395,432p crates/cards/src/scripts/sti\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 1395,1445p crates/cards/tests/cross/activate_listed.rs; grep -n \\\"fn b24_a_university_zolarketh_ran\\\" -A25 crates/cards/tests/cross/bala\u2026\n- Bash: {\"command\": \"grep -n \\\"^test result\\\\|Running\\\" /tmp/probe-rest.log | cut -c1-170; tail -2 /tmp/probe-rest.log | cut -c1-140\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -rn \\\"thread_local\\\" crates/tools/tests/*.rs | head -10; grep -rn \\\"thread_local\\\" crates/engine/src --include=*.rs -l | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 1905,1985p crates/tools/tests/acceptance.rs | cut -c1-230; sed -n 2040,2100p crates/tools/tests/acceptance.rs | cut -c1-230\"}\n- Bash: {\"command\": \"timeout 270 bash -c 'until grep -q \\\"Running\\\" /tmp/probe-rest.log; do sleep 5; done'; grep -n \\\"^test result\\\\|Running\\\" /tmp/probe-rest.log | cut -c1-170 | tail -12; tail -1 /tmp/probe\u2026\n- Bash: {\"command\": \"timeout 280 bash -c 'until [ $(grep -c \\\"^test result\\\" /tmp/probe-rest.log) -ge 6 ]; do sleep 5; done'; grep -n \\\"^test result\\\\|Running\\\" /tmp/probe-rest.log | cut -c1-150 | tail -14\",\u2026\n- Bash: {\"command\": \"grep -n \\\"^test result\\\" /tmp/probe-rest.log | cut -c1-150 | head -6; grep \\\" FAILED$\\\" /tmp/probe-rest.log | cut -c1-220; python3 - <<'EOF'\\nimport re\\nt=open('/tmp/probe-rest.log').rea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 1840,1900p crates/server/tests/api/practice.rs | cut -c1-220\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; git log --oneline -8 -- crates/server/tests/fixtures/practice-claim.json | cut -c1-140; git log --format=%ad --date=short -1; grep -n \\\"fn pinn\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3117/.bot-plan.md <<'EOF'\\n\\n## Experiment result 4 (server, run, shared)\\n- run, shared: all pass. server: 1 fail of 1706: crates/server/tests/a\u2026\n- Bash: {\"command\": \"timeout 280 bash -c 'until ! pgrep -f \\\"probe-exp\\\" >/dev/null && ! pgrep -f \\\"cargo test -p jackioh-server\\\" > /dev/null; do sleep 5; done'; grep -n \\\"^test result\\\" /tmp/probe-rest.log\u2026\n- Bash: {\"command\": \"grep -n \\\"Running\\\" -A0 /tmp/probe-rest.log | cut -c1-140 | sed -n 1,40p; grep -n \\\"^test result\\\" /tmp/probe-rest.log | awk -F: '{print $1}' | wc -l\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -n \\\"seed_search\\\\|seed_where\\\" crates/engine/README.md crates/cards/README.md crates/ai/README.md CLAUDE.md BUILD.md docs/architecture.md\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -n \\\"seed\\\" docs/ADDING_CARDS.md | cut -c1-180; grep -n \\\"ADDING_CARDS.md\\\" -r crates/tools/tests/*.rs crates/tools/src/*.rs | head -3; se\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 50,62p crates/cards/src/scripts/classic_plus/c038_1_solarius_prime.rs; sed -n 140,170p crates/cards/src/scripts/classic_plus/c038_1_sola\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -n \\\"scripts/\\\\|\\\\.sh\\\" scripts/ci-scope.sh | head -20; grep -rn \\\"shellcheck\\\" .github/workflows/ci.yml | head -3; ls scripts/*.sh | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; sed -n 306,330p scripts/ci-scope.sh; grep -n \\\"scripts/worktree.sh\\\" -r crates/tools/tests/*.rs crates/tools/src/*.rs | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -rn \\\"SEED_SEARCH_BOUND\\\\|seedSearchBound\\\" apps/web/src/wire crates/engine/tests/export_config.rs | head -3; grep -n \\\"fn \\\\|include\\\\|SE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -n \\\"config.rs\\\" crates/tools/tests/acceptance.rs | head -10; grep -rn \\\"SEED_SEARCH_BOUND\\\" --include=*.rs --include=*.md --include=*.ts \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/probe-exp && python3 - <<'EOF'\\np='crates/cards/tests/cross/query.rs'\\ns=open(p).read()\\ns=s.replace('use jackioh_cards::query::{CardQuery, TRA\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/probe-exp && cargo test -p jackioh-cards --features jackioh-engine/pool-probe --test cards query:: 2>&1 | tail -15 | cut -c1-200\", \"timeout\": 6\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/probe-exp && sed -i 's/use jackioh_engine::testkit::{json_as, register_catalog, with_pool_probe};/use jackioh_engine::testkit::pool_probe::with\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; git worktree remove --force ../jackioh-wt/probe-exp && git branch -D wt/probe-exp 2>&1 | tail -1; git worktree list; git status --short | head \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3117/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd a guard that fails when a test leans on where a pool's roll lands, convert the tests it catches, and sh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; grep -n \\\"fn radiant_the_options_stage_1s\\\" crates/cards/src/scripts/stinkyscape/c007_the_greatest_heist.rs; grep -n \\\"fn r386_an_upgrade_shuff\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3117; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"`radiant_the_options_stage_1s_unit_\\u2026` (l.416)\\\",\\\"`radiant_the_option\u2026\n- said: ## Goal Add a guard that fails when a test leans on where a pool's roll lands, convert the tests it catches, and shrink `docs/ADDING_CARDS.md` \u00a74's re-pin text to match. The guard is a testkit switch, the cargo feature `jackioh-engine/pool-probe`. With it on, every random pool `catalog::query` retu\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-05T06:54:39Z",
       "owner_why": "it plans it",
@@ -16800,9 +16792,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-05T01:44:51Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41983579747",
+      "run_id": "pending:85d99868-1793865067",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T06:54:39Z",
+      "started_at": "2026-11-05T07:51:54Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17740,9 +17732,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T07:36:18Z",
+    "at": "2026-11-05T07:51:54Z",
     "url": "",
-    "what": "plan #3158 on claude-7"
+    "what": "build #3117 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T07:32:47Z",
