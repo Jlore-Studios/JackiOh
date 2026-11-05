@@ -2490,7 +2490,7 @@ mod tests {
 
     #[test]
     fn r2944000_part_five_appends_immersive_and_prismatic() {
-        use crate::economy::store::CardCosmetic;
+        use crate::cosmetics::CardCosmetic;
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let new = r2944000_new(&cosmetics);
         assert_eq!(
