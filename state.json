@@ -16963,6 +16963,7 @@
       "run_id": "41962093073",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 65,
       "started_at": "2026-11-05T03:31:03Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -31746,9 +31747,33 @@
         "title": "Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-4",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "2a91f708ea0d901defa2d7daf41accf488f3f6c3",
+        "issue": 3093,
+        "merged_at": "2026-11-05T04:08:36Z",
+        "n": 65,
+        "pr": 3126,
+        "queued_at": "2026-11-05T04:08:36Z",
+        "sha": "b60666c6b030d31157d55d04993657c2b5b38622",
+        "status": "queued",
+        "title": "Patch: the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten",
+        "tries": 0
       }
     ],
-    "count": 64
+    "count": 65
   },
   "statistics": {
     "at": "2026-11-05T03:46:43Z"
