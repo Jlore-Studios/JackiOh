@@ -291,6 +291,29 @@ func TestSweep_ABlockedOrGreenPRIsLeftAlone(t *testing.T) {
 	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
+// A red pull request people hold (`human required`, `human`, `tracking`) gets no CI fix and no
+// comment, from the event or from the sweep that replays it every tick: #2964 got the same "CI
+// failed … I leave it alone" comment about forty times (#3073).
+func TestSweep_ARedPRPeopleHoldGetsNoComment(t *testing.T) {
+	for _, label := range []string{config.LabelHumanRequired, config.LabelHuman, config.LabelTracking} {
+		w := newSweepBase(t)
+		w.gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR, label, "difficulty:medium"},
+			SHA: "s1"})
+		run := pyjson.New("id", 99, "name", "CI", "head_sha", "s1", "head_branch", "bot/issue-5",
+			"status", "completed", "conclusion", "failure", "run_attempt", 1,
+			"created_at", sweepAnHourAgo, "html_url", "u", "pull_requests", []any{pyjson.New("number", 9)})
+		w.gh.Runs.Set("99", run)
+		assertEqual(t, events.Handle(w.ctx, "workflow_run", pyjson.New("action", "completed", "workflow_run", run)),
+			[]string{"#9: kept by `" + label + "` for people; left alone"})
+		for range 3 {
+			assertEqual(t, sweep.Sweep(w.ctx), []string{})
+		}
+		assertEqual(t, w.replies(9), []string(nil))
+		assertNotIn(t, config.LabelRevise, w.gh.LabelNames(9))
+		assertEqual(t, w.gh.Reruns, []any{})
+	}
+}
+
 func TestSweep_TheSweepRecordsWhenItRan(t *testing.T) {
 	w := newSweepBase(t)
 	sweep.Sweep(w.ctx)
