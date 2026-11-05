@@ -31702,7 +31702,7 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-05T17:27:27Z",
+    "idle_since": null,
     "last_run": "2026-11-04T20:26:42Z",
     "provider": null,
     "requested": false,
