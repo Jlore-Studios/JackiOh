@@ -15444,9 +15444,11 @@
         "by": "`claude` (medium)",
         "sha": "dd2e3a5534e0ec8bd59a2e6ee9f6eed2a5ce8801"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T12:15:58Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-05T12:59:13Z",
         "family": "claude",
@@ -15456,6 +15458,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; grep -n \\\"is_boss\\\" -r crates apps/web/src | head; git status --short\", \"description\": \"Read notes, find is_boss uses, check status\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3178/crates/tools/src/run_sim.rs\", \"offset\": 495, \"limit\": 15}\n- Grep: {\"pattern\": \"enum RunNodeKind\", \"path\": \"/home/runner/work/_temp/work/item-3178/crates/run/src\", \"output_mode\": \"content\", \"-A\": 14}\n- Bash: {\"command\": \"git log --oneline -S\\\"fn is_boss(\\\" -- crates/run/src/lib.rs | head; \", \"description\": \"Find commit that removed is_boss\"}\n- Bash: {\"command\": \"git show fb42f52ced -- crates/run/src/lib.rs | grep -n -B3 -A6 \\\"is_boss\\\"\", \"description\": \"Show the removed is_boss body\"}\n- said: The removed body matches the plan's replacement exactly. I'll make the edit.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3178/crates/tools/src/run_sim.rs\", \"old_string\": \" if fight.kind.is_boss() {\", \"new_string\": \" if matches!(fight.kind, RunNodeKi\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State (build pass)\\n- Done: edited crates/tools/src/run_sim.rs:503 to `matches!(fight.kind, RunNodeKind::MiniBoss | RunNodeKind::Boss)` (same body as t\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT_OK; cargo test -p jackioh-tools run_sim 2>&1 | tail -25\", \"description\": \"Check fmt and run run_sim tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-tools run_sim 2>&1 | grep -E \\\"^test |test result: ok. [1-9]|error|warning: unused\\\" | head -20\", \"description\": \"Show which run_sim tests ran\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -5\", \"description\": \"Clippy on jackioh-tools\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools 2>&1 | tail -3; cargo run --release -p jackioh-tools -- patches check 2>&1 | tail -5; cargo run --release -p jackioh-tools -- catalog check 2>&1 | \u2026\n- Bash: {\"command\": \"git diff; cat >> .bot-notes.md <<'EOF'\\n- build pass: fmt ok, clippy -p jackioh-tools ok, run_sim tests 4 passed (1 daily ignored), release build ok, patches/catalog/spec check ok. Diff \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: patches ship refused to promote the pending patches\"} --> `cargo jackioh` compiles again, so the `patches ship` step no longer dies at the build. I didn't run `patches ship`, so I haven't seen it promote the fragments. It rewrites `patches.json`, `shipp\u2026"
       },
+      "interruptions": 0,
       "issue": 3178,
       "kind": "review",
       "live": "reviewing",
