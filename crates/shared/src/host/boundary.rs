@@ -5,9 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use jackioh_engine::wire::{DuosSeat, DuosView};
 use jackioh_engine::{LeanPick, PlayerId, PlayerView};
 
+use super::again::{AgainBook, AgainClaim, AgainSeen, in_again_window};
 use super::duel::{DuelHost, DuelSetup};
+use super::duos::{DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, step_duos};
 use super::rematch::{
     OfferFacts, OfferOutcome, RematchBook, RematchRefusal, RematchSeen, RematchStakes, check_offer,
     in_rematch_window,
@@ -46,6 +49,66 @@ pub enum HostCall {
     /// R672: which accounts are here, by home seat.
     DuelPresence {
         host: Box<DuelHost>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// A Duos co-op host for a new or rebuilt match.
+    NewDuos {
+        setup: Box<DuosSetup>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// One event fed to a Duos host: the next host and its outputs.
+    StepDuos {
+        host: Box<DuosHost>,
+        event: DuosHostEvent,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// `seat`'s view of the co-op match, with its clock filled in (B23, R79).
+    DuosSeatView {
+        host: Box<DuosHost>,
+        seat: DuosSeat,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// R1398000: whether a finished co-op match's Play again window is open.
+    AgainWindow {
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        ended_at: i64,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// A person's Play again offer.
+    AgainClaim {
+        book: AgainBook,
+        match_id: String,
+        seat: DuosSeat,
+        #[cfg_attr(feature = "ts", ts(type = "string | null"))]
+        lean: Option<LeanPick>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// What a person is told of its match's Play again.
+    AgainSeen {
+        book: AgainBook,
+        match_id: String,
+        seat: DuosSeat,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// The create `creating` ended: the claim is given back.
+    AgainRelease {
+        book: AgainBook,
+        match_id: String,
+        creating: u32,
+    },
+    /// The create `creating` made the game `id`.
+    AgainMade {
+        book: AgainBook,
+        match_id: String,
+        creating: u32,
+        id: String,
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         now: i64,
     },
@@ -109,8 +172,16 @@ pub enum HostAnswer {
         host: Box<DuelHost>,
         outputs: Vec<DuelOutput>,
     },
+    /// The Duos host to hold from now on, and what to carry out.
+    SteppedDuos {
+        host: Box<DuosHost>,
+        outputs: Vec<DuosHostOutput>,
+    },
     View {
         view: Box<PlayerView>,
+    },
+    DuosView {
+        view: Box<DuosView>,
     },
     Presence {
         #[cfg_attr(feature = "ts", ts(type = "{ p1: boolean, p2: boolean }"))]
@@ -118,6 +189,14 @@ pub enum HostAnswer {
     },
     Checked {
         refusal: Option<RematchRefusal>,
+    },
+    AgainClaimed {
+        book: AgainBook,
+        claim: AgainClaim,
+    },
+    AgainSeen {
+        book: AgainBook,
+        seen: AgainSeen,
     },
     Window {
         open: bool,
@@ -132,6 +211,9 @@ pub enum HostAnswer {
     },
     Book {
         book: RematchBook,
+    },
+    AgainBook {
+        book: AgainBook,
     },
     Swept {
         book: RematchBook,
@@ -162,6 +244,63 @@ pub fn apply(call: HostCall) -> HostAnswer {
         HostCall::DuelPresence { host, now } => HostAnswer::Presence {
             presence: host.presence(now),
         },
+        HostCall::NewDuos { setup, now } => {
+            let (host, outputs) = DuosHost::new(*setup, now);
+            HostAnswer::SteppedDuos {
+                host: Box::new(host),
+                outputs,
+            }
+        }
+        HostCall::StepDuos { host, event, now } => {
+            let (host, outputs) = step_duos(*host, event, now);
+            HostAnswer::SteppedDuos {
+                host: Box::new(host),
+                outputs,
+            }
+        }
+        HostCall::DuosSeatView { host, seat, now } => HostAnswer::DuosView {
+            view: Box::new(host.view_for(seat, now)),
+        },
+        HostCall::AgainWindow { ended_at, now } => HostAnswer::Window {
+            open: in_again_window(ended_at, now),
+        },
+        HostCall::AgainClaim {
+            mut book,
+            match_id,
+            seat,
+            lean,
+            now,
+        } => {
+            let claim = book.claim(&match_id, seat, lean, now);
+            HostAnswer::AgainClaimed { book, claim }
+        }
+        HostCall::AgainSeen {
+            mut book,
+            match_id,
+            seat,
+            now,
+        } => {
+            let seen = book.seen(&match_id, seat, now);
+            HostAnswer::AgainSeen { book, seen }
+        }
+        HostCall::AgainRelease {
+            mut book,
+            match_id,
+            creating,
+        } => {
+            book.release(&match_id, creating);
+            HostAnswer::AgainBook { book }
+        }
+        HostCall::AgainMade {
+            mut book,
+            match_id,
+            creating,
+            id,
+            now,
+        } => {
+            book.made(&match_id, creating, &id, now);
+            HostAnswer::AgainBook { book }
+        }
         HostCall::CheckOffer { facts } => HostAnswer::Checked {
             refusal: check_offer(&facts).err(),
         },
