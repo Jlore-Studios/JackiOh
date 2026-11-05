@@ -23,11 +23,6 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok};
 use crate::api::ranked::{
     RankedGameInput, RankedPlan, RankedSideInput, commit_ranked_game, plan_ranked_game,
 };
-use crate::api::series_rules::{
-    RatingMove, SeriesRefusal, SeriesRefusalReason, abandon_unstarted, already_picked, forfeit_series,
-    game_ended, game_seats, new_series, pick_deck, project_series, rate_series, seat_of, series_score,
-    timeout_picks,
-};
 use crate::app::{App, now_ms};
 use crate::bots::pick::{bot_pick, pick_is_due};
 use crate::config::{
@@ -40,8 +35,13 @@ use crate::db::store::{
 };
 use crate::ranked::ladder::Ladder;
 use crate::seats::Seat;
+use jackioh_shared::series::{
+    RatingMove, SeriesRefusal, SeriesRefusalReason, abandon_unstarted, already_picked, forfeit_series,
+    game_ended, game_seats, new_series, pick_deck, project_series, rate_series, seat_of, series_score,
+    timeout_picks,
+};
 
-pub use crate::api::series_rules::NewSeriesInput;
+pub use jackioh_shared::series::NewSeriesInput;
 
 // Errors
 

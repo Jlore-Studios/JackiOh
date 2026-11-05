@@ -9,7 +9,6 @@ use jackioh_engine::{GameOverReason, Tag, Winner};
 use jackioh_server::actor::contracts::{RecordResultInput, TerminalOutcome};
 use jackioh_server::api::results::record_result;
 use jackioh_server::api::series::{run_sweeper, start_series, sweep_series};
-use jackioh_server::api::series_rules::NewSeriesInput;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_MAX_GAMES, SERIES_PICK_SECONDS,
@@ -18,6 +17,7 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::{MatchSeat, StoreError};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
+use jackioh_shared::series::NewSeriesInput;
 use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
