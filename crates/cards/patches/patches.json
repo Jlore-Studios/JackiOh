@@ -21122,5 +21122,1311 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11s",
+    "date": "2026-11-05",
+    "title": "Patch: Immersive and Prismatic card versions",
+    "source": "#2944",
+    "notes": "Part 5 of #2725's ten new card versions (tracker #2729), the last: two Mythic versions, the top chases, each per card, granted to no account, and offered on a share of the marquee cards of its own; no cosmetic token buys one (R2944000). Immersive (50 cards: a seeded share of the Legendary and Mythic cards but the Starship) lays the card's subject on a near layer over its backdrop hazed as far off, the near layer shifting with the pointer or the device's tilt and breathing slowly; Prismatic (48 cards: every Mythic card and a seeded share of the Legendary ones) draws the picture in mirror chrome under an iridescent sheen and on a base face a rainbow edge, a chrome bezel and a chrome name banner, chrome and never gold (R2944001). Animated, a foil, a finish and a border layer on each; Signature on neither, by R2949000's rule; Immersive's depth takes a motion slot, the one Animated shares on its face, and holds still under reduced motion, with Animated foil off and on a lazy face (R2944002). A Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Immersive and Prismatic",
+      "new": [
+        "Immersive: the card's subject stands out in front of a hazy backdrop, shifting with your pointer or your phone's tilt and breathing slowly. On some Legendary and Mythic cards.",
+        "Prismatic: the top chase, the picture in mirror chrome under a rainbow sheen, with a rainbow edge. Chrome, never gold, so it never looks Radiant. On every Mythic card and some Legendary ones."
+      ],
+      "balance": [],
+      "changes": [
+        "Each new version goes to its own mix of cards, so cards differ in what they can wear. Animated, foils, finishes and borders work on both; Signature stays on Full art with Animated.",
+        "Immersive holds still when you reduce motion or turn Animated foil off."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "79927460d50f3e56f13c8833e8e239abe717dcd4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12",
+    "date": "2026-11-05",
+    "title": "Patch: Stinkyscape balance pass — Starship tag, Marketplace prices, Weapons and twenty cards",
+    "source": "#3000, #3128",
+    "notes": "The owner's balance pass #3000, built as a fullsend tree (#3038 to #3048) and reconciled by a Claude session: Starship becomes a tag with innate Flying and Ranged (R3038000), launches for (4), and the Drone Battleship's layers stop being Starships (R3038002); an awakened card is never Dormant again (R3039000), and a Flashback play still spends the keyword, on the owner's word once a (0) Flashback card could repeat for free (R3039001); every Weapon's Health halved and the Rush Token Launcher reaches a Locked zone (#3040); eight Stinkyscape cards (#3041), five more cards (#3042), True Craft a Card's points (#3043), Twinspell as an Activate (R3044000); a fused Miner or Weapon keeps its host's art and a Starship its name (R3045000), full art on the board (R3046000); the Marketplace's four offers, new prices, (0) buys and Buffed or Nerfed offers (R3047000 to R3047004); Echo's Coin fallback and Death by 1000 cuts' kept targets (R3048000 to R3048002). The AI scores a decision over a Starship by its hand evaluation (R3038003). With it, the owner's Stinkyscape balance pass IV, #3128 (#3134 to #3142), none of its cards one #3000 already moved: part 1 (#3134), Last Hurrah's counted discard (R3134000), Joint Filing's turn-hook pools (R3134001) and Heroic Power's Cry Discover of 3 of its 13 powers (R3134002); part 2 (#3135), the three Calls to Chaos and Appropriations each a step weaker (R3135000 to R3135002); part 3 (#3136), seventeen Core, Classic and Legacy cards' numbers and keywords; part 4 (#3138), twelve Meditative, Meditative+ and Classic+ cards' numbers and keywords, an embiggen card's Flashback offered at both its prices (R3138000); part 5 (#3139), eleven Core, Classic and Training Grounds scripts (R3139000 to R3139004), xxFreshJack and Shockwave447 playing differently as the BUSTED and complicated lists they draw from moved; part 6 (#3140), ten Meditative, Meditative+ and Classic+ scripts, Luck given by no card any more (R3140000), Mountaintop Garden's Cry (R3140001) and Conjure Rush Token+'s coin (R3140002); part 7 (#3142), sixteen Stinkyscape cards (Asphyxiants Cloud left as #3041 made it, by the owner's word), with Stimmycheck's Inflation step 5 (R3142000), MELCHIOR's random keywords (R3142001) and two new pictures (R3142002).",
+    "player": {
+      "title": "Stinkyscape balance pass",
+      "new": [],
+      "balance": [
+        "Every Weapon has half its Health: the Rare ones are 0/2 (Radiant 0/4), the Epic ones 0/3 (0/6) and the Legendary ones 0/4 (0/8).",
+        "Launching a Starship costs (4), up from (3).",
+        "Circadian Fullcycler costs (4), up from (3).",
+        "Doom Shroom costs (4), up from (3).",
+        "Drone Hanger costs (3), up from (2).",
+        "Ultra Capacitor costs (1), down from (2).",
+        "In a hurry costs (3), up from (2), and summons 4 Rush Tokens, up from 3.",
+        "MC Tech steals when your opponent controls 5 or more permanents, up from 4.",
+        "ZolarKeth is 2/7 (Radiant 4/14), down from 2/9 (4/18).",
+        "The Propagation's Hornet is 3/3 (Radiant 6/6), down from 3/4 (6/8).",
+        "Rod of Ages turns Radiant at 12 keywords, up from 10, and loses Quickdraw and Flying.",
+        "True Craft a Card crafts with about a fifth fewer points.",
+        "In Too Deep's quests each ask about a fifth more, and the last one before Indestructible asks clearly more.",
+        "Twinspell's Radiant face gives Echo +1, down from +2.",
+        "Shadowstep costs (1), down from (2).",
+        "King Wagtoggle is 7/7 (Radiant 14/14), up from 5/5 (10/10).",
+        "Pointmaster is 6/1 (Radiant 12/2), down from 7/1 (14/2), and gains Rush.",
+        "Carnivorous Cube costs (2), down from (3), and is 2/4 (Radiant 4/8), down from 4/6 (8/12).",
+        "Selective Breeding's chance is 50%, up from 30%.",
+        "Rapid Draw draws 5 (Radiant 6), up from 4 (5).",
+        "Silly Silas is 2/2 (Radiant 4/4), down from 4/4 (8/8), and gains Crater.",
+        "Jlockeed Shredder-10 is 6/8 (Radiant 12/16), down from 6/10 (12/20).",
+        "Legacy: Jlockeed Shredder-10 is 4/10 (Radiant 8/20), down from 6/10 (12/20).",
+        "Jlockeed's Weapons gives +2 Attack (Radiant +4), down from +3 (+6).",
+        "Legacy: Big Felinor is 1/10 (Radiant 2/20), down from 3/10 (6/20).",
+        "KY's Trial costs (2), up from (1).",
+        "Nurse Cleaver is 3/4 (Radiant 6/8), down from 3/6 (6/12).",
+        "Unlicensed Experimentation costs (3), up from (2).",
+        "Legacy: Corpse Eater is 5/5 with no keywords (Radiant 10/10 with Rush), from 2/2 with Rush (Radiant 4/4 with Rush and Divine Shield).",
+        "Circadian Halfcycler costs (1), down from (2).",
+        "The Greatest Heist costs (2), down from (3).",
+        "Faction: ETHICS costs (1), down from (2).",
+        "Ocean Tsunami costs (4), up from (3).",
+        "Otherworldly Nightmare costs (3), up from (2), and its Psychic Scream costs (4), up from (3).",
+        "Drone Core VII costs (5), up from (4), and gains Float reduces cost.",
+        "Orca is 3/3 (Radiant 6/6), down from 8/8 (16/16).",
+        "Galaxy is 5/5 (Radiant 10/10), down from 10/10 (20/20).",
+        "Core Researcher is 3/3 (Radiant 6/6), down from 4/5 (8/10).",
+        "Tmack Trav is 8/8 (Radiant 16/16), down from 9/9 (18/18).",
+        "Stimmycheck's Inflation chance grows by 5% with each copy, down from 10%.",
+        "Living Bomb costs (2), up from (1).",
+        "Snom Bunny Mind Control costs (5), up from (4), and gains Float reduces cost.",
+        "Legacy: Jlockeed's Weapons gives +4 Attack (Radiant +8) and Rush, from +3 (+6), Rush and First Strike.",
+        "Call to Chaos (Training-Grounds Edition) refreshes 3 mana, gains 6, summons 5 permanents or 3 Rush Tokens, and its added cards cost (1) and give back mana.",
+        "Call to Chaos (Meditative Edition) adds 1 copy of your fused hand, down from 2, gives 5 Armor and heals 5, down from 6, and summons 2 Acclaimed cards, down from 3.",
+        "Call to Chaos (Scape Edition) summons 2 Drone Corvettes, down from 3, and adds or fuses 3 Starship Pieces, down from 4.",
+        "Appropriations gives 1 less Attack, Books or Health on both faces, never less than 1, and Culture's chance is 6X% (Radiant 16X%), down from 7X% (17X%).",
+        "Feng Shui costs (3), up from (2).",
+        "Spiritually 中国's transformed cards keep their own cost instead of costing (1).",
+        "Deadman's Hand draws a card after it shuffles (Radiant 3, up from 1), and is Embiggened for (1), down from (2).",
+        "Tatches the Totem costs (0), down from (1).",
+        "Forbiddenous Factory costs (2), down from (3).",
+        "Wardrum costs (4), down from (5), and gains Divine Shield.",
+        "NA Tech costs (0), down from (1).",
+        "Withering Storm costs (1), down from (2).",
+        "Fickle E-Kitten is 5/5 (Radiant 10/10), up from 3/4 (6/8).",
+        "Tommy Tempo is 4/4 (Radiant 8/8), down from 5/5 (10/10).",
+        "The Mother Pancake is 5/5 (Radiant 10/10), down from 8/8 (16/16).",
+        "KY's Intuition costs (2), up from (1).",
+        "Buff Billy is a 2X/3X (Radiant 4X/6X), down from 3X/3X (6X/6X)."
+      ],
+      "changes": [
+        "Starship is now a tag, and every Starship, Dormant or launched, has Flying and Ranged.",
+        "The Drone Battleship's Shield, Propagation and Meltdown Layers are no longer Starships: they have Flying and Ranged, and Scornboi exiles them.",
+        "A card that awakens from Dormant is never Dormant again.",
+        "The Marketplace offers 4 cards a turn: 8 Credits at (0), 15 at (1), then 10 more for each mana up to (4) and 15 more for each after that.",
+        "A card bought from the Marketplace costs (0), and some offers come Buffed, for more Credits, or Nerfed, for fewer.",
+        "A Resource card in your hand shows how many Credits it sells for this turn.",
+        "Twinspell is an Activate: the next Spell you play this turn gains Echo +1, then it goes to the graveyard. The Radiant one stays and works once a turn.",
+        "Echo has The Coin's text until a Spell has been played.",
+        "Death by 1000 cuts repeats by the mana you have left after paying for it, and every repeat hits the first target.",
+        "Drone Hanger summons its Drone Interceptor with an Activate instead of at the start of your turn.",
+        "ZolarKeth's second choice summons a random Starship Piece at the end of your turn instead of by an Activate.",
+        "Jlockeed's J15 Fighter has Can't Defend.",
+        "Jlockeed's Missile Pod rounds its damage up.",
+        "Asphyxiants Cloud has Flashback and deals 1 damage to all enemies (Radiant 2), and your next Spell this turn has Poisonous. It no longer draws.",
+        "Rush Token Launcher can summon its Rush Token into a Locked zone.",
+        "A Unit with a Miner or a Weapon fused into it keeps its own picture, and a Starship keeps its name as cards fuse into it.",
+        "Full-art cards look full-art on the board too, with their name below the picture.",
+        "Right-house defender has Can't Defend, and so do the ones House Party and The House summon.",
+        "System Schematic has Tradable and Flashback.",
+        "Sacked's Sack has Can't Defend.",
+        "Drone Commander fills your hand with random Drone Core cards, which no longer cost less, and is drawn as a human.",
+        "The Stinkyscape Golem is no longer a Starship Piece, and is drawn as a golem and a ship in one.",
+        "MELCHIOR's Activate gives each of your Units a random combat keyword instead of a Discover.",
+        "Palantir steals and casts a (2) Cost Spell, not a (1) Cost Spell.",
+        "Living Bomb's Cry places a Plague Counter; on its Radiant face an Activate does it instead.",
+        "Book of Plague lets you choose: place its Plague Counters, or add 3 random Plague cards to your hand (Radiant ones on its Radiant face).",
+        "Big Felinor destroys 3 random non-Felinor Units instead of all of them (on its Radiant face, enemy ones).",
+        "Snom Bunny Mind Control steals any enemy card on the field, not only a Unit.",
+        "Unbiased Immigration adds its random card with an Activate instead of at the start of your turn.",
+        "Masochism Mask makes your hand Radiant once you have taken 6 of its downsides, and again every 6.",
+        "Corpse Eater has Brittle 1 (Radiant Brittle 3), and after it attacks a Unit it may attack again.",
+        "Tutorial Master's Cry and Death add Training Grounds cards that no longer cost less.",
+        "Legacy: Snom Bunny Mind Control sets the stolen Unit's stats to 4/4, and its Radiant face steals any enemy card.",
+        "Last Hurrah discards 6 cards at the end of the turn instead of your whole hand.",
+        "Joint Filing gains a Cry: add a random card with a Start of turn or End of turn effect to your hand (Radiant: one of each).",
+        "Heroic Power lets you Discover one of 3 of its powers when you play it, instead of starting the game with a random one.",
+        "One of Call to Chaos (Training-Grounds Edition)'s effects adds a random Call to Chaos at its own price at the start of each of your turns, instead of one at (0) now and every second turn.",
+        "Feng Shui no longer gives you Luck: its Activate adds an Auspicious Rock to your hand (a Radiant one on its Radiant face).",
+        "Jogg's Box ends your turn after its casts, and its Radiant face casts 20 random Spells, up from 10, with no Echo.",
+        "Conjure Rush Token+ flips a coin: its token gains 3 random combat keywords on heads and 2 on tails. Its Radiant face's tokens gain 5, up from 3.",
+        "Introspection acts at the start of your turn instead of the end.",
+        "Skull of J'Nari summons from your hand at the end of your turn instead of the start.",
+        "饕餮 fuses a random enemy Unit into itself, not any enemy permanent.",
+        "Money Machine gains a Cry: add a The Coin to your hand (a Radiant one on its Radiant face).",
+        "Mountaintop Garden gains a Cry: add a random Embiggen card to your hand, which costs (0) on its Radiant face.",
+        "Spirit Lash has Flashback.",
+        "Aestheticize the Game has Tradable."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "52e9a6cdd7c2d883cd9f37f37912280bb9c51933"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-014",
+      "classic-026",
+      "classic-037",
+      "classic-040",
+      "classic-062",
+      "classic-070",
+      "classic-073",
+      "classic-085",
+      "classic-090",
+      "classicplus-001",
+      "classicplus-007",
+      "classicplus-008",
+      "classicplus-012",
+      "classicplus-016",
+      "classicplus-026",
+      "classicplus-037",
+      "classicplus-040",
+      "classicplus-047",
+      "classicplus-051",
+      "classicplus-069",
+      "core-003",
+      "core-013",
+      "core-014",
+      "core-020",
+      "core-022",
+      "core-042",
+      "core-043",
+      "core-049",
+      "core-052",
+      "core-065",
+      "core-079",
+      "core-082",
+      "core-085",
+      "core-089",
+      "meditative-020",
+      "meditative-029",
+      "meditative-030",
+      "meditative-040",
+      "meditative-047",
+      "meditative-056",
+      "meditative-081",
+      "meditative-087",
+      "meditative-101",
+      "meditativeplus-002",
+      "meditativeplus-005",
+      "meditativeplus-025",
+      "stinkyscape-007",
+      "stinkyscape-012",
+      "stinkyscape-013",
+      "stinkyscape-016",
+      "stinkyscape-018",
+      "stinkyscape-026",
+      "stinkyscape-033",
+      "stinkyscape-042",
+      "stinkyscape-045",
+      "stinkyscape-046",
+      "stinkyscape-047",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-052",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-055",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-059",
+      "stinkyscape-060",
+      "stinkyscape-061",
+      "stinkyscape-079",
+      "stinkyscape-080",
+      "stinkyscape-092",
+      "stinkyscape-094",
+      "stinkyscape-096",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-115",
+      "stinkyscape-121",
+      "stinkyscape-133",
+      "stinkyscape-135",
+      "stinkyscape-140",
+      "stinkyscape-141",
+      "stinkyscape-142",
+      "stinkyscape-143",
+      "stinkyscape-150",
+      "stinkyscape-159",
+      "stinkyscape-168",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-meltdown-layer",
+      "stinkyscape-t-propagation-layer",
+      "stinkyscape-t-shield-layer",
+      "traininggrounds-015",
+      "traininggrounds-038",
+      "traininggrounds-045",
+      "traininggrounds-048",
+      "traininggrounds-051",
+      "traininggrounds-056"
+    ],
+    "changes": [
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-020",
+        "name": "Pointmaster",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-042",
+        "name": "Selective Breeding",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "core-043",
+        "name": "Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-026",
+        "name": "Rapid Draw",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "classic-040",
+        "name": "MC Tech",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-057",
+        "name": "Echo",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-070",
+        "name": "Book of Plague",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-073",
+        "name": "Nurse Cleaver",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-085",
+        "name": "King Wagtoggle",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-001",
+        "name": "Doom Shroom",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-008",
+        "name": "Withering Storm",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-012",
+        "name": "The Mother Pancake",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-016",
+        "name": "Conjure Rush Token+",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-047",
+        "name": "Jogg's Box",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-051",
+        "name": "Jlockeed's J15 Fighter",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-069",
+        "name": "Buff Billy",
+        "kind": "changed",
+        "fields": [
+          "base.xStats",
+          "base.text",
+          "radiant.xStats",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-005",
+        "name": "Death by 1000 cuts",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-007",
+        "name": "Introspection",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-009",
+        "name": "Joint Filing",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-020",
+        "name": "Aestheticize the Game",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-029",
+        "name": "Forbiddenous Factory",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-030",
+        "name": "Fickle E-Kitten",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-032",
+        "name": "Spiritually 中国",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-040",
+        "name": "Feng Shui",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text",
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "meditative-047",
+        "name": "饕餮",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-054",
+        "name": "Money Machine",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-063",
+        "name": "Skull of J'Nari",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-081",
+        "name": "Deadman's Hand",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-087",
+        "name": "Tatches the Totem",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-095",
+        "name": "Call to Chaos (Meditative Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-002",
+        "name": "NA Tech",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditativeplus-005",
+        "name": "Spirit Lash",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-022",
+        "name": "Mountaintop Garden",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-025",
+        "name": "KY's Intuition",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-007",
+        "name": "The Greatest Heist",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-012",
+        "name": "Otherworldly Nightmare",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-012-3",
+        "name": "Psychic Scream",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-013",
+        "name": "Asphyxiants Cloud",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-016",
+        "name": "Rod of Ages",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-018-1",
+        "name": "MELCHIOR",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-026",
+        "name": "ZolarKeth",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "base.text",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-033",
+        "name": "Drone Core VII",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-042",
+        "name": "Core Researcher",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-045",
+        "name": "Drone Commander",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-046",
+        "name": "Circadian Halfcycler",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-047",
+        "name": "Circadian Fullcycler",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-050",
+        "name": "Beam v3",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-051",
+        "name": "Repeater v3",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-052",
+        "name": "Cannon v3",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-053",
+        "name": "Flak v3",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-054",
+        "name": "Beam v4",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-055",
+        "name": "Repeater v4",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-056",
+        "name": "Cannon v4",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-057",
+        "name": "Flak v4",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-059",
+        "name": "Repeater v5",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-060",
+        "name": "Cannon v5",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-061",
+        "name": "Flak v5",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-079",
+        "name": "Orca",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-080",
+        "name": "Galaxy",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-092",
+        "name": "The Propagation's Hornet",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-094",
+        "name": "Tmack Trav",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-096",
+        "name": "Ocean Tsunami",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-121",
+        "name": "System Schematic",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-129",
+        "name": "Jlockeed's Missile Pod",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-133",
+        "name": "Ultra Capacitor",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-135-1",
+        "name": "Sack",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-140",
+        "name": "Rush Token Launcher",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-141",
+        "name": "Fruit Launcher",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-142",
+        "name": "Jade Launcher",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-143",
+        "name": "Book Launcher",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-150-1",
+        "name": "Stinkyscape Golem",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-151",
+        "name": "Call to Chaos (Scape Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-153",
+        "name": "Stimmycheck",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-159",
+        "name": "Faction: ETHICS",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-168",
+        "name": "Drone Hanger",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-dormant-starship",
+        "name": "Dormant Starship",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-shield-layer",
+        "name": "Drone Battleship (Shield Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-propagation-layer",
+        "name": "Drone Battleship (Propagation Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-meltdown-layer",
+        "name": "Drone Battleship (Meltdown Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-015",
+        "name": "In a hurry",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-038",
+        "name": "Tutorial Master",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-039",
+        "name": "Call to Chaos (Training-Grounds Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-045",
+        "name": "Legacy: Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-048",
+        "name": "Legacy: Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "traininggrounds-051",
+        "name": "Legacy: Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "traininggrounds-052",
+        "name": "Legacy: Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-056",
+        "name": "Legacy: Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
