@@ -16448,13 +16448,14 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-1",
       "queued_at": "2026-11-05T01:12:22Z",
-      "run_id": "41947050395",
+      "run_id": "pending:7bf1852e-1793842120",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 60,
-      "started_at": "2026-11-05T01:13:39Z",
+      "started_at": "2026-11-05T01:29:10Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16491,9 +16492,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T01:14:25Z",
+    "at": "2026-11-05T01:29:10Z",
     "url": "",
-    "what": "plan #3098 on claude-6"
+    "what": "spot-check #3109 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T01:09:51Z",
@@ -31150,7 +31151,15 @@
         "n": 60,
         "pr": 3109,
         "queued_at": "2026-11-05T01:28:17Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:7bf1852e-1793842120",
         "sha": "6c1483f9fcc0928d7c2b7e4b9fe67bee7b109cbb",
+        "started_at": "2026-11-05T01:29:10Z",
         "status": "queued",
         "title": "Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
         "tries": 0
