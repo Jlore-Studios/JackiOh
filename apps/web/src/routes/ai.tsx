@@ -24,7 +24,7 @@ export const aiTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const AI_LAST_UPDATED = "2026-10-31";
+export const AI_LAST_UPDATED = "2026-11-05";
 
 /** Where each music track came from, in the published source. */
 export const MUSIC_SOURCES_URL = "https://github.com/Jlore-Studios/JackiOh/blob/main/assets/music/LICENSES.md";
@@ -56,11 +56,11 @@ export default function AiRoute(): ReactElement {
             <li>In Practice, at the difficulty you pick, and in the tutorial, an opponent that runs in your browser.</li>
             <li>
               In ranked, when no one near your rating is free after a short wait, an AI opponent that our server
-              plays. Nothing in the game marks it; the{" "}
+              plays. Nothing in the game marks it, as the{" "}
               <a href={paths.terms} onClick={followInApp(paths.terms)}>
                 Terms
               </a>{" "}
-              say when it comes, what it looks like and how it plays.
+              say.
             </li>
             <li>In co-op, the team you and a friend play against.</li>
           </ul>
