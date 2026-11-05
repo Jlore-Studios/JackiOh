@@ -16753,15 +16753,8 @@
       "stop_requested": false
     },
     "3116": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41957039188",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-05T03:03:20Z",
-        "until": "2026-11-05T03:33:20Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16773,10 +16766,9 @@
         "reason": "planned on opus",
         "trail": "apps --include=*.rs | grep -v target/; grep -rn \\\"register_code_lines\\\\|card_metrics()\\\" crates --include=*.rs | grep -v target/ | head -30\", \"description\u2026\n- Bash: {\"command\": \"sed -n 1900,1990p crates/tools/tests/acceptance.rs\", \"description\": \"Read the #3109 statics acceptance test\"}\n- Bash: {\"command\": \"grep -n '&\\\\[&\\\\(.static \\\\)\\\\?str\\\\]\\\\|\\\"[a-z]*-[0-9t]' crates/ai/src/config.rs | head -40; grep -rn '\\\"\\\\(core\\\\|classic\\\\|classicplus\\\\|meditative\\\\|meditativeplus\\\\|stinkyscape\\\\|tra\u2026\n- Bash: {\"command\": \"sed -n 205,232p crates/ai/src/config.rs\", \"description\": \"Read the other id lists in AI config\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/ai/tests/ai/support.rs; sed -n 1,80p crates/cards/tests/cross/card_metrics.rs\", \"description\": \"Read AI test support and cards metric tests\"}\n- Bash: {\"command\": \"sed -n 80,240p crates/cards/tests/cross/card_metrics.rs\", \"description\": \"Read the rest of the cards metrics tests\"}\n- Bash: {\"command\": \"sed -n 170,240p crates/engine/tests/rules/card_metrics.rs; grep -n \\\"is_busted\\\\|card_metrics\\\\|CardMetrics\\\\|code_lines_of\\\\|is_complicated\\\" crates/engine/src/lib.rs\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -n \\\"catalog::\\\\|pub use catalog\\\\|mod catalog\\\" crates/engine/src/lib.rs | head; grep -n \\\"card_metrics\\\\|is_busted\\\\|CardMetrics\\\" crates/engine/src/testkit/mod.rs | head\", \"descr\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/cards/src/scripts/meditative/c019_1_temporal_rift.rs; ls crates/cards/src/scripts/stinkyscape | grep -i \\\"004\\\\|olivian\\\"\", \"description\": \"Read Temporal Rift's scrip\u2026\n- Bash: {\"command\": \"grep -rn \\\"AI_EXTRA_TURN_CARDS\\\\|extra_turn_in_hand\\\\|extraTurnInHand\\\\|LIST_READERS\\\\|reads_card_lists\\\" --include=*.md --include=*.ts --include=*.tsx --include=*.json . 2>/dev/null | g\u2026\n- Bash: {\"command\": \"grep -rln \\\"extra turn\\\\|extra_turn\\\" spec/ docs/ crates/ai/README.md crates/cards/README.md crates/engine/README.md 2>/dev/null | head -20; grep -n \\\"1846\\\\|metrics\\\\|LIST_READERS\\\\|cod\u2026\n- Bash: {\"command\": \"grep -n \\\"9.9\\\\|extra turn\\\" spec/09*.md 2>/dev/null | head -20; ls spec/ | head -40; sed -n 240,262p crates/cards/README.md; sed -n 20,35p crates/cards/README.md; sed -n 75,90p crates/e\u2026\n- Bash: {\"command\": \"grep -n -i \\\"classify\\\" -A 6 crates/tools/README.md | head -60\", \"description\": \"Read what classify demands of a change\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\.\\\\.AI_EVAL\\\" crates/ai/tests/ai/*.rs | head -5; grep -n \\\"pub struct EvalWeights\\\" -B 3 crates/ai/src/config.rs; grep -rn \\\"register_code_lines\\\\|card_metrics\\\" crates/ai -\u2026\n- Bash: {\"command\": \"grep -n \\\"proven_in\\\" crates/tools/src/spec*.rs crates/tools/src/spec/*.rs 2>/dev/null | head -30\", \"description\": \"Find spec check's proven_in rules\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/spec.rs\", \"description\": \"Read spec check's rules header\"}\n- Bash: {\"command\": \"grep -rn \\\"extra_turn_in_hand\\\\|extra_turn\\\\b\\\" crates/ai/src --include=*.rs | grep -v \\\"^crates/ai/src/config.rs:4\\\" | head -20; grep -n \\\"pub use\\\" crates/engine/src/testkit/mod.rs | h\u2026\n- Bash: {\"command\": \"grep -n -i \\\"extra.turn\\\\|1886\\\" crates/ai/README.md docs/architecture.md docs/v0.3.0/SURFACE.md | head; grep -rn \\\"is_extra_turn_card\\\\|extra_turn_cards\\\\|EXTRA_TURN_CARDS\\\" crates --in\u2026\n- Bash: {\"command\": \"sed -n 378,392p crates/ai/README.md\", \"description\": \"Read the AI README evaluation paragraph\"}\n- Bash: {\"command\": \"cat > .bot-plan.md <<'EOF'\\n# Draft plan #3116 (planner notes)\\n\\nDesign chosen: derive the extra-turn set at compile time from each card script's code, as\\nR2173000's LIST_READERS is (c\u2026\n- Bash: {\"command\": \"git show --stat 10022554f9 | grep -c \\\"crates/engine/src\\\"; git show --stat 10022554f9 | grep \\\"patches/pending\\\" ; git show --stat 69b0567001 | grep \\\"patches\\\\|crates/\\\" | head\", \"desc\u2026\n- Bash: {\"command\": \"grep -n \\\"is_busted\\\\|card_metrics\\\\|register_card_metrics\\\\|code_lines_of\\\" docs/v0.3.0/SURFACE.md docs/architecture.md | head\", \"description\": \"Check whether SURFACE lists catalog read\u2026\n- Bash: {\"command\": \"grep -rln \\\"register_all()\\\" crates/*/src | grep -v \\\"crates/cards/src/scripts\\\" | head -20\", \"description\": \"List production callers of register_all\"}\n- Bash: {\"command\": \"ls crates; grep -rn \\\"register_all\\\" crates/wasm/src 2>/dev/null | head -3; grep -rn \\\"register_all\\\" crates/ai/src/decide.rs | head -3\", \"description\": \"Check the wasm crate calls regis\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/claims.rs | head -70\", \"description\": \"Read classify claims header\"}\n- Bash: {\"command\": \"grep -n \\\"card_metrics\\\" crates/cards/tests/cross/mod.rs; cat crates/ai/tests/ai.rs | head -20; grep -n \\\"^mod \\\\|^ mod \\\" crates/ai/tests/ai/evaluate.rs | awk -F: '$1<900' | tail -3; se\u2026\n- Bash: {\"command\": \"sed -n 653,668p crates/ai/tests/ai/evaluate.rs; grep -n \\\"EvalWeights\\\" crates/ai/tests/ai/evaluate.rs | head -3\", \"description\": \"Read the banked-state test module header\"}\n- Bash: {\"command\": \"grep -n -i \\\"extra turn\\\\|ai/src/config\\\\|AI_\\\" docs/ADDING_CARDS.md | head; grep -n \\\"rerun-if-changed\\\" crates/cards/build.rs | head -5\", \"description\": \"Check ADDING_CARDS for AI list\u2026\n- Bash: {\"command\": \"sed -n 109,130p crates/cards/build.rs\", \"description\": \"Check build.rs reruns for code_lines.rs\"}\n- Bash: {\"command\": \"sed -n 1,12p crates/cards/tests/cross/card_metrics.rs >/dev/null; sed -n 26,40p crates/cards/src/lib.rs; sed -n 7,9p crates/cards/src/lib.rs\", \"description\": \"Recheck lib.rs lines for ex\u2026\n- said: Now I'll write the full plan into the draft.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3116/.bot-plan.md\", \"content\": \"# Plan #3116 (draft = final; see final message)\\n\\nDesign: the build derives the extra-turn set from each card script'\u2026\n- said: ## Goal The AI's hand price for an extra turn (`AI_EVAL.extra_turn_in_hand`, R846, #1886) stops reading the hand-kept `AI_EXTRA_TURN_CARDS`. It reads a set the build works out from every card script: - `crates/cards/build.rs` already reads every script to count its code lines and find its list read\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-05T02:43:19Z",
       "owner_why": "it plans it",
@@ -16789,9 +16781,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-05T01:44:41Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41957039188",
+      "run_id": "pending:74a35a1c-1793847836",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T02:43:19Z",
+      "started_at": "2026-11-05T03:04:25Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17030,9 +17022,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T02:54:57Z",
+    "at": "2026-11-05T03:04:25Z",
     "url": "",
-    "what": "plan #3114 on claude-3"
+    "what": "build #3116 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T02:51:42Z",
