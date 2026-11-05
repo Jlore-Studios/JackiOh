@@ -9,7 +9,6 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::{GameOverReason, PlayerId, Winner};
 use jackioh_server::api::results::record_result;
 use jackioh_server::api::series::{ensure_series_game, start_series, sweep_series};
-use jackioh_server::api::series_rules::{game_ended, pick_deck};
 use jackioh_server::app::App;
 use jackioh_server::config::{
     MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_START_GIVE_UP_SECONDS,
@@ -18,6 +17,7 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::SeriesRow;
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
+use jackioh_shared::series::{game_ended, pick_deck};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 use crate::support::engine::playable;

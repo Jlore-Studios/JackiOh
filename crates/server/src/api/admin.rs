@@ -26,7 +26,7 @@ use crate::admin::store::{
 };
 use crate::api::dev::dev_caller;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, ok_of};
-use crate::api::ranked::dev_leaderboard;
+use crate::api::ranked::{dev_leaderboard, usernames_of};
 use crate::app::{App, now_ms};
 use crate::config::{ADMIN_AUDIT_PAGE, DEV_RATING_MAX, DEV_RATING_MIN, NEWS_POSTS_PAGE};
 use crate::db::store::{Profile, Tx};
@@ -263,16 +263,6 @@ pub async fn get_leaderboard(app: &Arc<App>, req: Req) -> ApiResult {
 
 // News posts (R3074003)
 
-/// Each listed profile's username as shown, read in `tx`.
-async fn usernames(tx: &mut Tx<'_>, profile_ids: Vec<String>) -> Result<IndexMap<String, String>, ApiError> {
-    Ok(tx
-        .profiles_get_many(&profile_ids)
-        .await?
-        .iter()
-        .map(|profile| (profile.id.clone(), profile.username()))
-        .collect())
-}
-
 /// A post as the dashboard reads it: its author by username, or `""` once the account is gone.
 fn post_view(post: &NewsPost, usernames: &IndexMap<String, String>) -> Value {
     json!({
@@ -296,11 +286,7 @@ pub async fn get_posts(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = admin_caller(app, &req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let posts = tx.admin_posts_recent(NEWS_POSTS_PAGE).await?;
-    let authors = usernames(
-        &mut tx,
-        posts.iter().filter_map(|post| post.posted_by.clone()).collect(),
-    )
-    .await?;
+    let authors = usernames_of(&mut tx, posts.iter().filter_map(|post| post.posted_by.as_deref())).await?;
     tx.commit().await?;
     let posts: Vec<Value> = posts.iter().map(|post| post_view(post, &authors)).collect();
     Ok(json(200, json!({ "posts": posts })))
@@ -336,7 +322,7 @@ pub async fn post_post(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.admin_posts_create(&post).await?;
-    let authors = usernames(&mut tx, vec![profile.id.clone()]).await?;
+    let authors = usernames_of(&mut tx, [profile.id.as_str()]).await?;
     let view = post_view(&post, &authors);
     audit(
         &mut tx,
@@ -369,7 +355,7 @@ pub async fn delete_post(app: &Arc<App>, req: Req) -> ApiResult {
             "That post is taken down already.",
         ));
     };
-    let authors = usernames(&mut tx, before.posted_by.iter().cloned().collect()).await?;
+    let authors = usernames_of(&mut tx, before.posted_by.as_deref()).await?;
     let view = post_view(&after, &authors);
     audit(
         &mut tx,
@@ -394,13 +380,11 @@ pub async fn get_audit(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = admin_caller(app, &req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let actions = tx.admin_actions_recent(ADMIN_AUDIT_PAGE).await?;
-    let mut authors: Vec<String> = actions
-        .iter()
-        .filter_map(|action| action.profile_id.clone())
-        .collect();
-    authors.sort();
-    authors.dedup();
-    let names = usernames(&mut tx, authors).await?;
+    let names = usernames_of(
+        &mut tx,
+        actions.iter().filter_map(|action| action.profile_id.as_deref()),
+    )
+    .await?;
     tx.commit().await?;
     let actions: Vec<Value> = actions
         .iter()

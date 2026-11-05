@@ -178,16 +178,10 @@ pub extern "C" fn carried_versions() -> i32 {
 // A run-rule refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason),
 // never the failed status: only JSON that does not parse, or an argument that is not text, is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
 #[unsafe(no_mangle)]
-pub extern "C" fn run_content(custom_cards_json_ptr: *const u8, custom_cards_json_len: usize) -> i32 {
-    boundary(|| {
-        wasm_core::run_content(arg(
-            "runContent: the custom cards",
-            custom_cards_json_ptr,
-            custom_cards_json_len,
-        )?)
-    })
+pub extern "C" fn run_content() -> i32 {
+    boundary(wasm_core::run_content)
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -521,6 +515,22 @@ pub extern "C" fn find_instance(
     })
 }
 
+/// R3100000: `CombatForecast`, `{ attacks: AttackForecast[], lethal }`: what each attack `seat` may declare
+/// would do, as the board shows it, for the tutorial's coach (`engine::combat_forecast`).
+#[unsafe(no_mangle)]
+pub extern "C" fn combat_forecast(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    seat_ptr: *const u8,
+    seat_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("combatForecast: the state", state_json_ptr, state_json_len)?;
+        let seat = arg("combatForecast: the seat", seat_ptr, seat_len)?;
+        wasm_core::combat_forecast(state, seat)
+    })
+}
+
 /// `EmoteId[]`: emote hand `seat` is dealt for `seed` (R1341), matching the match actor (R1342).
 #[unsafe(no_mangle)]
 pub extern "C" fn deal_emote_hand(
@@ -758,6 +768,72 @@ pub extern "C" fn validator(
         let call = arg("validator: the call", call_ptr, call_len)?;
         let input = arg("validator: the input", input_json_ptr, input_json_len)?;
         wasm_core::validator(call, input)
+    })
+}
+
+// The Conquest series rules (SPEC §9.5, #3098: `jackioh-shared`, which the server calls natively)
+
+/// One call of the Conquest series rules: a `SeriesCall` as JSON in, a `SeriesAnswer` as JSON out. The
+/// host holds the series row and hands it back on every call, and passes the time in
+/// (`crates/shared/README.md`, the host contract). A rules refusal is the answer's `refused`, never a
+/// failed status: only a call that does not parse is one.
+#[unsafe(no_mangle)]
+pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
+}
+
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`, the host contract). Only a call that does not parse is a failed status.
+#[unsafe(no_mangle)]
+pub extern "C" fn loadout(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::loadout(arg("loadout: the call", call_json_ptr, call_json_len)?))
+}
+
+// The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
+
+/// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host
+/// holds the `DuelHost` and hands it back on every call, and passes the time in
+/// (`crates/shared/README.md`, the host contract). A rules refusal is an answer's data, never a failed
+/// status: only a call that does not parse is one.
+#[unsafe(no_mangle)]
+pub extern "C" fn host(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::host(arg("host: the call", call_json_ptr, call_json_len)?))
+}
+
+// The ranked ladder (SPEC §9.12, #3105: `jackioh-shared`, which the server calls natively)
+
+/// One call of the ranked ladder's rules: a `RankedCall` as JSON in, a `RankedAnswer` as JSON out. The host
+/// holds the ladder's records and passes the time in (`crates/shared/README.md`, the host contract). Only a
+/// call that does not parse is a failed status.
+#[unsafe(no_mangle)]
+pub extern "C" fn ranked(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::ranked(arg("ranked: the call", call_json_ptr, call_json_len)?))
+}
+
+// The ladder bots (SPEC §9.12, #3103: `jackioh-shared`, which the server calls natively)
+
+/// One call of the decisions around a ladder bot: a `BotCall` as JSON in, a `BotAnswer` as JSON out. The
+/// host reads its store into plain records and writes what comes out (`crates/shared/README.md`, the host
+/// contract).
+#[unsafe(no_mangle)]
+pub extern "C" fn bots(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::bots(arg("bots: the call", call_json_ptr, call_json_len)?))
+}
+
+/// The move a ladder bot owes: a `DecideCall` (the `DuelHost` and the `DecideRequest` the machine made) as
+/// JSON in, the `BotChoice` to feed it back as `decided` out. As `ai_decide`'s, `deadline_ms` is accepted
+/// and has no effect: this module has no clock, so the search ends at the strength's budget.
+#[unsafe(no_mangle)]
+pub extern "C" fn bot_decide(call_json_ptr: *const u8, call_json_len: usize, _deadline_ms: f64) -> i32 {
+    boundary(|| {
+        wasm_core::bot_decide(
+            arg("botDecide: the call", call_json_ptr, call_json_len)?,
+            NO_DEADLINE_MS,
+            no_clock,
+        )
     })
 }
 

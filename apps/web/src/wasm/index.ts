@@ -5,7 +5,10 @@
 //
 // LOADING. Nothing works until `loadWasm()` (which `main.tsx`'s `EngineGate` awaits before any screen
 // that calls the engine, #778, as the deck builder calls the validator synchronously) or `loadWasmSync`
-// has run the module's `init()`, which registers the catalog and the card scripts.
+// has run the module's `init()`, which registers the catalog and the card scripts. #3183: the page
+// fetches the module brotli-compressed (`jackioh_wasm_bg.wasm.br`, scripts/build-wasm.sh), which the site
+// Worker serves with `Content-Encoding: br` (apps/edge), so the browser decodes it as it arrives, the
+// built site holds no uncompressed module, and the module compiles while it downloads.
 //
 // ERRORS. A refused deck or a malformed argument throws the engine's message; `reduce` and `beginGame`
 // answer an illegal action with `error` on the result. A panic (an engine invariant broken) is printed
@@ -20,6 +23,7 @@ import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
+import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
   RunAction,
   RunConstants,
@@ -45,6 +49,28 @@ import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 
 // loading
+
+/**
+ * #3183: the module as `instantiateStreaming` takes it, decoded by the browser as it arrives. The site
+ * Worker answers with `Content-Type: application/wasm` and `Content-Encoding: br`, and is handed on as it
+ * is. A static server that labels the .br by its extension alone (Vite's dev and preview servers send
+ * `Content-Encoding: br` with no type) is given the type. A body that arrives still compressed (no
+ * `Content-Encoding`: the request missed the Worker) cannot be compiled, and says why.
+ */
+async function moduleResponse(url: URL): Promise<Response> {
+  const fetched = await fetch(url);
+  if (!fetched.ok || fetched.body === null) {
+    throw new Error(`failed to fetch the engine: ${String(fetched.status)} ${fetched.statusText} fetching '${url.href}'`);
+  }
+  if (fetched.headers.get("Content-Type") === "application/wasm") return fetched;
+  if (fetched.headers.has("Content-Encoding")) {
+    return new Response(fetched.body, { headers: { "Content-Type": "application/wasm" } });
+  }
+  await fetched.body.cancel();
+  throw new Error(
+    `the engine arrived still compressed from '${url.href}': the site Worker must serve /assets/*.wasm-*.br with Content-Encoding: br (wrangler.jsonc run_worker_first, apps/edge)`,
+  );
+}
 
 let loaded = false;
 let loading: Promise<void> | null = null;
@@ -75,8 +101,8 @@ export function loadWasm(): Promise<void> {
   if (loaded) return Promise.resolve();
   if (loading === null) {
     // The literal `new URL(…, import.meta.url)` is what Vite recognizes and emits as an asset, in
-    // the page's bundle and in the practice worker's alike.
-    loading = initWasm({ module_or_path: new URL("./pkg/jackioh_wasm_bg.wasm", import.meta.url) })
+    // the page's bundle and in the practice worker's alike: the .br, and no .wasm (#3183).
+    loading = initWasm({ module_or_path: moduleResponse(new URL("./pkg/jackioh_wasm_bg.wasm.br", import.meta.url)) })
       .then(() => {
         ready();
       })
@@ -243,6 +269,16 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
   return call("findInstance", () => parsed<CardInstance | null>(normal.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
+/**
+ * R3100000: what each attack `seat` may declare would do, as the board shows it, and whether the attackers
+ * that may reach the enemy hero finish it (`engine::combat_forecast`). The tutorial's coach names its
+ * attacks by it. It is the normal module's own, as the Duos bindings are: a lesson holds no custom card
+ * (R915009), so the Luau module has no copy.
+ */
+export function combatForecast(state: GameState, seat: PlayerId): CombatForecast {
+  return call("combatForecast", () => parsed<CombatForecast>(normal.combat_forecast(stateJson(state), seat)));
+}
+
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
 export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
   return call("dealEmoteHand", () => parsed<EmoteId[]>(normal.deal_emote_hand(seed, seat)));
@@ -306,7 +342,7 @@ export type RunResult = { state: RunState } | { error: string };
 
 /** `RunContent`: `run_catalog_content` over the compiled-in catalog. */
 export function runContent(): RunContent {
-  return call("runContent", () => parsed<RunContent>(normal.run_content("[]")));
+  return call("runContent", () => parsed<RunContent>(normal.run_content()));
 }
 
 /** Whether the setup may start a run: null, or the reason. */

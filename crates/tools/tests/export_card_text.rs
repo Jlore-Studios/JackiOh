@@ -228,7 +228,11 @@ fn r660_r1303_every_catalog_card_and_token_has_an_entry_in_catalog_order_with_it
             None => wrong.push(format!("{id}: not a catalog card or token")),
         }
     }
-    assert_eq!(wrong, Vec::<String>::new());
+    assert_eq!(
+        wrong,
+        Vec::<String>::new(),
+        "`cargo jackioh names` rewrites the comments"
+    );
     let catalog: Vec<&str> = CATALOG.keys().map(String::as_str).collect();
     assert_eq!(
         ids, catalog,

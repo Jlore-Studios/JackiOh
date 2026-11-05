@@ -254,7 +254,9 @@ Meditative+ #25's code Discover), and the card metrics into `$OUT_DIR/card_metri
 `COMPLICATED_CODE_LINES`, which the catalog query's `busted` and `complicated` read; and
 `EXTRA_TURN_CARDS`, the ids whose script's code names `take_extra_turn` (#3116), which the AI prices in
 hand, R846). There is nothing to wire and nothing to
-regenerate by hand: drop the file in its folder and build. The build fails, naming the path, on a file
+regenerate by hand: drop the file in its folder and build. The folders are the ones that hold card
+files, each its set's id segment with `_` between its words (`classic_plus`), so a new set's folder is
+listed nowhere (R3114000). The build fails, naming the path, on a file
 without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outside a set folder, a
 file name that is not a Rust identifier, a file outside its `ID`'s set's folder or named for another
 card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSION`, the newest entry
@@ -281,7 +283,7 @@ what each does). `expect_refused` and `expect_refused_with` pass only on a refus
 answer the open prompt does not offer: any other panic in the step (a reference that matches nothing,
 `answer` with no prompt open) fails the test, so refuse the step while the board still holds what the
 rule needs (#1247). For **base and radiant separately**: one test per behavior in the card's spec §8 row
-and every must-pass case in its BUILD table row (M4-T4 for Core, M9 for Classic and Classic+). A
+and every must-pass case in its BUILD table row where it has one (M4-T4 to M13; a card added after #3111 has none). A
 test that proves a ruling is named after it: `fn r64_the_copy_lands_in_the_leftmost_free_zone`
 (CLAUDE.md rule 3). A test that only reads printed data back with no action (cost, stats, type, tags
 or rarity, which `tests/cross/catalog.rs` proves for every entry) proves nothing a card test should,
@@ -385,7 +387,7 @@ portraits' lines (R644). This crate parses no YAML (CLAUDE.md rule 4):
 `cargo test -p jackioh-tools --test export_card_text` writes `flavour.json`, `chinese.json` and
 `apps/web/src/audio/voice-text.json` from it, each headed by a `"//"` entry that says so, and fails
 while one is stale; commit what it writes. It also holds the YAML's ids to the catalog's, in its order,
-and each name comment to the card's name.
+and each name comment to the card's name (`cargo jackioh names` writes them).
 
 `flavour.json` is keyed by catalog id, `{ "flavour"?, "artist"? }`. It is not card data: an edit to it
 is no patch and claims no fragment. `tests/cross/flavour.rs` holds every key to a catalog entry, every

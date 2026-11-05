@@ -1,4 +1,4 @@
-/* `/purchases` (routes/purchases.tsx): the odds table and the pity counters, on `/privacy`'s board
+/* `/purchases` (routes/purchases.tsx): the odds tables and the pity table, on `/privacy`'s board
    (routes/privacy.css, which also sets its sections and paragraphs), scoped under `.purchases-screen`;
    and the link to the page at the foot of `/shop`. */
 
@@ -20,21 +20,6 @@
 .tavern.app-shell.purchases-screen .purchases-odds thead th {
   color: var(--tavern-gold-pale);
   font-weight: 700;
-}
-
-.tavern.app-shell.purchases-screen .purchases-pity__list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tavern.app-shell.purchases-screen .purchases-pity__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 /* The one small link at the foot of `/shop` (routes/shop.tsx), which takes this sheet for it. */

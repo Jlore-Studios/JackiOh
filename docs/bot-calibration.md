@@ -1,7 +1,7 @@
 # Calibrating the ladder bots (R748000)
 
-A ladder bot's rating starts at its strength's seed (`BOT_SEED_RATINGS`, `crates/server/src/config.rs`;
-R1454), and its own games move it from there (R610). This is how the five strengths are measured
+A ladder bot's rating starts at its strength's seed (`BOT_SEED_RATINGS`, `crates/shared/src/config.rs`,
+read off the Elo column of `SKILL_ELO_TABLE`; R1454), and its own games move it from there (R610). This is how the five strengths are measured
 against each other, how that measurement meets the skill curve the seeds are read from (R747000), and
 how it is done again when the AI changes. Issue #748, part of #636; the ruling is
 [R748000](../spec/rulings/R748000.md).
@@ -9,11 +9,13 @@ how it is done again when the AI changes. Issue #748, part of #636; the ruling i
 Two measurements stand behind the seeds, and they measure different things. The skill curve
 (`SKILL_ELO_TABLE`, `crates/server/README.md`, "Skill to Elo") is the AI at the arena's budget playing
 at each skill against the reference and against the random policy; each strength's seed is the curve's
-reading at its skill, and a test (`r747000_strength_seed_ratings_match_skill_curve`) holds the two equal.
+reading at its skill, which `BOT_SEED_RATINGS` reads off the table in `const`, and a test
+(`r747000_strength_seed_ratings_match_skill_curve`) holds each strength's seed to the curve at its skill.
 The calibration here plays the five strengths as they are built, each with its own search budget,
 softmax temperature, missed-lethal chance and skill, against one another, which is what the curve does
 not measure. The seeds are the curve's until a person moves them on the calibration's evidence, and
-then the calibration's rows and the curve's move together (below).
+then the calibration's rows are the curve's (below): `bot-calibrate --write` rewrites them in
+`config.rs`, and `BOT_SEED_RATINGS` follows.
 
 ## The reference and the offsets
 
@@ -98,10 +100,12 @@ The offsets are measured again, and the anchor moves by what the new AI gained.
    has measured the anchor since, pass it as `--anchor=<rating>` instead.
 2. Compare the printed seeds with the skill curve's (Results below shows how). Put the report into
    Results either way, and `BOT_CALIBRATION_GENERATION` at the printed generation when the seeds stay
-   at the curve. To move them, paste the printed `BOT_SEED_RATINGS` row over the one in
-   `crates/server/src/config.rs` and the same readings over the rows of `SKILL_ELO_TABLE` (the
-   strengths' skills are the rows' skills, and the test that holds a strength's seed to the curve
-   fails until they agree). Both measurements carry error, the curve's about 50 Elo (95%) for a run
+   at the curve. To move them, run it again with `--write`, which rewrites
+   `BOT_CALIBRATION_GENERATION`, `SKILL_ELO_ANCHOR` and the rows of `SKILL_ELO_TABLE` in
+   `crates/shared/src/config.rs` (from the repository root; it refuses seeds that do not rise with the
+   strengths), or paste the printed items over the three by hand. `BOT_SEED_RATINGS` is read off the
+   table, so nothing else moves (the strengths' skills are the rows' skills, and the test that holds a
+   strength's seed to the curve fails if they differ). Both measurements carry error, the curve's about 50 Elo (95%) for a run
    of 200 games near an even match and the calibration's the ± of its table, so a person judges
    whether a difference is the strengths' own budgets and temperatures or noise, and a longer run
    (`--games=300`) settles a doubt. A person or the night bot makes the pull request: the training
@@ -185,7 +189,7 @@ Wins, draws and losses are the lower strength's.
 | 3 | -115.6 | 18.7 | 1716.0 |
 | 4 (reference) | +0.0 | 0.0 | 1832.0 |
 
-// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs
+// jackioh-server bot-calibrate: paste over the rows of these names, crates/shared/src/config.rs
 pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, 1832.0];
 pub const BOT_CALIBRATION_GENERATION: i64 = 13;
 
@@ -241,7 +245,7 @@ pub const BOT_CALIBRATION_GENERATION: i64 = 13;
   is inside the noise. The rows pasted are the calibration's.
 - **The miss's mistakes.** Over the turn starts of 20 seeded random games
   (`r2214000_a_strength_zero_miss_makes_far_fewer_beginners_mistakes_than_random`,
-  `crates/server/tests/bots/seat.rs`), the random policy ended the turn while a card could be played
+  `crates/shared/tests/bots_decide.rs`), the random policy ended the turn while a card could be played
   0.094 of the time (95 of 1008 picks) and the miss 0.019 (19), and made an attack the greedy baseline
   scores below standing still 0.066 of the time (20 of 302) and the miss 0.010 (3).
 
@@ -286,7 +290,7 @@ Wins, draws and losses are the lower strength's.
 | 3 | -140.9 | 22.3 | 1692.0 |
 | 4 (reference) | +0.0 | 0.0 | 1832.0 |
 
-// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs
+// jackioh-server bot-calibrate: paste over the rows of these names, crates/shared/src/config.rs
 pub const BOT_SEED_RATINGS: [f64; 5] = [1216.0, 1383.0, 1536.0, 1692.0, 1832.0];
 pub const BOT_CALIBRATION_GENERATION: i64 = 13;
 
@@ -357,7 +361,7 @@ Wins, draws and losses are the lower strength's.
 | 3 | -141.8 | 21.1 | 1058.0 |
 | 4 (reference) | +0.0 | 0.0 | 1200.0 |
 
-// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs
+// jackioh-server bot-calibrate: paste over the rows of these names, crates/shared/src/config.rs
 pub const BOT_SEED_RATINGS: [f64; 5] = [636.0, 822.0, 934.0, 1058.0, 1200.0];
 pub const BOT_CALIBRATION_GENERATION: i64 = 9;
 

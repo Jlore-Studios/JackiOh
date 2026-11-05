@@ -9,10 +9,10 @@
 #   docker build -f crates/server/Dockerfile -t jackioh-server .
 #
 # Six stages build `jackioh-server` in release, cargo-chef's way: the tool (`chef`), the recipe
-# (`planner`), the dependencies (`deps`), the engine, the cards and the AI (`game`), the server's
+# (`planner`), the dependencies (`deps`), the engine, the cards, the AI and the shared logic (`game`), the server's
 # library (`crates`), then the server's binary (`build`). The dependencies (some 260 crates) sit in a
-# layer of their own that a change to the sources alone does not rebuild, and the engine, the cards
-# and the AI in one that a change to the server alone does not; the server's library and the
+# layer of their own that a change to the sources alone does not rebuild, and the engine, the cards,
+# the AI and the shared logic in one that a change to the server alone does not; the server's library and the
 # thin-LTO link are compiled on every change, each stage on its own so that CI can build each in a
 # job of its own. The image is the
 # last stage, a slim Debian with CA certificates (the server calls Supabase Auth over TLS and
@@ -68,9 +68,9 @@ FROM chef AS deps
 COPY --from=planner /src/recipe.json recipe.json
 RUN cargo chef cook --release --locked -p jackioh-server --recipe-path recipe.json
 
-# The crates the server builds on, the engine, the cards and the AI: the real manifests and their
-# sources over the skeleton, built by the server's own command below (so with its features) while
-# the server is still the skeleton's empty crate. Only these three of crates/ are copied, so this
+# The crates the server builds on, the engine, the cards, the AI and the shared logic: the real manifests and
+# their sources over the skeleton, built by the server's own command below (so with its features) while
+# the server is still the skeleton's empty crate. Only these four of crates/ are copied, so this
 # layer is rebuilt only when they, a manifest or the lock file change: a change to the server alone,
 # or to crates/tools, crates/luau or crates/wasm, reuses it (#2013). A crate the server comes to
 # build on needs a COPY line here, or the server's build below fails on its empty skeleton.
@@ -85,6 +85,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/engine ./crates/engine
 COPY crates/cards ./crates/cards
 COPY crates/ai ./crates/ai
+COPY crates/shared ./crates/shared
 RUN cargo build --release --locked -p jackioh-server --lib \
  && cargo clean --release --locked -p jackioh-server
 

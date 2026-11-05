@@ -45,6 +45,8 @@ export type UsernameFieldProps = {
   label?: string;
   /** Locks the field while something else answers for it (the prompt's Skip). */
   disabled?: boolean;
+  /** R3147003: what the box starts with, asked about at once as if typed. */
+  initial?: string;
 };
 
 /** A preview in a player's words, every name in it isolated (R1436). */
@@ -78,11 +80,11 @@ function PreviewWords({ preview }: { preview: UsernamePreview }): ReactElement {
   );
 }
 
-export default function UsernameField({ token, onSaved, label, disabled = false }: UsernameFieldProps): ReactElement {
+export default function UsernameField({ token, onSaved, label, disabled = false, initial = "" }: UsernameFieldProps): ReactElement {
   const id = useId();
   const hintId = `${id}-hint`;
   const previewId = `${id}-preview`;
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initial);
   const [shown, setShown] = useState<Shown | null>(null);
   const [failure, setFailure] = useState<{ name: string; message: string } | null>(null);
   const [saving, setSaving] = useState(false);

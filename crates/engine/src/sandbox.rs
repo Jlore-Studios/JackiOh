@@ -1,4 +1,4 @@
-//! The practice sandbox's tools (issue #923, R923000–R923003; #962, R962000): one action, `sandbox`,
+//! The practice sandbox's tools (issue #923, R923000–R923003): one action, `sandbox`,
 //! whose `op` spawns a card for either seat, sets a hero's health and Armor or a player's mana, draws,
 //! or destroys or removes a card. `why_sandbox_refused` is every refusal, `apply_sandbox` every change.
 //! A tool waits on an open prompt and the mulligan (`reduce`'s gates), on either seat's turn.
@@ -30,14 +30,11 @@ pub fn is_sandbox(state: &GameState) -> bool {
 }
 
 /// R923001: the definition a spawn may make: a card or a token of a set a player may hold (R1420).
-/// A transient definition (a Fuse's, a crafted card's) is no card to spawn. R962000: a custom card
-/// is one only when it is one of the game's own (`GameState.custom_defs`).
+/// A transient definition (a Fuse's, a crafted card's) is no card to spawn, and a custom card's is of
+/// the Custom set, which never ships.
 fn spawnable<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
     if state.transient_defs.contains_key(def_id) {
         return None;
-    }
-    if crate::custom::is_custom_id(def_id) {
-        return state.custom_defs.get(def_id);
     }
     find_def(Some(state), def_id).filter(|def| set_is_open(def.set))
 }

@@ -456,7 +456,7 @@ describe("card-audio.json5's layout and effects (R655)", () => {
         return typeof catalogName !== "string" || collapse(catalogName) !== name;
       })
       .map(({ id, name }) => `${id}: comment "${name}", catalog name ${JSON.stringify(CATALOG[id]?.name)}`);
-    expect(wrong, "entries whose comment is not the card's catalog name").toEqual([]);
+    expect(wrong, "entries whose comment is not the card's catalog name (`cargo jackioh names` rewrites them)").toEqual([]);
 
     // An entry written without its comment on the line of its id is not found above.
     const commented = new Set(comments.map(({ id }) => id));

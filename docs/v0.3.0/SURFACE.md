@@ -178,9 +178,10 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-cards` | `jackioh-engine` | `jackioh-engine` with `features = ["testkit"]` |
 | `jackioh-ai` | `jackioh-engine` | `jackioh-cards`, `jackioh-engine` with `testkit` |
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
-| `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | `jackioh-engine` with `testkit` |
+| `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
+| `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
@@ -190,7 +191,8 @@ on a crate that depends on you is legal for integration tests (`tests/`), which 
 
 ## 3. Purity (CLAUDE.md rule 4, in Rust)
 
-`jackioh-engine`, `jackioh-cards` and `jackioh-ai` are pure: no clock, no I/O, no environment, no
+`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-luau`, `jackioh-run` and `jackioh-shared` are pure
+(CLAUDE.md rule 4 has what each takes): no clock, no I/O, no environment, no
 threads, no OS randomness, no hash-ordered collections, **no mutable statics**. Two mechanisms
 enforce it, and nothing else is needed (the ESLint purity rules go):
 
@@ -198,7 +200,7 @@ enforce it, and nothing else is needed (the ESLint purity rules go):
    behind the engine's off-by-default `ts` feature.** No `rand`, no `getrandom`, no `tokio`, no
    `time`. A crate you cannot name, you cannot call.
 2. **Each has the same `clippy.toml`** (clippy reads the one in the crate's own directory;
-   `crates/tools/tests/acceptance.rs` holds the four byte for byte the same and runs clippy over a
+   `crates/tools/tests/acceptance.rs` holds the six byte for byte the same and runs clippy over a
    fixture with one use of each entry) and CI runs `cargo clippy --workspace --all-targets -- -D
    warnings`. `crates/engine/clippy.toml` is the list (#1600): the hash-ordered collections and
    `RandomState`, the clock, the disk (`File`, `OpenOptions`, `DirBuilder`, the `std::fs` functions,
@@ -766,6 +768,7 @@ keeps behind its opaque `EngineState` brand.
     // one flat object of every rules, AI and run number a client reads (#3093): AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK (practice, the tutorial harness, the lean toggle, R1370, and their tests),
     // RUN (run_constants's object) and each constant of engineConfig.ts (§5.1) under its own name (DECK_SIZE, …), so a host that is not the web restates none (CLAUDE.md rule 9)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
+#[wasm_bindgen] pub fn combat_forecast(state_json: &str, seat: &str) -> String;      // R3100000: CombatForecast { attacks: AttackForecast[], lethal } (query.rs's combat_forecast): what each attack `seat` may declare would do, as the board shows it, for the tutorial's coach; the normal and C modules bind it (the Luau module has no copy)
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
@@ -774,6 +777,24 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> String;
     // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false;
     // prompt_json is the open prompt's { craftMode, craftOffer } (either absent), so the verdict is its answer's (R1563007)
+#[wasm_bindgen] pub fn series(call_json: &str) -> String;
+    // #3098: jackioh-shared's Conquest series rules (SPEC §9.5, R330–R337). A SeriesCall in ({ call: "pickDeck", series, seat, slot, now, gameNo? }), a SeriesAnswer out
+    // ({ row } | { refused } | { seats } | { picked } | { view } | { score }); the host holds the row and hands it back (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn host(call_json: &str) -> String;
+    // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the same for "Duos" | the rematch and Play again books' calls),
+    // a HostAnswer out ({ answer: "stepped", host, outputs } | { answer: "steppedDuos", host, outputs } | { view } | { duosView } | { presence } | the books'); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn loadout(call_json: &str) -> String;
+    // #3102: jackioh-shared's loadout visibility rule (SPEC §10.8, R1834003, R3013002). A LoadoutCall in ({ call: "dealtCards", state } | { call: "shownDefs", view, dealt }
+    // | { call: "cardsDue", shown, loadouts, sent? }), a LoadoutAnswer out ({ dealt } | { shown } | { due: { cards, sent } }); the host holds the deal and each receiver's sent set
+#[wasm_bindgen] pub fn ranked(call_json: &str) -> String;
+    // #3105: jackioh-shared's ranked ladder (SPEC §9.12, R603–R612). A RankedCall in ({ call: "rateGame", game: { standings, sides, winnerSide?, reason, stake?, season, ladder, strict?, nowMs } } | planSeason | softReset | visibleRank | peakBadge | jloriousOrder),
+    // a RankedAnswer out ({ game: { sides, ranks, peaks, jlorious, records } } | { season } | { reset } | { rank } | { badge } | { jlorious }); each record carries sortKey, the integer a leaderboard sorts by
+#[wasm_bindgen] pub fn bots(call_json: &str) -> String;
+    // #3103: jackioh-shared's ladder bots (SPEC §9.12, R1453, R1454, R641000, R1555000). A BotCall in ({ call: "chooseBot", ticket, bots, recent, busy, hour, catalogVersion } | { call: "planPool" | "planGrind" | "newBot" | "drawDecks" | "drawTrio" | "fallbackDue" | "pickIsDue" | "botPick" | … }),
+    // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | …); the host reads its store into plain records and writes what comes out
+#[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
+    // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
+    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
 ```
 
 ### 10.2 Build
@@ -781,20 +802,28 @@ keeps behind its opaque `EngineState` brand.
 `scripts/build-wasm.sh` (part 21): installs nothing that is present; else `rustup target add
 wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarball into
 `.cache/bin/`; then `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown` and
-`wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
-`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
+`wasm-bindgen --target web --omit-default-module-path --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`
+(with `--remove-name-section` for a player's build), then writes `pkg/jackioh_wasm_bg.wasm.br`, the module
+brotli-compressed (#3183). `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest`
+run it. The page fetches only the `.br`; the site Worker serves it with `Content-Encoding: br` and
+`Content-Type: application/wasm` (apps/edge/src/routing.ts `precompressedModule`, routed by
+wrangler.jsonc's `run_worker_first`), so the browser decodes it as it arrives and the module compiles
+while it downloads (§10.3). The deploy jobs
 (`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
 the web build. `JACKIOH_WASM_C=1` also builds the C module (§10.5) and checks that it imports nothing;
 no CI job sets it yet.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
-`export async function loadWasm(): Promise<void>` (idempotent; `init()` + `pkg.init()`),
+`export async function loadWasm(): Promise<void>` (idempotent; `init()` + `pkg.init()`; it fetches
+`jackioh_wasm_bg.wasm.br` and hands the decoded response to `instantiateStreaming`, giving it the
+`application/wasm` type a static server that labels the file by its extension leaves out, and refusing,
+with the route it missed, a body that arrives still compressed),
 `export function loadWasmSync(bytes: BufferSource): void` (for jsdom tests, from
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
-`dealEmoteHand`, …).
+`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
 `practice.worker.ts` awaits it before handling a message.
@@ -863,7 +892,7 @@ app.rs         ← src/index.ts (part 18): App, the route table, boot, backgroun
 auth.rs        (part 18) the Auth enum (from src/api/auth.ts's provider half and src/api/e2e.ts's fixture auth)
 api/<x>.rs     ← src/api/<x>.ts (parts 18 and 19, by PORT-MAP)
 actor/<x>.rs   ← src/match/<x>.ts (part 19); actor.ts → match_actor.rs (clippy's module_inception)
-ranked/<x>.rs  ← src/ranked/<x>.ts (part 18), pure
+ranked/<x>.rs  ← src/ranked/<x>.ts (part 18), pure; since #3105 `jackioh-shared`'s (crates/shared/src/ranked/), which the server re-exports as `ranked`
 db/store.rs    (part 20) the Db and Tx enums and every store method (← src/api/ports.ts's Store half)
 db/pg.rs       (part 20) ← src/db/store.ts: one free async fn per store method over sqlx
 db/fake.rs     (part 20) ← src/api/memory-stores.ts + e2e-store.ts: one free fn per store method over FakeData
@@ -1016,7 +1045,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a
   Mythic's or an Animated art's id, R2655000, R2715000), goes after the first view to a socket that shows a card that seat's deck
-  dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
+  dealt, once per socket (`jackioh_shared::loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and

@@ -10,7 +10,6 @@ use jackioh_server::actor::clock::{initial_clocks, match_ceiling_at};
 use jackioh_server::actor::contracts::{RecordResultInput, TerminalOutcome};
 use jackioh_server::api::results::{reap_stuck_matches, record_result};
 use jackioh_server::api::series::{ensure_series_game, start_series};
-use jackioh_server::api::series_rules::{NewSeriesInput, pick_deck};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START};
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
@@ -20,6 +19,7 @@ use jackioh_server::db::store::{
 };
 use jackioh_server::ranked::glicko2::{Glicko, rate_game, rate_game_scored};
 use jackioh_server::ranked::season::season_id_of;
+use jackioh_shared::series::{NewSeriesInput, pick_deck};
 use serde_json::{Value, json};
 
 use crate::support::deps::test_app;

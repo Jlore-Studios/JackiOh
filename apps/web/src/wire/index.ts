@@ -27,12 +27,14 @@ import type { GameEventType } from "./generated/GameEventType.ts";
 export type { Action } from "./generated/Action.ts";
 export type { ActionBody } from "./generated/ActionBody.ts";
 export type { ActivationView } from "./generated/ActivationView.ts";
+export type { AttackForecast } from "./generated/AttackForecast.ts";
 export type { CardCost } from "./generated/CardCost.ts";
 export type { CardDef } from "./generated/CardDef.ts";
 export type { CardFace } from "./generated/CardFace.ts";
 export type { CardMark } from "./generated/CardMark.ts";
 export type { CardType } from "./generated/CardType.ts";
 export type { CardView } from "./generated/CardView.ts";
+export type { CombatForecast } from "./generated/CombatForecast.ts";
 export type { CraftEffect } from "./generated/CraftEffect.ts";
 export type { CraftFrame } from "./generated/CraftFrame.ts";
 export type { CraftHat } from "./generated/CraftHat.ts";
@@ -234,7 +236,9 @@ export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (ty
 // ---------------------------------------------------------------------------------------------
 
 // The catalog vocabulary's runtime half. Its types are the generated ones above; `./catalog.ts`
-// declares its own copies only for its functions' signatures, which are the same shapes.
+// declares its own copies only for its functions' signatures, which are the same shapes, but for
+// `SetName`, which it takes from the generated file, and `SHIPPED_SETS`, which it takes from
+// `./engineConfig.ts` (both read from the engine's set table, R3114000).
 export {
   KEYWORD_KINDS,
   LEAN_NEWEST,

@@ -15,6 +15,7 @@ import {
   googleClientId,
   normalizeOneTimeCode,
   oauthAuthorizeUrl,
+  oauthProviderLabel,
   oauthProviders,
   removeFactor,
   requestEmailSignIn,
@@ -347,6 +348,24 @@ describe("R666 OAuth providers, behind configuration", () => {
     serve(200, TOKEN_BODY);
     const exchange = await exchangeAuthCode("2b5e0c1a-8f1b-4c4f-9a35-0d8b3c1f2e77");
     expect(exchange.kind === "session" ? exchange.flow : exchange.kind).toBe("oauth");
+  });
+});
+
+describe("R3147000 Roblox, the projects' custom OIDC provider", () => {
+  it("R3147000 is offered by its dashboard identifier, custom:roblox, and by no other custom name", () => {
+    expect(oauthProviders("google, Custom:Roblox")).toEqual(["google", "custom:roblox"]);
+    expect(oauthProviders("custom:other,roblox,custom:")).toEqual([]);
+    expect(oauthProviderLabel("custom:roblox")).toBe("Roblox");
+    expect(oauthProviderLabel("email")).toBeNull();
+    expect(oauthProviderLabel(null)).toBeNull();
+  });
+
+  it("R3147000 leaves for Roblox as R666 leaves for any provider: its name, the /login return and PKCE", async () => {
+    const url = new URL(await oauthAuthorizeUrl("custom:roblox"));
+    expect(url.origin + url.pathname).toBe(`${URL_}/auth/v1/authorize`);
+    expect(url.searchParams.get("provider")).toBe("custom:roblox");
+    expect(url.searchParams.get("redirect_to")).toBe(`${window.location.origin}/login`);
+    expect(storedVerifiers().map((entry) => entry.flow)).toContain("oauth");
   });
 });
 

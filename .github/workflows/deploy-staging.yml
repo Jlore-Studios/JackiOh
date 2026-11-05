@@ -222,11 +222,17 @@ jobs:
 
       # R3074000: the dev dashboard (apps/admin), a Worker of its own that binds this one, so it goes
       # after the site's. Its address, admin-staging.jackioh.com, and the Access application in front
-      # of it are infra/cloudflare.tf's; until they are applied the Worker serves nothing.
+      # of it are infra/cloudflare.tf's; until they are applied the Worker serves nothing. A commit
+      # from before the dashboard has no apps/admin, so it deploys none, as promote-production.yml's
+      # step does (deploy-staging run 41938332424 failed on one with ENOENT).
       - name: build and deploy the dev dashboard
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
+          if [ ! -f apps/admin/wrangler.jsonc ]; then
+            echo "::notice::staging ($(git rev-parse --short HEAD)) predates the dev dashboard (apps/admin): nothing to deploy."
+            exit 0
+          fi
           pnpm --dir apps/admin build:staging
           pnpm --dir apps/edge exec wrangler deploy --config ../admin/wrangler.jsonc --env staging
 

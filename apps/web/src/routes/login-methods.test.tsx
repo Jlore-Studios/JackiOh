@@ -11,7 +11,7 @@ import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession, tak
 import { loginTestid } from "../auth/testids.ts";
 import { AUTH_MESSAGES, AUTH_NOTICES } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
-import { readSession, rememberPendingReset } from "../net/session.ts";
+import { linkAfterSignIn, readSession, rememberLinkAfterSignIn, rememberPendingReset } from "../net/session.ts";
 import { settle } from "../test/settle.ts";
 import LoginRoute from "./login.tsx";
 
@@ -458,6 +458,64 @@ describe("R666 OAuth providers, behind configuration", () => {
     expect(screen.getByTestId(loginTestid.oauthError).textContent).toBe(AUTH_MESSAGES.oauthFailed);
     expect(screen.queryByTestId(loginTestid.linkError)).toBeNull();
     expect(document.body.textContent).not.toContain("PROVIDER-TEXT");
+  });
+});
+
+describe("R3147000 Roblox on the sign-in screen", () => {
+  it("R3147000 offers Continue with Roblox, and says how an older account brings Roblox to it", async () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    serve({});
+    render(<LoginRoute />);
+    const buttons = screen.getAllByTestId(loginTestid.oauth);
+    expect(buttons.map((button) => button.getAttribute("data-provider"))).toEqual(["google", "custom:roblox"]);
+    expect(buttons[1]?.textContent).toBe("Continue with Roblox");
+    expect(screen.getByTestId(loginTestid.robloxHint)).toHaveTextContent("link Roblox on your account page");
+
+    fireEvent.click(buttons[1] as HTMLElement);
+    await waitFor(() => {
+      expect(storedVerifiers().map((entry) => entry.flow)).toContain("oauth");
+    });
+  });
+
+  it("R3147000 says nothing of Roblox on a build that does not name it", () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google");
+    serve({});
+    render(<LoginRoute />);
+    expect(screen.queryByTestId(loginTestid.robloxHint)).toBeNull();
+  });
+});
+
+describe("R3147002 signing in to link the provider of a removed new account", () => {
+  it("R3147002 says what to do on the sign-in screen", () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    rememberLinkAfterSignIn("custom:roblox");
+    serve({});
+    render(<LoginRoute />);
+    expect(screen.getByTestId(loginTestid.linkAfter)).toHaveTextContent(
+      "Sign in to the account you already have, then link Roblox to it on your account page.",
+    );
+    // Its hint about older accounts would say the same thing twice.
+    expect(screen.queryByTestId(loginTestid.robloxHint)).toBeNull();
+  });
+
+  it("R3147002 the sign-in that follows opens /account, where the provider is linked", async () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    rememberLinkAfterSignIn("custom:roblox");
+    await challengeForRequest("oauth");
+    serve({ "/auth/v1/token": tokens(AAL1) });
+    window.history.replaceState(null, "", `/login?code=${CODE}`);
+    render(<LoginRoute />);
+    await settle();
+    expect(readSession()?.accessToken).toBe(AAL1);
+    expect(window.location.pathname).toBe(paths.account);
+    // `/account` says it, and forgets it there.
+    expect(linkAfterSignIn()).toBe("custom:roblox");
+  });
+
+  it("R3147002 names nothing when nothing waits to be linked", () => {
+    serve({});
+    render(<LoginRoute />);
+    expect(screen.queryByTestId(loginTestid.linkAfter)).toBeNull();
   });
 });
 

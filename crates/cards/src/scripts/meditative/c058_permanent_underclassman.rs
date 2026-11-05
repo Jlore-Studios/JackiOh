@@ -262,9 +262,9 @@ mod tests {
             assert_eq!(books(&s).len(), 1);
         }
 
-        #[test]
-        fn the_grant_survives_a_copy() {
-            let (mut s, unit) = summoned("underclassman-copy");
+        /// The summoned Unit copied: the scenario, the Unit and the copy standing in lane 3, if one does.
+        fn copied(seed: &str) -> (Scenario, CardInstance, Option<CardInstance>) {
+            let (mut s, unit) = summoned(seed);
             run_as(
                 &mut s,
                 &[summon_copy(json_as(
@@ -272,7 +272,20 @@ mod tests {
                 ))],
                 PlayerId::P1,
             );
-            let copy = s.unit("p1", 3).expect("the copy");
+            let copy = s.unit("p1", 3);
+            (s, unit, copy)
+        }
+
+        #[test]
+        fn the_grant_survives_a_copy() {
+            // A random (1) Unit may leave its copy somewhere else (or none), so the seed is one where the copy
+            // stands in lane 3, searched for at run time (#848).
+            let seed = seed_where("underclassman-copy", |seed| {
+                let (_, unit, copy) = copied(seed);
+                copy.is_some_and(|copy| copy.def_id == unit.def_id)
+            });
+            let (mut s, unit, copy) = copied(&seed);
+            let copy = copy.expect("the copy");
             assert_eq!(copy.def_id, unit.def_id);
             assert_ne!(copy.id, unit.id);
             assert_eq!(copy.grants, s.card(&unit.id).grants);

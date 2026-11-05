@@ -5155,5 +5155,148 @@
     "pr": 3084,
     "title": "one press of End turn or a one-tap answer sends once, so a double click can't end an extra turn",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5daae77374b897ccc43444101db03481ef34f5d1",
+    "pr": 3089,
+    "title": "the training box runs no gather lane, and setup never starts one again",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f524001882fe15268f83ea876be2d39c35ddbee9",
+    "pr": 3092,
+    "title": "patches log: 65acf56..8560477",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "816f58412ff64e2a41b66f90fa73174ff9124d3c",
+    "pr": 3091,
+    "title": "a card-statistics request for a patch the server does not ship reads only that patch",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "6c1483f9fcc0928d7c2b7e4b9fe67bee7b109cbb",
+    "pr": 3109,
+    "title": "an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "69b05670019b59d4d22d712221ffab39f38da011",
+    "pr": 3088,
+    "title": "the AI prices what a sleeping card does when it wakes",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "820935af091647a76f28c2433b45018e3af7f1b7",
+    "pr": 3087,
+    "title": "a quick second click on Delete deck or Remove friend deletes nothing more",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "25466012134fcd1332c8f79e77b88c82e7f365ab",
+    "pr": 3118,
+    "title": "the repository's Actions settings in Terraform, so the daily promotion's pull request keeps working",
+    "kind": "internal",
+    "player": "None."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "60ae7d3482193684f2489953b7cec0640e5ab11c",
+    "pr": 3075,
+    "title": "rust (classify) diffs a pull request against its merge commit's first parent, not a stale base sha",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "15a1c7169c1dfea9d07591c890da3c105533f22b",
+    "pr": 3082,
+    "title": "the night bot splits a slow CI job without a person, through shard counts outside .github/ (#3072)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "818af400dcf0939eeade3d9f552ac0dcad4bd0a2",
+    "pr": 3076,
+    "title": "the night bot stops posting \"CI failed\" every ten minutes on a pull request people hold (#3073)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "edb3164426cbdcee68d2b89c582f89b6e7133be3",
+    "pr": 3120,
+    "title": "the fuzz monitor sends every action the legal list offers, and each one must be accepted",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "835a492ceccc18d224e6c4db99bbfcec9c92f3dc",
+    "pr": 3122,
+    "title": "two deck store tests read the clock once, so a millisecond tick between two readings can't fail them",
+    "kind": "internal",
+    "player": "None."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "61c9bb9ed47554671ddadd5e8d2e931b5a63823e",
+    "title": "Merge pull request #3124 from Jlore-Studios/claude/playful-404-3119",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b60666c6b030d31157d55d04993657c2b5b38622",
+    "pr": 3126,
+    "title": "bot: build pass 1 for #3093",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "06c99445c38c33c25b9509d5a29282aa5b53488f",
+    "pr": 3130,
+    "title": "the AI finds the cards that grant an extra turn itself, so a later one is never priced as a plain card",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "0f56d34c323c397ed2fe2dea530a396339470edb",
+    "pr": 3131,
+    "title": "the web drops the card creator and every custom-card path, with a note for players",
+    "kind": "app",
+    "player": "Custom cards and the card creator are gone, and the cards you made are deleted."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "dc2674fd93ed334f269290f9b57302e6cff99fa0",
+    "pr": 3129,
+    "title": "patches ship: v0.5.11p",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5243cd8cef34019451255cf212bf2cabd8c69dbd",
+    "pr": 3132,
+    "title": "the learned evaluation reads what a card is, not only its id, so a card it never trained on still counts",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "22e5431e5cc1e6bc026c1b5c88c010da230fe581",
+    "pr": 3143,
+    "title": "an after-merge spot-check reviews its merged pull request instead of stopping because it is closed",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "02343deae92881e4e392bf8f3c81a0a8e7d5414e",
+    "pr": 3137,
+    "title": "production signs in with Google through the redirect again, while Google's own button fails there",
+    "kind": "app",
+    "player": "Signing in with Google on jackioh.com works again."
   }
 ]

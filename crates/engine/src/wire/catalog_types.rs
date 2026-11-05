@@ -286,53 +286,115 @@ string_union! {
     }
 }
 
-string_union! {
-    /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
-    /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
-    /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
-    /// reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
-    /// shipped, so no pool or random deck finds one.
-    pub enum SetName {
-        Core = "Core",
-        Classic = "Classic",
-        ClassicPlus = "Classic+",
-        Meditative = "Meditative",
-        MeditativePlus = "Meditative+",
-        Stinkyscape = "Stinkyscape",
-        TrainingGrounds = "Training Grounds",
-        Boss = "Boss",
-        BossX = "Boss-X",
-        Custom = "Custom",
-    }
+/// #3114, R3114000: where a set stands. The lists every caller reads (`CATALOG_SETS`,
+/// `SHIPPED_SETS`, `SINGLE_PLAYER_SETS`) are the set table's rows of a stage, in its order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SetStage {
+    /// A set that ships (R380, R1420): in the catalog order and in every pool that names no set.
+    Shipped,
+    /// A set the catalog holds and orders before it ships (R1420): in no deck, no pool that names
+    /// no set and no list a player reads until its row says `Shipped`.
+    Held,
+    /// A set made for single-player modes (R1846001): never shipped, never in the catalog order,
+    /// reached only by a catalog query's `everySet`.
+    SinglePlayer,
+    /// A custom card's (§12.1, R915000): never in the catalog and never shipped.
+    Custom,
 }
 
-/// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
-/// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
-/// deck and on no list a player reads until it is (R1420).
-pub const SHIPPED_SETS: [SetName; 7] = [
-    SetName::Core,
-    SetName::Classic,
-    SetName::ClassicPlus,
-    SetName::Meditative,
-    SetName::MeditativePlus,
-    SetName::Stinkyscape,
-    SetName::TrainingGrounds,
-];
+/// #3114, R3114000: one row of the set table, every fact the code reads per set.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SetRow {
+    pub set: SetName,
+    pub stage: SetStage,
+    /// B2.2: the set's segment of a card id (`meditativeplus-011`). Its scripts folder,
+    /// `crates/cards/src/scripts/<folder>/`, is the segment with `_` between its words
+    /// (`meditative_plus`).
+    pub segment: &'static str,
+    /// What `spec check` reads before a `#` as the set's (`M+ #14`); the set's own name reads too.
+    pub abbreviation: Option<&'static str>,
+    /// R3114001: the share of the set's non-token cards the shadow ban may hold, `(part, whole)`
+    /// (§9.9, R732000); `None` when the shadow ban holds none of the set's cards.
+    pub shadow_ban_share: Option<(usize, usize)>,
+}
+
+/// Generates `SetName` and `SET_TABLE` from the set table's rows, one per set, in `SetName`'s order.
+macro_rules! set_table {
+    ($( $variant:ident = $name:literal { stage: $stage:ident, segment: $segment:literal, abbreviation: $abbreviation:expr, shadow_ban_share: $share:expr $(,)? } ),+ $(,)?) => {
+        string_union! {
+            /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
+            /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
+            /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
+            /// reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+            /// shipped, so no pool or random deck finds one.
+            pub enum SetName { $( $variant = $name ),+ }
+        }
+
+        /// #3114, R3114000: every set's row, in `SetName`'s order (`set_row` indexes it).
+        pub const SET_TABLE: &[SetRow] = &[
+            $( SetRow {
+                set: SetName::$variant,
+                stage: SetStage::$stage,
+                segment: $segment,
+                abbreviation: $abbreviation,
+                shadow_ban_share: $share,
+            } ),+
+        ];
+    };
+}
+
+/// Whether `stage` is one of `stages` (a `const fn`, so `as u8` stands in for `==`).
+const fn stage_in(stage: SetStage, stages: &[SetStage]) -> bool {
+    let mut at = 0;
+    while at < stages.len() {
+        if stage as u8 == stages[at] as u8 {
+            return true;
+        }
+        at += 1;
+    }
+    false
+}
+
+/// How many of the set table's rows are at one of `stages`.
+const fn count_in(stages: &[SetStage]) -> usize {
+    let mut count = 0;
+    let mut at = 0;
+    while at < SET_TABLE.len() {
+        if stage_in(SET_TABLE[at].stage, stages) {
+            count += 1;
+        }
+        at += 1;
+    }
+    count
+}
+
+/// The sets of the set table's rows at one of `stages`, in its order.
+const fn sets_in<const N: usize>(stages: &[SetStage]) -> [SetName; N] {
+    let mut sets = [SetName::Core; N];
+    let mut count = 0;
+    let mut at = 0;
+    while at < SET_TABLE.len() {
+        if stage_in(SET_TABLE[at].stage, stages) {
+            sets[count] = SET_TABLE[at].set;
+            count += 1;
+        }
+        at += 1;
+    }
+    assert!(count == N);
+    sets
+}
+
+const CATALOG_STAGES: &[SetStage] = &[SetStage::Shipped, SetStage::Held];
+const SHIPPED_STAGES: &[SetStage] = &[SetStage::Shipped];
+const SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::SinglePlayer];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
 /// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
-/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204).
-pub const CATALOG_SETS: [SetName; 7] = [
-    SetName::Core,
-    SetName::Classic,
-    SetName::ClassicPlus,
-    SetName::Meditative,
-    SetName::MeditativePlus,
-    SetName::Stinkyscape,
-    SetName::TrainingGrounds,
-];
+/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204). The set table's
+/// `Shipped` and `Held` rows, in its order (R3114000).
+pub const CATALOG_SETS: [SetName; count_in(CATALOG_STAGES)] = sets_in(CATALOG_STAGES);
 
 /// R1420: whether a set ships, i.e. whether `SHIPPED_SETS` lists it.
 pub fn set_ships(set: SetName) -> bool {
@@ -342,8 +404,8 @@ pub fn set_ships(set: SetName) -> bool {
 /// R1846001: the sets made for single-player modes (dungeon runs and their bosses, planned), reserved
 /// in `SetName` and holding no card yet. `SHIPPED_SETS` never lists one, so no deck holds its cards
 /// and no pool that names no set reaches them, but a catalog query's `everySet` ("every set,
-/// single-player ones too") does.
-pub const SINGLE_PLAYER_SETS: [SetName; 2] = [SetName::Boss, SetName::BossX];
+/// single-player ones too") does. The set table's `SinglePlayer` rows (R3114000).
+pub const SINGLE_PLAYER_SETS: [SetName; count_in(SINGLE_PLAYER_STAGES)] = sets_in(SINGLE_PLAYER_STAGES);
 
 /// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
 /// until the Meditative set shipped, Meditative until Meditative+ did, then whichever set ships
@@ -354,6 +416,45 @@ pub const SINGLE_PLAYER_SETS: [SetName; 2] = [SetName::Boss, SetName::BossX];
 pub fn newest_shipped_set() -> SetName {
     SHIPPED_SETS[SHIPPED_SETS.len() - 1]
 }
+
+/// R3114000: a set's row of the set table.
+pub const fn set_row(set: SetName) -> &'static SetRow {
+    &SET_TABLE[set as usize]
+}
+
+/// R3114001: the most of a set's `cards` non-token cards the shadow ban may hold, its share of
+/// them rounded down; `None` for a set whose cards it holds none of.
+pub fn shadow_ban_ceiling(set: SetName, cards: usize) -> Option<usize> {
+    set_row(set)
+        .shadow_ban_share
+        .map(|(part, whole)| cards * part / whole)
+}
+
+/// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
+/// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
+/// deck and on no list a player reads until it is (R1420). The set table's `Shipped` rows, in its
+/// order (R3114000).
+pub const SHIPPED_SETS: [SetName; count_in(SHIPPED_STAGES)] = sets_in(SHIPPED_STAGES);
+
+// The set table (#3114, R3114000): one row per set, every fact the code reads per set. It sits
+// directly under `SHIPPED_SETS` and closes with a `];` of its own line: the sweep workflow
+// (`.github/workflows/sweep.yml`, R1678000) compares this file's lines from `pub const
+// SHIPPED_SETS` to the first `];` between a push's base and its head, to see whether a set
+// shipped. Rows are only appended, never moved or removed: a row's place is its set's place in
+// `SetName`, in the catalog order (R1420) and in the deck codes' card numbers (R1410). A set is
+// added as a `Held` row and ships when its row says `Shipped`.
+set_table![
+    Core = "Core" { stage: Shipped, segment: "core", abbreviation: None, shadow_ban_share: None },
+    Classic = "Classic" { stage: Shipped, segment: "classic", abbreviation: Some("C"), shadow_ban_share: None },
+    ClassicPlus = "Classic+" { stage: Shipped, segment: "classicplus", abbreviation: Some("C+"), shadow_ban_share: None },
+    Meditative = "Meditative" { stage: Shipped, segment: "meditative", abbreviation: Some("M"), shadow_ban_share: Some((1, 2)) },
+    MeditativePlus = "Meditative+" { stage: Shipped, segment: "meditativeplus", abbreviation: Some("M+"), shadow_ban_share: Some((1, 2)) },
+    Stinkyscape = "Stinkyscape" { stage: Shipped, segment: "stinkyscape", abbreviation: Some("S"), shadow_ban_share: Some((1, 5)) },
+    TrainingGrounds = "Training Grounds" { stage: Shipped, segment: "traininggrounds", abbreviation: Some("TG"), shadow_ban_share: Some((1, 2)) },
+    Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
+    BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
+    Custom = "Custom" { stage: Custom, segment: "custom", abbreviation: None, shadow_ban_share: None },
+];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
 /// set that ships, resolved when the deck is dealt (R1371), or one shipped set by name. No lean at all
@@ -1854,5 +1955,86 @@ mod tests {
                 "Snack", "Hustle", "Clout", "Spirit", "Chaos",
             ]
         );
+    }
+
+    // R3114000: the set table holds one row per set, in `SetName`'s order, each with its id segment.
+    #[test]
+    fn r3114000_the_set_table_holds_one_row_per_set_in_set_name_order() {
+        assert_eq!(SET_TABLE.len(), SetName::ALL.len());
+        for (at, set) in SetName::ALL.iter().enumerate() {
+            let row = set_row(*set);
+            assert_eq!(row.set, *set, "row {at}");
+            assert_eq!(SET_TABLE[at], *row, "row {at}");
+            let segment = set
+                .as_str()
+                .to_lowercase()
+                .replace('+', "plus")
+                .replace([' ', '-'], "");
+            assert_eq!(row.segment, segment, "{set}");
+        }
+        let mut segments: Vec<&str> = SET_TABLE.iter().map(|row| row.segment).collect();
+        segments.sort_unstable();
+        segments.dedup();
+        assert_eq!(segments.len(), SET_TABLE.len(), "two sets share a segment");
+    }
+
+    // R1420, R3114000: the lists read from the set table keep every set's place (appending a row
+    // leaves these prefixes as they are), so a seeded pick and an old game's replay stay the same.
+    #[test]
+    fn r1420_r3114000_every_set_keeps_its_place_in_the_catalog_order() {
+        use SetName::*;
+        assert_eq!(
+            CATALOG_SETS[..7],
+            [
+                Core,
+                Classic,
+                ClassicPlus,
+                Meditative,
+                MeditativePlus,
+                Stinkyscape,
+                TrainingGrounds
+            ]
+        );
+        assert_eq!(
+            SetName::ALL[..10],
+            [
+                Core,
+                Classic,
+                ClassicPlus,
+                Meditative,
+                MeditativePlus,
+                Stinkyscape,
+                TrainingGrounds,
+                Boss,
+                BossX,
+                Custom
+            ]
+        );
+        let shipped: Vec<SetName> = CATALOG_SETS
+            .iter()
+            .copied()
+            .filter(|set| set_row(*set).stage == SetStage::Shipped)
+            .collect();
+        assert_eq!(SHIPPED_SETS.to_vec(), shipped);
+        assert!(
+            CATALOG_SETS
+                .iter()
+                .all(|set| set_row(*set).stage != SetStage::Held || !set_ships(*set))
+        );
+        assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX]);
+        assert!(!CATALOG_SETS.contains(&Custom));
+    }
+
+    // R3114001: a set's shadow-ban ceiling is its share of its non-token cards, rounded down.
+    #[test]
+    fn r3114001_a_ban_ceiling_is_its_sets_share_of_its_cards_rounded_down() {
+        assert_eq!(shadow_ban_ceiling(SetName::Stinkyscape, 175), Some(35));
+        assert_eq!(shadow_ban_ceiling(SetName::Stinkyscape, 178), Some(35));
+        assert_eq!(shadow_ban_ceiling(SetName::Stinkyscape, 180), Some(36));
+        assert_eq!(shadow_ban_ceiling(SetName::Meditative, 102), Some(51));
+        assert_eq!(shadow_ban_ceiling(SetName::MeditativePlus, 31), Some(15));
+        assert_eq!(shadow_ban_ceiling(SetName::TrainingGrounds, 60), Some(30));
+        assert_eq!(shadow_ban_ceiling(SetName::Core, 100), None);
+        assert_eq!(shadow_ban_ceiling(SetName::Boss, 10), None);
     }
 }

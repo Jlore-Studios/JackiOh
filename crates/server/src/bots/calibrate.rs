@@ -16,13 +16,13 @@ use jackioh_engine::wire::PerPlayer;
 use jackioh_engine::{Action, PlayerId, Rng, Winner, seat_played_by, seat_to_act};
 
 use crate::actor::engine::{self, Pinned};
-use crate::bots::seat::{fallback_action, r188_forbidden};
 use crate::config::{
     BOT_CALIBRATION_BISECTIONS, BOT_CALIBRATION_FIT_ITERATIONS, BOT_CALIBRATION_MAX_ACTIONS,
     BOT_CALIBRATION_MAX_TURN_ACTIONS, BOT_CALIBRATION_PRIOR_GAMES, BOT_CALIBRATION_SEARCH_SPAN,
     BOT_STRENGTHS, BotStrength, GLICKO_SCALE,
 };
 use crate::db::store::{BotRow, Pilot, RatedGameRow};
+use jackioh_shared::host::bot::{fallback_action, r188_forbidden};
 
 /// R748000: the strength the others are measured against: the strongest, the last of `BOT_STRENGTHS`.
 pub const REFERENCE_STRENGTH: usize = BOT_STRENGTHS.len() - 1;
@@ -124,11 +124,11 @@ pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winne
         streams[home] = rng;
         let body = chosen
             .filter(|body| !r188_forbidden(body))
-            .or_else(|| fallback_action(pinned, &state, seat))?;
+            .or_else(|| engine::run_pinned(pinned, || fallback_action(&state, seat)))?;
         let action = Action::new(body, seat, format!("calibrate-{moves}"));
         let mut result = engine::reduce(pinned, &state, &action);
         if result.error.is_some() {
-            let body = fallback_action(pinned, &state, seat)?;
+            let body = engine::run_pinned(pinned, || fallback_action(&state, seat))?;
             result = engine::reduce(
                 pinned,
                 &state,

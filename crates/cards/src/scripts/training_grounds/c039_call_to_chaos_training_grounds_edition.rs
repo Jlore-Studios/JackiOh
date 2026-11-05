@@ -519,10 +519,13 @@ mod tests {
         #[test]
         fn r2200004_once_its_set_ships_the_call_to_chaos_pool_holds_this_card() {
             crate::register_all();
-            let pool: Vec<String> = catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
-                .iter()
-                .map(|def| def.id.clone())
-                .collect();
+            // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+            let pool: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
+                catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
+            })
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
             assert_eq!(pool, SHIPPED_EDITIONS.map(String::from).to_vec());
         }
     }

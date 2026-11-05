@@ -24,7 +24,7 @@ use crate::layers::unit_view;
 use crate::mana::{mana_event, push_mana_spent};
 use crate::params::{ParamValueOptions, param_decl_of, param_value};
 use crate::play_choices::{
-    DeclaredChoices, in_declared_order, play_choice_combinations, targeting_discards_required,
+    DeclaredChoices, PlayChoices, in_declared_order, play_choice_combinations, targeting_discards_required,
     why_declared_choices_refused,
 };
 use crate::preview::is_face_down;
@@ -554,7 +554,8 @@ fn opponent_may_activate(state: &GameState, card: &CardInstance, ability: Option
 
 /// R384: why `player` cannot activate that ability of that card right now, or `Ok` when they can.
 /// `ability` names one of several (B3.2 rule 5); none named is the card's only one. `legal_actions`
-/// lists an `activate` for exactly the abilities this answers `Ok` for (§10.2).
+/// lists an `activate` only of an ability this answers `Ok` for, once per action `offered_actions`
+/// keeps (§10.2, R3061000).
 pub fn why_cannot_activate_ability(
     state: &GameState,
     player: PlayerId,
@@ -692,51 +693,113 @@ pub fn activate_actions_for(state: &GameState, player: PlayerId, card: &CardInst
         if why_cannot_activate_ability(state, player, &card.id, Some(&decl.id)).is_err() {
             continue;
         }
-        let tribute_sets = unit_sets(
-            &tribute_units_for(state, player, card, &decl),
-            decl.cost.and_then(|cost| cost.tribute).unwrap_or(0).max(0),
-        );
-        let choices = play_choice_combinations(state, player, card, Some(&declared_of(&decl)));
-        for tributes in &tribute_sets {
-            for choice in &choices {
-                // B5 E5, R450, R682: one action, offered only when the targets' discards can be paid.
-                let targets: Vec<Selection> = choice.targets.clone().unwrap_or_default();
-                let modes: Vec<String> = choice.modes.clone().unwrap_or_default();
-                let owed = discards_owed(state, player, card, &decl, &targets, &modes);
-                if why_targeting_discards_unpayable(state, player, owed, &hand_picks(&targets)).is_err() {
+        out.extend(offered_actions(state, player, card, &decl));
+    }
+    out
+}
+
+/// R384, R3061000: what one ability that passed `why_cannot_activate_ability` offers: each Tribute set its
+/// cost may take crossed with each choice combination it declares (R90), less those whose targets'
+/// discards the hand cannot pay (B5 E5, R450, R682). The listing and the view's `usable` both read it.
+fn offered_actions(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    decl: &ActivationDecl,
+) -> Vec<ActivateAction> {
+    let mut out: Vec<ActivateAction> = Vec::new();
+    let tribute_sets = unit_sets(
+        &tribute_units_for(state, player, card, decl),
+        decl.cost.and_then(|cost| cost.tribute).unwrap_or(0).max(0),
+    );
+    let choices = play_choice_combinations(state, player, card, Some(&declared_of(decl)));
+    for tributes in &tribute_sets {
+        for choice in &choices {
+            // B5 E5, R450, R682: one action, offered only when the targets' discards can be paid.
+            let targets: Vec<Selection> = choice.targets.clone().unwrap_or_default();
+            let modes: Vec<String> = choice.modes.clone().unwrap_or_default();
+            let owed = discards_owed(state, player, card, decl, &targets, &modes);
+            if why_targeting_discards_unpayable(state, player, owed, &hand_picks(&targets)).is_err() {
+                continue;
+            }
+            let mut pushed = ActivateAction {
+                instance_id: card.id.clone(),
+                ability: Some(decl.id.clone()),
+                tributes: if tributes.is_empty() {
+                    None
+                } else {
+                    Some(tributes.clone())
+                },
+                targets: choice.targets.clone(),
+                modes: choice.modes.clone(),
+            };
+            // R1200: while a Mayor acts the activation carries no declared targets — the
+            // reducer draws them — so collapsed choices list one action, not one per target set.
+            if crate::random_targets::targets_random(state) {
+                pushed.targets = crate::play_choices::without_target_picks(
+                    state,
+                    player,
+                    card,
+                    &declared_of(decl).targets,
+                    &targets,
+                    &modes,
+                );
+                if out.contains(&pushed) {
                     continue;
                 }
-                let mut pushed = ActivateAction {
-                    instance_id: card.id.clone(),
-                    ability: Some(decl.id.clone()),
-                    tributes: if tributes.is_empty() {
-                        None
-                    } else {
-                        Some(tributes.clone())
-                    },
-                    targets: choice.targets.clone(),
-                    modes: choice.modes.clone(),
-                };
-                // R1200: while a Mayor acts the activation carries no declared targets — the
-                // reducer draws them — so collapsed choices list one action, not one per target set.
-                if crate::random_targets::targets_random(state) {
-                    pushed.targets = crate::play_choices::without_target_picks(
-                        state,
-                        player,
-                        card,
-                        &declared_of(&decl).targets,
-                        &targets,
-                        &modes,
-                    );
-                    if out.contains(&pushed) {
-                        continue;
-                    }
-                }
-                out.push(pushed);
             }
+            out.push(pushed);
         }
     }
     out
+}
+
+/// R3061000: why an ability that passed `why_cannot_activate_ability` has no `activate` listed, in the
+/// reducer's words: `why_activate_refused` on each choice combination, carrying the first Tribute set,
+/// the first refusal said; with no combination (a required pick the board cannot answer, R703) on the
+/// ability sent with no picks and its modes' first options. `None` when the reducer accepts one.
+fn why_no_action_listed(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    decl: &ActivationDecl,
+) -> Option<String> {
+    let tributes: Option<Vec<String>> = unit_sets(
+        &tribute_units_for(state, player, card, decl),
+        decl.cost.and_then(|cost| cost.tribute).unwrap_or(0).max(0),
+    )
+    .into_iter()
+    .next()
+    .filter(|set| !set.is_empty());
+    let mut picks: Vec<PlayChoices> = play_choice_combinations(state, player, card, Some(&declared_of(decl)));
+    if picks.is_empty() {
+        let modes: Vec<String> = decl
+            .modes
+            .iter()
+            .filter_map(|mode| mode.options.first().cloned())
+            .collect();
+        picks.push(PlayChoices {
+            targets: None,
+            modes: (!decl.modes.is_empty()).then_some(modes),
+        });
+    }
+    let mut refusal: Option<String> = None;
+    for choice in picks {
+        let probe = ActivateAction {
+            instance_id: card.id.clone(),
+            ability: Some(decl.id.clone()),
+            targets: choice.targets,
+            modes: choice.modes,
+            tributes: tributes.clone(),
+        };
+        match why_activate_refused(state, player, &probe) {
+            Ok(()) => return None,
+            Err(error) => {
+                refusal.get_or_insert(error.message);
+            }
+        }
+    }
+    refusal
 }
 
 // Activating (B3.2 rules 3, 4, 6)
@@ -1099,7 +1162,8 @@ pub fn activate_ability(
 
 /// R384: the card's abilities as a client needs them, on the controller's own view of a card acting on
 /// the field and nowhere else; MD-D9: another viewer sees only those either player may use. `usable` is
-/// exactly whether `legal_actions` lists it.
+/// exactly whether `legal_actions` lists an `activate` of it (`offered_actions`), and `reason` is there
+/// exactly when it does not: the ability's own refusal, else `why_no_action_listed`'s (R3061000).
 pub fn activation_views_for(
     state: &GameState,
     viewer: PlayerId,
@@ -1121,9 +1185,15 @@ pub fn activation_views_for(
         abilities
             .iter()
             .map(|decl| {
-                let reason = why_cannot_activate_ability(state, viewer, &card.id, Some(&decl.id))
+                let gate = why_cannot_activate_ability(state, viewer, &card.id, Some(&decl.id))
                     .err()
                     .map(|error| error.message);
+                let usable = gate.is_none() && !offered_actions(state, viewer, card, decl).is_empty();
+                let reason = if usable {
+                    None
+                } else {
+                    gate.or_else(|| why_no_action_listed(state, viewer, card, decl))
+                };
                 let uses_left = match decl.uses {
                     ActivationUses::Unlimited => None,
                     ActivationUses::Count(_) => Some(
@@ -1134,7 +1204,7 @@ pub fn activation_views_for(
                     ability: decl.id.clone(),
                     label: decl.label.clone(),
                     uses_left,
-                    usable: reason.is_none(),
+                    usable,
                     reason,
                 }
             })

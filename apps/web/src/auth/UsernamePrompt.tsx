@@ -9,6 +9,7 @@ import { t } from "../i18n/i18n.ts";
 import { skipUsernamePrompt } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
+import { tokenMetadata } from "./claims.ts";
 import Username from "./Username.tsx";
 import UsernameField from "./UsernameField.tsx";
 import { shellTestid, usernameTestid } from "./testids.ts";
@@ -26,8 +27,25 @@ export type UsernamePromptProps = {
   onAnswered: () => void;
 };
 
+/** The provider's own username first (OIDC's `preferred_username`, Supabase's `user_name`), then its nickname. */
+const PROVIDER_USERNAME_CLAIMS = ["preferred_username", "user_name", "nickname"] as const;
+
+/**
+ * R3147003: the username the account's sign-in provider gave it (Roblox's, R3147000), which the prompt
+ * starts from. Read from the token's `user_metadata`, the user's own to edit, so it is only a first value:
+ * the server's preview and save judge it as any typed name.
+ */
+export function providerUsername(token: string): string {
+  for (const claim of PROVIDER_USERNAME_CLAIMS) {
+    const name = tokenMetadata(token, "user_metadata", claim)?.trim();
+    if (name !== undefined && name.length > 0) return name;
+  }
+  return "";
+}
+
 export default function UsernamePrompt({ token, name, onAnswered }: UsernamePromptProps): ReactElement {
   const leaving = useSigningOut();
+  const [suggested] = useState(() => providerUsername(token));
   const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // "You're Player#7 for now. …": split around the name, so English keeps the text nodes it had.
@@ -66,6 +84,7 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
         </p>
         <UsernameField
           token={token}
+          initial={suggested}
           disabled={skipping}
           onSaved={() => {
             onAnswered();

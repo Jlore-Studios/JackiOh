@@ -36,7 +36,7 @@ use crate::db::store::{
     DeckVersion, FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx,
     UpsertOutcome,
 };
-use crate::loadout::DeckSlots;
+use crate::loadout::{DeckSlots, DeckSlotsExt};
 use crate::seats::{Seat, Taken};
 
 // Ids
@@ -1096,43 +1096,6 @@ fn assert_legal(
         ApiErrorCode::LoadoutInvalid,
         first,
         Value::Array(errors),
-    ))
-}
-
-/// R915005: a deck with a custom card plays only in practice, so a path that starts a game from
-/// decks it does not judge again (a rematch replays the frozen decks, §9.4) still asks the shared
-/// validator its L7 and refuses as the queue does (`loadout_invalid`). L7 reads no catalog and no
-/// collection, so the check hands it neither and sets the other rules' verdicts aside.
-pub fn assert_no_custom_cards(decks: &[&[String]]) -> Result<(), ApiError> {
-    let mut issues: Vec<Value> = Vec::new();
-    for cards in decks {
-        let verdict = validator::validate_deck(&validator::DeckInput {
-            deck: validator::LoadoutDeck {
-                name: None,
-                cards: cards.to_vec(),
-            },
-            catalog: validator::CatalogSnapshot {
-                version: String::new(),
-                cards: Default::default(),
-                banned: None,
-            },
-            collection: Default::default(),
-        });
-        for error in verdict
-            .errors
-            .iter()
-            .filter(|error| error.rule == validator::LoadoutRule::L7)
-        {
-            issues.push(to_json(error)?);
-        }
-    }
-    let Some(first) = first_message(&issues) else {
-        return Ok(());
-    };
-    Err(ApiError::with_details(
-        ApiErrorCode::LoadoutInvalid,
-        first,
-        Value::Array(issues),
     ))
 }
 

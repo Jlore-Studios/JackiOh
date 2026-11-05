@@ -157,10 +157,13 @@ mod tests {
         #[test]
         fn r1828001_the_pool_is_the_thirteen_1_cost_ai_generated_cards() {
             crate::register_all();
-            let pool: Vec<String> = crate::query::query(&json_as(super::super::ai_cards(Some(POOL_COST))))
-                .iter()
-                .map(|def| def.id.clone())
-                .collect();
+            // The pool as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+            let pool: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
+                crate::query::query(&json_as(super::super::ai_cards(Some(POOL_COST))))
+            })
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
             assert_eq!(pool, ONE_COST.map(String::from).to_vec());
             assert!(ONE_COST.iter().all(|id| in_pool(id)));
         }

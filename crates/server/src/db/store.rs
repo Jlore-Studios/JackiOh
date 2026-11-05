@@ -27,8 +27,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::wire::{
-    Action, ActionType, CustomCard, CustomFrame, EmoteId, GameEventType, GameMode, GameOverReason,
-    GameRecord, LeanPick, ListTotal, PerPlayer, PlayerId, PortraitId, SourceFilter, StatsTotals, Winner,
+    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick, ListTotal,
+    PlayerId, PortraitId, SourceFilter, StatsTotals,
 };
 
 use super::{fake, pg};
@@ -99,28 +99,8 @@ pub type StoreResult<T> = Result<T, StoreError>;
 
 // Serde helpers and the string unions
 
-/// A field with three states — absent, `null`, a value — kept apart:
-/// `None` is absent, `Some(None)` is `null`, `Some(Some(x))` is `x`. Used with
-/// `#[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]`.
-pub(crate) mod absent_or_null {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    pub fn serialize<S: Serializer, T: Serialize>(
-        value: &Option<Option<T>>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        match value {
-            Some(inner) => inner.serialize(serializer),
-            None => serializer.serialize_none(),
-        }
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
-        deserializer: D,
-    ) -> Result<Option<Option<T>>, D::Error> {
-        Option::<T>::deserialize(deserializer).map(Some)
-    }
-}
+// `jackioh-shared`'s since #3098: its frozen decks are the one that uses it.
+pub(crate) use jackioh_shared::absent_or_null;
 
 /// A string-literal union as a Rust enum: one unit variant per literal, serialized as exactly that
 /// literal, with `as_str` (the text the wire, a SQL column or a function holds), `FromStr`, `Display`
@@ -558,58 +538,6 @@ pub fn deck_version_step(
     }
 }
 
-// Custom cards on the account (SPEC §12.9, R915008; migration 0037). Private to their owner: a
-// profile reads its own and the server alone writes them, each checked by the engine's validator
-// (R915001) first. The store counts the versions: a create is version 1, and an update names the
-// version it replaces and is refused when another save came first.
-
-/// R915008: one custom card as its owner's account keeps it: the engine's `CustomCard` and when it
-/// was made and last saved.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SavedCustomCard {
-    pub profile_id: String,
-    pub card: CustomCard,
-    pub created_at: i64,
-    pub updated_at: i64,
-}
-
-/// R915008: what a create or an update writes: a custom card but its version, which the store
-/// counts (§12.1).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CustomCardWrite {
-    /// `custom-…` (R915000), minted by the server at the first save.
-    pub id: String,
-    pub profile_id: String,
-    pub frame: CustomFrame,
-    pub source: String,
-    pub builder: Option<Value>,
-    /// Epoch ms: `updated_at`, and `created_at` too on a create.
-    pub at: i64,
-}
-
-store_union! {
-    /// R915008: what a create did: `created` (at version 1), or `limit` — the profile already holds
-    /// its cap of cards (`CUSTOM_CARDS_PER_ACCOUNT`) and nothing was written.
-    pub enum CustomCardCreateOutcome {
-        Created = "created",
-        Limit = "limit",
-    }
-}
-
-store_union! {
-    /// R915008: what an update did: `updated` (the card replaced whole, its version counted),
-    /// `stale` (its version is no longer the one the save replaces: another save came first) or
-    /// `missing` (the profile has no card with that id; another profile's card answers the same).
-    /// Nothing is written unless `updated`.
-    pub enum CustomCardUpdateOutcome {
-        Updated = "updated",
-        Stale = "stale",
-        Missing = "missing",
-    }
-}
-
 // Queue modes (SPEC §9.5, R257) and what a ticket or a room freezes.
 
 store_union! {
@@ -651,28 +579,9 @@ impl<T> IndexMut<QueueMode> for PerMode<T> {
     }
 }
 
-/// One deck as a match or a series freezes it: the cards and the name the player gave them. `portrait`
-/// freezes the deck's hero portrait with them (R642), and R1834002's `slots` its playmat, backdrop and card
-/// back; each is absent on rows frozen before it existed or on a deck that carried none, and absence stays
-/// absent (a missing `portrait` reads as `vanilla` downstream).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct FrozenDeck {
-    pub name: String,
-    pub cards: Vec<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
-    pub portrait: Option<Option<String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub slots: Option<DeckSlots>,
-}
-
-/// R259: a Conquest player's trio, frozen at enqueue (or at room create/join).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct FrozenTrio {
-    pub name: String,
-    pub decks: (FrozenDeck, FrozenDeck, FrozenDeck),
-}
+/// A deck and a trio as a match or a series freezes them (R259, R642, R1834002): `jackioh-shared`'s
+/// since #3098, which the series rules read.
+pub use jackioh_shared::deck::{FrozenDeck, FrozenTrio};
 
 // Matches
 
@@ -780,18 +689,9 @@ pub struct ReplayWithMode {
     pub mode: Option<QueueMode>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct MatchClocks {
-    /// Epoch ms the active player's turn clock expires, or null while it is paused.
-    pub turn_deadline: Option<i64>,
-    /// Epoch ms the open prompt's own clock expires (R79), or null.
-    pub prompt_deadline: Option<i64>,
-    /// Per-player disconnect grace deadlines (§9.5).
-    pub grace_deadline: PerPlayer<Option<i64>>,
-    /// Epoch ms the hard ceiling is reached (R79).
-    pub ceiling_at: i64,
-}
+// The deadlines both clients render and `matches.clocks` stores: the match host's (#3101), whose clock
+// states them.
+pub use jackioh_shared::host::clock::MatchClocks;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -982,128 +882,21 @@ pub struct BatchFolded {
 }
 
 // The Conquest series (SPEC §9.5, R330–R338, R262–R264). One row per series, persisted so a series
-// survives a server restart; every transition is a pure function in `api/series_rules.rs` written
-// back with `series_update`.
+// survives a server restart. The row types and every transition over them are `jackioh_shared::series`'s
+// (#3098); `series_update` writes each next row back.
 
-/// A series seat. Index 0 of `SeriesRow.sides` is `p1`; it is not the seat a game's match uses.
-pub type SeriesSeat = PlayerId;
-
-store_union! {
-    /// `picking` — both players are choosing the next game's deck (R331, R333);
-    /// `playing` — the game `next_match_id` names is being played (or about to be started);
-    /// `over` — decided, played out, forfeited or abandoned (R334).
-    pub enum SeriesStatus {
-        Picking = "picking",
-        Playing = "playing",
-        Over = "over",
-    }
-}
-
-store_union! {
-    /// Why a series ended (R334): a side won with every deck, `SERIES_WINS_NEEDED` wins
-    /// (`decided`, R330); `SERIES_MAX_GAMES` were played without that (`exhausted`); a side left
-    /// between games (`forfeit`); or neither side picked before the pick clock ran out, or a game
-    /// could not be started (`abandoned`, unrated, R333, R263).
-    pub enum SeriesEnd {
-        Decided = "decided",
-        Exhausted = "exhausted",
-        Forfeit = "forfeit",
-        Abandoned = "abandoned",
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeriesGame {
-    /// 1-based.
-    pub game_no: i64,
-    pub match_id: String,
-    /// The trio slot each side played, index 0 being series `p1`.
-    pub slots: (i64, i64),
-    /// Which side went first — was the match's `p1` (R335: odd games p1, even games p2).
-    pub first: SeriesSeat,
-    /// Null while the game is being played.
-    pub winner: Option<Winner>,
-    pub reason: Option<GameOverReason>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeriesSide {
-    pub profile_id: String,
-    pub trio: FrozenTrio,
-    /// Games this side has won. Each win locks the deck it was won with (R330), so this is also
-    /// how many of its decks have won; which ones is read off `games`.
-    pub wins: i64,
-    /// The trio slot this side picked for the next game, or null. Sealed: final once in, and
-    /// hidden from the other side until both have picked (R331): it leaves the server only in its
-    /// owner's projection. Set by the server when one deck is left (R332).
-    pub pick: Option<i64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeriesRow {
-    pub id: String,
-    pub sides: (SeriesSide, SeriesSide),
-    pub catalog_version: String,
-    /// R604: a series the queue paired is ranked and moves the rating when it ends; a room's is
-    /// not. Carried on `series.ranked` (migration 0022), a false flag read back as an absent one.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ranked: Option<bool>,
-    /// Each game's seed is `{seed_base}:{game_no}` (R335). The server mints it; R143's e2e
-    /// override feeds it.
-    pub seed_base: String,
-    pub status: SeriesStatus,
-    pub games: Vec<SeriesGame>,
-    /// The match id of the game being picked for or played. Minted when the pick phase opens — for
-    /// game 1, when the series is made — so a restart finds the same id (R263).
-    pub next_match_id: String,
-    /// Epoch ms the pick phase closes (R333); null outside it.
-    pub pick_deadline: Option<i64>,
-    pub winner: Option<Winner>,
-    pub end_reason: Option<SeriesEnd>,
-    /// R262: the one rating move a series makes, recorded when it ends; null until then, when
-    /// abandoned and for an unranked series (R604).
-    pub rating_before: Option<(f64, f64)>,
-    pub rating_after: Option<(f64, f64)>,
-    pub created_at: i64,
-    pub updated_at: i64,
-    pub ended_at: Option<i64>,
-    /// Optimistic concurrency: `series_update` writes only over the version before this one.
-    pub version: i64,
-}
+pub use jackioh_shared::series::{SeriesEnd, SeriesGame, SeriesRow, SeriesSeat, SeriesSide, SeriesStatus};
+// A ladder bot's decks and a new bot are `jackioh-shared`'s (#3103): the pool's decisions draw them, pure.
+pub use jackioh_shared::bots::pool::{BotDeck, NewBot};
 
 // The ranked ladder (SPEC §9.12, R603–R612): seasons, each player's season on the ladder, the bots'
 // ratings, and the record of every rated game. The rules are `ranked/*`, pure; `api/ranked.rs`
 // reads and writes through this port.
 
-/// R609: a season, named by the minor version of the game (`v0.2`), and the patch that opened it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Season {
-    pub id: String,
-    pub patch_version: String,
-    pub started_at: i64,
-}
-
-/// One player's season row with their current hidden rating: what percentiles and Jlorious read.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeasonStanding {
-    #[serde(flatten)]
-    pub rank: SeasonRank,
-    pub rating: f64,
-    /// R640000: a ladder bot's row; never serialized when false. Jlorious and the percentiles read
-    /// the rows without it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub bot: bool,
-    /// R3074001: the player holds a hand-set rating on this ladder (migration 0080's
-    /// `hand_set_ratings`); never serialized when false. On a strict server (`DEV_STRICT`) the public
-    /// ladder, the percentiles and Jlorious read the rows without it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub hand_set: bool,
-}
+/// R609: a season and the patch that opened it, and one player's season row with their current hidden
+/// rating (what percentiles and Jlorious read): `jackioh-shared`'s (#3105), which decides over them.
+pub use jackioh_shared::ranked::board::SeasonStanding;
+pub use jackioh_shared::ranked::season::Season;
 
 /// R610: an AI bot's own Glicko-2 rating. Its ladder rank is a season row like a person's, read
 /// against people's ratings and never in Jlorious (R640000).
@@ -1121,18 +914,6 @@ pub struct BotRating {
     /// for a row not rated since R1560000 (migration 0052).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ai_generation: Option<i64>,
-}
-
-/// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
-/// R1834005: and the slots it wears it with, drawn as a person's deck's (`bots::cosmetics`); absent
-/// on a deck dealt since the bot last drew its loadout, which the pool's next refresh draws.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BotDeck {
-    pub cards: Vec<String>,
-    pub portrait: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub slots: Option<DeckSlots>,
 }
 
 /// R1453, R1454, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
@@ -1232,23 +1013,6 @@ pub struct LoadoutSample {
     pub loadout: Loadout,
 }
 
-/// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
-/// `bot_ratings` row starts at (R610), with a new player's deviation and volatility.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct NewBot {
-    pub profile_id: String,
-    pub strength: usize,
-    pub speed: f64,
-    pub persona: PersonaName,
-    pub active_from_hour: i32,
-    pub active_hours: i32,
-    pub decks: Vec<BotDeck>,
-    pub decks_catalog_version: Option<String>,
-    pub created_at: i64,
-    pub seed_rating: f64,
-}
-
 /// R611: one side of a rated game, as recorded.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1272,13 +1036,8 @@ store_union! {
     }
 }
 
-/// How a rated game ended: the match's reason, or the series' (R334), whose literals are disjoint.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum RatedReason {
-    Game(GameOverReason),
-    Series(SeriesEnd),
-}
+/// How a rated game ended: the match's reason, or the series' (R334): `jackioh-shared`'s (#3105).
+pub use jackioh_shared::ranked::game::RatedReason;
 
 /// R611: the record of one rated game: a ranked match, or a ranked series, which is rated once as
 /// a whole (R262). Kept for good (account deletion empties a side's `profile_id`, as for
@@ -1624,21 +1383,7 @@ pub struct PlayTelemetry {
 // Live matches: what `queue.rs`, the room endpoints, the series and the rematch hand
 // `actor::registry::Registry::start`.
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct MatchSeat {
-    pub profile_id: String,
-    pub player: PlayerId,
-    pub deck: Vec<String>,
-    /// R642: the portrait dealt to this seat at match creation. Absent reads as `vanilla`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub portrait: Option<String>,
-    /// R1834002: the slots of the deck this seat plays, frozen with it (a ticket's, a room's, a
-    /// trio's picked deck's, a bot's); absent for none, and for an All Random seat, which wears the
-    /// account's.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub deck_slots: Option<DeckSlots>,
-}
+pub use jackioh_shared::deck::MatchSeat;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1852,9 +1597,9 @@ impl Tx<'_> {
         dispatch!(self, profiles_seated())
     }
 
-    /// Deletes the profile and everything only its own: collection and ledger, decks, trios, custom cards
-    /// (R915008), tutorial progress, age check and terms acceptances (R757000, R757001), queue tickets,
-    /// rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches,
+    /// Deletes the profile and everything only its own: collection and ledger, decks, trios, tutorial
+    /// progress, age check and terms acceptances (R757000, R757001), queue tickets, rooms it opened
+    /// that nobody joined, and its invite-code attempts' link to it. Finished matches,
     /// results and series stay for the other player, its seat left empty (migration 0012), as finished
     /// co-op matches do for the teammate (migration 0051, R1497000). False when there was no such profile.
     /// The caller refuses a profile in a live match, series or co-op match first.
@@ -2041,51 +1786,6 @@ impl Tx<'_> {
 
     pub async fn trios_remove(&mut self, profile_id: &str, trio_id: &str) -> StoreResult<bool> {
         dispatch!(self, trios_remove(profile_id, trio_id))
-    }
-
-    // custom cards (R915008, migration 0037)
-
-    /// R915008: a profile's custom cards, oldest first: `created_at`, then `id`.
-    pub async fn custom_cards_list(&mut self, profile_id: &str) -> StoreResult<Vec<SavedCustomCard>> {
-        dispatch!(self, custom_cards_list(profile_id))
-    }
-
-    /// R915008: the profile's own card with this id, or none; another profile's card is none.
-    pub async fn custom_cards_get(
-        &mut self,
-        profile_id: &str,
-        card_id: &str,
-    ) -> StoreResult<Option<SavedCustomCard>> {
-        dispatch!(self, custom_cards_get(profile_id, card_id))
-    }
-
-    /// R915008: a new card at version 1, `created_at` and `updated_at` both `card.at`; `limit` when
-    /// the profile already holds `max_cards`, counted under a lock on the profile so two creates at
-    /// once cannot both pass it (`app.create_custom_card`, migration 0037). An id already held is an
-    /// error: the server mints 128 random bits.
-    pub async fn custom_cards_create(
-        &mut self,
-        card: &CustomCardWrite,
-        max_cards: i64,
-    ) -> StoreResult<CustomCardCreateOutcome> {
-        dispatch!(self, custom_cards_create(card, max_cards))
-    }
-
-    /// R915008: replaces the frame, source and builder of the profile's own card whose version is
-    /// still `replaces`, counting the save (`replaces + 1`) and stamping `updated_at` (its
-    /// `created_at` is kept); `stale` or `missing` otherwise (`app.update_custom_card`).
-    pub async fn custom_cards_update(
-        &mut self,
-        card: &CustomCardWrite,
-        replaces: i32,
-    ) -> StoreResult<CustomCardUpdateOutcome> {
-        dispatch!(self, custom_cards_update(card, replaces))
-    }
-
-    /// R915008: deletes the profile's own card. False when the profile has no card with this id.
-    /// The decks that name it keep naming it (§12.9).
-    pub async fn custom_cards_remove(&mut self, profile_id: &str, card_id: &str) -> StoreResult<bool> {
-        dispatch!(self, custom_cards_remove(profile_id, card_id))
     }
 
     // matches

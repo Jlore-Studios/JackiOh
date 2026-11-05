@@ -25,7 +25,6 @@ use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, 
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::api::practice::{Swept, sweep_unsettled};
 use jackioh_server::app::{App, now_ms, serve_until};
-use jackioh_server::bots::seat::r188_forbidden;
 use jackioh_server::config::{
     JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS,
     PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
@@ -43,6 +42,7 @@ use jackioh_server::economy::store::{
     PracticeSeed, PracticeSettled, PracticeSetup, QuestChange, QuestGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
+use jackioh_shared::host::bot::r188_forbidden;
 
 use crate::support::deps::{RecordingLogger, add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};
@@ -1869,6 +1869,10 @@ struct Fixture {
 
 #[tokio::test]
 async fn r1303002_r2560000_the_game_the_worker_played_folds_and_pays() {
+    // A recorded game: the browser dealt it from the pools as they are (`practice-claim.json`, a random
+    // deck), so it folds only on them, not as the pool probe (#3117) rotates them, and it is re-recorded
+    // by `claim.test.ts` when a card joins a pool. The hold goes to the blocking jobs the claim runs.
+    let _unshifted = jackioh_engine::testkit::hold_pool_shift(0);
     let fixture: Fixture = serde_json::from_str(include_str!("../fixtures/practice-claim.json"))
         .expect("the fixture is a practice claim");
     let setup = PracticeSetup {
