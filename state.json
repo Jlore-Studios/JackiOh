@@ -15464,12 +15464,13 @@
     "what": "review #3174 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-05T11:08:31Z",
+    "at": "2026-11-05T11:21:04Z",
     "notes": [
-      "started revise #3157 on claude-8 (run 42016780383)",
-      "started review #3165 on claude-4 (run 42017305812)",
-      "another planner took the planning lock: the next tick plans",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered build #3162 on claude-6 (run 42010949915): built",
+      "delivered revise #3153 on claude-6 (run 42006319996): built",
+      "started review #3153 on claude-6 (run 42018711629)",
+      "started review #3174 on claude-6 (run 42018803802)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16175,7 +16176,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-05T11:08:31Z",
+  "loop_tick": "2026-11-05T11:21:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
