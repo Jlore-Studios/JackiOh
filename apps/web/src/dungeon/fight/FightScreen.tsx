@@ -38,6 +38,7 @@ import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
 import { guardLeaving } from "../../net/navigate.ts";
+import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
 import { useSetting } from "../../settings/store.ts";
 import { runFightSetup } from "../../wasm/index.ts";
@@ -62,10 +63,6 @@ type Report = { controller: PracticeController } & ({ action: RunAction } | { er
 
 function defaultHostFactory(): PracticeHost {
   return createPracticeHost();
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /** The setup, loading and failure screens are practice's reading column; the fight is its full-width board. */

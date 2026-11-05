@@ -20,7 +20,7 @@ import { BackLink } from "../../routes/nav.tsx";
 import { runCheckSetup, runConstants, runDailySeed, runLevelCost } from "../../wasm/index.ts";
 import { DUNGEON_FIRST_LEVEL, DUNGEON_LEVEL_STEP } from "../config.ts";
 import { isTypedSeed, randomSeed, seedLength, todayDate } from "../seed.ts";
-import { dailyRunNumber, runFinished, type Dungeon } from "../store.ts";
+import { cursePointsOf, dailyRunNumber, runFinished, type Dungeon } from "../store.ts";
 import { dungeonTestid } from "../testids.ts";
 import "../dungeon.css";
 
@@ -211,7 +211,7 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
 
   const pointsOf = (tier: RunTier | null): number => constants.tierPoints.find(([name]) => name === tier)?.[1] ?? 0;
   const relicPoints = taken.reduce((sum, id) => sum + pointsOf(relics.find((relic) => relic.id === id)?.tier ?? null), 0);
-  const cursePoints = curses.reduce((sum, id) => sum + (content.curses.find((curse) => curse.id === id)?.points ?? 0), 0);
+  const cursePoints = cursePointsOf(curses, content);
 
   const setup = useMemo<RunSetup>(() => ({ seed, starter: cards, artifacts: taken, curses }), [seed, cards, taken, curses]);
   const refusal = useMemo(() => (seedUsable ? runCheckSetup(setup, unlocks, content) : null), [seedUsable, setup, unlocks, content]);
