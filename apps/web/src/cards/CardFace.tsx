@@ -71,6 +71,10 @@
 // mark (R503) large, faint and in one ink (`.cf-watermark`, an `img` with no text, setMark.ts `watermarkOf`).
 // Glitch, a face with no box (compact, full art), a set with no symbol and the Set watermarks setting off print
 // none. It takes no pointer, so the text keeps its contrast and tooltip, and hides with the box.
+//
+// R3013002: the face wears its card's proficiency stamp (stamps.ts): the account's pick on the viewer's own copy
+// (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
+// of every part, base and Radiant alike.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -110,6 +114,8 @@ import {
   augmentsOf,
   isFullBleed,
 } from "./versions.ts";
+import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
+import { useCardStamp } from "./stamps.ts";
 
 import "./cards.css";
 import "./setmark.css";
@@ -351,6 +357,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
   // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
   const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil && !lazyArt);
+  const stamp = useCardStamp(face, worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -486,6 +493,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
         {!glitch && !bare && <SetMarkBadge set={face.set} />}
 
         <CardStates face={face} />
+
+        {stamp !== null && <ProficiencyStamp level={stamp} />}
 
         {!fullArt && <span className="card-type">{glitch ? GLITCH_WORDS.type : typeLine(face)}</span>}
 
