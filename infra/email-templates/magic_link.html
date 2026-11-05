@@ -1,0 +1,8 @@
+<h2>Your sign-in link</h2>
+
+<p>Follow the link below in the browser you asked from to sign in. It opens JackiOh, where one more press signs you in. It expires shortly and works once.</p>
+<p><a href="{{ .SiteURL }}/login?token_hash={{ .TokenHash }}&type=magiclink">Sign in</a></p>
+
+<p>Or type this code: <strong>{{ .Token }}</strong></p>
+
+<p>If you didn't ask to sign in, you can safely ignore this email.</p>

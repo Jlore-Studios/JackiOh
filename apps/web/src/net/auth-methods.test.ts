@@ -22,6 +22,9 @@ import {
   signInWithGoogleIdToken,
   verifyEmailCode,
   verifySecondFactor,
+  identityLinkUrl,
+  listIdentities,
+  unlinkIdentity,
 } from "./auth.ts";
 
 const URL_ = "https://project.supabase.co";
@@ -415,5 +418,74 @@ describe("R2983000 Google's ID token, from Google's own button", () => {
       expect((await refusal(signInWithGoogleIdToken(idToken, nonce))).failure).toBe("oauthFailed");
     }
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("R3025000 linking a provider to the signed-in account", () => {
+  const SESSION_TOKEN = tokenWith({ sub: "user-1", aal: "aal1" });
+
+  it("R3025000 lists the account's ways in from its user record", async () => {
+    const calls = serve(200, {
+      identities: [
+        { identity_id: "id-email", provider: "email" },
+        { identity_id: "id-google", provider: "google" },
+        { provider: "github" },
+      ],
+    });
+    expect(await listIdentities(SESSION_TOKEN)).toEqual([
+      { id: "id-email", provider: "email" },
+      { id: "id-google", provider: "google" },
+    ]);
+    expect(calls[0]?.url.pathname).toBe("/auth/v1/user");
+    expect(calls[0]?.headers.get("authorization")).toBe(`Bearer ${SESSION_TOKEN}`);
+
+    serve(401, { error_code: "bad_jwt" });
+    expect((await refusal(listIdentities(SESSION_TOKEN))).failure).toBe("sessionEnded");
+  });
+
+  it("R3025000 asks for the provider's page with the session, a challenge of its own flow and the /login return", async () => {
+    const calls = serve(200, { url: "https://accounts.google.com/o/oauth2/v2/auth?x=1" });
+    expect(await identityLinkUrl("google", SESSION_TOKEN)).toBe("https://accounts.google.com/o/oauth2/v2/auth?x=1");
+    const call = calls[0];
+    expect(call?.method).toBe("GET");
+    expect(call?.url.pathname).toBe("/auth/v1/user/identities/authorize");
+    expect(call?.headers.get("authorization")).toBe(`Bearer ${SESSION_TOKEN}`);
+    expect(call?.url.searchParams.get("provider")).toBe("google");
+    expect(call?.url.searchParams.get("skip_http_redirect")).toBe("true");
+    expect(call?.url.searchParams.get("redirect_to")).toBe(`${window.location.origin}/login`);
+    const kept = storedVerifiers().find((entry) => entry.flow === "link");
+    expect(await challengeFor(kept?.verifier ?? "")).toBe(call?.url.searchParams.get("code_challenge"));
+  });
+
+  it("R3025000 a project without linking, or an account linked elsewhere, reads linkRefused and keeps no verifier", async () => {
+    for (const code of ["manual_linking_disabled", "identity_already_exists"]) {
+      serve(422, { error_code: code });
+      expect((await refusal(identityLinkUrl("google", SESSION_TOKEN))).failure, code).toBe("linkRefused");
+      expect(storedVerifiers().map((entry) => entry.flow), code).not.toContain("link");
+    }
+    serve(200, { url: "javascript:alert(1)" });
+    expect((await refusal(identityLinkUrl("google", SESSION_TOKEN))).failure).toBe("service");
+    serve(429, {});
+    expect((await refusal(identityLinkUrl("google", SESSION_TOKEN))).failure).toBe("rateLimited");
+  });
+
+  it("R3025000 is never started without PKCE", async () => {
+    vi.stubGlobal("crypto", { getRandomValues: (bytes: Uint8Array) => bytes, subtle: undefined });
+    const calls = serve(200, { url: "https://accounts.google.com/" });
+    expect((await refusal(identityLinkUrl("google", SESSION_TOKEN))).failure).toBe("oauthUnavailable");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("R3025000 unlinking deletes the identity with the session's token, and the last way in reads lastIdentity", async () => {
+    const calls = serve(200, {});
+    await unlinkIdentity(SESSION_TOKEN, "id/google");
+    expect(calls[0]?.method).toBe("DELETE");
+    expect(calls[0]?.url.pathname).toBe("/auth/v1/user/identities/id%2Fgoogle");
+    expect(calls[0]?.headers.get("authorization")).toBe(`Bearer ${SESSION_TOKEN}`);
+
+    serve(422, { error_code: "single_identity_not_deletable" });
+    expect((await refusal(unlinkIdentity(SESSION_TOKEN, "id-google"))).failure).toBe("lastIdentity");
+    serve(500, {});
+    expect((await refusal(unlinkIdentity(SESSION_TOKEN, "id-google"))).failure).toBe("service");
   });
 });

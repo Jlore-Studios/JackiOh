@@ -105,8 +105,11 @@ jobs:
         run: sh scripts/build-wasm.sh
       - name: the e2e client
         run: pnpm build:e2e
+      # R3074000: the dev dashboard's e2e client, which spec 49 drives on :5174.
+      - name: the dev dashboard's e2e client
+        run: pnpm --dir apps/admin build:e2e
       - name: pack them
-        run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist
+        run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist apps/admin/dist
       - uses: actions/upload-artifact@v4
         with:
           name: web-build

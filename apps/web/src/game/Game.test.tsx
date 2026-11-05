@@ -1,13 +1,15 @@
 // Game.tsx's integration-QA findings: the moves of a view the board is not showing yet, the
 // game-over state (Result.tsx), and animations that played twice.
 
+import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { StrictMode, type ReactElement } from "react";
+import { StrictMode, useState, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
+import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
@@ -549,5 +551,170 @@ describe("a half-built play or attack is dropped at the turn change (#2924)", ()
 
     rerender(<Game view={{ ...first, clockMs: 59000, pending: null }} legal={[attack]} onAction={onAction} />);
     expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+  });
+});
+
+describe("R3060000 a repeat of one intent against one view is sent once", () => {
+  const clickEndTurn = () => fireEvent.click(screen.getByTestId("end-turn"));
+
+  it("R3060000 two End turn clicks against one view send one endTurn, and a new view lets the next through", () => {
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={baseView()} legal={[END_TURN]} onAction={onAction} />);
+
+    clickEndTurn();
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(END_TURN);
+
+    rerender(<Game view={baseView()} legal={[END_TURN]} onAction={onAction} />);
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(2);
+
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("R3060000 a refusal or an offline send releases the guard, and the error line clearing does not", () => {
+    const onAction = vi.fn();
+    const view = baseView();
+    const board = (error: string | null) => <Game view={view} legal={[END_TURN]} onAction={onAction} error={error} />;
+    const { rerender } = render(board(null));
+
+    clickEndTurn();
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(1);
+
+    // A refusal arrives against the same view: the retry goes through, and its double click is one send.
+    rerender(board("It is not your turn"));
+    clickEndTurn();
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(2);
+
+    // net.ts clears the line on every send; that is no refusal, so the repeat stays dropped.
+    rerender(board(null));
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(2);
+
+    // An offline send is an error too.
+    rerender(board("not connected to the match"));
+    clickEndTurn();
+    expect(onAction).toHaveBeenCalledTimes(3);
+  });
+
+  it("R3060000 a double-tapped one-tap choice sends one answer, a different answer still goes, and a new view lets the same one go again", () => {
+    const onAction = vi.fn();
+    const asking = () =>
+      baseView({
+        pending: pendingFor(
+          "answer",
+          ["A", "B", "C", "D"].map((label) => ({ key: `mode:${label}`, label })),
+          { prompt: "482 − 197 = ?" },
+        ),
+      });
+    const answer = (option: string): ActionBody => ({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "mode", option }],
+    });
+    const board = (view: PlayerView) => (
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <Game view={view} legal={[]} onAction={onAction} />
+      </CatalogContext.Provider>
+    );
+    const tap = (option: string) => fireEvent.click(screen.getByTestId(`prompt-option-mode:${option}`));
+    const first = asking();
+    const { rerender } = render(board(first));
+
+    tap("B");
+    tap("B");
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(answer("B"));
+
+    tap("C");
+    expect(onAction).toHaveBeenCalledTimes(2);
+    expect(onAction).toHaveBeenLastCalledWith(answer("C"));
+
+    rerender(board(asking()));
+    tap("B");
+    expect(onAction).toHaveBeenCalledTimes(3);
+    expect(onAction).toHaveBeenLastCalledWith(answer("B"));
+  });
+
+  it("R3060000 a double-pressed mulligan Ready sends one mulligan", () => {
+    const onAction = vi.fn();
+    const hand = [
+      card({ instanceId: "h1", defId: "core-002" }),
+      card({ instanceId: "h2", defId: "core-019" }),
+      card({ instanceId: "h3", defId: "core-004" }),
+    ];
+    const view = baseView({
+      turn: 0,
+      phase: "mulligan",
+      you: emptySide("p1", { hand }),
+      opponent: emptySide("p2", { hand: { count: 4 } }),
+      pending: pendingFor(
+        "mulligan",
+        hand.map((c) => ({ key: c.instanceId, label: c.defId, instanceId: c.instanceId })),
+        { min: 0, max: hand.length, prompt: "Choose the cards to keep; the rest are returned and redrawn" },
+      ),
+      mulligan: { youReady: false, opponentReady: false },
+    });
+    render(
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <Game view={view} legal={[]} onAction={onAction} />
+      </CatalogContext.Provider>,
+    );
+
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith({ type: "mulligan", keep: ["h1", "h2", "h3"] });
+  });
+
+  it("R3060000 Concede and attacks are never dropped", () => {
+    const concede: ActionBody = { type: "concede" };
+    const onConcede = vi.fn();
+    render(<Game view={baseView()} legal={[END_TURN, concede]} onAction={onConcede} />);
+    for (let times = 0; times < 2; times += 1) {
+      fireEvent.click(screen.getByTestId("concede"));
+      fireEvent.click(screen.getByTestId("concede-confirm"));
+    }
+    expect(onConcede.mock.calls).toEqual([[concede], [concede]]);
+    cleanup();
+
+    const attack: ActionBody = { type: "attack", attackerId: "u1", targetId: "e1" };
+    const view = baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1" }), null, null, null, null] }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+    });
+    const onAttack = vi.fn();
+    render(<Game view={view} legal={[attack]} onAction={onAttack} />);
+    for (let times = 0; times < 2; times += 1) {
+      fireEvent.click(screen.getByTestId(testid.card("u1")));
+      fireEvent.click(screen.getByTestId(testid.card("e1")));
+    }
+    expect(onAttack.mock.calls).toEqual([[attack], [attack]]);
+  });
+
+  it("R3060000 a board whose views arrive at once (hotseat) never blocks", () => {
+    const spy = vi.fn();
+    function Seat() {
+      const [, tick] = useState(0);
+      return (
+        <Game
+          view={baseView()}
+          legal={[END_TURN]}
+          onAction={(body) => {
+            spy(body);
+            tick((n) => n + 1);
+          }}
+        />
+      );
+    }
+    render(<Seat />);
+
+    clickEndTurn();
+    clickEndTurn();
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

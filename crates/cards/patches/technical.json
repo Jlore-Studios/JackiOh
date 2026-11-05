@@ -4504,5 +4504,531 @@
     "pr": 2879,
     "title": "the night bot's rework (own-lane review chain, holds and handoffs, no easy) and its usage history",
     "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "3897afdc74807623734869a709fe86871ce0a402",
+    "pr": 2889,
+    "title": "patches ship: v0.5.11e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "2b156276a3d1c0c628187a8034d8b5f1ee8fe7f3",
+    "pr": 2891,
+    "title": "a person's Claude session leaves a handoff comment that the night bot's next run reads",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "df034cc158d66702959f263c58de13941843c48a",
+    "pr": 2893,
+    "title": "patches log: c1f09b9..87e53f8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "635e3a8a64eaf4a3510563b163a09eac8ed29616",
+    "pr": 2897,
+    "title": "practice drops Offer draw because the AI always declines it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "069ac23c6ef8197ffb4e867f87f82c168c69d728",
+    "pr": 2902,
+    "title": "a /stats button that shows each card's 95% interval for Win rate and Adjusted",
+    "kind": "app",
+    "player": "The stats page can show how sure each card's figures are: Show 95% ranges puts a range under its win rate and adjusted rate."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "67fa9e5d3cd6f312236d58b0aad98c77ee69549f",
+    "pr": 2900,
+    "title": "phone field cards fill their zones, with no empty mat above and below the lanes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a6973252f1b22bf43d909f2795ea47f7dd6d2586",
+    "pr": 2899,
+    "title": "the cutover's copy as it ran, and a step that suspends Render once jackioh.com is on Cloudflare",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "aaf9a77223359c484b12aeda5c825039bbf57445",
+    "pr": 2894,
+    "title": "Google sign-in, with Google's own button, on staging and production",
+    "kind": "app",
+    "player": "You can now sign in with Google."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "53e62cbe2a2e36103d8a8407bb3e683e37c3fabc",
+    "pr": 2905,
+    "title": "card animations for the Core set",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "7587589df5a977054145a4a9885fd51650a9156b",
+    "pr": 2910,
+    "title": "super run failed on a production candidate",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f887a784229ff9160550bbd5e705c0e9728ef976",
+    "pr": 2909,
+    "title": "size the gather run from the deckable card count",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5d8a0b140ac8c5068b8ab40df36dc31fdf055c84",
+    "pr": 2914,
+    "title": "an item's plan, build and own review run on one lane with one model, and the owner's hold lasts 120 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "10cb3ba54a5ea45bac6312e10110616f02af3c03",
+    "pr": 2908,
+    "title": "system moments: quests, Jade, the Market, votes, Starscape travel, Glitched, Awakened, a rolled-back or replaced board, and the transform family",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "9f371d63ca5cad8004c6b94af7066181eefe9c59",
+    "pr": 2906,
+    "title": "card animations for the Meditative and Meditative+ sets",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b0e465602a388222016a02b080e0f57de1da7e26",
+    "pr": 2918,
+    "title": "patches ship: v0.5.11f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "d7804ec1ad606cdf37fc158a4886efbe853716a5",
+    "pr": 2911,
+    "title": "card animations for the Classic+ set",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
+    "pr": 2916,
+    "title": "hero plates keep one size however many effects they carry",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "c7145e4d941c6131378b5ef01be606e08775daf8",
+    "pr": 2921,
+    "title": "watch a friend's Duos game like a 1v1 game",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f130993e011ab47cdebce5cda3da1fa689780d80",
+    "pr": 2915,
+    "title": "card animations for Stinkyscape, part two: stinkyscape-091 to the end",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "08530a68c1bdc769e70552c24fe8ed1e63f67687",
+    "pr": 2934,
+    "title": "patches ship: v0.5.11g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b7bb4b6ca856ebda313e2b083b0c7779e70d2e12",
+    "pr": 2896,
+    "title": "bot: build pass 1 for #2884",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "46b50bf36d30c4e2890999e2bd644bc591feccbe",
+    "pr": 2935,
+    "title": "the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "daaec8d0c617f6320dd7f19e18c4eab5c1b7fbab",
+    "pr": 2938,
+    "title": "the server wakes faster: one ledger read for its migrations and one statement for the catalog",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a08964358c1cfb36bc966e1e74100aec0fa2c2fc",
+    "pr": 2936,
+    "title": "a play or attack half-built when your turn ends is dropped, not shown again next turn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "86d08ffa2b70fd8d31fb30aa1715977bbaef619f",
+    "pr": 2919,
+    "title": "card animations for the Training Grounds set",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "ace27fa04e107e1ba6a20edefabfd1d6d05ee909",
+    "pr": 2939,
+    "title": "a dungeon fight waits for the AI's shown card and voice line, and drops Offer draw, as practice does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "8355bf8ee036b98345b6f4a31260419695e991e3",
+    "pr": 2945,
+    "title": "R1933001: the development lanes file into production's card statistics too; cutover steps stats-logins and dev-stats",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a8611ef41c0365ba1bf288d05ccd23d7520401a2",
+    "pr": 2937,
+    "title": "unsquish the game-over screen's \"Their hand\" cards on a phone",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "35844cd8b76e362c1af00eba5e3531588e7c06dd",
+    "pr": 2947,
+    "title": "patches ship: v0.5.11h",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b2217c07db2339916245c8bed8ec474d0a53b95d",
+    "pr": 2917,
+    "title": "no practice HUD over the board; the enemy hero sits at the top",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "e0518493f5a9db180962e70399ccd488f2b43fc8",
+    "pr": 2946,
+    "title": "a finished game counts once in your statistics, even after you watch its replay",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "488f90175eabd235594e4218122ecf825dd520ad",
+    "pr": 2907,
+    "title": "card animations for the Classic set",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "443856f94a2513bf01fd51450057fb5af9a6bfe0",
+    "pr": 2950,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a40d16827f642753b8bc3973c45b842343f50781",
+    "pr": 2951,
+    "title": "the dungeon run's curses and Combat artifacts change its fights",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a0a59c03d1cee1adb31a3c0d3683584107fa2637",
+    "pr": 2952,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a7963a35de4fbf42ba55c6c58151ff6728729fd5",
+    "pr": 2954,
+    "title": "the AI prices the cards it can still play from a graveyard",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "1b9b410ab433df22e3d688f0ee11c64e63cc5035",
+    "pr": 2959,
+    "title": "production promotes itself daily from a passing super run, deploys reuse the server image, and Render and Vercel are gone",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "966939dea9fe9b4ba752f2d311196c32901451ca",
+    "pr": 2960,
+    "title": "the AI's search expects its own quiz answers as it will really give them, so it casts KY's Competition",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a1bcc2af170bc25ac91309f1375519ac73577c83",
+    "pr": 2961,
+    "title": "card tests use the crate's scenario helper instead of registering the catalog before every scenario",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "224a39fd0df8af9a9da5817a3e28950c3199863c",
+    "pr": 2963,
+    "title": "patches ship: v0.5.11i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "75d3d8ca6a971784648588b5212f552b4eeab6b1",
+    "pr": 2966,
+    "title": "patches ship: v0.5.11j",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f3ad75d1f435d375259b9951375424b065739749",
+    "pr": 2968,
+    "title": "patches ship: v0.5.11k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "78ba41a9ff52d71ad9e321211e90e618860ccd0b",
+    "pr": 2920,
+    "title": "card animations for Stinkyscape, part one: stinkyscape-001 to stinkyscape-090",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "594a73925948f57ab274c9643e5ae8e25e38acc0",
+    "pr": 2969,
+    "title": "bot: build pass 1 for #2962",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "7ead49830986375e40f0148dc1e0b3655a93bd28",
+    "pr": 2985,
+    "title": "patches ship: v0.5.11l",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "620d660269f03c862ae4e4cc94f49b411caf1886",
+    "pr": 2988,
+    "title": "a watched game's turn clock counts down, and a finished one stops saying Disconnected",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "2e85fba7a6a392ab3d8806c4b5e9c56f6a57e29b",
+    "pr": 2995,
+    "title": "the daily promotion says nothing of a passing super run on a commit production already has",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "63f83e3ac1a983935bca77d8d0547fd2ac452c3f",
+    "pr": 2987,
+    "title": "a bot pull request settles its merge conflicts before it goes ready, resolves the mechanical ones itself, and stops red CI early",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f940248de7986fca4562d046f95b7bf7ebd51553",
+    "pr": 2997,
+    "title": "the fuzz monitor's unlisted-action check forges plays too: a card or a zone the legal list leaves out must be refused",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "3fefc8059f1202cc4a5d4bb1ed6fee1b9cd07d3b",
+    "pr": 2989,
+    "title": "leaving a live co-op game asks first, and says your teammate plays on beside the AI",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "e18ddcfa60a5761917f8d6651bf21f15d2a02c66",
+    "pr": 3001,
+    "title": "the bot merges more of its own pull requests, a question it asks goes ahead on its default after 24 hours, and `needs decision` marks what only a person can unblock",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "e485107852599734d92622e1291c13742a3313a2",
+    "pr": 2998,
+    "title": "the AI facing lethal keeps the switch to Defense that would stop it",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "0d8b902e5f9bbbf1be5732a8bdc461b9cd5039af",
+    "pr": 3002,
+    "title": "patches ship: v0.5.11m",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "efc01ba2aee6eaebe3f7ed51fe89c850d3cf81b5",
+    "pr": 3003,
+    "title": "the status issue's Needs a decision row for another bot's hand-over says only a person can unblock it",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "33d08b556f2e87d5bc58798aa40e9e19443351e7",
+    "pr": 3004,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "6f782c5b966bb860e8a1e7cfffe2bc6c6e29585e",
+    "pr": 2999,
+    "title": "a Claim all button for the news, and news and quest entries as cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "c0ef6a692bf4342b38789a759fb197cc3298d046",
+    "pr": 2991,
+    "title": "the dungeon run asks before it throws away a run or a fight, and its map has a way back",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "004c2ae67b408a2057f6b848b3ec8cd9dea02dca",
+    "pr": 3006,
+    "title": "the Medium and Hard AI keep a 4-drop in the mulligan, as their extra mana makes it a turn-3 play",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5a1f360e5caf11020b27a569ba9e3f9a152e7e49",
+    "pr": 2993,
+    "title": "squishy: build pass 1 for #2981",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "3809c73ce671c88facee6311ffa38899a5db3adc",
+    "pr": 2996,
+    "title": "bot: build pass 1 for #2983",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5bad26fce43855b6fbc409010266d43d7968f8d0",
+    "pr": 3008,
+    "title": "training README: both projects' databases file the development lanes' games (R1933001)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5379469506919ae5dfa34da7df2b17732e4bfcd3",
+    "title": "Merge pull request #3010 from Jlore-Studios/claude/affectionate-lovelace-8g0sah",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "13ca97b99c1ba9c84f13a0e6fe314d8e713a0022",
+    "pr": 2964,
+    "title": "a job ran over 7 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "1a05687df8fbdb9ad28c888ca1f0a65b2b7eba58",
+    "pr": 3005,
+    "title": "a hand card the game won't let you play always says why, and the fuzz holds every card to it",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "c3037c4af39abf622626e759e625874e3387447d",
+    "pr": 3018,
+    "title": "a sleeping server gets 60 seconds to wake, so the first visitor waits instead of getting a 500",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "484c48a708ceb5a68d6ce8611ecaa32fb0121d12",
+    "pr": 3019,
+    "title": "patches ship: v0.5.11n",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "0b28d790335793e3691387a23afd90274e5dba02",
+    "pr": 3021,
+    "title": "spec 38 knows a phone's pile is tapped through its 44 px band",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "64355743f1af74046366f10f5ccce2c3929ae7d4",
+    "pr": 3020,
+    "title": "/stats opens on all game modes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a0f959db12fc833f502222159ae93e8f4016977a",
+    "pr": 3007,
+    "title": "spectators throw emotes from the sidelines",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "9920895186061b5954727c751727a5d7991bf012",
+    "pr": 3028,
+    "title": "a needs decision comment explains the problem with recommendations and a suggestion, assigns the owners, and a reply revises it; human required archives the bot's work; an UPDATE with no WHERE goes to a person",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b4e47754f5792582cf5c59a01a9c516648f14da2",
+    "pr": 3030,
+    "title": "a delivery retried after GitHub lost its record finds its own push, and state writes retry GitHub's server errors",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "511755a4aec0e88d60be625efc4d3e279d50bac0",
+    "pr": 2992,
+    "title": "audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f74d14ebf0c66279570cc566c67b25851777ac9e",
+    "pr": 3035,
+    "title": "patches ship: v0.5.11o",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "90b1a860c12cc13d18b0720a8bf0abecd7929bbe",
+    "pr": 3033,
+    "title": "the Statistics page drops its full-art picker",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "65acf5627acf41c509cc49423b4821e45ee67c66",
+    "pr": 3032,
+    "title": "practice deals one daily All Random setup for everyone",
+    "kind": "app"
   }
 ]

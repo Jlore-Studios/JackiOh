@@ -25,6 +25,13 @@
 #                       infra/cloudflare.tf), verifies the domain, makes a sending-only key for it and
 #                       sets it as both projects' SMTP (SUPABASE_ACCESS_TOKEN), then deletes the keys an
 #                       earlier run made, so running it again rotates the key. `dry_run` changes nothing.
+#   email-links         `project`'s four mail templates from infra/email-templates/ (R3024000): a link that
+#                       waits for a press on /login. It refuses a site whose deployed commit does not hold
+#                       those files, since that site has no button and every link would land on nothing.
+#                       `dry_run` prints the templates there now and writes nothing.
+#   manual-linking      turns `project`'s manual linking on (R3025000), as infra/supabase.tf has it, so
+#                       /account can link and unlink a provider. `dry_run` prints the setting and
+#                       writes nothing.
 #   stats-logins        JackiOh-Production's two statistics logins, each with a new password of its own
 #                       (the copy brought both from staging with staging's): stats_importer, which the
 #                       development lanes file through, and stats_reader, read-only, which
@@ -59,13 +66,23 @@ on:
           - check-production
           - production-auth
           - email
+          - email-links
+          - manual-linking
           - stats-logins
           - dev-stats
       dry_run:
-        description: "production-auth, email, stats-logins and dev-stats: show what it would do, and write nothing"
+        description: "production-auth, email, email-links, manual-linking, stats-logins and dev-stats: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
+      project:
+        description: "email-links and manual-linking: which project"
+        required: false
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
       public_key:
         description: "stats-logins: an RSA public key (SPKI DER, base64) the addresses are encrypted to in the log"
         required: false
@@ -306,6 +323,102 @@ jobs:
           api "$config/$PRODUCTION_REF/config/auth" \
             | jq -r '"production now: site_url \(.site_url), redirects \(.uri_allow_list), leaked-password protection \(.password_hibp_enabled), confirm email \(.mailer_autoconfirm | not), SMTP host \(.smtp_host // "Supabase'"'"'s own")"' \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: the emailed links' templates (R3024000)
+        if: ${{ inputs.step == 'email-links' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PROJECT: ${{ inputs.project }}
+        run: |
+          set -euo pipefail
+          umask 077
+          case "$PROJECT" in
+            staging) ref=$STAGING_REF; site=https://staging.jackioh.com; access=(-H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET") ;;
+            production) ref=$PRODUCTION_REF; site=https://jackioh.com; access=() ;;
+            *) echo "::error::project is staging or production, not $PROJECT"; exit 1 ;;
+          esac
+          api() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          config=https://api.supabase.com/v1/projects/$ref/config/auth
+          api "$config" > "$RUNNER_TEMP/auth.json"
+
+          # Prints what is there, and writes the PATCH body (an empty object when nothing changes).
+          python3 - "$RUNNER_TEMP" <<'EOF'
+          import json, os, pathlib, sys
+          tmp = sys.argv[1]
+          current = json.load(open(f"{tmp}/auth.json"))
+          dry = os.environ["DRY_RUN"] == "true"
+          body = {}
+          for name, link_type in {"confirmation": "signup", "recovery": "recovery", "magic_link": "magiclink", "email_change": "email_change"}.items():
+              key = f"mailer_templates_{name}_content"
+              print(f"--- {key}, subject {current.get(f'mailer_subjects_{name}')!r}:\n{current.get(key)}")
+              path = pathlib.Path("infra/email-templates") / f"{name}.html"
+              if not path.exists():
+                  if dry:
+                      print(f"{path}: not on main yet")
+                      continue
+                  sys.exit(f"::error::{path} is not on main")
+              want = path.read_text()
+              link = "{{ .SiteURL }}/login?token_hash={{ .TokenHash }}&type=" + link_type
+              if link not in want:
+                  sys.exit(f"::error::{path} does not carry {link}")
+              if want != current.get(key):
+                  body[key] = want
+          json.dump(body, open(f"{tmp}/auth.patch.json", "w"))
+          print("would change:" if dry else "changing:", ", ".join(sorted(body)) or "nothing")
+          EOF
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry_run: nothing written. Run it again without dry_run to apply." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$(cat "$RUNNER_TEMP/auth.patch.json")" = "{}" ]; then echo "$PROJECT: nothing to change"; exit 0; fi
+
+          # The site must serve the button first: the commit it runs holds these files, or it is too old.
+          deployed=$(curl -sS -o /dev/null -D - "${access[@]}" "$site/api/catalog" | tr -d '\r' | awk 'tolower($1) == "x-deployed-commit:" { print $2 }')
+          case "$deployed" in
+            "") echo "::error::$site named no deployed commit, so nothing was written"; exit 1 ;;
+          esac
+          if ! gh api "repos/$GITHUB_REPOSITORY/contents/infra/email-templates/confirmation.html?ref=$deployed" --silent; then
+            echo "::error::$site runs $deployed, which has no infra/email-templates: promote it first. Nothing was written."
+            exit 1
+          fi
+          api -X PATCH "$config" --data-binary "@$RUNNER_TEMP/auth.patch.json" > /dev/null
+          echo "$PROJECT ($ref, running $deployed): changed $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/auth.patch.json")" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: manual linking (R3025000)
+        if: ${{ inputs.step == 'manual-linking' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PROJECT: ${{ inputs.project }}
+        run: |
+          set -euo pipefail
+          case "$PROJECT" in
+            staging) ref=$STAGING_REF ;;
+            production) ref=$PRODUCTION_REF ;;
+            *) echo "::error::project is staging or production, not $PROJECT"; exit 1 ;;
+          esac
+          api() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          config=https://api.supabase.com/v1/projects/$ref/config/auth
+          now=$(api "$config" | jq -r '.security_manual_linking_enabled')
+          echo "$PROJECT ($ref): manual linking is $now"
+          if [ "$now" = "true" ]; then exit 0; fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry_run: nothing written. Run it again without dry_run to turn it on." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          api -X PATCH "$config" --data '{"security_manual_linking_enabled": true}' > /dev/null
+          echo "$PROJECT ($ref): manual linking now $(api "$config" | jq -r '.security_manual_linking_enabled')" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: sign-in emails through Resend
         if: ${{ inputs.step == 'email' }}

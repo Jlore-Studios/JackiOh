@@ -9,6 +9,9 @@ import { sourceFromData, type HistoryIndex, type Patch, type PatchSource, type S
 export const V1 = "v9-first";
 export const V2 = "v1-second";
 export const V3 = "v5-third";
+/** R3012000: the two micro patches of `TIERED_PATCHES`, between V2 and V3. */
+export const M1 = "v1-second-b";
+export const M2 = "v1-second-c";
 
 function card(fields: Partial<CardDef> & Pick<CardDef, "id" | "index" | "name">): CardDef {
   return {
@@ -127,6 +130,40 @@ export const FIXTURE_PATCHES: readonly Patch[] = [
   },
 ];
 
+/**
+ * R3012000: a history with every tier, major (V1) → patch (V2) → micro (M1) → micro (M2) → patch (V3):
+ * the page nests both micros under V2, and V3 is an entry of its own. The micros change no card, as a
+ * micro of the shipped history seldom does; V3's record is the one above.
+ */
+export const TIERED_PATCHES: readonly Patch[] = [
+  { ...(FIXTURE_PATCHES[0] as Patch), tier: "major" },
+  { ...(FIXTURE_PATCHES[1] as Patch), tier: "patch" },
+  {
+    version: M1,
+    tier: "micro",
+    date: "2026-02-10",
+    title: "A knight's wording",
+    source: "Fixture commit 2b",
+    notes: "Wording only.",
+    player: { title: "Knight wording", new: [], balance: [], changes: [], text: ["Test Knight reads clearer."], fixes: [] },
+    changes: [],
+  },
+  {
+    version: M2,
+    tier: "micro",
+    date: "2026-02-17",
+    title: "A golem fix",
+    source: "Fixture commit 2c",
+    notes: "A fix.",
+    player: { title: "Golem fix", new: [], balance: [], changes: [], text: [], fixes: ["Quiet Golem stays quiet."] },
+    changes: [],
+  },
+  { ...(FIXTURE_PATCHES[2] as Patch), tier: "patch" },
+];
+
+/** The micros carry V2's snapshot, as a patch that changed no card carries the one before it. */
+export const TIERED_SNAPSHOTS: Readonly<Record<string, Snapshot>> = { ...FIXTURE_SNAPSHOTS, [M1]: FIXTURE_SNAPSHOTS[V2] as Snapshot, [M2]: FIXTURE_SNAPSHOTS[V2] as Snapshot };
+
 export const FIXTURE_INDEX: HistoryIndex = {
   "core-001": [V1, V2],
   "core-002": [V1, V3],
@@ -140,6 +177,18 @@ export const FIXTURE_INDEX: HistoryIndex = {
 /** Fixture source; `onSnapshot` observes snapshots in request order. */
 export function fixtureSource(onSnapshot?: (version: string) => void): PatchSource {
   const source = sourceFromData({ patches: FIXTURE_PATCHES, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS });
+  return {
+    ...source,
+    snapshot: (version) => {
+      onSnapshot?.(version);
+      return source.snapshot(version);
+    },
+  };
+}
+
+/** The tiered history's source; `onSnapshot` observes snapshots in request order. */
+export function tieredSource(onSnapshot?: (version: string) => void): PatchSource {
+  const source = sourceFromData({ patches: TIERED_PATCHES, index: FIXTURE_INDEX, snapshots: TIERED_SNAPSHOTS });
   return {
     ...source,
     snapshot: (version) => {

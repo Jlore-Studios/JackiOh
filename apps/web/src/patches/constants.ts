@@ -16,5 +16,22 @@ export const RELEASE_ART_HEIGHT = 1080;
 /** #2681: the most cards one artwork shows; a patch that changed more is sampled evenly, first and last included. */
 export const RELEASE_ART_CARD_LIMIT = 7;
 
-/** #2681: the seconds one slow drift of a major's animated artwork takes, there and back. */
-export const RELEASE_ART_MAJOR_CYCLE_SECONDS = 18;
+/** R3012001: the most headline cards a major's poster shows, picked by rarity (releaseArt.ts); a patch's art stays at `RELEASE_ART_CARD_LIMIT`. */
+export const RELEASE_ART_MAJOR_CARD_LIMIT = 11;
+
+/** R3012001: how much smaller a major's cards are drawn than a patch's, so the poster's fan holds more of them. */
+export const RELEASE_ART_MAJOR_CARD_SCALE = 0.85;
+
+/**
+ * R3012001, CLAUDE.md rule 13: the last micro patch shipped before micros stopped getting art. Published
+ * releases and static pages link every earlier micro's `/release-art/<version>.svg`, so each up to and
+ * including this version (in patches.json's order, never compared as a version: R105) keeps its file; a
+ * micro after it has none.
+ */
+export const RELEASE_ART_LEGACY_MICRO_LAST = "v0.5.11n";
+
+/** R3012000: the width at and under which the Patch notes legend collapses into a drawer; patches.css's phone block holds the same number. */
+export const PATCH_LEGEND_PHONE_QUERY = "(max-width: 760px)";
+
+/** R3012000: the band of the viewport, from its top, in which an entry counts as the one in view (an IntersectionObserver `rootMargin`). */
+export const PATCH_LEGEND_BAND_MARGIN = "0px 0px -80% 0px";

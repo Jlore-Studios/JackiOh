@@ -49,6 +49,14 @@ export const server = {
   ws: () => env("wsUrl", "ws://localhost:8787/ws/match"),
 };
 
+/**
+ * Spec 49 (R3074000): the dev dashboard's own client, `apps/admin`'s `vite preview` of its
+ * `build:e2e`, which proxies `/api` to the server (apps/admin/README.md).
+ */
+export const adminClient = {
+  url: () => env("adminUrl", "http://localhost:5174"),
+};
+
 export function apiUrl(path: string): string {
   return `${server.http()}${path}`;
 }

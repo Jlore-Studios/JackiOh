@@ -475,7 +475,7 @@ export type StaticPagesInput = {
   cards: CardDefs;
   patches: readonly Patch[];
   technical?: readonly TechnicalEntry[];
-  /** #2681: one version's catalog snapshot; with it, every patch's release artwork is written beside the pages. */
+  /** #2681, R3012001: one version's catalog snapshot; with it, the release artwork of every major and patch (and of the micros that shipped with art) is written beside the pages. */
   snapshot?: (version: string) => Snapshot | null;
   outDir: string;
   origin: string;

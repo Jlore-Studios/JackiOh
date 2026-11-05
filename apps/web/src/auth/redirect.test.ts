@@ -389,6 +389,42 @@ describe("R193 B30 the recovery session", () => {
   });
 });
 
+describe("R3024000 a mailed link's token", () => {
+  const TOKEN = "pkce_0123456789abcdef";
+
+  it("R3024000 a token and a known type on /login or / wait for a press", () => {
+    for (const path of ["/login", "/"]) {
+      for (const linkType of ["signup", "recovery", "magiclink", "email_change"]) {
+        expect(parseAuthRedirect(new URL(`${ORIGIN}${path}?token_hash=${TOKEN}&type=${linkType}`)), path).toEqual({
+          kind: "press",
+          token: TOKEN,
+          linkType,
+        });
+      }
+    }
+  });
+
+  it("R3024000 an unknown type, a token of the wrong shape, or another page is no link", () => {
+    expect(parseAuthRedirect(new URL(`${ORIGIN}/login?token_hash=${TOKEN}&type=invite`)).kind).toBe("none");
+    expect(parseAuthRedirect(new URL(`${ORIGIN}/login?token_hash=${TOKEN}`)).kind).toBe("none");
+    expect(parseAuthRedirect(new URL(`${ORIGIN}/login?token_hash=a%2Fb&type=signup`)).kind).toBe("none");
+    expect(parseAuthRedirect(new URL(`${ORIGIN}/shop?token_hash=${TOKEN}&type=signup`)).kind).toBe("none");
+  });
+
+  it("R3024000 an error beside a token outranks it", () => {
+    const url = new URL(`${ORIGIN}/login?token_hash=${TOKEN}&type=signup&error=access_denied`);
+    expect(parseAuthRedirect(url)).toEqual({ kind: "error", failure: "linkDenied" });
+  });
+
+  it("R3024000 consumeAuthRedirect reads the token and drops it from the address bar", () => {
+    window.history.replaceState(null, "", `/login?token_hash=${TOKEN}&type=signup`);
+    expect(consumeAuthRedirect()).toEqual({ kind: "press", token: TOKEN, linkType: "signup" });
+    expect(window.location.pathname).toBe("/login");
+    expect(window.location.search).toBe("");
+    expect(window.location.href).not.toContain(TOKEN);
+  });
+});
+
 describe("R323 R324 a PKCE link's code", () => {
   const CODE = "3f9c6c1e-5a6b-4c2d-9e8f-0a1b2c3d4e5f";
 
