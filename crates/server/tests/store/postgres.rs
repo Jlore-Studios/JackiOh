@@ -1,13 +1,13 @@
 //! Postgres store tests (`Db::Pg`, `src/db/pg.rs`, §9.4, §9.5).
 //! Verifies role permissions, SET LOCAL scoping, app functions, and schema invariants.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::Poll;
 
 use jackioh_server::config::STARTER_CARDS;
-use jackioh_server::db::store::{Db, MatchActionRow};
+use jackioh_server::db::store::{Db, MatchActionRow, Tx};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -124,12 +124,12 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
 const PROBE_SETUP: &str = "
 create schema if not exists probe;
 create table if not exists probe.session_log (
-  who text not null, role_setting text, uid uuid, at timestamptz not null default now());
+  who text not null, role_setting text, uid uuid, ip_hash text, at timestamptz not null default now());
 create or replace function probe.record_session() returns trigger
 language plpgsql as $$
 begin
-  insert into probe.session_log (who, role_setting, uid)
-  values (current_user, current_setting('role', true), auth.uid());
+  insert into probe.session_log (who, role_setting, uid, ip_hash)
+  values (current_user, current_setting('role', true), auth.uid(), new.ip_hash);
   return new;
 end $$;
 drop trigger if exists code_attempts_session_probe on public.code_attempts;
@@ -217,6 +217,24 @@ impl Ctx {
                     .try_get::<Option<uuid::Uuid>, _>("uid")
                     .expect("uid")
                     .map(|id| id.to_string()),
+            })
+            .collect()
+    }
+
+    /// #3208: each probed row's `auth.uid()`, by the attempt's `ip_hash`, which names the call.
+    async fn probe_uids_by_ip(&self) -> BTreeMap<String, Option<String>> {
+        let rows = sqlx::query("select ip_hash, uid from probe.session_log")
+            .fetch_all(&self.admin)
+            .await
+            .expect("read the probe");
+        rows.iter()
+            .map(|row| {
+                let ip: String = row.try_get("ip_hash").expect("ip_hash");
+                let uid = row
+                    .try_get::<Option<uuid::Uuid>, _>("uid")
+                    .expect("uid")
+                    .map(|id| id.to_string());
+                (ip, uid)
             })
             .collect()
     }
@@ -369,6 +387,70 @@ mod the_acting_role {
         let uids: BTreeSet<Option<String>> = rows.iter().map(|row| row.uid.clone()).collect();
         assert_eq!(uids, BTreeSet::from([Some(a.clone()), Some(b.clone())]));
         assert!(rows.iter().all(|row| row.who == "service_role"));
+        ctx.finish().await;
+    }
+
+    /// #3208: `run_as` sends the stamp only when a method's subject differs from the one the transaction
+    /// holds, so a repeated subject is not stamped again, and a changed one, back included, always is.
+    #[tokio::test]
+    async fn stamps_a_methods_subject_only_when_it_changes_and_again_when_it_changes_back() {
+        let Some(ctx) = setup().await else { return };
+        let (a, b) = (ctx.sign_up().await, ctx.sign_up().await);
+        let at = now_ms();
+        {
+            let mut tx = ctx.db.begin(Some(a.as_str())).await.expect("store.tx");
+            for (profile, ip) in [
+                (Some(a.as_str()), "ip-a1"),
+                (Some(a.as_str()), "ip-a2"),
+                (Some(b.as_str()), "ip-b"),
+                (Some(a.as_str()), "ip-a3"),
+                (None, "ip-none"),
+            ] {
+                tx.codes_log_attempt(&de(attempt(profile, ip, "rejected", "x", at)))
+                    .await
+                    .expect("logAttempt");
+            }
+            tx.commit().await.expect("commit");
+        }
+        let uids = ctx.probe_uids_by_ip().await;
+        assert_eq!(
+            uids,
+            BTreeMap::from([
+                ("ip-a1".to_string(), Some(a.clone())),
+                ("ip-a2".to_string(), Some(a.clone())),
+                ("ip-b".to_string(), Some(b.clone())),
+                ("ip-a3".to_string(), Some(a.clone())),
+                ("ip-none".to_string(), None),
+            ])
+        );
+        let rows = ctx.probe_rows().await;
+        assert_eq!(rows.len(), 5);
+        assert!(rows.iter().all(|row| row.who == "service_role"));
+        ctx.finish().await;
+    }
+
+    /// #3208: `begin` writes only a uuid subject into its statement's text; any other is bound, and reads
+    /// back exactly as given.
+    #[tokio::test]
+    async fn a_subject_that_is_no_uuid_is_bound_never_written_into_the_statement() {
+        let Some(ctx) = setup().await else { return };
+        let subject = "x'); select 1; --";
+        {
+            let mut tx = ctx.db.begin(Some(subject)).await.expect("store.tx");
+            let Tx::Pg(t) = &mut tx else {
+                panic!("the Postgres store opens a Postgres transaction");
+            };
+            let row = sqlx::query(
+                "select current_setting('request.jwt.claim.sub', true) as sub, \
+                 current_setting('role', true) as role",
+            )
+            .fetch_one(&mut **t)
+            .await
+            .expect("read the session");
+            assert_eq!(row.try_get::<String, _>("sub").expect("sub"), subject);
+            assert_eq!(row.try_get::<String, _>("role").expect("role"), "service_role");
+            // Dropped uncommitted: rolled back.
+        }
         ctx.finish().await;
     }
 
