@@ -2447,18 +2447,11 @@ pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // but `DUOS_AI_BUDGET` is exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board
 // renders the same clocks and the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
 
-/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
-/// not ended has its prompts answered by the AI and its turn ended (`duos::actor`).
-pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
-/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
-/// person ended): on expiry the AI answers that prompt for them.
-pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
-/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
-/// still owes.
-pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
-/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
-/// the AI team's turn.
-pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+// S6, B38, B2, B36: the co-op match's clocks and its AI's pace are the match host's (`jackioh_shared::host::duos`,
+// #3101): the pure machine decides with them, and the server names them here as it always has.
+pub use jackioh_shared::config::{
+    DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
+};
 /// R2575000: the search budget of each AI-played Duos seat (`duos::actor`, cut short at
 /// `BOT_DECISION_DEADLINE_MS`): the practice AI's before issue #2575 doubled it, so the server's work
 /// per AI step does not double. Raising it is a person's call. Only the server reads it.

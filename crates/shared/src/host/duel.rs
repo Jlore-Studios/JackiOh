@@ -697,6 +697,14 @@ impl DuelHost {
                 self.bot_retry = None;
                 self.drive_bots(now);
             }
+            // A Duos host's timers are none of a 1v1 host's.
+            TimerKey::DuosMulligan
+            | TimerKey::DuosRound
+            | TimerKey::DuosPrompt { .. }
+            | TimerKey::DuosGrace { .. }
+            | TimerKey::DuosCeiling
+            | TimerKey::DuosAi { .. }
+            | TimerKey::DuosAiRetry => {}
         }
     }
 

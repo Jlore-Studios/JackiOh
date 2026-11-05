@@ -9,7 +9,7 @@ comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
-actor and the later practice and ladder-bot hosts (#3099, #3103) run on.
+and Duos actors and the later practice and ladder-bot hosts (#3099, #3103) run on.
 
 ## Host contract
 
@@ -209,12 +209,42 @@ Notes for a host:
 { "answer": "stepped", "host": { "...": "the next DuelHost" }, "outputs": [ { "output": "send", "home": "p1", "message": { "message": "clock", "now": 1700000000000, "clocks": { "...": "" } } } ] }
 ```
 
-The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `checkOffer`, `rematchWindow`, `offer`,
-`seen`, `release` and `sweep`; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
+The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
+`checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
 holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
 
-Duos co-op (`crates/server/src/duos/actor.rs`) runs on the same event and output shapes in a second
-part of #3101; until then its clocks and grace are the server's.
+### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
+
+The co-op host (`crates/server/src/duos/actor.rs`, fullsend SPEC S4 to S6, B35 to B40) is the twin of the
+1v1 one under the same shapes: `step_duos(host, event, now) -> (host, outputs)` over a serializable
+`DuosHost` holding the `DuosState` of two duels and four seats (a1 and a2 are people, b1 and b2 the AI's).
+`DuosHostEvent` (`arm`, `connected` / `attached` / `hello` / `left` / `disconnected`, `action`, `logged`,
+`timerFired`, `decided`, `rowChecked`, `stop`) and `DuosHostOutput` (`send`, `timer`, `append`, `answer`,
+`greeting`, `refused`, `panicked`, `pushed`, `decide`, `record`, `ceilingDraw`, `checkRow`, `letGo`, `note`)
+read like the 1v1 machine's, and its timers are the `duos*` `TimerKey`s. What it decides:
+
+- **The clocks** (S6, B2, B38): the one mulligan clock over the four mulligans (§13.2, R268), the round
+  clock of a round with a person in it, a prompt clock for a prompt a person holds outside its own round,
+  each person's disconnect grace (R744) and the hard ceiling (R1047000) with its retry (R776000). An expiry
+  hands seats to the AI and logs nothing itself: a lapsed mulligan keeps the hand, a lapsed round answers
+  the prompts and ends the turn of each round seat, a lapsed prompt answers that prompt alone.
+- **Who plays a seat** (B36 to B38): b1 and b2 always; a person's seat past its grace (until the person is
+  back, no loss by disconnect) or in the mode an expiry forced. The pause before every AI action
+  (`DUOS_AI_STEP_DELAY_MS`), whether the move needs the AI's search at all (a mulligan kept whole or a
+  turn simply ended does not), the move it falls back on and R188's forbidden ones, a refused move
+  deciding again, an unwritten one retried after `BOT_WRITE_RETRY_MS` (or the match let go if its row is
+  gone: `checkRow`, `rowChecked`).
+- **The flow of a change** (B35, B40): the order of every view and clock, the result recorded once with every
+  clock gone, a server action's panic ending the match as a ceiling draw (R1253000).
+
+The host keeps its sockets, its store, its abuse guards, the pings (B39), its watchers (R2881000) and the
+search itself (`decide`, answered by `decided`: one separate, deadline-bounded step).
+
+`AgainBook` is the co-op Play again's rendezvous state (R2092000, R1398000): an offer counts only inside the
+finished match's window, the offer that completes the pair makes the game, one that lands mid-create waits
+on it (the claim is a number, and the host keeps the wake-up under it), and a failed create gives the claim
+back. The boundary's `HostCall` carries the Duos host (`newDuos`, `stepDuos`, `duosSeatView`) and the book
+(`againWindow`, `againClaim`, `againSeen`, `againRelease`, `againMade`).
 
 ## `src/deck.rs`
 
@@ -227,7 +257,8 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
 unchanged, and `tests/boundary.rs` the JSON boundary. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
-the real catalog), `tests/rematch.rs` (the book) and `tests/host_boundary.rs`. The `ts` feature writes the types that cross to
+the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
+book) and `tests/host_boundary.rs`. The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.
 
 ```

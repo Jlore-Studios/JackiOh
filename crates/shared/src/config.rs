@@ -62,3 +62,18 @@ pub const REMATCH_OFFER_TTL_MS: i64 = 600_000;
 pub const STAKE_NORMAL: i32 = 1;
 /// R672: a double-or-nothing rematch moves it twice. Ranked matches only.
 pub const STAKE_DOUBLE: i32 = 2;
+
+// Duos co-op's clocks (#3101's second part): SPEC S6, B2, B36, B38 (`host::duos`).
+
+/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
+/// not ended has its prompts answered by the AI and its turn ended (`host::duos`).
+pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
+/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
+/// person ended): on expiry the AI answers that prompt for them.
+pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
+/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
+/// still owes.
+pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
+/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
+/// the AI team's turn.
+pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;

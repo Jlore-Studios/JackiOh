@@ -6,13 +6,18 @@
 //! Only seats of finished matches offer. Deleted accounts (R1497000) and other catalog versions
 //! (R1638000) are refused. Offers live in memory and lapse after `REMATCH_OFFER_TTL_MS` (§13.9, R1398000).
 //! Custom cards (R915005) and players already in matches (R1065000, R1523000) refuse creation.
+//!
+//! The rules (the window, what two offers make, who waits on a create, what is swept) are
+//! `jackioh_shared::host::again`'s, pure (#3101); this file is the request, the store reads, the start of
+//! the game and the wake-up of the offers that wait on it.
 
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexMap;
 use jackioh_engine::LeanPick;
 use jackioh_engine::wire::DuosSeat;
+use jackioh_shared::host::again::{AgainBook, AgainClaim, in_again_window};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Notify;
 use tokio::sync::futures::OwnedNotified;
@@ -24,7 +29,6 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::new_uuid;
 use crate::api::rematch::cards_changed;
 use crate::app::{App, now_ms};
-use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{FrozenDeck, Profile};
 use crate::duos::actor::HUMAN_SEATS;
 use crate::duos::registry::registry;
@@ -50,26 +54,19 @@ pub struct AgainStatusBody {
     pub match_id: Option<String>,
 }
 
-struct OfferEntry {
-    /// The seats that offered.
-    offers: IndexSet<DuosSeat>,
-    /// R924000, R2031000: each seat's latest offer's "More cards from" pick.
-    leans: IndexMap<DuosSeat, Option<LeanPick>>,
-    /// `now` of the latest offer; the sweep reads this.
-    at: i64,
-    /// The game both seats' offers made, once made — and only once made, so no offer ever reads
-    /// an id for a game whose create then fails.
-    match_id: Option<String>,
-    /// The create in flight, while one offer makes the game: an offer landing meanwhile waits on
-    /// it instead of minting a second game. Its `Creating` guard clears it however the create ends.
-    creating: Option<Arc<Notify>>,
-}
-
 /// R2092000's offers, by the finished match's id: rendezvous state for two sockets, not rows. One
 /// per `App` (`App::duos_again_offers`), like `RematchOffers`, so parallel tests never share offers
-/// and one test's sweep never reaches another's.
+/// and one test's sweep never reaches another's. The rules are `jackioh_shared::host::again`'s, pure
+/// (#3101); what is kept beside the book is the wake-up of the create in flight, which only a runtime has.
 #[derive(Default)]
-pub struct DuosAgainOffers(Mutex<IndexMap<String, OfferEntry>>);
+pub struct DuosAgainOffers(Mutex<Offers>);
+
+#[derive(Default)]
+struct Offers {
+    book: AgainBook,
+    /// The wake-up of the create in flight for a finished match, under the number the book holds it by.
+    wakers: IndexMap<String, (u32, Arc<Notify>)>,
+}
 
 /// What an offer does next, decided under the offers' lock (`DuosAgainOffers::claim`).
 enum Claim<'a> {
@@ -89,114 +86,83 @@ enum Claim<'a> {
 struct Creating<'a> {
     offers: &'a DuosAgainOffers,
     finished: String,
-    mine: Arc<Notify>,
+    number: u32,
 }
 
 impl Drop for Creating<'_> {
     fn drop(&mut self) {
-        let mut map = self.offers.lock();
-        if let Some(entry) = map.get_mut(&self.finished)
-            && self.holds(entry)
-        {
-            entry.creating = None;
+        let mut offers = self.offers.lock();
+        offers.book.release(&self.finished, self.number);
+        let mine = match offers.wakers.get(&self.finished) {
+            Some((number, _)) if *number == self.number => offers.wakers.shift_remove(&self.finished),
+            _ => None,
+        };
+        drop(offers);
+        if let Some((_, notify)) = mine {
+            notify.notify_waiters();
         }
-        drop(map);
-        self.mine.notify_waiters();
     }
 }
 
 impl Creating<'_> {
-    /// Whether `entry` still waits on this claim's create: a swept and remade entry does not.
-    fn holds(&self, entry: &OfferEntry) -> bool {
-        entry
-            .creating
-            .as_ref()
-            .is_some_and(|held| Arc::ptr_eq(held, &self.mine))
-    }
-
     /// Publishes the created game id and wakes waiters; remakes entry if swept concurrently.
     fn made(self, id: &str, now: i64) {
-        let mut map = self.offers.lock();
-        match map.get_mut(&self.finished) {
-            Some(entry) if self.holds(entry) => {
-                entry.match_id = Some(id.to_string());
-            }
-            _ => {
-                map.insert(
-                    self.finished.clone(),
-                    OfferEntry {
-                        offers: [DuosSeat::A1, DuosSeat::A2].into_iter().collect(),
-                        leans: IndexMap::new(),
-                        at: now,
-                        match_id: Some(id.to_string()),
-                        creating: None,
-                    },
-                );
-            }
-        }
-        drop(map);
+        self.offers.lock().book.made(&self.finished, self.number, id, now);
     }
 }
 
 impl DuosAgainOffers {
-    fn lock(&self) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
+    fn lock(&self) -> MutexGuard<'_, Offers> {
         self.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Records `seat`'s offer and decides next action; check and claim run under one lock.
     fn claim(&self, finished: &str, seat: DuosSeat, lean: Option<LeanPick>, now: i64) -> Claim<'_> {
-        let mut map = self.lock();
-        // Sweeps a stale entry, so the offer starts a fresh one.
-        live_entry(&mut map, finished, now);
-        let entry = map.entry(finished.to_string()).or_insert_with(|| OfferEntry {
-            offers: IndexSet::new(),
-            leans: IndexMap::new(),
-            at: now,
-            match_id: None,
-            creating: None,
-        });
-        entry.at = now;
-        entry.offers.insert(seat);
-        entry.leans.insert(seat, lean);
-        if let Some(created) = &entry.match_id {
-            return Claim::Done(Some(created.clone()));
-        }
-        if !entry.offers.contains(&seat.teammate()) {
-            return Claim::Done(None);
-        }
-        if let Some(inflight) = &entry.creating {
-            // Registered under the lock, which `Creating::drop` takes before it wakes anyone, so a
-            // create that ends in between cannot be missed.
-            let mut wait = Box::pin(Arc::clone(inflight).notified_owned());
-            wait.as_mut().enable();
-            return Claim::Wait(wait);
-        }
-        let mine = Arc::new(Notify::new());
-        entry.creating = Some(Arc::clone(&mine));
-        let lean_at = |at: DuosSeat| entry.leans.get(&at).copied().flatten();
-        let leans = (lean_at(DuosSeat::A1), lean_at(DuosSeat::A2));
-        Claim::Make {
-            creating: Creating {
-                offers: self,
-                finished: finished.to_string(),
-                mine,
-            },
-            leans,
+        let mut offers = self.lock();
+        match offers.book.claim(finished, seat, lean, now) {
+            AgainClaim::Done { answered } => Claim::Done(answered),
+            AgainClaim::Make { creating, leans } => {
+                offers
+                    .wakers
+                    .insert(finished.to_string(), (creating, Arc::new(Notify::new())));
+                Claim::Make {
+                    creating: Creating {
+                        offers: self,
+                        finished: finished.to_string(),
+                        number: creating,
+                    },
+                    leans,
+                }
+            }
+            AgainClaim::Wait { creating } => {
+                let inflight = offers
+                    .wakers
+                    .get(finished)
+                    .filter(|(number, _)| *number == creating)
+                    .map(|(_, notify)| Arc::clone(notify));
+                let Some(inflight) = inflight else {
+                    return Claim::Done(None);
+                };
+                // Registered under the lock, which `Creating::drop` takes before it wakes anyone, so a
+                // create that ends in between cannot be missed.
+                let mut wait = Box::pin(inflight.notified_owned());
+                wait.as_mut().enable();
+                Claim::Wait(wait)
+            }
         }
     }
 }
 
-fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
+fn offers(app: &App) -> MutexGuard<'_, Offers> {
     app.duos_again_offers.lock()
 }
 
 /// Drops offer entries older than `REMATCH_OFFER_TTL_MS` with no active actor in registry.
 /// Returns count of dropped entries.
 pub fn sweep_duos_again_offers(app: &Arc<App>, now: i64) -> usize {
-    let mut map = offers(app);
-    let before = map.len();
-    map.retain(|match_id, entry| now - entry.at <= REMATCH_OFFER_TTL_MS || registry(app).has(match_id));
-    before - map.len()
+    offers(app)
+        .book
+        .sweep(now, |match_id| registry(app).has(match_id))
 }
 
 // Small private copies (fullsend rule 5): the error shapes
@@ -211,25 +177,6 @@ fn not_finished() -> ApiError {
 
 fn not_open() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "that co-op room is not open")
-}
-
-// Offers
-
-/// Returns the live entry for a match, sweeping unanswered offers past `REMATCH_OFFER_TTL_MS`.
-fn live_entry<'a>(
-    offers: &'a mut IndexMap<String, OfferEntry>,
-    match_id: &str,
-    now: i64,
-) -> Option<&'a mut OfferEntry> {
-    let stale = {
-        let entry = offers.get(match_id)?;
-        entry.match_id.is_none() && now - entry.at > REMATCH_OFFER_TTL_MS
-    };
-    if stale {
-        offers.shift_remove(match_id);
-        return None;
-    }
-    offers.get_mut(match_id)
 }
 
 /// The match a `:matchId` route names and the caller's seat in it, or the 404 anyone else gets
@@ -382,16 +329,9 @@ pub async fn offer_again(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(not_finished());
     };
     let now = now_ms();
-    if now - ended_at > REMATCH_OFFER_TTL_MS {
+    if !in_again_window(ended_at, now) {
         // R1398000: offer lapses silently past reopen window; keep match id if already created.
-        let mut map = offers(app);
-        let answered = match map.get(&match_row.id) {
-            Some(entry) if entry.match_id.is_some() => entry.match_id.clone(),
-            _ => {
-                map.shift_remove(&match_row.id);
-                None
-            }
-        };
+        let answered = offers(app).book.lapse(&match_row.id);
         let created = AgainOfferBody { match_id: answered };
         return Ok(json(
             200,
@@ -414,17 +354,7 @@ pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(not_finished());
     }
 
-    let (you_offered, teammate_offered, created) = {
-        let mut map = offers(app);
-        match live_entry(&mut map, &match_row.id, now_ms()) {
-            None => (false, false, None),
-            Some(entry) => (
-                entry.offers.contains(&seat),
-                entry.offers.contains(&seat.teammate()),
-                entry.match_id.clone(),
-            ),
-        }
-    };
+    let seen = offers(app).book.seen(&match_row.id, seat, now_ms());
     // Gone whenever no live actor holds the match or the teammate's socket closed, and never
     // rebuilt: presence is about who is here now.
     let teammate_here = registry(app)
@@ -438,10 +368,10 @@ pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
         })
         .unwrap_or(false);
     let status = AgainStatusBody {
-        you_offered,
-        teammate_offered,
+        you_offered: seen.you_offered,
+        teammate_offered: seen.teammate_offered,
         teammate_here,
-        match_id: created,
+        match_id: seen.match_id,
     };
     Ok(json(
         200,

@@ -780,8 +780,8 @@ keeps behind its opaque `EngineState` brand.
     // #3098: jackioh-shared's Conquest series rules (SPEC §9.5, R330–R337). A SeriesCall in ({ call: "pickDeck", series, seat, slot, now, gameNo? }), a SeriesAnswer out
     // ({ row } | { refused } | { seats } | { picked } | { view } | { score }); the host holds the row and hands it back (crates/shared/README.md, the host contract)
 #[wasm_bindgen] pub fn host(call_json: &str) -> String;
-    // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
-    // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+    // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the same for "Duos" | the rematch and Play again books' calls),
+    // a HostAnswer out ({ answer: "stepped", host, outputs } | { answer: "steppedDuos", host, outputs } | { view } | { duosView } | { presence } | the books'); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
 ```
 
 ### 10.2 Build

@@ -3,4 +3,4 @@
 /**
  * How an action came out: the answer its sender is given.
  */
-export type ActionAnswer = { "answer": "ack", seq: number, } | { "answer": "illegal", reason: string, } | { "answer": "matchOver" } | { "answer": "panicked" } | { "answer": "notRecorded" };
+export type ActionAnswer = { "answer": "ack", seq: number, } | { "answer": "illegal", reason: string, } | { "answer": "matchOver" } | { "answer": "panicked" } | { "answer": "notRecorded" } | { "answer": "nonceTaken" };
