@@ -142,8 +142,8 @@ describe("B36 dragging a hand card onto a glowing zone plays it", () => {
     renderGame();
     lift(el("hand-card-h1"));
 
-    // The fixture has no catalog, so its def id is shown.
-    expect(el("drag-ghost")).toHaveTextContent("core-008");
+    // The fixture has no catalog in context; the engine's own names the card.
+    expect(el("drag-ghost")).toHaveTextContent("Mr. Vanilla");
     expect(el("drag-ghost")).toHaveTextContent("3");
     const layer = el("drag-layer");
     expect(within(layer).queryAllByTestId(/^(hand-)?card-/)).toHaveLength(0);

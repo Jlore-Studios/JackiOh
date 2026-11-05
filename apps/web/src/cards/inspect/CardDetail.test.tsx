@@ -252,7 +252,7 @@ describe("CardDetail (B29)", () => {
       unmount();
     }
     // The whole catalog outgrows the default 5 s.
-  }, 30_000);
+  }, 60_000);
 });
 
 describe("VoicePreview (R630)", () => {

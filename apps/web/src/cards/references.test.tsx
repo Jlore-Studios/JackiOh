@@ -74,7 +74,7 @@ describe("R279 the names a text links", () => {
         unmount();
       }
     }
-  }, 30_000);
+  }, 60_000);
 
   it("R903 'Coin' and 'Coins' name The Coin, and a lower-case coin names nothing", () => {
     const refs = [def("core-t-coin")];

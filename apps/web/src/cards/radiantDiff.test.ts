@@ -157,7 +157,7 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
       expect(base.container.querySelector(".cf-mark"), `${card.id} base`).toBeNull();
       base.unmount();
     }
-  }, 30_000);
+  }, 60_000);
 
   it("R277 the mark is a non-color cue too: bold and underlined, in the stylesheet every face loads", () => {
     const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8");

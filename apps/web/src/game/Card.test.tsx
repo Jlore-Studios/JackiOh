@@ -549,16 +549,16 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
     expect(cardRoot(yourUnit(view, 2).instanceId).querySelector(".damage-pop")).toBeNull();
   });
 
-  it("B17 with no catalog every face-up card still renders, named by its def id", () => {
+  it("B17 with no catalog in context every face-up card still renders, named by the engine's own catalog", () => {
     const view = fullBoardView();
     render(<Board view={view} />);
     for (const u of allUnits(view)) {
       const root = cardRoot(u.instanceId);
-      expect(inside(root, ".card-name").textContent, u.instanceId).toBe(u.defId);
+      expect(inside(root, ".card-name").textContent, u.instanceId).toBe(nameOf(u.defId));
       expect(inside(root, ".stat-attack").getAttribute("data-attack"), u.instanceId).toBe(String(u.attack));
     }
     for (const c of handOf(view)) {
-      expect(inside(handRoot(c.instanceId), ".card-name").textContent).toBe(c.defId);
+      expect(inside(handRoot(c.instanceId), ".card-name").textContent).toBe(nameOf(c.defId));
     }
   });
 });
@@ -691,14 +691,14 @@ describe("B19: what a face-up root adds", () => {
     expect(cardRoot(yourBackrow(view, 5).instanceId).getAttribute("data-rarity")).toBe("Rare");
   });
 
-  it("B19 with no catalog there is no data-rarity anywhere, but data-card-type is still set", () => {
+  it("B19 with no catalog in context the engine's own catalog still sets data-rarity and data-card-type", () => {
     const view = fullBoardView();
     const { container } = render(<Board view={view} />);
     for (const root of faceUpRoots(container)) {
-      expect(root.hasAttribute("data-rarity"), root.dataset.testid).toBe(false);
+      const printed = must(CATALOG[root.dataset.defId ?? ""], root.dataset.testid);
+      expect(root.getAttribute("data-rarity"), root.dataset.testid).toBe(printed.rarity);
       expect((root.getAttribute("data-card-type") ?? "") !== "", root.dataset.testid).toBe(true);
     }
-    expect(container.querySelectorAll("[data-rarity]")).toHaveLength(0);
     for (const lane of [1, 2, 5]) {
       const slot = yourBackrow(view, lane);
       expect(cardRoot(slot.instanceId).getAttribute("data-card-type")).toBe(slot.type);
@@ -816,16 +816,21 @@ describe("B19: what a face-up root adds", () => {
     expect(tones(enemyUnit(view, 5))).toEqual(["base", "base"]);
   });
 
-  it("B19 with no catalog every minion's tones are base", () => {
+  it("B19 with no catalog in context every minion's tones are the same, the engine holding the catalog", () => {
     const view = fullBoardView();
+    const tones = () =>
+      allUnits(view).map((u) => {
+        const root = cardRoot(u.instanceId);
+        return [
+          inside(root, ".stat-attack").getAttribute("data-tone"),
+          inside(root, ".stat-health").getAttribute("data-tone"),
+        ];
+      });
     render(<Board view={view} />);
-    for (const u of allUnits(view)) {
-      const root = cardRoot(u.instanceId);
-      expect(inside(root, ".stat-attack").getAttribute("data-tone"), u.defId).toBe("base");
-      const health = inside(root, ".stat-health").getAttribute("data-tone");
-      // Damage is visible without a catalog: health below max is still "damaged" or plain "base".
-      expect(["base", "damaged"], u.defId).toContain(health);
-    }
+    const bare = tones();
+    cleanup();
+    renderBoard(view);
+    expect(bare).toEqual(tones());
   });
 });
 
