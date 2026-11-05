@@ -793,15 +793,23 @@ keeps behind its opaque `EngineState` brand.
 `scripts/build-wasm.sh` (part 21): installs nothing that is present; else `rustup target add
 wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarball into
 `.cache/bin/`; then `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown` and
-`wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
-`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
+`wasm-bindgen --target web --omit-default-module-path --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`
+(with `--remove-name-section` for a player's build), then writes `pkg/jackioh_wasm_bg.wasm.br`, the module
+brotli-compressed (#3183). `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest`
+run it. The page fetches only the `.br`; the site Worker serves it with `Content-Encoding: br` and
+`Content-Type: application/wasm` (apps/edge/src/routing.ts `precompressedModule`, routed by
+wrangler.jsonc's `run_worker_first`), so the browser decodes it as it arrives and the module compiles
+while it downloads (§10.3). The deploy jobs
 (`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
 the web build. `JACKIOH_WASM_C=1` also builds the C module (§10.5) and checks that it imports nothing;
 no CI job sets it yet.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
-`export async function loadWasm(): Promise<void>` (idempotent; `init()` + `pkg.init()`),
+`export async function loadWasm(): Promise<void>` (idempotent; `init()` + `pkg.init()`; it fetches
+`jackioh_wasm_bg.wasm.br` and hands the decoded response to `instantiateStreaming`, giving it the
+`application/wasm` type a static server that labels the file by its extension leaves out, and refusing,
+with the route it missed, a body that arrives still compressed),
 `export function loadWasmSync(bytes: BufferSource): void` (for jsdom tests, from
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
