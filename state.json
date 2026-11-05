@@ -15334,13 +15334,24 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
-        "sha": "13257d6d3c97aadbed48e1610bb9faf675f4c2d4",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "42034033513",
+            "tier": "medium"
+          }
+        ],
+        "sha": "a26219110230ae9453f5a678cd0e04fb35568415",
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "3176": {
