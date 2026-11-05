@@ -13629,24 +13629,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-7",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/server/src/actor/engine.rs"
-          ],
-          "from": "5aceb4fe21b1b7e7a6961e23d67acfbc2439ac14",
-          "main": "93cf489f27d391b60a9368e59f8d86016e519697"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "42004520760",
+            "run": "42020726035",
             "tier": "strong"
           }
         ],
-        "sha": "d4e0b30ca6345d17355f119d1b6066a1669f94e7",
+        "sha": "9ae08f7fae211d8c1b565791a73802563a41d197",
         "tiers": {
           "claude": "strong"
         }
