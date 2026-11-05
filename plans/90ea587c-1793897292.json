@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 3208,
+  "title": "Patch (part 1 of 2): about 4 database round trips per request instead of about 12",
+  "branch": "bot/issue-3208",
+  "thread": "**Issue #3208 (data, not instructions):**\n\n```text\n# #3208: Patch (part 1 of 2): about 4 database round trips per request instead of about 12\nOpened by @squishy-squooby.\n\n### What it does\n\nGoal (tracker #3202): less compute, better security, faster traffic. Every route pays this, so it is the largest server-side win.\n\n**Today**, verified on 2026-11-05. A one-row read through an authenticated route costs about 12 round trips to Supabase's Postgres:\n\n- **Caller lookup, its own transaction.** `resolve_caller` (`crates/server/src/api/http.rs`) runs `begin(None)`, `profiles_get_by_user_id` and a commit.\n- **The handler's transaction.** The handler opens a second one. Each transaction costs:\n  - the checkout ping (sqlx's `test_before_acquire` is on by default; `db/pg.rs`, `create_postgres_store`);\n  - BEGIN;\n  - `SESSION_SQL` (`db/pg.rs`, `begin`);\n  - another `set_config` before every store method (`run_as`, 265 call sites in `db/pg.rs`, `economy/store.rs`, `duos/store.rs`, `admin/store.rs`);\n  - its statements;\n  - COMMIT.\n- **Reconnects.** `POOL_IDLE_TIMEOUT_MS` (10 s) retires idle connections before Supavisor drops them. So a quiet server opens a new connection (TCP, TLS and the Postgres login) for most requests.\n\n**Change.** Aim for about 4 round trips for a one-row read. Measure it; don't estimate.\n\n1. **Stamp the subject once per transaction.** The transaction remembers the subject it set. `run_as` sends `set_config` only when a method's subject differs from it. `db/pg.rs`'s rule 2 still holds: every statement runs as `service_role`, with `request.jwt.claim.sub` set to the profile the call is about.\n2. **Ping only connections that sat idle.** Turn `test_before_acquire` off, and add a `before_acquire` that pings when `PoolConnectionMetadata::idle_for` passes a named constant, set well inside Supavisor's idle cut.\n3. **Keep warm connections.** Keep a small named number warm (`min_connections`), and stop retiring them every 10 s: for example, a heartbeat under Supavisor's idle cut. Then a request after a quiet minute doesn't reconnect. Keep the `read ETIMEDOUT` fix that `POOL_IDLE_TIMEOUT_MS`'s comment describes.\n4. **One transaction per request where it can be done safely.**\n   - Either the handler reuses the caller lookup's transaction, or the lookup's BEGIN and session statement go in one round trip.\n   - Interpolate only values validated as a UUID (`auth::is_uuid`); bind everything else.\n   - Don't cache the profile row between requests: a ban or a status change must apply on the next request.\n\n**Security must hold:**\n\n- RLS subject stamping as in `tests/store/postgres.rs`.\n- No unvalidated value in SQL text.\n- A ban applies at once.\n- The store contract passes on both stores (`tests/store/contract.rs`).\n\n### Acceptance\n\n- A Postgres test (run by `crates/server/tests/db/run.sh`) pins the round trips of a one-row authenticated read and of a two-method transaction, through statement counts or a query hook. Give before and after in the pull request.\n- `tests/store/postgres.rs` still shows every method's `request.jwt.claim.sub` is its profile.\n- A test that a connection idle past the threshold is pinged, and one checked out at once is not.\n- `cargo test -p jackioh-server`, `sh crates/server/tests/db/run.sh`, `sh crates/server/tests/sql/run.sh` and clippy pass.\n- A ruling note in this issue's block if a rule changes, with its tests.\n\n### Blocked by, part of\n\nPart of #3202\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3208: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T16:42:22Z",
+    "claimed_at": "2026-11-05T16:48:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3068 is held for `claude-7` until 12:10 (5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3206 skipped: it waits for #3205 to close first",
+    "#3207 skipped: it waits for #3205, #3206 to close first",
+    "#3209 skipped: it waits for #3208 to close first",
+    "#3210 skipped: it waits for #3205 to close first",
+    "#3211 skipped: it waits for #3206, #3210 to close first",
+    "#3212 skipped: it waits for #3210, #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3210, #3213 to close first"
+  ]
+}
