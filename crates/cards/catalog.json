@@ -6125,14 +6125,17 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 1,
+    "refs": [
+      "core-t-coin"
+    ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "This has the text of the last Spell either player played."
+      "text": "This has the text of the last Spell either player played, or of The Coin if none has been."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nThis has the text of the last Spell either player played."
+      "text": "Echo 1\nThis has the text of the last Spell either player played, or of The Coin if none has been."
     }
   },
   "classic-058": {
@@ -11725,7 +11728,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+      "text": "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after paying for this."
     },
     "radiant": {
       "keywords": [
@@ -11736,7 +11739,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Echo X, Lifesteal, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+      "text": "Echo X, Lifesteal, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after paying for this."
     }
   },
   "meditative-006": {
