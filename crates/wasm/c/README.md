@@ -132,6 +132,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
 | `face(call)` | string | #3106: one call of `jackioh-shared`'s card face model, a `FaceCall` in and a `FaceAnswer` out (a face, every face of a view, a text as spans, a word diff); the catalog is the one `init` registered and the locale an argument, so the answer is final text as spans in the reader's words and the host lays it out (`crates/shared/README.md`) |
+| `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; the rematch book's calls answer its next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |

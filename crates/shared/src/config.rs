@@ -31,3 +31,47 @@ pub const GLITCH_SWAP_IN: u32 = 45;
 /// Out of [`GLITCH_ODDS_SCALE`]: below `GLITCH_SWAP_IN` plus this a Glitch character gains a combining mark.
 pub const GLITCH_MARK_IN: u32 = 35;
 pub const GLITCH_ODDS_SCALE: u32 = 100;
+
+// ---------------------------------------------------------------------------------------------
+// The match host's numbers (#3101): the clocks (SPEC §9.5, R79, R268, R744), the relays (R738) and
+// the rematch window (R672, R2685000) that `host` decides with. `crates/server/src/config.rs`
+// re-exports them, so `serverConfig.ts` and the server's code name them as before.
+// ---------------------------------------------------------------------------------------------
+
+/// R79: the turn clock belongs to the active player and ends a stalled turn.
+pub const TURN_CLOCK_SECONDS: i64 = 75;
+/// R79: a prompt held by the non-active player (e.g. a trap firing on the opponent's turn).
+pub const PROMPT_CLOCK_SECONDS: i64 = 30;
+/// SPEC §11 R268: the mulligan clock. Both seats' mulligans are open at once (R265), so one deadline
+/// runs for both, armed when the window opens and never re-armed when one seat answers; on expiry
+/// every seat still owing is timed out and keeps its whole hand. Longer than the prompt clock because
+/// a mulligan reads a whole opening hand, shorter than the turn clock because nothing is played.
+pub const MULLIGAN_CLOCK_SECONDS: i64 = 45;
+/// R79: grace window after a disconnect before `disconnectExpired` ends the match as a loss.
+pub const DISCONNECT_GRACE_SECONDS: i64 = 60;
+/// R79, R389: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`.
+/// Patch v0.2.0 doubled the turn cap to 60 player-turns (B4.3), which at a full turn clock is 75
+/// minutes, so the ceiling doubled with it and a slow game ends on the cap, not the clock.
+pub const MATCH_CEILING_MINUTES: i64 = 120;
+/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
+/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
+/// row lands, the match ends or the actor stops, never in a loop.
+pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
+/// R1452: how long a bot waits to decide again when its move could not be written to the log, so a
+/// store that keeps failing is retried at this pace, never in a loop.
+pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
+/// SPEC §11 R738: the least time between two `aim` frames the host relays for one seat. Aims that
+/// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
+/// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
+/// Ten a second follows a hover from target to target and bounds what a scripted client can push.
+/// R2739001's `choiceHover` relays are coalesced per seat by the same interval, on a window of their
+/// own.
+pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
+/// SPEC §11 R672: how long one seat's rematch offer stands after a non-series match ends. Ten
+/// minutes: long enough to read the result screen and press the button, short enough that a stale
+/// offer cannot summon a game long after both players moved on.
+pub const REMATCH_OFFER_TTL_MS: i64 = 600_000;
+/// R672: a normal rematch moves the rating once.
+pub const STAKE_NORMAL: i32 = 1;
+/// R672: a double-or-nothing rematch moves it twice. Ranked matches only.
+pub const STAKE_DOUBLE: i32 = 2;

@@ -327,35 +327,12 @@ pub fn think_ms(
     (drawn.clamp(lower as f64, upper as f64)) as i64
 }
 
-/// R188: actions forbidden to AI (concede, draw offer, accepted draw). MD-D29, R1127: also filters
-/// `Emote` (handled by persona). A ladder bot's concession, draw offer and draw answer come from
-/// `signals` (R639000, R2660000, R2660001).
-pub fn r188_forbidden(body: &ActionBody) -> bool {
-    matches!(
-        body,
-        ActionBody::Concede
-            | ActionBody::OfferDraw
-            | ActionBody::AnswerDraw { accept: true }
-            | ActionBody::Emote { .. }
-    )
-}
-
-/// R639000, R2660001: the move the actor never plays for a bot: an emote (its persona's, through the
-/// relay). A draw offer it plays, by `signals::offers_draw`'s roll.
-pub fn never_played(body: &ActionBody) -> bool {
-    matches!(body, ActionBody::Emote { .. })
-}
+// R188 and the fallback a bot's refused move falls back on are the match host's (#3101): the machine
+// applies a decided move and falls back itself, so the server names them only for its own callers.
+pub use jackioh_shared::host::bot::{never_played, r188_forbidden};
 
 /// Fallback action when AI produces no valid move: `EndTurn` if legal, else first legal
 /// action not forbidden by `r188_forbidden`.
 pub fn fallback_action(pinned: Pinned, state: &GameState, seat: PlayerId) -> Option<ActionBody> {
-    let legal: Vec<ActionBody> = engine::legal_actions(pinned, state, seat)
-        .into_iter()
-        .filter(|body| !r188_forbidden(body))
-        .collect();
-    legal
-        .iter()
-        .find(|body| matches!(body, ActionBody::EndTurn))
-        .or_else(|| legal.first())
-        .cloned()
+    engine::run_pinned(pinned, || jackioh_shared::host::bot::fallback_action(state, seat))
 }

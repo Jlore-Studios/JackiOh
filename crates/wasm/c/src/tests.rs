@@ -328,6 +328,34 @@ fn series_export_answers_what_the_core_body_answers() {
 }
 
 #[test]
+fn host_export_answers_what_the_core_body_answers() {
+    init();
+    // The rematch window and the refusal before an offer are data in, data out (#3101).
+    let window = r#"{ "call": "rematchWindow", "finishedAt": 1700000000000, "now": 1700000000001 }"#;
+    let answer = call!(host; window;);
+    assert_eq!(answer, expect(wasm_core::host(window)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    assert_eq!(
+        serde_json::from_str::<Value>(&answer.text).expect("JSON")["open"],
+        true
+    );
+    let double = r#"{ "call": "checkOffer", "facts": {
+        "stakes": 2, "ranked": false, "finished": true, "seriesGame": false, "catalogCurrent": true } }"#;
+    let refused = call!(host; double;);
+    assert_eq!(refused, expect(wasm_core::host(double)));
+    assert_eq!(refused.status, STATUS_OK, "{}", refused.text);
+    assert!(
+        refused.text.contains("double_requires_ranked"),
+        "{}",
+        refused.text
+    );
+    // A call that does not parse is the one failure.
+    let broken = call!(host; "{}";);
+    assert_eq!(broken, expect(wasm_core::host("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
 fn run_exports_answer_what_the_core_bodies_answer() {
     init();
     let content = call!(run_content; "[]";);
