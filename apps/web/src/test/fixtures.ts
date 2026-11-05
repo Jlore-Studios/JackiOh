@@ -365,12 +365,17 @@ function fusedFaceOf(faces: readonly CardFace[]): CardFace {
 /**
  * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179; the Token tag only when every
  * ingredient is a token, R1177000). The game runs the engine's builder; hidden-information.test.ts pins
- * what the view carries of it.
+ * what the view carries of it. The order is the engine's: an Equip played onto its host is `[equip, host]`
+ * (play_steps.rs `fuse_equip`), a piece fused into a Starship `[ship, piece]` (starship.rs). Its type is the
+ * first ingredient's here, where the engine's is the target's. R3045000: an ingredient that is itself a
+ * fusion goes in parentheses in the id, as the engine writes it (R179), so a fusion of fusions reads back:
+ * `fusedDef([equip, fusedDef([equip, host])], 2)` is a host equipped twice.
  */
 export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
   const first = ingredients[0];
   if (first === undefined) throw new Error("a fusion needs ingredients");
-  const id = `t-${n}:${ingredients.map((def) => def.id).join("+")}`;
+  const spelled = ingredients.map((def) => (def.ingredients === undefined ? def.id : `(${def.id})`));
+  const id = `t-${n}:${spelled.join("+")}`;
   const cost = Math.min(
     ingredients.reduce((sum, def) => sum + (typeof def.cost === "number" ? def.cost : def.cost === "X" ? 0 : def.cost.base), 0),
     4,

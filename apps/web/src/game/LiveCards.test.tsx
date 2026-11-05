@@ -166,6 +166,69 @@ describe("R243 a fused card says what it is: name, text, tags, keywords and stat
   });
 });
 
+/* a fused Starship */
+
+describe("R3045000 a fused Dormant Starship is named for its hull, and a launched one for its drawn name", () => {
+  const HULL = "stinkyscape-t-dormant-starship";
+  const fused = fusedDef([def(HULL), def("stinkyscape-062"), def("stinkyscape-050")], 5);
+  const piece = (id: string) => ({ defId: id });
+  const starshipView = (name?: string): PlayerView =>
+    baseView({
+      you: emptySide("p1", {
+        units: [
+          null,
+          null,
+          unit("p1", {
+            instanceId: "ship",
+            defId: fused.id,
+            attack: 0,
+            maxHealth: 3,
+            health: 3,
+            starship: { pieces: [piece("stinkyscape-062"), piece("stinkyscape-050")], ...(name === undefined ? {} : { name, launched: 1 }) },
+          }),
+          null,
+          null,
+        ],
+      }),
+      defs: { [fused.id]: fused },
+    });
+
+  it("R3045000 the engine joins the pieces' names onto the hull's, and the board prints the hull's", () => {
+    expect(fused.name).toBe("Dormant Starship + Miner v1 + Beam v3");
+    renderBoard(starshipView());
+    const root = screen.getByTestId(testid.card("ship"));
+    expect(text(root, ".card-name")).toBe("Dormant Starship");
+    expect(root.textContent).not.toContain("Miner v1");
+  });
+
+  it("R3045000 its hover preview prints the hull's name too", () => {
+    vi.useFakeTimers();
+    renderBoard(starshipView());
+    expect(text(hover(screen.getByTestId(testid.card("ship"))), ".card-name")).toBe("Dormant Starship");
+  });
+
+  it("R3045000 a launched Starship prints the name it launched under", () => {
+    renderBoard(starshipView("Ember of Departure"));
+    expect(text(screen.getByTestId(testid.card("ship")), ".card-name")).toBe("Ember of Departure");
+  });
+
+  it("R3045000 the card the log and the showcase name by its definition alone is the hull's too", () => {
+    vi.useFakeTimers();
+    const fusedEvent: GameEvent = { type: "fused", instanceIds: ["a", "b"], resultInstanceId: "ship", defId: fused.id };
+    const played: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "e1", defId: fused.id, costPaid: 0 };
+    const view = baseView({ defs: { [fused.id]: fused } });
+    render(withCatalog(<Log view={withEvents(view, [fusedEvent])} />));
+    expect(screen.getByTestId(testid.log).textContent).toContain("2 cards fused into Dormant Starship");
+    expect(screen.getByTestId(testid.log).textContent).not.toContain("Miner v1");
+    cleanup();
+
+    const before = withEvents(baseView(), [{ type: "turnStarted", player: "p2", turn: 4 }]);
+    const { rerender } = render(withCatalog(<CardShowcase view={before} />));
+    rerender(withCatalog(<CardShowcase view={withEvents(view, [...before.events, played])} />));
+    expect(text(screen.getByTestId(showcaseTestid.face), ".card-name")).toBe("Dormant Starship");
+  });
+});
+
 /* stats that move in hand */
 
 describe("R243 a hand card shows the stats it has now", () => {

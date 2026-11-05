@@ -13,7 +13,8 @@ import { lookupFromDefs, type CardInfo } from "../game/catalog.ts";
 import { liveFace } from "../game/faces.ts";
 import { card, fusedDef, unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
-import { CHINESE, CHINESE_TERMS, chineseDef, chineseKeyword } from "./chinese.ts";
+import { CHINESE, CHINESE_TERMS, chineseDef, chineseKeyword, chineseName } from "./chinese.ts";
+import { DORMANT_STARSHIP_ID } from "./fused.ts";
 import { GLOSSARY } from "./glossary.ts";
 import { Glossary } from "./inspect/Glossary.tsx";
 import { MinionFace } from "./MinionFace.tsx";
@@ -206,6 +207,31 @@ describe("R1301 a Chinese card in a match", () => {
     expect(chineseDef(forced).base.text).toBe(`${zh("core-011").radiant}\n${zh("core-089").base}`);
     // The English of the same fusion is what the glossary reads.
     expect(base.englishText).toBe(fused.base.text);
+  });
+
+  it("R3045000 a fused Dormant Starship is named for the hull in Chinese, a launched one for its drawn name", () => {
+    // The engine joins the names ("Dormant Starship + Miner v1"); the hull keeps its own, whatever was fused into it.
+    const hull = def(DORMANT_STARSHIP_ID);
+    const once = fusedDef([hull, def("stinkyscape-062")], 1);
+    const twice = fusedDef([once, def("stinkyscape-050")], 2);
+    expect(chineseDef(once).name).toBe(zh(DORMANT_STARSHIP_ID).name);
+    expect(chineseName(once.id, once.name, once)).toBe(zh(DORMANT_STARSHIP_ID).name);
+    // A fusion of fusions has no table entry for its inner id, so it stays English but for the name.
+    expect(chineseDef(twice)).toEqual({ ...twice, name: zh(DORMANT_STARSHIP_ID).name });
+    expect(chineseName(twice.id, twice.name, twice)).toBe(zh(DORMANT_STARSHIP_ID).name);
+    // The ingredients' Chinese words still join in its text, as they did.
+    expect(chineseDef(once).base.text).toBe(`${zh(DORMANT_STARSHIP_ID).base}\n${zh("stinkyscape-062").base}`);
+    for (const fused of [once, twice]) {
+      const dormant = faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: { starship: { pieces: 2, name: null } } });
+      expect(dormant.name).toBe(zh(DORMANT_STARSHIP_ID).name);
+      expect(dormant.englishName).toBe("Dormant Starship");
+      const launched = faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: { starship: { pieces: 2, name: "Ember of Departure" } } });
+      expect(launched.name).toBe("Ember of Departure");
+      expect(faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: {} }).name).toBe(zh(DORMANT_STARSHIP_ID).name);
+    }
+    // Any other fusion is joined from its ingredients' names, as before.
+    const equipped = fusedDef([def("stinkyscape-050"), def("core-020")]);
+    expect(chineseDef(equipped).name).toBe(`${zh("stinkyscape-050").name} + ${zh("core-020").name}`);
   });
 
   it("R1301 keywords read in Chinese", () => {

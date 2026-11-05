@@ -36,7 +36,8 @@ import {
   type RolledPower,
 } from "./inPlay.ts";
 import { isZhCn, t } from "../i18n/i18n.ts";
-import { CHINESE_COMMA, chineseDef, chineseKeyword, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
+import { CHINESE_COMMA, chineseDef, chineseKeyword, chineseName, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
+import { DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, holdsDormantStarship } from "./fused.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { temporaryLeft } from "./keywordVisuals.ts";
@@ -268,6 +269,11 @@ export function faceModel(source: FaceSource): FaceModel {
   return faceIn(source, drawnInChinese(source.chinese === true));
 }
 
+/** R3045000: the Dormant Starship's catalog name, in the face's language. */
+function hullName(chinese: boolean): string {
+  return chinese ? chineseName(DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME) : DORMANT_STARSHIP_NAME;
+}
+
 function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   const filled = withViewParams(source.def, source.inPlay?.params);
   // R1301: a Chinese card's name and texts are the table's; all else stays the definition's.
@@ -301,11 +307,16 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
       ? preview.map((entry) => ({ ...entry, label: chinesePreviewLabel(filled, source.radiant, entry.label, inPlay?.params) }))
       : preview;
   const english = chinese ? faceIn(source, false) : null;
+  // R3045000: a Starship keeps the hull's name whatever was fused into it (the engine joins the names): the name it
+  // launched under, else the Dormant Starship's. The view says a unit is a Starship; a fused definition says so
+  // too where no view does (a card the log or the graveyard names).
+  const holdsHull = inPlay?.starship !== undefined || (source.def !== undefined && holdsDormantStarship(source.def));
+  const hull = holdsHull ? hullName(chinese) : undefined;
 
   return {
     defId: source.defId,
     known: def !== undefined,
-    name: inPlay?.starship?.name ?? def?.name ?? source.name ?? source.defId,
+    name: inPlay?.starship?.name ?? hull ?? def?.name ?? source.name ?? source.defId,
     type,
     // MD-B15, R923: in play a face lists the view's tags; outside play the definition's.
     tags: source.inPlay !== undefined && source.tags !== undefined ? source.tags : (def?.tags ?? []),

@@ -9,6 +9,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardFace, type Tag } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
+import { DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME } from "./fused.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
 import { ALL_TRIBES, faceModel, foilFor, frameRarity, frameTags, type FaceModel, type FaceSource } from "./model.ts";
 import { markedText } from "./radiantDiff.ts";
@@ -247,10 +248,12 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // mark; its doubled stats are what R277 marks on it. Classic #60, Classic+ #5, Classic+ #34 and
     // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862)
     // and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
-    // Living Potions and the Stinkyscape set's #9 Ticketed (radiantDiff.test.ts names all thirteen;
+    // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
+    // "Then this goes to the graveyard." (R3044000) (radiantDiff.test.ts names all fourteen;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
+      "core-079",
       "classic-028",
       "classic-029",
       "classic-060",
@@ -598,6 +601,57 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(face("core-090", true).refs).toEqual(["core-090-1"]);
     expect(face("core-041", false, { inPlay: {} }).refs).toEqual(["core-t-sheep", "core-055"]);
     expect(face("core-002", false).refs).toEqual([]);
+  });
+});
+
+describe("R3045000: a Starship keeps its hull's name", () => {
+  const hull = def(DORMANT_STARSHIP_ID);
+  const MINER = "stinkyscape-062";
+  const BEAM = "stinkyscape-050";
+  // The engine joins the names of a Starship's pieces onto the hull's: "Dormant Starship + Miner v1 + Beam v3".
+  const once = fusedDef([hull, def(MINER)], 1);
+  const twice = fusedDef([once, def(BEAM)], 2);
+  const pieces = [{ defId: MINER, radiant: false }, { defId: BEAM, radiant: false }];
+
+  it("R3045000 the hull's name is the catalog's, and a fusion's definition keeps the engine's joined name", () => {
+    expect(hull.name).toBe(DORMANT_STARSHIP_NAME);
+    expect(once.name).toBe("Dormant Starship + Miner v1");
+    expect(twice.name).toBe("Dormant Starship + Miner v1 + Beam v3");
+  });
+
+  it("R3045000 a fused Dormant Starship in play is named Dormant Starship", () => {
+    for (const fused of [once, twice]) {
+      const f = faceModel({ defId: fused.id, def: fused, radiant: false, inPlay: { starship: { pieces: pieces.length, name: null, list: pieces } } });
+      expect(f.name).toBe("Dormant Starship");
+      expect(f.starship).toMatchObject({ launched: false });
+    }
+  });
+
+  it("R3045000 a launched Starship is named for the name it launched under", () => {
+    const f = faceModel({ defId: twice.id, def: twice, radiant: false, inPlay: { starship: { pieces: 2, name: "Ember of Departure", list: pieces } } });
+    expect(f.name).toBe("Ember of Departure");
+    expect(f.starship).toMatchObject({ launched: true });
+  });
+
+  it("R3045000 in play the view says it is a Starship, so even a definition that hides its pieces is named for the hull", () => {
+    const hidden = { ...twice, id: "t-9:#0123456789abcdef", ingredients: [{ defId: "t-8:#fedcba9876543210" }, { defId: BEAM }] };
+    expect(faceModel({ defId: hidden.id, def: hidden, radiant: false, inPlay: { starship: { pieces: 2, name: null } } }).name).toBe("Dormant Starship");
+    // With no view to say so, a definition that hides its pieces is named as the engine names it.
+    expect(faceModel({ defId: hidden.id, def: hidden, radiant: false, inPlay: {} }).name).toBe(hidden.name);
+  });
+
+  it("R3045000 a fused definition holding the hull is named for it where no view says it is a Starship", () => {
+    for (const fused of [once, twice]) {
+      expect(faceModel({ defId: fused.id, def: fused, radiant: false, inPlay: {} }).name).toBe("Dormant Starship");
+      expect(faceModel({ defId: fused.id, def: fused, radiant: true }).name).toBe("Dormant Starship");
+    }
+  });
+
+  it("R3045000 the hull itself and every other fusion are named as they were", () => {
+    expect(faceModel({ defId: hull.id, def: hull, radiant: false, inPlay: {} }).name).toBe("Dormant Starship");
+    const equipped = fusedDef([def(BEAM), def("core-020")]);
+    expect(faceModel({ defId: equipped.id, def: equipped, radiant: false, inPlay: {} }).name).toBe("Beam v3 + Pointmaster");
+    expect(face("core-020", false).name).toBe("Pointmaster");
   });
 });
 

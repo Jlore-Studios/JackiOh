@@ -15,7 +15,8 @@ import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { testid } from "./contract.ts";
 import { EMPTY_LOG_HISTORY, LOG_GAP_TEXT, advanceLogHistory } from "./useLogHistory.ts";
 import { CHINESE } from "../cards/chinese.ts";
-import { baseView, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { baseView, emptySide, fullBoardView, fusedDef, unit, withEvents } from "../test/fixtures.ts";
 
 afterEach(() => {
   cleanup();
@@ -661,6 +662,46 @@ describe("the Starship's fuse line in the log", () => {
     const line = keptLineFor(baseView(), lookup);
     expect(line(fused(1))?.text).toMatch(/Dormant Starship \(1 piece\)$/);
     expect(line(fused(3))?.text).toMatch(/Dormant Starship \(3 pieces\)$/);
+  });
+});
+
+describe("R3045000 a fused Dormant Starship is named for its hull in the log", () => {
+  const hull = CATALOG["stinkyscape-t-dormant-starship"];
+  const miner = CATALOG["stinkyscape-062"];
+  const beam = CATALOG["stinkyscape-050"];
+  const host = CATALOG["core-020"];
+  if (hull === undefined || miner === undefined || beam === undefined || host === undefined) throw new Error("the catalog has the hull and its pieces");
+  const once = fusedDef([hull, miner], 1);
+  const twice = fusedDef([once, beam], 2);
+  const equipped = fusedDef([beam, host], 3);
+  // The view carries the definitions its cards name (R243), here the outer fusion alone.
+  const lookup = lookupFromDefs({ ...CATALOG, [once.id]: once, [twice.id]: twice, [equipped.id]: equipped });
+  const fusedInto = (defId: string): GameEvent => ({ type: "fused", instanceIds: ["u1", "u2"], resultInstanceId: "u1", defId });
+
+  afterEach(() => {
+    resetLocaleForTests();
+  });
+
+  it("R3045000 the fused line names the Dormant Starship, not the pieces the engine joined onto its name", () => {
+    expect(once.name).toBe("Dormant Starship + Miner v1");
+    const line = keptLineFor(baseView(), lookup);
+    expect(line(fusedInto(once.id))?.text).toBe("2 cards fused into Dormant Starship");
+    expect(line(fusedInto(twice.id))?.text).toBe("2 cards fused into Dormant Starship");
+    // The face that line opens is the Starship's too.
+    expect(line(fusedInto(twice.id))?.face?.name).toBe("Dormant Starship");
+  });
+
+  it("R3045000 any other fused card is named by what it was fused of", () => {
+    expect(keptLineFor(baseView(), lookup)(fusedInto(equipped.id))?.text).toBe("2 cards fused into Beam v3 + Pointmaster");
+  });
+
+  it("R3045000 a reader of Chinese reads the hull's Chinese name", async () => {
+    await setLocale("zh-CN");
+    const name = CHINESE["stinkyscape-t-dormant-starship"]?.name ?? "";
+    expect(name).not.toBe("");
+    const line = keptLineFor(baseView(), lookup);
+    for (const fused of [once, twice]) expect(line(fusedInto(fused.id))?.text).toContain(name);
+    expect(line(fusedInto(twice.id))?.text).not.toContain("+");
   });
 });
 
