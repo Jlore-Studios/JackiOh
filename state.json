@@ -16190,6 +16190,8 @@
       }
     },
     "3088": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T23:15:55Z",
@@ -16203,8 +16205,11 @@
         "trail": "- Bash: {\"command\": \"grep -n 'max_decision_ms' crates/ai/src/config.rs | head -3; grep -ciE 'fail|exceed|over budget' /tmp/gate1.log /tmp/gate0.log\", \"description\": \"Check perf gate bound and failure lines\"}\n- Bash: {\"command\": \"grep -rn 'max_decision_ms' crates/ai/src/*.rs crates/tools/src/gate.rs | head -5\", \"description\": \"Find perf gate bound\"}\n- Bash: {\"command\": \"sed -i 's/smoke gate read GATE_AT_1; at 0, 20, 19 and 20\\\\./smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20./' crates/ai/src/config.rs && sed -i 's/At 1.0 the smoke gate read GA\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT_OK; find . -name generation.json -not -path './target/*' -not -path '*/node_modules/*' | head; grep -rn 'generation.json' crates/tools/src/*.rs | head -5\", \u2026\n- Bash: {\"command\": \"git log --oneline -5 -- crates/ai/generation.json; git log --oneline -3 --grep='attack hook' | head\", \"description\": \"Check generation.json history\"}\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | grep -v Compiling | tail -15\", \"description\": \"Run spec check for rulings\", \"timeout\": 1200000}\n- Bash: {\"command\": \"echo \\\"- run 3: spec check ok. Running clippy -p jackioh-ai and full ai tests.\\\" >> .bot-notes.md; cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | grep -v Compiling | tail\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | tail -5; touch crates/ai/src/evaluate.rs; cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | tail -5\", \"descrip\u2026\n- said: Clippy is clean. Now the AI crate's full test suite.\n- Bash: {\"command\": \"(time cargo test -p jackioh-ai) > /tmp/aitest.log 2>&1; grep -E 'test result|FAILED|panicked|^real' /tmp/aitest.log | tail -30\", \"description\": \"Run all AI crate tests\", \"timeout\": 24000\u2026\n- Bash: {\"command\": \"grep -ln 'jackioh-ai' crates/*/Cargo.toml apps/*/Cargo.toml 2>/dev/null\", \"description\": \"List crates depending on the AI crate\"}\n- tool error: Exit code 2 crates/ai/Cargo.toml crates/server/Cargo.toml crates/tools/Cargo.toml\n- Bash: {\"command\": \"ls crates; grep -ln 'jackioh-ai\\\\|jackioh_ai' crates/*/Cargo.toml\", \"description\": \"List all crates and AI dependents\"}\n- Bash: {\"command\": \"echo \\\"- run 3: cargo test -p jackioh-ai: 786 + 97 + 26 pass (7 daily ignored). clippy ai ok. Running tools and server tests.\\\" >> .bot-notes.md; (time cargo test -p jackioh-tools --feat\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/spec/rulings/R3064000.md\"}\n- Bash: {\"command\": \"until grep -qE '^real' /tmp/toolstest.log; do sleep 15; done; grep -E 'test result|FAILED|panicked|^real|^error' /tmp/toolstest.log | tail -30\", \"description\": \"Wait for tools tests to f\u2026\n- Bash: {\"command\": \"echo \\\"- run 3: tools tests pass (487+31+...). Temp experiment: decide on lone Ship Smith at awaken 0 and 0.5 (files backed up in /tmp/bak-*).\\\" >> .bot-notes.md\\ncp crates/ai/src/config\u2026\n- Bash: {\"command\": \"grep -n '^ awaken:' crates/ai/src/config.rs\\npython3 - <<'EOF'\\np='crates/ai/tests/ai/slumber.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" assert!(eval_with(&played, Prices::NONE) < eval_with(&stat\u2026\n- Bash: {\"command\": \"grep -c 'assert!(eval_with(&played, &prices) > eval_with(&state, &prices));' crates/ai/tests/ai/slumber.rs\\npython3 - <<'EOF'\\np='crates/ai/src/config.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" /\u2026\n- Bash: {\"command\": \"cp crates/ai/src/config.rs /tmp/bak-config.rs; python3 - <<'EOF'\\np='crates/ai/src/config.rs'\\ns=open(p).read()\\ns=s.replace(\\\" awaken: 1.0,\\\\n\\\",\\\" awaken: 0.0,\\\\n\\\",1)\\nopen(p,'w').wri\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT_OK; cargo test -p jackioh-ai --test ai -- r3064000 turn_hook 2>&1 | grep -E 'test result|FAILED'; git diff --stat | tail -1\", \"description\": \"Re-run fmt and\u2026\n- Bash: {\"command\": \"echo \\\"- run 3: after restore: fmt ok, r3064000+turn_hook 30 pass. Running server tests + classify.\\\" >> .bot-notes.md; (time cargo test -p jackioh-server --features jackioh-engine/testk\u2026\n- Bash: {\"command\": \"until grep -qE '^real' /tmp/servertest.log; do sleep 15; done; grep -E 'test result|FAILED|panicked|^real|^error' /tmp/servertest.log | tail -20\", \"description\": \"Wait for server tests t\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main 2>&1 | grep -v Compiling | tail -15; echo ---; cargo jackioh classify --base origin/main --claims 2>&1 | grep -v Compiling | tail -5; cargo jack\u2026\n- Bash: {\"command\": \"sed -n '100,135p' crates/tools/src/classify.rs\", \"description\": \"Read classify CLI options\"}\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/classify-idx; rm -f $GIT_INDEX_FILE; git read-tree HEAD && git add -A -- crates spec && tree=$(git write-tree) && unset GIT_INDEX_FILE && c=$(git commit-tree \\\u2026\n- Bash: {\"command\": \"unset GIT_INDEX_FILE; export GIT_INDEX_FILE=/tmp/classify-idx; rm -f $GIT_INDEX_FILE; git read-tree HEAD && git add -A -- crates spec && tree=$(git write-tree) && unset GIT_INDEX_FILE &&\u2026\n- Bash: {\"command\": \"grep -rln 'attack_hook\\\\|attackHook\\\\|AI_ATTACK_HOOK_PROBE_NODES' docs training analysis apps 2>/dev/null | grep -v node_modules | head\", \"description\": \"Search docs for lists of eval we\u2026\n- Bash: {\"command\": \"grep -rn 'attack_hook_prices\\\\|turn_hook_prices\\\\|R2688000' docs/ crates/*/README.md 2>/dev/null | grep -v 'crates/ai/README.md' | head\", \"description\": \"Check other docs that list root \u2026\n- Bash: {\"command\": \"git diff crates/ai/src/config.rs crates/ai/src/decide.rs spec/06-keywords.md | grep '^[+-]' | cut -c1-260\", \"description\": \"Review config, decide and \\u00a76.1 diffs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nstate='''## State\\n\\n- Run 3 (builder, opus): the whole plan is built and verifi\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI prices what a sleeping card does when it wakes\"} --> The practice AI now counts what a Dormant card's \"When this awakens\" does: Imprisoned Cosmality's 10 split damage and Imprisoned Ship Smith's Fiery Waraxe. It counts this for its own sleepers a\u2026"
       },
       "issue": 3064,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T00:33:06Z",
         "from_run": "41932330250",
         "gates": [
           {
@@ -16296,7 +16301,11 @@
         "source": "build",
         "until": "2026-11-05T01:01:55Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-05T00:31:55Z",
+      "run_id": "pending:0530d101-1793838758",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16315,6 +16324,9 @@
         "provider": "claude-8",
         "run": "41932330250"
       },
+      "started_at": "2026-11-05T00:33:06Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16328,9 +16340,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T00:22:47Z",
+    "at": "2026-11-05T00:33:06Z",
     "url": "",
-    "what": "build #3044 on claude-1"
+    "what": "review #3088 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T00:18:53Z",
