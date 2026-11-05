@@ -17764,6 +17764,8 @@
       }
     },
     "3166": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T08:25:51Z",
@@ -17777,8 +17779,11 @@
         "trail": "n.cy.ts'\\ns=open(p).read()\\nold=''' it(\\\"B40 the 404 panel says so in a player's words and offers a way home\\\", () => {\\n stubApi();\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127/e2e && grep -n \\\"function hitAreaProblems\\\" -B5 -A40 cypress/e2e/47-tap-areas.cy.ts | head -80; tail -2 /tmp/build-wasm.log | cut -c1-100; ls ..\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/build-wasm.log; do sleep 3; done; tail -3 /tmp/build-wasm.log | cut -c1-150\", \"description\": \"Wait for wasm build to finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127 && pnpm exec vitest run --project web apps/web/src/static-pages.test.ts apps/web/src/net/check-production-bundle.test.ts apps/web/src/net/cloudf\u2026\n- Bash: {\"command\": \"cd apps/web && python3 - <<'EOF'\\np='src/static-pages.test.ts'\\ns=open(p).read()\\ns=s.replace('''source.head.querySelector('script[type=\\\"module\\\"]')''','''source.querySelector('script[t\u2026\n- Bash: {\"command\": \"cd apps/web && python3 - <<'EOF'\\np='src/routes/shell-exits.test.tsx'\\ns=open(p).read()\\ns=s.replace('''import { readFileSync } from \\\"node:fs\\\";\\nimport { createRoot }''','''import { re\u2026\n- Bash: {\"command\": \"cd apps/web && sed -i 's/data-name-tier=\\\"s\\\" data-text-tier=\\\"s\\\"/data-name-tier=\\\"m\\\" data-text-tier=\\\"s\\\"/' static-pages.ts && cd .. && cd .. && pnpm exec vitest run --project web app\u2026\n- said: Good: the shape test fails when the markup drifts. Now the wider test set, typecheck, eslint and spec check.\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 3: wasm built; static-pages, shell-exits, gate, cloudflare, deploy-routes, NotFoundPlay tests pass; e2e 14/46/47 edited. Next: writing/palette/surface\u2026\n- Bash: {\"command\": \"(pnpm --dir apps/web typecheck 2>&1 | tail -20) ; (cargo jackioh spec check 2>&1 | tail -15)\", \"description\": \"Typecheck and spec check\", \"timeout\": 600000}\n- Bash: {\"command\": \"cp spec/rulings/R3127000.md /tmp/R3127000.bak && sed -i 's#^ - e2e/cypress/e2e/47-tap-areas.cy.ts# - e2e/cypress/e2e/99-nope.cy.ts#' spec/rulings/R3127000.md && ./target/release/jackioh \u2026\n- Bash: {\"command\": \"sed -i 's#^ - e2e/cypress/e2e/47-tap-areas.cy.ts# - e2e/cypress/e2e/99-nope.cy.ts#' spec/rulings/R3127000.md && cargo jackioh spec check 2>&1 | tail -4; cp /tmp/R3127000.bak spec/rulings\u2026\n- Bash: {\"command\": \"pnpm exec eslint apps/web/static-pages.ts apps/web/scripts apps/web/src/static-pages.test.ts apps/web/src/net apps/web/src/routes/shell-exits.test.tsx apps/web/src/auth e2e 2>&1 | tail -\u2026\n- Bash: {\"command\": \"cd apps/web && (pnpm build 2>&1 | tail -15); ls dist/404.html && wc -c dist/404.html\", \"description\": \"Run the production build\", \"timeout\": 600000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ns=open('dist/404.html').read()\\n# print everything but the huge art uri\\ns2=re.sub(r'url\\\\(&#34;data:[^)]{60,}\\\\)', 'url(DATA)', s)\\ns2=re.sub(r'url\\\\(&quot\u2026\n- Bash: {\"command\": \"cd dist/assets && for f in nav-C4BroEE2.css RankCrest-BwfprGAf.css CardDetail-6thpKTW3.css index-DMzDPsUh.css; do echo \\\"$f: nf-hand=$(grep -o 'nf-hand__slot' $f | wc -l) tavern-shown=$(\u2026\n- Bash: {\"command\": \"(pnpm exec vite preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &) ; sleep 4; curl -s -o /dev/null -w \\\"%{http_code}\\\\n\\\" http://localhost:4173/404.html; mkdir -p /tmp/shots; fo\u2026\n- tool error: Permission to use Bash with command (pnpm exec vite preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &) ; sleep 4; curl -s -o /dev/null -w \"%{http_code}\\n\" http://localhost:4173/404.html; mkd\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127 && grep -n \\\"ONE_SCREEN\\\" e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -3; pkill -f \\\"vite preview\\\" 2>/dev/null; true\", \"description\": \u2026\n- tool error: Exit code 144 34:const ONE_SCREEN = 1; 166: expectOnScreen(viewport, ONE_SCREEN); 174: expectOnScreen(viewport, ONE_SCREEN);\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127/e2e && grep -n '\\\"scripts\\\"' -A12 package.json | head -20\", \"description\": \"Look for e2e typecheck script\"}\n- Bash: {\"command\": \"pnpm exec tsc -p tsconfig.json 2>&1 | tail -10; echo \\\"tsc exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Typecheck e2e project\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127 && git status --short\", \"description\": \"Check working tree status\"}\n- Bash: {\"command\": \"grep -rn \\\"public/404\\\\|404\\\\.html\\\" --include=* -I . 2>/dev/null --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git --exclude-dir=target --exclude-dir=pkg | grep -v \\\"^./s\u2026\n- Bash: {\"command\": \"grep -rn \\\"not_found_handling\\\\|404-page\\\\|404 page\\\" -I docs infra apps/edge apps/web/README.md wrangler.jsonc apps/web/wrangler.jsonc 2>/dev/null | grep -v node_modules | head -20\", \"d\u2026\n- Bash: {\"command\": \"git rev-parse --verify origin/main 2>&1 | head -1; cargo fmt --check 2>&1 | tail -3; echo \\\"fmt $?\\\"; cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail \u2026\n- said: Now the harness's web test command (changed files since origin/main) plus the classify claim check.\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 3: all targeted tests, typecheck (web + e2e), eslint, spec check, fmt, catalog, patches, `pnpm build` pass; dist/404.html read, built CSS holds the ha\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | tail -8; cargo jackioh spec check 2>&1 | tail -2\", \"description\": \"Run classify claims and final spec check\", \"timeout\": 300000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Goal')\\nstate='''## State\\n\\nRun 3 (builder, sonnet): the whole plan is built and verified; o\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Cloudflare's 404 boots the client's playable 404, with a tavern-styled fallback\"} --> ## What changed Cloudflare's 404 is now the client. `pnpm --dir apps/web build` writes `dist/404.html` from the built `index.html`, and `public/404.html` is deleted. R\u2026"
       },
       "issue": 3127,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T09:41:05Z",
         "from_run": "41994402960",
         "gates": [
           {
@@ -17870,7 +17875,11 @@
         "source": "build",
         "until": "2026-11-05T10:09:40Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-05T09:39:40Z",
+      "run_id": "pending:a3b086af-1793871625",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17889,6 +17898,9 @@
         "provider": "claude-3",
         "run": "41994402960"
       },
+      "started_at": "2026-11-05T09:41:05Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17902,9 +17914,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T09:24:55Z",
+    "at": "2026-11-05T09:41:05Z",
     "url": "",
-    "what": "plan #3162 on claude-6"
+    "what": "review #3166 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T09:20:23Z",
