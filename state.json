@@ -16655,6 +16655,13 @@
     "3244": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42101724038",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-05T21:43:18Z",
+        "until": "2026-11-05T22:13:18Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
