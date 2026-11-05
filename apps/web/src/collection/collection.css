@@ -754,6 +754,89 @@
   aspect-ratio: 5 / 7;
 }
 
+/* ---- R3016000: a card's look as the card, in hand and on the board (LookViews), in the fullscreen
+   preview and the hover panel (LookHover). Each view is the game's own face in a 5:7 box; the hand's
+   and the board's are smaller, as they are in a game. They wrap, and stack at phone width, so nothing
+   scrolls sideways. */
+
+.tavern.app-shell .collection-look {
+  --look-face-h: min(44vh, 360px, 60vw);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+}
+
+.tavern.app-shell .collection-look__view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+/* A face's box is sized both ways: an aspect-ratio box takes its minimum width from its content,
+   which would widen the shrink-to-fit hover panel to the viewport. */
+.tavern.app-shell .collection-look__view {
+  --look-h: var(--look-face-h);
+}
+
+.tavern.app-shell .collection-look__view--hand {
+  --look-h: calc(var(--look-face-h) * 0.72);
+}
+
+.tavern.app-shell .collection-look__view--board {
+  --look-h: calc(var(--look-face-h) * 0.56);
+}
+
+.tavern.app-shell .collection-look__face {
+  display: block;
+  width: calc(var(--look-h) * 5 / 7);
+  height: var(--look-h);
+}
+
+.tavern.app-shell .collection-look__caption {
+  font-size: var(--type-sm);
+  color: var(--tavern-text-dim);
+}
+
+@media (max-width: 640px) {
+  .tavern.app-shell .collection-look {
+    --look-face-h: min(40vh, 300px, 64vw);
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.tavern.app-shell .collection-look-hover {
+  position: fixed;
+  z-index: var(--z-inspect-hover, 60);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 10px 12px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--pal-black) 60%, transparent);
+}
+
+.tavern.app-shell .collection-look-hover .collection-look {
+  --look-face-h: min(220px, 34vh);
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .tavern.app-shell .collection-look-hover {
+    animation: collection-preview-in 140ms ease-out;
+  }
+}
+
 /* R3013001: a card's proficiency in its card view (ProficiencyPanel.tsx): its level, its progress and its stamps,
    a locked one dimmed with the level it needs. The theme's and the palette's colours alone. */
 .tavern.app-shell .collection-proficiency {
