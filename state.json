@@ -15196,17 +15196,18 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-05T13:13:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "42034033513",
+      "run_id": "pending:5572bc40-1793888181",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 80,
-      "started_at": "2026-11-05T13:14:33Z",
+      "started_at": "2026-11-05T14:16:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -15461,9 +15462,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T14:06:54Z",
+    "at": "2026-11-05T14:16:45Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "spot-check #3174 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T14:03:01Z",
@@ -30707,7 +30708,15 @@
         "n": 80,
         "pr": 3174,
         "queued_at": "2026-11-05T14:09:13Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:5572bc40-1793888181",
         "sha": "40491edf77a4cf28938e291e98f874071d025695",
+        "started_at": "2026-11-05T14:16:45Z",
         "status": "queued",
         "title": "Patch: the db (store contract) job builds the engine and the cards at opt-level 0, which cuts its compile",
         "tries": 0
