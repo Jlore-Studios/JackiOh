@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { pollWhileVisible } from "../game/net.ts";
 import { ApiRequestError } from "../net/api.ts";
 import { readFailureOf } from "../net/gate.ts";
 import { attempt } from "../net/errors.ts";
@@ -74,10 +75,11 @@ export function usePolled<T>(
         canceled = true;
       };
     }
-    const handle = window.setInterval(tick, everyMs);
+    // R3205000: a hidden tab reads nothing, and reads once when it shows again.
+    const stopPolling = pollWhileVisible(tick, everyMs);
     return () => {
       canceled = true;
-      window.clearInterval(handle);
+      stopPolling();
     };
   }, [everyMs, round]);
 

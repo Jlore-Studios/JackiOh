@@ -85,9 +85,12 @@ a week old (`ROTATE_DAYS`), a fresh one takes over with its state, and the old o
 the days it covered ("Production, 2026-10-21 to 2026-11-04 (continued in #3101)") and closed with a
 link to the new one, so the thread never grows long; the closed ones are the history. A command left
 on a closed one is still carried out, and answered on the open one. The first line of its body is
-a hidden state line; leave it alone. Under it the issue lists every pull request on `main` that is
-not on production yet, with its push-to-main CI (passed, failed, running) and where it stands for
-production (in the open promotion, the next `/promote`, waits for CI). Its state line also keeps
+a hidden state line; leave it alone. Under it the issue says which commit of `main` each site serves
+(production from its branch, staging from the newest of its GitHub deployments that succeeded) and
+what production does next, then lists every pull request on `main` that is not on production yet,
+with where it stands on staging (live, the next deploy, or its checks running or failed) and on
+production (being tested in the open promotion, the next promotion, or its checks running or
+failed), and ends with how both sites move and the commands. Its state line also keeps
 the last super run on `main` it promoted from (`daily`), so a `/cancel` of a daily promotion stays
 cancelled until the next day's run.
 

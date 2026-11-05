@@ -6,37 +6,69 @@
 //! ([`OwnedCosmetics`]) but kept on its `bots` row (`bots.cosmetics`, migration 0061), never in the
 //! ledger. It holds a non-starter only when people own it widely and long enough ([`eligible`]),
 //! each eligible one held at the share of people of its account age that own it ([`fit_for`]).
-//! Its seat freezes through `loadout::freeze_loadout` as what it owns (R1834002).
+//! Its seat freezes through [`SeatPicks::freeze`](crate::loadout::SeatPicks::freeze) as what it owns
+//! (R1834002).
+//!
+//! Pure over plain records, like the rest of this crate: the host reads who owns what
+//! ([`CosmeticOwners`]) and the bots ([`BotRecord`]) from its store, asks [`eligible`] and [`redraw`], and
+//! writes the [`BotDraw`] that comes out. Every draw is a stream of the pool's seed
+//! (`Rng::new("{seed}:cosmetics:…", 0)`), apart from the match's, so none reaches a state, the log or a
+//! replay hash, and the time is an argument.
 
 use std::collections::BTreeSet;
 
+use jackioh_engine::Rng;
 use serde::{Deserialize, Serialize};
 
-use jackioh_engine::Rng;
-
+use crate::bots::pool::{BotDeck, BotRecord};
 use crate::config::{
     BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_MIN_AGE_DAYS,
     BOT_COSMETIC_MIN_OWNERS, BOT_COSMETIC_PRIOR, BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
     BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS,
     BOT_COSMETIC_SLOT_CHANGE_SHARE, CosmeticFit, MS_PER_DAY,
 };
-use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, owns};
-use crate::db::store::{BotDeck, BotRow, FrozenTrio};
-use crate::economy::store::{CardCosmetic, CardPicks, CosmeticOwners, FullArtPick, OwnedCosmetics};
-use crate::loadout::{
-    AccountPicks, CARD_SLOT_KINDS, CardPicksExt, DECK_SLOT_KINDS, DeckSlots, DeckSlotsExt, setting_key,
+use crate::cosmetics::{
+    CardCosmetic, Cosmetic, CosmeticKind, FullArtPick, OwnedCosmetics, full_art_of, owns,
 };
+use crate::deck::{DeckSlots, FrozenDeck, FrozenTrio};
+use crate::loadout::{AccountPicks, CARD_SLOT_KINDS, CardPicks, DECK_SLOT_KINDS, setting_key};
+
+/// R1834005: how many people own a cosmetic, on one card for a per-card one (`card_id`) or on the
+/// account (`None`), and when one was first granted it (epoch ms; `None` when no grant row shows
+/// it, as for a portrait migration 0057 handed out). A ladder bot's profile is never counted. The
+/// host's count of its store (the server's `economy_cosmetic_owners`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CosmeticOwners {
+    pub cosmetic_id: String,
+    pub card_id: Option<String>,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub owners: i64,
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub first_granted_at: Option<i64>,
+}
 
 /// R1834005: what a bot may wear and what it wears (`bots.cosmetics`, migration 0061): its
 /// wardrobe, account picks, cards' picks, last draw timestamp, and wardrobe seed ([`draw_wardrobe`]).
 /// Decks' slots ride on the decks.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct BotCosmetics {
     pub wardrobe: OwnedCosmetics,
     pub account: AccountPicks,
     #[serde(default)]
     pub cards: Vec<CardPicks>,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub drawn_at: i64,
     #[serde(default)]
     pub seed: String,
@@ -522,10 +554,20 @@ fn wear_full_arts<'c>(
 
 /// R1834005: what [`redraw`] changes of a bot: its cosmetics, and its decks and trio when a deck of
 /// theirs was given its slots (`None` for what it left alone).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
 pub struct BotDraw {
     pub cosmetics: BotCosmetics,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub decks: Option<Vec<BotDeck>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub trio: Option<FrozenTrio>,
 }
 
@@ -567,24 +609,24 @@ fn aged_slot(
 /// R1834005: what a bot draws at a refresh at `now`, or `None` when nothing is due: draws everything
 /// if undrawn; redraws slots and card picks if a deck has no slots; or ages after
 /// `BOT_COSMETIC_REDRAW_DAYS` (updates wardrobe, changes slots at `BOT_COSMETIC_SLOT_CHANGE_SHARE`).
-pub fn redraw(
+pub fn redraw<B: BotRecord>(
     seed: &str,
-    bot: &BotRow,
+    bot: &B,
     fits: &'static [CosmeticFit],
     registry: &[Cosmetic],
     eligible: &[Holding],
     now: i64,
 ) -> Option<BotDraw> {
-    if bot.decks.is_empty() {
+    if bot.decks().is_empty() {
         return None;
     }
-    let fit = fit_for(fits, (now - bot.created_at) / MS_PER_DAY);
-    let redealt = bot.decks.iter().any(|deck| deck.slots.is_none())
-        || bot.trio.as_ref().is_some_and(|trio| {
+    let fit = fit_for(fits, (now - bot.created_at()) / MS_PER_DAY);
+    let redealt = bot.decks().iter().any(|deck| deck.slots.is_none())
+        || bot.trio().is_some_and(|trio| {
             let (a, b, c) = &trio.decks;
             [a, b, c].iter().any(|deck| deck.slots.is_none())
         });
-    let held = bot.cosmetics.as_ref();
+    let held = bot.cosmetics();
     let ages = held.is_some_and(|held| now - held.drawn_at >= BOT_COSMETIC_REDRAW_DAYS * MS_PER_DAY);
     if held.is_some() && !redealt && !ages {
         return None;
@@ -644,16 +686,16 @@ pub fn redraw(
         }
     };
     let decks: Vec<BotDeck> = bot
-        .decks
+        .decks()
         .iter()
         .map(|deck| BotDeck {
             slots: dress(&deck.slots, &mut rng),
             ..deck.clone()
         })
         .collect();
-    let trio = bot.trio.as_ref().map(|trio| {
+    let trio = bot.trio().map(|trio| {
         let (a, b, c) = &trio.decks;
-        let mut again = |deck: &crate::db::store::FrozenDeck| crate::db::store::FrozenDeck {
+        let mut again = |deck: &FrozenDeck| FrozenDeck {
             slots: dress(&deck.slots, &mut rng),
             ..deck.clone()
         };
@@ -698,8 +740,8 @@ pub fn redraw(
         _ => draw_card_picks(seed, registry, fit, &wardrobe, &account, &played),
     };
 
-    let changed_decks = decks != bot.decks;
-    let changed_trio = trio != bot.trio;
+    let changed_decks = decks != bot.decks();
+    let changed_trio = trio.as_ref() != bot.trio();
     Some(BotDraw {
         cosmetics: BotCosmetics {
             wardrobe,
