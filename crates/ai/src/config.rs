@@ -399,9 +399,9 @@ pub struct EvalWeights {
     pub marked_share: f64,
     /// R846: per extra turn owed.
     pub extra_turn: f64,
-    /// R846: the share of `extra_turn` an own hand card of `AI_EXTRA_TURN_CARDS` counts on top of its
-    /// hand value: a turn it owes once cast, which the beam sees only on the turn it can pay for it
-    /// (#1886).
+    /// R846: the share of `extra_turn` an own hand card whose script owes an extra turn counts on top of
+    /// its hand value (`jackioh_engine::is_extra_turn_card`, which the build finds, #3116): a turn it
+    /// owes once cast, which the beam sees only on the turn it can pay for it (#1886).
     pub extra_turn_in_hand: f64,
     /// R1855003: per miss a side's Scanning Probes have banked (`PlayerState.anomaly_misses`), each
     /// adding its steps to every later scan's chances. Own side only: a miss is silent (#1886).
@@ -957,11 +957,6 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// ungated set instead. Meditative was gated until #732 (MN08 of #496), Stinkyscape from #1884 until
 /// #1885's sweep (R1885000).
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
-
-/// R846, #1886: the cards that owe their caster an extra turn when cast (`take_extra_turn`), priced in
-/// hand by `AI_EVAL.extra_turn_in_hand`: M #19.1 Temporal Rift, S #4.3 Event Horizon (twice on its
-/// Radiant face, counted once) and S #4.4 Last Word.
-pub const AI_EXTRA_TURN_CARDS: &[&str] = &["meditative-019-1", "stinkyscape-004-3", "stinkyscape-004-4"];
 
 /// The most times the AI plays one card (one instance) in a turn; past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell castable
