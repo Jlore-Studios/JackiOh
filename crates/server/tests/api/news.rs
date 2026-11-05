@@ -1,7 +1,7 @@
 //! News (SPEC §14.13, #2875): `GET /api/news` lists the live entries newest first, each marked
 //! claimed or not, and `POST /api/news/:newsId/claim` pays one entry's reward once, as `news` ledger
 //! rows (R2875000–R2875003); `POST /api/news/claim-all` claims every unclaimed one in one spend
-//! (R2982001). Each test posts its own entries, timed from the server's clock, so none depends on
+//! (R3191000). Each test posts its own entries, timed from the server's clock, so none depends on
 //! the date `news.json` was written.
 
 use std::sync::{Arc, Mutex};
@@ -369,7 +369,7 @@ async fn r2875002_a_pending_account_is_refused() {
     assert_eq!(economy(&app).await, before);
 }
 
-/// R2982001: Claim all's route.
+/// R3191000: Claim all's route.
 const CLAIM_ALL: &str = "/api/news/claim-all";
 
 async fn claim_all(app: &Arc<App>, token: &str) -> (u16, Value) {
@@ -412,7 +412,7 @@ fn many(count: usize) -> Vec<NewsEntry> {
 }
 
 #[tokio::test]
-async fn r2982001_claim_all_claims_every_live_unclaimed_entry_once_each_with_its_own_rows() {
+async fn r3191000_claim_all_claims_every_live_unclaimed_entry_once_each_with_its_own_rows() {
     let now = now_ms();
     let mut news = entries(now);
     news.insert(
@@ -478,7 +478,7 @@ async fn r2982001_claim_all_claims_every_live_unclaimed_entry_once_each_with_its
 }
 
 #[tokio::test]
-async fn r2982001_claim_all_costs_the_same_store_calls_for_two_entries_as_for_twenty() {
+async fn r3191000_claim_all_costs_the_same_store_calls_for_two_entries_as_for_twenty() {
     let mut seen = Vec::new();
     for count in [2, 20] {
         let (app, token) = setup_with(many(count), true).await;
@@ -511,9 +511,9 @@ async fn r2982001_claim_all_costs_the_same_store_calls_for_two_entries_as_for_tw
 }
 
 #[tokio::test]
-async fn r2982001_claim_all_with_its_key_replays_and_the_key_is_its_own_route() {
+async fn r3191000_claim_all_with_its_key_replays_and_the_key_is_its_own_route() {
     let (app, token) = setup().await;
-    let key = uuid(2982001);
+    let key = uuid(3191000);
     let (status, _, first) = call_with_key(&app, "POST", CLAIM_ALL, Some(&token), json!({}), &key).await;
     assert_eq!(status, 200, "{first}");
     let after = economy(&app).await;
@@ -533,7 +533,7 @@ async fn r2982001_claim_all_with_its_key_replays_and_the_key_is_its_own_route() 
 }
 
 #[tokio::test]
-async fn r2982001_claim_all_marks_a_dev_post_read_and_pays_it_nothing() {
+async fn r3191000_claim_all_marks_a_dev_post_read_and_pays_it_nothing() {
     let now = now_ms();
     let (app, token) = setup_with(entries(now)[1..2].to_vec(), true).await;
     let mut tx = app.db.begin(None).await.expect("a store transaction");
@@ -584,7 +584,7 @@ async fn r2982001_claim_all_marks_a_dev_post_read_and_pays_it_nothing() {
 }
 
 #[tokio::test]
-async fn r2982001_claim_all_is_refused_with_the_economy_off_and_to_a_pending_account() {
+async fn r3191000_claim_all_is_refused_with_the_economy_off_and_to_a_pending_account() {
     let (app, token) = setup_with(entries(now_ms()), false).await;
     fake(&app)
         .lock()

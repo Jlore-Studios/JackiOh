@@ -870,7 +870,7 @@ export async function claimNews(token: string, id: string): Promise<NewsResponse
 }
 
 /**
- * `POST /api/news/claim-all` (R2982001): Claim all, one spend for every entry the server finds unclaimed,
+ * `POST /api/news/claim-all` (R3191000): Claim all, one spend for every entry the server finds unclaimed,
  * so it sends an `Idempotency-Key` (R2124000); answers as `getNews`. The kept reads of every reward kind
  * the answer shows claimed are dropped, as one claim drops its own.
  */

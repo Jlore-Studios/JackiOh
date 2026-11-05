@@ -1,7 +1,7 @@
 // R2875002: the landing's news bookmark (SPEC §14.13, issue #2875): beside the quests' bookmark, its red
 // count of the entries the server says are unclaimed, a claim's answer moving it, and who gets none of
 // it; R2875001 no live entry, no bookmark; R2875003 each reward in its words; R3074003 a dev's post,
-// which pays no reward; R2982001 Claim all, one request for every unclaimed entry.
+// which pays no reward; R3191000 Claim all, one request for every unclaimed entry.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +25,7 @@ vi.mock("../economy/wallet.ts", async (importOriginal) => {
 
 const NOW = 1_800_000_000_000;
 
-/** R2982001: Claim all's one route. */
+/** R3191000: Claim all's one route. */
 const CLAIM_ALL_PATH = "/api/news/claim-all";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -58,7 +58,7 @@ function claimed(news: readonly NewsEntry[], id: string): Reply {
   return { status: 200, body: { news: news.map((one) => (one.id === id ? { ...one, claimed: true } : one)) } };
 }
 
-/** R2982001: the server's answer to Claim all: every entry claimed. */
+/** R3191000: the server's answer to Claim all: every entry claimed. */
 function allClaimed(news: readonly NewsEntry[]): Reply {
   return { status: 200, body: { news: news.map((one) => ({ ...one, claimed: true })) } };
 }
@@ -391,7 +391,7 @@ describe("R2875003 a news reward in words", () => {
   });
 });
 
-describe("R2982001 Claim all, one spend", () => {
+describe("R3191000 Claim all, one spend", () => {
   const OLDER = entry({
     id: "patch-0-5-9",
     version: "0.5.9",
@@ -420,7 +420,7 @@ describe("R2982001 Claim all, one spend", () => {
     };
   }
 
-  it("R2982001 Claim all is one POST with an Idempotency-Key, every Claim waiting until its one answer clears the count", async () => {
+  it("R3191000 Claim all is one POST with an Idempotency-Key, every Claim waiting until its one answer clears the count", async () => {
     vi.mocked(announceWallet).mockClear();
     signIn();
     const server = serve([entry(), ALERT, { ...OLDER, claimed: true }]);
@@ -457,7 +457,7 @@ describe("R2982001 Claim all, one spend", () => {
     expect(announceWallet).toHaveBeenCalledTimes(1);
   });
 
-  it("R2982001 a refused Claim all claims nothing and says why", async () => {
+  it("R3191000 a refused Claim all claims nothing and says why", async () => {
     vi.mocked(announceWallet).mockClear();
     signIn();
     const server = serve([entry(), ALERT, OLDER], {
@@ -481,7 +481,7 @@ describe("R2982001 Claim all, one spend", () => {
     expect(announceWallet).not.toHaveBeenCalled();
   });
 
-  it("R2982001 a Claim all that paid no Jlore announces nothing", async () => {
+  it("R3191000 a Claim all that paid no Jlore announces nothing", async () => {
     vi.mocked(announceWallet).mockClear();
     signIn();
     serve([ALERT, OLDER]);

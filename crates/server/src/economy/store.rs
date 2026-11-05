@@ -611,7 +611,7 @@ fn check_inventory(grant: &InventoryGrant) -> Result<(), StoreError> {
     check_inventory_key(grant.item, &grant.key)
 }
 
-/// R2982001: a batch of grants is a payout to one account: every grant adds, so no balance can
+/// R3191000: a batch of grants is a payout to one account: every grant adds, so no balance can
 /// fall short and none is refused partway, and all name the first one's account.
 fn check_payout<'g>(owners: impl IntoIterator<Item = (&'g str, i64)>) -> Result<(), StoreError> {
     let mut first = None;
@@ -773,7 +773,7 @@ impl Tx<'_> {
         economy_dispatch!(self, jlore_grant(grant))
     }
 
-    /// R2982001: [`Tx::economy_jlore_grant`] for a payout of several grants to one account, every
+    /// R3191000: [`Tx::economy_jlore_grant`] for a payout of several grants to one account, every
     /// delta above 0: the wallet moves by their sum and each grant writes its own ledger row, in
     /// one statement. Nothing to grant writes nothing.
     pub async fn economy_jlore_grant_all(&mut self, grants: &[JloreGrant]) -> StoreResult<()> {
@@ -816,7 +816,7 @@ impl Tx<'_> {
         economy_dispatch!(self, inventory_grant(grant))
     }
 
-    /// R2982001: [`Tx::economy_jlore_grant_all`] over the inventory: each item and key moves by
+    /// R3191000: [`Tx::economy_jlore_grant_all`] over the inventory: each item and key moves by
     /// the sum of its grants and each grant writes its own ledger row, in one statement.
     pub async fn economy_inventory_grant_all(&mut self, grants: &[InventoryGrant]) -> StoreResult<()> {
         for grant in grants {
@@ -1074,7 +1074,7 @@ impl Tx<'_> {
         economy_dispatch!(self, news_claim(profile_id, news_id, at))
     }
 
-    /// R2982001: [`Tx::economy_news_claim`] of every id in `news_ids` at once, in one statement:
+    /// R3191000: [`Tx::economy_news_claim`] of every id in `news_ids` at once, in one statement:
     /// answers the ids it wrote, those the profile had not claimed, in the order given. An id that
     /// is no slug, or one listed twice, is refused, writing nothing.
     pub async fn economy_news_claim_all(

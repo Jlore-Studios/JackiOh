@@ -10698,12 +10698,12 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
     }
 
-    /// R2982001: Claim all's batch writes leave what the same writes one at a time would: the
+    /// R3191000: Claim all's batch writes leave what the same writes one at a time would: the
     /// claims answer the ids the profile did not hold, in the order given, and a duplicate or an id
     /// that is no slug is refused; a payout moves each balance by the sum of its grants and writes
     /// one ledger row per grant, in order; a spend, a second account or a key that does not fit its
     /// item is refused, writing nothing; and an empty batch writes nothing.
-    async fn r2982001_batch_news_claims_and_payouts_write_what_one_at_a_time_would(harness: &StoreHarness) {
+    async fn r3191000_batch_news_claims_and_payouts_write_what_one_at_a_time_would(harness: &StoreHarness) {
         let owner = pending_profile(harness, None).await;
         let other = pending_profile(harness, None).await;
         let now = harness.now();
@@ -11030,7 +11030,7 @@ mod economy {
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
-        r2982001_batch_news_claims_and_payouts_write_what_one_at_a_time_would,
+        r3191000_batch_news_claims_and_payouts_write_what_one_at_a_time_would,
         practice_claims_count_once_per_bucket_and_utc_day,
         r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
         r3013001_a_stamp_is_kept_only_at_or_below_its_level,

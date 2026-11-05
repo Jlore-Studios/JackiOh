@@ -4,7 +4,7 @@
 // (R2875003) and whether a claim lands, so the count of unclaimed entries moves only on its answer.
 // A title and a summary show as the server sent them. A claim is a spend (R2378000): while one of the
 // tab's is out, every Claim waits, disabled and turning a loading wheel (`economy/spend.css`).
-// R2982001: Claim all is one spend too, one request the server answers with every entry claimed.
+// R3191000: Claim all is one spend too, one request the server answers with every entry claimed.
 // R3074003: a dev's post has no reward: it shows no reward, its button marks it read, and the
 // server's claim of it pays nothing.
 
@@ -29,7 +29,7 @@ export const newsTestid = {
   claimed: "news-claimed",
   /** Why the server refused a claim. */
   error: "news-error",
-  /** R2982001: claims every unclaimed entry, in one spend. */
+  /** R3191000: claims every unclaimed entry, in one spend. */
   claimAll: "news-claim-all",
 } as const;
 
@@ -75,7 +75,7 @@ export function NewsList({
   news: readonly NewsEntry[];
   /** Claims an entry's reward; answers why it was refused, or null once it is done. */
   onClaim: (id: string) => Promise<string | null>;
-  /** R2982001: claims every unclaimed entry's reward at once; answers as `onClaim`. */
+  /** R3191000: claims every unclaimed entry's reward at once; answers as `onClaim`. */
   onClaimAll: () => Promise<string | null>;
 }): ReactElement {
   const spendOut = useSpendOut();
@@ -93,7 +93,7 @@ export function NewsList({
     // R2982000: a single claim announces its own Jlore pay, as Claim all below announces its own.
     if (failure === null && news.find((entry) => entry.id === id)?.reward?.kind === "jlore") announceWallet();
   };
-  // R2982001: one press is one spend: the server claims every entry it finds unclaimed in one
+  // R3191000: one press is one spend: the server claims every entry it finds unclaimed in one
   // transaction, and its one answer moves the list and the count together. A refusal claims
   // nothing and says why. R2982000: the wallet is announced once for a press that paid Jlore.
   const claimAll = async (): Promise<void> => {
@@ -211,7 +211,7 @@ export function useNews(token: string): {
     },
     [token],
   );
-  // R2982001: Claim all's one answer replaces the list as a claim's does.
+  // R3191000: Claim all's one answer replaces the list as a claim's does.
   const claimAll = useCallback(async (): Promise<string | null> => {
     try {
       const answer = await claimAllNews(token);

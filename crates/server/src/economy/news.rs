@@ -10,7 +10,7 @@
 //!   [[R2875001]]); [`board`] is what `GET /api/news` and a claim answer.
 //! - A claim ([`claim_news_once`], [[R2875000]]) pays the reward as ledger rows with the reason
 //!   `news` and writes migration 0077's `news_claims` row, once per account and entry. Unread is
-//!   unclaimed ([[R2875002]]). Claim all ([`claim_all_news_once`], [[R2982001]]) is one spend that
+//!   unclaimed ([[R2875002]]). Claim all ([`claim_all_news_once`], [[R3191000]]) is one spend that
 //!   claims every unclaimed entry in one transaction, a few statements whatever their number.
 //! - A post a dev wrote from the dev dashboard (migration 0080's `news_posts`, [[R3074003]]) stands
 //!   on the board beside the file's entries for the same days, an alert with no reward: its claim
@@ -500,7 +500,7 @@ async fn pay(tx: &mut Tx<'_>, profile_id: &str, entry: &NewsEntry, at: i64) -> R
     Ok(())
 }
 
-/// R2982001: pays every one of `entries`' rewards ([`grant_of`]) to the account in `tx`, one
+/// R3191000: pays every one of `entries`' rewards ([`grant_of`]) to the account in `tx`, one
 /// statement per ledger whatever their number, each entry still its own ledger row.
 async fn pay_all<'e>(
     tx: &mut Tx<'_>,
@@ -580,7 +580,7 @@ pub async fn claim_news_once(
     Ok(Spent::Now(answer))
 }
 
-/// R2982001: Claim all, one spend: in one transaction, under the account's lock and after the
+/// R3191000: Claim all, one spend: in one transaction, under the account's lock and after the
 /// replay of an `Idempotency-Key` already committed (R2124000), claims every entry live at `now`
 /// and every post standing at `now` that the account has not claimed, the same test
 /// [`claim_news_once`] puts to one ([`live_at`], [`post_live_at`]), and pays each entry's reward

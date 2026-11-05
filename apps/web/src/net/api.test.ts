@@ -191,7 +191,7 @@ describe("R2124000 a spend runs once", () => {
     expect(sent[1]?.key).toBeUndefined();
   });
 
-  it("R2982001 claimAllNews is one spend with an Idempotency-Key of its own each press", async () => {
+  it("R3191000 claimAllNews is one spend with an Idempotency-Key of its own each press", async () => {
     const news = { id: "patch-0-6-0", kind: "patch", version: "0.6.0", title: "Patch 0.6.0", summary: "", postedAt: 1 };
     const answer = { status: 200, body: { news: [{ ...news, reward: { kind: "jlore", amount: 100 }, claimed: true }] } };
     const sent = stubFetch([answer, answer]);

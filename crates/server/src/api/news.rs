@@ -1,7 +1,7 @@
 //! The news an account may claim a reward from (SPEC §14.13, #2875). `GET /api/news` answers the live
 //! entries, newest first, each marked claimed or not for the caller, and nobody else's claims (§14);
 //! `POST /api/news/:newsId/claim` claims one entry's reward, once, while the economy is live
-//! (R2875000), and `POST /api/news/claim-all` every unclaimed one in one spend (R2982001). The
+//! (R2875000), and `POST /api/news/claim-all` every unclaimed one in one spend (R3191000). The
 //! entries, their window and the claims are `economy::news`'s.
 
 use std::sync::Arc;
@@ -56,7 +56,7 @@ pub async fn post_claim_news(app: &Arc<App>, req: Req) -> ApiResult {
         .answer()
 }
 
-/// `POST /api/news/claim-all` (`AuthLevel::Active`): [`claim_all_news_once`] ([[R2982001]]), with an
+/// `POST /api/news/claim-all` (`AuthLevel::Active`): [`claim_all_news_once`] ([[R3191000]]), with an
 /// optional `Idempotency-Key` (R2124000), in the account's spend turn (R2378000): one request and
 /// one transaction for every unclaimed entry; answers as `GET /api/news`. 409 while the economy is
 /// off, writing nothing.
