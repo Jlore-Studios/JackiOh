@@ -16698,15 +16698,8 @@
       "waiting_comment": 6648218890
     },
     "3115": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41975124334",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-05T05:50:01Z",
-        "until": "2026-11-05T06:20:01Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16718,10 +16711,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the code the issue names.\n- Grep: {\"pattern\": \"SKILL_ELO_TABLE|BOT_SEED_RATINGS|BOT_CALIBRATION_GENERATION\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"ls /home/runner/work/_temp/work/item-3115/crates/server/src /home/runner/work/_temp/work/item-3115/crates/server/src/cli; ls /home/runner/work/_temp/work/item-3115/.bot-plan.md 2>&1 | he\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/config.rs\", \"offset\": 1195, \"limit\": 210}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/cli/bot_calibrate.rs\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/tests/bots/calibrate.rs\", \"offset\": 1, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/tests/bots/calibrate.rs\", \"offset\": 240, \"limit\": 150}\n- Grep: {\"pattern\": \"--write|fn write_|rewrite\", \"path\": \"/home/runner/work/_temp/work/item-3115/crates/tools/src\", \"output_mode\": \"content\", \"-n\": true, \"head_limit\": 60}\n- Grep: {\"pattern\": \"bot-calibrate|bot_calibrate\", \"output_mode\": \"files_with_matches\", \"glob\": \"!target/**\"}\n- Grep: {\"pattern\": \"\\\"write\\\"|--write\", \"path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"grep -n \\\"bot-calibrate\\\\|bot_calibrate\\\\|timing-fit\\\\|timing_fit\\\" crates/server/src/main.rs crates/server/src/cli/mod.rs training/README.md crates/server/README.md spec/rulings/R748000\u2026\n- Bash: {\"command\": \"grep -rn \\\"bot-calibrate\\\\|bot_calibrate\\\" .github .harness .squishy bot scripts docs --include=* -l 2>/dev/null | head; grep -n \\\"bot-calibrate\\\" docs/bot-calibration.md | cut -c1-240\",\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/main.rs\", \"offset\": 1, \"limit\": 130}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/docs/bot-calibration.md\", \"offset\": 1, \"limit\": 125}\n- Bash: {\"command\": \"sed -n 760,845p crates/server/README.md\", \"description\": \"Read server README bot calibration section\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn flag\\\" -B2 -A14 crates/server/src/cli/card_stats.rs; grep -n \\\"REFERENCE_STRENGTH\\\\|pub fn seed_ratings\\\" -A12 crates/server/src/bots/calibrate.rs | head -60; grep -rn \\\u2026\n- Bash: {\"command\": \"cat spec/rulings/R748000.md | cut -c1-1500; echo ----; sed -n 1,30p spec/rulings/R747000.md | cut -c1-400\", \"description\": \"Read ruling notes R748000 and R747000\"}\n- Bash: {\"command\": \"grep -n \\\"fn flag\\\" -B3 -A14 crates/server/src/cli/card_stats.rs; sed -n 940,1015p crates/server/tests/bots/seat.rs; grep -n \\\"tempfile\\\\|^\\\\[dev-dependencies\\\\]\\\\|^\\\\[dependencies\\\\]\\\" \u2026\n- Bash: {\"command\": \"sed -n 2945,2965p crates/server/src/config.rs; grep -rn \\\"serverConfig\\\" crates/server/src crates/server/tests crates/tools/src -l | head; cat rust-toolchain.toml; cat crates/server/clip\u2026\n- Bash: {\"command\": \"sed -n 50,75p crates/server/Cargo.toml; git log --oneline -8 -- crates/server/src/cli | cat; git log -3 --stat --format='%h %s' -- crates/server/src/cli/bot_calibrate.rs | head -30\", \"de\u2026\n- Bash: {\"command\": \"grep -rn \\\"temp_dir\\\" crates/server/tests crates/server/src | head -8; grep -n \\\"SHADOW_BAN_RS\\\\|fn write_file\\\\|fs::write\\\" crates/tools/src/sweep.rs | head; mkdir -p /tmp/scratch3115 &\u2026\n- Bash: {\"command\": \"grep -rn \\\"src/config.rs\\\" crates tests scripts docs/*.md 2>/dev/null --include=*.rs --include=*.sh --include=*.toml | grep -v \\\"^target\\\" | head -12; echo ---; grep -rn \\\"bot-calibrate\\\u2026\n- Bash: {\"command\": \"cat > /tmp/scratch3115/b.rs <<'EOF'\\nuse std::fmt::Write;\\nfn replace_item(text: &str, name: &str, new: &str) -> Result<String, String> {\\n let prefix = format!(\\\"pub const {name}:\\\");\\n\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/.bot-plan.md\", \"content\": \"# Draft plan #3115 (planner notes)\\n\\nFound: BOT_SEED_RATINGS (config.rs:1236) restates SKILL_ELO_TABLE (config.rs:136\u2026\n- said: **Goal.** The ladder bots' calibration is written into the server config by a command, and the seed ratings have one home, the skill curve. `BOT_SEED_RATINGS` becomes a `const` read off `SKILL_ELO_TABLE`, so no number is stated twice. `jackioh-server bot-calibrate --write` rewrites `BOT_CALIBRATION\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-05T05:36:50Z",
       "owner_why": "it plans it",
@@ -16734,9 +16726,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-05T01:44:36Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41975124334",
+      "run_id": "pending:be499537-1793857998",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T05:36:50Z",
+      "started_at": "2026-11-05T05:53:50Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17452,9 +17444,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T05:53:03Z",
+    "at": "2026-11-05T05:53:50Z",
     "url": "",
-    "what": "revise #3050 on claude-1"
+    "what": "build #3115 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T05:34:07Z",
