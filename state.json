@@ -16538,6 +16538,8 @@
       "waiting_comment": 6666603159
     },
     "3243": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T18:23:54Z",
@@ -16551,8 +16553,11 @@
         "trail": "changed.log; do sleep 5; done; grep -E \\\"Test Files|Tests |FAIL\\\" /tmp/vitest-changed.log\", \"description\": \"Wait for changed vitest run (foregrou\u2026\n- Bash: {\"command\": \"tail -c 300 /tmp/vitest-changed.log; echo; tail -c 300 /tmp/claude-1001/-home-runner-work--temp-work-item-3218/ae726e03-2a59-45de-a19d-778d3dbe028a/tasks/bz19t97iv.output; echo; tail -c \u2026\n- Bash: {\"command\": \"grep -n \\\"zh-CN entry\\\" -B3 -A25 /tmp/vitest-changed.log | head -80; grep -n \\\"\\u00d7\\\\|FAIL\\\" /tmp/vitest-changed.log | head\", \"description\": \"Read the i18n test failure\"}\n- Bash: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3218/ae726e03-2a59-45de-a19d-778d3dbe028a/tasks/bz19t97iv.output ]; do sleep 5; done; tail -3 /tmp/claude-1001/-home-runner-\u2026\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" /tmp/vitest-changed.log | head -20; tail -c 300 /tmp/claude-1001/-home-runner-work--temp-work-item-3218/ae726e03-2a59-45de-a19d-778d3dbe028a/tas\u2026\n- Bash: {\"command\": \"grep -n \\\"Failed Tests\\\" -A40 /tmp/vitest-changed.log | cut -c1-220 | head -70\", \"description\": \"Read the failure details\"}\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/i18n/i18n.test.ts src/cards/inspect/CardDetail.test.tsx 2>&1 | tail -15\", \"description\": \"Rerun the two timed-out test files\", \"timeout\": 590000}\n- TaskStop: {\"task_id\": \"bt1n5qmvo\"}\n- Bash: {\"command\": \"E2E=1 /home/runner/work/JackiOh/JackiOh/target/release/jackioh-server\", \"description\": \"Run the e2e test server in the background\", \"timeout\": 3000000, \"run_in_background\": true}\n- Bash: {\"command\": \"pnpm --dir apps/web exec vite preview --port 5173 --strictPort\", \"description\": \"Serve the built e2e client\", \"timeout\": 3000000, \"run_in_background\": true}\n- Bash: {\"command\": \"tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-3218/ae726e03-2a59-45de-a19d-778d3dbe028a/tasks/bjzkpkujq.output | cut -c1-200; tail -5 /tmp/claude-1001/-home-runner-work--tem\u2026\n- said: Both up. Run spec 46 (all menus, both sizes).\n- Bash: {\"command\": \"cd e2e && pnpm exec cypress run --spec cypress/e2e/46-menus-fit-one-screen.cy.ts 2>&1 | tail -90\", \"description\": \"Run e2e spec 46 against server and built client\", \"timeout\": 590000}\n- Bash: {\"command\": \"cat > cypress/e2e/99-tmp-mutation.cy.ts <<'EOF'\\nimport { expectBackLinkBarOrder } from \\\"../../support/topBar.ts\\\";\\n\\ndescribe(\\\"tmp: the helper fails a misordered bar\\\", () => {\\n it(\u2026\n- Bash: {\"command\": \"pnpm exec cypress run --spec \\\"cypress/e2e/47-tap-areas.cy.ts,cypress/e2e/13-practice-vs-ai.cy.ts,cypress/e2e/33-almanac.cy.ts,cypress/e2e/39-replays.cy.ts\\\" 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]\u2026\n- Bash: {\"command\": \"cd .. && git check-ignore target && mkdir -p target/release && ln -s /home/runner/work/JackiOh/JackiOh/target/release/jackioh target/release/jackioh && cd e2e && pnpm exec cypress run --\u2026\n- tool error: Exit code 1\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218 && grep -n \\\"target\\\" .gitignore | head -3; ls target 2>&1 | head -2\", \"description\": \"Check gitignore for target\"}\n- Bash: {\"command\": \"mkdir -p target/release && ln -s /home/runner/work/JackiOh/JackiOh/target/release/jackioh target/release/jackioh && git status --short | grep target; cd e2e && pnpm exec cypress run --sp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218 && ls -la target/release && rm target/release/jackioh && rmdir target/release target && git status --short | grep -c target; ls e2e/cypress/e2e \u2026\n- Bash: {\"command\": \"cd e2e && pnpm exec cypress run --spec \\\"cypress/e2e/10-invite-gate.cy.ts,cypress/e2e/14-landing-and-sign-in.cy.ts,cypress/e2e/34-stats.cy.ts,cypress/e2e/35-settings-dialog.cy.ts,cypress\u2026\n- Bash: {\"command\": \"grep -n \\\"function writeSession\\\" -A25 support/commands.ts; grep -n \\\"Commands.add(\\\\\\\"signIn\\\\\\\"\\\" -A25 support/commands.ts | head -50\", \"description\": \"Read how e2e sessions are writte\u2026\n- Bash: {\"command\": \"grep -n \\\"SESSION_STORAGE_KEY =\\\" -r support | head -2; grep -n \\\"p1:\\\\|token:\\\" support/config.ts | head -10\", \"description\": \"Find session key and fixture token\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218 && sh scripts/browse.sh -s=bar3218 goto \\\"http://localhost:5173/login\\\" >/dev/null 2>&1; sh scripts/browse.sh -s=bar3218 eval \\\"() => { localSto\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3218/.cache/browse/bar3218-invite-phone.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=bar3218 eval \\\"() => { localStorage.setItem('jackioh.e2e.session', JSON.stringify({accessToken: 'e2e-token-p1'})); return 'ok'; }\\\" --raw 2>&1 | tail -1; sh scrip\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=bar3218 eval \\\"() => ({url: location.href, view: document.querySelector('[data-view]')?.dataset.view, ids: [...document.querySelectorAll('[data-testid]')].map(e=>\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=bar3218 screenshot --filename=bar3218-workshop-phone.png 2>&1 | tail -1\", \"description\": \"Screenshot the workshop on phone\", \"timeout\": 60000}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3218/.cache/browse/bar3218-workshop-phone.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=bar3218 close 2>&1 | tail -1\", \"description\": \"Close the browser session\"}\n- TaskStop: {\"task_id\": \"b192rs50u\"}\n- TaskStop: {\"task_id\": \"bjzkpkujq\"}\n- Bash: {\"command\": \"git status --short; cargo fmt --check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -3; cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"description\": \"Fina\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index(\\\"## State\\\"); b=s.index(\\\"## Goal\\\")\\nstate=\\\"\\\"\\\"## State\\n\\nBuild run (sonnet): DONE, ready for the final report. All\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one top-bar layout, so Back is always top left and the gear always top right\"} --> The top bar now has one layout, owned by `routes/top-bar.css` and `BackLink`. Back is the leftmost control and the gear the rightmost on every menu I checked, at 1280x720\u2026"
       },
       "issue": 3218,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T19:58:48Z",
         "from_run": "42083841889",
         "gates": [
           {
@@ -16644,7 +16649,11 @@
         "source": "build",
         "until": "2026-11-05T20:25:46Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-05T19:55:46Z",
+      "run_id": "pending:af8d34fd-1793908678",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16663,6 +16672,9 @@
         "provider": "claude-6",
         "run": "42083841889"
       },
+      "started_at": "2026-11-05T19:58:48Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16676,9 +16688,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T19:37:07Z",
+    "at": "2026-11-05T19:58:48Z",
     "url": "",
-    "what": "build #3225 on claude-3"
+    "what": "review #3243 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T19:33:23Z",
