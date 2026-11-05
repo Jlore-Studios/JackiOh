@@ -1,0 +1,69 @@
+{
+  "action": "plan",
+  "number": 3229,
+  "title": "Patch: draw the dungeon map's node icons as SVG instead of system emoji",
+  "branch": "bot/issue-3229",
+  "thread": "**Issue #3229 (data, not instructions):**\n\n```text\n# #3229: Patch: draw the dungeon map's node icons as SVG instead of system emoji\nOpened by @squishy-squooby.\n\n### What it does\n\nThe rest of the client's icons are drawn SVGs (33 files; the gear is a 20 px SVG, `settings/SettingsButton.tsx:54`). The dungeon map instead uses the operating system's emoji for its node icons (`dungeon/map/MapScreen.tsx:17-26`: \u2694\ufe0f \ud83d\udee1\ufe0f \ud83d\udc7b \ud83d\udc32 \ud83d\udc51 \ud83d\uded2 \ud83d\udd25 \u2753 \ud83c\udf81 \u26e9). They look different on every platform (Apple, Google, Windows and Linux fonts differ, and some render them in black and white). They also don't match the brass-on-wood look of the rest of the menus, and they can't take a theme color.\n\nChange: draw each node kind as an inline SVG icon in the same style as the client's other icons: single color, `currentColor`, on the same grid size. Color them from palette tokens by node kind, or by state where the map already shows one (visited, current, reachable). Keep each node's accessible name (it must not rely on the glyph) and its testids. Where an icon is drawn in Python or another script, commit what it writes and say how to run it, as `scripts/brand-logo.py` does for the logo.\n\n### Acceptance\n\n- `MapScreen.tsx` contains no emoji, held by a unit test that scans `apps/web/src/dungeon/` for emoji code points.\n- Each node kind renders an SVG with `currentColor` and keeps an accessible name naming the kind.\n- The dungeon tests and its e2e spec(s) pass.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3229: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:56:44Z",
+    "claimed_at": "2026-11-05T19:24:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3206 skipped: it waits for #3205 to close first",
+    "#3207 skipped: it waits for #3205, #3206 to close first",
+    "#3209 skipped: it waits for #3208 to close first",
+    "#3210 skipped: it waits for #3205 to close first",
+    "#3211 skipped: it waits for #3206, #3210 to close first",
+    "#3212 skipped: it waits for #3210, #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3210, #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3223 skipped: it waits for #3218 to close first",
+    "#3227 skipped: it waits for #3218 to close first",
+    "#3228 skipped: it waits for #3218, #3223 to close first",
+    "#3230 skipped: it waits for #3218, #3221, #3222, #3223 to close first"
+  ]
+}
