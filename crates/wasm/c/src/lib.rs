@@ -788,5 +788,16 @@ pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 
     boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
 }
 
+// The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
+
+/// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host
+/// holds the `DuelHost` and hands it back on every call, and passes the time in
+/// (`crates/shared/README.md`, the host contract). A rules refusal is an answer's data, never a failed
+/// status: only a call that does not parse is one.
+#[unsafe(no_mangle)]
+pub extern "C" fn host(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::host(arg("host: the call", call_json_ptr, call_json_len)?))
+}
+
 #[cfg(test)]
 mod tests;

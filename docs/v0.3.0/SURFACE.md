@@ -181,7 +181,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
-| `jackioh-shared` | `jackioh-engine` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | — (`serde_json`) |
+| `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
@@ -780,6 +780,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn series(call_json: &str) -> String;
     // #3098: jackioh-shared's Conquest series rules (SPEC §9.5, R330–R337). A SeriesCall in ({ call: "pickDeck", series, seat, slot, now, gameNo? }), a SeriesAnswer out
     // ({ row } | { refused } | { seats } | { picked } | { view } | { score }); the host holds the row and hands it back (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn host(call_json: &str) -> String;
+    // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
+    // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
 ```
 
 ### 10.2 Build

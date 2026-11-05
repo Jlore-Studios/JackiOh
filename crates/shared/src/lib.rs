@@ -4,10 +4,13 @@
 //!
 //! The first thing in is the Conquest series rules, from `crates/server` (#3098):
 //! [`series`] holds the rows and the transitions over them (SPEC §9.5, R330–R337), [`deck`] what a
-//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers.
+//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. Next is the
+//! match host's decisions (#3101): [`host`] holds the clocks, the disconnect grace, the rematch offers and
+//! the relays as one state machine, `step(host, event, now) -> (host, outputs)`.
 
 pub mod config;
 pub mod deck;
+pub mod host;
 pub mod series;
 
 /// A field with three states — absent, `null`, a value — kept apart:
