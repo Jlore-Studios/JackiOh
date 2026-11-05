@@ -15558,6 +15558,14 @@
         "sha": "dd2e3a5534e0ec8bd59a2e6ee9f6eed2a5ce8801",
         "tiers": {}
       }
+    },
+    "3180": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-05T12:00:38Z",
+      "issue": 3176,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
