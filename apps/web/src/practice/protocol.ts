@@ -12,6 +12,7 @@ import type {
   Action,
   ActionBody,
   CardDefs,
+  CombatForecast,
   DistributiveOmit,
   LeanPick,
   PlayerId,
@@ -107,6 +108,12 @@ export type PracticeSnapshot = {
    * by what they can see (`lethalHint`), shown only with the Lethal hint setting on. It never says how.
    */
   lethal?: true;
+  /**
+   * R3100000: present only in a tutorial lesson, whose coach names its attacks by it: what each of the
+   * human's legal attacks would do, as the board shows it (`combatForecast`). It reads nothing the human
+   * cannot see.
+   */
+  forecast?: CombatForecast;
 };
 
 /** R768: one kept practice game as the replay list shows it: never its log, seed or decks. */

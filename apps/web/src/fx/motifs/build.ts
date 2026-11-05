@@ -153,6 +153,11 @@ export function flies(from: FxAnchor | null, to: FxAnchor): from is FxAnchor {
 
 const HERO_ID = /^hero-(p1|p2)$/;
 
+/** The seat across the board from `side`. */
+export function otherSide(side: Side): Side {
+  return side === "you" ? "opponent" : "you";
+}
+
 /** The side and lane (1 on) of a unit or face-up backrow card; a hero has a side and no lane. */
 export function placeOf(view: PlayerView, id: string): { side: Side; lane: number | null } | null {
   if (id === HIDDEN_ID) return null;

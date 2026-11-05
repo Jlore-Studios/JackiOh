@@ -323,10 +323,6 @@ impl RunNodeKind {
                 | RunNodeKind::Boss
         )
     }
-
-    pub fn is_boss(self) -> bool {
-        matches!(self, RunNodeKind::MiniBoss | RunNodeKind::Boss)
-    }
 }
 
 /// A number for each kind of fight (`config.rs`'s tables).

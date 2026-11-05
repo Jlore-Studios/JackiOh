@@ -111,18 +111,11 @@ pub(crate) fn held(inventory: &[InventoryEntry], item: InventoryItem, key: &str)
 }
 
 /// §14.5: a card token unlocks any new card of a set that ships that the account chooses, in one
-/// transaction, every row with the same `at`. With no key, [`redeem_card_token_once`]'s redemption.
-pub async fn redeem_card_token(app: &App, profile_id: &str, card_id: &str) -> Result<(), ApiError> {
-    redeem_card_token_once(app, profile_id, card_id, None)
-        .await?
-        .now()?;
-    Ok(())
-}
-
-/// [`redeem_card_token`] under an `Idempotency-Key` (R2124000), answering the tokens after it, read
-/// in its transaction: right after the account's lock, before the token held is read (a retry
-/// finds the token its first try spent gone), a key already committed answers what it kept, and
-/// a redemption's answer is kept in its own transaction.
+/// transaction, every row with the same `at`, under an `Idempotency-Key` (R2124000) when `request`
+/// has one, answering the tokens after it, read in its transaction: right after the account's
+/// lock, before the token held is read (a retry finds the token its first try spent gone), a key
+/// already committed answers what it kept, and a redemption's answer is kept in its own
+/// transaction.
 pub async fn redeem_card_token_once(
     app: &App,
     profile_id: &str,
