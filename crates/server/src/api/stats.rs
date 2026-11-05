@@ -40,9 +40,9 @@ use jackioh_engine::wire::stats::{
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
     StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
     WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate, card_drills_of,
-    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, drawn_delta,
-    held_adjusted, not_drawn, patch_windows, played_delta, seen, sources_of, stats_field, tier_of,
-    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
+    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, held_adjusted,
+    patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -71,23 +71,9 @@ pub struct PublicCardStat {
     pub set: String,
     pub games: i64,
     pub win_rate: Option<f64>,
-    pub drawn_games: i64,
-    pub drawn_win_rate: Option<f64>,
-    pub played_games: i64,
-    pub played_win_rate: Option<f64>,
-    pub played_radiant_games: i64,
-    pub played_radiant_win_rate: Option<f64>,
-    pub played_normal_games: i64,
-    pub played_normal_win_rate: Option<f64>,
-    pub drawn_not_played_games: i64,
-    pub drawn_not_played_win_rate: Option<f64>,
-    pub played_delta: Option<f64>,
-    /// R2427000: the decks that held the card and never drew it, and their win rate.
-    pub not_drawn_games: i64,
-    pub not_drawn_win_rate: Option<f64>,
-    /// R2427000: the drawn win rate minus the never-drawn one; as R654's played delta, it waits for the
-    /// sample floor on both its sides.
-    pub drawn_delta: Option<f64>,
+    // R3185000: no drawn, played, face (R1147000), drawn-not-played or never-drawn (R2427000) breakdown and
+    // no played or drawn delta: no client reads them. The adjusted rate, its range and the tier below are
+    // still read off those tallies.
     /// R2777000: the drawn delta kept as far as its games back it, read from an even game
     /// (`adjusted_win_rate`): the page's headline rate and its default order.
     pub adjusted_win_rate: Option<f64>,
@@ -1196,34 +1182,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let rate = win_rate(&counted);
         // R2895000: the rate's 95% range, over the same games.
         let rate_range = rate.map(|_| wilson_interval(counted_wins, counted_games));
-        let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
-        let (played_radiant_games, _) = stat.map(|stat| tally_of(&stat.played_radiant)).unwrap_or((0, 0));
-        let played_radiant_rate = stat.and_then(|stat| win_rate(&stat.played_radiant));
-        let (played_normal_games, _) = stat.map(|stat| tally_of(&stat.played_normal)).unwrap_or((0, 0));
-        let played_normal_rate = stat.and_then(|stat| win_rate(&stat.played_normal));
-        let (unplayed_games, unplayed_wins) = stat
-            .map(|stat| tally_of(&stat.drawn_not_played))
-            .unwrap_or((0, 0));
-        let drawn_games = played_games + unplayed_games;
-        let drawn_wins = played_wins + unplayed_wins;
-        let drawn_rate = if drawn_games > 0 {
-            Some(drawn_wins as f64 / drawn_games as f64)
-        } else {
-            None
-        };
-        let played_rate = stat.and_then(|stat| win_rate(&stat.played));
-        let drawn_not_played_rate = stat.and_then(|stat| win_rate(&stat.drawn_not_played));
-        // R654: the delta waits for the sample floor on both its sides, as a small baseline swings it ±50.
-        let delta = stat
-            .filter(|_| played_games >= CARD_STATS_MIN_SAMPLE && unplayed_games >= CARD_STATS_MIN_SAMPLE)
-            .and_then(played_delta);
-        // R2427000: never drawn is in deck less both drawn sides; its delta waits for the floor on both sides too.
-        let never_drawn = stat.map(not_drawn);
-        let (not_drawn_games, _) = never_drawn.as_ref().map(tally_of).unwrap_or((0, 0));
-        let not_drawn_rate = never_drawn.as_ref().and_then(win_rate);
-        let drawn_gap = stat
-            .filter(|_| drawn_games >= CARD_STATS_MIN_SAMPLE && not_drawn_games >= CARD_STATS_MIN_SAMPLE)
-            .and_then(drawn_delta);
         let play_rate = if total_decks > 0 {
             counted_games as f64 / total_decks as f64
         } else {
@@ -1255,20 +1213,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             set: def.set.as_str().to_string(),
             games: counted_games,
             win_rate: rate,
-            drawn_games,
-            drawn_win_rate: drawn_rate,
-            played_games,
-            played_win_rate: played_rate,
-            played_radiant_games,
-            played_radiant_win_rate: played_radiant_rate,
-            played_normal_games,
-            played_normal_win_rate: played_normal_rate,
-            drawn_not_played_games: unplayed_games,
-            drawn_not_played_win_rate: drawn_not_played_rate,
-            played_delta: delta,
-            not_drawn_games,
-            not_drawn_win_rate: not_drawn_rate,
-            drawn_delta: drawn_gap,
             adjusted_win_rate: adjusted,
             win_rate_low: rate_range.map(|(low, _)| low),
             win_rate_high: rate_range.map(|(_, high)| high),

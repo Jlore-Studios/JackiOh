@@ -440,6 +440,8 @@ function useLobbyWatch(
         });
     };
 
+    // R3205000: this wait keeps reading in a hidden tab, unlike the polls on `pollWhileVisible`: a queue
+    // wait's reads keep its ticket alive (R897000), and a room wait's host holds a room that expires.
     // Check every mount so a reload after pairing cannot strand the player.
     check();
     if (!waiting) {

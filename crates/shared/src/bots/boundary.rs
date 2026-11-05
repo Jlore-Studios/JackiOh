@@ -3,8 +3,8 @@
 //! writes the [`BotAnswer`]; it decides nothing. A bot at a seat is the match host's machine's
 //! (`host::boundary`); these are the decisions around it, over plain records the host read from its store
 //! ([`BotFacts`], [`TicketFacts`], [`GameFacts`]): the pool's size, who grinds, a new bot, its decks and
-//! trio, the empty-queue pairing, a series pick. The decision a bot's move is (`bots::decide`) is a call of
-//! its own, `jackioh-wasm-core`'s `bot_decide`, since it may be given a clock.
+//! trio, the empty-queue pairing, a series pick and the cosmetics it wears. The decision a bot's move is
+//! (`bots::decide`) is a call of its own, `jackioh-wasm-core`'s `bot_decide`, since it may be given a clock.
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,7 @@ use jackioh_engine::WinRateTable;
 use jackioh_engine::validator::CatalogSnapshot;
 use jackioh_engine::wire::ListTotal;
 
+use crate::bots::cosmetics::{BotDraw, CosmeticOwners, Holding, eligible, redraw};
 use crate::bots::fallback::{
     BotMode, RatedGameRecord, TicketRecord, bot_match_gap_passed, bot_matches, choose_bot, choose_bot_pair,
     fallback_due_keyed, fallback_seconds_keyed, hour_of,
@@ -22,6 +23,8 @@ use crate::bots::pool::{
     BotDeck, BotFacts, BotLadder, NewBot, PoolChange, bot_target_strength, draw_decks, draw_new_bot,
     draw_trio, plan_grind, plan_pool, pool_target,
 };
+use crate::config::BOT_COSMETIC_FITS;
+use crate::cosmetics::registry;
 use crate::deck::FrozenTrio;
 use crate::series::{SeriesRefusal, SeriesRow, SeriesSeat};
 
@@ -204,6 +207,23 @@ pub enum BotCall {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         now: i64,
     },
+    /// R1834005: the non-starter cosmetics a bot may own as of `now`, from how many people own each and
+    /// when it was first granted to one, judged against the shipped registry.
+    EligibleCosmetics {
+        owners: Vec<CosmeticOwners>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// R1834005: what `bot` draws of its cosmetics at a refresh at `now` from the pool's `seed`, over the
+    /// `eligible` holdings, by the compiled-in fits (`BOT_COSMETIC_FITS`) and the shipped registry; none when
+    /// nothing is due.
+    RedrawCosmetics {
+        seed: String,
+        bot: Box<BotFacts>,
+        eligible: Vec<Holding>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
 }
 
 /// What a [`BotCall`] answers.
@@ -271,6 +291,15 @@ pub enum BotAnswer {
     /// R331: the pick the series refuses, as data.
     Refused {
         refused: SeriesRefusal,
+    },
+    /// The holdings a bot may own, sorted: a cosmetic id, and the card for a per-card one.
+    Holdings {
+        holdings: Vec<Holding>,
+    },
+    /// What a refresh changes of a bot's cosmetics (and of its decks and trio, when a deck was given its
+    /// slots), or none when nothing is due.
+    Dressed {
+        draw: Option<Box<BotDraw>>,
     },
 }
 
@@ -377,5 +406,16 @@ pub fn apply(call: BotCall) -> BotAnswer {
                 Err(refused) => BotAnswer::Refused { refused },
             }
         }
+        BotCall::EligibleCosmetics { owners, now } => BotAnswer::Holdings {
+            holdings: eligible(registry(), &owners, now),
+        },
+        BotCall::RedrawCosmetics {
+            seed,
+            bot,
+            eligible,
+            now,
+        } => BotAnswer::Dressed {
+            draw: redraw(&seed, &*bot, BOT_COSMETIC_FITS, registry(), &eligible, now).map(Box::new),
+        },
     }
 }

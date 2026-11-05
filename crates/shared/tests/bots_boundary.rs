@@ -7,16 +7,19 @@ use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::validator::CatalogSnapshot;
 use jackioh_engine::{PerPlayer, Rng, WinRateRow, WinRateSource, WinRateTable, deckable};
 use jackioh_shared::bots::boundary::{BotAnswer, BotCall, GameFacts, TicketFacts, apply};
+use jackioh_shared::bots::cosmetics::{CosmeticOwners, Holding, eligible, redraw};
 use jackioh_shared::bots::fallback::{
     BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, hour_of,
 };
 use jackioh_shared::bots::pool::{
-    BotFacts, BotLadder, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
+    BotDeck, BotFacts, BotLadder, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
 };
 use jackioh_shared::config::{
-    BOT_ACTIVE_HOURS_MIN, BOT_FALLBACK_MAX_SECONDS, BOT_POOL_MIN, BOT_VS_BOT_MIN_GAP_SECONDS, MS_PER_SECOND,
+    BOT_ACTIVE_HOURS_MIN, BOT_COSMETIC_FITS, BOT_COSMETIC_MIN_AGE_DAYS, BOT_COSMETIC_MIN_OWNERS,
+    BOT_FALLBACK_MAX_SECONDS, BOT_POOL_MIN, BOT_VS_BOT_MIN_GAP_SECONDS, MS_PER_DAY, MS_PER_SECOND,
     PersonaName,
 };
+use jackioh_shared::cosmetics::registry;
 use jackioh_shared::host::bot::BotSeat;
 use jackioh_shared::host::boundary::{DecideCall, decide};
 use jackioh_shared::host::clock::initial_clocks;
@@ -39,6 +42,7 @@ fn bot(id: &str, rating: f64) -> BotFacts {
         decks_catalog_version: None,
         trio: None,
         trio_catalog_version: None,
+        cosmetics: None,
     }
 }
 
@@ -370,4 +374,77 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
         ..call
     };
     assert!(decide(&nobody, None).is_none());
+}
+
+#[test]
+fn r1834005_the_cosmetics_calls_answer_what_the_functions_they_name_answer() {
+    // A cosmetic that enough people own, long enough: the Mythic card back that drops, and the Jlorious one,
+    // which no bot may wear however widely owned (R2755000).
+    let long_ago = NOW - (BOT_COSMETIC_MIN_AGE_DAYS + 30) * MS_PER_DAY;
+    let widely = |cosmetic: &str| CosmeticOwners {
+        cosmetic_id: cosmetic.to_string(),
+        card_id: None,
+        owners: BOT_COSMETIC_MIN_OWNERS * 100,
+        first_granted_at: Some(long_ago),
+    };
+    let owners = vec![widely("card-back-jlorious"), widely("card-back-nebula")];
+    let call = BotCall::EligibleCosmetics {
+        owners: owners.clone(),
+        now: NOW,
+    };
+    let BotAnswer::Holdings { holdings } = apply(over_json(&call)) else {
+        panic!("holdings")
+    };
+    assert_eq!(holdings, eligible(registry(), &owners, NOW));
+    assert_eq!(holdings, vec![("card-back-nebula".to_string(), None)]);
+
+    // A bot that has dealt its decks and has not been dressed draws everything, as the server's refresh does.
+    let deck = |first: usize| BotDeck {
+        cards: (first..first + 30).map(|n| format!("core-{n:03}")).collect(),
+        portrait: "vanilla".to_string(),
+        slots: None,
+    };
+    let mut undressed = bot("dressed", 1000.0);
+    undressed.created_at = NOW - 40 * MS_PER_DAY;
+    undressed.decks = vec![deck(1), deck(31)];
+    let held: Vec<Holding> = holdings;
+    let call = BotCall::RedrawCosmetics {
+        seed: "pool:dressed".to_string(),
+        bot: Box::new(undressed.clone()),
+        eligible: held.clone(),
+        now: NOW,
+    };
+    let BotAnswer::Dressed { draw } = apply(over_json(&call)) else {
+        panic!("a draw")
+    };
+    let expected = redraw(
+        "pool:dressed",
+        &undressed,
+        BOT_COSMETIC_FITS,
+        registry(),
+        &held,
+        NOW,
+    );
+    assert_eq!(draw.map(|draw| *draw), expected);
+    let drawn = expected.expect("a first draw");
+    assert!(
+        drawn
+            .decks
+            .is_some_and(|decks| decks.iter().all(|deck| deck.slots.is_some()))
+    );
+
+    // Dressed and nothing due: no draw. The draw is its own JSON, so a host keeps it as it was handed back.
+    let mut dressed = undressed.clone();
+    dressed.cosmetics = Some(drawn.cosmetics);
+    dressed.decks = vec![BotDeck {
+        slots: Some(Default::default()),
+        ..deck(1)
+    }];
+    let call = BotCall::RedrawCosmetics {
+        seed: "pool:again".to_string(),
+        bot: Box::new(dressed),
+        eligible: held,
+        now: NOW,
+    };
+    assert_eq!(apply(over_json(&call)), BotAnswer::Dressed { draw: None });
 }

@@ -50,6 +50,7 @@ import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type Pa
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
+import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -145,11 +146,6 @@ function defaultDirection(col: SortColumn): SortDirection {
   return col === "name" ? "asc" : "desc";
 }
 
-/** R2777000: an adjusted win rate to a tenth of a point, as it moves in tenths near 50%; "—" when there is none. */
-function adjustedText(rate: number | null | undefined): string {
-  return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";
-}
-
 /**
  * R2895000: a rate's 95% range under its figure, its ends to `digits` decimals of a percent (Adjusted's tenths,
  * Win rate's whole points); nothing when the server sent none.
@@ -182,16 +178,6 @@ function TierFitText({ fit }: { fit: number | null }): ReactElement | null {
   return (
     <span className="stats-sample-hint stats-range" data-testid={statsTestid.tierFit}>
       {`${Math.round(fit * 100)}%`}
-    </span>
-  );
-}
-
-/** R3022000: a card's tier chip, or "—" below the floor or from a server deployed before tiers. */
-function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid: string }): ReactElement {
-  if (!tier) return <span data-testid={testid}>—</span>;
-  return (
-    <span className="stats-tier" data-tier={tier} data-testid={testid}>
-      {tier}
     </span>
   );
 }

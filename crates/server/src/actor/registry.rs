@@ -33,7 +33,7 @@ use crate::db::store::{
     BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
     StoreError, Tx,
 };
-use crate::loadout::SeatPicks;
+use crate::loadout::read_seat_picks;
 
 /// Why `attach` could not hand the socket to a seat. `ws_server.rs` closes with 4404 for an
 /// `Api` error whose code is `not_found`, 4403 for any other `Api` error, and 1011 for `Internal`.
@@ -221,8 +221,8 @@ impl Registry {
             // R1834002: what each seat's loadout freezes from, as the match starts; R1834005: a
             // bot's from its own row, through the same path.
             let picks = (
-                SeatPicks::read(&mut t, &first.profile_id, bots.p1.as_ref()).await?,
-                SeatPicks::read(&mut t, &second.profile_id, bots.p2.as_ref()).await?,
+                read_seat_picks(&mut t, &first.profile_id, bots.p1.as_ref()).await?,
+                read_seat_picks(&mut t, &second.profile_id, bots.p2.as_ref()).await?,
             );
             (boards, sampled, derived_mode, bots, picks)
         })?;

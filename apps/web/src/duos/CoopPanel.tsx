@@ -193,6 +193,8 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
         });
     };
     check();
+    // R3205000: the host's room wait keeps reading in a hidden tab: the room expires after
+    // `DUOS_ROOM_TTL_MS`, and the read brings the host to the game the guest's join starts.
     const timer = window.setInterval(check, COOP_ROOM_POLL_MS);
     // A throttled tab's interval stalls; waking it reads the room again at once.
     const stopWake = pageWake(check);
