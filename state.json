@@ -16560,15 +16560,8 @@
       "stop_requested": false
     },
     "3112": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41953864687",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-05T02:39:26Z",
-        "until": "2026-11-05T03:09:26Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16580,10 +16573,9 @@
         "reason": "planned on opus",
         "trail": "s/cards/catalog.json'))\\ncards=c['cards'] if isinstance(c,dict) and 'cards' in c else c\\nprint(type(c), list(c.keys())[:10] if isins\u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<string>\", line 6, in <module> TypeError: string indices must be integers, not 'str' <class 'dict'> ['core-001', 'core-002', 'core-003', 'core-004\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nby=json.load(open('crates/cards/catalog.json'))\\nfor i in ['core-008','core-011','core-019','core-035','core-041','core-002','core-003','core-005','core-02\u2026\n- Bash: {\"command\": \"grep -rn \\\"positions.json\\\\|counts\\\\[\\\\|\\\\\\\"counts\\\\\\\"\\\\|\\\\.counts\\\" .github/workflows/learn*.yml training/ml/*.sh training/ml/jackioh_ml/*.py bot/go/internal/dashboard/*.go 2>/dev/null \u2026\n- Bash: {\"command\": \"sed -n 285,305p .github/workflows/learn.yml\", \"description\": \"Read how learn.yml reads positions counts\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -5; grep -n \\\"^## \\\\|classify\\\\|kind\\\" docs/issues-and-patches.md | head -40\", \"description\": \"Read classify docs and patch kinds\"}\n- Bash: {\"command\": \"grep -rn \\\"features_of\\\\|features(\\\\|sparse\\\" crates/ai/src/*.rs crates/ai/src/policy/*.rs crates/wasm 2>/dev/null | grep -v \\\"^crates/ai/src/features.rs\\\" | grep -v \\\"^crates/ai/src/lea\u2026\n- Bash: {\"command\": \"grep -n \\\"board:\\\\|split(\\\\\\\":\\\\\\\")\\\\|split(':')\\\\|startswith\\\" training/ml/jackioh_ml/*.py | head -20; grep -n \\\"MIN_KEY\\\\|20 or more\\\\|min_count\\\\|MIN_POSITIONS\\\" training/ml/jackioh_m\u2026\n- Bash: {\"command\": \"grep -rn \\\"unknown_cards\\\\|UnknownCards\\\\|known_card_ids\\\\|ID_ZONES\\\\|CARD_ZONES\\\" crates/ apps/web/src 2>/dev/null | head; cat crates/ai/tests/ai/main.rs 2>/dev/null | head -40 || ls cr\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/ crates/ai/tests/ai | head -60; grep -rn \\\"mod features\\\\|mod learned\\\" crates/ai/tests/*.rs | head\", \"description\": \"List AI test files and module wiring\"}\n- Bash: {\"command\": \"grep -rn '\\\"p2\\\": {}' crates/ai/tests/ai/*.rs | head -3; grep -rn \\\"#\\\\[derive.*Serialize\\\" -A3 crates/ai/src/types.rs | head -5\", \"description\": \"Check minimal scenario usage in AI test\u2026\n- said: Now I have the shape. Writing the draft before checking the remaining details.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3112/.bot-plan.md\", \"content\": \"# Draft plan, issue #3112 (planner's notes)\\n\\n## Findings\\n- features.rs: sparse id keys `<zone>:<side>:<id>`, zones \u2026\n- Bash: {\"command\": \"grep -rln \\\"board:own\\\\|hand_radiant\\\\|featuresVersion\\\" apps/web/src crates/wasm e2e 2>/dev/null | head; grep -n \\\"spec check\\\\|proven_in\\\" spec/README.md | head -10; ls spec/rulings | \u2026\n- Bash: {\"command\": \"sed -n 30,60p training/ml/jackioh_ml/data.py | head -0; grep -n \\\"class Vocabulary\\\" -A 25 training/ml/jackioh_ml/data.py | head -30; grep -n \\\"MIN_KEY_COUNT\\\\|sparse_in\\\" training/ml/ja\u2026\n- Bash: {\"command\": \"ls spec/ | head -30; grep -ln \\\"FEATURES_VERSION\\\\|features.rs\\\\|learned evaluation\\\" spec/*.md | head\", \"description\": \"Check spec sections mentioning learned features\"}\n- Bash: {\"command\": \"grep -n \\\"learned evaluation\\\\|FEATURES_VERSION\\\\|features.rs\\\" spec/09-architecture.md | head\", \"description\": \"Find learned eval mentions in \\u00a79\"}\n- Bash: {\"command\": \"for f in spec/pending/*.md; do n=$(grep -c '^\\\\*\\\\*\\\\[\\\\[R' $f); [ \\\"$n\\\" -gt 1 ] && echo \\\"$f $n\\\"; done | head -3; f=$(for f in spec/pending/*.md; do n=$(grep -c '^\\\\*\\\\*\\\\[\\\\[R' $f); \u2026\n- Bash: {\"command\": \"grep -rn \\\"positions::\\\" crates/tools/src/*.rs | head; grep -n \\\"learned\\\\|features\\\" scripts/ci-scope.sh | head\", \"description\": \"Check positions module users and CI scope map\"}\n- Bash: {\"command\": \"sed -n 50,80p crates/engine/src/wire/mod.rs\", \"description\": \"Check string_union derives\"}\n- Bash: {\"command\": \"ls spec/rulings/R0065.md spec/rulings/R0185.md spec/rulings/R1006003.md 2>&1; grep -n \\\"hand_radiant\\\\|own.hand_radiant\\\\|dense stats alone\\\\|stats alone\\\" crates/ai/README.md docs/learn\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Shape decided (final plan being written)\\n- features.rs: FEATURES_VERSION 3, FEATURES_READ_SINCE 2, ATTRIBUTE_TOP 10, ID_ZONES, pub fn card_id_of_key ->\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3112/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe learned evaluation's features gain sparse keys for **what a card is** (its running face's type, keyword\u2026\n- Bash: {\"command\": \"head -20 crates/ai/tests/ai.rs; grep -n \\\"mod features\\\\|mod learned\\\\|mod support\\\" crates/ai/tests/ai/mod.rs; wc -w .bot-plan.md\", \"description\": \"Check test binary layout and plan len\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- **`fit.py`'s misjudged-cards report** filters `board:own:`. Attribute keys (`board.\\u2026:own:`) never match it, so \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" The learn lane's next run refits on version 3: the bump makes `retrain.sh` fold with this tree's build, because the e\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3112/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- [ ] Attribute keys are written beside every id key and no others; `FEATURES_VERSION` is 3; the dense layout is uncha\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"The shipped network (generation 13, fitted on version 2) has no attribute rows. It reads version 3 exactly as it was f\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- Every new name must be unique across `jackioh_ai` (`lib.rs` re-exports every module whole); they are free today.\\\\n\\\u2026\n- said: ## Goal The learned evaluation's features gain sparse keys for **what a card is**: - its running face's type, keywords, and printed attack and health; - its printed cost and its tags; - whether it is Radiant. These keys sit beside the id keys and exist only for cards the seat can name in `redact(st\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-05T02:14:15Z",
       "owner_why": "it plans it",
@@ -16596,9 +16588,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-05T01:44:09Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41953864687",
+      "run_id": "pending:b850d290-1793846523",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T02:14:15Z",
+      "started_at": "2026-11-05T02:42:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16922,9 +16914,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T02:41:47Z",
+    "at": "2026-11-05T02:42:33Z",
     "url": "",
-    "what": "review #3123 on claude-4"
+    "what": "build #3112 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T02:21:31Z",
