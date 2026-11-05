@@ -399,3 +399,61 @@ pub fn engine_tables() -> Result<String, JsError> {
 pub fn validator(call: &str, input_json: &str) -> Result<String, JsError> {
     js(wasm_core::validator(call, input_json))
 }
+
+// The Conquest series rules (SPEC §9.5, #3098: `jackioh-shared`, which the server calls natively)
+
+/// One call of the Conquest series rules: a `SeriesCall` as JSON in, a `SeriesAnswer` as JSON out. The
+/// host holds the series row and hands it back on every call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn series(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::series(call_json))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jackioh_engine::{CardType, CustomCard, CustomFrame, PrintedRarity};
+
+    fn imp() -> CustomCard {
+        CustomCard {
+            id: "custom-ember-imp".to_owned(),
+            version: 1,
+            frame: CustomFrame {
+                name: "Ember Imp".to_owned(),
+                type_: CardType::Unit,
+                cost: 1,
+                rarity: PrintedRarity::Common,
+                attack: Some(1),
+                health: Some(2),
+                radiant_attack: None,
+                radiant_health: None,
+                keywords: Vec::new(),
+                text: String::new(),
+                params: Vec::new(),
+            },
+            source: String::new(),
+            builder: None,
+        }
+    }
+
+    #[test]
+    fn r915009_the_normal_module_refuses_a_game_with_custom_cards_and_names_the_module_that_runs_them() {
+        let with = CreateGameArgs {
+            custom_cards: Some(vec![imp()]),
+            ..CreateGameArgs::default()
+        };
+        let refusal = check_setup(&with, SetupKind::New).expect_err("a custom card is refused");
+        assert!(
+            refusal.contains("plays in the Luau module, not this one"),
+            "{refusal}"
+        );
+
+        // An empty list carries no custom card: the deck checks speak instead.
+        let empty = CreateGameArgs {
+            custom_cards: Some(Vec::new()),
+            ..CreateGameArgs::default()
+        };
+        let other = check_setup(&empty, SetupKind::New).expect_err("empty decks are refused");
+        assert!(!other.contains("Luau module"), "{other}");
+    }
+}

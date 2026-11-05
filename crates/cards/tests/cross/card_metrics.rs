@@ -4,17 +4,20 @@
 //! lists are computed on every build, so they grow with the catalog and this file names no card it
 //! expects in them: it holds each list to its threshold and to the cards on each side of it. The
 //! query's options on fixture cards, `everySet` among them, are the engine's
-//! (`crates/engine/tests/rules/card_metrics.rs`).
+//! (`crates/engine/tests/rules/card_metrics.rs`). #3116: the build also lists the cards whose script
+//! owes an extra turn, which the AI prices in hand (R846).
 
+use jackioh_cards::code_lines::owes_extra_turn;
 use jackioh_cards::query::{CardQuery, query};
 use jackioh_cards::{
-    BUSTED, CATALOG, CODE_LINES, COMPLICATED, carried_versions, register_all, shipped_catalog,
+    BUSTED, CATALOG, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, carried_versions, register_all,
+    shipped_catalog,
 };
 use jackioh_engine::catalog::set_is_open;
 use jackioh_engine::custom::is_custom_id;
 use jackioh_engine::{
     BUSTED_CODE_LINES, COMPLICATED_CODE_LINES, CardDef, GLITCH_DEF_ID, SINGLE_PLAYER_SETS, card_metrics,
-    code_lines_of, is_busted, is_complicated, with_shipped,
+    code_lines_of, is_busted, is_complicated, is_extra_turn_card, with_shipped,
 };
 
 fn ids_of_defs<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
@@ -201,6 +204,7 @@ fn r1846003_r2173000_a_fold_under_a_carried_version_reads_its_own_lists_or_the_b
                 code_lines: build.code_lines,
                 busted: &lists.busted,
                 complicated: &lists.complicated,
+                extra_turn_cards: build.extra_turn_cards,
             },
         };
         assert_eq!(
@@ -209,4 +213,101 @@ fn r1846003_r2173000_a_fold_under_a_carried_version_reads_its_own_lists_or_the_b
             "{version}: its own lists, else the build's"
         );
     }
+}
+
+/// #3116: the build lists every script whose code names `take_extra_turn`, sorted by id, and hands the
+/// list to the engine, where the AI prices it in hand (R846): M #19.1 Temporal Rift's and S #4.3 Event
+/// Horizon's cry, and S #4.4 Last Word's Trap step, but not S #4.1 Farewell, a Terminus Spell beside them.
+#[test]
+fn r846_the_build_lists_the_scripts_that_owe_an_extra_turn_sorted_by_id() {
+    register_all();
+    let mut sorted = EXTRA_TURN_CARDS.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(EXTRA_TURN_CARDS, sorted.as_slice(), "sorted by id, each once");
+    for id in EXTRA_TURN_CARDS {
+        assert!(CATALOG.contains_key(*id), "{id}: a catalog card");
+    }
+    assert_eq!(
+        card_metrics().extra_turn_cards,
+        EXTRA_TURN_CARDS,
+        "register_all hands the extra-turn cards to the engine"
+    );
+    for (id, source) in [
+        (
+            "meditative-019-1",
+            include_str!("../../src/scripts/meditative/c019_1_temporal_rift.rs"),
+        ),
+        (
+            "stinkyscape-004-3",
+            include_str!("../../src/scripts/stinkyscape/c004_3_event_horizon.rs"),
+        ),
+        (
+            "stinkyscape-004-4",
+            include_str!("../../src/scripts/stinkyscape/c004_4_last_word.rs"),
+        ),
+    ] {
+        assert!(owes_extra_turn(source), "{id}: its script owes an extra turn");
+        assert!(is_extra_turn_card(id), "{id}: the engine lists it");
+    }
+    assert!(!owes_extra_turn(include_str!(
+        "../../src/scripts/stinkyscape/c004_1_farewell.rs"
+    )));
+    assert!(!is_extra_turn_card("stinkyscape-004-1"));
+    assert!(!is_extra_turn_card("custom-anything"));
+}
+
+/// #3116: a script owes an extra turn once its code, above its tests and outside its comments, names
+/// `take_extra_turn` as a whole word, whichever hook returns it: a Unit's cry, or a Trap's step that
+/// resumes its reveal. So a card added later is priced with no list to join.
+#[test]
+fn r846_a_fixture_script_owes_an_extra_turn_once_its_code_names_take_extra_turn_in_any_hook() {
+    let cry = r#"
+pub const ID: &str = "fixture-unit";
+use jackioh_engine::prelude::*;
+pub fn script() -> CardScripts {
+    CardScripts {
+        cry: Some(hook(|_ctx| vec![take_extra_turn(json_as(json!({})))])),
+        ..CardScripts::default()
+    }
+}
+"#;
+    assert!(owes_extra_turn(cry), "a Unit's cry");
+    let trap = r#"
+pub const ID: &str = "fixture-trap";
+use jackioh_engine::effects::{end_turn, take_extra_turn};
+use jackioh_engine::prelude::*;
+fn after_prevent(ctx: &EffectContext) -> Vec<Effect> {
+    vec![end_turn(json_as(json!({}))), take_extra_turn(json_as(json!({})))]
+}
+"#;
+    assert!(owes_extra_turn(trap), "a Trap's resumed reveal step");
+    let comments = r#"
+//! Owes nothing: `take_extra_turn` is named in its comments only.
+pub const ID: &str = "fixture-comment";
+/* take_extra_turn(json_as(json!({}))) */
+pub fn script() -> CardScripts {
+    CardScripts::default() // take_extra_turn
+}
+"#;
+    assert!(!owes_extra_turn(comments), "named in comments only");
+    let tests = r#"
+pub const ID: &str = "fixture-tested";
+pub fn script() -> CardScripts {
+    CardScripts::default()
+}
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::effects::take_extra_turn;
+}
+"#;
+    assert!(!owes_extra_turn(tests), "named in its tests only");
+    let longer = r#"
+pub const ID: &str = "fixture-longer";
+pub fn script() -> CardScripts {
+    let _ = (take_extra_turns(), not_take_extra_turn());
+    CardScripts::default()
+}
+"#;
+    assert!(!owes_extra_turn(longer), "only inside longer names");
 }

@@ -541,8 +541,10 @@ func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* =
 			if record.Truthy("stop_requested") {
 				return &[2]string{"stopped by @" + py.Str(record.GetOr("stopped_by", "someone")), "stop"}
 			}
-			if closed(*number) {
-				// Deliver drops a closed thread's work anyway, so stop spending on it now.
+			// Deliver drops a closed thread's work anyway, so stop spending on it now. Not an
+			// after-merge spot-check's: its thread is the pull request it reviews, closed by its
+			// merge, which deliver expects (`deliverItem`); stopping it here failed every one (#3133).
+			if !record.Truthy("spot_check") && closed(*number) {
 				return &[2]string{fmt.Sprintf("#%d was closed", *number), "stop"}
 			}
 		}

@@ -43,6 +43,7 @@ describe("R2631000 how JackiOh uses AI", () => {
     expect(opponents).toHaveTextContent("In Practice, at the difficulty you pick, and in the tutorial");
     expect(opponents).toHaveTextContent("In ranked, when no one near your rating is free after a short wait, an AI opponent that our server plays.");
     expect(opponents).toHaveTextContent("Nothing in the game marks it");
+    expect(opponents).not.toHaveTextContent(/what it looks like|how it plays/);
     expect(within(opponents).getByRole("link", { name: "Terms" })).toHaveAttribute("href", paths.terms);
     expect(opponents).toHaveTextContent("In co-op, the team you and a friend play against.");
     expect(opponents).toHaveTextContent("They are not chatbots");

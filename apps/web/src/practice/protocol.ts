@@ -13,7 +13,6 @@ import type {
   ActionBody,
   CardDefs,
   CombatForecast,
-  CustomCard,
   DistributiveOmit,
   LeanPick,
   PlayerId,
@@ -34,9 +33,7 @@ export type PracticeDeckChoice =
   | { kind: "random"; leanSet?: LeanPick; leanNewest?: boolean }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
-  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null; cosmetics?: DeckCosmetics }
-  /** #920: the creator's "Try it": a random deck of one card fewer, and the custom card `card`. */
-  | { kind: "try"; card: string };
+  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null; cosmetics?: DeckCosmetics };
 
 /** R924000: the pick a random deck leans on, R1373's `leanNewest` read as "newest"; `null` for none. */
 export function randomDeckLean(choice: PracticeDeckChoice & { kind: "random" }): LeanPick | null {
@@ -63,18 +60,13 @@ export type PracticeStartConfig = {
    */
   sandbox?: true;
   /**
-   * R915006: the custom cards the human's deck names (SPEC §12), which the game carries and its replay
-   * folds with; a game with any runs in the Luau module (R915009) and records no card statistics (§12.10).
-   */
-  customCards?: CustomCard[];
-  /**
    * Issue #1113, tests only: the ids the AI deck is dealt without, as `banned`; absent, the live shadow
    * ban. The seeded fixtures (the R265/B34/R677 seeds, spec 13's URL games) set it to the frozen pool.
    */
   aiBanned?: readonly string[];
   /**
    * R1303000: the game is on a seed the server issued for this setup, so its end may be claimed and
-   * paid; never a lesson's, a sandbox's, one with custom cards, a Try it or a URL seed.
+   * paid; never a lesson's, a sandbox's or a URL seed.
    */
   earning?: true;
   /**
@@ -164,8 +156,6 @@ export type PracticeDebug = {
   deckMarks?: Partial<Record<PlayerId, RunFightSetup["humanMarks"]>>;
   /** R923000: present when the game is a sandbox, which its fold must be told. */
   sandbox?: true;
-  /** R915006: the game's custom cards, which its fold must be given; absent when it has none. */
-  customCards?: CustomCard[];
 };
 
 export type PracticeRequest =

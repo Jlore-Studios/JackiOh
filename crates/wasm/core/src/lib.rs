@@ -753,6 +753,19 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
     }
 }
 
+// The Conquest series rules (SPEC §9.5, R330 to R337; #3098)
+
+/// One call of `jackioh_shared::series`, the Conquest series rules the server calls natively: the input
+/// is a `SeriesCall` (`{ "call": "pickDeck", "series": …, "seat": "p1", "slot": 2, "now": … }`), the
+/// output a `SeriesAnswer` (`{ "row": … }`, `{ "refused": … }`, or the read). The host holds the
+/// `SeriesRow` and hands it back on every call, and passes the time in (`crates/shared/README.md`, the
+/// host contract). A rules refusal is the returned `refused`, never an error: only a call that does not
+/// parse is one. No decision is made here.
+pub fn series(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::series::SeriesCall = parse("series: the call", call_json)?;
+    to_json(&jackioh_shared::series::apply(&call))
+}
+
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
 // mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
 // feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only
@@ -1172,5 +1185,58 @@ mod run_body_tests {
             serde_json::from_str::<String>(&text).unwrap(),
             jackioh_run::run_daily_seed("2026-11-01", 2)
         );
+    }
+}
+
+#[cfg(test)]
+mod series_body_tests {
+    use super::*;
+
+    const NEW_SERIES: &str = r#"{
+        "call": "newSeries",
+        "now": 1700000000000,
+        "input": {
+            "seriesId": "series-1",
+            "firstMatchId": "match-1",
+            "sides": [
+                { "profileId": "alice", "trio": { "name": "a", "decks": [
+                    { "name": "a0", "cards": ["x"] }, { "name": "a1", "cards": ["x"] }, { "name": "a2", "cards": ["x"] } ] } },
+                { "profileId": "bob", "trio": { "name": "b", "decks": [
+                    { "name": "b0", "cards": ["y"] }, { "name": "b1", "cards": ["y"] }, { "name": "b2", "cards": ["y"] } ] } }
+            ],
+            "seedBase": "seed",
+            "catalogVersion": "v1",
+            "ranked": false
+        }
+    }"#;
+
+    /// The body is `jackioh_shared::series::apply` over JSON: the row it answers is the next call's input.
+    #[test]
+    fn series_body_answers_a_row_and_takes_it_back() {
+        let started: Value = serde_json::from_str(&series(NEW_SERIES).unwrap()).unwrap();
+        assert_eq!(started["row"]["status"], "picking");
+        assert_eq!(started["row"]["version"], 1);
+
+        let pick = json!({
+            "call": "pickDeck", "series": started["row"], "seat": "p1", "slot": 1, "now": 1_700_000_000_001_i64,
+        });
+        let picked: Value = serde_json::from_str(&series(&pick.to_string()).unwrap()).unwrap();
+        assert_eq!(picked["row"]["sides"][0]["pick"], 1);
+        assert_eq!(picked["row"]["version"], 2);
+
+        // A pick is final: the second is a refusal the host reads, not an error.
+        let again = json!({
+            "call": "pickDeck", "series": picked["row"], "seat": "p1", "slot": 0, "now": 1_700_000_000_002_i64,
+        });
+        let refused: Value = serde_json::from_str(&series(&again.to_string()).unwrap()).unwrap();
+        assert_eq!(refused["refused"]["reason"], "pick_sealed");
+    }
+
+    #[test]
+    fn series_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
+            let error = series(call).unwrap_err();
+            assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
     }
 }

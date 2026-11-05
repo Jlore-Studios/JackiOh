@@ -60,7 +60,7 @@ import {
   VERSIONS_SCHEME,
 } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, lethalHint, type SearchBudget } from "@jackioh/ai";
-import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
 import type { RunFightSetup } from "@jackioh/run";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_LETHAL_HINT_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
@@ -98,19 +98,10 @@ export type PracticeCoreEnv = {
   saves?: PracticeSaveStore;
 };
 
-/**
- * `handle` never throws: anything that goes wrong comes back as `"failed"`. `needsLuau` (R915009): whether
- * `request` runs on the Luau module (custom cards), the normal one, or whichever is in use (`null`), so the
- * worker can switch before the synchronous `handle`.
- */
+/** `handle` never throws: anything that goes wrong comes back as `"failed"`. */
 export type PracticeCore = {
   handle(request: PracticeRequest): PracticeResponse;
-  needsLuau(request: PracticeRequest): boolean | null;
 };
-
-export function hasCustomCards(config: PracticeStartConfig): boolean {
-  return config.customCards !== undefined && config.customCards.length > 0;
-}
 
 type PracticeGame = {
   config: PracticeStartConfig;
@@ -167,12 +158,6 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
     }
     case "saved":
       return [...choice.cards];
-    case "try":
-      // #920: the creator's "Try it": the custom card and a random deck around it.
-      return [
-        choice.card,
-        ...buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE - 1, { banned: [], gatedSets: [] }),
-      ];
   }
 }
 
@@ -226,7 +211,7 @@ function decksAndHandicap(config: PracticeStartConfig): {
 function dealtSeats(config: PracticeStartConfig): PlayerId[] {
   // R2706000: a run deck is built over the run, not dealt, whatever `deck` says.
   if (config.run !== undefined) return [];
-  const dealt = config.deck.kind === "random" || config.deck.kind === "try";
+  const dealt = config.deck.kind === "random";
   return config.lesson === undefined && dealt ? [config.humanSeat] : [];
 }
 
@@ -264,8 +249,6 @@ function startGame(asked: PracticeStartConfig): PracticeGame {
     ...(deckMarks === undefined ? {} : { deckMarks }),
     // R923000: the one game whose dev tools the engine takes.
     ...(config.sandbox === true ? { sandbox: true } : {}),
-    // R915006: the custom cards the human's deck names, which only the Luau module runs (R915009).
-    ...(hasCustomCards(config) ? { customCards: config.customCards } : {}),
   });
   const begun = beginGame(created);
   if (begun.error !== undefined) throw new Error(`the engine refused to begin the game: ${begun.error}`);
@@ -429,7 +412,6 @@ function foldInputOf(replay: PracticeReplay): FoldInput {
     ...(dealt.lastBoards === undefined ? {} : { lastBoards: dealt.lastBoards }),
     ...(dealt.dealt === undefined ? {} : { dealt: dealt.dealt }),
     ...(replay.config.sandbox === true ? { sandbox: true } : {}),
-    ...(hasCustomCards(replay.config) ? { customCards: replay.config.customCards } : {}),
     log: replay.log,
   };
 }
@@ -630,7 +612,6 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       ...(active.dealt === undefined ? {} : { dealt: [...active.dealt] }),
       ...(active.deckMarks === undefined ? {} : { deckMarks: JSON.parse(JSON.stringify(active.deckMarks)) as PracticeGame["deckMarks"] }),
       ...(active.config.sandbox === true ? { sandbox: true } : {}),
-      ...(hasCustomCards(active.config) ? { customCards: JSON.parse(JSON.stringify(active.config.customCards)) as CustomCard[] } : {}),
     };
   }
 
@@ -661,7 +642,6 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       decks: [[...active.decks[0]], [...active.decks[1]]],
       handicaps: JSON.parse(JSON.stringify(active.handicaps)) as Partial<Record<PlayerId, Handicap>>,
       ...(active.deckMarks === undefined ? {} : { deckMarks: active.deckMarks }),
-      ...(hasCustomCards(active.config) ? { customCards: active.config.customCards } : {}),
       log: JSON.parse(JSON.stringify(active.log)) as Action[],
     };
     const report = runFightReport(game, humanSeatNow(active));
@@ -734,23 +714,6 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         return handleUnsafe(request);
       } catch (cause) {
         return { id: request.id, type: "failed", message: messageOf(cause) };
-      }
-    },
-    needsLuau(request: PracticeRequest): boolean | null {
-      switch (request.type) {
-        case "start":
-          return hasCustomCards(request.config);
-        case "resume": {
-          // The save, not the page's memory, says what the game carries.
-          const save = env.saves?.read() ?? null;
-          return save === null ? false : hasCustomCards(save.config);
-        }
-        case "replay": {
-          const kept = env.saves?.readReplays().find((replay) => replay.summary.game === request.game);
-          return kept === undefined ? null : hasCustomCards(kept.config);
-        }
-        default:
-          return null;
       }
     },
   };

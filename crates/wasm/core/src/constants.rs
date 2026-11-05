@@ -9,7 +9,10 @@
 //! - each constant of `apps/web/src/wire/engineConfig.ts` under its own name, so `DECK_SIZE` is
 //!   `constants.DECK_SIZE` as it is in the web. The names are the list that
 //!   `crates/engine/tests/export_config.rs` writes that file from; this module's test holds the two
-//!   to each other.
+//!   to each other;
+//! - each constant of `jackioh_shared::config` (the shared logic's, `crates/shared/README.md`'s host
+//!   contract, #3098) under its own name, `SERIES_WINS_NEEDED` among them. A later shared module's
+//!   numbers join them here, and this module's test holds the list to that file.
 
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -29,6 +32,13 @@ fn put<T: Serialize + ?Sized>(all: &mut Map<String, Value>, name: &str, value: &
 macro_rules! put_engine {
     ($all:ident; $($name:ident),+ $(,)?) => {
         $( put(&mut $all, stringify!($name), &jackioh_engine::config::$name)?; )+
+    };
+}
+
+/// Adds each named constant of `jackioh_shared::config` under its Rust name.
+macro_rules! put_shared {
+    ($all:ident; $($name:ident),+ $(,)?) => {
+        $( put(&mut $all, stringify!($name), &jackioh_shared::config::$name)?; )+
     };
 }
 
@@ -61,6 +71,7 @@ pub fn constants() -> Result<String, String> {
         TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
         VOTE_TALLY_SIZE,
     );
+    put_shared!(all; MS_PER_SECOND, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED);
     to_json(&Value::Object(all))
 }
 
@@ -109,6 +120,17 @@ mod tests {
             .collect()
     }
 
+    /// The name of each `pub const` of `crates/shared/src/config.rs`, read off the source.
+    fn shared_config_names() -> Vec<String> {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shared/src/config.rs");
+        let text =
+            std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        text.lines()
+            .filter_map(|line| line.strip_prefix("pub const "))
+            .map(|rest| rest.split(':').next().expect("a name").trim().to_owned())
+            .collect()
+    }
+
     #[test]
     fn constants_hold_every_engine_config_constant() {
         let lines = engine_config_lines();
@@ -122,15 +144,54 @@ mod tests {
             assert_eq!(all.get(name), Some(value), "{name}");
         }
         let keys: BTreeSet<&str> = all.keys().map(String::as_str).collect();
+        let shared = shared_config_names();
         let expected: BTreeSet<&str> = lines
             .iter()
             .map(|(name, _)| name.as_str())
             .chain(BEYOND_ENGINE_CONFIG)
+            .chain(shared.iter().map(String::as_str))
             .collect();
         assert_eq!(
             keys, expected,
-            "the object's keys are engineConfig.ts's, plus the AI's and the run's"
+            "the object's keys are engineConfig.ts's, plus the AI's, the run's and the shared logic's"
         );
+    }
+
+    /// The shared logic's numbers (#3098), by the names its `config.rs` and the server's hold them under.
+    #[test]
+    fn constants_carry_the_shared_logics_numbers() {
+        let all = object();
+        let names = shared_config_names();
+        assert_eq!(
+            names,
+            [
+                "MS_PER_SECOND",
+                "SERIES_WINS_NEEDED",
+                "SERIES_MAX_GAMES",
+                "SERIES_PICK_SECONDS"
+            ],
+            "config.rs gained or lost a constant: put it in `constants` (put_shared!) and here"
+        );
+        for (name, value) in [
+            (
+                "MS_PER_SECOND",
+                serde_json::to_value(jackioh_shared::config::MS_PER_SECOND),
+            ),
+            (
+                "SERIES_WINS_NEEDED",
+                serde_json::to_value(jackioh_shared::config::SERIES_WINS_NEEDED),
+            ),
+            (
+                "SERIES_MAX_GAMES",
+                serde_json::to_value(jackioh_shared::config::SERIES_MAX_GAMES),
+            ),
+            (
+                "SERIES_PICK_SECONDS",
+                serde_json::to_value(jackioh_shared::config::SERIES_PICK_SECONDS),
+            ),
+        ] {
+            assert_eq!(all.get(name), Some(&value.expect("serializes")), "{name}");
+        }
     }
 
     #[test]

@@ -56,9 +56,11 @@ const SHARED: &[&str] = &[
 
 /// What only the normal module binds, and why: R1011000's fixture, which only the normal build is
 /// held to (`apps/web/src/wasm/learned.test.ts`), #936's Duos bindings for `/dev/duos`, whose
-/// game holds no custom card (`apps/web/src/wasm/index.ts` calls them on `normal`), and R3100000's
-/// combat forecast, which only a tutorial lesson asks for, a game with no custom card, so the Luau
-/// module (which leaves with part 5 of #2956) has no copy; the C module binds it.
+/// game holds no custom card (`apps/web/src/wasm/index.ts` calls them on `normal`), #3098's
+/// `series`, the Conquest series rules of `jackioh-shared`, and R3100000's combat forecast, which only a
+/// tutorial lesson asks for: no custom-card practice game or card creator plays any of these, so the Luau
+/// module that leaves with #3097 never binds them. Their other wrapper is the C module's (#3093), as the
+/// host contract of `crates/shared/README.md` says.
 const NORMAL_ONLY: &[&str] = &[
     "combat_forecast",
     "learned_parity",
@@ -67,6 +69,7 @@ const NORMAL_ONLY: &[&str] = &[
     "duos_reduce",
     "duos_legal_actions",
     "duos_view_for",
+    "series",
 ];
 
 /// What only the Luau module binds, and why: the creator's check (#913, #919) and the C

@@ -777,5 +777,16 @@ pub extern "C" fn validator(
     })
 }
 
+// The Conquest series rules (SPEC §9.5, #3098: `jackioh-shared`, which the server calls natively)
+
+/// One call of the Conquest series rules: a `SeriesCall` as JSON in, a `SeriesAnswer` as JSON out. The
+/// host holds the series row and hands it back on every call, and passes the time in
+/// (`crates/shared/README.md`, the host contract). A rules refusal is the answer's `refused`, never a
+/// failed status: only a call that does not parse is one.
+#[unsafe(no_mangle)]
+pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
+}
+
 #[cfg(test)]
 mod tests;

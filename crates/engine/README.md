@@ -65,8 +65,8 @@ mutable static. Two things hold it:
 
 - `Cargo.toml` depends on `serde`, `serde_json`, `indexmap` and, behind the off-by-default `ts`
   feature, `ts-rs`, and nothing else. A crate it cannot name it cannot call.
-- `clippy.toml` (the same file sits in `crates/cards`, `crates/ai` and `crates/luau`, and
-  `crates/tools/tests/acceptance.rs` holds the four byte for byte the same) bans `HashMap`, `HashSet`
+- `clippy.toml` (the same file sits in `crates/cards`, `crates/ai`, `crates/luau`, `crates/run` and
+  `crates/shared`, and `crates/tools/tests/acceptance.rs` holds the six byte for byte the same) bans `HashMap`, `HashSet`
   and `RandomState`; the clock (`Instant`, `SystemTime`); the disk (`File`, `OpenOptions`, `DirBuilder`,
   the `std::fs` functions and `Path`'s disk reads such as `exists` and `read_dir`); the environment and
   the command line; stdin, stdout and stderr; the network; processes (`Command`, `exit`, `abort`, `id`);
@@ -81,7 +81,8 @@ Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state)
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the
 catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`
 (with where the older shipped catalogs are found, `register_shipped`, R767000, and the card metrics
-compiled beside the catalog, `register_card_metrics`, R1846000); under the `testkit`
+compiled beside the catalog, `register_card_metrics`, R1846000, the extra-turn cards the AI prices
+among them, #3116); under the `testkit`
 feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One
 more thread-local, `catalog.rs`'s `FOLDING`, names the shipped catalog a replay is folding under:
 `with_shipped` sets it for that one call and puts the previous one back after it, a panic included,

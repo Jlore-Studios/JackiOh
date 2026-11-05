@@ -21041,5 +21041,33 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11p",
+    "date": "2026-11-05",
+    "title": "Patch: card proficiency, where playing a card levels it up and unlocks stamps to wear on it",
+    "source": "#3013",
+    "notes": "Each account now has a proficiency of every card: the server counts the account's own plays of a card from hand (a Unit summoned, a Spell cast, a Trap set; base and Radiant alike) in ladder, unranked and Conquest games, in the result's transaction, never a Created card or a token, never practice, co-op or a bot (R3013000). Five levels at 3, 15, 40, 100 and 200 plays, never falling; nothing is backfilled. Level n unlocks stamp n, a small SVG marker, and a card wears at most one, picked in the Collection; a locked pick is refused (R3013001). The stamp shows on the player's own card faces, in hand, on the board, in the deck builder and the Collection, and to the opponent, a watcher and a replay's viewer through the frozen loadout once the card is shown, clear of every part of the face and in no Radiant gold (R3013002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Card proficiency and stamps",
+      "new": [
+        "Card proficiency: every card you play from your hand in ladder, unranked and Conquest games counts toward that card, and it levels up at 3, 15, 40, 100 and 200 plays.",
+        "Stamps: each level unlocks a small stamp, more ornate the higher it goes. Pick one per card in the Collection, which shows each card's level and how far it is to the next.",
+        "Your stamp shows on your copies of the card, in your hand, on the board and in your decks, and your opponent, watchers and replays see it once that card is revealed."
+      ],
+      "balance": [],
+      "changes": [
+        "Practice and co-op games don't count toward proficiency, nor do cards a game creates or tokens. Every card starts at level 0."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "2dd1150b362c1f855edd7835875105b8ecf47a93"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

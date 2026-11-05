@@ -251,6 +251,11 @@ fn static_exports_answer_what_the_core_bodies_answer() {
     let constants: Value = serde_json::from_str(&ok(constants)).expect("JSON");
     assert_eq!(constants["DECK_SIZE"], json!(jackioh_engine::config::DECK_SIZE));
     assert!(constants["AI_BUDGET"].is_object() && constants["RUN"].is_object());
+    // And the shared logic's (#3098), by the names the server's config holds them under.
+    assert_eq!(
+        constants["SERIES_WINS_NEEDED"],
+        json!(jackioh_shared::config::SERIES_WINS_NEEDED)
+    );
     assert_eq!(call!(engine_tables;;), expect(wasm_core::engine_tables()));
     let validated = call!(validator; "normalizeName", "\"ab\"";);
     assert_eq!(validated, expect(wasm_core::validator("normalizeName", "\"ab\"")));
@@ -271,6 +276,45 @@ fn static_exports_answer_what_the_core_bodies_answer() {
         }
     );
     assert_eq!(jackioh_result_len(), 0);
+}
+
+#[test]
+fn series_export_answers_what_the_core_body_answers() {
+    init();
+    let started = r#"{
+        "call": "newSeries", "now": 1700000000000,
+        "input": {
+            "seriesId": "series-1", "firstMatchId": "match-1", "seedBase": "seed",
+            "catalogVersion": "v1", "ranked": false,
+            "sides": [
+                { "profileId": "alice", "trio": { "name": "a", "decks": [
+                    { "name": "a0", "cards": ["x"] }, { "name": "a1", "cards": ["x"] }, { "name": "a2", "cards": ["x"] } ] } },
+                { "profileId": "bob", "trio": { "name": "b", "decks": [
+                    { "name": "b0", "cards": ["y"] }, { "name": "b1", "cards": ["y"] }, { "name": "b2", "cards": ["y"] } ] } }
+            ]
+        }
+    }"#;
+    let answer = call!(series; started;);
+    assert_eq!(answer, expect(wasm_core::series(started)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    // The row it answered is the next call's argument, and a rules refusal is an answer, not a failure.
+    let row: Value = serde_json::from_str(&answer.text).expect("JSON");
+    assert_eq!(row["row"]["status"], "picking");
+    let sealed = json!({ "call": "pickDeck", "series": row["row"], "seat": "p1", "slot": 1, "now": 1700000000001_i64 });
+    let picked = ok(call!(series; sealed.to_string();));
+    let again = json!({
+        "call": "pickDeck", "series": serde_json::from_str::<Value>(&picked).expect("JSON")["row"],
+        "seat": "p1", "slot": 0, "now": 1700000000002_i64,
+    })
+    .to_string();
+    let refused = call!(series; again;);
+    assert_eq!(refused, expect(wasm_core::series(&again)));
+    assert_eq!(refused.status, STATUS_OK, "{}", refused.text);
+    assert!(refused.text.contains("pick_sealed"), "{}", refused.text);
+    // A call that does not parse is the one failure.
+    let broken = call!(series; "{}";);
+    assert_eq!(broken, expect(wasm_core::series("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
 }
 
 #[test]
