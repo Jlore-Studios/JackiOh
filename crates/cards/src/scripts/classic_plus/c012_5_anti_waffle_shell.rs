@@ -59,7 +59,7 @@ mod tests {
 
     const SHELL: &str = "classicplus-012-5";
     const MENACE: &str = "core-019"; // (3) 9/9
-    const POINTMASTER: &str = "core-020"; // (2) 7/1
+    const POINTMASTER: &str = "core-020"; // (2) 6/1
     const MAGIC_JAMMED: &str = "core-036"; // destroy target backrow card
     const FILLER: &str = "core-005";
 
@@ -113,7 +113,7 @@ mod tests {
             crate::register_all();
             let mut s = shell(false);
             s.play(POINTMASTER, json!({}));
-            s.expect_stats(POINTMASTER, json!({ "attack": 9, "health": 3 }));
+            s.expect_stats(POINTMASTER, json!({ "attack": 8, "health": 3 }));
             assert!(!has_shield(&s, POINTMASTER));
         }
 

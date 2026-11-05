@@ -114,9 +114,11 @@ describe("R277 the word diff", () => {
     // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #48 Tranquility's
     // (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
     // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000). #149 Wildar's is marked (#2657): its
-    // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too.
+    // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
+    // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000).
     expect(silent).toEqual([
       "core-055",
+      "core-079",
       "classic-028",
       "classic-029",
       "classic-060",

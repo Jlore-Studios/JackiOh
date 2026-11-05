@@ -17,7 +17,7 @@ mod generator {
     use jackioh_engine::wire::*;
     use jackioh_engine::{
         AltWinCondition, AttackAmong, CastAfterward, CatalogQueryArgs, CostRule, GameCounters, LibraryEnd,
-        ModifierExpiry, NumberRef, NumberedKey, OffFieldZone, Resume, Zone,
+        ModifierExpiry, NumberRef, NumberedKey, OffFieldZone, Resume, TurnHookFilter, Zone,
     };
     use jackioh_luau::api::after_check::AfterStateCheckArgs;
     use jackioh_luau::api::all_specs;
@@ -696,6 +696,7 @@ mod generator {
             ExileMatchingArgs,
             ExileRandomFromArgs,
             DiscardHandTurn,
+            TurnHookFilter,
             HoldRelease,
             NewHolder,
             DiscoverOffer,

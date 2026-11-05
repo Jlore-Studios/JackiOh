@@ -7,7 +7,7 @@ use jackioh_engine::view_for::{HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDD
 
 use super::support::{AI, HUMAN, card_by_id, every_card, register_cards};
 
-/// Classic #70 Book of Plague: the (1) Spell whose target prompt reaches the backrow.
+/// Classic #70 Book of Plague: the (1) Spell whose "counters" mode asks for a target that reaches the backrow.
 const BOOK: &str = "classic-070";
 /// Core #96 My Pawn: a (1) Trap.
 const PAWN: &str = "core-096";
@@ -32,7 +32,7 @@ fn plague_prompt(trap: &str) -> Scenario {
                 "library": ["core-020", "core-020", "core-020"] },
         "p2": { "hand": ["core-002"], "field": [MENACE], "backrow": [MANA_WELL, { "def": trap, "faceUp": false, "lane": 2 }] },
     }));
-    s.play(BOOK, json!({}));
+    s.play(BOOK, json!({ "modes": ["counters"] }));
     assert_eq!(
         s.state().pending.as_ref().map(|pending| pending.player_id),
         Some(AI)

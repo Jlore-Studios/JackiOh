@@ -16,6 +16,20 @@
       ]
     ]
   },
+  "classic-070": {
+    "base": [
+      [
+        "counters",
+        "cards"
+      ]
+    ],
+    "radiant": [
+      [
+        "counters",
+        "cards"
+      ]
+    ]
+  },
   "classic-081": {
     "base": [
       [

@@ -88,7 +88,7 @@ mod tests {
 
                 s.end_turn();
 
-                s.expect_in_zone(&pointmaster, "graveyard"); // 7/2 took 2
+                s.expect_in_zone(&pointmaster, "graveyard"); // 6/1 took 2
                 s.expect_stats("core-008", json!({ "health": 2, "maxHealth": 4 })); // 4/4 took 2
                 s.expect_health(PlayerId::P2, 28);
                 s.expect_health(PlayerId::P1, 30); // "each ENEMY unit and the enemy hero": nothing of its own
@@ -159,7 +159,7 @@ mod tests {
 
                 s.end_turn();
 
-                s.expect_in_zone(&pointmaster, "graveyard"); // 7/2
+                s.expect_in_zone(&pointmaster, "graveyard"); // 6/1
                 s.expect_in_zone(&vanilla, "graveyard"); // 4/4, which 2 would have survived
                 s.expect_health(PlayerId::P2, 26);
                 assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![4, 4, 4]);
@@ -167,8 +167,9 @@ mod tests {
         }
 
         #[test]
-        fn enters_as_a_6_10_and_radiant_a_12_20() {
-            for (radiant, attack, health, amount) in [(false, 6, 10, 2), (true, 12, 20, 4)] {
+        fn issue_3136_enters_as_a_4_10_and_radiant_an_8_20() {
+            // Core #13 is a 6/8 and 12/16 since the same patch; the Legacy card is its own copy (R2195003).
+            for (radiant, attack, health, amount) in [(false, 4, 10, 2), (true, 8, 20, 4)] {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": "traininggrounds-048", "radiant": radiant }, "core-005"],

@@ -98,7 +98,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const SEVEN: &str = "core-025"; // (4) Unit 7/7
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const BILLY: &str = "classicplus-069"; // (X) Unit, "This is a 3X/3X."
+    const BILLY: &str = "classicplus-069"; // (X) Unit, "This is a 2X/3X."
     const RUSH_TOKEN: &str = "core-t-rush";
 
     use crate::js;

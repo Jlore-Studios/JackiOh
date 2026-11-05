@@ -114,10 +114,10 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([WEAPONS]), json!([]));
             let unit = s.unit_at(P1, 1);
             let weapons = s.backrow(P1, 1).expect("the Field Spell");
-            assert_eq!(s.stats(&unit).attack, 7);
+            assert_eq!(s.stats(&unit).attack, 6);
             s.play(BEAN, on(&weapons));
             assert!(s.card(&weapons).radiant);
-            assert_eq!(s.stats(&unit).attack, 10, "+6 now");
+            assert_eq!(s.stats(&unit).attack, 8, "+4 now");
         }
 
         #[test]

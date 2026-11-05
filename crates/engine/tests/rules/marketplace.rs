@@ -1,12 +1,17 @@
-//! Stinkyscape's Marketplace (#1853, R1853000–R1853005; #2250, R2250002): opened for both players by
-//! the first Resource or Credits either gains; at the start of each player's turn
-//! `MARKETPLACE_OFFERS_PER_TURN` offers of their own, one copy each, rolled from a table of lots
-//! weighted by their counts and replacing the ones before; the designer's prices, moved as they are
-//! rolled, and the Resources' quotes, which a Resource played or discarded fetches; `marketBuy` and
-//! `marketSell` in the player's own main phase, for Credits and no mana, listed, refused and shown by
-//! one function each; and a lot an effect adds for the rest of the game.
+//! Stinkyscape's Marketplace (#1853, R1853000–R1853005; #2250, R2250002; #3047, R3047000–R3047004):
+//! opened for both players by the first Resource or Credits either gains; at the start of each player's
+//! turn `MARKETPLACE_OFFERS_PER_TURN` (4) offers of their own, one copy each, rolled from a table of
+//! lots weighted by their counts and replacing the ones before, each perhaps Buffed or Nerfed; the
+//! designer's prices, moved as they are rolled, and the Resources' quotes, which a Resource played or
+//! discarded fetches and which it shows in braces in its owner's hand; `marketBuy` and `marketSell` in
+//! the player's own main phase, for Credits and no mana, listed, refused and shown by one function
+//! each, the card bought costing (0) and carrying its lot's Buffs and Nerfs; and a lot an effect adds
+//! for the rest of the game.
 
-use jackioh_engine::effects::{add_market_lot, discard_resource, gain_market_credits, gain_resources};
+use jackioh_engine::effects::{
+    TuneDirection, TuneRow, add_market_lot, applicable_changes, discard_hand, discard_resource,
+    gain_market_credits, gain_resources,
+};
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 
@@ -222,7 +227,7 @@ fn r1853000_credits_open_it_and_nothing_else_does() {
 }
 
 #[test]
-fn r1853001_r2250002_a_roll_draws_three_different_cards_by_the_lots_counts() {
+fn r1853001_r2250002_a_roll_draws_four_different_cards_by_the_lots_counts() {
     let state = board("r2250002-roll", "p1", json!({}), json!({}));
     let mut rng = Rng::new("r2250002-roll-draws", 0);
     const ROLLS: i32 = 4_000;
@@ -242,7 +247,8 @@ fn r1853001_r2250002_a_roll_draws_three_different_cards_by_the_lots_counts() {
         }
         *first.entry(offers[0].def_id.clone()).or_default() += 1;
     }
-    // The first draw: the named three by 2, the (4) Unit alone by 1, the four Boss-X cards by 1.
+    // The first draw: the named three by 2, the (4) Unit alone by 1, the four Boss-X cards by 1. The
+    // fixture pool holds four cards and a roll offers four, so each roll offers every one (R3047000).
     let total = f64::from(4);
     let share = |lot: f64| lot / total;
     let expected = [
@@ -312,7 +318,7 @@ fn r2250002_each_turn_start_rolls_that_player_new_offers_and_leaves_the_others()
         "p2's offers are fresh"
     );
 
-    // p1's turn starts: p1's old offers go, three fresh ones with no copy bought follow.
+    // p1's turn starts: p1's old offers go, four fresh ones with no copy bought follow.
     start_turn_of(&mut state, P1);
     let fresh = own_offers(&state, P1);
     assert_eq!(fresh.len() as i32, MARKETPLACE_OFFERS_PER_TURN);
@@ -324,7 +330,7 @@ fn r2250002_each_turn_start_rolls_that_player_new_offers_and_leaves_the_others()
     assert_eq!(
         market(&state).offers.len() as i32,
         2 * MARKETPLACE_OFFERS_PER_TURN,
-        "each player's three, no more"
+        "each player's four, no more"
     );
 }
 
@@ -345,18 +351,22 @@ fn r1853001_the_same_seed_rolls_the_same_offering() {
 fn r1853002_the_price_rule_and_an_offer_moves_within_a_tenth_as_it_is_rolled() {
     register();
     let price = |id: &str, radiant: bool| market_card_price(def_of(None, id), radiant);
-    assert_eq!(price(FREE, false), 5, "a (0) card");
-    assert_eq!(price(CHAOS, false), 10);
-    assert_eq!(price(FOUR, false), 40);
-    assert_eq!(price(FIVE, false), 45, "(5) is 40 and 5 for the mana past (4)");
-    assert_eq!(price(FIVE, true), 90, "twice that on a Radiant lot");
+    assert_eq!(price(FREE, false), 8, "a (0) card (R3047000)");
+    assert_eq!(price(CHAOS, false), 15);
+    assert_eq!(price(FOUR, false), 45);
+    assert_eq!(price(FIVE, false), 60, "(5) is 45 and 15 for the mana past (4)");
+    assert_eq!(price(FIVE, true), 120, "twice that on a Radiant lot");
 
     let state = board("r1853002-rule", "p1", json!({}), json!({}));
     let mut rng = Rng::new("r1853002-rule-rolls", 0);
     let mut moved = false;
     for _ in 0..50 {
         for offer in roll_offers(&state, &mut rng, MARKET_TABLE, P1) {
-            let base = price(&offer.def_id, offer.radiant == Some(true));
+            let base = tuned_price(
+                price(&offer.def_id, offer.radiant == Some(true)),
+                offer.buffs.unwrap_or(0),
+                offer.nerfs.unwrap_or(0),
+            );
             assert_eq!(offer.base, base, "{offer:?}");
             let spread = base / MARKETPLACE_PRICE_SPREAD_DIVISOR;
             assert!(
@@ -445,14 +455,15 @@ fn r1853003_a_buy_pays_credits_not_mana_and_arrives_hidden() {
     assert!(buys_listed(&state, P1).contains(&at));
     let out = buy(&state, P1, at);
     assert_eq!(out.error, None);
-    assert_eq!(
-        types_of(&out.events),
-        vec![
-            GameEventType::MarketBought,
-            GameEventType::MarketCreditsChanged,
-            GameEventType::AddedToHand
-        ]
-    );
+    // The lot's Buffs and Nerfs follow the card's arrival, one event each (R3047003).
+    let mut expected = vec![
+        GameEventType::MarketBought,
+        GameEventType::MarketCreditsChanged,
+        GameEventType::AddedToHand,
+    ];
+    expected.extend((0..offer.buffs.unwrap_or(0)).map(|_| GameEventType::Upgraded));
+    expected.extend((0..offer.nerfs.unwrap_or(0)).map(|_| GameEventType::Degraded));
+    assert_eq!(types_of(&out.events), expected);
     let after = &out.state;
     assert_eq!(after.players[P1].market_credits, Some(200 - offer.price));
     assert_eq!(after.players[P1].mana.current, mana, "no mana is paid");
@@ -551,7 +562,7 @@ fn r1853003_r2250002_the_listing_the_refusal_and_the_view_agree() {
 
     refused_everywhere(&state, 99, "no offer 99 at the Marketplace");
     refused_everywhere(&state, -1, "no offer -1 at the Marketplace");
-    // p2's three follow p1's in the Marketplace's list, yet p1 is offered three alone.
+    // p2's four follow p1's in the Marketplace's list, yet p1 is offered four alone.
     let past = own_offers(&state, P1).len() as i32;
     refused_everywhere(&state, past, &format!("no offer {past} at the Marketplace"));
 
@@ -593,15 +604,24 @@ fn r1853003_r2250001_a_resource_is_not_sold_and_the_view_lists_no_sale_of_it() {
     assert!(view_for(&state, P1).marketplace.expect("open").sales.is_empty());
 }
 
-/// p1 may do one thing only: buy their first offer, with exactly its price in Credits, no mana, an
-/// empty hand and no other offer left to them.
+/// p1 may do one thing only: buy their first offer that is a Spell, with exactly its price in Credits, no
+/// mana, an empty hand and no other offer left to them. A Spell, so that once it is bought and played no
+/// Unit is left to switch position (R3047001: the card bought costs (0), so it is something to play).
 fn only_a_buy(seed: &str) -> (GameState, i32) {
     let mut state = board(seed, "p1", json!({ "hand": [] }), json!({}));
     credits(&mut state, P1, 1);
     state.players[P1].mana.current = 0;
     let own = own_offers(&state, P1);
-    let (chosen, lot) = own[0].clone();
-    let slots: Vec<usize> = own[1..].iter().map(|(at, _)| slot_of(&state, P1, *at)).collect();
+    let (chosen, lot) = own
+        .iter()
+        .find(|(_, offer)| [FREE, CHAOS].contains(&offer.def_id.as_str()))
+        .cloned()
+        .expect("a roll offers each of the four fixture cards, two of them Spells");
+    let slots: Vec<usize> = own
+        .iter()
+        .filter(|(at, _)| *at != chosen)
+        .map(|(at, _)| slot_of(&state, P1, *at))
+        .collect();
     let market = state.marketplace.as_mut().expect("open");
     for slot in slots {
         market.offers[slot].bought[P1] = market.offers[slot].stock;
@@ -620,11 +640,21 @@ fn r1853004_a_deal_left_keeps_the_turn_from_ending_by_itself() {
     assert_eq!(kept.error, None);
     assert_eq!(kept.state.active, P1, "a buy left is something to do (R82)");
     assert!(!types_of(&kept.events).contains(&GameEventType::TurnAutoEnded));
-    // Once it is made and nothing is left, the turn ends by itself.
+    // The card bought costs (0) (R3047001), so it is something to play: the turn waits for its play, and
+    // once that is made and nothing is left, the turn ends by itself.
     let bought = buy(&kept.state, P1, chosen);
     assert_eq!(bought.error, None);
-    assert!(types_of(&bought.events).contains(&GameEventType::TurnAutoEnded));
-    assert_eq!(bought.state.active, P2);
+    assert!(!types_of(&bought.events).contains(&GameEventType::TurnAutoEnded));
+    assert_eq!(bought.state.active, P1, "the card bought is playable at no mana");
+    let card = bought.state.players[P1].hand[0].id.clone();
+    let play = legal_actions(&bought.state, P1)
+        .into_iter()
+        .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card))
+        .expect("the card bought is listed to play");
+    let played = reduce(&bought.state, &Action::new(play, P1, next_nonce()));
+    assert_eq!(played.error, None);
+    assert!(types_of(&played.events).contains(&GameEventType::TurnAutoEnded));
+    assert_eq!(played.state.active, P2);
 }
 
 #[test]
@@ -669,6 +699,8 @@ fn r1853005_r2250002_a_fixed_lot_is_its_casters_alone_at_a_fixed_price_renewed_e
             bought: PerPlayer::new(0, 0),
             owner: Some(P1),
             fixed: Some(true),
+            buffs: None,
+            nerfs: None,
         }
     );
     credits(&mut state, P1, 100);
@@ -878,4 +910,551 @@ fn r1861000_closed_on_the_opponents_turn_or_unflagged_it_does_not_sell() {
         sell(&theirs, P1, &hand[1]).error.as_deref(),
         Some("it is not your turn")
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Issue #3047: four offers a turn, the new price curve, a card bought at (0), Buffed and Nerfed
+// offers, and a Resource's quote in braces.
+
+/// The card `offer` names, bought into p1's hand by `out`, from its `marketBought`.
+fn bought_in(out: &ReduceResult) -> CardInstance {
+    let Some(GameEvent::MarketBought { instance_id, .. }) = out.events.first() else {
+        panic!("the buy reports marketBought first: {:?}", out.events);
+    };
+    find_instance(&out.state, instance_id)
+        .expect("the card bought exists")
+        .clone()
+}
+
+/// p1's main phase with the Marketplace open (p1 holds 1000 Credits) on the first seed `<prefix>-<n>`
+/// in which an offer p1 is rolled satisfies `pick`: the position, the offer's index and the offer.
+fn opened_with(prefix: &str, pick: impl Fn(&MarketOffer) -> bool) -> (GameState, i32, MarketOffer) {
+    let open = |seed: &str| -> GameState {
+        let mut state = board(seed, "p1", json!({}), json!({}));
+        credits(&mut state, P1, 1000);
+        state
+    };
+    let seed = seed_where(prefix, |seed| {
+        own_offers(&open(seed), P1).iter().any(|(_, offer)| pick(offer))
+    });
+    let state = open(&seed);
+    let (at, offer) = own_offers(&state, P1)
+        .into_iter()
+        .find(|(_, offer)| pick(offer))
+        .expect("the seed holds the offer");
+    (state, at, offer)
+}
+
+/// p1's hand cards as the view lists them.
+fn hand_of(state: &GameState, viewer: PlayerId) -> Vec<CardView> {
+    match view_for(state, viewer).you.hand {
+        HandView::Cards(cards) => cards,
+        HandView::Count { count } => panic!("the viewer's own hand is cards, not a count of {count}"),
+    }
+}
+
+#[test]
+fn r3047000_a_turn_rolls_four_offers_of_their_own() {
+    assert_eq!(MARKETPLACE_OFFERS_PER_TURN, 4);
+    let mut state = board("r3047000-four", "p1", json!({}), json!({}));
+    credits(&mut state, P1, 20);
+    for player in [P1, P2] {
+        assert_eq!(own_offers(&state, player).len(), 4, "{player:?}");
+        let view = view_for(&state, player).marketplace.expect("open");
+        assert_eq!(view.offers.len(), 4, "{player:?}'s view");
+    }
+    // The fixture's Boss-X pool holds four cards and a roll offers four, so each roll draws every one.
+    let mut cards: Vec<String> = MARKET_CARDS.iter().map(|id| (*id).to_string()).collect();
+    cards.sort();
+    for player in [P2, P1, P2, P1] {
+        start_turn_of(&mut state, player);
+        let mut offered: Vec<String> = own_offers(&state, player)
+            .into_iter()
+            .map(|(_, offer)| offer.def_id)
+            .collect();
+        offered.sort();
+        assert_eq!(offered, cards, "{player:?} on turn {}", state.turn);
+    }
+    // A table with more cards than a roll takes still offers four of them, all different.
+    let rolling = board("r3047000-nine", "p1", json!({}), json!({}));
+    let mut rng = Rng::new("r3047000-nine-rolls", 0);
+    for _ in 0..50 {
+        let offers = roll_offers(&rolling, &mut rng, COST_TABLE, P1);
+        let ids: IndexSet<&str> = offers.iter().map(|offer| offer.def_id.as_str()).collect();
+        assert_eq!((offers.len(), ids.len()), (4, 4));
+    }
+}
+
+#[test]
+fn r3047000_the_base_price_at_each_cost_from_0_to_8_within_the_spread() {
+    register();
+    let curve = [8, 15, 25, 35, 45, 60, 75, 90, 105];
+    for (cost, (id, price)) in COST_CARDS.iter().zip(curve).enumerate() {
+        let def = def_of(None, id);
+        let mana = cost as i32;
+        assert_eq!(market_card_price(def, false), price, "a ({mana}) card");
+        assert_eq!(market_card_price(def, true), 2 * price, "a Radiant ({mana}) card");
+        let by_rule = if mana == 0 {
+            MARKETPLACE_ZERO_COST_PRICE
+        } else {
+            MARKETPLACE_PRICE_BASE
+                + MARKETPLACE_CREDITS_PER_MANA * mana.min(MARKETPLACE_FULL_PRICE_MANA)
+                + MARKETPLACE_CREDITS_PER_MANA_PAST * (mana - MARKETPLACE_FULL_PRICE_MANA).max(0)
+        };
+        assert_eq!(price, by_rule, "({mana}) by the rule");
+    }
+    // Rolled, an untuned offer's base is that price and its price moves within a tenth of it; every
+    // cost is offered.
+    let state = board("r3047000-curve", "p1", json!({}), json!({}));
+    let mut rng = Rng::new("r3047000-curve-rolls", 0);
+    let mut seen = [false; 9];
+    for _ in 0..400 {
+        for offer in roll_offers(&state, &mut rng, COST_TABLE, P1) {
+            let cost = COST_CARDS
+                .iter()
+                .position(|id| *id == offer.def_id)
+                .expect("a cost card");
+            seen[cost] = true;
+            let radiant = offer.radiant == Some(true);
+            let designer = curve[cost]
+                * if radiant {
+                    MARKETPLACE_RADIANT_PRICE_MULTIPLIER
+                } else {
+                    1
+                };
+            assert_eq!(
+                offer.base,
+                tuned_price(designer, offer.buffs.unwrap_or(0), offer.nerfs.unwrap_or(0)),
+                "{offer:?}"
+            );
+            if offer.buffs.is_none() && offer.nerfs.is_none() {
+                assert_eq!(offer.base, designer, "{offer:?}");
+            }
+            let spread = offer.base / MARKETPLACE_PRICE_SPREAD_DIVISOR;
+            assert!(
+                (offer.base - spread..=offer.base + spread).contains(&offer.price),
+                "{offer:?} moves within a tenth of its base"
+            );
+        }
+    }
+    assert_eq!(seen, [true; 9], "each cost from (0) to (8) was offered");
+}
+
+#[test]
+fn r3047001_a_bought_card_costs_0_in_hand_and_its_printed_cost_again_in_the_graveyard() {
+    let mut state = board("r3047001-free", "p1", json!({}), json!({}));
+    credits(&mut state, P1, 1000);
+    // Every roll offers each of the four fixture cards, so the (4) Unit is one of p1's offers.
+    let (at, offer) = own_offers(&state, P1)
+        .into_iter()
+        .find(|(_, offer)| offer.def_id == FOUR)
+        .expect("the (4) Unit is offered");
+    let out = buy(&state, P1, at);
+    assert_eq!(out.error, None);
+    let card = bought_in(&out);
+    assert_eq!(card.zone, Zone::Hand { player: P1 });
+    assert_eq!(card.cost_override, Some(MARKETPLACE_BOUGHT_COST));
+    assert_eq!(MARKETPLACE_BOUGHT_COST, 0);
+    assert_eq!(play_cost(&out.state, &card), 0, "it costs (0) in hand, not (4)");
+    let shown = hand_of(&out.state, P1)
+        .into_iter()
+        .find(|shown| shown.instance_id == card.id)
+        .expect("the hand shows it");
+    assert_eq!(shown.cost, 0, "the view shows (0)");
+    assert_eq!(
+        out.state.players[P1].market_credits,
+        Some(1000 - offer.price),
+        "the Credits are the price, and the mana nothing"
+    );
+
+    // In a graveyard it costs its printed cost again (R766).
+    let mut state = out.state;
+    run_effect(&mut state, discard_hand(json_as(json!({}))), P1);
+    let card = find_instance(&state, &card.id).expect("it is in the graveyard");
+    assert!(matches!(card.zone, Zone::Graveyard { .. }), "{:?}", card.zone);
+    assert_eq!(card.cost_override, None);
+    assert_eq!(play_cost(&state, card), 4);
+
+    // A Spell bought is free in hand as well.
+    let mut state = board("r3047001-spell", "p1", json!({}), json!({}));
+    credits(&mut state, P1, 1000);
+    let (at, _) = own_offers(&state, P1)
+        .into_iter()
+        .find(|(_, offer)| offer.def_id == CHAOS)
+        .expect("the (1) Spell is offered");
+    let spell = bought_in(&buy(&state, P1, at));
+    assert_eq!(spell.cost_override, Some(0));
+}
+
+#[test]
+fn r3047002_a_price_compounds_each_step_and_rounds_down_once() {
+    assert_eq!(tuned_price(100, 0, 0), 100);
+    assert_eq!(tuned_price(100, 1, 0), MARKETPLACE_BUFF_PRICE_PERCENT);
+    assert_eq!(tuned_price(100, 2, 0), 144, "120% of 120%, not 140%");
+    assert_eq!(tuned_price(100, 0, 1), MARKETPLACE_NERF_PRICE_PERCENT);
+    assert_eq!(tuned_price(100, 0, 2), 72, "85% of 85% is 72.25, rounded down");
+    // Rounded once, at the end: 8 × 1.2³ is 13.824, where rounding each step would give 9, 10, 12.
+    assert_eq!(tuned_price(8, 3, 0), 13);
+    assert_eq!(tuned_price(45, 0, 3), 27, "45 × 0.85³ is 27.6");
+    // Radiant first, then the percent: a Radiant (5) lot, 120, Nerfed once.
+    assert_eq!(tuned_price(2 * 60, 0, 1), 102);
+    // A Nerfed lot is never free within the bound, whatever it costs; a Buffed one never overflows.
+    for base in MARKETPLACE_ZERO_COST_PRICE..=2 * market_card_price(&COST_DEFS[8], false) {
+        for steps in 0..=MARKETPLACE_TUNE_MAX {
+            assert!(tuned_price(base, 0, steps) >= 1, "{base} after {steps} Nerfs");
+            assert!(tuned_price(base, steps, 0) >= base, "{base} after {steps} Buffs");
+        }
+    }
+}
+
+#[test]
+fn r3047002_a_run_of_rolls_stops_at_the_bound() {
+    let mut rng = Rng::new("r3047002-bound", 0);
+    assert_eq!(
+        repeated_rolls(&mut rng, 1.0),
+        MARKETPLACE_TUNE_MAX,
+        "a roll that always lands stops"
+    );
+    assert_eq!(
+        rng.cursor(),
+        MARKETPLACE_TUNE_MAX as u32,
+        "one draw for each roll made, none past the bound"
+    );
+    let mut rng = Rng::new("r3047002-bound", 0);
+    assert_eq!(repeated_rolls(&mut rng, 0.0), 0);
+    assert_eq!(
+        rng.cursor(),
+        1,
+        "a roll that fails ends the run after its one draw"
+    );
+}
+
+#[test]
+fn r3047002_a_roll_draws_the_card_radiant_buffs_nerfs_then_the_spread_in_that_order() {
+    let state = board("r3047002-order", "p1", json!({}), json!({}));
+    let four = def_of(None, FOUR).clone();
+    let (mut buffed, mut nerfed, mut plain) = (0, 0, 0);
+    for n in 0..400 {
+        let seed = format!("r3047002-order-{n}");
+        let mut rng = Rng::new(&seed, 0);
+        let offers = roll_offers(&state, &mut rng, ONE_CARD_TABLE, P1);
+
+        // The same draws by hand: the lot, its card, Radiant, Buffs, Nerfs only with none, the spread.
+        let mut by_hand = Rng::new(&seed, 0);
+        by_hand.int(1);
+        by_hand.int(1);
+        let radiant = by_hand.chance(MARKETPLACE_RADIANT_CHANCE);
+        let mut buffs = 0;
+        while buffs < MARKETPLACE_TUNE_MAX && by_hand.chance(MARKETPLACE_BUFF_CHANCE) {
+            buffs += 1;
+        }
+        let mut nerfs = 0;
+        if buffs == 0 {
+            while nerfs < MARKETPLACE_TUNE_MAX && by_hand.chance(MARKETPLACE_NERF_CHANCE) {
+                nerfs += 1;
+            }
+        }
+        let base = tuned_price(market_card_price(&four, radiant), buffs, nerfs);
+        let spread = base / MARKETPLACE_PRICE_SPREAD_DIVISOR;
+        let price = if spread > 0 {
+            base - spread + by_hand.int(2 * spread + 1)
+        } else {
+            base
+        };
+        assert_eq!(
+            offers,
+            vec![MarketOffer {
+                def_id: FOUR.to_string(),
+                radiant: radiant.then_some(true),
+                base,
+                price,
+                stock: MARKETPLACE_OFFER_STOCK,
+                bought: PerPlayer::new(0, 0),
+                owner: Some(P1),
+                fixed: None,
+                buffs: (buffs > 0).then_some(buffs),
+                nerfs: (nerfs > 0).then_some(nerfs),
+            }],
+            "{seed}"
+        );
+        assert_eq!(
+            rng.cursor(),
+            by_hand.cursor(),
+            "{seed}: the same draws and no more"
+        );
+        match (buffs, nerfs) {
+            (0, 0) => plain += 1,
+            (0, _) => nerfed += 1,
+            _ => buffed += 1,
+        }
+    }
+    assert!(buffed > 0 && nerfed > 0 && plain > 0, "{buffed} {nerfed} {plain}");
+}
+
+#[test]
+fn r3047002_over_many_seeds_an_offer_is_never_both_buffed_and_nerfed() {
+    let state = board("r3047002-many", "p1", json!({}), json!({}));
+    let (mut offers_seen, mut buffed, mut nerfed, mut twice, mut once) = (0, 0, 0, 0, 0);
+    for n in 0..3_000 {
+        let mut rng = Rng::new(&format!("r3047002-many-{n}"), 0);
+        for offer in roll_offers(&state, &mut rng, MARKET_TABLE, P1) {
+            offers_seen += 1;
+            assert!(
+                offer.buffs.is_none() || offer.nerfs.is_none(),
+                "never both: {offer:?}"
+            );
+            for count in [offer.buffs, offer.nerfs].into_iter().flatten() {
+                assert!(
+                    (1..=MARKETPLACE_TUNE_MAX).contains(&count),
+                    "absent, never 0: {offer:?}"
+                );
+            }
+            let designer = market_card_price(def_of(None, &offer.def_id), offer.radiant == Some(true));
+            let tuned = tuned_price(designer, offer.buffs.unwrap_or(0), offer.nerfs.unwrap_or(0));
+            assert_eq!(offer.base, tuned, "{offer:?}");
+            if offer.buffs.is_some() {
+                buffed += 1;
+                assert!(offer.base > designer, "a Buff raises the price: {offer:?}");
+            }
+            if offer.nerfs.is_some() {
+                nerfed += 1;
+                assert!(offer.base < designer, "a Nerf lowers the price: {offer:?}");
+            }
+            twice += i32::from(offer.buffs == Some(2));
+            once += i32::from(offer.nerfs == Some(1));
+        }
+    }
+    let share = |count: i32| f64::from(count) / f64::from(offers_seen);
+    // A Buff is 0.2 of the offers; a Nerf 0.1 of those with no Buff; Buffed twice 0.2² × 0.8; Nerfed once
+    // 0.8 × 0.1 × 0.9.
+    assert!((0.17..=0.23).contains(&share(buffed)), "Buffed {}", share(buffed));
+    assert!((0.06..=0.10).contains(&share(nerfed)), "Nerfed {}", share(nerfed));
+    assert!(
+        (0.02..=0.045).contains(&share(twice)),
+        "Buffed twice {}",
+        share(twice)
+    );
+    assert!(
+        (0.05..=0.095).contains(&share(once)),
+        "Nerfed once {}",
+        share(once)
+    );
+}
+
+#[test]
+fn r3047003_a_buy_lands_each_buff_of_the_lot_on_its_card_after_marketbought() {
+    let (state, at, offer) = opened_with("r3047003-buff", |offer| {
+        offer.buffs == Some(2) && [FOUR, FIVE].contains(&offer.def_id.as_str())
+    });
+    let designer = market_card_price(def_of(None, &offer.def_id), offer.radiant == Some(true));
+    assert_eq!(offer.base, tuned_price(designer, 2, 0));
+    assert!(offer.base > designer, "two Buffs raise the price");
+    let shown = offer_view(&state, P1, at).expect("shown");
+    assert_eq!(
+        (shown.buffs, shown.nerfs, shown.price),
+        (Some(2), None, offer.price)
+    );
+    assert_eq!(
+        offer_view(&state, P2, 0).map(|view| (view.buffs, view.nerfs)),
+        own_offers(&state, P2)
+            .first()
+            .map(|(_, theirs)| (theirs.buffs, theirs.nerfs)),
+        "each viewer reads the counts of their own lots"
+    );
+
+    let out = buy(&state, P1, at);
+    assert_eq!(out.error, None);
+    assert_eq!(
+        types_of(&out.events),
+        vec![
+            GameEventType::MarketBought,
+            GameEventType::MarketCreditsChanged,
+            GameEventType::AddedToHand,
+            GameEventType::Upgraded,
+            GameEventType::Upgraded,
+        ],
+        "each Buff is a Buff, after the buy's own events"
+    );
+    let card = bought_in(&out);
+    assert_eq!(out.state.players[P1].market_credits, Some(1000 - offer.price));
+    for event in &out.events[3..] {
+        let GameEvent::Upgraded {
+            instance_id,
+            change,
+            hidden_from,
+            ..
+        } = event
+        else {
+            panic!("an upgrade: {event:?}");
+        };
+        assert_eq!(*instance_id, card.id);
+        assert_ne!(*change, TuningChange::None, "a Unit has a row to Buff");
+        assert_eq!(
+            *hidden_from,
+            Some(vec![P2]),
+            "the other seat reads nothing of it (R177)"
+        );
+    }
+    assert!(card.tuning.is_some(), "the card carries the Buffs");
+    assert_eq!(play_cost(&out.state, &card), 0, "and still costs (0)");
+}
+
+#[test]
+fn r3047003_a_buy_lands_each_nerf_of_the_lot_sparing_the_cost_so_the_card_stays_free() {
+    let (state, at, offer) = opened_with("r3047003-nerf", |offer| {
+        offer.nerfs == Some(1) && [FOUR, FIVE].contains(&offer.def_id.as_str())
+    });
+    let designer = market_card_price(def_of(None, &offer.def_id), offer.radiant == Some(true));
+    assert_eq!(offer.base, tuned_price(designer, 0, 1));
+    assert!(offer.base < designer, "a Nerf lowers the price");
+    let shown = offer_view(&state, P1, at).expect("shown");
+    assert_eq!((shown.buffs, shown.nerfs), (None, Some(1)));
+    let out = buy(&state, P1, at);
+    assert_eq!(out.error, None);
+    assert_eq!(
+        types_of(&out.events),
+        vec![
+            GameEventType::MarketBought,
+            GameEventType::MarketCreditsChanged,
+            GameEventType::AddedToHand,
+            GameEventType::Degraded,
+        ]
+    );
+    let card = bought_in(&out);
+    assert_eq!(play_cost(&out.state, &card), 0);
+    // A plain Nerf could lift the (0) card's cost, as the cost row is open to a card that costs (0).
+    assert!(applicable_changes(&out.state, &card, TuneDirection::Degrade).contains(&TuneRow::Cost));
+
+    // Over many Nerfed lots: no Nerf ever draws the cost row, so every card bought stays at (0).
+    let mut landed = 0;
+    for n in 0..120 {
+        let mut state = board(&format!("r3047003-nerfs-{n}"), "p1", json!({}), json!({}));
+        credits(&mut state, P1, 1000);
+        for (at, offer) in own_offers(&state, P1) {
+            if offer.nerfs.is_none() {
+                continue;
+            }
+            let out = buy(&state, P1, at);
+            assert_eq!(out.error, None);
+            let card = bought_in(&out);
+            assert_eq!(play_cost(&out.state, &card), 0, "{offer:?}");
+            for event in &out.events {
+                if let GameEvent::Degraded { change, .. } = event {
+                    assert!(!matches!(change, TuningChange::Cost { .. }), "{change:?}");
+                    landed += 1;
+                }
+            }
+        }
+    }
+    assert!(landed >= 10, "the seeds Nerfed {landed} cards");
+}
+
+#[test]
+fn r3047002_a_lot_an_effect_adds_is_never_buffed_or_nerfed_yet_its_card_costs_0() {
+    let mut state = board("r3047002-fixed", "p1", json!({}), json!({}));
+    run_effect(
+        &mut state,
+        add_market_lot(json_as(json!({ "pool": [CHAOS], "price": CHAOS_PRICE }))),
+        P1,
+    );
+    credits(&mut state, P1, 100);
+    let fixed = fixed_offer(&state, P1);
+    let lot = market(&state).offers[slot_of(&state, P1, fixed)].clone();
+    assert_eq!((lot.buffs, lot.nerfs, lot.price), (None, None, CHAOS_PRICE));
+    let shown = offer_view(&state, P1, fixed).expect("shown");
+    assert_eq!((shown.buffs, shown.nerfs), (None, None));
+    // It stays that way through a turn start, which renews its copy.
+    start_turn_of(&mut state, P1);
+    let renewed = market(&state).offers[slot_of(&state, P1, fixed_offer(&state, P1))].clone();
+    assert_eq!(
+        (renewed.buffs, renewed.nerfs, renewed.price),
+        (None, None, CHAOS_PRICE)
+    );
+    let out = buy(&state, P1, fixed_offer(&state, P1));
+    assert_eq!(out.error, None);
+    assert_eq!(
+        types_of(&out.events),
+        vec![
+            GameEventType::MarketBought,
+            GameEventType::MarketCreditsChanged,
+            GameEventType::AddedToHand
+        ]
+    );
+    assert_eq!(
+        bought_in(&out).cost_override,
+        Some(0),
+        "bought at (0) like any lot"
+    );
+}
+
+#[test]
+fn r3047004_a_resource_in_its_owners_hand_shows_what_it_sells_for_while_the_marketplace_is_open() {
+    let mut state = board(
+        "r3047004-quote",
+        "p1",
+        json!({ "hand": ["fx-1", COMMON_A, { "def": COMMON_A, "radiant": true }] }),
+        json!({ "hand": ["fx-1", COMMON_A] }),
+    );
+    let shown = |state: &GameState, viewer: PlayerId| -> Vec<(String, Option<Vec<PreviewValue>>)> {
+        hand_of(state, viewer)
+            .into_iter()
+            .map(|card| (card.def_id, card.preview))
+            .collect()
+    };
+    // Closed, nothing is quoted: no card of the hand carries a preview.
+    assert!(state.marketplace.is_none());
+    assert!(
+        shown(&state, P1).iter().all(|(_, preview)| preview.is_none()),
+        "no quote while the Marketplace is closed"
+    );
+
+    credits(&mut state, P2, 1);
+    for turn in [P1, P2, P1, P2, P1] {
+        let quote = market(&state)
+            .quotes
+            .iter()
+            .find(|quote| quote.def_id == COMMON_A)
+            .cloned()
+            .expect("quoted");
+        let value = |credits: i32| {
+            Some(vec![PreviewValue {
+                label: SELL_QUOTE_LABEL.to_string(),
+                value: credits,
+                display: None,
+                ids: None,
+            }])
+        };
+        let hand = shown(&state, P1);
+        assert_eq!(hand[0].1, None, "a card that is no Resource shows no quote");
+        assert_eq!(
+            hand[1].1,
+            value(quote.base),
+            "the base face's quote, turn {}",
+            state.turn
+        );
+        assert_eq!(hand[2].1, value(quote.radiant), "the Radiant face's quote");
+        let theirs = shown(&state, P2);
+        assert_eq!(
+            (theirs[0].1.clone(), theirs[1].1.clone()),
+            (None, value(quote.base)),
+            "p2's own hand"
+        );
+
+        // The opponent's hand is a count, so it shows p2 nothing of p1's.
+        assert!(matches!(
+            view_for(&state, P2).opponent.hand,
+            HandView::Count { .. }
+        ));
+        start_turn_of(&mut state, turn);
+    }
+
+    // What it shows is what it pays as it is discarded (R2250001).
+    let before = state.players[P1].market_credits.unwrap_or(0);
+    let shown_base = shown(&state, P1)[1].1.clone().expect("the quote").remove(0).value;
+    run_effect(
+        &mut state,
+        discard_resource(json_as(json!({ "defIds": [COMMON_A] }))),
+        P1,
+    );
+    assert_eq!(state.players[P1].market_credits.unwrap_or(0) - before, shown_base);
 }
