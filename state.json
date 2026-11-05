@@ -16448,6 +16448,8 @@
       "stop_requested": false
     },
     "3109": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T00:10:46Z",
@@ -16461,8 +16463,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,40p .bot-notes.md | cut -c1-300 && git status --short && git log --oneline -1\", \"description\": \"Read the bot notes and check worktree state\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/tools/tests/acceptance.rs && wc -l crates/tools/tests/acceptance.rs && tail -40 crates/tools/tests/acceptance.rs\", \"description\": \"Read the acceptance test header and\u2026\n- Bash: {\"command\": \"sed -n 40,400p .bot-notes.md | cut -c1-200 | head -150; grep -n \\\"fn rust_sources\\\\|fn without_line_comments\\\\|struct Scratch\\\\|static SCRATCH\\\" crates/tools/tests/acceptance.rs\", \"descr\u2026\n- Bash: {\"command\": \"grep -n \\\"^## \\\" .bot-notes.md; cat .bot-journal.md | cut -c1-300 | head -30; sed -n 350,370p crates/tools/tests/acceptance.rs; sed -n 660,680p crates/tools/tests/acceptance.rs; sed -n 8\u2026\n- Bash: {\"command\": \"grep -n '^```' .bot-notes.md\", \"description\": \"Find code fence lines in the notes\"}\n- Bash: {\"command\": \"set -e\\nf=crates/tools/tests/acceptance.rs\\ntail -c 200 $f | od -c | tail -3\\n{ echo; sed -n 36,213p .bot-notes.md; echo; sed -n 219,343p .bot-notes.md; } >> $f\\npython3 - <<'EOF'\\np='cr\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3063/crates/tools/tests/acceptance.rs\", \"old_string\": \"//! of `crates/run/src/config.rs`, and `spec/README.md` maps the note.\\n\"\u2026\n- Bash: {\"command\": \"cargo fmt -p jackioh-tools && git diff --stat && cat >> .bot-notes.md <<'EOF'\\n\\n## State\\n\\nPasted the plan's code and four `statics_` tests into acceptance.rs, ran cargo fmt. Next: run\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --test acceptance statics_ 2>&1 | tail -30\", \"description\": \"Run the new statics_ tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-tools --test acceptance 2>&1 | tail -15; cargo fmt --check && echo FMT_OK; cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -8\", \"description\"\u2026\n- Bash: {\"command\": \"git add -N . 2>/dev/null; cargo run --release -q -p jackioh-tools -- spec check 2>&1 | tail -8; echo ---; git fetch -q origin main 2>&1 | tail -2; cargo run --release -q -p jackioh-tools\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"\\\\n## State\\\\n\\\")\\ns=s[:i]+\\\"\\\"\\\"\\n## State\\n\\nDone: the plan's code and four `statics_` tests are in `crates/tools/te\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows\"} --> Acceptance now has a check that fails when a pure crate declares a static that CLAUDE.md rule 4 doesn't allow. I added it to `crates/tools/tests/\u2026"
       },
       "issue": 3063,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T01:13:39Z",
         "from_run": "41939387238",
         "gates": [
           {
@@ -16554,7 +16559,11 @@
         "source": "build",
         "until": "2026-11-05T01:42:22Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-05T01:12:22Z",
+      "run_id": "pending:e33309cd-1793841185",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16573,6 +16582,9 @@
         "provider": "claude-3",
         "run": "41939387238"
       },
+      "started_at": "2026-11-05T01:13:39Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16586,9 +16598,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T01:02:18Z",
+    "at": "2026-11-05T01:13:39Z",
     "url": "",
-    "what": "plan #3065 on claude-3"
+    "what": "review #3109 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T00:57:59Z",
