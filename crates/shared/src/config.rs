@@ -313,3 +313,84 @@ pub const CHASE_SHARD_PACKS: i64 = 10;
 /// SPEC §14.7: the XP step of the level curve: going from level n to the next costs this times
 /// n, uncapped (#1333's table: 100), so level 10 is at 4,500 XP and level 100 at 495,000 XP.
 pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
+
+// ---------------------------------------------------------------------------------------------
+// What a finished game pays and how a quest moves (SPEC §14.7 to §14.9, #3104 part 2): the Jlore and XP
+// rates, the daily cap, the set tracks' levels and the quest rhythm that `economy::rewards` and
+// `economy::quests` decide with. `crates/server/src/config.rs` re-exports every one.
+// ---------------------------------------------------------------------------------------------
+
+/// Milliseconds in a day, a UTC day included (an epoch-ms timestamp has no leap seconds).
+pub const MS_PER_DAY: i64 = 86_400_000;
+/// SPEC §14.7: the levels of a set track (#1333's table: 100), whose whole curve costs 495,000 XP
+/// (`total_xp_for_level` in `crates/shared/src/economy/math.rs`), a set's lifetime of play.
+pub const SET_TRACK_LEVELS: u32 = 100;
+/// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
+pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
+/// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
+pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
+pub const JLORE_LADDER_WIN: i32 = 20;
+/// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves
+/// the wallet.
+pub const JLORE_LADDER_LOSS: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a win (#1333's table: 10), since the browser
+/// runs it and the server only checks the log.
+pub const JLORE_PRACTICE_WIN: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
+pub const JLORE_PRACTICE_LOSS: i32 = 5;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its winner, at the ladder's rate.
+pub const JLORE_UNRANKED_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its loser, at the ladder's rate.
+pub const JLORE_UNRANKED_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its winner, as its own
+/// result, at the ladder's rate.
+pub const JLORE_CONQUEST_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its loser, as its own result,
+/// at the ladder's rate.
+pub const JLORE_CONQUEST_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a winning team, at practice's
+/// rate, since the team plays the AI.
+pub const JLORE_COOP_WIN: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a team that did not win, at
+/// practice's rate.
+pub const JLORE_COOP_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000, R1502000: the most Jlore an account's games pay it in one UTC day, every
+/// mode's games together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
+/// what a loop of conceded practice games would earn.
+pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
+/// SPEC §14.8: the XP of a game per action the player took, a proxy for time played. #1333's
+/// table leaves it to measured action counts: over R1333001's games 20, 600 and 2,000 average
+/// 999.75 XP a ladder game, `XP_LADDER_TARGET_MEAN`'s 1,000.
+pub const XP_PER_ACTION: i32 = 20;
+/// SPEC §14.8: the XP more a win pays, the big bonus #1333's table asks for (R1333001).
+pub const XP_WIN_BONUS: i32 = 600;
+/// SPEC §14.8: the most XP a game pays, so a loop of empty actions cannot farm it: twice
+/// `XP_LADDER_TARGET_MEAN` (R1333001).
+pub const XP_GAME_CAP: i32 = 2000;
+/// SPEC §14.8: a practice game's share of the XP the same game earns on the ladder (#1333's
+/// table: 0.5).
+pub const XP_PRACTICE_SCALE: f64 = 0.5;
+/// SPEC §14.8, R1502000: a co-op game's share of the XP the same moves earn on the ladder, as
+/// practice's (the team plays the AI).
+pub const XP_COOP_SCALE: f64 = 0.5;
+/// SPEC §14.8: the XP a ladder game averages (#1333's table: 1,000), over R1333001's measured
+/// games.
+pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
+/// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
+/// (#1333's table: 5).
+pub const QUEST_INTERVAL_HOURS: i64 = 5;
+/// SPEC §14.9: how many quests an account holds at most (#1333's table: 3), so a player away for
+/// a day comes back to three waiting, never more.
+pub const QUEST_MAX_HELD: usize = 3;
+/// SPEC §14.9: the least Jlore a quest pays (#1333's table: 50 to 100), half a pack to a pack.
+pub const QUEST_JLORE_MIN: i32 = 50;
+/// SPEC §14.9: the most Jlore a quest pays, for the hardest goals (#1333's table: 100).
+pub const QUEST_JLORE_MAX: i32 = 100;
+/// SPEC §14.9: the XP of each Jlore a quest pays (#1333's table: 50), so a quest's XP weighs
+/// like a few games'.
+pub const QUEST_XP_PER_JLORE: i32 = 50;
+/// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
+/// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
+pub const QUEST_REPLACES_PER_DAY: i64 = 1;

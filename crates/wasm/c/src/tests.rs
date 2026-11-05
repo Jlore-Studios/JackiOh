@@ -382,6 +382,14 @@ fn economy_export_answers_what_the_core_body_answers() {
             .map(Vec::len),
         Some(5)
     );
+    // A quest top-up and a finished game's pay are data in, data out (#3104).
+    let top_up =
+        json!({ "call": "topUpQuests", "quests": { "held": [], "nextDueAt": null }, "seed": "s", "now": 1 })
+            .to_string();
+    let topped = call!(economy; top_up;);
+    assert_eq!(topped, expect(wasm_core::economy(&top_up)));
+    assert_eq!(topped.status, STATUS_OK, "{}", topped.text);
+    assert!(topped.text.contains("questDue"), "{}", topped.text);
     // A call that does not parse is the one failure.
     let broken = call!(economy; "{}";);
     assert_eq!(broken, expect(wasm_core::economy("{}")));

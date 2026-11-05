@@ -10,8 +10,9 @@ comes from this crate through that module.
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
 actor and the later practice and ladder-bot hosts (#3099, #3103) run on; the third is the collection
-economy's rolls (SPEC §14, #3104): the cosmetics registry, the card and cosmetic pack rolls, pity, the
-token bars and the set-track curve and rewards, each `decide(records, inputs, seed, now_ms) -> outcome`.
+economy (SPEC §14, #3104): the cosmetics registry, the card and cosmetic pack rolls, pity, the token bars, the
+set-track curve and rewards, what a finished game pays and how a quest moves, each
+`decide(records, inputs, seed, now_ms) -> outcome`.
 
 ## Host contract
 
@@ -71,7 +72,10 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672), and the economy's (#3104): the drop tables
 (`CARD_TIER_WEIGHTS`, `COSMETIC_TIER_WEIGHTS`, `TIER_WEIGHT_TOTAL`, `PACK_SLOTS`, the floors, the global
 cosmetic roll), pity (`PITY_*_PACKS`), the token bars (`CARD_TOKEN_BAR_SIZE`, `COSMETIC_TOKEN_CYCLE` and the
-points per rarity), the cosmetic pack and Chase Shard bar, and the set track's `SET_TRACK_XP_PER_LEVEL`. The
+points per rarity), the cosmetic pack and Chase Shard bar, the set track's `SET_TRACK_XP_PER_LEVEL`, and what a game pays and a quest does (#3104, part 2): the Jlore
+and XP rates (`JLORE_*`, `XP_*`), the daily cap (`JLORE_GAMES_DAILY_CAP`, R1483000), the track levels
+(`SET_TRACK_LEVELS`, `SET_TRACK_UNLOCK_LEVEL`, `SET_TRACK_FIRST_LEVEL`), the quest rhythm and pay (`QUEST_*`)
+and `MS_PER_DAY`. The
 server re-exports them from its own
 `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants`
 carries them, which the browser and the C module (`crates/wasm/c`) both bind.
@@ -245,6 +249,9 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
 | `open_cosmetic_pack(&PackRecords, &CosmeticPackInputs, seed, now_ms)` | the same | the slots, the Chase Shard bar before and after (R1306002), both bars, the `grants` and the `log` (R1306003) |
 | `bars::fill_bar(kind, &AccountCounters)` | a dev account's counters | the writes of a fill (R1310003), all `Cause::Dev` |
 | `track_rewards::reward_for_level(level)` | a level | what reaching it pays (R1302) |
+| `rewards::pay_game(&GameRecords, &GameSummary, seed)` | what the account was paid today (R1483000), its tracks and its quests | the game's Jlore held to the daily cap, its XP on every active track and the levels it reaches, the quests due as it ends, each quest's progress and what a completion pays: the `grants` in the order to write them and the `GameEconomy` a client animates (R1302006, R1304001); a bot's side pays nothing (R1454) |
+| `rewards::pay_xp(&[SetTrack], xp, cause, reference)`, `starting_rewards(&[SetTrack])`, `complete_quest(&QuestBook, &[SetTrack], id, cause, reference, at)` | tracks (and quests) | the grants of an XP payout (the unlock of one older track, R1302003), of a new account's first level (R1310000), of a dev completion of a held quest |
+| `quests::top_up_book(&QuestBook, seed, now)`, `replace_quest(&QuestBook, removed_today, id, seed, now)`, `give_quest(&QuestBook, seed, now)` | the account's quests, the day's replaces | the quests that fell due (R1304000), a held quest swapped for another (R2210000), a dev give; each arrival's draw is the engine's `Rng` over the host's seed and its `ref` logs `seed:<seed>:<cursor>` |
 
 - **The inputs are what the roll draws from, not what the store holds:** the pool in catalog order
   (`roll::pack_pool` over a `CardDefs`), the cosmetics registry and the catalog version, which the log keeps so
@@ -254,9 +261,14 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
   (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's and the pick's. A replayed
   opening grants the same.
 - **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
-  (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one).
-  Each carries its `Cause` (`PackOpen`, `TokenBar`, `Dev`), which the store's ledger reason names. A store refuses
-  a grant its holding cannot take and writes nothing more.
+  (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one),
+  Jlore to the wallet, XP and levels to a set track, a quest's change (an arrival is dated when it fell due) and
+  the date the next quest falls due. Each carries its `Cause` (`PackOpen`, `TokenBar`, `Dev`, `Game`, `Quest`,
+  `Track`), which the store's ledger reason names, and a `reference` when its row's `ref` is not the outcome's. A
+  store refuses a grant its holding cannot take and writes nothing more.
+- **A payout reads the tracks it moves.** `pay_game` applies each grant to its own copy of the tracks as the store
+  will, so a quest's XP lands on the tracks the game's XP already moved, and the answer's `TrackGain`s are read off
+  the tracks before and after the whole payout. `quests.json` is the quest pool, compiled in like `cosmetics.json`.
 - **`roll`, `cosmetic_pack`, `tiers`, `math`** are the rolls themselves (tiered rolls, the dupe chain, pity and the
   level curve), moved from `crates/server/src/economy/` with their tests; `bars` is the token bars (R1305000,
   R1953000, R2728000).
@@ -273,12 +285,10 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
 { "refused": { "reason": "no_pack_held", "message": "no unopened pack of that kind" } }
 ```
 
-The calls are `openCardPack`, `openCosmeticPack`, `fillBar` and `levelReward`; the answers are `opened`,
-`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it. Not in the
+The calls are `openCardPack`, `openCosmeticPack`, `fillBar`, `levelReward`, `payGame`, `payXp`,
+`startingRewards`, `topUpQuests`, `replaceQuest`, `giveQuest` and `completeQuest`; the answers are `opened`,
+`cosmeticOpened`, `filled`, `reward`, `paid`, `granted` (the writes, in order), `toppedUp` and `refused`. `boundary::apply` is the one function behind it. Not in the
 Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
-
-The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
-pool as data) moves in its second part.
 
 ## `src/deck.rs`
 

@@ -1,5 +1,5 @@
 //! The collection economy's decisions (SPEC §14, #3104), pure: what a card pack and a cosmetic pack grant,
-//! how pity and the token bars move, and what a set-track level pays, each over plain records the store
+//! how pity and the token bars move, what a set-track level pays, what a finished game pays and how a quest moves, each over plain records the store
 //! read and answered as grants and new records for the store to write. No store, no clock, no I/O
 //! (CLAUDE.md rule 4); `crates/shared/README.md`'s host contract binds every module here.
 //!
@@ -14,7 +14,13 @@
 //! - [`bars`]: the token bars (§14.5; R1305000, R1953000, R2728000): the points a slot adds, a bar settled
 //!   into the tokens it pays, the cosmetic cycle's steps, and a dev account's fill of a bar (R1310003).
 //! - [`track_rewards`]: what reaching a set-track level pays (§14.7, #1302).
-//! - [`ledger`]: the rows an outcome names: counters, inventory items and the [`ledger::Grant`]s.
+//! - [`rewards`]: what a finished game pays (§14.7 to §14.9, R1483000, R1302006): [`rewards::pay_game`] over the
+//!   records the store read, the smaller [`rewards::pay_xp`], [`rewards::starting_rewards`] and
+//!   [`rewards::complete_quest`], and the rates, the cap and the track curve they decide with.
+//! - [`quests`]: the quest pool (`quests.json`, compiled in), what a finished game counts toward each quest
+//!   and the decisions over an account's quests: a top-up, a replace, a dev give (R1304000, R2210000).
+//! - [`ledger`]: the rows an outcome names: counters, inventory items, a track, a quest and the
+//!   [`ledger::LedgerGrant`]s.
 //! - [`boundary`]: `jackioh-wasm-core`'s `economy(call)`, one [`boundary::EconomyCall`] in and one
 //!   [`boundary::EconomyAnswer`] out as JSON.
 
@@ -24,6 +30,8 @@ pub mod cosmetic_pack;
 pub mod ledger;
 pub mod math;
 pub mod open;
+pub mod quests;
+pub mod rewards;
 pub mod roll;
 #[cfg(test)]
 mod test_support;

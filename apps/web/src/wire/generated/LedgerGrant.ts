@@ -3,10 +3,15 @@ import type { CardCopies } from "./CardCopies";
 import type { Cause } from "./Cause";
 import type { Counter } from "./Counter";
 import type { InventoryItem } from "./InventoryItem";
+import type { QuestChange } from "./QuestChange";
 
 /**
  * One change an opening or a fill makes to what an account holds, in the order the store writes them. A
  * store writes each as the holding's new value and a ledger row (§14.11) carrying the opening's log as its
  * `ref` and the outcome's `at`.
  */
-export type LedgerGrant = { "kind": "inventory", item: InventoryItem, key: string, delta: number, cause: Cause, } | { "kind": "cards", cards: Array<CardCopies>, } | { "kind": "cosmetic", cardId: string | null, cosmeticId: string, } | { "kind": "counter", counter: Counter, delta: number, cause: Cause, };
+export type LedgerGrant = { "kind": "inventory", item: InventoryItem, key: string, delta: number, cause: Cause, 
+/**
+ * The row's `ref` when it is not the outcome's own (a level reward names its payout's match or quest).
+ */
+reference?: string, } | { "kind": "cards", cards: Array<CardCopies>, } | { "kind": "cosmetic", cardId: string | null, cosmeticId: string, } | { "kind": "counter", counter: Counter, delta: number, cause: Cause, } | { "kind": "jlore", delta: number, cause: Cause, reference?: string, } | { "kind": "track", setId: string, xp: number, levels: number, rewards: number, cause: Cause, reference?: string, } | { "kind": "quest", questId: string, change: QuestChange, progress: number, cause: Cause, reference?: string, at: number, } | { "kind": "questDue", nextDueAt: number | null, };

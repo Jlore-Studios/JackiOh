@@ -3,6 +3,8 @@
 /**
  * Why a grant was written, which the store's ledger reason names: the opening itself (`PackOpen`: the pack
  * spent, the cards and cosmetics it granted, the counters it moved and the points a bar that did not pay
- * kept), a token bar paying out (`TokenBar`, §14.5) or a dev account's own fill (`Dev`, §14.10).
+ * kept), a token bar paying out (`TokenBar`, §14.5), a dev account's own fill (`Dev`, §14.10), a finished
+ * game's pay (`Game`, §14.8), a quest arriving, leaving or paying (`Quest`, §14.9) and a set track's XP and
+ * the levels it reached (`Track`, §14.7).
  */
-export type Cause = "pack_open" | "token_bar" | "dev";
+export type Cause = "pack_open" | "token_bar" | "dev" | "game" | "quest" | "track";

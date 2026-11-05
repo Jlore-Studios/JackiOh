@@ -237,7 +237,8 @@ pub async fn open_pack_once(
 fn refused(refusal: EconomyRefusal) -> ApiError {
     match refusal.reason {
         RefusalReason::NoPackHeld => ApiError::new(ApiErrorCode::Conflict, refusal.message),
-        RefusalReason::EmptyPool => ApiError::internal(refusal.message),
+        // The quest refusals are other decisions'; an opening never meets them.
+        _ => ApiError::internal(refusal.message),
     }
 }
 

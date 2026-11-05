@@ -34,7 +34,9 @@ use crate::economy::practice::{ClaimBucket, ClaimedResult};
 // The rows an opening names and the cosmetics an account owns are `jackioh-shared`'s (#3104): the pure economy
 // decides over them and the store keeps them.
 pub use jackioh_shared::cosmetics::{CardCosmetic, FullArtPick, OwnedCosmetics};
-pub use jackioh_shared::economy::ledger::{Counter, InventoryItem};
+pub use jackioh_shared::economy::ledger::{
+    Counter, HeldQuest, InventoryItem, QuestBook, QuestChange, SetTrack,
+};
 
 // The literals
 
@@ -83,16 +85,6 @@ pub enum EconomyReason {
     News,
 }
 
-/// What befell a held quest (§14.9; `quest_grants.change`).
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum QuestChange {
-    Arrived,
-    Progressed,
-    Completed,
-    Removed,
-}
-
 fn literal<T: Serialize>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value)? {
         serde_json::Value::String(text) => Ok(text),
@@ -123,35 +115,6 @@ pub struct CounterEntry {
     /// `""` but on a pity counter kept per kind of pack.
     pub pack: String,
     pub value: i64,
-}
-
-/// One row of `public.set_tracks` (§14.7).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SetTrack {
-    pub set_id: String,
-    pub xp: i64,
-    /// From `SET_TRACK_FIRST_LEVEL`.
-    pub level: i64,
-    /// How many levels have paid their rewards: from 0 to `level`.
-    pub rewards_claimed: i64,
-}
-
-/// One row of `public.held_quests` (§14.9).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct HeldQuest {
-    pub quest_id: String,
-    pub progress: i64,
-    pub arrived_at: i64,
-}
-
-/// An account's quests: the held ones, oldest first, and when the next is due (`None`: none is).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct QuestBook {
-    pub held: Vec<HeldQuest>,
-    pub next_due_at: Option<i64>,
 }
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
