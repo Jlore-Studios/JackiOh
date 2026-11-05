@@ -38,7 +38,6 @@ import {
   fullArtIdOf,
   fullArtPickOf,
   fullArtSource,
-  fullArtTierOf,
   isFullArtCard,
   type FullArtOwnership,
   type FullArtTier,
@@ -226,12 +225,11 @@ describe("R2655000 the Legendary and Mythic tiers", () => {
     expect(fullArtIdOf(VANILLA, true)).toBe(idOf(VANILLA, "Epic"));
     expect(fullArtPickOf(VANILLA, idOf(VANILLA, "Epic"))).toBe(true);
     for (const tier of FULL_ART_TIERS) {
-      expect(fullArtTierOf(VANILLA, fullArtPickOf(VANILLA, idOf(VANILLA, tier))), tier).toBe(tier);
+      expect(fullArtIdOf(VANILLA, fullArtPickOf(VANILLA, idOf(VANILLA, tier))), tier).toBe(idOf(VANILLA, tier));
     }
     expect(fullArtPickOf(VANILLA, idOf(VANILLA, "Mythic"))).toBe(idOf(VANILLA, "Mythic"));
     for (const pick of [false, undefined, null, "", idOf("core-004", "Mythic"), "full-art-from-a-newer-client", "foil-rainbow"]) {
       expect(fullArtIdOf(VANILLA, pick), String(pick)).toBeNull();
-      expect(fullArtTierOf(VANILLA, pick), String(pick)).toBeNull();
     }
     expect(fullArtIdOf("core-002", true)).toBeNull();
   });
@@ -447,7 +445,6 @@ describe("R2715000 the Animated art", () => {
     expect(fullArtPickOf(VANILLA, animated)).toBe(animated);
     expect(fullArtPickOf(VANILLA, epic)).toBe(true);
     expect(fullArtIdOf(VANILLA, true)).toBe(epic);
-    expect(fullArtTierOf(VANILLA, animated)).toBe("Animated");
     writeCardFullArt(VANILLA, animated);
     // Read back after the page reloads, from what the device stored.
     resetCosmeticsForTests();

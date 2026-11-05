@@ -403,6 +403,14 @@ pub fn find_instance(state_json: &str, instance_id: &str) -> Result<String, Stri
     to_json(&engine::find_instance(&state, instance_id))
 }
 
+/// R3100000: `CombatForecast`, `{ attacks: AttackForecast[], lethal }`: what each attack `seat` may declare
+/// would do, as the board shows it, for the tutorial's coach (`engine::combat_forecast`). It reads nothing a
+/// seat could not see and asks no clock.
+pub fn combat_forecast(state_json: &str, seat: &str) -> Result<String, String> {
+    let state = state_of("combatForecast", state_json)?;
+    to_json(&engine::combat_forecast(&state, player(seat)?))
+}
+
 /// `EmoteId[]`: emote hand `seat` is dealt for `seed` (R1341), matching the match actor (R1342).
 pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, String> {
     to_json(&engine::deal_emote_hand(seed, player(seat)?))
