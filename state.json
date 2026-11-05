@@ -16274,15 +16274,8 @@
       }
     },
     "3093": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41948909880",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-05T02:03:27Z",
-        "until": "2026-11-05T02:33:27Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16294,25 +16287,24 @@
         "reason": "planned on sonnet",
         "trail": "sm\\\\|emscripten\\\" .github/workflows/ci.yml | head -50\", \"description\": \"Check SURFACE and CI wasm references\"}\n- Bash: {\"command\": \"ls $CARGO_TARGET_DIR 2>&1 | head; ls $CARGO_TARGET_DIR/wasm32-unknown-unknown/release 2>&1 | head -5; grep -n \\\"name = \\\\\\\"wasm-bindgen\\\\\\\"\\\\|name = \\\\\\\"js-sys\\\\\\\"\\\\|name = \\\\\\\"getrandom\u2026\n- Bash: {\"command\": \"cargo tree -p jackioh-wasm-core --offline --target wasm32-unknown-unknown -e normal --prefix none 2>&1 | sort -u | head -40; ls $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/*.wasm 2>\u2026\n- tool error: Exit code 2 \u001b[1m\u001b[91merror\u001b[0m: no matching package named `indexmap` found help: if this error is too confusing you may wish to retry without `--offline` location searched: crates.io index note: offl\u2026\n- Bash: {\"command\": \"cargo tree -p jackioh-wasm-core --target wasm32-unknown-unknown -e normal --prefix none 2>&1 | sort -u | head -40; echo CARGO_HOME=$CARGO_HOME; ls ${CARGO_HOME:-~/.cargo}/registry/cache/\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/c-scratch/src && cd /tmp/c-scratch && R=/home/runner/work/_temp/work/item-3093 && cat > Cargo.toml <<EOF\\n[package]\\nname = \\\"scratch-c\\\"\\nversion = \\\"0.0.0\\\"\\nedition = \\\"\u2026\n- Bash: {\"command\": \"cat > .bot-plan.md <<'EOF'\\n# Draft plan #3093 (planner notes; final message is the plan)\\n\\n## Findings so far\\n- crates/wasm/luau/src/main.rs: extern \\\"C\\\" wrappers over jackioh-wasm-c\u2026\n- Bash: {\"command\": \"cat spec/rulings/R915009.md; sed -n 120,280p crates/wasm/src/lib.rs | grep -n \\\"wasm_bindgen\\\" | head -50; grep -c \\\"#\\\\[wasm_bindgen\\\\]\\\" crates/wasm/src/lib.rs\", \"description\": \"Read R\u2026\n- Bash: {\"command\": \"tail -15 /tmp/c-scratch/build.log; ls -la /tmp/c-scratch-target/wasm32-unknown-unknown/release/*.wasm\", \"description\": \"Check scratch build result\"}\n- tool error: Exit code 2 \u001b[1m\u001b[92m Compiling\u001b[0m serde_core v1.0.229 \u001b[1m\u001b[92m Compiling\u001b[0m unicode-ident v1.0.27 \u001b[1m\u001b[92m Compiling\u001b[0m quote v1.0.47 \u001b[1m\u001b[92m Compiling\u001b[0m serde_json v1.0.154 \u001b[1m\u001b[92m Compi\u2026\n- Bash: {\"command\": \"for i in $(seq 1 55); do if pgrep -f \\\"c-scratch-target\\\" >/dev/null || pgrep -x cargo >/dev/null; then sleep 10; else break; fi; done; tail -5 /tmp/c-scratch/build.log; ls -la /tmp/c-sc\u2026\n- Bash: {\"command\": \"cd /tmp && cat > /tmp/c-scratch/check.mjs <<'EOF'\\nimport { readFileSync } from \\\"node:fs\\\";\\nconst bytes = readFileSync(process.argv[2]);\\nconst m = new WebAssembly.Module(bytes);\\ncons\u2026\n- Bash: {\"command\": \"ls crates/wasm/ -a; find crates -name clippy.toml | head; grep -rn \\\"README\\\" crates/tools/tests/*.rs | head -10; grep -rn \\\"unsafe\\\" crates/wasm/Cargo.toml Cargo.toml | head -3; grep -r\u2026\n- Bash: {\"command\": \"cat apps/web/src/net/build-wasm-cache.test.ts | head -60; grep -n \\\"wasm\\\" .gitignore\", \"description\": \"Read build-wasm-cache test and gitignore\"}\n- Bash: {\"command\": \"sed -n 60,220p apps/web/src/net/build-wasm-cache.test.ts\", \"description\": \"Rest of build-wasm-cache test\"}\n- Bash: {\"command\": \"grep -rn \\\"AI_GATE_BUDGET\\\\|FIXTURE_BANNED_IDS\\\" apps/web/src --include=*.ts --include=*.tsx | head; grep -rn \\\"constants()\\\" crates --include=*.rs | grep -v \\\"run_constants\\\\|^crates/wa\u2026\n- Bash: {\"command\": \"sed -n 590,640p apps/web/src/wasm/index.ts; grep -n \\\"pub struct RunConstants\\\" -B3 -A30 crates/run/src/*.rs | head -60\", \"description\": \"Read web constants wrapper and RunConstants\"}\n- Bash: {\"command\": \"ls crates/tools/src | head -50; grep -rn \\\"cited\\\\|not in proven_in\\\\|cites\\\" crates/tools/src/spec*.rs 2>/dev/null | head -20\", \"description\": \"Find spec check cite semantics\"}\n- Bash: {\"command\": \"sed -n 728,742p docs/v0.3.0/SURFACE.md; sed -n 760,800p docs/v0.3.0/SURFACE.md; sed -n 85,95p docs/v0.3.0/SURFACE.md; sed -n 176,184p docs/v0.3.0/SURFACE.md; sed -n 45,52p docs/architect\u2026\n- Bash: {\"command\": \"sed -n 385,470p .github/workflows/ci.yml\", \"description\": \"Read ci.yml tools,wasm group commands\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct CreateGameArgs\\\" -B6 -A40 crates/engine/src/wire/*.rs | head -90\", \"description\": \"Read CreateGameArgs definition\"}\n- Bash: {\"command\": \"grep -rn \\\"pub struct CreateGameArgs\\\" crates/engine/src | head; \", \"description\": \"Locate CreateGameArgs\"}\n- Bash: {\"command\": \"grep -rn \\\"CreateGameArgs\\\" crates/engine/src | head -8\", \"description\": \"Find CreateGameArgs mentions\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct CreateGameOptions\\\" -B8 -A50 crates/engine/src/state.rs | head -100; grep -rn \\\"wasm_core::create_game\\\\|create_game(\\\" crates/wasm crates/tools/src/*.rs 2>/dev/null\u2026\n- Bash: {\"command\": \"cd /tmp/c-scratch && cat >> src/lib.rs <<'EOF'\\n#[unsafe(no_mangle)]\\npub extern \\\"C\\\" fn boom() { panic!(\\\"boom {}\\\", 7); }\\nEOF\\ncat > check2.mjs <<'EOF'\\nimport { readFileSync } from \u2026\n- Bash: {\"command\": \"for i in $(seq 1 40); do if grep -q done /tmp/c-scratch/check2.out 2>/dev/null; then break; fi; sleep 8; done; cat /tmp/c-scratch/check2.out; tail -3 /tmp/c-scratch/build2.log\", \"descrip\u2026\n- Bash: {\"command\": \"sed -n 436,470p apps/web/src/net/ci-scope.test.ts; sed -n 526,548p apps/web/src/net/ci-scope.test.ts\", \"description\": \"View e2e off list and GROUPS table in ci-scope test\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct Action\\\\b\\\" -B6 -A14 crates/engine/src/*.rs crates/engine/src/wire/*.rs | head -50; grep -n \\\"pub struct FoldArgs\\\" -A22 crates/engine/src/*.rs | head -40\", \"descrip\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/c-scratch2/src && cd /tmp/c-scratch2 && cat > Cargo.toml <<'EOF'\\n[package]\\nname = \\\"scratch2\\\"\\nversion = \\\"0.0.0\\\"\\nedition = \\\"2024\\\"\\n[lib]\\ncrate-type = [\\\"cdylib\\\"]\\\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3093/.bot-plan.md\", \"content\": \"# Plan #3093 (draft = final message; planner verified by a scratch build in /tmp/c-scratch)\\n\\nVerified: a cdylib over\u2026\n- said: **Goal.** Add `crates/wasm/c` (`jackioh-wasm-c`), a `cdylib` for `wasm32-unknown-unknown`. It exports every `extern \"C\"` binding the browser module binds, as thin wrappers over `jackioh-wasm-core`'s bodies, with no Luau VM, no custom-card export and an empty import section. The change also covers: \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-05T01:29:50Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-3",
+      "owner_since": "2026-11-05T02:05:22Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-05T02:03:19Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-7",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-05T01:10:28Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41948909880",
+      "run_id": "pending:3ead87b9-1793844291",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T01:29:50Z",
+      "started_at": "2026-11-05T02:05:22Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16621,9 +16613,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T02:04:38Z",
+    "at": "2026-11-05T02:05:22Z",
     "url": "",
-    "what": "revise #3050 on claude-1"
+    "what": "build #3093 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T01:48:37Z",
