@@ -32514,7 +32514,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-05T09:21:50Z",
         "every": 5,
+        "findings": 0,
         "head": "5f0046ca73281580d1a79847fee981247258a3c6",
         "issue": 3061,
         "merged_at": "2026-11-05T08:49:43Z",
@@ -32527,12 +32529,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:419116a1-1793869292",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/41999067882",
         "sha": "2d7d2fffdeb59301398368256ac58a0ae8114ef1",
         "started_at": "2026-11-05T09:02:02Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: an Activate the game won't let you use says why, and the fuzz holds every ability to it",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 71
