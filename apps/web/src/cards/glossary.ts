@@ -182,8 +182,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Flying: keyword("Flying", "Only Units with Flying or Ranged can attack it, unless it is in Defense Position. It may be played into your backrow as well as into a unit zone"),
   Cloaked: keyword("Cloaked", "Can be played face-down as a Trap. Activate: Reveal"),
   Crater: keyword("Crater", "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap"),
-  // R3039001: a play by it keeps it, so it is offered again each time the card lies in its graveyard.
-  Flashback: keyword("Flashback", "Can be played from your graveyard, at its cost; it keeps Flashback"),
+  // R783013, upheld by R3039001: a play by it spends it, so a card is flashed back once.
+  Flashback: keyword("Flashback", "Can be played from your graveyard once, at its cost"),
   // #1838, R1838000: Tradable, Meditative #53 and #98's keyword, Stinkyscape's too.
   Tradable: keyword(
     "Tradable",

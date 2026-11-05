@@ -5,9 +5,10 @@
 //!   Radiant: "Tradable, Flashback / Add your choice of a Radiant Core System, Secure System, Unsecure System
 //!            or Wild System to your hand."
 //!
-//! Tradable (R1838000) and Flashback (R783012, kept after each play, R3039001) are catalog keywords the engine
-//! plays, on both faces since #3142: one Trade a turn from the hand, and from its owner's graveyard it is
-//! offered as a play at its price, once for each of its four modes, each play choosing its own.
+//! Tradable (R1838000) and Flashback (R783012) are catalog keywords the engine plays, on both faces since
+//! #3142: one Trade a turn from the hand, and from its owner's graveyard it is offered once as a play at
+//! its price, once for each of its four modes, that play choosing its own and spending the Flashback
+//! (R783013, upheld by R3039001).
 //! Engine: four modes, one per System (S #117 to #120), chosen with the play (R81), its player's
 //! choice and not a random pick (ST-S14-10); the Cry is one `add_to_hand` of the chosen System, a
 //! full hand burning it (§2.4). Radiant: the one added is Radiant. Declares no numbers.
@@ -141,10 +142,10 @@ mod tests {
         }
     }
 
-    /// #3142, R783012, R3039001: it is replayed from the graveyard at its price, each play choosing its mode
-    /// and adding that System, and it stays offered after each play.
+    /// #3142, R783012, R3039001: it is replayed from the graveyard once at its price, the play choosing its
+    /// mode and adding that System, and that play spends its Flashback (R783013).
     #[test]
-    fn r3039001_it_is_replayed_from_the_graveyard_choosing_its_mode_each_time() {
+    fn r3039001_it_is_replayed_from_the_graveyard_once_choosing_its_mode() {
         for radiant in [false, true] {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": SCHEMATIC, "radiant": radiant }], "mana": 10, "library": filler(4) },
@@ -163,7 +164,7 @@ mod tests {
             assert_eq!(made, ["stinkyscape-117", "stinkyscape-120"], "radiant {radiant}");
             assert!(systems_in_hand(&s).iter().all(|card| card.radiant == radiant));
             s.expect_in_zone(&id, "graveyard");
-            assert!(!offered_from_the_graveyard(&s, &id).is_empty(), "offered again after the play");
+            assert!(offered_from_the_graveyard(&s, &id).is_empty(), "spent: not offered again");
         }
     }
 
