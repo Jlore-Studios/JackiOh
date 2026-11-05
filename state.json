@@ -17697,12 +17697,14 @@
     "what": "revise #3050 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-05T08:22:47Z",
+    "at": "2026-11-05T08:33:50Z",
     "notes": [
-      "delivered plan #3127 on claude-3 (run 41990322219): planned",
-      "started build #3127 on claude-3 (run 41994402960)",
+      "#3068: its turn came (#3152, which it waited behind, closed)",
+      "started revise #3068 on claude-7 (run 41995749521)",
+      "started revise #3050 on claude-1 (run 41995858245)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days",
+      "#3152: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18408,7 +18410,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-05T08:22:47Z",
+  "loop_tick": "2026-11-05T08:33:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
