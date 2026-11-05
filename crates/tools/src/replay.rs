@@ -8,20 +8,17 @@
 //! `{"hash", "refusedAt"}`, stopping at the first refused action.
 //!
 //! The scripts are registered first, or every Cry in the log would fizzle differently from the browser
-//! (SPEC §10.9); custom cards (R915006) fold with the card kit's host lent, as the browser's (R915009).
-//! A refused action is listed in `errors`, not fatal; a deck its handicap does not allow fails loudly
+//! (SPEC §10.9). A game that carries custom cards (`customCards`) is not folded: custom cards are
+//! removed (#2956), so it exits 1 with the reason. A refused action is listed in `errors`, not fatal; a deck its handicap does not allow fails loudly
 //! rather than replay a different game (R180), and input that is no such object exits 1.
 
 use std::io::Read as _;
-use std::rc::Rc;
 
 use anyhow::{Context, Result, anyhow, bail};
 use serde_json::{Value, json};
 
-use jackioh_engine::custom::with_custom_scripts;
 use jackioh_engine::replay::{FoldArgs, fold, hash_state};
 use jackioh_engine::{DuosReplayInput, ShippedCatalog, catalog_for, duos_fold, with_shipped};
-use jackioh_luau::custom::KitHost;
 
 /// `cargo jackioh replay`: no options; the game comes on stdin.
 #[derive(clap::Args, Debug)]
@@ -65,7 +62,10 @@ fn replay_json(input: Value) -> Result<Value> {
     }
     let shipped = pinned_catalog(&input, jackioh_cards::versions::scheme_of(&input))?;
     let args: FoldArgs = serde_json::from_value(input).context("the input is not {seed, decks, log, …}")?;
-    let folded = with_shipped(shipped, || with_custom_scripts(Rc::new(KitHost), || fold(&args)));
+    if args.custom_cards.as_ref().is_some_and(|cards| !cards.is_empty()) {
+        bail!("the game carries custom cards, which are removed (#2956): it is not folded");
+    }
+    let folded = with_shipped(shipped, || fold(&args));
     Ok(json!({
         "hash": hash_state(&folded.state),
         "errors": serde_json::to_value(&folded.errors)?,
@@ -184,125 +184,23 @@ mod tests {
         );
     }
 
-    /// A 0-cost Spell that deals `{dmg}` (3) to the enemy hero, in the card kit.
-    fn burner() -> Value {
-        json!({
+    /// #2956: a stored game that carries custom cards is refused with the reason and not folded; an
+    /// empty list carries none.
+    #[test]
+    fn a_game_with_custom_cards_is_refused_and_not_folded() {
+        jackioh_cards::register_all();
+        let mut input: Value = serde_json::from_str(&std::fs::read_to_string(HOTSEAT).unwrap()).unwrap();
+        input["customCards"] = json!([{
             "id": "custom-burner",
             "version": 1,
-            "frame": {
-                "name": "Burner", "type": "Spell", "cost": 0, "rarity": "Common",
-                "text": "Deal {dmg} damage to the enemy hero.",
-                "params": [{ "key": "dmg", "base": 3, "radiant": 6 }]
-            },
-            "source": "return Card {\n  cry = function(c, n)\n    c:damage(\"the enemy hero\", n.dmg)\n  end,\n}\n"
-        })
-    }
+            "frame": { "name": "Burner", "type": "Spell", "cost": 0, "rarity": "Common" },
+            "source": "return Card {}"
+        }]);
+        let error = replay_json(input.clone()).unwrap_err();
+        assert!(format!("{error:#}").contains("custom cards"), "{error:#}");
 
-    /// The Human Vanguard deck as it stood before #1705: twenty distinct Core cards, which a recorded
-    /// game still folds (R1705003).
-    const VANGUARD: [&str; 20] = [
-        "core-004", "core-005", "core-008", "core-011", "core-015", "core-081", "core-001", "core-016",
-        "core-020", "core-045", "core-061", "core-069", "core-077", "core-030", "core-013", "core-019",
-        "core-053", "core-025", "core-054", "core-066",
-    ];
-
-    fn fold_of(input: &Value, host: bool) -> jackioh_engine::replay::ReplayResult {
-        let args: FoldArgs = serde_json::from_value(input.clone()).unwrap();
-        if host {
-            with_custom_scripts(Rc::new(KitHost), || fold(&args))
-        } else {
-            fold(&args)
-        }
-    }
-
-    fn view_of(state: &jackioh_engine::GameState, seat: jackioh_engine::PlayerId) -> Value {
-        serde_json::to_value(jackioh_engine::view_for::view_for(state, seat)).unwrap()
-    }
-
-    /// R915006: a practice game whose deck holds a custom card replays here to the browser's state: the
-    /// card's Cry runs through the card kit's host, and without the host it would do nothing.
-    #[test]
-    fn r915006_a_game_with_a_custom_card_folds_through_the_card_kit() {
-        jackioh_cards::register_all();
-        let mut human: Vec<String> = vec!["custom-burner".to_string()];
-        human.extend(VANGUARD[..19].iter().map(|id| (*id).to_string()));
-        let ai: Vec<String> = VANGUARD.iter().map(|id| (*id).to_string()).collect();
-        // A seed whose opening hand holds the card: the deal is the seed's, so the search is fixed.
-        let mut input = Value::Null;
-        for n in 0..60 {
-            let candidate = json!({
-                "seed": format!("r915006-tools-{n}"), "decks": [human, ai], "log": [], "customCards": [burner()]
-            });
-            let state = fold_of(&candidate, true).state;
-            let view = view_of(&state, jackioh_engine::PlayerId::P1);
-            let holds = view["you"]["hand"]
-                .as_array()
-                .is_some_and(|hand| hand.iter().any(|card| card["defId"] == "custom-burner"));
-            if holds {
-                input = candidate;
-                break;
-            }
-        }
-        assert!(
-            !input.is_null(),
-            "no seed in 60 deals the custom card into the opening hand"
-        );
-
-        // Keep both hands, pass until the human's main phase, then play the card.
-        let mut played_health = None;
-        for step in 0..40 {
-            let state = fold_of(&input, true).state;
-            let Some(seat) = jackioh_engine::seat_to_act(&state) else {
-                break;
-            };
-            let view = view_of(&state, seat);
-            let pending = &view["pending"];
-            let mut action = if pending["kind"] == "mulligan" {
-                let keep: Vec<Value> = pending["options"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(|option| option["key"].clone())
-                    .collect();
-                json!({ "type": "mulligan", "keep": keep })
-            } else if seat == jackioh_engine::PlayerId::P1 && view["phase"] == "main" && pending.is_null() {
-                let burner = view["you"]["hand"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .find(|card| card["defId"] == "custom-burner")
-                    .unwrap();
-                played_health = Some(view["opponent"]["hero"]["health"].as_i64().unwrap());
-                json!({ "type": "play", "instanceId": burner["instanceId"].clone() })
-            } else {
-                json!({ "type": "endTurn" })
-            };
-            action["playerId"] = serde_json::to_value(seat).unwrap();
-            action["nonce"] = json!(format!("n{step}"));
-            let legal = jackioh_engine::legal_actions(&state, seat);
-            let body: jackioh_engine::ActionBody = serde_json::from_value(action.clone()).unwrap();
-            assert!(
-                action["type"] == "mulligan" || legal.contains(&body),
-                "{action} is not legal"
-            );
-            input["log"].as_array_mut().unwrap().push(action);
-            if played_health.is_some() {
-                break;
-            }
-        }
-        let before = played_health.expect("the human reaches a main phase with the card in hand");
-
-        let answer = replay_json(input.clone()).unwrap();
-        assert_eq!(answer["errors"], json!([]));
-        let folded = fold_of(&input, true);
-        assert_eq!(answer["hash"], hash_state(&folded.state));
-        let after = view_of(&folded.state, jackioh_engine::PlayerId::P1)["opponent"]["hero"]["health"]
-            .as_i64()
-            .unwrap();
-        assert_eq!(after, before - 3, "the Cry dealt its {{dmg}}");
-        // Without the host the card has no script: the same log folds to another game.
-        let bare = fold_of(&input, false);
-        assert_ne!(hash_state(&bare.state), answer["hash"].as_str().unwrap());
+        input["customCards"] = json!([]);
+        assert_eq!(replay_json(input).unwrap()["hash"], HOTSEAT_HASH);
     }
 
     #[test]

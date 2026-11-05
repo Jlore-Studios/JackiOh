@@ -66,7 +66,7 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 
 ### 15.1 Sandbox and Campaign
 
-**Sandbox:** offline, no account. It plays in the browser's practice worker and never touches the server. The player's custom cards ([[§12]]) join the pool and the fights. It earns nothing on an account: unlocks, Embers, levels, history, stats and leaderboards stay on the device.
+**Sandbox:** offline, no account. It plays in the browser's practice worker and never touches the server. It earns nothing on an account: unlocks, Embers, levels, history, stats and leaderboards stay on the device.
 
 **Campaign:** signed in. The account holds the unlocks, Embers and levels. The server folds a finished run's file ([[§15.2]]) before it pays, as with practice claims ([[§14.8]], [[R1303000]]). Stats feed the leaderboards. The server acts at a run's start, at its end and for ghosts, never during.
 

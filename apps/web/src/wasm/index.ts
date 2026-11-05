@@ -306,7 +306,7 @@ export type RunResult = { state: RunState } | { error: string };
 
 /** `RunContent`: `run_catalog_content` over the compiled-in catalog. */
 export function runContent(): RunContent {
-  return call("runContent", () => parsed<RunContent>(normal.run_content("[]")));
+  return call("runContent", () => parsed<RunContent>(normal.run_content()));
 }
 
 /** Whether the setup may start a run: null, or the reason. */

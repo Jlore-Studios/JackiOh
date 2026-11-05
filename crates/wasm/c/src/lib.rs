@@ -178,16 +178,10 @@ pub extern "C" fn carried_versions() -> i32 {
 // A run-rule refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason),
 // never the failed status: only JSON that does not parse, or an argument that is not text, is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
 #[unsafe(no_mangle)]
-pub extern "C" fn run_content(custom_cards_json_ptr: *const u8, custom_cards_json_len: usize) -> i32 {
-    boundary(|| {
-        wasm_core::run_content(arg(
-            "runContent: the custom cards",
-            custom_cards_json_ptr,
-            custom_cards_json_len,
-        )?)
-    })
+pub extern "C" fn run_content() -> i32 {
+    boundary(wasm_core::run_content)
 }
 
 /// `null` when the setup may start a run, else the reason.

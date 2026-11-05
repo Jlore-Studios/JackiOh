@@ -268,8 +268,8 @@ fn static_exports_answer_what_the_core_bodies_answer() {
 #[test]
 fn run_exports_answer_what_the_core_bodies_answer() {
     init();
-    let content = call!(run_content; "[]";);
-    assert_eq!(content, expect(wasm_core::run_content("[]")));
+    let content = call!(run_content;;);
+    assert_eq!(content, expect(wasm_core::run_content()));
     let content = ok(content);
     let numbers = call!(run_constants;;);
     assert_eq!(numbers, expect(wasm_core::run_constants()));

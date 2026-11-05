@@ -177,10 +177,10 @@ pub extern "C" fn carried_versions() -> *mut c_char {
 // may carry custom cards, which folds only under the kit host. A run-rule refusal is a returned
 // value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never NULL.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
 #[unsafe(no_mangle)]
-pub extern "C" fn run_content(custom_cards_json: *const c_char) -> *mut c_char {
-    boundary(|| wasm_core::run_content(arg("runContent: the custom cards", custom_cards_json)?))
+pub extern "C" fn run_content() -> *mut c_char {
+    boundary(wasm_core::run_content)
 }
 
 /// `null` when the setup may start a run, else the reason.

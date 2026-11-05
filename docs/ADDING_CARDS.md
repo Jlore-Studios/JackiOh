@@ -235,8 +235,8 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   Power's own tests, `src/scripts/core/c098_heroic_power.rs`, and `crates/ai/tests/ai/shadow_ban.rs`) is re-pinned by looping seeds
   in a throwaway test (`for n in 0.. { let mut s = scenario(json!({ "seed": format!("craft-{n}"), … })); … }`) until the offers
   match, and the comment beside the seed updated; better, convert it to a search.
-- **The cross-build replay** (`cargo jackioh luau diff --parent-bin <base build's jackioh> --cards <ids>`, and `rust (classify)` on the pull
-  request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
+- **The cross-build replay** (`cargo jackioh classify --base origin/main --parent-bin <base build's jackioh>`, which `rust (classify)`
+  runs on the pull request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
   a divergence names the seed, the step and the hash. Nothing is committed (the 240 golden traces were retired in #2578), so nothing is
   re-recorded.
 - **The fuzz waves** play seeded games and may now draw a game nobody has played. Four latent bugs came out this way, all fixed: a fused

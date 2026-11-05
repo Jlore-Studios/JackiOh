@@ -28,7 +28,7 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `preview_sets(sets)` | R1400, R1420: treat `SetName[]` as shipped for the module's life (the dev hotseat's E2E injection); a module built without the `preview` feature refuses any set |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | #936: the Duos wrapper for `/dev/duos`: a `DuosState` (its four decks and handicaps checked first, as `create_game`'s setup is), then `{ state, events, error? }`, `DuosActionBody[]` and `DuosView`; the seat crosses as its string (`"a1"`). Built only with the `duos` feature (the dev server's build only: `JACKIOH_WASM_DUOS=1`, off by default); without it each throws the reason |
 | `craft_preview(recipe, cost, prompt)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say; `prompt` is the open prompt's `{ craftMode, craftOffer }`, its frame and offer (R1563007) |
-| `run_content(custom_cards)` | `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards |
+| `run_content()` | `RunContent`: `run_catalog_content` over the compiled-in catalog |
 | `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | whether the setup may start a run (`null`, or the reason), then the run's `{ state }` |
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | the run after one action, or a run file folded from its start: `{ state }` |
 | `run_fight_setup(state, content)` | the fight being played (`RunFightSetup`), or `null` outside one |

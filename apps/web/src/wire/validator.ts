@@ -31,7 +31,7 @@ export type LoadoutInput = {
   collection: Collection;
 };
 
-export type LoadoutRule = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
+export type LoadoutRule = "L1" | "L2" | "L3" | "L4" | "L5" | "L6";
 
 export type LoadoutError = {
   rule: LoadoutRule;

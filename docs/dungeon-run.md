@@ -46,8 +46,7 @@ A single-player run in the style of Slay the Spire, played against the AI.
 The dungeon run screen offers two ways to play:
 
 - **Sandbox.** Offline, no account, open to anyone. A run plays in the browser as a practice game does and
-  never touches the server. You can make custom cards and play with them, and they join the run's card
-  pools. It earns nothing, and its stats and leaderboards stay on the device.
+  never touches the server. It earns nothing, and its stats and leaderboards stay on the device.
 - **Campaign.** Signed in. The account holds the unlocks, the permanent currency and the slots' levels. A
   finished run is checked by the server before it pays, as practice games already are (§14.8, R1303000),
   and its stats feed the leaderboards. The server is involved at a run's start and end, and for ghosts, not
@@ -276,7 +275,7 @@ pub struct RunFightSetup {
 }
 pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup>; // None outside RunPhase::Fight
 pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String>; // a RunAction::FightOver
-pub fn run_catalog_content(catalog: &CardDefs, custom: &[CustomCard]) -> RunContent;
+pub fn run_catalog_content(catalog: &CardDefs) -> RunContent;
 pub fn run_level_cost(level: usize) -> Option<i64>; // the Embers from `level` to the next; None at the top
 pub struct RunConstants {           // the numbers the screens show, so the client states none (rule 9)
     pub slot_ladder: Vec<[usize; 6]>, pub starter_size: usize, pub starter_artifacts_max: usize,
@@ -291,7 +290,7 @@ pub fn run_constants() -> RunConstants;
 
 ```ts
 type RunResult = { state: RunState } | { error: string };
-export function runContent(customCards: CustomCard[]): RunContent; // run_catalog_content over the compiled-in catalog
+export function runContent(): RunContent; // run_catalog_content over the compiled-in catalog
 export function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null;
 export function runCreate(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): RunResult;
 export function runReduce(state: RunState, content: RunContent, action: RunAction): RunResult;
@@ -319,7 +318,6 @@ export type RunRecord = {
 };
 export type Dungeon = {
   content: RunContent;
-  customCards: CustomCard[];              // the pool's custom cards: the run's kept copy while it stands (B21; the reconcile's)
   progress: DungeonProgress;
   run: RunState | null;
   startedAt: number | null;               // Date.now() when the run started, for the timer
@@ -363,8 +361,8 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B3** A game created without `deckMarks` hashes and replays as before: the hotseat fixture still folds
   to its hash.
 - **B4** A mark whose index is past its seat's deck refuses `createGame` with a reason.
-- **B5** `run_catalog_content` pools every non-token card of the sets that ship and the custom cards
-  given, and no boss card while the Boss set has none.
+- **B5** `run_catalog_content` pools every non-token card of the sets that ship, and no boss card
+  while the Boss set has none.
 - **B6** `RUN_STARTER_CARDS` holds 20 Training Grounds Commons and Rares, each in the catalog.
 - **B7** `run_fight_setup` answers only in a fight; the human's handicap holds the run's HP and the deck's
   length; the marks hold each Radiant card and each card's buffs.
@@ -391,7 +389,7 @@ Each is proved by a test that names it in a comment (`// B7`).
   back.
 - **B20** A finished run adds what it extracted to the unlocks, its Embers to the balance and a
   `RunRecord` to the history.
-- **B21** In the Sandbox, the custom cards the creator saved join the pool and the fights.
+- **B21** (removed with custom cards, #2956) In the Sandbox, the custom cards the creator saved joined the pool and the fights.
 - **B22** A Fight node starts a practice game from `runFightSetup`, the AI playing the enemy, its name
   shown.
 - **B23** Both sides' artifacts show in a tray beside their hero; a button opens each one's name and text.

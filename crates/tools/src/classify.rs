@@ -23,6 +23,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command as Process, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
@@ -35,7 +36,6 @@ use serde_json::Value;
 use crate::card_lists::{self, CardLists, Scripts};
 use crate::catalog::{code_lines, code_lines_with_uses};
 use crate::golden::{record_seeds, text_at};
-use crate::luau::{parent_check, temp_traces};
 use crate::patches::patches_io::{Catalog, ChangeKind, diff_catalogs};
 use crate::patches::{git, repo_root};
 
@@ -54,7 +54,7 @@ const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs
 /// Stage 2: forced games per card a script change claims. A refactor diverges in none of them.
 const FORCED_GAMES: u32 = 40;
 
-/// Stage 2: the unforced games a change to play code replays, `luau diff`'s count.
+/// Stage 2: the unforced games a change to play code replays.
 const UNFORCED_GAMES: u32 = 200;
 
 /// R2455000: the unforced games that must hold a divergence touching no card for it to be a rule
@@ -796,6 +796,45 @@ fn games_in(traces: &Path) -> Result<HashMap<String, Value>> {
         .collect())
 }
 
+/// A path in the temporary directory for one run's recorded traces.
+fn temp_traces() -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos())
+        .unwrap_or(0);
+    std::env::temp_dir().join(format!("jackioh-classify-{}-{stamp}.jsonl", std::process::id()))
+}
+
+/// The parent build's `golden check --file` over `traces`: how many games diverged, and its report; an
+/// error when the parent could not check the file at all (R1365000).
+fn parent_check(parent_bin: &Path, traces: &Path) -> Result<(u64, String)> {
+    let parent = parent_bin.display();
+    let output = Process::new(parent_bin)
+        .args(["golden", "check", "--file"])
+        .arg(traces)
+        .output()
+        .with_context(|| format!("running {parent} golden check"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    match summary_counts(&stdout) {
+        Some((_, diverged)) if output.status.success() || diverged > 0 => Ok((diverged, stdout)),
+        _ => bail!(
+            "{parent} could not check {}: {}",
+            traces.display(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ),
+    }
+}
+
+/// `(steps, diverged)` from `golden check`'s summary line, `golden check: N of M games replayed
+/// identically (S steps), D diverged`.
+fn summary_counts(stdout: &str) -> Option<(u64, u64)> {
+    let line = stdout.lines().find(|line| line.starts_with("golden check: "))?;
+    let (_, after) = line.split_once('(')?;
+    let (steps, rest) = after.split_once(" steps), ")?;
+    let (diverged, _) = rest.split_once(" diverged")?;
+    Some((steps.parse().ok()?, diverged.parse().ok()?))
+}
+
 /// Whether `id`'s own play diverges from the parent's in `FORCED_GAMES` games with it forced in: a
 /// divergence that touches its family, or one that touches no card at all. The other cards of those
 /// games are random, so a divergence one of them explains says nothing of `id`.
@@ -1170,6 +1209,22 @@ fn print_classification(classification: &Classification) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn the_golden_summary_gives_the_steps_and_the_divergences() {
+        assert_eq!(
+            summary_counts("golden check: 240 of 240 games replayed identically (22571 steps), 0 diverged\n"),
+            Some((22571, 0))
+        );
+        assert_eq!(
+            summary_counts(
+                "seed jackioh-fuzz-1 step 0: `s` expected 00000000, Rust has 1a2b3c4d\n\
+                 golden check: 1 of 2 games replayed identically (95 steps), 1 diverged\n"
+            ),
+            Some((95, 1))
+        );
+        assert_eq!(summary_counts("hotseat fixture: folds to a798906b"), None);
+    }
 
     fn card(id: &str, set: &str, cost: i64, text: &str) -> (String, crate::patches::js::Object) {
         let entry = json!({ "id": id, "name": id, "set": set, "cost": cost, "base": { "text": text } });

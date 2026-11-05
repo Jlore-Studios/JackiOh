@@ -1,8 +1,8 @@
 //! #892: `layers::AuraTable` over the shipped auras — Jlockeed's Weapons (core-014), Spikey Pillow
-//! (core-065-1) and Siphon Squad (classic-088), kept in Rust, and Big D-fender (core-001) and
-//! Suppressive Aura (core-046), in Luau — reads every unit as `layers::unit_view` reads it alone, from
-//! both sides' units and backrows: a Vanilla'd source projects nothing (§6.1, §6.3) and a card dormant
-//! under a Stack takes no aura (§3.2, R13).
+//! (core-065-1), Siphon Squad (classic-088), Big D-fender (core-001) and Suppressive Aura (core-046) —
+//! reads every unit as `layers::unit_view` reads it alone, from both sides' units and backrows: a
+//! Vanilla'd source projects nothing (§6.1, §6.3) and a card dormant under a Stack takes no aura (§3.2,
+//! R13).
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

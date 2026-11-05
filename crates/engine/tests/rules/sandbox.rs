@@ -362,6 +362,28 @@ fn r923001_a_spawn_names_a_shipped_card_and_an_open_zone_its_type_stands_in() {
 }
 
 #[test]
+fn r923001_a_custom_card_is_no_card_to_spawn_even_in_a_game_that_carries_it() {
+    let (mut state, _log) = started("r923001-custom", true);
+    // A game created with the card (which only a host that lends scripts can still do) holds its
+    // definition; the Custom set never ships (R1420), so the tool does not spawn it.
+    let card: jackioh_engine::CustomCard = json_as(json!({
+        "id": "custom-sb",
+        "version": 1,
+        "frame": { "name": "Custom Sb", "type": "Unit", "cost": 1, "rarity": "Common", "attack": 1, "health": 1 },
+    }));
+    state
+        .custom_defs
+        .insert(card.id.clone(), jackioh_engine::custom::custom_def(&card));
+    state.custom_cards.insert(card.id.clone(), card);
+    let spawn = tool(
+        json!({ "kind": "spawn", "player": "p1", "defId": "custom-sb", "to": { "zone": "hand" } }),
+        P1,
+        "custom",
+    );
+    assert_eq!(refused(&state, &spawn), "there is no card \"custom-sb\" to spawn");
+}
+
+#[test]
 fn r923002_a_hero_and_mana_are_set_within_their_bounds_and_a_draw_draws() {
     let (mut state, mut log) = started("r923002-numbers", true);
     let events = apply(

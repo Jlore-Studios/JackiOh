@@ -5,7 +5,7 @@
 //! moves whatever the card metrics' lists hold (R1846003).
 //!
 //! A change is held to its base build by `golden record` on the head and `golden check --file` on the
-//! base build (`luau diff`, `classify --parent-bin`), with nothing committed (#2578).
+//! base build (`classify --parent-bin`), with nothing committed (#2578).
 
 use std::collections::BTreeSet;
 

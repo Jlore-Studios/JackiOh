@@ -5,14 +5,13 @@
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::combat::attack_target_of;
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap};
-use jackioh_engine::custom::custom_def;
 use jackioh_engine::damage::DamageTarget;
 use jackioh_engine::reduce::{begin_game, reduce};
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::state::{
     CreateGameOptions, GameState, SetupKind, create_recorded_game, starting_hero_health, validate_setup,
 };
-use jackioh_engine::wire::{CardDefs, CustomCard, DeckMark, GameEvent, PlayerId, SetName, Winner};
+use jackioh_engine::wire::{CardDefs, DeckMark, GameEvent, PlayerId, Winner};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
@@ -49,12 +48,11 @@ pub struct RunFightSetup {
 
 /// DR14: the content a run on the cards that ship deals from. The pool is every card a deck may hold
 /// (`deckable`: no token, a set that ships, no card only a rule makes), with its rarity, set, type and
-/// tags, then each custom card given (the Sandbox's). The starting cards are `RUN_STARTER_CARDS`. The
-/// enemies, passives, events and curses are `run_placeholder_content`'s until the designer's lists
-/// land, each enemy's own cards kept only where the pool holds them, so no pseudo boss card is dealt
-/// while the Boss set has none.
-pub fn run_catalog_content(catalog: &CardDefs, custom: &[CustomCard]) -> RunContent {
-    let mut pool: Vec<RunPoolCard> = catalog
+/// tags. The starting cards are `RUN_STARTER_CARDS`. The enemies, passives, events and curses are
+/// `run_placeholder_content`'s until the designer's lists land, each enemy's own cards kept only where
+/// the pool holds them, so no pseudo boss card is dealt while the Boss set has none.
+pub fn run_catalog_content(catalog: &CardDefs) -> RunContent {
+    let pool: Vec<RunPoolCard> = catalog
         .values()
         .filter(|def| deckable(def))
         .filter_map(|def| {
@@ -69,14 +67,6 @@ pub fn run_catalog_content(catalog: &CardDefs, custom: &[CustomCard]) -> RunCont
             })
         })
         .collect();
-    pool.extend(custom.iter().map(|card| RunPoolCard {
-        id: card.id.clone(),
-        name: card.frame.name.clone(),
-        rarity: card.frame.rarity,
-        set: SetName::Custom,
-        card_type: card.frame.type_,
-        tags: Vec::new(),
-    }));
     let placeholder = run_placeholder_content();
     let mut enemies = placeholder.enemies;
     for enemy in &mut enemies {
@@ -234,8 +224,7 @@ impl Tally {
 /// at the end; `damage_dealt` every `damage` event's amount on a target the enemy controls, its hero
 /// or a unit; `healing_done` every `healed` event's on `human`'s side; `cards_drawn` `human`'s draws
 /// after the opening deal; `turns` the game's. A setup the engine refuses, or a game with no result,
-/// is refused. A game with scripted custom cards folds only under the host that lends their scripts
-/// (`custom::with_custom_scripts`), as `replay::fold` does.
+/// is refused, and so is a game whose decks name a custom card: a run plays none.
 pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String> {
     // The fold's JSON is `createGame`'s plus its `log` (as the browser's `fold` reads it), so every
     // setup field the record carries, the deck marks among them, reaches the game unnamed here.
@@ -246,14 +235,9 @@ pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction
         Some(catalog) => catalog,
         None => registered_catalog(),
     };
-    let customs: CardDefs = options
-        .custom_cards
-        .iter()
-        .flatten()
-        .map(|card| (card.id.clone(), custom_def(card)))
-        .collect();
-    // `create_recorded_game` panics on a setup it refuses: refuse it here instead.
-    validate_setup(&options, catalog, &customs, SetupKind::Recorded).map_err(|e| e.to_string())?;
+    // `create_recorded_game` panics on a setup it refuses: refuse it here instead. A run gives the
+    // game no custom card, so a deck that names one is refused as a card the game was not given.
+    validate_setup(&options, catalog, &CardDefs::new(), SetupKind::Recorded).map_err(|e| e.to_string())?;
 
     let mut tally = Tally::default();
     let start = create_recorded_game(&options);

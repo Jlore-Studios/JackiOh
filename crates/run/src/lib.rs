@@ -41,8 +41,7 @@ use crate::config::{
 
 // Content: data the caller passes in
 
-/// What a run deals from: the designer's lists, or `run_placeholder_content` until they land. A
-/// Sandbox run's caller adds the player's custom cards to `pool` (DR1).
+/// What a run deals from: the designer's lists, or `run_placeholder_content` until they land.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",

@@ -748,9 +748,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             referenced.insert(resume.def_id.clone());
         }
     }
-    // Fusion definitions stay (R179). Custom definitions stay only if referenced (R915007).
-    next.custom_defs.retain(|def_id, _| referenced.contains(def_id));
-    next.custom_cards.retain(|def_id, _| referenced.contains(def_id));
+    // Fusion definitions stay (R179).
     let mut transient: IndexSet<String> = IndexSet::new();
     let mut keep: Vec<String> = referenced
         .into_iter()

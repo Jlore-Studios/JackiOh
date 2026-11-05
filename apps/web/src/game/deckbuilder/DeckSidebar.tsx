@@ -1,7 +1,7 @@
 // Open deck sidebar: count, curve, tiles, comparison, verdict and actions (docs/polish/6-cards.md,
 // Surface D; SPEC §9.4, R250–R251). Tile order is display-only; the deck's order is saved. R251
 // conflicts are marked, never removed for the player; a card the validator's verdict names (L3, L5,
-// L6, L7) wears the same flag, with the verdict's words. On phones the list folds but stays mounted
+// L6) wears the same flag, with the verdict's words. On phones the list folds but stays mounted
 // (deckbuilder.css). Tiles support preview, inspect, and keyboard detail view (I, the context-menu
 // key or Shift+F10).
 //

@@ -195,13 +195,9 @@ pub fn carried_versions() -> Result<String, String> {
 // refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never a
 // module error: only JSON that does not parse is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
-pub fn run_content(custom_cards_json: &str) -> Result<String, String> {
-    let custom: Vec<engine::CustomCard> = parse("runContent: the custom cards", custom_cards_json)?;
-    to_json(&jackioh_run::run_catalog_content(
-        engine::registered_catalog(),
-        &custom,
-    ))
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
+pub fn run_content() -> Result<String, String> {
+    to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -731,16 +727,6 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
             let raw: String = parse(call, input_json)?;
             to_json(&validator::normalize_name(&raw))
         }
-        // R915001, R915000: a custom card's frame judged, and the definition it builds, with no Luau:
-        // the script is the Luau module's to check.
-        "validateCustomCard" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::validate_custom_card(&card))
-        }
-        "customDef" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::custom_def(&card))
-        }
         other => Err(format!("validator: no such call {other:?}")),
     }
 }
@@ -897,10 +883,10 @@ pub use duos_bodies::{duos_begin, duos_create, duos_legal_actions, duos_reduce, 
 mod run_body_tests {
     use super::*;
 
-    /// The content Part B's tests deal from: the catalog's, no custom card.
+    /// The content Part B's tests deal from: the catalog's.
     fn content() -> RunContent {
         jackioh_cards::register_all();
-        jackioh_run::run_catalog_content(engine::registered_catalog(), &[])
+        jackioh_run::run_catalog_content(engine::registered_catalog())
     }
 
     /// Unlocks at the ladder's top, so any Common/Rare ordering of the starter is valid.
@@ -948,7 +934,7 @@ mod run_body_tests {
     #[test]
     fn run_content_body_serializes_content() {
         let content = content();
-        let text = run_content("[]").unwrap();
+        let text = run_content().unwrap();
         assert_eq!(serde_json::from_str::<RunContent>(&text).unwrap(), content);
     }
 
