@@ -49,13 +49,10 @@
 
 /* --- the title bar ------------------------------------------------------------------------------ */
 
-/* The way back and the title share one row, over a gold hairline. */
+/* The way back and the title share one row, over a gold hairline (the bar is BackLink's, drawn by
+   routes/top-bar.css). */
 .db-header {
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 16px;
   padding: 2px 2px 10px;
 }
 
@@ -67,10 +64,6 @@
   bottom: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgb(240 194 74 / 0.55) 18%, rgb(240 194 74 / 0.2) 70%, transparent);
-}
-
-.db-header .screen-nav {
-  margin: 0;
 }
 
 /* Back is the tavern's brass pill (tavern.css). The title is set as the tavern's screen titles are

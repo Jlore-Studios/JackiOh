@@ -18,6 +18,7 @@ use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, L
 use jackioh_engine::wire::ListTotal;
 use jackioh_engine::{DECK_SIZE, Rng, pick_portrait_from_seed};
 
+use crate::bots::cosmetics::BotCosmetics;
 use crate::bots::fallback::holds_deck_size;
 use crate::bots::int_in;
 use crate::bots::names::draw_username;
@@ -127,6 +128,9 @@ pub trait BotRecord {
     fn trio(&self) -> Option<&FrozenTrio>;
     /// R641000: the catalog version its trio was dealt for, or none before it was.
     fn trio_catalog_version(&self) -> Option<&str>;
+    /// R1834005: its wardrobe and the picks it wears, drawn by the pool (`bots::cosmetics::redraw`); none
+    /// before the first draw.
+    fn cosmetics(&self) -> Option<&BotCosmetics>;
 }
 
 /// A bot as a plain record, for a host that holds no row type of its own (a Roblox script, the
@@ -156,6 +160,10 @@ pub struct BotFacts {
     pub decks_catalog_version: Option<String>,
     pub trio: Option<FrozenTrio>,
     pub trio_catalog_version: Option<String>,
+    /// R1834005: its wardrobe and the picks it wears; none before the pool first draws them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cosmetics: Option<BotCosmetics>,
 }
 
 impl BotRecord for BotFacts {
@@ -197,6 +205,9 @@ impl BotRecord for BotFacts {
     }
     fn trio_catalog_version(&self) -> Option<&str> {
         self.trio_catalog_version.as_deref()
+    }
+    fn cosmetics(&self) -> Option<&BotCosmetics> {
+        self.cosmetics.as_ref()
     }
 }
 

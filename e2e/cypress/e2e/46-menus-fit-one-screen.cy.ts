@@ -26,6 +26,7 @@ import {
   deckRowId,
   ts,
 } from "../../support/testids.ts";
+import { expectBackLinkBarOrder, expectLandingCornerOrder } from "../../support/topBar.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
 
 /** #1576's tavern home: its main screen and one more below the floor. */
@@ -135,7 +136,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.signOut();
         });
 
-        it("R1581000 /", () => {
+        it("R1581000 R3218000 /", () => {
           cy.visit("/");
           cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
           // The fan's cards are dealt in (R704): measured once every one is drawn.
@@ -143,6 +144,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
             expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
             for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
           });
+          expectLandingCornerOrder();
           expectOnScreen(viewport, LANDING_SCREENS);
         });
 
@@ -160,60 +162,69 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           expectOnScreen(viewport, LANDING_SCREENS);
         });
 
-        it("R1581000 /login", () => {
+        it("R1581000 R3218000 /login", () => {
           cy.visit(routes.login());
           cy.get(ts(loginTestid.form), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /login, creating an account", () => {
+        it("R1581000 R3218000 /login, creating an account", () => {
           cy.visit(routes.login());
           cy.get(ts(loginTestid.mode), { timeout: timeouts.view }).click();
           cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
           cy.get(ts(consentTestid.birthYear)).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /reset-password", () => {
+        it("R1581000 R3218000 /reset-password", () => {
           cy.visit("/reset-password");
           cy.get(ts(resetTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /almanac", () => {
+        it("R1581000 R3218000 /almanac", () => {
           cy.visit("/almanac");
           cy.get(ts(SCREEN.almanac), { timeout: timeouts.view }).should("be.visible");
           cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /patch-notes", () => {
+        it("R1581000 R3218000 /patch-notes", () => {
           cy.visit("/patch-notes");
           cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /stats", () => {
+        it("R1581000 R3218000 /stats", () => {
           cy.visit("/stats");
           cy.get(ts(statsTestid.summaryTiles), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /practice", () => {
+        it("R1581000 R3218000 /practice", () => {
           cy.visit(routes.practice());
           cy.get(ts(practiceTestid.setup), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /play, signed out", () => {
+        it("R1581000 R3218000 /play, signed out", () => {
           cy.visit(routes.play());
           cy.get(ts(PLAY_SIGN_IN), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /replays, signed out", () => {
+        it("R1581000 R3218000 /replays, signed out", () => {
           cy.visit(routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -238,19 +249,21 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.freeAccount(accounts.p1());
         });
 
-        it("R1581000 /play", () => {
+        it("R1581000 R3218000 /play", () => {
           cy.visitAs(accounts.p1(), routes.play());
           cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /decks", () => {
+        it("R1581000 R3218000 /decks", () => {
           cy.visitAs(accounts.p1(), routes.deckbuilder());
           cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /decks, a deck open", () => {
+        it("R1581000 R3218000 /decks, a deck open", () => {
           // One full deck, whatever specs ran before this one saved: the open deck's pool is the big
           // list this menu holds.
           cy.clearDecks(accounts.p1());
@@ -260,69 +273,80 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
             // A phone shows the list alone until a deck is opened (a desktop opens it already).
             cy.get(ts(deckRowId(deckId))).click();
             cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+            expectBackLinkBarOrder();
             expectOnScreen(viewport, ONE_SCREEN);
           });
         });
 
-        it("R1581000 /account", () => {
+        it("R1581000 R3218000 /account", () => {
           cy.visitAs(accounts.p1(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /leaderboard", () => {
+        it("R1581000 R3218000 /leaderboard", () => {
           cy.visitAs(accounts.p1(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /replays", () => {
+        it("R1581000 R3218000 /replays", () => {
           cy.visitAs(accounts.p1(), routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /together", () => {
+        it("R1581000 R3218000 /together", () => {
           cy.visitAs(accounts.p1(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /collection", () => {
+        it("R1581000 R3218000 /collection", () => {
           cy.visitAs(accounts.p1(), routes.collection());
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /collection, Cards", () => {
+        it("R1581000 R3218000 /collection, Cards", () => {
           cy.visitAs(accounts.p1(), routes.collectionCards());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /collection, Cosmetics", () => {
+        it("R1581000 R3218000 /collection, Cosmetics", () => {
           cy.visitAs(accounts.p1(), `${routes.collection()}?section=cosmetics`);
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /shop", () => {
+        it("R1581000 R3218000 /shop", () => {
           cy.visitAs(accounts.p1(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /series, choosing a deck", () => {
+        it("R1581000 R3218000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
           cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 /invite, the code screen", () => {
+        it("R1581000 R3218000 /invite, the code screen", () => {
           asPending();
           cy.visitAs(accounts.p1(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
