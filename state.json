@@ -16698,14 +16698,26 @@
       "waiting_comment": 6648218890
     },
     "3115": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-05T05:36:50Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-05T01:44:36Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:89f98098-1793856974",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-05T05:36:50Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3116": {
       "action": "build",
@@ -17419,9 +17431,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T05:26:27Z",
+    "at": "2026-11-05T05:36:50Z",
     "url": "",
-    "what": "review #3146 on claude-8"
+    "what": "plan #3115 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T05:23:29Z",
