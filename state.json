@@ -17548,6 +17548,13 @@
     "3158": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41988416140",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-05T09:11:16Z",
+        "until": "2026-11-05T09:41:16Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
