@@ -753,3 +753,93 @@
   height: min(70vh, 560px);
   aspect-ratio: 5 / 7;
 }
+
+/* R3013001: a card's proficiency in its card view (ProficiencyPanel.tsx): its level, its progress and its stamps,
+   a locked one dimmed with the level it needs. The theme's and the palette's colours alone. */
+.tavern.app-shell .collection-proficiency {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tavern.app-shell .collection-proficiency__title,
+.tavern.app-shell .collection-proficiency__stamps-title {
+  margin: 0;
+  font-size: var(--type-lg);
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .collection-proficiency__level,
+.tavern.app-shell .collection-proficiency__plays {
+  margin: 0;
+  font-size: var(--type-md);
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .collection-proficiency__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tavern.app-shell button.collection-proficiency__none:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: var(--type-sm);
+  box-shadow: none;
+}
+
+.tavern.app-shell button.collection-proficiency__none:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[aria-pressed="true"],
+.tavern.app-shell button.collection-proficiency__stamp:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[aria-pressed="true"] {
+  border-color: var(--tavern-gold);
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .collection-proficiency__stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell button.collection-proficiency__stamp:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 72px;
+  min-height: 0;
+  padding: 6px 4px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: var(--type-xs);
+  font-weight: 700;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.tavern.app-shell button.collection-proficiency__stamp:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):is(:hover, :focus-visible) {
+  border-color: var(--tavern-gold);
+}
+
+.tavern.app-shell button.collection-proficiency__stamp:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-locked="true"] {
+  cursor: not-allowed;
+}
+
+.tavern.app-shell .collection-proficiency__stamp .cf-stamp {
+  width: 40px;
+}
+
+.tavern.app-shell .collection-proficiency__stamp[data-locked="true"] .cf-stamp {
+  filter: grayscale(1) brightness(0.5);
+}
+
+.tavern.app-shell .collection-proficiency__lock {
+  text-align: center;
+  line-height: 1.15;
+  color: var(--tavern-text-dim);
+}

@@ -138,6 +138,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `series` | **none** | no policy | none — holds both frozen trios and the hidden picks (R259) |
 | `tutorial_progress` | own row | `profile_id = auth.uid()` | none — the server merges a device's progress into it, never removing a lesson (R320) |
 | `card_cosmetic_picks` | own rows | `profile_id = auth.uid()` | **none** — every write is the server's, through `/api/card-picks`, which checks a pick's kind and ownership (R1834000, R1834001) |
+| `card_proficiency` | own rows | `profile_id = auth.uid()` | **none** — every write is the server's: a game's pay counts its plays and levels (R3013000), and `/api/proficiency/stamp` picks a stamp the card's level has unlocked (R3013001) |
 | `game_records` | **none** | no policy | none — holds both hands and both decklists of every recorded game (R376) |
 | `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
 | `emote_events` | **none** | no policy | none (R1442) |
