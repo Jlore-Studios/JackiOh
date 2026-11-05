@@ -31,7 +31,8 @@ import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
 import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
-import { foilFor, type FaceModel } from "./model.ts";
+import { foilFor } from "./frame.ts";
+import type { FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
 import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
 import {

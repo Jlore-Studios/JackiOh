@@ -4,10 +4,12 @@
 //!
 //! The first thing in is the Conquest series rules, from `crates/server` (#3098):
 //! [`series`] holds the rows and the transitions over them (SPEC §9.5, R330–R337), [`deck`] what a
-//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers.
+//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. [`face`] is what a
+//! card face prints, worked out from the catalog and a view in the reader's words (#3106).
 
 pub mod config;
 pub mod deck;
+pub mod face;
 pub mod series;
 
 /// A field with three states — absent, `null`, a value — kept apart:

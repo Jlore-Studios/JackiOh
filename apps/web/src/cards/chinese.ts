@@ -1,4 +1,4 @@
-// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the catalog
+// A card's words in Simplified Chinese (ME-CN, R1300–R1303) for the lists and filters that name cards, read from the two sidecars beside the catalog
 // (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases resolve to
 // crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no server is asked.
 // Presentation only (CLAUDE.md rule 7): no rule reads them.
@@ -18,19 +18,10 @@
 import chineseJson from "@jackioh/cards/chinese.json";
 import termsJson from "@jackioh/cards/chinese-terms.json";
 
-import {
-  fillParams,
-  type CardDef,
-  type CardType,
-  type Keyword,
-  type KeywordKind,
-  type Rarity,
-  type Tag,
-} from "@jackioh/shared";
+import type { CardDef, CardType, KeywordKind, Rarity, Tag } from "@jackioh/shared";
 
 import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
 import { isGlitch } from "./glitch.ts";
-import type { GlossaryTermId } from "./glossary.ts";
 
 /** One card's entry: its name and both faces' texts, and its preview labels' templates (R280). */
 export type ChineseEntry = {
@@ -56,7 +47,7 @@ export type ChineseTerms = {
   readonly created: string;
   /** R1382: what the frame prints in place of the five tribal tags on a card with them all. */
   readonly allTribes: string;
-  readonly glossary: Readonly<Record<GlossaryTermId, ChineseGlossaryEntry>>;
+  readonly glossary: Readonly<Record<string, ChineseGlossaryEntry>>;
 };
 
 const { "//": _generated, ...entries } = chineseJson;
@@ -149,35 +140,6 @@ export function chineseName(defId: string, english: string, def?: CardDef): stri
   if (own !== undefined) return own.name;
   if (def === undefined || ingredientEntries(def) === null) return english;
   return chineseDef(def).name;
-}
-
-/** R1301: a keyword as a Chinese face prints it: its word, with its number stuck to it ("护甲7"). */
-export function chineseKeyword(keyword: Keyword): string {
-  const word = CHINESE_TERMS.keywords[keyword.kind];
-  return "n" in keyword ? `${word}${String(keyword.n)}` : word;
-}
-
-/**
- * R280, R1301: a preview label in Chinese: of the card's templates (its own or its ingredients'), filled as
- * its face is (`fillParams`), the one whose English fill is `label` gives its Chinese template, filled the
- * same way. A label no template fills comes back as it is.
- */
-export function chinesePreviewLabel(
-  def: CardDef,
-  radiant: boolean,
-  label: string,
-  values?: Readonly<Record<string, number>>,
-): string {
-  const face = radiant ? "radiant" : "base";
-  const fill = (template: string): string =>
-    fillParams({ params: def.params, base: { ...def.base, text: template }, radiant: { ...def.radiant, text: template } }, face, values);
-  const ids = [def.id, ...(def.ingredients ?? []).map((ingredient) => ingredient.defId)];
-  for (const id of ids) {
-    for (const [english, chinese] of Object.entries(entryOf(id)?.previews ?? {})) {
-      if (fill(english) === label) return fill(chinese);
-    }
-  }
-  return label;
 }
 
 /**

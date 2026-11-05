@@ -1341,6 +1341,7 @@ name = "jackioh-shared"
 version = "0.5.0"
 dependencies = [
  "indexmap",
+ "jackioh-cards",
  "jackioh-engine",
  "serde",
  "serde_json",

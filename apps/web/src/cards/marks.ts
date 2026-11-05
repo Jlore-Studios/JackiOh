@@ -12,7 +12,11 @@
 import type { CardMark, CardView, GameEvent } from "@jackioh/shared";
 
 import type { FxPreset } from "../fx/types.ts";
-import { BERSERK_WORDS, FROZEN_WORDS } from "./cardState.ts";
+
+/** B5 E35, §6.1: what a Berserk unit's mark says. */
+const BERSERK_WORDS = "Berserk: at the start and end of its controller's turn it attacks its own hero";
+/** R1174000, R2246000, §6.1: what a Frozen unit's mark says. */
+const FROZEN_WORDS = "Frozen: can't attack, switch position or use its Activate; it thaws at the end of the turn it could have acted in";
 
 /** The colors one mark is drawn in, and its particles. */
 export type MarkPalette = {

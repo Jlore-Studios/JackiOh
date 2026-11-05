@@ -78,7 +78,7 @@
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
+import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { hasArtParts } from "./art/CardArt.tsx";
@@ -86,23 +86,20 @@ import { showcaseFamilyOf } from "./art/pictures.ts";
 import { SIGNATURE_MOTION } from "./art/motion.ts";
 import { CardStates } from "./CardStates.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
 import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
 import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
-import { nameTier, textTier, useFitText } from "./fit.ts";
+import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
-import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
+import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
 import { artMotionOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
-import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
+import { foilFor, frameRarity } from "./frame.ts";
+import type { FaceModel, RichText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
-import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
-import { questFaceText } from "./questFace.ts";
-import { MINUS } from "./tuning.ts";
 import { pixelNameUri } from "./pixelName.ts";
 import {
   NORMAL_LOOK,
@@ -154,116 +151,65 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
 }
 
-/** A keyword in the face's words: "Armor 2", or on a Chinese face "护甲2" (R1301). */
-function keywordWords(face: FaceModel, keyword: Keyword): string {
-  return face.chinese === true ? chineseKeyword(keyword) : keywordKey(keyword);
-}
-
-/** A keyword kind in the face's words (a Degrade's removed one, R386), Chinese on a Chinese face. */
-function kindWords(face: FaceModel, kind: KeywordKind): string {
-  return face.chinese === true ? CHINESE_TERMS.keywords[kind] : kind;
-}
-
-/** The keywords a face in play has gained, as the rules box prints them. Empty when none. */
-export function gainedLine(face: FaceModel): string {
-  return face.gained.map((keyword) => keywordWords(face, keyword)).join(face.chinese === true ? CHINESE_COMMA : ", ");
-}
-
-/** R386: the keyword chips a tuned face prints, as words: "+Rush −Taunt". Empty when none. */
+/** The keyword chips a tuned face prints, as words: "+Rush −Taunt". Empty when none. */
 export function tuningLine(face: FaceModel): string {
-  const tuning = face.tuning;
-  if (tuning === undefined || tuning === null) return "";
-  return [
-    ...tuning.added.map((keyword) => `+${keywordWords(face, keyword)}`),
-    ...tuning.removed.map((kind) => `${MINUS}${kindWords(face, kind)}`),
-  ].join(" ");
-}
-
-/** R1177001: the word a token's type line prints. */
-export const TOKEN_WORD = "Token";
-
-/** R1177001: the type line in the face's words: the card type, after "Token" on a token (R1301: 衍生物 on a Chinese face). */
-export function typeLine(face: FaceModel): string {
-  if (face.chinese === true) {
-    const type = CHINESE_TERMS.types[face.type];
-    return face.token === true ? `${CHINESE_TERMS.tags.Token}${type}` : type;
-  }
-  return face.token === true ? `${TOKEN_WORD} ${face.type}` : face.type;
-}
-
-/** A frame tag in the face's words (R1301). */
-function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
-  if (tag === ALL_TRIBES) return face.chinese === true ? CHINESE_TERMS.allTribes : ALL_TRIBES;
-  return face.chinese === true ? CHINESE_TERMS.tags[tag] : tag;
+  return face.tuningChips.map((chip) => `${chip.sign}${chip.text}`).join(" ");
 }
 
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
 function printedText(face: FaceModel, text: string): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${text}${values}`, creditsLine(face), gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${text}${values}`, face.creditsLine, face.gainedLine.full, ...face.grants.map((grant) => grant.full), tuningLine(face)]
+    .filter((part) => part !== "")
+    .join(" ");
 }
 
 /** What a face's rules box prints (issues #814, #1017). */
 export type RulesBox = {
   /** The words the rules box prints: the whole text, or a short form ending in "…". */
-  shown: string;
-  /** The short form, when the face prints one (`data-short`). */
-  short: string | null;
+  shown: RichText;
+  /** The face prints a short form (`data-short`). */
+  short: boolean;
   /** The face prints less than its whole text: its rules box clamps, never shrinking the art. */
   less: boolean;
-  /**
-   * R2450000: a Quest card's `shown` with its own marks and tuned numbers, where they stand in it
-   * (questFace.ts). Absent wherever `shown` is the whole text or its start.
-   */
-  text?: FaceText;
 };
 
 /**
  * Prints less than the whole text, which the hover preview prints on the face's left: a Summit in play given
- * its level prints its header and the next Ascent line; a Quest card (R1837000) the stage it stands at
- * (questFace.ts, R2450000); a face printing its catalog text its short form (shortText.ts SHORT_FORMS); a
- * face in play past the hover preview's limit clamps. `fullArtOn` is the caller's `useFullArt(defId)`
- * (R1108000, R1313000); without it, the setting decides.
+ * its level prints its header and the next Ascent line; a Quest card (R1837000) the stage it stands at; a
+ * face printing its catalog text its short form; a face in play past the hover preview's limit clamps. The
+ * face model decided every one of those (`face.short`, `.summit`, `.questBox`, `.clamp`); the box's size is
+ * the layout's. `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the
+ * setting decides. `ascentLevel` is the Summit's level where the surface gives it.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
-  const full = face.text.full;
-  if (showsFullArt(face, fullArtOn)) return { shown: "", short: null, less: printedText(face, full) !== "" };
+  if (showsFullArt(face, fullArtOn)) return { shown: EMPTY_TEXT, short: false, less: printedText(face, face.text.full) !== "" };
   // R2450000: a staged Quest prints one stage, a short form of its own; In Too Deep in play also clamps.
-  const quest = questFaceText(face);
+  const quest = face.questBox;
   if (quest !== null) {
-    const less = quest.less || (face.inPlay && overLimit(printedText(face, quest.full), PREVIEW_TEXT_LIMIT));
-    return { shown: quest.full, short: quest.less ? quest.full : null, less, text: quest };
+    const less = quest.less || (face.inPlay && overLimit(printedText(face, quest.text.full), PREVIEW_TEXT_LIMIT));
+    return { shown: quest.text, short: quest.less, less };
   }
-  const summit = summitShortText(face.defId, full, ascentLevel);
-  // A face in play that prints other than its catalog text (a #98 Heroic Power's rolled power, a
-  // Vanilla unit's lost text, inPlay.ts) takes no short form; a Call to Chaos's "???" has no colon to cut at.
-  const form = full === "" || face.printed !== null ? null : shortFormOf(face.defId, face.radiant);
-  const short = summit ?? (form === null ? null : cutText(full, form));
-  const shown = short ?? full;
-  const less = short !== null || form === "clamp" || (face.inPlay && overLimit(printedText(face, shown), PREVIEW_TEXT_LIMIT));
-  return { shown, short, less };
+  const summit = ascentLevel === null || ascentLevel === undefined ? undefined : face.summit;
+  const short = summit ?? face.short;
+  const shown = short ?? face.text;
+  const less = short !== undefined || face.clamp || (face.inPlay && overLimit(printedText(face, shown.full), PREVIEW_TEXT_LIMIT));
+  return { shown, short: short !== undefined, less };
 }
+
+const EMPTY_TEXT: RichText = { full: "", spans: [] };
 
 /** R386: the keywords a Buff added ("+") and a Nerf removed (struck "−"), at the foot of the rules box. */
 function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
-  const tuning = face.tuning;
-  if (tuning === undefined || tuning === null || (tuning.added.length === 0 && tuning.removed.length === 0)) return null;
+  if (face.tuningChips.length === 0) return null;
   return (
     <span className="cf-text-tuning">
-      {tuning.added.map((keyword) => (
-        <span key={`+${keywordKey(keyword)}`} className="cf-kw-chip" data-tuned="added" title={t("Gained {keyword}", { keyword: keywordWords(face, keyword) })}>
+      {face.tuningChips.map((chip) => (
+        <span key={`${chip.sign}${chip.text}`} className="cf-kw-chip" data-tuned={chip.added ? "added" : "removed"} title={chip.title}>
           <span className="cf-kw-sign" aria-hidden="true">
-            +
+            {chip.sign}
           </span>
-          {keywordWords(face, keyword)}
-        </span>
-      ))}
-      {tuning.removed.map((kind) => (
-        <span key={`-${kind}`} className="cf-kw-chip" data-tuned="removed" title={t("Lost {keyword}", { keyword: kindWords(face, kind) })}>
-          <span className="cf-kw-sign" aria-hidden="true">
-            {MINUS}
-          </span>
-          {kindWords(face, kind)}
+          {chip.text}
         </span>
       ))}
     </span>
@@ -336,15 +282,13 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
-  // Issues #814, #1017: a short form is the full text's prefix, so its values (R280), marks and tuned
-  // numbers keep their offsets, and RulesText drops marks past the printed words. A Quest card's
-  // stage (R2450000) is no prefix, so it brings its marks and tuned numbers with it (`text`).
-  const { shown, short, less, text } = faceText(face, ascentLevel, fullArtOn);
-  const words = text ?? face.text;
+  // Issues #814, #1017: the face model gives the box's words whole, as a short form, or as a Quest's stage
+  // (R2450000), each with its own spans; the box's size is the layout's.
+  const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
   // #912: the hover preview shows the whole card, so the native tooltip only stands in for it
   // while hover previews are off, as Card.tsx's root title does (B19).
   const tooltip = settings.hoverPreviews || face.text.full === "" ? undefined : face.text.full;
-  const printed = printedText(face, shown);
+  const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
   useFitText(nameRef, bare ? "" : face.name);
@@ -496,14 +440,14 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         {stamp !== null && <ProficiencyStamp level={stamp} />}
 
-        {!fullArt && <span className="card-type">{glitch ? GLITCH_WORDS.type : typeLine(face)}</span>}
+        {!fullArt && <span className="card-type">{face.typeLine}</span>}
 
         {full && !fullArt && (
           <span
             className="card-text"
             ref={textRef}
             title={tooltip}
-            data-short={short !== null ? "true" : undefined}
+            data-short={short ? "true" : undefined}
             data-less={less ? "true" : undefined}
           >
             {watermark !== null && (
@@ -511,43 +455,36 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             )}
             {face.inPlay && face.starship != null ? (
               // R2249000: a Starship lists its pieces in place of its text.
-              <StarshipPieces list={face.starship.list} />
+              <StarshipPieces starship={face.starship} />
             ) : (
               <span className="cf-text-base">
-                <RulesText
-                  text={shown}
-                  marks={words.marks}
-                  refs={face.refs}
-                  values={face.values}
-                  {...(words.tuned === undefined ? {} : { tuned: words.tuned })}
-                  chinese={face.chinese === true}
-                />
+                <RulesText rich={shown} />
               </span>
             )}
             {face.credits != null && (
               <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>
-                {creditsLine(face)}
+                {face.creditsLine}
               </span>
             )}
             {face.gained.length > 0 && (
               <span className="cf-text-gained" data-gained={face.gained.map(keywordKey).join("|")}>
-                <RulesText text={gainedLine(face)} />
+                <RulesText rich={face.gainedLine} />
               </span>
             )}
             {face.grants.map((grant) => (
-              <span key={grant} className="cf-text-granted">
-                <RulesText text={grant} />
+              <span key={grant.full} className="cf-text-granted">
+                <RulesText rich={grant} />
               </span>
             ))}
             <TuningKeywords face={face} />
           </span>
         )}
 
-        {full && !fullArt && !glitch && frameTags(face.tags).length > 0 && (
+        {full && !fullArt && !glitch && face.tagChips.length > 0 && (
           <span className="cf-tags">
-            {frameTags(face.tags).map((tag) => (
-              <span key={tag} className="cf-tag" data-tag={tag}>
-                {tagWords(face, tag)}
+            {face.tagChips.map((chip) => (
+              <span key={chip.tag} className="cf-tag" data-tag={chip.tag}>
+                {chip.text}
               </span>
             ))}
           </span>

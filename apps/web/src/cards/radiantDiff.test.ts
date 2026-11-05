@@ -1,5 +1,5 @@
 // R277: a Radiant face prints its whole catalog text and marks what its base face's text does not
-// have. The diff itself (radiantDiff.ts), then every real card rendered through it.
+// have. The diff itself (jackioh-shared `face/diff.rs`, through the module), then every real card rendered through it.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -16,7 +16,7 @@ import { CardFace, faceText } from "./CardFace.tsx";
 import { Extended } from "./inspect/Extended.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
-import { markedText, radiantMarks } from "./radiantDiff.ts";
+import { markedText, radiantMarks } from "../test/faceData.ts";
 
 afterEach(cleanup);
 
@@ -146,7 +146,7 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
         createElement(CardDefsProvider, {
           defs: CATALOG,
           children:
-            faceText(face).shown === face.text.full ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
+            faceText(face).shown.full === face.text.full ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
         }),
       );
       // A mark a reference's end splits ("Rush Tokens. Each": the mark runs out of the name) is one

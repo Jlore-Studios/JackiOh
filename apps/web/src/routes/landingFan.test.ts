@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import { nameTier, textTier } from "../cards/fit.ts";
 import { FULL_ART_CARDS, isFullArtCard } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
-import { faceLines, overLimit, shortFormOf } from "../cards/shortText.ts";
+import { faceLines, overLimit } from "../cards/fit.ts";
 import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN, FULL_ART_WEIGHT_FACTOR } from "../stats/config.ts";
 import { seeded } from "../test/random.ts";
 import {
@@ -257,7 +257,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
         const expected = [false, true].every((radiant) => {
           if (fullArt && isFullArtCard(def.id)) return true;
           const text = faceModel({ defId: def.id, def, radiant }).text.full;
-          return shortFormOf(def.id, radiant) === null && faceLines(text, FAN_TEXT_LIMIT.charsPerLine) <= FAN_TEXT_LIMIT.lines;
+          return !faceModel({ defId: def.id, def, radiant }).hasShortForm && faceLines(text, FAN_TEXT_LIMIT.charsPerLine) <= FAN_TEXT_LIMIT.lines;
         });
         expect(fitsTheFan(def, fullArt), `${def.id} with full art ${fullArt ? "on" : "off"}`).toBe(expected);
       }
@@ -298,7 +298,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     // R2511000: a Legacy card of a hero's card is held to its text, full art on or off.
     expect(HERO_LEGACY.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
     for (const def of HERO_LEGACY) {
-      const words = [false, true].every((radiant) => shortFormOf(def.id, radiant) === null && !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
+      const words = [false, true].every((radiant) => !faceModel({ defId: def.id, def, radiant }).hasShortForm && !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
       for (const fullArt of [true, false]) expect(fitsTheFan(def, fullArt), `${def.id}, full art ${fullArt ? "on" : "off"}`).toBe(words);
     }
   });

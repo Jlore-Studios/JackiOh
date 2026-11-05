@@ -11,7 +11,6 @@ import { CardBack } from "../CardBack.tsx";
 import { CardFace } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
 import type { FaceModel } from "../model.ts";
-import { glossaryFor } from "../rules.ts";
 import {
   LIST_PREVIEW_COLUMNS,
   LIST_PREVIEW_FACE_HEIGHT_PX,
@@ -355,7 +354,7 @@ export function CardListSheet({
               </div>
               <Printed face={opened} />
             </TermTips>
-            <Glossary entries={glossaryFor(opened)} />
+            <Glossary entries={opened.glossary} />
           </div>
         )}
 

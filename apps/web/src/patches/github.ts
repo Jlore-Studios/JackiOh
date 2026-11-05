@@ -7,7 +7,7 @@
 // to main, as `shipped.json` records it (R646), so the releases sit in the order and on the days the
 // patches shipped. Public data only (CLAUDE.md rule 7).
 
-import type { TextRange } from "../cards/radiantDiff.ts";
+import type { Utf16Range as TextRange } from "../wire/generated/Utf16Range.ts";
 import { changeSummary } from "./ChangeList.tsx";
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import type { CardDelta, FieldChange } from "./diff.ts";

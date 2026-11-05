@@ -6,13 +6,12 @@
 import type { ReactElement } from "react";
 
 import { t, useLocale } from "../../i18n/i18n.ts";
-import { questProgress, stageWords, stateBadges } from "../cardState.ts";
 import { MARK_GLYPH, markWords } from "../marks.ts";
 import { Icon } from "../icons.tsx";
-import { locWords, type FaceModel } from "../model.ts";
+import type { FaceModel } from "../model.ts";
+import { locWords } from "./locWords.ts";
 import { RulesText } from "../RulesText.tsx";
 import { TALLY_GLYPH, tallyWords } from "../tallies.ts";
-import { VERDICT_GLYPH, VERDICT_WORD, WAY_GLYPH, changeWords } from "../tuning.ts";
 import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
 /** R404: the glyphs of a quest and of an aura its line holds; R511: of a copier's note. */
@@ -25,6 +24,11 @@ const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string
   upcoming: "to come",
 };
 const AURA_GLYPH = "✦";
+/** The glyph each way a number moved is drawn with, so a mark never rests on color alone. */
+const TUNED_GLYPH = "◆";
+const WAY_GLYPH: Readonly<Record<"better" | "worse", string>> = { better: "▲", worse: "▼" };
+/** A quest's progress, "1/2". */
+const progressOf = (quest: { progress: number; goal: number }): string => `${String(quest.progress)}/${String(quest.goal)}`;
 const COPY_GLYPH = "“";
 const ATTACK_REASON_GLYPH = "⊘";
 /** R979000: the attack reason's sibling. */
@@ -36,7 +40,7 @@ export function copyingWords(copying: { name: string; radiant: boolean }): strin
 
 export function hasStateNotes(face: FaceModel): boolean {
   return (
-    stateBadges(face).length > 0 ||
+    face.badges.length > 0 ||
     (face.quest?.stages ?? []).length > 0 ||
     (face.marks ?? []).length > 0 ||
     (face.quest?.auras ?? []).length > 0 ||
@@ -54,18 +58,18 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
     <div className="inspect-tuned" data-testid={INSPECT_TUNED} data-tuned={tuning.verdict}>
       <p className="inspect-tuned-ribbon">
         <span className="inspect-tuned-glyph" aria-hidden="true">
-          {VERDICT_GLYPH[tuning.verdict]}
+          {tuning.glyph}
         </span>
-        {t(VERDICT_WORD[tuning.verdict])}
+        {tuning.word}
       </p>
       <ul className="inspect-tuned-changes">
         {tuning.changes.map((change, index) => {
-          const words = changeWords(change);
+          const words = tuning.changeWords[index] ?? "";
           const way = change.kind === "set" ? null : change.way;
           return (
             <li key={`${String(index)}:${words}`} className="inspect-tuned-change" data-change={change.kind} data-way={way ?? undefined}>
               <span className="inspect-tuned-glyph" aria-hidden="true">
-                {way === null ? VERDICT_GLYPH.tuned : WAY_GLYPH[way]}
+                {way === null ? TUNED_GLYPH : WAY_GLYPH[way]}
               </span>
               {words}
               {way === null ? null : <span className="inspect-sr">{` (${t(way)})`}</span>}
@@ -79,7 +83,7 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
 
 export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
   useLocale();
-  const others = stateBadges(face).filter((badge) => badge.kind !== "tuned" && badge.kind !== "quest" && badge.kind !== "questStage");
+  const others = face.badges.filter((badge) => badge.kind !== "tuned" && badge.kind !== "quest" && badge.kind !== "questStage");
   const tuned = face.tuning !== undefined && face.tuning !== null;
   // R437: a mark's words, which on the board live only in its badge's tooltip (no hover on touch).
   const marks = face.marks ?? [];
@@ -151,12 +155,12 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
               </span>
               <span className="inspect-state-words">
                 {t("Quest: ")}
-                <RulesText text={quest.text} /> <span className="inspect-quest-progress">({questProgress(quest)})</span>
+                <RulesText words={quest.text} /> <span className="inspect-quest-progress">({progressOf(quest)})</span>
                 <span className="inspect-quest-label">{t("Rewards")}</span>
                 <ul className="inspect-quest-rewards">
                   {quest.rewards.map((reward) => (
                     <li key={reward.id} data-reward={reward.id}>
-                      <RulesText text={reward.text} />
+                      <RulesText words={reward.text} />
                     </li>
                   ))}
                 </ul>
@@ -169,7 +173,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                 {QUEST_GLYPH}
               </span>
               <span className="inspect-state-words">
-                {stageWords(stages)}
+                {face.badges.find((badge) => badge.kind === "questStage")?.words}
                 <ol className="inspect-quest-stage-list">
                   {stages.map((stage, index) => (
                     <li
@@ -184,11 +188,11 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                       <ul className="inspect-quest-stage-goals">
                         {stage.goals.map((goal) => (
                           <li key={goal}>
-                            <RulesText text={goal} />
+                            <RulesText words={goal} />
                           </li>
                         ))}
                       </ul>
-                      <span className="inspect-quest-label">{t("Reward")}</span> <RulesText text={stage.reward} />
+                      <span className="inspect-quest-label">{t("Reward")}</span> <RulesText words={stage.reward} />
                     </li>
                   ))}
                 </ol>
@@ -201,7 +205,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                 {AURA_GLYPH}
               </span>
               <span className="inspect-state-words">
-                <RulesText text={aura.text} />
+                <RulesText words={aura.text} />
               </span>
             </li>
           ))}

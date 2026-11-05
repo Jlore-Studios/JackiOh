@@ -758,6 +758,18 @@ pub fn series(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::series::apply(&call))
 }
 
+// What a card face prints (#3106; `jackioh_shared::face`)
+
+/// One call of `jackioh_shared::face`, the card face model: the input is a `FaceCall`
+/// (`{ "call": "card", "source": …, "locale": "zh-CN" }`, `live`, `view`, `named`, `text` or `wordDiff`), the
+/// output a `FaceAnswer` (`{ "answer": "face", "face": … }`, `faces`, `rich`, `diff` or `noFace`). The
+/// catalog is the one `init` registered; the locale comes in as an argument, and the answer is final text as
+/// spans in the reader's words (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn face(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::face::FaceCall = parse("face: the call", call_json)?;
+    to_json(&jackioh_shared::face::apply(&call))
+}
+
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
 // mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
 // feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only
@@ -1177,6 +1189,53 @@ mod run_body_tests {
             serde_json::from_str::<String>(&text).unwrap(),
             jackioh_run::run_daily_seed("2026-11-01", 2)
         );
+    }
+}
+
+#[cfg(test)]
+mod face_body_tests {
+    use super::*;
+    use serde_json::Value;
+
+    /// The body is `jackioh_shared::face::apply` over JSON: a card in, its face out, in the locale it is asked in.
+    #[test]
+    fn face_body_answers_a_face_in_the_asked_locale() {
+        jackioh_cards::register_all();
+        let ask = |locale: &str| {
+            let call = format!(
+                r#"{{ "call": "card", "locale": "{locale}", "source": {{ "defId": "core-020", "radiant": false }} }}"#
+            );
+            serde_json::from_str::<Value>(&face(&call).unwrap()).unwrap()
+        };
+        let english = ask("en");
+        assert_eq!(english["answer"], "face");
+        assert_eq!(english["face"]["name"], "Pointmaster");
+        assert_eq!(english["face"]["text"]["full"], "First Strike");
+        assert_ne!(ask("zh-CN")["face"]["name"], "Pointmaster");
+    }
+
+    #[test]
+    fn face_body_answers_the_words_of_a_text_and_the_diff_of_two() {
+        jackioh_cards::register_all();
+        let text =
+            serde_json::from_str::<Value>(&face(r#"{ "call": "text", "text": "Cry: Armor 2" }"#).unwrap())
+                .unwrap();
+        assert_eq!(text["answer"], "rich");
+        assert_eq!(text["text"]["spans"][0]["kind"], "keyword");
+        let diff = serde_json::from_str::<Value>(
+            &face(r#"{ "call": "wordDiff", "before": "Deal 3 damage.", "after": "Deal 4 damage." }"#)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(diff["added"][0]["start"], 5);
+    }
+
+    #[test]
+    fn face_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{ "call": "nothing" }"#] {
+            let error = face(call).unwrap_err();
+            assert!(error.starts_with("face: the call"), "{call:?}: {error}");
+        }
     }
 }
 

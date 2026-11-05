@@ -11,7 +11,7 @@ import { VOICE_PRIORITY } from "../../audio/constants.ts";
 import { setAudioEngineForTests } from "../../audio/engine.ts";
 import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../../audio/types.ts";
-import { locWords } from "../model.ts";
+import { locWords } from "./locWords.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
 import { CardDetail, closeInspect } from "./index.ts";

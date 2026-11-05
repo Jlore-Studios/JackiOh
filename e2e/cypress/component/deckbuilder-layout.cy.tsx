@@ -263,7 +263,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // B15 with R1017000: only a face that prints less than its whole text (shortText.ts: a short form,
+  // B15 with R1017000: only a face that prints less than its whole text (the face model's `short`: a short form,
   // or its text cut at the box's last line, like Meditative+ #4's) may clamp, as card-faces.cy.tsx holds.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;

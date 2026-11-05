@@ -71,7 +71,11 @@ pub fn constants() -> Result<String, String> {
         TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
         VOTE_TALLY_SIZE,
     );
-    put_shared!(all; MS_PER_SECOND, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED);
+    put_shared!(
+        all;
+        GLITCH_MARK_IN, GLITCH_ODDS_SCALE, GLITCH_SEED, GLITCH_SWAP_IN, MS_PER_SECOND, SERIES_MAX_GAMES, SERIES_PICK_SECONDS,
+        SERIES_WINS_NEEDED, TEMPORARY_LAST_COUNT,
+    );
     to_json(&Value::Object(all))
 }
 
@@ -168,7 +172,12 @@ mod tests {
                 "MS_PER_SECOND",
                 "SERIES_WINS_NEEDED",
                 "SERIES_MAX_GAMES",
-                "SERIES_PICK_SECONDS"
+                "SERIES_PICK_SECONDS",
+                "TEMPORARY_LAST_COUNT",
+                "GLITCH_SEED",
+                "GLITCH_SWAP_IN",
+                "GLITCH_MARK_IN",
+                "GLITCH_ODDS_SCALE"
             ],
             "config.rs gained or lost a constant: put it in `constants` (put_shared!) and here"
         );
@@ -188,6 +197,26 @@ mod tests {
             (
                 "SERIES_PICK_SECONDS",
                 serde_json::to_value(jackioh_shared::config::SERIES_PICK_SECONDS),
+            ),
+            (
+                "TEMPORARY_LAST_COUNT",
+                serde_json::to_value(jackioh_shared::config::TEMPORARY_LAST_COUNT),
+            ),
+            (
+                "GLITCH_SEED",
+                serde_json::to_value(jackioh_shared::config::GLITCH_SEED),
+            ),
+            (
+                "GLITCH_SWAP_IN",
+                serde_json::to_value(jackioh_shared::config::GLITCH_SWAP_IN),
+            ),
+            (
+                "GLITCH_MARK_IN",
+                serde_json::to_value(jackioh_shared::config::GLITCH_MARK_IN),
+            ),
+            (
+                "GLITCH_ODDS_SCALE",
+                serde_json::to_value(jackioh_shared::config::GLITCH_ODDS_SCALE),
             ),
         ] {
             assert_eq!(all.get(name), Some(&value.expect("serializes")), "{name}");

@@ -18,7 +18,7 @@ import { renderBoard } from "../test/board.tsx";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { must } from "../test/stubServer.ts";
-import { STARSHIP_GLYPH } from "../cards/cardState.ts";
+const STARSHIP_GLYPH = "\u2604\uFE0E";
 
 function readSheet(fromWeb: string): string {
   for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {

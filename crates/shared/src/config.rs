@@ -18,3 +18,16 @@ pub const SERIES_WINS_NEEDED: i32 = 3;
 pub const SERIES_MAX_GAMES: i32 = 7;
 /// SPEC §11 R333: how long both players have to pick their deck for the next game of a series.
 pub const SERIES_PICK_SECONDS: i64 = 60;
+
+/// #2437, R637, R2179001: the Temporary count at which a card in a hand is discarded at its owner's next end of
+/// turn. A plain Temporary is Temporary 1; the face model's Temporary badge counts above it (`face/state.rs`).
+pub const TEMPORARY_LAST_COUNT: i32 = 1;
+
+/// Glitch (issue #170, SPEC §7) prints corrupted words (`face/glitch.rs`): the fixed seed every host jumbles with,
+/// so every client prints the same jumble.
+pub const GLITCH_SEED: u32 = 170;
+/// Out of [`GLITCH_ODDS_SCALE`]: below this a Glitch character becomes a glyph.
+pub const GLITCH_SWAP_IN: u32 = 45;
+/// Out of [`GLITCH_ODDS_SCALE`]: below `GLITCH_SWAP_IN` plus this a Glitch character gains a combining mark.
+pub const GLITCH_MARK_IN: u32 = 35;
+pub const GLITCH_ODDS_SCALE: u32 = 100;

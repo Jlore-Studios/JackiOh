@@ -271,6 +271,24 @@ fn static_exports_answer_what_the_core_bodies_answer() {
 }
 
 #[test]
+fn face_export_answers_what_the_core_body_answers() {
+    init();
+    let card = r#"{ "call": "card", "locale": "zh-CN", "source": { "defId": "core-020", "radiant": true } }"#;
+    let answer = call!(face; card;);
+    assert_eq!(answer, expect(wasm_core::face(card)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    let printed: Value = serde_json::from_str(&answer.text).expect("JSON");
+    assert_eq!(printed["answer"], "face");
+    assert_eq!(printed["face"]["defId"], "core-020");
+    // The words are the reader's: a reader of Chinese reads the card from the Chinese table.
+    assert_ne!(printed["face"]["name"], "Pointmaster");
+    // A call that does not parse is the one failure.
+    let broken = call!(face; "{}";);
+    assert_eq!(broken, expect(wasm_core::face("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
 fn series_export_answers_what_the_core_body_answers() {
     init();
     let started = r#"{

@@ -11,9 +11,10 @@
 
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
-import { marksOf } from "../cards/marks.ts";
-import { faceModel, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
+import { faceModel, type FaceModel, type RolledPower } from "../cards/index.ts";
 import type { NamedTally } from "../cards/tallies.ts";
+import { getLocale } from "../i18n/i18n.ts";
+import { face } from "../wasm/index.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
 
 /** R97: the id and definition an event or a prompt carries in place of a card the viewer may not read. */
@@ -46,97 +47,32 @@ export type LiveFacts = {
   inHand?: boolean;
 };
 
-/** The face in play of a card the view lists: its live cost, and whatever else the view says about it. */
+/**
+ * The face in play of a card the view lists: its live cost, and whatever else the view says about it. The
+ * face model reads the card's account off the view (jackioh-shared `face/live.rs`); this passes the card, its
+ * definition and the facts the view puts elsewhere.
+ */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
-  const unit = isUnitView(card) ? card : undefined;
-  const inPlay: InPlay = {};
-  if (unit === undefined && card.attack !== undefined && card.health !== undefined) {
-    inPlay.handStats = { attack: card.attack, health: card.health };
-  }
-  // B5 E38, R1438: a hand card's keywords as the view gives them, a given Lucky included.
-  if (unit === undefined && card.keywords !== undefined) inPlay.handKeywords = card.keywords;
-  // R43, R243: in hand the power rides on the card; on the field the hero's power list names it.
-  const power = card.power !== undefined ? { name: card.power } : facts.fieldPower;
-  if (power !== undefined) inPlay.power = power;
-  // R2247000: the word the card shows in place of its text (Anomaly Found!'s board code).
-  if (card.label !== undefined) inPlay.label = card.label;
-  // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`).
-  if (unit?.vanilla === true || (unit === undefined && "vanilla" in card && card.vanilla === true)) {
-    inPlay.vanilla = true;
-  }
-  // R280: what the card's formula comes to now, where the view says (never in the collection).
-  if (card.preview !== undefined && card.preview.length > 0) inPlay.preview = card.preview;
-  // B3.4, R386: the numbers the card has now fill its text's `{key}`s, and what changed is marked.
-  if (card.params !== undefined) inPlay.params = card.params;
-  if (card.tuning !== undefined) inPlay.tuning = card.tuning;
-  // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
-  if (card.brittle !== undefined) inPlay.brittle = card.brittle;
-  // #2437: a hand card's face carries the count its Temporary has left (R2179001).
-  if (unit === undefined && facts.inHand === true) inPlay.inHand = true;
-  // R980: the card's element, while a Feng Shui acts.
-  if (card.element !== undefined) inPlay.element = card.element;
-  if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
-  // R437: the marks on it, which the inspect overlays spell out (the board draws them, CardMarks.tsx).
-  const marks = marksOf(card);
-  if (marks.length > 0) inPlay.marks = marks;
-  // B3.1, R383: a Field Spell, Trap or Field Trap standing in a unit zone as a Unit.
-  if (unit?.animated !== undefined) inPlay.animated = unit.animated;
-  // B5 E35: a Berserk unit.
-  if (unit?.berserk === true) inPlay.berserk = true;
-  // R1174000: a Frozen unit; R1848000: one Frozen forever.
-  if (unit?.frozen === true) inPlay.frozen = true;
-  // R1839000, R1839001: a Dormant card, with its countdown.
-  if (unit?.slumber !== undefined) inPlay.dormant = { turns: unit.slumber.turns ?? null };
-  if (unit?.frozenForever === true) inPlay.frozenForever = true;
-  // R1852000, R1852004: a Starship, with the pieces fused into it and the name it launched under.
-  // R2249000: and the pieces themselves, which its face lists in place of its text.
-  if (unit?.starship !== undefined) {
-    inPlay.starship = {
-      pieces: unit.starship.pieces.length,
-      name: unit.starship.name ?? null,
-      list: unit.starship.pieces.map((piece) => ({ defId: piece.defId, radiant: piece.radiant === true })),
-    };
-  }
-  // MD-B6, R943: a Created card, wherever the view carries the mark.
-  if (card.created === true) inPlay.created = true;
-  // R1956001: and the card that generated it, on the viewer's own Created card alone.
-  if (card.createdBy !== undefined) inPlay.createdBy = card.createdBy;
-  // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
-  if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
-  // R849000: the inspect notes spell it out.
-  if (unit?.attackReason !== undefined) inPlay.attackReason = unit.attackReason;
-  // R2321000: and the counts the field keeps on the unit.
-  if (facts.tallies !== undefined && facts.tallies.length > 0) inPlay.tallies = facts.tallies;
-  // R979000: a hand card, or (R1571000) one in the viewer's own graveyard, says why it cannot be played.
-  if (unit === undefined && card.playReason !== undefined) inPlay.playReason = card.playReason;
-  // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
-  if (card.quest !== undefined) inPlay.quest = card.quest;
-  const copies = card.copies;
-  if (copies !== undefined && facts.copied !== undefined) {
-    inPlay.copies = { def: facts.copied, radiant: copies.radiant, ...(copies.params === undefined ? {} : { params: copies.params }) };
-  }
-  // B2.7: the type the card has now, where it differs from its definition's (Blood Moon's Radiant face).
-  const type = card.type ?? facts.type;
-  return faceModel({
-    defId: card.defId,
-    def: info.def,
+  const answer = face({
+    call: "live",
+    card,
+    ...(info.def === undefined ? {} : { def: info.def }),
     name: info.name,
-    ...(type === undefined ? {} : { type }),
-    radiant: card.radiant,
-    // R1301: the view says the card is shown in Chinese; never a card the viewer may not read.
-    chinese: card.chinese === true,
-    // MD-B15, R923: the view's tags where they differ from the definition's (a granted tag).
-    ...(card.tags === undefined ? {} : { tags: card.tags }),
-    liveCost: card.cost,
-    // R1181003: the second badge is the view's price for the Embiggened version, where it has one.
-    ...(card.embiggenCost === undefined ? {} : { liveEmbiggenCost: card.embiggenCost }),
-    // R1848003: an X card whose X is set prints it on its gem.
-    ...(card.fixedX === undefined ? {} : { fixedX: card.fixedX }),
-    ...(unit === undefined
-      ? {}
-      : { live: { attack: unit.attack, health: unit.health, maxHealth: unit.maxHealth, keywords: unit.keywords } }),
-    inPlay,
+    facts: { ...facts, tallies: facts.tallies === undefined ? undefined : [...facts.tallies] },
+    locale: getLocale(),
   });
+  if (answer.answer !== "face") throw new Error(`the face model answered ${answer.answer} for a card`);
+  return answer.face;
+}
+
+/**
+ * Every face a view shows, by instance id, in one call: the cards it lists face up on the field, in the piles
+ * and in the viewer's own hand (jackioh-shared `face/live.rs`). The sentinel has none.
+ */
+export function viewFaces(view: PlayerView): Readonly<Record<string, FaceModel>> {
+  const answer = face({ call: "view", view, locale: getLocale() });
+  if (answer.answer !== "faces") throw new Error(`the face model answered ${answer.answer} for a view`);
+  return answer.faces;
 }
 
 function backrowType(card: CardView): CardType | undefined {

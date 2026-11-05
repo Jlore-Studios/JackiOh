@@ -1,23 +1,33 @@
-// inPlay.ts: the words a face in play prints where play and print part ways (SPEC §10.10).
-// `POWER_WORDS` is the client's copy of §8 #98's thirteen powers, keyed by the view's power name (R243).
-// The engine holds the same clauses and the client cannot load it online, so this test keeps the two tables one.
+// The words a face in play prints where play and print part ways (SPEC §10.10), worked out by jackioh-shared's
+// face model (`face/power.rs`). `POWER_WORDS` is the crate's data file of §8 #98's thirteen powers, keyed by the
+// view's power name (R243). The engine holds the same clauses, so this test keeps the two tables one.
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { subsystems } from "@jackioh/engine";
-import { setShips } from "@jackioh/shared";
+import { fillParams, setShips, type CardDef } from "@jackioh/shared";
 
-import {
-  CONCEALED_TAG,
-  CONCEALED_TEXT_LOUD,
-  HEROIC_POWER_ID,
-  POWER_WORDS,
-  concealedInPlay,
-  concealedText,
-  powerText,
-  powerTitle,
-} from "./inPlay.ts";
+import { faceModel } from "./model.ts";
+import { POWER_WORDS } from "./faceData.ts";
+
+const HEROIC_POWER_ID = "core-098";
+const CONCEALED_TAG = "Call to Chaos";
+const CONCEALED_TEXT_LOUD = "!!!";
+
+/** The #98 Heroic Power's text in play for a rolled power, as the face model prints it (jackioh-shared `face/power.rs`). */
+function powerFace(name: string, radiant: boolean, params?: Record<string, number>): string {
+  const def = CATALOG[HEROIC_POWER_ID];
+  return faceModel({ defId: HEROIC_POWER_ID, ...(def === undefined ? {} : { def }), radiant, inPlay: { power: { name }, ...(params === undefined ? {} : { params }) } }).text.full;
+}
+
+function concealedText(defId: string, radiant: boolean): string {
+  return faceModel({ defId, def: CATALOG[defId], radiant, inPlay: {} }).text.full;
+}
+
+function concealedInPlay(tags: readonly string[]): boolean {
+  return tags.includes(CONCEALED_TAG);
+}
 
 describe("#98 Heroic Power's rolled power, in words (R752)", () => {
   it("names every power the engine can roll, with the engine's X, names and words, base and radiant", () => {
@@ -34,7 +44,7 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
   });
 
   it("prints the keyword line, then the one power's name and its Activate, and nothing of the other twelve", () => {
-    const text = powerText({ name: "recruit" }, false, "Indestructible");
+    const text = powerFace("recruit", false);
     expect(text).toBe("Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.");
     for (const other of ["Life Tap", "Deal 1 damage", "Rush Token", "Felinor Token", "Discover a Unit"]) {
       expect(text).not.toContain(other);
@@ -42,16 +52,14 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
   });
 
   it("prints the Radiant words and name on a radiant face, filling the card's numbers", () => {
-    expect(powerText({ name: "discover" }, true, "Indestructible")).toBe(
-      "Indestructible\nWitness Value\nActivate: Spend (2): Discover a Radiant Unit.",
-    );
-    expect(powerText({ name: "armor" }, true, "", { armor: 4 })).toBe("Tank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.");
-    expect(powerText({ name: "burn" }, false, "", { shot: 6 })).toBe("Steady Shot\nActivate: Spend (1): Deal 6 damage to the enemy hero.");
-    expect(powerTitle({ name: "armor" }, false)).toBe("Armor Up");
+    expect(powerFace("discover", true)).toMatch(/Witness Value\nActivate: Spend \(2\): Discover a Radiant Unit\.$/u);
+    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(1\): Your hero gains 4 Armor, then this power refreshes\.$/u);
+    expect(powerFace("burn", false, { shot: 6 })).toMatch(/Steady Shot\nActivate: Spend \(1\): Deal 6 damage to the enemy hero\.$/u);
+    expect(POWER_WORDS["armor"]?.title).toBe("Armor Up");
   });
 
   it("leaves a name it does not know to the printed text", () => {
-    expect(powerText({ name: "not-a-power" }, false, "Indestructible")).toBeNull();
+    expect(powerFace("not-a-power", false)).toBe(fillParams(CATALOG[HEROIC_POWER_ID] as CardDef, "base"));
   });
 
   it("is the card the catalog calls #98", () => {

@@ -1,0 +1,93 @@
+{
+  "recruit": {
+    "x": 3,
+    "title": "Expedition Map",
+    "radiantTitle": "Expedition Map",
+    "base": "Recruit a permanent.",
+    "radiant": "Recruit a permanent. Make it Radiant."
+  },
+  "draw": {
+    "x": 1,
+    "title": "Life Tap",
+    "radiantTitle": "Life Tap",
+    "base": "Draw {tapDraw}. Take {tapDamage} damage.",
+    "radiant": "Draw {tapDraw} from each player's deck."
+  },
+  "ping": {
+    "x": 1,
+    "title": "Ping",
+    "radiantTitle": "Ping",
+    "base": "Pierce. Deal {ping} damage.",
+    "radiant": "Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats."
+  },
+  "burn": {
+    "x": 1,
+    "title": "Steady Shot",
+    "radiantTitle": "Steady Shot",
+    "base": "Deal {shot} damage to the enemy hero.",
+    "radiant": "Deal {shot} damage to the enemy hero. This permanently deals 2 more damage."
+  },
+  "rush": {
+    "x": 2,
+    "title": "Ranching",
+    "radiantTitle": "Ranching",
+    "base": "Summon a Rush Token.",
+    "radiant": "Summon a Radiant Rush Token."
+  },
+  "felinor": {
+    "x": 1,
+    "title": "Cat Cafe",
+    "radiantTitle": "Cat Cafe",
+    "base": "Summon a Felinor Token.",
+    "radiant": "Summon a random Felinor."
+  },
+  "discover": {
+    "x": 2,
+    "title": "Witness Value",
+    "radiantTitle": "Witness Value",
+    "base": "Discover a Unit.",
+    "radiant": "Discover a Radiant Unit."
+  },
+  "stitching": {
+    "x": 2,
+    "title": "Stitching",
+    "radiantTitle": "Stitching",
+    "base": "Discover two ({stitchCost}) Cost or less Units. Fuse them.",
+    "radiant": "Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them."
+  },
+  "armor": {
+    "x": 1,
+    "title": "Armor Up",
+    "radiantTitle": "Tank Up",
+    "base": "Your hero gains {armor} Armor until your next turn.",
+    "radiant": "Your hero gains {armor} Armor, then this power refreshes."
+  },
+  "insect": {
+    "x": 2,
+    "title": "Die Insect",
+    "radiantTitle": "Die Insect",
+    "base": "Deal {insect} damage to a random enemy.",
+    "radiant": "Lucky 1. Deal {insect} damage to a random enemy."
+  },
+  "brainstorm": {
+    "x": 2,
+    "title": "KY Brainstorm",
+    "radiantTitle": "KY Brainstorm",
+    "base": "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
+    "radiant": "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount})."
+  },
+  "pluck": {
+    "x": 2,
+    "title": "Pluck",
+    "radiantTitle": "Pluck",
+    "base": "Add a random Fruit to your hand. It costs ({fruitCost}).",
+    "radiant": "Add a random Radiant Fruit to your hand. It costs ({fruitCost})."
+  },
+  "tricks": {
+    "x": 3,
+    "title": "Terminus Tricks",
+    "radiantTitle": "Terminus Tricks",
+    "base": "Discover a Trap to summon.",
+    "radiant": "Discover a Radiant Trap to summon."
+  }
+}

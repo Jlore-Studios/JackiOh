@@ -13,7 +13,6 @@ import { KEYWORD_KINDS, type BackrowView, type CardView, type PlayerView, type U
 import {
   CARD_SETTINGS_DEFAULTS,
   CardBack,
-  GLOSSARY,
   INSPECT_HOVER,
   INSPECT_SHEET,
   KEYWORD_MARK,
@@ -21,6 +20,7 @@ import {
   closeInspect,
   writeCardSettings,
 } from "../cards/index.ts";
+import { GLOSSARY } from "../test/faceData.ts";
 import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
 import { KEYWORD_VISUALS } from "../cards/keywordVisuals.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";

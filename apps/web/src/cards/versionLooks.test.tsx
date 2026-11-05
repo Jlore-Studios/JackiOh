@@ -33,6 +33,7 @@ import {
   lookOf,
   offeredOn,
 } from "./versions.ts";
+import { legacyText } from "../test/faceData.ts";
 
 /** R2940000: #2940's three versions, in the registry's order. */
 const NEW_VERSIONS = [VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID] as const;
@@ -217,7 +218,7 @@ describe("R2940001 Radiant under the new versions", () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
-      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
       for (const [version, augments] of LOOKS) {
         writeCardVersion(id, version, augments);
         for (const radiant of [false, true]) {

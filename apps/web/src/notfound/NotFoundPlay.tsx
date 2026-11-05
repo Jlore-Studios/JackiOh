@@ -15,6 +15,7 @@ import { readerName } from "../cards/chinese.ts";
 import { flavourFor } from "../cards/flavour.ts";
 import { GlitchBlob } from "../cards/GlitchBlob.tsx";
 import { faceModel } from "../cards/model.ts";
+import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { ChoiceCard } from "../game/ChoiceCard.tsx";
 import { t } from "../i18n/i18n.ts";
 import { followInApp } from "../routes/nav.tsx";
@@ -126,6 +127,8 @@ function LostCard({ path }: { path: string }): ReactElement | null {
   const defId = lostCardFor(path);
   const def = CATALOG[defId];
   const [speaking, setSpeaking] = useState(false);
+  // This page is engine-free (#778): the card's face is worked out by the module (jackioh-shared), so it is drawn once that is in.
+  const ready = useEngineReady();
   useEffect(() => {
     if (!speaking) return undefined;
     const timer = window.setTimeout(() => {
@@ -161,7 +164,7 @@ function LostCard({ path }: { path: string }): ReactElement | null {
         }}
       >
         <GlitchBlob />
-        <CardFace face={faceModel({ defId, def, radiant: false })} />
+        {ready ? <CardFace face={faceModel({ defId, def, radiant: false })} /> : null}
       </div>
       {flavour === undefined ? null : <figcaption className="not-found-lost__flavour">{flavour}</figcaption>}
     </figure>

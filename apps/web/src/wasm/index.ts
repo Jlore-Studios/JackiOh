@@ -43,6 +43,8 @@ import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
 import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
+import type { FaceAnswer } from "../wire/generated/FaceAnswer.ts";
+import type { FaceCall } from "../wire/generated/FaceCall.ts";
 
 // loading
 
@@ -603,4 +605,16 @@ export type ValidatorCall =
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
   return call(name, () => parsed<T>(normal.validator(name, json(input))));
+}
+
+// what a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/**
+ * One call of the face model (`crates/shared/src/face`): a `FaceCall` in, a `FaceAnswer` out, both the
+ * generated wire types. The catalog is the module's own and the locale is an argument, so the answer is
+ * final text as spans for the reader's language (`cards/model.ts` wraps the calls components make).
+ * It runs on the normal module whichever one the engine calls go through, since a face holds no custom card.
+ */
+export function face(request: FaceCall): FaceAnswer {
+  return call("face", () => parsed<FaceAnswer>(normal.face(json(request))));
 }

@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+# Compiles the face model's data in (the glossary, the powers, the short forms, the translations): build.rs.
+build = "build.rs"
 
 [dependencies]
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
@@ -21,4 +23,11 @@ ts-rs = { workspace = true, optional = true }
 ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
 [dev-dependencies]
+serde_json = { workspace = true }
+# The face tests register the catalog the way a host does (`jackioh_cards::register_all`).
+jackioh-cards = { workspace = true }
+
+[build-dependencies]
+# build.rs reads data/*.json and the cards' Chinese tables: a build script runs at compile time, which
+# is where data reaches a pure crate (rule 4).
 serde_json = { workspace = true }

@@ -26,20 +26,19 @@ import { useRef, type ReactElement } from "react";
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
-import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
-import { KEYWORD_MARK } from "./glossary.ts";
+import { KEYWORD_MARK } from "./keywordMarks.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
 import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
-import { foilFor, frameRarity, type FaceModel } from "./model.ts";
+import { foilFor, frameRarity } from "./frame.ts";
+import type { FaceModel, StateBadgeKind } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
 import { useCardSettings } from "./settings.ts";
 import { useCardStamp } from "./stamps.ts";
@@ -84,11 +83,22 @@ export function keywordChips(keywords: readonly Keyword[], armor: number): { sho
 }
 
 /** The keyword marks of a unit (`.keywords > .keyword-icon`, with their "+n" fold); #2932: a phone draws them off the face (`game/FieldBadges.tsx`). */
-export function KeywordIcons({ keywords, armor, chinese }: { keywords: readonly Keyword[]; armor: number; chinese: boolean }): ReactElement | null {
+export function KeywordIcons({
+  keywords,
+  words,
+  join,
+  armor,
+}: {
+  keywords: readonly Keyword[];
+  /** Each keyword in the face's words, in `keywords`' order (`FaceModel.keywordWords`; R1301: a Chinese unit's are the table's). */
+  words: readonly string[];
+  /** What joins a list of them (`FaceModel.keywordJoin`). */
+  join: string;
+  armor: number;
+}): ReactElement | null {
   if (keywords.length === 0) return null;
   const { shown, folded } = keywordChips(keywords, armor);
-  // R1301: a Chinese unit's keywords are named in the table's words.
-  const words = chinese ? chineseKeyword : keywordKey;
+  const wordsOf = (keyword: Keyword): string => words[keywords.indexOf(keyword)] ?? keywordKey(keyword);
   return (
     <span className="keywords">
       {keywords.map((keyword, index) => (
@@ -98,14 +108,14 @@ export function KeywordIcons({ keywords, armor, chinese }: { keywords: readonly 
           data-keyword={keyword.kind}
           data-n={"n" in keyword ? keyword.n : undefined}
           data-chip={shown.includes(keyword) ? undefined : "hidden"}
-          title={words(keyword)}
+          title={wordsOf(keyword)}
         >
           {KEYWORD_MARK[keyword.kind]}
           {"n" in keyword ? ` ${keyword.n}` : ""}
         </span>
       ))}
       {folded.length > 0 && (
-        <span className="cf-kw-more" title={folded.map(words).join(chinese ? CHINESE_COMMA : ", ")}>
+        <span className="cf-kw-more" title={folded.map(wordsOf).join(join)}>
           +{folded.length}
         </span>
       )}
@@ -219,7 +229,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
           )}
         </span>
 
-        {keywordsOffFace ? null : <KeywordIcons keywords={unit.keywords} armor={unit.armor} chinese={face.chinese === true} />}
+        {keywordsOffFace ? null : <KeywordIcons keywords={unit.keywords} words={face.keywordWords} join={face.keywordJoin} armor={unit.armor} />}
 
         {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
         {dormant === undefined ? null : <DormantSeal />}

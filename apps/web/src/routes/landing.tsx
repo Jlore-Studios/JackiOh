@@ -23,6 +23,7 @@ import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
+import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { FriendsButton } from "../together/FriendsButton.tsx";
 import { useSetting } from "../settings/store.ts";
@@ -581,6 +582,8 @@ export type LandingRouteProps = {
   economyLive?: boolean;
 };
 
+const NO_FAN: readonly FanFace[] = [];
+
 export default function LandingRoute({ random = Math.random, economyLive = ECONOMY_LIVE }: LandingRouteProps = {}): ReactElement {
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
@@ -594,24 +597,41 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   // R1017002: from the cards that print whole on a fan card, a hero's full-art card favored.
   const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
   const { fullArt } = useCardSettings();
-  const [hand, setHand] = useState(() =>
-    readPlayerStats().games >= ROTATION_MIN_GAMES
-      ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-      : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+  // The cards' faces are worked out by the module (jackioh-shared), which this engine-free screen need not wait
+  // for (#778): the fan is dealt once it is in.
+  const engineReady = useEngineReady();
+  const [dealt, setHand] = useState<readonly FanFace[] | null>(() =>
+    !engineReady
+      ? null
+      : readPlayerStats().games >= ROTATION_MIN_GAMES
+        ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
+        : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
   );
+  useEffect(() => {
+    if (dealt !== null || !engineReady) return;
+    setHand(
+      readPlayerStats().games >= ROTATION_MIN_GAMES
+        ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
+        : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+    );
+  }, [dealt, engineReady, fullArt, random]);
+  const hand = dealt ?? NO_FAN;
+  const fanDealt = dealt !== null;
   const [open, setOpen] = useState<CardDef | null>(null);
   const [held, setHeld] = useState(false);
   const nextSlot = useRef(0);
 
   // R639/R704 rotate left to right, but never while read, hidden, or under reduced motion.
   useEffect(() => {
-    if (motion === "reduced" || open !== null || held) return undefined;
+    if (motion === "reduced" || open !== null || held || !fanDealt) return undefined;
     const timer = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
       const at = nextSlot.current;
       nextSlot.current += 1;
       setHand((current) =>
-        fullPool
+        current === null
+          ? current
+          : fullPool
           ? rotateFan(current, at, random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
           : rotateFan(current, at, random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
       );
@@ -619,7 +639,7 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
     return () => {
       window.clearInterval(timer);
     };
-  }, [fullPool, fullArt, motion, open, held, random]);
+  }, [fullPool, fullArt, motion, open, held, random, fanDealt]);
 
   return (
     <div

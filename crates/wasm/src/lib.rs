@@ -402,6 +402,15 @@ pub fn series(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::series(call_json))
 }
 
+// What a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/// One call of the face model: a `FaceCall` as JSON in, a `FaceAnswer` as JSON out. The catalog is the one
+/// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn face(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::face(call_json))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

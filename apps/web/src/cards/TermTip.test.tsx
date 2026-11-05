@@ -13,7 +13,7 @@ import { CATALOG } from "@jackioh/cards";
 
 import { CardFace } from "./CardFace.tsx";
 import { TERM_HOVER_DELAY_MS } from "./constants.ts";
-import { GLOSSARY } from "./glossary.ts";
+import { GLOSSARY } from "../test/faceData.ts";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CardDefsProvider, RefsInteractive } from "./refContext.tsx";
 import { TERM_TOOLTIP_TESTID, TermTips } from "./TermTip.tsx";

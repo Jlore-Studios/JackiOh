@@ -8,7 +8,7 @@ scripts and client supply only I/O (timers, RemoteEvents, DataStores) and layout
 comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
-from `crates/server` (#3098).
+from `crates/server` (#3098); the second is what a card face prints (#3106), from `apps/web`.
 
 ## Host contract
 
@@ -16,8 +16,8 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first: a
-   binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first, `face`
+   the second: a binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its `NORMAL_ONLY`). A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -34,8 +34,11 @@ Every Part B issue follows it, and review holds each one to it.
 5. **Everything the host must do comes out as data:** rows to write, messages to send to a seat, timers
    to set. Never a trait object, a callback or a store handle across the boundary. The server's store
    code and a Roblox DataStore script then do the same job from the same output.
-6. **Data is compiled in** (`include_str!`, rule 4): quest pools, registries and translations. The
-   module carries it, and no host loads files.
+6. **Data is compiled in** (rule 4): quest pools, registries and translations. The module carries it, and
+   no host loads files. Small tables are read with `include_str!`; the face model's (the glossary, the
+   powers, the short forms, the translations and the Chinese card tables) are turned into immutable sorted
+   tables by `build.rs` from `data/*.json` and `crates/cards/chinese*.json`, so a call parses no JSON and the
+   crate keeps no static of its own state or cache.
 7. **Its numbers** are named constants in `src/config.rs` (rule 9) and join the `constants` export of
    `jackioh-wasm-core` under their own names, so no host restates them; that module's test holds its
    list to `config.rs`.
@@ -60,8 +63,9 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 
 ## `src/config.rs`
 
-`MS_PER_SECOND`, `SERIES_WINS_NEEDED` (R330), `SERIES_MAX_GAMES` (R334) and `SERIES_PICK_SECONDS`
-(R333). The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name
+`MS_PER_SECOND`, `SERIES_WINS_NEEDED` (R330), `SERIES_MAX_GAMES` (R334), `SERIES_PICK_SECONDS`
+(R333), and the face model's `TEMPORARY_LAST_COUNT` (R637, R2179001) and Glitch's `GLITCH_SEED`, `GLITCH_SWAP_IN`,
+`GLITCH_MARK_IN` and `GLITCH_ODDS_SCALE` (issue #170). The server re-exports the series' from its own `config.rs` (so `serverConfig.ts` and its code name
 them as before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
 (`crates/wasm/c`) both bind.
 
@@ -120,6 +124,51 @@ refused by the body as an error (thrown in the browser, status 1 in the C module
 is never one. `apply` is the one function behind it, and `tests/boundary.rs` holds it to the functions it
 names.
 
+## `src/face/`: what a card face prints
+
+The face model of `apps/web/src/cards/model.ts` and its neighbours (`inPlay.ts`, `cardState.ts`,
+`shortText.ts`, `radiantDiff.ts`, `rules.ts`'s tokenizer, `glossary.ts`), moved here with the translations of
+the face and glossary strings, so a client lays out what this returns and writes none of it. The decision
+the owner took on #2956 (2026-11-05): the model itself is Rust, not only its wording. Nothing in it is a rule
+(CLAUDE.md rule 7): it reads the catalog, the definitions a view carries and what `view_for` says of a card,
+never state, so a hidden card cannot be named by it.
+
+| Call | Takes | Answers |
+| --- | --- | --- |
+| `card` | a `FaceSource` (a `defId`, optionally its `def`, the face, and, in a game, `inPlay`), `locale`, `defs` | the `FaceModel` |
+| `live` | a `LiveCard` (a `CardView`, `UnitView` or face-up backrow card as the view lists it), its `def`, `facts`, `locale` | the face in play the view says it has (R243) |
+| `view` | a `PlayerView`, `locale` | every face the view shows, by instance id: one call for a whole view |
+| `named` | a `PlayerView`, a `NamedCard`, `locale` | the face of a card an event or a prompt names, or `noFace` for the sentinel |
+| `text` | words from the engine or a card, `locale` | the same words as spans, the glossary's terms in bold |
+| `wordDiff` | two texts | what the newer adds and what the older loses, by word, in UTF-16 offsets (R277, R388) |
+
+```json
+{ "call": "card", "locale": "zh-CN", "source": { "defId": "core-020", "radiant": true } }
+{ "answer": "face", "face": { "name": "…", "text": { "full": "…", "spans": [ { "kind": "mark", "children": [ … ] } ] }, … } }
+```
+
+- **Spans, not markup.** A face's text is `RichText { full, spans }`: `full` the plain words (what a client
+  measures and keys on), `spans` the same words as `Span`s: `text`, `keyword` (the term and its glossary
+  entry), `number` (a number the view moved off its printed value, with whether that is better or worse and a
+  title that says so), `card` (a name that points at another card), `mark` (words a Radiant face adds to the
+  base face's, R277) and `value` (what a card's formula comes to, R280). `card` and `mark` hold their
+  children already nested, a mark that crosses a name's edge cut there. No HTML, Markdown or CSS: the web maps
+  spans to elements and Roblox to RichText.
+- **Final words.** Everything a face prints is in the reader's language: the name and text (from the Chinese
+  card table for a Chinese card, R1301, or for any card when the reader reads Chinese, R711000), the type line,
+  tag chips, keyword words, state badges and their sentences, the tuning chips and tooltips, the glossary
+  entries, a Heroic Power's rolled power and a Quest's stage. The translations of those strings are
+  `data/zh-CN.json` (English sentence to words; a key with `{name}` tokens also matches a finished sentence,
+  as the engine's quest texts arrive); the web's UI strings stay in `apps/web/src/i18n/`.
+- **What the rules box prints** is decided here too: `text` (the whole), `short` (a card's short form, issues
+  #814 and #1017: `data/short-forms.json`), `summit` (the Summit's header and the next Ascent line), `questBox`
+  (a Quest's one stage, R2450000) and `clamp`. Whether the text fits its box is the client's layout.
+- **Locale and catalog come in as arguments.** The catalog is the engine's registered one, with the
+  definitions a view carries (`PlayerView.defs`) consulted next.
+- **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
+  held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
+  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:
@@ -129,7 +178,8 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 ## Tests
 
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
-unchanged, and `tests/boundary.rs` the JSON boundary. The `ts` feature writes the types that cross to
+unchanged, `tests/boundary.rs` the JSON boundary, and `tests/face.rs` the face model: a face as the web's
+tests held it, in both locales. The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.
 
 ```

@@ -75,7 +75,7 @@ const EYE_OFF = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <path d='M14 50 L50 14' stroke='#e8ecf8' stroke-width='4.5' stroke-linecap='round'/>
 </svg>`;
 
-// The state badges (cardState.ts), each a pale outline on a dark plate like the struck eye.
+// The state badges (the face model's badges), each a pale outline on a dark plate like the struck eye.
 
 // B3.3, R385: a pane of glass with a crack running through it (Brittle); the count sits over it.
 const BRITTLE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>

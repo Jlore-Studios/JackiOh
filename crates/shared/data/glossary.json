@@ -1,0 +1,707 @@
+{
+  "entries": [
+    {
+      "id": "Taunt",
+      "label": "Taunt",
+      "rule": "Enemies must attack Taunt units first",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Rush",
+      "label": "Rush",
+      "rule": "May attack units, not heroes, on summon turn",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Charge",
+      "label": "Charge",
+      "rule": "May attack units and heroes on summon turn",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "First Strike",
+      "label": "First Strike",
+      "rule": "Deals damage before non-First-Strike units",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Poisonous",
+      "label": "Poisonous",
+      "rule": "Destroys any unit it damages",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Lifesteal",
+      "label": "Lifesteal",
+      "rule": "Damage dealt heals your hero",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Reborn",
+      "label": "Reborn",
+      "rule": "First death: return at 1 health without Reborn",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Divine Shield",
+      "label": "Divine Shield",
+      "rule": "Negate the first damage instance, then lose it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Trample",
+      "label": "Trample",
+      "rule": "Excess damage to a unit hits its hero; a unit tramples only when it attacks",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Cleave",
+      "label": "Cleave",
+      "rule": "Also damages units adjacent to the target",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Pierce",
+      "label": "Pierce",
+      "rule": "Its damage ignores Armor",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Indestructible",
+      "label": "Indestructible",
+      "rule": "Can't be destroyed or damaged, can't be in Defense Position and never has Taunt; can be exiled or tributed",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Immutable",
+      "label": "Immutable",
+      "rule": "Text can't be changed or transformed. While in play, Spells, Field Spells and Field Traps can't target it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Stack",
+      "label": "Stack",
+      "rule": "May be played onto an occupied zone",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Can't attack",
+      "label": "Can't attack",
+      "rule": "Cannot declare attacks",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Armor",
+      "label": "Armor",
+      "rule": "Reduce each damage instance by X",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Armor X"
+    },
+    {
+      "id": "Lucky",
+      "label": "Lucky",
+      "rule": "Repeat a luck-based roll X extra times, keep the best; a coin flip is one, heads its better side unless the card says otherwise; Lucky given to it adds to X",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Lucky X"
+    },
+    {
+      "id": "Animated",
+      "label": "Animated",
+      "rule": "A Field Spell or Trap with stats that becomes a Unit in an open unit zone when it fires or enters the field, or as it gains stats",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Animated on your turn",
+      "label": "Animated on your turn",
+      "rule": "A Unit on your turn; back in its backrow on your opponent's",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Brittle",
+      "label": "Brittle",
+      "rule": "At the start of turn, after a full turn cycle, the count drops by 1; at 0 the card is destroyed",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Brittle X"
+    },
+    {
+      "id": "Spell Damage",
+      "label": "Spell Damage",
+      "rule": "Your Spells deal X more damage per hit",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Spell Damage X"
+    },
+    {
+      "id": "Immune to Spells",
+      "label": "Immune to Spells",
+      "rule": "Spells can't target it or affect it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Windfury",
+      "label": "Windfury",
+      "rule": "Can attack twice each turn",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Temporary",
+      "label": "Temporary",
+      "rule": "At the end of its owner's turn the count drops by 1; at 0 the card is discarded from their hand. Temporary alone is Temporary 1",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Temporary X"
+    },
+    {
+      "id": "Deft",
+      "label": "Deft",
+      "rule": "Can attack and switch position in the same turn",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Untributable",
+      "label": "Untributable",
+      "rule": "Can't be Tributed, by any cost or effect",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Equip",
+      "label": "Equip",
+      "rule": "May be played onto one of your Units, fusing into it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Ranged",
+      "label": "Ranged",
+      "rule": "Takes no damage back when it attacks, unless the defender is Ranged",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Flying",
+      "label": "Flying",
+      "rule": "Only Units with Flying or Ranged can attack it, unless it is in Defense Position. It may be played into your backrow as well as into a unit zone",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Cloaked",
+      "label": "Cloaked",
+      "rule": "Can be played face-down as a Trap. Activate: Reveal",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Crater",
+      "label": "Crater",
+      "rule": "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Flashback",
+      "label": "Flashback",
+      "rule": "Can be played from your graveyard once, at its cost",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Tradable",
+      "label": "Tradable",
+      "rule": "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Starship Piece",
+      "label": "Starship Piece",
+      "rule": "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Starship",
+      "label": "Starship",
+      "rule": "A launched Starship, built from the Starship Pieces fused into it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Can't Defend",
+      "label": "Can't Defend",
+      "rule": "Never in Defense Position",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Can't be attacked",
+      "label": "Can't be attacked",
+      "rule": "No attack may target it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Only Units in this lane can attack this",
+      "label": "Only Units in this lane can attack this",
+      "rule": "An attack on it is legal only from the enemy unit zone of its own lane",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Berserk",
+      "label": "Berserk",
+      "rule": "While Berserk, at the start and end of its controller's turn this attacks its own hero",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Frozen",
+      "label": "Frozen",
+      "rule": "Can't attack, switch position or use its Activate until it thaws: it loses its next chance to attack or switch, and thaws at the end of the turn it could have done it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Dormant",
+      "label": "Dormant",
+      "rule": "On the field and filling its zone, but out of play until it awakens: it can't attack, be attacked or be targeted, no effect reaches it, and its auras and triggers are off",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Combat keyword",
+      "label": "Combat keyword",
+      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample",
+      "section": "§6.1",
+      "aliases": [
+        "combat keywords",
+        "combat keyword"
+      ]
+    },
+    {
+      "id": "Cry",
+      "label": "Cry",
+      "rule": "When you play this card or an effect casts it. Never when it enters play otherwise",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Death",
+      "label": "Death",
+      "rule": "When sent from the field to the GY",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Start of turn",
+      "label": "Start of turn",
+      "rule": "Controller's turn start, before the draw",
+      "section": "§6.2",
+      "aliases": [
+        "start of turn"
+      ]
+    },
+    {
+      "id": "End of turn",
+      "label": "End of turn",
+      "rule": "Controller's turn end, before cleanup",
+      "section": "§6.2",
+      "aliases": [
+        "end of turn"
+      ]
+    },
+    {
+      "id": "Start of game",
+      "label": "Start of game",
+      "rule": "After mulligan, before turn 1",
+      "section": "§6.2",
+      "aliases": [],
+      "row": "Start of Game"
+    },
+    {
+      "id": "Once per turn",
+      "label": "Once per turn",
+      "rule": "Activated ability limit",
+      "section": "§6.2",
+      "aliases": [],
+      "row": "Once per Turn"
+    },
+    {
+      "id": "Aura",
+      "label": "Aura",
+      "rule": "Effect while in play",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Combo",
+      "label": "Combo",
+      "rule": "Extra effect if X or more cards were played earlier this turn",
+      "section": "§6.2",
+      "aliases": [],
+      "row": "Combo X"
+    },
+    {
+      "id": "Echo",
+      "label": "Echo",
+      "rule": "Recast this card X more times",
+      "section": "§6.2",
+      "aliases": [],
+      "row": "Echo X"
+    },
+    {
+      "id": "Cast on draw",
+      "label": "Cast on draw",
+      "rule": "Plays itself on draw, then draw again",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Quickdraw",
+      "label": "Quickdraw",
+      "rule": "Starts in your opening hand instead of a draw",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Float",
+      "label": "Float",
+      "rule": "The mana a player leaves unspent when their turn ends. \"Float reduces cost\": whenever you Float, this costs that much less",
+      "section": "§6.2",
+      "aliases": [
+        "Floats",
+        "Floated"
+      ]
+    },
+    {
+      "id": "Activate",
+      "label": "Activate",
+      "rule": "Once per turn on your turn, click the card to do an effect; \"Activate X\" up to X times per turn, \"Activate ♾️\" any number of times",
+      "section": "§6.2",
+      "aliases": [
+        "Activated"
+      ],
+      "row": "Activate / Activate X / Activate ♾️"
+    },
+    {
+      "id": "When this awakens",
+      "label": "When this awakens",
+      "rule": "When this Dormant card awakens",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "When launched",
+      "label": "When launched",
+      "rule": "When the Starship this is fused into launches, after its Cries",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Discover",
+      "label": "Discover",
+      "rule": "Choose 1 of 3 options",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Tribute",
+      "label": "Tribute",
+      "rule": "Playing this also costs X of your Units, which go to the graveyard",
+      "section": "§6.3",
+      "aliases": [
+        "Tributes"
+      ],
+      "row": "Tribute X"
+    },
+    {
+      "id": "Embiggened",
+      "label": "Embiggened",
+      "rule": "An embiggen card has two prices. Its normal version costs the cheaper one; its Embiggened version costs more and does more.",
+      "section": "§6.3",
+      "aliases": [],
+      "row": "Embiggen"
+    },
+    {
+      "id": "Recruit",
+      "label": "Recruit",
+      "rule": "Summon from deck, scanning top down",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Fuse",
+      "label": "Fuse",
+      "rule": "Combine effects, stats and cost, cost capped at 4",
+      "section": "§6.3",
+      "aliases": [
+        "fuse",
+        "fused",
+        "fuses"
+      ]
+    },
+    {
+      "id": "Transform",
+      "label": "Transform",
+      "rule": "Replace a card with another in place",
+      "section": "§6.3",
+      "aliases": [
+        "transform",
+        "transforms"
+      ]
+    },
+    {
+      "id": "Vanilla",
+      "label": "Vanilla",
+      "rule": "Remove a unit's text and return it to its printed stats",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Lock",
+      "label": "Lock",
+      "rule": "Zone can't be played into",
+      "section": "§6.3",
+      "aliases": [
+        "Locked"
+      ]
+    },
+    {
+      "id": "Choose one",
+      "label": "Choose one",
+      "rule": "Modal effect",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Counter",
+      "label": "Counter",
+      "rule": "Cancel a card being played or cast",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Steal",
+      "label": "Steal",
+      "rule": "Take control",
+      "section": "§6.3",
+      "aliases": [
+        "steal"
+      ]
+    },
+    {
+      "id": "Unlock",
+      "label": "Unlock",
+      "rule": "A Locked zone accepts plays again",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Flicker",
+      "label": "Flicker",
+      "rule": "The card leaves the field then re-enters the same zone at once",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Bounce",
+      "label": "Bounce",
+      "rule": "Return to controller's hand",
+      "section": "§6.3",
+      "aliases": [
+        "Bounced",
+        "bounced"
+      ]
+    },
+    {
+      "id": "Nerf",
+      "label": "Nerf",
+      "rule": "Weaken a card: one change per application",
+      "section": "§6.3",
+      "aliases": [
+        "Nerfs"
+      ]
+    },
+    {
+      "id": "Buff",
+      "label": "Buff",
+      "rule": "Strengthen a card: one change per application",
+      "section": "§6.3",
+      "aliases": [
+        "Buffs"
+      ]
+    },
+    {
+      "id": "Plague Counter",
+      "label": "Plague Counter",
+      "rule": "Counter on a permanent, any number, reset on leaving the field",
+      "section": "§6.3",
+      "aliases": [
+        "Plague Counters"
+      ]
+    },
+    {
+      "id": "Set health",
+      "label": "Set health",
+      "rule": "A hero's health becomes N",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Redirect",
+      "label": "Redirect",
+      "rule": "A hit, a chosen target or an attack moves to another",
+      "section": "§6.3",
+      "aliases": [
+        "redirected"
+      ]
+    },
+    {
+      "id": "End the turn",
+      "label": "End the turn",
+      "rule": "The turn ends from an effect",
+      "section": "§6.3",
+      "aliases": [
+        "end the turn"
+      ]
+    },
+    {
+      "id": "Trigger a Cry",
+      "label": "Trigger a Cry",
+      "rule": "Run a unit's Cry again",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Look at a hand",
+      "label": "Look at a hand",
+      "rule": "See the opponent's hand in a prompt",
+      "section": "§6.3",
+      "aliases": [
+        "Look at your opponent's hand"
+      ]
+    },
+    {
+      "id": "Allure",
+      "label": "Allure",
+      "rule": "Steal the marked enemy permanents at the start of your next turn; one you have no room for is destroyed",
+      "section": "§6.3",
+      "aliases": [
+        "Allured"
+      ]
+    },
+    {
+      "id": "Freeze",
+      "label": "Freeze",
+      "rule": "The Unit loses its next attack or position switch, and thaws at the end of the turn it could have made one",
+      "section": "§6.3",
+      "aliases": [
+        "freeze",
+        "freezes"
+      ]
+    },
+    {
+      "id": "Awaken",
+      "label": "Awaken",
+      "rule": "A Dormant card awakens now",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Launch",
+      "label": "Launch",
+      "rule": "Your Dormant Starship awakens: every Cry fused into it fires, then every When launched",
+      "section": "§6.3",
+      "aliases": [
+        "launch",
+        "launches"
+      ]
+    },
+    {
+      "id": "Jade Counter",
+      "label": "Jade Counter",
+      "rule": "A public count each player has, that only rises",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Exile",
+      "label": "Exile",
+      "rule": "Send to the exile pile, from anywhere; it triggers no Death",
+      "section": "§6.3",
+      "aliases": [
+        "exile",
+        "exiles",
+        "exiled"
+      ]
+    },
+    {
+      "id": "Hand size",
+      "label": "Hand size",
+      "rule": "How many cards a hand holds, set for the rest of the game",
+      "section": "§6.3",
+      "aliases": [
+        "hand size"
+      ]
+    },
+    {
+      "id": "Mark in a hand",
+      "label": "Mark in a hand",
+      "rule": "Mark cards in a hand; a later effect acts on the ones still there",
+      "section": "§6.3",
+      "aliases": [
+        "Mark",
+        "marked"
+      ]
+    },
+    {
+      "id": "Radiant",
+      "label": "Radiant",
+      "rule": "Raise a card to its Radiant form. In hand or deck: cost unchanged, stats and text swap to the radiant form.",
+      "section": "§5.2",
+      "aliases": []
+    }
+  ],
+  "plain": [
+    "your exile",
+    "their exile",
+    "from exile",
+    "graveyard or exile",
+    "Exile, deal"
+  ],
+  "ruled": [
+    "Cry"
+  ],
+  "shortReminders": {
+    "Cry": "When you play this card or an effect casts it. Never when it enters play otherwise",
+    "Tribute": "Playing this also costs X of your Units, which go to the graveyard"
+  },
+  "shortTerms": [
+    "Cry",
+    "Tribute"
+  ]
+}

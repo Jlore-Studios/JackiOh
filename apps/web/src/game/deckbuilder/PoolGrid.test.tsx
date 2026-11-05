@@ -15,12 +15,12 @@ import { TERM_HOVER_DELAY_MS } from "../../cards/constants.ts";
 import { LONG_PRESS_MS } from "../../cards/inspect/constants.ts";
 import {
   CARD_SETTINGS_DEFAULTS,
-  GLOSSARY,
   INSPECT_FACE_BASE,
   TERM_TOOLTIP_TESTID,
   closeInspect,
   writeCardSettings,
 } from "../../cards/index.ts";
+import { GLOSSARY } from "../../test/faceData.ts";
 import { must } from "../../test/stubServer.ts";
 import CardBrowser from "./CardBrowser.tsx";
 import DeckSidebar from "./DeckSidebar.tsx";

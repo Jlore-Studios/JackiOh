@@ -36,7 +36,7 @@ import {
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
 import { AUGMENT_SIGNATURE_ID, artPartOf, artPictureOf, augmentPicksOf, augmentsOf, lookOf, signatureFits, versionPickOf } from "../cards/versions.ts";
 import type { FaceModel } from "../cards/model.ts";
-import { t } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
@@ -320,7 +320,9 @@ export default function CardCosmeticsView({
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
+  // A face is worded in the reader's language, so a switch of language makes it again.
+  const locale = useLocale();
+  const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def, locale]);
   const strip = cardStrip(def.id, canEquip);
   // R1953001: the held tokens are read only where one may be offered: a locked item on a card owned at
   // MAX_COPIES, the only card a token's per-card cosmetic goes on (the server's `choice_of`).

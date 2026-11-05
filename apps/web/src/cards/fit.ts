@@ -6,6 +6,31 @@ import { useLayoutEffect, type RefObject } from "react";
 
 import { FIT_MIN, FIT_STEPS, NAME_TIER_MAX, TEXT_TIER_MAX } from "./constants.ts";
 
+/** A text limit: the lines a rules box holds at the reading floor, and the characters in each. */
+export type TextLimit = { readonly charsPerLine: number; readonly lines: number };
+
+/** The lines `text` takes wrapped by words at `charsPerLine`, each of its own lines starting a new one. */
+export function faceLines(text: string, charsPerLine: number): number {
+  let count = 0;
+  for (const line of text.split("\n")) {
+    let width = 0;
+    count += 1;
+    for (const word of line.split(" ")) {
+      if (width === 0) width = word.length;
+      else if (width + 1 + word.length <= charsPerLine) width += 1 + word.length;
+      else {
+        count += 1;
+        width = word.length;
+      }
+    }
+  }
+  return count;
+}
+
+export function overLimit(text: string, limit: TextLimit): boolean {
+  return faceLines(text, limit.charsPerLine) > limit.lines;
+}
+
 export type LengthTier = "s" | "m" | "l" | "xl" | "xxl";
 
 function tierOf(length: number, max: { s: number; m: number; l: number; xl: number }): LengthTier {
@@ -50,7 +75,7 @@ export type FitOptions = {
   floorPx?: number;
   /**
    * Issue #1017: false keeps the art whole: past the floor the text clamps without the long
-   * layouts, its whole text standing beside the face instead (shortText.ts). True when absent.
+   * layouts, its whole text standing beside the face instead (the face model's short form). True when absent.
    */
   long?: boolean;
 };

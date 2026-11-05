@@ -772,5 +772,14 @@ pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 
     boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
 }
 
+// What a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/// One call of the face model: a `FaceCall` as JSON in, a `FaceAnswer` as JSON out. The catalog is the one
+/// `init` registered; the host passes the locale in (`crates/shared/README.md`, the host contract).
+#[unsafe(no_mangle)]
+pub extern "C" fn face(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::face(arg("face: the call", call_json_ptr, call_json_len)?))
+}
+
 #[cfg(test)]
 mod tests;

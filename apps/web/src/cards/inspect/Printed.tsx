@@ -16,7 +16,7 @@ export function Printed({ face }: { face: FaceModel }): ReactElement | null {
     <div className="inspect-printed" data-testid={INSPECT_PRINTED}>
       <p className="inspect-printed-label">{t("Printed")}</p>
       <p className="inspect-printed-text">
-        <RulesText text={printed.full} marks={printed.marks} refs={face.refs} chinese={face.chinese === true} />
+        <RulesText rich={printed} />
       </p>
     </div>
   );

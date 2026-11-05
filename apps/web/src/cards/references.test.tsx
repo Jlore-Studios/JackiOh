@@ -19,7 +19,7 @@ import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CardDefsProvider, RefsInteractive } from "./refContext.tsx";
-import { findRefs } from "./refs.ts";
+import { findRefs } from "../test/faceData.ts";
 
 function def(id: string): CardDef {
   const found = CATALOG[id];
@@ -64,7 +64,7 @@ describe("R279 the names a text links", () => {
         const model = face(card.id, radiant);
         const { container, unmount } = render(
           <CardDefsProvider defs={CATALOG}>
-            {faceText(model).shown === model.text.full ? <CardFace face={model} layout="full" /> : <Extended face={model} />}
+            {faceText(model).shown.full === model.text.full ? <CardFace face={model} layout="full" /> : <Extended face={model} />}
           </CardDefsProvider>,
         );
         const shown = [...container.querySelectorAll(".cf-ref")].map((ref) => ref.getAttribute("data-ref"));

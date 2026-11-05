@@ -88,7 +88,7 @@ describe("R1017001 full-art faces", () => {
         if (def.type === "Unit") expect(cf.querySelector(".cf-stats"), where).not.toBeNull();
         // The face prints less than its text (Mr. Vanilla has none): the preview and the detail view carry it whole.
         const model = faceModel({ defId: def.id, def, radiant });
-        expect(faceText(model), where).toEqual({ shown: "", short: null, less: model.text.full !== "" });
+        expect(faceText(model), where).toEqual({ shown: { full: "", spans: [] }, short: false, less: model.text.full !== "" });
         cleanup();
       }
     }
@@ -133,7 +133,7 @@ describe("R1017001 full-art faces", () => {
       expect(cf.querySelector(".cf-art--full"), def.id).toBeNull();
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();
       expect(showsFullArt(model), def.id).toBe(false);
-      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model).shown);
+      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model).shown.full);
       cleanup();
     }
   });
@@ -155,7 +155,7 @@ describe("R1108000 no full art on a tutorial lesson's board", () => {
       expect(cf.hasAttribute("data-full-art"), def.id).toBe(false);
       expect(cf.querySelector(".cf-art--full"), def.id).toBeNull();
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();
-      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model, undefined, false).shown);
+      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model, undefined, false).shown.full);
       cleanup();
     }
   });

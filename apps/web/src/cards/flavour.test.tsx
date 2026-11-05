@@ -97,7 +97,7 @@ describe("R660 where the flavour shows", () => {
   });
 
   it("R660 a face with no catalog def has no flavour line, and its preview stays alone", () => {
-    render(<HoverPreview face={faceModel({ defId: "core-008", radiant: false })} anchor={ANCHOR} />);
+    render(<HoverPreview face={faceModel({ defId: "core-999", radiant: false })} anchor={ANCHOR} />);
     const hover = screen.getByTestId(INSPECT_HOVER);
     expect(within(hover).queryByTestId(INSPECT_FLAVOUR)).toBeNull();
   });

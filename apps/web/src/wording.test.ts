@@ -1,7 +1,8 @@
 // Player-facing text in today's words, one describe per ruling (R373: Deck and Tribute, never library
 // or sacrifice). R781000: the old word Magnetic is left
 // only where the past is shown as it was. The guards parse strings, templates and JSX, not comments or
-// lower-case machine words; `cards/glossary.ts` puts SPEC text through `inPlayerWords`.
+// lower-case machine words; the glossary's words are jackioh-shared's data (`crates/shared/data/glossary.json`),
+// which rules.test.ts holds to the same words.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -19,7 +20,7 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 
 const OLD_WORDS = /\b(librar(y|ies)|sacrific\w*)\b/i;
 
-const CONVERTED = new Set(["cards/glossary.ts"]);
+const CONVERTED = new Set<string>();
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

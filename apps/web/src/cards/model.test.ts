@@ -9,13 +9,20 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardFace, type Tag } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
-import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
-import { ALL_TRIBES, faceModel, foilFor, frameRarity, frameTags, type FaceModel, type FaceSource } from "./model.ts";
-import { markedText } from "./radiantDiff.ts";
-import { termsIn } from "./rules.ts";
+import { ALL_TRIBES, foilFor, frameRarity } from "./frame.ts";
+import { faceModel, type FaceModel, type FaceSource } from "./model.ts";
+import { legacyText, markedText, termsIn } from "../test/faceData.ts";
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const UNKNOWN_ID = "core-999";
+const CONCEALED_TEXT = "???";
+const VANILLA_TEXT = "Vanilla: its text is gone";
+
+/** The tags the frame prints for a card with `tags`, as the face model answers (R1162). */
+function frameTags(tags: Tag[]): string[] {
+  const base = def("core-001");
+  return faceModel({ defId: "t-tags", def: { ...base, id: "t-tags", tags }, radiant: false }).tagChips.map((chip) => chip.tag);
+}
 
 function def(id: string): CardDef {
   const found = CATALOG[id];
@@ -53,7 +60,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
     });
     expect(f.stats).toEqual({ attack: 7, health: 1, maxHealth: 1, attackTone: "base", healthTone: "base" });
     expect(f.keywords).toEqual([{ kind: "First Strike" }]);
-    expect(f.text).toEqual({ full: "First Strike", marks: [] });
+    expect(legacyText(f.text)).toEqual({ full: "First Strike", marks: [] });
   });
 
   it("B7 a radiant face takes stats and keywords from def.radiant, and its keyword list replaces the base one", () => {
@@ -70,26 +77,26 @@ describe("B7: faceModel copies the def and picks the face", () => {
     expect(f.keywords).toEqual([{ kind: "Charge" }, { kind: "First Strike" }]);
     // The catalog prints the radiant face whole, so base's Rush is not printed on it (R277).
     expect(f.text.full).toBe("Charge, First Strike");
-    expect(markedText(f.text.full, f.text.marks)).toEqual(["Charge"]);
+    expect(markedText(f.text.full, legacyText(f.text).marks)).toEqual(["Charge"]);
   });
 
   it("B7 a base face prints its base text and marks nothing, even when the radiant text differs", () => {
     const f = face("core-002", false);
     expect(def("core-002").radiant.text).not.toBe(def("core-002").base.text);
-    expect(f.text).toEqual({ full: "Cry: Destroy an enemy non-Human Unit.", marks: [] });
+    expect(legacyText(f.text)).toEqual({ full: "Cry: Destroy an enemy non-Human Unit.", marks: [] });
   });
 
   it("R277 a radiant face that adds a keyword marks just the keyword (core-020)", () => {
     const f = face("core-020", true);
     expect(f.text.full).toBe("First Strike, Divine Shield");
-    expect(markedText(f.text.full, f.text.marks)).toEqual(["Divine Shield"]);
+    expect(markedText(f.text.full, legacyText(f.text).marks)).toEqual(["Divine Shield"]);
     expect(f.stats?.attack).toBe(14);
     expect(f.stats?.maxHealth).toBe(2);
   });
 
   it("R277 a face whose base text is empty marks the whole radiant text (core-t-felinor, core-t-bread)", () => {
     const f = face("core-t-felinor", true);
-    expect(f.text).toEqual({ full: "Rush", marks: [{ start: 0, end: 4 }] });
+    expect(legacyText(f.text)).toEqual({ full: "Rush", marks: [{ start: 0, end: 4 }] });
     expect(f.stats).toEqual({
       attack: 2,
       health: 2,
@@ -98,8 +105,8 @@ describe("B7: faceModel copies the def and picks the face", () => {
       healthTone: "base",
       grew: { attack: true, health: true },
     });
-    expect(face("core-t-bread", true).text).toEqual({ full: "Armor X", marks: [{ start: 0, end: 7 }] });
-    expect(face("core-t-bread", false).text).toEqual({ full: "", marks: [] });
+    expect(legacyText(face("core-t-bread", true).text)).toEqual({ full: "Armor X", marks: [{ start: 0, end: 7 }] });
+    expect(legacyText(face("core-t-bread", false).text)).toEqual({ full: "", marks: [] });
   });
 
   it("B7 every catalog card, both faces: identity copied from the def, keywords and stats from the printed face", () => {
@@ -123,7 +130,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
         // Each face prints its own catalog text whole, its `{key}` numbers filled in (B3.4 rule 5); only
         // a radiant face marks anything (R277).
         expect(f.text.full, where).toBe(fillParams(card, radiant ? "radiant" : "base"));
-        if (!radiant) expect(f.text.marks, where).toEqual([]);
+        if (!radiant) expect(legacyText(f.text).marks, where).toEqual([]);
 
         // B3.1 rule 1: an Animated face that prints stats shows them, the stats of the Unit it becomes
         // (R2280000: one may print none, Stinkyscape #16 and Classic+ #74).
@@ -192,7 +199,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
     expect(f.set).toBeNull();
     expect(f.stats).toBeNull();
     expect(f.keywords).toEqual([]);
-    expect(f.text).toEqual({ full: "", marks: [] });
+    expect(legacyText(f.text)).toEqual({ full: "", marks: [] });
   });
 
   it("B7 with a def present, the def's name wins over the CardInfo name fallback", () => {
@@ -209,7 +216,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
 
 function marksOf(id: string): string[] {
   const f = face(id, true);
-  return markedText(f.text.full, f.text.marks);
+  return markedText(f.text.full, legacyText(f.text).marks);
 }
 
 describe("R277: a Radiant face prints its whole text and marks what differs from the base", () => {
@@ -268,10 +275,10 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       const f = face(card.id, true);
       expect(f.text.full, card.id).toBe(fillParams(card, "radiant"));
       if (fillParams(card, "radiant") === fillParams(card, "base") || pureDeletions.has(card.id)) {
-        expect(f.text.marks, card.id).toEqual([]);
+        expect(legacyText(f.text).marks, card.id).toEqual([]);
         continue;
       }
-      expect(f.text.marks.length, `${card.id} marks nothing`).toBeGreaterThan(0);
+      expect(legacyText(f.text).marks.length, `${card.id} marks nothing`).toBeGreaterThan(0);
       const printed = termsIn(f.text.full);
       for (const keyword of card.radiant.keywords) {
         expect(printed, `${card.id} never prints its radiant keyword ${keyword.kind}`).toContain(keyword.kind);
@@ -485,7 +492,7 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R752 a Heroic Power in play prints only the power it rolled, and its (0) on the gem", () => {
     const f = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "recruit" } } });
-    expect(f.text).toEqual({ full: "Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.", marks: [] });
+    expect(legacyText(f.text)).toEqual({ full: "Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.", marks: [] });
     expect(f.cost).toEqual({ text: "0", value: "0", tone: "base", alt: null });
     for (const other of ["13 random powers", "Felinor Token", "Discover a Unit", "Life Tap"]) {
       expect(f.text.full).not.toContain(other);
@@ -498,14 +505,14 @@ describe("a face in play is the card as the view says it stands; the collection'
     const f = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "armor" } } });
     expect(f.text.full).toBe("Indestructible\nTank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.");
     // R277: the rolled power is marked against the same power's base words.
-    expect(markedText(f.text.full, f.text.marks).length).toBeGreaterThan(0);
+    expect(markedText(f.text.full, legacyText(f.text).marks).length).toBeGreaterThan(0);
     expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));
   });
 
   it("R2247000 an Anomaly Found! that holds a board prints its code in play, and its catalog text in the collection", () => {
     for (const [code, radiant] of [["FO", true], ["WH", false]] as const) {
       const f = face("stinkyscape-t-anomaly-found", radiant, { inPlay: { label: code } });
-      expect(f.text).toEqual({ full: code, marks: [] });
+      expect(legacyText(f.text)).toEqual({ full: code, marks: [] });
     }
     expect(face("stinkyscape-t-anomaly-found", false).text.full).toContain("Replace your side of the field");
     expect(face("stinkyscape-t-anomaly-found", false, { inPlay: {} }).text.full).toContain("Replace your side of the field");
@@ -528,7 +535,7 @@ describe("a face in play is the card as the view says it stands; the collection'
   it("Call to Chaos reads ??? in play on both faces, and keeps no printed text beside it", () => {
     for (const radiant of [false, true]) {
       const f = face("core-095", radiant, { liveCost: 4, inPlay: {} });
-      expect(f.text, `radiant ${String(radiant)}`).toEqual({ full: CONCEALED_TEXT, marks: [] });
+      expect(legacyText(f.text), `radiant ${String(radiant)}`).toEqual({ full: CONCEALED_TEXT, marks: [] });
       expect(f.printed).toBeNull();
       expect(f).toMatchObject({ name: "Call to Chaos (Core Edition)", tags: ["Call to Chaos"], rarity: "Legendary" });
     }
@@ -548,9 +555,9 @@ describe("a face in play is the card as the view says it stands; the collection'
       inPlay: { vanilla: true },
     });
     expect(f.vanilla).toBe(true);
-    expect(f.text).toEqual({ full: VANILLA_TEXT, marks: [] });
+    expect(legacyText(f.text)).toEqual({ full: VANILLA_TEXT, marks: [] });
     expect(f.gained).toEqual([{ kind: "Taunt" }]);
-    expect(f.printed).toEqual({ full: fillParams(def("core-091"), "base"), marks: [] });
+    expect(f.printed === null ? null : legacyText(f.printed)).toEqual({ full: fillParams(def("core-091"), "base"), marks: [] });
   });
 
   it("a unit in play prints the keywords it has gained since it was printed, and only those", () => {
@@ -583,7 +590,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     const f = faceModel({ defId: fused.id, def: fused, radiant: true, inPlay: {} });
     expect(f.text.full.split("\n")).toEqual([def("core-011").radiant.text, def("core-002").radiant.text]);
     // Tempo Timmy's Charge, and Speciesist's "all … Units", each against its own base line.
-    expect(markedText(f.text.full, f.text.marks)).toEqual(["Charge", "all", "Units"]);
+    expect(markedText(f.text.full, legacyText(f.text).marks)).toEqual(["Charge", "all", "Units"]);
   });
 
   it("R280 a face in play carries the values its view names; the collection's carries none", () => {
@@ -620,7 +627,7 @@ describe("R503: a token's printed rarity", () => {
     expect(unknown.printedRarity).toBeNull();
     expect(frameRarity(unknown)).toBeNull();
     // A face built by hand without the field reads as none.
-    expect(frameRarity({ rarity: "Epic" })).toBe("Epic");
+    expect(frameRarity({ rarity: "Epic", printedRarity: null })).toBe("Epic");
   });
 });
 

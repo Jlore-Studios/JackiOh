@@ -4,8 +4,9 @@
 
 import { fillParams, keywordKey, type CardCost, type CardDef, type CardDefs, type CardFace, type Param } from "@jackioh/shared";
 
-import { powerTitle } from "../cards/inPlay.ts";
-import { wordDiff, type TextRange } from "../cards/radiantDiff.ts";
+import { POWER_WORDS } from "../cards/faceData.ts";
+import { wordDiff } from "../cards/model.ts";
+import type { Utf16Range as TextRange } from "../wire/generated/Utf16Range.ts";
 
 export type FaceKey = "base" | "radiant";
 
@@ -150,7 +151,7 @@ function paramText(param: Param): string {
   if (param.max !== undefined) parts.push(`at most ${String(param.max)}`);
   if (param.tunedOn === "radiant") parts.push("tuned on the Radiant face only");
   if (param.tunedOn === "base") parts.push("tuned on the base face only");
-  if (param.power !== undefined) parts.push(`tuned only while the card has ${powerTitle({ name: param.power }, false)}`);
+  if (param.power !== undefined) parts.push(`tuned only while the card has ${POWER_WORDS[param.power]?.title ?? param.power}`);
   // R1748000: a number only the card's Cry reads is out of a Nerf's and a Buff's reach on the field,
   // on the one face it names (R2261001).
   if (param.cry === true) parts.push("tuned only off the field");

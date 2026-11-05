@@ -6,7 +6,7 @@
 import type { ReactElement, ReactNode } from "react";
 
 import { CHINESE_COMMA, readerKeyword, readerTerms } from "../cards/chinese.ts";
-import type { TextRange } from "../cards/radiantDiff.ts";
+import type { Utf16Range as TextRange } from "../wire/generated/Utf16Range.ts";
 import { isZhCn, t } from "../i18n/i18n.ts";
 import { NONE, NOT_RECORDED, type CardDelta, type FieldChange, type TextChange } from "./diff.ts";
 import { patchTestid } from "./testids.ts";

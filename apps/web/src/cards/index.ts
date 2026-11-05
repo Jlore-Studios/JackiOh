@@ -2,19 +2,17 @@
 // `src/cards/` takes through it, which may also import a `cards/` module by path. Inside `src/cards/`,
 // files import each other by path, never through this barrel, so it cannot create an import cycle.
 
-export { ALL_TRIBES, faceModel } from "./model.ts";
-export type { FaceModel, InPlay } from "./model.ts";
+export { faceModel } from "./model.ts";
+export type { FaceModel, InPlay, RolledPower } from "./model.ts";
+export { ALL_TRIBES } from "./frame.ts";
 
 export { CardDefsProvider } from "./refContext.tsx";
 export { TERM_TOOLTIP_TESTID, TermTips } from "./TermTip.tsx";
 
-// What a face in play prints where play and print part ways (SPEC §10.10).
-export { CONCEALED_TEXT, POWER_WORDS, VANILLA_TEXT } from "./inPlay.ts";
-export type { RolledPower } from "./inPlay.ts";
+// The face model's data, for specs (jackioh-shared's files).
+export { LONG_FACES, POWER_WORDS } from "./faceData.ts";
 
-export { LONG_FACES, ascentLevelOf } from "./shortText.ts";
-
-export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";
+export { KEYWORD_MARK } from "./keywordMarks.ts";
 
 export { FACE_ASPECT } from "./constants.ts";
 

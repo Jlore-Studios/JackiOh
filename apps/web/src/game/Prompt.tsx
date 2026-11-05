@@ -625,7 +625,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
     case "equip": {
       // R1086: one zone with both a plain and an Equip play asks which: two choice cards (#2646), each
-      // saying what it does in its keyword's words (glossary.ts).
+      // saying what it does in its keyword's words (the glossary, jackioh-shared).
       const cards = need.values.length <= DISCOVER_OPTION_LIMIT;
       const played = playedRef(interaction, view);
       return {

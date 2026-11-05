@@ -1,40 +1,34 @@
 // R1017000: every catalog face fits the measured text limit (constants.ts FACE_TEXT_LIMIT), or prints
-// a short form that does (shortText.ts SHORT_FORMS), so no face in the Almanac or the deck builder
+// a short form that does (the crate's short-forms.json, jackioh-shared), so no face in the Almanac or the deck builder
 // shrinks its art for its words; the pixel half is e2e/cypress/component/card-faces.cy.tsx's (B15).
-// R2450000: a staged Quest is measured by the one stage it prints (questFace.ts).
+// R2450000: a staged Quest is measured by the one stage it prints (the face model's `questBox`).
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
+import shortFormsJson from "../../../../crates/shared/data/short-forms.json";
 import { FACE_TEXT_LIMIT, PREVIEW_TEXT_LIMIT, TEXT_TIER_MAX } from "./constants.ts";
+import { LONG_FACES } from "./faceData.ts";
+import { faceLines, overLimit } from "./fit.ts";
 import { faceModel } from "./model.ts";
-import { questFaceText } from "./questFace.ts";
-import {
-  LONG_FACES,
-  MORE,
-  SHORT_FORMS,
-  SUMMIT_DEF_ID,
-  cutText,
-  faceLines,
-  overLimit,
-  shortFormOf,
-  summitShortText,
-  type ShortForm,
-} from "./shortText.ts";
+
+const SUMMIT_DEF_ID = "meditative-008";
+const MORE = "…";
+const SHORT_FORMS: Readonly<Record<string, { base?: number | string; radiant?: number | string }>> = shortFormsJson.forms;
 
 const DEFS = Object.values(CATALOG);
 const FACES = [false, true] as const;
 
 /** What a collection face prints: its whole text (a staged Quest's first stage, R2450000), or its short form. */
-function printed(defId: string, radiant: boolean): { full: string; form: ShortForm | null; shown: string } {
+function printed(defId: string, radiant: boolean): { full: string; form: "clamp" | "cut" | null; shown: string } {
   const def = CATALOG[defId];
   if (def === undefined) throw new Error(`no ${defId}`);
   const face = faceModel({ defId, def, radiant });
-  const full = questFaceText(face)?.full ?? face.text.full;
-  const form = shortFormOf(defId, radiant);
-  return { full, form, shown: (form === null ? null : cutText(full, form)) ?? full };
+  const full = face.questBox?.text.full ?? face.text.full;
+  const form = !face.hasShortForm ? null : face.clamp ? "clamp" : "cut";
+  return { full, form, shown: (form === null ? null : face.short?.full) ?? full };
 }
 
 describe("R1017000 the face text limit", () => {
@@ -47,19 +41,6 @@ describe("R1017000 the face text limit", () => {
     expect(faceLines("aaaa bbbb cccc dddd eeee ffff", 28)).toBe(2);
     expect(overLimit("a\nb\nc\nd\ne\nf", FACE_TEXT_LIMIT)).toBe(false);
     expect(overLimit("a\nb\nc\nd\ne\nf\ng", FACE_TEXT_LIMIT)).toBe(true);
-  });
-
-  it("R1017000 cutText keeps a short form's first lines, or the text up to its first colon, \"…\" in place of its stop", () => {
-    expect(cutText("One.\nTwo.\nThree.", 2)).toBe(`One.\nTwo${MORE}`);
-    expect(cutText("One random effect: A; B.", "colon")).toBe(`One random effect${MORE}`);
-    expect(cutText("随机一个效果：甲；乙。", "colon")).toBe(`随机一个效果${MORE}`);
-    expect(cutText("每张牌。\n攻击。\n防御。", 1)).toBe(`每张牌${MORE}`);
-    // A line that ends in no full stop keeps its last character.
-    expect(cutText("Reach for the stars!\nThen more.", 1)).toBe(`Reach for the stars!${MORE}`);
-    // Nothing to cut: a text no longer than its form, one with no colon, and a clamp.
-    expect(cutText("One.\nTwo.", 2)).toBeNull();
-    expect(cutText("???", "colon")).toBeNull();
-    expect(cutText("One.\nTwo.\nThree.", "clamp")).toBeNull();
   });
 
   it("R1017000 every catalog face fits the limit, or its short form does", () => {
@@ -105,15 +86,16 @@ describe("R1017000 the face text limit", () => {
     expect(TEXT_TIER_MAX.xl).toBe(260);
     for (const entry of long) {
       const [id, label] = entry.split(" ");
-      expect(shortFormOf(id ?? "", label === "radiant"), entry).not.toBeNull();
+      const def = CATALOG[id ?? ""];
+      expect(def === undefined ? false : faceModel({ defId: id ?? "", def, radiant: label === "radiant" }).hasShortForm, entry).toBe(true);
     }
     expect([...long].sort()).toEqual([...LONG_FACES].sort());
   });
 
   it("R2450000 a staged Quest is measured by the stage it prints: no cut short form, Heist's base face whole, the rest clamped and whole in the hover preview", () => {
-    expect(shortFormOf("stinkyscape-007", false)).toBeNull();
+    expect(printed("stinkyscape-007", false).form).toBeNull();
     for (const [defId, radiant] of [["stinkyscape-007", true], ["stinkyscape-112", false], ["stinkyscape-112", true]] as const) {
-      expect(shortFormOf(defId, radiant), `${defId} ${String(radiant)}`).toBe("clamp");
+      expect(printed(defId, radiant).form, `${defId} ${String(radiant)}`).toBe("clamp");
     }
     for (const [defId, radiant] of [["stinkyscape-007", false], ["stinkyscape-007", true], ["stinkyscape-112", false], ["stinkyscape-112", true]] as const) {
       const { full } = printed(defId, radiant);
@@ -155,11 +137,10 @@ describe("R1017000 the face text limit", () => {
     const def = CATALOG[SUMMIT_DEF_ID];
     if (def === undefined) throw new Error("no Summit");
     for (const radiant of FACES) {
-      const full = faceModel({ defId: SUMMIT_DEF_ID, def, radiant }).text.full;
       for (let level = 0; level <= 10; level += 1) {
-        const short = summitShortText(SUMMIT_DEF_ID, full, level);
-        expect(short, `level ${String(level)}`).not.toBeNull();
-        expect(overLimit(short ?? full, PREVIEW_TEXT_LIMIT), `level ${String(level)}`).toBe(false);
+        const face = faceModel({ defId: SUMMIT_DEF_ID, def, radiant, inPlay: { preview: [{ label: "Ascent level", value: level }] } });
+        expect(face.summit, `level ${String(level)}`).toBeDefined();
+        expect(overLimit(face.summit?.full ?? face.text.full, PREVIEW_TEXT_LIMIT), `level ${String(level)}`).toBe(false);
       }
     }
   });
