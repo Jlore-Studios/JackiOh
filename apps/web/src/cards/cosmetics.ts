@@ -456,8 +456,11 @@ export function ownsCosmetic(owned: CardOwnership, defId: string, cosmeticId: st
   return found.default || found.starter || owned.get(defId)?.has(cosmeticId) === true;
 }
 
-/** Whether the viewer may equip `cosmeticId` on the card `defId`: true wherever every cosmetic counts as owned. */
-export function useCanEquip(): (defId: string, cosmeticId: CosmeticId) => boolean {
+/**
+ * Whether the viewer may equip `cosmeticId` on the card `defId`: true wherever every cosmetic counts as owned. Any text
+ * is asked (R3015007: a ladder's level ids among them), an id it does not know owned nowhere.
+ */
+export function useCanEquip(): (defId: string, cosmeticId: string) => boolean {
   const owned = useContext(OwnershipContext);
   return useCallback((defId, cosmeticId) => ownsCosmetic(owned, defId, cosmeticId), [owned]);
 }

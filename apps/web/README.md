@@ -495,17 +495,19 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         defaults of every card, so a card with no pick
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
-                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
-                        as live previews (a full-art card's strip offers no full art, its Animated art
-                        (its normal face, its art moving, R2715000), its Epic, its animated Legendary and
-                        its signed Mythic, R2655000), which equip on that card
-                        alone, kept on the device
+                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of the foils, finishes
+                        and borders it may wear drawn as live previews and, R3015007, its variants as ladders
+                        of their levels (collection/VariantLadders.tsx, `cardLadders`: the Default first,
+                        each rung owned, next or locked and naming what it needs; a full-art card's retired
+                        tiers are listed nowhere, the levels they map to standing for them), which equip on
+                        that card alone, one level a card (`writeCardLevel`), kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        stored pick draws as the default (R1833000); holding a tile, a strip item, a rung or a
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
-                        R2730000). Only there does a locked item a held token covers offer the token
+                        R2730000). Only there does a locked item a held token covers offer the token (of a
+                        ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or

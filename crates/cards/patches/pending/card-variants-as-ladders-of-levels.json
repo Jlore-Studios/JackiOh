@@ -1,0 +1,25 @@
+{
+  "title": "Patch: card variants as ladders of levels (art, then animated, then signed), with one picture per variant",
+  "sources": "#3015",
+  "notes": "Card looks become variants, each a ladder of levels (R3015000): a variant is one picture, and each level is the one below it plus one more thing, its art in the normal frame, then its full art where it has one, then animated, then signed above an animated full art; owning a level owns every level below it. Every version becomes a level and fifteen are appended: the Default's Animated on every card but a Legacy one (whose picture never moves), Full art's animated and signed levels, Alt full art's animated and signed levels, the Sketch's full art with its animated and signed levels, and an animated level for each of Extended art, Pixel, Comic, Set showcase, Out of frame, Immersive and Prismatic, which get no full-art level. A variant's first level keeps its rarity, each new level is a tier rarer up to Mythic, and a signed level is Mythic (R3015001). Every level of a variant draws its first level's picture: R2949000's Signature look, a picture and a motion of its own, is gone, and a signed level is its variant's full art, moving, signed (R3015002). Pulls grant the next level, and a far rarer draw (LEVEL_SKIP_WEIGHT, 40 in 1000 where one is open) a level past it with every level below it; both odds list it (R3015003). A cosmetic token and the Chase Shard buy only the next level (R3015004). A card's pick names one level, every older pick and frozen loadout read as the level it drew (R3015005). The Animated and Signature augments retire with the full arts, and migration 0083 turns every combination an account owns into the levels it covers, so nobody loses anything (R3015006). The Collection shows each card's variants as ladders (R3015007). How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Card looks as ladders",
+    "new": [
+      "Every card look is now a ladder of levels: its art, then its full art where it has one, then animated, then signed. Every level of a look keeps the same picture.",
+      "New levels: an animated level for every look, Animated on the normal face among them, Sketch full art, and signed levels for Full art, Alt full art and Sketch full art."
+    ],
+    "balance": [],
+    "changes": [
+      "Owning a level means owning every level below it. Packs drop the next level of a look; rarely, one drops a higher level and every level below it at once.",
+      "Cosmetic tokens and the Chase Shard buy only the next level of a look.",
+      "Animated and Signature are no longer add-ons: each is a level of its look. Everything you owned is kept, as the levels it covers.",
+      "Signed Full art shows the card's own picture, moving and signed, in place of a picture of its own.",
+      "Alt art and Sketch move from their full-art level up, no longer in the normal frame.",
+      "The Collection shows each card's looks as ladders, marking the next level and what each locked level needs. The Purchases page shows the chance of a higher level."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

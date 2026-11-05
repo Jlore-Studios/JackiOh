@@ -164,7 +164,7 @@ export const NO_FULL_ART_ID = "no-full-art";
 
 export type StripItem = {
   kind: StripKind;
-  /** The registry's id; `NO_FULL_ART_ID` for the normal face. */
+  /** The registry's id. */
   id: string;
   /** In the reader's language. */
   name: string;
@@ -224,7 +224,7 @@ function levelName(id: string): string {
  * variant whose first level the card is offered (R3015000); each level the card is offered a rung, owned as `canEquip`
  * says, the next one marked (every level below it owned, R3015004), a locked one naming what it needs.
  */
-export function cardLadders(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): Ladder[] {
+export function cardLadders(defId: string, canEquip: (defId: string, cosmeticId: string) => boolean): Ladder[] {
   const owns = (card: string, id: string): boolean => id === NO_FULL_ART_ID || canEquip(card, id);
   return variantsOn(defId).map((variant) => {
     const levels = levelsOn(defId, variant);

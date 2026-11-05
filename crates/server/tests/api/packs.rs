@@ -16,8 +16,9 @@ use jackioh_server::config::{
     CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
     COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE, CosmeticTokenStep,
     ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
-    GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS,
-    PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SPEND_BUSY_RETRY_AFTER_MS, TIER_WEIGHT_TOTAL,
+    GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, LEVEL_SKIP_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
+    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SPEND_BUSY_RETRY_AFTER_MS,
+    TIER_WEIGHT_TOTAL,
 };
 use jackioh_server::cosmetics::{
     Cosmetic, CosmeticKind, CosmeticRarity, global_cosmetics, pack_cosmetics, portrait_of, shipped,
@@ -214,6 +215,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         jlorious: false,
         card: None,
         offer: Vec::new(),
+        level: None,
     }
 }
 
@@ -510,6 +512,7 @@ async fn r1301002_an_opening_on_a_full_collection_grants_cosmetics_or_bar_points
             SlotGrant::Cosmetic {
                 cosmetic_id,
                 cosmetic_rarity,
+                ..
             } => {
                 cosmetics += 1;
                 let entry = registry
@@ -1174,6 +1177,20 @@ async fn the_routes_refuse_a_signed_out_caller() {
 }
 
 #[tokio::test]
+async fn r3015003_the_odds_list_the_out_of_order_chance() {
+    let (app, token) = setup().await;
+    // Both odds `GET`s list the chance a pull that finds a level open past the next takes it with every level below
+    // it (R1665000: the Purchases page shows the server's odds), the same share of the same total.
+    let chance = f64::from(LEVEL_SKIP_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL);
+    assert!(chance > 0.0 && chance < 1.0);
+    for path in ["/api/packs", "/api/cosmetic-packs"] {
+        let (status, _, body) = call(&app, "GET", path, Some(&token), Value::Null).await;
+        assert_eq!(status, 200, "{path}: {body}");
+        assert_eq!(body["odds"]["levelSkip"], json!(chance), "{path}");
+    }
+}
+
+#[tokio::test]
 async fn r1339000_get_reads_the_pity_counters_and_the_tables() {
     let (app, token) = setup().await;
     let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
@@ -1195,6 +1212,8 @@ async fn r1339000_get_reads_the_pity_counters_and_the_tables() {
                 "chance": f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL),
                 "tiers": cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY)),
             },
+            // R3015003: the chance a duplicate that finds a level open past the next takes it.
+            "levelSkip": f64::from(LEVEL_SKIP_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL),
         })
     );
     // The tables as percentages' fractions, the computed fallback included, and no Common in the
@@ -1299,6 +1318,7 @@ async fn r1661001_an_account_cosmetic_a_duplicate_drops_is_owned_on_no_card_and_
                 SlotGrant::Cosmetic {
                     cosmetic_id: playmat.id.clone(),
                     cosmetic_rarity: playmat.rarity,
+                    below: Vec::new(),
                 }
             );
             dropped = Some(log);
@@ -1393,6 +1413,7 @@ async fn r1827000_r1833000_a_duplicate_drops_each_account_cosmetic_on_no_card_un
             let SlotGrant::Cosmetic {
                 cosmetic_id,
                 cosmetic_rarity,
+                ..
             } = &slot.grant
             else {
                 continue;

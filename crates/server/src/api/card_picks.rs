@@ -43,7 +43,9 @@ fn check_full_art(card_id: &str, pick: &FullArtPick, owned: &OwnedCosmetics) -> 
     let registry = cosmetics::registry();
     let level = match pick {
         FullArtPick::On(false) => return Ok(()),
-        FullArtPick::On(true) if full_art_of(registry, card_id).is_none() => return Err(PickRefusal::WrongKind),
+        FullArtPick::On(true) if full_art_of(registry, card_id).is_none() => {
+            return Err(PickRefusal::WrongKind);
+        }
         FullArtPick::On(true) => VERSION_FULL_ART_ID,
         FullArtPick::Id(id) => id,
     };
@@ -334,7 +336,8 @@ mod tests {
         assert_eq!(kept.finish, None);
         assert_eq!(kept.border.as_deref(), Some("border-standard"));
         assert_eq!(kept.full_art, Some(FullArtPick::On(false)));
-        // A full art switched on stays only where the card's full art is owned, or unknown here.
+        // A full art switched on stays only where the card's full art is owned, or unknown here. R3015005: kept, it
+        // is the level it names, Full art's first.
         let full_art = cosmetics::registry()
             .iter()
             .find(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
@@ -354,7 +357,10 @@ mod tests {
             }],
             account: Vec::new(),
         };
-        assert_eq!(keepable(on, &owned).full_art, Some(FullArtPick::On(true)));
+        assert_eq!(
+            keepable(on, &owned).full_art,
+            Some(FullArtPick::Id(crate::cosmetics::VERSION_FULL_ART_ID.to_string()))
+        );
         let unknown_here = CardPicks {
             card_id: "core-999".to_string(),
             full_art: Some(FullArtPick::On(true)),
@@ -381,14 +387,22 @@ mod tests {
             account: Vec::new(),
         };
         let kept = |id: &str, owned: &OwnedCosmetics| keepable(vanilla(id), owned).full_art;
-        let signed = Some(FullArtPick::Id("full-art-mr-vanilla-signed".to_string()));
-        assert_eq!(kept("full-art-mr-vanilla-signed", &owned), signed);
+        let level = |id: &str| Some(FullArtPick::Id(id.to_string()));
+        // R3015005: an owned one is kept as the highest level it maps to, so the signed one is Full art's signed
+        // level, and the Legendary, which the signed one's row owns too (R3015006), Full art's animated level.
+        assert_eq!(
+            kept("full-art-mr-vanilla-signed", &owned),
+            level(crate::cosmetics::VERSION_FULL_ART_SIGNED_ID)
+        );
+        assert_eq!(
+            kept("full-art-mr-vanilla-animated", &owned),
+            level(crate::cosmetics::VERSION_FULL_ART_ANIMATED_ID)
+        );
         // Not owned, another card's or no full art at all: dropped.
         assert_eq!(
             kept("full-art-mr-vanilla-signed", &OwnedCosmetics::default()),
             None
         );
-        assert_eq!(kept("full-art-mr-vanilla-animated", &owned), None);
         assert_eq!(kept("full-art-gary-the-gambler-signed", &owned), None);
         // An id this build does not know is kept, as the device kept it.
         assert_eq!(
@@ -420,7 +434,8 @@ mod tests {
             None
         );
         assert_eq!(full_art_pick_of(&json!("animated")), None);
-        // Owned on its card, it is a pick; `true` still needs the still Epic, which it is not.
+        // R3015005: a retired id is no level, so no pick of it passes, owned or not; `true` still needs Full art's
+        // first level, which it does not own.
         let owned = OwnedCosmetics {
             cards: vec![CardCosmetic {
                 card_id: "core-008".to_string(),
@@ -429,20 +444,24 @@ mod tests {
             account: Vec::new(),
         };
         let id = FullArtPick::Id("animated-mr-vanilla".to_string());
-        assert_eq!(check_full_art("core-008", &id, &owned), Ok(()));
+        assert_eq!(
+            check_full_art("core-008", &id, &owned),
+            Err(PickRefusal::WrongKind)
+        );
         assert_eq!(
             check_full_art("core-008", &FullArtPick::On(true), &owned),
             Err(PickRefusal::NotOwned)
         );
         assert_eq!(
             check_full_art("core-008", &id, &OwnedCosmetics::default()),
-            Err(PickRefusal::NotOwned)
+            Err(PickRefusal::WrongKind)
         );
         assert_eq!(
             check_full_art("core-004", &id, &owned),
             Err(PickRefusal::WrongKind)
         );
-        // An upload keeps it owned and drops it unowned or on another card.
+        // An upload keeps it owned, as the Default variant's animated level it maps to (R3015005), and drops it
+        // unowned or on another card.
         let upload = |card: &str, owned: &OwnedCosmetics| {
             keepable(
                 CardPicks {
@@ -454,30 +473,41 @@ mod tests {
             )
             .full_art
         };
-        assert_eq!(upload("core-008", &owned), animated());
+        assert_eq!(
+            upload("core-008", &owned),
+            Some(FullArtPick::Id(crate::cosmetics::VERSION_ANIMATED_ID.to_string()))
+        );
         assert_eq!(upload("core-008", &OwnedCosmetics::default()), None);
         assert_eq!(upload("core-004", &owned), None);
     }
 
     #[test]
-    fn r2949000_an_upload_keeps_signature_only_beside_full_art_and_animated() {
-        use crate::cosmetics::VERSION_FULL_ART_ID;
-        // Carnivorous Cube, offered all three, owning each.
+    fn r2949000_r3015005_an_upload_wears_the_level_its_old_augments_drew_and_keeps_no_augment() {
+        use crate::cosmetics::{
+            AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ANIMATED_ID, VERSION_FULL_ART_ANIMATED_ID,
+            VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
+        };
+        // Carnivorous Cube, offered Full art's ladder, owning the version and both augments, and the levels
+        // migration 0083 wrote for them (R3015006).
         let cube = "core-022";
         let row = |id: &str| CardCosmetic {
             card_id: cube.to_string(),
             cosmetic_id: id.to_string(),
         };
-        let all = OwnedCosmetics {
-            cards: vec![
-                row(VERSION_FULL_ART_ID),
-                row(AUGMENT_ANIMATED_ID),
-                row(AUGMENT_SIGNATURE_ID),
-            ],
+        let rows = |ids: &[&str]| OwnedCosmetics {
+            cards: ids.iter().map(|id| row(id)).collect(),
             account: Vec::new(),
         };
+        let all = rows(&[
+            VERSION_FULL_ART_ID,
+            AUGMENT_ANIMATED_ID,
+            AUGMENT_SIGNATURE_ID,
+            VERSION_FULL_ART_ANIMATED_ID,
+            VERSION_FULL_ART_SIGNED_ID,
+            VERSION_ANIMATED_ID,
+        ]);
         let kept = |full_art: FullArtPick, augments: &[&str], owned: &OwnedCosmetics| {
-            keepable(
+            let kept = keepable(
                 CardPicks {
                     card_id: cube.to_string(),
                     full_art: Some(full_art),
@@ -485,25 +515,35 @@ mod tests {
                     ..CardPicks::default()
                 },
                 owned,
-            )
-            .augments
+            );
+            assert!(kept.augments.is_empty(), "{kept:?}");
+            kept.full_art
         };
+        let level = |id: &str| Some(FullArtPick::Id(id.to_string()));
         let version = || FullArtPick::Id(VERSION_FULL_ART_ID.to_string());
         let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
-        assert_eq!(kept(version(), &both, &all), both);
-        assert!(kept(version(), &[AUGMENT_SIGNATURE_ID], &all).is_empty());
-        assert_eq!(kept(FullArtPick::On(false), &both, &all), [AUGMENT_ANIMATED_ID]);
-        // The version not owned: the version goes, and Signature with it.
-        let no_version = OwnedCosmetics {
-            cards: vec![row(AUGMENT_ANIMATED_ID), row(AUGMENT_SIGNATURE_ID)],
-            account: Vec::new(),
-        };
-        assert_eq!(kept(version(), &both, &no_version), [AUGMENT_ANIMATED_ID]);
-        // Animated not owned: Signature goes with it.
-        let no_animated = OwnedCosmetics {
-            cards: vec![row(VERSION_FULL_ART_ID), row(AUGMENT_SIGNATURE_ID)],
-            account: Vec::new(),
-        };
-        assert!(kept(version(), &both, &no_animated).is_empty());
+        // R2949000's Signature look is Full art's signed level; Signature without Animated steps nowhere, and
+        // Animated on the normal face is the Default variant's animated level.
+        assert_eq!(kept(version(), &both, &all), level(VERSION_FULL_ART_SIGNED_ID));
+        assert_eq!(
+            kept(version(), &[AUGMENT_ANIMATED_ID], &all),
+            level(VERSION_FULL_ART_ANIMATED_ID)
+        );
+        assert_eq!(
+            kept(version(), &[AUGMENT_SIGNATURE_ID], &all),
+            level(VERSION_FULL_ART_ID)
+        );
+        assert_eq!(
+            kept(FullArtPick::On(false), &both, &all),
+            level(VERSION_ANIMATED_ID)
+        );
+        // The level named not owned: the highest owned below it, and none when no level of it is.
+        let unsigned = rows(&[VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID]);
+        assert_eq!(
+            kept(version(), &both, &unsigned),
+            level(VERSION_FULL_ART_ANIMATED_ID)
+        );
+        let no_version = rows(&[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ANIMATED_ID]);
+        assert_eq!(kept(version(), &both, &no_version), None);
     }
 }

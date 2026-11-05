@@ -2626,11 +2626,11 @@ pub const LEVEL_SKIP_MAX_PERCENT_OF_IN_ORDER: u32 = 10;
 /// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
 /// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
 pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
-/// SPEC §14.2, R2725001: the fewest cards each version and each augment is offered on, across the shipped
-/// sets (the registry's check holds every one to it).
+/// SPEC §14.2, R2725001, R3015000: the fewest cards each level of each variant is offered on, across the shipped
+/// sets (the registry's check holds every one to it), and each retired augment's offer.
 pub const VERSION_OFFER_MIN_CARDS: usize = 20;
-/// SPEC §14.2, R2725001: the fewest cards of each shipped set each version and each augment is offered on, so
-/// every set has some.
+/// SPEC §14.2, R2725001, R3015000: the fewest cards of each shipped set each level of each variant is offered on,
+/// so every set has some.
 pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
 /// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
 /// seeded hash, modulo this, falls below the percent.

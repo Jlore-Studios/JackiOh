@@ -16,7 +16,7 @@ declare
   v_text text;
 begin
   -- The registry's entries, as crates/server/cosmetics.json has them: each a version, none a default,
-  -- a chase exactly at Legendary and above.
+  -- and `chase` left at its default, as seed-catalog leaves it (nothing reads the column).
   select string_agg(format('%s %s %s %s', id, rarity, is_default::text, chase::text), ', ' order by id)
     into v_text from public.cosmetics
    where id in ('version-animated', 'version-full-art-animated', 'version-full-art-signed',
@@ -27,14 +27,14 @@ begin
                 'version-prismatic-animated')
      and kind = 'version';
   if v_text is distinct from
-     'version-alt-full-art-animated Mythic false true, version-alt-full-art-signed Mythic false true, '
-     'version-animated Epic false false, version-comic-animated Legendary false true, '
-     'version-extended-art-animated Legendary false true, version-full-art-animated Mythic false true, '
-     'version-full-art-signed Mythic false true, version-immersive-animated Mythic false true, '
-     'version-out-of-frame-animated Mythic false true, version-pixel-animated Legendary false true, '
-     'version-prismatic-animated Mythic false true, version-set-showcase-animated Mythic false true, '
-     'version-sketch-full-art Epic false false, version-sketch-full-art-animated Legendary false true, '
-     'version-sketch-full-art-signed Mythic false true' then
+     'version-alt-full-art-animated Mythic false false, version-alt-full-art-signed Mythic false false, '
+     'version-animated Epic false false, version-comic-animated Legendary false false, '
+     'version-extended-art-animated Legendary false false, version-full-art-animated Mythic false false, '
+     'version-full-art-signed Mythic false false, version-immersive-animated Mythic false false, '
+     'version-out-of-frame-animated Mythic false false, version-pixel-animated Legendary false false, '
+     'version-prismatic-animated Mythic false false, version-set-showcase-animated Mythic false false, '
+     'version-sketch-full-art Epic false false, version-sketch-full-art-animated Legendary false false, '
+     'version-sketch-full-art-signed Mythic false false' then
     raise exception 'FAIL (R3015000): the new levels'' rows of public.cosmetics are [%]', coalesce(v_text, '(none)');
   end if;
   raise notice 'OK (R3015000): the fifteen new levels are in public.cosmetics';
@@ -53,14 +53,14 @@ values ('version-full-art', 'version', 'Full art', 'Legendary', true),
        ('version-pixel', 'version', 'Pixel', 'Epic', false),
        ('augment-animated', 'augment', 'Animated', 'Epic', false),
        ('augment-signature', 'augment', 'Signature', 'Mythic', true),
-       ('full-art-r3015', 'fullArt', 'R3015 full art', 'Epic', false),
-       ('full-art-r3015-animated', 'fullArt', 'R3015 animated full art', 'Legendary', true),
-       ('full-art-r3015-signed', 'fullArt', 'R3015 signed full art', 'Mythic', true),
-       ('animated-r3015', 'fullArt', 'R3015 animated art', 'Epic', false)
+       ('full-art-r3015', 'fullArt', 'Ladder full art', 'Epic', false),
+       ('full-art-r3015-animated', 'fullArt', 'Ladder animated full art', 'Legendary', true),
+       ('full-art-r3015-signed', 'fullArt', 'Ladder signed full art', 'Mythic', true),
+       ('animated-r3015', 'fullArt', 'Ladder animated art', 'Epic', false)
 on conflict (id) do nothing;
 -- One card per combination, and a Legacy card, whose picture never moves (R2724000).
 insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
-select format('r3015-%s', lpad(n::text, 2, '0')), format('3015.%s', n), format('R3015 card %s', n), 'Core', 'Unit',
+select format('r3015-%s', lpad(n::text, 2, '0')), format('3015.%s', n), format('Ladder card %s', n), 'Core', 'Unit',
        case when n = 16 then '{Legacy}'::text[] else '{}'::text[] end, 'Rare', false, '1'::jsonb, 'core-r3015'
   from generate_series(1, 16) as n;
 -- What profile 1 holds on each, as the store wrote it before #3015, each row beside its ledger row.

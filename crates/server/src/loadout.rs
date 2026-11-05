@@ -396,7 +396,7 @@ impl SeatPicks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cosmetics::CosmeticRarity;
+    use crate::cosmetics::{CosmeticRarity, LevelAdds, OfferClause, VERSION_FULL_ART_ID, VariantLevel};
     use crate::economy::store::CardCosmetic;
 
     fn entry(id: &str, kind: CosmeticKind, default: bool, starter: bool) -> Cosmetic {
@@ -419,7 +419,8 @@ mod tests {
         }
     }
 
-    /// Each kind's default, one starter and one earned item per slot kind, and a full art.
+    /// Each kind's default, one starter and one earned item per slot kind, a full art, and (R3015000) Full art's
+    /// first level, offered on that full art's card alone.
     fn test_registry() -> Vec<Cosmetic> {
         let mut cosmetics = Vec::new();
         for (kind, prefix) in [
@@ -438,6 +439,19 @@ mod tests {
             card: Some("core-001".to_owned()),
             rarity: CosmeticRarity::Epic,
             ..entry("full-art-core-001", CosmeticKind::FullArt, false, false)
+        });
+        cosmetics.push(Cosmetic {
+            rarity: CosmeticRarity::Legendary,
+            offer: vec![OfferClause {
+                cards: vec!["core-001".to_owned()],
+                ..OfferClause::default()
+            }],
+            level: Some(VariantLevel {
+                variant: "full-art".to_owned(),
+                rank: 1,
+                adds: LevelAdds::FullArt,
+            }),
+            ..entry(VERSION_FULL_ART_ID, CosmeticKind::Version, false, false)
         });
         cosmetics
     }
@@ -546,9 +560,10 @@ mod tests {
         let registry = test_registry();
         let owned = OwnedCosmetics {
             cards: vec![
+                // R3015005: the full-art card owns Full art's first level, what its full art prints as.
                 CardCosmetic {
                     card_id: "core-001".to_owned(),
-                    cosmetic_id: "full-art-core-001".to_owned(),
+                    cosmetic_id: VERSION_FULL_ART_ID.to_owned(),
                 },
                 CardCosmetic {
                     card_id: "core-002".to_owned(),
@@ -600,7 +615,7 @@ mod tests {
             vec![
                 CardPicks {
                     card_id: "core-001".to_owned(),
-                    full_art: Some(FullArtPick::On(true)),
+                    full_art: Some(FullArtPick::Id(VERSION_FULL_ART_ID.to_owned())),
                     ..CardPicks::default()
                 },
                 CardPicks {
@@ -632,7 +647,7 @@ mod tests {
             freeze_loadout(&registry, &owned, &off, None, &on_for_the_card, &deck)
                 .card("core-001")
                 .and_then(|card| card.full_art.clone()),
-            Some(FullArtPick::On(true))
+            Some(FullArtPick::Id(VERSION_FULL_ART_ID.to_owned()))
         );
         assert!(
             freeze_loadout(
@@ -648,161 +663,147 @@ mod tests {
         );
     }
 
-    #[test]
-    fn r2655000_a_card_freezes_its_picked_tier_when_owned_and_nothing_when_not() {
-        let mut registry = test_registry();
-        for (id, rarity) in [
-            ("full-art-core-001-animated", CosmeticRarity::Legendary),
-            ("full-art-core-001-signed", CosmeticRarity::Mythic),
-        ] {
-            registry.push(Cosmetic {
-                card: Some("core-001".to_owned()),
-                rarity,
-                chase: true,
-                ..entry(id, CosmeticKind::FullArt, false, false)
-            });
-        }
-        let owning = |ids: &[&str]| OwnedCosmetics {
+    /// Rows of `ids`, each on `card`.
+    fn rows_on(card: &str, ids: &[&str]) -> OwnedCosmetics {
+        OwnedCosmetics {
             cards: ids
                 .iter()
                 .map(|id| CardCosmetic {
-                    card_id: "core-001".to_owned(),
+                    card_id: card.to_owned(),
                     cosmetic_id: (*id).to_owned(),
                 })
                 .collect(),
             account: Vec::new(),
-        };
-        let deck = cards(&["core-001", "core-002"]);
-        let frozen = |owned: &OwnedCosmetics, account_on: bool, pick: Option<FullArtPick>| {
-            let picks: Vec<CardPicks> = pick
-                .map(|pick| CardPicks {
-                    card_id: "core-001".to_owned(),
-                    full_art: Some(pick),
-                    ..CardPicks::default()
-                })
-                .into_iter()
-                .collect();
-            freeze_loadout(&registry, owned, &account(&[], account_on), None, &picks, &deck)
-                .card("core-001")
-                .and_then(|card| card.full_art.clone())
-        };
+        }
+    }
+
+    /// What the shipped registry freezes for Mr. Vanilla, a full-art card, owning `owned`, its own pick `pick`
+    /// (none when `None`) and the Full-art cards setting `account_on`.
+    fn vanilla_frozen(
+        owned: &OwnedCosmetics,
+        account_on: bool,
+        pick: Option<FullArtPick>,
+    ) -> Option<FullArtPick> {
+        let picks: Vec<CardPicks> = pick
+            .map(|pick| CardPicks {
+                card_id: "core-008".to_owned(),
+                full_art: Some(pick),
+                ..CardPicks::default()
+            })
+            .into_iter()
+            .collect();
+        let deck = cards(&["core-008", "core-002"]);
+        freeze_loadout(registry(), owned, &account(&[], account_on), None, &picks, &deck)
+            .card("core-008")
+            .and_then(|card| card.full_art.clone())
+    }
+
+    #[test]
+    fn r2655000_r3015005_a_card_freezes_the_level_its_picked_tier_maps_to_when_owned() {
+        use crate::cosmetics::{VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID};
+        let frozen = vanilla_frozen;
+        let owning = |ids: &[&str]| rows_on("core-008", ids);
         let id = |id: &str| FullArtPick::Id(id.to_owned());
         let every = owning(&[
-            "full-art-core-001",
-            "full-art-core-001-animated",
-            "full-art-core-001-signed",
+            "full-art-mr-vanilla",
+            "full-art-mr-vanilla-animated",
+            "full-art-mr-vanilla-signed",
         ]);
-        // An owned Legendary or Mythic freezes as its id; the Epic as `true`, whether picked by its
-        // id or by `true`; with the setting off the card's own pick still prints it.
+        // An owned tier freezes as the level it maps to (R3015005): the Mythic Full art's signed level, the
+        // Legendary its animated one, the Epic, by its id or by `true`, its first; with the setting off the card's
+        // own pick still prints it.
         assert_eq!(
-            frozen(&every, false, Some(id("full-art-core-001-signed"))),
-            Some(id("full-art-core-001-signed"))
+            frozen(&every, false, Some(id("full-art-mr-vanilla-signed"))),
+            Some(id(VERSION_FULL_ART_SIGNED_ID))
         );
         assert_eq!(
-            frozen(&every, true, Some(id("full-art-core-001-animated"))),
-            Some(id("full-art-core-001-animated"))
+            frozen(&every, true, Some(id("full-art-mr-vanilla-animated"))),
+            Some(id(VERSION_FULL_ART_ANIMATED_ID))
         );
         assert_eq!(
-            frozen(&every, true, Some(id("full-art-core-001"))),
-            Some(FullArtPick::On(true))
+            frozen(&every, true, Some(id("full-art-mr-vanilla"))),
+            Some(id(VERSION_FULL_ART_ID))
         );
         assert_eq!(
             frozen(&every, false, Some(FullArtPick::On(true))),
-            Some(FullArtPick::On(true))
+            Some(id(VERSION_FULL_ART_ID))
         );
-        // With no pick of its own the card wears its Epic when the setting is on, never a rarer tier.
-        assert_eq!(frozen(&every, true, None), Some(FullArtPick::On(true)));
+        // With no pick of its own the card wears Full art's first level when the setting is on, never a higher one;
+        // a retired Mythic alone owns that level too (R3015006).
+        assert_eq!(frozen(&every, true, None), Some(id(VERSION_FULL_ART_ID)));
         assert_eq!(frozen(&every, false, None), None);
-        assert_eq!(frozen(&owning(&["full-art-core-001-signed"]), true, None), None);
-        // A tier not owned, another card's, an unknown id or `false` freeze nothing.
-        let epic_only = owning(&["full-art-core-001"]);
         assert_eq!(
-            frozen(&epic_only, true, Some(id("full-art-core-001-signed"))),
+            frozen(&owning(&["full-art-mr-vanilla-signed"]), true, None),
+            Some(id(VERSION_FULL_ART_ID))
+        );
+        // A tier not owned wears the highest level below it that is; another card's, an unknown id or `false`
+        // freeze nothing.
+        let epic_only = owning(&["full-art-mr-vanilla"]);
+        assert_eq!(
+            frozen(&epic_only, true, Some(id("full-art-mr-vanilla-signed"))),
+            Some(id(VERSION_FULL_ART_ID))
+        );
+        assert_eq!(
+            frozen(&every, true, Some(id("full-art-gary-the-gambler-signed"))),
             None
         );
-        assert_eq!(frozen(&every, true, Some(id("full-art-core-002-signed"))), None);
         assert_eq!(
             frozen(&every, true, Some(id("full-art-from-a-newer-client"))),
             None
         );
         assert_eq!(frozen(&every, true, Some(FullArtPick::On(false))), None);
-        // The frozen pick travels as `true` or the id's text, as the client reads `fullArt`.
+        assert_eq!(
+            frozen(&OwnedCosmetics::default(), true, Some(FullArtPick::On(true))),
+            None
+        );
+        // The frozen pick travels as the level's id, as the client reads `fullArt`; `true` still reads as `true`.
         assert_eq!(
             serde_json::to_value(FullArtPick::On(true)).ok(),
             Some(serde_json::json!(true))
         );
         assert_eq!(
-            serde_json::to_value(id("full-art-core-001-signed")).ok(),
-            Some(serde_json::json!("full-art-core-001-signed"))
+            serde_json::to_value(id(VERSION_FULL_ART_SIGNED_ID)).ok(),
+            Some(serde_json::json!(VERSION_FULL_ART_SIGNED_ID))
         );
     }
 
     #[test]
-    fn r2715000_an_owned_animated_art_freezes_as_its_id() {
-        // The card's Animated art, an Epic listed ahead of its still Epic.
-        let mut registry = test_registry();
-        registry.insert(
-            0,
-            Cosmetic {
-                card: Some("core-001".to_owned()),
-                rarity: CosmeticRarity::Epic,
-                ..entry("animated-core-001", CosmeticKind::FullArt, false, false)
-            },
-        );
-        let owning = |ids: &[&str]| OwnedCosmetics {
-            cards: ids
-                .iter()
-                .map(|id| CardCosmetic {
-                    card_id: "core-001".to_owned(),
-                    cosmetic_id: (*id).to_owned(),
-                })
-                .collect(),
-            account: Vec::new(),
-        };
-        let deck = cards(&["core-001", "core-002"]);
-        let frozen = |owned: &OwnedCosmetics, account_on: bool, pick: Option<FullArtPick>| {
-            let picks: Vec<CardPicks> = pick
-                .map(|pick| CardPicks {
-                    card_id: "core-001".to_owned(),
-                    full_art: Some(pick),
-                    ..CardPicks::default()
-                })
-                .into_iter()
-                .collect();
-            freeze_loadout(&registry, owned, &account(&[], account_on), None, &picks, &deck)
-                .card("core-001")
-                .and_then(|card| card.full_art.clone())
-        };
-        let animated = || Some(FullArtPick::Id("animated-core-001".to_owned()));
-        let both = owning(&["full-art-core-001", "animated-core-001"]);
-        // An owned Animated pick freezes as its id, not as `true`, whatever the setting.
-        assert_eq!(frozen(&both, false, animated()), animated());
-        assert_eq!(frozen(&both, true, animated()), animated());
-        // `true`, or the setting with no pick, still freezes the still Epic as `true`.
+    fn r2715000_r3015005_an_owned_animated_art_freezes_as_the_default_animated_level() {
+        use crate::cosmetics::VERSION_ANIMATED_ID;
+        let frozen = vanilla_frozen;
+        let owning = |ids: &[&str]| rows_on("core-008", ids);
+        let animated = || Some(FullArtPick::Id("animated-mr-vanilla".to_owned()));
+        let level = |id: &str| Some(FullArtPick::Id(id.to_owned()));
+        let both = owning(&["full-art-mr-vanilla", "animated-mr-vanilla"]);
+        // An owned Animated pick freezes as the Default variant's animated level it maps to, whatever the setting.
+        assert_eq!(frozen(&both, false, animated()), level(VERSION_ANIMATED_ID));
+        assert_eq!(frozen(&both, true, animated()), level(VERSION_ANIMATED_ID));
+        // `true`, or the setting with no pick, freezes Full art's first level, the still Epic's look.
         assert_eq!(
             frozen(&both, false, Some(FullArtPick::On(true))),
-            Some(FullArtPick::On(true))
+            level(VERSION_FULL_ART_ID)
         );
-        assert_eq!(frozen(&both, true, None), Some(FullArtPick::On(true)));
-        // The Animated art alone owns no still Epic, so `true` and the setting print nothing.
-        let animated_only = owning(&["animated-core-001"]);
-        assert_eq!(frozen(&animated_only, true, animated()), animated());
+        assert_eq!(frozen(&both, true, None), level(VERSION_FULL_ART_ID));
+        // The Animated art alone owns no full-art level, so `true` and the setting print nothing.
+        let animated_only = owning(&["animated-mr-vanilla"]);
+        assert_eq!(
+            frozen(&animated_only, true, animated()),
+            level(VERSION_ANIMATED_ID)
+        );
         assert_eq!(frozen(&animated_only, true, Some(FullArtPick::On(true))), None);
         assert_eq!(frozen(&animated_only, true, None), None);
         // Not owned, it freezes nothing.
-        assert_eq!(frozen(&owning(&["full-art-core-001"]), true, animated()), None);
-        // It travels as its id's text.
-        assert_eq!(
-            serde_json::to_value(animated()).ok(),
-            Some(serde_json::json!("animated-core-001"))
-        );
+        assert_eq!(frozen(&owning(&["full-art-mr-vanilla"]), true, animated()), None);
     }
 
     #[test]
-    fn r2725000_a_loadout_freezes_a_version_and_its_owned_augments() {
-        use crate::cosmetics::{AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID};
-        // The shipped registry: Carnivorous Cube (an Epic Unit) is offered the version and the augments,
-        // Speciesist (a Common Unit) is not, and Mr. Vanilla is one of the 21 with retired full arts.
+    fn r2725000_r3015005_a_loadout_freezes_one_level_and_no_augment() {
+        use crate::cosmetics::{
+            AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ANIMATED_ID, VERSION_FULL_ART_ANIMATED_ID,
+            VERSION_FULL_ART_SIGNED_ID,
+        };
+        // The shipped registry: Carnivorous Cube (an Epic Unit) is offered Full art's ladder, Speciesist (a Common
+        // Unit) is not, and Mr. Vanilla is one of the 21 with retired full arts.
         let registry = registry();
         let (cube, speciesist, vanilla) = ("core-022", "core-002", "core-008");
         let row = |card: &str, id: &str| CardCosmetic {
@@ -815,7 +816,8 @@ mod tests {
             augments: augments.iter().map(|id| (*id).to_owned()).collect(),
             ..CardPicks::default()
         };
-        let version = || Some(FullArtPick::Id(VERSION_FULL_ART_ID.to_owned()));
+        let level = |id: &str| Some(FullArtPick::Id(id.to_owned()));
+        let version = || level(VERSION_FULL_ART_ID);
         let every_augment = [
             AUGMENT_SIGNATURE_ID,
             "augment-from-a-newer-client",
@@ -824,13 +826,15 @@ mod tests {
         ];
         let owned = OwnedCosmetics {
             cards: vec![
+                // The version and Animated, and the levels migration 0083 wrote for them (R3015006).
                 row(cube, VERSION_FULL_ART_ID),
                 row(cube, AUGMENT_ANIMATED_ID),
-                // Owned on Speciesist by a grant no shop makes, none of them is offered there.
+                row(cube, VERSION_FULL_ART_ANIMATED_ID),
+                row(cube, VERSION_ANIMATED_ID),
+                // Owned on Speciesist by a grant no shop makes, Full art's ladder is not offered there.
                 row(speciesist, VERSION_FULL_ART_ID),
-                row(speciesist, AUGMENT_ANIMATED_ID),
-                row(speciesist, AUGMENT_SIGNATURE_ID),
-                // A retired signed full art owns the version and both augments it combines (R2725002).
+                row(speciesist, VERSION_FULL_ART_ANIMATED_ID),
+                // A retired signed full art owns Full art's three levels (R3015006).
                 row(vanilla, "full-art-mr-vanilla-signed"),
             ],
             account: Vec::new(),
@@ -848,23 +852,19 @@ mod tests {
             &picks,
             &cards(&[cube, speciesist, vanilla]),
         );
-        // The owned version, and only the owned, known augments, once each, in the registry's order.
+        // The pick names Full art's signed level; the highest owned at or below it is frozen, with no augment.
         assert_eq!(
             loadout.card(cube),
-            Some(&pick(cube, version(), &[AUGMENT_ANIMATED_ID]))
+            Some(&pick(cube, level(VERSION_FULL_ART_ANIMATED_ID), &[]))
         );
         // Not offered: nothing of its own, so the card is left out.
         assert_eq!(loadout.card(speciesist), None);
         assert_eq!(
             loadout.card(vanilla),
-            Some(&pick(
-                vanilla,
-                version(),
-                &[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]
-            ))
+            Some(&pick(vanilla, level(VERSION_FULL_ART_SIGNED_ID), &[]))
         );
-        // A legacy pick freezes as it did before #2725: `true` for the still Epic, its id for another, with no
-        // augment, and the setting alone never prints a version.
+        // A pick from before #2725 freezes as the level it maps to, and the setting alone prints Full art's first
+        // level on a full-art card alone.
         let legacy = OwnedCosmetics {
             cards: vec![
                 row(vanilla, "full-art-mr-vanilla"),
@@ -885,20 +885,20 @@ mod tests {
         };
         let signed = Some(FullArtPick::Id("full-art-mr-vanilla-signed".to_owned()));
         assert_eq!(
-            frozen(&[pick(vanilla, signed.clone(), &[])]).card(vanilla),
-            Some(&pick(vanilla, signed, &[]))
+            frozen(&[pick(vanilla, signed, &[])]).card(vanilla),
+            Some(&pick(vanilla, level(VERSION_FULL_ART_SIGNED_ID), &[]))
         );
         let by_setting = frozen(&[]);
-        assert_eq!(
-            by_setting.card(vanilla),
-            Some(&pick(vanilla, Some(FullArtPick::On(true)), &[]))
-        );
+        assert_eq!(by_setting.card(vanilla), Some(&pick(vanilla, version(), &[])));
         assert_eq!(by_setting.card(cube), None);
     }
 
     #[test]
-    fn r2949000_a_loadout_freezes_signature_only_beside_full_art_and_animated() {
-        use crate::cosmetics::{AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID};
+    fn r2949000_r3015005_every_old_pick_shape_freezes_the_level_it_maps_to() {
+        use crate::cosmetics::{
+            AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ANIMATED_ID, VERSION_FULL_ART_ANIMATED_ID,
+            VERSION_FULL_ART_SIGNED_ID,
+        };
         let registry = registry();
         let (cube, vanilla) = ("core-022", "core-008");
         let row = |card: &str, id: &str| CardCosmetic {
@@ -911,15 +911,24 @@ mod tests {
             augments: augments.iter().map(|id| (*id).to_owned()).collect(),
             ..CardPicks::default()
         };
-        let version = || Some(FullArtPick::Id(VERSION_FULL_ART_ID.to_owned()));
+        let level = |id: &str| Some(FullArtPick::Id(id.to_owned()));
+        let version = || level(VERSION_FULL_ART_ID);
         let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
-        // Each of the three owned on its own, on Carnivorous Cube and on Mr. Vanilla, whose still Epic is owned
-        // too.
+        // The version and both augments on Carnivorous Cube and on Mr. Vanilla, whose still Epic is owned too, and
+        // the levels migration 0083 wrote for them (R3015006).
         let owned = OwnedCosmetics {
             cards: [cube, vanilla]
                 .into_iter()
                 .flat_map(|card| {
-                    [VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(|id| row(card, id))
+                    [
+                        VERSION_FULL_ART_ID,
+                        AUGMENT_ANIMATED_ID,
+                        AUGMENT_SIGNATURE_ID,
+                        VERSION_FULL_ART_ANIMATED_ID,
+                        VERSION_FULL_ART_SIGNED_ID,
+                        VERSION_ANIMATED_ID,
+                    ]
+                    .map(|id| row(card, id))
                 })
                 .chain([row(vanilla, "full-art-mr-vanilla")])
                 .collect(),
@@ -932,26 +941,26 @@ mod tests {
                 .cloned()
         };
         let on = AccountPicks::default();
-        // Both worn: Signature stands beside them.
+        // R2949000's Signature look, the version with both augments: Full art's signed level.
         assert_eq!(
             frozen(&on, pick(cube, version(), &both)),
-            Some(pick(cube, version(), &both))
+            Some(pick(cube, level(VERSION_FULL_ART_SIGNED_ID), &[]))
         );
-        // The version without Animated: Signature is dropped, the version kept.
+        // The version with Signature and no Animated: Full art's first level, as it printed.
         assert_eq!(
             frozen(&on, pick(cube, version(), &[AUGMENT_SIGNATURE_ID])),
             Some(pick(cube, version(), &[]))
         );
-        // Animated on the normal face: Signature is dropped, Animated kept.
+        // Animated on the normal face: the Default variant's animated level.
         assert_eq!(
             frozen(&on, pick(cube, Some(FullArtPick::On(false)), &both)),
-            Some(pick(cube, None, &[AUGMENT_ANIMATED_ID]))
+            Some(pick(cube, level(VERSION_ANIMATED_ID), &[]))
         );
-        // A full-art card with no version pick wears its still Epic by the setting, and Signature with it; with
-        // the setting off it wears the normal face, and Signature goes.
+        // A full-art card with no pick of a look wears Full art's first level by the setting, so with both
+        // augments its signed level; with the setting off the normal face, so the Default variant's animated level.
         assert_eq!(
             frozen(&on, pick(vanilla, None, &both)),
-            Some(pick(vanilla, Some(FullArtPick::On(true)), &both))
+            Some(pick(vanilla, level(VERSION_FULL_ART_SIGNED_ID), &[]))
         );
         let off = AccountPicks {
             full_art: false,
@@ -959,7 +968,16 @@ mod tests {
         };
         assert_eq!(
             frozen(&off, pick(vanilla, None, &both)),
-            Some(pick(vanilla, None, &[AUGMENT_ANIMATED_ID]))
+            Some(pick(vanilla, level(VERSION_ANIMATED_ID), &[]))
+        );
+        // A level picked since #3015 freezes as itself, and an unowned one, with nothing owned below it, as nothing.
+        assert_eq!(
+            frozen(&on, pick(cube, level(VERSION_FULL_ART_ANIMATED_ID), &[])),
+            Some(pick(cube, level(VERSION_FULL_ART_ANIMATED_ID), &[]))
+        );
+        assert_eq!(
+            frozen(&on, pick(cube, level("version-sketch-full-art-signed"), &[])),
+            None
         );
     }
 

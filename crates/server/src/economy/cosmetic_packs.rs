@@ -80,7 +80,10 @@ impl CosmeticHoldings {
     /// Whether the account owns the per-card cosmetic `id` on `card_id`: a row of it, or of a retired entry that
     /// owns it there (R2725002, R3015006).
     fn holds(&self, card_id: &str, id: &str) -> bool {
-        let row = |id: &str| self.card_cosmetics.contains(&(card_id.to_string(), id.to_string()));
+        let row = |id: &str| {
+            self.card_cosmetics
+                .contains(&(card_id.to_string(), id.to_string()))
+        };
         row(id) || implying(id).any(row)
     }
 }
@@ -237,7 +240,12 @@ fn open_places<'p>(
 
 /// Whether the account can still gain `cosmetic` in order: an account cosmetic it does not own, or a
 /// per-card one with a card left to own it on as its next level.
-fn is_open(cosmetic: &Cosmetic, droppable: &[Cosmetic], pool: &[PoolCard], holdings: &CosmeticHoldings) -> bool {
+fn is_open(
+    cosmetic: &Cosmetic,
+    droppable: &[Cosmetic],
+    pool: &[PoolCard],
+    holdings: &CosmeticHoldings,
+) -> bool {
     if cosmetic.kind.is_per_card() {
         !placements(cosmetic, droppable, pool, holdings).is_empty()
     } else {
@@ -325,8 +333,12 @@ pub fn slot_grant(
             continue;
         };
         // An open per-card cosmetic has a placement, so the pick finds a card.
-        let card_id = pick_card(&placements(cosmetic, droppable, pool, holdings), &holdings.owned, rng)
-            .map(str::to_string);
+        let card_id = pick_card(
+            &placements(cosmetic, droppable, pool, holdings),
+            &holdings.owned,
+            rng,
+        )
+        .map(str::to_string);
         let card_granted = card_id.as_deref().is_some_and(|card| !holdings.owns(card));
         return CosmeticSlotGrant::Cosmetic {
             cosmetic_id: cosmetic.id.clone(),
@@ -1338,5 +1350,76 @@ mod tests {
             slot_grant(Legendary, Legendary, &pool, &droppable, &legacy, &mut rng),
             CosmeticSlotGrant::Bars
         );
+    }
+
+    #[test]
+    fn r3015003_a_slot_places_the_next_level_or_a_skip_with_its_levels_below() {
+        use crate::cosmetics::LevelAdds;
+        use crate::economy::test_support::level;
+        // A ladder of four, art (Rare), full art (Epic), animated (Legendary) and signed (Mythic), on a pool of one
+        // owned card it is offered.
+        let ids = [
+            "version-a",
+            "version-a-full-art",
+            "version-a-animated",
+            "version-a-signed",
+        ];
+        let droppable = vec![
+            level(ids[0], "a", 1, LevelAdds::Art, Rare),
+            level(ids[1], "a", 2, LevelAdds::FullArt, Epic),
+            level(ids[2], "a", 3, LevelAdds::Animated, Legendary),
+            level(ids[3], "a", 4, LevelAdds::Signed, Mythic),
+        ];
+        let pool = vec![card("core-022", PrintedRarity::Epic)];
+        let holding = |held: &[&str]| CosmeticHoldings {
+            owned: owning(&["core-022"]),
+            ..wearing("core-022", held)
+        };
+        let grant = |id: &str, rarity: CosmeticRarity, below: &[&str]| CosmeticSlotGrant::Cosmetic {
+            cosmetic_id: id.to_owned(),
+            cosmetic_rarity: rarity,
+            card_id: Some("core-022".to_owned()),
+            card_granted: false,
+            below: below.iter().map(|id| (*id).to_owned()).collect(),
+        };
+        // The art held: an Epic slot places the full art, the next level, on every seed, with no skip open there.
+        for seed in 0..100 {
+            let mut rng = Rng::new("r3015003-slot", seed);
+            assert_eq!(
+                slot_grant(Epic, Common, &pool, &droppable, &holding(&ids[..1]), &mut rng),
+                grant(ids[1], Epic, &[]),
+                "{seed}"
+            );
+        }
+        // Nothing held: a Mythic slot finds only levels past the next until it falls to the art. Each tier it tries
+        // with one open takes the skip draw first; a hit places that level and every level below it, lowest
+        // first, and the misses fall to the art, in order.
+        let (mut skips, mut in_order) = (0, 0);
+        for seed in 0..2000 {
+            let mut rng = Rng::new("r3015003-slot", seed);
+            let placed = slot_grant(Mythic, Common, &pool, &droppable, &holding(&[]), &mut rng);
+            if placed == grant(ids[0], Rare, &[]) {
+                in_order += 1;
+                continue;
+            }
+            let at = ids
+                .iter()
+                .position(|id| named(&placed) == Some(*id))
+                .unwrap_or_else(|| panic!("{placed:?}"));
+            assert_eq!(placed, grant(ids[at], droppable[at].rarity, &ids[..at]), "{seed}");
+            skips += 1;
+        }
+        assert!(
+            skips > 0 && in_order > skips,
+            "{skips} skips, {in_order} in order"
+        );
+        // The art and the full art held, a skip to the signed level places only the animated one below it.
+        let placed = (0..2000)
+            .map(|seed| {
+                let mut rng = Rng::new("r3015003-slot", seed);
+                slot_grant(Mythic, Mythic, &pool, &droppable, &holding(&ids[..2]), &mut rng)
+            })
+            .find(|placed| named(placed) == Some(ids[3]));
+        assert_eq!(placed, Some(grant(ids[3], Mythic, &ids[2..3])));
     }
 }

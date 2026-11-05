@@ -1,5 +1,6 @@
 // `/purchases` (#1665, part of #1651, SPEC §14.4, R1665000) and the footer's link to it; a failed read
-// offers Try again (#1774). Every figure below is the fixture's, none of them the shipped tables'.
+// offers Try again (#1774). R3015003 (#3015): both packs' odds say how often a pull grants a level past a variant's next
+// one (`levelSkip`). Every figure below is the fixture's, none of them the shipped tables'.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,7 +69,7 @@ afterEach(() => {
 });
 
 describe("R1665000 /purchases signed in", () => {
-  it("R1665000 shows the server's odds, the global roll's line and the pity counters", async () => {
+  it("R1665000 R3015003 shows the server's odds, the global roll's line, the chance of a level past the next and the pity counters", async () => {
     const server = servePurchases();
     signIn(TOKEN);
     render(<PurchasesRoute />);
@@ -88,12 +89,20 @@ describe("R1665000 /purchases signed in", () => {
     expect(screen.getByTestId(purchasesTestid.globalCosmetic)).toHaveTextContent(
       "a duplicate becomes one 12.5% of the time: Epic 93%, Legendary 6%, Mythic 1%.",
     );
+    // R3015003: the server's chance that a duplicate's cosmetic grants a level past the next, and every level below it.
+    expect(screen.getByTestId(purchasesTestid.levelSkip)).toHaveTextContent(
+      "A variant drops its next level. 5% of the time, when a higher level is left, it drops that level and every level below it instead.",
+    );
 
     expect(await screen.findByTestId(purchasesTestid.cosmeticSlot, undefined, SLOW)).toHaveTextContent(
       "Each slot: Common 50%, Rare 30%, Epic 15%, Legendary 4%, Mythic 1%.",
     );
     expect(screen.getByTestId(purchasesTestid.cosmeticFloored)).toHaveTextContent(
       "Guaranteed slot: Common 0%, Rare 0%, Epic 90%, Legendary 8%, Mythic 2%.",
+    );
+    // R3015003: and a cosmetic pack slot's, its own read's.
+    expect(screen.getByTestId(purchasesTestid.cosmeticLevelSkip)).toHaveTextContent(
+      "A variant drops its next level. 3% of the time, when a higher level is left, it drops that level and every level below it instead.",
     );
 
     // The account's counters, once for every card pack (R1298000), with the server's thresholds.

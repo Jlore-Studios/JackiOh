@@ -63,8 +63,8 @@ A full-art card's procedural picture also has a moving version (R2715001, `motio
 card's recipe (`FULL_ART_MOTION`), the painters tag each layer by its role (background, subject,
 over, light, props, motes), add particles that suit the card, and put per-card keyframes in the
 picture, transform and opacity only, behind `prefers-reduced-motion`. Without a recipe the picture is
-byte for byte the still one. The Animated art, the Legendary and the Mythic wear it (R2715000), a few
-faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
+byte for byte the still one. Every animated level and the signed one above it wear it (R3015002, as the
+Animated art, the Legendary and the Mythic did, R2715000), a few faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
 version, so delivering a full-art card's file means delivering its motion too, or the card stops
 moving.
 

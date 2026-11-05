@@ -44,7 +44,10 @@ fn render() -> String {
     out.push_str("] as const;\n");
     out.push_str("export const COSMETIC_OFFERS: Readonly<Record<string, readonly string[]>> = {\n");
     // R3015000: the levels alone; a retired augment is offered nothing.
-    for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind == CosmeticKind::Version) {
+    for cosmetic in cosmetics
+        .iter()
+        .filter(|cosmetic| cosmetic.kind == CosmeticKind::Version)
+    {
         let mut cards: Vec<&str> = shipped_defs()
             .keys()
             .map(String::as_str)

@@ -23,7 +23,7 @@ use jackioh_server::cosmetics::{
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase, buy_chase_once,
-    open_cosmetic_pack, roll_cosmetic_pack,
+    level_skip_chance, open_cosmetic_pack, roll_cosmetic_pack,
 };
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
 use jackioh_server::economy::packs::{BarSettle, BarsSettled};
@@ -248,6 +248,7 @@ fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
         jlorious: false,
         card: None,
         offer: Vec::new(),
+        level: None,
     }
 }
 
@@ -1151,10 +1152,12 @@ async fn r1306002_a_full_bar_holds_full_and_buys_no_starter() {
 #[tokio::test]
 async fn r1306002_get_reads_the_shard_bar_and_unopened_packs() {
     let (app, token) = setup().await;
-    // One roll's odds on the cosmetic table, a slot's and the floored slot's (R1339000).
+    // One roll's odds on the cosmetic table, a slot's and the floored slot's (R1339000), and (R3015003) the chance
+    // a slot that finds a level open past the next takes it.
     let odds = json!({
         "slot": cosmetic_odds(None),
         "flooredSlot": cosmetic_odds(Some(COSMETIC_PACK_FLOOR_RARITY)),
+        "levelSkip": level_skip_chance(),
     });
     let (status, _, body) = call(&app, "GET", "/api/cosmetic-packs", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
@@ -1642,8 +1645,8 @@ async fn r2655000_r2725001_the_chase_refuses_an_unoffered_card_and_a_retired_ful
     assert_eq!(status, 409, "{answer}");
     assert_eq!(everything(&app).await, before);
 
-    // Owning both cards: its retired signed full art is sold no more, and the version on Speciesist is not
-    // offered, each a 400; the Animated augment is no chase, a 409. Nothing is written.
+    // Owning both cards: its retired signed full art is sold no more, the version on Speciesist is not offered,
+    // and (R3015000) the Animated augment is retired too, each a 400. Nothing is written.
     own(&app, &[card.clone(), bare.clone()]).await;
     let before = everything(&app).await;
     for (body, status, message) in [
@@ -1659,8 +1662,8 @@ async fn r2655000_r2725001_the_chase_refuses_an_unoffered_card_and_a_retired_ful
         ),
         (
             json!({ "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card }),
-            409,
-            None,
+            400,
+            Some("that cosmetic is retired"),
         ),
     ] {
         let (got, answer) = chase(body.clone()).await;
@@ -1708,8 +1711,17 @@ async fn r2940000_the_chase_refuses_alt_full_art_where_it_is_not_offered() {
     }
     assert_eq!(everything(&app).await, before);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
-    // On the card it is offered, the bar buys it and empties; no account was granted it before (R2940000).
+    // On the card it is offered, Alt art's second level (R3015000) waits for its first: a 400 writing nothing
+    // (R3015004). Alt art owned, the bar buys it and empties; no account was granted it before (R2940000).
     assert!(!owns_cosmetic(&app, Some(&card), VERSION_ALT_FULL_ART_ID).await);
+    let (status, answer) = chase(json!({ "cosmeticId": VERSION_ALT_FULL_ART_ID, "cardId": card })).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that level needs every level below it owned first")),
+        "{answer}"
+    );
+    assert_eq!(everything(&app).await, before);
+    give(&app, Some(&card), VERSION_ALT_ART_ID).await;
     let (status, answer) = chase(json!({ "cosmeticId": VERSION_ALT_FULL_ART_ID, "cardId": card })).await;
     assert_eq!(status, 200, "{answer}");
     assert!(owns_cosmetic(&app, Some(&card), VERSION_ALT_FULL_ART_ID).await);
@@ -1865,4 +1877,48 @@ async fn r2715000_r2725000_the_chase_shard_bar_refuses_an_animated_art() {
     assert_eq!(everything(&app).await, before);
     assert!(!owns_cosmetic(&app, Some(&card), "animated-gary-the-gambler").await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+}
+
+#[tokio::test]
+async fn r3015004_the_chase_shard_buys_only_the_next_level() {
+    let (app, token) = setup().await;
+    // Gary the Gambler, one of the 21 full-art cards, is offered Full art's ladder: Legendary, Mythic, Mythic.
+    let card = "core-004".to_string();
+    own(&app, std::slice::from_ref(&card)).await;
+    let chase = |id: &str| {
+        let (app, token) = (app.clone(), token.clone());
+        let body = json!({ "cosmeticId": id, "cardId": card });
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let skip = (400, json!("that level needs every level below it owned first"));
+    let (animated, signed) = ("version-full-art-animated", "version-full-art-signed");
+    for (bought, refused) in [
+        (VERSION_FULL_ART_ID, vec![animated, signed]),
+        (animated, vec![signed]),
+        (signed, vec![]),
+    ] {
+        set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+        // A level past the next: a 400, writing and spending nothing.
+        let before = everything(&app).await;
+        for id in refused {
+            let (status, answer) = chase(id).await;
+            assert_eq!(
+                (status, answer["error"]["message"].clone()),
+                skip,
+                "{id}: {answer}"
+            );
+            assert!(!owns_cosmetic(&app, Some(&card), id).await, "{id}");
+        }
+        assert_eq!(everything(&app).await, before);
+        assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+        // The next level: bought, and the bar empties.
+        let (status, answer) = chase(bought).await;
+        assert_eq!(status, 200, "{bought}: {answer}");
+        assert!(owns_cosmetic(&app, Some(&card), bought).await, "{bought}");
+        assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0, "{bought}");
+    }
 }

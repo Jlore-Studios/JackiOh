@@ -47,23 +47,25 @@
 -- ----------------------------------------------------------------------------
 -- 1. The new levels in the registry's projection (R3015000).
 -- ----------------------------------------------------------------------------
--- MIRRORS crates/server/cosmetics.json (its last fifteen entries).
-insert into public.cosmetics (id, kind, name, rarity, is_default, chase)
-values ('version-animated', 'version', 'Animated', 'Epic', false, false),
-       ('version-full-art-animated', 'version', 'Full art, animated', 'Mythic', false, true),
-       ('version-full-art-signed', 'version', 'Full art, animated and signed', 'Mythic', false, true),
-       ('version-alt-full-art-animated', 'version', 'Alt full art, animated', 'Mythic', false, true),
-       ('version-alt-full-art-signed', 'version', 'Alt full art, animated and signed', 'Mythic', false, true),
-       ('version-sketch-full-art', 'version', 'Sketch full art', 'Epic', false, false),
-       ('version-sketch-full-art-animated', 'version', 'Sketch full art, animated', 'Legendary', false, true),
-       ('version-sketch-full-art-signed', 'version', 'Sketch full art, animated and signed', 'Mythic', false, true),
-       ('version-extended-art-animated', 'version', 'Extended art, animated', 'Legendary', false, true),
-       ('version-pixel-animated', 'version', 'Pixel, animated', 'Legendary', false, true),
-       ('version-comic-animated', 'version', 'Comic, animated', 'Legendary', false, true),
-       ('version-set-showcase-animated', 'version', 'Set showcase, animated', 'Mythic', false, true),
-       ('version-out-of-frame-animated', 'version', 'Out of frame, animated', 'Mythic', false, true),
-       ('version-immersive-animated', 'version', 'Immersive, animated', 'Mythic', false, true),
-       ('version-prismatic-animated', 'version', 'Prismatic, animated', 'Mythic', false, true)
+-- MIRRORS crates/server/cosmetics.json (its last fifteen entries). `chase` keeps
+-- its default, as seed-catalog leaves it: nothing reads the column, and the
+-- registry's mark is its rarity's (R1333000).
+insert into public.cosmetics (id, kind, name, rarity, is_default)
+values ('version-animated', 'version', 'Animated', 'Epic', false),
+       ('version-full-art-animated', 'version', 'Full art, animated', 'Mythic', false),
+       ('version-full-art-signed', 'version', 'Full art, animated and signed', 'Mythic', false),
+       ('version-alt-full-art-animated', 'version', 'Alt full art, animated', 'Mythic', false),
+       ('version-alt-full-art-signed', 'version', 'Alt full art, animated and signed', 'Mythic', false),
+       ('version-sketch-full-art', 'version', 'Sketch full art', 'Epic', false),
+       ('version-sketch-full-art-animated', 'version', 'Sketch full art, animated', 'Legendary', false),
+       ('version-sketch-full-art-signed', 'version', 'Sketch full art, animated and signed', 'Mythic', false),
+       ('version-extended-art-animated', 'version', 'Extended art, animated', 'Legendary', false),
+       ('version-pixel-animated', 'version', 'Pixel, animated', 'Legendary', false),
+       ('version-comic-animated', 'version', 'Comic, animated', 'Legendary', false),
+       ('version-set-showcase-animated', 'version', 'Set showcase, animated', 'Mythic', false),
+       ('version-out-of-frame-animated', 'version', 'Out of frame, animated', 'Mythic', false),
+       ('version-immersive-animated', 'version', 'Immersive, animated', 'Mythic', false),
+       ('version-prismatic-animated', 'version', 'Prismatic, animated', 'Mythic', false)
 on conflict (id) do nothing;
 
 
