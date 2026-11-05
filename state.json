@@ -17569,6 +17569,14 @@
       "started_at": "2026-11-05T09:12:33Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3165": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-05T07:53:33Z",
+      "issue": 3065,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
