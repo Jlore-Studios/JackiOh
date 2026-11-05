@@ -15701,7 +15701,6 @@
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-04T23:46:01Z",
         "from_run": "41919924456",
         "gates": [
@@ -15792,7 +15791,7 @@
         "rounds_used": 0,
         "since": "2026-11-04T23:44:45Z",
         "source": "cross-review",
-        "until": "2026-11-05T00:14:45Z"
+        "until": "2026-11-05T05:51:45Z"
       },
       "pending_request": false,
       "provider": "claude-7",
