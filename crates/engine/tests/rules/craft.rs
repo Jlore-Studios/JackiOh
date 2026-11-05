@@ -4,8 +4,8 @@
 
 use jackioh_engine::effects::degrade;
 use jackioh_engine::subsystems::craft::{
-    compile_crafted_def, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe,
-    whole_palette,
+    compile_crafted_def, craft_id, craft_presets, craft_preview, points_budget, recipe_loc, recipe_points,
+    validate_recipe, whole_palette,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -191,13 +191,66 @@ fn r880_the_preview_and_the_reducer_agree() {
         (unit_recipe(2, 10, 10), 2, false),
         (unit_recipe(1, 3, 4), 2, false),
     ] {
-        let preview = craft_preview(&json_as(recipe.clone()), cost);
+        let preview = craft_preview(&json_as(recipe.clone()), cost, None);
         assert_eq!(preview.valid, valid, "{recipe}");
         let mut state = crafting(&format!("craft-agree-{cost}-{valid}"), &format!("mode:{cost}"));
         let refused = answer_recipe(&mut state, recipe);
         assert_eq!(refused.error.is_none(), valid, "{preview:?}");
         assert_eq!(preview.reasons.is_empty(), valid);
     }
+}
+
+#[test]
+fn r3043000_the_crafter_has_80_percent_of_the_points_and_one_over_them_is_refused() {
+    // The crafter's 2, 7, 12, 17, 22 at 80%, to the nearest point.
+    assert_eq!(TRUE_CRAFT_POINTS_PERCENT, 80);
+    let budgets: Vec<i32> = (0..=CRAFT_MAX_COST).map(true_craft_points_budget).collect();
+    assert_eq!(budgets, vec![2, 6, 10, 14, 18]);
+    for cost in 0..=CRAFT_MAX_COST {
+        let budget = true_craft_points_budget(cost);
+        assert_eq!(points_budget(None, None, cost), budget);
+        // An N/1 Unit costs N points.
+        let full = unit_recipe(cost, budget, 1);
+        let preview = craft_preview(&json_as(full.clone()), cost, None);
+        assert!(preview.valid, "cost {cost}: {:?}", preview.reasons);
+        assert_eq!([preview.points, preview.points_budget], [budget, budget]);
+
+        let mut state = crafting(&format!("craft-true-{cost}"), &format!("mode:{cost}"));
+        let unit = must(presets_of(&state).first().cloned(), "the Unit preset");
+        assert_eq!(
+            recipe_points(&unit),
+            budget,
+            "cost {cost}: the Unit preset spends it all"
+        );
+        let before = hash_state(&state);
+        let refused = answer_recipe(&mut state, unit_recipe(cost, budget + 1, 1));
+        let error = must(refused.error, "one point over is refused");
+        assert!(
+            error.contains(&format!(
+                "costs {} points, over the budget of {budget}",
+                budget + 1
+            )),
+            "cost {cost}: {error}"
+        );
+        assert_eq!(hash_state(&state), before, "cost {cost}: the state is unchanged");
+        assert_eq!(
+            answer_recipe(&mut state, full).error,
+            None,
+            "cost {cost}: the whole budget crafts"
+        );
+    }
+}
+
+/// The open craft prompt's presets, in order.
+fn presets_of(state: &GameState) -> Vec<CraftRecipe> {
+    must(state.pending.clone(), "a craft prompt")
+        .options
+        .iter()
+        .map(|option| match &option.selection {
+            Selection::Craft { recipe } => recipe.clone(),
+            other => panic!("a preset is a recipe, not {other:?}"),
+        })
+        .collect()
 }
 
 #[test]
@@ -231,7 +284,7 @@ fn r881_every_preset_is_valid_at_every_cost() {
     for cost in 0..=4 {
         for seed in 0..50 {
             let mut rng = Rng::new(&format!("craft-preset-{cost}-{seed}"), 0);
-            let presets = craft_presets(&mut rng, cost, &whole_palette());
+            let presets = craft_presets(&mut rng, None, cost, &whole_palette());
             assert_eq!(
                 presets.iter().map(|recipe| recipe.type_).collect::<Vec<_>>(),
                 vec![
@@ -245,9 +298,9 @@ fn r881_every_preset_is_valid_at_every_cost() {
             for recipe in &presets {
                 assert_eq!(recipe.cost, cost);
                 assert!(
-                    validate_recipe(recipe, cost).is_ok(),
+                    validate_recipe(recipe, cost, None).is_ok(),
                     "cost {cost} seed {seed}: {:?}",
-                    validate_recipe(recipe, cost)
+                    validate_recipe(recipe, cost, None)
                 );
             }
         }
@@ -476,19 +529,22 @@ fn r883_stockpiles_recipe_costs_seven_points_and_seven_lines() {
     assert_eq!(recipe_points(&recipe), 7);
     assert_eq!(recipe_loc(&recipe), 3 + 2 + 1 + 1);
     assert_eq!(recipe_loc(&recipe), 7);
-    assert!(validate_recipe(&recipe, 1).is_ok());
+    // Against the crafter's whole budget of 7, Scratch Pad's; Meditative #17's 6 is one short (R3043000).
+    assert!(validate_recipe(&recipe, 1, Some(CraftMode::Scratch)).is_ok());
+    assert!(validate_recipe(&recipe, 1, None).is_err());
     let def = compile_crafted_def(&recipe);
     assert_eq!(def.base.text, "Draw {b1|card|cards}. Heal your hero {b2}.");
 }
 
 #[test]
 fn r883_a_targeted_block_needs_a_cry_or_when_cast_hat() {
+    // A 4/4 dealing 3: 7 + 3 = 10 points, the whole budget at cost 2 (R3043000).
     let aimed = json!({
         "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
-        "attack": 4, "health": 5, "keywords": [], "echo": 0,
+        "attack": 4, "health": 4, "keywords": [], "echo": 0,
         "hats": [{ "hat": "death", "effects": [{ "verb": "damageTarget", "n": 3 }] }],
     });
-    let errors = validate_recipe(&json_as(aimed.clone()), 2).expect_err("aimed from a Death");
+    let errors = validate_recipe(&json_as(aimed.clone()), 2, None).expect_err("aimed from a Death");
     assert!(
         errors.iter().any(|reason| reason.contains("Cry or When cast")),
         "{errors:?}"
@@ -504,7 +560,7 @@ fn r883_a_targeted_block_needs_a_cry_or_when_cast_hat() {
     let mut state = crafting("craft-cry", "mode:2");
     let under_cry = json!({
         "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
-        "attack": 4, "health": 5, "keywords": [], "echo": 0,
+        "attack": 4, "health": 4, "keywords": [], "echo": 0,
         "hats": [{ "hat": "cry", "effects": [{ "verb": "damageTarget", "n": 3 }] }],
     });
     let refused = answer_recipe(&mut state, under_cry);

@@ -691,7 +691,9 @@ percentile's 24.
        and adds a fresh instance to your hand at its cost, Radiant on the Radiant face. A full hand
        burns it (§2.4).
   - **Budget.** Points ≤ `CRAFT_POINTS_BASE` (2) + `CRAFT_POINTS_PER_MANA` (5) × cost, so 2, 7, 12,
-    17 or 22, which matches the catalog's stats per cost for Units. Lines of code must be at most
+    17 or 22, which matches the catalog's stats per cost for Units. Since #3043 this card's prompt has
+    `TRUE_CRAFT_POINTS_PERCENT` (80%) of that, to the nearest point, so 2, 6, 10, 14 or 18; Meditative+
+    #26 Scratch Pad keeps the whole (R3043000). Lines of code must be at most
     `CRAFT_LOC_BUDGET` (24, the catalog's 75th percentile), counting `CRAFT_LOC_SKELETON` (3, the
     `pub const ID` / `pub fn script()` / `CardScripts` frame that Core #8's `loc` 3 is). There are
     at most `CRAFT_MAX_EFFECTS` (8) effect blocks, and each number runs 1 to `CRAFT_MAX_N` (10).

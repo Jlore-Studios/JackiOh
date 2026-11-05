@@ -647,7 +647,7 @@ describe("the R81 kinds render the same picker when the engine does open them as
 
     expect(kindOfModal()).toBe("craft");
     expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "craft");
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("10/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("10/10 pts");
     fireEvent.click(screen.getByTestId("prompt-submit"));
     expect(onAction).toHaveBeenCalledWith({
       type: "answer",

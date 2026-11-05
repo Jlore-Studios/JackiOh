@@ -514,7 +514,8 @@ pub struct ChooseCraftArgs {
     #[serde(default)]
     pub cost: i32,
     /// What the prompt asks for beyond Meditative #17's free crafter: Scratch Pad's empty canvas or
-    /// a potion frame (R1182000 to R1182002). Absent: Meditative #17's prompt, exactly as before.
+    /// a potion frame (R1182000 to R1182002). Absent: Meditative #17's prompt, whose points are about
+    /// 20% fewer than Scratch Pad's (R3043000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<crate::wire::CraftMode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -528,7 +529,9 @@ pub struct ChooseCraftArgs {
 /// ME-CRAFT (Meditative #17, R880): the block editor's prompt, offering the seeded presets within the
 /// budget and answered by one `Selection::Craft`, which the reducer validates (R90); `legal_actions`
 /// offers the presets (R881, R79). `mode` (#1182): a potion mode fixes the cost and frame (R1182000,
-/// R1182001); `scratch` rolls #17's (R1182002). R1563007: all but Scratch Pad's first prompt draw an offer.
+/// R1182001); `scratch` rolls #17's on the crafter's whole points, where #17's own prompt has
+/// `TRUE_CRAFT_POINTS_PERCENT` of them (R1182002, R3043000). R1563007: all but Scratch Pad's first prompt
+/// draw an offer.
 pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
     Effect::new("chooseCraft", move |ctx| {
         let cost = match args.mode.and_then(crate::wire::CraftMode::frame) {

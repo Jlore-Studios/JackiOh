@@ -1621,9 +1621,21 @@ pub const CRAFT_NOUNS: &[&str] = &[
     "Closure", "Reducer", "Iterator", "Trait", "Crate", "Struct", "Macro", "Enum",
 ];
 
-/// The point budget for the chosen cost: `CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA × cost`.
+/// The point budget for the chosen cost: `CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA × cost`. Scratch
+/// Pad's (R1182002); Meditative #17's is this scaled (`true_craft_points_budget`, R3043000).
 pub fn craft_points_budget(cost: i32) -> i32 {
     CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA * cost
+}
+
+/// R3043000: Meditative #17 True Craft a Card's prompt (the one of no mode) has this percent of the
+/// crafter's budget ("about 20% fewer points", #3043); Scratch Pad's keeps it whole.
+pub const TRUE_CRAFT_POINTS_PERCENT: i32 = 80;
+
+/// R3043000: Meditative #17's point budget for the chosen cost: `craft_points_budget` times
+/// `TRUE_CRAFT_POINTS_PERCENT`, out of `PERCENT`, to the nearest whole point (a half up): 2, 6, 10,
+/// 14, 18 against 2, 7, 12, 17, 22.
+pub fn true_craft_points_budget(cost: i32) -> i32 {
+    (craft_points_budget(cost) * TRUE_CRAFT_POINTS_PERCENT + PERCENT / 2) / PERCENT
 }
 
 /// One row of the verb price table (`docs/meditative-set.md` M6 #17): `points + per_n × N`,
@@ -2002,8 +2014,8 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
 /// R1182000: a Potion's fixed cost (Meditative+ #16 Jazakus: "It costs (1).").
 pub const CRAFT_POTION_COST: i32 = 1;
 /// R1563008: a Potion's points. A Potion is a Spell with no stats since #1563, so it has fewer than
-/// the crafter's budget at its cost (`craft_points_budget(CRAFT_POTION_COST)`, 7), which a Unit
-/// Potion spent mostly on stats.
+/// the crafter's budget at its cost (`craft_points_budget(CRAFT_POTION_COST)`, 7, and Meditative
+/// #17's `true_craft_points_budget`, 6, R3043000), which a Unit Potion spent mostly on stats.
 pub const CRAFT_POTION_POINTS: i32 = 4;
 /// R1182001: a HUGE Potion's fixed cost (Meditative+ #16.1 Jazakus Prime: "It costs (3).").
 pub const CRAFT_HUGE_POTION_COST: i32 = 3;

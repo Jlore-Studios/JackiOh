@@ -10,6 +10,8 @@
 //! THE PROMPT (R880, `subsystems/craft.rs`). The `craft` prompt offers four seeded presets; the reducer
 //! validates a preset or the player's own recipe and refuses an invalid one with the state unchanged. A
 //! valid one becomes a transient definition whose id names the recipe (R882); a full hand burns it (§2.4).
+//! Its points are `true_craft_points_budget`, `TRUE_CRAFT_POINTS_PERCENT` (80) of the crafter's, keyed
+//! on its prompt having no mode; Scratch Pad's `scratch` prompt keeps the whole (R3043000).
 //!
 //! THE FACES differ only in `radiant`: the Radiant face crafts the card Radiant, whose face
 //! doubles every number and stat (`CRAFT_RADIANT_MULTIPLIER` 2, R275 by construction).
@@ -229,7 +231,7 @@ mod tests {
         #[test]
         fn r882_adds_a_crafted_card_to_hand() {
             let mut s = any_block_at(1);
-            // A 3/4 Unit costs 6 points, within the budget of 7.
+            // A 3/4 Unit costs 6 points, the whole budget of 6 (R3043000).
             s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
             assert!(s.state().pending.is_none());
             let hand = s.hand(P1);
@@ -273,7 +275,7 @@ mod tests {
         #[test]
         fn r882_a_crafted_spell_deals_its_damage() {
             let mut s = any_block_at(1);
-            // N=5 at 1 point each: 5 points, within the budget of 7.
+            // N=5 at 1 point each: 5 points, within the budget of 6.
             s.answer(json!([{
                 "pick": "craft",
                 "recipe": {
@@ -388,12 +390,26 @@ mod tests {
             let mut rng = Rng::new(&seed, cursor);
             let offer = roll_offer(&mut rng, None, 3).expect("the free crafter's offer");
             assert_eq!(s.state().pending.as_ref().and_then(|pending| pending.craft_offer.clone()), Some(offer.clone()));
-            assert_eq!(offered, craft_presets(&mut rng, 3, &offer), "the match rng rolls them");
+            assert_eq!(offered, craft_presets(&mut rng, None, 3, &offer), "the match rng rolls them");
             assert_eq!(s.state().rng_cursor, rng.cursor());
             for recipe in &offered {
                 assert_eq!(recipe.cost, 3);
-                assert!(recipe_points(recipe) <= 2 + 5 * 3, "within the budget: {recipe:?}");
-                assert!(validate_recipe(recipe, 3).is_ok(), "{recipe:?}");
+                assert!(recipe_points(recipe) <= true_craft_points_budget(3), "within the budget: {recipe:?}");
+                assert!(validate_recipe(recipe, 3, None).is_ok(), "{recipe:?}");
+            }
+        }
+
+        #[test]
+        fn r3043000_crafts_on_80_percent_of_the_crafters_points_at_every_cost() {
+            // The crafter's 2, 7, 12, 17 and 22 points at 80%, to the nearest point.
+            for (cost, budget) in (0..=CRAFT_MAX_COST).zip([2, 6, 10, 14, 18]) {
+                assert_eq!(true_craft_points_budget(cost), budget);
+                let s = crafted_at(cost);
+                assert_eq!(recipe_points(&presets(&s)[0]), budget, "the Unit preset spends it all");
+                assert!(presets(&s).iter().all(|recipe| recipe_points(recipe) <= budget));
+                refused(cost, unit_recipe(cost, budget + 1, 1), &format!("over the budget of {budget}"));
+                let (_, card) = minted(unit_recipe(cost, budget, 1));
+                assert!(card.def_id.starts_with("craft:"), "cost {cost}: the whole budget crafts");
             }
         }
 
@@ -491,7 +507,8 @@ mod tests {
 
         #[test]
         fn r882_its_loc_is_the_counted_lines() {
-            let recipe = spell(1, json!([{ "verb": "draw", "n": 2 }, { "verb": "healYourHero", "n": 2 }]));
+            // Stockpile's 7 points, over the 6 at cost 1 since R3043000: at cost 2.
+            let recipe = spell(2, json!([{ "verb": "draw", "n": 2 }, { "verb": "healYourHero", "n": 2 }]));
             let (s, card) = minted(recipe.clone());
             let def = transient_of(&s, &card);
             let lines = recipe_loc(&json_as(recipe));
@@ -538,7 +555,7 @@ mod tests {
             let aimed = |hat: &str| {
                 json!({
                     "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
-                    "attack": 4, "health": 5, "keywords": [], "echo": 0,
+                    "attack": 4, "health": 4, "keywords": [], "echo": 0,
                     "hats": [{ "hat": hat, "effects": [{ "verb": "damageTarget", "n": 3 }] }],
                 })
             };
@@ -605,7 +622,7 @@ mod tests {
                 (unit_recipe(2, 10, 10), 2, false),
                 (unit_recipe(1, 3, 4), 2, false),
             ] {
-                let preview = craft_preview(&json_as(recipe.clone()), cost);
+                let preview = craft_preview(&json_as(recipe.clone()), cost, None);
                 assert_eq!(preview.valid, valid, "{recipe}");
                 assert_eq!(preview.reasons.is_empty(), valid);
                 let mut s = any_block_at(cost);
@@ -630,14 +647,14 @@ mod tests {
                 "p2": { "hand": ["core-053"] },
             }));
             s.play(ID, json!({}));
-            s.answer(json!(["2"]));
+            s.answer(json!(["3"]));
             // R1563007's offer only narrows what R882 holds: widen it to every block.
             if let Some(pending) = s.state_mut().pending.as_mut() {
                 pending.craft_offer = Some(whole_palette());
             }
-            // A 3/4 with Armor 1 and a Cry dealing N=3: 3+4-1+2+3 = 11 points, within 12.
+            // A 3/4 with Armor 1 and a Cry dealing N=3: 3+4-1+2+3 = 11 points, within 14 (R3043000).
             s.answer(json!([{ "pick": "craft", "recipe": {
-                "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+                "cost": 3, "type": "Unit", "adjective": "Pure", "noun": "Closure",
                 "attack": 3, "health": 4,
                 "keywords": [{ "kind": "Armor", "n": 1 }], "echo": 0,
                 "hats": [{ "hat": "cry", "effects": [{ "verb": "damageEnemyHero", "n": 3 }] }],
@@ -666,6 +683,28 @@ mod tests {
             assert!(s.hand(P1)[0].radiant);
             s.expect_in_zone(&spell.id, "exile");
             assert!(s.pile(P1, "graveyard").iter().all(|card| card.id != spell.id));
+        }
+
+        #[test]
+        fn r3043000_the_radiant_face_crafts_on_the_same_80_percent() {
+            for cost in [1, 3, 4] {
+                let budget = true_craft_points_budget(cost);
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": ID, "radiant": true }], "mana": 10 },
+                    "p2": { "hand": ["core-053"] },
+                }));
+                s.play(ID, json!({}));
+                s.answer(json!([cost.to_string()]));
+                s.expect_refused_with(
+                    |s| s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(cost, budget + 1, 1) }])),
+                    &format!("over the budget of {budget}"),
+                );
+                s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(cost, budget, 1) }]));
+                let hand = s.hand(P1);
+                assert!(hand[0].radiant, "cost {cost}: crafted Radiant");
+                let def = transient_of(&s, &hand[0]);
+                assert_eq!(def.radiant.attack, Some(CRAFT_RADIANT_MULTIPLIER * budget), "doubled after the budget");
+            }
         }
 
         #[test]

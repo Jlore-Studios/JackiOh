@@ -572,7 +572,7 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
 /// block editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
 /// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (either absent), so the verdict is the
-/// one its answer gets: the mode's frame and the offer's blocks (R1563007).
+/// one its answer gets: the mode's frame and points (R3043000) and the offer's blocks (R1563007).
 pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, String> {
     let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
     if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {

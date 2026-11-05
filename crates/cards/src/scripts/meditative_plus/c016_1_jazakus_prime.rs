@@ -129,10 +129,10 @@ mod tests {
             assert_eq!(pending.budget, Some(CRAFT_HUGE_POTION_COST));
             assert_eq!(pending.craft_mode, Some(CraftMode::HugePotion));
             assert_eq!(
-                points_budget(Some(CraftFrame::HugePotion), 3),
-                CRAFT_HUGE_POTION_BUDGET_MULTIPLE * points_budget(Some(CraftFrame::Potion), 1)
+                points_budget(Some(CraftFrame::HugePotion), Some(CraftMode::HugePotion), 3),
+                CRAFT_HUGE_POTION_BUDGET_MULTIPLE * points_budget(Some(CraftFrame::Potion), Some(CraftMode::Potion), 1)
             );
-            assert_eq!(points_budget(Some(CraftFrame::HugePotion), 3), 20);
+            assert_eq!(points_budget(Some(CraftFrame::HugePotion), Some(CraftMode::HugePotion), 3), 20);
             let offer = pending.craft_offer.clone().expect("a potion prompt rolls an offer");
             assert!(!pending.options.is_empty() && pending.options.len() <= offer.verbs.len());
             for option in &pending.options {
