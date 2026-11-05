@@ -17142,6 +17142,7 @@
         "by": "`claude` (strong)",
         "sha": "51da8fc07a37d6a95077262510388cdbda529d9d"
       },
+      "closed_at": "2026-11-05T05:23:52Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "hard",
@@ -17153,6 +17154,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "claude-8",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-05T04:37:30Z",
