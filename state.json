@@ -13596,7 +13596,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42041780822",
+      "run_id": "pending:3efb5e35-1793892439",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -13617,7 +13617,7 @@
         "run": "42041780822"
       },
       "source": "conflict",
-      "started_at": "2026-11-05T14:06:14Z",
+      "started_at": "2026-11-05T15:27:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 6,
@@ -15545,9 +15545,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T14:44:13Z",
+    "at": "2026-11-05T15:27:52Z",
     "url": "",
-    "what": "build #3189 on claude-8"
+    "what": "revise #3068 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-05T15:18:15Z",
