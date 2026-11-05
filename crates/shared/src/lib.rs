@@ -2,7 +2,7 @@
 //! calls it natively, and the browser and Roblox call it through a body in `jackioh-wasm-core`.
 //! `README.md` is the contract (the host contract among it); this file is the map.
 //!
-//! The first thing in is the Conquest series rules, from the server's `api/series_rules.rs` (#3098):
+//! The first thing in is the Conquest series rules, from `crates/server` (#3098):
 //! [`series`] holds the rows and the transitions over them (SPEC §9.5, R330–R337), [`deck`] what a
 //! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers.
 

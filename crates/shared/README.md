@@ -8,7 +8,7 @@ scripts and client supply only I/O (timers, RemoteEvents, DataStores) and layout
 comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
-from the server's `api/series_rules.rs` (#3098).
+from `crates/server` (#3098).
 
 ## Host contract
 
@@ -125,7 +125,7 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 
 ## Tests
 
-`tests/series.rs` holds the series rules' tests, moved from the server's `tests/api/series_rules.rs`
+`tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
 unchanged, and `tests/boundary.rs` the JSON boundary. The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.
 
