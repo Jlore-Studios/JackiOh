@@ -21,8 +21,8 @@ use serde_json::{Map, Value};
 use crate::scripts::classic::{
     c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
     c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime, c032_felinor_feelings, c035_prep,
-    c039_outbreak, c047_recurring_felinor, c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad,
-    c090_in_too_deep,
+    c039_outbreak, c047_recurring_felinor, c052_final_gambit, c057_echo, c064_malzahars_recycler,
+    c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c019_1_top_loser, c023_dropshipping, c030_felinor_fuser,
@@ -37,13 +37,13 @@ use crate::scripts::core::{
     c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
 };
 use crate::scripts::meditative::{
-    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
-    c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer,
-    c045_knowledge_breaker, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
-    c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant, c080_aluneth, c085_playtester,
-    c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
-    c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
-    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c005_death_by_1000_cuts, c017_true_craft_a_card, c018_expedition12, c019_expedition123,
+    c021_api_key_fishing, c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle,
+    c038_h1b_printer, c045_knowledge_breaker, c048_tranquility, c049_1_yilegpt_unleashed,
+    c049_3_ai_girlfriend, c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant,
+    c080_aluneth, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
+    c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
+    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
@@ -70,7 +70,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
-/// #3044).
+/// #3044, #3048).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -504,6 +504,12 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c090_in_too_deep::script_v0_5_11o,
     ),
     (c079_twinspell::ID, "v0.5.11o", c079_twinspell::script_v0_5_11o),
+    (c057_echo::ID, "v0.5.11o", c057_echo::script_v0_5_11o),
+    (
+        c005_death_by_1000_cuts::ID,
+        "v0.5.11o",
+        c005_death_by_1000_cuts::script_v0_5_11o,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
