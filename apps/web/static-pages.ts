@@ -229,8 +229,8 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.copyright]:
     section(
       "Reporting content that infringes your copyright",
-      "<p>If you believe something on JackiOh infringes a copyright you own or act for, such as a username or " +
-        "a custom card&rsquo;s name or text, send a written notice to our designated agent below. Under the Digital Millennium Copyright Act " +
+      "<p>If you believe something on JackiOh infringes a copyright you own or act for, such as a username, " +
+        "send a written notice to our designated agent below. Under the Digital Millennium Copyright Act " +
         "(17 U.S.C. &sect; 512(c)(3)), the notice must include:</p>" +
         "<ul><li>Your physical or electronic signature, as the copyright owner or someone authorised to act for them.</li>" +
         "<li>The copyrighted work you say is infringed.</li>" +
@@ -292,7 +292,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "<li>Play, Decks, Account and the leaderboard.</li>" +
         "<li>The Almanac, Patch notes and Stats.</li>" +
         "<li>Practice, its setup and a game, and a game on one device.</li>" +
-        "<li>The card creator, Replays, Play together and the Collection.</li>" +
+        "<li>Replays, Play together and the Collection.</li>" +
         "<li>The Privacy Policy, the Terms, this page and the Copyright page.</li></ul>",
     ) +
     section(

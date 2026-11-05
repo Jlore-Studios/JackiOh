@@ -330,17 +330,6 @@
   color: #ff8f86;
 }
 
-/* R915005: a deck naming a custom card plays only in practice. */
-.ws-chip[data-status="practice"],
-.deckbuilder.app-shell .ws-practice-only {
-  color: #c9a8f5;
-}
-
-.deckbuilder.app-shell .ws-practice-only {
-  margin: 0;
-  font-size: 12px;
-}
-
 /* R2097000: what the newest patch changed of a deck, under its row and its editor's head. */
 .ws-patch {
   display: flex;

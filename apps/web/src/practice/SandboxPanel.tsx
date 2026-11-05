@@ -1,7 +1,6 @@
-// The practice sandbox's dev tools (issue #923, SPEC §9.9, R923000–R923003), the game's own custom cards
-// among the spawnable ones (R962000). It sends intent and nothing else (CLAUDE.md rule 7): every tool is a
-// `sandbox` action the engine judges, and the board shows a refusal as it shows any other. The bounds
-// come from the engine's config (rule 9); the lanes from the view.
+// The practice sandbox's dev tools (issue #923, SPEC §9.9, R923000–R923003). It sends intent and nothing
+// else (CLAUDE.md rule 7): every tool is a `sandbox` action the engine judges, and the board shows a
+// refusal as it shows any other. The bounds come from the engine's config (rule 9); the lanes from the view.
 
 import { useId, useMemo, useState, type ReactElement } from "react";
 
@@ -25,8 +24,6 @@ export type SandboxPanelProps = {
   view: PlayerView;
   /** The worker's catalog; null while it loads. */
   defs: CardDefs | null;
-  /** R962000: the game's own custom cards (its setup's), which a spawn may also name; absent, none. */
-  customs?: CardDefs;
   /** Whether the AI's next step waits (the controller's `sandbox` hold). */
   held: boolean;
   onHold(held: boolean): void;
@@ -61,8 +58,8 @@ function wheres(view: PlayerView, seat: Seat): Where[] {
   ];
 }
 
-function nameOf(defs: CardDefs | null, customs: CardDefs | undefined, view: PlayerView, defId: string): string {
-  return defs?.[defId]?.name ?? customs?.[defId]?.name ?? view.defs?.[defId]?.name ?? defId;
+function nameOf(defs: CardDefs | null, view: PlayerView, defId: string): string {
+  return defs?.[defId]?.name ?? view.defs?.[defId]?.name ?? defId;
 }
 
 function whole(text: string): number | null {
@@ -96,7 +93,7 @@ function ResultCard({ def, radiant, picked, onPick }: { def: CardDef; radiant: b
   );
 }
 
-export function SandboxPanel({ view, defs, customs, held, onHold, onTool }: SandboxPanelProps): ReactElement {
+export function SandboxPanel({ view, defs, held, onHold, onTool }: SandboxPanelProps): ReactElement {
   const baseId = useId();
   const [open, setOpen] = useState(true);
   const [query, setQuery] = useState("");
@@ -114,7 +111,7 @@ export function SandboxPanel({ view, defs, customs, held, onHold, onTool }: Sand
   const [drawCount, setDrawCount] = useState("1");
   const [target, setTarget] = useState("");
 
-  const pool = useMemo(() => (defs === null ? [] : spawnableDefs(defs, customs)), [defs, customs]);
+  const pool = useMemo(() => (defs === null ? [] : spawnableDefs(defs)), [defs]);
   const results = useMemo(() => searchCards(pool, query), [pool, query]);
   const places = wheres(view, spawnSeat);
   const place = places.find((option) => option.value === where) ?? places[0];
@@ -184,7 +181,7 @@ export function SandboxPanel({ view, defs, customs, held, onHold, onTool }: Sand
 
       <section className="sandbox-panel__section" aria-labelledby={`${baseId}-spawn`}>
         <h3 className="sandbox-panel__heading" id={`${baseId}-spawn`}>
-          {picked === null ? t("Spawn a card") : t("Spawn {name}", { name: nameOf(defs, customs, view, picked) })}
+          {picked === null ? t("Spawn a card") : t("Spawn {name}", { name: nameOf(defs, view, picked) })}
         </h3>
         <div className="sandbox-panel__row">
           <SeatPicker value={spawnSeat} onChange={setSpawnSeat} testid={practiceTestid.sandboxSpawnSeat} />
@@ -367,7 +364,7 @@ export function SandboxPanel({ view, defs, customs, held, onHold, onTool }: Sand
             {cards.map((card) => (
               <option key={card.instanceId} value={card.instanceId}>
                 {t("{name} ({side}, {where})", {
-                  name: nameOf(defs, customs, view, card.defId),
+                  name: nameOf(defs, view, card.defId),
                   side: card.side === "you" ? t("yours") : t("the AI's"),
                   where: card.where === "field" ? t("field") : card.where === "hand" ? t("hand") : t("graveyard"),
                 })}

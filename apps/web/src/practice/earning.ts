@@ -18,7 +18,6 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
   if (config.lesson !== undefined || config.sandbox === true || config.aiBanned !== undefined) return null;
   // R2882000: today's deal plays its day's own seed, which no server issues.
   if (config.dailyDeal !== undefined) return null;
-  if (config.customCards !== undefined && config.customCards.length > 0) return null;
   const base = { difficulty: config.difficulty, humanSeat: config.humanSeat, catalog: CATALOG_VERSION };
   const deck = config.deck;
   switch (deck.kind) {
@@ -30,8 +29,6 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
     }
     case "saved":
       return { ...base, deck: { kind: "cards", cards: [...deck.cards] } };
-    case "try":
-      return null;
   }
 }
 

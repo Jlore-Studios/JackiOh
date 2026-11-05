@@ -4,8 +4,7 @@
 // friend joins (`ChallengeToast.tsx`).
 //
 // CLAUDE.md rule 7: the picks are the lobby's (`routes/play.tsx`); whether a deck may be played is the
-// server's, at the room. R915005: as there, a deck naming a custom card (or a trio holding one) is
-// listed off, "(practice only)", and never picked.
+// server's, at the room.
 //
 // It opens on the last mode and deck (or trio) a challenge was sent with from this browser
 // (`challengeChoice.ts`, #1831), so a repeat challenge is Challenge and Enter. R2031000: All Random
@@ -27,13 +26,10 @@ import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   choiceOf,
-  deckPracticeOnly,
   pickDeck,
   pickTrio,
-  practiceOnlyLabel,
   readChallengeChoice,
   rememberChallengeChoice,
-  trioPracticeOnly,
 } from "./challengeChoice.ts";
 import { followChallenge } from "./follow.ts";
 import { tabStops, useModalKeys } from "./modalKeys.ts";
@@ -82,7 +78,7 @@ export function ChallengeDialog({
         if (canceled) return;
         setSaved({ decks: answer.decks, trios: answer.trios });
         setDeckId(pickDeck(answer.decks, initial.deckId)?.id ?? null);
-        setTrioId(pickTrio(answer.trios, initial.trioId, answer.decks)?.id ?? null);
+        setTrioId(pickTrio(answer.trios, initial.trioId)?.id ?? null);
       },
       (cause: unknown) => {
         if (!canceled) setLoadError(messageOf(cause));
@@ -223,25 +219,13 @@ export function ChallengeDialog({
                     setDeckId(event.target.value);
                   }}
                 >
-                  {deckId === null ? <option value="">{t("No deck plays online yet")}</option> : null}
-                  {saved.decks.map((deck) =>
-                    deckPracticeOnly(deck) ? (
-                      <option key={deck.id} value={deck.id} disabled>
-                        {practiceOnlyLabel(deck.name)}
-                      </option>
-                    ) : (
-                      <option key={deck.id} value={deck.id}>
-                        {deck.name}
-                      </option>
-                    ),
-                  )}
+                  {saved.decks.map((deck) => (
+                    <option key={deck.id} value={deck.id}>
+                      {deck.name}
+                    </option>
+                  ))}
                 </select>
               </label>
-              {saved.decks.some(deckPracticeOnly) ? (
-                <p className="lobby-note" data-testid={togetherTestid.challengePracticeOnly}>
-                  {t("A deck with a custom card plays only in practice, against the AI.")}
-                </p>
-              ) : null}
             </>
           )
         ) : null}
@@ -264,25 +248,13 @@ export function ChallengeDialog({
                     setTrioId(event.target.value);
                   }}
                 >
-                  {trioId === null ? <option value="">{t("No trio plays online yet")}</option> : null}
-                  {saved.trios.map((trio) =>
-                    trioPracticeOnly(trio, saved.decks) ? (
-                      <option key={trio.id} value={trio.id} disabled>
-                        {practiceOnlyLabel(trio.name)}
-                      </option>
-                    ) : (
-                      <option key={trio.id} value={trio.id}>
-                        {trio.name}
-                      </option>
-                    ),
-                  )}
+                  {saved.trios.map((trio) => (
+                    <option key={trio.id} value={trio.id}>
+                      {trio.name}
+                    </option>
+                  ))}
                 </select>
               </label>
-              {saved.trios.some((trio) => trioPracticeOnly(trio, saved.decks)) ? (
-                <p className="lobby-note" data-testid={togetherTestid.challengePracticeOnly}>
-                  {t("A trio holding a deck with a custom card cannot play Conquest: custom cards play only in practice.")}
-                </p>
-              ) : null}
             </>
           )
         ) : null}

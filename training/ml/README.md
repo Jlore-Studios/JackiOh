@@ -24,7 +24,8 @@ To move a pin, edit `pyproject.toml`, run `uv lock --project training/ml` and co
    `cargo jackioh selfplay --games 2000 --seed <base> --out <dir>` (R1006001, R1006002).
 2. Positions: `cargo jackioh positions <dir>/selfplay-*.jsonl --out positions.jsonl` (one row per seat
    per turn, the default; `--every decision` for every decision), which drops and counts any game that
-   no longer replays (R1006003, R1006004).
+   no longer replays (R1006003, R1006004). It prints `unknownShare`, the share of the cards its rows
+   name that the build's network has no row for (R3112002).
 
 `training/ml/data/` and `training/ml/out/` are git-ignored: positions and fits are data. The fixture
 `tests/fixtures/positions.jsonl` (20 games, `selfplay --games 20 --seed ml-fixture`, 284 positions) is

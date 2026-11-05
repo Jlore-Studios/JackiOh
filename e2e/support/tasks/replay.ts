@@ -15,8 +15,6 @@ export type ReplayHashPayload = {
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
   /** R433: the seats the game dealt, passed to `fold` untouched. */
   dealt?: ("p1" | "p2")[];
-  /** R915006: a practice game's custom cards (spec 40), folded through the card kit by the CLI. */
-  customCards?: unknown[];
 };
 
 export type ReplayHashResult = {
@@ -44,7 +42,6 @@ export function replayHash(projectRoot: string, payload: ReplayHashPayload): Rep
         log: payload.log,
         ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
         ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
-        ...(payload.customCards === undefined ? {} : { customCards: payload.customCards }),
       },
       null,
       2,

@@ -115,7 +115,9 @@ that stays off, or a change to the exporter, the features, the trainer or the ga
 The network learns a worth for each card it has seen played, on top of the card's stats, which it
 reads live (`docs/learned-eval.md`, D5 and D10). A patch leaves the learned worth of the cards it
 changed stale until a run exports on it, and a set's new cards have none until then: they are valued
-by their stats alone.
+by their stats and by what they are (type, cost, tags, keywords, printed stats, Radiant; R3112000).
+The run's `positions.json` gives `unknownShare`, the share of the export's cards that the network
+shipped before it has no row for (R3112002).
 
 Patches and micros (`docs/issues-and-patches.md`, Version numbers) ship two or three times a day,
 and a run takes about two days, about 40 hours of them its export. So a patch or a micro stops

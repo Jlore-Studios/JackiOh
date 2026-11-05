@@ -20,7 +20,7 @@ export const copyrightTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const COPYRIGHT_LAST_UPDATED = "2026-10-15";
+export const COPYRIGHT_LAST_UPDATED = "2026-11-05";
 
 export default function CopyrightRoute(): ReactElement {
   const locale = useLocale();
@@ -42,8 +42,8 @@ export default function CopyrightRoute(): ReactElement {
         <section aria-labelledby="copyright-report">
           <h3 id="copyright-report">Reporting content that infringes your copyright</h3>
           <p>
-            If you believe something on JackiOh infringes a copyright you own or act for, such as a username or
-            a custom card&rsquo;s name or text, send a written notice to our designated agent below. Under the Digital Millennium Copyright Act
+            If you believe something on JackiOh infringes a copyright you own or act for, such as a username,
+            send a written notice to our designated agent below. Under the Digital Millennium Copyright Act
             (17 U.S.C. &sect; 512(c)(3)), the notice must include:
           </p>
           <ul>

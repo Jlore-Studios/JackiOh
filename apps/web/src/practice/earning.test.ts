@@ -15,18 +15,9 @@ function config(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {
 }
 
 describe("R1303000 which practice games ask for a server seed", () => {
-  it("R1303000 a lesson, a sandbox, custom cards, Try it and aiBanned ask for no seed", () => {
+  it("R1303000 a lesson, a sandbox and aiBanned ask for no seed", () => {
     expect(seedRequestOf(config({ lesson: "basics" }))).toBeNull();
     expect(seedRequestOf(config({ sandbox: true }))).toBeNull();
-    expect(
-      seedRequestOf(
-        config({
-          deck: { kind: "saved", index: 1, cards: ["custom-0123"] },
-          customCards: [{ id: "custom-0123" } as NonNullable<PracticeStartConfig["customCards"]>[number]],
-        }),
-      ),
-    ).toBeNull();
-    expect(seedRequestOf(config({ deck: { kind: "try", card: "custom-0123" } }))).toBeNull();
     expect(seedRequestOf(config({ aiBanned: ["core-001"] }))).toBeNull();
     expect(seedRequestOf(config({ deck: { kind: "preset", id: "no-such-preset" } }))).toBeNull();
   });

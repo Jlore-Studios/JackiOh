@@ -44,7 +44,7 @@ const byId = (id: string): HTMLElement => screen.getByTestId(id);
 function keepRun(log: readonly object[]): void {
   window.localStorage.setItem(
     DUNGEON_RUN_KEY,
-    JSON.stringify({ v: 1, file: { setup: setupOf(), unlocks: unlocks(), log }, customCards: [], startedAt: Date.now(), daily: false }),
+    JSON.stringify({ v: 1, file: { setup: setupOf(), unlocks: unlocks(), log }, startedAt: Date.now(), daily: false }),
   );
 }
 
