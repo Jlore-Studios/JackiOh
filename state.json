@@ -12670,9 +12670,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-05T13:04:18Z",
-      "owner_why": "handed off from `claude-4`: `claude-4` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-05T16:30:00Z; it can start again only in 2h 25m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-6",
+      "owner_since": "2026-11-05T14:17:24Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-05T18:10:00Z; it can start again only in 3h 52m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-05T14:15:47Z",
         "interrupt": "usage",
@@ -12684,11 +12684,11 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-04T08:53:30Z",
       "requested_by": "squishy-squooby",
       "round_tier": "strong",
-      "run_id": "42032513183",
+      "run_id": "pending:3d6c4356-1793888218",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -12707,7 +12707,7 @@
         "provider": "claude-3",
         "run": "42032513183"
       },
-      "started_at": "2026-11-05T13:04:18Z",
+      "started_at": "2026-11-05T14:17:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -15462,9 +15462,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T14:16:45Z",
+    "at": "2026-11-05T14:17:24Z",
     "url": "",
-    "what": "spot-check #3174 on claude-8"
+    "what": "build #3015 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T14:03:01Z",
