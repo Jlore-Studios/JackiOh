@@ -141,7 +141,7 @@ mod tests {
             }
 
             #[test]
-            fn r3140000_the_draw_follows_the_last_copy() {
+            fn r1144_the_draw_follows_the_last_copy() {
                 let mut s = holding("deadman-order", false, json!([VANILLA]), 2);
                 s.play(ID, json!({}));
                 let events = s.events();

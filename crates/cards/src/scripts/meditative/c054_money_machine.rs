@@ -313,7 +313,7 @@ mod tests {
         }
 
         #[test]
-        fn r3140000_cry_adds_a_the_coin_to_your_hand_as_it_is_played() {
+        fn r1_cry_adds_a_the_coin_to_your_hand_as_it_is_played() {
             let mut s = holding("money-machine-cry", false, 2);
             s.play(ID, json!({}));
             let coins = hand_coins(&s);
@@ -328,7 +328,7 @@ mod tests {
         }
 
         #[test]
-        fn r3140000_a_full_hand_burns_the_cry_s_coin() {
+        fn r1_a_full_hand_burns_the_cry_s_coin() {
             // Ten cards beside the Machine: the hand is full once it is played, so the Coin burns (§2.4).
             let mut s = holding("money-machine-cry-full", false, HAND_CAP as usize);
             s.play(ID, json!({}));
@@ -342,7 +342,7 @@ mod tests {
         }
 
         #[test]
-        fn r3140000_a_machine_that_is_not_played_adds_no_coin() {
+        fn r1_a_machine_that_is_not_played_adds_no_coin() {
             // Set straight into the backrow (no play), it has no Cry to run.
             let s = machine("money-machine-no-cry", false);
             assert!(hand_coins(&s).is_empty());
@@ -353,7 +353,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3140000_cry_adds_a_radiant_the_coin_to_your_hand() {
+        fn r1_cry_adds_a_radiant_the_coin_to_your_hand() {
             let mut s = holding("money-machine-cry-radiant", true, 2);
             s.play(ID, json!({}));
             let coins = hand_coins(&s);
