@@ -14,15 +14,13 @@ use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
+use jackioh_server::api::queue::{fallback_due, fallback_seconds};
 use jackioh_server::api::queue::{kick_off_bot_match, seat_coin_p1_first, try_pair};
 use jackioh_server::api::ranked::rate_ranked_game;
 use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::api::series::sweep_series;
 use jackioh_server::app::{App, load_server_env, now_ms};
 use jackioh_server::bots::calibrate::reference_observations;
-use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, fallback_seconds_keyed, hour_of};
-use jackioh_server::bots::pick::{pick_due_at, pick_slot};
-use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_STEP_GAMES, BOT_RECENT_OPPONENTS,
     BOT_REMATCH_DELAY_MAX_MS, BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, BOT_STRENGTHS,
@@ -36,6 +34,9 @@ use jackioh_server::env::SERVER_ONLY_ENV_VARS;
 use jackioh_server::ranked::ladder::{GrapeTier, Ladder, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::seats::Seat;
+use jackioh_shared::bots::fallback::{fallback_seconds_keyed, hour_of};
+use jackioh_shared::bots::pick::{pick_due_at, pick_slot};
+use jackioh_shared::bots::signals::{RematchPlan, rematch_plan};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 use crate::support::engine::playable;

@@ -2,6 +2,7 @@
 import type { Action } from "./Action";
 import type { ActionAnswer } from "./ActionAnswer";
 import type { DecideRequest } from "./DecideRequest";
+import type { EmoteId } from "./EmoteId";
 import type { GameEventType } from "./GameEventType";
 import type { GreetingPart } from "./GreetingPart";
 import type { HostNote } from "./HostNote";
@@ -20,4 +21,4 @@ export type DuelOutput = { "output": "send", home: PlayerId, message: SeatMessag
 /**
  * The acting seat's clock as the change landed.
  */
-clockLeftMs: number | null, lastEvent: GameEventType | null, } | { "output": "seatsSwapped", swapped: boolean, } | { "output": "changed", fresh: number, } | { "output": "pushed", snapshot: MatchSnapshot, } | { "output": "decide", request: DecideRequest, } | { "output": "record", request: RecordRequest, } | { "output": "voided", at: number, } | { "output": "ceilingDraw", at: number, } | { "output": "offerRematch", home: PlayerId, stakes: number, reply: boolean, } | { "output": "letGo", reason: LetGo, } | { "output": "note", note: HostNote, };
+clockLeftMs: number | null, lastEvent: GameEventType | null, } | { "output": "seatsSwapped", swapped: boolean, } | { "output": "changed", fresh: number, } | { "output": "pushed", snapshot: MatchSnapshot, } | { "output": "decide", request: DecideRequest, } | { "output": "record", request: RecordRequest, } | { "output": "voided", at: number, } | { "output": "ceilingDraw", at: number, } | { "output": "botEmote", home: PlayerId, emote: EmoteId, } | { "output": "offerRematch", home: PlayerId, stakes: number, reply: boolean, } | { "output": "letGo", reason: LetGo, } | { "output": "note", note: HostNote, };

@@ -772,6 +772,41 @@ pub fn host(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::host::boundary::apply(call))
 }
 
+// The ladder bots (SPEC §9.12, R1452; #3103)
+
+/// One call of `jackioh_shared::bots`, the decisions around a ladder bot the server calls natively: the
+/// pool's size, who grinds, a new bot, its decks and trio, the empty-queue pairing and a series pick. The
+/// input is a `BotCall` (`{ "call": "chooseBot", "ticket": …, "bots": …, … }`), the output a `BotAnswer`.
+/// The host reads its store into plain records and writes what comes out (`crates/shared/README.md`, the
+/// host contract). The deals read the catalog this module registered. No decision is made here.
+pub fn bots(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::bots::boundary::BotCall = parse("bots: the call", call_json)?;
+    jackioh_cards::register_all();
+    to_json(&jackioh_shared::bots::boundary::apply(call))
+}
+
+/// The move a ladder bot owes: the input is a `DecideCall` (`{ "host": <the DuelHost>, "request": <the
+/// DecideRequest the machine made> }`), the output the `BotChoice` to feed the machine back as
+/// `{ "event": "decided", … }`. Once `now_ms()` passes `deadline_ms` the search answers with its best so far;
+/// `deadline_ms <= 0` means no clock, so the decision depends only on its inputs and the strength's budget.
+pub fn bot_decide(call_json: &str, deadline_ms: f64, now_ms: fn() -> f64) -> Result<String, String> {
+    let call: jackioh_shared::host::boundary::DecideCall = parse("botDecide: the call", call_json)?;
+    jackioh_cards::register_all();
+    let clock = move || now_ms() >= deadline_ms;
+    let should_stop = if deadline_ms > 0.0 {
+        Some(&clock as &dyn Fn() -> bool)
+    } else {
+        None
+    };
+    match jackioh_shared::host::boundary::decide(&call, should_stop) {
+        Some(choice) => to_json(&choice),
+        None => Err(format!(
+            "botDecide: no bot plays at {} in this host",
+            call.request.home
+        )),
+    }
+}
+
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
 // mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
 // feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only

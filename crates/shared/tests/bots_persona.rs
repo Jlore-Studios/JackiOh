@@ -1,11 +1,11 @@
 //! Bot persona chatter (SPEC §9.9, §6, R645, R1344, R643).
 
 use jackioh_engine::wire::{EMOTE_COOLDOWN_MS, EMOTE_IDS, EmoteId, GameEvent, PlayerId, PlayerView};
-use jackioh_server::bots::persona::{
+use jackioh_shared::bots::persona::{
     AiEmote, EmotePersona, pick_bot_persona, pick_persona, reply_key_of, roll_delay, roll_for_reply,
     roll_for_trigger,
 };
-use jackioh_server::config::{
+use jackioh_shared::config::{
     AI_EMOTE, AI_PERSONAS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_PERSONA_WEIGHTS,
     EMOTE_REPLY_KEYS, EMOTE_TRIGGERS, EmoteDelayFit, EmoteReplyKey, EmoteTrigger, PERSONA_DEAL_STEPS,
     PERSONA_NAMES, PersonaCaps, PersonaName, PersonaRow, persona_spec,
@@ -221,8 +221,49 @@ fn emote_for_key(key: EmoteReplyKey) -> EmoteId {
     }
 }
 
-fn session(persona: PersonaName, rng: Rng) -> EmotePersona {
-    EmotePersona::new(persona, SEAT, rng, None)
+/// A persona with the scripted draws it rolls on: the persona keeps no generator (the machine rolls it
+/// on its own stream), so a test holds the script beside it.
+struct Session {
+    persona: EmotePersona,
+    rng: Rng,
+}
+
+impl Session {
+    fn new(persona: PersonaName, seat: PlayerId, rng: Rng, hand: Option<Vec<EmoteId>>) -> Session {
+        Session {
+            persona: EmotePersona::new(persona, seat, hand),
+            rng,
+        }
+    }
+
+    fn with_delays(self, trigger: EmoteDelayFit, reply: EmoteDelayFit) -> Session {
+        Session {
+            persona: self.persona.with_delays(trigger, reply),
+            ..self
+        }
+    }
+
+    fn on_events(
+        &mut self,
+        fresh: &[GameEvent],
+        prev: Option<&PlayerView>,
+        view: &PlayerView,
+        now: i64,
+    ) -> Vec<AiEmote> {
+        self.persona.on_events(&mut *self.rng, fresh, prev, view, now)
+    }
+
+    fn on_player_emote(&mut self, emote: EmoteId, now: i64) -> Vec<AiEmote> {
+        self.persona.on_player_emote(&mut *self.rng, emote, now)
+    }
+
+    fn on_player_turn_long(&mut self, view: &PlayerView, now: i64) -> Vec<AiEmote> {
+        self.persona.on_player_turn_long(&mut *self.rng, view, now)
+    }
+}
+
+fn session(persona: PersonaName, rng: Rng) -> Session {
+    Session::new(persona, SEAT, rng, None)
 }
 
 /// `emote` after the shortest delay.
@@ -1192,12 +1233,12 @@ fn r1344_a_hit_on_a_row_the_hand_holds_none_of_sends_nothing() {
 fn r1344_a_session_made_with_a_hand_sends_from_that_hand_alone_greeting_and_replies_included() {
     use EmoteId::*;
     let hand = vec![WellPlayed, Oops, Thanks, Sob, Clap, Skull, Salute, Gasp];
-    let mut s = EmotePersona::new(PersonaName::Balanced, SEAT, low(), Some(hand.clone()));
+    let mut s = Session::new(PersonaName::Balanced, SEAT, low(), Some(hand.clone()));
     assert_eq!(
         s.on_events(&[], Some(&mulligan_view()), &turn_view(FOE, 1), 1_000),
         vec![at_min(Salute)]
     );
-    let mut replies = EmotePersona::new(PersonaName::Balanced, SEAT, low(), Some(hand));
+    let mut replies = Session::new(PersonaName::Balanced, SEAT, low(), Some(hand));
     let sent: Vec<EmoteId> = replies
         .on_player_emote(WellPlayed, 60_000)
         .into_iter()
@@ -1241,12 +1282,23 @@ fn r1344_over_dealt_hands_nothing_any_persona_rolls_is_outside_its_hand() {
     }
 }
 
-// Persona held in match actor tokio task, must be Send.
+// The persona is plain data, so the match host's machine can keep it in its checkpoint (the host
+// contract, `crates/shared/README.md`).
 
 #[test]
-fn r645_a_persona_can_live_in_a_match_actors_task() {
-    fn assert_send<T: Send>(_: &T) {}
-    assert_send(&session(PersonaName::Balanced, low()));
+fn r645_a_persona_is_data_the_machines_checkpoint_holds() {
+    let mut s = session(PersonaName::Balanced, low());
+    s.on_events(&[turn_started(FOE, 3)], None, &turn_view(FOE, 3), 1_000);
+    assert_eq!(s.on_player_emote(EmoteId::Greetings, 11_000), vec![min_delay()]);
+    let json = serde_json::to_string(&s.persona).expect("a persona serializes");
+    let mut resumed = Session {
+        persona: serde_json::from_str(&json).expect("a persona reads back"),
+        rng: low(),
+    };
+    assert_eq!(resumed.persona, s.persona);
+    // What it had already answered, it answers no second time; what it had not, it still does.
+    assert_eq!(resumed.on_player_emote(EmoteId::Greetings, 21_000), vec![]);
+    assert_eq!(s.on_player_emote(EmoteId::Greetings, 21_000), vec![]);
 }
 
 // R639000: a ladder bot's refit rows
@@ -1263,7 +1315,7 @@ const REPLY_WINDOW: EmoteDelayFit = EmoteDelayFit {
     max_ms: 6_000.0,
 };
 
-fn ladder_session(persona: PersonaName, rng: Rng) -> EmotePersona {
+fn ladder_session(persona: PersonaName, rng: Rng) -> Session {
     session(persona, rng).with_delays(TRIGGER_WINDOW, REPLY_WINDOW)
 }
 

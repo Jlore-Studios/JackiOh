@@ -119,13 +119,13 @@ fn r1442_timing_fit_prints_rows_to_paste_into_config() {
     ];
     assert_eq!(
         render_fits(&fits),
-        "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/server/src/config.rs\n\
+        "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/shared/src/config.rs\n\
          \x20   ThinkTimeFit { rank_bucket: None, action_kind: \"endTurn\", first_in_turn: false, samples: 40, mu: 7.5000, sigma: 0.2500, ln_legal_mean: 1.0000 },\n\
          \x20   ThinkTimeFit { rank_bucket: Some(\"golden\"), action_kind: \"play\", first_in_turn: true, samples: 31, mu: 8.1234, sigma: 0.7345, ln_legal_mean: 2.1235 },\n"
     );
     assert_eq!(
         render_fits(&[]),
-        "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/server/src/config.rs\n"
+        "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/shared/src/config.rs\n"
     );
 }
 
@@ -475,7 +475,7 @@ fn r639000_timing_fit_prints_the_rows_to_paste_over_the_priors() {
     };
     assert_eq!(
         render_constants(&fits),
-        "// jackioh-server timing-fit: paste each over the row of its name, crates/server/src/config.rs\n\
+        "// jackioh-server timing-fit: paste each over the row of its name, crates/shared/src/config.rs\n\
          pub const THINK_COMPLEXITY_SLOPE: ScalarFit = ScalarFit { samples: 120, value: 0.1832 };\n\
          // THINK_LETHAL_SHIFT: under TIMING_FIT_MIN_SAMPLES; keep the prior\n\
          pub const BOT_CONCEDE_FIT: ConcedeFit = ConcedeFit { samples: 44, share: 0.4000, min_turn: 7, deficit_mu: 38.5000, deficit_sigma: 17.2500 };\n\

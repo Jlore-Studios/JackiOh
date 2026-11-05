@@ -783,5 +783,29 @@ pub extern "C" fn host(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::host(arg("host: the call", call_json_ptr, call_json_len)?))
 }
 
+// The ladder bots (SPEC §9.12, #3103: `jackioh-shared`, which the server calls natively)
+
+/// One call of the decisions around a ladder bot: a `BotCall` as JSON in, a `BotAnswer` as JSON out. The
+/// host reads its store into plain records and writes what comes out (`crates/shared/README.md`, the host
+/// contract).
+#[unsafe(no_mangle)]
+pub extern "C" fn bots(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::bots(arg("bots: the call", call_json_ptr, call_json_len)?))
+}
+
+/// The move a ladder bot owes: a `DecideCall` (the `DuelHost` and the `DecideRequest` the machine made) as
+/// JSON in, the `BotChoice` to feed it back as `decided` out. As `ai_decide`'s, `deadline_ms` is accepted
+/// and has no effect: this module has no clock, so the search ends at the strength's budget.
+#[unsafe(no_mangle)]
+pub extern "C" fn bot_decide(call_json_ptr: *const u8, call_json_len: usize, _deadline_ms: f64) -> i32 {
+    boundary(|| {
+        wasm_core::bot_decide(
+            arg("botDecide: the call", call_json_ptr, call_json_len)?,
+            NO_DEADLINE_MS,
+            no_clock,
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests;

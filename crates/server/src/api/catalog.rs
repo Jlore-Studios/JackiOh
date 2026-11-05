@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::response::Response;
+use jackioh_engine::validator::CatalogSnapshot;
 use jackioh_engine::{CardDef, CardDefs, set_ships};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -55,6 +56,15 @@ pub struct Catalog {
 }
 
 impl Catalog {
+    /// The catalog as the shared validator reads it (§9.4): its version, cards and ban list.
+    pub fn snapshot(&self) -> CatalogSnapshot {
+        CatalogSnapshot {
+            version: self.version.clone(),
+            cards: self.defs.clone(),
+            banned: Some(self.banned.clone()),
+        }
+    }
+
     pub fn is_token(&self, card_id: &str) -> bool {
         match self.defs.get(card_id) {
             None => false,

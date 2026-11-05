@@ -4,4 +4,4 @@ import type { PlayerId } from "./PlayerId";
 /**
  * Which timer. One of each is armed at most, so a host keeps them by key and replaces on `Set`.
  */
-export type TimerKey = { "kind": "turn" } | { "kind": "prompt" } | { "kind": "mulligan" } | { "kind": "sequence" } | { "kind": "ceiling" } | { "kind": "grace", player: PlayerId, } | { "kind": "aim", player: PlayerId, } | { "kind": "hover", player: PlayerId, } | { "kind": "botOffer", player: PlayerId, } | { "kind": "botReply", player: PlayerId, } | { "kind": "botRetry" };
+export type TimerKey = { "kind": "turn" } | { "kind": "prompt" } | { "kind": "mulligan" } | { "kind": "sequence" } | { "kind": "ceiling" } | { "kind": "grace", player: PlayerId, } | { "kind": "aim", player: PlayerId, } | { "kind": "hover", player: PlayerId, } | { "kind": "botOffer", player: PlayerId, } | { "kind": "botReply", player: PlayerId, } | { "kind": "botRetry" } | { "kind": "botMove", player: PlayerId, } | { "kind": "botAim", player: PlayerId, } | { "kind": "botEmote", player: PlayerId, } | { "kind": "botLongTurn", player: PlayerId, };

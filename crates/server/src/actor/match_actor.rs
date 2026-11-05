@@ -9,7 +9,8 @@
 //! a refusal is relayed verbatim, never re-derived. Every clock expiry is a server action on a client's
 //! path, since "(seed, log) reconstructs any match" (§9.3). A socket is only sent `view_for` its player
 //! (§9.1, §10.8). R1452, R639000: a ladder bot's seat has no socket; the machine asks for its moves and
-//! the actor plays it. Every task runs on one serialized queue, so two `reduce` calls or log appends never
+//! paces them, aims, emotes and rematches itself (#3103), and the actor only runs the AI's search when
+//! asked. Every task runs on one serialized queue, so two `reduce` calls or log appends never
 //! interleave; a panicking `reduce` is caught (R1253000). The lock is never held across an `.await` nor
 //! while a socket is closed (a close calls back into the actor).
 
@@ -21,14 +22,15 @@ use indexmap::IndexMap;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
-    ActionBody, EmoteId, PLAYER_IDS, PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, Rng,
-    deal_emote_hand, emote_gate, emote_gate_within, hand_holds, portrait_or_default,
+    ActionBody, EmoteId, PLAYER_IDS, PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, deal_emote_hand,
+    emote_gate, emote_gate_within, hand_holds, portrait_or_default,
 };
+use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::host::bot::BotSeat;
 use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 use jackioh_shared::host::{
     ActionAnswer, ActionBy, DecideRequest, DuelEvent, DuelHost, DuelOutput, DuelSetup, GreetingPart,
-    HostNote, LetGo, Played, RecordRequest, SeatMessage,
+    HostNote, LetGo, RecordRequest, SeatMessage,
 };
 
 use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
@@ -46,14 +48,10 @@ use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
 use crate::api::rematch::{RematchStakes, offer_for_bot};
 use crate::app::now_ms;
-use crate::bots::persona::{AiEmote, EmotePersona};
-use crate::bots::seat::{self, BotJob, BotMove};
-use crate::bots::signals::rematch_plan;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    AI_EMOTE, BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT,
-    BOT_REMATCH_FIT, BOT_STRENGTHS, BOT_TIMEOUT_FIT, MATCH_CHECKPOINT_MIN_ACTIONS,
-    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
+    MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
@@ -210,13 +208,13 @@ enum Task {
     Idle(oneshot::Sender<()>),
     /// #1169: the restart drain's checkpoint, answered once it is written or passed over.
     Checkpoint(oneshot::Sender<()>),
-    /// R1452: the move a bot home's `seat::play` came back with, decided on the state as it stood
+    /// R1452: the move the search for a bot home came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     Decided {
         home: PlayerId,
         version: i64,
         turn: i32,
-        played: BotMove,
+        choice: BotChoice,
     },
 }
 
@@ -252,11 +250,16 @@ fn timer_name(key: TimerKey) -> &'static str {
         TimerKey::BotOffer { .. } => "bot-offer",
         TimerKey::BotReply { .. } => "bot-reply",
         TimerKey::BotRetry => "bot-retry",
+        TimerKey::BotMove { .. } => "bot-move",
+        TimerKey::BotAim { .. } => "bot-aim",
+        TimerKey::BotEmote { .. } => "bot-emote",
+        TimerKey::BotLongTurn { .. } => "bot-long-turn",
     }
 }
 
-/// Whether a timer's firing is a task on the queue (the clocks', which act on the match) or answered at
-/// once (the relays' and the bots', which never touch the log).
+/// Whether a timer's firing is a task on the queue (the clocks', and a bot's move, which act on the
+/// match) or answered at once (the relays', and the bots' aim, emotes and offers, which never touch the
+/// log).
 fn queued_timer(key: TimerKey) -> bool {
     matches!(
         key,
@@ -266,6 +269,7 @@ fn queued_timer(key: TimerKey) -> bool {
             | TimerKey::Sequence
             | TimerKey::Ceiling
             | TimerKey::Grace { .. }
+            | TimerKey::BotMove { .. }
     )
 }
 
@@ -299,12 +303,6 @@ struct Core {
     /// R1442: each player's ladder tier as the actor armed (seat order, `MatchRow.players`), the
     /// telemetry's rank bucket; `None` until then, or when it could not be read.
     tiers: Option<PerPlayer<RankTier>>,
-    /// R645, R1344: each bot home's persona, reading the bot seat's own view.
-    personas: PerPlayer<Option<EmotePersona>>,
-    /// The bot seat's view as its persona last read it (`on_events`' `prev`).
-    bot_views: PerPlayer<Option<PlayerView>>,
-    /// R645: the long-turn wait each bot home's persona keeps on the person's turn.
-    bot_long_turn: PerPlayer<Option<Timer>>,
     /// Social (#939): B50's watchers and the delayed views they are sent (`Spectate`).
     spectate: Spectate,
     /// R1834003: card picks sent to each socket; every hello and attach empties it.
@@ -356,37 +354,15 @@ fn playing(core: &Core, home: PlayerId) -> PlayerId {
     core.host.playing(home)
 }
 
-/// R645: the persona of the bot that began in `home`, playing engine seat `seat`: its own rng stream
-/// (`{seed}:bot-persona:{home}`, apart from the match rng and the search's) and its dealt hand
-/// (R1344), waiting out its emotes inside the ladder bots' refit windows (R639000). `None` for a
-/// person's home.
-fn persona_for(
-    seed: &str,
-    home: PlayerId,
-    seat: PlayerId,
-    bot: Option<&BotRow>,
-    hand: &[EmoteId],
-) -> Option<EmotePersona> {
-    let bot = bot?;
-    let mut rng = Rng::new(&format!("{seed}:bot-persona:{home}"), 0);
-    Some(
-        EmotePersona::new(
-            bot.persona,
-            seat,
-            Box::new(move || rng.next()),
-            Some(hand.to_vec()),
-        )
-        .with_delays(BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT),
-    )
-}
-
-/// What the machine is told of the ladder bot at `home` (R639000): its fits, and its plan for the end of
-/// a ranked match, drawn on the match's seed so every call agrees.
-fn bot_seat_for(seed: &str, home: PlayerId, bot: Option<&BotRow>) -> Option<BotSeat> {
-    bot.map(|_| BotSeat {
-        idle_chance_per_turn: BOT_TIMEOUT_FIT.chance_per_turn,
-        aim_lead_ms: (BOT_AIM_LEAD_MIN_MS, BOT_AIM_LEAD_MAX_MS),
-        rematch: rematch_plan(seed, home, &BOT_REMATCH_FIT),
+/// What the machine is told of the ladder bot at a home seat (R1452): who it is. The server's bots pass
+/// for people (`hidden`), so the machine gives them a person's pace, aim, emotes, habits and rematches
+/// (R639000, R645); the rest the machine draws from the match's seed.
+fn bot_seat_for(bot: Option<&BotRow>) -> Option<BotSeat> {
+    bot.map(|bot| BotSeat {
+        strength: u32::try_from(bot.strength).unwrap_or(u32::MAX),
+        speed: bot.speed,
+        persona: bot.persona,
+        hidden: true,
     })
 }
 
@@ -487,36 +463,6 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     let opening = engine::snapshot(&state);
     let telemetry =
         telemetry.unwrap_or_else(|| Recorder::new(pinned, &match_row.id, match_row.created_at, &opening));
-    // R677: a rebuilt actor's bot may already play the other seat.
-    let seat_of_home = |home: PlayerId| {
-        if opening.seats_swapped {
-            home.opponent()
-        } else {
-            home
-        }
-    };
-    let personas = PerPlayer::new(
-        persona_for(
-            &match_row.seed,
-            PlayerId::P1,
-            seat_of_home(PlayerId::P1),
-            bots.p1.as_ref(),
-            &emote_hands.p1,
-        ),
-        persona_for(
-            &match_row.seed,
-            PlayerId::P2,
-            seat_of_home(PlayerId::P2),
-            bots.p2.as_ref(),
-            &emote_hands.p2,
-        ),
-    );
-    let bot_view = |home: PlayerId, bot: &Option<BotRow>| {
-        bot.as_ref()
-            .map(|_| engine::view_for(pinned, &state, seat_of_home(home)))
-    };
-    let bot_views = PerPlayer::new(bot_view(PlayerId::P1, &bots.p1), bot_view(PlayerId::P2, &bots.p2));
-
     let setup = DuelSetup {
         match_id: match_row.id.clone(),
         seed: match_row.seed.clone(),
@@ -528,10 +474,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         next_seq,
         acked,
         clocks: match_row.clocks.clone(),
-        bots: PerPlayer::new(
-            bot_seat_for(&match_row.seed, PlayerId::P1, bots.p1.as_ref()),
-            bot_seat_for(&match_row.seed, PlayerId::P2, bots.p2.as_ref()),
-        ),
+        bots: PerPlayer::new(bot_seat_for(bots.p1.as_ref()), bot_seat_for(bots.p2.as_ref())),
         bot_moved_turn,
     };
     // R79: the turn clock runs when the match opens, and the ceiling from its start; both armed
@@ -552,9 +495,6 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         economy: PerPlayer::new(None, None),
         telemetry,
         tiers: None,
-        personas,
-        bot_views,
-        bot_long_turn: PerPlayer::new(None, None),
         spectate: Spectate::new(),
         card_picks_sent: PerPlayer::new(BTreeSet::new(), BTreeSet::new()),
     };
@@ -669,19 +609,13 @@ impl MatchActor {
                 home,
                 version,
                 turn,
-                played,
+                choice,
             } => {
-                let played = Played {
-                    aimed: played.aim.is_some(),
-                    body: played.body,
-                    ai_cursor: played.ai_cursor,
-                    timing_cursor: played.timing_cursor,
-                };
                 self.drive(DuelEvent::Decided {
                     home,
                     version,
                     turn,
-                    played,
+                    choice,
                 })
                 .await;
             }
@@ -699,7 +633,11 @@ impl MatchActor {
         // this read reaches the actor through `mute_emotes_between`, and `|=` never undoes it.
         let (first, second) = &self.shared.match_row.players;
         match one_tx!(self.shared.deps.db, |t| t.blocks_between(first, second).await?) {
-            Ok(blocked) => self.lock().emotes_blocked |= blocked,
+            Ok(true) => {
+                self.lock().emotes_blocked = true;
+                self.drive(DuelEvent::EmotesMuted).await;
+            }
+            Ok(false) => {}
             Err(error) => {
                 tracing::warn!(event = "match.emote.blocks_failed", matchId = %self.match_id_str(), message = %error);
             }
@@ -714,15 +652,7 @@ impl MatchActor {
             .await;
             self.lock().tiers = tiers;
         }
-        if snapshot.result.is_none() {
-            // R1452: a bot that owes the match a move, as it opens or after a restart, makes it.
-            let mut core = self.lock();
-            for home in PLAYERS {
-                if let Some(view) = core.bot_views[home].clone() {
-                    self.rearm_long_turn(&mut core, home, &view);
-                }
-            }
-        }
+        // R1452: a bot that owes the match a move, as it opens or after a restart, makes it.
         self.drive(DuelEvent::Arm).await;
         // R1483000: an actor rebuilt on a match whose result is already in learns what the cap held back
         // from the ledger; one that is about to write it does so as the result lands.
@@ -838,19 +768,12 @@ impl MatchActor {
                 }
             }
             DuelOutput::SeatsSwapped { swapped } => {
-                // R645: a bot's persona reads the seat its bot plays now, from a fresh start: the view it
-                // read last is the other seat's, and no difference between the two is anything that
-                // happened.
-                for home in PLAYERS {
-                    let seat = playing(core, home);
-                    if let Some(persona) = core.personas[home].as_mut() {
-                        persona.set_seat(seat);
-                        core.bot_views[home] = None;
-                    }
-                }
                 tracing::info!(event = "match.seats.swapped", matchId = %self.match_id_str(), swapped = swapped);
             }
-            DuelOutput::Changed { fresh } => self.feed_personas(core, fresh),
+            // The machine's own bookkeeping: a bot's persona reads the change inside it (R645).
+            DuelOutput::Changed { .. } => {}
+            // R645: a bot's emote goes out as a person's does (the hand, the rate gate, the relay).
+            DuelOutput::BotEmote { home, emote } => self.relay_emote(core, home, emote),
             DuelOutput::Pushed { snapshot } => {
                 // R1442: a seat's think time runs from this push.
                 core.telemetry.on_pushed(&snapshot, now_ms());
@@ -1336,176 +1259,51 @@ impl MatchActor {
 
     // The bot seat (R1452)
 
-    /// R1452: launches the asynchronous move the machine asked for. The think time is waited off the
-    /// queue; clocks can still expire. The move comes back as a `Decided` task.
+    /// R1452: runs the search the machine asked for, off the queue and off the lock, under the match's
+    /// pinned catalog and the machine's deadline (`BOT_DECISION_DEADLINE_MS`, less the clock's margin).
+    /// The move comes back as a `Decided` task; the machine paces it (the think time, the aim, the
+    /// moment it goes), so the actor keeps no bot timer of its own.
     fn spawn_bot(&self, core: &mut Core, request: DecideRequest) {
-        let DecideRequest {
-            home,
-            seat,
-            version,
-            turn,
-            first_in_turn,
-            own_turn_start,
-            aim_lead_ms,
-            clock_left_ms,
-            ai_cursor,
-            timing_cursor,
-        } = request;
-        let actor = Arc::downgrade(&self.shared);
-        let strength = self.shared.bots[home].as_ref().and_then(|bot| {
-            BOT_STRENGTHS
-                .get(bot.strength)
-                .or(BOT_STRENGTHS.last())
-                .copied()
-                .map(|s| (s, bot.speed))
-        });
-        let Some((strength, speed)) = strength else {
-            // No bot or no strength to play it with: nothing to decide, and the machine is told so.
+        let (home, version, turn) = (request.home, request.version, request.turn);
+        let Some(job) = core.host.job(&request) else {
+            // No bot to decide for: nothing found, and the machine is told so.
             self.enqueue(Task::Decided {
                 home,
                 version,
                 turn,
-                played: BotMove {
-                    body: None,
-                    ai_cursor,
-                    timing_cursor,
-                    aim: None,
-                    aim_lead_ms,
-                },
+                choice: BotChoice::nothing(request.ai_cursor),
             });
             return;
         };
-        let seed = &self.shared.match_row.seed;
-        let job = BotJob {
-            state: core.host.game().clone(),
-            seat,
-            home,
-            seed: seed.clone(),
-            strength,
-            speed,
-            ai_rng: Rng::new(&format!("{seed}:bot-ai:{home}"), ai_cursor),
-            timing_rng: Rng::new(&format!("{seed}:bot-timing:{home}"), timing_cursor),
-            first_in_turn,
-            own_turn_start,
-            aim_lead_ms,
-            clock_left_ms,
-            pinned: self.shared.pinned,
-        };
+        let actor = Arc::downgrade(&self.shared);
+        let pinned = self.shared.pinned;
+        let fallback_cursor = request.ai_cursor;
         tokio::spawn(async move {
-            let played = seat::play(job).await;
-            if let Some(aim) = played.aim {
-                // R738: the aim shows a beat before the move, through the relay a person's goes by.
-                let Some(shared) = actor.upgrade() else { return };
-                let strong = MatchActor { shared };
-                {
-                    let mut core = strong.lock();
-                    let outputs = strong.step_in(&mut core, DuelEvent::Aim { home, aim: Some(aim) });
-                    strong.exec_now(&mut core, outputs);
-                }
-                // Not held across the wait, so the actor can still go meanwhile.
-                drop(strong);
-                tokio::time::sleep(Duration::from_millis(
-                    u64::try_from(played.aim_lead_ms).unwrap_or(0),
-                ))
-                .await;
-            }
+            let found = tokio::task::spawn_blocking(move || {
+                // R388, R767000: runs under the match's pinned catalog.
+                jackioh_cards::register_all();
+                let deadline = std::time::Instant::now()
+                    + Duration::from_millis(u64::try_from(job.deadline_ms).unwrap_or(0));
+                let should_stop = move || std::time::Instant::now() >= deadline;
+                pinned.run(|| job.run(Some(&should_stop)))
+            })
+            .await;
+            let choice = found.unwrap_or_else(|_| BotChoice::nothing(fallback_cursor));
             if let Some(shared) = actor.upgrade() {
                 MatchActor { shared }.enqueue(Task::Decided {
                     home,
                     version,
                     turn,
-                    played,
+                    choice,
                 });
             }
         });
     }
 
-    /// R645: each bot's persona reads the change off its own seat's view: the newest `fresh` events
-    /// that view carries (the change's own, redacted for that seat) against the view it read last.
-    /// What it rolls waits out its delay and goes out as the bot's emote (`schedule_emotes`).
-    fn feed_personas(&self, core: &mut Core, fresh: usize) {
-        let now = now_ms();
-        for home in PLAYERS {
-            if core.personas[home].is_none() {
-                continue;
-            }
-            let seat = playing(core, home);
-            let view = engine::view_for(self.shared.pinned, core.host.game(), seat);
-            // R2652000: less the face-down rolls this seat's view leaves out of the change.
-            let fresh = engine::viewed_of_newest(core.host.game(), seat, fresh);
-            let from = view.events.len().saturating_sub(fresh);
-            let prev = core.bot_views[home].take();
-            let intents = match core.personas[home].as_mut() {
-                Some(persona) => persona.on_events(&view.events[from..], prev.as_ref(), &view, now),
-                None => Vec::new(),
-            };
-            self.rearm_long_turn(core, home, &view);
-            core.bot_views[home] = Some(view);
-            self.schedule_emotes(home, intents);
-        }
-    }
-
-    /// R645's long-turn trigger, armed as practice arms it: on every change that leaves the person the
-    /// active seat, a fresh `AI_EMOTE.long_turn_ms` wait (the persona's once-a-turn check makes a
-    /// second arm harmless); none on the bot's own turn or once the game is over.
-    fn rearm_long_turn(&self, core: &mut Core, home: PlayerId, view: &PlayerView) {
-        if let Some(timer) = core.bot_long_turn[home].take() {
-            timer.cancel();
-        }
-        if core.host.is_finished()
-            || core.host.is_stopped()
-            || view.result.is_some()
-            || view.active == view.viewer
-        {
-            return;
-        }
-        let actor = Arc::downgrade(&self.shared);
-        core.bot_long_turn[home] = Some(after(AI_EMOTE.long_turn_ms, move |id| {
-            let Some(shared) = actor.upgrade() else { return };
-            let actor = MatchActor { shared };
-            let intents = {
-                let mut core = actor.lock();
-                if core.bot_long_turn[home].as_ref().map(Timer::id) != Some(id) {
-                    return;
-                }
-                if let Some(timer) = core.bot_long_turn[home].take() {
-                    timer.fired();
-                }
-                if core.host.is_finished() || core.host.is_stopped() {
-                    return;
-                }
-                let Some(view) = core.bot_views[home].clone() else {
-                    return;
-                };
-                match core.personas[home].as_mut() {
-                    Some(persona) => persona.on_player_turn_long(&view, now_ms()),
-                    None => Vec::new(),
-                }
-            };
-            actor.schedule_emotes(home, intents);
-        }));
-    }
-
-    /// R645: each of a bot's intents waits out its own delay, then goes out as the bot's emote.
-    fn schedule_emotes(&self, home: PlayerId, intents: Vec<AiEmote>) {
-        for intent in intents {
-            let actor = Arc::downgrade(&self.shared);
-            let wait = Duration::from_millis(intent.delay_ms.max(0.0).round() as u64);
-            tokio::spawn(async move {
-                tokio::time::sleep(wait).await;
-                let Some(shared) = actor.upgrade() else { return };
-                let actor = MatchActor { shared };
-                let mut core = actor.lock();
-                if !core.host.is_stopped() {
-                    actor.relay_emote(&mut core, home, intent.emote);
-                }
-            });
-        }
-    }
-
     /// R643, R1342: drops undealt or rate-limited emotes silently. Passes relay to opponent and
-    /// enqueue `Emote` if a card listens (R1127). R645: offers person emote to opposing bot persona
-    /// (bots never answer bots). R1351000: blocked accounts relay to no one.
+    /// enqueue `Emote` if a card listens (R1127), and the machine, which offers a person's emote to the
+    /// bot opposite (R645: bots never answer bots) when it is fed it. R1351000: blocked accounts relay
+    /// to no one.
     fn relay_emote(&self, core: &mut Core, home: PlayerId, emote: EmoteId) {
         let player = playing(core, home);
         if !hand_holds(&self.shared.emote_hands[home], emote) {
@@ -1537,15 +1335,6 @@ impl MatchActor {
         // answers it in turn order behind every action queued ahead of it. A bot's emote is minted
         // like a person's (R1452): a hearing card answers either.
         self.enqueue(Task::Emote { home, emote });
-        if self.shared.bots[home].is_some() {
-            return;
-        }
-        let foe = home.opponent();
-        let intents = match core.personas[foe].as_mut() {
-            Some(persona) => persona.on_player_emote(emote, now),
-            None => Vec::new(),
-        };
-        self.schedule_emotes(foe, intents);
     }
 
     // Sockets
@@ -1687,7 +1476,10 @@ impl MatchActor {
         let (first, second) = &self.shared.match_row.players;
         let seated = (first == x && second == y) || (first == y && second == x);
         if seated {
-            self.lock().emotes_blocked = true;
+            let mut core = self.lock();
+            core.emotes_blocked = true;
+            let outputs = self.step_in(&mut core, DuelEvent::EmotesMuted);
+            self.exec_now(&mut core, outputs);
         }
         seated
     }
@@ -1871,11 +1663,6 @@ impl MatchActor {
             // The machine stops its clocks and relays, and takes their timers back.
             let outputs = self.step_in(&mut core, DuelEvent::Stop);
             self.exec_now(&mut core, outputs);
-            for player in PLAYERS {
-                if let Some(timer) = core.bot_long_turn[player].take() {
-                    timer.cancel();
-                }
-            }
             PLAYERS.map(|home| core.sockets[home].take())
         };
         for socket in sockets.into_iter().flatten() {

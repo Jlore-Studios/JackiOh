@@ -35,7 +35,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs`, `cosmetics.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, the strengths' measured seed ratings, and a bot's wardrobe and the loadout it draws from it (R1453, R641000, R1454, R1452, R748000, R1834005) |
+| Ladder bots | `bots/pool.rs`, `calibrate.rs`, `cosmetics.rs` | the pool's refresh (it sizes the pool and deals decks, trios, wardrobes and grinders, and writes them) with the store rows as the pure decisions read them, the strengths' measured seed ratings, and a bot's wardrobe and the loadout it draws from it (R1454, R748000, R1834005). What a bot decides is `jackioh-shared` (#3103): its move, pace, aim, emotes and habits are a seat of the match host's machine, and the pairing, the picks, the pool's draws and the usernames are `jackioh_shared::bots` (R1453, R641000, R1454, R1452, R639000) |
 | Cosmetics | `cosmetics.rs`, `cosmetics.json`, `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the full arts, an Epic, a Legendary and a Mythic on each full-art card, and its Animated art, a second Epic `animated-<slug>` (R2715000), the registry being the list of those cards (R2655000, R2655001), and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card, its id `full-art-…` or `animated-…`, an `animated-…` one Epic, no default and no second full art of its rarity, or second Animated art, on its card (R1295000, R1297000, R1313000, R2655000, R2715000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` and `owns_account_cosmetic` whether an account owns a portrait or another account cosmetic (R1833000), and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla and #1833's 18 playmats, backdrops and card backs on the shipped registry; `check_pick` refuses a pick that is not of its slot's kind or not owned where it is worn (R1834001), and `full_art_picked` reads which full art a card's pick names (`true` its still Epic, R2655000, never its Animated art, R2715000). `loadout.rs` freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
@@ -53,12 +53,12 @@ tx.commit().await?`.
 decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set its player picked,
 "newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
-(`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). Every whole-log
+(`jackioh_shared::bots::decide`, which the actor runs when the machine asks), on the blocking pool so no search holds up the runtime (R1452). Every whole-log
 fold on an async path (a rebuild's three, a replay's opening, the reaper's, a finished match's one, before its result's transaction, which its quests and its game record share (#2213), a refiled game record's and `timing-backfill`'s) runs there too,
 one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. The Conquest series' transitions and projection are `jackioh_shared::series`
-(R330–R337), which `api/series.rs`, `api/queue.rs`, `actor/rooms.rs` and `bots/pick.rs` call; `db/store.rs` and
+(R330–R337), which `api/series.rs`, `api/queue.rs` and `actor/rooms.rs` call, as they call `jackioh_shared::bots::pick`; `db/store.rs` and
 `loadout.rs` re-export its types. A co-op match calls the engine's Duos functions (`duos_create`,
 `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
 `duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§13). The
@@ -651,8 +651,9 @@ against a ladder bot, which this process plays itself: in a match for Best of 1 
 series for Conquest. Off, no bot is seated and the pool is never sized; a bot already seated in a
 series still makes its picks.
 
-- `bots::fallback` is pure but for that key: which waiting ticket may have a bot (`fallback_due`)
-  and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match and a side of no
+- `jackioh_shared::bots::fallback` is pure (its key, which the server keeps to itself, is `api/queue.rs`'s
+  `FALLBACK_KEY`; the server's bots are hidden, so every ticket waits its fallback time, R3103000): which
+  waiting ticket may have a bot (`fallback_due`) and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match and a side of no
   series that is not over, not one of the player's last `BOT_RECENT_OPPONENTS`, for Best of 1
   holding decks and for Conquest a trio dealt for this catalog, the closest in rating; for a
   player rated above every bot, only a grinder within `MAX_FAIR_GAP`, R1555000). The queue's sweep
@@ -673,7 +674,7 @@ series still makes its picks.
   neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
   whose actor is not in memory, which no socket would come back to rebuild after a restart. The sweep
   decides on `bots_states` (no decks or cosmetics) and loads `bots_list` only to choose a pair.
-- `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
+- `jackioh_shared::bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
   `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
   the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
   (`rule_slot`: the fastest deck by mean cost on the play, the slowest on the draw, of those that have
@@ -681,11 +682,12 @@ series still makes its picks.
   sealed as a person's. Its streams are `{seed_base}:bot-pick-delay:{seat}:{game}` and
   `{seed_base}:bot-pick:{seat}:{game}`, from the series seed no client holds. A series game draws
   its bot no rematch plan (`MatchActorInput::series_game`), as a series game offers no rematch.
-- `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
+- A bot's move is the match host's machine's (`jackioh_shared::host`, `bots::decide`, `bots::think`, R3103000): the
+  machine asks (`decide`) and the actor runs `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
   budget (the middle two strengths' `BOT_MID_STRENGTH_BUDGET`, R2575000), a softmax temperature, a chance to miss a lethal and, R747000, a skill) on the spec's
-  resources, then a
+  resources, answers `decided`, and the machine draws the
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
-  acting clock, the search's deadline too; a move whose write failed is decided again
+  acting clock (the search's deadline too, and the time the search took counts toward it) and sets the timer that plays it; a move whose write failed is decided again
   `BOT_WRITE_RETRY_MS` later. A move decided before the person acted still goes while
   it is the same turn and the engine takes it, so the person's own actions never hold it back. Its streams (`{seed}:bot-ai:{home}`, `{seed}:bot-timing:{home}`) are the server's
   own, never the match rng, so a match with a bot replays from `(seed, log)` like any other, and a
@@ -696,13 +698,13 @@ series still makes its picks.
   the opponent's board it cannot stop (`jackioh_ai::unstoppable_lethal`, inside the decision's
   deadline, R2660000), and otherwise may offer a draw while well behind (`BOT_DRAW_OFFER`,
   R2660001), and it answers a draw offer by `bots::signals` rather than the AI's refusal (R188 holds
-  for practice); the actor plays every move but an emote (`never_played`). A rebuild reads the turn each bot last moved in off the log
+  for practice); the machine plays every move but an emote (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
   turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
   no draw at full or zero skill); a decision the roll does not give to the AI is the skill miss's
   (`skill_miss_action`, R2214000: a softmax over the greedy baseline's one-ply scores) with no search, whose
   draw-offer answer is still the bot's own roll's, and `r188_forbidden` filters either.
-- `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
+- `jackioh_shared::bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
   on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-offer-draw`,
   `bot-idle`, `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the
   same: its concession temper (`BOT_CONCEDE_FIT.share`, whether it concedes at all, then only when
@@ -714,8 +716,8 @@ series still makes its picks.
   `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
   cannot look up a face-down placeholder: the deficit on R1442's scale, and how far it trails its
   opponent, centered on an even board, which the draw answer and the draw offer read.
-- `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
-  person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
+- `jackioh_shared::bots::aim` is the mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
+  person's client would show for a targeted play, Activate, hero power or attack. The machine relays it
   through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and
   takes it down after.
 - Once a ranked match a bot played ends, the bot reads as present (`presence`) until its plan's
@@ -725,14 +727,15 @@ series still makes its picks.
   its answer lands (`MatchActor::on_rematch_offer`, told by `api/rematch.rs`'s `offer_as` through
   `Registry::get`); its offers go through the route's own path (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free
   and not retired, whatever its schedule) and lets it go if the start fails.
-- `bots::persona` is the server's port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
+- `jackioh_shared::bots::persona` is the port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
   which stays for practice), its tables `config.rs`'s `AI_PERSONAS` and `AI_EMOTE`, drawing as the
   web's does on its own stream (`{seed}:bot-persona:{home}`) and within the bot seat's dealt hand
   (R645, R1344). A ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and
   waits out its emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT`
   (`EmotePersona::with_delays`), the rows `timing-fit` refits; the caps and R643's rate limit are
   unchanged (R639000).
-- `bots::pool` sizes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
+- `bots::pool` sizes the pool (`jackioh_shared::bots::pool` decides it; this module reads the store and
+  writes what it answers) as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
   (`run_bot_pool`): `clamp(BOT_POOL_MIN, round(BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people),
   BOT_POOL_MAX)` active bots, one per weekly person between 40 and 400 since R2778001, retiring the
   youngest accounts and reinstating the most recently retired first.
@@ -780,7 +783,7 @@ series still makes its picks.
   The curve (`SKILL_ELO_TABLE`, R747000, "Skill to Elo" below) is the one home of the seeds:
   `BOT_SEED_RATINGS` is read off its Elo column in `const`. Printing is the default; with `--write`
   (run from the repository root) it rewrites `BOT_CALIBRATION_GENERATION`, `SKILL_ELO_ANCHOR` and
-  the rows of `SKILL_ELO_TABLE` in `crates/server/src/config.rs` in place, as `cargo jackioh sweep
+  the rows of `SKILL_ELO_TABLE` in `crates/shared/src/config.rs` in place, as `cargo jackioh sweep
   --write` does the shadow ban's, and a person reads the diff in the pull request. The same
   calibration written again leaves no diff. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
   rated games against people (`ranked_bot_games_since`) and prints the rating they say it performs

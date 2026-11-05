@@ -12,7 +12,8 @@ use super::rematch::{
     OfferFacts, OfferOutcome, RematchBook, RematchRefusal, RematchSeen, RematchStakes, check_offer,
     in_rematch_window,
 };
-use super::types::{DuelEvent, DuelOutput};
+use super::types::{DecideRequest, DuelEvent, DuelOutput};
+use crate::bots::decide::BotChoice;
 
 /// One call of the host machine.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -203,4 +204,26 @@ pub fn apply(call: HostCall) -> HostAnswer {
             HostAnswer::Swept { book, removed }
         }
     }
+}
+
+/// R1452: the decision a `DuelOutput::Decide` asks for, as the host that holds the machine as JSON runs it
+/// (`jackioh-wasm-core`'s `bot_decide`): the machine, which holds the game and who the bot is, and the
+/// request it made. The answer is the [`BotChoice`] the host feeds back as `DuelEvent::Decided`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct DecideCall {
+    pub host: Box<DuelHost>,
+    pub request: DecideRequest,
+}
+
+/// Runs the decision of `call` under the catalog the caller registered; `should_stop` is the host's
+/// wall-clock cap from `request.deadline_ms` (none: the search ends at the strength's budget). `None` when
+/// no bot plays at the request's home.
+pub fn decide(call: &DecideCall, should_stop: Option<&dyn Fn() -> bool>) -> Option<BotChoice> {
+    call.host.job(&call.request).map(|job| job.run(should_stop))
 }

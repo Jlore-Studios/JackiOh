@@ -10,12 +10,12 @@ use jackioh_engine::{CardDefs, Rng, query_cost};
 use crate::config::{
     BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, MS_PER_SECOND, SERIES_PICK_SECONDS,
 };
-use crate::db::store::{SeriesRow, SeriesSeat, SeriesSide, SeriesStatus};
-use jackioh_shared::series::{
-    SeriesRefusal, SeriesRefusalReason, first_seat_of, pick_deck, seat_index, trio_deck, unwon_slots,
+use crate::series::{
+    SeriesRefusal, SeriesRefusalReason, SeriesRow, SeriesSeat, SeriesSide, SeriesStatus, first_seat_of,
+    pick_deck, seat_index, trio_deck, unwon_slots,
 };
 
-/// Games are numbered from one (`SeriesGame.game_no`), as in `jackioh_shared::series`.
+/// Games are numbered from one (`SeriesGame.game_no`), as in `series`.
 const FIRST_GAME: i32 = 1;
 
 fn picking_for(series: &SeriesRow) -> i32 {

@@ -27,10 +27,6 @@ use crate::api::decks::{
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json};
 use crate::api::series::start_series;
 use crate::app::{App, now_ms};
-use crate::bots::fallback::{
-    bot_match_gap_passed, bot_match_gap_since, bot_matches, choose_bot, choose_bot_pair, fallback_due,
-    hour_of,
-};
 use crate::config::{
     BOT_RECENT_OPPONENTS, BOT_VS_BOT_MAX_LIVE, MATCHMAKER_SWEEP_INTERVAL_SECONDS, MS_PER_SECOND,
     QUEUE_READOUT_CACHE_TTL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS,
@@ -41,6 +37,10 @@ use crate::db::store::{
     TicketStatus, ladder_of_mode,
 };
 use crate::seats::{Lease, Seat};
+use jackioh_shared::bots::fallback::{
+    bot_match_gap_passed, bot_match_gap_since, bot_matches, choose_bot, choose_bot_pair, fallback_due_keyed,
+    fallback_seconds_keyed, hour_of,
+};
 use jackioh_shared::series::{NewSeriesInput, NewSeriesSide};
 
 // Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
@@ -55,6 +55,22 @@ pub(crate) fn new_seed() -> String {
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes).expect("the system's random source failed");
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// R1453: the key every fallback time is drawn with beside its ticket's id, drawn as the process
+/// starts drawing them and sent to no one (`jackioh_shared::bots::fallback`).
+static FALLBACK_KEY: std::sync::LazyLock<String> = std::sync::LazyLock::new(new_seed);
+
+/// R1453: the ticket's fallback time in seconds, from its id and this server's key, so the same at
+/// every sweep it runs.
+pub fn fallback_seconds(ticket_id: &str) -> i64 {
+    fallback_seconds_keyed(&FALLBACK_KEY, ticket_id)
+}
+
+/// R1453, R641000: whether the ticket may pair with a bot at `now` (epoch ms): a ticket of any mode
+/// that has waited its fallback time. The server's bots pass for people (R1452), so they wait it out.
+pub fn fallback_due(ticket: &Ticket, now: i64) -> bool {
+    fallback_due_keyed(&FALLBACK_KEY, ticket, now, true)
 }
 
 /// A list as the JSON array a log line prints.
@@ -1213,7 +1229,7 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
         tx.commit().await?;
         (states, queued)
     };
-    let live = bot_matches(&states);
+    let live = bot_matches(states.iter().map(|bot| bot.in_match_id.as_deref()));
     for match_id in live.iter().filter(|match_id| !app.matches.has(match_id)) {
         if let Err(error) = app.matches.actor_for(app, match_id).await {
             tracing::warn!(event = "bots.match.resume_failed", matchId = %match_id, message = %error);

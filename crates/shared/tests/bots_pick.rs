@@ -2,15 +2,14 @@
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Winner, query_cost};
-use jackioh_server::bots::pick::{bot_pick, pick_due_at, pick_is_due, pick_slot, rule_slot};
-use jackioh_server::config::{
+use jackioh_shared::bots::pick::{bot_pick, pick_due_at, pick_is_due, pick_slot, rule_slot};
+use jackioh_shared::config::{
     BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, SERIES_PICK_SECONDS,
-    SERIES_SWEEP_INTERVAL_SECONDS,
 };
-use jackioh_server::db::store::{FrozenDeck, FrozenTrio, SeriesRow, SeriesStatus};
+use jackioh_shared::deck::{FrozenDeck, FrozenTrio};
 use jackioh_shared::series::{
-    NewSeriesInput, NewSeriesSide, SeriesRefusalReason, game_ended, new_series, pick_deck, project_series,
-    unwon_slots,
+    NewSeriesInput, NewSeriesSide, SeriesRefusalReason, SeriesRow, SeriesStatus, game_ended, new_series,
+    pick_deck, project_series, unwon_slots,
 };
 
 /// Unit conversion, not configuration: the series constants are stated in seconds.
@@ -263,9 +262,8 @@ fn r641000_the_bot_s_pick_goes_through_pick_deck_sealed() {
 fn r641000_the_pick_waits_a_person_s_delay_inside_the_clock() {
     const {
         assert!(
-            BOT_PICK_DELAY_MAX_MS + SERIES_SWEEP_INTERVAL_SECONDS * MS_PER_SECOND
-                < SERIES_PICK_SECONDS * MS_PER_SECOND,
-            "PREMISE: the latest pick, one sweep late, still beats the clock"
+            BOT_PICK_DELAY_MAX_MS < SERIES_PICK_SECONDS * MS_PER_SECOND,
+            "PREMISE: the latest pick beats the clock (the server's sweep, one late, too: tests/bots/budget.rs)"
         );
         assert!(BOT_PICK_DELAY_MIN_MS < BOT_PICK_DELAY_MAX_MS);
     };

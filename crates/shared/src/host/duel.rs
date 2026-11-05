@@ -13,10 +13,14 @@
 //!  - which clock runs and what an expiry becomes (R79, R265, R268, R1563006, R776000) and the grace a
 //!    disconnect starts (§9.5, R144, R147, R744), the mulligan and prompt frames a change sends (R265,
 //!    R266, §10.6), the seats' swap (R677), the relays of an aim (R738) and a choice hover (R2739001),
-//!    the order every view and clock goes out in, when a bot owes a move (R1452, R639000), what a
-//!    game's end records (R677, R679, R417, R768) and what a bot does after a ranked one (R639000);
+//!    the order every view and clock goes out in, what a game's end records (R677, R679, R417, R768),
+//!    and a ladder bot (R1452, R639000, R645, #3103): when it owes a move, how long it thinks, when it
+//!    shows its aim and plays, what it emotes, whether it lets a clock run out, and what it does after a
+//!    ranked game. A bot that passes for a person (`BotSeat.hidden`) does all of it; one that does not
+//!    plays as the practice AI does;
 //!  - the host owns its sockets, its store, its abuse guards (flood, malformed frames, hello interval),
-//!    its emote gate, its watchers, its telemetry and the bots' moves themselves.
+//!    its emote gate, its watchers, its telemetry and the AI's search, which it runs when the machine
+//!    asks (`DuelOutput::Decide`, `DuelHost::job`) and answers with `DuelEvent::Decided`.
 //!
 //! The machine reduces under whatever catalog the host has set (R388, R767000): it calls the engine as
 //! the engine is called, and a host with a pinned catalog runs `step` inside it.
@@ -27,11 +31,11 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, GameOverReason, GameState, PLAYER_IDS, PendingView, PerPlayer, PlayerId,
-    PlayerView, aim_key,
+    Action, ActionBody, ActionType, Aim, EmoteId, GameOverReason, GameState, PLAYER_IDS, PendingView,
+    PerPlayer, PlayerId, PlayerView, Rng, aim_key,
 };
 
-use super::bot::{BotSeat, RematchPlan, aim_lead_ms, fallback_action, idles_turn, never_played};
+use super::bot::{BotSeat, DecideJob, RematchPlan, fallback_action, never_played};
 use super::clock::{ClockExpiry, MatchClock, MatchClocks};
 use super::relay::{AimSlot, HoverSlot, aim_is_public, hover_is_shown};
 use super::rematch::RematchStakes;
@@ -39,9 +43,16 @@ use super::snapshot::{MatchSnapshot, clock_view_for, mulligan_key, mulligan_wind
 use super::timer::{Fx, TimerCommand, TimerKey};
 use super::types::{
     ActionAnswer, ActionBy, DecideRequest, DuelEvent, DuelOutput, ExpiryRun, GreetingPart, HostNote, LetGo,
-    LogOutcome, Played, RecordRequest, SERVER_NONCE_PREFIX, SeatMessage,
+    LogOutcome, RecordRequest, SERVER_NONCE_PREFIX, SeatMessage,
 };
-use crate::config::{AIM_RELAY_INTERVAL_MS, BOT_WRITE_RETRY_MS, MATCH_SERVER_ACTION_RETRY_MS, STAKE_NORMAL};
+use crate::bots::decide::BotChoice;
+use crate::bots::persona::{AiEmote, EmotePersona};
+use crate::bots::signals::{aim_lead_ms, idles_turn, rematch_plan};
+use crate::bots::think::{THINK_MODEL, ThinkFor, decision_deadline_ms, think_ms};
+use crate::config::{
+    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_SERVER_ACTION_RETRY_MS, STAKE_NORMAL,
+};
 
 /// What a host makes a [`DuelHost`] from: the game as the host holds it (the opening a registry began, or
 /// the fold a rebuild ran) and what the match row and its log say.
@@ -141,6 +152,45 @@ struct Linger {
     until: i64,
 }
 
+/// When the host was asked for a bot's move, and what it was asked on: the time the decision takes counts
+/// toward the think time (R1452).
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Asked {
+    at: i64,
+    first_in_turn: bool,
+    clock_left_ms: Option<i64>,
+}
+
+/// A bot's decided move, waiting out its think time (R1452, R639000): the aim it shows a beat before and
+/// the timer that plays it.
+#[derive(Clone, Debug, PartialEq)]
+struct Waiting {
+    version: i64,
+    turn: i32,
+    body: Option<ActionBody>,
+    /// The aim not yet shown, and the timer that shows it.
+    aim: Option<Aim>,
+    aim_timer: Option<u32>,
+    /// Whether the aim is up, which the move takes down.
+    aimed: bool,
+    /// The timer that plays the move.
+    move_timer: u32,
+}
+
+/// An emote a bot's persona rolled, due at `at` (epoch ms): its delay is waited out (R645).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+struct DueEmote {
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    at: i64,
+    emote: EmoteId,
+}
+
 /// The 1v1 host's state: the checkpoint. Serializable, with the `GameState` inside it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
@@ -199,11 +249,32 @@ pub struct DuelHost {
     aims: PerPlayer<AimSlot>,
     hovers: PerPlayer<HoverSlot>,
 
-    // A bot's turn (R1452)
+    // A bot's turn (R1452). What is in flight (a search the host runs, a think time its timers wait out) is
+    // not the checkpoint's: a host made from one asks again, and its timers are its own.
+    #[serde(skip)]
+    #[cfg_attr(feature = "ts", ts(skip))]
     bot_thinking: PerPlayer<bool>,
+    /// Where each bot's two random streams stand: the search's and the think time's.
     bot_cursors: PerPlayer<(u32, u32)>,
     bot_moved_turn: PerPlayer<Option<i32>>,
     bot_retry: Option<u32>,
+    #[serde(skip)]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    bot_asked: PerPlayer<Option<Asked>>,
+    #[serde(skip)]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    bot_waiting: PerPlayer<Option<Waiting>>,
+
+    // A bot's chatter (R645, R1344): its persona, the view the persona read last, where its stream stands,
+    // the emotes it rolled and the timers that wait them out.
+    bot_personas: PerPlayer<Option<EmotePersona>>,
+    bot_persona_cursor: PerPlayer<u32>,
+    bot_views: PerPlayer<Option<PlayerView>>,
+    bot_emotes: PerPlayer<Vec<DueEmote>>,
+    bot_emote_timer: PerPlayer<Option<u32>>,
+    bot_long_turn_timer: PerPlayer<Option<u32>>,
+    /// R1351000: no persona answers a person's emote.
+    emotes_muted: bool,
 
     // The post-game linger (R639000)
     /// Each bot home's plan for the end of a ranked match, and when its linger ends.
@@ -275,6 +346,15 @@ impl DuelHost {
             bot_cursors: PerPlayer::new((0, 0), (0, 0)),
             bot_moved_turn,
             bot_retry: None,
+            bot_asked: PerPlayer::new(None, None),
+            bot_waiting: PerPlayer::new(None, None),
+            bot_personas: PerPlayer::new(None, None),
+            bot_persona_cursor: PerPlayer::new(0, 0),
+            bot_views: PerPlayer::new(None, None),
+            bot_emotes: PerPlayer::new(Vec::new(), Vec::new()),
+            bot_emote_timer: PerPlayer::new(None, None),
+            bot_long_turn_timer: PerPlayer::new(None, None),
+            emotes_muted: false,
             bot_rematch: PerPlayer::new(None, None),
             bot_rematch_answered: PerPlayer::new(false, false),
             bot_rematch_replying: PerPlayer::new(false, false),
@@ -284,6 +364,24 @@ impl DuelHost {
             game,
             out: Vec::new(),
         };
+        // R645, R1344: a bot that passes for a person emotes by the persona it was dealt, within the hand
+        // dealt to its account, and reads the view of the seat it plays (R677: a rebuilt host's bot may
+        // already play the other seat).
+        for home in PLAYER_IDS {
+            let Some(bot) = host.bots[home].filter(|bot| bot.hidden) else {
+                continue;
+            };
+            let seat = host.playing(home);
+            host.bot_personas[home] = Some(
+                EmotePersona::new(
+                    bot.persona,
+                    seat,
+                    Some(jackioh_engine::deal_emote_hand(&host.seed, home)),
+                )
+                .with_delays(BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT),
+            );
+            host.bot_views[home] = Some(jackioh_engine::view_for(&host.game, seat));
+        }
         // R79: the ceiling runs from the match's start, and the turn clock when the match opens.
         host.clock.arm_ceiling(now, &mut host.fx);
         host.clock.sync(&clock_view_for(&opening), now, &mut host.fx);
@@ -329,8 +427,9 @@ impl DuelHost {
                 home,
                 version,
                 turn,
-                played,
-            } => self.on_decided(home, version, turn, played, now),
+                choice,
+            } => self.on_decided(home, version, turn, choice, now),
+            DuelEvent::EmotesMuted => self.emotes_muted = true,
             DuelEvent::ResultRecorded => self.on_result_recorded(now),
             DuelEvent::RematchOffered { from, stakes } => self.on_rematch_offered(from, stakes, now),
             DuelEvent::RematchSent { home } => self.bot_rematch_replying[home] = false,
@@ -507,6 +606,18 @@ impl DuelHost {
             self.start_absent_grace(now);
         }
         self.persist_clocks();
+        // A host made from a checkpoint has none of the timers its bots' emotes were waiting on: what they
+        // had rolled waits out its delay again (R645).
+        for home in PLAYER_IDS {
+            self.bot_emote_timer[home] = None;
+            self.arm_emotes(home);
+            self.bot_long_turn_timer[home] = None;
+            if snapshot.result.is_none()
+                && let Some(view) = self.bot_views[home].clone()
+            {
+                self.rearm_long_turn(home, &view, now);
+            }
+        }
         if snapshot.result.is_some() {
             self.on_terminal(&snapshot, now);
         } else {
@@ -577,6 +688,18 @@ impl DuelHost {
             }
             if let Some(id) = self.hovers[player].timer.take() {
                 self.fx.cancel(TimerKey::Hover { player }, id);
+            }
+            if let Some(waiting) = self.bot_waiting[player].take() {
+                self.fx.cancel(TimerKey::BotMove { player }, waiting.move_timer);
+                if let Some(id) = waiting.aim_timer {
+                    self.fx.cancel(TimerKey::BotAim { player }, id);
+                }
+            }
+            if let Some(id) = self.bot_emote_timer[player].take() {
+                self.fx.cancel(TimerKey::BotEmote { player }, id);
+            }
+            if let Some(id) = self.bot_long_turn_timer[player].take() {
+                self.fx.cancel(TimerKey::BotLongTurn { player }, id);
             }
         }
     }
@@ -696,6 +819,70 @@ impl DuelHost {
                 }
                 self.bot_retry = None;
                 self.drive_bots(now);
+            }
+            TimerKey::BotMove { player } => {
+                if self.bot_waiting[player]
+                    .as_ref()
+                    .map(|waiting| waiting.move_timer)
+                    != Some(id)
+                {
+                    return;
+                }
+                if let Some(waiting) = self.bot_waiting[player].take() {
+                    self.play_bot_move(
+                        player,
+                        waiting.version,
+                        waiting.turn,
+                        waiting.body,
+                        waiting.aimed,
+                        now,
+                    );
+                }
+            }
+            TimerKey::BotAim { player } => {
+                let Some(waiting) = self.bot_waiting[player].as_mut() else {
+                    return;
+                };
+                if waiting.aim_timer != Some(id) {
+                    return;
+                }
+                waiting.aim_timer = None;
+                self.show_bot_aim(player, now);
+            }
+            TimerKey::BotEmote { player } => {
+                if self.bot_emote_timer[player] != Some(id) {
+                    return;
+                }
+                self.bot_emote_timer[player] = None;
+                if self.stopped {
+                    return;
+                }
+                let due: Vec<DueEmote> = self.bot_emotes[player]
+                    .iter()
+                    .copied()
+                    .take_while(|emote| emote.at <= now)
+                    .collect();
+                self.bot_emotes[player].drain(..due.len());
+                for DueEmote { emote, .. } in due {
+                    self.emit(DuelOutput::BotEmote { home: player, emote });
+                }
+                self.arm_emotes(player);
+            }
+            TimerKey::BotLongTurn { player } => {
+                if self.bot_long_turn_timer[player] != Some(id) {
+                    return;
+                }
+                self.bot_long_turn_timer[player] = None;
+                if self.finished || self.stopped {
+                    return;
+                }
+                let Some(view) = self.bot_views[player].clone() else {
+                    return;
+                };
+                let intents = self.roll(player, |persona, rng| {
+                    persona.on_player_turn_long(rng, &view, now)
+                });
+                self.schedule_emotes(player, intents, now);
             }
         }
     }
@@ -960,6 +1147,13 @@ impl DuelHost {
     /// MD-D29, R1127: mints an `Emote` action only if a card hears it; otherwise the relay suffices
     /// (R643). The sender showed it already, so the answer is dropped.
     fn on_emote(&mut self, home: PlayerId, emote: jackioh_engine::EmoteId, now: i64) {
+        // R645: a person's emote may earn the bot opposite a reply; bots never answer bots. R1351000: a
+        // muted pair is answered by no persona.
+        if self.bots[home].is_none() && !self.emotes_muted {
+            let foe = home.opponent();
+            let intents = self.roll(foe, |persona, rng| persona.on_player_emote(rng, emote, now));
+            self.schedule_emotes(foe, intents, now);
+        }
         let player = self.playing(home);
         let wanted = ActionBody::Emote { emote };
         if !self.legal(player).contains(&wanted) {
@@ -978,6 +1172,7 @@ impl DuelHost {
         }
         self.clock.sync(&clock_view_for(&snapshot), now, &mut self.fx);
         self.emit(DuelOutput::Changed { fresh });
+        self.feed_personas(fresh, now);
         self.persist_clocks();
 
         // R2739001: a hover on a prompt the change answered or replaced is cleared before the view that
@@ -1084,6 +1279,15 @@ impl DuelHost {
             let player = self.playing(*home);
             self.clock.start_grace(player, None, now, &mut self.fx);
         }
+        // R645: a bot's persona reads the seat its bot plays now, from a fresh start: the view it read last
+        // is the other seat's, and no difference between the two is anything that happened.
+        for home in PLAYER_IDS {
+            let seat = self.playing(home);
+            if let Some(persona) = self.bot_personas[home].as_mut() {
+                persona.set_seat(seat);
+                self.bot_views[home] = None;
+            }
+        }
         self.emit(DuelOutput::SeatsSwapped { swapped });
     }
 
@@ -1153,11 +1357,13 @@ impl DuelHost {
         if !self.ranked || self.series_game || PLAYER_IDS.iter().all(|home| self.bots[*home].is_some()) {
             return;
         }
+        // R1452: a bot that does not pass for a person stays for no rematch.
         for home in PLAYER_IDS {
-            if let Some(bot) = self.bots[home] {
+            if self.bots[home].is_some_and(|bot| bot.hidden) {
+                let plan = rematch_plan(&self.seed, home, &BOT_REMATCH_FIT);
                 self.bot_rematch[home] = Some(Linger {
-                    plan: bot.rematch,
-                    until: at + bot.rematch.linger_ms,
+                    plan,
+                    until: at + plan.linger_ms,
                 });
             }
         }
@@ -1204,10 +1410,11 @@ impl DuelHost {
 
     // The bot seat (R1452)
 
-    /// R1452: asks for the move of every bot owing one on its current seat (R677). The think time is
-    /// the host's to wait off the queue; the clocks can still run out meanwhile. R639000: if `idles_turn`
-    /// (drawn on the turn's stream, so every call agrees), no move starts and the turn clock times out
-    /// (R79).
+    /// R1452: asks for the move of every bot owing one on its current seat (R677). The AI's search is the
+    /// host's, one step apart from the machine ([`DuelHost::job`], answered by [`DuelEvent::Decided`]);
+    /// the pace is the machine's (`on_decided`), and the clocks can still run out meanwhile. R639000: a
+    /// bot that passes for a person may let its turn clock run out (`idles_turn`, drawn on the turn's
+    /// stream, so every call agrees): then no move starts and the turn clock times it out (R79).
     fn drive_bots(&mut self, now: i64) {
         if self.finished || self.stopped {
             return;
@@ -1233,13 +1440,18 @@ impl DuelHost {
             // Only a running clock can time the bot out; with none, an idle turn would never end.
             if own_turn_start
                 && clock_left_ms.is_some()
-                && idles_turn(&self.seed, home, turn, bot.idle_chance_per_turn)
+                && bot.hidden
+                && idles_turn(&self.seed, home, turn, &BOT_TIMEOUT_FIT)
             {
                 continue;
             }
-            let (ai_cursor, timing_cursor) = self.bot_cursors[home];
             let version = self.next_seq;
             self.bot_thinking[home] = true;
+            self.bot_asked[home] = Some(Asked {
+                at: now,
+                first_in_turn,
+                clock_left_ms,
+            });
             let request = DecideRequest {
                 home,
                 seat: player,
@@ -1247,13 +1459,32 @@ impl DuelHost {
                 turn,
                 first_in_turn,
                 own_turn_start,
-                aim_lead_ms: aim_lead_ms(&self.seed, home, version, bot.aim_lead_ms.0, bot.aim_lead_ms.1),
                 clock_left_ms,
-                ai_cursor,
-                timing_cursor,
+                deadline_ms: decision_deadline_ms(clock_left_ms),
+                ai_cursor: self.bot_cursors[home].0,
             };
             self.emit(DuelOutput::Decide { request });
         }
+    }
+
+    /// What the host runs to answer `request`: the game and the bot's identity, owned so it can run on
+    /// another thread or in a slice of a frame (`bots::decide`). `None` when no bot plays at `home`.
+    pub fn job(&self, request: &DecideRequest) -> Option<DecideJob> {
+        let bot = self.bots[request.home]?;
+        Some(DecideJob {
+            game: self.game.clone(),
+            seat: request.seat,
+            home: request.home,
+            seed: self.seed.clone(),
+            // A bot keeps its index in `BOT_STRENGTHS`; one past the table plays the last.
+            strength: *BOT_STRENGTHS
+                .get(usize::try_from(bot.strength).unwrap_or(usize::MAX))
+                .or(BOT_STRENGTHS.last())?,
+            hidden: bot.hidden,
+            own_turn_start: request.own_turn_start,
+            ai_cursor: request.ai_cursor,
+            deadline_ms: request.deadline_ms,
+        })
     }
 
     /// `drive_bots` once `ms` have passed: a bot whose move could not be written decides again at that
@@ -1264,21 +1495,107 @@ impl DuelHost {
         }
     }
 
+    /// R1452, R639000: the host has decided the bot's move. A bot that passes for a person waits a
+    /// human-paced think time, drawn from R1442's fitted think times for its kind of move and scaled by
+    /// its speed, bounded by the clock it had when asked (R79); the time the decision took counts toward
+    /// it. A targeted move shows its aim `aim_lead_ms` before it goes (R738); one that does not pass for a
+    /// person moves at once, with no aim.
+    fn on_decided(&mut self, home: PlayerId, version: i64, turn: i32, choice: BotChoice, now: i64) {
+        self.bot_cursors[home].0 = choice.ai_cursor;
+        let hidden = self.bots[home].is_some_and(|bot| bot.hidden);
+        if self.finished || self.stopped || !hidden {
+            self.bot_asked[home] = None;
+            self.play_bot_move(home, version, turn, choice.body, false, now);
+            return;
+        }
+        let Some(bot) = self.bots[home] else {
+            return;
+        };
+        let asked = self.bot_asked[home].take().unwrap_or(Asked {
+            at: now,
+            first_in_turn: false,
+            clock_left_ms: None,
+        });
+        let think = ThinkFor {
+            action_kind: choice
+                .body
+                .as_ref()
+                .map_or(ActionType::EndTurn, ActionBody::action_type),
+            first_in_turn: asked.first_in_turn,
+            legal_count: usize::try_from(choice.legal_count).unwrap_or(usize::MAX),
+            lethal: choice.lethal,
+        };
+        let mut timing = Rng::new(
+            &format!("{}:bot-timing:{home}", self.seed),
+            self.bot_cursors[home].1,
+        );
+        let wait = think_ms(&mut timing, &think, &THINK_MODEL, bot.speed, asked.clock_left_ms);
+        self.bot_cursors[home].1 = timing.cursor();
+        let left = (wait - (now - asked.at).max(0)).max(0);
+        // R738: the aim shows for the lead, never longer than what is left of the wait, and not at all
+        // unless the relay would send it before the move.
+        let lead = aim_lead_ms(&self.seed, home, version).min(left);
+        let (aim, lead) = match choice.aim {
+            Some(aim) if lead >= AIM_RELAY_INTERVAL_MS => (Some(aim), lead),
+            _ => (None, 0),
+        };
+        if left == 0 && aim.is_none() {
+            self.play_bot_move(home, version, turn, choice.body, false, now);
+            return;
+        }
+        let aim_timer = match aim {
+            Some(_) if left > lead => Some(self.fx.set(TimerKey::BotAim { player: home }, now + left - lead)),
+            _ => None,
+        };
+        let move_timer = self.fx.set(TimerKey::BotMove { player: home }, now + left);
+        self.bot_waiting[home] = Some(Waiting {
+            version,
+            turn,
+            body: choice.body,
+            aim,
+            aim_timer,
+            aimed: false,
+            move_timer,
+        });
+        if aim.is_some() && aim_timer.is_none() {
+            self.show_bot_aim(home, now);
+        }
+    }
+
+    /// R738: the aim the bot at `home` waited to show goes out through the relay a person's goes by.
+    fn show_bot_aim(&mut self, home: PlayerId, now: i64) {
+        let Some(waiting) = self.bot_waiting[home].as_mut() else {
+            return;
+        };
+        let Some(aim) = waiting.aim.take() else {
+            return;
+        };
+        waiting.aimed = true;
+        let player = self.playing(home);
+        self.receive_aim(player, Some(aim), now);
+    }
+
     /// R1452: applies a decided bot move with R270's prefix (bypassing R1442's think telemetry). R639000:
-    /// concedes and answers draws as the host drew them, offers one too (R2660001), never an emote, and
+    /// concedes and answers draws as the habits drew them, offers one too (R2660001), never an emote, and
     /// takes down the aim it relayed after the move. A move on a stale state still goes in the same turn
     /// if the engine takes it. A refused fresh move falls back to `fallback_action` once; a failed write
     /// is decided again after `BOT_WRITE_RETRY_MS`.
-    fn on_decided(&mut self, home: PlayerId, version: i64, turn: i32, played: Played, now: i64) {
+    fn play_bot_move(
+        &mut self,
+        home: PlayerId,
+        version: i64,
+        turn: i32,
+        body: Option<ActionBody>,
+        aimed: bool,
+        now: i64,
+    ) {
         self.bot_thinking[home] = false;
-        self.bot_cursors[home] = (played.ai_cursor, played.timing_cursor);
-        let aimed = played.aimed;
         if self.finished || self.stopped {
             return;
         }
         let player = self.playing(home);
         let stale = self.next_seq != version;
-        let body = played.body.filter(|body| !never_played(body));
+        let body = body.filter(|body| !never_played(body));
         let body = if !stale {
             body.or_else(|| fallback_action(&self.game, player))
         } else if self.game.turn == turn {
@@ -1308,6 +1625,91 @@ impl DuelHost {
             aimed,
         };
         self.apply(player, nonce, body, origin, now);
+    }
+
+    // A bot's chatter (R645)
+
+    /// Runs `roll` on the persona of the bot at `home`, with the draws of its own stream
+    /// (`{seed}:bot-persona:{home}`, apart from the match rng and the search's), and moves the stream
+    /// on. Nothing when the bot has no persona (it does not pass for a person, or no bot plays there).
+    fn roll<T: Default>(
+        &mut self,
+        home: PlayerId,
+        roll: impl FnOnce(&mut EmotePersona, &mut dyn FnMut() -> f64) -> T,
+    ) -> T {
+        let Some(mut persona) = self.bot_personas[home].take() else {
+            return T::default();
+        };
+        let mut rng = Rng::new(
+            &format!("{}:bot-persona:{home}", self.seed),
+            self.bot_persona_cursor[home],
+        );
+        let rolled = roll(&mut persona, &mut || rng.next());
+        self.bot_persona_cursor[home] = rng.cursor();
+        self.bot_personas[home] = Some(persona);
+        rolled
+    }
+
+    /// R645: each bot's persona reads the change off its own seat's view: the newest `fresh` events that
+    /// view carries (the change's own, redacted for that seat) against the view it read last. What it
+    /// rolls waits out its delay and goes out as the bot's emote (`schedule_emotes`).
+    fn feed_personas(&mut self, fresh: usize, now: i64) {
+        for home in PLAYER_IDS {
+            if self.bot_personas[home].is_none() {
+                continue;
+            }
+            let seat = self.playing(home);
+            let view = jackioh_engine::view_for(&self.game, seat);
+            // R2652000: less the face-down rolls this seat's view leaves out of the change.
+            let fresh = jackioh_engine::viewed_of_newest(&self.game, seat, fresh);
+            let from = view.events.len().saturating_sub(fresh);
+            let prev = self.bot_views[home].take();
+            let intents = self.roll(home, |persona, rng| {
+                persona.on_events(rng, &view.events[from..], prev.as_ref(), &view, now)
+            });
+            self.rearm_long_turn(home, &view, now);
+            self.bot_views[home] = Some(view);
+            self.schedule_emotes(home, intents, now);
+        }
+    }
+
+    /// R645's long-turn trigger: on every change that leaves the person the active seat, a fresh
+    /// `AI_EMOTE.long_turn_ms` wait (the persona's once-a-turn check makes a second arm harmless); none on
+    /// the bot's own turn or once the game is over.
+    fn rearm_long_turn(&mut self, home: PlayerId, view: &PlayerView, now: i64) {
+        if let Some(id) = self.bot_long_turn_timer[home].take() {
+            self.fx.cancel(TimerKey::BotLongTurn { player: home }, id);
+        }
+        if self.finished || self.stopped || view.result.is_some() || view.active == view.viewer {
+            return;
+        }
+        self.bot_long_turn_timer[home] = Some(self.fx.set(
+            TimerKey::BotLongTurn { player: home },
+            now + AI_EMOTE.long_turn_ms,
+        ));
+    }
+
+    /// R645: each of a bot's intents waits out its own delay, then goes out as the bot's emote.
+    fn schedule_emotes(&mut self, home: PlayerId, intents: Vec<AiEmote>, now: i64) {
+        for intent in intents {
+            let wait = intent.delay_ms.max(0.0).round() as i64;
+            self.bot_emotes[home].push(DueEmote {
+                at: now + wait,
+                emote: intent.emote,
+            });
+        }
+        self.bot_emotes[home].sort_by_key(|emote| emote.at);
+        self.arm_emotes(home);
+    }
+
+    /// The timer for the bot's next due emote, in place of any it held.
+    fn arm_emotes(&mut self, home: PlayerId) {
+        if let Some(id) = self.bot_emote_timer[home].take() {
+            self.fx.cancel(TimerKey::BotEmote { player: home }, id);
+        }
+        if let Some(next) = self.bot_emotes[home].first().copied() {
+            self.bot_emote_timer[home] = Some(self.fx.set(TimerKey::BotEmote { player: home }, next.at));
+        }
     }
 
     // The opponent's aim (R738)

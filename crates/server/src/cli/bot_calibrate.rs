@@ -9,7 +9,7 @@
 //!
 //! `bot-calibrate` plays every pair of `BOT_STRENGTHS` against each other (`bots::calibrate`), fits
 //! each strength's Elo offset from the strongest, and prints the `BOT_CALIBRATION_GENERATION`,
-//! `SKILL_ELO_ANCHOR` and `SKILL_ELO_TABLE` items of `crates/server/src/config.rs`, as `timing-fit`
+//! `SKILL_ELO_ANCHOR` and `SKILL_ELO_TABLE` items of `crates/shared/src/config.rs`, as `timing-fit`
 //! prints its rows (CLAUDE.md rule 9); `BOT_SEED_RATINGS` is read off the table. With `--write` it
 //! rewrites those items in place, as `cargo jackioh sweep --write` does the shadow ban's; without
 //! it a person pastes them. Either way a change reaches a ladder bot only through a pull request,
@@ -40,7 +40,7 @@ const USAGE: &str = "Usage: jackioh-server bot-calibrate [--games=<n>] [--seed=<
 
   bot-calibrate plays every pair of ladder bot strengths against each other and prints the
   BOT_CALIBRATION_GENERATION, SKILL_ELO_ANCHOR and SKILL_ELO_TABLE items to paste into
-  crates/server/src/config.rs (R748000); BOT_SEED_RATINGS is read off the table. It reads no database
+  crates/shared/src/config.rs (R748000); BOT_SEED_RATINGS is read off the table. It reads no database
   and takes about an hour in release.
 
   --games=<n>        Games each pair plays, at least 30. Default: 100.
@@ -50,7 +50,7 @@ const USAGE: &str = "Usage: jackioh-server bot-calibrate [--games=<n>] [--seed=<
   --history=<dir>    The training lanes' history. Default: training/history.
   --threads=<n>      Games played at once. Default: the machine's cores.
   --write            Rewrite BOT_CALIBRATION_GENERATION, SKILL_ELO_ANCHOR and the SKILL_ELO_TABLE rows
-                     in crates/server/src/config.rs (run from the repository root) after printing the
+                     in crates/shared/src/config.rs (run from the repository root) after printing the
                      report. Default: print only.
 
   bot-calibrate-live reads the strongest bot's rated games against people (DATABASE_URL) and prints
@@ -245,7 +245,7 @@ pub fn render_calibration(report: &CalibrationReport) -> String {
         ));
     }
     out.push_str(
-        "\n// jackioh-server bot-calibrate: paste over the items of these names, crates/server/src/config.rs, \
+        "\n// jackioh-server bot-calibrate: paste over the items of these names, crates/shared/src/config.rs, \
          or run again with --write (BOT_SEED_RATINGS follows from the table)\n",
     );
     for (_, text) in config_items(&report.seeds, report.generation) {
@@ -255,9 +255,9 @@ pub fn render_calibration(report: &CalibrationReport) -> String {
 }
 
 /// The file `--write` rewrites, from the repository root, as `--history` is read.
-pub const CONFIG_RS: &str = "crates/server/src/config.rs";
+pub const CONFIG_RS: &str = "crates/shared/src/config.rs";
 
-/// The items of `crates/server/src/config.rs` a calibration owns, as `(const name, its text)` in the
+/// The items of `crates/shared/src/config.rs` a calibration owns, as `(const name, its text)` in the
 /// order the file holds them: the generation, the anchor (the reference's seed, the last) and the
 /// curve's rows, one per strength at its skill. `BOT_SEED_RATINGS` is not among them: it is read off
 /// the table in `const`.
@@ -309,7 +309,7 @@ fn replace_item(text: &str, name: &str, new: &str) -> anyhow::Result<String> {
     ))
 }
 
-/// R748000: `config_text` (`crates/server/src/config.rs`) with the calibration's items rewritten to
+/// R748000: `config_text` (`crates/shared/src/config.rs`) with the calibration's items rewritten to
 /// hold `seeds` (weakest strength first, the reference last) and `generation`. The curve's rows rise
 /// with skill (R747000), so seeds that are not one per strength, finite and strictly ascending are an
 /// error, and so is an item the file does not hold as `config_items` spells it.

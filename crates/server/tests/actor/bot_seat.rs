@@ -17,8 +17,6 @@ use jackioh_server::actor::match_actor::{MatchActor, bot_moved_turns};
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::bots::cosmetics::BotCosmetics;
-use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
-use jackioh_server::bots::signals::{accepts_draw, idles_turn, standing};
 use jackioh_server::config::{
     AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS,
     BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger, MULLIGAN_CLOCK_MS, PLAYER_SETTINGS_BYTES_MAX,
@@ -27,6 +25,8 @@ use jackioh_server::config::{
 use jackioh_server::db::store::{NewBot, PlayerSettingsLimits, PlayerSettingsMergeInput, StoreError};
 use jackioh_server::economy::store::CardPicks;
 use jackioh_server::ranked::ladder::Ladder;
+use jackioh_shared::bots::signals::{accepts_draw, idles_turn, standing};
+use jackioh_shared::bots::think::{THINK_MODEL, ThinkFor, think_ms};
 
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};

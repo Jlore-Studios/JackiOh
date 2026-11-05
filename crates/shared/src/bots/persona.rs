@@ -8,6 +8,13 @@
 //!
 //! R639000: a ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and waits
 //! out emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT` (`EmotePersona::with_delays`).
+//!
+//! The match host's machine holds one `EmotePersona` per bot that passes for a person (`host/duel.rs`,
+//! R1452) and rolls it on its own stream (`{seed}:bot-persona:{home}`): `EmotePersona` keeps no
+//! generator, each method takes the draws as `rng`, so the persona is plain data and part of the host's
+//! checkpoint (the host contract, `crates/shared/README.md`).
+
+use serde::{Deserialize, Serialize};
 
 use jackioh_engine::wire::{
     EMOTE_IDS, EmoteId, GameEvent, Phase, PlayerId, PlayerView, SideView, emote_gate, hand_holds, opponent_of,
@@ -199,7 +206,12 @@ pub fn roll_for_reply_within(
 // One match's persona: the session triggers, the caps and the rate limit (R645, R643).
 
 /// Whose turn it is and in which phase: what a roll's caps are counted against.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 struct Moment {
     active: PlayerId,
     phase: Phase,
@@ -211,15 +223,22 @@ fn send_instant(now: i64, delay_ms: f64) -> i64 {
 }
 
 /// R645, R1344: match persona for the bot in `seat`, constrained to its dealt hand.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
 pub struct EmotePersona {
     persona: PersonaName,
     seat: PlayerId,
-    rng: Box<dyn FnMut() -> f64 + Send>,
     hand: Vec<EmoteId>,
     /// R639000: the windows a triggered emote's and a reply's delays are drawn inside.
     trigger_delay: EmoteDelayFit,
     reply_delay: EmoteDelayFit,
     /// R643: the send instants of the emotes it let through, oldest first.
+    #[cfg_attr(feature = "ts", ts(type = "Array<number>"))]
     sent_at: Vec<i64>,
     sent_match: usize,
     sent_own_turn: usize,
@@ -234,18 +253,12 @@ pub struct EmotePersona {
 }
 
 impl EmotePersona {
-    /// A persona for `seat`, drawing on `rng` and choosing within `hand` (`None`: the whole pool,
-    /// `EMOTE_IDS`, as a test makes it).
-    pub fn new(
-        persona: PersonaName,
-        seat: PlayerId,
-        rng: Box<dyn FnMut() -> f64 + Send>,
-        hand: Option<Vec<EmoteId>>,
-    ) -> Self {
+    /// A persona for `seat`, choosing within `hand` (`None`: the whole pool, `EMOTE_IDS`, as a test
+    /// makes it). Its draws are the caller's: each roll takes them as `rng`.
+    pub fn new(persona: PersonaName, seat: PlayerId, hand: Option<Vec<EmoteId>>) -> Self {
         EmotePersona {
             persona,
             seat,
-            rng,
             hand: hand.unwrap_or_else(|| EMOTE_IDS.to_vec()),
             trigger_delay: PRACTICE_EMOTE_DELAY,
             reply_delay: PRACTICE_EMOTE_DELAY,
@@ -330,19 +343,14 @@ impl EmotePersona {
     /// Rolls `trigger` and pushes what `admit` lets through.
     fn fire(
         &mut self,
+        rng: &mut dyn FnMut() -> f64,
         trigger: EmoteTrigger,
         moment: Moment,
         now: i64,
         match_exempt: bool,
         out: &mut Vec<AiEmote>,
     ) {
-        let roll = roll_for_trigger_within(
-            self.persona,
-            trigger,
-            &mut *self.rng,
-            &self.hand,
-            &self.trigger_delay,
-        );
+        let roll = roll_for_trigger_within(self.persona, trigger, rng, &self.hand, &self.trigger_delay);
         if let Some(admitted) = self.admit(roll, moment, now, match_exempt) {
             out.push(admitted);
         }
@@ -351,6 +359,7 @@ impl EmotePersona {
     /// R645: detects and fires triggers across one view step (`prev` to `view`).
     pub fn on_events(
         &mut self,
+        rng: &mut dyn FnMut() -> f64,
         fresh: &[GameEvent],
         prev: Option<&PlayerView>,
         view: &PlayerView,
@@ -371,7 +380,7 @@ impl EmotePersona {
 
         // The mulligan's end is the step away from a view that showed it open.
         if prev.is_some_and(|prev| prev.mulligan.is_some()) && view.mulligan.is_none() {
-            self.fire(EmoteTrigger::MulliganEnd, moment, now, true, &mut out);
+            self.fire(rng, EmoteTrigger::MulliganEnd, moment, now, true, &mut out);
         }
 
         for event in fresh {
@@ -390,24 +399,24 @@ impl EmotePersona {
                     let ahead = you.hero.health - enemy.hero.health >= AI_EMOTE.lead_health
                         || unit_count(you) >= unit_count(enemy) + AI_EMOTE.lead_units;
                     if ahead {
-                        self.fire(EmoteTrigger::TurnStartAhead, moment, now, false, &mut out);
+                        self.fire(rng, EmoteTrigger::TurnStartAhead, moment, now, false, &mut out);
                     }
                 }
                 GameEvent::Damage {
                     target_id, amount, ..
                 } => {
                     if *target_id == foe_hero && *amount >= AI_EMOTE.big_hit {
-                        self.fire(EmoteTrigger::DealtBigHit, moment, now, false, &mut out);
+                        self.fire(rng, EmoteTrigger::DealtBigHit, moment, now, false, &mut out);
                     }
                     if *target_id == own_hero && *amount >= AI_EMOTE.big_hit {
                         // The same hit rolls tookBigHit and playerBigPlay, independently.
-                        self.fire(EmoteTrigger::TookBigHit, moment, now, false, &mut out);
-                        self.fire(EmoteTrigger::PlayerBigPlay, moment, now, false, &mut out);
+                        self.fire(rng, EmoteTrigger::TookBigHit, moment, now, false, &mut out);
+                        self.fire(rng, EmoteTrigger::PlayerBigPlay, moment, now, false, &mut out);
                     }
                 }
                 GameEvent::HealthLost { player, amount } | GameEvent::Fatigue { player, amount, .. } => {
                     if *player == seat && *amount >= AI_EMOTE.big_hit {
-                        self.fire(EmoteTrigger::TookBigHit, moment, now, false, &mut out);
+                        self.fire(rng, EmoteTrigger::TookBigHit, moment, now, false, &mut out);
                     }
                 }
                 GameEvent::Destroyed {
@@ -422,7 +431,7 @@ impl EmotePersona {
                     if *controller == seat {
                         let top = prev.map_or(*attack, |prev| max_attack_of(side_of(prev, seat)));
                         if *attack >= top {
-                            self.fire(EmoteTrigger::LostTopUnit, moment, now, false, &mut out);
+                            self.fire(rng, EmoteTrigger::LostTopUnit, moment, now, false, &mut out);
                         }
                         // playerBigPlay rolls once, as a player's turn reaches its kill threshold.
                         if view.active != seat {
@@ -431,22 +440,22 @@ impl EmotePersona {
                                 && self.big_play_rolled_turn != Some(view.turn)
                             {
                                 self.big_play_rolled_turn = Some(view.turn);
-                                self.fire(EmoteTrigger::PlayerBigPlay, moment, now, false, &mut out);
+                                self.fire(rng, EmoteTrigger::PlayerBigPlay, moment, now, false, &mut out);
                             }
                         }
                     } else {
                         let top = prev.map_or(*attack, |prev| max_attack_of(side_of(prev, foe)));
                         if *attack >= top {
-                            self.fire(EmoteTrigger::KilledTopUnit, moment, now, false, &mut out);
+                            self.fire(rng, EmoteTrigger::KilledTopUnit, moment, now, false, &mut out);
                         }
                     }
                 }
                 GameEvent::GameOver { winner, .. } => match winner.player() {
                     // R645 exempts the end-of-match emotes from the match cap.
                     Some(player) if player == seat => {
-                        self.fire(EmoteTrigger::MatchWon, moment, now, true, &mut out);
+                        self.fire(rng, EmoteTrigger::MatchWon, moment, now, true, &mut out);
                     }
-                    Some(_) => self.fire(EmoteTrigger::MatchLost, moment, now, true, &mut out),
+                    Some(_) => self.fire(rng, EmoteTrigger::MatchLost, moment, now, true, &mut out),
                     None => {}
                 },
                 _ => {}
@@ -457,9 +466,14 @@ impl EmotePersona {
 
     /// R645: a player's emote may earn a reply, each reply row at most once a match. A row is spent
     /// only when its reply is sent.
-    pub fn on_player_emote(&mut self, emote: EmoteId, now: i64) -> Vec<AiEmote> {
+    pub fn on_player_emote(
+        &mut self,
+        rng: &mut dyn FnMut() -> f64,
+        emote: EmoteId,
+        now: i64,
+    ) -> Vec<AiEmote> {
         let Some((roll, key)) =
-            roll_for_reply_within(self.persona, emote, &mut *self.rng, &self.hand, &self.reply_delay)
+            roll_for_reply_within(self.persona, emote, rng, &self.hand, &self.reply_delay)
         else {
             return Vec::new();
         };
@@ -480,7 +494,12 @@ impl EmotePersona {
     }
 
     /// R645: rolls when the player's turn exceeds `AI_EMOTE.long_turn_ms`.
-    pub fn on_player_turn_long(&mut self, view: &PlayerView, now: i64) -> Vec<AiEmote> {
+    pub fn on_player_turn_long(
+        &mut self,
+        rng: &mut dyn FnMut() -> f64,
+        view: &PlayerView,
+        now: i64,
+    ) -> Vec<AiEmote> {
         let moment = Moment {
             active: view.active,
             phase: view.phase,
@@ -493,7 +512,7 @@ impl EmotePersona {
         let roll = roll_for_trigger_within(
             self.persona,
             EmoteTrigger::PlayerTurnLong,
-            &mut *self.rng,
+            rng,
             &self.hand,
             &self.trigger_delay,
         );

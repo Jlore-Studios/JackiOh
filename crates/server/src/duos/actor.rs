@@ -36,7 +36,6 @@ use crate::actor::protocol::{ACTION_PANICKED_MESSAGE, SERVER_NONCE_PREFIX, Socke
 use crate::actor::registry::panic_text;
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket};
 use crate::app::{App, now_ms};
-use crate::bots::seat::r188_forbidden;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
     BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_BUDGET, DUOS_AI_STEP_DELAY_MS,
@@ -54,6 +53,7 @@ use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
 use crate::duos::{ceiling_at, ceiling_draw, finish_match};
 use crate::economy::rewards::GameEconomy;
 use crate::seats::Seat;
+use jackioh_shared::host::bot::r188_forbidden;
 
 /// Human player seats, host and guest (S6): the per-person arrays' order.
 pub const HUMAN_SEATS: [DuosSeat; 2] = [DuosSeat::A1, DuosSeat::A2];

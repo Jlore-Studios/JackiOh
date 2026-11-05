@@ -13,375 +13,122 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput};
-use jackioh_engine::wire::ListTotal;
-use jackioh_engine::{Rng, pick_portrait_from_seed};
+use jackioh_shared::bots::fallback::{BotMode, RatedGameRecord, TicketRecord, holds_decks, holds_trio};
+use jackioh_shared::bots::names::never_lists;
+use jackioh_shared::bots::pool::{
+    BotLadder, BotRecord, bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool,
+    pool_target,
+};
 
-use crate::actor::engine::{deal_random_deck_excluding_with_strength, deal_random_deck_with_strength};
-use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::api::ranked::{SeasonDeps, build_season_id};
 use crate::app::{App, now_ms};
 use crate::bots::cosmetics;
-use crate::bots::fallback::{holds_deck_size, holds_decks, holds_trio};
-use crate::bots::names::draw_username;
-use crate::bots::persona::pick_bot_persona;
 use crate::config::{
-    BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
-    BOT_COSMETIC_FITS, BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE,
-    BOT_GRIND_GAP, BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY,
-    BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
-    BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
-    CARD_STATS_MIN_SAMPLE, MS_PER_DAY, MS_PER_SECOND, USERNAME_CHANGE_COOLDOWN_MS,
+    BOT_COSMETIC_FITS, BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_REFRESH_INTERVAL_SECONDS,
+    BOT_STALE_START_SECONDS, MS_PER_DAY, MS_PER_SECOND, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
-    BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
+    BotDeck, BotRow, FrozenTrio, QueueMode, RatedGameRow, StoreError, Ticket, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::ranked::ladder::Ladder;
-use crate::username::{normalize_username, username_key};
+use crate::username::{matches_lists, normalize_username, username_key};
 
-/// R641000: the name a bot's trio is frozen under. No client reads it: a series shows a player only
-/// which of the opponent's slots have won (R336).
-const TRIO_NAME: &str = "Conquest";
+// The store's rows as the pure decisions read them (`jackioh_shared::bots`): a Roblox DataStore script
+// would implement the same traits, or hand over `BotFacts`.
 
-/// R1454: the pool's size for `weekly` people who finished a live game in the last
-/// `BOT_POOL_ACTIVE_WINDOW_DAYS`.
-pub fn pool_target(weekly: i64) -> usize {
-    let wanted = (weekly.max(0) as f64 * BOT_POOL_PER_WEEKLY_ACTIVE).round() as usize;
-    wanted.clamp(BOT_POOL_MIN, BOT_POOL_MAX)
-}
-
-/// R1454: what a refresh does to the pool.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct PoolChange {
-    /// Active bots to retire, the youngest accounts first.
-    pub retire: Vec<String>,
-    /// Retired bots to put back, the most recently retired first.
-    pub reinstate: Vec<String>,
-    /// How many new bots to make.
-    pub create: usize,
-}
-
-/// R1454: the change that brings the pool's active bots to `target`.
-pub fn plan_pool(bots: &[BotRow], target: usize) -> PoolChange {
-    let mut active: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
-    let mut retired: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_some()).collect();
-    if active.len() > target {
-        active.sort_by(|a, b| {
-            b.created_at
-                .cmp(&a.created_at)
-                .then_with(|| b.profile_id.cmp(&a.profile_id))
-        });
-        return PoolChange {
-            retire: active
-                .iter()
-                .take(active.len() - target)
-                .map(|bot| bot.profile_id.clone())
-                .collect(),
-            ..PoolChange::default()
-        };
-    }
-    let short = target - active.len();
-    retired.sort_by(|a, b| {
-        b.retired_at
-            .cmp(&a.retired_at)
-            .then_with(|| a.profile_id.cmp(&b.profile_id))
-    });
-    let reinstate: Vec<String> = retired
-        .iter()
-        .take(short)
-        .map(|bot| bot.profile_id.clone())
-        .collect();
-    PoolChange {
-        create: short - reinstate.len(),
-        reinstate,
-        retire: Vec::new(),
-    }
-}
-
-/// R1555000: active bots that should grind when the reference-rank person exceeds the top bot by
-/// `BOT_GRIND_GAP` (less `BOT_GRIND_HYSTERESIS` while some grind, so it does not flap), taking top
-/// `BOT_GRINDERS` by rating.
-/// R2778000: on `ladder`, its people's ratings against the bots' there; a refresh plans each ladder.
-pub fn plan_grind(bots: &[BotRow], people: &[f64], ladder: Ladder) -> Vec<String> {
-    let mut active: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
-    active.sort_by(|a, b| {
-        b.rating_on(ladder)
-            .total_cmp(&a.rating_on(ladder))
-            .then_with(|| a.profile_id.cmp(&b.profile_id))
-    });
-    let Some(top) = active.first().map(|bot| bot.rating_on(ladder)) else {
-        return Vec::new();
-    };
-    let mut people = people.to_vec();
-    people.sort_by(|a, b| b.total_cmp(a));
-    let Some(reference) = BOT_GRIND_REFERENCE_RANK
-        .checked_sub(1)
-        .and_then(|index| people.get(index))
-    else {
-        return Vec::new();
-    };
-    let threshold = if active.iter().any(|bot| bot.grinding) {
-        BOT_GRIND_GAP - BOT_GRIND_HYSTERESIS
-    } else {
-        BOT_GRIND_GAP
-    };
-    if reference - top <= threshold {
-        return Vec::new();
-    }
-    active
-        .into_iter()
-        .take(BOT_GRINDERS)
-        .map(|bot| bot.profile_id.clone())
-        .collect()
-}
-
-pub(crate) fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
-    low + i64::from(rng.int(i32::try_from(high - low + 1).unwrap_or(1)))
-}
-
-/// R1454: a new bot drawn from `seed` (its profile id `profile_id`, made at `now`), and the username
-/// it claims, or none to keep the `Player#n` the store gives it. Its decks are dealt after
-/// (`draw_decks`).
-pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<String>) {
-    let mut rng = Rng::new(&format!("{seed}:bot"), 0);
-    let strength = usize::try_from(rng.int(i32::try_from(BOT_STRENGTHS.len()).unwrap_or(1))).unwrap_or(0);
-    let speed = BOT_SPEED_MIN + rng.next() * (BOT_SPEED_MAX - BOT_SPEED_MIN);
-    let persona = pick_bot_persona(&mut || rng.next());
-    let active_from_hour = rng.int(BOT_HOURS_PER_DAY);
-    let active_hours = i32::try_from(int_in(
-        &mut rng,
-        i64::from(BOT_ACTIVE_HOURS_MIN),
-        i64::from(BOT_ACTIVE_HOURS_MAX),
-    ))
-    .unwrap_or(BOT_ACTIVE_HOURS_MIN);
-    let age_days = int_in(&mut rng, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACCOUNT_AGE_MAX_DAYS);
-    let into_day = i64::from(rng.int(i32::try_from(MS_PER_DAY).unwrap_or(1)));
-    let name = if rng.chance(BOT_DEFAULT_USERNAME_SHARE) {
-        None
-    } else {
-        draw_username(&mut rng)
-    };
-    let seed_rating = BOT_STRENGTHS
-        .get(strength)
-        .map_or(crate::config::RATING_START, |strength| strength.seed_rating);
-    (
-        NewBot {
-            profile_id: profile_id.to_string(),
-            strength,
-            speed,
-            persona,
-            active_from_hour,
-            active_hours,
-            decks: Vec::new(),
-            decks_catalog_version: None,
-            created_at: now - age_days * MS_PER_DAY - into_day,
-            seed_rating,
-        },
-        name,
-    )
-}
-
-/// A collection of exactly the cards of `decks`, which is all a bot needs to own (R1454).
-fn owning<'a>(decks: impl IntoIterator<Item = &'a [String]>) -> IndexMap<String, i32> {
-    let mut owned: IndexMap<String, i32> = IndexMap::new();
-    for card in decks.into_iter().flatten() {
-        *owned.entry(card.clone()).or_insert(0) += 1;
-    }
-    owned
-}
-
-/// R1454: whether `cards` is a deck a player could queue for Best of 1 on this catalog (§9.4's L2,
-/// L3, L5 and L6), against a collection of the deck's own cards.
-fn deck_is_legal(input: &mut DeckInput, cards: &[String]) -> bool {
-    input.deck = LoadoutDeck {
-        name: None,
-        cards: cards.to_vec(),
-    };
-    input.collection = owning([cards]);
-    validator::validate_deck(input).ok
-}
-
-/// The validator's input for one deck on `catalog`, its deck and collection filled in per check.
-fn deck_input(catalog: &Catalog) -> DeckInput {
-    DeckInput {
-        deck: LoadoutDeck {
-            name: None,
-            cards: Vec::new(),
-        },
-        catalog: CatalogSnapshot {
-            version: catalog.version.clone(),
-            cards: catalog.defs.clone(),
-            banned: Some(catalog.banned.clone()),
-        },
-        collection: IndexMap::new(),
-    }
-}
-
-/// R750000: how far a bot of strength index `strength` leans its random decks on winning cards
-/// (`deal_random_deck_with_strength`), normalized across `BOT_STRENGTHS` seed ratings to [0.0, 1.0].
-pub fn bot_target_strength(strength: usize) -> f64 {
-    let Some(own) = BOT_STRENGTHS.get(strength) else {
-        return 0.0;
-    };
-    let ratings = BOT_STRENGTHS.iter().map(|strength| strength.seed_rating);
-    let low = ratings.clone().fold(f64::INFINITY, f64::min);
-    let high = ratings.fold(f64::NEG_INFINITY, f64::max);
-    if high <= low {
-        return 0.0;
-    }
-    ((own.seed_rating - low) / (high - low)).clamp(0.0, 1.0)
-}
-
-/// R1454, R750000: distinct live Best-of-1 human decklists (R1044000) partitioned into `ranked` (at least
-/// `CARD_STATS_MIN_SAMPLE` games, sorted by exact win rate (no float decides it), game count, and
-/// cards) and `unranked`. Lists not of `DECK_SIZE` cards are excluded (R1705001): they fail L2, and
-/// would take every one of `draw_decks`' attempts.
-fn ranked_human_bo1_decklists(lists: &[ListTotal]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-    let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) = lists
-        .iter()
-        .filter(|list| holds_deck_size(&list.deck))
-        .partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
-    ranked.sort_by(|a, b| {
-        (b.wins * a.games)
-            .cmp(&(a.wins * b.games))
-            .then_with(|| b.games.cmp(&a.games))
-            .then_with(|| a.key.join(",").cmp(&b.key.join(",")))
-    });
-    (
-        ranked.into_iter().map(|list| list.deck.clone()).collect(),
-        unranked.into_iter().map(|list| list.deck.clone()).collect(),
-    )
-}
-
-/// R750000: ranked lists ordered nearest to the bot's strength percentile (1.0 = best, 0.0 = worst),
-/// ties to the better list; only the share is a float.
-fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
-    let last = ranked.len().saturating_sub(1) as f64;
-    let place = (1.0 - strength.clamp(0.0, 1.0)) * last;
-    let mut placed: Vec<(usize, Vec<String>)> = ranked.into_iter().enumerate().collect();
-    placed.sort_by(|(a, _), (b, _)| {
-        (*a as f64 - place)
-            .abs()
-            .total_cmp(&(*b as f64 - place).abs())
-            .then_with(|| a.cmp(b))
-    });
-    placed.into_iter().map(|(_, deck)| deck).collect()
-}
-
-/// R1454: draws legal Best-of-1 decks for a bot: human lists first, ranked by strength and the rest
-/// shuffled (R750000), then random decks (R1453) leaning on winning cards by strength, up to
-/// `BOT_DECK_DRAW_ATTEMPTS`. `lists` are live Best-of-1 human decklists (R1044000).
-pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: f64) -> Vec<BotDeck> {
-    jackioh_cards::register_all();
-    let mut rng = Rng::new(&format!("{seed}:decks"), 0);
-    let wanted = usize::try_from(int_in(
-        &mut rng,
-        i64::try_from(BOT_DECKS_MIN).unwrap_or(0),
-        i64::try_from(BOT_DECKS_MAX).unwrap_or(0),
-    ))
-    .unwrap_or(BOT_DECKS_MIN);
-    let (ranked, unranked) = ranked_human_bo1_decklists(lists);
-    let mut candidates = by_strength(ranked, strength);
-    candidates.extend(rng.shuffle(&unranked));
-    candidates.truncate(BOT_DECK_DRAW_ATTEMPTS);
-    for index in candidates.len()..BOT_DECK_DRAW_ATTEMPTS {
-        candidates.push(deal_random_deck_with_strength(
-            &format!("{seed}:deck:{index}"),
-            None,
-            strength,
-        ));
-    }
-    let mut input = deck_input(catalog);
-    let mut decks: Vec<BotDeck> = Vec::new();
-    for cards in candidates {
-        if decks.len() >= wanted {
-            break;
-        }
-        if !deck_is_legal(&mut input, &cards) {
-            continue;
-        }
-        // R1834005: dealt with no slots, which the refresh's cosmetics step draws next.
-        decks.push(BotDeck {
-            portrait: pick_portrait_from_seed(&format!("{seed}:portrait:{}", decks.len())).to_string(),
-            cards,
-            slots: None,
-        });
-    }
-    decks
-}
-
-/// R641000: draws a Conquest trio from disjoint decks in `own`, filling shortfalls with strength-weighted
-/// random decks excluding used cards (R750000), portraits from seed (R642). Returns `None` if fewer than
-/// 3 valid decks are found or if the trio fails rules (§9.4, R253): no Conquest until next refresh.
-pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) -> Option<FrozenTrio> {
-    jackioh_cards::register_all();
-    let mut input = deck_input(catalog);
-    let mut kept: Vec<BotDeck> = Vec::new();
-    let mut used: IndexSet<String> = IndexSet::new();
-    let shares_none =
-        |cards: &[String], used: &IndexSet<String>| !cards.iter().any(|card| used.contains(card));
-    for deck in own {
-        if kept.len() >= validator::TRIO_DECKS {
-            break;
-        }
-        if shares_none(&deck.cards, &used) && deck_is_legal(&mut input, &deck.cards) {
-            used.extend(deck.cards.iter().cloned());
-            kept.push(deck.clone());
+impl From<Ladder> for BotLadder {
+    fn from(ladder: Ladder) -> Self {
+        match ladder {
+            Ladder::Constructed => BotLadder::Constructed,
+            Ladder::Random => BotLadder::Random,
         }
     }
-    for attempt in 0..BOT_DECK_DRAW_ATTEMPTS {
-        if kept.len() >= validator::TRIO_DECKS {
-            break;
-        }
-        let excluded: Vec<String> = used.iter().cloned().collect();
-        let cards = deal_random_deck_excluding_with_strength(
-            &format!("{seed}:trio-deck:{attempt}"),
-            &excluded,
-            strength,
-        );
-        if shares_none(&cards, &used) && deck_is_legal(&mut input, &cards) {
-            used.extend(cards.iter().cloned());
-            kept.push(BotDeck {
-                portrait: pick_portrait_from_seed(&format!("{seed}:trio-portrait:{}", kept.len()))
-                    .to_string(),
-                cards,
-                slots: None,
-            });
+}
+
+impl From<QueueMode> for BotMode {
+    fn from(mode: QueueMode) -> Self {
+        match mode {
+            QueueMode::Bo1 => BotMode::Bo1,
+            QueueMode::Bo3 => BotMode::Bo3,
+            QueueMode::Random => BotMode::Random,
         }
     }
-    if kept.len() < validator::TRIO_DECKS {
-        return None;
+}
+
+impl BotRecord for BotRow {
+    fn profile_id(&self) -> &str {
+        &self.profile_id
     }
-    let checked = validator::validate_trio(&LoadoutInput {
-        decks: kept
-            .iter()
-            .map(|deck| LoadoutDeck {
-                name: None,
-                cards: deck.cards.clone(),
-            })
-            .collect(),
-        catalog: input.catalog,
-        collection: owning(kept.iter().map(|deck| deck.cards.as_slice())),
-    });
-    if !checked.ok {
-        return None;
+    fn created_at(&self) -> i64 {
+        self.created_at
     }
-    let mut decks = kept.into_iter().enumerate().map(|(slot, deck)| FrozenDeck {
-        name: format!("Deck {}", slot + 1),
-        cards: deck.cards,
-        portrait: Some(Some(deck.portrait)),
-        // R1834005: a Best-of-1 deck the trio keeps keeps its slots; a deck dealt for it has none yet.
-        slots: deck.slots,
-    });
-    let (Some(first), Some(second), Some(third)) = (decks.next(), decks.next(), decks.next()) else {
-        return None;
-    };
-    Some(FrozenTrio {
-        name: TRIO_NAME.to_string(),
-        decks: (first, second, third),
-    })
+    fn retired_at(&self) -> Option<i64> {
+        self.retired_at
+    }
+    fn grinding(&self) -> bool {
+        self.grinding
+    }
+    fn rating_for(&self, ladder: BotLadder) -> f64 {
+        match ladder {
+            BotLadder::Constructed => self.rating,
+            BotLadder::Random => self.random_rating,
+        }
+    }
+    fn active_from_hour(&self) -> i32 {
+        self.active_from_hour
+    }
+    fn active_hours(&self) -> i32 {
+        self.active_hours
+    }
+    fn in_match_id(&self) -> Option<&str> {
+        self.in_match_id.as_deref()
+    }
+    fn decks(&self) -> &[BotDeck] {
+        &self.decks
+    }
+    fn decks_catalog_version(&self) -> Option<&str> {
+        self.decks_catalog_version.as_deref()
+    }
+    fn trio(&self) -> Option<&FrozenTrio> {
+        self.trio.as_ref()
+    }
+    fn trio_catalog_version(&self) -> Option<&str> {
+        self.trio_catalog_version.as_deref()
+    }
+}
+
+impl TicketRecord for Ticket {
+    fn id(&self) -> &str {
+        &self.id
+    }
+    fn rating(&self) -> f64 {
+        self.rating
+    }
+    fn mode(&self) -> BotMode {
+        self.mode.into()
+    }
+    fn enqueued_at(&self) -> i64 {
+        self.enqueued_at
+    }
+}
+
+impl RatedGameRecord for RatedGameRow {
+    fn between_bots(&self) -> bool {
+        self.sides.0.bot_id.is_some() && self.sides.1.bot_id.is_some()
+    }
+    fn ended_at(&self) -> i64 {
+        self.ended_at
+    }
+}
+
+/// R1454: a drawn name as the account will hold it, when it is one a person could hold (R1432) that the
+/// bots' own list (`never.txt`) lets by; else none, and the draw tries again.
+pub fn bot_name_filter(name: &str) -> Option<String> {
+    let base = normalize_username(name).ok()?;
+    let (anywhere, token) = never_lists();
+    (!matches_lists(&base, &anywhere, &token)).then_some(base)
 }
 
 /// What one refresh did, for its log line and the tests.
@@ -465,7 +212,9 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     }
     let mut named: Vec<(String, String)> = Vec::new();
     for index in 0..change.create {
-        let (bot, name) = draw_new_bot(&format!("{seed}:{index}"), &new_uuid(), now);
+        let (bot, name) = draw_new_bot(&format!("{seed}:{index}"), &new_uuid(), now, &mut |name| {
+            bot_name_filter(name)
+        });
         tx.bots_create(&bot).await?;
         if let Some(name) = name {
             named.push((bot.profile_id.clone(), name));
@@ -478,6 +227,9 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
 
     let mut tx = app.db.begin(None).await?;
     let bots = tx.bots_list().await?;
+    let snapshot = app.catalog.snapshot();
+    // The deals read the registered catalog (R388).
+    jackioh_cards::register_all();
     let stale: Vec<BotRow> = bots
         .into_iter()
         .filter(|bot| bot.retired_at.is_none())
@@ -494,7 +246,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         let decks = draw_decks(
             &format!("{seed}:{}", bot.profile_id),
             &lists,
-            &app.catalog,
+            &snapshot,
             bot_target_strength(bot.strength),
         );
         let mut tx = app.db.begin(None).await?;
@@ -515,7 +267,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         let Some(trio) = draw_trio(
             &format!("{seed}:{}", bot.profile_id),
             &bot.decks,
-            &app.catalog,
+            &snapshot,
             bot_target_strength(bot.strength),
         ) else {
             tracing::warn!(event = "bots.pool.trio_short", botId = %bot.profile_id);
@@ -582,7 +334,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
             })
             .map(|standing| standing.rating)
             .collect();
-        for bot in plan_grind(&bots, &people, ladder) {
+        for bot in plan_grind(&bots, &people, ladder.into()) {
             if !grinders.contains(&bot) {
                 grinders.push(bot);
             }

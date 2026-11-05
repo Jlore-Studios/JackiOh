@@ -5,8 +5,11 @@
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, GameEventType, GameResult, LastBoardEntry, PlayerId, PlayerView, PromptKind,
+    Action, ActionBody, Aim, EmoteId, GameEventType, GameResult, LastBoardEntry, PlayerId, PlayerView,
+    PromptKind,
 };
+
+use crate::bots::decide::BotChoice;
 
 use super::clock::{ClockExpiry, MatchClocks};
 use super::rematch::RematchStakes;
@@ -154,7 +157,9 @@ pub enum HostNote {
 }
 
 /// The host must decide a move for the AI or ladder bot at `home`, and answer with
-/// [`DuelEvent::Decided`]: one deadline-bounded step, apart from every other.
+/// [`DuelEvent::Decided`]: one deadline-bounded step, apart from every other (`DuelHost::job` makes the
+/// job to run, `bots::decide` is what it runs). The machine paces the move it is told: its think time,
+/// its aim, the moment it is played.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
@@ -175,31 +180,16 @@ pub struct DecideRequest {
     pub first_in_turn: bool,
     /// R639000: whether this is the first move of the bot's own turn, the one a concession comes at.
     pub own_turn_start: bool,
-    /// R639000: how long an aim shows before the move.
-    #[cfg_attr(feature = "ts", ts(type = "number"))]
-    pub aim_lead_ms: i64,
     /// The acting clock the bot has left (R79), or none when none runs for it.
     #[cfg_attr(feature = "ts", ts(type = "number | null"))]
     pub clock_left_ms: Option<i64>,
-    /// Where the bot's two random streams stand: the search's and the think time's.
+    /// R1452: the most wall-clock time the decision may take (`BOT_DECISION_DEADLINE_MS`, and never so
+    /// long that less than `BOT_CLOCK_MARGIN_MS` is left on the clock), past which it plays the best line
+    /// found so far. A host with no clock may ignore it: the search ends at the strength's budget.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub deadline_ms: i64,
+    /// Where the bot's search stream stands.
     pub ai_cursor: u32,
-    pub timing_cursor: u32,
-}
-
-/// What a decided move comes back as.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(rename_all = "camelCase")]
-pub struct Played {
-    pub body: Option<ActionBody>,
-    pub ai_cursor: u32,
-    pub timing_cursor: u32,
-    /// Whether an aim was shown (`DuelEvent::Aim`) before the move: it is taken down after it.
-    pub aimed: bool,
 }
 
 /// What the store must record when the game ends (SPEC §9.5: every ending records a result and clears
@@ -282,14 +272,17 @@ pub enum DuelEvent {
     Aim { home: PlayerId, aim: Option<Aim> },
     /// R2739001: the account's choice hover, or its end.
     Hover { home: PlayerId, index: Option<i32> },
-    /// A bot's move, decided as [`DuelOutput::Decide`] asked.
+    /// A bot's move, decided as [`DuelOutput::Decide`] asked (`bots::decide`).
     Decided {
         home: PlayerId,
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         version: i64,
         turn: i32,
-        played: Played,
+        choice: BotChoice,
     },
+    /// R1351000: the two accounts block each other, or one does: from now on a person's emote is
+    /// answered by no persona (the host relays none either), though a card that hears emotes still hears it.
+    EmotesMuted,
     /// The result [`DuelOutput::Record`] asked for has been written.
     ResultRecorded,
     /// A rematch offer the account at `from` made reached the host (R639000: a bot may meet it).
@@ -391,6 +384,10 @@ pub enum DuelOutput {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         at: i64,
     },
+    /// R645: the bot at `home` sends an emote of its persona. The host sends it as it sends a person's
+    /// (the hand check, the rate gate (R643), the relay to the opponent, telemetry) and feeds
+    /// [`DuelEvent::Emote`] if it let it through, so a card that hears emotes hears the bot's too (R1127).
+    BotEmote { home: PlayerId, emote: EmoteId },
     /// R639000: the bot at `home` makes a rematch offer at `stakes` (`reply`: in answer to a person's).
     /// A reply is awaited: feed [`DuelEvent::RematchSent`] once it has been made, so the bot stays on the
     /// match until then.

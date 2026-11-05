@@ -782,6 +782,12 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn host(call_json: &str) -> String;
     // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
     // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn bots(call_json: &str) -> String;
+    // #3103: jackioh-shared's ladder bots (SPEC §9.12, R1453, R1454, R641000, R1555000). A BotCall in ({ call: "chooseBot", ticket, bots, recent, busy, hour, catalogVersion } | { call: "planPool" | "planGrind" | "newBot" | "drawDecks" | "drawTrio" | "fallbackDue" | "pickIsDue" | "botPick" | … }),
+    // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | …); the host reads its store into plain records and writes what comes out
+#[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
+    // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
+    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
 ```
 
 ### 10.2 Build

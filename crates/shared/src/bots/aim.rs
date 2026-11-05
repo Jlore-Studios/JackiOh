@@ -1,7 +1,8 @@
 //! A ladder bot's aim arrow (SPEC §9.5, R738, R639000; #639): the aim a person's client would send
 //! the opponent while making a move, so targeted plays and attacks show an arrow as a person's do.
 //! Every end is a public handle, and only a move with a declared target aims, never a simple placement.
-//! The relay judges aim visibility against the receiver's view (`aim_is_public`).
+//! The relay judges aim visibility against the receiver's view (`aim_is_public`). The machine shows it
+//! (`host/duel.rs`) a beat before the move, only for a bot that passes for a person (R1452).
 
 use jackioh_engine::{
     ActionBody, Aim, AimEnd, DamageTarget, GameState, PlayerId, RANDOM_ATTACK_TARGET, Selection,

@@ -938,6 +938,8 @@ pub struct BatchFolded {
 // (#3098); `series_update` writes each next row back.
 
 pub use jackioh_shared::series::{SeriesEnd, SeriesGame, SeriesRow, SeriesSeat, SeriesSide, SeriesStatus};
+// A ladder bot's decks and a new bot are `jackioh-shared`'s (#3103): the pool's decisions draw them, pure.
+pub use jackioh_shared::bots::pool::{BotDeck, NewBot};
 
 // The ranked ladder (SPEC §9.12, R603–R612): seasons, each player's season on the ladder, the bots'
 // ratings, and the record of every rated game. The rules are `ranked/*`, pure; `api/ranked.rs`
@@ -986,18 +988,6 @@ pub struct BotRating {
     /// for a row not rated since R1560000 (migration 0052).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ai_generation: Option<i64>,
-}
-
-/// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
-/// R1834005: and the slots it wears it with, drawn as a person's deck's (`bots::cosmetics`); absent
-/// on a deck dealt since the bot last drew its loadout, which the pool's next refresh draws.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BotDeck {
-    pub cards: Vec<String>,
-    pub portrait: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub slots: Option<DeckSlots>,
 }
 
 /// R1453, R1454, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
@@ -1095,23 +1085,6 @@ pub struct LoadoutSample {
     pub match_created_at: i64,
     pub deck: Vec<String>,
     pub loadout: Loadout,
-}
-
-/// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
-/// `bot_ratings` row starts at (R610), with a new player's deviation and volatility.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct NewBot {
-    pub profile_id: String,
-    pub strength: usize,
-    pub speed: f64,
-    pub persona: PersonaName,
-    pub active_from_hour: i32,
-    pub active_hours: i32,
-    pub decks: Vec<BotDeck>,
-    pub decks_catalog_version: Option<String>,
-    pub created_at: i64,
-    pub seed_rating: f64,
 }
 
 /// R611: one side of a rated game, as recorded.

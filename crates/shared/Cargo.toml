@@ -1,6 +1,6 @@
 [package]
 name = "jackioh-shared"
-description = "The logic the JackiOh server and its clients share, pure (CLAUDE.md rule 4): first, the Conquest series rules (SPEC §9.5)."
+description = "The logic the JackiOh server and its clients share, pure (CLAUDE.md rule 4): the Conquest series rules (SPEC §9.5), the match host's machine and the ladder bots."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

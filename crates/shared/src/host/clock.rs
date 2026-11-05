@@ -543,7 +543,11 @@ impl MatchClock {
             | TimerKey::Hover { .. }
             | TimerKey::BotOffer { .. }
             | TimerKey::BotReply { .. }
-            | TimerKey::BotRetry => return None,
+            | TimerKey::BotRetry
+            | TimerKey::BotMove { .. }
+            | TimerKey::BotAim { .. }
+            | TimerKey::BotEmote { .. }
+            | TimerKey::BotLongTurn { .. } => return None,
         };
         (!self.stopped).then_some(expiry)
     }

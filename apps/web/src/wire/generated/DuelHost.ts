@@ -2,6 +2,8 @@
 import type { AimSlot } from "./AimSlot";
 import type { Awaiting } from "./Awaiting";
 import type { BotSeat } from "./BotSeat";
+import type { DueEmote } from "./DueEmote";
+import type { EmotePersona } from "./EmotePersona";
 import type { ExpiryRun } from "./ExpiryRun";
 import type { Fx } from "./Fx";
 import type { GameState } from "./GameState";
@@ -11,6 +13,7 @@ import type { MatchClock } from "./MatchClock";
 import type { MatchClocks } from "./MatchClocks";
 import type { PerPlayer } from "./PerPlayer";
 import type { PlayerId } from "./PlayerId";
+import type { PlayerView } from "./PlayerView";
 
 /**
  * The 1v1 host's state: the checkpoint. Serializable, with the `GameState` inside it.
@@ -39,7 +42,15 @@ swapped: boolean, lastPendingFor: PlayerId | null,
 /**
  * R265: which seats owed a mulligan at the last push, so a `prompt` frame goes out on a change.
  */
-lastMulliganOwed: string, finished: boolean, finishedAt: number | null, voided: boolean, stopped: boolean, clock: MatchClock, persistedClocks: MatchClocks, fx: Fx, aims: PerPlayer<AimSlot>, hovers: PerPlayer<HoverSlot>, botThinking: PerPlayer<boolean>, botCursors: PerPlayer<[number, number]>, botMovedTurn: PerPlayer<number | null>, botRetry: number | null, 
+lastMulliganOwed: string, finished: boolean, finishedAt: number | null, voided: boolean, stopped: boolean, clock: MatchClock, persistedClocks: MatchClocks, fx: Fx, aims: PerPlayer<AimSlot>, hovers: PerPlayer<HoverSlot>, 
+/**
+ * Where each bot's two random streams stand: the search's and the think time's.
+ */
+botCursors: PerPlayer<[number, number]>, botMovedTurn: PerPlayer<number | null>, botRetry: number | null, botPersonas: PerPlayer<EmotePersona | null>, botPersonaCursor: PerPlayer<number>, botViews: PerPlayer<PlayerView | null>, botEmotes: PerPlayer<Array<DueEmote>>, botEmoteTimer: PerPlayer<number | null>, botLongTurnTimer: PerPlayer<number | null>, 
+/**
+ * R1351000: no persona answers a person's emote.
+ */
+emotesMuted: boolean, 
 /**
  * Each bot home's plan for the end of a ranked match, and when its linger ends.
  */

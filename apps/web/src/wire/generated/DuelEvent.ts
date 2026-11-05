@@ -2,9 +2,9 @@
 import type { ActionBody } from "./ActionBody";
 import type { ActionBy } from "./ActionBy";
 import type { Aim } from "./Aim";
+import type { BotChoice } from "./BotChoice";
 import type { EmoteId } from "./EmoteId";
 import type { LogOutcome } from "./LogOutcome";
-import type { Played } from "./Played";
 import type { PlayerId } from "./PlayerId";
 import type { TimerKey } from "./TimerKey";
 
@@ -13,4 +13,4 @@ import type { TimerKey } from "./TimerKey";
  * (`Connected`, `Left`, `Aim`, `Hover`) may be fed the moment it is learned; the rest are the host's
  * turns, one at a time, in order (the machine awaits the log between an action and its `Logged`).
  */
-export type DuelEvent = { "event": "arm" } | { "event": "connected", home: PlayerId, } | { "event": "attached", home: PlayerId, } | { "event": "hello", home: PlayerId, } | { "event": "left", home: PlayerId, } | { "event": "disconnected", home: PlayerId, } | { "event": "action", by: ActionBy, nonce: string, body: ActionBody, } | { "event": "emote", home: PlayerId, emote: EmoteId, } | { "event": "logged", outcome: LogOutcome, } | { "event": "timerFired", key: TimerKey, id: number, } | { "event": "aim", home: PlayerId, aim: Aim | null, } | { "event": "hover", home: PlayerId, index: number | null, } | { "event": "decided", home: PlayerId, version: number, turn: number, played: Played, } | { "event": "resultRecorded" } | { "event": "rematchOffered", from: PlayerId, stakes: number, } | { "event": "rematchSent", home: PlayerId, } | { "event": "stop" };
+export type DuelEvent = { "event": "arm" } | { "event": "connected", home: PlayerId, } | { "event": "attached", home: PlayerId, } | { "event": "hello", home: PlayerId, } | { "event": "left", home: PlayerId, } | { "event": "disconnected", home: PlayerId, } | { "event": "action", by: ActionBy, nonce: string, body: ActionBody, } | { "event": "emote", home: PlayerId, emote: EmoteId, } | { "event": "logged", outcome: LogOutcome, } | { "event": "timerFired", key: TimerKey, id: number, } | { "event": "aim", home: PlayerId, aim: Aim | null, } | { "event": "hover", home: PlayerId, index: number | null, } | { "event": "decided", home: PlayerId, version: number, turn: number, choice: BotChoice, } | { "event": "emotesMuted" } | { "event": "resultRecorded" } | { "event": "rematchOffered", from: PlayerId, stakes: number, } | { "event": "rematchSent", home: PlayerId, } | { "event": "stop" };
