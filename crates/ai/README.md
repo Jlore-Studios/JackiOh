@@ -279,9 +279,10 @@ less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but 
 The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
-set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most
-`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000), and since #2203 Training Grounds cards, at most half
-of them (R2203000): no sweep, lane or person adds a card of an
+set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most a fifth of them
+(R1885000), and since #2203 Training Grounds cards, at most half of them (R2203000), each set's share
+written in its row of the set table and its ceiling that share of its non-token cards (R3114001): no
+sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`

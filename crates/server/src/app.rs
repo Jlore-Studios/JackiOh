@@ -433,6 +433,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::news::post_claim_news),
     ),
+    // R3191000: Claim all, one spend for every unclaimed entry.
+    (
+        "POST",
+        "/api/news/claim-all",
+        AuthLevel::Active,
+        h!(api::news::post_claim_all_news),
+    ),
     // api/practice.rs (#1303)
     (
         "POST",
@@ -720,6 +727,13 @@ pub static ROUTES: &[Route] = &[
         h!(api::dev::give_jlore),
     ),
     ("POST", "/api/dev/fill", AuthLevel::Active, h!(api::dev::fill)),
+    // R3156001: every cosmetic the fill grants, and nothing else.
+    (
+        "POST",
+        "/api/dev/cosmetics",
+        AuthLevel::Active,
+        h!(api::dev::cosmetics),
+    ),
     (
         "POST",
         "/api/dev/clear/:part",

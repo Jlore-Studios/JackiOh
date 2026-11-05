@@ -31,8 +31,8 @@ export const routes = {
   practice: () => env("practiceRoute", "/practice"),
   /** R768000. */
   replays: () => env("replaysRoute", "/replays"),
-  /** §14: spec 45 opens its Dev tools toggle. */
-  account: () => env("accountRoute", "/account"),
+  /** R3156000: the front screen, where spec 45 opens its Dev tools from the Dev button. */
+  landing: () => env("landingRoute", "/"),
   /** #1307. */
   collection: () => env("collectionRoute", "/collection"),
   /** R1579000: the Cards section. */

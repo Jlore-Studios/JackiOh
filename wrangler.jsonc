@@ -5,7 +5,9 @@
 //
 // Each serves apps/web/dist as static assets, which no Worker code runs for, and sends `/api/*` and
 // `/ws/*` (`run_worker_first`) to apps/edge's Worker, which hands them to one container running
-// crates/server's image: the site and its server share an origin. The custom domains and Access are
+// crates/server's image: the site and its server share an origin. It also sends the engine's module,
+// stored brotli-compressed (`/assets/*.wasm-*.br`, #3183), which the Worker serves from the `ASSETS`
+// binding with `Content-Encoding: br`. The custom domains and Access are
 // infra/cloudflare.tf's; the server's secrets are set with `wrangler secret put` (apps/edge/README.md).
 //
 // `containers`, `durable_objects` and `vars` are not inherited by a named environment, so staging
@@ -23,7 +25,9 @@
   "assets": {
     "directory": "./apps/web/dist",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/ws/*"]
+    // #3183: the Worker serves the engine's module, the stored brotli file, with its Content-Encoding.
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/ws/*", "/assets/*.wasm-*.br"]
   },
   // One instance (the server holds every live match in memory, so every request must reach the same
   // one), `basic` (1/4 vCPU, 1 GiB), placed in eastern North America beside Supabase's us-east-2.
@@ -63,7 +67,8 @@
       "assets": {
         "directory": "./apps/web/dist",
         "not_found_handling": "404-page",
-        "run_worker_first": ["/api/*", "/ws/*"]
+        "binding": "ASSETS",
+        "run_worker_first": ["/api/*", "/ws/*", "/assets/*.wasm-*.br"]
       },
       "containers": [
         {

@@ -24,6 +24,7 @@ pub mod snapshot;
 pub mod timer;
 pub mod types;
 
+pub use bot::{BotSeat, DecideJob};
 pub use duel::{DuelHost, DuelSetup, step};
 pub use duos::{DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, step_duos};
 pub use types::*;

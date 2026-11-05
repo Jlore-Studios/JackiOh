@@ -131,6 +131,7 @@ export function adminApi(token: TokenSource) {
     giveXp: (setId: SetName, xp: number) => call<{ track: unknown }>("/api/dev/xp", "POST", { setId, xp }),
     giveJlore: (jlore: number) => call<{ jlore: number }>("/api/dev/jlore", "POST", { jlore }),
     fill: () => call<{ cards: number; cosmetics: number }>("/api/dev/fill", "POST", {}),
+    unlockCosmetics: () => call<{ cosmetics: number }>("/api/dev/cosmetics", "POST", {}),
     clear: (part: ClearPart) => call<{ written: number }>(`/api/dev/clear/${part}`, "POST", {}),
     fillBar: (bar: Bar) => call<{ written: number }>(`/api/dev/bar/${bar}`, "POST", {}),
     giveQuest: () => call<{ quest: QuestView }>("/api/dev/quests", "POST", {}),

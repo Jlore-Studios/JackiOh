@@ -40,6 +40,7 @@ import {
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
+import { DevButton } from "./DevButton.tsx";
 import { LiveGameBanner } from "./GameBanner.tsx";
 import { NewsList, useNews } from "./NewsPanel.tsx";
 import { QuestsView, useQuests } from "./QuestsPanel.tsx";
@@ -474,7 +475,7 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
  * entries the server says are unclaimed (CLAUDE.md rule 7). No live entry or no answer: no bookmark (R2875001).
  */
 function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
-  const { news, claim } = useNews(token);
+  const { news, claim, claimAll } = useNews(token);
   const { phase, open, root, bookmark, close, toggle } = useUnroll(motion);
   const panelId = useId();
 
@@ -519,7 +520,7 @@ function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion 
         data-motion={motion}
         hidden={phase === "closed"}
       >
-        {phase === "closed" ? null : <NewsList news={news} onClaim={claim} />}
+        {phase === "closed" ? null : <NewsList news={news} onClaim={claim} onClaimAll={claimAll} />}
       </div>
     </div>
   );
@@ -636,6 +637,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
               volume and reduced motion are reachable from the first screen too. A signed-in
               account's Jlore pill leads the language button and the gear, as in every top bar. */}
           <div className="landing-corner">
+            {/* R3156000: a dev account's door to the Dev tools, on a computer alone. */}
+            <DevButton account={account} />
             <Corner account={account} />
             <JlorePill />
             <FriendsButton placement="nav" />

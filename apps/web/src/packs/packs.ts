@@ -12,7 +12,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import { raysCue, tid, tunedBurst, type BurstTuning } from "../fx/build.ts";
 import type { FxCue } from "../fx/types.ts";
 import { t } from "../i18n/i18n.ts";
-import type { OpenedPackResponse, PackSlot, PacksResponse, TierOdds } from "../net/api.ts";
+import type { OpenedPackResponse, PackSlot, PacksResponse } from "../net/api.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
 /** How long a torn pack takes to open before its cards show. */
@@ -94,17 +94,6 @@ export const packTestid = {
 /** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros. */
 export function percent(rate: number): string {
   return `${String(Number((rate * 100).toFixed(PACK_ODDS_DECIMALS)))}%`;
-}
-
-/** The server's odds of each tier as percentages, by tier key, for a sentence to name. */
-export function tierPercents(odds: TierOdds): Record<keyof TierOdds, string> {
-  return {
-    common: percent(odds.common),
-    rare: percent(odds.rare),
-    epic: percent(odds.epic),
-    legendary: percent(odds.legendary),
-    mythic: percent(odds.mythic),
-  };
 }
 
 /** The highest rarity among a pack's slots; Common for none. */
