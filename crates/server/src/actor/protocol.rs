@@ -717,8 +717,9 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
 pub const MAX_NONCE_LENGTH: usize = 128;
 
 /// SPEC §11 R270: prefix for server-minted nonces (`timeout`, `disconnectExpired`, `ceilingReached`).
-/// Clients may not send one: a known nonce is acked and not applied, so it would swallow an expiry.
-pub const SERVER_NONCE_PREFIX: &str = "srv-";
+/// Clients may not send one: a known nonce is acked and not applied, so it would swallow an expiry. The
+/// match host's machine mints them (`jackioh_shared::host`, #3101).
+pub use jackioh_shared::host::SERVER_NONCE_PREFIX;
 
 /// SPEC §9.3, §9.8 and R270's rules for a client's nonce: a non-empty string of at most
 /// `MAX_NONCE_LENGTH`, outside the server's own namespace. The co-op parser holds them too, and its
