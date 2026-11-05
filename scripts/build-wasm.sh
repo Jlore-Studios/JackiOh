@@ -289,7 +289,7 @@ export interface JackiohWasmLuauModule {
   _catalog(): number;
   _catalog_version(): number;
   _carried_versions(): number;
-  _run_content(customCards: number): number;
+  _run_content(): number;
   _run_check_setup(setup: number, unlocks: number, content: number): number;
   _run_create(setup: number, unlocks: number, content: number): number;
   _run_reduce(state: number, content: number, action: number): number;

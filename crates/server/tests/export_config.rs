@@ -1,6 +1,6 @@
 //! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
 //! Ensures client reads server constants (CLAUDE.md rule 9).
-//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R915008, R2101000, R2990001, R2990002.
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002.
 
 use serde_json::{Value, json};
 
@@ -75,7 +75,6 @@ fn constants() -> Vec<(&'static str, Value)> {
             "CODE_STATUS_RECHECK_FLOOR_SECONDS",
             json!(c::CODE_STATUS_RECHECK_FLOOR_SECONDS),
         ),
-        ("CUSTOM_CARDS_PER_ACCOUNT", json!(c::CUSTOM_CARDS_PER_ACCOUNT)),
         // SPEC §11 R897000: the client counts reads, never compares times, so only the read count
         // ships; QUEUE_TICKET_STALE_MS stays server-only.
         ("QUEUE_ENDED_AFTER_READS", json!(c::QUEUE_ENDED_AFTER_READS)),
@@ -395,12 +394,11 @@ fn every_name_is_listed_once() {
         // #3074: the dev dashboard's seven (R3074000, R3074001, R3074003).
         // #3013: PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000).
         listed,
-        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
-         (R757000, R757001), REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), and \
-         CUSTOM_CARDS_PER_ACCOUNT (R915008), with \
+         (R757000, R757001), REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
          twelve (#936) with the social poll (SOCIAL_POLL_MS), Duos co-op's eight clocks and ping \

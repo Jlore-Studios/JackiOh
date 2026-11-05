@@ -14,7 +14,6 @@ use jackioh_cards::{
     shipped_catalog,
 };
 use jackioh_engine::catalog::set_is_open;
-use jackioh_engine::custom::is_custom_id;
 use jackioh_engine::{
     BUSTED_CODE_LINES, COMPLICATED_CODE_LINES, CardDef, GLITCH_DEF_ID, SINGLE_PLAYER_SETS, card_metrics,
     code_lines_of, is_busted, is_complicated, is_extra_turn_card, with_shipped,
@@ -179,16 +178,6 @@ fn r1846001_every_set_adds_nothing_until_a_single_player_set_holds_a_card() {
 }
 
 #[test]
-fn r1846002_no_custom_card_is_counted() {
-    register_all();
-    // The build counts the catalog's Rust scripts; a custom card is never in the catalog (R915000)
-    assert!(CODE_LINES.iter().all(|(id, _)| !is_custom_id(id)));
-    assert_eq!(code_lines_of("custom-anything"), None);
-    assert!(!is_busted("custom-anything"));
-    assert!(!is_complicated("custom-anything"));
-}
-
-#[test]
 fn r1846003_r2173000_a_fold_under_a_carried_version_reads_its_own_lists_or_the_builds() {
     register_all();
     let build = card_metrics();
@@ -254,7 +243,6 @@ fn r846_the_build_lists_the_scripts_that_owe_an_extra_turn_sorted_by_id() {
         "../../src/scripts/stinkyscape/c004_1_farewell.rs"
     )));
     assert!(!is_extra_turn_card("stinkyscape-004-1"));
-    assert!(!is_extra_turn_card("custom-anything"));
 }
 
 /// #3116: a script owes an extra turn once its code, above its tests and outside its comments, names

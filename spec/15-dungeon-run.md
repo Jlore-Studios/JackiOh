@@ -66,7 +66,7 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 
 ### 15.1 Sandbox and Campaign
 
-**Sandbox:** offline, no account. It plays in the browser's practice worker and never touches the server. The player's custom cards ([[§12]]) join the pool and the fights. It earns nothing on an account: unlocks, Embers, levels, history, stats and leaderboards stay on the device.
+**Sandbox:** offline, no account. It plays in the browser's practice worker and never touches the server. It earns nothing on an account: unlocks, Embers, levels, history, stats and leaderboards stay on the device.
 
 **Campaign:** signed in. The account holds the unlocks, Embers and levels. The server folds a finished run's file ([[§15.2]]) before it pays, as with practice claims ([[§14.8]], [[R1303000]]). Stats feed the leaderboards. The server acts at a run's start, at its end and for ghosts, never during.
 
@@ -274,6 +274,8 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill and prints each kind of fight's win rate and HP cost, the HP at each boss, the rows reached, the score and the Embers (#3065): a guide to tuning the strawmen, not a target.
+
 ### 15.13 Open questions
 
 These are the plan's DR13 open questions, not decided here:
@@ -283,4 +285,4 @@ These are the plan's DR13 open questions, not decided here:
 - the starting cards and starter artifacts;
 - the prestige artifacts;
 - ghost snapshots;
-- tuning the strawmen.
+- tuning the strawmen, against [[§15.12]]'s `cargo jackioh run-sim`.
