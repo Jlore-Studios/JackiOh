@@ -3621,7 +3621,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "40",
         "Feng Shui",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Cn],
         R::Legendary,
@@ -3705,8 +3705,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn],
         R::Legendary,
-        st(2, 2),
-        st(4, 4),
+        st(0, 1),
+        st(0, 2),
     ),
     row(
         "48",
@@ -4091,7 +4091,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "81",
         "Deadman's Hand",
-        emb(0, 2),
+        emb(0, 1),
         T::Spell,
         &[],
         R::Rare,

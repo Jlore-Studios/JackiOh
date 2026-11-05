@@ -427,7 +427,7 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
 }
 
 const RECYCLER: &str = "classic-064"; // C #64 Malzahar's Recycler: "Whenever you discard cards, draw that many."
-const INTROSPECTION: &str = "meditative-007"; // M #7: "End of turn: ... Draw 1. ..."
+const ALUNETH: &str = "meditative-080"; // M #80: "End of turn: Draw 3. They cost (1) less." (M #7 Introspection drew at the end of turn until #3140.)
 
 mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     use super::*;
@@ -436,13 +436,14 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     fn r2067000_r2179002_an_end_turn_s_hinders_beside_both_players_recyclers_stop_at_the_actions_cap() {
         register_all();
         // Fuzz seed 9688's loop of #33's Hinders and #64's draws (R217): a cast on draw is no play (#2179,
-        // R2179002), so one library runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60
-        // (chains of 20, R58). The same action then starts p2's turn, whose draw sets off p2's Hinders and
-        // Recycler, and the cap counts either side's casts.
+        // R2179002), so one library runs dry first: p1's end of turn (M #80 Aluneth's draws, M #7 Introspection's
+        // until #3140 moved it to the start of the turn) casts its Hinders in chains of 20 (R58). The same action
+        // then starts p2's turn, whose draw sets off p2's Hinders and Recycler, and the cap counts either side's
+        // casts.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [VANILLA, VANILLA],
-                "backrow": [INTROSPECTION, RECYCLER, CLONE_MACHINE],
+                "backrow": [ALUNETH, RECYCLER, CLONE_MACHINE],
                 "library": vec![HINDER; LIBRARY_CAP as usize],
             },
             "p2": {

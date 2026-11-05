@@ -12,7 +12,8 @@
 // (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant face of #16 clamps
 // (#38's did until issue #3139 made its text one short line).
 // #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Issue #3139: Core #65 and #89, whose new last lines put
-// both their faces over the limit. Only a face printing its catalog text takes a
+// both their faces over the limit. Issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry
+// and draw lines put them over. Only a face printing its catalog text takes a
 // short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
 // only its header and the next Ascent line (#814, R280, c008_reach_the_summit.rs); a face in play past the
 // preview's limit clamps rather than shrinking its art.
@@ -48,10 +49,12 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditative-022": { base: 1, radiant: 1 },
   "meditative-022-1": { base: 3, radiant: 2 },
   "meditative-039-5": { base: 3, radiant: 3 },
-  "meditative-040": { radiant: "clamp" },
+  "meditative-040": { base: "clamp", radiant: "clamp" },
   "meditative-045": { base: "clamp", radiant: "clamp" },
   "meditative-049-1": { base: "clamp", radiant: "clamp" },
   "meditative-049-2": { base: "clamp", radiant: "clamp" },
+  "meditative-054": { base: "clamp", radiant: "clamp" },
+  "meditative-081": { base: "clamp", radiant: "clamp" },
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
@@ -59,6 +62,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditativeplus-001": { base: "clamp", radiant: "clamp" },
   "meditativeplus-004": { base: "clamp", radiant: "clamp" },
   "meditativeplus-020": { radiant: "clamp" },
+  "meditativeplus-022": { base: "clamp", radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-4": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-5": { base: "colon", radiant: "clamp" },

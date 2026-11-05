@@ -65,15 +65,17 @@ mod tests {
     const PEPTIDES: &str = "meditative-036";
 
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
-    /// R1444). Meditative's are #36 CN Peptides, #86 Mayor Medinamogger and #102 Catboy Maid SSR+ (not #65
+    /// R1444), C+ #16 Conjure Rush Token+ among them since #3140 (its base face flips a coin, R3140002).
+    /// Meditative's are #36 CN Peptides, #86 Mayor Medinamogger and #102 Catboy Maid SSR+ (not #65
     /// Keymaster Keenus, R781004, nor Core #42 Selective Breeding, R831014); Stinkyscape's (#1884) #77 Yuma, #112 Job
     /// Application, #145 Fortify Flesh, #153 Stimmycheck, #166 and #167 (the Scanning Probes) and #53, #57
     /// and #61 (the Flaks, whose Radiant faces print Lucky 1, #2521); Training Grounds' #49 Reoccurring
     /// Dream (#2204), the snapshot of Core #23.
-    const SHIPPED_POOL: [&str; 20] = [
+    const SHIPPED_POOL: [&str; 21] = [
         "core-004",
         "core-023",
         "classic-065",
+        "classicplus-016",
         "classicplus-025",
         "classicplus-053",
         "classicplus-065",

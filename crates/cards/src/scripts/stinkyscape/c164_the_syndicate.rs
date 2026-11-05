@@ -78,7 +78,6 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile, a Spell that prints no Tradable.
     const PRESTIGE: &str = "meditative-053"; // Prints Tradable.
     const TRADE_UNION: &str = "stinkyscape-165"; // The same aura, and no roll.
-    const FENG_SHUI: &str = "meditative-040"; // You have Luck 1.
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Outcome {
@@ -238,16 +237,27 @@ mod tests {
         assert_eq!(cursor_after(&kept, ID, &[]), cursor_after(&kept, TRADE_UNION, &[]) + 1, "one roll");
     }
 
+    /// The cursor after a Trade with a Lucky 3 given to `field_spell` (R1438).
+    fn cursor_after_lucky(seed: &str, field_spell: &str) -> u32 {
+        let mut s = with(seed, field_spell, false, &[]);
+        crate::give_lucky(&mut s, field_spell, 3);
+        traded(&mut s);
+        s.state().rng_cursor
+    }
+
     #[test]
-    fn r1864003_r987_luck_rolls_it_no_more_times() {
+    fn r1864003_r987_lucky_rolls_it_no_more_times() {
+        // The roll is a pick from a table, not a best-of (R32): a Lucky X given to the Syndicate (R1438) adds
+        // no roll, as the Luck M #40 Feng Shui gave through v0.5.11p added none (R3140000).
         let kept = seed_where("syndicate-luck", |seed| {
-            traded(&mut with(seed, ID, false, &[FENG_SHUI])).1 != Outcome::DrawnBack
+            let mut s = with(seed, ID, false, &[]);
+            crate::give_lucky(&mut s, ID, 3);
+            traded(&mut s).1 != Outcome::DrawnBack
         });
-        assert!(luck_of(with(&kept, ID, false, &[FENG_SHUI]).state(), P1) > 0, "p1 has Luck");
         assert_eq!(
-            cursor_after(&kept, ID, &[FENG_SHUI]),
-            cursor_after(&kept, TRADE_UNION, &[FENG_SHUI]) + 1,
-            "one roll, Luck or not"
+            cursor_after_lucky(&kept, ID),
+            cursor_after_lucky(&kept, TRADE_UNION) + 1,
+            "one roll, Lucky or not"
         );
     }
 

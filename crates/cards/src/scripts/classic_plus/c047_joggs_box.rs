@@ -6,10 +6,14 @@
 //!            at least 1; so nothing pauses for a prompt. Each cast is free and counts as a play (R70),
 //!            and each cast Spell goes to your graveyard when it resolves (R87)."
 //!
-//! `castRandom` (B5 E12, R452) is the whole card: each cast draws its Spell as it begins, never this
+//! `castRandom` (B5 E12, R452) is the card's casts: each cast draws its Spell as it begins, never this
 //! card's definition, and makes every choice from the match rng; a Call to Chaos it casts is the first
-//! link of its chain (R28, R593). The Radiant Echo is §6.1's printed `Echo X` (R30), a repeat that
-//! runs the Cry again with fresh picks.
+//! link of its chain (R28, R593). "End the turn" (since #3140) is the verb `end_turn` last in the list
+//! (R456): the casts and everything they set off resolve first, and the turn then ends as if its player
+//! had pressed End turn, every end-of-turn step running (R62); on the opponent's turn it does nothing.
+//! Base "Cast {casts} random Spells. End the turn." (10); Radiant the same, 20 (`casts` 10 → 20). The
+//! Radiant face had Echo 1 through v0.5.11p, a repeat that ran the Cry again with fresh picks, and the
+//! Box ended no turn (`script_v0_5_11o`, R767000).
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
@@ -27,6 +31,20 @@ fn cast_spells(count: i32) -> Effect {
 }
 
 pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| vec![cast_spells(param(&*ctx, "casts")), end_turn(json_as(json!({})))])),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared `casts`, read through `param`.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.11p the Box ended no turn, and its Radiant face had Echo 1 (20 casts as two runs of
+/// 10); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| vec![cast_spells(param(&*ctx, "casts"))])),
         ..Script::default()
@@ -175,17 +193,16 @@ mod tests {
         casts(&s.events()[from..], &id)
     }
 
-    /// Seeds that cast all their Spells with no prompt and no end of the game.
+    /// Seeds that cast all their Spells with no prompt and no end of the game, and end p1's turn (R456).
     fn quiet_seed(make: impl Fn(&str) -> Scenario, want: usize) -> (Scenario, Vec<Played>) {
         for i in 0..60 {
             let mut s = make(&format!("jogg-quiet-{i}"));
             let id = s.card(BOX).id.clone();
-            let turn = s.state().turn;
             s.play(BOX, json!({}));
             let cast = casts(s.last_events(), &id);
-            // R82: a turn left with nothing to do ends itself, which would clear this turn's counts; keep a
-            // seed whose turn is still going.
-            let quiet = s.state().pending.is_none() && s.state().result.is_none() && s.state().turn == turn;
+            // R456: the Box ends the turn, so p2 holds it with nothing asked of anyone; keep a seed whose casts
+            // asked nothing, ended no game and gave no extra turn.
+            let quiet = s.state().pending.is_none() && s.state().result.is_none() && s.state().active == P2;
             if quiet && cast.len() == want {
                 return (s, cast);
             }
@@ -236,8 +253,46 @@ mod tests {
                 assert_eq!(card.owner, P1);
                 assert_ne!(card.zone.z(), ZoneName::Resolving);
             }
-            assert!(cards_played_this_turn(s.state(), P1) >= 11);
+            // The Box and its ten casts (and any cast they set off) were p1's plays.
+            let plays = s
+                .last_events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::CardPlayed { player: P1, .. }))
+                .count();
+            assert!(plays >= 11);
             s.expect_in_zone(BOX, "graveyard");
+        }
+
+        #[test]
+        fn r456_the_turn_ends_once_the_casts_have_resolved_every_end_of_turn_step_running() {
+            crate::register_all();
+            let (s, _) = quiet_seed(|seed| box_(seeded(seed)), 10);
+            assert_eq!(s.state().active, P2, "p1's turn ended");
+            let events = s.last_events();
+            let last_cast = events
+                .iter()
+                .rposition(|event| matches!(event, GameEvent::CardPlayed { player: P1, .. }))
+                .expect("the casts");
+            let ended = events
+                .iter()
+                .position(|event| matches!(event, GameEvent::TurnEnded { player: P1, .. }))
+                .expect("p1's turn ended");
+            assert!(last_cast < ended, "the turn ends last");
+        }
+
+        #[test]
+        fn r456_a_degrade_leaves_it_ending_the_turn_all_the_same() {
+            crate::register_all();
+            let (s, cast) = quiet_seed(
+                |seed| {
+                    let mut s = box_(seeded(seed));
+                    step_param(s.card_mut(BOX), "casts", -3);
+                    s
+                },
+                4,
+            );
+            assert_eq!(cast.len(), 4);
+            assert_eq!(s.state().active, P2);
         }
 
         #[test]
@@ -545,21 +600,17 @@ mod tests {
                 if s.state().result.is_some() {
                     continue;
                 }
-                // R1279000: even a cast Pickle asks nothing at once, so the box casts all ten
-                // without pausing on the other player's prompt.
-                if s.state().pending.is_some() {
-                    continue;
-                }
+                // R1279000: even a cast Pickle asks nothing at once, so the box casts all ten without
+                // pausing on the other player's prompt, and then ends p1's turn (R456).
                 assert_eq!(casts(s.last_events(), &id).len(), 10);
-                s.end_turn();
-                // ...unless the box cast no Pickle: the deferred question opens on p2's turn,
-                // pausing the rest of the turn-start order behind it.
+                // ...unless the box cast no Pickle: the deferred question opens on p2's turn, which began as p1's
+                // ended, pausing the rest of the turn-start order behind it.
                 let Some(pending) = s.state().pending.clone() else {
                     continue;
                 };
-                // A box that cast a card asking its own caster on p2's turn (#2521's pool) pauses on
-                // p1's prompt instead: this test wants the other player's.
-                if s.state().result.is_some() || pending.player_id != P2 {
+                // A box that cast a card asking its own caster (#2521's pool) pauses on p1's prompt instead:
+                // this test wants the other player's.
+                if pending.player_id != P2 {
                     continue;
                 }
                 assert_eq!(pending.kind, PromptKind::Mode);
@@ -639,9 +690,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r30_echo_1_runs_ten_more_with_fresh_random_picks_twenty_casts() {
+        fn r456_it_casts_20_once_with_no_echo_and_then_ends_the_turn() {
             crate::register_all();
-            let (_, cast) = quiet_seed(
+            let (s, cast) = quiet_seed(
                 |seed| {
                     box_(BoxOpts {
                         radiant: true,
@@ -651,16 +702,21 @@ mod tests {
                 20,
             );
             assert_eq!(cast.len(), 20);
-            let first: Vec<&str> = cast[..10].iter().map(|played| played.def_id.as_str()).collect();
-            let second: Vec<&str> = cast[10..].iter().map(|played| played.def_id.as_str()).collect();
-            assert_ne!(second, first);
             assert!(!cast.iter().any(|played| played.def_id == BOX));
+            assert_eq!(s.state().active, P2, "p1's turn ended");
+            // One Cry of twenty: the Radiant face has no Echo, in its text or in its script.
+            let def = crate::card_def(BOX);
+            assert_eq!(def.radiant.text, "Cast {casts|random Spell|random Spells}. End the turn.");
+            assert!(def.radiant.keywords.is_empty());
+            let scripts = crate::scripts_of();
+            let flags = scripts.get(BOX).and_then(|card| card.radiant.static_flags.clone());
+            assert!(flags.and_then(|flags| flags.echo).is_none());
         }
 
         #[test]
-        fn r386_an_upgrade_casts_12_on_each_run() {
+        fn r386_an_upgrade_casts_22_step_2_a_degrade_18() {
             crate::register_all();
-            let (_, cast) = quiet_seed(
+            let (_, up) = quiet_seed(
                 |seed| {
                     let mut s = box_(BoxOpts {
                         radiant: true,
@@ -669,9 +725,61 @@ mod tests {
                     step_param(s.card_mut(BOX), "casts", 1);
                     s
                 },
-                24,
+                22,
             );
-            assert_eq!(cast.len(), 24);
+            assert_eq!(up.len(), 22);
+
+            let (_, down) = quiet_seed(
+                |seed| {
+                    let mut s = box_(BoxOpts {
+                        radiant: true,
+                        ..seeded(seed)
+                    });
+                    step_param(s.card_mut(BOX), "casts", -1);
+                    s
+                },
+                18,
+            );
+            assert_eq!(down.len(), 18);
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.5.11p and before: no End the turn, and Echo 1 on the
+    /// Radiant face, whose `casts` was 10.
+    mod v0_5_11o {
+        use super::*;
+
+        #[test]
+        fn r767000_a_game_on_v0_5_11o_casts_10_and_ends_no_turn_and_the_radiant_face_echoes_to_20() {
+            crate::register_all();
+            let through_v0_5_11o = |def: &mut CardDef| {
+                for param in def.params.iter_mut().flatten().filter(|param| param.key == "casts") {
+                    param.radiant = 10;
+                }
+            };
+            for (radiant, want) in [(false, 10), (true, 20)] {
+                let mut found = false;
+                for i in 0..60 {
+                    let seed = format!("jogg-kept-{i}");
+                    let kept = crate::under_kept_as(BOX, script_v0_5_11o(), through_v0_5_11o, || {
+                        let mut s = box_(BoxOpts {
+                            radiant,
+                            ..seeded(seed)
+                        });
+                        let id = s.card(BOX).id.clone();
+                        s.play(BOX, json!({}));
+                        let cast = casts(s.last_events(), &id);
+                        let quiet = s.state().pending.is_none() && s.state().result.is_none();
+                        (quiet && cast.len() == want).then(|| s.state().active)
+                    });
+                    if let Some(active) = kept {
+                        assert_eq!(active, P1, "radiant {radiant}: the Box ended no turn");
+                        found = true;
+                        break;
+                    }
+                }
+                assert!(found, "radiant {radiant}: no quiet seed");
+            }
         }
     }
 }

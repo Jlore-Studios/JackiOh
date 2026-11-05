@@ -8265,10 +8265,19 @@
       {
         "key": "keywords",
         "base": 3,
-        "radiant": 3,
+        "radiant": 5,
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "tails",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "tokens",
@@ -8283,7 +8292,7 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon a Rush Token. Flip a coin: it gains {keywords|random combat keyword|random combat keywords} on heads, {tails} on tails."
     },
     "radiant": {
       "keywords": [],
@@ -9805,7 +9814,7 @@
       {
         "key": "casts",
         "base": 10,
-        "radiant": 10,
+        "radiant": 20,
         "better": "up",
         "step": 2,
         "min": 1
@@ -9814,11 +9823,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Cast {casts|random Spell|random Spells}."
+      "text": "Cast {casts|random Spell|random Spells}. End the turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nCast {casts|random Spell|random Spells}."
+      "text": "Cast {casts|random Spell|random Spells}. End the turn."
     }
   },
   "classicplus-048": {
@@ -11888,11 +11897,11 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "Start of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "Start of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     }
   },
   "meditative-008": {
@@ -13074,11 +13083,11 @@
     "loc": 43,
     "base": {
       "keywords": [],
-      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card, which costs (1). Summon {units} random CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card. Summon {units} random CN Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card, which costs (1). Summon {units} random Radiant CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card. Summon {units} random Radiant CN Units."
     }
   },
   "meditative-033": {
@@ -13563,25 +13572,18 @@
     "rarity": "Legendary",
     "flavor": "Nature",
     "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "luck",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
+    "cost": 3,
+    "refs": [
+      "meditative-039-1"
     ],
     "loc": 35,
     "base": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished. You have Luck {luck}.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily. You have Luck {luck}.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     }
   },
   "meditative-041": {
@@ -13851,16 +13853,16 @@
     "cost": 4,
     "loc": 29,
     "base": {
-      "attack": 2,
-      "health": 2,
+      "attack": 0,
+      "health": 1,
       "keywords": [],
-      "text": "End of turn: Fuse a random enemy permanent into this."
+      "text": "End of turn: Fuse a random enemy Unit into this."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 0,
+      "health": 2,
       "keywords": [],
-      "text": "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck into this."
+      "text": "End of turn: Fuse a random enemy Unit and a random card from your opponent's deck into this."
     }
   },
   "meditative-048": {
@@ -14251,11 +14253,11 @@
     "loc": 52,
     "base": {
       "keywords": [],
-      "text": "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin into your deck."
+      "text": "Cry: Add a The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
+      "text": "Cry: Add a Radiant The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
     }
   },
   "meditative-055": {
@@ -14549,11 +14551,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Summon {units|random Unit|random Units} from your hand."
+      "text": "End of turn: Summon {units|random Unit|random Units} from your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
+      "text": "End of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
     }
   },
   "meditative-064": {
@@ -15278,7 +15280,7 @@
     "token": false,
     "cost": {
       "base": 0,
-      "embiggen": 2
+      "embiggen": 1
     },
     "params": [
       {
@@ -15293,21 +15295,20 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 1,
+        "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw}.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
     }
   },
   "meditative-082": {
@@ -17916,11 +17917,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
+      "text": "Cry: Add a random Embiggen card to your hand.\nAura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
+      "text": "Cry: Add a random Embiggen card to your hand. It costs (0).\nAura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
     }
   },
   "meditativeplus-023": {

@@ -293,11 +293,14 @@ mod tests {
 
     // R987, R1438: the wish rolls once, once more for each Lucky on the Well, printed or given, and once
     // more for each point of its controller's Luck. At chance 1 nearly every seed misses, and a miss
-    // draws one `chance` per roll and nothing else.
+    // draws one `chance` per roll and nothing else. No card gives Luck since #3140 (R3140000), so the
+    // Luck path is proved here by a Lucky X given to the Well (R1438), the same best-of rolls, and
+    // by the engine's own Luck test on its fixture; Feng Shui's Luck 1 stands only in the kept script
+    // of v0.5.11p and before.
     mod luck {
         use super::*;
 
-        const FENG_SHUI: &str = "meditative-040"; // (2) Field Spell: "Aura: You have Luck 1".
+        const FENG_SHUI: &str = "meditative-040"; // (3) Field Spell, no longer "Aura: You have Luck 1" (R3140000).
 
         /// Seeds per count: at chance 1 most of them miss.
         const LUCK_SEEDS: usize = 20;
@@ -324,7 +327,6 @@ mod tests {
                     },
                     "p2": { "hand": [FILLER], "backrow": backrow(P2), "library": [SPARE, SPARE] },
                 }));
-                assert_eq!(luck_of(s.state(), P1), i32::from(feng_shui == Some(P1)));
                 set_param(s.card_mut(ID), "chance", 1);
                 if given > 0 {
                     crate::give_lucky(&mut s, ID, given);
@@ -342,23 +344,34 @@ mod tests {
         }
 
         #[test]
-        fn r987_feng_shui_on_its_controller_s_side_rolls_once_more_on_each_face() {
-            assert_eq!(rolls(false, None, 0), 1);
-            assert_eq!(rolls(false, Some(P1), 0), 2);
-            assert_eq!(rolls(true, None, 0), 2);
-            assert_eq!(rolls(true, Some(P1), 0), 3);
+        fn r3140000_feng_shui_standing_adds_no_roll_on_either_side_or_face() {
+            for side in [P1, P2] {
+                assert_eq!(rolls(false, Some(side), 0), 1);
+                assert_eq!(rolls(true, Some(side), 0), 2);
+            }
         }
 
         #[test]
-        fn r987_feng_shui_on_the_opponent_s_side_adds_no_roll() {
-            assert_eq!(rolls(false, Some(P2), 0), 1);
-            assert_eq!(rolls(true, Some(P2), 0), 2);
+        fn r987_r767000_a_game_on_v0_5_11o_has_feng_shui_s_luck_1_roll_once_more_on_its_controller_s_side_only() {
+            crate::register_all();
+            crate::under_kept(
+                FENG_SHUI,
+                crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(),
+                || {
+                    assert_eq!(rolls(false, None, 0), 1);
+                    assert_eq!(rolls(false, Some(P1), 0), 2);
+                    assert_eq!(rolls(true, None, 0), 2);
+                    assert_eq!(rolls(true, Some(P1), 0), 3);
+                    assert_eq!(rolls(false, Some(P2), 0), 1);
+                    assert_eq!(rolls(true, Some(P2), 0), 2);
+                },
+            );
         }
 
         #[test]
-        fn r1438_lucky_given_to_the_well_rolls_once_more() {
-            assert_eq!(rolls(false, None, 1), 2);
-            assert_eq!(rolls(true, None, 1), 3);
+        fn r987_r1438_lucky_2_given_to_the_well_rolls_twice_more_on_each_face() {
+            assert_eq!(rolls(false, None, 2), 3);
+            assert_eq!(rolls(true, None, 2), 4);
         }
 
         #[test]

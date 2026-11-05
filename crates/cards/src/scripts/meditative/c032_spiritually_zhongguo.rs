@@ -1,7 +1,8 @@
 //! M #32 Spiritually 中国 (SPEC §8.8 row 32): (4) Spell, CN, Epic ((3) through v0.5.2).
 //!
 //! Base:    "Get ready to learn Chinese! Transform every card in your hand into the same random CN
-//!           card, which costs (1). Summon {units} random CN Units." ((0) through v0.5.9f, kept as
+//!           card. Summon {units} random CN Units." (the cards cost their printed prices since #3140;
+//!           (1) through v0.5.11p, kept as `script_v0_5_11o`, and (0) through v0.5.9f, kept as
 //!           `script_v0_5_9f`, R767000)
 //! Radiant: "… the same random Radiant CN card … Summon {units} random Radiant CN Units." Printed in
 //!           English since issue #2179 (in Chinese before, MD-B13).
@@ -14,8 +15,9 @@
 //!   the printed text never says what it does.
 //! - **Transform the hand** draws one definition from `query({ tags: [CN] })`, never this card
 //!   (R387), then replaces every card in the caster's hand in its place (R31, R671; an Immutable
-//!   hand card too, R35), each costing `CN_CARD_COST` and Radiant on the Radiant face (MD-B10, R921). Each is
-//!   generated into a hand for R673's own Glitch roll.
+//!   hand card too, R35), each at its own printed cost and Radiant on the Radiant face (MD-B10, R921);
+//!   only the kept scripts set a price, `costOverride` (1 or 0). Each is generated into a hand for R673's
+//!   own Glitch roll.
 //! - **Summon** `units` random CN Units (repeats allowed, R60), each into the leftmost empty,
 //!   unlocked unit zone (R64); a full row takes fewer, drawing nothing for the rest (R129).
 
@@ -26,13 +28,14 @@ pub const ID: &str = "meditative-032";
 /// The three effects, in the order the text prints them.
 const EFFECTS: i32 = 3;
 
-/// "which costs (1)": what the new hand cards cost since #2657, (0) before.
-const CN_CARD_COST: i32 = 1;
-/// R767000: what they cost through v0.5.9f.
+/// R767000: "which costs (1)": what the new hand cards cost from #2657 through v0.5.11p.
+const CN_CARD_COST_V0_5_11O: i32 = 1;
+/// R767000: what they cost through v0.5.9f, (0).
 const CN_CARD_COST_V0_5_9E: i32 = 0;
 
-/// One of the three: 0 the learning, 1 the hand, 2 the summon; the hand's cards cost `cost`.
-fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32, cost: i32) -> Vec<Effect> {
+/// One of the three: 0 the learning, 1 the hand, 2 the summon; the hand's cards cost `cost` when a kept script
+/// prices them, and their printed prices otherwise.
+fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32, cost: Option<i32>) -> Vec<Effect> {
     match which {
         0 => vec![translate(json_as(json!({
             "scope": {
@@ -40,14 +43,16 @@ fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32, cost: i32) -> 
                 "zones": ["hand", "library"],
             },
         })))],
-        // Transform the hand into the same random CN card, each costing `cost`.
+        // Transform the hand into the same random CN card, each costing `cost` or its own price.
         1 => {
             let mut args = json!({
                 "scope": { "side": "self", "zones": ["hand"] },
                 "same": true,
                 "query": { "tags": ["CN"] },
-                "costOverride": cost,
             });
+            if let Some(cost) = cost {
+                args["costOverride"] = json!(cost);
+            }
             if radiant {
                 args["radiant"] = json!(true);
             }
@@ -65,7 +70,7 @@ fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32, cost: i32) -> 
     }
 }
 
-fn spiritually(radiant: bool, cost: i32) -> Script {
+fn spiritually(radiant: bool, cost: Option<i32>) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             (0..EFFECTS)
@@ -81,7 +86,7 @@ fn spiritually_v0_5_2(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let which = ctx.rng.int(EFFECTS);
-            effect(ctx, radiant, which, CN_CARD_COST_V0_5_9E)
+            effect(ctx, radiant, which, Some(CN_CARD_COST_V0_5_9E))
         })),
         ..Script::default()
     }
@@ -90,16 +95,24 @@ fn spiritually_v0_5_2(radiant: bool) -> Script {
 pub fn script() -> CardScripts {
     // The Radiant face learns only the opponent's cards and makes Radiant cards and Units; the
     // numbers are the same on both faces.
-    let base = spiritually(false, CN_CARD_COST);
-    let radiant = spiritually(true, CN_CARD_COST);
+    let base = spiritually(false, None);
+    let radiant = spiritually(true, None);
     CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.11p the new hand cards cost (1); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: spiritually(false, Some(CN_CARD_COST_V0_5_11O)),
+        radiant: spiritually(true, Some(CN_CARD_COST_V0_5_11O)),
+    }
 }
 
 /// R767000: through v0.5.9f the new hand cards cost (0); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
-        base: spiritually(false, CN_CARD_COST_V0_5_9E),
-        radiant: spiritually(true, CN_CARD_COST_V0_5_9E),
+        base: spiritually(false, Some(CN_CARD_COST_V0_5_9E)),
+        radiant: spiritually(true, Some(CN_CARD_COST_V0_5_9E)),
     }
 }
 
@@ -204,7 +217,7 @@ mod tests {
                         assert_eq!(card.chinese, Some(true), "{}", card.id);
                     }
                 }
-                // The hand: one CN definition, each costing (1).
+                // The hand: one CN definition, each at its own printed cost.
                 let defs = def_ids(&s.hand(P1));
                 assert_eq!(defs.len(), 2);
                 assert!(defs.iter().all(|def| *def == defs[0]));
@@ -231,7 +244,7 @@ mod tests {
             }
 
             #[test]
-            fn r921_one_cn_definition_replaces_the_hand_in_place_at_1() {
+            fn r921_one_cn_definition_replaces_the_hand_in_place_at_its_printed_cost() {
                 let mut s = casting("spiritually-hand", false);
                 let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.play(SPIRITUALLY, json!({}));
@@ -242,9 +255,31 @@ mod tests {
                 assert!(CN_IDS.contains(&defs[0].as_str()));
                 for card in s.hand(P1) {
                     assert!(!before.contains(&card.id));
-                    assert_eq!(card.cost_override, Some(1));
+                    // Since #3140 no price is set: the card costs what it prints, and the Spell no longer says "which
+                    // costs (1)".
+                    assert_eq!(card.cost_override, None);
                     assert!(!card.radiant);
                 }
+                let def = crate::card_def(SPIRITUALLY);
+                assert!(!def.base.text.contains("costs (1)") && !def.radiant.text.contains("costs (1)"));
+            }
+
+            #[test]
+            fn r921_the_hand_keeps_the_printed_costs_of_whatever_cn_card_is_drawn() {
+                // Over many seeds the drawn CN card differs, and its price is its own, never 1 for them all.
+                let mut prices: IndexSet<i32> = IndexSet::new();
+                for n in 0..40 {
+                    let mut s = casting(&format!("spiritually-prices-{n}"), false);
+                    s.play(SPIRITUALLY, json!({}));
+                    let hand = s.hand(P1);
+                    let def = crate::card_def(&hand[0].def_id);
+                    assert_eq!(effective_cost(s.state(), &hand[0], CostOptions::default()), printed_cost(s.state(), &hand[0]));
+                    if let CardCost::Fixed(price) = def.cost {
+                        assert_eq!(printed_cost(s.state(), &hand[0]), price);
+                        prices.insert(price);
+                    }
+                }
+                assert!(prices.len() > 1, "{prices:?}");
             }
 
             #[test]
@@ -292,7 +327,7 @@ mod tests {
                 assert_eq!(def_ids(&s.hand(P1)).len(), 2);
                 for card in s.hand(P1) {
                     assert!(card.radiant);
-                    assert_eq!(card.cost_override, Some(1));
+                    assert_eq!(card.cost_override, None);
                 }
                 let units = units_of(&s);
                 assert_eq!(units.len(), 5);
@@ -306,6 +341,26 @@ mod tests {
                 let def = crate::card_def(SPIRITUALLY);
                 assert!(def.radiant.text.starts_with("Get ready to learn Chinese!"));
                 assert!(def.radiant.text.contains("Radiant CN"));
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.5.11p and before, whose hand cards cost (1).
+        mod v0_5_11o {
+            use super::*;
+
+            #[test]
+            fn r767000_a_game_on_v0_5_11o_makes_the_hand_cost_1() {
+                for radiant in [false, true] {
+                    crate::under_kept(SPIRITUALLY, script_v0_5_11o(), || {
+                        let mut s = casting("spiritually-kept-11o", radiant);
+                        s.play(SPIRITUALLY, json!({}));
+                        assert!(!s.hand(P1).is_empty());
+                        for card in s.hand(P1) {
+                            assert_eq!(card.cost_override, Some(1), "radiant {radiant}");
+                            assert_eq!(card.radiant, radiant);
+                        }
+                    });
+                }
             }
         }
 
