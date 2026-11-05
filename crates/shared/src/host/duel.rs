@@ -884,6 +884,14 @@ impl DuelHost {
                 });
                 self.schedule_emotes(player, intents, now);
             }
+            // A Duos host's timers are none of a 1v1 host's.
+            TimerKey::DuosMulligan
+            | TimerKey::DuosRound
+            | TimerKey::DuosPrompt { .. }
+            | TimerKey::DuosGrace { .. }
+            | TimerKey::DuosCeiling
+            | TimerKey::DuosAi { .. }
+            | TimerKey::DuosAiRetry => {}
         }
     }
 

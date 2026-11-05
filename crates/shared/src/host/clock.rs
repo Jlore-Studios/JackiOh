@@ -547,7 +547,14 @@ impl MatchClock {
             | TimerKey::BotMove { .. }
             | TimerKey::BotAim { .. }
             | TimerKey::BotEmote { .. }
-            | TimerKey::BotLongTurn { .. } => return None,
+            | TimerKey::BotLongTurn { .. }
+            | TimerKey::DuosMulligan
+            | TimerKey::DuosRound
+            | TimerKey::DuosPrompt { .. }
+            | TimerKey::DuosGrace { .. }
+            | TimerKey::DuosCeiling
+            | TimerKey::DuosAi { .. }
+            | TimerKey::DuosAiRetry => return None,
         };
         (!self.stopped).then_some(expiry)
     }

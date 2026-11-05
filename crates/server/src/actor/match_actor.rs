@@ -254,6 +254,7 @@ fn timer_name(key: TimerKey) -> &'static str {
         TimerKey::BotAim { .. } => "bot-aim",
         TimerKey::BotEmote { .. } => "bot-emote",
         TimerKey::BotLongTurn { .. } => "bot-long-turn",
+        _ => "duos",
     }
 }
 
@@ -387,6 +388,12 @@ fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
         ActionAnswer::NotRecorded => error_message(
             SocketErrorCode::Internal,
             "the action could not be recorded; try again",
+            Some(nonce),
+        ),
+        // Only a co-op host answers so; a 1v1 nonce is the seat's, whoever sends it.
+        ActionAnswer::NonceTaken => error_message(
+            SocketErrorCode::Malformed,
+            "that nonce is already taken",
             Some(nonce),
         ),
     }

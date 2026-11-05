@@ -1385,3 +1385,18 @@ pub const AI_EMOTE: AiEmoteConfig = AiEmoteConfig {
     delay_min_ms: 800.0,
     delay_max_ms: 2500.0,
 };
+
+// Duos co-op's clocks (#3101's second part): SPEC S6, B2, B36, B38 (`host::duos`).
+
+/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
+/// not ended has its prompts answered by the AI and its turn ended (`host::duos`).
+pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
+/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
+/// person ended): on expiry the AI answers that prompt for them.
+pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
+/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
+/// still owes.
+pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
+/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
+/// the AI team's turn.
+pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
