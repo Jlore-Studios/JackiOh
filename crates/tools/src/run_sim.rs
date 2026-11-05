@@ -610,7 +610,7 @@ fn sweep(seeds: u32, from: u32, skills: &[f64], budget: &str, content: &RunConte
 
 pub fn run(args: Args) -> anyhow::Result<()> {
     jackioh_cards::register_all();
-    let content = run_catalog_content(registered_catalog(), &[]);
+    let content = run_catalog_content(registered_catalog());
     let skills = if args.skill.is_empty() {
         vec![AI_SKILL_MAX]
     } else {
@@ -644,7 +644,7 @@ mod tests {
 
     fn content() -> RunContent {
         jackioh_cards::register_all();
-        run_catalog_content(registered_catalog(), &[])
+        run_catalog_content(registered_catalog())
     }
 
     #[test]

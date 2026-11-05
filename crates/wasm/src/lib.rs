@@ -72,10 +72,10 @@ pub fn carried_versions() -> Result<String, JsError> {
 // A run-rule refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable
 // reason), never thrown: only JSON that does not parse, or a setup TypeScript refused, is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
 #[wasm_bindgen]
-pub fn run_content(custom_cards_json: &str) -> Result<String, JsError> {
-    js(wasm_core::run_content(custom_cards_json))
+pub fn run_content() -> Result<String, JsError> {
+    js(wasm_core::run_content())
 }
 
 /// `null` when the setup may start a run, else the reason.

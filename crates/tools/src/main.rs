@@ -18,7 +18,6 @@ mod fuzz;
 mod fx_census;
 mod gate;
 mod golden;
-mod luau;
 mod names;
 mod patches;
 mod positions;
@@ -83,8 +82,6 @@ enum Command {
     Winrates(winrates::Args),
     /// Golden traces: `golden check`, `golden record` (part 23; `bless` retired in #2578).
     Golden(golden::Args),
-    /// Two builds compared: `luau diff`, `luau bench`.
-    Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
     /// A card's name comments, written from catalog.json (#3111).
@@ -120,7 +117,6 @@ fn main() -> ExitCode {
         Command::Stats(args) => stats::run(args),
         Command::Winrates(args) => winrates::run(args),
         Command::Golden(args) => golden::run(args),
-        Command::Luau(args) => luau::run(args),
         Command::Spec(args) => spec::run(args),
         Command::Names(args) => names::run(args),
         Command::Arena(args) => arena::run(args),
