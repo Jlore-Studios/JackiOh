@@ -26,7 +26,6 @@ use crate::api::decks::{
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json};
 use crate::api::series::start_series;
-use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
 use crate::bots::fallback::{
     bot_match_gap_passed, bot_match_gap_since, bot_matches, choose_bot, choose_bot_pair, fallback_due,
@@ -42,6 +41,7 @@ use crate::db::store::{
     TicketStatus, ladder_of_mode,
 };
 use crate::seats::{Lease, Seat};
+use jackioh_shared::series::{NewSeriesInput, NewSeriesSide};
 
 // Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
 

@@ -17,7 +17,6 @@ use jackioh_engine::wire::{
     card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
-use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::{
     DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, JLORIOUS_SIZE, STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS,
@@ -39,6 +38,7 @@ use jackioh_server::ranked::ladder::{
 };
 use jackioh_server::ranked::season::ResetChange;
 use jackioh_server::username::{normalize_username, username_key};
+use jackioh_shared::series::forfeit_series;
 
 // One store call, one transaction
 

@@ -4113,7 +4113,7 @@ pub async fn results_get_by_match(t: &mut PgTx<'_>, match_id: &str) -> Result<Op
 // The Conquest series (SPEC §9.5, R259-R263), migration 0009
 //
 // None of these reaches an `app.*` function: `update` is compare-and-set in its `where`, the lookups are
-// single selects, and the transitions are `src/api/series_rules.rs`'s pure functions, written back whole.
+// single selects, and the transitions are `jackioh_shared::series`'s pure functions, written back whole.
 
 struct SeriesParams {
     id: String,

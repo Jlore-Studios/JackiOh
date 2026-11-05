@@ -18,6 +18,7 @@ mod fx_census;
 mod gate;
 mod golden;
 mod luau;
+mod names;
 mod patches;
 mod positions;
 mod promote;
@@ -78,6 +79,8 @@ enum Command {
     Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
+    /// A card's name comments, written from catalog.json (#3111).
+    Names(names::Args),
     /// The training arena (part 29).
     Arena(arena::Args),
     /// The agent protocol on stdin and stdout (part 29).
@@ -109,6 +112,7 @@ fn main() -> ExitCode {
         Command::Golden(args) => golden::run(args),
         Command::Luau(args) => luau::run(args),
         Command::Spec(args) => spec::run(args),
+        Command::Names(args) => names::run(args),
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),
         Command::Promote(args) => promote::run(args),
