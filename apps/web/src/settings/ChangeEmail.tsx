@@ -54,7 +54,15 @@ async function sendChange(email: string): Promise<void> {
   }
 }
 
-export default function ChangeEmail(): ReactElement | null {
+export type ChangeEmailProps = {
+  /**
+   * R3147001: the account has no address yet (a Roblox sign-up, R3147000), so this adds one: the same
+   * change, worded as an addition, and its link answered by the code screen's Check again.
+   */
+  adding?: boolean;
+};
+
+export default function ChangeEmail({ adding = false }: ChangeEmailProps = {}): ReactElement | null {
   const [value, setValue] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
@@ -98,7 +106,7 @@ export default function ChangeEmail(): ReactElement | null {
       }}
     >
       <label className="settings-email__label" htmlFor={changeEmailTestid.input}>
-        {t("Change email")}
+        {adding ? t("Add an email address") : t("Change email")}
       </label>
       {currentEmail != null ? (
         <p className="settings-account__status">
@@ -114,7 +122,7 @@ export default function ChangeEmail(): ReactElement | null {
         type="email"
         autoComplete="email"
         inputMode="email"
-        placeholder={t("New email address")}
+        placeholder={adding ? t("Email address") : t("New email address")}
         value={value}
         aria-invalid={phase.kind === "failed" ? true : undefined}
         aria-describedby={phase.kind === "failed" ? changeEmailTestid.error : undefined}
@@ -133,7 +141,9 @@ export default function ChangeEmail(): ReactElement | null {
       </button>
       {phase.kind === "sent" ? (
         <p className="settings-account__status" data-testid={changeEmailTestid.sent} role="status">
-          {t(AUTH_NOTICES.emailChangeSent)}
+          {adding
+            ? t("We emailed a confirmation link to {address}. Open it, then press Check again here.", { address: phase.address })
+            : t(AUTH_NOTICES.emailChangeSent)}
         </p>
       ) : null}
       {phase.kind === "failed" ? (
