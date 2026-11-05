@@ -31,13 +31,14 @@ use jackioh_engine::{
     Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
-    card_type_of_face, credit_lapsing, death_hook_of, effective_cost, effective_life, exit_mark, face_of,
-    find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
-    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
-    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back,
-    trigger_holders_with_hook, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
+    exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
+    has_keyword, heal_multiplier_of, hero_armor_of, is_slumbering, is_standing_unit, is_starship_piece,
+    is_temporary_card, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
+    query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -224,7 +225,8 @@ impl TurnHookPrice {
 }
 
 /// R2424000, R2477000, R2564000, R2688000, R3064000: the prices a decision's root probed, passed by
-/// reference from `decide` through the search to every scorer that reads them.
+/// reference from `decide` through the search to every scorer that reads them, and R3038003: the one fact
+/// about the root they ride with, whether it holds a Starship.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prices {
     pub deaths: Vec<DeathPrice>,
@@ -232,6 +234,11 @@ pub struct Prices {
     pub activations: Vec<ActivationPrice>,
     pub attack_hooks: Vec<AttackHookPrice>,
     pub awakenings: Vec<AwakenPrice>,
+    /// R3038003: the root holds a Starship (`holds_starship`), so its finalists are scored by the hand
+    /// eval alone (`learned::finalist_score_with`), whatever the line: what a Starship leaves behind is
+    /// priced in the hand eval's terms above (R2566000, R2380000, R3064000), which the network was never
+    /// fitted to read.
+    pub starship_root: bool,
 }
 
 impl Prices {
@@ -242,7 +249,28 @@ impl Prices {
         activations: Vec::new(),
         attack_hooks: Vec::new(),
         awakenings: Vec::new(),
+        starship_root: false,
     };
+}
+
+/// R3038003: whether `state` holds a Starship `seat` can see: a hull on either side, Dormant or
+/// launched (`dormant_starship_of`, `launched_starship_of`: the hull and its memory, never the Starship
+/// tag, R1852005), or a Starship Piece (`is_starship_piece`) standing on either field or in the seat's
+/// own hand. The other hand and both libraries are hidden cards (R185), so they never count, nor does a
+/// graveyard: a piece that died has fused into a hull.
+pub fn holds_starship(state: &GameState, seat: PlayerId) -> bool {
+    let on_a_field = PLAYER_IDS.into_iter().any(|player| {
+        dormant_starship_of(state, player).is_some()
+            || launched_starship_of(state, player).is_some()
+            || units_on_field_of(state, player)
+                .into_iter()
+                .any(|unit| is_starship_piece(state, unit))
+    });
+    on_a_field
+        || state.players[seat]
+            .hand
+            .iter()
+            .any(|card| is_starship_piece(state, card))
 }
 
 /// R2477000, R2689000: whether the face `card` runs has a start-of-turn, an end-of-turn or a

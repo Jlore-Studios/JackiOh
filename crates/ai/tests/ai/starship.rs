@@ -217,3 +217,23 @@ fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() 
     without.players[AI].backrow[lane] = None;
     assert_ne!(search_signature(&state, AI), search_signature(&without, AI));
 }
+
+/// R3038003: a Dormant Starship, and the Starship it launches into, are held by their hull: the AI's
+/// piece is dead and nothing else on either field is a piece.
+#[test]
+fn r3038003_a_dormant_or_launched_starship_is_held_by_its_hull_alone() {
+    let (state, ship) = built();
+    assert!(active_units_of(&state, AI).is_empty() && active_units_of(&state, HUMAN).len() == 1);
+    assert!(
+        holds_starship(&state, AI) && holds_starship(&state, HUMAN),
+        "the Dormant Starship"
+    );
+    let paused = apply(&state, launch(&ship), AI, "launch");
+    assert!(is_launched_starship(
+        find_instance(&paused, &ship).expect("the Starship")
+    ));
+    assert!(
+        holds_starship(&paused, AI) && holds_starship(&paused, HUMAN),
+        "the launched Starship"
+    );
+}

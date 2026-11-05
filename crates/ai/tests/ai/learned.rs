@@ -515,3 +515,90 @@ fn r1011000_the_integer_network_gives_the_reference_bit_for_bit() {
     }
     assert!(moved > 30, "the network moves most positions");
 }
+
+/// R3038003: a position `holds_starship` reads for `seat`: p1 and p2 each with `hand`, `field` and, for p2,
+/// `theirs` on the field, in a board with no other mechanic of the set.
+fn starship_board(mine: Value, hand: Value, theirs: Value) -> GameState {
+    jackioh_cards::register_all();
+    scenario(json!({
+        "seed": "learned-3038",
+        "p1": { "hand": hand, "field": mine, "library": ["core-020", "core-053"] },
+        "p2": { "hand": ["core-002"], "field": theirs, "library": ["core-005"] },
+    }))
+    .state()
+    .clone()
+}
+
+/// R3038003: with the root's fact set (`Prices.starship_root`) a finalist keeps the hand eval for either
+/// seat, as a Duos duel does (R1010002), though the network moves the same position when it is not.
+#[test]
+fn r3038003_a_finalist_of_a_decision_that_holds_a_starship_keeps_the_hand_eval() {
+    let solo = state();
+    assert!(!holds_starship(&solo, PlayerId::P1), "no Starship on this board");
+    let rooted = Prices {
+        starship_root: true,
+        ..Prices::default()
+    };
+    assert_ne!(&rooted, Prices::NONE);
+    with_tiny(|network, _| {
+        let network = Learned::Float(*network);
+        for next in [NextSwing::Seat, NextSwing::Enemy] {
+            let hand = evaluate(&solo, PlayerId::P1, next, &AI_EVAL);
+            let score =
+                |seat, prices| finalist_score_with(&solo, seat, next, EvalKind::Learned, &network, prices);
+            assert_ne!(
+                score(PlayerId::P1, Prices::NONE),
+                hand,
+                "the network moves this position when the fact is not set"
+            );
+            assert_eq!(score(PlayerId::P1, &rooted), hand);
+            assert_eq!(
+                score(PlayerId::P2, &rooted),
+                evaluate(&solo, PlayerId::P2, next, &AI_EVAL)
+            );
+        }
+    });
+}
+
+/// R3038003: the fact is a hull on either side or a piece on either field or in the seat's own hand, and
+/// it reads nothing the seat cannot see: the other hand's piece is no fact for it.
+#[test]
+fn r3038003_a_piece_on_either_field_or_in_the_seats_own_hand_is_a_starship_the_root_holds() {
+    const VANILLA: &str = "core-008";
+    const AFTER_BURNER: &str = "stinkyscape-090";
+    const HIT_JOB: &str = "core-016";
+    let (p1, p2) = (PlayerId::P1, PlayerId::P2);
+
+    let bare = starship_board(json!([VANILLA]), json!([VANILLA]), json!([VANILLA]));
+    assert!(!holds_starship(&bare, p1) && !holds_starship(&bare, p2));
+
+    let theirs = starship_board(json!([VANILLA]), json!([VANILLA]), json!([AFTER_BURNER]));
+    assert!(holds_starship(&theirs, p1), "the enemy's piece on its field");
+    assert!(holds_starship(&theirs, p2));
+    let mine = starship_board(json!([AFTER_BURNER]), json!([VANILLA]), json!([VANILLA]));
+    assert!(holds_starship(&mine, p1) && holds_starship(&mine, p2));
+
+    let in_hand = starship_board(json!([VANILLA]), json!([AFTER_BURNER]), json!([VANILLA]));
+    assert!(holds_starship(&in_hand, p1), "the seat's own hand");
+    assert!(
+        !holds_starship(&in_hand, p2),
+        "the other seat cannot see that hand, so it is no fact for it"
+    );
+
+    // A piece that dies fuses into a Dormant Starship: the hull holds it with no piece left to read.
+    jackioh_cards::register_all();
+    let mut s = scenario(json!({
+        "seed": "learned-3038-hull",
+        "p1": { "hand": [HIT_JOB], "field": [], "library": ["core-020", "core-053"], "mana": 3 },
+        "p2": { "hand": ["core-002"], "field": [{ "def": AFTER_BURNER, "lane": 1 }], "library": ["core-005"] },
+    }));
+    let piece = s.unit_at(p2, 1).id;
+    s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
+    let after = s.state();
+    assert!(dormant_starship_of(after, p2).is_some());
+    assert!(
+        active_units_of(after, p2).is_empty(),
+        "no piece is left on the field"
+    );
+    assert!(holds_starship(after, p1) && holds_starship(after, p2), "the hull");
+}
