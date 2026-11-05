@@ -104,7 +104,7 @@ fn the_pool_calls_answer_what_the_functions_they_name_answer() {
 }
 
 #[test]
-fn the_fallback_calls_pair_a_ticket_when_it_is_due_and_a_bot_that_is_not_hidden_has_no_wait() {
+fn r3103000_the_fallback_calls_pair_a_ticket_when_it_is_due_and_a_bot_that_is_not_hidden_has_no_wait() {
     let waiting = ticket("ticket-1", BotMode::Bo1, 1500.0);
     let call = |now: i64, hidden: bool| BotCall::FallbackDue {
         key: "key".to_string(),
