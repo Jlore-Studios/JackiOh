@@ -83,6 +83,13 @@ echo "--- postgres up and bootstrapped (the Supabase-managed pieces), alongside 
 bring_up_postgres &
 postgres_pid=$!
 
+# The engine and the cards compile at opt-level 0 here, not the test profile's 2 (Cargo.toml): these
+# tests store and read rows and play no game, so nothing runs their code long enough to repay
+# optimizing it. On four cores with the dependencies built, the build took 195 s at 2, 150 s at 1
+# and 108 s at 0, and the tests 52 s at each (#3162). Every `cargo` call below takes the same flags:
+# a different profile is a different build, so one call without them compiles it all again.
+PROFILE_FLAGS="--config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0"
+
 # Built once: in the test profile, `cargo test`'s, and with the tests, so with the features the tests
 # turn on. A plain `cargo build` (the dev profile, which Cargo.toml's test-profile overrides make
 # different) or a `cargo run` (no tests, so other features) would compile the workspace again, so the
@@ -90,7 +97,8 @@ postgres_pid=$!
 # the `jackioh-server` executable (for `migrate`) and the `server_store` test target, not the server's
 # other test binaries.
 echo "--- build (jackioh-server and its store tests) ---"
-cargo build --profile test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bin jackioh-server --test server_store || {
+# shellcheck disable=SC2086 # PROFILE_FLAGS is several arguments on purpose.
+cargo build $PROFILE_FLAGS --profile test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bin jackioh-server --test server_store || {
   kill "$postgres_pid" 2>/dev/null || true
   exit 1
 }
@@ -111,7 +119,8 @@ docker exec "$CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 -q -d jackioh -f /t
 SHARDS=${DB_SHARDS:-3}
 echo "--- cargo test (crates/server/tests/store, $SHARDS databases) ---"
 run_tests() {
-  cargo test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --test server_store "$@"
+  # shellcheck disable=SC2086 # PROFILE_FLAGS is several arguments on purpose.
+  cargo test $PROFILE_FLAGS --manifest-path "$REPO/Cargo.toml" -p jackioh-server --test server_store "$@"
 }
 run_tests store:: -- --list 2>/dev/null | sed -n 's/: test$//p' >"$LOGDIR/tests.txt"
 if [ ! -s "$LOGDIR/tests.txt" ]; then
