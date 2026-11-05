@@ -91,7 +91,7 @@ mod r783013_flashback_spent {
     use super::*;
 
     #[test]
-    fn r783013_spent_as_replayed_never_offered_again_unit_and_spell() {
+    fn r783013_r3039001_spent_as_replayed_never_offered_again_unit_and_spell() {
         // A Spell: back in the graveyard as any Spell goes, spent.
         let mut state = playing("r783013-spell");
         state.players.p1.mana.current = 10;

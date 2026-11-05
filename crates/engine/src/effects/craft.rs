@@ -8,7 +8,7 @@ use crate::draw::add_to_hand;
 use crate::script::Effect;
 use crate::state::new_instance;
 use crate::subsystems::craft::{compile_crafted_def, validate_recipe};
-use crate::wire::{CraftRecipe, Zone};
+use crate::wire::{CraftMode, CraftRecipe, Zone};
 
 /// `craft_card`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -22,10 +22,12 @@ pub struct CraftCardArgs {
 }
 
 /// An invalid recipe makes nothing: the answer check (`prompts`) has already refused it, so this
-/// guard is unreachable from an answered prompt.
+/// guard is unreachable from an answered prompt. R3043000: the answer check held the recipe to its
+/// prompt's mode's points, which this effect does not know, so the guard holds it to the most any
+/// prompt grants it: its frame's, or with no frame Scratch Pad's whole budget (Meditative #17's is less).
 pub fn craft_card(args: CraftCardArgs) -> Effect {
     Effect::new("craftCard", move |ctx| {
-        if validate_recipe(&args.recipe, args.recipe.cost).is_err() {
+        if validate_recipe(&args.recipe, args.recipe.cost, Some(CraftMode::Scratch)).is_err() {
             return;
         }
         let def = compile_crafted_def(&args.recipe);

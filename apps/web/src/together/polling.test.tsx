@@ -10,8 +10,9 @@ import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
-import { FRIENDS_PATH, type Friend } from "../net/social.ts";
+import { FRIENDS_PATH, type Challenge, type Friend } from "../net/social.ts";
 import { settle } from "../test/settle.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
@@ -28,7 +29,19 @@ const ANN: Friend = {
   since: "2026-10-01T00:00:00.000Z",
 };
 
-function serve(): StubServer {
+/** R3205000: a challenge this account sent, as `ChallengeToast.test.tsx` has one. */
+const OUTGOING: Challenge = {
+  challengeId: "ch-2",
+  from: { profileId: "profile-1", username: "Me#1" },
+  to: { profileId: "f-bob", username: "Bob#3" },
+  roomCode: "MNP567",
+  mode: "bo1",
+  expiresAt: "2099-01-01T00:00:00.000Z",
+};
+
+type Challenges = { incoming: Challenge[]; outgoing: Challenge[] };
+
+function serve(challenges: () => Challenges = () => ({ incoming: [], outgoing: [] })): StubServer {
   return stubServer((call) => {
     const { method, path } = call;
     if (path === "/api/auth/me") {
@@ -40,7 +53,7 @@ function serve(): StubServer {
     if (method === "GET" && path === "/api/friends") {
       return { status: 200, body: { friends: [ANN], incoming: [], outgoing: [], blocked: [] } };
     }
-    if (method === "GET" && path === "/api/challenges") return { status: 200, body: { incoming: [], outgoing: [] } };
+    if (method === "GET" && path === "/api/challenges") return { status: 200, body: challenges() };
     if (method === "GET" && path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
     if (method === "GET" && path === "/api/replays/shared") return { status: 200, body: { shared: [] } };
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
@@ -70,6 +83,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetVisibility();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -188,5 +202,87 @@ describe("R2125000 the friends list opens on its last answer", () => {
 
     await settle({ advance: 0 });
     expect(screen.getAllByTestId(togetherTestid.friendRow)[0]).toHaveTextContent("Ann");
+  });
+});
+
+describe("R3205000 a hidden tab's social reads", () => {
+  it("R3205000 the unread counts and the challenges pause while the tab is hidden and read once when it shows", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
+
+    setVisibility("hidden");
+    await settle({ advance: 3 * SOCIAL_POLL_MS });
+    expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads(server)).toMatchObject({ challenges: 2, unread: 2 });
+
+    await settle({ advance: SOCIAL_POLL_MS });
+    expect(reads(server)).toMatchObject({ challenges: 3, unread: 3 });
+  });
+
+  it("R3205000 Play together's friends list pauses while the tab is hidden and reads once when it shows", async () => {
+    const server = serve();
+    render(<TogetherRoute />);
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(1);
+
+    setVisibility("hidden");
+    await settle({ advance: 3 * FRIENDS_POLL_MS });
+    expect(reads(server).friends).toBe(1);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(2);
+
+    await settle({ advance: FRIENDS_POLL_MS });
+    expect(reads(server).friends).toBe(3);
+  });
+
+  it("R3205000 an open friends panel's list pauses while the tab is hidden and reads once when it shows", async () => {
+    const server = serve();
+    render(
+      <>
+        <ChallengeToast />
+        <FriendsButton placement="game" />
+      </>,
+    );
+    await settle({ advance: 0 });
+    fireEvent.click(screen.getByTestId(friendsTestid.button));
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(1);
+
+    setVisibility("hidden");
+    await settle({ advance: 3 * FRIENDS_POLL_MS });
+    expect(reads(server).friends).toBe(1);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(2);
+
+    await settle({ advance: FRIENDS_POLL_MS });
+    expect(reads(server).friends).toBe(3);
+  });
+
+  it("R3205000 a challenge of the tab's own keeps the social poll reading while hidden, and it pauses once none is open", async () => {
+    let open: Challenges = { incoming: [], outgoing: [OUTGOING] };
+    const server = serve(() => open);
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    const first = reads(server).challenges;
+
+    setVisibility("hidden");
+    await settle({ advance: 2 * SOCIAL_POLL_MS });
+    expect(reads(server).challenges, "the room expires and the follow rides this poll").toBe(first + 2);
+
+    open = { incoming: [], outgoing: [] };
+    await settle({ advance: SOCIAL_POLL_MS });
+    expect(reads(server).challenges).toBe(first + 3);
+
+    await settle({ advance: 3 * SOCIAL_POLL_MS });
+    expect(reads(server).challenges, "no challenge left open: the poll paused").toBe(first + 3);
   });
 });

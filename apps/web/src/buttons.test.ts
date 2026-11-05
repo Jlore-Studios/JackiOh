@@ -108,8 +108,8 @@ const stated = (body: string, pattern: RegExp): number => [...body.matchAll(patt
 
 /** The button skins outside buttons.css that are no role's: each sheet's count, frozen, so one only falls. */
 const UNROLED: Record<string, number> = {
-  // Google's own sign-in button, drawn to Google's brand rules.
-  "auth/auth.css": 4,
+  // Google's and Roblox's own sign-in buttons, drawn to their brands' rules.
+  "auth/auth.css": 7,
   // The collection's strip and tiles: their pressed, equipped and hovered states (the tabs/segmented issue).
   "collection/collection.css": 11,
   // The dev bar's owed and pressed toggles.

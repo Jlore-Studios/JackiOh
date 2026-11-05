@@ -51,10 +51,10 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // C+ #40 Appropriations (X spell): the effects the Discover menu shows, X filled in on play.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 2X−1 random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 7X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Health and Armor X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−2) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 2X−2 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 6X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−2) Health and Armor X." },
   },
   // C+ #7 The House: the twin is the Activate's mode (R1704002).
   "classicplus-007": {
@@ -86,6 +86,11 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     take: { label: "Take a Unit", detail: "Put the enemy Unit you choose into your hand. Your opponent gets Coins." },
     discover: { label: "Discover a Unit", detail: "Discover a Unit and make it Radiant." },
     copies: { label: "Draw and copy", detail: "Draw 1, then fill your hand with copies of it." },
+  },
+  // C #70 Book of Plague: the counts are the card's and its Radiant face's, so the details name none.
+  "classic-070": {
+    counters: { label: "Plague Counters", detail: "Place Plague Counters on a permanent you choose." },
+    cards: { label: "Plague cards", detail: "Add random Plague cards to your hand." },
   },
   // C #8 Pickle: the opponent answers, so the words are theirs; the engine's labels carry the counts.
   "classic-008": {
@@ -162,6 +167,8 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // #82 KY's Trial: a set, then a number in it (R831004: a set is offered by its name).
   "core-082": trialSets(),
+  // #98 Heroic Power's Cry (R3134002): the powers offered, by their stored names (R103).
+  "core-098": heroicPowers(false),
   // M #20 Aestheticize the Game: the thresholds are the card's, so the detail names none.
   "meditative-020": {
     health: { label: "Health", detail: "For the rest of the game, you also win while your hero has enough Health." },
@@ -178,12 +185,12 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "give Indestructible": { label: "Indestructible too", detail: "Freeze the Unit forever, and give it Indestructible." },
     "freeze only": { label: "Freeze only", detail: "Freeze the Unit forever." },
   },
-  // S #18.1 MELCHIOR (R21's pool).
+  // S #18.1 MELCHIOR (R21's pool): the base Activate's Discover through v0.5.11r, kept for its replays (R3142001).
   "stinkyscape-018-1": combatKeywords(),
-  // S #26 ZolarKeth (#2657): `universities` is v0.5.9f's Activate's other option, kept for its replays.
+  // S #26 ZolarKeth (#2657, #3041): `universities` is v0.5.9f's Activate's other option, kept for its replays.
   "stinkyscape-026": {
     university: { label: "University", detail: "Summon a University." },
-    piece: { label: "Starship Piece", detail: "This gains “Activate: Summon a random Starship Piece.”" },
+    piece: { label: "Starship Piece", detail: "This gains “End of turn: Summon a random Starship Piece.”" },
     universities: { label: "Universities", detail: "Activate your Universities." },
   },
   // S #112 Job Application, Stage 3.
@@ -242,6 +249,50 @@ function trialSets(): Record<string, ModeText> {
   );
 }
 
+/**
+ * #98 Heroic Power's Cry Discovers one of three of its thirteen powers (R3134002), each offered by its stored name
+ * (R103) and told by its Activate's words, naming no number the card declares. The Radiant face's lines are its own
+ * (Armor Up is Tank Up).
+ */
+function heroicPowers(radiant: boolean): Record<string, ModeText> {
+  const base: readonly [string, string, string][] = [
+    ["recruit", "Expedition Map", "Spend (3): Recruit a permanent."],
+    ["draw", "Life Tap", "Spend (1): Draw cards. Take damage."],
+    ["ping", "Ping", "Spend (1): Pierce. Deal damage to a Unit or a hero."],
+    ["burn", "Steady Shot", "Spend (1): Deal damage to the enemy hero."],
+    ["rush", "Ranching", "Spend (2): Summon a Rush Token."],
+    ["felinor", "Cat Cafe", "Spend (1): Summon a Felinor Token."],
+    ["discover", "Witness Value", "Spend (2): Discover a Unit."],
+    ["stitching", "Stitching", "Spend (2): Discover two cheap Units. Fuse them."],
+    ["armor", "Armor Up", "Spend (1): Your hero gains Armor until your next turn."],
+    ["insect", "Die Insect", "Spend (2): Deal damage to a random enemy."],
+    ["brainstorm", "KY Brainstorm", "Spend (2): Add a random KY card to your hand. Your Spells cost less."],
+    ["pluck", "Pluck", "Spend (2): Add a random Fruit to your hand. It costs less."],
+    ["tricks", "Terminus Tricks", "Spend (3): Discover a Trap to summon."],
+  ];
+  const shining: Readonly<Record<string, readonly [string, string]>> = {
+    recruit: ["Expedition Map", "Spend (3): Recruit a permanent. Make it Radiant."],
+    draw: ["Life Tap", "Spend (1): Draw from each player's deck."],
+    ping: ["Ping", "Spend (1): Pierce. Deal damage. If this kills a Unit, summon a Ghoul Token with its stats."],
+    burn: ["Steady Shot", "Spend (1): Deal damage to the enemy hero. This permanently deals 2 more damage."],
+    rush: ["Ranching", "Spend (2): Summon a Radiant Rush Token."],
+    felinor: ["Cat Cafe", "Spend (1): Summon a random Felinor."],
+    discover: ["Witness Value", "Spend (2): Discover a Radiant Unit."],
+    stitching: ["Stitching", "Spend (2): Discover two cheap Radiant Units. Fuse them."],
+    armor: ["Tank Up", "Spend (1): Your hero gains Armor, then this power refreshes."],
+    insect: ["Die Insect", "Spend (2): Lucky 1. Deal damage to a random enemy."],
+    brainstorm: ["KY Brainstorm", "Spend (2): Add a Radiant KY card to your hand. Your Spells cost less."],
+    pluck: ["Pluck", "Spend (2): Add a random Radiant Fruit to your hand. It costs less."],
+    tricks: ["Terminus Tricks", "Spend (3): Discover a Radiant Trap to summon."],
+  };
+  return Object.fromEntries(
+    base.map(([option, label, detail]) => {
+      const [name, words] = radiant ? (shining[option] ?? [label, detail]) : [label, detail];
+      return [option, { label: name, detail: words }];
+    }),
+  );
+}
+
 /** R21's combat keywords, the pool S #18.1 MELCHIOR Discovers from (`RANDOM_KEYWORD_POOL`). */
 function combatKeywords(): Record<string, ModeText> {
   const pool = ["Taunt", "Rush", "First Strike", "Flying", "Ranged", "Poisonous", "Reborn", "Divine Shield", "Windfury", "Cleave", "Deft", "Lifesteal", "Pierce", "Trample"];
@@ -255,15 +306,20 @@ function combatKeywords(): Record<string, ModeText> {
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
   // C+ #40 Appropriations, radiant.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−2) Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 4X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 17X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +5X Health and Armor 2X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−3) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 4X−1 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 16X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(5X−1) Health and Armor 2X." },
   },
   // C+ #7 The House, radiant: the twins it summons are Radiant.
   "classicplus-007": {
     defender: { label: "Radiant Right-house defender", detail: "Spend a Plague Counter to summon a Radiant Right-house defender." },
     attacker: { label: "Radiant Wrong-House Attacker", detail: "Spend a Plague Counter to summon a Radiant Wrong-House Attacker." },
+  },
+  // C #70 Book of Plague, radiant: the cards it adds are Radiant.
+  "classic-070": {
+    counters: { label: "Plague Counters", detail: "Place Plague Counters on a permanent you choose." },
+    cards: { label: "Radiant Plague cards", detail: "Add random Radiant Plague cards to your hand." },
   },
   // M #98 Showdown, radiant.
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
@@ -273,6 +329,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
     heal: { label: "Heal 8X", detail: "Heal a target by eight times X." },
     mana: { label: "Mana next turn", detail: "Gain X plus 1 mana next turn." },
   },
+  // #98 Heroic Power, radiant (R3134002): its own lines, Armor Up named Tank Up.
+  "core-098": heroicPowers(true),
   // S #116 Megabase, radiant: "its Activate gives its controller N and the opponent N − 5".
   "stinkyscape-116": {
     "5 Credits": { label: "5 Credits", detail: "You gain 5 Credits, and your opponent 5 fewer." },
@@ -282,7 +340,7 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   // S #26 ZolarKeth, radiant (#2657): the University and the Starship Piece are Radiant.
   "stinkyscape-026": {
     university: { label: "Radiant University", detail: "Summon a Radiant University." },
-    piece: { label: "Radiant Starship Piece", detail: "This gains “Activate: Summon a random Radiant Starship Piece.”" },
+    piece: { label: "Radiant Starship Piece", detail: "This gains “End of turn: Summon a random Radiant Starship Piece.”" },
   },
   // S #121 System Schematic, radiant: "The one chosen Radiant".
   "stinkyscape-121": {

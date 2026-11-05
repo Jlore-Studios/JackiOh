@@ -1,4 +1,4 @@
-//! M #30 Fickle E-Kitten (SPEC §8.8 row 30): (1) Unit, Felinor, Epic, 3/4 → 6/8.
+//! M #30 Fickle E-Kitten (SPEC §8.8 row 30): (1) Unit, Felinor, Epic, 5/5 → 10/10 (3/4 → 6/8 until issue #3138).
 //!
 //! Base:    "End of turn: If your opponent has a pricier permanent, they gain control of this.
 //! Otherwise, shuffle a Love Bomb into your deck."
@@ -210,7 +210,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(s.card(&id).controller, P2);
                 s.attack(&id, "hero");
-                s.expect_health(P1, 30 - 3);
+                s.expect_health(P1, 30 - 5);
             }
 
             #[test]
@@ -360,7 +360,7 @@ mod tests {
             }
 
             #[test]
-            fn shuffles_a_radiant_love_bomb_and_is_6_8() {
+            fn shuffles_a_radiant_love_bomb_and_is_10_10() {
                 let mut s = kittened("kitten-radiant", true, json!([]), json!([{ "def": VANILLA, "lane": 2 }]));
 
                 s.end_turn();
@@ -369,7 +369,22 @@ mod tests {
                 assert_eq!(bombs.len(), 1);
                 assert!(bombs[0].radiant);
                 let me = s.unit(P1, 1).expect("the Kitten on the field");
-                s.expect_stats(&me, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
+                s.expect_stats(&me, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
+            }
+        }
+
+        /// Issue #3138: it is a 5/5, Radiant 10/10, from 3/4 and 6/8, for the same (1).
+        #[test]
+        fn issue_3138_it_enters_as_a_5_5_radiant_a_10_10_for_1_mana() {
+            for (radiant, attack, health) in [(false, 5, 5), (true, 10, 10)] {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": KITTEN, "radiant": radiant }, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                crate::expect_costs(&mut s, KITTEN, 1, json!({}));
+                s.state_mut().players.p1.mana.current = 1;
+                s.play(KITTEN, json!({}));
+                s.expect_stats(KITTEN, json!({ "attack": attack, "health": health, "maxHealth": health }));
             }
         }
 

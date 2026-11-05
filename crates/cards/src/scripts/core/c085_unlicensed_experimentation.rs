@@ -177,7 +177,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const TRAP: &str = "core-085"; // Trap, 1, Legendary
+    const TRAP: &str = "core-085"; // Trap, 3 (2 until issue #3136), Legendary
     const TIMMY: &str = "core-011"; // Unit, 1 — 3/3 Rush, First Strike
     const BIG_UNIT: &str = "core-025"; // Unit, 4 — 7/7 Armor 7
     const MR_TOKEN: &str = "core-015"; // Unit, 1 — 1/1, Cry: summon a Rush Token
@@ -196,6 +196,15 @@ mod tests {
     const MENACE: &str = "core-019";
 
     use crate::js;
+
+    /// Issue #3136: it costs (3), from (2), on both faces.
+    #[test]
+    fn issue_3136_costs_3_refused_with_2_mana_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": TRAP, "radiant": radiant }, "core-005"] }, "p2": { "hand": ["core-005"] } }));
+            crate::expect_costs(&mut s, TRAP, 3, json!({}));
+        }
+    }
 
     /// The trap as it sits in play: face-down in lane 3, so lanes 1 and 2 are free for the board.
     fn armed(radiant: bool) -> Value {

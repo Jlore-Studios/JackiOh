@@ -5,8 +5,10 @@
 //! pinned as a `#[should_panic]` test, its fix in its comment. The fixture cards are registered here
 //! on top of the shared fixture catalog, so no shared fixture has to grow for them (BUILD §0).
 
+use jackioh_engine::effects::delay::DELAYED_DISCARD_HAND_HOOK;
 use jackioh_engine::effects::{
-    DELAYED_HOOK, HAND_WATCH_KEY, THIS_TURN, add_player_modifier, damage, delay, due_resume, give_from_hand,
+    DELAYED_HOOK, DISCARD_COUNT_KEY, HAND_WATCH_KEY, THIS_TURN, add_player_modifier, damage, delay,
+    discard_hand_at_turn_end, due_resume, give_from_hand,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::{
@@ -16,7 +18,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::indestructible;
 use super::fixtures::harness::{Bench, events_of_type, ids_of, in_hand, new_game, put, slot};
-use crate::rules::fixtures::harness::{act, json_of, matches_object};
+use crate::rules::fixtures::harness::{act, act_ok, json_of, matches_object};
 
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let player = at.player;
@@ -194,6 +196,159 @@ fn as_scribe(scribe: &CardInstance) -> RunOptions {
     RunOptions {
         self_: Some(scribe.clone()),
         controller: Some(P1),
+    }
+}
+
+// discardHandAtTurnEnd
+
+/// R3134000 (Classic #37 Last Hurrah): the delayed discard of the hand takes an optional count, kept in the
+/// entry's data; with none it discards the whole hand, as R458's entries always did.
+mod discard_hand_at_turn_end_r458_r3134000 {
+    use super::*;
+
+    fn discards_of(events: &[GameEvent], player: PlayerId) -> Vec<String> {
+        events_of_type(events, GameEventType::Discarded)
+            .into_iter()
+            .map(json_of)
+            .filter(|event| event["owner"] == json!(player))
+            .filter_map(|event| event["instanceId"].as_str().map(str::to_string))
+            .collect()
+    }
+
+    /// p1 holds exactly `held` cards and schedules a delayed discard with `args`, as itself.
+    fn scheduled(seed: &str, held: i32, args: Value) -> GameState {
+        let mut state = playing(seed);
+        state.players.p1.hand.clear();
+        in_hand(&mut state, &bolt().id, P1, held);
+        run(
+            &mut state,
+            vec![discard_hand_at_turn_end(json_as(args))],
+            RunOptions {
+                self_: None,
+                controller: Some(P1),
+            },
+        );
+        state
+    }
+
+    fn end_p1_turn(state: &GameState) -> ReduceResult {
+        act_ok(state, json!({ "type": "endTurn", "playerId": "p1" }))
+    }
+
+    #[test]
+    fn r3134000_the_count_rides_in_the_entry_s_data_and_that_many_cards_go_at_the_end_of_this_turn() {
+        let state = scheduled("discard-count", 8, json!({ "turn": "this", "count": 6 }));
+        assert_eq!(state.delayed.len(), 1);
+        assert_matches_object(
+            only(&state.delayed),
+            json!({
+                "owner": "p1",
+                "at": { "phase": "end", "player": "p1" },
+                "resume": { "hook": DELAYED_DISCARD_HAND_HOOK, "step": "this", "data": { (DISCARD_COUNT_KEY): 6 } },
+            }),
+        );
+        // §10.1: the count is data, so the entry survives a JSON round trip.
+        let round_tripped: Vec<DelayedEffect> =
+            serde_json::from_value(json_of(&state.delayed)).expect("the delayed list is JSON");
+        assert_eq!(round_tripped, state.delayed);
+
+        let held: Vec<String> = ids_of(&state.players.p1.hand);
+        let ended = end_p1_turn(&state);
+
+        assert_eq!(ended.state.players.p1.hand.len(), 2);
+        let gone = discards_of(&ended.events, P1);
+        assert_eq!(gone.len(), 6);
+        assert!(gone.iter().all(|id| held.contains(id)));
+        let kept: Vec<&String> = held.iter().filter(|id| !gone.contains(id)).collect();
+        assert_eq!(kept.len(), 2);
+        assert!(
+            kept.iter()
+                .all(|id| ended.state.players.p1.hand.iter().any(|card| &&card.id == id))
+        );
+        assert!(
+            gone.iter()
+                .all(|id| ended.state.players.p1.graveyard.iter().any(|card| &card.id == id))
+        );
+        assert!(ended.state.delayed.is_empty());
+    }
+
+    #[test]
+    fn r458_an_entry_with_no_count_discards_the_whole_hand_as_before() {
+        let state = scheduled("discard-all", 8, json!({ "turn": "this" }));
+        assert_matches_object(only(&state.delayed), json!({ "resume": { "data": {} } }));
+        assert!(only(&state.delayed).resume.data.is_empty());
+
+        let ended = end_p1_turn(&state);
+
+        assert!(ended.state.players.p1.hand.is_empty());
+        assert_eq!(discards_of(&ended.events, P1).len(), 8);
+    }
+
+    #[test]
+    fn r682_r3134000_a_hand_of_fewer_cards_than_the_count_loses_all_of_them() {
+        let state = scheduled("discard-fewer", 3, json!({ "turn": "this", "count": 6 }));
+
+        let ended = end_p1_turn(&state);
+
+        assert!(ended.state.players.p1.hand.is_empty());
+        assert_eq!(discards_of(&ended.events, P1).len(), 3);
+    }
+
+    #[test]
+    fn r3134000_each_card_is_its_own_discard_event_and_only_the_controller_s_hand_is_touched() {
+        let mut state = scheduled("discard-events", 8, json!({ "turn": "this", "count": 5 }));
+        let other = state.players.p2.hand.len();
+        state.players.p1.auto_end_turn = Some(false);
+
+        let ended = end_p1_turn(&state);
+
+        assert_eq!(events_of_type(&ended.events, GameEventType::Discarded).len(), 5);
+        assert!(discards_of(&ended.events, P2).is_empty());
+        // p2 drew for its own turn, and lost nothing.
+        assert!(ended.state.players.p2.hand.len() >= other);
+    }
+
+    #[test]
+    fn r3134000_a_count_of_zero_discards_nothing() {
+        let state = scheduled("discard-zero", 4, json!({ "turn": "this", "count": 0 }));
+
+        let ended = end_p1_turn(&state);
+
+        assert_eq!(ended.state.players.p1.hand.len(), 4);
+        assert!(discards_of(&ended.events, P1).is_empty());
+    }
+
+    #[test]
+    fn r3134000_r458_next_carries_the_count_to_the_end_of_the_controller_s_next_turn() {
+        let state = scheduled("discard-next", 8, json!({ "turn": "next", "count": 6 }));
+        assert_matches_object(
+            only(&state.delayed),
+            json!({
+                "at": { "phase": "end", "player": "p1" },
+                "notBefore": state.turn + 1,
+                "resume": { "step": "next", "data": { (DISCARD_COUNT_KEY): 6 } },
+            }),
+        );
+
+        let first = end_p1_turn(&state);
+        assert!(discards_of(&first.events, P1).is_empty());
+        let second = act_ok(&first.state, json!({ "type": "endTurn", "playerId": "p2" }));
+        assert!(discards_of(&second.events, P1).is_empty());
+        let held = second.state.players.p1.hand.len();
+        let third = end_p1_turn(&second.state);
+
+        assert_eq!(discards_of(&third.events, P1).len(), 6);
+        assert_eq!(third.state.players.p1.hand.len(), held - 6);
+    }
+
+    #[test]
+    fn r3134000_the_same_seed_discards_the_same_cards() {
+        let kept = |seed: &str| -> Vec<String> {
+            let ended = end_p1_turn(&scheduled(seed, 8, json!({ "turn": "this", "count": 3 })));
+            ids_of(&ended.state.players.p1.hand)
+        };
+        assert_eq!(kept("discard-seeded"), kept("discard-seeded"));
+        assert_eq!(kept("discard-seeded").len(), 5);
     }
 }
 

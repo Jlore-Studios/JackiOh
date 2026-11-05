@@ -1,4 +1,5 @@
-//! Exile, Bounce, Discard and Counter (SPEC §6.3, §2.4, §3.2, R11, R12, R16, R78, BUILD M3-T1).
+//! Exile, Bounce, Discard, Counter and a plain move to the graveyard (SPEC §6.3, §2.4, §3.2, R11, R12, R16,
+//! R78, R3044000, BUILD M3-T1).
 //! Fixture defs and scripts are registered here, so no shared fixture has to grow for them (BUILD §0).
 
 use jackioh_engine::testkit::*;
@@ -6,7 +7,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::announce::begin_announce;
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::config::{HAND_CAP, HERO_HEALTH};
-use jackioh_engine::effects::{bounce, counter, damage, discard, discard_random, exile};
+use jackioh_engine::effects::{bounce, counter, damage, discard, discard_random, exile, send_to_graveyard};
 use jackioh_engine::play_choices::gifted_makes_radiant;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
@@ -520,6 +521,111 @@ mod bounce_s6_3_m3_t1 {
         );
 
         assert_eq!(ids(&state.players.p1.hand), vec![card.id.clone()]);
+        assert!(events.is_empty());
+    }
+}
+
+// send to the graveyard
+
+mod r3044000_send_to_graveyard {
+    use super::*;
+
+    #[test]
+    fn r3044000_moves_a_card_from_the_field_to_the_graveyard_and_it_is_no_death() {
+        let mut state = game("effects-move");
+        let victim = put(
+            &mut state,
+            &noisy().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+
+        let events = run(
+            &mut state,
+            send_to_graveyard(json_as(chosen())),
+            Some(&victim),
+            RunOptions::default(),
+        );
+
+        assert_eq!(at(&state, PlayerId::P1, Row::Units, 2), None);
+        assert_eq!(ids(&state.players.p1.graveyard), vec![victim.id.clone()]);
+        // No Death trigger (its 6 to the enemy hero), no `destroyed` and no count of deaths (R55).
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
+        assert_eq!(state.counters.destroyed, 0);
+        assert_eq!(types(&events), vec!["enteredGraveyard"]);
+    }
+
+    #[test]
+    fn r3044000_indestructible_does_not_hold_it() {
+        let mut state = game("effects-move");
+        let warded = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        live_mut(&mut state, &warded.id)
+            .granted_keywords
+            .push(Keyword::Indestructible);
+
+        run(
+            &mut state,
+            send_to_graveyard(json_as(chosen())),
+            Some(&warded),
+            RunOptions::default(),
+        );
+
+        assert_eq!(ids(&state.players.p1.graveyard), vec![warded.id.clone()]);
+    }
+
+    #[test]
+    fn r3044000_r2618000_a_stolen_card_lands_in_its_controllers_graveyard_as_theirs() {
+        let mut state = game("effects-move");
+        let theirs = placed_from_hand_of(&mut state, "fx-4", PlayerId::P2);
+
+        run(
+            &mut state,
+            send_to_graveyard(json_as(chosen())),
+            Some(&theirs),
+            as_controller(PlayerId::P1),
+        );
+
+        assert_eq!(ids(&state.players.p1.graveyard), vec![theirs.id.clone()]);
+        assert_eq!(state.players.p2.graveyard.len(), 0);
+        assert_eq!(live(&state, &theirs.id).owner, PlayerId::P1);
+    }
+
+    #[test]
+    fn r3044000_r11_a_unit_token_ceases_to_exist() {
+        let mut state = game("effects-move");
+        let token = put(
+            &mut state,
+            &rush_token().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+
+        let events = run(
+            &mut state,
+            send_to_graveyard(json_as(chosen())),
+            Some(&token),
+            RunOptions::default(),
+        );
+
+        assert_eq!(at(&state, PlayerId::P1, Row::Units, 1), None);
+        assert_eq!(state.players.p1.graveyard.len(), 0);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn r3044000_a_card_that_is_not_on_the_field_is_left_where_it_is() {
+        let mut state = game("effects-move");
+        let card = first(in_hand(&mut state, "fx-1", PlayerId::P1, 1));
+
+        let events = run(
+            &mut state,
+            send_to_graveyard(json_as(chosen())),
+            Some(&card),
+            RunOptions::default(),
+        );
+
+        assert_eq!(ids(&state.players.p1.hand), vec![card.id.clone()]);
+        assert_eq!(state.players.p1.graveyard.len(), 0);
         assert!(events.is_empty());
     }
 }

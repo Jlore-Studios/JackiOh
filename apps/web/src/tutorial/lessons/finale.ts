@@ -3,7 +3,8 @@
 // player, and the only one with no pool hold, so random cards may be any card of every shipped set (TG
 // #40 draws from all of them). The AI's deck holds none Legendary or Mythic (R2533001). Deck order
 // fixes this seed's deal (`scripts/lesson-deal.ts finale`). Since #2521, whose cards change what
-// Goetzmann Game Design's random effects find, "-59" is the seed that wins within the lesson's 11 turns.
+// Goetzmann Game Design's random effects find, "-59" was the seed that won within the lesson's 11 turns;
+// since #3128's costs, whose deals and AI's plays moved, "-133" is, both showpieces played.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -13,7 +14,7 @@ export const lesson: TutorialLesson = {
   title: "The final exam",
   summary: "Legendary and Mythic cards, random effects, Quickdraw and copies: everything at once.",
   discoveries: ["quickdraw", "legendary", "random", "copying"],
-  seed: "tg-finale-59",
+  seed: "tg-finale-133",
   humanSeat: "p1",
   poolHold: false,
   humanDeck: [

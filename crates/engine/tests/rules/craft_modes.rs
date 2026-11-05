@@ -318,7 +318,7 @@ fn r1563007_every_free_prompt_offers_four_keywords_two_hats_and_three_verbs_and_
             assert_eq!(offer.verbs.len(), CRAFT_OFFER_VERBS);
             assert!(!offer.hats.contains(&CraftHatKind::Activate));
             assert!(!offer.verbs.contains(&CraftVerb::GainArmor));
-            let presets = craft_presets(&mut rng, cost, &offer);
+            let presets = craft_presets(&mut rng, None, cost, &offer);
             assert_eq!(presets.first().map(|recipe| recipe.type_), Some(CardType::Unit));
             for recipe in &presets {
                 assert!(
@@ -395,13 +395,13 @@ fn r1182000_r1563007_every_potion_preset_is_a_different_offered_verb_valid_withi
             for recipe in &offered {
                 assert_eq!(recipe.frame, Some(frame));
                 assert!(
-                    validate_recipe(recipe, cost).is_ok(),
+                    validate_recipe(recipe, cost, Some(mode)).is_ok(),
                     "{:?}",
-                    validate_recipe(recipe, cost)
+                    validate_recipe(recipe, cost, Some(mode))
                 );
                 assert!(offer.verbs.contains(&recipe.hats[0].effects[0].verb));
                 assert!(
-                    recipe_points(recipe) <= points_budget(Some(frame), cost),
+                    recipe_points(recipe) <= points_budget(Some(frame), Some(mode), cost),
                     "{recipe:?}"
                 );
             }
@@ -443,10 +443,11 @@ fn r1182001_r1563008_a_huge_potion_costs_3_with_five_times_a_potions_points() {
     let pending = open_as(&state, PromptKind::Craft, P1);
     assert_eq!(pending.budget, Some(CRAFT_HUGE_POTION_COST));
     assert_eq!(pending.craft_mode, Some(CraftMode::HugePotion));
-    let budget = points_budget(Some(CraftFrame::HugePotion), 3);
+    let budget = points_budget(Some(CraftFrame::HugePotion), Some(CraftMode::HugePotion), 3);
     assert_eq!(
         budget,
-        CRAFT_HUGE_POTION_BUDGET_MULTIPLE * points_budget(Some(CraftFrame::Potion), 1)
+        CRAFT_HUGE_POTION_BUDGET_MULTIPLE
+            * points_budget(Some(CraftFrame::Potion), Some(CraftMode::Potion), 1)
     );
     assert_eq!(budget, 20);
     for recipe in presets(&state) {
@@ -464,7 +465,7 @@ fn r1182001_r1563008_a_huge_potion_costs_3_with_five_times_a_potions_points() {
             { "verb": "healYourHero", "n": 1 },
         ]),
     );
-    let preview = craft_preview(&json_as(full.clone()), 3);
+    let preview = craft_preview(&json_as(full.clone()), 3, Some(CraftMode::HugePotion));
     assert!(preview.valid, "{:?}", preview.reasons);
     assert_eq!([preview.points, preview.points_budget], [20, 20]);
     let mut over = full.clone();
@@ -500,7 +501,10 @@ fn r1182002_from_scratch_is_the_free_crafters_chain_with_its_flag() {
     assert_eq!(pending.craft_offer, None);
     // The engine still rolls Meditative #17's four presets, from the match rng (R881).
     let mut rng = Rng::new(&seed, cursor);
-    assert_eq!(presets(&state), craft_presets(&mut rng, 2, &whole_palette()));
+    assert_eq!(
+        presets(&state),
+        craft_presets(&mut rng, Some(CraftMode::Scratch), 2, &whole_palette())
+    );
     match view_for(&state, P1).pending {
         Some(PendingView::ForYou(view)) => {
             assert_eq!(view.craft_mode, Some(CraftMode::Scratch));
@@ -530,6 +534,59 @@ fn r1182002_a_card_from_scratch_is_the_card_the_free_crafter_makes_of_that_recip
     assert_eq!(def, &compile_crafted_def(&parsed));
     assert_eq!(def.set, SetName::Meditative);
     assert!(def.tags.is_empty());
+}
+
+/// An N/1 Unit at `cost`: N points.
+fn unit_of(cost: i32, points: i32) -> Value {
+    json!({
+        "cost": cost, "type": "Unit", "adjective": "Lazy", "noun": "Iterator",
+        "attack": points, "health": 1, "keywords": [], "echo": 0, "hats": [],
+    })
+}
+
+#[test]
+fn r3043000_one_point_over_meditative_17s_budget_is_refused_there_and_crafted_from_scratch() {
+    for cost in 0..=CRAFT_MAX_COST {
+        let (fewer, whole) = (true_craft_points_budget(cost), craft_points_budget(cost));
+        assert_eq!(points_budget(None, None, cost), fewer);
+        assert_eq!(points_budget(None, Some(CraftMode::Scratch), cost), whole);
+
+        let mut free = crafting(&format!("budget-free-{cost}"), "pm-crafter", false);
+        assert_eq!(answer_keys(&mut free, &[&format!("mode:{cost}")]).error, None);
+        let mut scratch = crafting(&format!("budget-scratch-{cost}"), "pm-scratch-crafter", false);
+        assert_eq!(answer_keys(&mut scratch, &[&format!("mode:{cost}")]).error, None);
+        // Each prompt's Unit preset spends its own whole budget, and its preview shows it.
+        assert_eq!(recipe_points(&presets(&free)[0]), fewer, "cost {cost}");
+        assert_eq!(recipe_points(&presets(&scratch)[0]), whole, "cost {cost}");
+        let shown = |mode| craft_preview(&json_as(unit_of(cost, 0)), cost, mode).points_budget;
+        assert_eq!([shown(None), shown(Some(CraftMode::Scratch))], [fewer, whole]);
+
+        let over = unit_of(cost, fewer + 1);
+        refused(&free, over.clone(), &format!("over the budget of {fewer}"));
+        if fewer < whole {
+            assert_eq!(
+                answered(&scratch, over).error,
+                None,
+                "cost {cost}: from scratch crafts it"
+            );
+        } else {
+            // At cost 0 the 1.6 rounds back to 2: both prompts have 2 points.
+            assert_eq!((cost, fewer), (0, 2));
+        }
+        refused(
+            &scratch,
+            unit_of(cost, whole + 1),
+            &format!("over the budget of {whole}"),
+        );
+    }
+    // R1563008 still holds: a Potion has fewer points than Meditative #17 at the Potion's cost.
+    assert!(
+        points_budget(
+            Some(CraftFrame::Potion),
+            Some(CraftMode::Potion),
+            CRAFT_POTION_COST
+        ) < points_budget(None, None, CRAFT_POTION_COST)
+    );
 }
 
 #[test]
