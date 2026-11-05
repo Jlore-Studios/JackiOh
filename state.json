@@ -16772,6 +16772,8 @@
       }
     },
     "3123": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-05T01:01:29Z",
@@ -16785,8 +16787,11 @@
         "trail": "ntil grep -q '^exit=' /tmp/fuzz-h.log 2>/dev/null; do sleep 15; done; tail -6 /tmp/fuzz.log | cut -c1-300; echo =====; tail -6 /tmp/fuzz-h.log | cut -c1-300\", \"description\": \"Block unti\u2026\n- Bash: {\"command\": \"grep -iE 'passed|failed|fail|seeds' /tmp/fuzz.log | grep -v Compiling | head -6 | cut -c1-250; echo ====; grep -iE 'passed|failed|fail|seeds' /tmp/fuzz-h.log | grep -v Compiling | head -\u2026\n- said: Both fuzz waves: 200 passed, 0 invariant violations. Now `golden check`, then a wider fuzz sweep to give I14 more games.\n- Bash: {\"command\": \"echo \\\"- Build run 1: fuzz 200 and --handicap 200 green (0 invariant violations). Running golden check.\\\" >> .bot-notes.md; cargo jackioh golden check 2>&1 | tail -8; echo golden-exit=${\u2026\n- Bash: {\"command\": \"(time cargo jackioh fuzz --from 201 --seeds 800) > /tmp/fuzz-wide.log 2>&1; echo exit=$? >> /tmp/fuzz-wide.log; (cargo jackioh fuzz --duos --seeds 200) > /tmp/fuzz-duos.log 2>&1; echo ex\u2026\n- said: Golden check passes (hotseat fixture folds to 972f5b85). While the wider fuzz runs, here is the final engine diff for review:\n- Bash: {\"command\": \"git diff crates/engine/src/subsystems/activate.rs | sed -n 1,60p\", \"description\": \"Review activate.rs diff head\"}\n- Bash: {\"command\": \"grep -rln '\\\"usable\\\"\\\\|usable:' crates/server crates/ai crates/tools crates/luau crates/run apps/web/src 2>/dev/null | grep -v generated | head\", \"description\": \"Find other tests assert\u2026\n- Bash: {\"command\": \"grep -n 'usable' apps/web/src/test/ux/drag-continue.test.tsx apps/web/src/test/ux/attack-pickup.test.tsx apps/web/src/game/activate.test.ts | head; grep -ln 'wasm\\\\|engine/pkg\\\\|createGa\u2026\n- Bash: {\"command\": \"grep -rn \\\"activated right now\\\\|data-usable\\\" e2e/cypress 2>/dev/null | head\", \"description\": \"Check e2e specs for the Not now text\"}\n- said: No web or e2e reader depends on the changed views. Recording decisions in the notes while the fuzz sweep runs.\n- Bash: {\"command\": \"python3 -I - <<'PY'\\np = \\\".bot-notes.md\\\"\\ns = open(p).read()\\nold = \\\"- Left: full engine and cards suites, fmt, clippy, spec check, patches check, fuzz 200 (+ --handicap), golden chec\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/fuzz-duos.log 2>/dev/null; do sleep 15; done; grep -E 'passed|invariant|^real|^exit' /tmp/fuzz-wide.log | head -5 | cut -c1-250; echo ===; grep -E 'passed|fai\u2026\n- said: Seeds 201\u20131000: 800 passed; Duos 200: 0 failed. Fuzz is cheap, so I'm widening it toward the daily 10,000-seed run, then the workspace suite.\n- Bash: {\"command\": \"echo \\\"- Build run 1: fuzz 201\\u20131000 (800 passed) and --duos 200 (0 failed) green. Running wider waves + workspace tests.\\\" >> .bot-notes.md; cargo jackioh fuzz --from 201 --seeds 80\u2026\n- Bash: {\"command\": \"cp crates/engine/src/subsystems/activate.rs /tmp/activate.rs.keep && python3 -I - <<'PY'\\np = \\\"crates/engine/src/subsystems/activate.rs\\\"\\ns = open(p).read()\\nold = \\\"let usable = gate.\u2026\n- Bash: {\"command\": \"grep -n 'let usable = ' crates/engine/src/subsystems/activate.rs; cmp /tmp/activate.rs.keep crates/engine/src/subsystems/activate.rs && echo restored\", \"description\": \"Verify activate.rs\u2026\n- said: Restored. Now the harness's workspace test command (with `ts`) and workspace clippy.\n- Bash: {\"command\": \"echo \\\"- Build run 1: handicap 201\\u20131000 and fuzz 1001\\u20135000 green. Sanity: with the old usable, fuzz 200 fails I14 on stinkyscape-112 send-resume (restored after). Running works\u2026\n- said: While the workspace suite runs (it takes a while), I'm drafting the PR description from what I've verified.\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/ws-tests.log 2>/dev/null; do sleep 30; done; grep -E '^exit=' /tmp/ws-tests.log\", \"description\": \"Block until workspace suite finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -cE '^test result' /tmp/ws-tests.log; grep -E 'FAILED|panicked' /tmp/ws-tests.log | head -5; grep -E 'Running' /tmp/ws-tests.log | tail -2 | cut -c1-200\", \"description\": \"Check work\u2026\n- said: Still compiling the workspace with `ts`. I'll wait for the completion notice.\n- Bash: {\"command\": \"sleep 5; tail -2 /tmp/ws-tests.log | cut -c1-200\", \"description\": \"Peek at workspace build output\"}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/ws-tests.log 2>/dev/null; do sleep 30; done; grep -E '^exit=' /tmp/ws-tests.log\", \"description\": \"Wait again for workspace suite\", \"timeout\": 3600000, \"run_in\u2026\n- said: Waiting for the workspace suite to finish.\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/ws-tests.log 2>/dev/null; do sleep 20; done; echo finished\", \"description\": \"Block on workspace suite completion\", \"timeout\": 600000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3061/3b699b33-20d8-4e88-8103-a633e8547382/tasks/b00dcxwwg.output; git status --porcelain -- apps/web/src/wire | wc -l\", \"descriptio\u2026\n- said: Workspace suite with `ts`: 17824 passed, 0 failed, and `apps/web/src/wire` is unchanged. Last check: the harness's workspace clippy.\n- Bash: {\"command\": \"echo \\\"- Build run 1: workspace cargo test (testkit,ts) green: 17824 passed, 0 failed; wire/ clean. Running workspace clippy.\\\" >> .bot-notes.md; cargo clippy --workspace --all-targets -\u2026\n- said: Workspace clippy is clean. (The stopped background task was only a wait loop; the suite itself had already exited 0.) Final fmt check and status:\n- Bash: {\"command\": \"cargo fmt --check; echo fmt-exit=$?; git status --short; git diff --stat | tail -1; git worktree list | head\", \"description\": \"Final fmt check, status and worktrees\"}\n- Bash: {\"command\": \"python3 -I - <<'PY'\\np = \\\".bot-notes.md\\\"\\ns = open(p).read()\\nstart = s.index(\\\"## State\\\\n\\\")\\nend = s.index(\\\"## Log\\\\n\\\")\\nstate = \\\"\\\"\\\"## State\\n\\n- Build run 1 (2026-11-05, opus)\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: an Activate the game won't let you use says why, and the fuzz holds every ability to it\"} --> ## What changed An Activate ability that `legalActions` does not list now shows `usable: false` and a `reason` in `viewFor`. Before, it showed `usable: true` w\u2026"
       },
       "issue": 3061,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T02:41:47Z",
         "from_run": "41945611716",
         "gates": [
           {
@@ -16878,7 +16883,11 @@
         "source": "build",
         "until": "2026-11-05T03:10:24Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-05T02:40:24Z",
+      "run_id": "pending:ef134541-1793846468",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16897,6 +16906,9 @@
         "provider": "claude-4",
         "run": "41945611716"
       },
+      "started_at": "2026-11-05T02:41:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16910,9 +16922,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T02:25:24Z",
+    "at": "2026-11-05T02:41:47Z",
     "url": "",
-    "what": "plan #3114 on claude-8"
+    "what": "review #3123 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-05T02:21:31Z",
