@@ -354,6 +354,13 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
       cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
+
+    it("R2122000 R3127000 the static 404 page's link, its script blocked", () => {
+      cy.intercept({ method: "GET", url: "**/assets/*.js" }, { forceNetworkError: true });
+      cy.visit("/404.html");
+      cy.get(ts(shellTestid.notFoundStatic), { timeout: timeouts.view }).should("be.visible");
+      expectHitAreas();
+    });
   });
 
   describe("signed in", () => {

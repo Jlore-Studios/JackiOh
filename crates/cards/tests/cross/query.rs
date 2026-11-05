@@ -1,15 +1,25 @@
 //! BUILD M4-T2 acceptance for SPEC §5.1's catalog query (B2.2, B2.6, R380, R1420; SURFACE §8).
 //! Explicit pool id lists and arguments for random pools and Discover.
 
-use jackioh_cards::query::{CardQuery, TRAP_TYPES, pool, query, query_cost};
+use jackioh_cards::query::{CardQuery, TRAP_TYPES, query_cost};
 use jackioh_cards::{CATALOG, card_def_by_index};
 use jackioh_engine::catalog::set_is_open;
-use jackioh_engine::testkit::{json_as, register_catalog};
+use jackioh_engine::testkit::{json_as, register_catalog, with_pool_shift};
 use jackioh_engine::{CardCost, CardDef, CardDefs, CardType, GLITCH_DEF_ID, Rarity, SetName, Tag};
 use serde_json::{Value, json};
 
 fn q(literal: Value) -> CardQuery {
     json_as::<CardQuery>(literal)
+}
+
+// These tests are of a pool's content and order, so they read it as it is: under the pool probe (#3117)
+// every pool `query` returns is rotated one place, which these are not about.
+fn query(args: &CardQuery) -> Vec<&'static CardDef> {
+    with_pool_shift(0, || jackioh_cards::query::query(args))
+}
+
+fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
+    with_pool_shift(0, || jackioh_cards::query::pool(own_id, args))
 }
 
 /// Results are compared by catalog id: an index names a card only within its set (B2.2).

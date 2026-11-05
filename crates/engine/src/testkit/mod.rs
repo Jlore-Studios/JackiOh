@@ -5,6 +5,8 @@
 //! `catalog::registered_catalog()` and `scripts::script_of()` consult first under this feature, so they win
 //! over the production versions `crate::*` also brings.
 //!
+//! `pool_probe.rs` is #3117's guard: under the `pool-probe` feature every random pool comes back rotated one
+//! place, so a test that pins where a roll lands fails; `with_pool_shift(0, …)` reads a pool as it is.
 //! `seed_search.rs` is #848's seed search: `seed_where` and `cursor_where` find the seed or rng cursor where
 //! a pool's roll lands as a test needs. `preview.rs` is R1420's preview of a set that does not ship yet,
 //! `duos_scenario.rs` #936's begun Duos game. `golden.rs` (§13.3, #1641) and `pick.rs` (the one-instance pick
@@ -16,6 +18,7 @@ pub mod glow;
 pub mod golden;
 pub mod invariants;
 pub mod pick;
+pub mod pool_probe;
 pub mod preview;
 pub mod scenario;
 pub mod seams;
@@ -26,6 +29,7 @@ pub use crate::*;
 pub use duos_scenario::*;
 pub use glow::*;
 pub use invariants::*;
+pub use pool_probe::*;
 pub use preview::*;
 pub use scenario::*;
 pub use seams::*;

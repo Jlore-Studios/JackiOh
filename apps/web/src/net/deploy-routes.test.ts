@@ -137,12 +137,15 @@ describe("public/_redirects", () => {
     }
   });
 
-  it("rewrites no path the Worker answers: wrangler.jsonc sends /api/* and /ws/* to it first", () => {
+  it("rewrites no path the Worker answers: wrangler.jsonc sends /api/*, /ws/* and the compressed module to it first", () => {
     const config = JSON5.parse<{ assets?: { run_worker_first?: string[] } }>(readFileSync(join(ROOT, "wrangler.jsonc"), "utf8"));
-    const prefixes = (config.assets?.run_worker_first ?? []).map((route) => route.replace(/\*$/u, ""));
+    const routes = config.assets?.run_worker_first ?? [];
+    // The server's are prefixes; #3183's module is the one glob within a folder.
+    const prefixes = routes.filter((route) => /^\/\w+\/\*$/u.test(route)).map((route) => route.replace(/\*$/u, ""));
     expect(prefixes).toEqual(["/api/", "/ws/"]);
+    expect(routes.filter((route) => !/^\/\w+\/\*$/u.test(route))).toEqual(["/assets/*.wasm-*.br"]);
     const worker = prefixes.flatMap((prefix) => [prefix, `${prefix}x`, `${prefix}x/`, `${prefix}a/b`]);
-    worker.push("/api/auth/me", "/api/catalog", "/ws/match", "/ws/duos", "/ws/watch");
+    worker.push("/api/auth/me", "/api/catalog", "/ws/match", "/ws/duos", "/ws/watch", "/assets/jackioh_wasm_bg.wasm-BIXTgzSO.br");
     for (const { from, regex } of matchers) {
       expect(from, "a rule under the Worker's paths").not.toMatch(/^\/(api|ws)(\/|$)/u);
       for (const path of worker) expect(regex.test(path), `${from} matches ${path}`).toBe(false);

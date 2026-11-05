@@ -4,15 +4,20 @@
 //!
 //! The first thing in is the Conquest series rules, from `crates/server` (#3098):
 //! [`series`] holds the rows and the transitions over them (SPEC §9.5, R330–R337), [`deck`] what a
-//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. [`host`] is the
-//! match host's decisions (#3101): the clocks, the disconnect grace, the rematch offers and the relays as
-//! one state machine, `step(host, event, now) -> (host, outputs)`. [`face`] is what a card face prints,
-//! worked out from the catalog and a view in the reader's words (#3106).
+//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. Next is the
+//! match host's decisions (#3101): [`host`] holds the clocks, the disconnect grace, the rematch offers and
+//! the relays as one state machine, `step(host, event, now) -> (host, outputs)`. Then the loadout
+//! visibility rule (SPEC §10.8, R1834003, #3102): [`loadout`] decides when a card's cosmetics may be shown
+//! without leaking a decklist. Then the ranked ladder (#3105): [`ranked`] holds the Glicko-2 ratings, the
+//! visible ladder, the seasons, one rated game decided as data and the leaderboard's sort key. Last,
+//! [`face`] is what a card face prints, worked out from the catalog and a view in the reader's words (#3106).
 
 pub mod config;
 pub mod deck;
 pub mod face;
 pub mod host;
+pub mod loadout;
+pub mod ranked;
 pub mod series;
 
 /// A field with three states — absent, `null`, a value — kept apart:

@@ -59,7 +59,7 @@ use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
 };
 use crate::economy::rewards::GameEconomy;
-use crate::loadout::{Loadout, cards_due, shown_defs};
+use crate::loadout::{Loadout, LoadoutExt, cards_due, shown_defs};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -252,6 +252,7 @@ fn timer_name(key: TimerKey) -> &'static str {
         TimerKey::BotOffer { .. } => "bot-offer",
         TimerKey::BotReply { .. } => "bot-reply",
         TimerKey::BotRetry => "bot-retry",
+        _ => "duos",
     }
 }
 
@@ -411,6 +412,12 @@ fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
         ActionAnswer::NotRecorded => error_message(
             SocketErrorCode::Internal,
             "the action could not be recorded; try again",
+            Some(nonce),
+        ),
+        // Only a co-op host answers so; a 1v1 nonce is the seat's, whoever sends it.
+        ActionAnswer::NonceTaken => error_message(
+            SocketErrorCode::Malformed,
+            "that nonce is already taken",
             Some(nonce),
         ),
     }

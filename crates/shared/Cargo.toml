@@ -26,9 +26,12 @@ ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
 [dev-dependencies]
 serde_json = { workspace = true }
-# The face tests register the catalog the way a host does (`jackioh_cards::register_all`), and the host
-# machine's tests play whole games under the real catalog.
+# The loadout tests deal a real game from the shipped cards (`tests/loadout.rs`), the face tests register the
+# catalog the way a host does (`jackioh_cards::register_all`), and the host machine's tests play whole games
+# under the real catalog; dev-dependencies are not the crate's own, which stay the pure crates' (CLAUDE.md
+# rule 4).
 jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }
 
 [build-dependencies]
 # build.rs reads data/*.json and the cards' Chinese tables: a build script runs at compile time, which

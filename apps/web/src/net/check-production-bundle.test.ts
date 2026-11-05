@@ -26,14 +26,23 @@ afterEach(() => {
   dist = "";
 });
 
-/** A built site holding `values` in its JavaScript, with every file the check requires and a CSP that reaches both hosts. */
-function builtWith(values: readonly string[]): string {
+/** R3127000: the client's entry as Vite's build writes it into index.html, and the head line that makes 404.html noindex. */
+const ENTRY_TAG = '<script type="module" crossorigin src="/assets/index-test.js"></script>';
+const NOINDEX = '<meta name="robots" content="noindex" />';
+
+/**
+ * A built site holding `values` in its JavaScript, with every file the check requires and a CSP that reaches both hosts.
+ * R3127000: `notFound` is its 404.html, by default the client's own page (its entry script, noindex, no canonical).
+ */
+function builtWith(values: readonly string[], notFound: string = `${ENTRY_TAG}${NOINDEX}`): string {
   dist = mkdtempSync(join(tmpdir(), "bundle-check-"));
   mkdirSync(join(dist, "assets"));
   mkdirSync(join(dist, "almanac"));
-  for (const served of ["index.html", "404.html", "_redirects", "sitemap.xml", "almanac/index.html"]) {
+  for (const served of ["_redirects", "sitemap.xml", "almanac/index.html"]) {
     writeFileSync(join(dist, served), "");
   }
+  writeFileSync(join(dist, "index.html"), ENTRY_TAG);
+  writeFileSync(join(dist, "404.html"), notFound);
   const connect = [PRODUCTION.VITE_SUPABASE_URL, PRODUCTION.VITE_SERVER_WS_URL].map((url) => new URL(url ?? "").origin);
   writeFileSync(join(dist, "_headers"), `/*\n  Content-Security-Policy: connect-src 'self' ${connect.join(" ")}; img-src 'self'\n`);
   writeFileSync(join(dist, "assets", "index.js"), values.map((value) => JSON.stringify(value)).join(";"));
@@ -67,6 +76,28 @@ describe("check-production-bundle.mjs", () => {
   it("takes an override that agrees with the file", () => {
     const result = check(builtWith(VALUES), { VITE_SUPABASE_PUBLISHABLE_KEY: KEY });
     expect(result.status).toBe(0);
+  });
+
+  it("R3127000 passes a 404.html that is the client: its entry script and noindex", () => {
+    expect(check(builtWith(VALUES)).status).toBe(0);
+  });
+
+  it("R3127000 refuses a 404.html that does not load the client's entry script", () => {
+    const result = check(builtWith(VALUES, NOINDEX));
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("404.html does not load the client's entry script (/assets/index-test.js)");
+  });
+
+  it("R3127000 refuses a 404.html that crawlers may index", () => {
+    const result = check(builtWith(VALUES, ENTRY_TAG));
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("404.html is not noindex");
+  });
+
+  it("R3127000 refuses a 404.html that names a canonical address", () => {
+    const result = check(builtWith(VALUES, `${ENTRY_TAG}${NOINDEX}<link rel="canonical" href="https://jackioh.com/" />`));
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("404.html names a canonical address");
   });
 });
 

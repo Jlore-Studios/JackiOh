@@ -1,6 +1,7 @@
 // wrangler.jsonc and public/_headers: what Cloudflare serves the site with, in both environments.
 // Each environment serves apps/web/dist as static assets and sends only the server's paths, `/api/*`
-// and `/ws/*`, to apps/edge's Worker (`assets.run_worker_first`); every file it serves carries
+// and `/ws/*`, and the engine's brotli-compressed module (#3183) to apps/edge's Worker
+// (`assets.run_worker_first`); every file it serves carries
 // `_headers`' security headers, whose CSP names the build's own hosts (static-pages.ts
 // `connectSources`). cloudflare-serve.test.ts holds how a path that is no file is answered, and
 // deploy-routes.test.ts holds `_redirects` to the route table.
@@ -31,8 +32,11 @@ const ENVIRONMENTS: [string, Environment][] = [
   ["staging", wrangler.env?.["staging"] ?? {}],
 ];
 
-/** The paths the Worker answers: crates/server's routes (apps/edge/src/routing.ts `SERVER_ROUTES`). */
-const SERVER_ROUTES = ["/api/*", "/ws/*"];
+/**
+ * The paths the Worker answers (apps/edge/src/routing.ts `WORKER_ROUTES`): crates/server's routes, and
+ * #3183's module, which the Worker serves with its `Content-Encoding` (Vite names it `jackioh_wasm_bg.wasm-<hash>.br`).
+ */
+const WORKER_ROUTES = ["/api/*", "/ws/*", "/assets/*.wasm-*.br"];
 
 describe("wrangler.jsonc", () => {
   it("has exactly the two environments, production at the top level and staging", () => {
@@ -47,13 +51,13 @@ describe("wrangler.jsonc", () => {
     }
   });
 
-  it("answers an unrouted path with public/404.html and a 404 in both environments", () => {
+  it("answers an unrouted path with the build's 404.html and a 404 in both environments", () => {
     for (const [name, environment] of ENVIRONMENTS) expect(environment.assets?.not_found_handling, name).toBe("404-page");
   });
 
-  it("runs the Worker first for exactly /api/* and /ws/* in both environments: every other path is a file, a rewrite or the 404 page", () => {
+  it("runs the Worker first for exactly /api/*, /ws/* and the compressed module in both environments: every other path is a file, a rewrite or the 404 page", () => {
     expect(wrangler.main).toBe("./apps/edge/src/index.ts");
-    for (const [name, environment] of ENVIRONMENTS) expect(environment.assets?.run_worker_first, name).toEqual(SERVER_ROUTES);
+    for (const [name, environment] of ENVIRONMENTS) expect(environment.assets?.run_worker_first, name).toEqual(WORKER_ROUTES);
   });
 
   it("serves staging only at staging.jackioh.com, behind Access: no workers.dev or preview address around it", () => {

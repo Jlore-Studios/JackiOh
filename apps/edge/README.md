@@ -9,8 +9,15 @@ One Cloudflare Worker per environment serves the whole site at one origin (`wran
 | Deployed by | `promote-production.yml`, from `production` | `deploy-staging.yml`, from `main` once its CI passes |
 | Container | `jackioh-server` | `jackioh-staging-server` |
 
-Every path but `/api/*` and `/ws/*` is a static file from `apps/web/dist`, served by Cloudflare without
-running this code (`assets.run_worker_first`), so page loads cost nothing. Those two prefixes reach
+Every path but `/api/*`, `/ws/*` and the engine's module is a static file from `apps/web/dist`, served by
+Cloudflare without running this code (`assets.run_worker_first`), so page loads cost nothing. The module
+(`/assets/*.wasm-*.br`, #3183) is stored brotli-compressed, and this Worker serves the stored file from
+the `ASSETS` binding with `Content-Encoding: br`, `Content-Type: application/wasm` and
+`encodeBody: "manual"` (`src/routing.ts` `precompressedModule`), so the browser decodes it natively and
+compiles it while it downloads. A `_headers` rule could not do it: Cloudflare's asset Worker applies
+`_headers` to a response it built without `encodeBody: "manual"`, so the runtime would compress the
+stored file again. It costs one Worker request per download of the module, which a browser then keeps
+for a year (`MODULE_CACHE_CONTROL`). Those two prefixes reach
 `src/index.ts`, which hands them to the `Server` Durable Object, which runs one container of
 `crates/server/Dockerfile`'s image (`jackioh-server release`: migrate, seed the catalog, serve). The
 custom domains and Access are `infra/cloudflare.tf`'s.

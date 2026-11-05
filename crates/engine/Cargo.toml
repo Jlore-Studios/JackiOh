@@ -11,6 +11,10 @@ default = []
 # `jackioh_engine::testkit`: scenario() and the invariant monitor (SURFACE §8). Every test crate
 # enables it as a dev-dependency feature.
 testkit = []
+# #3117: every random pool `catalog::query` returns comes back rotated `POOL_PROBE_SHIFT` places, so each
+# draw lands on its neighbour as it would after a card joined the pool (R380); a test that leans on where a
+# roll lands then fails. Implies `testkit`; `sh scripts/pool-probe.sh` runs the suites under it.
+pool-probe = ["testkit"]
 # The client's generated TypeScript types (SURFACE §5.1):
 # `cargo test -p jackioh-engine --features ts export_bindings`.
 ts = ["dep:ts-rs"]

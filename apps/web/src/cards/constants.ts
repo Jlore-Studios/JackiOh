@@ -119,6 +119,28 @@ export const OUT_OF_FRAME_SUBJECT_PCT = 115;
 export const OUT_OF_FRAME_SUBJECT_SINK_PCT = 10;
 
 /**
+ * R2944002: how far the Immersive version's near layer shifts from its rest at the pointer's or the tilt's far edge, in
+ * percent of the window, each way. Mirrored in cards.css.
+ */
+export const IMMERSIVE_SHIFT_PCT = 6;
+
+/**
+ * R2944002: how long the Immersive version's near layer takes to swell, and again to settle, in seconds: a slow breath.
+ * Mirrored in cards.css.
+ */
+export const IMMERSIVE_BREATH_S = 7;
+
+/** R2944002: how far the Immersive version's near layer swells at the top of a breath, its scale. Mirrored in cards.css. */
+export const IMMERSIVE_BREATH_SCALE = 1.04;
+
+/**
+ * R2944002: how far a device tilts, in degrees, from its rest to the Immersive version's far edge: left and right
+ * (`gamma`) from flat, and forward and back (`beta`) from IMMERSIVE_TILT_REST_DEG, the way a phone is held to be read.
+ */
+export const IMMERSIVE_TILT_RANGE_DEG = 30;
+export const IMMERSIVE_TILT_REST_DEG = 45;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim.
