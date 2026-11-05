@@ -6,7 +6,7 @@
 //! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real catalog
 //! into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002) admits each
 //! later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake
-//! and AI (B2.4) from 0015 and #3038's Starship (R3038000) from 0080 among them. The seed runs in one
+//! and AI (B2.4) from 0015 and #3038's Starship (R3038000) from 0081 among them. The seed runs in one
 //! transaction, so one such row fails the whole catalog. The first half compares the tags with the
 //! migrations' text; the second checks that the database accepts them. Both count the catalog of the
 //! sets that ship (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative,
@@ -286,8 +286,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0080_starship_tag.sql",
-            "0080 re-adds the check with #3038's Starship (R3038000), after 0070's Resource and Faction"
+            file, "0081_starship_tag.sql",
+            "0081 re-adds the check with #3038's Starship (R3038000), after 0070's Resource and Faction"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -351,7 +351,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0080_starship_tag.sql");
+        assert_eq!(file, "0081_starship_tag.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -658,7 +658,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
         }
-        // R3038000: Starship, the tag 0080 admits, is on the Stinkyscape set's one card, its Dormant
+        // R3038000: Starship, the tag 0081 admits, is on the Stinkyscape set's one card, its Dormant
         // Starship, alone.
         assert_eq!(rows_tagged("Starship"), tagged("Starship"));
         assert_eq!(tagged("Starship"), stinkyscape(1));
