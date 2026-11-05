@@ -42,7 +42,4 @@ export const INSPECT_TUNED = "inspect-tuned";
 export const INSPECT_STATES = "inspect-states";
 export const INSPECT_LOC = "inspect-loc";
 export const INSPECT_STATS = "inspect-stats";
-/** R3185000: the Statistics panel's tier chip and adjusted win rate. */
-export const INSPECT_STATS_TIER = "inspect-stats-tier";
-export const INSPECT_STATS_ADJUSTED = "inspect-stats-adjusted";
 

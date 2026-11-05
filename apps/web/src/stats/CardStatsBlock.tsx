@@ -3,7 +3,7 @@
 // as /stats prints them, and nothing else of the server's (R3185000).
 
 import { useEffect, useState, type ReactElement } from "react";
-import { INSPECT_STATS, INSPECT_STATS_ADJUSTED, INSPECT_STATS_TIER } from "../cards/inspect/testids.ts";
+import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
@@ -13,6 +13,7 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE } from "./config.ts";
 import { winPercent } from "./model.ts";
 import { usePlayerStats } from "./store.ts";
+import { statsTestid } from "./testids.ts";
 import { TierChip, adjustedText } from "./TierChip.tsx";
 
 export type CardStatsBlockProps = {
@@ -105,12 +106,12 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
         <div className="inspect-stats-metric">
           <span className="inspect-stats-metric-label">{t("Tier")}</span>
           <span className="inspect-stats-metric-value">
-            <TierChip tier={stat.hasEnoughGames ? stat.tier : null} testid={INSPECT_STATS_TIER} />
+            <TierChip tier={stat.hasEnoughGames ? stat.tier : null} testid={statsTestid.cardStatsTier} />
           </span>
         </div>
         <div className="inspect-stats-metric">
           <span className="inspect-stats-metric-label">{t("Adjusted win rate")}</span>
-          <span className="inspect-stats-metric-value" data-testid={INSPECT_STATS_ADJUSTED}>
+          <span className="inspect-stats-metric-value" data-testid={statsTestid.cardStatsAdjusted}>
             {stat.hasEnoughGames ? adjustedText(stat.adjustedWinRate) : "—"}
           </span>
         </div>

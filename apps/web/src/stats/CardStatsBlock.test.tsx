@@ -3,9 +3,10 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { INSPECT_STATS, INSPECT_STATS_ADJUSTED, INSPECT_STATS_TIER } from "../cards/inspect/testids.ts";
+import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { CardStatsBlock } from "./CardStatsBlock.tsx";
+import { statsTestid } from "./testids.ts";
 
 const SLOW = { timeout: 10_000 } as const;
 
@@ -82,10 +83,10 @@ describe("R3185000 CardStatsBlock", () => {
       ["Play rate", "50%"],
     ]);
     // The tier is /stats' chip.
-    const chip = screen.getByTestId(INSPECT_STATS_TIER);
+    const chip = screen.getByTestId(statsTestid.cardStatsTier);
     expect(chip).toHaveClass("stats-tier");
     expect(chip).toHaveAttribute("data-tier", "A");
-    expect(screen.getByTestId(INSPECT_STATS_ADJUSTED)).toHaveTextContent("56.1%");
+    expect(screen.getByTestId(statsTestid.cardStatsAdjusted)).toHaveTextContent("56.1%");
     for (const gone of ["When drawn", "Drawn vs not drawn", "not enough data"]) {
       expect(screen.queryByText(gone)).toBeNull();
     }
@@ -137,9 +138,9 @@ describe("R3185000 CardStatsBlock", () => {
     render(<CardStatsBlock cardId="core-001" />);
 
     await screen.findByText("Adjusted win rate", undefined, SLOW);
-    expect(screen.getByTestId(INSPECT_STATS_TIER)).toHaveTextContent("—");
-    expect(screen.getByTestId(INSPECT_STATS_TIER)).not.toHaveClass("stats-tier");
-    expect(screen.getByTestId(INSPECT_STATS_ADJUSTED)).toHaveTextContent("—");
+    expect(screen.getByTestId(statsTestid.cardStatsTier)).toHaveTextContent("—");
+    expect(screen.getByTestId(statsTestid.cardStatsTier)).not.toHaveClass("stats-tier");
+    expect(screen.getByTestId(statsTestid.cardStatsAdjusted)).toHaveTextContent("—");
     expect(screen.getByText("60%")).toBeInTheDocument();
   });
 });
