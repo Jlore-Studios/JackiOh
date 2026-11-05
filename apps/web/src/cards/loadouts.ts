@@ -7,6 +7,8 @@
 // R1834004: the server checked every pick against the seat's own account (R1834001), so nothing here
 // asks whether the viewer owns it; game/wearer.ts decides which copies wear one. Drawn state only
 // (CLAUDE.md rule 7): no loadout reaches the engine, an action or the view.
+// R3013002: a `cardLoadouts` payload also carries the proficiency stamps of the cards it lists that wear one
+// (`stamps`, left out when none does), frozen with the seat's loadout and sent by the same rule (stamps.ts).
 
 import { createElement, type ReactElement, type ReactNode } from "react";
 
@@ -23,15 +25,19 @@ import {
   type CardPicks,
   type CosmeticKind,
 } from "./cosmetics.ts";
+import { isStampLevel } from "./stamps.ts";
 
-/** R1834002: one seat's loadout: its six picks, and the picks of each card of its the server has sent, by card id. */
-export type SeatLoadout = { seat: CardCosmetics; cards: Readonly<Record<string, CardPicks>> };
+/**
+ * R1834002: one seat's loadout: its six picks, and the picks of each card of its the server has sent, by card id.
+ * R3013002: and the stamp of each such card that wears one, by card id.
+ */
+export type SeatLoadout = { seat: CardCosmetics; cards: Readonly<Record<string, CardPicks>>; stamps?: Readonly<Record<string, number>> };
 
 /** R1834002: both seats' loadouts, by engine seat. */
 export type SeatLoadouts = Readonly<Record<PlayerId, SeatLoadout>>;
 
-/** R1834003: one `cardLoadouts` payload: the picks of cards owned by `seat`, by card id. */
-export type CardLoadouts = { seat: PlayerId; cards: Readonly<Record<string, CardPicks>> };
+/** R1834003: one `cardLoadouts` payload: the picks of cards owned by `seat`, by card id; R3013002: and their stamps. */
+export type CardLoadouts = { seat: PlayerId; cards: Readonly<Record<string, CardPicks>>; stamps?: Readonly<Record<string, number>> };
 
 /** Every kind's default, for a seat a replay from before R1834002 names nothing of. */
 const DEFAULT_SEAT: CardCosmetics = Object.freeze({ ...DEFAULT_CARD_COSMETICS });
@@ -77,19 +83,28 @@ function cardPicksOf(raw: Record<string, unknown>): CardPicks {
   return out;
 }
 
-/** R1834003: a `cardLoadouts` payload, or null when its seat or its list is malformed; an entry with no card id is skipped. */
+/**
+ * R1834003: a `cardLoadouts` payload, or null when its seat or its list is malformed; an entry with no card id is
+ * skipped. R3013002: its `stamps`, when it has them, each a card id and a stamp of `1..PROFICIENCY_LEVELS`; any
+ * other entry is skipped.
+ */
 export function parseCardLoadouts(raw: unknown): CardLoadouts | null {
   if (!isRecord(raw) || !isSeat(raw.seat) || !Array.isArray(raw.cards)) return null;
   const cards: Record<string, CardPicks> = {};
   for (const entry of raw.cards as unknown[]) {
     if (isRecord(entry) && typeof entry.cardId === "string") cards[entry.cardId] = cardPicksOf(entry);
   }
-  return { seat: raw.seat, cards };
+  const stamps: Record<string, number> = {};
+  for (const entry of Array.isArray(raw.stamps) ? (raw.stamps as unknown[]) : []) {
+    if (isRecord(entry) && typeof entry.cardId === "string" && isStampLevel(entry.stamp)) stamps[entry.cardId] = entry.stamp;
+  }
+  return Object.keys(stamps).length > 0 ? { seat: raw.seat, cards, stamps } : { seat: raw.seat, cards };
 }
 
 /**
  * R1834003: what one socket, or one replay's pages, have sent so far: the seats' picks, the newest
- * standing, and every card's picks merged by seat and card id, a card sent again replacing its entry. A
+ * standing, and every card's picks merged by seat and card id, a card sent again replacing its entry (R3013002: its
+ * stamp too). A
  * `cardLoadouts` before any `loadouts` is kept for it. Each verb answers what `current()` then holds,
  * null until the seats' picks have come.
  */
@@ -107,14 +122,19 @@ export type LoadoutsHolder = {
 export function createLoadoutsHolder(): LoadoutsHolder {
   let seats: Record<PlayerId, CardCosmetics> | null = null;
   const cards: Record<PlayerId, Readonly<Record<string, CardPicks>>> = { p1: {}, p2: {} };
+  const stamps: Record<PlayerId, Readonly<Record<string, number>>> = { p1: {}, p2: {} };
   let held: SeatLoadouts | null = null;
+  /** One seat's loadout, with its stamps only once any has come, so a loadout without one keeps its shape. */
+  const seatOf = (seat: PlayerId, picks: CardCosmetics): SeatLoadout =>
+    Object.keys(stamps[seat]).length > 0 ? { seat: picks, cards: cards[seat], stamps: stamps[seat] } : { seat: picks, cards: cards[seat] };
   const build = (picks: Record<PlayerId, CardCosmetics>): SeatLoadouts => {
     seats = picks;
-    held = { p1: { seat: picks.p1, cards: cards.p1 }, p2: { seat: picks.p2, cards: cards.p2 } };
+    held = { p1: seatOf("p1", picks.p1), p2: seatOf("p2", picks.p2) };
     return held;
   };
   const merge = (update: CardLoadouts): void => {
     cards[update.seat] = { ...cards[update.seat], ...update.cards };
+    if (update.stamps !== undefined) stamps[update.seat] = { ...stamps[update.seat], ...update.stamps };
   };
   return {
     seats: build,

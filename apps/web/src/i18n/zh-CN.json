@@ -4198,8 +4198,22 @@
   "Extended art": "延伸画",
   "Pixel": "像素",
   "Comic": "漫画",
+  "Level {level} stamp": "{level} 级印章",
+  "Proficiency": "熟练度",
+  "Top level reached.": "已达到最高熟练等级。",
+  "Progress to the next level": "距下一级的进度",
+  "{plays} of {needed} plays to the next level": "已打出 {plays} 次，共需 {needed} 次升到下一级",
+  "Stamps": "印章",
+  "No stamp": "不用印章",
+  "Unlocks at level {level}": "{level} 级解锁",
   "Play today's deal": "开始今日牌局",
   "Everyone gets the same decks today at the same difficulty and “More cards from” pick. A new deal comes at midnight UTC. It earns no Jlore or XP.": "今天在相同难度和“更多牌来自”选择下，所有人拿到相同的卡组。UTC 午夜换新牌局。本局不会获得 Jlore 或经验。",
   "Set showcase": "系列珍藏",
-  "Out of frame": "破框"
+  "Out of frame": "破框",
+  "Queue for a match.": "排队匹配一局。",
+  "Play the AI.": "与 AI 对战。",
+  "Read every card.": "查看每一张卡牌。",
+  "Hear {name}": "聆听{name}",
+  "Ways out": "出路",
+  "Pick a card, any card.": "随便抽一张牌。"
 }

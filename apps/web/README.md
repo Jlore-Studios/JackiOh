@@ -94,6 +94,15 @@ wood (`auth/tavern.css`); both are drawn only once the panel shows, so a short w
 `empty/EmptyState.tsx`: the tankard, the words with the old testid, and an optional `action` (`to`
 for a link, `onPress` for a button). The ruling lists what stays text.
 
+The 404 is a small game (R3119000, #3119). `main.tsx`'s `NotFound` keeps its words, its `not-found` and
+`not-found-home` testids and its shell panel, and adds `notfound/NotFoundPlay.tsx`: `GlitchPath` names the path in
+Glitch's glyphs (`cards/glitch.ts`), seeded by the path, settling one character at a time while the element's text
+stays the path; `NotFoundPlay` draws the lost card `notfound/lost.ts` picks by a hash of the path, which says its
+voice line through the audio engine when tapped, beside three face-down `CardBack`s that turn over into
+`ChoiceCard`s for Play, Practice and the Almanac (a tap turns one over and the next follows it; a mouse over it or
+keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. `public/404.html`, which
+Cloudflare serves for a path nothing routes, fans three of the brand's card backs into 4, 0 and 4 in CSS alone.
+
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
 reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic
@@ -493,7 +502,12 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
-                        the collection is read again;
+                        the collection is read again. An owned card's view also shows its proficiency
+                        (collection/ProficiencyPanel.tsx, §14.14, R3013001): its level, its plays to the
+                        next on serverConfig.ts's curve and a picker of its stamps, a locked one with the
+                        level it needs; the account's copy is cards/stamps.ts's, loaded and each pick sent
+                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp), and
+                        the faces wear the pick (R3013002);
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;

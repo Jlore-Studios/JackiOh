@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0081: the Starship tag (SPEC §5, §8.10, issue #3038)
+-- Migration 0082: the Starship tag (SPEC §5, §8.10, issue #3038)
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and issue #3038 (R3038000), which makes Starship a
 -- tag, and a card holding it has Flying and Ranged. It adds the tag to one
@@ -24,7 +24,7 @@
 -- point at (0002's comment on the table). No existing row is rewritten. Every
 -- row 0070 admitted, this check admits too.
 --
--- Apply order: 0002 (`public.cards`) -> ... -> 0070 -> ... -> 0079 -> 0080 -> 0081
+-- Apply order: 0002 (`public.cards`) -> ... -> 0070 -> ... -> 0080 -> 0081 -> 0082
 -- (this file). Safe to re-apply: drop-constraint-if-exists-then-add, as 0070
 -- does.
 -- ============================================================================
@@ -56,7 +56,7 @@ comment on constraint cards_tags_check on public.cards is
   Catalyst, Prime and Acclaimed, 0030 with Wincon, 0043 with Potion, 0058
   with Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean, 0065 with
   Drone Core, Weapon, War Doctrine and Swarm, 0069 with Legacy, 0070 with
-  Resource and Faction, 0081 with Starship.$$;
+  Resource and Faction, 0082 with Starship.$$;
 
 -- ----------------------------------------------------------------------------
 -- Grants: nothing changes. public.cards keeps 0002's grants and policies.

@@ -65,4 +65,13 @@ describe("public/404.html", () => {
     expect(page).not.toMatch(/<script/u);
     expect(page).toContain('<meta name="robots" content="noindex" />');
   });
+
+  it("R3119000 deals the brand's card backs into 4, 0 and 4 in CSS alone, and stills them under reduced motion", () => {
+    const page = readFileSync(join(PUBLIC, "404.html"), "utf8");
+    expect(page).toContain('url("/brand/jackioh-card-back.svg")');
+    const ranks = [...page.matchAll(/<span class="rank">(\d)<\/span>/gu)].map((match) => match[1]);
+    expect(ranks).toEqual(["4", "0", "4"]);
+    expect(page).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none;/u);
+    expect(page).not.toMatch(/<script/u);
+  });
 });

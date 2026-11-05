@@ -171,6 +171,8 @@ async fn pay_coop(
                     attacks,
                     ..GameTally::default()
                 },
+                // R3013000: the co-op log is not folded, so no play is counted.
+                proficiency: Vec::new(),
             },
         )
         .await?;
