@@ -6,7 +6,8 @@
 //! (R1012001), mapped back onto the hand eval's points (D4's skip connection, `Network::points`), so
 //! `unspent_mana`, the lethal constants and a ladder bot's `temperature` (R1452) keep their meaning.
 //! 1v1 only: a Duos duel keeps the hand eval (D9, R964000), since the network never saw a team's pool,
-//! and so does the tutorial's opponent (R1012003), whose lessons are scripts written for it. The float
+//! and so does the tutorial's opponent (R1012003), whose lessons are scripts written for it, and so does a
+//! decision whose root holds a Starship (R3038003), which the network never saw. The float
 //! network is `f64`, every loop in one fixed order, ReLU written as comparisons and no libm function:
 //! the determinism the hand eval's own `f64` rests on (D7). A feature key the weights' table lacks is
 //! no input, so a new or custom card (#915) is valued by its dense stats alone (D5).
@@ -259,10 +260,13 @@ pub fn finalist_score_with(
         EvalKind::Hand => hand,
         EvalKind::Learned => {
             // R1012003: the tutorial's opponent (R290) plays a game the network never saw, at 3 mana
-            // with a 12-card deck, as a Duos duel is one (D9).
+            // with a 12-card deck, as a Duos duel is one (D9). R3038003: so is a decision that holds a
+            // Starship, which the hand eval prices by what it leaves (R2566000) and the network, fitted
+            // before the set, reads as any unit and its spent mana: every line of the decision alike.
             if state.result.is_some()
                 || state.players[seat].duos.is_some()
                 || is_tutorial_opponent(state.players[seat].handicap)
+                || prices.starship_root
             {
                 return hand;
             }

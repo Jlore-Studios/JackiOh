@@ -641,3 +641,72 @@ fn r2687000_decide_plays_comet_crash_and_bauble_bubble_when_nothing_else_is_wort
         }
     }
 }
+
+/// R3038003: the root of the removal test holds a Starship Piece, so a finalist is scored by the hand eval
+/// in every determinization, and the hand eval keeps the vanilla kill above the piece kill by the margin
+/// R2566000's price gives it, whatever the network, fitted before any Starship, would add to either.
+#[test]
+fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_above_the_piece_kill() {
+    register_cards();
+    let library = json!([VANILLA, VANILLA, VANILLA, VANILLA]);
+    for (at, enemy) in [
+        ("piece-first", json!([AFTER_BURNER, vanilla_four_eight()])),
+        ("vanilla-first", json!([vanilla_four_eight(), AFTER_BURNER])),
+    ] {
+        let seed = format!("ai-piece-removal-{at}");
+        let state = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [HIT_JOB], "field": [], "library": library, "mana": 3 },
+            "p2": { "hand": [VANILLA], "field": enemy, "library": library },
+        }))
+        .state()
+        .clone();
+        let public = redact(&state, AI);
+        assert!(
+            holds_starship(&public, AI),
+            "{at}: the enemy's piece is on its field"
+        );
+        let ground = det_ground(&public, AI);
+        let probe = determinize_on(
+            &public,
+            AI,
+            &mut Rng::new(AI_SEARCH.probe_seed, 0),
+            DeterminizeOptions::default(),
+            &ground,
+        );
+        let counter = create_node_counter(AI_BUDGET.nodes * 100, None);
+        let prices = Prices {
+            deaths: death_prices(&probe, AI, &counter),
+            starship_root: holds_starship(&public, AI),
+            ..Prices::default()
+        };
+        let mut rng = create_rng(&seed, 0);
+        let worlds: Vec<GameState> = (0..AI_BUDGET.determinizations)
+            .map(|_| determinize_on(&public, AI, &mut rng, DeterminizeOptions::default(), &ground))
+            .collect();
+        let lines = beam_search(&worlds[0], AI, &counter, AI_BUDGET, &prices);
+        let aimed_at = |target: &str| {
+            let id = unit(&worlds[0], HUMAN, target).id.clone();
+            lines
+                .iter()
+                .find(|line| {
+                    matches!(&line.actions[0], ActionBody::Play { targets: Some(targets), .. }
+                        if targets.first() == Some(&Selection::Instance { instance_id: id.clone() }))
+                })
+                .unwrap_or_else(|| panic!("{at}: a line destroys the {target}"))
+        };
+        let (piece, vanilla) = (aimed_at(AFTER_BURNER), aimed_at(VANILLA));
+        for (k, world) in worlds.iter().enumerate() {
+            let hidden = hidden_card_ids(world, AI);
+            let score = |line: &Line| {
+                score_line(world, AI, &line.actions, &counter, true, Some(&hidden), &prices)
+                    .expect("the counter has nodes left")
+            };
+            let (piece_kill, vanilla_kill) = (score(piece), score(vanilla));
+            assert!(
+                vanilla_kill > piece_kill,
+                "{at}, determinization {k}: the vanilla kill {vanilla_kill} against the piece kill {piece_kill}"
+            );
+        }
+    }
+}
