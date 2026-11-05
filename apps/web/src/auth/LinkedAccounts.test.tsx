@@ -88,7 +88,10 @@ describe("R3025000 linking on the account screen", () => {
       expect(screen.getByTestId(linkedTestid.notice)).toBeInTheDocument();
     });
     expect(calls.find((call) => call.method === "DELETE")?.url.pathname).toBe("/auth/v1/user/identities/id-google");
-    expect(calls.filter((call) => call.method === "GET")).toHaveLength(2);
+    // The list is read again by the effect after the render that shows the notice, so it can come a tick later.
+    await waitFor(() => {
+      expect(calls.filter((call) => call.method === "GET")).toHaveLength(2);
+    });
   });
 
   it("R3025000 the account's only way in is never offered for removal", async () => {
