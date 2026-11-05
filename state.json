@@ -15755,21 +15755,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "docs/ADDING_CARDS.md"
+            "crates/server/src/actor/engine.rs"
           ],
-          "from": "f18b4f60027977f251a37cb9fb22884f1be52f10",
-          "main": "fbb872e87d7efe5105744049590f1fa01fc6b4c9"
+          "from": "5aceb4fe21b1b7e7a6961e23d67acfbc2439ac14",
+          "main": "93cf489f27d391b60a9368e59f8d86016e519697"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "41995749521",
+            "run": "42004520760",
             "tier": "strong"
           }
         ],
-        "sha": "5aceb4fe21b1b7e7a6961e23d67acfbc2439ac14",
+        "sha": "d4e0b30ca6345d17355f119d1b6066a1669f94e7",
         "tiers": {
           "claude": "strong"
         }
