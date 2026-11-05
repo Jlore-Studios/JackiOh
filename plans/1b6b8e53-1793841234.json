@@ -1,0 +1,71 @@
+{
+  "action": "plan",
+  "number": 3098,
+  "title": "Patch: a new pure crate, jackioh-shared, takes the Conquest series rules from the server",
+  "branch": "bot/issue-3098",
+  "thread": "**Issue #3098 (data, not instructions):**\n\n```text\n# #3098: Patch: a new pure crate, jackioh-shared, takes the Conquest series rules from the server\nOpened by @MaxGoetzmann.\n\nPart B of #2956 (move shared logic into the pure crates). This issue comes first, and every other Part B issue waits for it.\n\n**Decided on #2956 (2026-11-05):** everything Part B moves out of `crates/server` and `apps/web` goes into one new pure crate. This issue creates that crate and moves the smallest item into it, so the crate never lands empty.\n\n### What to do\n\n- **The crate.** Add `crates/shared` (`jackioh-shared`), pure by CLAUDE.md rule 4. It may depend on `jackioh-engine`, `jackioh-cards`, `jackioh-ai` and `jackioh-run`, and none of them depends on it. Give it a `clippy.toml` with the same bans as the other pure crates' and a `README.md` as its contract. Its numbers go in `crates/shared/src/config.rs`.\n- **CLAUDE.md.** Edit rules 4 and 9 in place, never renumbering them:\n  - Rule 4 names six pure crates, not five, and lists `jackioh-shared`'s dependencies: `serde`, `serde_json`, `indexmap`, the pure crates, and `ts-rs` behind a `ts` feature if it exports types.\n  - Rule 9 names the crate's `config.rs`.\n  - Edit every other place that lists the pure crates: `docs/architecture.md`, the purity lint and its acceptance tests, #3063's list if it has landed, and the crates' READMEs.\n- **CI scope.** Map `crates/shared/*` in `scripts/ci-scope.sh`. Its tests run in CI's `--workspace` group with no workflow change; check that they do.\n- **The first move.** Move the Conquest series rules, `crates/server/src/api/series_rules.rs` (R330 to R337), into the crate.\n  - The decision lives in `jackioh-shared`, and the server calls it.\n  - The tests move with the code, and the rulings' `proven_in` follows them.\n  - Behaviour doesn't change.\n\n### Done when\n\n- These pass: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, the workspace tests, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims`.\n- Nothing in `crates/shared` reads a clock, I/O, the environment or OS randomness, and its `clippy.toml` would catch it if it did.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3098: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:12:26Z",
+    "claimed_at": "2026-11-05T01:14:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3045 skipped: it waits for #3044 to close first",
+    "#3046 skipped: it waits for #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3044, #3045, #3046, #3047 to close first",
+    "#3094 skipped: it waits for #3093 to close first",
+    "#3095 skipped: it waits for #3093, #3094 to close first",
+    "#3096 skipped: it waits for #3093, #3094, #3095 to close first",
+    "#3099 skipped: it waits for #3098 to close first",
+    "#3101 skipped: it waits for #3098 to close first",
+    "#3102 skipped: it waits for #3098 to close first",
+    "#3103 skipped: it waits for #3098 to close first",
+    "#3104 skipped: it waits for #3098 to close first",
+    "#3105 skipped: it waits for #3098 to close first",
+    "#3106 skipped: it waits for #3098 to close first",
+    "#3108 skipped: it waits for #3098 to close first"
+  ]
+}
