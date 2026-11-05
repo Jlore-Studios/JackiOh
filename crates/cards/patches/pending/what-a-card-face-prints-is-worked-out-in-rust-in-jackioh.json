@@ -1,0 +1,17 @@
+{
+  "title": "Patch: what a card face prints is worked out in Rust, in jackioh-shared, and the web reads it through wasm",
+  "sources": "#3106",
+  "notes": "The text, marks, numbers, terms, references and badges a card face prints are now worked out by the engine's shared Rust crate and read by the web through the WebAssembly module, instead of by the web's own code. Faces read exactly as before, in English and Chinese: how cards look only, nothing plays differently.",
+  "player": {
+    "title": "Card faces worked out in one place",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Card faces are now worked out by the game's own rules code instead of the website's, so a card reads the same on every screen. Nothing about how cards read or play changes."
+    ],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
