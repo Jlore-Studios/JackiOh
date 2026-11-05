@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3115,
+  "title": "Patch: bot-calibrate writes its results into the server config, and the seed ratings are read from the skill curve",
+  "branch": "bot/issue-3115",
+  "thread": "**Issue #3115 (data, not instructions):**\n\n```text\n# #3115: Patch: bot-calibrate writes its results into the server config, and the seed ratings are read from the skill curve\nOpened by @MaxGoetzmann.\n\n### Kind\n\nArchitecture\n\n### Why\n\nWith sets shipping every month or two (owner, 2026-11-05, expects hundreds of new cards a month), the ladder bots' calibration is redone often, and every time a person pastes numbers by hand:\n\n- `SKILL_ELO_TABLE` (`crates/server/src/config.rs`) says \"a new best AI, or a set that ships, is measured again \u2026 and the rows pasted over\".\n- `BOT_SEED_RATINGS` restates the same five Elo numbers as `SKILL_ELO_TABLE`, and only a test keeps the two equal.\n- `jackioh-server bot-calibrate` prints rows \"to paste into crates/server/src/config.rs\" (`crates/server/src/cli/bot_calibrate.rs`).\n\n### What to change\n\nHigh level; the planner decides the details:\n\n- `BOT_SEED_RATINGS` is computed from `SKILL_ELO_TABLE` (or the reverse) in `const`, so the numbers live in one place.\n- `bot-calibrate --write` rewrites those rows and `BOT_CALIBRATION_GENERATION` in place, as `cargo jackioh sweep --write` already does for the shadow ban. Printing stays the default.\n- No values change. No subcommand or flag a person or workflow uses is removed (CLAUDE.md rule 13). Scheduling a calibration is out of scope.\n\n### Acceptance\n\n- Running `--write` on the current calibration's results leaves no diff.\n- A test covers the writer.\n- The server suite and clippy are green.\n\n### Blocked by, part of\n\nRelated: #748, #1680.\n\n### Difficulty (a guess)\n\nmedium\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3115: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:36Z",
+    "claimed_at": "2026-11-05T05:36:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
