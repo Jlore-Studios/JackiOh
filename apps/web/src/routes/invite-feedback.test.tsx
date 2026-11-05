@@ -1124,3 +1124,117 @@ describe("'Check again' on an unconfirmed email answers", () => {
     }
   });
 });
+
+// R3147000: Roblox names no address, so a Roblox sign-up reaches this screen with none.
+
+describe("R3147001 an account with no email address adds one before its code", () => {
+  function noAddressMe() {
+    return { ...meBody("pending", true), emailVerified: false, email: null };
+  }
+
+  /** The auth provider: an email change is taken (and its address recorded); anything else waits. */
+  function providerStub(): { url: string; auth: string | null; body: unknown }[] {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    const sent: { url: string; auth: string | null; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (url.pathname === "/auth/v1/user" && (init?.method ?? "GET").toUpperCase() === "PUT") {
+          sent.push({
+            url: url.toString(),
+            auth: new Headers(init?.headers).get("authorization"),
+            body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+          });
+          return Promise.resolve(Response.json({ id: "user-1" }));
+        }
+        return new Promise<Response>(() => {});
+      }),
+    );
+    return sent;
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("R3147001 asks for an address where a confirmation would be, sends it as an email change, and checks again", async () => {
+    const sent = providerStub();
+    vi.mocked(getMe).mockResolvedValue(noAddressMe());
+    await mount();
+
+    const panel = await screen.findByTestId(inviteTestid.addEmail);
+    expect(panel).toHaveTextContent("This account has no email address yet.");
+    // There is no address to resend a confirmation to.
+    expect(screen.queryByTestId(inviteTestid.resend)).toBeNull();
+    expect(screen.getByTestId(inviteTestid.accountEmail)).toHaveTextContent("an account with no email address");
+
+    fireEvent.change(screen.getByTestId("settings-email-input"), { target: { value: " new@example.test " } });
+    fireEvent.submit(screen.getByTestId("settings-email"));
+    expect(await screen.findByTestId("settings-email-sent")).toHaveTextContent(
+      "We emailed a confirmation link to new@example.test. Open it, then press Check again here.",
+    );
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toMatchObject({ email: "new@example.test" });
+    expect(sent[0]?.auth).toBe(`Bearer ${TOKEN}`);
+    expect(new URL(sent[0]?.url ?? "").searchParams.get("redirect_to")).toBe(`${window.location.origin}/login`);
+
+    // The link was opened: the server now reads a confirmed address.
+    vi.mocked(getMe).mockResolvedValue({ ...meBody("pending", true), email: "new@example.test" });
+    fireEvent.click(screen.getByTestId(inviteTestid.checkAgain));
+    await waitFor(() => {
+      expect(screen.queryByTestId(inviteTestid.unverified)).toBeNull();
+    });
+  });
+
+  it("R3147001 an account with an address is asked to confirm it, as before", async () => {
+    providerStub();
+    vi.mocked(getMe).mockResolvedValue({ ...meBody("pending", true), emailVerified: false });
+    await mount();
+    await screen.findByTestId(inviteTestid.unverified);
+    expect(screen.queryByTestId(inviteTestid.addEmail)).toBeNull();
+    expect(screen.getByTestId(inviteTestid.resend)).toBeInTheDocument();
+  });
+});
+
+describe("R3147002 the code screen offers a new account's way back to an older one", () => {
+  function base64url(text: string): string {
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function tokenFor(provider: string): string {
+    const claims = { sub: "user-1", app_metadata: { provider } };
+    return `${base64url(JSON.stringify({ alg: "none" }))}.${base64url(JSON.stringify(claims))}.sig`;
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("R3147002 shows it to a pending account that signed up with Roblox, and not to one that signed up by email", async () => {
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: tokenFor("custom:roblox") }));
+    vi.mocked(getMe).mockResolvedValue({ ...meBody("pending", true), emailVerified: false, email: null });
+    await mount();
+    expect(screen.getByTestId("move-to-existing-open")).toHaveTextContent("Already have a JackiOh account?");
+    cleanup();
+
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: tokenFor("email") }));
+    await mount();
+    expect(screen.queryByTestId("move-to-existing")).toBeNull();
+  });
+
+  it("R3147002 an active account is not offered it", async () => {
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: tokenFor("custom:roblox") }));
+    vi.mocked(getMe).mockResolvedValue(meBody("active", false));
+    render(<InviteRoute />);
+    await screen.findByTestId(inviteTestid.notNeeded);
+    expect(screen.queryByTestId("move-to-existing")).toBeNull();
+  });
+});

@@ -7,6 +7,7 @@ import { AUTH_MESSAGES, startIdentityLink } from "../net/auth.ts";
 import { settle } from "../test/settle.ts";
 import LinkedAccounts, { linkedTestid } from "./LinkedAccounts.tsx";
 import { holdLinkResult } from "./redirect.ts";
+import { linkAfterSignIn, rememberLinkAfterSignIn } from "../net/session.ts";
 
 vi.mock("../net/auth.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../net/auth.ts")>()),
@@ -47,6 +48,7 @@ beforeEach(() => {
   vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google");
   vi.mocked(startIdentityLink).mockClear();
   window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -113,5 +115,59 @@ describe("R3025000 linking on the account screen", () => {
     render(<LinkedAccounts token={TOKEN} />);
     expect(screen.queryByTestId(linkedTestid.notice)).toBeNull();
     expect(screen.queryByTestId(linkedTestid.error)).toBeNull();
+  });
+});
+
+describe("R3147000 Roblox among the ways to sign in", () => {
+  it("R3147000 lists Roblox, linked by its custom provider's name, and links it with this session", async () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    serve([
+      { identity_id: "id-email", provider: "email" },
+      { identity_id: "id-roblox", provider: "custom:roblox" },
+    ]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    expect(row("custom:roblox")).toHaveAttribute("data-linked", "true");
+    expect(row("custom:roblox")).toHaveTextContent("Roblox: linked. You can sign in with it.");
+    expect(row("google")).toHaveAttribute("data-linked", "false");
+    cleanup();
+
+    serve([{ identity_id: "id-email", provider: "email" }]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    const link = screen.getAllByTestId(linkedTestid.link).find((button) => button.getAttribute("data-provider") === "custom:roblox");
+    expect(link).toHaveTextContent("Link Roblox");
+    fireEvent.click(link as HTMLElement);
+    expect(startIdentityLink).toHaveBeenCalledWith("custom:roblox", TOKEN);
+  });
+});
+
+describe("R3147002 linking the provider of a removed new account", () => {
+  it("R3147002 says once which provider to link to finish, until it is linked", async () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    rememberLinkAfterSignIn("custom:roblox");
+    serve([{ identity_id: "id-email", provider: "email" }]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    expect(screen.getByTestId(linkedTestid.moving)).toHaveTextContent("Link Roblox below to finish");
+    expect(linkAfterSignIn()).toBeNull();
+    cleanup();
+
+    // Said once: a reload of `/account` does not say it again.
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    expect(screen.queryByTestId(linkedTestid.moving)).toBeNull();
+  });
+
+  it("R3147002 says nothing once the provider is linked here already", async () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+    rememberLinkAfterSignIn("custom:roblox");
+    serve([
+      { identity_id: "id-email", provider: "email" },
+      { identity_id: "id-roblox", provider: "custom:roblox" },
+    ]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    expect(screen.queryByTestId(linkedTestid.moving)).toBeNull();
   });
 });

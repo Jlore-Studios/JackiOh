@@ -514,7 +514,7 @@ public by construction; anything without that prefix must never appear in a clie
 | `VITE_SERVER_HTTP_URL` | `https://jackioh.com` | the site's own origin: its Worker hands `/api/*` and `/ws/*` to the server (§4.2) |
 | `VITE_SERVER_WS_URL` | `wss://jackioh.com/ws/match` | same host, WebSocket path |
 | `VITE_SITE_ORIGIN` | `https://jackioh.com` | #696: the host the bundle is served from, named by its canonical links, sitemap and robots.txt; `apps/web/.env.production` for production, `apps/web/.env.staging` for staging; unset, `SITE_ORIGIN` |
-| `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
+| `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch, and `custom:roblox`, R3147000). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
 | `VITE_GOOGLE_CLIENT_ID` | optional, `<digits>-<id>.apps.googleusercontent.com` | R2983000: the Google web client ID listed under Client IDs in the Supabase project's Google provider. Set, with `google` in `VITE_AUTH_OAUTH_PROVIDERS`, `/login` draws Google's own button, which signs in on the site's origin by ID token; unset (or when Google's script is blocked), Google signs in through R666's redirect. Public; its `GOCSPX-…` secret stays in Supabase (§10, step 2) |
 
 The client's catalog version is not a variable: the bundle reads it from
@@ -678,6 +678,16 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
+   - **Roblox (R3147000),** a custom OIDC provider, since Supabase has no built-in one: at
+     create.roblox.com → Creations → OAuth 2.0 Apps, an app with the scopes `openid` and `profile`
+     and the redirect URL `https://<ref>.supabase.co/auth/v1/callback` (each project's own); then
+     Auth → Sign In / Providers → Custom Providers → a new OIDC provider with the identifier
+     `custom:roblox` exactly (the client sends that name, and it cannot be changed later), the issuer
+     `https://apis.roblox.com/oauth/`, the app's client id and secret, and the scopes `openid profile`.
+     Roblox gives third-party apps no email address, so its sign-in never matches an account by one:
+     a Roblox sign-up is a new pending account with no address, which adds one on the code screen
+     (R3147001), and a player who already has an account links Roblox from `/account` (R3147002).
+     Both projects have it (#3147).
    - **Google's own button (R2983000).** So that Google's sign-in screen names the site
      (`jackioh.com`, `staging.jackioh.com`) rather than `<ref>.supabase.co`: on the Google Cloud OAuth
      client each project already uses for Google, add the site's address (`https://jackioh.com`,
