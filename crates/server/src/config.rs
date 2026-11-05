@@ -1118,9 +1118,15 @@ pub const FRIEND_REQUESTS_PER_HOUR: usize = 20;
 pub const MAX_FRIENDS: i64 = 200;
 /// B47: a friend is online while their last heartbeat is at most this old.
 pub const PRESENCE_TTL_MS: i64 = 90_000;
-/// B47: how often a signed-in client sends `POST /api/presence`: half the TTL, so one lost beat
-/// never shows a friend offline.
+/// B47, R3210000: how long a signed-in client goes with no signed-in request before it sends
+/// `POST /api/presence`: half the TTL, so one lost beat never shows a friend offline.
 pub const PRESENCE_HEARTBEAT_MS: i64 = 45_000;
+/// R3210000: the least time between two writes of one account's presence row by the router's touch,
+/// which every signed-in request makes. A client sends something at least every PRESENCE_HEARTBEAT_MS,
+/// so two writes are at most this plus a heartbeat apart, under PRESENCE_TTL_MS: a friend never
+/// flickers offline.
+pub const PRESENCE_TOUCH_EVERY_MS: i64 = 30_000;
+const _: () = assert!(PRESENCE_TOUCH_EVERY_MS + PRESENCE_HEARTBEAT_MS < PRESENCE_TTL_MS);
 /// B49: how long a challenge, and the room it opened, stays open unanswered.
 pub const CHALLENGE_TTL_MS: i64 = 120_000;
 /// B50: how far behind the live game a watcher's view runs. Five seconds keeps each view

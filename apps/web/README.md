@@ -667,18 +667,20 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
                          of FriendRows.tsx, shared with /together) and a link to /together; the friends
                          list is read only while the panel is open, ChatPanel and ChallengeDialog open
                          from it without leaving the screen
-together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts) the toast,
+together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
+                         GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
                          hidden unless a challenge of the player's is open, R3205000)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden
-together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenges (socialPoll.ts) while signed in and
+together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
                          refused join offers Open in lobby, /play with the room code filled in (R767);
                          Decline declines
-together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
+together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
+                         no signed-in request (onSignedInRequest, R3210000)
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          offer its link, invite a friend by sending the link in chat, join by code or by
                          a co-op link that fills the join form and focuses Join (R2094000); both players

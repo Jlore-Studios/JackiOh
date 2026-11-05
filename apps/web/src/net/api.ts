@@ -121,11 +121,25 @@ function errorBodyOf(value: unknown, status: number): ApiErrorBody {
   return { code: "internal", message: `the server answered ${String(status)}` };
 }
 
+const signedInListeners = new Set<() => void>();
+
+/**
+ * R3210000: hears every request that carries a token as it goes out; the server counts each as presence
+ * (`together/presence.ts`). Answers the function that stops hearing.
+ */
+export function onSignedInRequest(listener: () => void): () => void {
+  signedInListeners.add(listener);
+  return () => {
+    signedInListeners.delete(listener);
+  };
+}
+
 /** One request: the parsed body on 2xx, else `ApiRequestError`, so no caller checks `response.ok`. */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.token !== undefined && options.token !== null && options.token.length > 0) {
     headers.authorization = `Bearer ${options.token}`;
+    for (const listener of signedInListeners) listener();
   }
   if (options.body !== undefined) headers["content-type"] = "application/json";
   if (options.idempotencyKey !== undefined) headers["idempotency-key"] = options.idempotencyKey;
