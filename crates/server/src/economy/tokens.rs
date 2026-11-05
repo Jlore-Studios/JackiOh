@@ -22,7 +22,7 @@ use crate::config::{
     CARD_TOKEN_BAR_SIZE, CosmeticTokenStep, TOKEN_BAR_POINTS_BY_CARD_RARITY,
     TOKEN_BAR_POINTS_BY_COSMETIC_RARITY,
 };
-use crate::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, offered, row_owns};
+use crate::cosmetics::{Cosmetic, CosmeticRarity, is_next, offered, owns, row_owns};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::packs::{bar_before, cycle_at};
@@ -197,14 +197,33 @@ pub(crate) struct Choice {
 }
 
 /// R2725000, R2725001: why no token or Chase Shard bar buys `cosmetic` on `card_id`, a 400's words: a retired
-/// full art, which nothing sells, or a version or an augment the card is not offered. `None` when either may.
+/// full art or (R3015000) augment, which nothing sells, or a version the card is not offered. `None` when either
+/// may.
 pub(crate) fn unsold(cosmetic: &Cosmetic, card_id: Option<&str>) -> Option<&'static str> {
-    if cosmetic.kind == CosmeticKind::FullArt {
+    if cosmetic.is_retired() {
         Some("that cosmetic is retired")
     } else if cosmetic.kind.is_offered() && !offered(cosmetic, card_id) {
         Some("that cosmetic is not offered on that card")
     } else {
         None
+    }
+}
+
+/// R3015004: what a token or the Chase Shard bar aimed past a variant's next level answers, a 400 spending nothing.
+pub(crate) const NOT_NEXT_LEVEL: &str = "that level needs every level below it owned first";
+
+/// R3015004: `Err` with [`NOT_NEXT_LEVEL`] when `cosmetic` is a level some level below which the account does not
+/// own on `card_id` (a row of it, or of a retired entry owning it there, R3015006).
+pub(crate) fn next_level_only(
+    registry: &[Cosmetic],
+    cosmetic: &Cosmetic,
+    card_id: Option<&str>,
+    cosmetics: &OwnedCosmetics,
+) -> Result<(), ApiError> {
+    if is_next(registry, cosmetic, |below| owns(below, card_id, cosmetics)) {
+        Ok(())
+    } else {
+        Err(bad_request(NOT_NEXT_LEVEL))
     }
 }
 
@@ -295,6 +314,7 @@ pub async fn redeem_cosmetic_token_once(
         &token_key(token),
     );
     let choice = choice_of(cosmetic, card_id, &owned, &cosmetics);
+    next_level_only(registry, cosmetic, card_id, &cosmetics)?;
     if token_held < 1 {
         return Err(conflict("no cosmetic token of that tier is held"));
     }

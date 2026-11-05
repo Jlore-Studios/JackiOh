@@ -9,7 +9,7 @@
 //! - `POST /api/dev/xp`: XP to a shipping set's track (§14.7), up to `SET_TRACK_LEVELS`; no rewards are paid.
 //! - `POST /api/dev/jlore`: Jlore (§14.1).
 //! - `POST /api/dev/fill`: every collectable card to `MAX_COPIES` and every cosmetic but each kind's default,
-//!   which every account owns with no row (§14.2), a full art on its card (R1313000); and every collectable
+//!   which every account owns with no row (§14.2), and the retired ones (R3015000); and every collectable
 //!   card to its top proficiency level (§14.14, R3013001), progress with no ledger row.
 //! - `POST /api/dev/clear/:part`: cards, cosmetics, jlore, counters, tracks, or everything; packs,
 //!   tokens and quests are no part of any.
@@ -227,13 +227,14 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let mut cosmetics_written = 0;
-    // R2755000: the Jlorious card back too is left out, which only reaching Jlorious grants.
+    // R2755000: the Jlorious card back too is left out, which only reaching Jlorious grants. R3015000: and the
+    // retired full arts and augments, which nothing grants again.
     for cosmetic in cosmetics
         .iter()
-        .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious && !cosmetic.is_retired())
     {
-        // §14.2: a per-card cosmetic on every card it is offered (R2725001): a full art on the one card it names
-        // (R1313000), a version or an augment on each card its offer takes.
+        // §14.2: a per-card cosmetic on every card it is offered (R2725001): every level of a variant on each card
+        // its offer takes (R3015000), so the fill leaves no ladder with a gap.
         let targets: Vec<Option<&str>> = if cosmetic.kind.is_per_card() {
             cards
                 .iter()

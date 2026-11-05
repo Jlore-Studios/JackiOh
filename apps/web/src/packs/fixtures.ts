@@ -17,6 +17,7 @@ export function packsInfo(): PacksResponse {
       flooredSlot: { common: 0, rare: 0.82, epic: 0.123, legendary: 0.045, mythic: 0.012 },
       duplicateCosmetic: { common: 0.5, rare: 0.3, epic: 0.15, legendary: 0.04, mythic: 0.01 },
       globalCosmetic: { chance: 0.2, tiers: { common: 0, rare: 0, epic: 0.85, legendary: 0.12, mythic: 0.03 } },
+      levelSkip: 0.05,
     },
     unopened: [
       { pack: GLOBAL_PACK_NAME, count: 1 },

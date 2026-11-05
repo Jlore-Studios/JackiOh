@@ -5,17 +5,18 @@
 // R2723000: in the viewer's own hand it keeps only the cost gem and a Unit's attack and health (CardFace's `ownHand`).
 // R2715000: a fourth, the Animated art (`animated-<slug>`, tier "Animated"), prints the normal face with its art moving
 // (R2715001) and no full art; a pick of `true` still names the still Epic.
-// R2725000: a face wears a look (versions.ts, `useCardLook`): its version, the normal face or the Full art version (which
-// any card it is offered may wear, `wearsFullArt`), and the Animated and Signature augments layered on it. The 21 still
-// print full art by the setting alone; any other card wears a version only by its own pick. A retired full art's pick
-// looks as it did (`tierOfLook` gives its tier back). R2940001: Alt full art prints the full-art layout as Full art
-// does (`isFullBleed`), on any card it is offered.
+// R2725000: a face wears a look (versions.ts, `useCardLook`). The 21 still print full art by the setting alone; any
+// other card wears a version only by its own pick. A retired full art's pick looks as it did (`tierOfLook` gives its
+// tier back). R2940001: Alt full art prints the full-art layout as Full art does (`isFullBleed`), on any card it is
+// offered. R3015005: the look is one level, the one a pick names (`levelOfPick`, an older shape mapped as the server
+// maps it), worn where owned and offered, else the highest below it that is (`wornLevel`); R3015002: every full-art
+// level prints the full-art layout (`wearsFullArt`, `isFullBleed`).
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
 import { ECONOMY_LIVE } from "@jackioh/server-config";
 
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, COSMETIC_LEVELS } from "../wire/generated/cosmetics.ts";
 import { FULL_ART_MOTION, artMotionFor, type ArtMotion } from "./art/motion.ts";
 import {
   ANIMATED_ART_ID_PREFIX,
@@ -33,14 +34,14 @@ import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
 import { getStored } from "../net/storage.ts";
 import {
-  AUGMENT_ANIMATED_ID,
   NORMAL_LOOK,
-  VERSION_ALT_FULL_ART_ID,
+  VERSION_ANIMATED_ID,
   VERSION_FULL_ART_ID,
-  augmentsOf,
   isFullBleed,
-  lookOf,
+  levelOfPick,
+  lookOfLevel,
   offeredOn,
+  wornLevel,
   type CardLook,
 } from "./versions.ts";
 
@@ -104,11 +105,11 @@ export function fullArtSource(defId: string): string {
 
 /**
  * R2715001: the moving art `defId` draws (motion.ts): its full-art card's, a listed token's parent's, or (R2725000) a
- * borrowed one on a card offered the Animated augment (`artMotionFor`); none otherwise.
+ * borrowed one on a card offered an animated level (R3015000: the Default's, `artMotionFor`); none otherwise.
  */
 export function artMotionOf(defId: string): ArtMotion | null {
   const source = fullArtSource(defId);
-  return FULL_ART_MOTION[source] ?? (offeredOn(AUGMENT_ANIMATED_ID, source) ? artMotionFor(source) : null);
+  return FULL_ART_MOTION[source] ?? (offeredOn(VERSION_ANIMATED_ID, source) ? artMotionFor(source) : null);
 }
 
 /**
@@ -120,13 +121,19 @@ export function isFullArtCard(defId: string): boolean {
   return !isGlitch(defId) && FULL_ART_CARDS.has(fullArtSource(defId));
 }
 
+/** R3015002: the levels that add the full-art frame: Full art's first, Alt art's and the Sketch's second. */
+const FULL_ART_LEVELS: readonly string[] = Object.entries(COSMETIC_LEVELS)
+  .filter(([, level]) => level.adds === "fullArt")
+  .map(([id]) => id);
+
 /**
- * R2725000: whether a copy of `defId` may wear full art at all: a full-art card, or one offered the Full art version
- * (R2940001: or Alt full art); never the Glitch.
+ * R2725000: whether a copy of `defId` may wear full art at all: a full-art card, or one offered a level that adds the
+ * full-art frame (R2940001: Alt full art; R3015002: the Sketch's full art), every level above it wearing it too;
+ * never the Glitch.
  */
 export function wearsFullArt(defId: string): boolean {
   const source = fullArtSource(defId);
-  return isFullArtCard(defId) || (!isGlitch(defId) && (offeredOn(VERSION_FULL_ART_ID, source) || offeredOn(VERSION_ALT_FULL_ART_ID, source)));
+  return isFullArtCard(defId) || (!isGlitch(defId) && FULL_ART_LEVELS.some((id) => offeredOn(id, source)));
 }
 
 /**
@@ -215,9 +222,9 @@ const FullArtShownContext = createContext<{ defId: string; pick: boolean | strin
 /**
  * R1834000: the viewer's own copies of `defId` below it print as if its full-art pick were `pick`, without
  * the store holding it: the Collection's preview, which must write no pick (cards/cardPicksSync.ts sends each).
- * R2725000: and as if its augments were `augments`, none when not given: the store's never layer on a shown pick
- * (the Stats drill-down gives the setting's pick alone, R3011000); with no `pick`, the setting decides the version,
- * as with no pick of the card's own.
+ * R2725000: and as if its older augments were `augments`, none when not given: the store's never layer on a shown pick
+ * (the Stats drill-down gives the setting's pick alone, R3011000); with no `pick`, the setting decides the level,
+ * as with no pick of the card's own. R3015005: the Collection shows a level by its id, with no augments.
  */
 export function FullArtShown({
   defId,
@@ -234,36 +241,15 @@ export function FullArtShown({
 }
 
 /**
- * R2725000: the version a pick of `defId`'s own names (versions.ts `lookOf`), as `{ id, look }`: `id` the cosmetic
- * owning it rests on (a retired full art's own id, the still Epic's for `true`, or the version's), or null for
- * `false`; undefined where the pick names nothing of this card's (an unknown id, another card's, `true` on a card
- * with no still Epic, a version it is not offered), which leaves the face to the setting.
- */
-function pickedVersion(defId: string, pick: boolean | string | undefined): { id: string | null; look: CardLook } | undefined {
-  if (pick === false) return { id: null, look: NORMAL_LOOK };
-  if (pick === true) {
-    const epic = FULL_ART_OF_CARD.get(defId);
-    return epic === undefined ? undefined : { id: epic, look: lookOf(true) };
-  }
-  if (typeof pick !== "string") return undefined;
-  if (fullArtIdOf(defId, pick) !== null || offeredOn(pick, defId)) return { id: pick, look: lookOf(pick) };
-  return undefined;
-}
-
-/** R2725000: `look` with each augment of `augments` that `keeps` layered on it. */
-function withAugments(look: CardLook, augments: readonly string[], keeps: (id: string) => boolean): CardLook {
-  return lookOf(look.version ?? false, [...augmentsOf(look), ...augments.filter(keeps)]);
-}
-
-/**
- * R2725000: what a copy of `defId` wears: its version and augments. NORMAL_LOOK below a `FullArtAllowed` of false
- * (R1108000) and on the Glitch. Below a `TheirCopy` and not the viewer's own, its owner's loadout entry (R1834004), which
- * the server holds to ownership and the offer (R1834001), while the Full-art cards setting is on. The viewer's own copy
- * (`worn`, or below an `OwnCopy`): its pick (`writeCardVersion`, a `FullArtShown`'s) where it names something of this
- * card's, else the setting (a full-art card's still Epic); the version prints only where owned (R1313000), a retired
- * full art's own id judged whole as before #2725, and each augment of its pick layers on where offered and owned
- * (R2725001, R2725002). Any other copy prints the setting's, where every cosmetic counts as owned. R2655002: a listed
- * token reads its parent's (`fullArtSource`).
+ * R2725000, R3015005: what a copy of `defId` wears: one level's look (`lookOfLevel`). NORMAL_LOOK below a
+ * `FullArtAllowed` of false (R1108000) and on the Glitch. Below a `TheirCopy` and not the viewer's own, its owner's
+ * loadout entry's level (R1834004; a loadout frozen before #3015 read by `levelOfPick`) where the card is offered it,
+ * which the server holds to ownership (R1834001), while the Full-art cards setting is on. The viewer's own copy (`worn`,
+ * or below an `OwnCopy`): the level its pick names (a `FullArtShown`'s, else the store's; with none, `true` while the
+ * setting is on, a full-art card's Full art), worn where offered and owned (R1313000, R2725001), else the highest below
+ * it that is (`wornLevel`), as the server freezes it (R1834002). Any other copy wears the setting's, where every
+ * cosmetic counts as owned. R1310004: with no ownership above it every level counts as owned on the cards it is
+ * offered. R2655002: a listed token reads its parent's (`fullArtSource`).
  */
 export function useCardLook(defId: string, worn: boolean = false): CardLook {
   const { fullArt } = useCardSettings();
@@ -279,19 +265,13 @@ export function useCardLook(defId: string, worn: boolean = false): CardLook {
   if (!own && theirs !== null) {
     if (!fullArt) return NORMAL_LOOK;
     const entry = theirs.cards[source];
-    const base = pickedVersion(source, entry?.fullArt)?.look ?? NORMAL_LOOK;
-    return withAugments(base, entry?.augments ?? [], (id) => offeredOn(id, source));
+    return lookOfLevel(wornLevel(levelOfPick(source, entry?.fullArt, entry?.augments), (id) => offeredOn(id, source)));
   }
   const showing = shown?.defId === source;
-  const pick = showing ? shown.pick : stored.fullArt;
-  const picked = own ? pickedVersion(source, pick) : undefined;
-  const epic = FULL_ART_OF_CARD.get(source);
-  const chosen = picked ?? (fullArt && epic !== undefined ? { id: epic, look: lookOf(true) } : { id: null, look: NORMAL_LOOK });
-  const ownsPart = (id: string): boolean => owned === "every" || (own && ownsCosmetic(owned, source, id));
-  const base = chosen.id === null || ownsPart(chosen.id) ? chosen.look : NORMAL_LOOK;
-  if (!own) return base;
-  const augments = (showing ? shown.augments : stored.augments) ?? [];
-  return withAugments(base, augments, (id) => offeredOn(id, source) && ownsPart(id));
+  const pick = own ? (showing ? shown.pick : stored.fullArt) : undefined;
+  const augments = own ? ((showing ? shown.augments : stored.augments) ?? []) : [];
+  const wears = (id: string): boolean => offeredOn(id, source) && (owned === "every" || (own && ownsCosmetic(owned, source, id)));
+  return lookOfLevel(wornLevel(levelOfPick(source, pick ?? fullArt, augments), wears));
 }
 
 /**
@@ -305,8 +285,8 @@ export function tierOfLook(look: CardLook): FullArtTier | null {
 }
 
 /**
- * Whether a copy of `defId` prints full art at all (R2725000: it wears the Full art version, R2940001: or Alt full art),
- * not the Animated art's normal face (R2715000).
+ * Whether a copy of `defId` prints full art at all (R2725000: it wears the Full art version, R2940001: or Alt full art;
+ * R3015002: any full-art level or one above it), not the Animated art's normal face (R2715000).
  */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
   return isFullBleed(useCardLook(defId, worn).version);

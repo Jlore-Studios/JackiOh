@@ -24,8 +24,7 @@ use serde::{Deserialize, Serialize};
 pub use jackioh_shared::loadout::{CardStamp, Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
 
 use crate::cosmetics::{
-    AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, check_pick, default_of, full_art_of, full_art_picked,
-    offered, owns, registry, signature_fits,
+    Cosmetic, CosmeticKind, default_of, level_of_pick, offered, owns, registry, worn_level,
 };
 use crate::db::store::{BotRow, PlayerSettingValue, PlayerSettingsRow, SavedDeck, StoreResult, Tx};
 use crate::economy::store::{CardPicks, CardProficiency, FullArtPick, OwnedCosmetics};
@@ -241,15 +240,12 @@ impl CardPicksExt for CardPicks {
 ///  - a deck slot wears the deck's pick when there is one and it is owned (the deck's word is final);
 ///    with no pick, the account's if owned;
 ///  - a card slot wears its kind's default, never the account's foil, finish or border;
-///  - each card of the deck wears its own pick of a kind when owned on the card (R1655000, R1953001); its
-///    full art is its own pick's, else its Epic when the Full-art cards setting is on, and prints when
-///    owned on the card: `true` for the still Epic, its id for a Legendary or a Mythic (R2655000) or the
-///    card's Animated art, an Epic too (R2715000), or for a version the card is offered (R2725000);
-///  - its augments are those of its own pick the card is offered and owns there ([`check_pick`]), each once, in
-///    the registry's order, layered on whichever version it wears (R2725000, R2725001);
-///  - Signature among them only beside the Full art version and Animated as frozen ([`signature_fits`],
-///    R2949000), so the other seat never wears it without them. A card is listed only where it differs from
-///    the seat.
+///  - each card of the deck wears its own pick of a kind when owned on the card (R1655000, R1953001);
+///  - R3015005: it wears one level, frozen by its id with no augments: the level its own pick names, an older
+///    shape mapped as [`level_of_pick`] maps it (a retired full art's id, `true`, a version with augments),
+///    else Full art's first level on a full-art card while the Full-art cards setting is on; the highest of that
+///    level and the ones below it that the card is offered and owns ([`worn_level`]), and none when no level is.
+///    A card is listed only where it differs from the seat.
 pub fn freeze_loadout(
     registry: &[Cosmetic],
     owned: &OwnedCosmetics,
@@ -298,31 +294,12 @@ pub fn freeze_loadout(
         let pick = own
             .and_then(|picks| picks.full_art.clone())
             .unwrap_or(FullArtPick::On(account.full_art));
-        if let Some(full_art) = full_art_picked(registry, card, &pick)
-            .filter(|full_art| owns(full_art, Some(card), owned) && offered(full_art, Some(card)))
-        {
-            // R2715000: `true` is the still Epic alone; the card's Animated art, an Epic too, is its id.
-            let still = full_art_of(registry, card).is_some_and(|epic| epic.id == full_art.id);
-            entry.full_art = Some(if still {
-                FullArtPick::On(true)
-            } else {
-                FullArtPick::Id(full_art.id.clone())
-            });
-        }
-        if let Some(picks) = own {
-            entry.augments = registry
-                .iter()
-                .filter(|cosmetic| {
-                    cosmetic.kind == CosmeticKind::Augment && picks.augments.contains(&cosmetic.id)
-                })
-                .filter(|cosmetic| {
-                    check_pick(registry, owned, CosmeticKind::Augment, &cosmetic.id, Some(card)).is_ok()
-                })
-                .map(|cosmetic| cosmetic.id.clone())
-                .collect();
-            if !signature_fits(entry.full_art.as_ref(), &entry.augments) {
-                entry.augments.retain(|id| id != AUGMENT_SIGNATURE_ID);
-            }
+        let augments = own.map_or(&[][..], |picks| picks.augments.as_slice());
+        let named = level_of_pick(registry, card, Some(&pick), augments);
+        if let Some(level) = worn_level(registry, named, |level| {
+            offered(level, Some(card)) && owns(level, Some(card), owned)
+        }) {
+            entry.full_art = Some(FullArtPick::Id(level.id.clone()));
         }
         if !entry.is_empty() {
             cards.push(entry);
@@ -438,6 +415,7 @@ mod tests {
             jlorious: false,
             card: None,
             offer: Vec::new(),
+            level: None,
         }
     }
 

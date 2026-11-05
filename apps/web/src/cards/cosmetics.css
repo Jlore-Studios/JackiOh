@@ -33,8 +33,8 @@
  * under a pen tip, through a slanted, feathered mask, then bursts, slashes a flourish under itself and
  * shines now and then, its timings the custom properties FullArtSignature.tsx sets.
  *
- * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2949000: Signature signs
- * only on Full art beside Animated, never on the normal face. R2725004: no part of it is Radiant's gold: the ink is
+ * R2725000: the same rules draw the Full art version's animated and signed levels (R3015002: every full-art variant's,
+ * Alt art's and the Sketch's too), never the normal face. R2725004: no part of it is Radiant's gold: the ink is
  * a cool silver and the pen's glow and the landing's burst white.
  *
  * R2940001: the Sketch version, after the full-art tiers, rings a base face's art window with a pencil line and a
@@ -883,8 +883,10 @@
 /* ---------------------------------------------------------------------------- sketch --- */
 
 /* R2940001: the window's ring drawn as a pencil line, a smudge offset under it, in the bezel's colour: graphite
-   (cards.css, beside the face's other edges, since this sheet sets an edge only per border) or a worn border's. */
-.cf[data-version="version-sketch"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+   (cards.css, beside the face's other edges, since this sheet sets an edge only per border) or a worn border's.
+   R3015002: the Sketch's full art too, at every level. */
+.cf[data-version="version-sketch"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art,
+.cf[data-version="version-sketch-full-art"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
   box-shadow:
     0 0 0 0.45cqw var(--cf-bezel),
     0.35cqw 0.25cqw 0 0.55cqw color-mix(in srgb, var(--pal-slate-700) 40%, transparent),

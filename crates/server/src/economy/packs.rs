@@ -20,6 +20,7 @@ use crate::config::{
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
+use crate::economy::cosmetic_packs::level_skip_chance;
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::math::PityCounters;
 use crate::economy::roll::{Holdings, OpeningLog, PackKind, Slot, SlotGrant, pack_pool, roll_opening};
@@ -518,28 +519,34 @@ pub async fn open_pack_once(
     grant_unlocked(&mut tx, profile_id, &holdings.owned, &unlocked, at).await?;
 
     for slot in &opening.slots {
-        if let SlotGrant::Cosmetic { cosmetic_id, .. } = &slot.grant {
+        if let SlotGrant::Cosmetic {
+            cosmetic_id, below, ..
+        } = &slot.grant
+        {
             // The global roll's account cosmetic is owned for the account, on no card (R1661001).
             let for_account = registry
                 .iter()
                 .any(|cosmetic| cosmetic.id == *cosmetic_id && !cosmetic.kind.is_per_card());
             let card_id = (!for_account).then(|| slot.card_id.clone());
-            let owned = tx
-                .economy_cosmetics_grant(&CosmeticGrant {
-                    profile_id: profile_id.to_string(),
-                    card_id: card_id.clone(),
-                    cosmetic_id: cosmetic_id.clone(),
-                    delta: 1,
-                    reason: EconomyReason::PackOpen,
-                    reference: reference.clone(),
-                    dev: false,
-                    at,
-                })
-                .await?;
-            if !owned {
-                return Err(ApiError::internal(format!(
-                    "{cosmetic_id} was already owned on {card_id:?}"
-                )));
+            // R3015003: an out-of-order pull's levels below it first, each a row of its own.
+            for cosmetic_id in below.iter().chain([cosmetic_id]) {
+                let owned = tx
+                    .economy_cosmetics_grant(&CosmeticGrant {
+                        profile_id: profile_id.to_string(),
+                        card_id: card_id.clone(),
+                        cosmetic_id: cosmetic_id.clone(),
+                        delta: 1,
+                        reason: EconomyReason::PackOpen,
+                        reference: reference.clone(),
+                        dev: false,
+                        at,
+                    })
+                    .await?;
+                if !owned {
+                    return Err(ApiError::internal(format!(
+                        "{cosmetic_id} was already owned on {card_id:?}"
+                    )));
+                }
             }
         }
     }
@@ -597,7 +604,8 @@ pub async fn open_pack_once(
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
 /// screen to show (§14.4), and the unopened packs it holds. The odds are one roll's on the tier
 /// tables, the fallback included (R1339000), and a duplicate's global roll (R1661001) is its
-/// `chance` and its `tiers`, the table floored at `GLOBAL_COSMETIC_FLOOR_RARITY`.
+/// `chance` and its `tiers`, the table floored at `GLOBAL_COSMETIC_FLOOR_RARITY`. R3015003: `levelSkip` is the
+/// chance a duplicate that finds a level past the next one open drops it with every level below it.
 pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -621,6 +629,7 @@ pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
                 "chance": f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL),
                 "tiers": cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY)),
             },
+            "levelSkip": level_skip_chance(),
         },
         "unopened": unopened_from(&inventory),
     })))

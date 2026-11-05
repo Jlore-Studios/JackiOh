@@ -12,10 +12,12 @@ use jackioh_engine::{CardDefs, SetName, set_ships};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY,
-    PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
+    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, LEVEL_SKIP_WEIGHT,
+    PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity, global_cosmetics, offered, pack_cosmetics, row_owns};
+use crate::cosmetics::{
+    Cosmetic, CosmeticRarity, global_cosmetics, is_next, levels_below, offered, pack_cosmetics, row_owns,
+};
 use crate::economy::math::{PityCounters, apply_pity};
 use crate::economy::store::CardCosmetic;
 use crate::economy::tiers::{card_tier, cosmetic_tier, tier_draw};
@@ -89,10 +91,13 @@ pub enum SlotGrant {
     /// A new card: a copy of it.
     Card,
     /// A duplicate: a per-card cosmetic of the rarity it rolled, or an account cosmetic of the global
-    /// roll, on no card (R1661001).
+    /// roll, on no card (R1661001). R3015003: `below`, the levels an out-of-order pull grants with its
+    /// level, lowest first; empty, and left out, for every other grant.
     Cosmetic {
         cosmetic_id: String,
         cosmetic_rarity: CosmeticRarity,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        below: Vec<String>,
     },
     /// A spent duplicate: nothing of the rarity it rolled was left to own. Like every slot, its points
     /// go to both token bars (§14.5, R1999000).
@@ -223,9 +228,13 @@ pub fn draw_card<'p>(
 /// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002), a tiered roll
 /// on `COSMETIC_TIER_WEIGHTS` on its own scale, whatever the card's rarity (R1339000, R1333000): one
 /// of `droppable` of that rarity unowned on that card, picked uniformly (one draw), else the bars (no
-/// draw), never another tier. One that names a card, a full art, is of that card alone (R1313000); a version
-/// or an augment drops only on a card it is offered, and not where a retired full art already owns it
-/// (R2725001, R2725002).
+/// draw), never another tier. A version drops only on a card it is offered, and not where a retired entry
+/// already owns it (R2725001, R2725002).
+///
+/// R3015003: a level drops in order, the next of its variant, every level below it owned. Where a level past the
+/// next is open at the tier, one draw below `TIER_WEIGHT_TOTAL` comes first: below `LEVEL_SKIP_WEIGHT` the pick is
+/// among those, uniform (one draw), and grants it and every unowned level below it (`below`); at or past it, and
+/// with none open, the pick is among the in-order ones.
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: CosmeticRarity,
@@ -233,20 +242,35 @@ pub fn duplicate_grant(
     owned: &[CardCosmetic],
     rng: &mut Rng,
 ) -> SlotGrant {
-    let unowned: Vec<&Cosmetic> = droppable
+    let held = |cosmetic: &Cosmetic| {
+        owned
+            .iter()
+            .any(|row| row.card_id == card_id && row_owns(&row.cosmetic_id, &cosmetic.id))
+    };
+    let (in_order, skips): (Vec<&Cosmetic>, Vec<&Cosmetic>) = droppable
         .iter()
         .filter(|cosmetic| cosmetic.rarity == cosmetic_rarity)
         .filter(|cosmetic| offered(cosmetic, Some(card_id)))
-        .filter(|cosmetic| {
-            !owned
-                .iter()
-                .any(|held| held.card_id == card_id && row_owns(&held.cosmetic_id, &cosmetic.id))
-        })
-        .collect();
-    match rng.pick(&unowned) {
+        .filter(|cosmetic| !held(cosmetic))
+        .partition(|cosmetic| is_next(droppable, cosmetic, held));
+    let (pool, skipped) = if !skips.is_empty() && tier_draw(rng) < LEVEL_SKIP_WEIGHT {
+        (&skips, true)
+    } else {
+        (&in_order, false)
+    };
+    match rng.pick(pool) {
         Some(cosmetic) => SlotGrant::Cosmetic {
             cosmetic_id: cosmetic.id.clone(),
             cosmetic_rarity,
+            below: if skipped {
+                levels_below(droppable, cosmetic)
+                    .into_iter()
+                    .filter(|below| !held(below))
+                    .map(|below| below.id.clone())
+                    .collect()
+            } else {
+                Vec::new()
+            },
         },
         None => SlotGrant::Bars { cosmetic_rarity },
     }
@@ -278,6 +302,7 @@ pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Opt
         rng.pick(&of_tier).map(|cosmetic| SlotGrant::Cosmetic {
             cosmetic_id: cosmetic.id.clone(),
             cosmetic_rarity: tier,
+            below: Vec::new(),
         })
     })
 }
@@ -285,8 +310,9 @@ pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Opt
 /// The whole opening (R1301003, R1339002). Its draws, in this order and no other: [`slot_tiers`]' one
 /// per slot (pity adds none), then slot by slot the card's one and, for a duplicate, the global roll's
 /// when an account cosmetic is left unowned ([`global_grant`], R1661001), its tier's and pick's on a
-/// hit, else its cosmetic tier's and, when there is something to pick, the pick's. Ownership is read
-/// slot by slot (R1301002, R1661001). A slot keeps its rarity when its card comes from another
+/// hit, else its cosmetic tier's, then the skip's when a level past the next is open at that tier (R3015003),
+/// and, when there is something to pick, the pick's. Ownership is read slot by slot (R1301002, R1661001),
+/// an out-of-order pull's levels below it owned from the next slot on. A slot keeps its rarity when its card comes from another
 /// (R1301001). `None` for an empty pool.
 pub fn roll_opening(
     pool: &[PoolCard],
@@ -321,11 +347,16 @@ pub fn roll_opening(
         } else {
             let cosmetic_rarity = cosmetic_tier(None, &mut rng);
             let grant = duplicate_grant(&card.id, cosmetic_rarity, &droppable, &cosmetics, &mut rng);
-            if let SlotGrant::Cosmetic { cosmetic_id, .. } = &grant {
-                cosmetics.push(CardCosmetic {
-                    card_id: card.id.clone(),
-                    cosmetic_id: cosmetic_id.clone(),
-                });
+            if let SlotGrant::Cosmetic {
+                cosmetic_id, below, ..
+            } = &grant
+            {
+                for cosmetic_id in below.iter().chain([cosmetic_id]) {
+                    cosmetics.push(CardCosmetic {
+                        card_id: card.id.clone(),
+                        cosmetic_id: cosmetic_id.clone(),
+                    });
+                }
             }
             grant
         };
@@ -672,6 +703,7 @@ mod tests {
                 SlotGrant::Cosmetic {
                     cosmetic_id: foil.id.clone(),
                     cosmetic_rarity: foil.rarity,
+                    below: Vec::new(),
                 }
             );
         }
@@ -691,6 +723,7 @@ mod tests {
                 if let SlotGrant::Cosmetic {
                     cosmetic_id,
                     cosmetic_rarity,
+                    ..
                 } = slot.grant
                 {
                     let cosmetic = foils
@@ -724,6 +757,7 @@ mod tests {
             SlotGrant::Cosmetic {
                 cosmetic_id: "foil-legendary".to_owned(),
                 cosmetic_rarity: CosmeticRarity::Legendary,
+                below: Vec::new(),
             }
         );
         assert_eq!(
@@ -768,6 +802,7 @@ mod tests {
             SlotGrant::Cosmetic {
                 cosmetic_id: "full-art-m".to_owned(),
                 cosmetic_rarity: CosmeticRarity::Epic,
+                below: Vec::new(),
             }
         );
         assert_eq!(
@@ -825,6 +860,7 @@ mod tests {
             SlotGrant::Cosmetic {
                 cosmetic_id: AUGMENT_SIGNATURE_ID.to_owned(),
                 cosmetic_rarity: CosmeticRarity::Mythic,
+                below: Vec::new(),
             }
         );
         // R2725002: its retired signed full art owns Signature there, so that roll goes to the bars.
@@ -850,6 +886,7 @@ mod tests {
             SlotGrant::Cosmetic {
                 cosmetic_id: VERSION_FULL_ART_ID.to_owned(),
                 cosmetic_rarity: CosmeticRarity::Legendary,
+                below: Vec::new(),
             }
         );
         let mut animated = held_legendaries.clone();
@@ -892,6 +929,7 @@ mod tests {
             SlotGrant::Cosmetic {
                 cosmetic_id: AUGMENT_ANIMATED_ID.to_owned(),
                 cosmetic_rarity: CosmeticRarity::Epic,
+                below: Vec::new(),
             }
         );
         // R2725002: a held retired Animated art owns the augment there, so the Epic roll has nothing left and

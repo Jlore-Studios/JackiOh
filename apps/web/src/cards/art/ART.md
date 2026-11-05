@@ -68,23 +68,31 @@ faces at once (`useArtMotion`). A delivered file is still art: a card with real 
 version, so delivering a full-art card's file means delivering its motion too, or the card stops
 moving.
 
-## Pictures (R2949000)
+## Pictures (R2940001)
 
-A look with a picture of its own, the Signature look today, draws the card's own painter re-seeded:
+A look with a picture of its own, Alt art's today, draws the card's own painter re-seeded:
 `pictures.ts`'s `artSeedOf` joins the card's id and the picture's name. The Stinkyscape and Training
 Grounds painters keep the card's subject and grow the rest from that seed (backdrop, drift, layout,
 particles); the procedural painter keeps what the card's name, tags and type pick (its theme,
 composition and motif) and grows its figure, backdrop and particles from it. Either way the picture is
 still a pure function of the card's id, name, tags and type. The cache keys the seed in the card id's place, so a look's picture is never
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
-golden hash stands. The Signature look moves by `SIGNATURE_MOTION`, which no Animated motion is. A later
-version with a picture of its own (#2940's Alt full art) adds its own name to `ArtPicture`, so it draws
-apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
+draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+
+## One picture per variant (R3015002)
+
+A variant is a ladder of levels (`versions.ts`, R3015000), and every level of it draws its first
+level's picture (`artPictureOf`): Full art's levels the normal picture, Alt art's the `"alt"` one, the
+Sketch's full art the `"sketch"`, each one-art variant's animated level its own restyle. A level adds
+only the full-art frame, its picture's own motion (`artMotionFor`, the one motion a card has) and a
+signature, so a signed level is its variant's full art, moving, with the signed name. #2949's Signature
+look, a picture and a motion of its own, is gone: no `"signature"` picture and no `SIGNATURE_MOTION`.
 
 ## The versions' pictures (R2940001)
 
-Alt art and Alt full art draw the picture `"alt"`, seeded apart by `artSeedOf` as the Signature
-look's is, so the two versions share one picture and neither is the normal one or Signature's. The
+Alt art and Alt full art draw the picture `"alt"`, seeded apart by `artSeedOf`, so the two versions
+share one picture and neither is the normal one. The
 Sketch (`"sketch"`) draws no picture of its own: `sketchSvg` lays the normal picture, whichever
 painter drew it (a Legacy card's and a Starship's too), under one SVG filter, its greys dodged into
 line work, hatched in slate ink where it is dark and grained, on slate paper; a Radiant face washes

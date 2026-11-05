@@ -5,14 +5,12 @@
 //!
 //! `GET /api/card-picks` answers `{ cards }` by card id, each id as it was written. `PUT` changes one
 //! card's picks (`{ cardId, foil?, finish?, border?, fullArt?, augments? }`): a key left out keeps its pick,
-//! `null` clears it. R1834001: an id must be one the account owns on that card; `fullArt` is a boolean or a
-//! full art's id (R2655000), `full-art-…` or the card's Animated art's `animated-…` (R2715000), or a version's
-//! `version-…` (R2725000), `true` needing the card's still Epic full art owned and an id one of the card's own,
-//! or a version the card is offered, owned; `augments` is a list of distinct augment ids (`augment-…`), each
-//! offered on the card and owned there (R2725001); else 400 and nothing is written. R2949000: a `PUT` whose
-//! `augments` lists Signature is a 400 too, writing nothing, unless the card's pick, once changed, wears the Full
-//! art version and Animated, each owned and offered there; a held Signature a `PUT` leaves without them is
-//! dropped.
+//! `null` clears it. R1834001: an id must be one the account owns on that card. R3015005: a card wears one level
+//! of one variant, named in `fullArt`: `false` for the normal face, `true` for Full art's first level on a
+//! full-art card (R2655000), or a level's `version-…` id, each offered on the card and owned there (R2725001),
+//! else 400 and nothing is written. A retired full art's id (`full-art-…`, `animated-…`) is a 400, and so is a
+//! non-empty `augments`: the augments are retired, and `null` or `[]` only clears what a pick held from before.
+//! Every write of `fullArt` clears the augments held, so a card's pick never names a level and an augment both.
 //!
 //! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they moved to
 //! the account. A card the account already holds a row for is never touched, so a newer device's pick
@@ -27,8 +25,8 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, now_ms, ok_of, str
 use crate::app::App;
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
 use crate::cosmetics::{
-    self, ANIMATED_ART_ID_PREFIX, AUGMENT_ANIMATED_ID, AUGMENT_ID_PREFIX, AUGMENT_SIGNATURE_ID, CosmeticKind,
-    FULL_ART_ID_PREFIX, PickRefusal, VERSION_ID_PREFIX, full_art_of, is_slug, owns,
+    self, ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal,
+    VERSION_FULL_ART_ID, VERSION_ID_PREFIX, full_art_of, is_slug, level_of_pick, worn_level,
 };
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, CardPicksExt, FULL_ART_SETTING, setting_key};
@@ -38,62 +36,25 @@ pub(crate) fn is_playable(app: &App, card_id: &str) -> bool {
     app.catalog.card_ids.iter().any(|id| id == card_id) && !app.catalog.is_token(card_id)
 }
 
-/// What a write of `card_id`'s full-art pick comes to against the account's ledger (R2655000):
-/// `false` always passes, `true` when the card has an Epic full art the account owns, and an id
-/// when it is one of the card's full arts, or a version the card is offered (R2725001), and the account
-/// owns it there.
+/// R3015005: what a write of `card_id`'s pick of a level comes to against the account's ledger: `false` always
+/// passes, `true` when the card is a full-art card (R2655000) offered and owning Full art's first level, and an
+/// id when it is a level the card is offered and owns there (R2725001). A retired full art's id is no level.
 fn check_full_art(card_id: &str, pick: &FullArtPick, owned: &OwnedCosmetics) -> Result<(), PickRefusal> {
     let registry = cosmetics::registry();
-    match pick {
-        FullArtPick::On(false) => Ok(()),
-        FullArtPick::On(true) => match full_art_of(registry, card_id) {
-            None => Err(PickRefusal::WrongKind),
-            Some(full_art) if owns(full_art, Some(card_id), owned) => Ok(()),
-            Some(_) => Err(PickRefusal::NotOwned),
-        },
-        FullArtPick::Id(id) => {
-            let kind = if id.starts_with(VERSION_ID_PREFIX) {
-                CosmeticKind::Version
-            } else {
-                CosmeticKind::FullArt
-            };
-            cosmetics::check_pick(registry, owned, kind, id, Some(card_id))
-        }
-    }
+    let level = match pick {
+        FullArtPick::On(false) => return Ok(()),
+        FullArtPick::On(true) if full_art_of(registry, card_id).is_none() => return Err(PickRefusal::WrongKind),
+        FullArtPick::On(true) => VERSION_FULL_ART_ID,
+        FullArtPick::Id(id) => id,
+    };
+    cosmetics::check_pick(registry, owned, CosmeticKind::Version, level, Some(card_id))
 }
 
-/// R2949000: what a `PUT` naming Signature answers when the card's pick would not wear it.
-const SIGNATURE_REFUSAL: &str =
-    "\"augments\" lists Signature, which needs the Full art version and Animated on this card";
+/// R3015005: what a `PUT` naming a retired full art in `fullArt` answers: a card's pick names a level.
+const RETIRED_REFUSAL: &str = "that cosmetic is retired: \"fullArt\" names a level";
 
-/// R2949000: whether `picks` may wear its Signature: it fits ([`cosmetics::signature_fits`]), its version is
-/// owned and offered on the card, and so is a listed Animated. Reads nothing of Signature itself.
-fn signature_worn(picks: &CardPicks, owned: &OwnedCosmetics) -> bool {
-    let card = Some(picks.card_id.as_str());
-    cosmetics::signature_fits(picks.full_art.as_ref(), &picks.augments)
-        && picks
-            .full_art
-            .as_ref()
-            .is_some_and(|pick| check_full_art(&picks.card_id, pick, owned).is_ok())
-        && (!picks.augments.iter().any(|id| id == AUGMENT_ANIMATED_ID)
-            || cosmetics::check_pick(
-                cosmetics::registry(),
-                owned,
-                CosmeticKind::Augment,
-                AUGMENT_ANIMATED_ID,
-                card,
-            )
-            .is_ok())
-}
-
-/// R2949000: `picks` without a Signature it may not wear ([`signature_worn`]), and whether it held one.
-fn without_unworn_signature(picks: &mut CardPicks, owned: &OwnedCosmetics) -> bool {
-    let unworn = picks.augments.iter().any(|id| id == AUGMENT_SIGNATURE_ID) && !signature_worn(picks, owned);
-    if unworn {
-        picks.augments.retain(|id| id != AUGMENT_SIGNATURE_ID);
-    }
-    unworn
-}
+/// R3015005: what a `PUT` listing augments answers: they are retired, each level a ladder's rung of its own.
+const AUGMENTS_REFUSAL: &str = "\"augments\" are retired: a card wears one level, named in \"fullArt\"";
 
 /// R2725000: whether `id` is an augment's well-shaped id, as a card pick's `augments` lists one.
 fn is_augment_id(id: &str) -> bool {
@@ -189,6 +150,12 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
         augments_pick_of,
         "an array of augment ids",
     )?;
+    if matches!(&augments, Some(Some(ids)) if !ids.is_empty()) {
+        return Err(bad_request(AUGMENTS_REFUSAL));
+    }
+    if matches!(&full_art, Some(Some(FullArtPick::Id(id))) if !id.starts_with(VERSION_ID_PREFIX)) {
+        return Err(bad_request(RETIRED_REFUSAL));
+    }
 
     // R2378000: the account's turn first, so a burst waits here holding no database
     // connection, not on the economy lock below.
@@ -208,18 +175,6 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
         check_full_art(&card_id, pick, &owned)
             .map_err(|refusal| bad_request(refusal.message(FULL_ART_SETTING)))?;
     }
-    for id in augments.iter().flatten().flatten() {
-        cosmetics::check_pick(
-            cosmetics::registry(),
-            &owned,
-            CosmeticKind::Augment,
-            id,
-            Some(&card_id),
-        )
-        .map_err(|refusal| bad_request(refusal.message(AUGMENTS_KEY)))?;
-    }
-    let names_signature =
-        matches!(&augments, Some(Some(ids)) if ids.iter().any(|id| id == AUGMENT_SIGNATURE_ID));
     let held = tx.economy_card_picks_get(&profile.id).await?;
     let mut picks = held
         .into_iter()
@@ -233,16 +188,13 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
             picks.set(kind, pick);
         }
     }
+    // R3015005: a level written, or the augments cleared, leaves no augment held from before #3015.
     if let Some(pick) = full_art {
         picks.full_art = pick;
+        picks.augments.clear();
     }
-    if let Some(ids) = augments {
-        picks.augments = ids.unwrap_or_default();
-    }
-    // R2949000: a Signature named here without the Full art version and Animated is refused; one held from
-    // before, which this change leaves without them, is dropped.
-    if without_unworn_signature(&mut picks, &owned) && names_signature {
-        return Err(bad_request(SIGNATURE_REFUSAL));
+    if augments.is_some() {
+        picks.augments.clear();
     }
     tx.economy_card_picks_put(&profile.id, &picks, now_ms()).await?;
     let cards = tx.economy_card_picks_get(&profile.id).await?;
@@ -293,11 +245,9 @@ fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
 
 /// R1834000: what of an uploaded entry can be kept: an id this build does not know stays, as the
 /// device kept it; one it knows is kept only where the account owns it on the card, under its kind.
-/// A full art switched on stays unless the card's Epic full art is known and not owned; a full art's
-/// id stays unless it is known and is another card's or not owned (R2655000), a version's unless it is known
-/// and not offered there or not owned (R2725001). An augment stays only where the card is offered it and owns
-/// it: no device held one before the picks moved to the account (R2725000), and Signature only beside the Full
-/// art version and Animated, each kept (R2949000).
+/// R3015005: the pick of a look is kept as the level it names ([`level_of_pick`], an older shape mapped), or the
+/// highest below it, that the card is offered and owns ([`worn_level`]); a known id naming no level of the card is
+/// dropped, `false`, `true` on a card with no full art and an unknown id stay as they are, and no augment stays.
 fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
     let registry = cosmetics::registry();
     for kind in CARD_SLOT_KINDS {
@@ -309,24 +259,18 @@ fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
             picks.set(kind, None);
         }
     }
-    let dropped = match &picks.full_art {
-        Some(pick @ FullArtPick::On(true)) => {
-            check_full_art(&picks.card_id, pick, owned) == Err(PickRefusal::NotOwned)
-        }
-        Some(pick @ FullArtPick::Id(id)) => {
-            registry.iter().any(|cosmetic| cosmetic.id == *id)
-                && check_full_art(&picks.card_id, pick, owned).is_err()
-        }
-        Some(FullArtPick::On(false)) | None => false,
+    let card = picks.card_id.clone();
+    let named = level_of_pick(registry, &card, picks.full_art.as_ref(), &picks.augments);
+    picks.full_art = match named {
+        Some(_) => worn_level(registry, named, |level| {
+            cosmetics::check_pick(registry, owned, CosmeticKind::Version, &level.id, Some(&card)).is_ok()
+        })
+        .map(|level| FullArtPick::Id(level.id.clone())),
+        None => picks.full_art.filter(
+            |pick| !matches!(pick, FullArtPick::Id(id) if registry.iter().any(|cosmetic| cosmetic.id == *id)),
+        ),
     };
-    if dropped {
-        picks.full_art = None;
-    }
-    let card_id = picks.card_id.clone();
-    picks.augments.retain(|id| {
-        cosmetics::check_pick(registry, owned, CosmeticKind::Augment, id, Some(&card_id)).is_ok()
-    });
-    without_unworn_signature(&mut picks, owned);
+    picks.augments.clear();
     picks
 }
 

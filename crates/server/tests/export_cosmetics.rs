@@ -1,5 +1,5 @@
 //! Generates `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json` (#1295, SPEC §11, R1295000, R633),
-//! and each version's and augment's offer as the cards it takes (R2725001).
+//! each version's offer as the cards it takes (R2725001) and (R3015000) each level's place on its ladder.
 
 use jackioh_server::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
 use jackioh_server::cosmetics::{CosmeticKind, CosmeticRarity, offered, shipped, shipped_defs};
@@ -43,7 +43,8 @@ fn render() -> String {
     }
     out.push_str("] as const;\n");
     out.push_str("export const COSMETIC_OFFERS: Readonly<Record<string, readonly string[]>> = {\n");
-    for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind.is_offered()) {
+    // R3015000: the levels alone; a retired augment is offered nothing.
+    for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind == CosmeticKind::Version) {
         let mut cards: Vec<&str> = shipped_defs()
             .keys()
             .map(String::as_str)
@@ -51,6 +52,17 @@ fn render() -> String {
             .collect();
         cards.sort_unstable();
         out.push_str(&format!("  {}: {},\n", json(&cosmetic.id), json(&cards)));
+    }
+    out.push_str("};\n");
+    // R3015000: each level's variant, rank and what it adds, so the client reads a ladder without a clause.
+    out.push_str(
+        "export const COSMETIC_LEVELS: Readonly<Record<string, { readonly variant: string; readonly rank: number; readonly adds: \"art\" | \"fullArt\" | \"animated\" | \"signed\" }>> = {\n",
+    );
+    for (id, level) in cosmetics
+        .iter()
+        .filter_map(|cosmetic| cosmetic.level.as_ref().map(|level| (&cosmetic.id, level)))
+    {
+        out.push_str(&format!("  {}: {},\n", json(id), json(level)));
     }
     out.push_str("};\n");
     out

@@ -1,9 +1,10 @@
-// R2949000 (#2949): a look with a picture of its own (the Signature look) draws its card's own painter seeded
-// apart from the card's normal picture, by a seed of the card's id and the picture's name (`artSeedOf`): a
-// Stinkyscape or Training Grounds card keeps its subject, and a procedural one what its name, tags and type pick
-// (theme, composition, motif), the rest grown from the seed (ART.md, Pictures). The normal picture keeps the
-// card's id alone, so it and every golden hash are unchanged.
-// R2940001 (#2940): the Alt art and Alt full art versions draw the picture "alt", seeded apart as Signature's is;
+// R2940001 (#2940): a look with a picture of its own (Alt art's, "alt") draws its card's own painter seeded apart from
+// the card's normal picture, by a seed of the card's id and the picture's name (`artSeedOf`): a Stinkyscape or
+// Training Grounds card keeps its subject, and a procedural one what its name, tags and type pick (theme, composition,
+// motif), the rest grown from the seed (ART.md, Pictures). The normal picture keeps the card's id alone, so it and
+// every golden hash are unchanged. R3015002 (#3015): every level of a variant draws its first level's picture, and no
+// look has a picture of its own past Alt art's (R2949000's Signature picture is gone).
+// R2940001: the Alt art and Alt full art versions draw the picture "alt";
 // the Sketch version draws the card's normal picture in pencil and ink on paper (`sketchSvg`), a filter over it.
 // R2942001 (#2942): the Pixel and Comic versions restyle the normal picture as the Sketch does, by a filter over it:
 // Pixel's 8-bit cells (`pixelSvg`) and Comic's pop art (`comicSvg`); `restyledSvg` draws whichever a face wears.
@@ -59,13 +60,13 @@ const SHOWCASE_RESTYLES: ReadonlySet<string> = new Set(Object.values(SHOWCASE_FA
 export type ArtPart = "whole" | "backdrop" | "subject";
 
 /**
- * R2949000: which of a card's pictures a face draws: its normal one, or the Signature look's own. R2940001: or Alt
- * art's own, or the normal one sketched; R2942001: or pixelled, or drawn as a comic; R2943001: or in its set's Set
- * showcase treatment; R2944001: or hazed as far off, or in chrome.
+ * R2940001: which of a card's pictures a face draws: its normal one, Alt art's own, or the normal one sketched;
+ * R2942001: or pixelled, or drawn as a comic; R2943001: or in its set's Set showcase treatment; R2944001: or hazed as
+ * far off, or in chrome. R3015002: no other (R2949000's Signature picture is gone).
  */
-export type ArtPicture = "normal" | "signature" | "alt" | ArtRestyle;
+export type ArtPicture = "normal" | "alt" | ArtRestyle;
 
-/** R2942001: the restyle `picture` is, or null for a picture of its own (normal, Signature's, Alt art's). */
+/** R2942001: the restyle `picture` is, or null for a picture of its own (normal, Alt art's). */
 export function restyleOf(picture: ArtPicture): ArtRestyle | null {
   return picture === "sketch" || picture === "pixel" || picture === "comic" || picture === "depth" || picture === "prismatic" || SHOWCASE_RESTYLES.has(picture)
     ? (picture as ArtRestyle)
@@ -76,8 +77,9 @@ export function restyleOf(picture: ArtPicture): ArtRestyle | null {
 const PICTURE_SEED_SEPARATOR = "#";
 
 /**
- * R2949000: the id a card's painter seeds `picture` by: the card's own id for its normal picture, and R2940001 for
- * its Sketch, which pencils the normal picture; R2942001 for any restyle of it.
+ * R2940001: the id a card's painter seeds `picture` by: the card's own id for its normal picture and for its Sketch,
+ * which pencils the normal picture (R2942001: for any restyle of it), and one of its id and the picture's name for
+ * Alt art's.
  */
 export function artSeedOf(defId: string, picture: ArtPicture): string {
   return picture === "normal" || restyleOf(picture) !== null ? defId : `${defId}${PICTURE_SEED_SEPARATOR}${picture}`;

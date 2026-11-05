@@ -2612,6 +2612,16 @@ pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
 pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 20;
 // SPEC §14.3, R1661001: the hit is a share of the same total, so it cannot pass it.
 const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.3, §14.6, R3015003: an out-of-order pull. Where a duplicate's per-card cosmetic or a cosmetic pack
+/// slot finds a level past the next one open at its tier, it first draws one integer below `TIER_WEIGHT_TOTAL`;
+/// below this (4%) it grants such a level and every level under it in its variant, at or past it the next level
+/// as ever. A skip is open far less often than a next level, so this keeps it far rarer than an in-order pull.
+pub const LEVEL_SKIP_WEIGHT: u32 = 40;
+// R3015003: the skip is a share of the same total, so it cannot pass it.
+const _: () = assert!(LEVEL_SKIP_WEIGHT <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.3, R3015003: the most out-of-order pulls a seeded simulation of duplicates on one card may count, in
+/// percent of the in-order pulls it counts: an out-of-order pull is far rarer than an in-order one.
+pub const LEVEL_SKIP_MAX_PERCENT_OF_IN_ORDER: u32 = 10;
 /// SPEC §14.2, §14.3, R1661000, R1661001: the rarity every account cosmetic but its kind's default
 /// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
 /// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).

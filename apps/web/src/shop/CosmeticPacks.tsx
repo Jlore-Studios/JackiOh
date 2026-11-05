@@ -56,6 +56,7 @@ import {
   cosmeticSlotOutcome,
   fittingCards,
   isPerCardKind,
+  nextThere,
   quantitiesOf,
   shopTestid,
   type RegistryCosmetic,
@@ -260,6 +261,12 @@ export default function CosmeticPacks({
                     data-revealed="true"
                   >
                     <p className="pack-slot__outcome">{cosmeticSlotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}</p>
+                    {/* R3015003: an out-of-order pull granted the levels below it too. */}
+                    {slot.grant.kind === "cosmetic" && (slot.grant.below?.length ?? 0) > 0 ? (
+                      <p className="pack-slot__below" data-testid={shopTestid.below(index)}>
+                        {t("and every level below it")}
+                      </p>
+                    ) : null}
                     {look === null ? null : <CosmeticLook id={look.id} cardId={look.cardId} />}
                     {slot.grant.kind === "cosmetic" && slot.grant.cardId !== null ? (
                       <p className="pack-slot__card">
@@ -416,7 +423,8 @@ function ShardBar({
           {filled ? <RewardReveal items={reveal} testid={shopTestid.shardReveal} /> : <p>{t("The bar is full — pick a chase:")}</p>}
           {candidates.map((cosmetic) => {
             const fits = fittingCards(cosmetic, quantities);
-            const open = fits === null ? [] : fits.filter((cardId) => CATALOG[cardId] !== undefined);
+            // R3015004: a level only on the cards where it is the next one.
+            const open = fits === null ? [] : fits.filter((cardId) => CATALOG[cardId] !== undefined && nextThere(cosmetic.id, cardId, owned));
             const chosen =
               cardFor[cosmetic.id] !== undefined && open.includes(cardFor[cosmetic.id]!)
                 ? cardFor[cosmetic.id]!

@@ -1,7 +1,8 @@
 // `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000). Public
 // like `/terms` (main.tsx serves it ungated); it reads the session itself (`readSession`), so a visitor
 // with none makes no request. The client computes nothing (CLAUDE.md rule 7): every figure is the
-// server's, only formatted. A failed read offers Try again in its place (#1774), as elsewhere (#1691).
+// server's, only formatted. A failed read offers Try again in its place (#1774), as elsewhere (#1691). R3015003: both
+// odds list the chance a pull grants a variant's levels out of order (`levelSkip`).
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -32,6 +33,8 @@ export const purchasesTestid = {
   oddsRow: (key: string) => `purchases-odds-${key}`,
   duplicate: "purchases-duplicate",
   globalCosmetic: "purchases-global-cosmetic",
+  levelSkip: "purchases-level-skip",
+  cosmeticLevelSkip: "purchases-cosmetic-level-skip",
   cosmeticPacks: "purchases-cosmetic-packs",
   cosmeticSlot: "purchases-cosmetic-slot",
   cosmeticFloored: "purchases-cosmetic-floored",
@@ -134,6 +137,21 @@ function SlotOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement {
   );
 }
 
+/**
+ * R3015003: how a pull grants a variant's levels: its next level, and `chance` of the time, where a higher one is
+ * left, that one and every level below it instead.
+ */
+function LevelSkip({ chance, testid }: { chance: number; testid: string }): ReactElement {
+  return (
+    <p data-testid={testid}>
+      {t(
+        "A variant drops its next level. {chance} of the time, when a higher level is left, it drops that level and every level below it instead.",
+        { chance: percent(chance) },
+      )}
+    </p>
+  );
+}
+
 /** What a duplicate becomes: a cosmetic of the table's rarity, or, on the global roll, an account cosmetic (R1661001). */
 function DuplicateOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement {
   const { chance, tiers } = odds.globalCosmetic;
@@ -152,6 +170,7 @@ function DuplicateOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement 
           { chance: percent(chance), epic: global.epic, legendary: global.legendary, mythic: global.mythic },
         )}
       </p>
+      <LevelSkip chance={odds.levelSkip} testid={purchasesTestid.levelSkip} />
     </>
   );
 }
@@ -172,6 +191,7 @@ function CosmeticOdds({ odds }: { odds: CosmeticPacksResponse["odds"] }): ReactE
           tierPercents(odds.flooredSlot),
         )}
       </p>
+      <LevelSkip chance={odds.levelSkip} testid={purchasesTestid.cosmeticLevelSkip} />
     </>
   );
 }

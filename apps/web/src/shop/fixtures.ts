@@ -33,6 +33,7 @@ function cosmeticPackOdds(): CosmeticPacksResponse["odds"] {
   return {
     slot: { common: 0.5, rare: 0.3, epic: 0.15, legendary: 0.04, mythic: 0.01 },
     flooredSlot: { common: 0, rare: 0, epic: 0.9, legendary: 0.08, mythic: 0.02 },
+    levelSkip: 0.03,
   };
 }
 

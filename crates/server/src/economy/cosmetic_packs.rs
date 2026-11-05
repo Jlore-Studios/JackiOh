@@ -27,9 +27,9 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok_o
 use crate::app::App;
 use crate::config::{
     CHASE_SHARD_PACKS, COSMETIC_PACK_CARD_WEIGHTS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
-    PACK_FLOORED_SLOT,
+    LEVEL_SKIP_WEIGHT, PACK_FLOORED_SLOT, TIER_WEIGHT_TOTAL,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics, implying, offered};
+use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics, implying, levels_below, offered};
 use crate::db::store::Tx;
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::packs::{BarsSettled, bar_before, grant_counter, grant_unlocked, settle_bars};
@@ -37,8 +37,10 @@ use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryGrant, InventoryItem, OwnedCosmetics,
 };
-use crate::economy::tiers::{TierOdds, cosmetic_odds, cosmetic_tier};
-use crate::economy::tokens::{BarState, choice_of, conflict, cosmetic_bar_points, held, unsold};
+use crate::economy::tiers::{TierOdds, cosmetic_odds, cosmetic_tier, tier_draw};
+use crate::economy::tokens::{
+    BarState, choice_of, conflict, cosmetic_bar_points, held, next_level_only, unsold,
+};
 
 // A cosmetic pack holds a slot, and a full Chase Shard bar holds a pack.
 const _: () = assert!(COSMETIC_PACK_SLOTS >= 1);
@@ -74,6 +76,13 @@ impl CosmeticHoldings {
     fn owns(&self, card_id: &str) -> bool {
         self.owned.get(card_id).copied().unwrap_or(0) >= i64::from(MAX_COPIES)
     }
+
+    /// Whether the account owns the per-card cosmetic `id` on `card_id`: a row of it, or of a retired entry that
+    /// owns it there (R2725002, R3015006).
+    fn holds(&self, card_id: &str, id: &str) -> bool {
+        let row = |id: &str| self.card_cosmetics.contains(&(card_id.to_string(), id.to_string()));
+        row(id) || implying(id).any(row)
+    }
 }
 
 /// What one cosmetic pack slot grants (R1306000, R1306001).
@@ -83,12 +92,15 @@ pub enum CosmeticSlotGrant {
     /// An unowned cosmetic of `cosmetic_rarity`, which is the rarity rolled or the nearest one
     /// with something unowned. `card_id` is the card a per-card cosmetic goes on (`None` for an
     /// account cosmetic), and `card_granted` whether the account lacked that card, so the slot
-    /// grants it too.
+    /// grants it too. R3015003: `below`, the levels an out-of-order pull grants on that card with its
+    /// level, lowest first; empty, and left out, for every other grant.
     Cosmetic {
         cosmetic_id: String,
         cosmetic_rarity: CosmeticRarity,
         card_id: Option<String>,
         card_granted: bool,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        below: Vec<String>,
     },
     /// A spent slot: nothing at all was left to own, so it grants nothing. Like every slot, it
     /// adds the points of the cosmetic rarity it rolled to both token bars (R1306001, R1953000,
@@ -156,12 +168,19 @@ pub struct OpenedCosmeticPack {
 }
 
 /// A cosmetic pack's odds as `GET /api/cosmetic-packs` shows them (R1339000): one roll of a slot
-/// and of the floored slot on `COSMETIC_TIER_WEIGHTS`, the fallback included.
+/// and of the floored slot on `COSMETIC_TIER_WEIGHTS`, the fallback included. R3015003: and `level_skip`, the
+/// chance a slot that finds a level past the next one open grants that level and every level below it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticPackOdds {
     pub slot: TierOdds,
     pub floored_slot: TierOdds,
+    pub level_skip: f64,
+}
+
+/// R3015003: the chance an out-of-order pull is taken where one is open, as both odds `GET`s list it.
+pub fn level_skip_chance() -> f64 {
+    f64::from(LEVEL_SKIP_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL)
 }
 
 /// What `GET /api/cosmetic-packs` reads back (R1306002, R1339000).
@@ -174,31 +193,53 @@ pub struct CosmeticPacks {
 }
 
 /// The pool cards a per-card cosmetic is not owned on: those it is offered (R2725001), all of them for a foil,
-/// a finish or a border, a full art's own card alone (R1313000). One a retired full art owns by implication is
-/// owned there (R2725002). An account cosmetic has none.
-fn placements<'p>(cosmetic: &Cosmetic, pool: &'p [PoolCard], holdings: &CosmeticHoldings) -> Vec<&'p str> {
+/// a finish or a border, a full art's own card alone (R1313000). One a retired entry owns is owned there
+/// (R2725002). An account cosmetic has none. R3015003: a level only where it is the next, every level below it
+/// in `droppable` owned there.
+fn placements<'p>(
+    cosmetic: &Cosmetic,
+    droppable: &[Cosmetic],
+    pool: &'p [PoolCard],
+    holdings: &CosmeticHoldings,
+) -> Vec<&'p str> {
+    open_places(cosmetic, droppable, pool, holdings, true)
+}
+
+/// R3015003: the pool cards a level is open on out of order: offered, not owned, and some level below it not.
+fn skip_placements<'p>(
+    cosmetic: &Cosmetic,
+    droppable: &[Cosmetic],
+    pool: &'p [PoolCard],
+    holdings: &CosmeticHoldings,
+) -> Vec<&'p str> {
+    open_places(cosmetic, droppable, pool, holdings, false)
+}
+
+/// The pool cards `cosmetic` is offered and not owned on, where every level below it is owned (`next`) or not.
+fn open_places<'p>(
+    cosmetic: &Cosmetic,
+    droppable: &[Cosmetic],
+    pool: &'p [PoolCard],
+    holdings: &CosmeticHoldings,
+    next: bool,
+) -> Vec<&'p str> {
     if !cosmetic.kind.is_per_card() {
         return Vec::new();
     }
+    let below = levels_below(droppable, cosmetic);
     pool.iter()
         .filter(|card| offered(cosmetic, Some(&card.id)))
-        .filter(|card| {
-            let held = |id: &str| {
-                holdings
-                    .card_cosmetics
-                    .contains(&(card.id.clone(), id.to_string()))
-            };
-            !held(&cosmetic.id) && !implying(&card.id, &cosmetic.id).any(held)
-        })
+        .filter(|card| !holdings.holds(&card.id, &cosmetic.id))
+        .filter(|card| below.iter().all(|level| holdings.holds(&card.id, &level.id)) == next)
         .map(|card| card.id.as_str())
         .collect()
 }
 
-/// Whether the account can still gain `cosmetic`: an account cosmetic it does not own, or a
-/// per-card one with a card left to own it on.
-fn is_open(cosmetic: &Cosmetic, pool: &[PoolCard], holdings: &CosmeticHoldings) -> bool {
+/// Whether the account can still gain `cosmetic` in order: an account cosmetic it does not own, or a
+/// per-card one with a card left to own it on as its next level.
+fn is_open(cosmetic: &Cosmetic, droppable: &[Cosmetic], pool: &[PoolCard], holdings: &CosmeticHoldings) -> bool {
     if cosmetic.kind.is_per_card() {
-        !placements(cosmetic, pool, holdings).is_empty()
+        !placements(cosmetic, droppable, pool, holdings).is_empty()
     } else {
         !holdings.account_cosmetics.contains(&cosmetic.id)
     }
@@ -238,6 +279,11 @@ pub fn pick_card<'c>(
 /// picked uniformly (one draw); a per-card one then takes its card by [`pick_card`] (one draw), and
 /// an account one has none. A Legendary or Mythic one is a chase, and drops like any other
 /// (R1333000). With nothing open in any rarity the slot is spent: `Bars`, with no draw.
+///
+/// R3015003: a level is open in order only as its card's next. Each rarity tried that has a level open out of
+/// order on some card first takes one draw below `TIER_WEIGHT_TOTAL`: below `LEVEL_SKIP_WEIGHT` it picks such a
+/// level (one draw) and its card among those (one draw), and grants it with every level below it the card does
+/// not own (`below`); at or past it, the rarity is tried in order as ever.
 pub fn slot_grant(
     rolled: CosmeticRarity,
     floor: CosmeticRarity,
@@ -247,23 +293,47 @@ pub fn slot_grant(
     rng: &mut Rng,
 ) -> CosmeticSlotGrant {
     for tier in rolled.floored_fallback_order(floor) {
+        let skips: Vec<(&Cosmetic, Vec<&str>)> = droppable
+            .iter()
+            .filter(|cosmetic| cosmetic.rarity == tier && cosmetic.level.is_some())
+            .map(|cosmetic| (cosmetic, skip_placements(cosmetic, droppable, pool, holdings)))
+            .filter(|(_, places)| !places.is_empty())
+            .collect();
+        if !skips.is_empty()
+            && tier_draw(rng) < LEVEL_SKIP_WEIGHT
+            && let Some((cosmetic, places)) = rng.pick(&skips)
+            && let Some(card) = pick_card(places, &holdings.owned, rng)
+        {
+            return CosmeticSlotGrant::Cosmetic {
+                cosmetic_id: cosmetic.id.clone(),
+                cosmetic_rarity: tier,
+                card_id: Some(card.to_string()),
+                card_granted: !holdings.owns(card),
+                below: levels_below(droppable, cosmetic)
+                    .into_iter()
+                    .filter(|below| !holdings.holds(card, &below.id))
+                    .map(|below| below.id.clone())
+                    .collect(),
+            };
+        }
         let open: Vec<&Cosmetic> = droppable
             .iter()
             .filter(|cosmetic| cosmetic.rarity == tier)
-            .filter(|cosmetic| is_open(cosmetic, pool, holdings))
+            .filter(|cosmetic| is_open(cosmetic, droppable, pool, holdings))
             .collect();
         let Some(cosmetic) = rng.pick(&open) else {
             continue;
         };
         // An open per-card cosmetic has a placement, so the pick finds a card.
-        let card_id =
-            pick_card(&placements(cosmetic, pool, holdings), &holdings.owned, rng).map(str::to_string);
+        let card_id = pick_card(&placements(cosmetic, droppable, pool, holdings), &holdings.owned, rng)
+            .map(str::to_string);
         let card_granted = card_id.as_deref().is_some_and(|card| !holdings.owns(card));
         return CosmeticSlotGrant::Cosmetic {
             cosmetic_id: cosmetic.id.clone(),
             cosmetic_rarity: tier,
             card_id,
             card_granted,
+            below: Vec::new(),
         };
     }
     CosmeticSlotGrant::Bars
@@ -300,14 +370,17 @@ pub fn roll_cosmetic_pack(
             cosmetic_id,
             card_id,
             card_granted,
+            below,
             ..
         } = &grant
         {
             match card_id {
                 Some(card_id) => {
-                    holdings
-                        .card_cosmetics
-                        .insert((card_id.clone(), cosmetic_id.clone()));
+                    for cosmetic_id in below.iter().chain([cosmetic_id]) {
+                        holdings
+                            .card_cosmetics
+                            .insert((card_id.clone(), cosmetic_id.clone()));
+                    }
                     if *card_granted {
                         *holdings.owned.entry(card_id.clone()).or_insert(0) += 1;
                     }
@@ -410,25 +483,31 @@ pub async fn open_cosmetic_pack_once(
 
     for slot in &opening.slots {
         if let CosmeticSlotGrant::Cosmetic {
-            cosmetic_id, card_id, ..
+            cosmetic_id,
+            card_id,
+            below,
+            ..
         } = &slot.grant
         {
-            let granted = tx
-                .economy_cosmetics_grant(&CosmeticGrant {
-                    profile_id: profile_id.to_string(),
-                    card_id: card_id.clone(),
-                    cosmetic_id: cosmetic_id.clone(),
-                    delta: 1,
-                    reason: EconomyReason::PackOpen,
-                    reference: reference.clone(),
-                    dev: false,
-                    at,
-                })
-                .await?;
-            if !granted {
-                return Err(ApiError::internal(format!(
-                    "{cosmetic_id} was already owned on {card_id:?}"
-                )));
+            // R3015003: an out-of-order pull's levels below it first, each a row of its own.
+            for cosmetic_id in below.iter().chain([cosmetic_id]) {
+                let granted = tx
+                    .economy_cosmetics_grant(&CosmeticGrant {
+                        profile_id: profile_id.to_string(),
+                        card_id: card_id.clone(),
+                        cosmetic_id: cosmetic_id.clone(),
+                        delta: 1,
+                        reason: EconomyReason::PackOpen,
+                        reference: reference.clone(),
+                        dev: false,
+                        at,
+                    })
+                    .await?;
+                if !granted {
+                    return Err(ApiError::internal(format!(
+                        "{cosmetic_id} was already owned on {card_id:?}"
+                    )));
+                }
             }
         }
     }
@@ -536,6 +615,7 @@ pub async fn buy_chase_once(
     let owned = owned_in(&mut tx, profile_id).await?;
     let cosmetics = tx.economy_cosmetics_get(profile_id).await?;
     let choice = choice_of(cosmetic, card_id, &owned, &cosmetics);
+    next_level_only(registry, cosmetic, card_id, &cosmetics)?;
     if bar < CHASE_SHARD_PACKS {
         return Err(conflict("the Chase Shard bar is not full"));
     }
@@ -606,6 +686,7 @@ async fn cosmetic_packs_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<Cosmetic
         odds: CosmeticPackOdds {
             slot: cosmetic_odds(None),
             floored_slot: cosmetic_odds(Some(COSMETIC_PACK_FLOOR_RARITY)),
+            level_skip: level_skip_chance(),
         },
     })
 }
@@ -687,6 +768,7 @@ mod tests {
             jlorious: false,
             card: None,
             offer: Vec::new(),
+            level: None,
         }
     }
 
@@ -894,6 +976,7 @@ mod tests {
                 cosmetic_rarity: Common,
                 card_id: None,
                 card_granted: false,
+                below: Vec::new(),
             }
         );
         assert!(drops[1..].iter().all(|grant| **grant == CosmeticSlotGrant::Bars));
@@ -919,6 +1002,7 @@ mod tests {
                 cosmetic_rarity: Epic,
                 card_id: Some("card-3".to_owned()),
                 card_granted: true,
+                below: Vec::new(),
             }
         );
         let holdings = CosmeticHoldings {
@@ -933,6 +1017,7 @@ mod tests {
                 cosmetic_rarity: Epic,
                 card_id: Some("card-3".to_owned()),
                 card_granted: false,
+                below: Vec::new(),
             }
         );
         // A full art on a card that is not in the pool has nowhere to go.
@@ -1193,6 +1278,7 @@ mod tests {
                 cosmetic_rarity: Epic,
                 card_id: Some("card-1".to_owned()),
                 card_granted: false,
+                below: Vec::new(),
             }
         );
         // With both held the slot has nothing left to drop.
@@ -1238,6 +1324,7 @@ mod tests {
                     cosmetic_rarity: Legendary,
                     card_id: Some("classicplus-012".to_owned()),
                     card_granted: false,
+                    below: Vec::new(),
                 }
             );
         }
