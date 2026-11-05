@@ -56,7 +56,7 @@ use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
 };
 use crate::economy::rewards::GameEconomy;
-use crate::loadout::{Loadout, cards_due, shown_defs};
+use crate::loadout::{Loadout, LoadoutExt, cards_due, shown_defs};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;

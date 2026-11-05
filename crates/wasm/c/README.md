@@ -131,6 +131,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `choose_action(state, seat, rng_seed, rng_cursor)` | strings, then `rng_cursor: f64` | `{ action, rngCursor }` |
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
+| `loadout(call)` | string | #3102: one call of `jackioh-shared`'s loadout visibility rule, a `LoadoutCall` in and a `LoadoutAnswer` out (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`); the host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |

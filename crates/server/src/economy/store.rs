@@ -204,80 +204,9 @@ pub struct OwnedCosmetics {
     pub account: Vec<String>,
 }
 
-/// R2655000: a card's own full-art pick: `false` (no full art), `true` (its Epic full art, as every
-/// pick before #2655 named it) or a full art's registry id, which travels as the id's text. An id
-/// is kept as written and judged where it is worn, as a foil's is (`cosmetics::full_art_picked`).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum FullArtPick {
-    On(bool),
-    Id(String),
-}
-
-impl From<bool> for FullArtPick {
-    fn from(on: bool) -> FullArtPick {
-        FullArtPick::On(on)
-    }
-}
-
-impl FullArtPick {
-    /// Whether the pick prints a full art at all: `true` or any id.
-    pub fn prints(&self) -> bool {
-        !matches!(self, FullArtPick::On(false))
-    }
-
-    /// The id the pick names, if it names one rather than a switch.
-    pub fn id(&self) -> Option<&str> {
-        match self {
-            FullArtPick::Id(id) => Some(id),
-            FullArtPick::On(_) => None,
-        }
-    }
-
-    /// The pick a row of `public.card_cosmetic_picks` holds: its `full_art` switch, and the id
-    /// migration 0072 keeps beside a switch that is on.
-    pub fn of_row(full_art: Option<bool>, id: Option<String>) -> Option<FullArtPick> {
-        match (full_art, id) {
-            (Some(true), Some(id)) => Some(FullArtPick::Id(id)),
-            (Some(on), _) => Some(FullArtPick::On(on)),
-            (None, _) => None,
-        }
-    }
-}
-
-/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
-/// wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may
-/// name a version, and the augments layered on it (migration 0079, R2725000). A kind
-/// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
-/// id is kept as written, an unknown one too, and judged only where it is worn (`loadout::freeze_loadout`,
-/// R1834002).
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct CardPicks {
-    pub card_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub foil: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub finish: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub border: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub full_art: Option<FullArtPick>,
-    /// R2725000: the augments the card layers on its version, by id, as written: none is no pick.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub augments: Vec<String>,
-}
-
-impl CardPicks {
-    /// Whether the card has no pick of its own at all, which the store keeps as no row.
-    pub fn is_empty(&self) -> bool {
-        self.foil.is_none()
-            && self.finish.is_none()
-            && self.border.is_none()
-            && self.full_art.is_none()
-            && self.augments.is_empty()
-    }
-}
+/// R2655000, R1834000: a card's own full-art pick and what it wears of its own, which the loadout
+/// visibility rule reads: `jackioh-shared`'s (#3102), which the frozen loadouts of a match hold.
+pub use jackioh_shared::loadout::{CardPicks, FullArtPick};
 
 /// R1834005: how many people own a cosmetic, on one card for a per-card one (`card_id`) or on the
 /// account (`None`), and when one was first granted it (epoch ms; `None` when no grant row shows

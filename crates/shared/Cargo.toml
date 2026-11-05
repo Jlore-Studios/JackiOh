@@ -22,3 +22,7 @@ ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
 [dev-dependencies]
 serde_json = { workspace = true }
+# The loadout tests deal a real game from the shipped cards (`tests/loadout.rs`); dev-dependencies are not
+# the crate's own, which stay the pure crates' (CLAUDE.md rule 4).
+jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }

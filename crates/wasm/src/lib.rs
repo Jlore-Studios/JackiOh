@@ -402,6 +402,16 @@ pub fn series(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::series(call_json))
 }
 
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn loadout(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::loadout(call_json))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
