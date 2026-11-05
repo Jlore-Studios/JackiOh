@@ -256,9 +256,9 @@ describe("B12: the full face's DOM", () => {
     const cf = catalogFace("core-020");
     const atk = one(cf, ".cf-stats .cf-atk");
     const hp = one(cf, ".cf-stats .cf-hp");
-    expect(atk.getAttribute("data-face-attack")).toBe("7");
+    expect(atk.getAttribute("data-face-attack")).toBe("6");
     expect(atk.getAttribute("data-tone")).toBe("base");
-    expect(atk.textContent?.trim()).toBe("7");
+    expect(atk.textContent?.trim()).toBe("6");
     expect(hp.getAttribute("data-face-health")).toBe("1");
     expect(hp.getAttribute("data-tone")).toBe("base");
     expect(hp.textContent?.trim()).toBe("1");
@@ -1249,7 +1249,8 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
   });
 
   it("#1017: a face that fits prints its whole text, and a clamp prints its whole text as printing less", () => {
-    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: true })} />);
+    // Silly Silas's base face: its Radiant face has been a clamp since Crater joined it (issue #3136).
+    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: false })} />);
     flushFits();
     const fits = one(container, ".card-text");
     expect(fits.hasAttribute("data-short")).toBe(false);

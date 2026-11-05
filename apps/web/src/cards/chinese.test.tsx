@@ -127,7 +127,7 @@ describe("R1301 a Chinese card in a match", () => {
     const chinese = glossaryFor(inPlay(card({ defId: "core-003", cost: 4, radiant: true, chinese: true })));
     // The terms are found in the English text.
     expect(chinese.map((entry) => entry.id)).toEqual(english.map((entry) => entry.id));
-    expect(chinese.map((entry) => entry.id)).toEqual(["Taunt", "Divine Shield", "Reborn", "Death"]);
+    expect(chinese.map((entry) => entry.id)).toEqual(["Taunt", "Divine Shield", "Reborn", "Can't Defend", "Death"]);
     for (const entry of chinese) {
       expect({ label: entry.label, rule: entry.rule }, entry.id).toEqual(CHINESE_TERMS.glossary[entry.id]);
     }

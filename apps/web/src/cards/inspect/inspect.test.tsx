@@ -1276,10 +1276,10 @@ describe("the glossary (B26)", () => {
 
   it("B26 a keyword the text already names is listed once", () => {
     const def = defOf("core-003");
-    expect(def.base.text).toBe("Taunt, Divine Shield, Reborn");
+    expect(def.base.text).toBe("Taunt, Divine Shield, Reborn, Can't Defend");
     render(<Trigger id="a" subject={{ key: "b26-once", face: faceOf("core-003") }} />);
     hover(screen.getByTestId("a"));
-    expect(glossaryTerms(screen.getByTestId(INSPECT_HOVER))).toEqual(["Taunt", "Divine Shield", "Reborn"]);
+    expect(glossaryTerms(screen.getByTestId(INSPECT_HOVER))).toEqual(["Taunt", "Divine Shield", "Reborn", "Can't Defend"]);
   });
 
   it("B26 a face with no terms and no keywords renders no inspect-glossary at all", () => {

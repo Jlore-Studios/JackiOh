@@ -2352,10 +2352,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   class="stat stat-attack"
-                  data-attack="6"
+                  data-attack="3"
                   data-tone="base"
                 >
-                  6
+                  3
                 </span>
                 <span
                   class="stat stat-health"

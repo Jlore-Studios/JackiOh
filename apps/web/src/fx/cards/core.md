@@ -40,7 +40,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-019` | Midrange Menace | Unit | trigger mend | 1.24 | none: vanilla | trigger: the census leaves out the events on the card itself, its healed, which mend reads |
 | `core-020` | Pointmaster | Unit | none: vanilla | — | none: vanilla | the census agrees |
 | `core-021` | Hinder | Spell | bespoke manaCrack | 1.00 | none: no motif reads discarded | kept: #2784's bespoke `manaCrack` (R502), which cracks the crystals the census's `discarded` window does not show |
-| `core-022` | Carnivorous Cube | Unit | cry offering; death conjure | 1.55 | bolt | cry: its Cry tributes your own unit, a cost, which offering draws (the census's bolt reads that destroyed as a kill); death: no census family reads summoned, which conjure (#2786) reads |
+| `core-022` | Carnivorous Cube | Unit | cry offering; death conjure | 1.45 | bolt | cry: its Cry tributes your own unit, a cost, which offering draws (the census's bolt reads that destroyed as a kill); death: no census family reads summoned, which conjure (#2786) reads |
 | `core-023` | Reoccurring Dream | Spell | cast radiance | 1.19 | vanish | cast: the census's vanish is its End of turn return to hand; its play's radiantSet, which no census family reads, radiance (#2793) reads |
 | `core-024` | Efficiency Dividend | Spell | cast bolt Hustle/cash | 1.55 | bolt | cast: the census agrees (bolt) |
 | `core-025` | 4-mana 7/7 | Unit | none: vanilla | — | none: vanilla | the census agrees |
@@ -102,10 +102,10 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-079` | Twinspell | Field Spell | cast conjure; aura arcane zone | 1.28 | none: no motif reads modifierChanged | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it |
 | `core-080` | Zao Gao | Spell | cast conjure | 1.28 | volley | cast: the census's suggestion is noise in its window (fatigue, other cards' events); its own effect is summoned, which conjure reads |
 | `core-081` | Radiant Saintess | Unit | death radiance | 1.45 | none: vanilla | death: no census family reads radiantSet, which radiance (#2793) reads |
-| `core-082` | KY's Trial | Spell | cast send | 1.19 | none: no motif reads promptAnswered | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
+| `core-082` | KY's Trial | Spell | cast send | 1.28 | none: no motif reads promptAnswered | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-083` | Transmogulate | Spell | bespoke legendaryTide | 1.62 | none: no motif reads transformed | bespoke: its transforms land in a hand and a deck the board does not show, which no motif anchors on |
 | `core-084` | Going Long | Field Spell | cast conjure; aura holy side | 1.28 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it |
-| `core-085` | Unlicensed Experimentation | Trap | cast snap | 1.62 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
+| `core-085` | Unlicensed Experimentation | Trap | cast snap | 1.74 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
 | `core-086` | "Miss" Mrow | Unit | death tether Beast/felinor | 1.35 | none: vanilla | death: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
 | `core-087` | Pocket Chaos | Spell | cast shift | 1.85 | vanish | cast: the census's vanish is the cards a board swap moved; its swap is `swapped`, which shift reads |
 | `core-088` | Twisting Nether | Spell | setPiece nether | 1.65 | wipe | kept: #2800's `nether` set piece (R2800000), which part F builds; the census's wipe is its removals |
