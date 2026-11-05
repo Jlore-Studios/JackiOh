@@ -65,7 +65,8 @@ export function usePreviewHold(key: string, onPreview: () => void): PreviewHold 
 
 /**
  * R2730000: one item fullscreen, modal, focus trapped: its picture large, its name, its rarity,
- * whether it is owned or locked, the token's offer where one covers it, and Close.
+ * whether it is owned or locked, the token's offer where one covers it, and Close. R3016000: `controls`
+ * sit under the picture, outside its `aria-hidden` (a grid card's Radiant toggle).
  */
 export default function ItemPreview({
   id,
@@ -73,6 +74,7 @@ export default function ItemPreview({
   rarity,
   owned,
   picture,
+  controls = null,
   offer,
   onClose,
 }: {
@@ -81,6 +83,7 @@ export default function ItemPreview({
   rarity: string;
   owned: boolean;
   picture: ReactElement;
+  controls?: ReactElement | null;
   offer: ReactElement | null;
   onClose: () => void;
 }): ReactElement {
@@ -122,6 +125,7 @@ export default function ItemPreview({
         <div className="collection-preview__picture" aria-hidden="true">
           {picture}
         </div>
+        {controls}
         <h3 className="collection-preview__name">{name}</h3>
         <p className="collection-preview__meta">{t(rarity)}</p>
         <p className="collection-preview__meta" data-testid={T.previewStatus}>

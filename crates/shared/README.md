@@ -496,6 +496,64 @@ Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
 The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
 pool as data) moves in its second part.
 
+## `src/cosmetics.rs` and `cosmetics.json`: the registry
+
+Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
+`Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
+offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
+lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
+judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
+(`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
+`cosmetics` module re-exports all of it, and `crates/server/tests/export_cosmetics.rs` writes the registry into
+`apps/web/src/wire/generated/cosmetics.ts`.
+
+## `src/economy/`: the collection economy
+
+What a pack opening grants, how pity and the token bars move, and what a set-track level pays (SPEC §14.3 to
+§14.7), over plain records. The server's store code reads the records, calls the decision and writes the
+outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the same outcome to DataStores.
+
+| Decision | Records in | Outcome |
+| --- | --- | --- |
+| `open_card_pack(&PackRecords, &PackInputs, seed, now_ms)` | the packs of the kind held, the account's copies of each card, its cosmetics and its counters | the slots, the pity after, what both bars did, the `grants` in the order to write them and the `log` every row's `ref` carries (R1301003, R1339002); `EconomyRefusal` for no pack held or a pool of no card |
+| `open_cosmetic_pack(&PackRecords, &CosmeticPackInputs, seed, now_ms)` | the same | the slots, the Chase Shard bar before and after (R1306002), both bars, the `grants` and the `log` (R1306003) |
+| `bars::fill_bar(kind, &AccountCounters)` | a dev account's counters | the writes of a fill (R1310003), all `Cause::Dev` |
+| `track_rewards::reward_for_level(level)` | a level | what reaching it pays (R1302) |
+
+- **The inputs are what the roll draws from, not what the store holds:** the pool in catalog order
+  (`roll::pack_pool` over a `CardDefs`), the cosmetics registry and the catalog version, which the log keeps so
+  an opening replays however the live catalog or registry has moved (R1301003). A call across the boundary that
+  leaves them out gets the compiled-in ones.
+- **Every draw is the roll's, in the order its docs state (R1339002):** `Rng::new(seed, 0)`, the slot tiers first
+  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's and the pick's. A replayed
+  opening grants the same.
+- **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
+  (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one).
+  Each carries its `Cause` (`PackOpen`, `TokenBar`, `Dev`), which the store's ledger reason names. A store refuses
+  a grant its holding cannot take and writes nothing more.
+- **`roll`, `cosmetic_pack`, `tiers`, `math`** are the rolls themselves (tiered rolls, the dupe chain, pity and the
+  level curve), moved from `crates/server/src/economy/` with their tests; `bars` is the token bars (R1305000,
+  R1953000, R2728000).
+
+### The boundary
+
+`jackioh-wasm-core`'s `economy(call)` takes one `EconomyCall` as JSON and answers one `EconomyAnswer`:
+
+```json
+{ "call": "openCardPack", "records": { "held": 1, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+  "counters": { "pity": { "epic": 0, "legendary": 0, "mythic": 0 }, "cardBar": 0, "cosmeticBar": 0,
+  "cosmeticCycle": 0, "chaseShard": 0 } }, "pack": "global", "seed": "…", "now": 1700000000000 }
+{ "opened": { "pack": "global", "slots": [ … ], "pity": { … }, "bars": { … }, "grants": [ … ], "log": { … }, "at": 1700000000000 } }
+{ "refused": { "reason": "no_pack_held", "message": "no unopened pack of that kind" } }
+```
+
+The calls are `openCardPack`, `openCosmeticPack`, `fillBar` and `levelReward`; the answers are `opened`,
+`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it. Not in the
+Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+
+The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
+pool as data) moves in its second part.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:

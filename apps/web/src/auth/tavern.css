@@ -3,21 +3,27 @@
    the landing's hearth into a sign-in form that belongs to the same room rather than a bare
    developer form.
 
-   SCOPED ON PURPOSE. Every token and rule is under `.tavern`; nothing is added to :root or
-   index.css, whose rules the board's pixel-measured layout depends on (index.css's header). The
-   screens still render index.css's `.app-shell`, `.panel`, `.notice`, `.form-card`,
-   `.link-button` and `.affix-button`; the rules below re-skin them only inside `.tavern`, with one
-   more class of specificity than the rule they replace. No image and no web font: gradients,
-   shadows and the system's serif. */
+   SCOPED ON PURPOSE. Every token and rule is under `.tavern` (but for the top bar's three colors,
+   below); nothing is added to :root or index.css, whose rules the board's pixel-measured layout
+   depends on (index.css's header). The screens still render index.css's `.app-shell`, `.panel`,
+   `.notice`, `.form-card`, `.link-button` and `.affix-button`; the rules below re-skin them only
+   inside `.tavern`, with one more class of specificity than the rule they replace. No image and no
+   web font: gradients, shadows and the system's serif. */
+
+/* The top bar's three colors (routes/top-bar.css, #3189). BackLink's nav also sits on screens that are not
+   `.tavern` (the replays, the deck screens), where they would be undefined, so the nav carries them. */
+.tavern,
+.screen-nav {
+  --tavern-brass: #c9953f;
+  --tavern-gold: #f3c969;
+  --tavern-gold-pale: #fbe7b0;
+}
 
 .tavern {
   --tavern-night: #120b07;
   --tavern-wood-deep: #2b170c;
   --tavern-wood: #5a341b;
   --tavern-wood-light: #8a5a33;
-  --tavern-brass: #c9953f;
-  --tavern-gold: #f3c969;
-  --tavern-gold-pale: #fbe7b0;
   --tavern-ember: #ff7a2f;
   --tavern-flame: #ffb347;
   --tavern-parchment: #efe0bf;
@@ -103,58 +109,12 @@
   color: var(--tavern-gold-pale);
 }
 
-/* ---- the corner: the way back, as the landing's corner pill ------------------------------- */
+/* ---- the corner: the way back ------------------------------------------------------------- */
 
+/* Back, the gear and the buttons beside them are the landing's corner pills and circles, drawn by
+   routes/top-bar.css on the replays' and the deck screens' bar as on this one. */
 .tavern.app-shell .screen-nav {
   margin-bottom: 0;
-}
-
-.tavern.app-shell .screen-nav .link-button {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border: 1px solid var(--tavern-brass);
-  border-radius: 999px;
-  background: rgba(18, 11, 7, 0.65);
-  color: var(--tavern-gold-pale);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-decoration: none;
-  white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
-  transition: background-color 140ms, border-color 140ms, box-shadow 140ms;
-}
-
-.tavern.app-shell .screen-nav .link-button:hover {
-  color: var(--tavern-gold-pale);
-  border-color: var(--tavern-gold);
-  background: rgba(90, 52, 27, 0.75);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.2), 0 0 18px rgba(243, 201, 105, 0.3);
-}
-
-/* The settings gear at the bar's far end, a round brass button like the landing's (landing.css):
-   the same control in the same corner on every screen, not a wood square beside a pill. */
-/* Written long enough to outrank the wood button rule below, which every other button here takes. */
-.tavern.app-shell .screen-nav button.settings-gear.settings-gear--nav:not(.link-button):not(.button-primary) {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 1px solid var(--tavern-brass);
-  border-radius: 50%;
-  background: rgba(18, 11, 7, 0.65);
-  color: var(--tavern-gold-pale);
-  text-shadow: none;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
-}
-
-.tavern.app-shell .screen-nav button.settings-gear.settings-gear--nav:not(.link-button):not(.button-primary):hover:not(:disabled) {
-  border-color: var(--tavern-gold);
-  background: rgba(90, 52, 27, 0.75);
-  color: var(--tavern-gold-pale);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.2), 0 0 18px rgba(243, 201, 105, 0.3);
 }
 
 /* ---- the board ----------------------------------------------------------------------------- */
@@ -467,8 +427,9 @@
 
 /* Any other button (Try again, Check again): a wood one, secondary to the gold. Not in the deck
    builder (/decks), whose chips, tiles and card buttons are drawn to its pixel budget by
-   deckbuilder.css; `:where()` leaves the rule's weight as it was, so the gear still outranks it. */
-.tavern.app-shell:where(:not(.deckbuilder)) button:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
+   deckbuilder.css, and not the top bar's buttons, which draw themselves (routes/top-bar.css);
+   `:where()` leaves the rule's weight as it was, so the sheets that outrank it still do. */
+.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
   min-height: 44px;
   padding: 8px 18px;
   border: 1px solid var(--tavern-brass);
@@ -482,7 +443,7 @@
   box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.3), 0 3px 0 #1f1008, 0 6px 12px rgba(0, 0, 0, 0.45);
 }
 
-.tavern.app-shell:where(:not(.deckbuilder)) button:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):hover:not(:disabled) {
+.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):hover:not(:disabled) {
   border-color: var(--tavern-gold);
   color: var(--tavern-gold-pale);
 }
@@ -513,8 +474,9 @@
 }
 
 /* The text-like ways on and out (forgot, the mode toggle, back to sign in, sign out). No padding
-   of their own, so they line up with the form's left edge, and one underline, never two. */
-.tavern.app-shell .link-button,
+   of their own, so they line up with the form's left edge, and one underline, never two. The top
+   bar's Back and Sign out are pills instead (routes/top-bar.css); `:where()` adds no weight. */
+.tavern.app-shell .link-button:where(:not(.top-bar-button)),
 .tavern.app-shell a.link-button {
   padding: 0;
   border: none;
@@ -530,7 +492,7 @@
   box-shadow: none;
 }
 
-.tavern.app-shell .link-button:hover:not(:disabled),
+.tavern.app-shell .link-button:where(:not(.top-bar-button)):hover:not(:disabled),
 .tavern.app-shell a.link-button:hover {
   border: none;
   background: none;
