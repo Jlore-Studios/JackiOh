@@ -1,11 +1,9 @@
 // Practice setup maps difficulty and deck selection to Start (SPEC §9.9).
 // AI resource tiers derive from `AI_DIFFICULTY` (CLAUDE.md rule 9).
 // R1373, R924000: only the player's Random deck can lean toward a set; retain its pick.
-// R915005: a saved deck that names custom cards starts with them (`customCards`); one that names a card
-// the account no longer has says so and does not start.
 // R2882000: Play today's deal starts the UTC day's deal (todaysDeal.ts) on the picked difficulty and lean, whatever the deck.
 
-import { useId, useMemo, useState, type FormEvent, type ReactElement } from "react";
+import { useId, useState, type FormEvent, type ReactElement } from "react";
 
 import {
   AI_DIFFICULTY,
@@ -17,21 +15,13 @@ import {
   type Handicap,
 } from "@jackioh/engine/config";
 
-import type { CardDefs, CustomCard, LeanPick } from "@jackioh/shared";
+import type { CardDefs, LeanPick } from "@jackioh/shared";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
-import {
-  customCardsOfDeck,
-  customDefsOf,
-  gameCustomCards,
-  namesCustomCard,
-  type CustomCardsState,
-} from "../creator/useCustomCards.ts";
 import { LeanSetPicker } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "../routes/nav.tsx";
-import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { DeckPreview } from "./DeckPreview.tsx";
 import {
   RANDOM_DECK_IDENTITY,
@@ -54,8 +44,6 @@ export type PracticeSetupChoice = {
   deck: PracticeDeckChoice;
   leanSet?: LeanPick | null;
   sandbox?: boolean;
-  /** R915006: the custom cards the deck names, which the game carries (R915009: it runs on the Luau module). */
-  customCards?: CustomCard[];
   /** R2882000: today's deal on `difficulty` and `leanSet`; `deck` is only remembered; never a sandbox. */
   dailyDeal?: true;
 };
@@ -78,28 +66,10 @@ type PracticeSetupProps = {
   /** The worker's catalog for the deck preview; null while it loads or when it could not be read. */
   defs: CardDefs | null;
   defsFailed: boolean;
-  /** §12.9: the account's custom cards, which a saved deck may name; absent, there are none. */
-  custom?: CustomCardsState;
-  onRetryCustom?: () => void;
   /** #1691: asks the worker for the catalog again, offered beside a failed preview. */
   onRetryDefs?: () => void;
   onStart(choice: PracticeSetupChoice): void;
 };
-
-const NO_CUSTOM: CustomCardsState = { kind: "none" };
-const NO_CARDS: readonly CustomCard[] = [];
-
-/** Why a saved deck that names custom cards cannot start yet, or null when it can. */
-function customBlock(custom: CustomCardsState, missing: number): string | null {
-  if (custom.kind === "loading") return t("Loading your custom cards…");
-  if (custom.kind !== "ready") return t("Your custom cards could not be loaded, so this deck cannot start.");
-  if (missing === 0) return null;
-  return missing === 1
-    ? t("This deck names a custom card you no longer have. Replace it in Decks to play this deck.")
-    : t("This deck names {count} custom cards you no longer have. Replace them in Decks to play this deck.", {
-        count: String(missing),
-      });
-}
 
 function savedHint(saved: SavedDecks): ReactElement | null {
   switch (saved.kind) {
@@ -170,8 +140,6 @@ function previewFor(
         identity: t("One of your saved decks, exactly as you saved it."),
         cards: choice.cards,
       };
-    case "try":
-      return { title: t("Random deck"), identity: t("A random deck with your custom card."), cards: null };
   }
 }
 
@@ -237,8 +205,6 @@ export function PracticeSetup({
   initial,
   defs,
   defsFailed,
-  custom = NO_CUSTOM,
-  onRetryCustom,
   onRetryDefs,
   onStart,
 }: PracticeSetupProps): ReactElement {
@@ -257,23 +223,9 @@ export function PracticeSetup({
   const preview = previewFor(choice, savedDecks);
   const hint = savedHint(saved);
 
-  // R915005: the custom cards a saved deck names, drawn from their frames beside the catalog.
-  const customCards = custom.kind === "ready" ? custom.cards : NO_CARDS;
-  const customDefs = useMemo(() => customDefsOf(customCards), [customCards]);
-  const previewDefs = useMemo(() => (defs === null ? null : { ...defs, ...customDefs }), [defs, customDefs]);
-  const named = choice.kind === "saved" && namesCustomCard(choice.cards) ? customCardsOfDeck(choice.cards, customCards) : null;
-  const blocked = named === null ? null : customBlock(custom, named.missing.length);
-
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    if (blocked !== null) return;
-    onStart({
-      difficulty,
-      deck: choice,
-      leanSet: lean,
-      ...(sandbox ? { sandbox: true } : {}),
-      ...(named === null || named.cards.length === 0 ? {} : { customCards: gameCustomCards(named.cards) }),
-    });
+    onStart({ difficulty, deck: choice, leanSet: lean, ...(sandbox ? { sandbox: true } : {}) });
   }
 
   /** R2882000: today's deal, on this setup's difficulty and pick; the deck picked is only remembered. */
@@ -365,23 +317,10 @@ export function PracticeSetup({
             title={preview.title}
             identity={preview.identity}
             cards={preview.cards}
-            defs={previewDefs}
+            defs={defs}
             defsFailed={defsFailed}
             onRetry={onRetryDefs}
           />
-          {blocked === null ? null : custom.kind === "loading" ? (
-            <Skeleton variant="panel" label={blocked} testId={practiceTestid.customBlocked} />
-          ) : (
-            <p className="practice-setup__hint" data-testid={practiceTestid.customBlocked} role="status">
-              {blocked}
-              {custom.kind === "failed" && onRetryCustom !== undefined ? (
-                <>
-                  {" "}
-                  <TryAgainButton retryAfterMs={custom.retryAfterMs} onRetry={onRetryCustom} testId={practiceTestid.customRetry} />
-                </>
-              ) : null}
-            </p>
-          )}
         </div>
 
         <label className="practice-setup__sandbox">
@@ -415,7 +354,7 @@ export function PracticeSetup({
           </span>
         </div>
 
-        <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start} disabled={blocked !== null}>
+        <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start}>
           {t("Start game")}
         </button>
       </div>

@@ -32,7 +32,7 @@ export const SHOWCASE_FAMILIES: Readonly<Record<string, ShowcaseFamily>> = {
   "Training Grounds": "training-grounds",
 };
 
-/** R2943001: the Set showcase look of a card of `set`, or null for a set with none (no set, a boss's, a custom card's). */
+/** R2943001: the Set showcase look of a card of `set`, or null for a set with none (no set, a boss's). */
 export function showcaseFamilyOf(set: string | null): ShowcaseFamily | null {
   return set !== null && Object.hasOwn(SHOWCASE_FAMILIES, set) ? (SHOWCASE_FAMILIES[set] ?? null) : null;
 }

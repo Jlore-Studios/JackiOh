@@ -5,8 +5,7 @@
 // AN INCOMING CHALLENGE is a toast with its mode and a picker of the player's deck (or trio), starting on the
 // last one used (`challengeChoice.ts`); for All Random, "More cards from" (R924000) on the device's online
 // pick (R2031000), shown once the engine is in (#778). Accept joins the room by its code, which accepts the
-// challenge (B49), in one press (R1831000). R915005: a deck naming a custom card (or a trio holding one) is
-// listed off, "(practice only)", and never picked. A screen holding unsaved work asks first (R1754000). A
+// challenge (B49), in one press (R1831000). A screen holding unsaved work asks first (R1754000). A
 // refused join is shown in the server's words, with "Open in lobby", as a room link opens `/play` (R767).
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
@@ -35,13 +34,10 @@ import { QueueFound } from "../routes/GameBanner.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   choiceOf,
-  deckPracticeOnly,
   pickDeck,
   pickTrio,
-  practiceOnlyLabel,
   readChallengeChoice,
   rememberChallengeChoice,
-  trioPracticeOnly,
 } from "./challengeChoice.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";
 import { reloadSocial, useSocialPoll } from "./socialPoll.ts";
@@ -64,14 +60,6 @@ function gameAfterJoin(answer: { matchId: string | null; seriesId: string | null
   if (typeof answer.matchId === "string" && answer.matchId.length > 0) return paths.match(answer.matchId);
   if (typeof answer.seriesId === "string" && answer.seriesId.length > 0) return paths.series(answer.seriesId);
   return paths.play;
-}
-
-/** R915005: the ids of the decks (or, for Conquest, the trios) the toast lists but never picks. */
-function practiceOnlyIds(saved: Saved | "failed" | null, mode: Challenge["mode"]): ReadonlySet<string> {
-  if (saved === null || saved === "failed" || mode === "random") return new Set();
-  const off: readonly { id: string }[] =
-    mode === "bo3" ? saved.trios.filter((trio) => trioPracticeOnly(trio, saved.decks)) : saved.decks.filter(deckPracticeOnly);
-  return new Set(off.map((entry) => entry.id));
 }
 
 export function ChallengeToast(): ReactElement {
@@ -162,7 +150,7 @@ export function ChallengeToast(): ReactElement {
     if (saved === null || saved === "failed" || challenge.mode === "random") return null;
     const remembered = readChallengeChoice();
     const chosen = picks[challenge.challengeId];
-    if (challenge.mode === "bo3") return pickTrio(saved.trios, chosen ?? remembered.trioId, saved.decks)?.id ?? null;
+    if (challenge.mode === "bo3") return pickTrio(saved.trios, chosen ?? remembered.trioId)?.id ?? null;
     return pickDeck(saved.decks, chosen ?? remembered.deckId)?.id ?? null;
   };
 
@@ -240,7 +228,6 @@ export function ChallengeToast(): ReactElement {
           const lean = challenge.mode === "random" ? leanFor(challenge) : null;
           const choice = choiceOf(challenge.mode, pick, pick, lean);
           const list = saved === null || saved === "failed" ? [] : challenge.mode === "bo3" ? saved.trios : saved.decks;
-          const practice = practiceOnlyIds(saved, challenge.mode);
           const busy = joining === id || declining === id;
           const lobby = refusedId === id || (challenge.mode !== "random" && saved !== null && choice === null);
           return (
@@ -275,26 +262,13 @@ export function ChallengeToast(): ReactElement {
                       setPicks((before) => ({ ...before, [id]: value }));
                     }}
                   >
-                    {list.map((entry) =>
-                      practice.has(entry.id) ? (
-                        <option key={entry.id} value={entry.id} disabled>
-                          {practiceOnlyLabel(entry.name)}
-                        </option>
-                      ) : (
-                        <option key={entry.id} value={entry.id}>
-                          {entry.name}
-                        </option>
-                      ),
-                    )}
+                    {list.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.name}
+                      </option>
+                    ))}
                   </select>
                 </label>
-              ) : null}
-              {practice.size > 0 ? (
-                <p className="challenge-toast__note" data-testid={challengeToastTestid.practiceOnly}>
-                  {challenge.mode === "bo3"
-                    ? t("A trio holding a deck with a custom card cannot play Conquest: custom cards play only in practice.")
-                    : t("A deck with a custom card plays only in practice, against the AI.")}
-                </p>
               ) : null}
               {challenge.mode === "random" ? (
                 <LeanSetPickerLazy

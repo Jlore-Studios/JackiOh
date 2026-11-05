@@ -15,7 +15,6 @@ import {
   CARD_POOL,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
-  CREATOR_SCREEN,
   PLAY_QUEUE,
   PLAY_SIGN_IN,
   PRACTICE_HUD,
@@ -396,12 +395,6 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
     it("R2122000 /leaderboard", () => {
       cy.visitAs(SIGNED_IN(), "/leaderboard");
       cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /creator", () => {
-      cy.visitAs(SIGNED_IN(), routes.creator());
-      cy.get(ts(CREATOR_SCREEN), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 

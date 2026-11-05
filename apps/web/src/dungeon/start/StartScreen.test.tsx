@@ -32,7 +32,6 @@ const TODAY = "2026-11-01";
 function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
   return {
     content: CONTENT,
-    customCards: [],
     progress: { unlocks: unlocks(), embers: 0 },
     run: null,
     startedAt: null,

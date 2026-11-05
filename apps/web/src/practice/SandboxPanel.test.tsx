@@ -5,9 +5,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { registeredCatalog } from "@jackioh/engine";
-import type { CustomCard, SandboxOp } from "@jackioh/shared";
+import type { SandboxOp } from "@jackioh/shared";
 
-import { customDefsOf } from "../creator/useCustomCards.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -149,39 +148,5 @@ describe("R923000 the sandbox's dev tools panel", () => {
     rerender(panel(registeredCatalog()));
     expect(screen.queryByText("Loading the cards…")).toBeNull();
     expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
-  });
-});
-
-/** A 1-cost 1/2 Unit with no script, as a game carries it (R915006). */
-const IMP: CustomCard = {
-  id: "custom-ember-imp",
-  version: 1,
-  frame: { name: "Ember Imp", type: "Unit", cost: 1, rarity: "Common", attack: 1, health: 2, text: "" },
-  source: "",
-};
-
-describe("R962000 the panel offers a sandbox game's own custom cards", () => {
-  it("R962000 a sandbox game's own custom card is offered only when given, and spawned like a shipped one", () => {
-    const onTool = vi.fn<(op: SandboxOp) => void>();
-    const panel = (customs?: ReturnType<typeof customDefsOf>) => (
-      <SandboxPanel
-        view={baseView({ you: emptySide("p1"), opponent: emptySide("p2") })}
-        defs={registeredCatalog()}
-        {...(customs === undefined ? {} : { customs })}
-        held={false}
-        onHold={vi.fn()}
-        onTool={onTool}
-      />
-    );
-    const { rerender } = render(panel());
-    type(practiceTestid.sandboxSearch, "ember imp");
-    expect(screen.queryByTestId(practiceTestid.sandboxResult(IMP.id)), "no game card without the game's").toBeNull();
-
-    rerender(panel(customDefsOf([IMP])));
-    fireEvent.click(screen.getByTestId(practiceTestid.sandboxResult(IMP.id)));
-    expect(screen.getByRole("heading", { name: "Spawn Ember Imp" })).toBeInTheDocument();
-    fireEvent.change(screen.getByTestId(practiceTestid.sandboxSpawnWhere), { target: { value: "units:2" } });
-    fireEvent.click(screen.getByTestId(practiceTestid.sandboxSpawn));
-    expect(onTool).toHaveBeenLastCalledWith({ kind: "spawn", player: "p1", defId: IMP.id, to: { zone: "field", row: "units", lane: 2 } });
   });
 });

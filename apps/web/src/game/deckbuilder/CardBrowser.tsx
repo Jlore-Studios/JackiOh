@@ -7,13 +7,12 @@
 
 import type { ReactElement, ReactNode } from "react";
 
-import type { SetName, Tag } from "@jackioh/shared";
+import type { Tag } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { CardDetail } from "../../cards/index.ts";
 import { t } from "../../i18n/i18n.ts";
 import FilterBar from "./FilterBar.tsx";
-import { CUSTOM_SET } from "./loadout.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import PoolGrid, { AsOwnCopy, type OwnCopies, type PoolGridDeckProps } from "./PoolGrid.tsx";
 import { DB_EMPTY, DB_WINRATE_NOTICE, DB_WINRATE_RETRY } from "./testids.ts";
@@ -40,9 +39,6 @@ export type CardBrowserProps = {
   ownedUnavailable?: boolean;
   /** FilterBar's: the tag chips, the deck builder's when absent. */
   tags?: readonly Tag[];
-  /** FilterBar's: the set chips, and what follows them (the deck builder's "Custom" chip and creator link). */
-  sets?: readonly SetName[];
-  setsAfter?: ReactNode;
   /** The grid's deck half; absent, the grid is read-only. */
   deck?: PoolGridDeckProps;
   /** R1956000: a read-only grid's cards that are the viewer's own copies, and what they own on them. */
@@ -63,7 +59,7 @@ export type CardBrowserProps = {
 };
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
-  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, sets, setsAfter, showStats } = props;
+  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, showStats } = props;
   const { deck, own, virtual, status, onInspect, detail, onCloseDetail, winRates } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
@@ -78,8 +74,6 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
         ownedControl={ownedControl}
         ownedUnavailable={ownedUnavailable}
         tags={tags}
-        sets={sets}
-        setsAfter={setsAfter}
       />
       {status}
       {sort.key === "winRate" && winRates !== undefined && (winRates.status === "loading" || winRates.status === "failed") ? (
@@ -124,8 +118,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
             onClose={onCloseDetail}
             meta={detail.meta}
             actions={detail.actions}
-            // R915005: a custom card is private and plays in no game the statistics count.
-            showStats={showStats === true && detailDef.set !== CUSTOM_SET}
+            showStats={showStats === true}
           />
         </AsOwnCopy>
       )}

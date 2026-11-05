@@ -1,4 +1,4 @@
-// R2119000: a deletion is undone, not asked. Deleting a deck, a trio or a custom card, or removing a
+// R2119000: a deletion is undone, not asked. Deleting a deck or a trio, or removing a
 // friend, takes the item off the screen at once and holds its request for `UNDO_WINDOW_MS` behind the
 // undo toast (`UndoToast.tsx`), one at a time. A second deletion within `UNDO_REPEAT_MS` of the first is a
 // double click and is refused (R3059000). Nothing here is a rule (CLAUDE.md rule 7): the server still

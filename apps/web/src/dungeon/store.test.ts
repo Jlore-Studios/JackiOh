@@ -6,15 +6,13 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CustomCard } from "@jackioh/shared";
-import type { RunContent, RunFile, RunState } from "@jackioh/run";
+import type { RunFile, RunState } from "@jackioh/run";
 
 import { DUNGEON_HISTORY_KEY, DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY } from "./config.ts";
 import { __resetDungeonForTests, dailyRunNumber, readRunHistory, useDungeon, type Dungeon } from "./store.ts";
 import {
   CONTENT,
   EXTRACTABLE,
-  IMP,
   ZERO_STATS,
   resetBindings,
   runState,
@@ -29,22 +27,8 @@ vi.mock("../wasm/index.ts", async (importOriginal) => ({
   ...(await import("./test/fixtures.ts")).wasmBindings,
 }));
 
-// The account's custom cards, which practice reads and the Sandbox's pool takes (B21).
-const account = vi.hoisted(() => ({ cards: [] as CustomCard[] }));
-vi.mock("./customCards.ts", () => ({ useSandboxCustomCards: (): CustomCard[] => account.cards }));
-vi.mock("../net/gate.ts", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  useAccount: () => ({ kind: "anonymous" }),
-}));
-
 const DAY = "2026-11-01";
 const NEXT_DAY = "2026-11-02";
-
-/** The content a run with the creator's Ember Imp deals from, which the plain content is not. */
-const WITH_IMP: RunContent = {
-  ...CONTENT,
-  pool: [...CONTENT.pool, { id: IMP.id, name: "Ember Imp", rarity: "Common", set: "Core", cardType: "Unit", tags: [] }],
-};
 
 function stored(key: string): unknown {
   const raw = window.localStorage.getItem(key);
@@ -80,7 +64,6 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(`${DAY}T12:00:00Z`));
   window.localStorage.clear();
-  account.cards = [];
   __resetDungeonForTests();
   resetBindings();
 });
@@ -109,7 +92,6 @@ describe("the store's start", () => {
     expect(stored(DUNGEON_RUN_KEY)).toEqual({
       v: 1,
       file: { setup: setupOf(), unlocks: unlocks(), log: [] },
-      customCards: [],
       startedAt: Date.now(),
       daily: false,
     });
@@ -158,7 +140,7 @@ describe("B19 a run in progress survives a reload", () => {
       unlocks: unlocks(),
       log: [{ type: "go", col: 1 }],
     };
-    expect(stored(DUNGEON_RUN_KEY)).toEqual({ v: 1, file, customCards: [], startedAt, daily: false });
+    expect(stored(DUNGEON_RUN_KEY)).toEqual({ v: 1, file, startedAt, daily: false });
 
     // A reload folds it back, as it was.
     vi.setSystemTime(new Date(`${DAY}T18:00:00Z`));
@@ -176,27 +158,6 @@ describe("B19 a run in progress survives a reload", () => {
     expect(press(() => again.current.act({ type: "fightOver", won: true, hp: 20, damageDealt: 5, healingDone: 0, cardsDrawn: 3, turns: 4 }))).toBeNull();
     expect(again.current.run?.phase).toEqual({ phase: "map" });
     expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toHaveLength(2);
-  });
-
-  it("B19 a reload folds the run on the custom cards it began with, not the ones the account has now", () => {
-    wasmBindings.runContent.mockImplementation((cards) => (cards.length === 0 ? CONTENT : WITH_IMP));
-    account.cards = [IMP];
-    const dungeon = mount();
-    expect(dungeon.current.content).toBe(WITH_IMP);
-    press(() => dungeon.current.start(setupOf()));
-    expect((stored(DUNGEON_RUN_KEY) as { customCards: CustomCard[] }).customCards).toEqual([IMP]);
-
-    // The creator's card is gone by the next visit: the run under way still has it.
-    account.cards = [];
-    wasmBindings.runFold.mockClear();
-    const again = reload();
-    expect(wasmBindings.runFold).toHaveBeenCalledWith(expect.anything(), WITH_IMP);
-    expect(again.current.content).toBe(WITH_IMP);
-
-    // Once it is over, the pool is the account's as it stands.
-    press(() => again.current.abandon());
-    expect(again.current.run).toBeNull();
-    expect(again.current.content).toBe(CONTENT);
   });
 
   it("B19 a kept run that no longer folds is dropped alone: the progress and the history stay", () => {
@@ -414,22 +375,8 @@ describe("B18 the starting deck's level", () => {
   });
 });
 
-describe("B21 the Sandbox's custom cards", () => {
-  it("B21 new content receives Practice's custom cards", () => {
-    wasmBindings.runContent.mockImplementation((cards) => (cards.length === 0 ? CONTENT : WITH_IMP));
-    account.cards = [IMP];
-    const dungeon = mount();
-
-    expect(wasmBindings.runContent).toHaveBeenCalledWith([IMP]);
-    expect(dungeon.current.content).toBe(WITH_IMP);
-
-    press(() => dungeon.current.start(setupOf()));
-    // The run is dealt on the pool with the card, and keeps the card with it.
-    expect(wasmBindings.runCreate).toHaveBeenCalledWith(setupOf(), unlocks(), WITH_IMP);
-    expect(dungeon.current.content).toBe(WITH_IMP);
-  });
-
-  it("B21 the content is built once for the same cards", () => {
+describe("B21 the run's content", () => {
+  it("B21 the content is built once, however often a run starts or ends", () => {
     const dungeon = mount();
     const calls = wasmBindings.runContent.mock.calls.length;
 

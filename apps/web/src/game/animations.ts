@@ -762,7 +762,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // R915004: a custom card's hook failed and did nothing; the hero stands in for an unseen card.
+  // A hook that failed and did nothing; the hero stands in for an unseen card.
   scriptFailed: {
     animation: "jk-badge-fade",
     durationMs: 400,
