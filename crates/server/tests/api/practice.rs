@@ -25,7 +25,6 @@ use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, 
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::api::practice::{Swept, sweep_unsettled};
 use jackioh_server::app::{App, now_ms, serve_until};
-use jackioh_server::bots::seat::r188_forbidden;
 use jackioh_server::config::{
     JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS,
     PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
@@ -43,6 +42,7 @@ use jackioh_server::economy::store::{
     PracticeSeed, PracticeSettled, PracticeSetup, QuestChange, QuestGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
+use jackioh_shared::host::bot::r188_forbidden;
 
 use crate::support::deps::{RecordingLogger, add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};

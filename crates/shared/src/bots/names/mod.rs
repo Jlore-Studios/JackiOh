@@ -7,10 +7,14 @@
 //! A politics word is never drawn beside an edgy or crude one: each register draws only from
 //! its own lists, and the politics register's shapes never meet another register's. No shape
 //! writes a `Real`, `Official` or `The_Real` prefix, so no bot poses as a person (R1454).
+//!
+//! What a username may be is the accounts' rule (R1432), not this module's: the host judges each name
+//! drawn (`draw_username`'s `accepts`), as it judges a person's, and `never_lists` is the bots' own
+//! list for it to hold the name to.
 
 use jackioh_engine::Rng;
 
-use crate::bots::pool::int_in;
+use crate::bots::int_in;
 use crate::config::{
     BOT_DEFAULT_USERNAME_SHARE, BOT_NAME_BIRTH_YEAR_MAX, BOT_NAME_BIRTH_YEAR_MIN, BOT_NAME_CHINESE_NUMBERS,
     BOT_NAME_CHINESE_YEAR_SHARE, BOT_NAME_COMPOUND_LETTERS, BOT_NAME_DRAW_ATTEMPTS,
@@ -24,7 +28,6 @@ use crate::config::{
     BOT_NAME_SYLLABLES_MIN, BOT_NAME_TWO_DIGIT_MAX, BOT_NAME_TWO_DIGIT_MIN, BOT_NAME_YEAR_SHARE,
     BotNameShape,
 };
-use crate::username::{matches_lists, normalize_username};
 
 /// R1454: word lists for bot username registers.
 const ADJECTIVES: &str = include_str!("adjectives.txt");
@@ -338,10 +341,11 @@ fn render(rng: &mut Rng, register: Register, shape: BotNameShape) -> Option<Stri
     Some(name)
 }
 
-/// R1454: matches `name` against `never.txt` tokens (R1433).
-fn never(name: &str) -> bool {
-    let mut anywhere: Vec<&str> = Vec::new();
-    let mut token: Vec<&str> = Vec::new();
+/// R1454: the bots' own exclusion list (`never.txt`, R1433) as the two lists the account filter reads: the
+/// words refused anywhere in a name, and the ones refused as a whole token (written `=word`).
+pub fn never_lists() -> (Vec<&'static str>, Vec<&'static str>) {
+    let mut anywhere: Vec<&'static str> = Vec::new();
+    let mut token: Vec<&'static str> = Vec::new();
     for word in entries(NEVER) {
         if let Some(stripped) = word.strip_prefix('=') {
             token.push(stripped);
@@ -349,20 +353,22 @@ fn never(name: &str) -> bool {
             anywhere.push(word);
         }
     }
-    matches_lists(name, &anywhere, &token)
+    (anywhere, token)
 }
 
-/// R1454: draws a normalized username passing `never.txt`, or `None` to keep `Player#n`.
-pub fn draw_username(rng: &mut Rng) -> Option<String> {
+/// R1454: draws a username `accepts` takes, or `None` to keep `Player#n`. `accepts` is the host's own
+/// judgement of a drawn name: it answers the name as the account will hold it (normalized as a person's
+/// is, R1432) when it passes that filter and `never_lists`, else `None`, and the draw tries again, up to
+/// `BOT_NAME_DRAW_ATTEMPTS` times.
+pub fn draw_username(rng: &mut Rng, accepts: &mut dyn FnMut(&str) -> Option<String>) -> Option<String> {
     let register = weighted(rng, &REGISTERS)?;
     for _ in 0..BOT_NAME_DRAW_ATTEMPTS {
         let shape = weighted(rng, register.shapes())?;
         let Some(name) = render(rng, register, shape) else {
             continue;
         };
-        match normalize_username(&name) {
-            Ok(base) if !never(&base) => return Some(base),
-            _ => {}
+        if let Some(base) = accepts(&name) {
+            return Some(base);
         }
     }
     None
