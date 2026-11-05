@@ -339,11 +339,12 @@ knows nothing of cards or sets: it keeps meaning the same when the AI improves o
 arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
 the same way, and the skill-to-Elo curve is measured with the arena.
 
-`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, written beside the config's
-other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps (R433, R417,
-R564, R678), and `MatchConfig::fold_args` folds a record with all of them (#1697). Unset, a game is
-created, played and folded exactly as before. No gate sets it; `SweepOptions.setup` opts a sweep in,
-the same inputs in seat order in every game.
+`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, written beside
+the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
+(R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
+(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
+`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `cargo jackioh
+run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
 
