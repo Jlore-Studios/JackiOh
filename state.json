@@ -16709,7 +16709,7 @@
       "started_at": "2026-11-05T05:53:50Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3116": {
       "action": "build",
