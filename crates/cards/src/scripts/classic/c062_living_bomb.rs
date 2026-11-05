@@ -84,7 +84,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, with no Cry and no Activate; `KEPT_SCRIPTS`
+/// R767000: the script v0.5.11p and the versions before it ran, with no Cry and no Activate; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let at_opponents_turn = at_opponents_turn();
@@ -613,7 +613,7 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.5.11o it had no Cry and no Activate, and cost (1) in the catalog it folded under.
+        /// R767000: through v0.5.11p it had no Cry and no Activate, and cost (1) in the catalog it folded under.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11o_places_nothing_on_either_face() {
             let kept = script_v0_5_11o();

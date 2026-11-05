@@ -165,7 +165,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, with no count of downsides; `KEPT_SCRIPTS`
+/// R767000: the script v0.5.11p and the versions before it ran, with no count of downsides; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -527,7 +527,7 @@ mod tests {
             assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant));
         }
 
-        /// R767000: through v0.5.11o the Mask counted nothing and made no hand Radiant.
+        /// R767000: through v0.5.11p the Mask counted nothing and made no hand Radiant.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11o_counts_no_downsides() {
             crate::under_kept(MASK, script_v0_5_11o(), || {

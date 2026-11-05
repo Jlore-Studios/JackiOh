@@ -6,7 +6,7 @@
 //! lists the scope with `cards_in_scope_aimed` and draws each pick with `ctx.rng` as the Cry resolves
 //! (R3139003), one `destroy` per pick: marks collected in one state check (§10.3, R59; §6.3, §4.5).
 //! Dormant under Stack spared (R13); Indestructible spares (R46, R69; #12, #20, #21, #25, #66, R11, R82, §5), but a pick
-//! of it is still one of the three. Through v0.5.11o (`script_v0_5_11o`, kept, R767000) the Cry was a
+//! of it is still one of the three. Through v0.5.11p (`script_v0_5_11o`, kept, R767000) the Cry was a
 //! `destroy_all`: every non-Felinor Unit of the scope.
 
 use jackioh_engine::effects::{cards_in_scope_aimed, destroy, destroy_all};
@@ -14,7 +14,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-043";
 
-/// v0.5.11o's Cry, "destroy all non-Felinor Units": the faces differ only in which sides the destroy
+/// v0.5.11p's Cry, "destroy all non-Felinor Units": the faces differ only in which sides the destroy
 /// reaches (`"any"` or `"enemy"`).
 fn big_felinor_v0_5_11o(side: &'static str) -> Script {
     Script {
@@ -57,7 +57,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, destroying every non-Felinor Unit of the
+/// R767000: the script v0.5.11p and the versions before it ran, destroying every non-Felinor Unit of the
 /// scope; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -331,7 +331,7 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.5.11o the Cry destroyed every non-Felinor Unit of its scope, the Radiant face's the
+    /// R767000: through v0.5.11p the Cry destroyed every non-Felinor Unit of its scope, the Radiant face's the
     /// enemy's.
     #[test]
     fn r767000_the_script_kept_for_v0_5_11o_destroys_every_non_felinor_unit_of_its_scope() {

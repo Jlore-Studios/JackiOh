@@ -13,7 +13,7 @@
 //! Since issue #3139 it is its own card in earnest: "Aura: Your Units have +{attack} Attack and Rush."
 //! at 4 (Radiant 8), with no First Strike on either face, where Core #14 moved on its own way (issue
 //! #3137, part 3). `script_v0_5_11o` keeps the +3 / +6 aura with Rush and First Strike for the replays of
-//! v0.5.11o and before (R767000).
+//! v0.5.11p and before (R767000).
 //!
 //! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
 //! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
@@ -64,7 +64,7 @@ pub fn script() -> CardScripts {
     weapons(vec![Keyword::Rush])
 }
 
-/// R767000: through v0.5.11o the aura granted Rush and First Strike (+3, Radiant +6); `KEPT_SCRIPTS` folds
+/// R767000: through v0.5.11p the aura granted Rush and First Strike (+3, Radiant +6); `KEPT_SCRIPTS` folds
 /// those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     weapons(vec![Keyword::Rush, Keyword::FirstStrike])
@@ -282,7 +282,7 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.5.11o the aura gave +3 (Radiant +6), Rush and First Strike.
+    /// R767000: through v0.5.11p the aura gave +3 (Radiant +6), Rush and First Strike.
     #[test]
     fn r767000_the_script_kept_for_v0_5_11o_grants_rush_and_first_strike_as_before() {
         crate::under_kept("traininggrounds-045", script_v0_5_11o(), || {

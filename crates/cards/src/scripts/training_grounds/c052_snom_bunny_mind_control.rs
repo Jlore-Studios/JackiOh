@@ -37,7 +37,7 @@
 //! Radiant face, literally, "Steal an enemy card.": the target is any enemy permanent as Core #49's is
 //! (R3139002), and it no longer makes the card Radiant. Both effects run in a list, so a steal that finds no
 //! free zone (R15) still sets the Unit's stats, as Core #49's Radiant face still makes it Radiant. `script_v0_5_11o`
-//! keeps the earlier Unit-only steal, whose Radiant face made it Radiant, for the replays of v0.5.11o and
+//! keeps the earlier Unit-only steal, whose Radiant face made it Radiant, for the replays of v0.5.11p and
 //! before (R767000).
 
 use jackioh_engine::prelude::*;
@@ -82,7 +82,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11o and every version before it ran: a steal of an enemy Unit, whose Radiant
+/// R767000: the scripts v0.5.11p and every version before it ran: a steal of an enemy Unit, whose Radiant
 /// face made it Radiant. `KEPT_SCRIPTS` folds those versions' replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -372,7 +372,7 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.5.11o the base face stole an enemy Unit and the Radiant face made it Radiant, the
+    /// R767000: through v0.5.11p the base face stole an enemy Unit and the Radiant face made it Radiant, the
     /// target a Unit on both.
     #[test]
     fn r767000_the_script_kept_for_v0_5_11o_steals_a_unit_and_the_radiant_face_makes_it_radiant() {

@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape balance pass — Starship tag, Marketplace prices, Weapons and twenty cards",
   "sources": "#3000",
-  "notes": " Part 7 (#3142) moves sixteen Stinkyscape cards (Asphyxiants Cloud left as #3041 made it, by the owner's word), with Stimmycheck's Inflation step 5 (R3142000), MELCHIOR's random keywords (R3142001) and two new pictures (R3142002).",
+  "notes": " Part 5 (#3139) rewrites eleven Core, Classic and Training Grounds scripts (R3139000 to R3139004); xxFreshJack and Shockwave447 (stinkyscape-109, -111) play differently as the BUSTED and complicated lists they draw from moved.",
   "player": {
     "title": "Stinkyscape balance pass",
     "new": [],
@@ -45,7 +45,10 @@
       "Galaxy is 5/5 (Radiant 10/10), down from 10/10 (20/20).",
       "Core Researcher is 3/3 (Radiant 6/6), down from 4/5 (8/10).",
       "Tmack Trav is 8/8 (Radiant 16/16), down from 9/9 (18/18).",
-      "Stimmycheck's Inflation chance grows by 5% with each copy, down from 10%."
+      "Stimmycheck's Inflation chance grows by 5% with each copy, down from 10%.",
+      "Living Bomb costs (2), up from (1).",
+      "Snom Bunny Mind Control costs (5), up from (4), and gains Float reduces cost.",
+      "Legacy: Jlockeed's Weapons gives +4 Attack (Radiant +8) and Rush, from +3 (+6), Rush and First Strike."
     ],
     "changes": [
       "Starship is now a tag, and every Starship, Dormant or launched, has Flying and Ranged.",
@@ -71,7 +74,17 @@
       "Sacked's Sack has Can't Defend.",
       "Drone Commander fills your hand with random Drone Core cards, which no longer cost less, and is drawn as a human.",
       "The Stinkyscape Golem is no longer a Starship Piece, and is drawn as a golem and a ship in one.",
-      "MELCHIOR's Activate gives each of your Units a random combat keyword instead of a Discover."
+      "MELCHIOR's Activate gives each of your Units a random combat keyword instead of a Discover.",
+      "Palantir steals and casts a (2) Cost Spell, not a (1) Cost Spell.",
+      "Living Bomb's Cry places a Plague Counter; on its Radiant face an Activate does it instead.",
+      "Book of Plague lets you choose: place its Plague Counters, or add 3 random Plague cards to your hand (Radiant ones on its Radiant face).",
+      "Big Felinor destroys 3 random non-Felinor Units instead of all of them (on its Radiant face, enemy ones).",
+      "Snom Bunny Mind Control steals any enemy card on the field, not only a Unit.",
+      "Unbiased Immigration adds its random card with an Activate instead of at the start of your turn.",
+      "Masochism Mask makes your hand Radiant once you have taken 6 of its downsides, and again every 6.",
+      "Corpse Eater has Brittle 1 (Radiant Brittle 3), and after it attacks a Unit it may attack again.",
+      "Tutorial Master's Cry and Death add Training Grounds cards that no longer cost less.",
+      "Legacy: Snom Bunny Mind Control sets the stolen Unit's stats to 4/4, and its Radiant face steals any enemy card."
     ],
     "text": [],
     "fixes": []
@@ -83,14 +96,22 @@
     "core-020",
     "core-022",
     "core-042",
+    "core-043",
+    "core-049",
     "core-052",
+    "core-059",
+    "core-065",
     "core-079",
     "core-082",
     "core-085",
+    "core-089",
+    "classic-004",
     "classic-014",
     "classic-026",
     "classic-040",
     "classic-057",
+    "classic-062",
+    "classic-070",
     "classic-073",
     "classic-085",
     "classicplus-001",
@@ -142,15 +163,20 @@
     "stinkyscape-t-propagation-layer",
     "stinkyscape-t-meltdown-layer",
     "traininggrounds-015",
+    "traininggrounds-038",
+    "traininggrounds-045",
     "traininggrounds-048",
     "traininggrounds-051",
+    "traininggrounds-052",
     "traininggrounds-056"
   ],
   "plays": [
     "classic-090",
     "stinkyscape-115",
     "meditative-056",
-    "classicplus-007"
+    "classicplus-007",
+    "stinkyscape-109",
+    "stinkyscape-111"
   ],
   "rule": true,
   "visual": true

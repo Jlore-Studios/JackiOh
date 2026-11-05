@@ -9,7 +9,7 @@
 //! field nothing is placed. Placements are individual (C #53 answers each; C #27 multiplies). Count is
 //! `tokens` (R386). The second is `add_random_from_catalog` of the Plague tag: `cards` non-token cards of
 //! the shipped sets that carry it, never this one (R380, R387), repeats allowed (R60), Radiant ones on the
-//! Radiant face (R74), a full hand burning the rest (§2.4). Through v0.5.11o (`script_v0_5_11o`, kept,
+//! Radiant face (R74), a full hand burning the rest (§2.4). Through v0.5.11p (`script_v0_5_11o`, kept,
 //! R767000) it was the placement alone, with no choice.
 
 use jackioh_engine::effects::{add_random_from_catalog, place_plague_tokens};
@@ -50,7 +50,7 @@ fn book(radiant: bool) -> Script {
     }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, the placement alone with no mode;
+/// R767000: the script v0.5.11p and the versions before it ran, the placement alone with no mode;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
@@ -287,7 +287,7 @@ mod tests {
             assert_eq!(added_to_hand(&s).len(), 1);
         }
 
-        /// R767000: through v0.5.11o it placed counters with no choice.
+        /// R767000: through v0.5.11p it placed counters with no choice.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11o_places_the_counters_with_no_mode() {
             let kept = script_v0_5_11o();

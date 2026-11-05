@@ -7,7 +7,7 @@
 //! An Activate since issue #3139 (R384), once a turn on its controller's turn with no price: it no longer
 //! fires on its own at the start of a turn. The Embiggened price is read as the Activate runs
 //! (`ctx.embiggened`, built from the instance, R65), so it is remembered turns after the play. Through
-//! v0.5.11o (`script_v0_5_11o`, kept, R767000) it was a start-of-turn trigger.
+//! v0.5.11p (`script_v0_5_11o`, kept, R767000) it was a start-of-turn trigger.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -71,7 +71,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, a start-of-turn trigger; `KEPT_SCRIPTS`
+/// R767000: the script v0.5.11p and the versions before it ran, a start-of-turn trigger; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -367,7 +367,7 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.5.11o it added a card at the start of its controller's turn, with no Activate.
+        /// R767000: through v0.5.11p it added a card at the start of its controller's turn, with no Activate.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11o_adds_a_card_at_the_start_of_its_controllers_turn() {
             let kept = script_v0_5_11o();

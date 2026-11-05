@@ -30,7 +30,9 @@ pub const ID: &str = "traininggrounds-051";
 fn big_felinor(side: &'static str) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            vec![destroy_all(json_as(json!({ "side": side, "notTags": ["Felinor"] })))]
+            vec![destroy_all(json_as(
+                json!({ "side": side, "notTags": ["Felinor"] }),
+            ))]
         })),
         ..Script::default()
     }
@@ -110,8 +112,14 @@ mod tests {
             s.play("traininggrounds-051", json!({ "zone": 3 }));
 
             s.expect_in_zone("traininggrounds-051", "field");
-            s.expect_stats("traininggrounds-051", json!({ "attack": 1, "health": 10, "maxHealth": 10 }));
-            assert_eq!(def_at(&s, PlayerId::P1, 3).as_deref(), Some("traininggrounds-051"));
+            s.expect_stats(
+                "traininggrounds-051",
+                json!({ "attack": 1, "health": 10, "maxHealth": 10 }),
+            );
+            assert_eq!(
+                def_at(&s, PlayerId::P1, 3).as_deref(),
+                Some("traininggrounds-051")
+            );
         }
 
         #[test]
@@ -121,19 +129,28 @@ mod tests {
             s.play("traininggrounds-051", json!({ "zone": 3 }));
 
             s.expect_in_zone("core-066", "field");
-            assert_eq!(s.unit(PlayerId::P2, 2).and_then(|card| card.position), Some(Position::Atk));
+            assert_eq!(
+                s.unit(PlayerId::P2, 2).and_then(|card| card.position),
+                Some(Position::Atk)
+            );
             // The other non-Felinor is not Indestructible and still dies in the same check.
             s.expect_in_zone("core-020", "graveyard");
         }
 
         #[test]
         fn s8_conventions_an_empty_target_set_fizzles_and_the_unit_still_enters_the_field() {
-            let mut s = scenario(json!({ "seed": "big-felinor", "p1": { "hand": ["traininggrounds-051", "core-021"] } }));
+            let mut s = scenario(
+                json!({ "seed": "big-felinor", "p1": { "hand": ["traininggrounds-051", "core-021"] } }),
+            );
             s.play("traininggrounds-051", json!({ "zone": 1 }));
 
             s.expect_in_zone("traininggrounds-051", "field");
             s.expect_events(json!(["cardPlayed", "summoned"]));
-            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
+            assert!(
+                !s.events()
+                    .iter()
+                    .any(|event| event.event_type() == GameEventType::Destroyed)
+            );
         }
     }
 
@@ -159,7 +176,10 @@ mod tests {
             s.expect_in_zone("core-012", "field");
             s.expect_in_zone("core-t-felinor", "field");
             s.expect_in_zone("traininggrounds-051", "field");
-            s.expect_stats("traininggrounds-051", json!({ "attack": 2, "health": 20, "maxHealth": 20 }));
+            s.expect_stats(
+                "traininggrounds-051",
+                json!({ "attack": 2, "health": 20, "maxHealth": 20 }),
+            );
         }
 
         #[test]
@@ -169,7 +189,10 @@ mod tests {
 
             s.expect_events(json!(["cardPlayed", "destroyed"]));
             assert_eq!(
-                s.events().iter().filter(|event| event.event_type() == GameEventType::Destroyed).count(),
+                s.events()
+                    .iter()
+                    .filter(|event| event.event_type() == GameEventType::Destroyed)
+                    .count(),
                 1,
             );
         }
@@ -180,22 +203,35 @@ mod tests {
             s.play("traininggrounds-051", json!({ "zone": 3 }));
 
             s.expect_in_zone("core-066", "field");
-            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
+            assert!(
+                !s.events()
+                    .iter()
+                    .any(|event| event.event_type() == GameEventType::Destroyed)
+            );
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-043, on both faces: every non-Felinor Unit destroyed, the enemy's only on the Radiant face.
+    /// R2195003, R3139003: the snapshot is its own copy, no longer core-043's play: core-043 destroys 3
+    /// random non-Felinor Units since #3139, the Legacy card every one, as the foundation's commit did.
     #[test]
-    fn r2195003_plays_exactly_as_core_043() {
-        for radiant in [false, true] {
-            crate::expect_plays_as(
-                "core-043",
-                super::ID,
-                |id| json!({ "p1": { "hand": [{ "def": id, "radiant": radiant }], "field": ["core-025", "core-012"] }, "p2": { "field": ["core-008", "core-012"] } }),
-                |s, id| {
-                    s.play(id, json!({}));
-                },
-            );
-        }
+    fn r2195003_the_legacy_card_is_its_own_copy_and_no_longer_plays_as_core_043() {
+        crate::register_all();
+        let destroyed = |id: &str| {
+            let mut s = scenario(json!({
+                "p1": { "hand": [id] },
+                "p2": { "field": ["core-008", "core-025", "core-019", "core-002"] }
+            }));
+            s.play(id, json!({ "zone": 3 }));
+            s.events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Destroyed { .. }))
+                .count()
+        };
+        assert_eq!(
+            destroyed(super::ID),
+            4,
+            "the Legacy card destroys every non-Felinor Unit"
+        );
+        assert_eq!(destroyed("core-043"), 3, "core-043 destroys 3 of them");
     }
 }

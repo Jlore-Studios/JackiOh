@@ -28,39 +28,43 @@ pub const ID: &str = "traininggrounds-056";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
 fn feed(factor: i32) -> TriggerDef {
-    TriggerDef::new("corpse-eater-feed", &[GameEventType::Destroyed], move |ctx, event| {
-        // `on` already narrows this, and the check is what gives the payload its type.
-        let GameEvent::Destroyed {
-            def_id,
-            attack,
-            max_health,
-            ..
-        } = event
-        else {
-            return vec![];
-        };
+    TriggerDef::new(
+        "corpse-eater-feed",
+        &[GameEventType::Destroyed],
+        move |ctx, event| {
+            // `on` already narrows this, and the check is what gives the payload its type.
+            let GameEvent::Destroyed {
+                def_id,
+                attack,
+                max_health,
+                ..
+            } = event
+            else {
+                return vec![];
+            };
 
-        let dead = def_of(Some(&*ctx.state), def_id);
-        // A destroyed Field Spell or Trap emits the same event; only units feed it.
-        if dead.type_ != CardType::Unit {
-            return vec![];
-        }
-        // R11: a unit token ceases to exist and never reaches a graveyard, so it never died for this.
-        if dead.token {
-            return vec![];
-        }
+            let dead = def_of(Some(&*ctx.state), def_id);
+            // A destroyed Field Spell or Trap emits the same event; only units feed it.
+            if dead.type_ != CardType::Unit {
+                return vec![];
+            }
+            // R11: a unit token ceases to exist and never reaches a graveyard, so it never died for this.
+            if dead.token {
+                return vec![];
+            }
 
-        // R38, R89: the attack and max health the layers computed at the moment it died. R219: a gain
-        // is never a loss, so a unit #46 starved below 0 max health gives nothing rather than shrinking
-        // the Eater (§10.4 floors attack at 0 already; max health below 0 is only the check's signal).
-        let gained_attack = (*attack).max(0) * factor;
-        let gained_health = (*max_health).max(0) * factor;
-        vec![buff(json_as(json!({
-            "target": { "of": "self" },
-            "attack": gained_attack,
-            "health": gained_health,
-        })))]
-    })
+            // R38, R89: the attack and max health the layers computed at the moment it died. R219: a gain
+            // is never a loss, so a unit #46 starved below 0 max health gives nothing rather than shrinking
+            // the Eater (§10.4 floors attack at 0 already; max health below 0 is only the check's signal).
+            let gained_attack = (*attack).max(0) * factor;
+            let gained_health = (*max_health).max(0) * factor;
+            vec![buff(json_as(json!({
+                "target": { "of": "self" },
+                "attack": gained_attack,
+                "health": gained_health,
+            })))]
+        },
+    )
 }
 
 pub fn script() -> CardScripts {
@@ -107,7 +111,10 @@ mod tests {
     use crate::matches_object;
 
     fn count_of(s: &Scenario, type_: GameEventType) -> usize {
-        s.events().iter().filter(|event| event.event_type() == type_).count()
+        s.events()
+            .iter()
+            .filter(|event| event.event_type() == type_)
+            .count()
     }
 
     fn kinds(keywords: &[Keyword]) -> Vec<KeywordKind> {
@@ -368,7 +375,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r219_corpse_eater_gains_nothing_from_a_unit_suppressive_aura_starved_below_0_max_health_r38_s10_4() {
+        fn r219_corpse_eater_gains_nothing_from_a_unit_suppressive_aura_starved_below_0_max_health_r38_s10_4()
+        {
             let mut g = scenario(json!({
                 "p1": { "hand": [EATER, SUPPRESSIVE_AURA, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] }, // 1/1
@@ -386,7 +394,10 @@ mod tests {
                 .iter()
                 .find(|event| matches!(event, GameEvent::Destroyed { .. }))
                 .cloned();
-            assert!(matches_object(&js(&died), &json!({ "attack": 0, "maxHealth": -1 })));
+            assert!(matches_object(
+                &js(&died),
+                &json!({ "attack": 0, "maxHealth": -1 })
+            ));
 
             // The unit had no attack and no max health to give, so the Eater does not shrink by the −1 the
             // aura dragged the dead unit's max health to.
@@ -394,19 +405,28 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-089, on both faces.
+    /// R2195003, R3139004: the snapshot is its own copy, no longer core-089's play: core-089 has Brittle
+    /// since #3139, and the Legacy card has none on either face (#3136).
     #[test]
-    fn r2195003_plays_exactly_as_core_089() {
+    fn r2195003_the_legacy_card_is_its_own_copy_and_no_longer_plays_as_core_089() {
+        crate::register_all();
         for radiant in [false, true] {
-            crate::expect_plays_as(
-                "core-089",
-                super::ID,
-                |id| json!({ "p1": { "hand": [{ "def": id, "radiant": radiant }, "core-016"] }, "p2": { "field": ["core-025"] } }),
-                |s, id| {
-                    let t = s.card("core-025").id.clone();
-                    s.play("core-016", json!({ "targets": [{ "pick": "instance", "instanceId": t }] }));
-                    s.play(id, json!({}));
-                },
+            let keywords = |id: &str| {
+                let mut s = scenario(json!({ "p1": { "hand": [{ "def": id, "radiant": radiant }] } }));
+                s.play(id, json!({ "zone": 1 }));
+                s.stats(id)
+                    .keywords
+                    .iter()
+                    .map(|keyword| keyword.kind())
+                    .collect::<Vec<_>>()
+            };
+            assert!(
+                keywords("core-089").contains(&KeywordKind::Brittle),
+                "radiant {radiant}"
+            );
+            assert!(
+                !keywords(super::ID).contains(&KeywordKind::Brittle),
+                "radiant {radiant}"
             );
         }
     }

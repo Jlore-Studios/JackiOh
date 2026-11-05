@@ -7,14 +7,14 @@
 //!   non-token cards but this one (R387), one match-rng draw per card, repeats allowed (R60), each at its
 //!   own price; a full hand burns the rest (§2.4). `cards` is read by both hooks. Radiant: added Radiant.
 //!   The two hooks stay, the one label printing both: the words are one line since issue #3139, with no
-//!   "They cost (1) less" (the `discount` param went with it). Through v0.5.11o (`script_v0_5_11o`, kept,
+//!   "They cost (1) less" (the `discount` param went with it). Through v0.5.11p (`script_v0_5_11o`, kept,
 //!   R767000) each card cost `discount` less, a `costMod` flooring at (0) (R65).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-038";
 
-/// `discounted` is v0.5.11o's: each card added cost the declared `discount` less (R65).
+/// `discounted` is v0.5.11p's: each card added cost the declared `discount` less (R65).
 fn master(radiant: bool, discounted: bool) -> Script {
     let add = hook(move |ctx| {
         let mut args = json!({
@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o the cards it added cost `discount` (1) less, a number its definition declared;
+/// R767000: through v0.5.11p the cards it added cost `discount` (1) less, a number its definition declared;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -197,14 +197,14 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.5.11o each card it added cost `discount` (1) less, on the Cry and on the Death.
+        /// R767000: through v0.5.11p each card it added cost `discount` (1) less, on the Cry and on the Death.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11o_adds_each_card_1_less_on_the_cry_and_the_death() {
             let old = |def: &mut CardDef| {
                 let declared: Vec<Param> = serde_json::from_value(json!([{
                     "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1
                 }]))
-                .expect("v0.5.11o's discount");
+                .expect("v0.5.11p's discount");
                 def.params.get_or_insert_with(Vec::new).extend(declared);
             };
             crate::under_kept_as(ID, script_v0_5_11o(), old, || {

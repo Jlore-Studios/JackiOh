@@ -26,7 +26,7 @@
 //!     ({threshold}) Palantir Tributes itself — never before.
 //!
 //! Patch v0.3.10 (#831): it cost (1) and answered only Books (the Radiant face every Spell, until the
-//! costs it had stolen reached (2)), and it kept the stolen card in your hand. Through v0.5.11o
+//! costs it had stolen reached (2)), and it kept the stolen card in your hand. Through v0.5.11p
 //! (`script_v0_5_11o`, kept, R767000) it answered the (1) Cost Spells: the cost is the one number the two
 //! scripts differ by.
 
@@ -41,7 +41,7 @@ const STOLEN: &str = "stolen";
 /// stands out of play, an X Spell 0), Books or not.
 const STOLEN_COST: i32 = 2;
 
-/// Patch v0.3.10 (#831) through v0.5.11o: the (1) Cost ones.
+/// Patch v0.3.10 (#831) through v0.5.11p: the (1) Cost ones.
 const STOLEN_COST_V0_5_11O: i32 = 1;
 
 fn answered(ctx: &EffectContext<'_>, event: &GameEvent, stolen_cost: i32) -> Option<String> {
@@ -148,7 +148,7 @@ pub fn script() -> CardScripts {
     palantir(STOLEN_COST)
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, answering the (1) Cost Spells;
+/// R767000: the script v0.5.11p and the versions before it ran, answering the (1) Cost Spells;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     palantir(STOLEN_COST_V0_5_11O)
@@ -781,7 +781,7 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.5.11o it answered the (1) Cost Spells, and let a (2) Cost one by.
+        /// R767000: through v0.5.11p it answered the (1) Cost Spells, and let a (2) Cost one by.
         #[test]
         fn r3139000_r767000_the_script_kept_for_v0_5_11o_steals_a_1_cost_spell_and_ignores_a_2_cost_one() {
             for radiant in [false, true] {

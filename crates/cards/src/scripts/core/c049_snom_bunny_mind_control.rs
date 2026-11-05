@@ -7,7 +7,7 @@
 //! DECLARED play-time target (R81), validated by R90, only the top card of a Stack pile on offer (R13) and a
 //! face-down Trap offered by its id alone (R177). No enemy permanent fizzles and the spell still counts as
 //! played. It is the steal of v0.3.7b again, which `script_v0_3_7b` keeps for replays (R767000); through
-//! v0.5.11o (`script_v0_5_11o`, kept) it stole an enemy Unit only, since patch v0.3.12 (#1149), and cost (4).
+//! v0.5.11p (`script_v0_5_11o`, kept) it stole an enemy Unit only, since patch v0.3.12 (#1149), and cost (4).
 //!
 //! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464) as
 //! Drone Core VIII's: each Float of its owner's lowers its cost by that much while it is in their hand,
@@ -44,7 +44,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     scripts_with(enemy_permanent, false)
 }
 
-/// R767000: the scripts v0.5.11o and the versions back to patch v0.3.12 (#1149) ran, a steal of an enemy Unit
+/// R767000: the scripts v0.5.11p and the versions back to patch v0.3.12 (#1149) ran, a steal of an enemy Unit
 /// with no Float; `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_5_11o() -> CardScripts {
     scripts_with(enemy_unit, false)
@@ -350,7 +350,7 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.5.11o it cost (4), had no Float and stole an enemy Unit only, the Radiant face
+    /// R767000: through v0.5.11p it cost (4), had no Float and stole an enemy Unit only, the Radiant face
     /// making it Radiant.
     #[test]
     fn r767000_the_script_kept_for_v0_5_11o_steals_a_unit_only_with_no_float() {

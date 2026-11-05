@@ -90,7 +90,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, the hand growth alone with no repeat
+/// R767000: the script v0.5.11p and the versions before it ran, the hand growth alone with no repeat
 /// attack; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
@@ -534,8 +534,8 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.5.11o it had neither Brittle nor a repeat attack; the kept script is the hand growth
-    /// alone, and the catalog it folds under (v0.5.11o's) prints no Brittle.
+    /// R767000: through v0.5.11p it had neither Brittle nor a repeat attack; the kept script is the hand growth
+    /// alone, and the catalog it folds under (v0.5.11p's) prints no Brittle.
     #[test]
     fn r767000_the_script_kept_for_v0_5_11o_grows_in_hand_and_never_attacks_again() {
         let kept = script_v0_5_11o();
