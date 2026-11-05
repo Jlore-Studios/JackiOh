@@ -6,7 +6,9 @@
 //! migration 0071's claim, kept with its seed until a pay or a refusal settles it, once (R2422000,
 //! `economy_practice_seed_settle`); migration 0077's news claims, one per account and entry
 //! (R2875000), no holding and no ledger: the reward a claim pays is written to the ledgers; and
-//! migration 0078's practice claim counts by UTC day and outcome (#2884, `economy_practice_claim_count`).
+//! migration 0078's practice claim counts by UTC day and outcome (#2884, `economy_practice_claim_count`);
+//! and migration 0081's card proficiency, one row per account and card (R3013000, R3013001): plays, level
+//! and the stamp worn, current state and no ledger, a level and a stamp being progress and a pick.
 //!
 //! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching to
 //! this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and ledger row together, in the
@@ -22,7 +24,9 @@ use jackioh_engine::config::Difficulty;
 use jackioh_engine::wire::PrintedRarity;
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
 
-use crate::config::{NANOS_PER_MS, SET_TRACK_FIRST_LEVEL};
+use crate::config::{
+    NANOS_PER_MS, PLAYER_SETTINGS_TEXT_MAX_LENGTH, PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL,
+};
 use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::economy::practice::{ClaimBucket, ClaimedResult};
@@ -406,6 +410,18 @@ pub struct NewsClaim {
     pub claimed_at: i64,
 }
 
+/// R3013000: one row of `public.card_proficiency` (migration 0081): how often the account played
+/// the card from hand in games that pay rewards, the level those plays reached (§14.14), and the
+/// stamp the card wears, one its level unlocked (R3013001), `None` for none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CardProficiency {
+    pub card_id: String,
+    pub plays: i64,
+    pub level: i64,
+    pub stamp: Option<i64>,
+}
+
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
 // whether a dev tool wrote it (`dev`, §14.10).
 
@@ -543,6 +559,8 @@ pub struct EconomyTables {
     pub idempotency_keys: Vec<IdempotencyRow>,
     /// R2875000: migration 0077's news claims, one per profile and entry.
     pub news_claims: Vec<NewsClaim>,
+    /// R3013000: migration 0081's card proficiency, one per profile and card.
+    pub card_proficiency: Vec<(String, CardProficiency)>,
 }
 
 // What both stores refuse alike: migration 0045's checks
@@ -686,6 +704,32 @@ fn track_after(held: Option<&SetTrack>, grant: &TrackGrant) -> Option<SetTrack> 
 /// A count after `delta`: `None` below 0, or on overflow.
 fn count_after(held: Option<i64>, delta: i64) -> Option<i64> {
     held.unwrap_or(0).checked_add(delta).filter(|count| *count >= 0)
+}
+
+/// R3013001: a stamp a card can wear, `1..=PROFICIENCY_LEVELS`, level n's stamp being n.
+fn is_stamp(stamp: i64) -> bool {
+    usize::try_from(stamp).is_ok_and(|stamp| (1..=PROFICIENCY_LEVELS).contains(&stamp))
+}
+
+/// Migration 0081's checks of a row's card and counts, and the curve's top (R3013000): a slug of a
+/// settings text's length, at least one play, and a level of the curve.
+fn check_proficiency(row: &CardProficiency) -> Result<(), StoreError> {
+    if !crate::cosmetics::is_slug(&row.card_id) || row.card_id.len() > PLAYER_SETTINGS_TEXT_MAX_LENGTH {
+        return Err(refused(format!("a card id is a slug, not {:?}", row.card_id)));
+    }
+    if row.plays <= 0 {
+        return Err(refused(format!(
+            "a card's proficiency counts at least one play, not {}",
+            row.plays
+        )));
+    }
+    if !usize::try_from(row.level).is_ok_and(|level| level <= PROFICIENCY_LEVELS) {
+        return Err(refused(format!(
+            "a proficiency level is 0 to {PROFICIENCY_LEVELS}, not {}",
+            row.level
+        )));
+    }
+    Ok(())
 }
 
 // The store methods
@@ -978,6 +1022,53 @@ impl Tx<'_> {
         economy_dispatch!(self, news_claim(profile_id, news_id, at))
     }
 
+    /// R3013000: the account's card proficiency, by card (`collate "C"`), a stamp in each row that
+    /// wears one.
+    pub async fn economy_card_proficiency_get(
+        &mut self,
+        profile_id: &str,
+    ) -> StoreResult<Vec<CardProficiency>> {
+        economy_dispatch!(self, card_proficiency_get(profile_id))
+    }
+
+    /// R3013000: writes each row's plays and level, inserting a card the account holds no row for
+    /// and never touching a stamp (a new row wears none). A row migration 0081's checks refuse is
+    /// refused here first, writing nothing; so is one whose level falls below the stamp it holds. A
+    /// current-state table with no ledger: a level is progress, no holding (§14.11).
+    pub async fn economy_card_proficiency_put(
+        &mut self,
+        profile_id: &str,
+        rows: &[CardProficiency],
+        at: i64,
+    ) -> StoreResult<()> {
+        for (index, row) in rows.iter().enumerate() {
+            check_proficiency(row)?;
+            // One statement writes the lot in Postgres, which takes a card once.
+            if rows[..index].iter().any(|held| held.card_id == row.card_id) {
+                return Err(refused(format!("{:?} is listed twice", row.card_id)));
+            }
+        }
+        economy_dispatch!(self, card_proficiency_put(profile_id, rows, at))
+    }
+
+    /// R3013001: sets the stamp `card_id` wears, or clears it with `None`. False, writing nothing,
+    /// when the account holds no row for the card or its level has not reached the stamp; a stamp
+    /// outside `1..=PROFICIENCY_LEVELS` is refused, as migration 0081's check refuses it.
+    pub async fn economy_card_proficiency_stamp(
+        &mut self,
+        profile_id: &str,
+        card_id: &str,
+        stamp: Option<i64>,
+        at: i64,
+    ) -> StoreResult<bool> {
+        if let Some(stamp) = stamp.filter(|stamp| !is_stamp(*stamp)) {
+            return Err(refused(format!(
+                "a stamp is 1 to {PROFICIENCY_LEVELS}, not {stamp}"
+            )));
+        }
+        economy_dispatch!(self, card_proficiency_stamp(profile_id, card_id, stamp, at))
+    }
+
     /// R1301003: a lock on the account's economy until the transaction ends, so two pack openings
     /// at once run one after the other and neither rolls on counters the other is moving. A lock,
     /// not a holding: no ledger row.
@@ -1013,6 +1104,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables.card_picks.retain(|(owner, _)| owner != profile_id);
     tables.idempotency_keys.retain(|row| row.profile_id != profile_id);
     tables.news_claims.retain(|row| row.profile_id != profile_id);
+    tables.card_proficiency.retain(|(owner, _)| owner != profile_id);
 }
 
 // Postgres (migration 0045)
@@ -1023,11 +1115,11 @@ mod pg {
     use time::OffsetDateTime;
 
     use super::{
-        CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        EconomyReason, FullArtPick, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry,
-        InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim, PracticeClaimCount,
-        PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange, QuestGrant, SetTrack,
-        TrackGrant, claim_count_day, count_after, from_literal, literal, track_after,
+        CardCosmetic, CardPicks, CardProficiency, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant,
+        EconomyLedger, EconomyReason, FullArtPick, GameJloreTotals, HeldQuest, IdempotencyRow,
+        InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim,
+        PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
+        QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, from_literal, literal, track_after,
     };
     use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
@@ -2222,15 +2314,97 @@ mod pg {
         .await?;
         Ok(done.rows_affected() == 1)
     }
+
+    /// Migration 0081.
+    pub async fn card_proficiency_get(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+    ) -> Result<Vec<CardProficiency>, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        sqlx::query(
+            r#"select card_id, plays, level, stamp from public.card_proficiency
+                where profile_id = $1::uuid
+                order by card_id collate "C""#,
+        )
+        .bind(profile_id)
+        .fetch_all(&mut **t)
+        .await?
+        .iter()
+        .map(|row| {
+            Ok(CardProficiency {
+                card_id: row.try_get("card_id")?,
+                plays: row.try_get("plays")?,
+                level: row.try_get("level")?,
+                stamp: row.try_get("stamp")?,
+            })
+        })
+        .collect()
+    }
+
+    /// One statement for every row (`unnest`): a held row's plays and level are replaced, its stamp
+    /// kept; migration 0081's stamp check refuses a level below it, rolling back the statement.
+    pub async fn card_proficiency_put(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        rows: &[CardProficiency],
+        at: i64,
+    ) -> Result<(), StoreError> {
+        if rows.is_empty() {
+            return Ok(());
+        }
+        run_as(t, Some(profile_id)).await?;
+        let cards: Vec<&str> = rows.iter().map(|row| row.card_id.as_str()).collect();
+        let plays: Vec<i64> = rows.iter().map(|row| row.plays).collect();
+        let levels: Vec<i64> = rows.iter().map(|row| row.level).collect();
+        sqlx::query(
+            "insert into public.card_proficiency (profile_id, card_id, plays, level, updated_at)
+             select $1::uuid, r.card_id, r.plays, r.level, to_timestamp($5::double precision / 1000.0)
+               from unnest($2::text[], $3::int8[], $4::int8[]) as r(card_id, plays, level)
+             on conflict (profile_id, card_id) do update
+                set plays = excluded.plays, level = excluded.level, updated_at = excluded.updated_at",
+        )
+        .bind(profile_id)
+        .bind(cards)
+        .bind(plays)
+        .bind(levels)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(())
+    }
+
+    /// One statement: the row's level is checked where it is written, so no read races it.
+    pub async fn card_proficiency_stamp(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        card_id: &str,
+        stamp: Option<i64>,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let done = sqlx::query(
+            "update public.card_proficiency
+                set stamp = $3::bigint, updated_at = to_timestamp($4::double precision / 1000.0)
+              where profile_id = $1::uuid and card_id = $2::text
+                and ($3::bigint is null or $3::bigint <= level)",
+        )
+        .bind(profile_id)
+        .bind(card_id)
+        .bind(stamp)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
 }
 
 // The in-memory fake (`FakeTables::economy`)
 
 mod fake {
     use super::{
-        CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry,
-        InventoryGrant, JloreGrant, JloreReason, NewsClaim, OwnedCosmetics, PracticeClaim,
+        CardCosmetic, CardPicks, CardProficiency, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant,
+        EconomyLedger, EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow,
+        InventoryEntry, InventoryGrant, JloreGrant, JloreReason, NewsClaim, OwnedCosmetics, PracticeClaim,
         PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
         QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, literal, track_after,
     };
@@ -2935,6 +3109,85 @@ mod fake {
             news_id: news_id.to_string(),
             claimed_at: at,
         });
+        Ok(true)
+    }
+
+    pub fn card_proficiency_get(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+    ) -> Result<Vec<CardProficiency>, StoreError> {
+        let tables = call(f, "economy.cardProficiency.get")?;
+        let rows = tables
+            .card_proficiency
+            .iter()
+            .filter(|(owner, _)| owner == profile_id)
+            .map(|(_, row)| row.clone())
+            .collect();
+        Ok(sorted_by(rows, |row: &CardProficiency| row.card_id.clone()))
+    }
+
+    /// Every row or none, as Postgres's one statement: a level below a held stamp refuses the lot,
+    /// as migration 0081's stamp check does.
+    pub fn card_proficiency_put(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        rows: &[CardProficiency],
+        _at: i64,
+    ) -> Result<(), StoreError> {
+        let tables = call(f, "economy.cardProficiency.put")?;
+        let held = |tables: &EconomyTables, card_id: &str| {
+            tables
+                .card_proficiency
+                .iter()
+                .position(|(owner, held)| owner == profile_id && held.card_id == card_id)
+        };
+        for row in rows {
+            let stamp = held(tables, &row.card_id).and_then(|at| tables.card_proficiency[at].1.stamp);
+            if stamp.is_some_and(|stamp| stamp > row.level) {
+                return Err(super::refused(format!(
+                    "{}'s level {} is below the stamp it wears",
+                    row.card_id, row.level
+                )));
+            }
+        }
+        for row in rows {
+            match held(tables, &row.card_id) {
+                Some(at) => {
+                    let held = &mut tables.card_proficiency[at].1;
+                    held.plays = row.plays;
+                    held.level = row.level;
+                }
+                None => tables.card_proficiency.push((
+                    profile_id.to_string(),
+                    CardProficiency {
+                        stamp: None,
+                        ..row.clone()
+                    },
+                )),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn card_proficiency_stamp(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        card_id: &str,
+        stamp: Option<i64>,
+        _at: i64,
+    ) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.cardProficiency.stamp")?;
+        let Some((_, held)) = tables
+            .card_proficiency
+            .iter_mut()
+            .find(|(owner, held)| owner == profile_id && held.card_id == card_id)
+        else {
+            return Ok(false);
+        };
+        if stamp.is_some_and(|stamp| stamp > held.level) {
+            return Ok(false);
+        }
+        held.stamp = stamp;
         Ok(true)
     }
 }

@@ -502,7 +502,12 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
-                        the collection is read again;
+                        the collection is read again. An owned card's view also shows its proficiency
+                        (collection/ProficiencyPanel.tsx, §14.14, R3013001): its level, its plays to the
+                        next on serverConfig.ts's curve and a picker of its stamps, a locked one with the
+                        level it needs; the account's copy is cards/stamps.ts's, loaded and each pick sent
+                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp), and
+                        the faces wear the pick (R3013002);
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;

@@ -21,7 +21,7 @@ use jackioh_engine::{
 use crate::db::store::MatchClocks;
 use crate::economy::rewards::GameEconomy;
 use crate::economy::store::CardPicks;
-use crate::loadout::{Loadout, SeatCards, SeatLoadout};
+use crate::loadout::{CardStamp, Loadout, SeatCards, SeatLoadout};
 
 // Client -> server
 
@@ -199,7 +199,13 @@ pub enum ServerMessage {
     Loadouts { p1: SeatLoadout, p2: SeatLoadout },
     /// R1834003: card picks for `seat`'s deck, each sent after the first view showing it, not again
     /// until a hello or attach (`loadout::cards_due`); an unshown card never travels (§10.8).
-    CardLoadouts { seat: PlayerId, cards: Vec<CardPicks> },
+    /// R3013002: with the stamps of those cards that wear one, left out when none does.
+    CardLoadouts {
+        seat: PlayerId,
+        cards: Vec<CardPicks>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        stamps: Vec<CardStamp>,
+    },
     /// R2990001: a watcher's own emote hand, emoji only, dealt from the match seed and the watcher's
     /// account (`social::watch::deal_spectator_emote_hand`); sent to that watcher alone as it attaches.
     SpectatorHand { emotes: Vec<EmoteId> },
@@ -268,6 +274,7 @@ pub fn card_loadouts_message(cards: SeatCards) -> ServerMessage {
     ServerMessage::CardLoadouts {
         seat: cards.seat,
         cards: cards.cards,
+        stamps: cards.stamps,
     }
 }
 
