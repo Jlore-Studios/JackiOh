@@ -15209,19 +15209,19 @@
           "conflicts": [
             "apps/web/src/i18n/zh-CN.json"
           ],
-          "from": "7a2e22ac73d20d6c4417fc96ab8cfa07b046c410",
-          "main": "7828a40227ee0607a576513eb4fe7d20053679bb"
+          "from": "56031abd6adbc4ed471b39968f13d3e2945779b8",
+          "main": "2d7d2fffdeb59301398368256ac58a0ae8114ef1"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "41976802779",
+            "run": "41995858245",
             "tier": "strong"
           }
         ],
-        "sha": "56031abd6adbc4ed471b39968f13d3e2945779b8",
+        "sha": "1004316db3c906aad04e6b548a2a6e23f8723fc8",
         "tiers": {
           "claude": "strong"
         }
