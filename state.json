@@ -16449,6 +16449,7 @@
       "run_id": "41947050395",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 60,
       "started_at": "2026-11-05T01:13:39Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -31120,9 +31121,33 @@
         "title": "Patch: seeded random walks play whole dungeon runs and check that every fight starts and every count stays in bounds",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-3",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "028d973d9c81db0a7c6476a10b7377c2bb45a9d3",
+        "issue": 3063,
+        "merged_at": "2026-11-05T01:28:17Z",
+        "n": 60,
+        "pr": 3109,
+        "queued_at": "2026-11-05T01:28:17Z",
+        "sha": "6c1483f9fcc0928d7c2b7e4b9fe67bee7b109cbb",
+        "status": "queued",
+        "title": "Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
+        "tries": 0
       }
     ],
-    "count": 59
+    "count": 60
   },
   "statistics": {
     "at": "2026-11-05T01:20:34Z"
