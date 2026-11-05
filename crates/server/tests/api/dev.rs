@@ -15,12 +15,12 @@ use jackioh_server::cosmetics::{
 };
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
-use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::store::{
     Counter, CounterEntry, CounterGrant, EconomyLedger, EconomyReason, InventoryItem, JloreReason,
     OwnedCosmetics, SetTrack,
 };
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env, parse_dev_profile_ids};
+use jackioh_shared::economy::math::total_xp_for_level;
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 use crate::support::store::fake;

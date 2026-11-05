@@ -11,7 +11,8 @@
 //!   `crates/engine/tests/export_config.rs` writes that file from; this module's test holds the two
 //!   to each other;
 //! - each constant of `jackioh_shared::config` (the shared logic's, `crates/shared/README.md`'s host
-//!   contract, #3098) under its own name, `SERIES_WINS_NEEDED` among them. A later shared module's
+//!   contract, #3098) under its own name, `SERIES_WINS_NEEDED` and the economy's drop tables and token bars
+//!   (#3104) among them. A later shared module's
 //!   numbers join them here, and this module's test holds the list to that file.
 
 use serde::Serialize;
@@ -80,6 +81,17 @@ macro_rules! shared_constants {
             BOT_THINK_MAX_MS, BOT_CLOCK_MARGIN_MS, BOT_DECISION_DEADLINE_MS, PERSONA_NAMES, EMOTE_TRIGGERS,
             EMOTE_REPLY_KEYS, AI_PERSONAS, PERSONA_DEAL_STEPS, AI_EMOTE, DUOS_ROUND_CLOCK_MS,
             DUOS_PROMPT_CLOCK_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_AI_STEP_DELAY_MS,
+            PLAYER_SETTINGS_TEXT_MAX_LENGTH, GLOBAL_PACK_NAME, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
+            TIER_WEIGHT_TOTAL, CARD_TIER_WEIGHTS, COSMETIC_TIER_WEIGHTS, PACK_FLOORED_SLOT, PACK_FLOOR_RARITY,
+            COSMETIC_PACK_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_COSMETIC_FLOOR_RARITY,
+            VERSION_OFFER_MIN_CARDS, VERSION_OFFER_MIN_PER_SET, OFFER_SAMPLE_PERCENT_SCALE, PITY_EPIC_PACKS,
+            PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_RARE,
+            COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK,
+            TOKEN_BAR_POINTS_BY_CARD_RARITY, TOKEN_BAR_POINTS_BY_COSMETIC_RARITY, CARD_TOKEN_BAR_TARGET_PACKS,
+            COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE, COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC,
+            COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY, COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK,
+            COSMETIC_TOKEN_CYCLE, COSMETIC_PACK_SLOTS, COSMETIC_PACK_CARD_WEIGHTS, CHASE_SHARD_PACKS,
+            SET_TRACK_XP_PER_LEVEL,
         )
     };
 }
