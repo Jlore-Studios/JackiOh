@@ -20,13 +20,18 @@ import {
   ADDRESSED_PUBLIC_FILES,
   CONNECT_SRC_PLACEHOLDER,
   HEADERS_FILE,
+  NOT_FOUND_FILE,
+  NOT_FOUND_HAND,
   PAGE_TEXT,
   PUBLIC_PAGES,
   connectSources,
+  notFoundHtml,
   sitemapXml,
   staticPages,
   writeStaticPages,
 } from "../static-pages.ts";
+import { CardFace } from "./cards/CardFace.tsx";
+import { faceModel } from "./cards/model.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "./game/deckbuilder/filters.ts";
 import { almanacShelf } from "./game/deckbuilder/shelf.ts";
 import { SITE_ORIGIN, originOf, paths, siteOrigin } from "./net/navigate.ts";
@@ -444,5 +449,185 @@ describe("#2681 the release artwork beside the static pages", () => {
       expect(seen.passed, url).toBe(true);
       expect(seen.body, url).toBeNull();
     }
+  });
+});
+
+describe("R3127000 the 404 page", () => {
+  /** The built 404.html, as text and as a document. */
+  function page(): { html: string; doc: Document } {
+    const html = readFileSync(join(writeAll({}, []), NOT_FOUND_FILE), "utf8");
+    return { html, doc: new DOMParser().parseFromString(html, "text/html") };
+  }
+
+  /** An element as the test compares it: its tag, its attributes but `style` (sorted), its style, its own text and its children. */
+  type Shape = { tag: string; attrs: string[]; style: string; text: string; children: Shape[] };
+  const shapeOf = (el: Element): Shape => ({
+    tag: el.tagName.toLowerCase(),
+    attrs: [...el.attributes]
+      .filter((a) => a.name !== "style")
+      .map((a) => `${a.name}=${a.value}`)
+      .sort(),
+    style: (el as HTMLElement).style.cssText,
+    text: [...el.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent ?? "")
+      .join(""),
+    children: [...el.children].map(shapeOf),
+  });
+
+  it("R3127000 writes 404.html from the built index.html: its entry script, noindex, the 404 title, no canonical", () => {
+    const outDir = writeAll({}, []);
+    const { html, doc } = page();
+    const entry = (source: Document): string | null | undefined =>
+      source.querySelector('script[type="module"]')?.getAttribute("src");
+    const template = new DOMParser().parseFromString(TEMPLATE, "text/html");
+    expect(entry(doc)).toBe("/src/main.tsx");
+    expect(entry(doc)).toBe(entry(template));
+    expect(attr(doc, 'meta[name="robots"]', "content")).toBe("noindex");
+    expect(doc.title).toBe(documentTitleFor(`/${NOT_FOUND_FILE}`));
+    expect(doc.title).toBe("Page not found · JackiOh");
+    expect(attr(doc, 'meta[property="og:title"]', "content")).toBe(doc.title);
+    expect(doc.querySelector('link[rel="canonical"]')).toBeNull();
+    expect(doc.querySelector('meta[property="og:url"]')).toBeNull();
+    expect(doc.querySelector('script[type="application/ld+json"]')).toBeNull();
+    // The shell it shares with every page is kept: the viewport, the fonts' preloads, the root the client mounts in.
+    expect(doc.querySelectorAll("#root")).toHaveLength(1);
+    expect(doc.querySelectorAll('link[rel="preload"][as="font"]')).toHaveLength(2);
+    // Every public page is still written beside it, and the page names the build's own host, as the others do.
+    for (const { path } of PUBLIC_PAGES) expect(existsSync(join(outDir, path, "index.html")), path).toBe(true);
+    expect(html).toContain(`${SITE_ORIGIN}/og.png`);
+    const other = "https://example.test";
+    expect(notFoundHtml(TEMPLATE, other)).not.toContain(SITE_ORIGIN);
+    expect(notFoundHtml(TEMPLATE, other)).toContain(`${other}/og.png`);
+  });
+
+  it("R3127000 the hand is three placeholder Spell faces named Error, Not, Found with cost gems 4, 0, 4", () => {
+    const faces = [...page().doc.querySelectorAll("#root .cf")];
+    expect(faces).toHaveLength(3);
+    expect(faces.map((face) => face.querySelector(".card-name")?.textContent)).toEqual(["Error", "Not", "Found"]);
+    expect(faces.map((face) => face.querySelector(".cost-gem")?.textContent)).toEqual(["4", "0", "4"]);
+    expect(faces.map((face) => face.querySelector(".cost-gem")?.getAttribute("data-cost"))).toEqual(["4", "0", "4"]);
+    expect(NOT_FOUND_HAND.map(({ name, cost }) => [name, cost])).toEqual([["Error", 4], ["Not", 0], ["Found", 4]]);
+    for (const face of faces) {
+      // A Spell with no attack or health, no rarity, set or crest: the gem's number is the only number on it.
+      expect(face.getAttribute("data-card-type")).toBe("Spell");
+      expect(face.getAttribute("data-foil")).toBe("none");
+      expect(face.hasAttribute("data-rarity")).toBe(false);
+      for (const part of [".cf-stats", ".cf-atk", ".cf-hp", ".cf-set", ".cf-gem", ".cf-crest", ".cf-watermark"]) {
+        expect(face.querySelector(part), part).toBeNull();
+      }
+      expect(face.querySelector(".card-text")?.textContent).toBe("");
+      expect(face.querySelector('.cf-art[data-art="procedural"]')).not.toBeNull();
+      expect(face.textContent).toMatch(/^\d[A-Za-z]+Spell$/u);
+    }
+    // Nothing a player could mistake for a real card: no card of the catalog has these ids.
+    for (const { id } of NOT_FOUND_HAND) expect(CATALOG[id], id).toBeUndefined();
+  });
+
+  it("R3127000 each hand card is what CardFace renders", () => {
+    const faces = [...page().doc.querySelectorAll("#root .cf")];
+    expect(faces).toHaveLength(NOT_FOUND_HAND.length);
+    NOT_FOUND_HAND.forEach((card, i) => {
+      const { container, unmount } = render(
+        createElement(CardFace, {
+          face: faceModel({ defId: card.id, name: card.name, type: "Spell", radiant: false, liveCost: card.cost }),
+        }),
+      );
+      const rendered = container.firstElementChild;
+      expect(rendered, card.name).not.toBeNull();
+      expect(shapeOf(faces[i] as Element), card.name).toEqual(shapeOf(rendered as Element));
+      unmount();
+    });
+  });
+
+  it("R3127000 the fallback is the app's own look: the tavern board, the stacked logo, the fonts and the button home", () => {
+    const { doc } = page();
+    const root = doc.querySelector("#root");
+    expect(root?.children).toHaveLength(1);
+    const shell = root?.firstElementChild;
+    expect(shell?.matches('div.app-shell.tavern.shell-panel[data-shown="true"]')).toBe(true);
+    expect(shell?.getAttribute("data-testid")).toBe("not-found-static");
+    const logo = shell?.querySelector("h1.shell-panel__brand > img.shell-panel__logo");
+    expect(logo?.getAttribute("src")).toBe("/brand/jackioh-logo-stacked.svg");
+    expect(logo?.getAttribute("alt")).toBe("JackiOh");
+    expect(shell?.querySelector("section.panel.panel--auth")).not.toBeNull();
+    const home = shell?.querySelector('a.button-secondary[href="/"]');
+    expect(home?.textContent).toBe("Back to the start");
+    // The logo's file and size are the client's own (main.tsx SHELL_LOGO).
+    const main = readFileSync(join(HERE, "main.tsx"), "utf8");
+    const shellLogo = /const SHELL_LOGO = \{ src: "([^"]+)", width: (\d+), height: (\d+) \}/u.exec(main);
+    expect([logo?.getAttribute("src"), logo?.getAttribute("width"), logo?.getAttribute("height")]).toEqual(shellLogo?.slice(1));
+    // The two web faces are preloaded from /fonts/, and src/fonts.css names both files.
+    const fonts = readFileSync(join(HERE, "fonts.css"), "utf8");
+    const preloads = [...doc.querySelectorAll('link[rel="preload"][as="font"]')].map((link) => link.getAttribute("href") ?? "");
+    expect(preloads).toHaveLength(2);
+    for (const href of preloads) {
+      expect(href.startsWith("/fonts/"), href).toBe(true);
+      expect(fonts, href).toContain(href);
+    }
+    // The plank floor and the brass-studded board are the tavern sheet's own rules.
+    const tavern = readFileSync(join(HERE, "auth/tavern.css"), "utf8");
+    expect(tavern).toContain('.tavern.shell-panel[data-shown="true"]');
+    expect(tavern).toContain(".panel--auth::before");
+    // Everything the fallback loads is the site's own (the CSP allows 'self' and data: images).
+    for (const el of root?.querySelectorAll("[src], [href]") ?? []) {
+      const url = el.getAttribute("src") ?? el.getAttribute("href") ?? "";
+      expect(/^(\/(?!\/)|data:)/u.test(url), url).toBe(true);
+    }
+    const csp = readFileSync(join(HERE, "../public/_headers"), "utf8");
+    expect(csp).toContain("img-src 'self' data:");
+    expect(csp).toContain("font-src 'self'");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+  });
+
+  it("R3127000 the fallback shows with script off and while the entry script has not loaded: nothing hides it", () => {
+    const { html, doc } = page();
+    expect(html).not.toContain("static-body");
+    expect(html).not.toContain("display:none");
+    expect(html).not.toMatch(/<noscript/iu);
+    expect(doc.querySelectorAll("style")).toHaveLength(0);
+    // The page is #root's fallback alone, none of the landing page's hero the template holds.
+    expect(doc.querySelector("#root")?.children).toHaveLength(1);
+    expect(doc.querySelector(".landing")).toBeNull();
+    // The stylesheet it relies on is the entry's, linked in the head, and the client's script replaces #root when it starts.
+    expect(new DOMParser().parseFromString(TEMPLATE, "text/html").querySelector("#root .landing")).not.toBeNull();
+  });
+
+  it("R3127000 the hand deals, fans, turns over and floats, and lies still and face up under Reduce motion", () => {
+    const css = readFileSync(join(HERE, "notfound/notfound.css"), "utf8");
+    const block = (selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start, selector).toBeGreaterThanOrEqual(0);
+      return css.slice(start, css.indexOf("}", start));
+    };
+    // The card rests face up, and the slots rest fanned: every animation only runs toward them.
+    expect(block(".nf-hand__card")).toContain("transform: rotateY(180deg);");
+    expect(block(".nf-hand__slot")).toContain("transform: rotate(var(--turn));");
+    for (const name of ["nf-hand-deal", "nf-hand-fan", "nf-hand-flip"]) {
+      const frames = block(`@keyframes ${name}`);
+      expect(frames, name).toContain("from {");
+      expect(frames, name).not.toMatch(/\bto \{|^\s*\d+% \{/mu);
+    }
+    expect(css).toContain("@keyframes nf-hand-float");
+    expect(css).toMatch(/\.nf-hand__slot:nth-child\(1\) \{ --turn: -15deg;/u);
+    expect(css).toMatch(/\.nf-hand__slot:nth-child\(2\) \{ --turn: 0deg;/u);
+    expect(css).toMatch(/\.nf-hand__slot:nth-child\(3\) \{ --turn: 15deg;/u);
+    expect(block(".nf-hand__card")).toContain("nf-hand-deal");
+    expect(block(".nf-hand__card")).toContain("nf-hand-flip");
+    expect(block(".nf-hand__slot")).toContain("nf-hand-fan");
+    expect(block(".nf-hand")).toContain("nf-hand-float");
+    expect(block(".nf-hand__side--back")).toContain("/brand/jackioh-card-back.svg");
+    // Reduce motion: the three moving layers stop.
+    const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+    for (const selector of [".nf-hand", ".nf-hand__slot", ".nf-hand__card"]) expect(reduced, selector).toContain(selector);
+    expect(reduced).toContain("animation: none;");
+    // Every nf-hand class the markup uses is styled.
+    const used = new Set([...page().html.matchAll(/class="(nf-hand[^"]*)"/gu)].flatMap((match) => (match[1] ?? "").split(" ")));
+    expect([...used].sort()).toEqual(["nf-hand", "nf-hand__card", "nf-hand__side", "nf-hand__side--back", "nf-hand__side--face", "nf-hand__slot"]);
+    for (const name of used) expect(css, name).toContain(`.${name}`);
+  });
+
+  it("R3127000 no public/404.html ships beside the generated one", () => {
+    expect(existsSync(join(HERE, "../public/404.html"))).toBe(false);
   });
 });

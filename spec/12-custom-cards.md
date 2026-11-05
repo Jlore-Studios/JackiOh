@@ -66,7 +66,7 @@ The AI decides from what its seat may know ([[R185]]) and assumes nothing about 
 
 ### 12.9 Saved on the account
 
-An active account's custom cards are stored by the server in a table only their owner can read or write ([[R915008]]): at most `CUSTOM_CARDS_PER_ACCOUNT` (50), each saved whole by the routes under `/api/custom-cards` (list, get, create, update, delete). The server checks the frame with the engine's validator and the source's size, and never compiles or runs a script; the creator checks a script with the Luau module before it saves it. A deleted card leaves the decks that name it, which then cannot start a game until it is replaced.
+The server no longer keeps custom cards (#2956). It has no routes for them, and the table that held them, with every player's saved cards and no export, is dropped (migration 0082). It had kept each account's cards in a table only their owner could read or write, at most 50 each, saved whole by the routes under `/api/custom-cards` (R915008, removed). A deck that names a custom card stays a draft ([[R250]]) and cannot start a game.
 
 ### 12.10 Practice with custom cards
 

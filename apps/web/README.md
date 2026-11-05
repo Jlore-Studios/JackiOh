@@ -100,8 +100,15 @@ Glitch's glyphs (`cards/glitch.ts`), seeded by the path, settling one character 
 stays the path; `NotFoundPlay` draws the lost card `notfound/lost.ts` picks by a hash of the path, which says its
 voice line through the audio engine when tapped, beside three face-down `CardBack`s that turn over into
 `ChoiceCard`s for Play, Practice and the Almanac (a tap turns one over and the next follows it; a mouse over it or
-keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. `public/404.html`, which
-Cloudflare serves for a path nothing routes, fans three of the brand's card backs into 4, 0 and 4 in CSS alone.
+keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. The page Cloudflare serves
+for a path nothing routes, `404.html`, is the client itself (R3127000, #3127): `static-pages.ts` `notFoundHtml`
+writes it from the built `index.html` (entry script, `noindex`, the 404 title, no canonical link), so the client
+starts and draws that `NotFound` with the real path. Its body, which shows with no script and until the client
+replaces `#root`, is a fallback in the app's look (`shellTestid.notFoundStatic`: the tavern board, the stacked logo,
+the button home) whose hand is three placeholder `CardFace` Spells, Error 4, Not 0 and Found 4, that deal in, fan out,
+turn over from the brand's card back and float in CSS alone (`notfound/notfound.css` `.nf-hand`, still under Reduce
+motion). `handCardHtml` writes their markup from the art builders `CardArt` calls, and `static-pages.test.ts` holds it
+to `CardFace`'s own render. No `public/404.html` ships beside it.
 
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept

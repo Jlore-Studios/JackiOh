@@ -340,6 +340,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0081_card_proficiency.sql",
         include_str!("../../migrations/0081_card_proficiency.sql"),
     ),
+    (
+        "0082_drop_custom_cards.sql",
+        include_str!("../../migrations/0082_drop_custom_cards.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
@@ -372,8 +376,13 @@ comment on table app.migrations is
 /// 0068_v0_5_retcon.sql (R2532000): its first version's PL/pgSQL call per renamed record id ran for
 /// minutes, past Render's `release` boot window. Where applied, 0013 works as written and 0068's renames
 /// are the same.
+/// 0037_custom_cards.sql (#3095): its first version's comments cited three of the custom cards'
+/// rulings, whose notes go with their removal, and `cargo jackioh spec check` refuses a citation with
+/// no note. Only comments changed (`comment on` texts among them), so what the file does is
+/// the same, and 0082 drops what it made.
 pub const REWRITTEN: &[(&str, &[&str])] = &[
     ("0013_retention_purge.sql", &["16b93e4d"]),
+    ("0037_custom_cards.sql", &["f1bfd2c3"]),
     ("0068_v0_5_retcon.sql", &["5827754e"]),
 ];
 
