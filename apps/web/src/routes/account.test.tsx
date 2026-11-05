@@ -536,7 +536,7 @@ describe("R1435 the username on the account page", () => {
 
 // R1300000: every signed-in account can reveal its own account secret ID (its profile id), hidden
 // until asked for, and a dev account, by the server's word alone, gets the Dev tools.
-describe("R1300000 the account secret ID and the Dev tools", () => {
+describe("R1300000 the account secret ID, and no Dev tools here", () => {
   const ID = "d0000000-0000-4000-8000-000000001300";
 
   function me(isDev?: boolean): MeResponse {
@@ -559,22 +559,13 @@ describe("R1300000 the account secret ID and the Dev tools", () => {
     Reflect.deleteProperty(navigator, "clipboard");
   });
 
-  it("R1300000 shows Dev tools only when the server says isDev", async () => {
+  it("R3156000 carries no Dev tools, a dev account's or anyone's: the front screen's Dev button has them", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
-    const { unmount } = render(<AccountRoute token={TOKEN} me={me(true)} />);
-    const toggle = screen.getByTestId(accountTestid.devToggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByTestId(devToolsTestid.panel), "closed, the panel is not mounted").toBeNull();
-    await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId(devToolsTestid.panel)).toBeInTheDocument();
-    unmount();
-
-    for (const isDev of [false, undefined]) {
+    for (const isDev of [true, false, undefined]) {
       const view = render(<AccountRoute token={TOKEN} me={me(isDev)} />);
       await userEvent.click(screen.getByTestId("account-manage-toggle"));
-      expect(screen.queryByTestId(accountTestid.devToggle), `isDev ${String(isDev)}`).toBeNull();
-      expect(screen.queryByTestId(devToolsTestid.panel)).toBeNull();
+      expect(screen.queryByTestId(devToolsTestid.panel), `isDev ${String(isDev)}`).toBeNull();
+      expect(screen.queryByText("Dev tools"), `isDev ${String(isDev)}`).toBeNull();
       view.unmount();
     }
   });

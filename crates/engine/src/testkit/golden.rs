@@ -1,6 +1,6 @@
 //! The golden replay (SURFACE §13.3), its pure half: the canonical texts, one recorded game's replay
 //! to its first `Mismatch` and the hotseat fixture's fold. `cargo jackioh golden check --file` replays a
-//! `golden record` file with it, on this build or another (`luau diff`, `classify`), and the engine's
+//! `golden record` file with it, on this build or another (`classify`), and the engine's
 //! `tests/golden.rs` folds the hotseat fixture with it. No committed traces now (#1641, #2578).
 //!
 //! A mismatch carries the Rust side's canonical text (`text`) and never writes it: the engine's

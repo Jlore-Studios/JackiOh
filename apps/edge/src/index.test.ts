@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "../../web/src/wire/serverConfig.ts";
-import { Server, START_WAIT_MS } from "./index.ts";
+import worker, { Server, START_WAIT_MS, type Env } from "./index.ts";
 import { SERVER_PORT } from "./routing.ts";
 
 const library = vi.hoisted(() => ({
@@ -100,5 +100,20 @@ describe("a request and a sleeping server", () => {
 
   it("answers before the client gives up on the request", () => {
     expect(START_WAIT_MS).toBeLessThan(API_REQUEST_TIMEOUT_SECONDS * 1000);
+  });
+});
+
+describe("#3183 the engine's compressed module", () => {
+  it("is served from the web build's files with its Content-Encoding, and never wakes the server", async () => {
+    const assets = { fetch: vi.fn(() => Promise.resolve(new Response("stored brotli bytes"))) };
+    const env = { ASSETS: assets, SERVER: { idFromName: vi.fn(), get: vi.fn() } };
+    // An incoming request carries Cloudflare's `cf` facts, which a test's own Request has none of.
+    const path = new Request("https://jackioh.com/assets/jackioh_wasm_bg.wasm-BIXTgzSO.br") as Parameters<typeof worker.fetch>[0];
+    const served = await worker.fetch(path, env as unknown as Env);
+    expect(assets.fetch).toHaveBeenCalledWith(path);
+    expect(env.SERVER.get).not.toHaveBeenCalled();
+    expect(served.headers.get("Content-Encoding")).toBe("br");
+    expect(served.headers.get("Content-Type")).toBe("application/wasm");
+    expect(await served.text()).toBe("stored brotli bytes");
   });
 });

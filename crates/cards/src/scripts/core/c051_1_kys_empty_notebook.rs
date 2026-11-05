@@ -95,10 +95,24 @@ mod tests {
         (s, added)
     }
 
+    /// How many cards the play shuffled into the deck, one `shuffledIn` event each.
+    fn shuffled_in(s: &Scenario) -> usize {
+        s.events().iter().filter(|event| event.event_type() == GameEventType::ShuffledIn).count()
+    }
+
     #[test]
     fn r386_an_upgrade_shuffles_4_and_a_degrade_2() {
         for (step, count) in [(1, 4), (-1, 2)] {
-            let (s, added) = shuffled("notebook-tuned", false, step);
+            let (s, _) = shuffled("notebook-tuned", false, step);
+            assert_eq!(shuffled_in(&s), count);
+        }
+        // A card shuffled in may leave the deck by its own effect, so the deck grows by the count only on a
+        // seed where none does: the first one that does for both steps.
+        let seed = seed_where("notebook-tuned", |seed| {
+            [(1, 4), (-1, 2)].iter().all(|&(step, count)| shuffled(seed, false, step).1.len() == count)
+        });
+        for (step, count) in [(1, 4), (-1, 2)] {
+            let (s, added) = shuffled(&seed, false, step);
             assert_eq!(added.len(), count);
             assert_eq!(s.pile(P1, "library").len(), LIBRARY.len() + count);
         }
@@ -140,7 +154,10 @@ mod tests {
 
         #[test]
         fn r1828002_across_30_seeds_no_ky_token_is_shuffled_in() {
-            let tokens = ids_of_defs(crate::query::query(&json_as(json!({ "tags": ["KY", "Token"] }))));
+            // The token pool as it is, not as the pool probe (#3117) rotates it: its order is asserted.
+            let tokens = ids_of_defs(jackioh_engine::testkit::with_pool_shift(0, || {
+                crate::query::query(&json_as(json!({ "tags": ["KY", "Token"] })))
+            }));
             assert_eq!(
                 tokens,
                 [
@@ -230,8 +247,11 @@ mod tests {
             // The pool #57 Conjure KY generates from: the KY tag of every set (R380), minus tokens, minus
             // the generator: §8.8 #34, #38, #45, #79, #87; §8.9 (#1187) #20 and #25 but not its token #20.1;
             // §8.10 (#1884) #25 but not its token #4.2.
+            // Read as it is, not as the pool probe (#3117) rotates it: its order is asserted.
             assert_eq!(
-                ids_of_defs(crate::query::pool("core-057", &json_as(json!({ "tags": ["KY"] })))),
+                ids_of_defs(jackioh_engine::testkit::with_pool_shift(0, || {
+                    crate::query::pool("core-057", &json_as(json!({ "tags": ["KY"] })))
+                })),
                 vec![
                     "core-031".to_string(),
                     "core-051".to_string(),

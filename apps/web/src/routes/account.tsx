@@ -43,7 +43,6 @@ import {
 } from "../net/session.ts";
 import { hasLinkResult } from "../auth/redirect.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
-import DevTools from "./DevTools.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import LinkedAccounts from "../auth/LinkedAccounts.tsx";
@@ -90,8 +89,6 @@ export const accountTestid = {
   secretIdShow: "account-secret-id-show",
   secretId: "account-secret-id",
   secretIdCopy: "account-secret-id-copy",
-  /** R1300000: the Dev tools toggle, shown only when the server says `isDev`. */
-  devToggle: "account-dev-toggle",
 } as const;
 
 /** What a player types before an account is deleted. Case and spaces around it don't matter. */
@@ -255,7 +252,6 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [attempt, setAttempt] = useState(0);
   // Open where a provider link's outcome is said (R3025000), or where the one to link is (R3147002).
   const [manageOpen, setManageOpen] = useState(() => hasLinkResult() || linkAfterSignIn() !== null);
-  const [devOpen, setDevOpen] = useState(false);
 
   useEffect(() => {
     if (pending) return;
@@ -411,17 +407,6 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             profileId={me?.profile.id}
           />
 
-          {/* R1300000: the server's word decides whether the panel shows; each tool asks it again. */}
-          {me?.isDev === true ? (
-            <AccountDevTools
-              open={devOpen}
-              onToggle={() => {
-                setDevOpen(!devOpen);
-              }}
-              token={token}
-            />
-          ) : null}
-
           <div className="account-session">
             <p>
               {t("Signing out forgets this session on this device and revokes it.")}
@@ -536,40 +521,6 @@ function AccountSecretId({ id }: { id: string }): ReactElement {
           {copied ? t("Copied") : t("Copy")}
         </button>
       </div>
-    </div>
-  );
-}
-
-/** R1300000: the Dev tools behind a toggle of their own, mounted once opened; only when `isDev`. */
-function AccountDevTools({
-  open,
-  onToggle,
-  token,
-}: {
-  open: boolean;
-  onToggle: () => void;
-  token: string;
-}): ReactElement {
-  const bodyId = useId();
-  return (
-    <div className="account-manage">
-      <div className="account-actions">
-        <button
-          type="button"
-          className="account-manage__toggle"
-          data-testid={accountTestid.devToggle}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={onToggle}
-        >
-          {t("Dev tools")}
-        </button>
-      </div>
-      {open ? (
-        <div className="account-manage__body" id={bodyId}>
-          <DevTools token={token} />
-        </div>
-      ) : null}
     </div>
   );
 }

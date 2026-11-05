@@ -50,23 +50,25 @@ A custom card's hook runs under the sandbox, the integer boundary and the memory
 
 ### 12.6 Where a custom card plays
 
-- **Practice only** ([[R915005]]). A deck that holds a custom card is a practice deck: it plays against the AI in practice ([[§9.9]]) and nowhere else. It is judged by L2, L3 and L6 ([[§9.4]]) as any deck, a custom card counting as one card of it, and each custom card it names must be one of the game's custom cards.
-- **Saving a deck** that names a custom card is allowed: decks are drafts ([[R250]]), so D3 also accepts a well-formed custom id, which need not name a card the player still has.
-- **Online**: every queue, room, rematch and ranked path refuses a deck or trio that names a custom card, with its own reason, **L7**, "a deck with a custom card plays only in practice", before any other queue rule.
+Nowhere now (issues #3096 and #2956): the client, the server, the Sandbox, the dungeon run, the AI and the tools take no custom card, and the validator knows none.
+
+- **Dealt** ([[R915005]]). The engine's setup still deals a deck that names a custom card, but only to a game that is given every custom card the decks name; this check leaves with the engine's custom-card host.
+- **Saving and queueing.** A deck that names a custom card is a draft ([[R250]]) that D3 refuses to save, as it refuses any id that is no card a deck can hold, and that L6 refuses to queue as a card the catalog does not hold ([[§9.4]]).
 - **The AI's deck** never holds a custom card.
-- **The sandbox** ([[R962000]]). A practice sandbox game ([[§9.9]]) whose setup carries custom cards may spawn each of them as it spawns a shipped card, and no custom card it was not given.
+- **The sandbox** (R962000, removed). A practice sandbox game ([[§9.9]]) spawns no custom card.
+- **The dungeon run** ([[§15]]) pools none and refuses a fight report whose decks name one.
 
 ### 12.7 Replays
 
-A game with custom cards carries them: `createGame` takes the game's custom cards, each with its frame, version and script source, and the state keeps them, so `hash_state` covers them and `fold(seed, decks, custom cards, log)` folds the same game anywhere the Luau module runs ([[R915006]]). A practice game kept to resume ([[R668]]) or to replay ([[R768]]) keeps its custom cards with it, so editing a card later never changes a game already played.
+A game with custom cards carries them: `createGame` takes the game's custom cards, each with its frame, version and script source, and the state keeps them, so `hash_state` covers them and `fold(seed, decks, custom cards, log)` folds the same game anywhere the Luau module runs ([[R915006]]). A practice game kept to resume ([[R668]]) or to replay ([[R768]]) kept its custom cards with it, so editing a card later never changed a game already played. Stored games that used custom cards are no longer supported (#2956): `cargo jackioh replay` exits 1 with the reason and does not fold one, and they drop out of replays and stats.
 
 ### 12.8 The AI against custom cards
 
-The AI decides from what its seat may know ([[R185]]) and assumes nothing about cards it has never seen ([[R915007]]): a hidden card is resampled from the official cards, as before, and a custom card's definition is part of its view only once the card has been seen. It plays against a custom card through the engine like any card.
+The AI decides from what its seat may know ([[R185]]). Its redaction kept a custom card's definition out of its view until the card had been seen (R915007, removed); it has no case for one now, since no game it plays holds a custom card.
 
 ### 12.9 Saved on the account
 
-An active account's custom cards are stored by the server in a table only their owner can read or write ([[R915008]]): at most `CUSTOM_CARDS_PER_ACCOUNT` (50), each saved whole by the routes under `/api/custom-cards` (list, get, create, update, delete). The server checks the frame with the engine's validator and the source's size, and never compiles or runs a script; the creator checks a script with the Luau module before it saves it. A deleted card leaves the decks that name it, which then cannot start a game until it is replaced.
+The server no longer keeps custom cards (#2956). It has no routes for them, and the table that held them, with every player's saved cards and no export, is dropped (migration 0082). It had kept each account's cards in a table only their owner could read or write, at most 50 each, saved whole by the routes under `/api/custom-cards` (R915008, removed). A deck that names a custom card stays a draft ([[R250]]) and cannot start a game.
 
 ### 12.10 Practice with custom cards
 

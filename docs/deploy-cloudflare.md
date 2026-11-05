@@ -18,8 +18,10 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 | Dev dashboard (R3074000) | https://admin-staging.jackioh.com, Worker `jackioh-admin-staging`, behind Access for the devs; `DEV_STRICT` off | https://admin.jackioh.com, Worker `jackioh-admin`, behind Access for the devs; `DEV_STRICT` on, so its routes need the two-step code |
 
 Each site is one Worker at one origin (`apps/edge/README.md`). Every path but `/api/*` and `/ws/*` is
-a static file from the web build, served without running any Worker code. Those two prefixes go to
-the Worker, which hands them to one container running `crates/server/Dockerfile`'s image. The
+a static file from the web build, served without running any Worker code, but one: the engine's
+WebAssembly module, stored brotli-compressed (`/assets/*.wasm-*.br`, #3183), which the Worker serves
+from the `ASSETS` binding with its `Content-Encoding`, so the browser decodes it as it downloads. Those
+two prefixes go to the Worker, which hands them to one container running `crates/server/Dockerfile`'s image. The
 container sleeps after ten minutes with no request and no open socket, and the next request starts
 it again. A daily cron wakes it.
 
@@ -334,7 +336,8 @@ later, so Render would stop billing:
 
 ## 6. Cost
 
-The Workers Paid plan is $5 a month. Static files cost nothing. A container is billed for memory
+The Workers Paid plan is $5 a month. Static files cost nothing; the engine's module is one Worker
+request per download of it, which a browser then keeps a year. A container is billed for memory
 and disk while it is awake, and for CPU while it works: about $7 a month on top of the plan for one
 `basic` container awake all month, far less when it sleeps, and the plan's included usage covers
 the first hours. Staging's container sleeps whenever the team is away. Supabase is the Pro plan, $25
@@ -370,6 +373,12 @@ once a day and opens a `human` issue once the period's spend, or its projection,
   promotion of a commit staging already ran pushes nothing. The registry keeps the newest ten tags
   (and whatever a site runs), so a Worker rolled back further than that finds no image: promote a
   revert instead.
+- **No built file may reach Cloudflare Workers' 25 MiB cap on one asset.** `wrangler deploy` stops
+  at the first one ("Asset too large"), as staging's deploys did on 2026-11-05, when the engine's
+  module reached 25.5 MiB. The module now ships brotli-compressed (about 2.5 MiB, #3183), and
+  `apps/web/scripts/check-assets.mjs` refuses any file at or over `ASSET_REFUSED_BYTES` (a MiB under
+  the cap) and any uncompressed `.wasm`: before both deploys (`check-production-bundle.mjs`) and on
+  every pull request the web's jobs run on (`src/net/check-assets.test.ts`, over CI's built client).
 - **Containers are in beta** on Cloudflare: limits and behaviour can change; read their changelog
   when something surprises you.
 

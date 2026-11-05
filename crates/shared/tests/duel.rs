@@ -6,18 +6,21 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, DECK_SIZE, GameOverReason, GameState, PerPlayer, Rng, Winner,
+    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, Rng, Winner,
 };
+use jackioh_shared::bots::decide::BotChoice;
+use jackioh_shared::bots::signals::{idles_turn, rematch_plan};
 use jackioh_shared::config::{
-    AIM_RELAY_INTERVAL_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES,
-    MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS, STAKE_NORMAL, TURN_CLOCK_SECONDS,
+    AIM_RELAY_INTERVAL_MS, BOT_REMATCH_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
+    BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_SERVER_ACTION_RETRY_MS,
+    MULLIGAN_CLOCK_SECONDS, PersonaName, STAKE_NORMAL, TURN_CLOCK_SECONDS,
 };
-use jackioh_shared::host::bot::{BotSeat, RematchPlan};
+use jackioh_shared::host::bot::BotSeat;
 use jackioh_shared::host::clock::{ClockExpiry, MatchClocks, initial_clocks};
 use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 use jackioh_shared::host::{
     ActionAnswer, ActionBy, DecideRequest, DuelEvent, DuelHost, DuelOutput, DuelSetup, GreetingPart,
-    HostNote, LetGo, LogOutcome, Played, RecordRequest, SeatMessage,
+    HostNote, LetGo, LogOutcome, RecordRequest, SeatMessage,
 };
 
 const SECOND: i64 = 1000;
@@ -89,6 +92,7 @@ struct Table {
     answers: Vec<(String, ActionAnswer)>,
     records: Vec<RecordRequest>,
     decides: Vec<DecideRequest>,
+    emotes: Vec<(PlayerId, EmoteId)>,
     offers: Vec<(PlayerId, i32, bool)>,
     notes: Vec<HostNote>,
     refused: Vec<PlayerId>,
@@ -119,6 +123,7 @@ impl Table {
             answers: Vec::new(),
             records: Vec::new(),
             decides: Vec::new(),
+            emotes: Vec::new(),
             offers: Vec::new(),
             notes: Vec::new(),
             refused: Vec::new(),
@@ -167,6 +172,7 @@ impl Table {
                 DuelOutput::Greeting { home, part } => self.greetings.push((home, part)),
                 DuelOutput::Refused { home } => self.refused.push(home),
                 DuelOutput::Decide { request } => self.decides.push(request),
+                DuelOutput::BotEmote { home, emote } => self.emotes.push((home, emote)),
                 DuelOutput::Record { request } => {
                     self.records.push(request);
                     self.feed(DuelEvent::ResultRecorded);
@@ -932,81 +938,185 @@ mod relays {
 mod bots {
     use super::*;
 
-    fn bot_seat() -> BotSeat {
+    fn bot_seat(hidden: bool) -> BotSeat {
         BotSeat {
-            idle_chance_per_turn: 0.0,
-            aim_lead_ms: (100, 200),
-            rematch: RematchPlan {
-                linger_ms: 30 * SECOND,
-                offers: true,
-                accepts: true,
-                offer_after_ms: 5 * SECOND,
-                reply_ms: 2 * SECOND,
-            },
+            strength: 2,
+            speed: 1.0,
+            persona: PersonaName::Balanced,
+            hidden,
         }
     }
 
-    fn with_bot_at_p2() -> Table {
+    /// A match whose host seed is `seed`, with a ladder bot at p2 and a person at p1.
+    fn match_on(seed: &str, hidden: bool, ranked: bool) -> Table {
         let mut setup = setup(opening("bot-1"));
-        setup.ranked = true;
-        setup.bots = PerPlayer::new(None, Some(bot_seat()));
-        Table::new(setup)
+        setup.seed = seed.to_string();
+        setup.ranked = ranked;
+        setup.bots = PerPlayer::new(None, Some(bot_seat(hidden)));
+        let mut table = Table::new(setup);
+        table.connect(P1);
+        table.feed(DuelEvent::Arm);
+        table
+    }
+
+    fn with_bot_at_p2(hidden: bool) -> Table {
+        match_on("seed-host", hidden, true)
+    }
+
+    fn chose(body: Option<ActionBody>) -> BotChoice {
+        BotChoice {
+            body,
+            ai_cursor: 7,
+            legal_count: 5,
+            lethal: false,
+            aim: None,
+        }
+    }
+
+    fn decided(table: &mut Table, request: &DecideRequest, choice: BotChoice) {
+        table.feed(DuelEvent::Decided {
+            home: request.home,
+            version: request.version,
+            turn: request.turn,
+            choice,
+        });
     }
 
     #[test]
-    fn r1452_the_machine_asks_for_a_bots_move_once_and_plays_what_it_is_told_under_a_server_nonce() {
-        let mut table = with_bot_at_p2();
-        table.connect(P1);
-        table.feed(DuelEvent::Arm);
+    fn r3103000_r1452_the_machine_asks_for_a_bots_move_once_and_a_bot_that_does_not_pass_for_a_person_plays_it_at_once()
+     {
+        let mut table = with_bot_at_p2(false);
         // The bot owes its mulligan: one request, none again while it is thinking.
         assert_eq!(table.decides.len(), 1);
         let request = table.decides[0].clone();
         assert_eq!((request.home, request.seat), (P2, P2));
         assert_eq!(request.version, table.host.next_seq());
+        assert_eq!(request.ai_cursor, 0);
         table.feed(DuelEvent::Arm);
         assert_eq!(table.decides.len(), 1);
+        // The host has what it needs to run the decision: the game, the bot's strength, its identity.
+        let job = table.host.job(&request).expect("a bot plays at p2");
+        assert_eq!((job.home, job.seat, job.hidden), (P2, P2, false));
+        assert!(
+            table
+                .host
+                .job(&DecideRequest {
+                    home: P1,
+                    ..request.clone()
+                })
+                .is_none()
+        );
 
         let keep = table.keep_hand(P2);
-        table.feed(DuelEvent::Decided {
-            home: P2,
-            version: request.version,
-            turn: request.turn,
-            played: Played {
-                body: Some(keep),
-                ai_cursor: 7,
-                timing_cursor: 3,
-                aimed: false,
-            },
-        });
+        decided(&mut table, &request, chose(Some(keep)));
         assert_eq!(table.nonces(), vec![format!("srv-bot-{}", request.version)]);
         assert_eq!(table.log[0].1.player_id, P2);
+        // No think time, no timer: it moved as soon as it had decided.
+        assert!(table.timer(TimerKey::BotMove { player: P2 }).is_none());
+    }
+
+    #[test]
+    fn r1452_a_bot_that_passes_for_a_person_waits_a_think_time_the_decision_counts_toward() {
+        // The moment the move goes out, counted from the moment the host was asked, when the decision
+        // took `decision_took` ms; `None` when it went out at once.
+        let moved_after = |decision_took: i64| {
+            let mut table = with_bot_at_p2(true);
+            let request = table.decides[0].clone();
+            let asked = table.now;
+            let keep = table.keep_hand(P2);
+            table.sleep(decision_took);
+            decided(&mut table, &request, chose(Some(keep)));
+            let Some(at) = table.timer(TimerKey::BotMove { player: P2 }) else {
+                assert_eq!(table.nonces(), vec![format!("srv-bot-{}", request.version)]);
+                return None;
+            };
+            // Nothing is played until the think time is out.
+            assert!(table.log.is_empty());
+            table.sleep(at - table.now - 1);
+            assert!(table.log.is_empty());
+            table.sleep(1);
+            assert_eq!(table.nonces(), vec![format!("srv-bot-{}", request.version)]);
+            Some(at - asked)
+        };
+        let think = moved_after(0).expect("a think time");
+        assert!((BOT_THINK_MIN_MS..=BOT_THINK_MAX_MS).contains(&think), "{think}");
+        // The time the decision took counts toward it, so the move goes out at the same moment.
+        assert_eq!(moved_after(think / 2), Some(think));
+        // A decision that took longer than the think time moves at once.
+        assert_eq!(moved_after(think + 1000), None);
+    }
+
+    #[test]
+    fn r738_a_hidden_bot_shows_its_aim_a_beat_before_its_move_and_takes_it_down_after() {
+        let aim = Aim {
+            source: AimEnd::Hero { player: P2 },
+            target: Some(AimEnd::Hero { player: P1 }),
+        };
+        let aims_p1 = |table: &Table| -> Vec<Option<Aim>> {
+            table
+                .sent
+                .p1
+                .iter()
+                .filter_map(|message| match message {
+                    SeatMessage::Aim { aim, .. } => Some(*aim),
+                    _ => None,
+                })
+                .collect()
+        };
+        let mut table = with_bot_at_p2(true);
+        let request = table.decides[0].clone();
+        let keep = table.keep_hand(P2);
+        decided(
+            &mut table,
+            &request,
+            BotChoice {
+                aim: Some(aim),
+                ..chose(Some(keep))
+            },
+        );
+        let move_at = table
+            .timer(TimerKey::BotMove { player: P2 })
+            .expect("the move waits");
+        // The aim is up at least the relay's interval before the move, and not before it is due.
+        let aim_at = table.timer(TimerKey::BotAim { player: P2 }).unwrap_or(table.now);
+        assert!(move_at - aim_at >= AIM_RELAY_INTERVAL_MS, "{aim_at} {move_at}");
+        assert!(aims_p1(&table).is_empty() || aim_at == table.now);
+        table.sleep(aim_at - table.now);
+        assert_eq!(aims_p1(&table), vec![Some(aim)]);
+        assert!(table.log.is_empty());
+        table.sleep(move_at - table.now);
+        assert_eq!(table.log.len(), 1);
+        assert_eq!(aims_p1(&table), vec![Some(aim), None]);
+
+        // One that does not pass for a person shows no aim at all.
+        let mut plain = with_bot_at_p2(false);
+        let request = plain.decides[0].clone();
+        let keep = plain.keep_hand(P2);
+        decided(
+            &mut plain,
+            &request,
+            BotChoice {
+                aim: Some(Aim {
+                    source: AimEnd::Hero { player: P2 },
+                    target: Some(AimEnd::Hero { player: P1 }),
+                }),
+                ..chose(Some(keep))
+            },
+        );
+        assert!(aims_p1(&plain).is_empty());
     }
 
     #[test]
     fn r1452_a_move_the_bot_could_not_make_falls_back_to_a_legal_one_and_a_stale_one_is_dropped() {
-        let mut table = with_bot_at_p2();
-        table.connect(P1);
-        table.feed(DuelEvent::Arm);
+        let mut table = with_bot_at_p2(false);
         let request = table.decides[0].clone();
         // Nothing decided: the fallback plays something legal that R188 allows.
-        table.feed(DuelEvent::Decided {
-            home: P2,
-            version: request.version,
-            turn: request.turn,
-            played: Played {
-                body: None,
-                ai_cursor: 1,
-                timing_cursor: 1,
-                aimed: false,
-            },
-        });
+        decided(&mut table, &request, BotChoice::nothing(1));
         assert_eq!(table.log.len(), 1);
         assert!(matches!(table.log[0].1.body, ActionBody::Mulligan { .. }));
 
         // A move decided on a state two rows old is stale: dropped when the turn has moved on.
-        let mut stale = with_bot_at_p2();
-        stale.connect(P1);
-        stale.feed(DuelEvent::Arm);
+        let mut stale = with_bot_at_p2(false);
         let request = stale.decides[0].clone();
         let keep = stale.keep_hand(P1);
         stale.act(P1, "p1", keep);
@@ -1014,35 +1124,18 @@ mod bots {
             home: P2,
             version: request.version - 5,
             turn: request.turn + 5,
-            played: Played {
-                body: Some(ActionBody::EndTurn),
-                ai_cursor: 1,
-                timing_cursor: 1,
-                aimed: false,
-            },
+            choice: chose(Some(ActionBody::EndTurn)),
         });
         assert_eq!(stale.log.len(), 1, "{:?}", stale.nonces());
     }
 
     #[test]
     fn r1452_a_move_the_log_would_not_take_is_decided_again_after_the_write_retry_pace() {
-        let mut table = with_bot_at_p2();
-        table.connect(P1);
-        table.feed(DuelEvent::Arm);
+        let mut table = with_bot_at_p2(false);
         let request = table.decides[0].clone();
         let keep = table.keep_hand(P2);
         table.failing_appends = 1;
-        table.feed(DuelEvent::Decided {
-            home: P2,
-            version: request.version,
-            turn: request.turn,
-            played: Played {
-                body: Some(keep),
-                ai_cursor: 1,
-                timing_cursor: 1,
-                aimed: false,
-            },
-        });
+        decided(&mut table, &request, chose(Some(keep)));
         assert!(table.log.is_empty());
         assert_eq!(
             table.timer(TimerKey::BotRetry),
@@ -1052,28 +1145,30 @@ mod bots {
         assert_eq!(table.decides.len(), 2);
     }
 
+    /// A host seed whose bot at p2 plans a rematch `wanted` says it does, by R639000's fit.
+    fn seed_where(wanted: impl Fn(&jackioh_shared::bots::signals::RematchPlan) -> bool) -> String {
+        (0..10_000)
+            .map(|k| format!("seed-rematch-{k}"))
+            .find(|seed| wanted(&rematch_plan(seed, P2, &BOT_REMATCH_FIT)))
+            .expect("a seed whose bot plans so")
+    }
+
     #[test]
     fn r639000_a_bot_lingers_after_a_ranked_game_offers_a_rematch_and_meets_a_persons_offer() {
-        let mut table = with_bot_at_p2();
-        table.connect(P1);
-        table.feed(DuelEvent::Arm);
+        let seed = seed_where(|plan| plan.offers && plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = match_on(&seed, true, true);
         // Presence: the bot is here for the whole game.
         assert_eq!(table.host.presence(table.now), PerPlayer::new(true, true));
         let keep = table.keep_hand(P1);
         table.act(P1, "p1", keep);
         let request = table.decides[0].clone();
         let keep = table.keep_hand(P2);
-        table.feed(DuelEvent::Decided {
-            home: P2,
-            version: request.version,
-            turn: request.turn,
-            played: Played {
-                body: Some(keep),
-                ai_cursor: 0,
-                timing_cursor: 0,
-                aimed: false,
-            },
-        });
+        decided(&mut table, &request, chose(Some(keep)));
+        let at = table
+            .timer(TimerKey::BotMove { player: P2 })
+            .expect("a think time");
+        table.sleep(at - table.now);
         table.act(P1, "gg", ActionBody::Concede);
         assert_eq!(table.records.len(), 1);
         // The bot stays for its linger, then it is gone; the person's own socket is separate.
@@ -1081,9 +1176,9 @@ mod bots {
         // Its own offer comes `offer_after_ms` after the game's end.
         assert_eq!(
             table.timer(TimerKey::BotOffer { player: P2 }),
-            Some(table.now + 5 * SECOND)
+            Some(table.now + plan.offer_after_ms)
         );
-        table.sleep(5 * SECOND);
+        table.sleep(plan.offer_after_ms);
         assert_eq!(table.offers, vec![(P2, STAKE_NORMAL, false)]);
         // A person's offer is met after the reply delay, at its stakes, and the bot stays until sent.
         table.feed(DuelEvent::RematchOffered {
@@ -1092,9 +1187,9 @@ mod bots {
         });
         assert_eq!(
             table.timer(TimerKey::BotReply { player: P2 }),
-            Some(table.now + 2 * SECOND)
+            Some(table.now + plan.reply_ms)
         );
-        table.sleep(2 * SECOND);
+        table.sleep(plan.reply_ms);
         assert_eq!(table.offers.last(), Some(&(P2, STAKE_NORMAL, true)));
         // Answered once only.
         table.feed(DuelEvent::RematchOffered {
@@ -1103,10 +1198,25 @@ mod bots {
         });
         assert!(table.timer(TimerKey::BotReply { player: P2 }).is_none());
         // Past its linger the bot reads as gone, unless its reply is on its way.
-        table.sleep(30 * SECOND);
+        table.sleep(plan.linger_ms);
         assert!(table.host.presence(table.now).p2);
         table.feed(DuelEvent::RematchSent { home: P2 });
         assert!(!table.host.presence(table.now).p2);
+    }
+
+    #[test]
+    fn r3103000_r639000_a_bot_that_does_not_pass_for_a_person_stays_for_no_rematch() {
+        let seed = seed_where(|plan| plan.offers && plan.accepts);
+        let mut table = match_on(&seed, false, true);
+        table.act(P1, "gg", ActionBody::Concede);
+        assert_eq!(table.records.len(), 1);
+        assert!(table.timer(TimerKey::BotOffer { player: P2 }).is_none());
+        assert!(!table.host.presence(table.now).p2);
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        assert!(table.timer(TimerKey::BotReply { player: P2 }).is_none());
     }
 
     #[test]
@@ -1114,24 +1224,106 @@ mod bots {
         let mut series = setup(opening("bot-2"));
         series.ranked = true;
         series.series_game = true;
-        series.bots = PerPlayer::new(None, Some(bot_seat()));
+        series.bots = PerPlayer::new(None, Some(bot_seat(true)));
         let mut table = Table::new(series);
-        table.connect(P1);
-        table.feed(DuelEvent::Arm);
-        table.feed(DuelEvent::Stop);
-        let mut table = Table::new({
-            let mut series = setup(opening("bot-2"));
-            series.ranked = true;
-            series.series_game = true;
-            series.bots = PerPlayer::new(None, Some(bot_seat()));
-            series
-        });
         table.connect(P1);
         table.feed(DuelEvent::Arm);
         table.act(P1, "gg", ActionBody::Concede);
         assert_eq!(table.records.len(), 1);
         assert!(table.timer(TimerKey::BotOffer { player: P2 }).is_none());
         assert!(!table.host.presence(table.now).p2);
+    }
+
+    #[test]
+    fn r3103000_r639000_a_bot_that_passes_for_a_person_may_let_its_turn_clock_run_out_and_one_that_does_not_never_does()
+     {
+        // The turn p2 first owes a move on its own turn, found on a scratch match.
+        let mut probe = match_on("seed-probe", false, true);
+        probe.through_the_mulligans();
+        let first = probe.host.game().turn + i32::from(probe.active() != P2);
+        let seed = (0..10_000)
+            .map(|k| format!("seed-idle-{k}"))
+            .find(|seed| idles_turn(seed, P2, first, &BOT_TIMEOUT_FIT))
+            .expect("a seed whose bot idles on that turn");
+        let owes_a_move_on_its_own_turn = |hidden: bool| {
+            let mut table = match_on(&seed, hidden, true);
+            // Its mulligan was asked first; the table answers it for the bot, as the opening is over.
+            let mulligan = table.decides[0].clone();
+            table.through_the_mulligans();
+            decided(&mut table, &mulligan, BotChoice::nothing(0));
+            if table.active() != P2 {
+                table.act(P1, "p1-end", ActionBody::EndTurn);
+            }
+            assert_eq!((table.active(), table.host.game().turn), (P2, first));
+            table
+                .decides
+                .iter()
+                .any(|request| request.own_turn_start && request.turn == first)
+        };
+        assert!(!owes_a_move_on_its_own_turn(true));
+        assert!(owes_a_move_on_its_own_turn(false));
+    }
+
+    /// The emotes a hidden bot at p2 sends in the first seconds of a match on `seed`.
+    fn emotes_after_the_mulligans(seed: &str, hidden: bool) -> (Vec<(PlayerId, EmoteId)>, i64) {
+        let mut table = match_on(seed, hidden, true);
+        let before = table.now;
+        table.through_the_mulligans();
+        table.sleep(10 * SECOND);
+        let at = table.now - before;
+        (table.emotes, at)
+    }
+
+    #[test]
+    fn r3103000_r645_a_bot_that_passes_for_a_person_emotes_by_its_persona_after_a_delay_and_one_that_does_not_never_does()
+     {
+        let sent = (0..60)
+            .map(|k| format!("seed-chat-{k}"))
+            .find(|seed| !emotes_after_the_mulligans(seed, true).0.is_empty())
+            .expect("a seed whose bot greets after the mulligan");
+        let (emotes, _) = emotes_after_the_mulligans(&sent, true);
+        assert!(emotes.iter().all(|(home, _)| *home == P2));
+        // Every emote waited out its delay before it went (the host relays it as a person's).
+        let mut table = match_on(&sent, true, true);
+        table.through_the_mulligans();
+        assert!(table.emotes.is_empty(), "no emote before its delay");
+        let due = table
+            .timer(TimerKey::BotEmote { player: P2 })
+            .expect("an emote is due");
+        assert!(due >= table.now + 800, "{due} {}", table.now);
+        // A bot that does not pass for a person has no persona.
+        assert!(emotes_after_the_mulligans(&sent, false).0.is_empty());
+    }
+
+    #[test]
+    fn r645_a_persons_emote_may_earn_the_bot_a_reply_unless_the_pair_is_muted() {
+        let reply = |seed: &str, muted: bool| {
+            let mut table = match_on(seed, true, true);
+            table.through_the_mulligans();
+            table.sleep(10 * SECOND);
+            table.emotes.clear();
+            if muted {
+                table.feed(DuelEvent::EmotesMuted);
+            }
+            table.feed(DuelEvent::Emote {
+                home: P1,
+                emote: EmoteId::Greetings,
+            });
+            table.sleep(10 * SECOND);
+            table.emotes
+        };
+        let seed = (0..60)
+            .map(|k| format!("seed-reply-{k}"))
+            .find(|seed| !reply(seed, false).is_empty())
+            .expect("a seed whose bot answers a greeting");
+        assert_eq!(
+            reply(&seed, false)
+                .iter()
+                .map(|(home, _)| *home)
+                .collect::<Vec<_>>(),
+            vec![P2]
+        );
+        assert!(reply(&seed, true).is_empty());
     }
 }
 
@@ -1169,11 +1361,12 @@ mod the_checkpoint {
             home: P2,
             version: 4,
             turn: 2,
-            played: Played {
+            choice: BotChoice {
                 body: Some(ActionBody::EndTurn),
                 ai_cursor: 1,
-                timing_cursor: 2,
-                aimed: true,
+                legal_count: 3,
+                lethal: false,
+                aim: None,
             },
         };
         let json = serde_json::to_string(&event).expect("event");

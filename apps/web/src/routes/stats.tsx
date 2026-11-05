@@ -1,11 +1,12 @@
 // `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on three tabs: Cards
 // (the filters, not columns, cover cost, rarity and keyword, R2446000), Sets (R1966000) and Players (public
 // aggregates, fun stats from #125). No provisional banner and no reading notes (R2325000): the page never
-// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games", and a
-// Drawn vs not drawn the server withholds until both sides reach it, "not enough data" (R2427000). The
-// patch bar (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of
-// its own. The Cards tab also holds the games panel (R1994000), the Created cards (R2089000) and, behind
-// Show tokens, off by default, the tokens (R2370000). The card drill-down shows the faces (a full-art
+// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games". The Adjusted
+// win rate leads (R2777000), so the table shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000);
+// with the ranges shown, a tier says how much of the card's range is in it (R3184001). The patch bar
+// (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own. The
+// Cards tab also holds the games panel (R1994000), the Created cards (R2089000, sortable, R3184002) and,
+// behind Show tokens, off by default, the tokens (R2370000). The card drill-down shows the faces (a full-art
 // card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
@@ -45,11 +46,11 @@ import {
 } from "../stats/config.ts";
 import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
-import { faceRate, formatPlayedDelta } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
+import { cardTierFit } from "../stats/tierFit.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
@@ -126,31 +127,10 @@ function setPercent(rate: number, signed = false): string {
 
 type TabKey = "cards" | "sets" | "players";
 type ViewKey = "table" | "grid";
-type SortColumn =
-  | "name"
-  | "games"
-  | "tier"
-  | "adjustedWinRate"
-  | "winRate"
-  | "drawnWinRate"
-  | "drawnDelta"
-  | "radiantWinRate"
-  | "normalWinRate"
-  | "playRate";
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
-const SORT_COLUMNS: readonly SortColumn[] = [
-  "name",
-  "games",
-  "tier",
-  "adjustedWinRate",
-  "winRate",
-  "drawnWinRate",
-  "drawnDelta",
-  "radiantWinRate",
-  "normalWinRate",
-  "playRate",
-] as const;
+const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
@@ -158,10 +138,6 @@ const SORT_LABELS: Record<SortColumn, string> = {
   tier: "Tier",
   adjustedWinRate: "Adjusted",
   winRate: "Win rate",
-  drawnWinRate: "When drawn",
-  drawnDelta: "Drawn vs not drawn",
-  radiantWinRate: "Radiant",
-  normalWinRate: "Normal",
   playRate: "Play rate",
 };
 
@@ -200,6 +176,16 @@ function percentText(fraction: number): string {
   return `${String(Number((fraction * 100).toFixed(1)))}%`;
 }
 
+/** R3184001: under a tier, the share of the card's Adjusted range inside the tier's band, to a whole percent; nothing without one. */
+function TierFitText({ fit }: { fit: number | null }): ReactElement | null {
+  if (fit === null) return null;
+  return (
+    <span className="stats-sample-hint stats-range" data-testid={statsTestid.tierFit}>
+      {`${Math.round(fit * 100)}%`}
+    </span>
+  );
+}
+
 /** R3022000: a card's tier chip, or "—" below the floor or from a server deployed before tiers. */
 function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid: string }): ReactElement {
   if (!tier) return <span data-testid={testid}>—</span>;
@@ -215,7 +201,8 @@ const DEFAULT_SORT: SortColumn = "adjustedWinRate";
 
 /**
  * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
- * `keyword`) is the default, the adjusted win rate descending (R2777000), its direction too.
+ * `keyword`, or R3184000's `drawnWinRate`, `drawnDelta`, `radiantWinRate` or `normalWinRate`) is the default,
+ * the adjusted win rate descending (R2777000), its direction too.
  */
 function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
   const asked = params.get("sort");
@@ -292,10 +279,6 @@ export default function StatsRoute(): ReactElement {
     thumbnail: true,
     games: true,
     winRate: true,
-    drawnWinRate: true,
-    drawnDelta: true,
-    radiantWinRate: true,
-    normalWinRate: true,
     playRate: true,
   });
 
@@ -594,6 +577,12 @@ export default function StatsRoute(): ReactElement {
         if (aRank >= 0 && bRank < 0) return -1;
         if (aRank < 0 && bRank >= 0) return 1;
         if (aRank !== bRank) return (aRank - bRank) * flip;
+        // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
+        const aFit = cardTierFit(a, tiers);
+        const bFit = cardTierFit(b, tiers);
+        if (aFit !== null && bFit === null) return -1;
+        if (aFit === null && bFit !== null) return 1;
+        if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
         const aRate = a.adjustedWinRate ?? null;
         const bRate = b.adjustedWinRate ?? null;
         if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
@@ -614,42 +603,10 @@ export default function StatsRoute(): ReactElement {
         if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
           return (a.winRate - b.winRate) * flip;
         }
-      } else if (sortCol === "drawnWinRate") {
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        if (a.drawnWinRate !== null && b.drawnWinRate !== null && a.drawnWinRate !== b.drawnWinRate) {
-          return (a.drawnWinRate - b.drawnWinRate) * flip;
-        }
-      } else if (sortCol === "radiantWinRate") {
-        const aRate = faceRate(a.playedRadiantGames, a.playedRadiantWinRate, minSample);
-        const bRate = faceRate(b.playedRadiantGames, b.playedRadiantWinRate, minSample);
-        if (aRate !== null && bRate === null) return -1;
-        if (aRate === null && bRate !== null) return 1;
-        if (aRate !== null && bRate !== null && aRate !== bRate) {
-          return (aRate - bRate) * flip;
-        }
-      } else if (sortCol === "normalWinRate") {
-        const aRate = faceRate(a.playedNormalGames, a.playedNormalWinRate, minSample);
-        const bRate = faceRate(b.playedNormalGames, b.playedNormalWinRate, minSample);
-        if (aRate !== null && bRate === null) return -1;
-        if (aRate === null && bRate !== null) return 1;
-        if (aRate !== null && bRate !== null && aRate !== bRate) {
-          return (aRate - bRate) * flip;
-        }
       } else if (sortCol === "games") {
         if (a.games !== b.games) return (a.games - b.games) * flip;
       } else if (sortCol === "playRate") {
         if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
-      } else if (sortCol === "drawnDelta") {
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aDelta = a.drawnDelta ?? null;
-        const bDelta = b.drawnDelta ?? null;
-        if (aDelta !== null && bDelta === null) return -1;
-        if (aDelta === null && bDelta !== null) return 1;
-        if (aDelta !== null && bDelta !== null && aDelta !== bDelta) {
-          return (aDelta - bDelta) * flip;
-        }
       } else if (sortCol === "name") {
         const diff = compareNames(a, b);
         if (diff !== 0) return diff * flip;
@@ -658,7 +615,7 @@ export default function StatsRoute(): ReactElement {
     });
 
     return list;
-  }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, minSample]);
+  }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, tiers]);
 
   // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
@@ -973,38 +930,6 @@ export default function StatsRoute(): ReactElement {
                   <label className="stats-col-toggle">
                     <input
                       type="checkbox"
-                      checked={visibleCols.drawnWinRate}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, drawnWinRate: e.target.checked }))}
-                    />
-                    {t("When drawn")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.drawnDelta}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, drawnDelta: e.target.checked }))}
-                    />
-                    {t("Drawn vs not drawn")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.radiantWinRate}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, radiantWinRate: e.target.checked }))}
-                    />
-                    {t("Radiant")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.normalWinRate}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, normalWinRate: e.target.checked }))}
-                    />
-                    {t("Normal")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
                       checked={visibleCols.playRate}
                       onChange={(e) => setVisibleCols((c) => ({ ...c, playRate: e.target.checked }))}
                     />
@@ -1031,8 +956,6 @@ export default function StatsRoute(): ReactElement {
                 {filteredCards.map((card) => {
                   const def = CATALOG[card.id];
                   const face = def ? faceModel({ defId: card.id, def, radiant: false }) : null;
-                  const radiant = faceRate(card.playedRadiantGames, card.playedRadiantWinRate, minSample);
-                  const normal = faceRate(card.playedNormalGames, card.playedNormalWinRate, minSample);
 
                   return (
                     <li key={card.id} className="stats-grid-item" data-card-id={card.id}>
@@ -1052,6 +975,7 @@ export default function StatsRoute(): ReactElement {
                         <dt>{t("Tier")}</dt>
                         <dd>
                           <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
+                          {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                         </dd>
                         <dt>{t("Adjusted")}</dt>
                         <dd>
@@ -1069,10 +993,6 @@ export default function StatsRoute(): ReactElement {
                             <RangeText low={card.winRateLow} high={card.winRateHigh} digits={WIN_RATE_RANGE_DIGITS} testid={statsTestid.winRateRange} />
                           )}
                         </dd>
-                        <dt>{t("Radiant")}</dt>
-                        <dd>{radiant !== null ? `${Math.round(radiant * 100)}%` : "—"}</dd>
-                        <dt>{t("Normal")}</dt>
-                        <dd>{normal !== null ? `${Math.round(normal * 100)}%` : "—"}</dd>
                         <dt>{t("Games")}</dt>
                         <dd>{card.games}</dd>
                       </dl>
@@ -1165,74 +1085,6 @@ export default function StatsRoute(): ReactElement {
                       >
                         {t("Win rate")} {sortCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
-                      {visibleCols.drawnWinRate && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "drawnWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("drawnWinRate")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("drawnWinRate");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("When drawn")} {sortCol === "drawnWinRate" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {visibleCols.drawnDelta && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "drawnDelta" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("drawnDelta")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("drawnDelta");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Drawn vs not drawn")} {sortCol === "drawnDelta" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {visibleCols.radiantWinRate && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "radiantWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("radiantWinRate")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("radiantWinRate");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Radiant")} {sortCol === "radiantWinRate" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {visibleCols.normalWinRate && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "normalWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("normalWinRate")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("normalWinRate");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Normal")} {sortCol === "normalWinRate" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
                       {visibleCols.playRate && (
                         <th
                           scope="col"
@@ -1254,9 +1106,6 @@ export default function StatsRoute(): ReactElement {
                   </thead>
                   <tbody>
                     {filteredCards.map((card) => {
-                      const radiantRate = faceRate(card.playedRadiantGames, card.playedRadiantWinRate, minSample);
-                      const normalRate = faceRate(card.playedNormalGames, card.playedNormalWinRate, minSample);
-
                       return (
                         <tr
                           key={card.id}
@@ -1285,6 +1134,7 @@ export default function StatsRoute(): ReactElement {
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td">
                             <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
+                            {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                           </td>
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
                             {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
@@ -1310,37 +1160,6 @@ export default function StatsRoute(): ReactElement {
                               <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
                           </td>
-                          {visibleCols.drawnWinRate && (
-                            <td className="stats-td">
-                              {card.hasEnoughGames && card.drawnWinRate !== null
-                                ? `${Math.round(card.drawnWinRate * 100)}%`
-                                : "—"}
-                            </td>
-                          )}
-                          {visibleCols.drawnDelta && (
-                            <td className="stats-td">
-                              {card.hasEnoughGames && typeof card.drawnDelta === "number" ? (
-                                <span>
-                                  {formatPlayedDelta(card.drawnDelta)}{" "}
-                                  <span className="stats-sample-hint">
-                                    ({card.drawnGames} / {card.notDrawnGames ?? 0})
-                                  </span>
-                                </span>
-                              ) : (
-                                <span className="stats-not-enough">{t("not enough data")}</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleCols.radiantWinRate && (
-                            <td className="stats-td">
-                              {radiantRate !== null ? `${Math.round(radiantRate * 100)}%` : "—"}
-                            </td>
-                          )}
-                          {visibleCols.normalWinRate && (
-                            <td className="stats-td">
-                              {normalRate !== null ? `${Math.round(normalRate * 100)}%` : "—"}
-                            </td>
-                          )}
                           {visibleCols.playRate && (
                             <td className="stats-td">{`${Math.round(card.playRate * 100)}%`}</td>
                           )}
@@ -1385,6 +1204,7 @@ export default function StatsRoute(): ReactElement {
             {showRanges && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
               <p className="stats-sample-hint" data-testid={statsTestid.rangesNote}>
                 {t("A range is where the card's true rate most likely sits, 95% sure. Two cards whose ranges overlap may be no different.")}
+                {tiers && ` ${t("The percentage under a tier is how much of the card's Adjusted range lies inside that tier.")}`}
               </p>
             )}
 

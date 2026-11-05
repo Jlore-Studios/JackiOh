@@ -72,10 +72,10 @@ pub fn carried_versions() -> Result<String, JsError> {
 // A run-rule refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable
 // reason), never thrown: only JSON that does not parse, or a setup TypeScript refused, is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
 #[wasm_bindgen]
-pub fn run_content(custom_cards_json: &str) -> Result<String, JsError> {
-    js(wasm_core::run_content(custom_cards_json))
+pub fn run_content() -> Result<String, JsError> {
+    js(wasm_core::run_content())
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -409,6 +409,16 @@ pub fn series(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::series(call_json))
 }
 
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn loadout(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::loadout(call_json))
+}
+
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
 
 /// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host
@@ -416,6 +426,32 @@ pub fn series(call_json: &str) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn host(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::host(call_json))
+}
+
+// The ranked ladder (SPEC §9.12, #3105: `jackioh-shared`, which the server calls natively)
+
+/// One call of the ranked ladder's rules: a `RankedCall` as JSON in, a `RankedAnswer` as JSON out. The host
+/// holds the ladder's records and passes the time in (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn ranked(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::ranked(call_json))
+}
+
+// The ladder bots (SPEC §9.12, #3103: `jackioh-shared`, which the server calls natively)
+
+/// One call of the decisions around a ladder bot: a `BotCall` as JSON in, a `BotAnswer` as JSON out. The
+/// host reads its store into plain records and writes what comes out (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn bots(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::bots(call_json))
+}
+
+/// The move a ladder bot owes: a `DecideCall` (the `DuelHost` and the `DecideRequest` the machine made) as
+/// JSON in, the `BotChoice` to feed it back out. Once the clock passes `deadline_ms` (a `Date.now()` time)
+/// the search answers with its best so far; `deadline_ms <= 0` means no clock.
+#[wasm_bindgen]
+pub fn bot_decide(call_json: &str, deadline_ms: f64) -> Result<String, JsError> {
+    js(wasm_core::bot_decide(call_json, deadline_ms, js_sys::Date::now))
 }
 
 // The collection economy's decisions (SPEC §14, #3104: `jackioh-shared`, which the server calls natively)

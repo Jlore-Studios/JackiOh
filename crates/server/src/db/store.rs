@@ -27,8 +27,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::wire::{
-    Action, ActionType, CustomCard, CustomFrame, EmoteId, GameEventType, GameMode, GameOverReason,
-    GameRecord, LeanPick, ListTotal, PlayerId, PortraitId, SourceFilter, StatsTotals,
+    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick, ListTotal,
+    PlayerId, PortraitId, SourceFilter, StatsTotals,
 };
 
 use super::{fake, pg};
@@ -538,58 +538,6 @@ pub fn deck_version_step(
     }
 }
 
-// Custom cards on the account (SPEC §12.9, R915008; migration 0037). Private to their owner: a
-// profile reads its own and the server alone writes them, each checked by the engine's validator
-// (R915001) first. The store counts the versions: a create is version 1, and an update names the
-// version it replaces and is refused when another save came first.
-
-/// R915008: one custom card as its owner's account keeps it: the engine's `CustomCard` and when it
-/// was made and last saved.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SavedCustomCard {
-    pub profile_id: String,
-    pub card: CustomCard,
-    pub created_at: i64,
-    pub updated_at: i64,
-}
-
-/// R915008: what a create or an update writes: a custom card but its version, which the store
-/// counts (§12.1).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CustomCardWrite {
-    /// `custom-…` (R915000), minted by the server at the first save.
-    pub id: String,
-    pub profile_id: String,
-    pub frame: CustomFrame,
-    pub source: String,
-    pub builder: Option<Value>,
-    /// Epoch ms: `updated_at`, and `created_at` too on a create.
-    pub at: i64,
-}
-
-store_union! {
-    /// R915008: what a create did: `created` (at version 1), or `limit` — the profile already holds
-    /// its cap of cards (`CUSTOM_CARDS_PER_ACCOUNT`) and nothing was written.
-    pub enum CustomCardCreateOutcome {
-        Created = "created",
-        Limit = "limit",
-    }
-}
-
-store_union! {
-    /// R915008: what an update did: `updated` (the card replaced whole, its version counted),
-    /// `stale` (its version is no longer the one the save replaces: another save came first) or
-    /// `missing` (the profile has no card with that id; another profile's card answers the same).
-    /// Nothing is written unless `updated`.
-    pub enum CustomCardUpdateOutcome {
-        Updated = "updated",
-        Stale = "stale",
-        Missing = "missing",
-    }
-}
-
 // Queue modes (SPEC §9.5, R257) and what a ticket or a room freezes.
 
 store_union! {
@@ -938,37 +886,17 @@ pub struct BatchFolded {
 // (#3098); `series_update` writes each next row back.
 
 pub use jackioh_shared::series::{SeriesEnd, SeriesGame, SeriesRow, SeriesSeat, SeriesSide, SeriesStatus};
+// A ladder bot's decks and a new bot are `jackioh-shared`'s (#3103): the pool's decisions draw them, pure.
+pub use jackioh_shared::bots::pool::{BotDeck, NewBot};
 
 // The ranked ladder (SPEC §9.12, R603–R612): seasons, each player's season on the ladder, the bots'
 // ratings, and the record of every rated game. The rules are `ranked/*`, pure; `api/ranked.rs`
 // reads and writes through this port.
 
-/// R609: a season, named by the minor version of the game (`v0.2`), and the patch that opened it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Season {
-    pub id: String,
-    pub patch_version: String,
-    pub started_at: i64,
-}
-
-/// One player's season row with their current hidden rating: what percentiles and Jlorious read.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeasonStanding {
-    #[serde(flatten)]
-    pub rank: SeasonRank,
-    pub rating: f64,
-    /// R640000: a ladder bot's row; never serialized when false. Jlorious and the percentiles read
-    /// the rows without it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub bot: bool,
-    /// R3074001: the player holds a hand-set rating on this ladder (migration 0080's
-    /// `hand_set_ratings`); never serialized when false. On a strict server (`DEV_STRICT`) the public
-    /// ladder, the percentiles and Jlorious read the rows without it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub hand_set: bool,
-}
+/// R609: a season and the patch that opened it, and one player's season row with their current hidden
+/// rating (what percentiles and Jlorious read): `jackioh-shared`'s (#3105), which decides over them.
+pub use jackioh_shared::ranked::board::SeasonStanding;
+pub use jackioh_shared::ranked::season::Season;
 
 /// R610: an AI bot's own Glicko-2 rating. Its ladder rank is a season row like a person's, read
 /// against people's ratings and never in Jlorious (R640000).
@@ -986,18 +914,6 @@ pub struct BotRating {
     /// for a row not rated since R1560000 (migration 0052).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ai_generation: Option<i64>,
-}
-
-/// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
-/// R1834005: and the slots it wears it with, drawn as a person's deck's (`bots::cosmetics`); absent
-/// on a deck dealt since the bot last drew its loadout, which the pool's next refresh draws.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BotDeck {
-    pub cards: Vec<String>,
-    pub portrait: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub slots: Option<DeckSlots>,
 }
 
 /// R1453, R1454, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
@@ -1097,23 +1013,6 @@ pub struct LoadoutSample {
     pub loadout: Loadout,
 }
 
-/// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
-/// `bot_ratings` row starts at (R610), with a new player's deviation and volatility.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct NewBot {
-    pub profile_id: String,
-    pub strength: usize,
-    pub speed: f64,
-    pub persona: PersonaName,
-    pub active_from_hour: i32,
-    pub active_hours: i32,
-    pub decks: Vec<BotDeck>,
-    pub decks_catalog_version: Option<String>,
-    pub created_at: i64,
-    pub seed_rating: f64,
-}
-
 /// R611: one side of a rated game, as recorded.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1137,13 +1036,8 @@ store_union! {
     }
 }
 
-/// How a rated game ended: the match's reason, or the series' (R334), whose literals are disjoint.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum RatedReason {
-    Game(GameOverReason),
-    Series(SeriesEnd),
-}
+/// How a rated game ended: the match's reason, or the series' (R334): `jackioh-shared`'s (#3105).
+pub use jackioh_shared::ranked::game::RatedReason;
 
 /// R611: the record of one rated game: a ranked match, or a ranked series, which is rated once as
 /// a whole (R262). Kept for good (account deletion empties a side's `profile_id`, as for
@@ -1703,9 +1597,9 @@ impl Tx<'_> {
         dispatch!(self, profiles_seated())
     }
 
-    /// Deletes the profile and everything only its own: collection and ledger, decks, trios, custom cards
-    /// (R915008), tutorial progress, age check and terms acceptances (R757000, R757001), queue tickets,
-    /// rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches,
+    /// Deletes the profile and everything only its own: collection and ledger, decks, trios, tutorial
+    /// progress, age check and terms acceptances (R757000, R757001), queue tickets, rooms it opened
+    /// that nobody joined, and its invite-code attempts' link to it. Finished matches,
     /// results and series stay for the other player, its seat left empty (migration 0012), as finished
     /// co-op matches do for the teammate (migration 0051, R1497000). False when there was no such profile.
     /// The caller refuses a profile in a live match, series or co-op match first.
@@ -1892,51 +1786,6 @@ impl Tx<'_> {
 
     pub async fn trios_remove(&mut self, profile_id: &str, trio_id: &str) -> StoreResult<bool> {
         dispatch!(self, trios_remove(profile_id, trio_id))
-    }
-
-    // custom cards (R915008, migration 0037)
-
-    /// R915008: a profile's custom cards, oldest first: `created_at`, then `id`.
-    pub async fn custom_cards_list(&mut self, profile_id: &str) -> StoreResult<Vec<SavedCustomCard>> {
-        dispatch!(self, custom_cards_list(profile_id))
-    }
-
-    /// R915008: the profile's own card with this id, or none; another profile's card is none.
-    pub async fn custom_cards_get(
-        &mut self,
-        profile_id: &str,
-        card_id: &str,
-    ) -> StoreResult<Option<SavedCustomCard>> {
-        dispatch!(self, custom_cards_get(profile_id, card_id))
-    }
-
-    /// R915008: a new card at version 1, `created_at` and `updated_at` both `card.at`; `limit` when
-    /// the profile already holds `max_cards`, counted under a lock on the profile so two creates at
-    /// once cannot both pass it (`app.create_custom_card`, migration 0037). An id already held is an
-    /// error: the server mints 128 random bits.
-    pub async fn custom_cards_create(
-        &mut self,
-        card: &CustomCardWrite,
-        max_cards: i64,
-    ) -> StoreResult<CustomCardCreateOutcome> {
-        dispatch!(self, custom_cards_create(card, max_cards))
-    }
-
-    /// R915008: replaces the frame, source and builder of the profile's own card whose version is
-    /// still `replaces`, counting the save (`replaces + 1`) and stamping `updated_at` (its
-    /// `created_at` is kept); `stale` or `missing` otherwise (`app.update_custom_card`).
-    pub async fn custom_cards_update(
-        &mut self,
-        card: &CustomCardWrite,
-        replaces: i32,
-    ) -> StoreResult<CustomCardUpdateOutcome> {
-        dispatch!(self, custom_cards_update(card, replaces))
-    }
-
-    /// R915008: deletes the profile's own card. False when the profile has no card with this id.
-    /// The decks that name it keep naming it (§12.9).
-    pub async fn custom_cards_remove(&mut self, profile_id: &str, card_id: &str) -> StoreResult<bool> {
-        dispatch!(self, custom_cards_remove(profile_id, card_id))
     }
 
     // matches

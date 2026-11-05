@@ -279,9 +279,10 @@ less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but 
 The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
-set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most
-`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000), and since #2203 Training Grounds cards, at most half
-of them (R2203000): no sweep, lane or person adds a card of an
+set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most a fifth of them
+(R1885000), and since #2203 Training Grounds cards, at most half of them (R2203000), each set's share
+written in its row of the set table and its ceiling that share of its non-token cards (R3114001): no
+sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
@@ -339,11 +340,12 @@ knows nothing of cards or sets: it keeps meaning the same when the AI improves o
 arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
 the same way, and the skill-to-Elo curve is measured with the arena.
 
-`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, written beside the config's
-other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps (R433, R417,
-R564, R678), and `MatchConfig::fold_args` folds a record with all of them (#1697). Unset, a game is
-created, played and folded exactly as before. No gate sets it; `SweepOptions.setup` opts a sweep in,
-the same inputs in seat order in every game.
+`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, written beside
+the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
+(R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
+(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
+`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `cargo jackioh
+run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
 
