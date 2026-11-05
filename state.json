@@ -251,8 +251,10 @@
     "what": "build #3029 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-05T04:24:35Z",
-    "notes": [],
+    "at": "2026-11-05T04:39:25Z",
+    "notes": [
+      "#3136: typed it Task"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "needs_decision_synced": "d4c5f9 A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it",
