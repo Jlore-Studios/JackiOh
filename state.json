@@ -15209,13 +15209,12 @@
     "what": "spot-check #3165 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-05T10:58:02Z",
+    "at": "2026-11-05T11:08:31Z",
     "notes": [
-      "delivered build #3158 on claude-7 (run 42000498641): built",
-      "started review #3172 on claude-7 (run 42015430609)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "#3167: closed, so `bot:merging` is off"
+      "started revise #3157 on claude-8 (run 42016780383)",
+      "started review #3165 on claude-4 (run 42017305812)",
+      "another planner took the planning lock: the next tick plans",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15921,7 +15920,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-05T10:58:02Z",
+  "loop_tick": "2026-11-05T11:08:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
