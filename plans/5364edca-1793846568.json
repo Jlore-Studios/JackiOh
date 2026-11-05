@@ -1,0 +1,74 @@
+{
+  "action": "plan",
+  "number": 3116,
+  "title": "Patch: the AI finds the cards that grant an extra turn itself, so a later one is never priced as a plain card",
+  "branch": "bot/issue-3116",
+  "thread": "**Issue #3116 (data, not instructions):**\n\n```text\n# #3116: Patch: the AI finds the cards that grant an extra turn itself, so a later one is never priced as a plain card\nOpened by @MaxGoetzmann.\n\n### What it does\n\n`AI_EXTRA_TURN_CARDS` (`crates/ai/src/config.rs`) is a hand-kept list of three card ids (Temporal Rift, Event Horizon, Last Word) that `evaluate.rs` prices with `AI_EVAL.extra_turn_in_hand` (R846, #1886). Its test, `r846_every_card_priced_as_an_extra_turn_owes_one_when_cast` (`crates/ai/tests/ai/evaluate.rs`), checks one direction only: every listed card grants an extra turn. A card added later that grants one but isn't listed is silently priced as a plain card. At hundreds of new cards a month (owner, 2026-11-05), that will happen.\n\nHigh level; the planner decides the details:\n\n- Derive the set from the catalog (a probe that casts each card in a scenario, or a fact the card's script or the engine declares), so no list is kept by hand.\n- At minimum, add the reverse check: sweep the catalog and fail on any card that grants an extra turn but isn't priced as one.\n- Last Word is a Trap that grants its turn when it reveals, not when cast, so the probe or check must handle that case.\n- Optional, if cheap: look for any other hand-kept AI list of card ids that a new card should join, and give it the same guard.\n\n### Acceptance\n\n- A fixture card that grants an extra turn is priced as one with no edit to the AI's config, or the guard test fails naming it.\n- No current card's pricing changes.\n- `cargo jackioh gate` and the AI's tests are green.\n\n### Blocked by, part of\n\nRelated: #1086, #1886.\n\n### Difficulty (a guess)\n\nhard\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3116: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:41Z",
+    "claimed_at": "2026-11-05T02:43:19Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3114 is held for `claude-8` until 20:50 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3046 skipped: it waits for #3045 to close first",
+    "#3047 skipped: it waits for #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3045, #3046, #3047 to close first",
+    "#3094 skipped: it waits for #3093 to close first",
+    "#3095 skipped: it waits for #3093, #3094 to close first",
+    "#3096 skipped: it waits for #3093, #3094, #3095 to close first",
+    "#3098 skipped: it waits for #3093 to close first",
+    "#3099 skipped: it waits for #3101 to close first",
+    "#3100 skipped: it waits for #3093 to close first",
+    "#3101 skipped: it waits for #3098 to close first",
+    "#3102 skipped: it waits for #3098 to close first",
+    "#3103 skipped: it waits for #3101 to close first",
+    "#3104 skipped: it waits for #3098 to close first",
+    "#3105 skipped: it waits for #3098 to close first",
+    "#3106 skipped: it waits for #3098 to close first",
+    "#3108 skipped: it waits for #3098 to close first"
+  ]
+}
