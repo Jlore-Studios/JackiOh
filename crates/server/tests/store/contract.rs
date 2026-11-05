@@ -1941,14 +1941,17 @@ mod decks {
     ) {
         let profile = active_profile(harness, None).await;
         let portraitless = saved_deck(harness, &profile.id, json!({}));
-        // One tick later, so "oldest first" below asks a real ordering question, not a tie.
+        // One tick later, so "oldest first" below asks a real ordering question, not a tie. One
+        // reading of the clock for both: a new deck's row takes `updatedAt` for its `created_at` too
+        // (`app.upsert_deck`), so two readings a millisecond apart came back 1 ms off.
+        let later = harness.now() + 1_000;
         let pictured = saved_deck(
             harness,
             &profile.id,
             json!({
                 "portrait": "gary",
-                "createdAt": harness.now() + 1_000,
-                "updatedAt": harness.now() + 1_000,
+                "createdAt": later,
+                "updatedAt": later,
             }),
         );
         // PREMISE: `saved_deck` really does hold `null` — the pre-portrait default — not undefined.
@@ -1989,7 +1992,9 @@ mod decks {
     async fn r1297000_round_trips_a_deck_s_cosmetics_and_clears_them_in_place(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
         let plain = saved_deck(harness, &profile.id, json!({}));
-        // One tick later, so "oldest first" below asks a real ordering question, not a tie.
+        // One tick later, so "oldest first" below asks a real ordering question, not a tie. One
+        // reading of the clock for both, as in the R641 test above.
+        let later = harness.now() + 1_000;
         let dressed = saved_deck(
             harness,
             &profile.id,
@@ -1997,8 +2002,8 @@ mod decks {
                 "tableCosmetic": "table-felt",
                 "fieldCosmetic": "field-rain",
                 "cardBackCosmetic": "card-back-blueprint",
-                "createdAt": harness.now() + 1_000,
-                "updatedAt": harness.now() + 1_000,
+                "createdAt": later,
+                "updatedAt": later,
             }),
         );
         // PREMISE: a deck that names none holds none, and the keys stay out of its JSON.
