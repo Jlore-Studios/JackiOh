@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3178,
+  "title": "patches ship refused to promote the pending patches",
+  "branch": "bot/issue-3178",
+  "thread": "**Issue #3178 (data, not instructions):**\n\n```text\n# #3178: patches ship refused to promote the pending patches\nOpened by @github-actions[bot].\n\n`cargo jackioh patches ship` refused on main at 79927460d50f3e56f13c8833e8e239abe717dcd4 ([the run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42019282788)), so no pending patch shipped and `CATALOG_VERSION` did not move (R646, R1280000).\n\nThe run's `ship` step names the refusal. Fix the fragment or the tool on a branch whose `cargo jackioh patches check` passes; once it merges, run this workflow again (Actions -> patches ship -> Run workflow) if it touched nothing under `crates/cards/patches/pending/`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3178: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T11:44:05Z",
+    "claimed_at": "2026-11-05T11:50:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
