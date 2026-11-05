@@ -334,6 +334,72 @@ fn r2203001_after_each_call_to_chaos_entry_the_ai_finishes_its_turn_cleanly() {
     }
 }
 
+/// The Calls to Chaos in the AI's hand.
+fn calls_held(state: &GameState) -> Vec<CardInstance> {
+    state.players[AI]
+        .hand
+        .iter()
+        .filter(|card| def_of(Some(state), &card.def_id).tags.contains(&Tag::CallToChaos))
+        .cloned()
+        .collect()
+}
+
+/// R3135000: entry 9 hands its caster a Call at its printed (4) at the start of each turn and none as the
+/// card resolves, so the AI's turns go on cleanly with a Call it can pay for in its hand each time.
+#[test]
+fn r3135000_the_ai_holding_entry_nine_plays_its_turns_through_the_calls_it_is_given() {
+    register_cards();
+    let seed = "ai-tg-chaos-alternate-turns";
+    let cursor = cursor_where(seed, |cursor| {
+        let mut rng = Rng::new(seed, cursor);
+        subsystems::roll_chaos_effects(&mut rng, false, Some(subsystems::CHAOS_TG_EFFECTS))
+            .first()
+            .is_some_and(|rolled| rolled.name == "alternate")
+    });
+    let mut s = scenario(json!({
+        "seed": seed,
+        "p1": { "hand": [CALL_TO_CHAOS, VANILLA], "mana": 10, "library": library() },
+        "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 3 }], "library": library() },
+    }));
+    s.state_mut().rng_cursor = cursor;
+    s.play(CALL_TO_CHAOS, json!({}));
+    let mut state = s.state().clone();
+    // Nothing came as the card resolved.
+    assert!(calls_held(&state).is_empty());
+    let mut options = AiOptions::new(create_rng(seed, 0));
+    for round in 0..3 {
+        let turn = play_ai_turn(&state, AI, &mut options);
+        for decision in &turn.decisions {
+            assert_ne!(
+                decision.reason,
+                DecisionReason::Fallback,
+                "round {round}: {:?}",
+                decision.action
+            );
+            assert_eq!(decision.first_sim_panic, None, "round {round}");
+        }
+        assert!(
+            turn.state.result.is_some() || turn.state.active == HUMAN,
+            "round {round}: the AI's turn ends"
+        );
+        if turn.state.result.is_some() {
+            return;
+        }
+        // The human passes; the AI's next turn begins with one more Call, at its printed price.
+        state = act(&turn.state, HUMAN, ActionBody::EndTurn);
+        assert_eq!(state.active, AI, "round {round}");
+        let held = calls_held(&state);
+        assert!(
+            !held.is_empty(),
+            "round {round}: the turn began with a Call in hand"
+        );
+        for card in &held {
+            let cost = jackioh_engine::mana::effective_cost(&state, card, Default::default());
+            assert_eq!(cost, 4, "round {round}: {} costs what it prints", card.def_id);
+        }
+    }
+}
+
 // TG #21 Flame Tongue Totem: an aura on the Units beside it
 
 #[test]

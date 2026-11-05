@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape balance pass — Starship tag, Marketplace prices, Weapons and twenty cards",
-  "sources": "#3000",
-  "notes": " Part 1 (#3134): Last Hurrah's counted discard (R3134000), Joint Filing's turn-hook pools (R3134001) and Heroic Power's Cry Discover of 3 of its 13 powers (R3134002).",
+  "sources": "#3000, #3128",
+  "notes": "The owner's balance pass #3000, built as a fullsend tree (#3038 to #3048) and reconciled by a Claude session: Starship becomes a tag with innate Flying and Ranged (R3038000), launches for (4), and the Drone Battleship's layers stop being Starships (R3038002); an awakened card is never Dormant again and a Flashback play keeps Flashback (R3039000, R3039001); every Weapon's Health halved and the Rush Token Launcher reaches a Locked zone (#3040); eight Stinkyscape cards (#3041), five more cards (#3042), True Craft a Card's points (#3043), Twinspell as an Activate (R3044000); a fused Miner or Weapon keeps its host's art and a Starship its name (R3045000), full art on the board (R3046000); the Marketplace's four offers, new prices, (0) buys and Buffed or Nerfed offers (R3047000 to R3047004); Echo's Coin fallback and Death by 1000 cuts' kept targets (R3048000 to R3048002). The AI scores a decision over a Starship by its hand evaluation (R3038003). With it, the owner's Stinkyscape balance pass IV, #3128 (#3134 to #3142), none of its cards one #3000 already moved: part 1 (#3134), Last Hurrah's counted discard (R3134000), Joint Filing's turn-hook pools (R3134001) and Heroic Power's Cry Discover of 3 of its 13 powers (R3134002); part 2 (#3135), the three Calls to Chaos and Appropriations each a step weaker (R3135000 to R3135002); part 3 (#3136), seventeen Core, Classic and Legacy cards' numbers and keywords; part 5 (#3139), eleven Core, Classic and Training Grounds scripts (R3139000 to R3139004), xxFreshJack and Shockwave447 playing differently as the BUSTED and complicated lists they draw from moved; part 7 (#3142), sixteen Stinkyscape cards (Asphyxiants Cloud left as #3041 made it, by the owner's word), with Stimmycheck's Inflation step 5 (R3142000), MELCHIOR's random keywords (R3142001) and two new pictures (R3142002).",
   "player": {
     "title": "Stinkyscape balance pass",
     "new": [],
@@ -48,7 +48,11 @@
       "Stimmycheck's Inflation chance grows by 5% with each copy, down from 10%.",
       "Living Bomb costs (2), up from (1).",
       "Snom Bunny Mind Control costs (5), up from (4), and gains Float reduces cost.",
-      "Legacy: Jlockeed's Weapons gives +4 Attack (Radiant +8) and Rush, from +3 (+6), Rush and First Strike."
+      "Legacy: Jlockeed's Weapons gives +4 Attack (Radiant +8) and Rush, from +3 (+6), Rush and First Strike.",
+      "Call to Chaos (Training-Grounds Edition) refreshes 3 mana, gains 6, summons 5 permanents or 3 Rush Tokens, and its added cards cost (1) and give back mana.",
+      "Call to Chaos (Meditative Edition) adds 1 copy of your fused hand, down from 2, gives 5 Armor and heals 5, down from 6, and summons 2 Acclaimed cards, down from 3.",
+      "Call to Chaos (Scape Edition) summons 2 Drone Corvettes, down from 3, and adds or fuses 3 Starship Pieces, down from 4.",
+      "Appropriations gives 1 less Attack, Books or Health on both faces, never less than 1, and Culture's chance is 6X% (Radiant 16X%), down from 7X% (17X%)."
     ],
     "changes": [
       "Starship is now a tag, and every Starship, Dormant or launched, has Flying and Ranged.",
@@ -87,7 +91,8 @@
       "Legacy: Snom Bunny Mind Control sets the stolen Unit's stats to 4/4, and its Radiant face steals any enemy card.",
       "Last Hurrah discards 6 cards at the end of the turn instead of your whole hand.",
       "Joint Filing gains a Cry: add a random card with a Start of turn or End of turn effect to your hand (Radiant: one of each).",
-      "Heroic Power lets you Discover one of 3 of its powers when you play it, instead of starting the game with a random one."
+      "Heroic Power lets you Discover one of 3 of its powers when you play it, instead of starting the game with a random one.",
+      "One of Call to Chaos (Training-Grounds Edition)'s effects adds a random Call to Chaos at its own price at the start of each of your turns, instead of one at (0) now and every second turn."
     ],
     "text": [],
     "fixes": []
@@ -123,6 +128,7 @@
     "classicplus-051",
     "meditative-005",
     "meditative-009",
+    "meditative-095",
     "stinkyscape-007",
     "stinkyscape-012",
     "stinkyscape-012-3",
@@ -161,6 +167,7 @@
     "stinkyscape-142",
     "stinkyscape-143",
     "stinkyscape-150-1",
+    "stinkyscape-151",
     "stinkyscape-153",
     "stinkyscape-159",
     "stinkyscape-168",
@@ -170,6 +177,7 @@
     "stinkyscape-t-meltdown-layer",
     "traininggrounds-015",
     "traininggrounds-038",
+    "traininggrounds-039",
     "traininggrounds-045",
     "traininggrounds-048",
     "traininggrounds-051",
@@ -182,7 +190,8 @@
     "meditative-056",
     "classicplus-007",
     "stinkyscape-109",
-    "stinkyscape-111"
+    "stinkyscape-111",
+    "classicplus-040"
   ],
   "rule": true,
   "visual": true

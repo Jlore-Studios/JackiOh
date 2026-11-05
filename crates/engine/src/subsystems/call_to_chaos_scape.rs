@@ -1,5 +1,5 @@
 //! Stinkyscape #151 Call to Chaos (Scape Edition) (SPEC §8.10 row 151, R28, R87, R423, R436,
-//! R1882005–R1882009): the builders of its table's entries, which Core #95's subsystem
+//! R1882005–R1882009, R3135001): the builders of its table's entries, which Core #95's subsystem
 //! (`call_to_chaos.rs`) rolls, announces and resolves as it does every other edition's.
 //!
 //! The table itself is the card's (`CHAOS_SCAPE_EFFECTS`), since its first entry lays an Anomaly board,
@@ -67,7 +67,7 @@ fn starship_pieces_query() -> Value {
     json!({ "set": SET, "keywords": [KeywordKind::StarshipPiece] })
 }
 
-/// 2. Three Drone Corvettes, each placed per R64; a full row takes fewer.
+/// 2. Two Drone Corvettes (R3135001), each placed per R64; a full row takes fewer.
 pub fn scape_corvettes() -> Effect {
     scape_entry("corvettes", |_ctx| {
         let Some(def_id) = def_id_at(CORVETTE_INDEX) else {
@@ -138,7 +138,8 @@ pub fn scape_systems() -> Effect {
     })
 }
 
-/// 5. Independent picks (R60) of the Starship Pieces, each a fresh (0) hand card (a full hand: §2.4).
+/// 5. Three (R3135001) independent picks (R60) of the Starship Pieces, each a fresh (0) hand card (a full
+///    hand: §2.4).
 pub fn scape_pieces() -> Effect {
     scape_entry("pieces", |_ctx| {
         vec![crate::effects::add_random_from_catalog(json_as(json!({
@@ -168,9 +169,9 @@ pub fn scape_interceptors() -> Effect {
     })
 }
 
-/// 7. R1882008: independent picks (R60) of the Starship Pieces fused into its caster's Dormant Starship,
-///    the first summoning one if none (R1852000); then it awakens, launching for free (R1852003,
-///    R1852006). A Starship buried under a Stack pile cannot awaken and stays Dormant.
+/// 7. R1882008, R3135001: three independent picks (R60) of the Starship Pieces fused into its caster's
+///    Dormant Starship, the first summoning one if none (R1852000); then it awakens, launching for free
+///    (R1852003, R1852006). A Starship buried under a Stack pile cannot awaken and stays Dormant.
 pub fn scape_launch() -> Effect {
     scape_entry("launch", |_ctx| {
         vec![Effect::new("callToChaosScape:fuseAndLaunch", |ctx| {

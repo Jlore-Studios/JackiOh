@@ -1,12 +1,16 @@
-//! M #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244). (4)
-//! Spell, Call to Chaos, Legendary.
-//!   Base:    "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all
-//!            three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random
-//!            Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a
-//!            Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each
-//!            card bounced; summon a CN Golem; for the rest of the game, at the start of each of your
-//!            turns, cast a random Call to Chaos; cast a random Call to Chaos."
+//! M #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244,
+//! R3135001). (4) Spell, Call to Chaos, Legendary.
+//!   Base:    "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of
+//!            which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards
+//!            to your hand, which cost (0); your hero gains 5 Armor and you heal it 5; summon a Jade
+//!            Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card
+//!            bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns,
+//!            cast a random Call to Chaos; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
+//!
+//! Through v0.5.11p the fuse added 2 copies (three cards at (0)), the hero gained 6 Armor and healed 6, and
+//! 3 Acclaimed cards were summoned; those numbers are the engine's (`config.rs`), so this file keeps no old
+//! script (R3135001, R767000).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MED_EFFECTS`,
 //! `subsystems/call_to_chaos_meditative.rs`): the roll, the announcement both players read (R436), the
@@ -204,6 +208,34 @@ mod tests {
         assert_eq!(subsystems::CHAOS_MED_EFFECTS.len(), 10);
     }
 
+    #[test]
+    fn r3135001_the_three_tuned_modes_name_their_new_numbers_and_the_other_seven_keep_theirs() {
+        crate::register_all();
+        let labels: Vec<&str> = subsystems::CHAOS_MED_EFFECTS.iter().map(|entry| entry.label).collect();
+        assert_eq!(
+            labels,
+            vec![
+                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
+                "Add 2 random CN cards to your hand, which cost (0)",
+                "Add 2 random Prime cards to your hand, which cost (0)",
+                "Your hero gains 5 Armor and you heal it 5",
+                "Summon a Jade Beauty",
+                "Summon 2 random Acclaimed cards",
+                "Bounce every enemy permanent, then Nerf each card bounced",
+                "Summon a CN Golem",
+                "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos",
+                "Cast a random Call to Chaos",
+            ]
+        );
+        assert_eq!((CHAOS_MED_FUSE_COPIES, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL, CHAOS_MED_ACCLAIMED), (1, 5, 5, 2));
+        assert_eq!((CHAOS_MED_CN_CARDS, CHAOS_MED_PRIME_CARDS, CHAOS_MED_NERFS, CALL_TO_CHAOS_ETERNAL_CAP), (2, 2, 1, 3));
+        let def = crate::card_def(ID);
+        for text in [&def.base.text, &def.radiant.text] {
+            assert!(text.contains("add 1 copy of it") && text.contains("both of which"), "{text}");
+            assert!(text.contains("gains 5 Armor and you heal it 5") && text.contains("summon 2 random Acclaimed"), "{text}");
+        }
+    }
+
     mod base {
         use super::*;
 
@@ -232,7 +264,7 @@ mod tests {
         }
 
         #[test]
-        fn r1242_entry_fuse_keeps_immutable_cards_and_hides_the_fusion() {
+        fn r1242_r3135001_entry_fuse_keeps_immutable_cards_and_hides_the_fusion() {
             crate::register_all();
             let s = chaos(
                 "fuse",
@@ -241,7 +273,8 @@ mod tests {
             );
             let hand = s.hand(P1);
             assert_eq!(events_of(&s, "fused").len(), 1);
-            assert_eq!(hand.len(), 1 + 1 + CHAOS_MED_FUSE_COPIES as usize);
+            // The Menace kept, the fusion, and its one copy.
+            assert_eq!(hand.len(), 3);
             assert_eq!(hand[0].def_id, MENACE);
             assert_eq!(cost_of(&s, &hand[0]), 3);
             let fusion = hand[1].def_id.clone();
@@ -263,12 +296,13 @@ mod tests {
         }
 
         #[test]
-        fn r1242_entry_fuse_one_card_takes_the_copies() {
+        fn r1242_r3135001_entry_fuse_one_card_takes_the_copy() {
             crate::register_all();
             let s = chaos("fuse", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let hand = s.hand(P1);
             assert!(events_of(&s, "fused").is_empty());
-            assert_eq!(hand.len(), 1 + CHAOS_MED_FUSE_COPIES as usize);
+            // The one fusable card and its one copy, both at (0).
+            assert_eq!(hand.len(), 2);
             for card in &hand {
                 assert_eq!(card.def_id, VANILLA);
                 assert_eq!(cost_of(&s, card), CHAOS_MED_COST);
@@ -276,7 +310,7 @@ mod tests {
         }
 
         #[test]
-        fn entry_cn_adds_three_cn_cards_at_zero() {
+        fn entry_cn_adds_two_cn_cards_at_zero() {
             crate::register_all();
             let s = chaos("cn", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s);
@@ -307,13 +341,13 @@ mod tests {
         }
 
         #[test]
-        fn entry_armor_gives_8_armor_and_8_health() {
+        fn r3135001_entry_armor_gives_5_armor_and_heals_5() {
             crate::register_all();
             let mut p1 = side(false, json!([]));
             p1["health"] = json!(20);
             let mut s = chaos("armor", p1, json!({ "hand": [VANILLA] }));
-            s.expect_health(P1, 20 + CHAOS_MED_HEAL);
-            assert_eq!(s.state().players.p1.hero.armor, CHAOS_MED_HERO_ARMOR);
+            s.expect_health(P1, 20 + 5);
+            assert_eq!(s.state().players.p1.hero.armor, 5);
             assert_eq!(s.state().players.p2.hero.armor, 0);
         }
 
@@ -327,21 +361,18 @@ mod tests {
         }
 
         #[test]
-        fn r1243_entry_acclaimed_summons_three_acclaimed_permanents() {
+        fn r1243_r3135001_entry_acclaimed_summons_two_acclaimed_permanents() {
             crate::register_all();
             let s = chaos("acclaimed", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let summoned = events_of(&s, "summoned");
-            assert_eq!(summoned.len() as i32, CHAOS_MED_ACCLAIMED);
+            assert_eq!(summoned.len(), 2);
             for event in &summoned {
                 let def = crate::card_def(event["defId"].as_str().unwrap_or(""));
                 assert!(def.tags.contains(&Tag::Acclaimed));
                 assert!(!def.token);
                 assert_ne!(def.type_, CardType::Spell);
             }
-            assert_eq!(
-                (1..=5).filter(|lane| s.unit(P1, *lane).is_some()).count() as i32,
-                CHAOS_MED_ACCLAIMED
-            );
+            assert_eq!((1..=5).filter(|lane| s.unit(P1, *lane).is_some()).count(), 2);
         }
 
         #[test]
@@ -506,7 +537,7 @@ mod tests {
             let types = types_of(&s);
             assert!(index_of(&types, "addedToHand") < index_of(&types, "summoned"));
             assert_eq!(added_to(&s).len() as i32, CHAOS_MED_CN_CARDS);
-            assert_eq!(s.state().players.p1.hero.armor, CHAOS_MED_HERO_ARMOR);
+            assert_eq!(s.state().players.p1.hero.armor, 5);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(GOLEM.to_string()));
             // Every Radiant roll is three different entries in the list's order.
             let order: Vec<&str> = subsystems::CHAOS_MED_EFFECTS

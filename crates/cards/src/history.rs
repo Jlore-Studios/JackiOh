@@ -76,7 +76,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
-/// #3044, #3048) and #3128's (#3134, #3139, #3142).
+/// #3044, #3048) and #3128's (#3134, #3135, #3139, #3142).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -597,6 +597,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c098_heroic_power::ID,
         "v0.5.11p",
         c098_heroic_power::script_v0_5_11o,
+    ),
+    (
+        c040_appropriations::ID,
+        "v0.5.11p",
+        c040_appropriations::script_v0_5_11o,
     ),
 ];
 
