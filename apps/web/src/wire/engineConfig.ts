@@ -10,7 +10,6 @@ import type { CraftVerb } from "./generated/CraftVerb.ts";
 import type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
 import type { DuosTeamRules } from "./generated/DuosTeamRules.ts";
 import type { GameOverReason } from "./generated/GameOverReason.ts";
-import type { KeywordKind } from "./generated/KeywordKind.ts";
 import type { Rarity } from "./generated/Rarity.ts";
 import type { SetName } from "./generated/SetName.ts";
 import type { Tag } from "./generated/Tag.ts";
