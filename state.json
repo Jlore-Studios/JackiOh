@@ -15828,9 +15828,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T15:40:00Z",
+    "at": "2026-11-05T15:49:13Z",
     "url": "",
-    "what": "review #3193 on claude-8"
+    "what": "suggestions on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T15:35:48Z",
@@ -31520,11 +31520,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-05T14:52:20Z",
-    "last_run": "2026-11-04T20:26:42Z",
-    "provider": null,
+    "idle_since": "2026-11-05T15:49:13Z",
+    "last_run": "2026-11-05T15:49:13Z",
+    "provider": "claude-1",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:650ca1eb-1793893728",
     "taken_asks": []
   },
   "usage": null,
