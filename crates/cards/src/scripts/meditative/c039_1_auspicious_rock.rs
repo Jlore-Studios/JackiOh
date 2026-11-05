@@ -207,10 +207,11 @@ mod tests {
     }
 
     #[test]
-    fn r987_feng_shuis_luck_joins_the_roll() {
-        // M #40's Luck 1 gives the base Rock a second roll, keeping the better.
+    fn r987_a_lucky_x_given_to_the_rock_joins_the_roll() {
+        // Lucky 1 given to the base Rock (R1438) gives its roll a second roll, keeping the better: the best-of
+        // path Feng Shui's Luck 1 took through v0.5.11o (R3140000: no card gives Luck now; the engine keeps
+        // it, tested on its fixture).
         crate::register_all();
-        const FENG_SHUI: &str = "meditative-040";
         let mut worse_never = true;
         let mut better_once = false;
         for n in 0..30 {
@@ -218,18 +219,15 @@ mod tests {
             let mut plain =
                 scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
             plain.play(ID, json!({}));
-            let mut lucky = scenario(json!({
-                "seed": seed,
-                "p1": { "hand": [ID, FILLER], "backrow": [FENG_SHUI] },
-                "p2": { "hand": [FILLER] },
-            }));
-            assert_eq!(luck_of(lucky.state(), P1), 1);
+            let mut lucky =
+                scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
+            crate::give_lucky(&mut lucky, ID, 1);
             lucky.play(ID, json!({}));
             let (without, with) = (rank(&rolled(&plain)), rank(&rolled(&lucky)));
             worse_never &= with >= without;
             better_once |= with > without;
         }
-        assert!(worse_never, "Luck keeps the best of the rolls");
+        assert!(worse_never, "Lucky keeps the best of the rolls");
         assert!(better_once, "over 30 seeds some roll improves");
     }
 }

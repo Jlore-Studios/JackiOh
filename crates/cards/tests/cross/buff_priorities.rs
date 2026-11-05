@@ -17,7 +17,7 @@ const LIVING_BOMB: &str = "classic-062"; // (1) Field Spell, no numbers.
 const PLANTATION: &str = "classic-074"; // Corpse Plantation: (2) Field Spell, `usesPlague`.
 const ECLIPSE: &str = "core-035"; // Lunar Eclipse: (1) Spell, deals 3 damage, `dealsDamage`.
 const FIELD_OF_DREAMS: &str = "core-076"; // (2) Spell that deals no damage.
-const INTROSPECTION: &str = "meditative-007"; // (4) Field Spell: End of turn ... deal 2 damage to each enemy, `dealsDamage`.
+const INTROSPECTION: &str = "meditative-007"; // (4) Field Spell: Start of turn ... deal 1 damage to each enemy, `dealsDamage`.
 const ARMORED: &str = "core-025"; // A 7/7 Unit with Armor 7.
 const FILLER: &str = "core-005";
 
@@ -261,8 +261,8 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
 
 #[test]
 fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
-    // Introspection's end of turn deals 2 to each enemy, with no Pierce of its own (The Power to Punish's has
-    // it, #2179).
+    // Introspection's start of turn deals 1 to each enemy (at the end of turn through v0.5.11o, #3140), with no
+    // Pierce of its own (The Power to Punish's has it, #2179).
     let introspection_at_armored = |pierce: bool| {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "library": [FILLER, FILLER], "backrow": [{ "def": INTROSPECTION, "faceUp": true }] },
@@ -271,7 +271,7 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
         if pierce {
             give_pierce(&mut s, INTROSPECTION);
         }
-        s.end_turn();
+        s.start_turn();
         s
     };
     let unit_hits = |s: &Scenario| -> Vec<(i32, i32)> {

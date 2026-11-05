@@ -178,40 +178,39 @@ mod tests {
     mod n23_reoccurring_dream {
         use super::*;
 
-        /// Plays the Dream with(out) a Feng Shui in the caster's backrow and counts the Radiant
-        /// cards left in the hand.
-        fn radiants_with(seed: &str, is_radiant: bool, judge: bool) -> usize {
+        /// Plays the Dream with(out) a Lucky 1 given to it (R1438) and counts the Radiant cards left in
+        /// the hand.
+        fn radiants_with(seed: &str, is_radiant: bool, lucky: bool) -> usize {
             let mut hand = vec![json!({ "def": DREAM, "radiant": is_radiant })];
             hand.extend(OTHERS.iter().map(|def| json!(def)));
-            let mut p1 = json!({ "hand": hand });
-            if judge {
-                p1["backrow"] = json!(["meditative-040"]);
-            }
             let mut s = scenario(json!({
                 "seed": seed,
-                "p1": p1,
+                "p1": { "hand": hand },
                 "p2": { "hand": ["core-005"] },
             }));
+            if lucky {
+                crate::give_lucky(&mut s, DREAM, 1);
+            }
             s.play(DREAM, json!({}));
             s.hand(P1).iter().filter(|card| card.radiant).count()
         }
 
         #[test]
-        fn r987_feng_shui_s_luck_adds_a_roll() {
+        fn r987_a_given_lucky_adds_a_roll() {
             crate::register_all();
             for radiant in [false, true] {
                 let bare: Vec<usize> = SEEDS
                     .iter()
                     .map(|seed| radiants_with(seed, radiant, false))
                     .collect();
-                let judged: Vec<usize> = SEEDS
+                let lucky: Vec<usize> = SEEDS
                     .iter()
                     .map(|seed| radiants_with(seed, radiant, true))
                     .collect();
-                // One more roll per seed keeps the success: every bare hit is a judged hit, and at
+                // One more roll per seed keeps the success: every bare hit is a lucky hit, and at
                 // least one bare miss becomes a hit.
-                assert!(bare.iter().zip(&judged).all(|(hit, judged)| judged >= hit));
-                assert!(judged.iter().sum::<usize>() > bare.iter().sum::<usize>());
+                assert!(bare.iter().zip(&lucky).all(|(hit, lucky)| lucky >= hit));
+                assert!(lucky.iter().sum::<usize>() > bare.iter().sum::<usize>());
             }
         }
 

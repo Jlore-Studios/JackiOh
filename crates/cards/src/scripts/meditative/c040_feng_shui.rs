@@ -1,20 +1,29 @@
-//! Meditative #40 Feng Shui (SPEC §8.8 row 40, R980–R987, BUILD M10 row M 40). (2) Field
+//! Meditative #40 Feng Shui (SPEC §8.8 row 40, R980–R987, R3140000, BUILD M10 row M 40). (3) Field
 //! Spell, CN, Legendary.
-//!   Base:    "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished. You
-//!            have Luck {luck}. / Your last element, your opponent's last element."
+//!   Base:    "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.
+//!            Activate: Add an Auspicious Rock to your hand. / Your last element, your opponent's last
+//!            element."
 //!   Radiant: line 1's "good feng shui is rewarded, bad punished" becomes "good feng shui rewards you,
-//!            bad hurts your opponent heavily"
+//!            bad hurts your opponent heavily", and the Activate adds a Radiant Auspicious Rock.
 //!   Engine:  ME-ELEMENT (`engine/src/subsystems/feng_shui.rs`): the card judges every face-up play at
 //!            §10.5 step 3 by its element against its player's last (R981–R984), shows elements on
-//!            readable cards while it acts (R980), and shows both records through `preview` (R982);
-//!            ME-LUCK: "You have Luck {luck}" (R987). Tunes: luck 1 ↑ (never below 1).
+//!            readable cards while it acts (R980), and shows both records through `preview` (R982).
+//!            The Activate (R384, once a turn, its controller's alone, no cost) is one `add_to_hand` of
+//!            Meditative #39.1 Auspicious Rock, Radiant on the Radiant face as every other Rock source has
+//!            it (M #39, #43, #44), and the Feng Shui stays. It declares no number.
+//!   Luck:    through v0.5.11o the card also read "You have Luck {luck}" (ME-LUCK, R987), the `luck` static
+//!            flag and its tuned param; no card gives Luck now (R3140000), the engine keeping `luck_of`,
+//!            the flag and its fixture (`script_v0_5_11o`, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-040";
 
-/// The declared number `luck` (R987): "Aura: You have Luck {luck}".
-const LUCK: i32 = 1;
+/// R767000: the declared number `luck` the card read through v0.5.11o (R987): "Aura: You have Luck {luck}".
+const LUCK_V0_5_11O: i32 = 1;
+
+/// Meditative #39.1 Auspicious Rock (§7), the card its Activate adds.
+const ROCK: &str = "meditative-039-1";
 
 /// R982: the two "last element" preview labels — exact substrings of line 3 (R280).
 const YOUR_LAST: &str = "Your last element";
@@ -37,11 +46,11 @@ fn preview() -> PreviewHook {
     })
 }
 
-fn face() -> Script {
+/// The judge both faces share: the element judging, the elements shown and the two records.
+fn judge() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             feng_shui: Some(true),
-            luck: Some(LUCK),
             ..StaticFlags::default()
         }),
         preview: Some(preview()),
@@ -49,10 +58,58 @@ fn face() -> Script {
     }
 }
 
+/// "Activate: Add an Auspicious Rock to your hand." (R384, R3140000): once a turn, free, Radiant on the
+/// Radiant face.
+fn rock(radiant: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: "rock".to_string(),
+        label: if radiant {
+            "Add a Radiant Auspicious Rock to your hand".to_string()
+        } else {
+            "Add an Auspicious Rock to your hand".to_string()
+        },
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| vec![add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant })))]),
+    }
+}
+
+fn face(radiant: bool) -> Script {
+    Script {
+        activations: vec![rock(radiant)],
+        ..judge()
+    }
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(),
-        radiant: face(),
+        base: face(false),
+        radiant: face(true),
+    }
+}
+
+/// R767000: the judge with the Luck it gave through v0.5.11o and no Activate, `luck` read through the
+/// declared number (R386); `KEPT_SCRIPTS` folds those replays under it.
+fn judge_v0_5_11o() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            feng_shui: Some(true),
+            luck: Some(LUCK_V0_5_11O),
+            ..StaticFlags::default()
+        }),
+        ..judge()
+    }
+}
+
+/// R767000: the scripts v0.5.11o and every version before it ran.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: judge_v0_5_11o(),
+        radiant: judge_v0_5_11o(),
     }
 }
 
@@ -63,6 +120,7 @@ mod tests {
     use super::{ID, THEIR_LAST, YOUR_LAST};
     use crate::js;
     use jackioh_engine::effects::cast_new;
+    use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -109,18 +167,19 @@ mod tests {
     }
 
     #[test]
-    fn r985_r986_a_2_cost_legendary_cn_field_spell_whose_only_param_is_luck() {
+    fn r985_r986_a_3_cost_legendary_cn_field_spell_that_declares_no_number() {
         crate::register_all();
         let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
+        assert_eq!(def.cost, CardCost::Fixed(3));
         assert_eq!(def.type_, CardType::FieldSpell);
         assert_eq!(def.tags, vec![Tag::Cn]);
         assert_eq!(def.rarity, Rarity::Legendary);
         assert!(!def.token);
-        let params = def.params.clone().unwrap_or_default();
-        assert_eq!(params.len(), 1);
-        assert_eq!(params[0].key, "luck");
-        assert_eq!([params[0].base, params[0].radiant], [1, 1]);
+        // R3140000: its `luck` is gone with the Luck it gave, so nothing is left to tune.
+        assert!(def.params.is_none());
+        for text in [&def.base.text, &def.radiant.text] {
+            assert!(!text.contains("Luck"), "{text}");
+        }
     }
 
     #[test]
@@ -290,16 +349,39 @@ mod tests {
     }
 
     #[test]
-    fn r987_luck_1_for_its_controller_alone_tuned_by_its_param() {
-        let mut s = scenario(json!({
-            "seed": "meditative-040-luck",
-            "p1": { "mana": 10, "backrow": [ID] },
-            "p2": { "hand": ["core-005"] },
-        }));
-        assert_eq!(luck_of(s.state(), P1), 1);
-        assert_eq!(luck_of(s.state(), P2), 0);
-        step_param(s.card_mut(ID), "luck", 1);
-        assert_eq!(luck_of(s.state(), P1), 2);
+    fn r3140000_it_gives_no_luck_to_either_player() {
+        for radiant in [false, true] {
+            let s = scenario(json!({
+                "seed": "meditative-040-no-luck",
+                "p1": { "mana": 10, "backrow": [{ "def": ID, "radiant": radiant }] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            assert_eq!(luck_of(s.state(), P1), 0, "radiant {radiant}");
+            assert_eq!(luck_of(s.state(), P2), 0, "radiant {radiant}");
+        }
+    }
+
+    /// The card as v0.5.11o and before printed it: (2), "You have Luck {luck}" on both faces.
+    fn as_printed_through_v0_5_11o(def: &mut CardDef) {
+        def.cost = CardCost::Fixed(2);
+        def.params = Some(vec![json_as(json!({
+            "key": "luck", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1,
+        }))]);
+    }
+
+    #[test]
+    fn r767000_r987_a_game_on_v0_5_11o_keeps_luck_1_for_its_controller_alone_tuned_by_its_param() {
+        crate::under_kept_as(ID, super::script_v0_5_11o(), as_printed_through_v0_5_11o, || {
+            let mut s = scenario(json!({
+                "seed": "meditative-040-luck",
+                "p1": { "mana": 10, "backrow": [ID] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            assert_eq!(luck_of(s.state(), P1), 1);
+            assert_eq!(luck_of(s.state(), P2), 0);
+            step_param(s.card_mut(ID), "luck", 1);
+            assert_eq!(luck_of(s.state(), P1), 2);
+        });
     }
 
     /// `effects` applied for p1 on a sink over the scenario's state, then settled; their events.
@@ -550,61 +632,6 @@ mod tests {
     }
 
     #[test]
-    fn r987_luck_adds_a_roll_to_best_of_rolls_but_not_to_a_pool_pick() {
-        crate::register_all();
-        const ROCK: &str = "meditative-039-1";
-        const ROLLS: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
-        let rank = |s: &Scenario| -> usize {
-            s.hand(P1)
-                .iter()
-                .find_map(|card| ROLLS.iter().position(|id| *id == card.def_id))
-                .expect("a roll")
-        };
-        let (mut worse_never, mut better_once) = (true, false);
-        for n in 0..30 {
-            let seed = format!("meditative-040-luck-roll-{n}");
-            let mut plain = scenario(
-                json!({ "seed": seed, "p1": { "hand": [ROCK, "core-005"] }, "p2": { "hand": ["core-005"] } }),
-            );
-            plain.play(ROCK, json!({}));
-            let mut lucky = scenario(json!({
-                "seed": seed,
-                "p1": { "hand": [ROCK, "core-005"], "backrow": [ID] },
-                "p2": { "hand": ["core-005"] },
-            }));
-            lucky.play(ROCK, json!({}));
-            worse_never &= rank(&lucky) >= rank(&plain);
-            better_once |= rank(&lucky) > rank(&plain);
-        }
-        assert!(
-            worse_never && better_once,
-            "Luck 1 is a second roll, the better kept"
-        );
-        // A pool pick is no roll: H1B Printer prints the same card with Feng Shui standing or not.
-        const PRINTER: &str = "meditative-038";
-        let printed = |with_judge: bool| -> Vec<String> {
-            let mut backrow = vec![json!({ "def": PRINTER, "lane": 1 })];
-            if with_judge {
-                backrow.push(json!({ "def": ID, "lane": 2 }));
-            }
-            let mut s = scenario(json!({
-                "seed": "meditative-040-luck-pool",
-                "p1": { "hand": ["core-005"], "backrow": backrow, "library": ["core-005", "core-005"] },
-                "p2": { "hand": ["core-005"], "library": ["core-005", "core-005"] },
-            }));
-            s.start_turn();
-            s.events()
-                .iter()
-                .filter_map(|event| match event {
-                    GameEvent::AddedToHand { def_id, .. } => Some(def_id.clone()),
-                    _ => None,
-                })
-                .collect()
-        };
-        assert_eq!(printed(true), printed(false));
-    }
-
-    #[test]
     fn r984_the_radiant_face_never_punishes_you_nor_rewards_the_opponent() {
         let mut s = scenario(json!({
             "seed": "meditative-040-radiant-only-mine",
@@ -626,5 +653,181 @@ mod tests {
         s.play(FIRE, json!({}));
         assert_eq!(judged(&s), 0, "the opponent's generating play goes unrewarded");
         assert!(!s.card(FIRE).radiant);
+    }
+    /// Auspicious Rock (M #39.1), the card its Activate adds.
+    const ROCK_ID: &str = "meditative-039-1";
+
+    /// p1 has Feng Shui (Radiant on `radiant`) standing, `hand` in hand and a library to draw from.
+    fn standing(seed: &str, radiant: bool, hand: Value) -> Scenario {
+        scenario(json!({
+            "seed": seed,
+            "p1": {
+                "mana": 10,
+                "backrow": [{ "def": ID, "radiant": radiant }],
+                "hand": hand,
+                "library": ["core-005", "core-005", "core-005"],
+            },
+            "p2": { "hand": ["core-005"], "library": ["core-005", "core-005", "core-005"] },
+        }))
+    }
+
+    /// The Rocks `player` holds.
+    fn rocks_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
+        s.hand(player).into_iter().filter(|card| card.def_id == ROCK_ID).collect()
+    }
+
+    /// Whether `legal_actions` offers `player` an activation of Feng Shui.
+    fn listed_for(s: &Scenario, player: PlayerId) -> bool {
+        let id = s.card(ID).id.clone();
+        legal_actions(s.state(), player)
+            .into_iter()
+            .any(|body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == id))
+    }
+
+    #[test]
+    fn r384_r3140000_activate_adds_an_auspicious_rock_to_your_hand_once_a_turn_and_the_feng_shui_stays() {
+        let mut s = standing("meditative-040-activate", false, json!(["core-005"]));
+        let id = s.card(ID).id.clone();
+        let mana = s.view(P1).you.mana.current;
+        let hand = s.hand(P1).len();
+        assert!(listed_for(&s, P1));
+        s.activate(ID, json!({}));
+        let rocks = rocks_of(&s, P1);
+        assert_eq!(rocks.len(), 1);
+        assert!(!rocks[0].radiant);
+        assert_eq!(s.hand(P1).len(), hand + 1);
+        assert_eq!(s.view(P1).you.mana.current, mana, "the Activate is free");
+        s.expect_in_zone(&id, "field");
+        // R384: once a turn.
+        assert!(!listed_for(&s, P1));
+        let refused = why_cannot_activate_ability(s.state(), P1, &id, None).err().map(|error| error.message);
+        assert_eq!(refused.as_deref(), Some("that ability has already been used this turn"));
+        // And again on its controller's next turn.
+        s.end_turn();
+        s.end_turn();
+        assert!(listed_for(&s, P1));
+        s.activate(ID, json!({}));
+        assert_eq!(rocks_of(&s, P1).len(), 2);
+    }
+
+    #[test]
+    fn r384_r3140000_the_radiant_face_adds_a_radiant_rock() {
+        let mut s = standing("meditative-040-activate-radiant", true, json!(["core-005"]));
+        s.activate(ID, json!({}));
+        let rocks = rocks_of(&s, P1);
+        assert_eq!(rocks.len(), 1);
+        assert!(rocks[0].radiant);
+    }
+
+    #[test]
+    fn r384_only_its_controller_activates_it() {
+        let mut s = standing("meditative-040-theirs-to-use", false, json!(["core-005"]));
+        s.end_turn();
+        assert_eq!(s.state().active, P2);
+        let id = s.card(ID).id.clone();
+        let refused = why_cannot_activate_ability(s.state(), P2, &id, Some("rock")).err().map(|error| error.message);
+        assert_eq!(refused.as_deref(), Some("that card is not yours"));
+        assert!(!listed_for(&s, P2));
+    }
+
+    #[test]
+    fn r3140000_a_full_hand_burns_the_rock() {
+        let hand: Vec<Value> = (0..HAND_CAP).map(|_| json!("core-005")).collect();
+        let mut s = standing("meditative-040-full", false, json!(hand));
+        assert_eq!(s.hand(P1).len() as i32, HAND_CAP);
+        s.activate(ID, json!({}));
+        assert_eq!(s.hand(P1).len() as i32, HAND_CAP);
+        assert!(rocks_of(&s, P1).is_empty());
+        assert!(s.events().iter().any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == ROCK_ID)));
+        s.expect_in_zone(ID, "field");
+        assert!(!listed_for(&s, P1), "the use is spent all the same");
+    }
+
+    #[test]
+    fn r3140000_the_activate_is_no_play_so_it_is_neither_judged_nor_recorded() {
+        let mut s = standing("meditative-040-no-record", false, json!([WOOD]));
+        s.activate(ID, json!({}));
+        assert_eq!(last(&s, P1), None);
+        assert_eq!(judged(&s), 0);
+        // The record starts with the first play, as before.
+        s.play(WOOD, json!({}));
+        assert_eq!(last(&s, P1), Some(CardElement::Wood));
+    }
+
+    #[test]
+    fn r3140000_a_rock_roll_with_it_standing_is_the_plain_one() {
+        crate::register_all();
+        const ROLLS: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
+        for n in 0..30 {
+            let seed = format!("meditative-040-no-luck-roll-{n}");
+            let mut ranks = Vec::new();
+            for judge in [false, true] {
+                let backrow = if judge { json!([ID]) } else { json!([]) };
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": { "hand": [ROCK_ID, "core-005"], "backrow": backrow },
+                    "p2": { "hand": ["core-005"] },
+                }));
+                s.play(ROCK_ID, json!({}));
+                ranks.push(ROLLS.iter().position(|id| s.hand(P1).iter().any(|card| card.def_id == *id)));
+            }
+            assert_eq!(ranks[0], ranks[1], "{seed}: no Luck, so the same roll");
+        }
+    }
+
+    #[test]
+    fn r767000_r987_a_game_on_v0_5_11o_adds_a_roll_to_best_of_rolls_but_not_to_a_pool_pick() {
+        crate::register_all();
+        crate::under_kept_as(ID, super::script_v0_5_11o(), as_printed_through_v0_5_11o, || {
+            const ROLLS: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
+            let rank = |s: &Scenario| -> usize {
+                s.hand(P1)
+                    .iter()
+                    .find_map(|card| ROLLS.iter().position(|id| *id == card.def_id))
+                    .expect("a roll")
+            };
+            let (mut worse_never, mut better_once) = (true, false);
+            for n in 0..30 {
+                let seed = format!("meditative-040-luck-roll-{n}");
+                let mut plain = scenario(
+                    json!({ "seed": seed, "p1": { "hand": [ROCK_ID, "core-005"] }, "p2": { "hand": ["core-005"] } }),
+                );
+                plain.play(ROCK_ID, json!({}));
+                let mut lucky = scenario(json!({
+                    "seed": seed,
+                    "p1": { "hand": [ROCK_ID, "core-005"], "backrow": [ID] },
+                    "p2": { "hand": ["core-005"] },
+                }));
+                lucky.play(ROCK_ID, json!({}));
+                worse_never &= rank(&lucky) >= rank(&plain);
+                better_once |= rank(&lucky) > rank(&plain);
+            }
+            assert!(
+                worse_never && better_once,
+                "Luck 1 is a second roll, the better kept"
+            );
+            // A pool pick is no roll: H1B Printer prints the same card with Feng Shui standing or not.
+            const PRINTER: &str = "meditative-038";
+            let printed = |with_judge: bool| -> Vec<String> {
+                let mut backrow = vec![json!({ "def": PRINTER, "lane": 1 })];
+                if with_judge {
+                    backrow.push(json!({ "def": ID, "lane": 2 }));
+                }
+                let mut s = scenario(json!({
+                    "seed": "meditative-040-luck-pool",
+                    "p1": { "hand": ["core-005"], "backrow": backrow, "library": ["core-005", "core-005"] },
+                    "p2": { "hand": ["core-005"], "library": ["core-005", "core-005"] },
+                }));
+                s.start_turn();
+                s.events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::AddedToHand { def_id, .. } => Some(def_id.clone()),
+                        _ => None,
+                    })
+                    .collect()
+            };
+            assert_eq!(printed(true), printed(false));
+        });
     }
 }

@@ -41,6 +41,7 @@ const SCHOOL: &str = "meditative-097-3";
 const MEGA_CHURCH: &str = "meditative-097-4";
 const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
+const FENG_SHUI: &str = "meditative-040";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
@@ -51,7 +52,7 @@ const LIVING_MANA_POTION: &str = "meditativeplus-011";
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 72] = [
+const ACTIVATE_CARDS: [&str; 73] = [
     HEROIC_POWER,
     TWINSPELL,
     INFINISCEPTER,
@@ -76,6 +77,7 @@ const ACTIVATE_CARDS: [&str; 72] = [
     MEGA_CHURCH,
     UNIVERSITY,
     HEADQUARTERS,
+    FENG_SHUI,
     MONEY_MACHINE,
     GACHAHOLIC,
     ALUNETH,
@@ -135,6 +137,7 @@ const X: &str = "core-020"; // library filler.
 const CONJURE_KY: &str = "core-057"; // (2) Spell: Add 3 random KY cards to your hand.
 const APPLE: &str = "classicplus-059"; // All Purpose Apple, Doctors Orders' card.
 const THE_COIN: &str = "core-t-coin"; // Money Machine's card.
+const AUSPICIOUS_ROCK: &str = "meditative-039-1"; // Feng Shui's card.
 
 fn on(def: &str, radiant: bool) -> Value {
     json!({ "def": def, "radiant": radiant })
@@ -1153,6 +1156,56 @@ mod m_n97_9_jlockeeds_headquarters {
         assert!(!listed(&s, &id).is_empty(), "Activate 2 has a second use");
         activate_listed(&mut s, HEADQUARTERS, any);
         assert!(listed(&s, &id).is_empty(), "Activate 2 is twice per turn");
+    }
+}
+
+mod m_n40_feng_shui {
+    use super::*;
+
+    /// R384, R3140000: the listed `activate` adds an Auspicious Rock, Radiant on the Radiant face, once a turn.
+    fn adds_a_rock(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(FENG_SHUI, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        activate_listed(&mut s, FENG_SHUI, any);
+        let rocks: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == AUSPICIOUS_ROCK)
+            .collect();
+        assert_eq!(rocks.len(), 1);
+        assert_eq!(rocks[0].radiant, radiant);
+        assert_eq!(s.state().players.p1.mana.current, mana);
+        s.expect_in_zone(FENG_SHUI, "field");
+        let id = s.card(FENG_SHUI).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_r3140000_base_adds_an_auspicious_rock_to_your_hand_once_a_turn() {
+        adds_a_rock(false);
+    }
+
+    #[test]
+    fn r384_r3140000_radiant_adds_a_radiant_auspicious_rock_to_your_hand_once_a_turn() {
+        adds_a_rock(true);
+    }
+
+    #[test]
+    fn r384_the_opponent_is_not_listed_it_on_their_own_turn() {
+        let s = scenario(json!({
+            "active": "p2",
+            "p1": { "backrow": [FENG_SHUI], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(FENG_SHUI).id.clone();
+        assert!(
+            !legal_actions(s.state(), P2).into_iter().any(
+                |action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
+            )
+        );
     }
 }
 

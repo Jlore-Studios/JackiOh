@@ -2050,7 +2050,7 @@ classicplus-016: # Conjure Rush Token+
     cast: More helpers, even quicker!
   zh:
     name: 变出突袭衍生物+
-    base: 召唤一个突袭衍生物。它获得{keywords}个随机战斗关键词。
+    base: 召唤一个突袭衍生物。抛一枚硬币：正面时它获得{keywords}个随机战斗关键词，反面时获得{tails}个。
     radiant: 召唤{tokens}个突袭衍生物。每个都获得{keywords}个随机战斗关键词。
 classicplus-017: # Conjure Rush Token++
   flavour: Same sprinter, best shoes, extra attitude.
@@ -2443,8 +2443,8 @@ classicplus-047: # Jogg's Box
     cast: What's in the box? Surprise!
   zh:
     name: 约格的谜匣
-    base: 施放{casts}个随机法术。
-    radiant: "回响1\n施放{casts}个随机法术。"
+    base: 施放{casts}个随机法术。结束回合。
+    radiant: 施放{casts}个随机法术。结束回合。
 classicplus-048: # Jlockeed's Lobbyist
   flavour: He works for the contract, and the contract always pays.
   voice:
@@ -2928,8 +2928,8 @@ meditative-007: # Introspection
     cast: Breathe in. Look within.
   zh:
     name: 内省
-    base: 回合结束时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
-    radiant: 回合结束时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
+    base: 回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
+    radiant: 回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
 meditative-008: # Reach the Summit
   flavour: Every summit is only the floor of the next sky.
   voice:
@@ -3182,8 +3182,8 @@ meditative-032: # Spiritually 中国
     cast: Lesson one. Repeat after me.
   zh:
     name: 精神中国人
-    base: 准备好学中文！将你手牌中的每张牌变形为同一张随机的中国牌，它们的法力值消耗为(1)。召唤{units}个随机的中国单位。
-    radiant: 准备好学中文！将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(1)。召唤{units}个随机的光辉中国单位。
+    base: 准备好学中文！将你手牌中的每张牌变形为同一张随机的中国牌。召唤{units}个随机的中国单位。
+    radiant: 准备好学中文！将你手牌中的每张牌变形为同一张随机的光辉中国牌。召唤{units}个随机的光辉中国单位。
 meditative-033: # First Day of 学校
   flavour: New backpack, new pencils, new alphabet.
   voice:
@@ -3290,8 +3290,8 @@ meditative-040: # Feng Shui
     cast: Water feeds wood. Wood feeds fire.
   zh:
     name: 风水
-    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。你的幸运为{luck}。\n你的上一个元素，你的对手的上一个元素。"
-    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。你的幸运为{luck}。\n你的上一个元素，你的对手的上一个元素。"
+    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。\n激活：将一张鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
+    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。\n激活：将一张光辉鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
     previews:
       Your last element: 你的上一个元素
       your opponent's last element: 你的对手的上一个元素
@@ -3365,8 +3365,8 @@ meditative-047: # 饕餮
     death: Still hungry. Always hungry.
   zh:
     name: 饕餮
-    base: 回合结束时：将一张随机敌方永久物融合进本牌。
-    radiant: 回合结束时：将一张随机敌方永久物和你对手牌库中的一张随机牌融合进本牌。
+    base: 回合结束时：将一个随机敌方单位融合进本牌。
+    radiant: 回合结束时：将一个随机敌方单位和你对手牌库中的一张随机牌融合进本牌。
 meditative-048: # Tranquility
   flavour: Breathe in. The storm waits its turn.
   voice:
@@ -3455,8 +3455,8 @@ meditative-054: # Money Machine
     cast: Cha-ching! Everybody gets a little something.
   zh:
     name: 印钞机
-    base: "回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张幸运币洗入你的牌库。"
-    radiant: "回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张光辉幸运币洗入你的牌库。"
+    base: "战吼：将一张幸运币置入你的手牌。\n回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张幸运币洗入你的牌库。"
+    radiant: "战吼：将一张光辉幸运币置入你的手牌。\n回合结束时：将一张幸运币洗入你对手的牌库。\n激活：将一张光辉幸运币洗入你的牌库。"
 meditative-055: # Dragon Fruit
   flavour: Scaly outside, speckled inside, and a little smug about both.
   voice:
@@ -3543,8 +3543,8 @@ meditative-063: # Skull of J'Nari
       - Good units are hard to find.
   zh:
     name: 纳里之颅
-    base: 回合开始时：从你的手牌中召唤{units}个随机单位。
-    radiant: 回合开始时：从你的手牌中召唤{units}个随机单位。使其变为光辉。
+    base: 回合结束时：从你的手牌中召唤{units}个随机单位。
+    radiant: 回合结束时：从你的手牌中召唤{units}个随机单位。使其变为光辉。
 meditative-064: # Traitorous Blood
   flavour: Blood is thicker than orders.
   voice:
@@ -3721,8 +3721,8 @@ meditative-081: # Deadman's Hand
     cast: Aces and eights. Deal me back in.
   zh:
     name: 死人之手
-    base: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。\n加码(2)：每个复制都有{chance}%的几率变为光辉。"
-    radiant: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。然后抽{draw}张牌。\n加码(2)：每个复制都有{chance}%的几率变为光辉。"
+    base: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。然后抽{draw}张牌。\n加码(1)：每个复制都有{chance}%的几率变为光辉。"
+    radiant: "将你手牌中每张牌以及这张牌的复制洗入你的牌库。然后抽{draw}张牌。\n加码(1)：每个复制都有{chance}%的几率变为光辉。"
 meditative-082: # Medina Outfitter
   flavour: "Every stall in the bazaar gets the same pitch: a little more."
   voice:
@@ -4323,8 +4323,8 @@ meditativeplus-022: # Mountaintop Garden
     cast: Up here, everything grows bigger.
   zh:
     name: 山顶花园
-    base: 光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。
-    radiant: 光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。
+    base: "战吼：将一张随机加码牌置入你的手牌。\n光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。"
+    radiant: "战吼：将一张随机加码牌置入你的手牌。其法力值消耗为(0)。\n光环：加码牌以其普通价格打出其加码版本。不是光辉的任何牌都可以多花({premium})点以光辉打出。"
 meditativeplus-023: # Enormous Elderberry
   flavour: Picked by a crew of six on ladders. Eaten by one brave soul.
   voice:

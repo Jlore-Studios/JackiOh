@@ -1,10 +1,13 @@
 //! M #54 Money Machine (SPEC §8.8 row 54): (1) Field Spell, Common.
 //!
-//! Base:    "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin
-//!          into your deck."
-//! Radiant: "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The
-//!          Coin into your deck."
-//! Engine (#1194):
+//! Base:    "Cry: Add a The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's
+//!          deck.\nActivate: Shuffle a The Coin into your deck."
+//! Radiant: "Cry: Add a Radiant The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your
+//!          opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
+//! Engine (#1194, #3140):
+//! - **Cry** (since #3140, `script_v0_5_11o` has none): one `add_to_hand` of The Coin (§7), Radiant on the
+//!   Radiant face, as it is played; a full hand burns it (§2.4). It is a Cry, so it runs when the Machine
+//!   is played or cast (R1), never when it is put into a backrow zone by a summon or a fusion.
 //! - **End of turn** (its controller's): one fresh shuffle of The Coin (§7) into the opponent's deck, a
 //!   base Coin on either face, R80's cap turning a full library away. Nothing is rolled, and the
 //!   shuffle is open: the opponent's list names the Coin it was shown going in (R311).
@@ -23,8 +26,12 @@ fn coin_for_the_opponent() -> Effect {
     shuffle_into(json_as(json!({ "defId": THE_COIN, "count": 1, "player": "enemy" })))
 }
 
-fn money_machine(radiant: bool) -> Script {
+/// One face. `cry` is the Cry the Machine has had since #3140, which `script_v0_5_11o` lacks.
+fn money_machine(radiant: bool, cry: bool) -> Script {
     Script {
+        cry: cry.then(|| {
+            hook(move |_ctx| vec![add_to_hand(json_as(json!({ "defId": THE_COIN, "radiant": radiant })))])
+        }),
         end_of_turn: Some(hook(|_ctx| vec![coin_for_the_opponent()])),
         activations: vec![ActivationDecl {
             id: "coin".to_string(),
@@ -49,8 +56,16 @@ fn money_machine(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: money_machine(false),
-        radiant: money_machine(true),
+        base: money_machine(false, true),
+        radiant: money_machine(true, true),
+    }
+}
+
+/// R767000: through v0.5.11o the Machine had no Cry; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: money_machine(false, false),
+        radiant: money_machine(true, false),
     }
 }
 
@@ -117,7 +132,7 @@ pub fn script_v0_3_7b() -> CardScripts {
 // M #54 Money Machine — SPEC §8.8 row 54, BUILD M10 row M 54.
 #[cfg(test)]
 mod tests {
-    use super::{ID, THE_COIN};
+    use super::{ID, THE_COIN, script_v0_5_11o};
     use jackioh_engine::subsystems::activate::{activation_views_for, why_cannot_activate_ability};
     use jackioh_engine::testkit::*;
 
@@ -167,6 +182,22 @@ mod tests {
             .any(|body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == machine_id))
     }
 
+    /// p1 holds the Machine (Radiant on `radiant`) and `others` more cards in hand, to be played.
+    fn holding(seed: &str, radiant: bool, others: usize) -> Scenario {
+        let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
+        hand.extend((0..others).map(|_| json!(FILLER)));
+        crate::scenario(json!({
+            "seed": seed,
+            "p1": { "hand": hand, "library": [FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+        }))
+    }
+
+    /// The Coins in p1's hand.
+    fn hand_coins(s: &Scenario) -> Vec<CardInstance> {
+        s.hand(P1).into_iter().filter(|card| card.def_id == THE_COIN).collect()
+    }
+
     #[test]
     fn r1106_the_odds_are_89_10_1_worst_to_best_and_add_to_100() {
         // The v0.3.7b script's roll (`script_v0_3_7b`, R767000).
@@ -181,6 +212,22 @@ mod tests {
     fn declares_no_tuned_numbers() {
         crate::register_all();
         assert!(crate::card_def(ID).params.is_none());
+    }
+
+    /// R767000: through v0.5.11o the Machine had no Cry, so playing it added nothing to the hand.
+    #[test]
+    fn r767000_a_game_on_v0_5_11o_adds_no_coin_when_it_is_played() {
+        for radiant in [false, true] {
+            crate::under_kept(ID, script_v0_5_11o(), || {
+                let mut s = holding("money-machine-kept", radiant, 2);
+                s.play(ID, json!({}));
+                assert!(hand_coins(&s).is_empty(), "radiant {radiant}");
+                s.expect_in_zone(ID, "field");
+                // The rest of the card is the same: its End of turn still gives the opponent a Coin.
+                s.end_turn();
+                assert_eq!(coins_of(&s, P2).len(), 1);
+            });
+        }
     }
 
     mod base {
@@ -264,10 +311,55 @@ mod tests {
             assert!(!listed_for(&s, P2));
             assert!(activation_views_for(s.state(), P2, s.card(ID)).unwrap_or_default().is_empty());
         }
+
+        #[test]
+        fn r3140000_cry_adds_a_the_coin_to_your_hand_as_it_is_played() {
+            let mut s = holding("money-machine-cry", false, 2);
+            s.play(ID, json!({}));
+            let coins = hand_coins(&s);
+            assert_eq!(coins.len(), 1);
+            assert!(!coins[0].radiant);
+            // The Machine, played, stands; its Coin is in the hand, not the deck.
+            s.expect_in_zone(ID, "field");
+            assert_eq!(s.hand(P1).len(), 3);
+            assert!(coins_of(&s, P1).len() == 1 && shuffled_in(&s, P1).is_empty());
+            // The Cry added a Coin to the hand and shuffled none into the opponent's deck.
+            assert!(coins_of(&s, P2).is_empty());
+        }
+
+        #[test]
+        fn r3140000_a_full_hand_burns_the_cry_s_coin() {
+            // Ten cards beside the Machine: the hand is full once it is played, so the Coin burns (§2.4).
+            let mut s = holding("money-machine-cry-full", false, HAND_CAP as usize);
+            s.play(ID, json!({}));
+            assert!(hand_coins(&s).is_empty());
+            assert_eq!(s.hand(P1).len() as i32, HAND_CAP);
+            assert!(s
+                .events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == THE_COIN)));
+            s.expect_in_zone(ID, "field");
+        }
+
+        #[test]
+        fn r3140000_a_machine_that_is_not_played_adds_no_coin() {
+            // Set straight into the backrow (no play), it has no Cry to run.
+            let s = machine("money-machine-no-cry", false);
+            assert!(hand_coins(&s).is_empty());
+        }
     }
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r3140000_cry_adds_a_radiant_the_coin_to_your_hand() {
+            let mut s = holding("money-machine-cry-radiant", true, 2);
+            s.play(ID, json!({}));
+            let coins = hand_coins(&s);
+            assert_eq!(coins.len(), 1);
+            assert!(coins[0].radiant);
+        }
 
         #[test]
         fn the_opponent_still_gets_a_base_coin_and_its_activate_shuffles_a_radiant_one_into_yours() {

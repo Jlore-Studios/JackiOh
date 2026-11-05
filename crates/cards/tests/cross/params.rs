@@ -373,8 +373,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
-        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board).
-        assert_eq!(shipped.len(), 16, "{shipped:#?}");
+        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board), and
+        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails".
+        assert_eq!(shipped.len(), 17, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
@@ -440,8 +441,8 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
         // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
-        // print (#2020); and the Meditative set's twenty-three, less M #1's draw (both faces), with M #37's
-        // and M #38's `setCost` (R1748003).
+        // print (#2020); and the Meditative set's twenty-two (twenty-three until #3140 made M #81's draw
+        // both faces'), less M #1's draw (both faces), with M #37's and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
@@ -460,7 +461,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // M #49.1's `radiants`, gone with its start-of-turn text.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (43, 23),
+            (43, 22),
             "{radiant_only:#?}"
         );
     }
@@ -533,7 +534,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-057", KEYWORD),
         ("classicplus-025", KEYWORD),
         ("classicplus-036-1", KEYWORD),
-        ("classicplus-047", KEYWORD),
         ("classicplus-061", KEYWORD),
         ("classicplus-065", KEYWORD),
         ("classicplus-066", KEYWORD),
@@ -578,6 +578,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("meditativeplus-005", PRICE),
         ("meditativeplus-009", PRICE),
         ("meditativeplus-019", PRICE),
+        ("meditativeplus-022", PRICE),
         ("meditativeplus-023", PRICE),
         ("stinkyscape-004", PRICE),
         ("stinkyscape-012-3", PRICE),
@@ -591,7 +592,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classicplus-062", ENGINE),
         ("classicplus-073", ENGINE),
         ("traininggrounds-039", ENGINE),
-        ("meditative-032", ENGINE),
         ("meditative-039-1", ENGINE),
         ("meditative-095", ENGINE),
         ("stinkyscape-148", ENGINE),

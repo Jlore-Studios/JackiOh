@@ -186,11 +186,27 @@ mod tests {
         }
 
         #[test]
-        fn r1439_r987_feng_shui_s_luck_reaches_both_rolls() {
-            // Luck 1 beside the printed Lucky 1: each roll keeps the best of three draws. (The
-            // Maid is p1's first play, which Feng Shui judges neutral, R981: nothing else draws.)
+        fn r1439_r987_a_given_lucky_2_beside_the_printed_one_reaches_both_rolls() {
+            // Lucky 2 given beside the printed Lucky 1: each roll keeps the best of four draws, the best-of
+            // path Feng Shui's Luck 1 took through v0.5.11o (R3140000: no card gives Luck now).
             for n in 0..12 {
                 let seed = format!("catboy-maid-luck-{n}");
+                let mut s = holding(&seed, false);
+                crate::give_lucky(&mut s, ID, 2);
+                let cursor = s.state().rng_cursor;
+                let (drawn, jade, taken) = cry(s);
+                assert_eq!(taken, 8);
+                let [draws, amount] = replayed(&seed, cursor, 3, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE)]);
+                assert_eq!([drawn, jade], [draws, amount]);
+            }
+        }
+
+        #[test]
+        fn r3140000_feng_shui_standing_adds_no_draw_to_either_roll() {
+            // The Maid is p1's first play, which Feng Shui judges neutral (R981): nothing else draws, and the
+            // two rolls stay two draws each.
+            for n in 0..12 {
+                let seed = format!("catboy-maid-no-luck-{n}");
                 let s = crate::scenario(json!({
                     "seed": seed,
                     "p1": {
@@ -200,11 +216,11 @@ mod tests {
                     },
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
-                assert_eq!(luck_of(s.state(), P1), 1);
+                assert_eq!(luck_of(s.state(), P1), 0);
                 let cursor = s.state().rng_cursor;
                 let (drawn, jade, taken) = cry(s);
-                assert_eq!(taken, 6);
-                let [draws, amount] = replayed(&seed, cursor, 2, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE)]);
+                assert_eq!(taken, 4);
+                let [draws, amount] = replayed(&seed, cursor, 1, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE)]);
                 assert_eq!([drawn, jade], [draws, amount]);
             }
         }

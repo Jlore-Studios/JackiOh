@@ -430,11 +430,14 @@ mod tests {
 
     // R987, R1438: the capture rolls once, once more for each Lucky on Prison, printed or given, and once
     // more for each point of its controller's Luck; a capture draws nothing more, so at chance 100 the
-    // rolls are the whole difference Prison makes to the cursor.
+    // rolls are the whole difference Prison makes to the cursor. No card gives Luck since #3140
+    // (R3140000), so the Luck path is proved by a Lucky X given to Prison (R1438), the same best-of rolls,
+    // and by the engine's own Luck test on its fixture; Feng Shui's Luck 1 stands only in the kept script
+    // of v0.5.11o and before.
     mod luck {
         use super::*;
 
-        const FENG_SHUI: &str = "meditative-040"; // (2) Field Spell: "Aura: You have Luck 1".
+        const FENG_SHUI: &str = "meditative-040"; // (3) Field Spell, no longer "Aura: You have Luck 1" (R3140000).
 
         /// The draws Prison's capture takes as p2 plays VANILLA at chance 100: the play's move of the
         /// rng cursor with Prison on p1's field, less the same play's without it (Gary's control,
@@ -463,7 +466,6 @@ mod tests {
                         "mana": 10
                     },
                 }));
-                assert_eq!(luck_of(s.state(), P1), i32::from(feng_shui == Some(P1)));
                 if prison {
                     set_param(s.card_mut(ID), "chance", 100);
                     if given > 0 {
@@ -482,19 +484,29 @@ mod tests {
         }
 
         #[test]
-        fn r987_feng_shui_on_prison_s_side_rolls_the_capture_once_more_on_each_face() {
+        fn r3140000_feng_shui_standing_adds_no_roll_on_either_side_or_face() {
             crate::register_all();
-            assert_eq!(capture_rolls(false, None, 0), 1);
-            assert_eq!(capture_rolls(false, Some(P1), 0), 2);
-            assert_eq!(capture_rolls(true, None, 0), 2);
-            assert_eq!(capture_rolls(true, Some(P1), 0), 3);
+            for side in [P1, P2] {
+                assert_eq!(capture_rolls(false, Some(side), 0), 1);
+                assert_eq!(capture_rolls(true, Some(side), 0), 2);
+            }
         }
 
         #[test]
-        fn r987_feng_shui_on_the_opponent_s_side_adds_no_roll() {
+        fn r987_r767000_a_game_on_v0_5_11o_has_feng_shui_s_luck_1_roll_the_capture_once_more_on_prison_s_side_only() {
             crate::register_all();
-            assert_eq!(capture_rolls(false, Some(P2), 0), 1);
-            assert_eq!(capture_rolls(true, Some(P2), 0), 2);
+            crate::under_kept(
+                FENG_SHUI,
+                crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(),
+                || {
+                    assert_eq!(capture_rolls(false, None, 0), 1);
+                    assert_eq!(capture_rolls(false, Some(P1), 0), 2);
+                    assert_eq!(capture_rolls(true, None, 0), 2);
+                    assert_eq!(capture_rolls(true, Some(P1), 0), 3);
+                    assert_eq!(capture_rolls(false, Some(P2), 0), 1);
+                    assert_eq!(capture_rolls(true, Some(P2), 0), 2);
+                },
+            );
         }
 
         #[test]
@@ -502,6 +514,13 @@ mod tests {
             crate::register_all();
             assert_eq!(capture_rolls(false, None, 1), 2);
             assert_eq!(capture_rolls(true, None, 1), 3);
+        }
+
+        #[test]
+        fn r987_r1438_lucky_2_given_to_prison_rolls_twice_more_on_each_face() {
+            crate::register_all();
+            assert_eq!(capture_rolls(false, None, 2), 3);
+            assert_eq!(capture_rolls(true, None, 2), 4);
         }
 
         #[test]
