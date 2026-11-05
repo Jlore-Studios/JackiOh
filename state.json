@@ -16509,15 +16509,8 @@
       }
     },
     "3110": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41964445510",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-05T04:02:25Z",
-        "until": "2026-11-05T04:32:25Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16529,10 +16522,9 @@
         "reason": "planned on sonnet",
         "trail": "rms of service.\\\\{250\\\\}\\\\|.\\\\{200\\\\}the Terms.\\\\{250\\\\}\\\" spec/09-architecture.md | head; echo ----; grep -rn \\\"AI opponents\\\\\\\" section\\\\|Terms' \\\\\\\"AI\\\\|terms\u2026\n- Bash: {\"command\": \"sed -n 21p spec/rulings/R1452.md | cut -c1-1500; echo ----; sed -n 8,14p spec/rulings/R2631000.md; echo ----; cat spec/rulings/R1442.md | head -30 | cut -c1-900; echo ---; grep -rn \\\"R14\u2026\n- Bash: {\"command\": \"sed -n 1,60p docs/issues-and-patches.md | cut -c1-300; grep -n \\\"Ruling numbers\\\" -A 12 docs/issues-and-patches.md | cut -c1-300 | head -30; grep -n \\\"difficulty\\\\|player note\\\\|Player n\u2026\n- Bash: {\"command\": \"git show --stat 52553cc9c1 | head -40; git log --oneline -5 -- apps/web/src/routes/terms.tsx\", \"description\": \"See a comparable prior change's file set\"}\n- Bash: {\"command\": \"git show --stat $(git log --format=%h -1 -- apps/web/src/routes/terms.tsx) | head -50\", \"description\": \"See the last terms.tsx change's file set\"}\n- Bash: {\"command\": \"git show --stat 9766ab504a | grep -v \\\"^ *$\\\" | tail -45\", \"description\": \"See the #2621 change's file list (similar scope)\"}\n- Bash: {\"command\": \"sed -n 1,20p apps/web/WRITING.md; grep -n \\\"Terms of service\\\\|Privacy policy\\\\|English text\\\\|friends watch\\\\|watch your\\\\|AI opponent\\\\|Privacy\\\" apps/web/src/i18n/zh-CN.json | head -2\u2026\n- Bash: {\"command\": \"cat apps/web/src/routes/privacy.css | head -60; grep -n \\\"CONTACT_EMAIL\\\\|CONTACT_URL\\\" apps/web/src/routes/SiteFooter.tsx | head\", \"description\": \"Check privacy.css and SiteFooter const\u2026\n- Bash: {\"command\": \"grep -rn \\\"What we collect\\\\|Who handles it\\\\|AI opponents\\\\|Do Not Track\\\\|Agreeing to these terms\\\\|Who can have an account\\\\|privacy-screen\\\\|terms-screen\\\\|What you submit\\\" e2e apps\u2026\n- Bash: {\"command\": \"grep -n \\\"privacy\\\\|terms\\\\|PAGE_TEXT\\\" apps/web/src/static-pages.test.ts | cut -c1-240\", \"description\": \"See how static-pages test checks legal pages\"}\n- Bash: {\"command\": \"sed -n 335,420p apps/web/src/static-pages.test.ts\", \"description\": \"Read the static quote test\"}\n- Bash: {\"command\": \"sed -n 3650,3660p crates/cards/patches/technical.json; ls crates/cards/patches | head; ls crates/cards/patches/pending 2>/dev/null | head; grep -n \\\"pending\\\" docs/issues-and-patches.md \u2026\n- Bash: {\"command\": \"grep -n \\\"description\\\" apps/web/src/static-pages.test.ts | head -20; grep -rn \\\"what your browser keeps\\\" apps e2e docs --include=* -I 2>/dev/null | grep -v node_modules | head\", \"descr\u2026\n- Bash: {\"command\": \"sed -n 120,170p apps/web/src/wire/serverConfig.ts; grep -n \\\"retention\\\\|RETENTION\\\\|PRESENCE_TTL\\\\|SPECTATE_DELAY\\\\|AUTH_PENDING\\\" crates/server/tests/export_config.rs | head -20; grep \u2026\n- Bash: {\"command\": \"sed -n 385,410p crates/server/tests/export_config.rs; grep -rn \\\"SPECTATE_DELAY_MS\\\\|PRESENCE_TTL_MS\\\\|CHALLENGE_TTL_MS\\\\|CHAT_RETENTION_DAYS\\\\|MATCH_ACTION_RETENTION_DAYS\\\" apps/web/src\u2026\n- Bash: {\"command\": \"grep -n -i -o \\\".\\\\{120\\\\}privacy polic.\\\\{160\\\\}\\\" spec/0*.md spec/1*.md | cut -c1-420; echo ======; grep -l -i \\\"privacy polic\\\\|the terms\\\\b\\\" spec/rulings/*.md\", \"description\": \"Find\u2026\n- Bash: {\"command\": \"for f in R0632 R1044001 R1302 R910000 R970000 R970002 R1452 R970001 R757001; do echo \\\"=== $f\\\"; grep -n -i -o \\\".\\\\{160\\\\}\\\\(privacy polic\\\\|the terms\\\\b\\\\|terms of service\\\\|the policy\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/routes/SiteFooter.tsx; grep -rn \\\"jmgoetzmann6\\\" apps e2e docs crates --include=* -I 2>/dev/null | grep -v node_modules | cut -c1-160 | head\", \"description\": \"C\u2026\n- Bash: {\"command\": \"cat spec/rulings/R0632.md | cut -c1-1200; echo; grep -rn \\\"R632\\\\b\\\\|R0632\\\" apps/web/src --include=*.ts --include=*.tsx -l | head\", \"description\": \"Read R632 note and its tests\"}\n- Bash: {\"command\": \"grep -rn \\\"R1442\\\\|R970002\\\\|#936\\\\|#970\\\\b\\\" apps/web/src/routes/privacy.test.tsx | cut -c1-200; grep -rln \\\"R2615000\\\\|R2615001\\\" apps/web/src e2e | head\", \"description\": \"Check which \u2026\n- Bash: {\"command\": \"tail -c 500 spec/rulings/R0632.md; echo; tail -c 600 spec/rulings/R1452.md | head -c 100; echo; grep -n -i \\\"privacy\\\" spec/rulings/R1044001.md | cut -c1-400; grep -n -i \\\"privacy\\\" spec\u2026\n- Bash: {\"command\": \"grep -o \\\"The privacy policy says where the session is kept.*\\\" spec/rulings/R0632.md; grep -o \\\"The privacy policy names the telemetry.*\\\" spec/rulings/R1442.md; grep -o \\\"The Privacy P\u2026\n- Bash: {\"command\": \"sed -n 1,25p crates/server/tests/export_config.rs; grep -n \\\"GENERATED\\\\|write\\\\|fs::\\\" crates/server/tests/export_config.rs | head\", \"description\": \"Check how export_config rewrites ser\u2026\n- Bash: {\"command\": \"sed -n 120,160p e2e/cypress/e2e/38-accessibility.cy.ts | head -50; grep -rn \\\"I agree to the Terms\\\\|signUpPrivacyTestid\\\" apps/web/src/routes/login.tsx | head -5; grep -n \\\"unused\\\\|noU\u2026\n- Bash: {\"command\": \"grep -n \\\"privacy\\\\|terms.tsx\\\\|legal\\\" apps/web/src/writing.test.ts | head; grep -rn \\\"routes/terms\\\\|routes/privacy\\\\|terms.tsx\\\\|privacy.tsx\\\" apps/web/src --include=*.test.ts --inclu\u2026\n- Bash: {\"command\": \"grep -n \\\"privacy\\\\|terms\\\" apps/web/src/typescale.test.ts | head; ls apps/web/src | grep -i \\\"writing\\\"; sed -n 1,40p apps/web/src/writing.test.ts | head -60\", \"description\": \"Check typ\u2026\n- Bash: {\"command\": \"sed -n 40,140p apps/web/src/writing.test.ts\", \"description\": \"Read writing test rules and exemptions\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3110/.bot-plan.md\", \"content\": \"# Plan draft for #3110 (planner's working notes; final plan is the last message of the run)\\n\\nRead so far: terms.tsx,\u2026\n- Bash: {\"command\": \"tail -n 3 spec/rulings/R0632.md | cut -c1-300; grep -c \\\"\\\" spec/rulings/R0632.md\", \"description\": \"See R632 final lines\"}\n- Bash: {\"command\": \"tail -c 260 spec/rulings/R0632.md\", \"description\": \"See exact end of R632\"}\n- said: **Goal.** `/terms` and `/privacy` show the owner's short text exactly, with the age read from `MIN_ACCOUNT_AGE_YEARS` and the email from `CONTACT_EMAIL`. Both pages get new dates, and `TERMS_VERSION` becomes `2026-11-05/2026-11-05`. This adds a `privacy.test.tsx` `AGREED_TEXT` row, re-quotes both p\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-05T03:54:05Z",
       "owner_why": "it plans it",
@@ -16545,9 +16537,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-05T01:27:10Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41964445510",
+      "run_id": "pending:ec497ec5-1793851380",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T03:54:05Z",
+      "started_at": "2026-11-05T04:03:28Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17021,9 +17013,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T03:54:05Z",
+    "at": "2026-11-05T04:03:28Z",
     "url": "",
-    "what": "plan #3110 on claude-8"
+    "what": "build #3110 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T03:51:49Z",
