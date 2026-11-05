@@ -22,7 +22,7 @@ use crate::api::decks::{
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
 use crate::api::series::start_series;
-use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
+use jackioh_shared::series::{NewSeriesInput, NewSeriesSide};
 // The server's one clock (SURFACE §11.3), via tokio's, so a paused test moves every "now" together.
 use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};

@@ -40,12 +40,12 @@
 # per Dockerfile stage, then the image, then one boot shard per database shape.
 # REHEARSAL_STAGE=deps stops after building the Dockerfile's `deps` stage (the image's
 # dependencies, `cargo chef cook`), REHEARSAL_STAGE=game after its `game` stage (the engine, the
-# cards and the AI, compiled on them) and REHEARSAL_STAGE=crates after its `crates` stage (the
+# cards, the AI and the shared logic, compiled on them) and REHEARSAL_STAGE=crates after its `crates` stage (the
 # server's library, compiled on those), with the cache flags below: no database, no image, no boot.
 # REHEARSAL_DEPS_ONLY=1 is REHEARSAL_STAGE=deps. CI builds each stage in a job of its own before the
 # rehearsal (#653, #1223, #2013: db-deploy-deps, db-deploy-game, then db-deploy-crates), so a change
 # to a manifest or Cargo.lock, which recompiles every dependency, is paid in the first, the engine,
-# the cards and the AI in the second, the server's library in the third, and the rehearsal's own
+# the cards, the AI and the shared logic in the second, the server's library in the third, and the rehearsal's own
 # build compiles only the server's binary and its thin-LTO link.
 # REHEARSAL_STAGE=image builds the whole image exactly as the rehearsal below does (`-t` the image,
 # the same cache flags, `--load` under buildx) and, when REHEARSAL_SAVE_IMAGE is set, saves it with

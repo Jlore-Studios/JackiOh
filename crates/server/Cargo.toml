@@ -18,6 +18,7 @@ path = "src/main.rs"
 jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
+jackioh-shared = { workspace = true }
 serde = { workspace = true }
 # `float_roundtrip`: JSON numbers parse to the nearest double, as `JSON.parse` does (serde_json's
 # default parser may land one ulp off: `0.22727272727272727`, 10/44, read back as
