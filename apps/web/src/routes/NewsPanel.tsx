@@ -4,6 +4,7 @@
 // (R2875003) and whether a claim lands, so the count of unclaimed entries moves only on its answer.
 // A title and a summary show as the server sent them. A claim is a spend (R2378000): while one of the
 // tab's is out, every Claim waits, disabled and turning a loading wheel (`economy/spend.css`).
+// R2982001: Claim all is one spend too, one request the server answers with every entry claimed.
 // R3074003: a dev's post has no reward: it shows no reward, its button marks it read, and the
 // server's claim of it pays nothing.
 
@@ -14,7 +15,7 @@ import { announceWallet } from "../economy/wallet.ts";
 import "../economy/spend.css";
 import "./entry-card.css";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import { claimNews, getNews, type CosmeticTokenTier, type NewsEntry, type NewsReward } from "../net/api.ts";
+import { claimAllNews, claimNews, getNews, type CosmeticTokenTier, type NewsEntry, type NewsReward } from "../net/api.ts";
 import { messageOf } from "../net/errors.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
 
@@ -28,7 +29,7 @@ export const newsTestid = {
   claimed: "news-claimed",
   /** Why the server refused a claim. */
   error: "news-error",
-  /** R2982000: claims every unclaimed entry, newest first. */
+  /** R2982001: claims every unclaimed entry, in one spend. */
   claimAll: "news-claim-all",
 } as const;
 
@@ -69,10 +70,13 @@ export function rewardWords(reward: NewsReward): string {
 export function NewsList({
   news,
   onClaim,
+  onClaimAll,
 }: {
   news: readonly NewsEntry[];
   /** Claims an entry's reward; answers why it was refused, or null once it is done. */
   onClaim: (id: string) => Promise<string | null>;
+  /** R2982001: claims every unclaimed entry's reward at once; answers as `onClaim`. */
+  onClaimAll: () => Promise<string | null>;
 }): ReactElement {
   const spendOut = useSpendOut();
   const [busy, setBusy] = useState<string | null>(null);
@@ -86,28 +90,22 @@ export function NewsList({
     const failure = await onClaim(id);
     setBusy(null);
     setError(failure);
-    // R2982000: a single claim announces its own Jlore pay, as the run below announces its run's.
+    // R2982000: a single claim announces its own Jlore pay, as Claim all below announces its own.
     if (failure === null && news.find((entry) => entry.id === id)?.reward?.kind === "jlore") announceWallet();
   };
-  // R2982000: one press claims every unclaimed entry through its own claim, newest first; the
-  // first refusal stops the run, the earlier claims standing, and the wallet is announced once.
+  // R2982001: one press is one spend: the server claims every entry it finds unclaimed in one
+  // transaction, and its one answer moves the list and the count together. A refusal claims
+  // nothing and says why. R2982000: the wallet is announced once for a press that paid Jlore.
   const claimAll = async (): Promise<void> => {
     if (busy !== null || claimingAll || spendOutNow()) return;
     const targets = news.filter((entry) => !entry.claimed);
     if (targets.length < CLAIM_ALL_MIN_UNCLAIMED) return;
     setClaimingAll(true);
     setError(null);
-    let paidJlore = false;
-    for (const target of targets) {
-      const failure = await onClaim(target.id);
-      if (failure !== null) {
-        setError(failure);
-        break;
-      }
-      if (target.reward?.kind === "jlore") paidJlore = true;
-    }
+    const failure = await onClaimAll();
     setClaimingAll(false);
-    if (paidJlore) announceWallet();
+    setError(failure);
+    if (failure === null && targets.some((entry) => entry.reward?.kind === "jlore")) announceWallet();
   };
   const unclaimed = news.filter((entry) => !entry.claimed).length;
   return (
@@ -180,6 +178,7 @@ export function NewsList({
 export function useNews(token: string): {
   news: NewsEntry[] | null;
   claim: (id: string) => Promise<string | null>;
+  claimAll: () => Promise<string | null>;
 } {
   const [news, setNews] = useState<NewsEntry[] | null>(null);
 
@@ -199,7 +198,7 @@ export function useNews(token: string): {
   }, [token]);
 
   // The entries the server answers replace the ones shown; a refusal says why and changes nothing.
-  // R2982000: no wallet announcement here; `NewsList` announces its own claim or run, once.
+  // R2982000: no wallet announcement here; `NewsList` announces its own claim or Claim all, once.
   const claim = useCallback(
     async (id: string): Promise<string | null> => {
       try {
@@ -212,5 +211,15 @@ export function useNews(token: string): {
     },
     [token],
   );
-  return { news, claim };
+  // R2982001: Claim all's one answer replaces the list as a claim's does.
+  const claimAll = useCallback(async (): Promise<string | null> => {
+    try {
+      const answer = await claimAllNews(token);
+      setNews(answer.news);
+      return null;
+    } catch (cause: unknown) {
+      return messageOf(cause);
+    }
+  }, [token]);
+  return { news, claim, claimAll };
 }

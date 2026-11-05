@@ -10,7 +10,8 @@
 //!   [[R2875001]]); [`board`] is what `GET /api/news` and a claim answer.
 //! - A claim ([`claim_news_once`], [[R2875000]]) pays the reward as ledger rows with the reason
 //!   `news` and writes migration 0077's `news_claims` row, once per account and entry. Unread is
-//!   unclaimed ([[R2875002]]).
+//!   unclaimed ([[R2875002]]). Claim all ([`claim_all_news_once`], [[R2982001]]) is one spend that
+//!   claims every unclaimed entry in one transaction, a few statements whatever their number.
 //! - A post a dev wrote from the dev dashboard (migration 0080's `news_posts`, [[R3074003]]) stands
 //!   on the board beside the file's entries for the same days, an alert with no reward: its claim
 //!   marks it read and pays nothing. [`post_problems`] is its check, the file's own rules for a
@@ -445,30 +446,32 @@ fn already_claimed() -> ApiError {
     ApiError::new(ApiErrorCode::Conflict, "That reward is already claimed.")
 }
 
-/// Pays `entry`'s reward to the account in `tx`, its rows' reason `news` and `ref` the entry's id
-/// (§14.11): Jlore in the wallet, every other reward in the inventory.
-async fn pay(tx: &mut Tx<'_>, profile_id: &str, entry: &NewsEntry, at: i64) -> Result<(), ApiError> {
+/// What `entry`'s reward pays the account, as its ledger's grant, its reason `news` and `ref` the
+/// entry's id (§14.11): Jlore in the wallet, every other reward in the inventory.
+enum NewsGrant {
+    Jlore(JloreGrant),
+    Item(InventoryGrant),
+}
+
+fn grant_of(profile_id: &str, entry: &NewsEntry, at: i64) -> NewsGrant {
     let amount = entry.reward.amount();
     let (item, key) = match entry.reward {
         NewsReward::Jlore => {
-            tx.economy_jlore_grant(&JloreGrant {
+            return NewsGrant::Jlore(JloreGrant {
                 profile_id: profile_id.to_string(),
                 delta: amount,
                 reason: JloreReason::News,
                 reference: Some(entry.id.clone()),
                 dev: false,
                 at,
-            })
-            .await?
-            .ok_or_else(|| ApiError::internal("the wallet refused a news reward"))?;
-            return Ok(());
+            });
         }
         NewsReward::CardPack(pack) => inventory_of(pack),
         NewsReward::CardToken => (InventoryItem::CardToken, String::new()),
         NewsReward::CosmeticToken(tier) => (InventoryItem::CosmeticToken, tier.as_str().to_string()),
         NewsReward::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
     };
-    tx.economy_inventory_grant(&InventoryGrant {
+    NewsGrant::Item(InventoryGrant {
         profile_id: profile_id.to_string(),
         item,
         key,
@@ -478,8 +481,42 @@ async fn pay(tx: &mut Tx<'_>, profile_id: &str, entry: &NewsEntry, at: i64) -> R
         dev: false,
         at,
     })
-    .await?
-    .ok_or_else(|| ApiError::internal("the inventory refused a news reward"))?;
+}
+
+/// Pays `entry`'s reward ([`grant_of`]) to the account in `tx`.
+async fn pay(tx: &mut Tx<'_>, profile_id: &str, entry: &NewsEntry, at: i64) -> Result<(), ApiError> {
+    match grant_of(profile_id, entry, at) {
+        NewsGrant::Jlore(grant) => {
+            tx.economy_jlore_grant(&grant)
+                .await?
+                .ok_or_else(|| ApiError::internal("the wallet refused a news reward"))?;
+        }
+        NewsGrant::Item(grant) => {
+            tx.economy_inventory_grant(&grant)
+                .await?
+                .ok_or_else(|| ApiError::internal("the inventory refused a news reward"))?;
+        }
+    }
+    Ok(())
+}
+
+/// R2982001: pays every one of `entries`' rewards ([`grant_of`]) to the account in `tx`, one
+/// statement per ledger whatever their number, each entry still its own ledger row.
+async fn pay_all<'e>(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    entries: impl IntoIterator<Item = &'e NewsEntry>,
+    at: i64,
+) -> Result<(), ApiError> {
+    let (mut jlore, mut items) = (Vec::new(), Vec::new());
+    for entry in entries {
+        match grant_of(profile_id, entry, at) {
+            NewsGrant::Jlore(grant) => jlore.push(grant),
+            NewsGrant::Item(grant) => items.push(grant),
+        }
+    }
+    tx.economy_jlore_grant_all(&jlore).await?;
+    tx.economy_inventory_grant_all(&items).await?;
     Ok(())
 }
 
@@ -540,6 +577,54 @@ pub async fn claim_news_once(
     keep(&mut tx, profile_id, request, &answer).await?;
     tx.commit().await?;
     tracing::info!(event = "news.claimed", "profileId" = %profile_id, news = news_id);
+    Ok(Spent::Now(answer))
+}
+
+/// R2982001: Claim all, one spend: in one transaction, under the account's lock and after the
+/// replay of an `Idempotency-Key` already committed (R2124000), claims every entry live at `now`
+/// and every post standing at `now` that the account has not claimed, the same test
+/// [`claim_news_once`] puts to one ([`live_at`], [`post_live_at`]), and pays each entry's reward
+/// ([`pay_all`]). However many there are it costs the same few statements, where a claim each cost
+/// a request and a transaction each. Nothing left to claim writes nothing. Answers [`board`].
+pub async fn claim_all_news_once(
+    app: &App,
+    profile_id: &str,
+    request: Option<&RequestKey>,
+) -> Result<Spent<Value>, ApiError> {
+    let now = now_ms();
+    let mut tx = app.db.begin(Some(profile_id)).await?;
+    tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
+    let mut claimed = tx.economy_news_claims_get(profile_id).await?;
+    let posts = tx.admin_posts_standing(posts_live_from(now), now).await?;
+    let entries: Vec<&NewsEntry> = app
+        .news
+        .iter()
+        .filter(|entry| live_at(entry, now) && !claimed.contains(&entry.id))
+        .collect();
+    let ids: Vec<String> = posts
+        .iter()
+        .filter(|post| post_live_at(post, now) && !claimed.contains(&post.id))
+        .map(|post| post.id.clone())
+        .chain(entries.iter().map(|entry| entry.id.clone()))
+        .collect();
+    // The claims' key decides what is paid: only an entry whose claim this statement wrote.
+    let written = tx.economy_news_claim_all(profile_id, &ids, now).await?;
+    pay_all(
+        &mut tx,
+        profile_id,
+        entries.into_iter().filter(|entry| written.contains(&entry.id)),
+        now,
+    )
+    .await?;
+    let count = written.len();
+    claimed.extend(written);
+    let answer = board(&app.news, &posts, &claimed, now);
+    keep(&mut tx, profile_id, request, &answer).await?;
+    tx.commit().await?;
+    tracing::info!(event = "news.claimed_all", "profileId" = %profile_id, claimed = count);
     Ok(Spent::Now(answer))
 }
 

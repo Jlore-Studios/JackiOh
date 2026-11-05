@@ -1,14 +1,16 @@
 //! News (SPEC §14.13, #2875): `GET /api/news` lists the live entries newest first, each marked
 //! claimed or not, and `POST /api/news/:newsId/claim` pays one entry's reward once, as `news` ledger
-//! rows (R2875000–R2875003). Each test posts its own entries, timed from the server's clock, so none
-//! depends on the date `news.json` was written.
+//! rows (R2875000–R2875003); `POST /api/news/claim-all` claims every unclaimed one in one spend
+//! (R2982001). Each test posts its own entries, timed from the server's clock, so none depends on
+//! the date `news.json` was written.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{Value, json};
 
 use jackioh_engine::SetName;
+use jackioh_server::admin::store::NewsPost;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     MS_PER_DAY, NEWS_REWARD_CARD_PACKS, NEWS_REWARD_CARD_TOKENS, NEWS_REWARD_COSMETIC_PACKS,
@@ -365,4 +367,238 @@ async fn r2875002_a_pending_account_is_refused() {
         assert_eq!(status, 403, "{method} {path}: {body}");
     }
     assert_eq!(economy(&app).await, before);
+}
+
+/// R2982001: Claim all's route.
+const CLAIM_ALL: &str = "/api/news/claim-all";
+
+async fn claim_all(app: &Arc<App>, token: &str) -> (u16, Value) {
+    let (status, _, body) = call(app, "POST", CLAIM_ALL, Some(token), json!({})).await;
+    (status, body)
+}
+
+/// The economy store's calls `run` makes, in order: one per statement or so in Postgres.
+async fn economy_calls<F: std::future::Future<Output = (u16, Value)>>(
+    app: &App,
+    run: impl FnOnce() -> F,
+) -> (u16, Value, Vec<String>) {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let seen = Arc::clone(&calls);
+    fake(app).lock().await.on_call = Some(Arc::new(move |method: &str| {
+        if method.starts_with("economy.") {
+            seen.lock().expect("the calls").push(method.to_string());
+        }
+        Ok(())
+    }));
+    let (status, body) = run().await;
+    fake(app).lock().await.on_call = None;
+    let calls = calls.lock().expect("the calls").clone();
+    (status, body, calls)
+}
+
+/// `count` live entries posted a day ago, of every reward kind in turn.
+fn many(count: usize) -> Vec<NewsEntry> {
+    let at = now_ms() - MS_PER_DAY;
+    let kinds = [
+        NewsReward::Jlore,
+        NewsReward::CardPack(PackKind::Global),
+        NewsReward::CardToken,
+        NewsReward::CosmeticToken(CosmeticRarity::Epic),
+        NewsReward::CosmeticPack,
+    ];
+    (0..count)
+        .map(|index| entry(&format!("entry-{index}"), at, kinds[index % kinds.len()]))
+        .collect()
+}
+
+#[tokio::test]
+async fn r2982001_claim_all_claims_every_live_unclaimed_entry_once_each_with_its_own_rows() {
+    let now = now_ms();
+    let mut news = entries(now);
+    news.insert(
+        3,
+        entry(
+            "third",
+            now - MS_PER_DAY / 2,
+            NewsReward::CosmeticToken(CosmeticRarity::Epic),
+        ),
+    );
+    let (app, token) = setup_with(news, true).await;
+    let wallet = read(&app, &token, "/api/wallet").await["jlore"]
+        .as_i64()
+        .expect("jlore");
+    // One claimed already, through its own route: Claim all leaves it as it is.
+    let (status, body) = claim(&app, &token, "first").await;
+    assert_eq!(status, 200, "{body}");
+
+    let (status, answer) = claim_all(&app, &token).await;
+    assert_eq!(status, 200, "{answer}");
+    // The board, every live entry claimed; `old` expired and `future` not posted, so neither is.
+    assert_eq!(
+        rows(&answer),
+        owned(&[("third", true), ("second", true), ("first", true)])
+    );
+    assert_eq!(rows(&read(&app, &token, "/api/news").await), rows(&answer));
+    // `first`'s Jlore was paid by its own claim and not again.
+    assert_eq!(
+        read(&app, &token, "/api/wallet").await["jlore"],
+        json!(wallet + NEWS_REWARD_JLORE)
+    );
+    let tokens = read(&app, &token, "/api/tokens").await["tokens"].clone();
+    assert_eq!(
+        tokens["cosmeticEpic"],
+        json!(NEWS_REWARD_COSMETIC_TOKENS),
+        "{tokens}"
+    );
+    let tables = economy(&app).await;
+    let paid: Vec<(&str, EconomyReason)> = tables
+        .inventory_grants
+        .iter()
+        .map(|grant| (grant.reference.as_deref().unwrap_or(""), grant.reason))
+        .collect();
+    // Each entry its own ledger row, `news`, its `ref` the entry (§14.11).
+    assert_eq!(
+        paid,
+        [("second", EconomyReason::News), ("third", EconomyReason::News)]
+    );
+    assert_eq!(tables.jlore_grants.len(), 1, "{:?}", tables.jlore_grants);
+    let mut ids: Vec<&str> = tables
+        .news_claims
+        .iter()
+        .map(|claim| claim.news_id.as_str())
+        .collect();
+    ids.sort_unstable();
+    assert_eq!(ids, ["first", "second", "third"]);
+
+    // Nothing is left to claim: a second press answers the board and writes nothing.
+    let (status, again) = claim_all(&app, &token).await;
+    assert_eq!(status, 200, "{again}");
+    assert_eq!(rows(&again), rows(&answer));
+    assert_eq!(economy(&app).await, tables, "nothing left pays nothing");
+}
+
+#[tokio::test]
+async fn r2982001_claim_all_costs_the_same_store_calls_for_two_entries_as_for_twenty() {
+    let mut seen = Vec::new();
+    for count in [2, 20] {
+        let (app, token) = setup_with(many(count), true).await;
+        let (status, answer, calls) = economy_calls(&app, || claim_all(&app, &token)).await;
+        assert_eq!(status, 200, "{answer}");
+        assert!(rows(&answer).iter().all(|(_, claimed)| *claimed), "{answer}");
+        assert_eq!(economy(&app).await.news_claims.len(), count);
+        // One write of each kind for the lot, and no claim or grant of one entry.
+        for batch in [
+            "economy.newsClaims.putAll",
+            "economy.wallets.grantAll",
+            "economy.inventory.grantAll",
+        ] {
+            assert_eq!(
+                calls.iter().filter(|call| *call == batch).count(),
+                1,
+                "{batch} in {calls:?}"
+            );
+        }
+        for single in [
+            "economy.newsClaims.put",
+            "economy.wallets.grant",
+            "economy.inventory.grant",
+        ] {
+            assert!(!calls.iter().any(|call| call == single), "{single} in {calls:?}");
+        }
+        seen.push(calls);
+    }
+    assert_eq!(seen[0], seen[1], "twenty entries cost what two do");
+}
+
+#[tokio::test]
+async fn r2982001_claim_all_with_its_key_replays_and_the_key_is_its_own_route() {
+    let (app, token) = setup().await;
+    let key = uuid(2982001);
+    let (status, _, first) = call_with_key(&app, "POST", CLAIM_ALL, Some(&token), json!({}), &key).await;
+    assert_eq!(status, 200, "{first}");
+    let after = economy(&app).await;
+    assert_eq!(after.news_claims.len(), 2);
+
+    let (status, _, again) = call_with_key(&app, "POST", CLAIM_ALL, Some(&token), json!({}), &key).await;
+    assert_eq!(status, 200, "{again}");
+    assert_eq!(again, first);
+    assert_eq!(economy(&app).await, after, "the replay pays nothing more");
+
+    // The key belongs to Claim all: sent to one entry's claim it is another request, 422.
+    let (status, _, other) =
+        call_with_key(&app, "POST", &claim_path("first"), Some(&token), json!({}), &key).await;
+    assert_eq!(status, 422, "{other}");
+    assert_eq!(other["error"]["code"], json!("idempotency_key_reused"));
+    assert_eq!(economy(&app).await, after);
+}
+
+#[tokio::test]
+async fn r2982001_claim_all_marks_a_dev_post_read_and_pays_it_nothing() {
+    let now = now_ms();
+    let (app, token) = setup_with(entries(now)[1..2].to_vec(), true).await;
+    let mut tx = app.db.begin(None).await.expect("a store transaction");
+    for post in [
+        NewsPost {
+            id: "post-standing".to_string(),
+            title: "Maintenance".to_string(),
+            summary: "The server restarts at noon.".to_string(),
+            posted_at: now - MS_PER_DAY,
+            posted_by: None,
+            taken_down_at: None,
+        },
+        NewsPost {
+            id: "post-down".to_string(),
+            title: "Taken down".to_string(),
+            summary: "Gone.".to_string(),
+            posted_at: now - MS_PER_DAY,
+            posted_by: None,
+            taken_down_at: Some(now - 1),
+        },
+    ] {
+        tx.admin_posts_create(&post).await.expect("a post");
+    }
+    tx.commit().await.expect("commit");
+
+    let (status, answer) = claim_all(&app, &token).await;
+    assert_eq!(status, 200, "{answer}");
+    assert_eq!(rows(&answer), owned(&[("post-standing", true), ("first", true)]));
+    let tables = economy(&app).await;
+    let mut ids: Vec<&str> = tables
+        .news_claims
+        .iter()
+        .map(|claim| claim.news_id.as_str())
+        .collect();
+    ids.sort_unstable();
+    assert_eq!(
+        ids,
+        ["first", "post-standing"],
+        "a post taken down is not claimed"
+    );
+    let refs: Vec<Option<&str>> = tables
+        .jlore_grants
+        .iter()
+        .map(|grant| grant.reference.as_deref())
+        .collect();
+    assert_eq!(refs, [Some("first")], "the post pays nothing");
+    assert!(tables.inventory_grants.is_empty());
+}
+
+#[tokio::test]
+async fn r2982001_claim_all_is_refused_with_the_economy_off_and_to_a_pending_account() {
+    let (app, token) = setup_with(entries(now_ms()), false).await;
+    fake(&app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": "p2", "userId": "u2", "status": "pending" }));
+    let pending = add_user(&app, "u2", "p2@example.test", true);
+    let before = economy(&app).await;
+    let (status, body) = claim_all(&app, &token).await;
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(
+        body["error"]["message"],
+        json!("News rewards can't be claimed yet.")
+    );
+    let (status, body) = claim_all(&app, &pending).await;
+    assert_eq!(status, 403, "{body}");
+    assert_eq!(economy(&app).await, before, "a refusal writes nothing");
 }

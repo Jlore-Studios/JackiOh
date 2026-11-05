@@ -12,6 +12,7 @@ import {
   ApiUnreachableError,
   buyChase,
   buyPack,
+  claimAllNews,
   claimNews,
   getNews,
   getPacks,
@@ -188,6 +189,20 @@ describe("R2124000 a spend runs once", () => {
     expect(sent.map((call) => call.path)).toEqual(["/api/news/r2875000%20patch/claim", "/api/news"]);
     expect(sent[0]?.key).toMatch(UUID);
     expect(sent[1]?.key).toBeUndefined();
+  });
+
+  it("R2982001 claimAllNews is one spend with an Idempotency-Key of its own each press", async () => {
+    const news = { id: "patch-0-6-0", kind: "patch", version: "0.6.0", title: "Patch 0.6.0", summary: "", postedAt: 1 };
+    const answer = { status: 200, body: { news: [{ ...news, reward: { kind: "jlore", amount: 100 }, claimed: true }] } };
+    const sent = stubFetch([answer, answer]);
+
+    await expect(claimAllNews(TOKEN)).resolves.toEqual(answer.body);
+    await claimAllNews(TOKEN);
+
+    expect(sent.map((call) => call.path)).toEqual(["/api/news/claim-all", "/api/news/claim-all"]);
+    expect(sent[0]?.key).toMatch(UUID);
+    expect(sent[1]?.key).toMatch(UUID);
+    expect(sent[1]?.key).not.toBe(sent[0]?.key);
   });
 });
 

@@ -10698,6 +10698,140 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
     }
 
+    /// R2982001: Claim all's batch writes leave what the same writes one at a time would: the
+    /// claims answer the ids the profile did not hold, in the order given, and a duplicate or an id
+    /// that is no slug is refused; a payout moves each balance by the sum of its grants and writes
+    /// one ledger row per grant, in order; a spend, a second account or a key that does not fit its
+    /// item is refused, writing nothing; and an empty batch writes nothing.
+    async fn r2982001_batch_news_claims_and_payouts_write_what_one_at_a_time_would(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let ids = |list: &[&str]| list.iter().map(|id| (*id).to_string()).collect::<Vec<String>>();
+
+        assert!(q!(harness, t => t.economy_news_claim(&owner.id, "held", now)));
+        assert_eq!(
+            q!(harness, t => t.economy_news_claim_all(&owner.id, &ids(&["zeta", "held", "alpha"]), now + 1)),
+            ids(&["zeta", "alpha"])
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claim_all(&owner.id, &ids(&["zeta"]), now + 2)),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claim_all(&owner.id, &[], now + 2)),
+            Vec::<String>::new()
+        );
+        for refused in [ids(&["fine", "fine"]), ids(&["fine", "Not-A-Slug"])] {
+            assert!(
+                call!(harness, t => t.economy_news_claim_all(&owner.id, &refused, now)).is_err(),
+                "{}: {refused:?}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&owner.id)),
+            ids(&["alpha", "held", "zeta"])
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&other.id)),
+            Vec::<String>::new()
+        );
+
+        let news_jlore = |delta: i64, reference: &str, at: i64| JloreGrant {
+            reference: Some(reference.to_string()),
+            ..jlore(&owner.id, delta, "news", false, at)
+        };
+        // The first batch makes the wallet, the second adds to it.
+        q!(harness, t => t.economy_jlore_grant_all(&[news_jlore(20, "a", now), news_jlore(30, "b", now + 1)]));
+        q!(harness, t => t.economy_jlore_grant_all(&[news_jlore(5, "c", now + 2)]));
+        q!(harness, t => t.economy_jlore_grant_all(&[]));
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&owner.id)), 55);
+
+        let news_item = |name: &str, key: &str, delta: i64, reference: &str| InventoryGrant {
+            reason: from(json!("news")),
+            reference: Some(reference.to_string()),
+            ..item(&owner.id, name, key, delta, now)
+        };
+        q!(harness, t => t.economy_inventory_grant_all(&[
+            news_item("global_pack", "", 1, "d"),
+            news_item("cosmetic_token", "Epic", 1, "e"),
+            news_item("global_pack", "", 2, "f"),
+        ]));
+        q!(harness, t => t.economy_inventory_grant_all(&[news_item("global_pack", "", 1, "g")]));
+        q!(harness, t => t.economy_inventory_grant_all(&[]));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_inventory_get(&owner.id))),
+            json!([
+                { "item": "cosmetic_token", "key": "Epic", "count": 1 },
+                { "item": "global_pack", "key": "", "count": 4 },
+            ])
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        let rows = |refs: Vec<(Option<String>, i64)>| refs;
+        assert_eq!(
+            rows(
+                ledger
+                    .jlore
+                    .iter()
+                    .map(|row| (row.reference.clone(), row.delta))
+                    .collect()
+            ),
+            [("a", 20), ("b", 30), ("c", 5)].map(|(id, delta)| (Some(id.to_string()), delta))
+        );
+        assert_eq!(
+            rows(
+                ledger
+                    .inventory
+                    .iter()
+                    .map(|row| (row.reference.clone(), row.delta))
+                    .collect()
+            ),
+            [("d", 1), ("e", 1), ("f", 2), ("g", 1)].map(|(id, delta)| (Some(id.to_string()), delta))
+        );
+        assert!(ledger.jlore.iter().all(|row| j(&row.reason) == json!("news")));
+        assert!(ledger.inventory.iter().all(|row| j(&row.reason) == json!("news")));
+
+        let before = economy_of(harness, &owner.id).await;
+        let theirs = JloreGrant {
+            profile_id: other.id.clone(),
+            ..news_jlore(10, "h", now)
+        };
+        for (what, refused) in [
+            (
+                "a spend",
+                vec![news_jlore(10, "h", now), news_jlore(-1, "i", now)],
+            ),
+            ("two accounts", vec![news_jlore(10, "h", now), theirs]),
+        ] {
+            assert!(
+                call!(harness, t => t.economy_jlore_grant_all(&refused)).is_err(),
+                "{}: {what}",
+                harness.name
+            );
+        }
+        for (what, refused) in [
+            ("a spend", news_item("global_pack", "", -1, "j")),
+            (
+                "a key the item does not take",
+                news_item("global_pack", "Core", 1, "k"),
+            ),
+        ] {
+            assert!(
+                call!(harness, t => t.economy_inventory_grant_all(&[news_item("card_token", "", 1, "l"), refused.clone()]))
+                    .is_err(),
+                "{}: {what}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            economy_of(harness, &owner.id).await,
+            before,
+            "a refused batch writes nothing"
+        );
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&other.id)), 0);
+    }
+
     /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
     /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
     /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
@@ -10896,6 +11030,7 @@ mod economy {
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
+        r2982001_batch_news_claims_and_payouts_write_what_one_at_a_time_would,
         practice_claims_count_once_per_bucket_and_utc_day,
         r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
         r3013001_a_stamp_is_kept_only_at_or_below_its_level,

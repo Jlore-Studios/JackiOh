@@ -869,6 +869,18 @@ export async function claimNews(token: string, id: string): Promise<NewsResponse
   return answer;
 }
 
+/**
+ * `POST /api/news/claim-all` (R2982001): Claim all, one spend for every entry the server finds unclaimed,
+ * so it sends an `Idempotency-Key` (R2124000); answers as `getNews`. The kept reads of every reward kind
+ * the answer shows claimed are dropped, as one claim drops its own.
+ */
+export async function claimAllNews(token: string): Promise<NewsResponse> {
+  const answer = await spendRequest<NewsResponse>("/api/news/claim-all", token, {});
+  const kinds = new Set(answer.news.flatMap((entry) => (entry.claimed && entry.reward !== null ? [entry.reward.kind] : [])));
+  for (const path of new Set([...kinds].flatMap((kind) => NEWS_REWARD_READS[kind]))) forgetRead(token, path);
+  return answer;
+}
+
 // Saved decks and trios (SPEC §9.4, R250–R256). Ids are minted by the client, so every save is an
 // idempotent `PUT` that a retry after a dropped connection cannot turn into a second deck (R256).
 

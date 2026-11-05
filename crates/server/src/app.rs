@@ -433,6 +433,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::news::post_claim_news),
     ),
+    // R2982001: Claim all, one spend for every unclaimed entry.
+    (
+        "POST",
+        "/api/news/claim-all",
+        AuthLevel::Active,
+        h!(api::news::post_claim_all_news),
+    ),
     // api/practice.rs (#1303)
     (
         "POST",

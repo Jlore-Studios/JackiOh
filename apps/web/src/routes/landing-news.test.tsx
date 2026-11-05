@@ -1,7 +1,7 @@
 // R2875002: the landing's news bookmark (SPEC §14.13, issue #2875): beside the quests' bookmark, its red
 // count of the entries the server says are unclaimed, a claim's answer moving it, and who gets none of
 // it; R2875001 no live entry, no bookmark; R2875003 each reward in its words; R3074003 a dev's post,
-// which pays no reward.
+// which pays no reward; R2982001 Claim all, one request for every unclaimed entry.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +24,9 @@ vi.mock("../economy/wallet.ts", async (importOriginal) => {
 });
 
 const NOW = 1_800_000_000_000;
+
+/** R2982001: Claim all's one route. */
+const CLAIM_ALL_PATH = "/api/news/claim-all";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
@@ -55,13 +58,22 @@ function claimed(news: readonly NewsEntry[], id: string): Reply {
   return { status: 200, body: { news: news.map((one) => (one.id === id ? { ...one, claimed: true } : one)) } };
 }
 
+/** R2982001: the server's answer to Claim all: every entry claimed. */
+function allClaimed(news: readonly NewsEntry[]): Reply {
+  return { status: 200, body: { news: news.map((one) => ({ ...one, claimed: true })) } };
+}
+
 /**
- * `/api/auth/me` answers `status`, `/api/quests` one quest, `GET /api/news` `news`, and a claim
- * `claim(id)` (by default that entry claimed).
+ * `/api/auth/me` answers `status`, `/api/quests` one quest, `GET /api/news` `news`, a claim
+ * `claim(id)` (by default that entry claimed), and Claim all `claimAll()` (by default every entry claimed).
  */
 function serve(
   news: NewsEntry[],
-  { status = "active", claim = (id) => claimed(news, id) }: { status?: "active" | "pending"; claim?: (id: string) => Reply } = {},
+  {
+    status = "active",
+    claim = (id) => claimed(news, id),
+    claimAll = () => allClaimed(news),
+  }: { status?: "active" | "pending"; claim?: (id: string) => Reply; claimAll?: () => Reply } = {},
 ): StubServer {
   return stubServer((call) => {
     if (call.path === "/api/auth/me") {
@@ -72,6 +84,7 @@ function serve(
       return { status: 200, body: { quests: [quest], nextDueAt: null } };
     }
     if (call.method === "GET" && call.path === "/api/news") return { status: 200, body: { news } };
+    if (call.method === "POST" && call.path === CLAIM_ALL_PATH) return claimAll();
     const claimOf = /^\/api\/news\/([^/]+)\/claim$/u.exec(call.path);
     if (call.method === "POST" && claimOf !== null) return claim(decodeURIComponent(must(claimOf[1], "the claimed id")));
     return undefined;
@@ -378,117 +391,77 @@ describe("R2875003 a news reward in words", () => {
   });
 });
 
-describe("R2982000 Claim all", () => {
-  /**
-   * The server keeps every claim a run has landed, so each answer of the run builds on the last
-   * (unlike `serve`'s default, which answers every claim from the list as first served).
-   */
-  function keeping(all: readonly NewsEntry[]): (id: string) => Reply {
-    const done = new Set<string>();
-    return (id) => {
-      done.add(id);
-      return { status: 200, body: { news: all.map((one) => (done.has(one.id) ? { ...one, claimed: true } : one)) } };
-    };
-  }
+describe("R2982001 Claim all, one spend", () => {
+  const OLDER = entry({
+    id: "patch-0-5-9",
+    version: "0.5.9",
+    title: "Patch 0.5.9",
+    summary: "Older news.",
+    reward: { kind: "cardToken", amount: 1 },
+  });
 
-  it("R2982000 Claim all claims each unclaimed entry newest first, the count dropping per answer", async () => {
-    vi.mocked(announceWallet).mockClear();
-    signIn();
-    const list = [
-      entry(),
-      ALERT,
-      entry({
-        id: "patch-0-5-9",
-        version: "0.5.9",
-        title: "Patch 0.5.9",
-        summary: "Older news.",
-        reward: { kind: "cardToken", amount: 1 },
-        claimed: true,
-      }),
-    ];
-    const server = serve(list, { claim: keeping(list) });
-    // Each claim's answer waits for its own `release`, so the count drops one answer at a time.
-    let releasePatch = (): void => {};
-    const patchReleased = new Promise<void>((resolve) => {
-      releasePatch = resolve;
-    });
-    let releaseAlert = (): void => {};
-    const alertReleased = new Promise<void>((resolve) => {
-      releaseAlert = resolve;
+  /** Every POST's answer waits for the returned `release`. */
+  function holdPosts(): () => Promise<void> {
+    let release = (): void => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
     });
     const stubbed = globalThis.fetch;
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const reply = stubbed(input, init);
-        if (init?.method === "POST" && String(input).includes("patch-0-6-0")) return patchReleased.then(() => reply);
-        if (init?.method === "POST" && String(input).includes("alert-1")) return alertReleased.then(() => reply);
-        return reply;
+        return init?.method === "POST" ? released.then(() => reply) : reply;
       }),
     );
+    return async () => {
+      release();
+      await released;
+    };
+  }
+
+  it("R2982001 Claim all is one POST with an Idempotency-Key, every Claim waiting until its one answer clears the count", async () => {
+    vi.mocked(announceWallet).mockClear();
+    signIn();
+    const server = serve([entry(), ALERT, { ...OLDER, claimed: true }]);
+    const release = holdPosts();
     render(<LandingRoute />);
 
     expect(await screen.findByTestId(landingTestid.newsCount, undefined, SLOW)).toHaveTextContent("2");
     fireEvent.click(screen.getByTestId(landingTestid.newsBookmark));
     fireEvent.click(await screen.findByTestId(newsTestid.claimAll, undefined, SLOW));
 
-    // The newest claim is out but unanswered: the count holds, and the run sends nothing else yet.
+    // The press is out but unanswered: the count holds and every button waits, turning its wheel.
     await waitFor(() => {
-      expect(server.to("POST", "/api/news/patch-0-6-0/claim")).toHaveLength(1);
+      expect(server.to("POST", CLAIM_ALL_PATH)).toHaveLength(1);
     }, SLOW);
     expect(screen.getByTestId(landingTestid.newsCount)).toHaveTextContent("2");
-    expect(server.to("POST", "/api/news/alert-1/claim")).toHaveLength(0);
-    await act(async () => {
-      releasePatch();
-      await patchReleased;
-    });
-    // The patch's answer took the count down by one; the run went on to the alert on its own.
-    await waitFor(() => {
-      expect(screen.getByTestId(landingTestid.newsCount)).toHaveTextContent("1");
-    }, SLOW);
-    await waitFor(() => {
-      expect(server.to("POST", "/api/news/alert-1/claim")).toHaveLength(1);
-    }, SLOW);
-    await act(async () => {
-      releaseAlert();
-      await alertReleased;
-    });
-    // At zero the bubble is gone, as when all were claimed to begin with.
+    for (const button of [screen.getByTestId(newsTestid.claimAll), ...screen.getAllByTestId(newsTestid.claim)]) {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute("aria-busy", "true");
+    }
+    await act(release);
+
+    // Its one answer claimed both: the bubble is gone, as when all were claimed to begin with.
     await waitFor(() => {
       expect(screen.queryByTestId(landingTestid.newsCount)).toBeNull();
     }, SLOW);
     expect(screen.getByTestId(landingTestid.newsBookmark)).toHaveAccessibleName("News");
-    expect(server.to("POST", "/api/news/patch-0-6-0/claim")).toHaveLength(1);
-    expect(server.to("POST", "/api/news/alert-1/claim")).toHaveLength(1);
-    // Newest first: the patch's POST went out before the alert's.
-    const paths = server.calls.filter((call) => call.method === "POST").map((call) => call.path);
-    expect(paths).toEqual(["/api/news/patch-0-6-0/claim", "/api/news/alert-1/claim"]);
-    // Each claim sent its own Idempotency-Key.
-    const [patchPost] = server.to("POST", "/api/news/patch-0-6-0/claim");
-    const [alertPost] = server.to("POST", "/api/news/alert-1/claim");
-    expect(patchPost?.headers["idempotency-key"]).toMatch(UUID);
-    expect(alertPost?.headers["idempotency-key"]).toMatch(UUID);
-    expect(alertPost?.headers["idempotency-key"]).not.toBe(patchPost?.headers["idempotency-key"]);
-    expect(screen.queryByTestId(newsTestid.claimAll)).toBeNull();
     expect(screen.getAllByTestId(newsTestid.claimed)).toHaveLength(3);
+    expect(screen.queryByTestId(newsTestid.claimAll)).toBeNull();
+    // One request for the lot, with its key, and no claim of one entry.
+    const posts = server.calls.filter((call) => call.method === "POST");
+    expect(posts.map((call) => call.path)).toEqual([CLAIM_ALL_PATH]);
+    expect(posts[0]?.headers["idempotency-key"]).toMatch(UUID);
+    // R2982000: the press paid Jlore, so the wallet is announced, once.
+    expect(announceWallet).toHaveBeenCalledTimes(1);
   });
 
-  it("R2982000 a refusal partway stops the run and shows news-error", async () => {
+  it("R2982001 a refused Claim all claims nothing and says why", async () => {
     vi.mocked(announceWallet).mockClear();
     signIn();
-    const entries = [
-      entry(),
-      ALERT,
-      entry({
-        id: "patch-0-5-9",
-        version: "0.5.9",
-        title: "Patch 0.5.9",
-        summary: "Older news.",
-        reward: { kind: "cardToken", amount: 1 },
-      }),
-    ];
-    const server = serve(entries, {
-      claim: (id) => (id === ALERT.id ? refusal(409, "conflict", "This reward was claimed already.") : claimed(entries, id)),
+    const server = serve([entry(), ALERT, OLDER], {
+      claimAll: () => refusal(409, "conflict", "News rewards can't be claimed yet."),
     });
     render(<LandingRoute />);
 
@@ -496,79 +469,22 @@ describe("R2982000 Claim all", () => {
     fireEvent.click(screen.getByTestId(landingTestid.newsBookmark));
     fireEvent.click(await screen.findByTestId(newsTestid.claimAll, undefined, SLOW));
 
-    expect(await screen.findByTestId(newsTestid.error, undefined, SLOW)).toHaveTextContent("This reward was claimed already.");
-    // The first claim stands, the third was never sent, and the run stopped waiting.
-    expect(screen.getByTestId(landingTestid.newsCount)).toHaveTextContent("2");
-    const [first] = screen.getAllByTestId(newsTestid.entry);
-    expect(within(must(first, "the patch")).getByTestId(newsTestid.claimed)).toHaveTextContent("Claimed");
-    expect(server.to("POST", "/api/news/patch-0-5-9/claim")).toHaveLength(0);
+    expect(await screen.findByTestId(newsTestid.error, undefined, SLOW)).toHaveTextContent("News rewards can't be claimed yet.");
+    expect(screen.getByTestId(landingTestid.newsCount)).toHaveTextContent("3");
+    expect(screen.queryByTestId(newsTestid.claimed)).toBeNull();
+    expect(server.calls.filter((call) => call.method === "POST")).toHaveLength(1);
     expect(screen.getByTestId(newsTestid.claimAll)).toBeEnabled();
     for (const button of screen.getAllByTestId(newsTestid.claim)) {
       expect(button).toBeEnabled();
       expect(button).toHaveAttribute("aria-busy", "false");
     }
+    expect(announceWallet).not.toHaveBeenCalled();
   });
 
-  it("R2982000 while the run is out every Claim and Claim all are disabled with aria-busy", async () => {
+  it("R2982001 a Claim all that paid no Jlore announces nothing", async () => {
     vi.mocked(announceWallet).mockClear();
     signIn();
-    const list = [entry(), ALERT];
-    const server = serve(list, { claim: keeping(list) });
-    // Every claim's answer waits for `answer`.
-    let answer = (): void => {};
-    const answered = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    const stubbed = globalThis.fetch;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-        const reply = stubbed(input, init);
-        return init?.method === "POST" ? answered.then(() => reply) : reply;
-      }),
-    );
-    render(<LandingRoute />);
-
-    expect(await screen.findByTestId(landingTestid.newsCount, undefined, SLOW)).toHaveTextContent("2");
-    fireEvent.click(screen.getByTestId(landingTestid.newsBookmark));
-    fireEvent.click(await screen.findByTestId(newsTestid.claimAll, undefined, SLOW));
-
-    await waitFor(() => {
-      expect(server.to("POST", "/api/news/patch-0-6-0/claim")).toHaveLength(1);
-    }, SLOW);
-    const claimAll = screen.getByTestId(newsTestid.claimAll);
-    expect(claimAll).toBeDisabled();
-    expect(claimAll).toHaveAttribute("aria-busy", "true");
-    for (const button of screen.getAllByTestId(newsTestid.claim)) {
-      expect(button).toBeDisabled();
-      expect(button).toHaveAttribute("aria-busy", "true");
-    }
-
-    await act(async () => {
-      answer();
-      await answered;
-    });
-    await waitFor(() => {
-      expect(screen.queryByTestId(landingTestid.newsCount)).toBeNull();
-    }, SLOW);
-    expect(screen.queryByTestId(newsTestid.claimAll)).toBeNull();
-    expect(screen.queryByTestId(newsTestid.claim)).toBeNull();
-  });
-
-  it("R2982000 announceWallet fires once for a run that paid Jlore", async () => {
-    vi.mocked(announceWallet).mockClear();
-    signIn();
-    const list = [
-      entry(),
-      entry({
-        id: "patch-0-5-9",
-        version: "0.5.9",
-        title: "Patch 0.5.9",
-        summary: "Older news.",
-        reward: { kind: "jlore", amount: 50 },
-      }),
-    ];
-    serve(list, { claim: keeping(list) });
+    serve([ALERT, OLDER]);
     render(<LandingRoute />);
 
     expect(await screen.findByTestId(landingTestid.newsCount, undefined, SLOW)).toHaveTextContent("2");
@@ -578,8 +494,19 @@ describe("R2982000 Claim all", () => {
     await waitFor(() => {
       expect(screen.queryByTestId(landingTestid.newsCount)).toBeNull();
     }, SLOW);
-    expect(announceWallet).toHaveBeenCalledTimes(1);
+    expect(announceWallet).not.toHaveBeenCalled();
   });
+});
+
+describe("R2982000 Claim all", () => {
+  /** The server keeps every claim it has landed, so each answer builds on the last. */
+  function keeping(all: readonly NewsEntry[]): (id: string) => Reply {
+    const done = new Set<string>();
+    return (id) => {
+      done.add(id);
+      return { status: 200, body: { news: all.map((one) => (done.has(one.id) ? { ...one, claimed: true } : one)) } };
+    };
+  }
 
   it("R2982000 a single claim still announces once, and a non-Jlore claim not at all", async () => {
     vi.mocked(announceWallet).mockClear();
