@@ -153,7 +153,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Deleting your account or getting a copy",
       "<p>You can delete your account yourself: sign in, open your Account page, and choose " +
         "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
-        "custom cards, your tutorial progress, your player statistics, the records of how you played, and " +
+        "tutorial progress, your player statistics, the records of how you played, and " +
         "the record of your age check and of the terms you agreed to. Finished matches and their results stay in " +
         "the other player&rsquo;s history, with your account removed from them, and so does a finished " +
         "co-op game in your teammate&rsquo;s, its moves and its result included. You can&rsquo;t delete " +
@@ -198,7 +198,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "<ul><li>Your username, which other players see.</li>" +
         "<li>Your chat messages, which the friend you send them to sees, and the reason you give when you " +
         "report one, which only we see.</li>" +
-        "<li>Your custom cards (their names, text and scripts) and the names of your decks, which only you see.</li>" +
+        "<li>The names of your decks, which only you see.</li>" +
         "<li>The replays you share, which the friends you share them with see.</li></ul>" +
         "<p>Don&rsquo;t submit anything that infringes someone else&rsquo;s rights. We remove content that " +
         "infringes, and close the accounts of players who repeatedly infringe; see Copyright for how to report it.</p>",

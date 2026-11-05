@@ -51,6 +51,7 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
   "2026-10-31/2026-10-31": "5ac8a025c4405ca53208415c1aa5af89e7c6dceae143d442c3e36d5d5b3fc0a3",
   "2026-10-31/2026-11-01": "b21cb121e8ed21750bf3a141392ed8f0238f8cb657b05833d802e55094387dd2",
+  "2026-11-05/2026-11-05": "4e9706b5c12ecb1e327e8545d3369560ef6db2e3c03c69b86b3610e726cf62c4",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -90,7 +91,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-11-01");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-11-05");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
@@ -245,7 +246,7 @@ describe("the privacy policy", () => {
     expect(section(/deleting your account/i)).toMatch(/your tutorial progress, your player statistics, the records of how you played/);
   });
 
-  it("#970 names custom cards and the presence heartbeat, and deletes the custom cards with the account", () => {
+  it("#970 names the presence heartbeat, and says nothing of custom cards, which are gone", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
     const section = (name: RegExp): string =>
@@ -255,18 +256,15 @@ describe("the privacy policy", () => {
         (item) => item.textContent ?? "",
       );
 
-    const custom = items(/what we collect/i).find((item) => item.startsWith("Your custom cards")) ?? "";
-    expect(custom).toMatch(/name, type, cost, rarity, stats, keywords, text and numbers/);
-    expect(custom).toMatch(/its script/);
-    expect(custom).toMatch(/Only you can see them\./);
+    expect(page.textContent).not.toMatch(/custom card/i);
     // R970002: every signed-in session beats, once its account has agreed; not only Play together's.
     const online = items(/what we collect/i).filter((item) => /told us you were online/.test(item));
     expect(online).toHaveLength(1);
     expect(online[0]).toMatch(/^While you are signed in, .* once you have agreed\s+to the Terms and this policy\./u);
     expect(items(/what we collect/i).find((item) => item.startsWith("If you use Play together"))).not.toMatch(/online/);
-    expect(section(/why we collect it/i)).toMatch(/custom cards/);
-    expect(section(/how long we keep it/i)).toMatch(/your custom cards, your age check/);
-    expect(section(/deleting your account/i)).toMatch(/trios and cards, your custom cards, your\s+tutorial progress/);
+    expect(section(/why we collect it/i)).toMatch(/To save your decks and tutorial progress so they follow your account\./);
+    expect(section(/how long we keep it/i)).toMatch(/your account and game data, your age check/i);
+    expect(section(/deleting your account/i)).toMatch(/trios and cards, your\s+tutorial progress/);
   });
 
   it("R632 says the sign-in session lasts only as long as the tab, not as a stored sign-in", () => {
@@ -362,7 +360,7 @@ describe("the legal pages", () => {
     expect(items).toEqual([
       "Your username, which other players see.",
       expect.stringMatching(/^Your chat messages, which the friend you send them to sees, and the reason you give when you\s+report one, which only we see\.$/u),
-      "Your custom cards (their names, text and scripts) and the names of your decks, which only you see.",
+      "The names of your decks, which only you see.",
       "The replays you share, which the friends you share them with see.",
     ]);
     expect(within(submitted).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);

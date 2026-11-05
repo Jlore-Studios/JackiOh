@@ -5,7 +5,7 @@
 //!
 //! R1372, R924000: an All Random rematch deals fresh decks on each seat's latest "More cards from"
 //! pick (`leanSet`, or R1372's `leanNewest` from an older client); a Best-of-1 one replays its frozen
-//! decks, which R915005 asks the validator's L7 first. R1638000: a match on another catalog version
+//! decks. R1638000: a match on another catalog version
 //! is `409 update_required` before any offer is recorded (§9.4). R2685000: an offer counts only
 //! within `REMATCH_OFFER_TTL_MS` of the match's `finished_at`, as a co-op Play again's (R1398000).
 //! Offers live in memory, one map per `App`: a restart drops them and both clients re-offer.

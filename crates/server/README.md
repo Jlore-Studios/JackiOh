@@ -1,7 +1,7 @@
 # `jackioh-server`
 
 The authority for everything that is not presentation: identity, usernames (R1432–R1436) and the
-invite gate, the collection ledger, saved decks and trios, custom cards (R915008), an active account's tutorial progress
+invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
 (R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
 Conquest series, the ranked ladder and the ladder bots it plays itself when the queue is empty
 (R1453, R1454, R1451, R1452), and the match itself: one actor per match holding the
@@ -220,8 +220,6 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET`, `POST` | `/api/decks/:id/versions`, `/api/decks/:id/versions/:versionId/restore` | active | the caller's deck's earlier versions, newest first, `{ versions }`, each `{ id, name, cards, savedAt }`, which every save keeps (R2100000); a restore, `{ catalogVersion }`, saves one's name and cards as the deck's, checked as a `PUT` is, and as a new version, answering `{ deck, versions }`; another account's deck is 404 `not_found`, as a missing one |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
-| `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
-| `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is canceled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
@@ -245,7 +243,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the newest `SHARED_REPLAYS_LIST_MAX` replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
 | `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002; `already_in_match` for a guest in a game and `conflict` for a host in one, R1065000, the ledger's answer to a join racing another door, and 503 `unavailable` while a newer server holds the seats, R1523000); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
 | `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§13.9) |
-| `POST`, `GET` | `/api/duos/matches/:matchId/again` | active | Play again after a finished co-op match: either human seat's offer, and the game both offers make with the same seats and difficulty under a fresh seed (a saved deck replayed, a dealt one dealt afresh on its latest pick; 404 to a non-seat and an unknown id, 409 while it is live, an offer past `REMATCH_OFFER_TTL_MS` lapsing silently, 409 `update_required` on a stale catalog, 422 `loadout_invalid` on a custom card, `already_in_match` for a seat in another game, an unknown code's 404 to a blocked pair), and what each seat offered with whether the teammate is still here (R2092000) |
+| `POST`, `GET` | `/api/duos/matches/:matchId/again` | active | Play again after a finished co-op match: either human seat's offer, and the game both offers make with the same seats and difficulty under a fresh seed (a saved deck replayed, a dealt one dealt afresh on its latest pick; 404 to a non-seat and an unknown id, 409 while it is live, an offer past `REMATCH_OFFER_TTL_MS` lapsing silently, 409 `update_required` on a stale catalog, `already_in_match` for a seat in another game, an unknown code's 404 to a blocked pair), and what each seat offered with whether the teammate is still here (R2092000) |
 | `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
 | `GET` | `/readyz` | none | readiness, what the Worker's daily cron requests to wake the server: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
 
@@ -275,25 +273,11 @@ once; the next ones wait their turn in the process, in the order sent, holding n
 burst never holds the pool's connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
 `rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
 
-**Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
-`CUSTOM_CARDS_PER_ACCOUNT` (50) custom cards in `public.custom_cards`, whose row-level security lets
-only the owner read its rows; no client role writes one, and the server writes through
-`app.create_custom_card` (the cap, counted under the profile lock, against the smaller of its own
-number and `app.settings.max_custom_cards`) and `app.update_custom_card` (compare-and-set on the
-version). Each card is the engine's `CustomCard`: `POST` takes `{ frame, source, builder? }` and
-mints the id (`custom-` and 32 lowercase hex digits) at version 1; `PUT` takes `{ version, frame,
-source, builder? }`, `version` the one it replaces, and answers the card at that version and one, or
-409 `conflict` with `details.version` when another save came first; a refusal of the engine's
-validator (`custom::validate_custom_card`, R915001) is a 400 whose message is the first issue's and
-whose `details.issues` are its `CustomIssue`s; the cap is a 409 with `details.limit`; another
-profile's card answers as a missing one (404). A body is read under `API_MAX_BODY_BYTES` like every
-other, which a card at every limit fits (the router reads a body before it picks the handler, so
-there is no cap of the routes' own). **The server never compiles or runs a script**: it does not
-link `jackioh-luau` (#902 V4), and a source is text it stores; the creator checks a script with the
-browser's Luau module before it saves it. A deck naming a custom id saves as a draft (D3, R250), and
-every queue, room and rematch path refuses it with the validator's L7 (R915005): the queue and the
-rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen decks, through
-`decks::assert_no_custom_cards`.
+**Custom cards are gone** (#2956, migration 0082). `/api/custom-cards` answers as any unknown route does,
+and the store has no custom-card methods. Players' saved custom cards were deleted with their table, with no
+export. The server never ran a game that used one (R915005: they played in practice only) and never stored one,
+so no log it folds names a custom card; a practice claim whose deck names a custom id does not fold
+(`DoesNotFold`).
 
 ## WebSocket surface
 
@@ -1164,6 +1148,12 @@ account and a client reading only its own and writing none. Current state with n
 game's pay updates its plays and level (`economy::proficiency::add_plays`), a stamp pick its stamp, and a
 dev fill every collectable card's level. Kept apart from `card_cosmetic_picks`. `tests/sql/47_card_proficiency.sql`
 checks the table, its checks, policy and grants, the stamp held to the level, the cascade and the re-apply.
+
+Migration 0082 drops custom cards (#2956): the table they were kept in, with its policy, checks, index and
+grants, the two functions that wrote it (`app.create_custom_card`, `app.update_custom_card`) and the cap's row in
+`app.settings` (`max_custom_cards`). `0037_custom_cards.sql` stays, because a migration is history.
+`tests/sql/48_drop_custom_cards.sql` checks that none is left, that the file deletes the cards a database
+held (0037 re-applied for the test) and keeps their owner, and the re-apply.
 
 ## Tests
 

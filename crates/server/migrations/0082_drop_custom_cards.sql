@@ -2,7 +2,7 @@
 -- Migration 0082: custom cards are removed, so the custom_cards table goes
 -- (SPEC §12.9; issues #3095 and #2956)
 -- ============================================================================
--- Custom cards (R915008; issue #918) are removed from the game (#2956): the
+-- Custom cards (issue #918) are removed from the game (#2956): the
 -- card creator went in #3094 and `/api/custom-cards` in this change, so no
 -- code reads or writes what 0037 added. Players' saved custom cards are deleted
 -- with no export (#2956, "Decided"), and a stored game that used one is no

@@ -1,6 +1,6 @@
 //! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
 //! Ensures client reads server constants (CLAUDE.md rule 9).
-//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R915008, R2101000, R2990001, R2990002.
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002.
 
 use serde_json::{Value, json};
 

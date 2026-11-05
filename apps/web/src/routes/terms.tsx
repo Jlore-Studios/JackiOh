@@ -25,7 +25,7 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-31";
+export const TERMS_LAST_UPDATED = "2026-11-05";
 
 export default function TermsRoute(): ReactElement {
   const locale = useLocale();
@@ -99,7 +99,7 @@ export default function TermsRoute(): ReactElement {
               Your chat messages, which the friend you send them to sees, and the reason you give when you
               report one, which only we see.
             </li>
-            <li>Your custom cards (their names, text and scripts) and the names of your decks, which only you see.</li>
+            <li>The names of your decks, which only you see.</li>
             <li>The replays you share, which the friends you share them with see.</li>
           </ul>
           <p>
