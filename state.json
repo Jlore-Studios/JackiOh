@@ -32559,7 +32559,9 @@
           "provider": "claude-8"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-05T22:59:38Z",
         "every": 5,
+        "findings": 0,
         "head": "975bc92d0cd918383167a37f66fdcaccde505ffb",
         "issue": 3196,
         "merged_at": "2026-11-05T22:37:05Z",
@@ -32572,12 +32574,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:b335ba8d-1793918432",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42123574540",
         "sha": "80115f257d6a38835fa8b8d158b15c7dd4200567",
         "started_at": "2026-11-05T22:41:09Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the component specs for R2803000's shift ghosts and phone frame budget hold up on a loaded runner",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 86
