@@ -7,19 +7,24 @@
 //! (`c098_heroic_power.rs`) cover the powers that draw from the catalog's pools (Witness Value,
 //! Stitching, KY Brainstorm, Pluck, Terminus Tricks, Cat Cafe).
 //!
-//! `hp-heroic` below is this file's stand-in for #98, wired as the real card is. Its catalog entry
-//! declares the `shot` number Steady Shot reads (R754).
+//! `hp-heroic` below is this file's stand-in for #98, wired as the real card is: since issue #3134 its
+//! Cry Discovers its power and its arrival clause rolls one only for a copy on the field (R3134002). Its
+//! catalog entry declares the `shot` number Steady Shot reads (R754). The M1/M3 fixture card
+//! (`fixtures::scripts::heroic_power`) keeps the old wiring, a roll at the start of the game, which is
+//! what `setup.rs` proves of the engine's start-of-game clause.
 
 use serde::Serialize;
 
-use jackioh_engine::effects::bounce;
 use jackioh_engine::effects::tune::TuneDirection;
+use jackioh_engine::effects::{bounce, summon};
 use jackioh_engine::subsystems::activate::uses_this_turn;
 use jackioh_engine::subsystems::hero_power::{
-    HERO_POWER_NAMES, HERO_POWERS, POWER_KEY, POWER_RESUME, STEADY_SHOT_PARAM, ensure_power, hero_power,
-    power_abilities, power_ability_of, power_by_name, power_of, roll_power, used_this_turn,
+    DISCOVER_POWER_PROMPT, HERO_POWER_NAMES, HERO_POWERS, POWER_KEY, POWER_RESUME, STEADY_SHOT_PARAM,
+    discover_power, ensure_power, hero_power, power_abilities, power_ability_of, power_by_name, power_of,
+    roll_power_on_field, used_this_turn,
 };
 use jackioh_engine::testkit::*;
+use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
@@ -128,7 +133,8 @@ fn heroic_script(radiant: bool) -> Script {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        start_of_game: Some(hook(|_ctx| vec![roll_power()])),
+        cry: Some(hook(|_ctx| vec![discover_power()])),
+        start_of_game: Some(hook(|_ctx| vec![roll_power_on_field()])),
         activations: power_abilities(radiant),
         resume,
         ..Script::default()
@@ -197,6 +203,40 @@ fn use_power(state: &GameState, card: &CardInstance, targets: Option<Value>) -> 
 /// Keep the turn from auto-ending (§2.5) under the assertions: a second card p1 could still play.
 fn keep_turn(state: &mut GameState) {
     in_hand(state, &plain.id, P1, 1);
+}
+
+/// The powers the open prompt offers, in the order offered.
+fn offered(state: &GameState) -> Vec<String> {
+    let pending = state.pending.as_ref().expect("a prompt is open");
+    json_of(&pending.options)
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|option| option["selection"]["option"].as_str().map(str::to_string))
+        .collect()
+}
+
+/// The open prompt answered with the `mode` option `option`, as the one it asks.
+fn answer_mode(state: &GameState, option: &str) -> ReduceResult {
+    let pending = state.pending.as_ref().expect("a prompt is open");
+    act_result(
+        state,
+        json!({
+            "type": "answer",
+            "choiceId": pending.id,
+            "selection": [{ "pick": "mode", "option": option }],
+            "playerId": pending.player_id,
+        }),
+    )
+}
+
+/// `card` played from p1's hand into the backrow, its Cry's prompt open.
+fn play_heroic(state: &GameState, card: &CardInstance) -> ReduceResult {
+    act_result(
+        state,
+        json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+    )
 }
 
 fn on_field_now(state: &GameState, id: &str) -> CardInstance {
@@ -329,18 +369,15 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
     }
 
     #[test]
-    fn r752_the_card_costs_0_and_playing_it_uses_nothing_its_power_is_then_one_activation_a_turn() {
+    fn r752_the_card_costs_0_and_playing_it_uses_nothing_but_its_cry_its_power_is_then_one_activation_a_turn()
+    {
         let mut state = game("r752-play");
         let held = in_hand(&mut state, &heroic().id, P1, 1);
         let card = held.first().expect("a Heroic Power in hand");
-        let card = set_memory(&mut state, &card.id, POWER_KEY, json!("burn"));
         keep_turn(&mut state);
-        assert_eq!(effective_cost(&state, &card, CostOptions::default()), 0);
+        assert_eq!(effective_cost(&state, card, CostOptions::default()), 0);
 
-        let played = act_result(
-            &state,
-            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
-        );
+        let played = play_heroic(&state, card);
         assert_eq!(played.error, None);
         assert_eq!(
             events_json(&played.events, GameEventType::CardPlayed)
@@ -348,16 +385,26 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
                 .map(|event| event["costPaid"].clone()),
             Some(json!(0))
         );
-        assert_eq!(played.state.players.p1.mana.current, 4);
-        assert_eq!(played.state.players.p2.hero.health, HERO_HEALTH);
-        assert!(events_of_type(&played.events, GameEventType::Activated).is_empty());
+        // R3134002: the Cry asks, and the answer is the power.
+        let picked = offered(&played.state).remove(0);
+        let power = power_by_name(&picked).expect("an offered power");
+        let answered = answer_mode(&played.state, &picked);
+        assert_eq!(answered.error, None);
+        assert_eq!(answered.state.players.p1.mana.current, 4);
+        assert_eq!(answered.state.players.p2.hero.health, HERO_HEALTH);
+        assert!(events_of_type(&answered.events, GameEventType::Activated).is_empty());
 
-        let on_field = on_field_now(&played.state, &card.id);
-        assert!(!used_this_turn(&played.state, &on_field));
-        let shot = use_power(&played.state, &on_field, None);
-        assert_eq!(shot.error, None);
-        assert_eq!(shot.state.players.p2.hero.health, HERO_HEALTH - 2);
-        assert_eq!(shot.state.players.p1.mana.current, 3);
+        let on_field = on_field_now(&answered.state, &card.id);
+        assert_eq!(on_field.memory.get(POWER_KEY), Some(&json!(picked)));
+        assert!(!used_this_turn(&answered.state, &on_field));
+        assert!(lists_activation_of(&answered.state, &on_field));
+        let used = use_power(&answered.state, &on_field, None);
+        // A power that aims (Ping) names its target with the activation, so it is refused bare here.
+        if power.targets.is_none() {
+            assert_eq!(used.error, None);
+            assert_eq!(used.state.players.p1.mana.current, 4 - power.x);
+            assert!(used_this_turn(&used.state, &on_field_now(&used.state, &card.id)));
+        }
     }
 
     #[test]
@@ -752,44 +799,294 @@ mod heroic_power_the_powers_r753_r758 {
     }
 }
 
-// The roll (R43, R78, R151).
+// The Cry that Discovers the power, and the roll that remains (R43, R78, R151, R3134002).
+
+mod heroic_power_cry_discovers_its_power_r3134002 {
+    use super::*;
+
+    /// p1 plays a Heroic Power from the hand under `seed`, its prompt open.
+    fn played(seed: &str, radiant: bool) -> (GameState, CardInstance) {
+        let mut state = game(seed);
+        let card = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
+        if radiant {
+            find_instance_mut(&mut state, &card.id).expect("the card").radiant = true;
+        }
+        keep_turn(&mut state);
+        let result = play_heroic(&state, &card);
+        assert_eq!(result.error, None);
+        (result.state, card)
+    }
+
+    #[test]
+    fn r3134002_the_cry_opens_a_choose_one_for_its_controller_of_3_different_powers() {
+        for n in 0..24 {
+            let (state, _) = played(&format!("r3134002-offer-{n}"), false);
+            let pending = state.pending.as_ref().expect("the Cry's prompt");
+            assert_eq!(pending.player_id, P1);
+            assert_eq!(json_of(pending.kind), json!("mode"));
+            assert_eq!(pending.prompt, DISCOVER_POWER_PROMPT);
+            let offer = offered(&state);
+            assert_eq!(offer.len() as i32, DISCOVER_OPTIONS);
+            let distinct: IndexSet<&String> = offer.iter().collect();
+            assert_eq!(distinct.len(), offer.len(), "seed {n}: {offer:?}");
+            let names = json_of(HERO_POWER_NAMES);
+            for name in &offer {
+                assert!(
+                    names.as_array().is_some_and(|names| names.contains(&json!(name))),
+                    "{name}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r3134002_the_offer_is_drawn_from_the_match_rng_so_the_same_seed_offers_the_same_3() {
+        let first = offered(&played("r3134002-seeded", false).0);
+        assert_eq!(offered(&played("r3134002-seeded", false).0), first);
+        let others: IndexSet<Vec<String>> = (0..12)
+            .map(|n| offered(&played(&format!("r3134002-seeded-{n}"), false).0))
+            .collect();
+        assert!(others.len() > 1, "every seed offered {first:?}");
+    }
+
+    #[test]
+    fn r3134002_every_one_of_the_13_can_be_offered() {
+        let mut seen: IndexSet<String> = IndexSet::new();
+        for n in 0..60 {
+            seen.extend(offered(&played(&format!("r3134002-all-{n}"), false).0));
+        }
+        let all: IndexSet<String> = HERO_POWER_NAMES.iter().map(name_of).collect();
+        assert_eq!(
+            seen.len(),
+            all.len(),
+            "missing {:?}",
+            all.difference(&seen).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn r3134002_the_options_carry_the_stored_names_labeled_by_title_and_the_radiant_says_tank_up() {
+        let (state, _) = played("r3134002-labels", false);
+        let pending = state.pending.as_ref().expect("the prompt");
+        for option in json_of(&pending.options).as_array().expect("options") {
+            let name = option["selection"]["option"].as_str().expect("a name");
+            assert_eq!(option["label"], power_by_name(name).expect("a power").title);
+        }
+        for n in 0..40 {
+            let (state, _) = played(&format!("r3134002-tank-{n}"), true);
+            for option in json_of(&state.pending.as_ref().expect("the prompt").options)
+                .as_array()
+                .expect("options")
+            {
+                let name = option["selection"]["option"].as_str().expect("a name");
+                assert_eq!(
+                    option["label"],
+                    power_by_name(name).expect("a power").radiant_title
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r3134002_the_answer_is_written_to_memory_power_and_is_the_cards_power_to_activate() {
+        let (state, card) = played("r3134002-answer", false);
+        assert!(power_of(&on_field_now(&state, &card.id)).is_none());
+        assert!(!lists_activation_of(&state, &on_field_now(&state, &card.id)));
+        for name in offered(&state) {
+            let answered = answer_mode(&state, &name);
+            assert_eq!(answered.error, None);
+            assert!(answered.state.pending.is_none());
+            let now = on_field_now(&answered.state, &card.id);
+            assert_eq!(now.memory.get(POWER_KEY), Some(&json!(name)));
+            assert_eq!(
+                power_of(&now).map(|power| power.name.to_string()),
+                Some(name.clone())
+            );
+            assert!(lists_activation_of(&answered.state, &now));
+        }
+    }
+
+    #[test]
+    fn r3134002_a_power_outside_the_offer_is_refused_and_the_prompt_stays_open() {
+        let (state, _) = played("r3134002-refused", false);
+        let offer = offered(&state);
+        let outside = HERO_POWER_NAMES
+            .iter()
+            .map(name_of)
+            .find(|name| !offer.contains(name))
+            .expect("a power not offered");
+        let refused = answer_mode(&state, &outside);
+        assert!(refused.error.is_some());
+        assert!(state.pending.is_some());
+    }
+
+    #[test]
+    fn r3134002_the_pick_replaces_any_power_the_card_held() {
+        let mut state = game("r3134002-replace");
+        let card = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
+        set_memory(&mut state, &card.id, POWER_KEY, json!("tricks"));
+        keep_turn(&mut state);
+        let played = play_heroic(&state, &card).state;
+        let picked = offered(&played).remove(0);
+        let answered = answer_mode(&played, &picked).state;
+        assert_eq!(
+            on_field_now(&answered, &card.id).memory.get(POWER_KEY),
+            Some(&json!(picked))
+        );
+    }
+
+    #[test]
+    fn r311_r97_the_other_seat_reads_only_that_a_prompt_is_open_and_not_the_powers_offered() {
+        let (state, _) = played("r3134002-view", false);
+        let offer = offered(&state);
+        let seen = json_of(view_for(&state, P2));
+        assert_eq!(seen["pending"]["forYou"], false);
+        assert_eq!(seen["pending"]["pendingFor"], "p1");
+        assert!(seen["pending"].get("options").is_none());
+        let text = serde_json::to_string(&seen).expect("a view serializes");
+        for name in &offer {
+            assert!(
+                !text.contains(&format!("\"option\":\"{name}\"")),
+                "{name} reached p2"
+            );
+        }
+        let own = json_of(view_for(&state, P1));
+        assert_eq!(
+            own["pending"]["options"].as_array().map(Vec::len),
+            Some(offer.len())
+        );
+    }
+}
+
+// The arrival roll that remains (R43, R78, R151, R3134002).
 
 mod heroic_power_rolling_the_power_r43_r78 {
     use super::*;
 
+    /// A Heroic Power summoned onto p1's field by an effect, the card as it now stands.
+    fn summoned(state: &mut GameState, radiant: bool) -> CardInstance {
+        let mut sink = sink_for(state);
+        {
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            apply_effects(
+                &[summon(json_as(
+                    json!({ "defId": heroic().id, "radiant": radiant }),
+                ))],
+                &mut ctx,
+            );
+        }
+        sink.state
+            .players
+            .p1
+            .backrow
+            .iter()
+            .flatten()
+            .find(|card| card.def_id == heroic().id)
+            .cloned()
+            .expect("the summoned Heroic Power")
+    }
+
     #[test]
-    fn r43_rolls_a_power_at_start_of_game_for_every_copy_in_either_players_hand_or_library() {
-        let mut state = game("r43-roll-setup");
+    fn r3134002_setup_rolls_nothing_for_a_copy_in_either_hand_or_library() {
+        let mut state = game("r3134002-setup");
         let p1_hand = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
         let p2_hand = in_hand(&mut state, &heroic().id, P2, 1).remove(0);
         set_library(&mut state, P1, &[heroic().id, plain.id.clone()]);
         set_library(&mut state, P2, &[plain.id.clone(), heroic().id]);
-        let p1_library = state
-            .players
-            .p1
-            .library
-            .iter()
-            .find(|card| card.def_id == heroic().id)
-            .cloned()
-            .expect("p1's library copy");
-        let p2_library = state
-            .players
-            .p2
-            .library
-            .iter()
-            .find(|card| card.def_id == heroic().id)
-            .cloned()
-            .expect("p2's library copy");
+        let in_library = |state: &GameState, player: PlayerId| {
+            state.players[player]
+                .library
+                .iter()
+                .find(|card| card.def_id == heroic().id)
+                .cloned()
+                .expect("a library copy")
+        };
+        let cards = [p1_hand, p2_hand, in_library(&state, P1), in_library(&state, P2)];
 
-        let cards = [p1_hand, p2_hand, p1_library, p2_library];
-        for card in &cards {
-            assert!(card.memory.get(POWER_KEY).is_none());
-        }
         finish_setup(&mut sink_for(&mut state));
+
         for card in &cards {
             let now = on_field_now(&state, &card.id);
-            assert!(is_power_name(now.memory.get(POWER_KEY)));
-            assert!(power_of(&now).is_some());
+            assert!(now.memory.get(POWER_KEY).is_none(), "{:?}", now.zone);
+            assert!(power_of(&now).is_none());
+        }
+    }
+
+    #[test]
+    fn r3134002_a_game_begun_with_a_heroic_power_in_the_deck_has_no_power_until_it_is_played() {
+        game("r3134002-begin");
+        let mut deck = vec![heroic().id];
+        deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
+        let begun = begin_game(&create_game(&CreateGameArgs {
+            seed: "r3134002-begin".into(),
+            decks: (deck, vanilla_deck(DECK_SIZE, 21)),
+            ..Default::default()
+        }))
+        .state;
+        let keep: Vec<String> = begun.players.p1.hand.iter().map(|card| card.id.clone()).collect();
+        let mut playing = act_result(
+            &begun,
+            json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
+        )
+        .state;
+        let keep: Vec<String> = playing
+            .players
+            .p2
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        playing = act_result(
+            &playing,
+            json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
+        )
+        .state;
+        let card = playing
+            .players
+            .p1
+            .hand
+            .iter()
+            .chain(playing.players.p1.library.iter())
+            .find(|entry| entry.def_id == heroic().id)
+            .cloned()
+            .expect("the Heroic Power");
+        assert!(card.memory.get(POWER_KEY).is_none());
+        assert_eq!(effective_cost(&playing, &card, CostOptions::default()), 0);
+    }
+
+    #[test]
+    fn r151_r3134002_a_copy_that_reaches_the_field_with_no_cry_rolls_a_power_from_the_match_rng() {
+        let rolled = |seed: &str| {
+            let mut state = game(seed);
+            let card = summoned(&mut state, false);
+            assert!(state.pending.is_none());
+            find_instance(&state, &card.id).and_then(|now| now.memory.get(POWER_KEY).cloned())
+        };
+        let first = rolled("r43-seeded");
+        assert!(is_power_name(first.as_ref()));
+        assert_eq!(rolled("r43-seeded"), first);
+        let powers: IndexSet<String> = (0..12)
+            .filter_map(|n| rolled(&format!("r43-seeded-{n}")))
+            .map(|power| power.to_string())
+            .collect();
+        assert!(powers.len() > 1);
+    }
+
+    #[test]
+    fn r151_r3134002_a_summoned_copy_of_either_face_has_its_power_to_activate() {
+        for radiant in [false, true] {
+            let mut state = game("r3134002-summon");
+            let card = summoned(&mut state, radiant);
+            assert_eq!(card.radiant, radiant);
+            assert!(power_of(&on_field_now(&state, &card.id)).is_some());
+            assert!(power_ability_of(&state, &on_field_now(&state, &card.id)).is_some());
         }
     }
 
@@ -797,27 +1094,13 @@ mod heroic_power_rolling_the_power_r43_r78 {
     fn r43_the_roll_comes_from_the_match_rng_so_the_same_seed_rolls_the_same_power() {
         fn rolled(seed: &str) -> Option<Value> {
             let mut state = game(seed);
-            let card = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
+            let card = in_hand(&mut state, &heroic_power().id, P1, 1).remove(0);
             finish_setup(&mut sink_for(&mut state));
             find_instance(&state, &card.id).and_then(|now| now.memory.get(POWER_KEY).cloned())
         }
         let first = rolled("r43-seeded");
         assert!(is_power_name(first.as_ref()));
         assert_eq!(rolled("r43-seeded"), first);
-
-        let mut state = game("r43-two-copies");
-        let cards = in_hand(&mut state, &heroic().id, P1, 6);
-        finish_setup(&mut sink_for(&mut state));
-        let powers: IndexSet<String> = cards
-            .iter()
-            .map(|card| {
-                find_instance(&state, &card.id)
-                    .and_then(|now| now.memory.get(POWER_KEY))
-                    .map(Value::to_string)
-                    .unwrap_or_default()
-            })
-            .collect();
-        assert!(powers.len() > 1);
     }
 
     #[test]
@@ -852,8 +1135,30 @@ mod heroic_power_rolling_the_power_r43_r78 {
     }
 
     #[test]
-    fn r43_a_bounced_heroic_power_arrives_in_hand_with_a_power_again_r78_r151() {
-        let mut state = game("r43-bounced");
+    fn r3134002_roll_power_on_field_rolls_for_a_card_on_the_field_and_nothing_in_a_hand() {
+        let mut state = game("r3134002-field-only");
+        let in_the_hand = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
+        let mut sink = sink_for(&mut state);
+        {
+            let mut ctx = make_context(
+                &mut sink,
+                Some(&in_the_hand),
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            apply_effects(&[roll_power_on_field()], &mut ctx);
+        }
+        assert!(
+            find_instance(sink.state, &in_the_hand.id)
+                .is_some_and(|card| card.memory.get(POWER_KEY).is_none())
+        );
+    }
+
+    #[test]
+    fn r3134002_a_bounced_heroic_power_arrives_in_hand_with_no_power_and_asks_again_when_played_r78_r151() {
+        let mut state = game("r3134002-bounced");
         let card = powered(&mut state, "recruit", false, 1);
         let mut sink = sink_for(&mut state);
         {
@@ -879,49 +1184,12 @@ mod heroic_power_rolling_the_power_r43_r78 {
         );
         settle(&mut sink, SettleOptions::default());
         let now = on_field_now(sink.state, &card.id);
-        assert!(is_power_name(now.memory.get(POWER_KEY)));
+        assert!(now.memory.get(POWER_KEY).is_none());
         assert_eq!(effective_cost(sink.state, &now, CostOptions::default()), 0);
-    }
 
-    #[test]
-    fn r43_a_game_begun_with_a_heroic_power_in_the_deck_has_one_with_a_power_in_play_2_1() {
-        game("r43-begin");
-        let mut deck = vec![heroic().id];
-        deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
-        let begun = begin_game(&create_game(&CreateGameArgs {
-            seed: "r43-begin".into(),
-            decks: (deck, vanilla_deck(DECK_SIZE, 21)),
-            ..Default::default()
-        }))
-        .state;
-        let keep: Vec<String> = begun.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-        let mut playing = act_result(
-            &begun,
-            json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
-        )
-        .state;
-        let keep: Vec<String> = playing
-            .players
-            .p2
-            .hand
-            .iter()
-            .map(|card| card.id.clone())
-            .collect();
-        playing = act_result(
-            &playing,
-            json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
-        )
-        .state;
-        let card = playing
-            .players
-            .p1
-            .hand
-            .iter()
-            .chain(playing.players.p1.library.iter())
-            .find(|entry| entry.def_id == heroic().id)
-            .cloned()
-            .expect("the Heroic Power");
-        assert!(is_power_name(card.memory.get(POWER_KEY)));
-        assert_eq!(effective_cost(&playing, &card, CostOptions::default()), 0);
+        keep_turn(&mut state);
+        let replayed = play_heroic(&state, &on_field_now(&state, &card.id));
+        assert_eq!(replayed.error, None);
+        assert_eq!(offered(&replayed.state).len() as i32, DISCOVER_OPTIONS);
     }
 }

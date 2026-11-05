@@ -514,6 +514,39 @@ pub struct CatalogQueryArgs {
     /// lent by its Embiggened version or by an aura) is not printed, so no pool reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keywords: Option<Vec<KeywordKind>>,
+    /// R3134001: only cards whose base face has a Start of turn effect (`start`), an End of turn effect
+    /// (`end`) or either (`either`) (`has_turn_hook`): Meditative #9 Joint Filing's "a random card with a
+    /// Start of turn or an End of turn effect". Read off the registered script, as `tribute` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_hook: Option<TurnHookFilter>,
+}
+
+/// R3134001: which turn hook `CatalogQueryArgs.turn_hook` asks a card for.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum TurnHookFilter {
+    /// A Start of turn effect.
+    Start,
+    /// An End of turn effect.
+    End,
+    /// A Start of turn effect or an End of turn effect, or both.
+    Either,
+}
+
+/// R3134001: whether this definition's base face has the turn hook `which` names — its script's
+/// `start_of_turn` or `end_of_turn`, read off the registered script without state like
+/// `has_tribute_cost`. A card with no registered script has neither.
+fn has_turn_hook(def: &CardDef, which: TurnHookFilter) -> bool {
+    crate::scripts::registered_entry(&def.id).is_some_and(|entry| {
+        let start = entry.base.start_of_turn.is_some();
+        let end = entry.base.end_of_turn.is_some();
+        match which {
+            TurnHookFilter::Start => start,
+            TurnHookFilter::End => end,
+            TurnHookFilter::Either => start || end,
+        }
+    })
 }
 
 /// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
@@ -554,6 +587,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             every_set: None,
             deals_damage: None,
             keywords: None,
+            turn_hook: None,
         }
     }
 }
@@ -717,6 +751,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     }
     if let Some(wanted) = args.deals_damage
         && (def.deals_damage == Some(true)) != wanted
+    {
+        return false;
+    }
+    // R3134001: `turnHook` reads the registered base-face script.
+    if let Some(which) = args.turn_hook
+        && !has_turn_hook(def, which)
     {
         return false;
     }

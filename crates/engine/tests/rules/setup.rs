@@ -200,6 +200,9 @@ mod setup_m1_t5 {
         assert_eq!(second.players.p1.mana.max, 1);
     }
 
+    // R43, R3134002: these two prove the engine's start-of-game clause (§2.1 step 4) with the M1/M3
+    // fixture card, whose clause still rolls. The shipped #98 no longer rolls at setup, since its Cry
+    // Discovers its power; `hero_power.rs` proves that for the card's stand-in.
     #[test]
     fn r43_heroic_power_rolls_its_power_during_setup_deterministically_from_the_seed() {
         let mut deck = vec![heroic_power().id];

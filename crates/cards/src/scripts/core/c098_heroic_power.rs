@@ -1,29 +1,40 @@
-//! #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game", Quickdraw, Activate; R43, R103, R352, R752–R761).
-//! Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Start of game: Gain one of 13
-//! random powers, each 'Activate: Spend (X)'" (each power's words are its catalog line). Radiant: every
+//! #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game", Quickdraw, Activate; R43, R103, R352, R752–R761,
+//! R3134002). Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Cry: Discover one of
+//! 13 powers, each 'Activate: Spend (X)'" (each power's words are its catalog line). Radiant: every
 //! power's Radiant words, Armor Up named Tank Up (R757).
+//! Through v0.5.11o: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
 //! The thirteen powers live in `subsystems/hero_power.rs` (R43); `power_abilities` declares each as an
-//! Activate ability (R384, R752) present only while the card rolled it, its X the mana price. State is on
-//! the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
+//! Activate ability (R384, R752) present only while the card has that power, its X the mana price. State is
+//! on the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
 //! Discovers resume at `hero_power` (`POWER_RESUME`, §10.6). Indestructible is a §10.4 layer (R46),
-//! Quickdraw the flag `setup.rs` step 2 reads (§6.2), the arrival roll the engine's (R151); Ping's target
-//! comes with the activation (R81).
+//! Quickdraw the flag `setup.rs` step 2 reads (§6.2); Ping's target comes with the activation (R81).
+//!   - The Cry is `discover_power` (R3134002): 3 different powers of the 13 as a Choose one, the answer the
+//!     card's power for the game, named by its title on the face (Tank Up on the Radiant one).
+//!   - The arrival roll is `roll_power_on_field` (R151, R3134002): a copy that reaches the field with no
+//!     Cry (Summoned, Recruited, fused onto a card on the field, Reborn, Flickered) rolls one so it is never
+//!     dead; a copy in a hand or library rolls nothing.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-098";
 
 /// Both faces are the same wiring: `power_abilities(radiant)` builds each power on the face that is
-/// running (§5.2), and `has` keeps only the one the instance rolled.
-fn heroic_power(radiant: bool) -> Script {
+/// running (§5.2), and `has` keeps only the one the instance has. `discovers` is whether the Cry asks
+/// (R3134002), where v0.5.11o's rolled at the start of the game in every zone (R43).
+fn heroic_power(radiant: bool, discovers: bool) -> Script {
     Script {
         // §6.2: starts in the opening hand instead of a draw (setup step 2).
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        // R43: every copy in either hand or library rolls its power after the mulligan (§6.2).
-        start_of_game: Some(hook(|_ctx| vec![subsystems::roll_power()])),
+        // R3134002: "Cry: Discover one of 13 powers."
+        cry: discovers.then(|| hook(|_ctx| vec![subsystems::discover_power()])),
+        // R151, R3134002: the roll of a copy that reaches the field with no Cry to choose; R43, through
+        // v0.5.11o: every copy in either hand or library rolls its power after the mulligan (§6.2).
+        start_of_game: Some(hook(move |_ctx| {
+            vec![if discovers { subsystems::roll_power_on_field() } else { subsystems::roll_power() }]
+        })),
         activations: subsystems::power_abilities(radiant),
         resume: IndexMap::from([(subsystems::POWER_RESUME, hook(subsystems::hero_power::hero_power))]),
         ..Script::default()
@@ -32,14 +43,23 @@ fn heroic_power(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: heroic_power(false),
-        radiant: heroic_power(true),
+        base: heroic_power(false, true),
+        radiant: heroic_power(true, true),
     }
 }
 
-// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761).
-// `scenario()` skips §2.1, so `startOfGame` never runs; `crates/engine/tests/rules/hero_power.rs`
-// covers the roll.
+/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: no Cry, and every
+/// copy in either hand or library rolled its power at the start of the game (R43).
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: heroic_power(false, false),
+        radiant: heroic_power(true, false),
+    }
+}
+
+// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761,
+// R3134002). `scenario()` skips §2.1, so `startOfGame` never runs; `crates/engine/tests/rules/hero_power.rs`
+// covers the roll. The Cry's Discover and the arrival roll have their own module below.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,6 +84,10 @@ mod tests {
     const MENACE: &str = "core-019";
     /// #93.1 Combo-Fodder, a 0-cost Spell token: a card p2 can always play, so its turn never auto-ends.
     const FREE: &str = "core-093-1";
+    /// #5 Stockpile, a 1-cost Spell: draw 2, so a Heroic Power in the library reaches the hand.
+    const FILLER_DRAW: &str = "core-005";
+    /// Classic #60 Pile On, a 5-cost Spell: Recruit every permanent in your deck.
+    const PILE_ON: &str = "classic-060";
 
     use crate::js;
 
@@ -196,6 +220,49 @@ mod tests {
             .collect()
     }
 
+    /// A Heroic Power summoned onto p1's field by an effect (no Cry), the card as it stands.
+    fn summon_heroic(s: &mut Scenario, radiant_face: bool) -> CardInstance {
+        crate::run_as(
+            s,
+            jackioh_engine::effects::summon(json_as(json!({ "defId": HEROIC, "radiant": radiant_face }))),
+            P1,
+        );
+        must(s.backrow(P1, 1), "the summoned Heroic Power")
+    }
+
+    /// The labels a Discover prompt shows, in the order offered.
+    fn offered_labels(s: &Scenario) -> Vec<String> {
+        let pending = js(must(s.state().pending.as_ref(), "a prompt"));
+        pending["options"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(|option| option["label"].as_str().unwrap_or_default().to_string())
+            .collect()
+    }
+
+    /// p1 plays a Heroic Power from the hand under `seed`, and its Cry's prompt is open.
+    fn played(seed: &str, radiant_face: bool) -> (Scenario, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [{ "def": HEROIC, "radiant": radiant_face }, SPARE], "mana": 8 },
+            "p2": { "hand": [FREE], "library": [JAMMED, JAMMED, JAMMED] },
+        }));
+        let card = must(s.hand(P1).into_iter().next(), "the Heroic Power");
+        s.play(&card, json!({ "zone": 1 }));
+        (s, card)
+    }
+
+    /// The first seed `prefix-0`, … under which the Cry of a played Heroic Power offers the power `name`.
+    fn offering_seed_with(prefix: &str, name: &str, radiant_face: bool) -> String {
+        seed_where(prefix, |seed| offered_ids(&played(seed, radiant_face).0).iter().any(|offered| offered == name))
+    }
+
+    fn offering_seed(name: &str, radiant_face: bool) -> String {
+        offering_seed_with("hp-cry", name, radiant_face)
+    }
+
     /// The power's activations `legal_actions` lists for p1 now.
     fn listed(s: &Scenario, card: &CardInstance) -> Vec<Value> {
         legal_actions(s.state(), P1)
@@ -244,7 +311,8 @@ mod tests {
                     .collect();
                 assert!(kinds.contains(&json!("Indestructible")));
                 let text = face["text"].as_str().unwrap_or_default();
-                assert!(text.contains("Gain one of 13 random powers. Each is an Activate that spends its (X)."));
+                assert!(text.contains("Cry: Discover one of 13 powers. Each is an Activate that spends its (X)."));
+                assert!(!text.contains("Start of game"));
                 assert!(!text.contains("Playing it") && !text.contains("Once per turn, spend"));
             }
             assert_eq!(
@@ -292,10 +360,10 @@ mod tests {
         }
 
         #[test]
-        fn r752_both_faces_wire_the_roll_the_thirteen_abilities_and_the_discover_step_no_cost_hook_no_cry() {
+        fn r3134002_both_faces_wire_the_cry_the_arrival_roll_the_thirteen_abilities_and_the_discover_step_no_cost_hook() {
             crate::register_all();
             let scripts = script();
-            let wanted = sorted(vec!["staticFlags", "startOfGame", "activations", "resume"]);
+            let wanted = sorted(vec!["staticFlags", "cry", "startOfGame", "activations", "resume"]);
             assert_eq!(sorted(members(&scripts.base)), wanted);
             assert_eq!(sorted(members(&scripts.radiant)), wanted);
             let ids: Vec<String> = scripts.base.activations.iter().map(|decl| decl.id.clone()).collect();
@@ -324,6 +392,204 @@ mod tests {
         }
     }
 
+    // The Cry: Discover one of 13 powers (R3134002).
+
+    mod n98_heroic_power_cry_discovers_its_power_r3134002 {
+        use super::*;
+
+        fn names() -> Vec<String> {
+            subsystems::HERO_POWER_NAMES.iter().map(|name| name.to_string()).collect()
+        }
+
+        #[test]
+        fn r3134002_the_cry_opens_a_choose_one_of_3_different_powers_of_the_13() {
+            for n in 0..20 {
+                let (s, _) = played(&format!("hp-cry-3-{n}"), false);
+                let pending = must(s.state().pending.clone(), "the Cry's prompt");
+                assert_eq!(pending.player_id, P1);
+                assert_eq!(pending.kind, PromptKind::Mode);
+                let offered = offered_ids(&s);
+                assert_eq!(offered.len() as i32, DISCOVER_OPTIONS, "seed {n}");
+                let distinct: std::collections::BTreeSet<&String> = offered.iter().collect();
+                assert_eq!(distinct.len(), offered.len(), "seed {n}: {offered:?}");
+                assert!(offered.iter().all(|name| names().contains(name)), "seed {n}: {offered:?}");
+            }
+        }
+
+        #[test]
+        fn r3134002_each_of_the_13_powers_can_be_offered() {
+            let mut seen = std::collections::BTreeSet::new();
+            for n in 0..60 {
+                seen.extend(offered_ids(&played(&format!("hp-cry-all-{n}"), false).0));
+            }
+            assert_eq!(seen.into_iter().collect::<Vec<_>>(), {
+                let mut all = names();
+                all.sort();
+                all
+            });
+        }
+
+        #[test]
+        fn r3134002_the_offer_names_each_power_by_its_title_and_the_radiant_names_tank_up() {
+            let seed = offering_seed("armor", false);
+            let (s, _) = played(&seed, false);
+            let at = must(offered_ids(&s).iter().position(|name| name == "armor"), "armor offered");
+            assert_eq!(offered_labels(&s)[at], "Armor Up");
+
+            let seed = offering_seed("armor", true);
+            let (s, _) = played(&seed, true);
+            let at = must(offered_ids(&s).iter().position(|name| name == "armor"), "armor offered");
+            assert_eq!(offered_labels(&s)[at], "Tank Up");
+            for (name, label) in offered_ids(&s).iter().zip(offered_labels(&s)) {
+                let power = must(subsystems::power_by_name(name), "an offered power");
+                assert_eq!(label, power.radiant_title);
+            }
+        }
+
+        #[test]
+        fn r3134002_the_pick_is_the_cards_power_and_its_activate_is_offered_once_a_turn_for_its_x() {
+            let seed = offering_seed("rush", false);
+            let (mut s, card) = played(&seed, false);
+            assert!(s.backrow(P1, 1).is_some_and(|found| found.id == card.id));
+            // No power until it is chosen; nothing to activate meanwhile.
+            assert!(subsystems::power_of(&must(s.backrow(P1, 1), "the card")).is_none());
+            assert!(listed(&s, &card).is_empty());
+
+            s.answer(json!("rush"));
+
+            let now = must(s.backrow(P1, 1), "the card");
+            assert_eq!(now.memory.get(subsystems::POWER_KEY), Some(&json!("rush")));
+            assert_eq!(listed(&s, &now).len(), 1);
+            assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["name"], "rush");
+            assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["x"], 2);
+            s.expect_mana(P1, 8);
+            s.activate(&now, json!({}));
+            s.expect_mana(P1, 6);
+            assert_eq!(units_of(&s, P1).iter().filter(|unit| unit.def_id == RUSH_TOKEN).count(), 1);
+            assert!(listed(&s, &s.backrow(P1, 1).expect("the card")).is_empty());
+            s.expect_refused_with(|s| s.activate(&now, json!({})), "already been used this turn");
+        }
+
+        #[test]
+        fn r3134002_the_radiant_picks_a_radiant_power_tank_up_for_armor_up() {
+            let seed = offering_seed("armor", true);
+            let (mut s, card) = played(&seed, true);
+
+            s.answer(json!("armor"));
+
+            let now = must(s.backrow(P1, 1), "the card");
+            assert_eq!(now.memory.get(subsystems::POWER_KEY), Some(&json!("armor")));
+            assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["title"], "Tank Up");
+            s.activate(&card, json!({}));
+            assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 4);
+        }
+
+        #[test]
+        fn r3134002_a_power_the_card_held_is_replaced_by_the_pick() {
+            let seed = offering_seed("burn", false);
+            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [HEROIC, SPARE], "mana": 8 } }));
+            let card = must(s.hand(P1).into_iter().next(), "the Heroic Power");
+            set_power(&mut s, &card, "tricks");
+
+            s.play(&card, json!({ "zone": 1 }));
+            s.answer(json!("burn"));
+
+            assert_eq!(must(s.backrow(P1, 1), "the card").memory.get(subsystems::POWER_KEY), Some(&json!("burn")));
+        }
+
+        #[test]
+        fn r3134002_the_answer_must_be_one_of_the_3_offered() {
+            let seed = offering_seed("rush", false);
+            let (mut s, _) = played(&seed, false);
+            let absent = must(names().into_iter().find(|name| !offered_ids(&s).contains(name)), "an unoffered power");
+            s.expect_refused(|s| s.answer(json!(absent)));
+            assert!(s.state().pending.is_some());
+        }
+
+        #[test]
+        fn r311_r97_the_other_seat_sees_only_that_a_prompt_is_open_and_not_the_powers_offered() {
+            let (s, _) = played("hp-cry-view", false);
+            let offered = offered_ids(&s);
+            let seen = view_json(&s, P2);
+            assert_eq!(seen["pending"]["forYou"], false);
+            assert_eq!(seen["pending"]["pendingFor"], "p1");
+            assert!(seen["pending"].get("options").is_none());
+            assert!(seen["pending"].get("kind").is_none());
+            let events = serde_json::to_string(&seen["events"]).expect("events serialize");
+            for name in &offered {
+                assert!(!events.contains(&format!("\"{name}\"")), "{name} leaked into p2's events");
+            }
+            // The chooser reads the options.
+            let own = view_json(&s, P1);
+            assert_eq!(own["pending"]["forYou"], true);
+            assert_eq!(own["pending"]["options"].as_array().map(Vec::len), Some(3));
+        }
+
+        #[test]
+        fn r3134002_a_heroic_power_in_the_hand_has_no_power_to_show_until_it_is_played() {
+            // Through v0.5.11o a copy rolled in the hand as it arrived (R151); now playing it asks.
+            let mut s = scenario(json!({
+                "seed": "hp-hand",
+                "p1": { "hand": [FILLER_DRAW], "library": [HEROIC, SPARE], "mana": 8 },
+            }));
+            s.play(FILLER_DRAW, json!({}));
+            let drawn = must(s.hand(P1).into_iter().find(|card| card.def_id == HEROIC), "the Heroic Power drawn");
+            assert!(drawn.memory.get(subsystems::POWER_KEY).is_none());
+            assert!(view_json(&s, P1)["you"]["hand"]
+                .as_array()
+                .and_then(|hand| hand.iter().find(|card| card["defId"] == HEROIC))
+                .is_some_and(|card| card.get("power").is_none()));
+        }
+
+        #[test]
+        fn r151_r3134002_a_copy_that_arrives_on_the_field_with_no_cry_still_rolls_a_power() {
+            // Recruited out of the library by Pile On: no Cry, so the arrival roll gives it a power.
+            let mut s = scenario(json!({
+                "seed": "hp-recruit",
+                "p1": { "hand": [PILE_ON], "library": [{ "def": HEROIC }], "mana": 8 },
+            }));
+            s.play(PILE_ON, json!({}));
+            let now = must(s.backrow(P1, 1), "the Recruited Heroic Power");
+            assert_eq!(now.def_id, HEROIC);
+            assert!(s.state().pending.is_none());
+            assert!(subsystems::power_of(&now).is_some());
+            assert_eq!(listed(&s, &now).len(), 1);
+        }
+
+        #[test]
+        fn r151_r3134002_a_summoned_copy_rolls_its_power_in_either_face() {
+            for radiant_face in [false, true] {
+                let mut s = scenario(json!({ "seed": "hp-summon", "p1": { "hand": [SPARE], "mana": 8 } }));
+                let summoned = summon_heroic(&mut s, radiant_face);
+                assert!(s.state().pending.is_none());
+                assert!(subsystems::power_of(&summoned).is_some(), "radiant {radiant_face}");
+            }
+        }
+
+        #[test]
+        fn r767000_the_kept_script_has_no_cry_and_rolls_in_the_hand_as_it_arrives() {
+            let kept = script_v0_5_11o();
+            assert!(kept.base.cry.is_none() && kept.radiant.cry.is_none());
+            assert!(kept.base.start_of_game.is_some() && kept.radiant.start_of_game.is_some());
+            assert_eq!(
+                sorted(members(&kept.base)),
+                sorted(vec!["staticFlags", "startOfGame", "activations", "resume"]),
+            );
+            crate::under_kept(HEROIC, kept, || {
+                let mut s = scenario(json!({
+                    "seed": "hp-kept",
+                    "p1": { "hand": [FILLER_DRAW], "library": [HEROIC, SPARE], "mana": 8 },
+                }));
+                s.play(FILLER_DRAW, json!({}));
+                let drawn = must(s.hand(P1).into_iter().find(|card| card.def_id == HEROIC), "the Heroic Power drawn");
+                assert!(subsystems::power_of(&drawn).is_some(), "rolled as it arrived in the hand");
+                s.play(&drawn, json!({ "zone": 1 }));
+                assert!(s.state().pending.is_none(), "no Cry asks");
+                assert_eq!(listed(&s, &drawn).len(), 1);
+            });
+        }
+    }
+
     // Playing it, and using a power (R752).
 
     mod n98_heroic_power_costs_0_each_power_an_activate_r752 {
@@ -331,11 +597,12 @@ mod tests {
 
         #[test]
         fn r752_playing_it_costs_0_and_uses_nothing_the_power_is_then_one_activation_a_turn_for_its_x() {
-            let mut s = scenario(json!({ "seed": "hp-play", "p1": { "hand": [HEROIC, SPARE], "mana": 8 } }));
-            let in_hand = must(s.hand(P1).into_iter().next(), "the Heroic Power");
-            let card = set_power(&mut s, &in_hand, "burn");
+            let seed = offering_seed("burn", false);
+            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [HEROIC, SPARE], "mana": 8 } }));
+            let card = must(s.hand(P1).into_iter().next(), "the Heroic Power");
             assert_eq!(effective(&s, &card), 0);
             s.play(&card, json!({ "zone": 1 }));
+            s.answer(json!("burn"));
             s.expect_mana(P1, 8).expect_health(P2, 30);
             assert!(events_of(&s, "activated").is_empty());
 

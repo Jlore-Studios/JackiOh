@@ -1244,7 +1244,7 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     flushFits();
     const heroic = one(container, ".card-text");
     expect(heroic.getAttribute("data-short")).toBe("true");
-    expect(heroic.textContent).toContain("Gain one of 13 random powers");
+    expect(heroic.textContent).toContain("Discover one of 13 powers");
     expect(heroic.textContent).not.toContain("Expedition Map");
   });
 

@@ -623,8 +623,6 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
                 ],
             },
         }));
-        // The power the Heroic Power rolled in hand (R43): "deal 2 damage to each opposing hero", which
-        // asks nothing.
         let power = must(
             g.state()
                 .players
@@ -635,21 +633,29 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
                 .cloned(),
             "the live Heroic Power",
         );
-        g.card_mut(&power.id)
-            .memory
-            .insert(subsystems::POWER_KEY.to_string(), json!("burn"));
         let well = must(g.backrow(P2, 2), "p2's Mana Well");
 
-        // p1 plays it (which uses nothing, R752), and after it resolves p2's #85 fuses it onto the Mana Well
-        // (R61, R77): the Mana Well's instance is kept and now carries the Heroic Power's text.
+        // p1 plays it (which uses nothing but its Cry, R752, R3134002), which Discovers its power, and after
+        // it resolves p2's #85 fuses it onto the Mana Well (R61, R77): the Mana Well's instance is kept and
+        // now carries the Heroic Power's text.
         g.play(&power.id, json!({ "zone": 1 }));
+        let first_power = must(
+            g.state()
+                .pending
+                .as_ref()
+                .and_then(|pending| pending.options.first())
+                .cloned(),
+            "an offered power",
+        );
+        g.answer(json!(first_power.key));
         let fused: CardInstance = g.card(&well.id).clone();
         assert!(fused.def_id.starts_with("t-"));
         g.expect_in_zone(&power.id, "gone");
 
         // R43: each power is an Activate of the card's text (R752), and "one created later rolls when it
-        // is created"; R151 has a Heroic Power roll as it arrives anywhere a card can be looked at, so no
-        // copy of the text is left "carrying no power … for ever".
+        // is created"; R151 has a Heroic Power that reaches the field with no Cry roll as it arrives (a
+        // fusion onto a card on the field, R3134002), so no copy of the text is left "carrying no power …
+        // for ever".
         assert!(subsystems::power_of(&fused).is_some());
         g.end_turn();
         assert_eq!(g.state().active, P2);

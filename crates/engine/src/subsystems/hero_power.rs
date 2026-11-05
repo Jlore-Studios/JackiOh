@@ -5,6 +5,12 @@
 //! game never share a roll or a use and a serialized game resumes knowing both (§10.1). The roll goes
 //! through the match rng, so a replay rolls the same power (§9.3).
 //!
+//! R3134002: since issue #3134 the card's Cry Discovers its power (`discover_power`): a Choose one of
+//! `DISCOVER_OPTIONS` different powers, whose answer is the power (`POWER_PICK`). A copy that reaches
+//! the field with no Cry to choose keeps R151's arrival roll (`roll_power_on_field`); one in a hand or
+//! a library rolls nothing, as playing it asks. Through v0.5.11o every copy rolled in every zone
+//! (`roll_power`, the kept script's).
+//!
 //! R752: the card costs (0); each power is a once-per-turn "Activate: Spend (X): …" ability (R384,
 //! R81), of which the card has only the one it rolled (`ActivationDecl.has`). Three powers pause on a
 //! Discover (§6.3) whose answer re-enters `hero_power`: a `PendingChoice`, never a callback (§10.6).
@@ -13,9 +19,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use indexmap::IndexMap;
+
 use crate::config::{
-    ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, LIFE_TAP_DAMAGE, LIFE_TAP_DRAW,
-    PING_DAMAGE, PLUCK_COST, STEADY_SHOT_RAISE, STITCHING_INGREDIENTS, STITCHING_MAX_COST, TANK_UP_ARMOR,
+    ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, DISCOVER_OPTIONS,
+    LIFE_TAP_DAMAGE, LIFE_TAP_DRAW, PING_DAMAGE, PLUCK_COST, STEADY_SHOT_RAISE, STITCHING_INGREDIENTS,
+    STITCHING_MAX_COST, TANK_UP_ARMOR,
 };
 use crate::damage::DamageTarget;
 use crate::effects::TargetSpec;
@@ -29,7 +38,7 @@ use crate::state::{CardInstance, GameState};
 use crate::subsystems::activate::{
     ACTIVATIONS_MEMORY_KEY, abilities_of, ability_uses_this_turn, uses_allowed, uses_record_after_refund,
 };
-use crate::wire::{CardType, SetName, TargetDecl, opponent_of};
+use crate::wire::{CardType, SetName, TargetDecl, ZoneName, opponent_of};
 
 /// R43: where the rolled power lives on the instance.
 pub const POWER_KEY: &str = "power";
@@ -43,6 +52,13 @@ pub const POWER_RESUME: &str = "heroPower";
 
 /// The data key that names the power a paused activation is finishing.
 pub const POWER_DATA_KEY: &str = "power";
+
+/// R3134002: the `POWER_DATA_KEY` value of the Discover of the card's own power, which no stored power
+/// name (R103) is: its answer is the power picked, where another power's answer is that power's pick.
+pub const POWER_PICK: &str = "pick";
+
+/// R3134002: the Discover of the card's power asks this.
+pub const DISCOVER_POWER_PROMPT: &str = "Discover a power";
 
 /// §7: the tokens #98 summons, by catalog index (§5.3), so the engine names no catalog id.
 pub const RUSH_TOKEN_INDEX: &str = "T-rush";
@@ -739,6 +755,73 @@ pub fn roll_power() -> Effect {
     })
 }
 
+/// R3134002: the card's power set to `name`, replacing any it held (the Discover's answer). The uses
+/// record is left as it is: a card that is played is a fresh instance (R78), with none.
+pub fn set_power(name: HeroPowerName) -> Effect {
+    Effect::new("setPower", move |ctx| {
+        let Some(card) = ctx.live_self() else {
+            return;
+        };
+        let id = card.id.clone();
+        write_memory(ctx, &id, POWER_KEY, json!(name.as_str()));
+    })
+}
+
+/// R3134002: "Cry: Discover one of 13 powers." A Choose one of `DISCOVER_OPTIONS` different powers, drawn
+/// without replacement from the thirteen through the match rng (R60), each named by its title on the
+/// card's face (Tank Up for Armor Up on the Radiant one, R757). Its answer re-enters `hero_power` at
+/// `POWER_RESUME` and becomes the card's power. Only its controller reads the offer (§10.6).
+pub fn discover_power() -> Effect {
+    Effect::new("discoverPower", |ctx| {
+        let radiant = ctx.radiant;
+        let offered: Vec<&'static HeroPower> = ctx
+            .sink
+            .rng
+            .shuffle(HERO_POWER_NAMES)
+            .into_iter()
+            .take(DISCOVER_OPTIONS.max(0) as usize)
+            .filter_map(|name| power_by_name(name.as_str()))
+            .collect();
+        let options: Vec<String> = offered
+            .iter()
+            .map(|power| power.name.as_str().to_string())
+            .collect();
+        let labels: IndexMap<String, String> = offered
+            .iter()
+            .map(|power| {
+                (
+                    power.name.as_str().to_string(),
+                    power_title_of(power, radiant).to_string(),
+                )
+            })
+            .collect();
+        let discover = crate::effects::choose_mode(crate::effects::ChooseModeArgs {
+            options,
+            step: POWER_RESUME.to_string(),
+            prompt: Some(DISCOVER_POWER_PROMPT.to_string()),
+            data: Some(IndexMap::from([(POWER_DATA_KEY.to_string(), json!(POWER_PICK))])),
+            by: None,
+            labels: Some(labels),
+        });
+        (discover.apply)(ctx);
+    })
+}
+
+/// R3134002: R151's arrival roll for a copy that reaches the field with no Cry to choose: Summoned,
+/// Recruited, fused onto a card on the field, Reborn or Flickered back (`summon_onto`'s and the fuse's
+/// arrival clause), so it is never dead. A copy in a hand or a library rolls nothing: playing it runs
+/// the Cry, which asks.
+pub fn roll_power_on_field() -> Effect {
+    Effect::new("rollPowerOnField", |ctx| {
+        if ctx
+            .live_self()
+            .is_some_and(|card| card.zone.z() == ZoneName::Field)
+        {
+            (roll_power().apply)(ctx);
+        }
+    })
+}
+
 /// R752: the thirteen Activate abilities on the face `radiant` names, each paying its power's X,
 /// declaring its targets (R81) and the card's only while it rolled that power (`has`). The id is the
 /// stored name (R103), so a fused card's ids (R102), a resumed tail and the alias name the same power.
@@ -771,13 +854,20 @@ pub fn power_abilities(radiant: bool) -> Vec<ActivationDecl> {
         .collect()
 }
 
-/// The step a Discover comes back to (§10.6): the power's own builder finishes the activation.
+/// The step a Discover comes back to (§10.6): the power's own builder finishes the activation, and the
+/// Discover of the card's own power (R3134002, `POWER_PICK`) writes the power it picked.
 pub fn hero_power(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let named = ctx
-        .data
-        .get(POWER_DATA_KEY)
-        .and_then(Value::as_str)
-        .and_then(power_by_name);
+    let tag = ctx.data.get(POWER_DATA_KEY).and_then(Value::as_str);
+    if tag == Some(POWER_PICK) {
+        return match crate::effects::chosen_options(ctx)
+            .first()
+            .and_then(|name| power_by_name(name))
+        {
+            Some(picked) => vec![set_power(picked.name)],
+            None => vec![],
+        };
+    }
+    let named = tag.and_then(power_by_name);
     let power = named.or_else(|| ctx.live_self().and_then(power_of));
     let Some(power) = power else {
         return vec![];

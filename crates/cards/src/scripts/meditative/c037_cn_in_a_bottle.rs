@@ -423,8 +423,10 @@ mod tests {
             }
 
             #[test]
-            fn r151_the_new_card_runs_its_own_arrival_hooks() {
-                // A Heroic Power rolls its power as it arrives (R43): one a bottle adds has.
+            fn r151_r3134002_a_heroic_power_a_bottle_adds_has_no_power_until_it_is_played() {
+                // A Heroic Power rolled its power as it arrived (R43, R151) through v0.5.11o; since issue #3134
+                // its Cry Discovers it, so one a bottle adds holds none (R3134002), and no card's arrival
+                // clause is left in a hand for this test to see run.
                 const HEROIC_POWER: &str = "core-098";
                 let mut s = quiet("bottle-arrives");
                 let mut found = None;
@@ -436,11 +438,7 @@ mod tests {
                     }
                 }
                 let power = found.expect("some bottle adds a Heroic Power");
-                assert!(
-                    power.memory.get("power").is_some_and(Value::is_string),
-                    "{:?}",
-                    power.memory
-                );
+                assert!(power.memory.get("power").is_none(), "{:?}", power.memory);
             }
         }
 

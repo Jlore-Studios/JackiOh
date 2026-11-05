@@ -157,7 +157,6 @@
     "Death": { "label": "亡语", "rule": "从场上被送入墓地时触发" },
     "Start of turn": { "label": "回合开始时", "rule": "在控制者的回合开始时，抽牌之前" },
     "End of turn": { "label": "回合结束时", "rule": "在控制者的回合结束时，清理之前" },
-    "Start of game": { "label": "对战开始时", "rule": "在调度之后，第1回合之前" },
     "Once per turn": { "label": "每回合一次", "rule": "主动能力的次数限制" },
     "Aura": { "label": "光环", "rule": "在场上时生效的效果" },
     "Combo": { "label": "连击", "rule": "如果本回合之前已打出X张或更多的牌，获得额外效果" },

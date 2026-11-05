@@ -167,6 +167,8 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // #82 KY's Trial: a set, then a number in it (R831004: a set is offered by its name).
   "core-082": trialSets(),
+  // #98 Heroic Power's Cry (R3134002): the powers offered, by their stored names (R103).
+  "core-098": heroicPowers(false),
   // M #20 Aestheticize the Game: the thresholds are the card's, so the detail names none.
   "meditative-020": {
     health: { label: "Health", detail: "For the rest of the game, you also win while your hero has enough Health." },
@@ -247,6 +249,50 @@ function trialSets(): Record<string, ModeText> {
   );
 }
 
+/**
+ * #98 Heroic Power's Cry Discovers one of three of its thirteen powers (R3134002), each offered by its stored name
+ * (R103) and told by its Activate's words, naming no number the card declares. The Radiant face's lines are its own
+ * (Armor Up is Tank Up).
+ */
+function heroicPowers(radiant: boolean): Record<string, ModeText> {
+  const base: readonly [string, string, string][] = [
+    ["recruit", "Expedition Map", "Spend (3): Recruit a permanent."],
+    ["draw", "Life Tap", "Spend (1): Draw cards. Take damage."],
+    ["ping", "Ping", "Spend (1): Pierce. Deal damage to a Unit or a hero."],
+    ["burn", "Steady Shot", "Spend (1): Deal damage to the enemy hero."],
+    ["rush", "Ranching", "Spend (2): Summon a Rush Token."],
+    ["felinor", "Cat Cafe", "Spend (1): Summon a Felinor Token."],
+    ["discover", "Witness Value", "Spend (2): Discover a Unit."],
+    ["stitching", "Stitching", "Spend (2): Discover two cheap Units. Fuse them."],
+    ["armor", "Armor Up", "Spend (1): Your hero gains Armor until your next turn."],
+    ["insect", "Die Insect", "Spend (2): Deal damage to a random enemy."],
+    ["brainstorm", "KY Brainstorm", "Spend (2): Add a random KY card to your hand. Your Spells cost less."],
+    ["pluck", "Pluck", "Spend (2): Add a random Fruit to your hand. It costs less."],
+    ["tricks", "Terminus Tricks", "Spend (3): Discover a Trap to summon."],
+  ];
+  const shining: Readonly<Record<string, readonly [string, string]>> = {
+    recruit: ["Expedition Map", "Spend (3): Recruit a permanent. Make it Radiant."],
+    draw: ["Life Tap", "Spend (1): Draw from each player's deck."],
+    ping: ["Ping", "Spend (1): Pierce. Deal damage. If this kills a Unit, summon a Ghoul Token with its stats."],
+    burn: ["Steady Shot", "Spend (1): Deal damage to the enemy hero. This permanently deals 2 more damage."],
+    rush: ["Ranching", "Spend (2): Summon a Radiant Rush Token."],
+    felinor: ["Cat Cafe", "Spend (1): Summon a random Felinor."],
+    discover: ["Witness Value", "Spend (2): Discover a Radiant Unit."],
+    stitching: ["Stitching", "Spend (2): Discover two cheap Radiant Units. Fuse them."],
+    armor: ["Tank Up", "Spend (1): Your hero gains Armor, then this power refreshes."],
+    insect: ["Die Insect", "Spend (2): Lucky 1. Deal damage to a random enemy."],
+    brainstorm: ["KY Brainstorm", "Spend (2): Add a Radiant KY card to your hand. Your Spells cost less."],
+    pluck: ["Pluck", "Spend (2): Add a random Radiant Fruit to your hand. It costs less."],
+    tricks: ["Terminus Tricks", "Spend (3): Discover a Radiant Trap to summon."],
+  };
+  return Object.fromEntries(
+    base.map(([option, label, detail]) => {
+      const [name, words] = radiant ? (shining[option] ?? [label, detail]) : [label, detail];
+      return [option, { label: name, detail: words }];
+    }),
+  );
+}
+
 /** R21's combat keywords, the pool S #18.1 MELCHIOR Discovers from (`RANDOM_KEYWORD_POOL`). */
 function combatKeywords(): Record<string, ModeText> {
   const pool = ["Taunt", "Rush", "First Strike", "Flying", "Ranged", "Poisonous", "Reborn", "Divine Shield", "Windfury", "Cleave", "Deft", "Lifesteal", "Pierce", "Trample"];
@@ -283,6 +329,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
     heal: { label: "Heal 8X", detail: "Heal a target by eight times X." },
     mana: { label: "Mana next turn", detail: "Gain X plus 1 mana next turn." },
   },
+  // #98 Heroic Power, radiant (R3134002): its own lines, Armor Up named Tank Up.
+  "core-098": heroicPowers(true),
   // S #116 Megabase, radiant: "its Activate gives its controller N and the opponent N − 5".
   "stinkyscape-116": {
     "5 Credits": { label: "5 Credits", detail: "You gain 5 Credits, and your opponent 5 fewer." },

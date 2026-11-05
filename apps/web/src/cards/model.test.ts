@@ -490,7 +490,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     const f = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "recruit" } } });
     expect(f.text).toEqual({ full: "Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.", marks: [] });
     expect(f.cost).toEqual({ text: "0", value: "0", tone: "base", alt: null });
-    for (const other of ["13 random powers", "Felinor Token", "Discover a Unit", "Life Tap"]) {
+    for (const other of ["one of 13 powers", "Felinor Token", "Discover a Unit", "Life Tap"]) {
       expect(f.text.full).not.toContain(other);
     }
     // The printed list of thirteen is held beside it for the inspect overlays.
@@ -522,10 +522,10 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R752 a Heroic Power in the collection keeps the list of thirteen and its (0) on the gem", () => {
     const f = face("core-098", false);
-    expect(f.text.full).toContain("Gain one of 13 random powers");
+    expect(f.text.full).toContain("Discover one of 13 powers");
     expect(f.cost.text).toBe("0");
     // In play with no power named (one that has not rolled, R43), it prints the card as printed.
-    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("Gain one of 13 random powers");
+    expect(face("core-098", false, { inPlay: {} }).text.full).toContain("Discover one of 13 powers");
   });
 
   it("Call to Chaos reads ??? in play on both faces, and keeps no printed text beside it", () => {
