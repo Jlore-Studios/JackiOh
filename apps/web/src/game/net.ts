@@ -142,6 +142,39 @@ export function pageWake(handler: () => void): () => void {
   };
 }
 
+/**
+ * R3205000: runs `read` every `everyMs`, except that a tick while the tab is hidden sends nothing. When
+ * the tab shows again (or the network comes back, as `pageWake` has it) it reads once at once and the
+ * pace starts over, so the next read is a full period later. A poll that holds a place the server
+ * expires (the queue's ticket, R897000, a pick, a room) must not use this: it keeps its own interval, or
+ * says through `keepRunning` when its tick may run hidden. Presentation only (CLAUDE.md rule 7).
+ * It returns what stops the timer and the wakes.
+ */
+export function pollWhileVisible(
+  read: () => void,
+  everyMs: number,
+  keepRunning: () => boolean = () => false,
+): () => void {
+  if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
+  let timer: ReturnType<typeof setInterval> | null = null;
+  const start = (): void => {
+    if (timer !== null) clearInterval(timer);
+    timer = setInterval(() => {
+      if (document.visibilityState !== "hidden" || keepRunning()) read();
+    }, everyMs);
+  };
+  const stopWake = pageWake(() => {
+    read();
+    start();
+  });
+  start();
+  return () => {
+    stopWake();
+    if (timer !== null) clearInterval(timer);
+    timer = null;
+  };
+}
+
 export type WakeProbeTarget = {
   readonly readyState: number;
 };

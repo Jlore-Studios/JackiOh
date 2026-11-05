@@ -665,9 +665,11 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
                          list is read only while the panel is open, ChatPanel and ChallengeDialog open
                          from it without leaving the screen
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts) the toast,
-                         the button and /together share, and the badge's count
+                         the button and /together share, and the badge's count (paused while the tab is
+                         hidden unless a challenge of the player's is open, R3205000)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
-                         PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS
+                         PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
+                         both paused while the tab is hidden
 together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenges (socialPoll.ts) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a

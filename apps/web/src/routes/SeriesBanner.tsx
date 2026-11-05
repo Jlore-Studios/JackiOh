@@ -4,6 +4,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { pollWhileVisible } from "../game/net.ts";
 import { t } from "../i18n/i18n.ts";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
@@ -70,10 +71,12 @@ export function useMatchSeries(token: string, matchId: string, gameOver: boolean
         canceled = true;
       };
     }
-    const handle = setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // R3205000: a hidden tab reads nothing, and reads once when it shows again; the pick itself is read
+    // by the series route, which keeps running.
+    const stopPolling = pollWhileVisible(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
     return () => {
       canceled = true;
-      clearInterval(handle);
+      stopPolling();
     };
   }, [token, matchId, gameOver, poll, notSeries]);
 
