@@ -474,7 +474,7 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
  * entries the server says are unclaimed (CLAUDE.md rule 7). No live entry or no answer: no bookmark (R2875001).
  */
 function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
-  const { news, claim } = useNews(token);
+  const { news, claim, claimAll } = useNews(token);
   const { phase, open, root, bookmark, close, toggle } = useUnroll(motion);
   const panelId = useId();
 
@@ -519,7 +519,7 @@ function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion 
         data-motion={motion}
         hidden={phase === "closed"}
       >
-        {phase === "closed" ? null : <NewsList news={news} onClaim={claim} />}
+        {phase === "closed" ? null : <NewsList news={news} onClaim={claim} onClaimAll={claimAll} />}
       </div>
     </div>
   );
