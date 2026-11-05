@@ -617,6 +617,36 @@ mod tests {
     }
 
     #[test]
+    fn r3061000_upload_resume_with_an_empty_hand_is_unusable_and_says_why() {
+        use jackioh_engine::subsystems::activate::activation_views_for;
+
+        let mut s = scenario(json!({
+            "p1": { "hand": [ID], "library": [MENACE] },
+            "p2": { "hand": [MENACE] },
+        }));
+        // R345: with nothing left to do the turn would end itself, and the view is read in p1's own.
+        s.state_mut().players.p1.auto_end_turn = Some(false);
+        played(&mut s, None);
+        let views = activation_views_for(s.state(), P1, s.card(ID)).expect("Job Application's abilities");
+        assert_eq!(views.len(), 1, "{views:?}");
+        assert_eq!(views[0].ability, SEND);
+        assert!(!views[0].usable, "nothing to send, so not usable: {views:?}");
+        assert_eq!(
+            views[0].reason.as_deref(),
+            Some("Job Application cannot be played without 1 legal target")
+        );
+
+        // A card in hand to send: usable, and nothing to say.
+        let mut s = setup("ja-r3061000", false, &[]);
+        played(&mut s, None);
+        let views = activation_views_for(s.state(), P1, s.card(ID)).expect("Job Application's abilities");
+        assert_eq!(views.len(), 1, "{views:?}");
+        assert_eq!(views[0].ability, SEND);
+        assert!(views[0].usable, "{views:?}");
+        assert_eq!(views[0].reason, None);
+    }
+
+    #[test]
     fn r1865000_sending_sets_the_resume_aside_and_hears_back_in_2_to_6() {
         let mut s = setup("ja-send", false, &[]);
         let me = played(&mut s, None);

@@ -3,7 +3,7 @@
 // steps expire, and the HUD always offers exit. R2205000: the coach recognizes each Field Guide entry
 // (discoveries.ts) from the view alone and names its rule in a bubble.
 
-import type { ActionBody, CardDef, GameEvent, PlayerView, Row } from "@jackioh/shared";
+import type { ActionBody, CardDef, CombatForecast, GameEvent, PlayerView, Row } from "@jackioh/shared";
 
 import type { Side } from "../game/contract.ts";
 import { t } from "../i18n/i18n.ts";
@@ -16,6 +16,8 @@ export type CoachCtx = {
   view: PlayerView;
   /** legalActions(state, human). */
   legal: readonly ActionBody[];
+  /** R3100000: what each of `legal`'s attacks would do (combatForecast(state, human)); absent outside a lesson's game. */
+  forecast?: CombatForecast;
   /** Events new since the previously observed view. */
   fresh: readonly GameEvent[];
   aiToAct: boolean;

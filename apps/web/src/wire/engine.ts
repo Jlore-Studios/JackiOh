@@ -28,6 +28,7 @@ export { createRng, type Rng } from "./rng.ts";
 export {
   beginGame,
   carriedVersions,
+  combatForecast,
   craftPreview,
   createGame,
   dealEmoteHand,
