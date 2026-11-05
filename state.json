@@ -15910,15 +15910,8 @@
       "stop_requested": false
     },
     "3210": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42108620628",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-05T21:42:28Z",
-        "until": "2026-11-05T22:12:28Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15930,25 +15923,24 @@
         "reason": "planned on opus",
         "trail": " 320,332p crates/server/tests/api/proficiency.rs\", \"description\": \"Check route-filtering tests\"}\n- Grep: {\"pattern\": \"no store call|touches no|before touching the store|before any store|reads nothing|asks the store nothing|no store read|without touching the store\", \"path\": \"/home/runner/work/_temp/work/\u2026\n- Bash: {\"command\": \"sleep 1; ls /tmp/claude-1001/-home-runner-work--temp-work-item-3210/b64ab02e-4188-4b47-994e-fe2f0de1708a/tasks/ 2>/dev/null | head\", \"description\": \"Check whether the survey is still run\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/net/social.test.ts; sed -n 215,230p apps/web/src/net/social.test.ts; sed -n 258,270p apps/web/src/net/social.test.ts; sed -n 340,352p apps/web/src/net/social.te\u2026\n- Bash: {\"command\": \"grep -rn \\\"getChallenges\\\\|getUnread\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v test | grep -v \\\"net/social.ts\\\"; grep -n \\\"knip\\\\|ts-prune\\\\|unused\\\" package.json apps/web/\u2026\n- Grep: {\"pattern\": \"\\\"/healthz\\\"|\\\"/api/friends/requests|\\\"/api/presence\\\"|\\\"/api/replays\\\"\", \"path\": \"/home/runner/work/_temp/work/item-3210/crates/server/src/app.rs\", \"output_mode\": \"content\", \"-A\": 2}\n- Bash: {\"command\": \"sed -n 1,40p crates/server/src/social/friends.rs | head -40; grep -n \\\"use crate::api::http\\\" crates/server/src/social/presence.rs\", \"description\": \"Read friends.rs header for module doc\u2026\n- Grep: {\"pattern\": \"pub async fn call\\\\b|pub fn add_user\", \"path\": \"/home/runner/work/_temp/work/item-3210/crates/server/tests/support/deps.rs\", \"output_mode\": \"content\", \"-A\": 22}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3210/.bot-plan.md\", \"content\": \"# Draft plan, issue #3210 (planner notes; see final message for the plan)\\n\\n## Decisions so far\\n- Server touch: `soc\u2026\n- Grep: {\"pattern\": \"\\\\{:\\\\?\\\\}\\\", *(data|store|fake)|\\\\{data:\\\\?\\\\}|\\\\{tables:\\\\?\\\\}|serde_json::to_string\\\\(&.*tables\", \"path\": \"/home/runner/work/_temp/work/item-3210/crates/server/tests\", \"output_mode\": \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3210/crates/server/src/db/fake.rs\", \"offset\": 4150, \"limit\": 30}\n- Bash: {\"command\": \"grep -n \\\"offline\\\\|heartbeat(&app\\\\|advance(\\\" crates/server/tests/api/challenges.rs | head -30\", \"description\": \"Find offline expectations in challenge tests\"}\n- Bash: {\"command\": \"sed -n 82,130p crates/server/tests/api/challenges.rs; sed -n 120,142p crates/server/tests/api/chat.rs; sed -n 320,347p crates/server/tests/api/chat.rs\", \"description\": \"Read the challeng\u2026\n- Bash: {\"command\": \"grep -n \\\"limiter\\\\|API_REQUESTS_PER_MINUTE\\\" crates/server/tests/api/rate_limit.rs | head -15; grep -n \\\"pub limiter\\\\|pub social\\\" crates/server/src/app.rs\", \"description\": \"Check how \u2026\n- said: I found three tests that would break, and a fourth that probably will. All four run on the real clock (`#[tokio::test]`, not paused), and in each one the friend or caller made a signed-in request only milliseconds before the check. Nothing in the `src/` `#[cfg(test)]` modules is at risk: none of th\u2026\n- Bash: {\"command\": \"grep -rn \\\"const _: () = assert\\\" crates --include=*.rs | head -5; grep -n \\\"pub async fn begin\\\\|pub async fn commit\\\" crates/server/src/db/store.rs; grep -n \\\"^use std::sync\\\" crates/s\u2026\n- Bash: {\"command\": \"sed -n 840,895p crates/server/tests/api/replays.rs\", \"description\": \"Read the replay list store-call test\"}\n- Bash: {\"command\": \"grep -rn \\\"calls.map\\\\|calls).toHaveLength\\\\|calls.length).toBe\\\\|calls.filter\\\" apps/web/src --include=*.test.* | grep -v \\\"to(\\\" | head -20\", \"description\": \"Find web tests asserting o\u2026\n- Bash: {\"command\": \"sed -n 320,345p apps/web/src/tutorial/accountSync.test.ts; grep -n \\\"LinkedAccounts\\\\|render(\\\" apps/web/src/auth/LinkedAccounts.test.tsx | head -5\", \"description\": \"Check exact-call-lis\u2026\n- Bash: {\"command\": \"grep -n \\\"^net/api.ts\\\\|^net/social.ts\\\" -A3 apps/web/README.md\", \"description\": \"Find the README rows for api.ts and social.ts\"}\n- Bash: {\"command\": \"grep -n \\\"net/api.ts\\\" apps/web/README.md | head -5\", \"description\": \"Find api.ts mentions in web README\"}\n- Bash: {\"command\": \"grep -n \\\"pub presence\\\" crates/server/src/db/fake.rs; grep -n \\\"use jackioh_server::app\\\" crates/server/tests/api/friends.rs crates/server/tests/api/replays.rs; grep -n \\\"^async fn get\\\u2026\n- Bash: {\"command\": \"sed -n 118,150p crates/server/tests/support/store.rs; grep -n \\\"API_REQUESTS_PER_MINUTE\\\" crates/server/src/config.rs\", \"description\": \"Read uuid and advance signatures\"}\n- Bash: {\"command\": \"grep -n \\\"AccountBanned\\\\|AccountPending\\\" crates/server/src/api/http.rs | head -8\", \"description\": \"Check the gate's refusal statuses\"}\n- Bash: {\"command\": \"grep -n \\\"heartbeat\\\" apps/web/src/test/qa-v020.test.tsx apps/web/src/together/WatchRoute.test.tsx | head\", \"description\": \"Check other heartbeat mentions in web tests\"}\n- Bash: {\"command\": \"grep -n \\\"PRESENCE\\\" apps/web/src/wire/serverConfig.ts; head -5 apps/web/src/wire/serverConfig.ts\", \"description\": \"Check whether the generated config carries doc comments\"}\n- Bash: {\"command\": \"grep -rln \\\"challenges.sweep_failed\\\" --include=*.md --include=*.rs --include=*.ts . 2>/dev/null | grep -v target | head\", \"description\": \"Check whether log event names are registered an\u2026\n- Bash: {\"command\": \"grep -rn \\\"Social {\\\\|Social::default\\\\|social: \\\" crates/server/src crates/server/tests | head\", \"description\": \"Find constructions of the Social struct\"}\n- Bash: {\"command\": \"grep -n \\\"/api/\\\" apps/edge/src/*.ts | head -20\", \"description\": \"Check the edge Worker for an API path allowlist\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Survey result (done)\\n- Break: replays.rs:849 r768 exact call list (brand-new account's first request) -> warm-up request before the hook.\\n- Break: fri\u2026\n- said: **Goal.** Three things. First, a new `GET /api/social` returns what `GET /api/challenges` and `GET /api/chat/unread` return, in one transaction, for the caller only, and the social poll uses it. Second, every signed-in request from an active account that passes auth, the rate limit and the gate ref\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-4",
-      "owner_since": "2026-11-05T21:00:27Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-05T21:45:35Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-05T21:42:20Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-1",
       "queued_at": "2026-11-05T16:44:30Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42108620628",
+      "run_id": "pending:61b56fa0-1793915095",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T21:00:27Z",
+      "started_at": "2026-11-05T21:45:35Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16989,9 +16981,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T21:44:42Z",
+    "at": "2026-11-05T21:45:35Z",
     "url": "",
-    "what": "build #3244 on claude-8"
+    "what": "build #3210 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T21:28:30Z",
