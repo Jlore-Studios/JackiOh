@@ -2355,9 +2355,8 @@ mod r1834002_the_loadout_the_ticket_freezes {
             ("plain", "dresser")
         };
         assert_eq!(row["players"], json!([first, second]));
-        // R3015005: the setting's full art frozen as the level it prints, Full art's first.
         let mut cards = vec![
-            json!({ "cardId": full_art_card, "fullArt": "version-full-art" }),
+            json!({ "cardId": full_art_card, "fullArt": true }),
             json!({ "cardId": plain_card, "border": "border-bone" }),
         ];
         cards.sort_by(|a, b| a["cardId"].as_str().cmp(&b["cardId"].as_str()));

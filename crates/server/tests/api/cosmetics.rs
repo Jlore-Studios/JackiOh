@@ -250,7 +250,7 @@ async fn r2725000_r2940000_r2942000_r2943000_r2944000_an_existing_account_owns_n
     // #2725's three: the Full art version and the Animated and Signature augments, none a default or a
     // starter (R2725000); then #2940's three versions, Alt art, Sketch and Alt full art (R2940000),
     // #2942's three, Extended art, Pixel and Comic (R2942000), #2943's two, Set showcase and Out of frame
-    // (R2943000), #2944's two, Immersive and Prismatic (R2944000), and #3015's fifteen levels (R3015000).
+    // (R2943000), and #2944's two, Immersive and Prismatic (R2944000).
     let new: Vec<String> = shipped()
         .expect("the shipped registry")
         .into_iter()
@@ -274,27 +274,11 @@ async fn r2725000_r2940000_r2942000_r2943000_r2944000_an_existing_account_owns_n
             "version-out-of-frame",
             "version-immersive",
             "version-prismatic",
-            "version-animated",
-            "version-full-art-animated",
-            "version-full-art-signed",
-            "version-alt-full-art-animated",
-            "version-alt-full-art-signed",
-            "version-sketch-full-art",
-            "version-sketch-full-art-animated",
-            "version-sketch-full-art-signed",
-            "version-extended-art-animated",
-            "version-pixel-animated",
-            "version-comic-animated",
-            "version-set-showcase-animated",
-            "version-out-of-frame-animated",
-            "version-immersive-animated",
-            "version-prismatic-animated",
         ]
     );
 
-    // Nothing in the server grants them: the account reads what it was given, and none of the twenty-eight, even
-    // those its retired full arts count as owning (R2725002, R3015006), which is read where they are worn; only
-    // migration 0083 wrote them as rows, once, for the accounts the database held then.
+    // Nothing grants them: the account reads what it was given, and none of the thirteen, even those its
+    // retired full arts count as owning (R2725002), which is read where they are worn and never written.
     let (status, body) = get(&app, Some(TOKEN)).await;
     assert_eq!(status, 200, "{body}");
     assert_eq!(

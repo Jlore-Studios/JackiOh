@@ -7,11 +7,11 @@ use jackioh_server::config::{
     SET_TRACK_FIRST_LEVEL, SET_TRACK_UNLOCK_LEVEL, SET_TRACK_XP_PER_LEVEL, XP_PER_ACTION,
 };
 use jackioh_server::db::store::{Db, Profile, ProfileCreateInput};
-use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::quests::GameTally;
 use jackioh_server::economy::rewards::{GameMode, GameSummary, game_xp, pay_game_rewards, track_level};
 use jackioh_server::economy::store::{EconomyReason, InventoryItem, JloreReason, TrackGrant};
-use jackioh_server::economy::track_rewards::reward_for_level;
+use jackioh_shared::economy::math::total_xp_for_level;
+use jackioh_shared::economy::track_rewards::reward_for_level;
 
 use super::contract::{PG_SERIAL, StoreHarness};
 

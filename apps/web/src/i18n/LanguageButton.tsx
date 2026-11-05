@@ -5,6 +5,7 @@
 import type { ReactElement } from "react";
 
 import { LOCALES, nextLocale, setLocale, t, useLocale, useLocaleSettled } from "./i18n.ts";
+import "../routes/top-bar.css";
 import "./language.css";
 
 export type LanguageButtonProps = {
@@ -17,10 +18,12 @@ export default function LanguageButton({ placement }: LanguageButtonProps): Reac
   const settled = useLocaleSettled();
   if (settled) return null;
   const next = nextLocale(locale);
+  // The top bar's control wears routes/top-bar.css; the board's control bar draws its own.
+  const bar = placement === "nav" ? " top-bar-button" : "";
   return (
     <button
       type="button"
-      className={`language-button language-button--${placement}`}
+      className={`language-button language-button--${placement}${bar}`}
       data-testid={`language-${placement}`}
       data-locale={locale}
       // WCAG 2.5.3 (#757): the name starts with the shown short name, so a voice user can say what they see.

@@ -143,6 +143,10 @@ describe("#1831 where the Friends button sits", () => {
         render(<App />);
         const found = await button();
         expect(found.nextElementSibling, path).toHaveAttribute("data-testid", "language-nav");
+        // #3189: the top bar's three buttons wear its one skin, routes/top-bar.css.
+        expect(found, path).toHaveClass("top-bar-button", "top-bar-button--round");
+        expect(found.nextElementSibling, path).toHaveClass("top-bar-button");
+        expect(screen.getByTestId("settings-open-nav"), path).toHaveClass("top-bar-button", "top-bar-button--round");
         cleanup();
       }
 
@@ -151,11 +155,16 @@ describe("#1831 where the Friends button sits", () => {
       const onBoard = await button();
       expect(onBoard.nextElementSibling).toHaveAttribute("data-testid", "language-game");
       expect(onBoard.closest(".control-bar")).not.toBeNull();
+      // #3189: the board's control bar draws its own buttons, as it did.
+      expect(onBoard).not.toHaveClass("top-bar-button");
+      expect(onBoard.nextElementSibling).not.toHaveClass("top-bar-button");
+      expect(screen.getByTestId("settings-open-game")).not.toHaveClass("top-bar-button");
       cleanup();
 
       // Sign-in and a password reset draw their bar without the wallet, and with no friends to show.
       render(<><ChallengeToast /><BackLink showWallet={false} /></>);
-      expect(await screen.findByTestId(navTestid.back)).toBeInTheDocument();
+      // #3189: Back is the bar's dark pill, and stays the link-button it was.
+      expect(await screen.findByTestId(navTestid.back)).toHaveClass("link-button", "top-bar-button", "top-bar-button--text");
       await waitFor(() => {
         expect(screen.getByTestId("language-nav")).toBeInTheDocument();
       });
@@ -179,6 +188,7 @@ describe("#2645 the board's Friends button on a phone", () => {
 
         expect(menu).toContainElement(row);
         expect(row).toHaveClass("friends-button--menu");
+        expect(row).not.toHaveClass("top-bar-button");
         expect(row).toHaveTextContent("Friends");
         expect(row.closest(".control-bar")).not.toBeNull();
 
