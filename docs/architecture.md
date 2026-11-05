@@ -265,8 +265,14 @@ things in it are not obvious:
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
 is a 404 on a cold load. `apps/web/public/_redirects` lists them, each with and without a trailing
-slash, and every other path gets `404.html` with a 404, so a missing bundle stays a 404 rather than
-being served `index.html` as JavaScript.
+slash, and every other path gets `404.html` with a 404 status, so a missing bundle stays a 404 rather than
+being served `index.html` as JavaScript. That `404.html` is the app's own page, no hand-made one:
+`apps/web/static-pages.ts` writes it from the built `index.html` (R3127000, #3127), with its entry script,
+`noindex`, the title "Page not found · JackiOh" and no canonical link. Cloudflare answers with the 404, the client
+starts, routes on `window.location.pathname` and draws its own 404 with the real path. What shows with no script,
+or until the bundle starts (a stale deploy, a blocked chunk), is a script-free fallback in the app's look (the
+tavern board, the stacked logo and a hand of three placeholder card faces whose cost gems read 4, 0 and 4) that
+the client replaces at startup.
 
 ### 4.2 Where each clock lives
 
