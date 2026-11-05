@@ -16938,7 +16938,7 @@
       }
     },
     "3121": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-11-05T03:10:28Z",
@@ -16950,20 +16950,20 @@
         "trail": "ommand\": \"for n in $(grep -oE '^export (async )?(function|const) [A-Za-z_]+' apps/web/src/wasm/index.ts | awk '{print $NF}'); do c=$(git grep -lw \\\"$n\\\" -- apps e2e | grep -v '^apps/web/src/wasm/i\u2026\n- tool error: Exit code 1 TEST-ONLY luauModuleInUse NO-EXT findInstance TEST-ONLY learnedParity\n- said: I checked the code added since fb1e762241 two ways. A script (`/tmp/dups/hash.py` and `annotate.py`) hashed normalized function bodies across `apps/*`, `e2e/support` and `crates/*/src`. I also searched by category: storage, fetch, date/time, percent, RNG, error text, auth and validation. Every pair\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json,re,collections\\nocc=json.load(open('/tmp/audit/occ.json'))\\nroot='/home/runner/work/_temp/work/item-3121/'\\ndefs=collections.defaultdict(list)\\nfor l in op\u2026\n- Bash: {\"command\": \"sed -n 1,15p apps/web/src/net/errors.ts; echo ---; sed -n 62,72p apps/web/src/dungeon/fight/FightScreen.tsx; echo ---; sed -n 195,225p apps/web/src/dungeon/store.ts; sed -n 340,370p apps\u2026\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/dungeon/store.ts | grep -n \\\"import\\\\|from\\\"; grep -n \\\"readJson\\\\|writeJson\\\\|removeKey\\\\|messageOf\\\\|localStorageOrNull\\\" apps/web/src/dungeon/store.ts; grep \u2026\n- Bash: {\"command\": \"cat apps/web/src/patches/usePatchLegendCollapsed.ts; echo ----; sed -n 1,45p apps/web/src/game/phoneBar.ts\", \"description\": \"Compare the media-query hook pairs\"}\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/game/useOsReducedMotion.ts; echo ----; sed -n 50,90p apps/web/src/shortcuts/shortcuts.ts; git log --format='%h %ad %s' --date=short -1 -- apps/web/src/game/phon\u2026\n- Bash: {\"command\": \"ls apps/web/src/; git grep -ln \\\"window.matchMedia(\\\" -- apps/web/src ':!*.test.*' | head -20\", \"description\": \"List web source dirs and matchMedia callers\"}\n- Bash: {\"command\": \"sed -n 205,222p apps/web/src/dungeon/start/StartScreen.tsx; grep -n \\\"cursePointsOf\\\\|from \\\\\\\"../store.ts\\\\\\\"\\\\|from \\\\\\\"../store\\\\\\\"\\\" apps/web/src/dungeon/start/StartScreen.tsx apps/w\u2026\n- Bash: {\"command\": \"sed -n 100,112p apps/web/src/fx/motifs/board.ts; sed -n 106,116p apps/web/src/fx/motifs/damage.ts; grep -n \\\"otherSide\\\\|from \\\\\\\"./build.ts\\\\\\\"\\\" apps/web/src/fx/motifs/*.ts | head; git\u2026\n- Bash: {\"command\": \"git grep -n '=== \\\"Trap\\\" || [a-z.]* === \\\"Field Trap\\\"\\\\|\\\"Field Trap\\\" ||' -- apps/web/src ':!*.test.*' | cut -c1-180 | head -20; grep -n \\\"^import\\\\|Side\\\" apps/web/src/fx/motifs/buil\u2026\n- Bash: {\"command\": \"git grep -n '=== \\\"you\\\" ? \\\"opponent\\\" : \\\"you\\\"\\\\|=== \\\"opponent\\\" ? \\\"you\\\" : \\\"opponent\\\"' -- apps/web/src ':!*.test.*' | cut -c1-160\", \"description\": \"Find other side-flip expressio\u2026\n- Bash: {\"command\": \"sed -n 260,285p crates/server/src/api/admin.rs; sed -n 395,410p crates/server/src/api/admin.rs; sed -n 725,750p crates/server/src/api/ranked.rs; grep -n \\\"usernames(\\\\|usernames_of(\\\" cr\u2026\n- Bash: {\"command\": \"sed -n 293,305p crates/server/src/api/admin.rs; sed -n 336,341p crates/server/src/api/admin.rs; sed -n 366,375p crates/server/src/api/admin.rs; grep -n \\\"^use\\\\|^ [a-z_]*::\\\\|IndexMap\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"async fn profiles_get_many\\\" -A14 crates/server/src/db/pg.rs | head -20; grep -n \\\"fn profiles_get_many\\\" -A10 crates/server/src/db/fake.rs | head -14; grep -n \\\"impl From<Stor\u2026\n- Bash: {\"command\": \"sed -n 500,515p crates/server/src/db/fake.rs; sed -n 600,625p crates/server/src/admin/store.rs; sed -n 680,695p crates/server/src/duos/store.rs; sed -n 2238,2255p crates/server/src/econo\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn data\\\\|pub(crate) fn data\\\\|fn data(\\\" -A6 crates/server/src/db/fake.rs | head -12; grep -n \\\"pub fn tables\\\\|pub(crate) fn tables\\\" -A4 crates/server/src/db/fake.rs | h\u2026\n- Bash: {\"command\": \"sed -n 535,545p crates/server/src/app.rs; sed -n 690,698p crates/server/src/app.rs; git grep -n \\\"custom-cards\\\" -- apps/web/src ':!*.test.*' | cut -c1-160; git grep -n \\\"stats/player\\\" \u2026\n- Bash: {\"command\": \"sed -n 1718,1728p apps/web/src/net/api.ts; git grep -n \\\"auth/me\\\" -- apps/admin/src | head -3\", \"description\": \"Confirm the stats/player method and admin auth/me use\"}\n- Bash: {\"command\": \"sed -n 110,123p crates/server/src/economy/tokens.rs | cat -n | sed 's/^/+109 /'; echo; awk 'NR>=57&&NR<=62 || NR>=70&&NR<=76 || NR>=149&&NR<=159 || NR>=225&&NR<=237 || NR>=330&&NR<=338 {\u2026\n- Bash: {\"command\": \"awk 'NR>=2300 && /^ *(#\\\\[cfg\\\\(test\\\\)\\\\]|(pub )?mod [a-z_0-9]+ \\\\{|use super|use [a-z])/ {print NR\\\": \\\"$0}' crates/engine/src/wire/stats.rs | head -30; grep -n \\\"card_tier\\\\|tier_of\\\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"PLAYER_LINE_MAX: usize\\\\|const PLAYER_LINE_MAX\\\" crates/tools/src | head -2; grep -n \\\"pub struct PlayerNote\\\" -A20 crates/tools/src/patches.rs | head -24\", \"description\": \"Re\u2026\n- Bash: {\"command\": \"sed -n 45,75p apps/web/src/wire/engine.ts; git grep -n \\\"subsystems\\\\.\\\\(HERO_POWERS\\\\|CHAOS\\\\|heroPower\\\\|chaos\\\\)\\\" -- apps/web/src ':!*.test.*' | head\", \"description\": \"Check producti\u2026\n- Bash: {\"command\": \"wc -l apps/web/scripts/music/tracks.mjs; sed -n 2649,2653p apps/web/scripts/music/tracks.mjs | cut -c1-80; sed -n 322,331p crates/run/src/lib.rs; grep -n \\\"touchQuery\\\" apps/web/src/shor\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3121/.bot-plan.md\", \"content\": \"**Goal.** Ship the 2026-11-05 audit as one pull request that: (1) **dead code**: removes the items nothing in the code\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; git status --porcelain\", \"description\": \"Check the plan's length and worktree state\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3121/.bot-plan.md\", \"old_string\": \"Each removed body is identical to the moved one apart from its query constant.\", \"new_string\"\u2026\n- said: **Goal.** Ship the 2026-11-05 audit as one pull request that: (1) **dead code**: removes the items nothing in the codebase calls, and the ones only their own tests call, that showed up since the last audit (#2658, `fb1e762241`); (2) **duplicates**: merges seven duplicated helpers where the same inp\u2026"
       },
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-05T02:44:04Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-05T03:19:06Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-05T03:16:21Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
-      "run_id": "41957116381",
+      "provider": "claude-1",
+      "run_id": "pending:c429556f-1793848719",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T02:44:04Z",
+      "started_at": "2026-11-05T03:19:06Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17118,9 +17118,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T03:18:24Z",
+    "at": "2026-11-05T03:19:06Z",
     "url": "",
-    "what": "review #3050 on claude-1"
+    "what": "build #3121 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T03:02:09Z",
