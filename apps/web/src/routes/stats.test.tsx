@@ -711,122 +711,30 @@ describe("R654 public statistics route", () => {
     expect(within(modal).getByText("Win rate by patch")).toBeInTheDocument();
   });
 
-  it("R2427000 shows Drawn vs not drawn beside When drawn with signed points and both sides' games", async () => {
+  it("R3184000 the Cards tab shows no When drawn, Drawn vs not drawn, Radiant or Normal column, toggle or grid figure", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const headers = within(table).getAllByRole("columnheader").map((th) => th.textContent?.replace(/[↑↓]/g, "").trim());
+    for (const label of ["When drawn", "Drawn vs not drawn", "Radiant", "Normal"]) {
+      expect(headers).not.toContain(label);
+      expect(screen.queryByLabelText(label)).toBeNull();
+    }
+    // Spark Pup's When drawn (65%), drawn delta (+25%, 40 / 10) and Radiant and Normal rates (70%, 40%) show nowhere.
+    const pupRow = within(table).getByText("Spark Pup").closest("tr")!;
+    for (const figure of ["65%", "+25%", "(40 / 10)", "70%", "40%"]) {
+      expect(within(pupRow).queryByText(figure)).toBeNull();
+    }
+    // Lava Hound, below the floor: its Tier (R3022000) and Adjusted (R2777000) alone read "—", and nothing reads "not enough data".
+    const houndRow = within(table).getByText("Lava Hound").closest("tr")!;
+    expect(within(houndRow).getAllByText("—")).toHaveLength(2);
+    expect(screen.queryByText("not enough data")).toBeNull();
 
-    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent ?? "");
-    const drawnAt = headers.findIndex((text) => /When drawn/i.test(text));
-    expect(headers[drawnAt + 1]).toMatch(/Drawn vs not drawn/i);
-    expect(screen.queryByRole("columnheader", { name: /Played vs held/i })).not.toBeInTheDocument();
-
-    // Spark Pup (eligible, delta = +0.25): renders +25% and (40 / 10)
-    expect(screen.getByText("+25%")).toBeInTheDocument();
-    expect(screen.getByText("(40 / 10)")).toBeInTheDocument();
-
-    // Aqua Warden (eligible, delta = -0.15): renders -15% and (25 / 5)
-    expect(screen.getByText("-15%")).toBeInTheDocument();
-    expect(screen.getByText("(25 / 5)")).toBeInTheDocument();
-
-    // Lava Hound (below sample floor: 10 games < 20): its Tier (R3022000), Adjusted (R2777000) and When drawn render "—"
-    const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(5);
-
-    await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
-    expect(screen.queryByRole("columnheader", { name: /Drawn vs not drawn/i })).not.toBeInTheDocument();
-
-    await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
-    expect(screen.getByRole("columnheader", { name: /Drawn vs not drawn/i })).toBeInTheDocument();
-  });
-
-  it("R654 renders not enough data for a Drawn vs not drawn on a card below the floor", async () => {
-    render(<StatsRoute />);
-
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-
-    // Lava Hound is below the floor (10 games < 20): no delta and no cohort sizes.
-    const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getByText("not enough data")).toBeInTheDocument();
-    expect(within(houndRow).queryByText("-10%")).not.toBeInTheDocument();
-    expect(within(houndRow).queryByText("(8 / 2)")).not.toBeInTheDocument();
-  });
-
-  it("R2427000 sorts cards by Drawn vs not drawn descending and ascending", async () => {
-    const user = userEvent.setup();
-    render(<StatsRoute />);
-
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-
-    const deltaHeader = screen.getByRole("columnheader", { name: /Drawn vs not drawn/i });
-    expect(deltaHeader).toHaveAttribute("aria-sort", "none");
-
-    // Lava Hound, under the floor, sorts last either way.
-    await user.click(deltaHeader);
-    expect(deltaHeader).toHaveAttribute("aria-sort", "descending");
-
-    let rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Spark Pup");
-    expect(rows[1]).toHaveTextContent("Aqua Warden");
-    expect(rows[2]).toHaveTextContent("Lava Hound");
-
-    await user.click(deltaHeader);
-    expect(deltaHeader).toHaveAttribute("aria-sort", "ascending");
-
-    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Aqua Warden");
-    expect(rows[1]).toHaveTextContent("Spark Pup");
-    expect(rows[2]).toHaveTextContent("Lava Hound");
-  });
-
-  it("R1147000 face rates + Normal/Radiant click-sorts", async () => {
-    const user = userEvent.setup();
-    render(<StatsRoute />);
-
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-
-    const radiantHeader = screen.getByRole("columnheader", { name: /Radiant/i });
-    const normalHeader = screen.getByRole("columnheader", { name: /Normal/i });
-
-    expect(radiantHeader).toBeInTheDocument();
-    expect(normalHeader).toBeInTheDocument();
-
-    // Spark Pup: 30 radiant (70%), 20 normal (40%)
-    const pupRow = screen.getByText("Spark Pup").closest("tr")!;
-    expect(within(pupRow).getByText("70%")).toBeInTheDocument();
-    expect(within(pupRow).getByText("40%")).toBeInTheDocument();
-
-    // Aqua Warden: 20 radiant (40%), 10 normal (<20 => —)
-    const wardenRow = screen.getByText("Aqua Warden").closest("tr")!;
-    expect(within(wardenRow).getByText("40%")).toBeInTheDocument();
-
-    // Lava Hound (<20 games total => — for both, and for its Adjusted, R2777000, and its Tier, R3022000)
-    const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(5);
-
-    await user.click(radiantHeader);
-    expect(radiantHeader).toHaveAttribute("aria-sort", "descending");
-
-    let rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Spark Pup");
-    expect(rows[1]).toHaveTextContent("Aqua Warden");
-    expect(rows[2]).toHaveTextContent("Lava Hound");
-
-    await user.click(radiantHeader);
-    expect(radiantHeader).toHaveAttribute("aria-sort", "ascending");
-
-    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Aqua Warden");
-    expect(rows[1]).toHaveTextContent("Spark Pup");
-    expect(rows[2]).toHaveTextContent("Lava Hound");
-
-    // Sort by Normal descending: Spark Pup (40%) > Aqua Warden (—) / Lava Hound (—)
-    await user.click(normalHeader);
-    expect(normalHeader).toHaveAttribute("aria-sort", "descending");
-
-    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Spark Pup");
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const pup = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
+    expect([...pup.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Win rate", "Games"]);
   });
 
   it("R654 keyword filter", async () => {
@@ -923,18 +831,15 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Columns:")).toBeInTheDocument();
   });
 
-  it("shows Drawn vs not drawn and every other column by default", async () => {
+  it("R3184000 shows every column by default, Games and Play rate the only ones a toggle hides", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    expect(screen.getByLabelText("Drawn vs not drawn")).toBeChecked();
     expect(screen.getByLabelText("Games")).toBeChecked();
-    expect(screen.getByLabelText("When drawn")).toBeChecked();
-    expect(screen.getByLabelText("Radiant")).toBeChecked();
-    expect(screen.getByLabelText("Normal")).toBeChecked();
     expect(screen.getByLabelText("Play rate")).toBeChecked();
-    expect(screen.getByRole("columnheader", { name: /Drawn vs not drawn/i })).toBeInTheDocument();
+    const toggles = screen.getByText("Columns:").parentElement!;
+    expect(within(toggles).getAllByRole("checkbox")).toHaveLength(2);
   });
 });
 
@@ -1163,6 +1068,61 @@ describe("R377 public statistics match type", () => {
     expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
     expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
     expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
+  });
+
+  it("R3184000 with ranges shown a tiered card shows how much of its Adjusted range lies in its tier, and the tier sort orders a tier's cards by it", async () => {
+    const user = userEvent.setup();
+    const fits: Record<string, object> = {
+      // Tier B is 50% to 52.5%: 2.5 of these 9 points lie in it (28%).
+      "core-001": { tier: "B", adjustedWinRate: 0.515, adjustedLow: 0.47, adjustedHigh: 0.56 },
+      // Below the floor: no fit, as no tier or range shows.
+      "core-002": { tier: "B", adjustedLow: 0.4, adjustedHigh: 0.6 },
+      // 2.5 of these 3.5 points lie in B (71%): a lower adjusted rate than Spark Pup's, but surer of its tier.
+      "core-003": { tier: "B", adjustedWinRate: 0.51, adjustedLow: 0.495, adjustedHigh: 0.53 },
+    };
+    // Tier B with the highest adjusted rate but no range: no fit, so after the cards with one.
+    const fox = { ...MOCK_CARD_STATS_PROVISIONAL.cards[0], id: "core-004", name: "Ember Fox", tier: "B", adjustedWinRate: 0.52, adjustedLow: null, adjustedHigh: null };
+    const cards = [...MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, ...fits[card.id] })), fox];
+    const tiers = { center: 0.021, spread: 0.034, cards: 412, bandLow: 0.45, bandHigh: 0.55 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const order = (): (string | null)[] =>
+      [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+    expect(order()).toEqual(["core-004", "core-001", "core-003", "core-002"]);
+    // Off by default, the fit still orders the tier sort: the surer card first, a card with none after it.
+    expect(screen.queryAllByTestId(statsTestid.tierFit)).toHaveLength(0);
+    const header = within(table).getByRole("columnheader", { name: /^Tier/ });
+    await user.click(header);
+    expect(order()).toEqual(["core-003", "core-001", "core-004", "core-002"]);
+    await user.click(header);
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+    expect(order()).toEqual(["core-001", "core-003", "core-004", "core-002"]);
+
+    // Shown under the tier chip, to a whole percent, with a line that says what it is.
+    await user.click(screen.getByTestId(statsTestid.rangesToggle));
+    const row = (id: string): HTMLElement => table.querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!;
+    const fitOf = (scope: HTMLElement): (string | null)[] =>
+      within(scope).queryAllByTestId(statsTestid.tierFit).map((fit) => fit.textContent);
+    expect(fitOf(row("core-001"))).toEqual(["28%"]);
+    expect(fitOf(row("core-003"))).toEqual(["71%"]);
+    expect(fitOf(row("core-004"))).toEqual([]);
+    expect(fitOf(row("core-002"))).toEqual([]);
+    expect(within(row("core-001")).getByTestId(statsTestid.tierCell).closest("td")).toContainElement(
+      within(row("core-001")).getByTestId(statsTestid.tierFit),
+    );
+    expect(screen.getByTestId(statsTestid.rangesNote)).toHaveTextContent(
+      "The percent under a tier is how much of the card's Adjusted range lies inside that tier.",
+    );
+
+    // The grid shows it too.
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    expect(fitOf(grid.querySelector<HTMLElement>('[data-card-id="core-003"]')!)).toEqual(["71%"]);
   });
 
   it("R377 stats page starts with the mode the URL names", async () => {
@@ -1859,10 +1819,6 @@ describe("R2446000 the Cards table's columns", () => {
       "Tier",
       "Adjusted",
       "Win rate",
-      "When drawn",
-      "Drawn vs not drawn",
-      "Radiant",
-      "Normal",
       "Play rate",
     ]);
     for (const label of ["Cost", "Rarity", "Keywords", "Your stats"]) {
@@ -1879,16 +1835,12 @@ describe("R2446000 the Cards table's columns", () => {
       "tier",
       "adjustedWinRate",
       "winRate",
-      "drawnWinRate",
-      "drawnDelta",
-      "radiantWinRate",
-      "normalWinRate",
       "playRate",
     ]);
   });
 
-  it("R2446000 R2777000 an old address's sort by cost, rarity or keyword opens on the default sort, adjusted win rate descending", async () => {
-    for (const gone of ["cost", "rarity", "keyword"]) {
+  it("R2446000 R2777000 R3184000 an old address's sort by cost, rarity, keyword, When drawn, Drawn vs not drawn, Radiant or Normal opens on the default sort, adjusted win rate descending", async () => {
+    for (const gone of ["cost", "rarity", "keyword", "drawnWinRate", "drawnDelta", "radiantWinRate", "normalWinRate"]) {
       at(`/stats?sort=${gone}&dir=asc`);
       render(<StatsRoute />);
 

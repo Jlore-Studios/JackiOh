@@ -429,8 +429,8 @@ export function formatPlayedDelta(delta: number | null): string | null {
 }
 
 /**
- * R654, R1147000: a server-calculated rate to show, null when none or below the sample floor: the cards
- * table's Radiant and Normal rates, and the Created cards' (R2089000).
+ * R654: a server-calculated rate to show, null when none or below the sample floor: the Created cards' rates
+ * (R2089000), Used Radiant and Used normal among them (R1147000).
  */
 export function faceRate(
   games: number | undefined,
