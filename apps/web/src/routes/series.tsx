@@ -175,6 +175,8 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
         });
     };
     read();
+    // R3205000: the pick keeps reading in a hidden tab: the pick clock expires the pick whichever tab is
+    // open (R333), and the read carries the player into the game it starts.
     const handle = setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
     // A throttled tab's interval stalls; waking it reads the series again at once.
     const stopWake = pageWake(read);

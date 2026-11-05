@@ -7,11 +7,12 @@
 //! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. Next is the
 //! match host's decisions (#3101): [`host`] holds the clocks, the disconnect grace, the rematch offers and
 //! the relays as one state machine, `step(host, event, now) -> (host, outputs)`. Then the loadout
-//! visibility rule (SPEC §10.8, R1834003, #3102): [`loadout`] decides when a card's cosmetics may be shown
-//! without leaking a decklist. Then the ranked ladder (#3105): [`ranked`] holds the Glicko-2 ratings, the
-//! visible ladder, the seasons, one rated game decided as data and the leaderboard's sort key. Then the
+//! visibility rule (SPEC §10.8, R1834003, #3102): [`loadout`] decides what a seat wears when its match
+//! starts (R1834002) and when a card's cosmetics may be shown without leaking a decklist. Then the ranked
+//! ladder (#3105): [`ranked`] holds the Glicko-2 ratings, the visible ladder, the seasons, one rated game
+//! decided as data and the leaderboard's sort key. Then the
 //! ladder bots (#3103): a bot is a seat of that machine, and [`bots`] holds what its moves, pace, aim, emotes
-//! and habits are made of and the queue's and the pool's decisions around it.
+//! and habits are made of, the loadout it wears (R1834005) and the queue's and the pool's decisions around it.
 //!
 //! Then the collection economy's rolls (#3104): [`cosmetics`] is the cosmetics registry (data compiled in,
 //! SPEC §14.2) and [`economy`] what is decided over plain records: a card pack's and a cosmetic pack's

@@ -1407,6 +1407,30 @@ mod loadout_body_tests {
         assert_eq!(again["due"]["cards"], json!([]));
     }
 
+    /// R1834002: a seat's loadout as its match starts is the body too: the picks the host read in, the loadout out.
+    #[test]
+    fn loadout_body_freezes_a_seat_from_the_picks_a_host_read() {
+        let call = json!({
+            "call": "freezeSeat", "deckCards": ["core-001", "core-002"],
+            "picks": { "stamps": [{ "cardId": "core-001", "stamp": 2 }, { "cardId": "core-009", "stamp": 4 }] },
+        });
+        let frozen: Value = serde_json::from_str(&loadout(&call.to_string()).unwrap()).unwrap();
+        // Only a card the deck deals wears its stamp; a seat that owns nothing wears the defaults.
+        assert_eq!(
+            frozen["frozen"]["stamps"],
+            json!([{ "cardId": "core-001", "stamp": 2 }])
+        );
+        let defaults: Value =
+            serde_json::from_str(&loadout(r#"{"call":"defaultLoadout"}"#).unwrap()).unwrap();
+        assert_eq!(frozen["frozen"]["seat"], defaults["frozen"]["seat"]);
+        let rows = json!({ "call": "wornStamps", "rows": [
+            { "cardId": "core-001", "plays": 20, "level": 2, "stamp": 2 },
+            { "cardId": "core-002", "plays": 3, "level": 1, "stamp": 4 },
+        ] });
+        let worn: Value = serde_json::from_str(&loadout(&rows.to_string()).unwrap()).unwrap();
+        assert_eq!(worn["stamps"], json!([{ "cardId": "core-001", "stamp": 2 }]));
+    }
+
     #[test]
     fn loadout_body_refuses_a_call_that_does_not_parse() {
         for call in [
