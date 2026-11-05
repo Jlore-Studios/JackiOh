@@ -661,11 +661,12 @@ mod tests {
         for id in ["classic-t-glitch", "no-such-card"] {
             assert!(resolve_force(&ids(&[id])).is_err(), "{id}");
         }
-        // The Coin was such a token until the Meditative set shipped in v0.3.5: Meditative #27
-        // Clip-Farming Lawyer names it, so it carries it now.
+        // The Coin was such a token until the Meditative set shipped in v0.3.5, when Meditative #27
+        // Clip-Farming Lawyer named it. Classic #57 Echo names it too since #3048 (its text while no
+        // Spell has been played, R3048000), and the first card by id carries it.
         assert_eq!(
             resolve_force(&ids(&["core-t-coin"])).unwrap(),
-            ids(&["meditative-027"])
+            ids(&["classic-057"])
         );
     }
 }
