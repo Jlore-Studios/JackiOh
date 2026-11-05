@@ -15454,6 +15454,13 @@
     "3062": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-05T00:46:54Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the rule holds: the change is a test oracle in the engine's testkit (invariants.rs, no rules or resolution loop), one call site in the fuzz tool, tests and docs, about 7 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
