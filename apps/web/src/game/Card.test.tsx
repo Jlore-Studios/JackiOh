@@ -695,7 +695,7 @@ describe("B19: what a face-up root adds", () => {
     const view = fullBoardView();
     const { container } = render(<Board view={view} />);
     for (const root of faceUpRoots(container)) {
-      const printed = must(CATALOG[root.dataset.defId ?? ""], root.dataset.testid);
+      const printed = must(CATALOG[root.dataset.defId ?? ""], root.dataset.testid ?? "a card");
       expect(root.getAttribute("data-rarity"), root.dataset.testid).toBe(printed.rarity);
       expect((root.getAttribute("data-card-type") ?? "") !== "", root.dataset.testid).toBe(true);
     }
