@@ -18,6 +18,11 @@ use crate::config::{
 
 /// One Grape tier. Declared lowest first, so a variant's discriminant is its index in `GRAPE_TIERS`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum GrapeTier {
     Rotten,
@@ -50,6 +55,11 @@ pub const GRAPE_TIERS: &[GrapeTier] = &[
 
 /// Every tier a player can be shown in, lowest first.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum RankTier {
     Raisin,
@@ -125,6 +135,11 @@ const _: () = {
 };
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum GameResult {
     Win,
@@ -137,6 +152,11 @@ pub enum GameResult {
 /// and All Random. A ranked game moves only its own mode's ladder. On the wire and in the database
 /// it is `constructed` or `random`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum Ladder {
     #[default]
@@ -176,6 +196,11 @@ impl Ladder {
 /// in `GRAPE_TIERS`), which the ladder never drops below (R607); `peak_ladder` and `peak_jlorious` are
 /// the best the season has seen, for the profile's badge.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SeasonRank {
     pub season_id: String,
@@ -195,11 +220,17 @@ pub struct SeasonRank {
     pub peak_ladder: Option<i32>,
     /// The best (lowest) Jlorious position held this season, or null.
     pub peak_jlorious: Option<i32>,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub updated_at: i64,
 }
 
 /// A placed or placing player's standing, as the season's percentiles and Jlorious read it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Standing {
     pub profile_id: String,
@@ -450,7 +481,13 @@ pub fn with_jlorious_peak(rank: &SeasonRank, position: i32) -> SeasonRank {
 /// What a player is shown as (R612): Raisin with their placements, a Grape tier with its division,
 /// pips and the floor that holds them, or a Jlorious position. Never the rating.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
+#[cfg_attr(feature = "ts", ts(as = "VisibleRankWire"))]
 pub enum VisibleRank {
     Raisin {
         placements_played: i32,
@@ -471,6 +508,11 @@ pub enum VisibleRank {
 /// The JSON shape of [`VisibleRank`] and [`PeakBadge`]: every arm's fields, each present only on its
 /// own arm.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct VisibleRankWire {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -589,7 +631,13 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
 
 /// A season's best, as the profile's badge shows it (R607): a Jlorious position or a Grape division.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
+#[cfg_attr(feature = "ts", ts(as = "VisibleRankWire"))]
 pub enum PeakBadge {
     Jlorious {
         season_id: String,

@@ -43,7 +43,7 @@ fn assert_close(actual: f64, expected: f64) {
     );
 }
 
-/// R609: `v<major>.<minor>` of a patch version (`ranked/season.rs`'s `season_id_of`, copied so the
+/// R609: `v<major>.<minor>` of a patch version (`jackioh-shared`'s `ranked/season.rs` `season_id_of`, copied so the
 /// expectation is computed here rather than by the code under test).
 fn season_id_of(patch_version: &str) -> String {
     let rest = patch_version
