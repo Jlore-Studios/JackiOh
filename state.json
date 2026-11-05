@@ -15267,7 +15267,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-04T18:26:03Z",
+      "feedback_since": "2026-11-05T02:04:38Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-04T21:34:30Z",
@@ -15310,7 +15310,7 @@
         "provider": "claude-4",
         "run": "41903260232"
       },
-      "source": "request",
+      "source": "",
       "started_at": "2026-11-05T02:04:38Z",
       "stop_requested": false,
       "taken_asks": [
