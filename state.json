@@ -15703,6 +15703,14 @@
         "provider": "claude-6",
         "since": "2026-11-05T16:04:29Z"
       }
+    },
+    "3197": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-05T14:44:13Z",
+      "issue": 3189,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
