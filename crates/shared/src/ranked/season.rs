@@ -52,8 +52,64 @@ pub fn season_id_of(patch_version: &str) -> String {
     }
 }
 
+/// R609: a season, named by the minor version of the game (`v0.2`), and the patch that opened it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Season {
+    pub id: String,
+    pub patch_version: String,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub started_at: i64,
+}
+
+/// What opening the build's season comes to (R609).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "plan", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum SeasonPlan {
+    /// The build's season is open already: nothing to create or reset.
+    Exists { season: Season },
+    /// `season` is to be created, started at the time given. `first` is the first season of all, which resets
+    /// nothing; every later one soft-resets every rated player of each ladder ([`soft_reset`]) in the
+    /// transaction that creates it, so a season is either open and reset or neither.
+    New { season: Season, first: bool },
+}
+
+/// R609: opens the season a build plays in (`season_id_of(patch_version)`) among `seasons`, the ones that
+/// exist, at `now_ms`.
+pub fn plan_season(seasons: &[Season], patch_version: &str, now_ms: i64) -> SeasonPlan {
+    let id = season_id_of(patch_version);
+    if let Some(existing) = seasons.iter().find(|season| season.id == id) {
+        return SeasonPlan::Exists {
+            season: existing.clone(),
+        };
+    }
+    SeasonPlan::New {
+        season: Season {
+            id,
+            patch_version: patch_version.to_string(),
+            started_at: now_ms,
+        },
+        first: seasons.is_empty(),
+    }
+}
+
 /// One rated player going into a reset.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ResetPlayer {
     pub profile_id: String,
@@ -62,6 +118,11 @@ pub struct ResetPlayer {
 
 /// One player's reset: the rating before and after.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ResetChange {
     pub profile_id: String,
@@ -71,6 +132,11 @@ pub struct ResetChange {
 
 /// What a reset did, for the operator who runs it and the log line the server writes.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ResetReport {
     pub players: usize,
@@ -88,6 +154,11 @@ pub struct ResetReport {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 pub struct SoftReset {
     pub changes: Vec<ResetChange>,
     pub report: ResetReport,
