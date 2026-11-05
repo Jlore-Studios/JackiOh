@@ -10,10 +10,11 @@
 // rows put over the limit clamps unless the card's part wrote its own; #4.5's and #26's base faces take lines or a
 // colon (#2067); Quests #7 and #112 print one stage (questFace.ts, R2450000). The held Training Grounds set
 // (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant faces of #16 and #38 clamp.
-// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Only a face printing its catalog text takes a
-// short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
-// only its header and the next Ascent line (#814, R280, c008_reach_the_summit.rs); a face in play past the
-// preview's limit clamps rather than shrinking its art.
+// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. #3138: Classic+ #37 Wardrum and Meditative #20
+// Aestheticize the Game, whose new keyword line (Divine Shield, Tradable) makes a seventh line. Only a face
+// printing its catalog text takes a short form (in play #98 prints its rolled power and a Call to Chaos "???",
+// inPlay.ts). In play the Summit prints only its header and the next Ascent line (#814, R280,
+// c008_reach_the_summit.rs); a face in play past the preview's limit clamps rather than shrinking its art.
 
 import type { PreviewValue } from "@jackioh/shared";
 
@@ -37,8 +38,10 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "classicplus-019-2": { base: "clamp", radiant: "clamp" },
   "classicplus-042-1": { radiant: "clamp" },
   "classicplus-034": { base: "clamp" },
+  "classicplus-037": { base: "clamp", radiant: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
+  "meditative-020": { base: "clamp", radiant: "clamp" },
   "meditative-022": { base: 1, radiant: 1 },
   "meditative-022-1": { base: 3, radiant: 2 },
   "meditative-039-5": { base: 3, radiant: 3 },

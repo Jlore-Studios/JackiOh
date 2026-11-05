@@ -264,7 +264,10 @@ mod tests {
 
         #[test]
         fn the_grant_survives_a_copy() {
-            let (mut s, unit) = summoned("underclassman-copy");
+            // S #17 Imprisoned Ship Smith is Dormant and no body to copy; the roll moved onto it when Tatches
+            // the Totem left the (1) pool (#3138), so take the first seed that picks any other (1) Unit.
+            let seed = seed_where("underclassman-copy", |seed| summoned(seed).1.def_id != "stinkyscape-017");
+            let (mut s, unit) = summoned(&seed);
             run_as(
                 &mut s,
                 &[summon_copy(json_as(
