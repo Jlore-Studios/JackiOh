@@ -31,7 +31,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | --- | --- | --- |
 | Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
-| Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
+| Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. The 1v1 actor decides no clock, reconnect or rematch rule (#3101): `jackioh_shared::host`'s pure machine does (`step(host, event, now) -> (host, outputs)`: which clock runs and what an expiry becomes, the disconnect grace, the order every view is sent in, the aim relay, a bot's turn, what a rematch offer meets), and the actor feeds it events and carries out its outputs: a tokio timer (`clock.rs` is only that), a socket send, a store write; Duos' actor still decides its own (the second part of #3101). `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
@@ -57,7 +57,9 @@ decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set 
 fold on an async path (a rebuild's three, a replay's opening, the reaper's, a finished match's one, before its result's transaction, which its quests and its game record share (#2213), a refiled game record's and `timing-backfill`'s) runs there too,
 one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
-no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
+no rule is restated here. The Conquest series' transitions and projection are `jackioh_shared::series`
+(R330–R337), which `api/series.rs`, `api/queue.rs`, `actor/rooms.rs` and `bots/pick.rs` call; `db/store.rs` and
+`loadout.rs` re-export its types. A co-op match calls the engine's Duos functions (`duos_create`,
 `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
 `duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§13). The
 catalog and its version are compiled in from `crates/cards`.

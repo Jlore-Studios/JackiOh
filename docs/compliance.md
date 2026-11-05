@@ -68,9 +68,9 @@ line only after that review.
    `b` for the second change that day, then `c` (`2026-10-15b/2026-10-15`, R970001). Run the
    export test above and commit `serverConfig.ts`.
    The same test file's `AGREED_TEXT` holds a row per version, the SHA-256 of both pages' English
-   text, and fails on any change to the words (a number the pages read from the configuration, such
-   as `MIN_ACCOUNT_AGE_YEARS` or a retention period, included) until the version moves. Add the new
-   version's row with the digest the failure prints; never edit an old row.
+   text, and fails on any change to the words (`MIN_ACCOUNT_AGE_YEARS`, the one number the pages read
+   from the configuration, included) until the version moves. Add the new version's row with the
+   digest the failure prints; never edit an old row.
 3. Re-quote the changed text in `apps/web/static-pages.ts`.
 4. Every account is asked to agree again, on its next gated screen (never on `/account` and never in
    a match). Staging gets the change on merge and production with the next daily promotion, the site
@@ -98,7 +98,7 @@ read them at least weekly.
    every report held, oldest first: when it was made and its reason, the reporter's and the
    sender's profile ids, and the message as stored (the word filter has already masked what it
    catches).
-2. Judge each against the Terms' "Chat" section. Abuse is grounds for a ban:
+2. Judge each against the Terms' "Play fair" section. Abuse is grounds for a ban:
    `moderate ban <sender-profile-id>` (each report prints the line). A ban lands at once: the
    account's next request, chat included, answers `account_banned`.
 3. Nothing marks a report done: the next run lists it again until its message is purged.
@@ -110,22 +110,22 @@ decklists, opening hands, draws and plays, and the result. As it is written it i
 card statistics' totals (`record_totals`, `card_totals`, `decklist_totals`), counts with no single
 game in them. The retention loop empties a record's detail `GAME_RECORD_RAW_RETENTION_DAYS` (7) after
 it was written and keeps only its id, source, mode, patch and time, so the same game is not counted
-twice; the totals are kept as long as the statistics are. The Privacy Policy's "for as long as the
-statistics are kept" covers both, so this changed none of its words.
+twice; the totals are kept as long as the statistics are. The Privacy Policy's "Card statistics that
+don't identify you may be kept indefinitely" covers both, so this changed none of its words.
 
-## 8. What the Terms say about AI opponents (R2614000)
+## 8. What the Terms say about AI opponents (R2614000, R3110000)
 
 The ladder bots (SPEC §9.12) pass as people: nothing in the game marks one. The Terms' "AI opponents"
 section (`apps/web/src/routes/terms.tsx`) is how players learn of them, as Hearthstone's patch notes
-and Fortnite's support page are for theirs: when ranked may seat one and why, what one looks like and
-does, that nothing marks it, and that a friend's challenge is always that friend.
+and Fortnite's support page are for theirs. It says only that ranked may match a player with an AI
+opponent when no one near their rank is available, and that nothing in the game marks which opponents
+are AI. The owner dropped what one looks like and does, and that a friend's challenge is always that
+friend (#3110); the bots themselves did not change (R1452).
 
-- Keep it true. A change to what a bot is, wears or does that the section names (its name, portrait,
-  cosmetics, rank, leaderboard row, pace, emotes, concessions, draw answers, timeouts, rematches, which
-  modes and ranks it plays, or a new way to seat one) changes the section in the same pull request, and
-  the Terms' version with it (section 4).
-- Tuning a number changes none of its words: it says "a short wait" for the fallback time and "near
-  your rating" for the rating window.
+- Keep it true. A change to when ranked may seat one (its modes, its ranks, or a new way to seat one)
+  or to whether any seat is marked changes the section in the same pull request, and the Terms'
+  version with it (section 4).
+- Tuning a number changes none of its words: it says only "near your rank".
 - Say what changed for players in the pull request's `## Player note` too, so the patch notes carry it,
   as Hearthstone's did.
 - Whether this is enough under the EU AI Act's rule that people be told when they deal with an AI

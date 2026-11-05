@@ -31,8 +31,8 @@ use crate::cosmetics::CosmeticRarity;
 // takes these (#2160).
 // ---------------------------------------------------------------------------------------------
 
-/// Milliseconds in a second.
-pub const MS_PER_SECOND: i64 = 1000;
+/// Milliseconds in a second: `jackioh-shared`'s (#3098), where the series' pick clock converts.
+pub use jackioh_shared::config::MS_PER_SECOND;
 /// Milliseconds in a day, a UTC day included (an epoch-ms timestamp has no leap seconds).
 pub const MS_PER_DAY: i64 = 86_400_000;
 /// Nanoseconds in a millisecond: `time::OffsetDateTime` counts the one, the port the other.
@@ -43,21 +43,15 @@ pub const NANOS_PER_MS: i128 = 1_000_000;
 // paragraph; do not rename or re-derive these.
 // ---------------------------------------------------------------------------------------------
 
-/// R79: the turn clock belongs to the active player and ends a stalled turn.
-pub const TURN_CLOCK_SECONDS: i64 = 75;
-/// R79: a prompt held by the non-active player (e.g. a trap firing on the opponent's turn).
-pub const PROMPT_CLOCK_SECONDS: i64 = 30;
-/// SPEC §11 R268: the mulligan clock. Both seats' mulligans are open at once (R265), so one deadline
-/// runs for both, armed when the window opens and never re-armed when one seat answers; on expiry
-/// every seat still owing is timed out and keeps its whole hand. Longer than the prompt clock because
-/// a mulligan reads a whole opening hand, shorter than the turn clock because nothing is played.
-pub const MULLIGAN_CLOCK_SECONDS: i64 = 45;
-/// R79: grace window after a disconnect before `disconnectExpired` ends the match as a loss.
-pub const DISCONNECT_GRACE_SECONDS: i64 = 60;
-/// R79, R389: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`.
-/// Patch v0.2.0 doubled the turn cap to 60 player-turns (B4.3), which at a full turn clock is 75
-/// minutes, so the ceiling doubled with it and a slow game ends on the cap, not the clock.
-pub const MATCH_CEILING_MINUTES: i64 = 120;
+// The match host's numbers (the clocks, the aim relay's interval, the retry paces, the rematch window and
+// its stakes) are `jackioh_shared::config`'s since #3101: the pure machine decides with them, and the
+// server names them here as it always has.
+pub use jackioh_shared::config::{
+    AIM_RELAY_INTERVAL_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES,
+    MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, REMATCH_OFFER_TTL_MS,
+    TURN_CLOCK_SECONDS,
+};
+
 /// R79, §9.5: room codes are 6 characters from the invite-code alphabet.
 pub const ROOM_CODE_LENGTH: usize = 6;
 /// R79, §9.5: how long an unjoined room stays open, in seconds. Fifteen minutes. TS stated this as
@@ -229,7 +223,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-31/2026-11-01";
+pub const TERMS_VERSION: &str = "2026-11-05/2026-11-05";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -610,13 +604,6 @@ pub const KNOWN_PROFILES_MAX: usize = 10_000;
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.
 pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
-/// SPEC §11 R738: the least time between two `aim` frames the actor relays for one seat. Aims that
-/// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
-/// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
-/// Ten a second follows a hover from target to target and bounds what a scripted client can push.
-/// R2739001's `choiceHover` relays are coalesced per seat by the same interval, on a window of their
-/// own.
-pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
 /// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000
 /// holds a player's socket to the same interval, on `/ws/match` and `/ws/duos`: a later hello of one
@@ -674,10 +661,6 @@ pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
 /// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
 /// try after it (250 ms, then 500 ms).
 pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
-/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
-/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
-/// row lands, the match ends or the actor stops, never in a loop.
-pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 /// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
@@ -843,18 +826,9 @@ pub const CUSTOM_CARDS_PER_ACCOUNT: usize = 50;
 // Queue modes and the Conquest series (SPEC §9.5, R257–R264, R330–R338).
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R330: game wins that take a Conquest series — one with each deck of a trio, since a deck
-/// that has won is locked. `tests/api/series_rules.rs` asserts it equals the validator's
-/// `TRIO_DECKS`. (R259's Best of 3 needed 2.)
-pub const SERIES_WINS_NEEDED: i32 = 3;
-/// SPEC §11 R334: the most games a series plays, drawn games included. Without a draw a series is
-/// decided by its fifth game at the latest (2 × `SERIES_WINS_NEEDED` − 1: a side is then at three
-/// wins), so the cap leaves room for two drawn games in the longest series and stops a run of draws
-/// from holding both players for ever. At the cap more wins takes the series and equal wins is a
-/// series draw. (R259's Best of 3 played at most 3.)
-pub const SERIES_MAX_GAMES: i32 = 7;
-/// SPEC §11 R333: how long both players have to pick their deck for the next game of a series.
-pub const SERIES_PICK_SECONDS: i64 = 60;
+/// R330, R333, R334: the series' wins needed, its most games and its pick clock are `jackioh-shared`'s
+/// since #3098, which holds the rules that read them.
+pub use jackioh_shared::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
 /// SPEC §11 R263: how often the series sweeper runs (pick clocks, and games a restart left unstarted).
 pub const SERIES_SWEEP_INTERVAL_SECONDS: i64 = 5;
 /// SPEC §11 R263: how long a series game may sit unstarted before the sweeper starts it. Longer
@@ -877,10 +851,6 @@ pub const SERIES_POLL_SECONDS: i64 = 2;
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render
 /// (`main.tsx` keys the gate and the error boundary by path).
 pub const MATCH_FOUND_NAV_DELAY_MS: i64 = 1200;
-/// SPEC §11 R672: how long one seat's rematch offer stands after a non-series match ends. Ten
-/// minutes: long enough to read the result screen and press the button, short enough that a stale
-/// offer cannot summon a game long after both players moved on.
-pub const REMATCH_OFFER_TTL_MS: i64 = 600_000;
 
 // ---------------------------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320). The lessons themselves are the client's
@@ -1744,9 +1714,6 @@ pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
 pub const BOT_STALE_START_SECONDS: i64 = 60;
-/// R1452: how long a bot waits to decide again when its move could not be written to the log, so a
-/// store that keeps failing is retried at this pace, never in a loop.
-pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Ladder bots' cosmetics (SPEC §14.2, R1834005, R1834006; #1834). A bot wears a loadout drawn as a
