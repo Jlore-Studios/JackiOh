@@ -15252,9 +15252,11 @@
         "by": "`claude` (medium)",
         "sha": "b74d36cc490948d93cf9e5951ebb4dd606176e4d"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T10:28:06Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-05T11:11:04Z",
         "family": "claude",
@@ -15264,6 +15266,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -50; echo ----; cat crates/server/tests/db/run.sh\", \"description\": \"Read bot notes and the db run script\"}\n- Grep: {\"pattern\": \"run\\\\.sh builds and links only that\", \"path\": \"crates/server/README.md\", \"output_mode\": \"content\"}\n- Grep: {\"pattern\": \"db \\\\(store contract\\\\)\", \"path\": \"crates/server/README.md\", \"output_mode\": \"content\", \"-B\": 3, \"-A\": 2}\n- Bash: {\"command\": \"grep -n \\\"profile.test\\\" -A8 Cargo.toml; which docker shellcheck; nproc\", \"description\": \"Check test profile, docker, shellcheck\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3162/crates/server/tests/db/run.sh\", \"old_string\": \"# Built once: in the test profile, `cargo test`'s, and with the tests, so wi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3162/crates/server/tests/db/run.sh\", \"old_string\": \"cargo build --profile test --manifest-path\", \"new_string\": \"# shellcheck dis\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3162/crates/server/tests/db/run.sh\", \"old_string\": \" cargo test --manifest-path \\\"$REPO/Cargo.toml\\\" -p jackioh-server --test se\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3162/crates/server/README.md\", \"old_string\": \"so that\\n`tests/db/run.sh` builds and links only that (CI's `db (store contract)` \u2026\n- Bash: {\"command\": \"sh -n crates/server/tests/db/run.sh && echo syntax-ok; shellcheck crates/server/tests/db/run.sh; git stash list >/dev/null; git show HEAD:crates/server/tests/db/run.sh | shellcheck - ; d\u2026\n- Bash: {\"command\": \"(CARGO_PROFILE_TEST_DEBUG=0 sh crates/server/tests/db/run.sh > /tmp/db.log 2>&1; echo \\\"exit=$?\\\" >> /tmp/db.log)\", \"description\": \"Run the Postgres store suite via run.sh\", \"timeout\": 1\u2026\n- Bash: {\"command\": \"echo \\\"- run 2: shellcheck shows only the 2 old warnings; started the Docker run to /tmp/db.log (background).\\\" >> .bot-notes.md; sleep 5; tail -5 /tmp/db.log\", \"description\": \"Log progr\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/db.log; do sleep 10; done; tail -c 1500 /tmp/db.log\", \"description\": \"Wait for the db run to finish\", \"timeout\": 590000}\n- Bash: {\"command\": \"grep -E '^(--- |test result|exit=)' /tmp/db.log; awk '/--- cargo test/{f=1} f && /Compiling/{bad=1} END{exit bad}' /tmp/db.log && echo \\\"no-recompile-ok\\\"; grep -c 'Compiling' /tmp/db.lo\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 2: Docker run passed (exit 0; shards 228/227/227 passed); awk no-recompile check exit 0; build 1m48s cold in this env. Done; only the final report is \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: the db (store contract) job builds the engine and the cards at opt-level 0, which cuts its compile\"} --> `crates/server/tests/db/run.sh` now builds the engine and the cards at opt-level 0, which shortens the compile that made `db (store contract)` take 8m \u2026"
       },
+      "interruptions": 0,
       "issue": 3162,
       "kind": "review",
       "live": "reviewing",
