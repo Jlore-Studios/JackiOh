@@ -9,11 +9,15 @@ package tests
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cli"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
@@ -24,6 +28,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
 // spotCheckClose closes bot pull request #200+n of issue #100+n, labelled `labels` too, merged
@@ -222,6 +227,32 @@ func TestSpotCheck_AMergedChangeIsReviewedByOpusAndRecordedClean(t *testing.T) {
 	assertFalse(t, config.IsLive(h.gh.LabelNames(pr)))
 	assertEqual(t, len(spotcheck.Pending(h.ctx.Store.Load())), 0)
 	assertEqual(t, flowMake(h.ctx).Get("action"), "none")
+}
+
+// The same check, with the worker's probe the real one `work` gives it (`cli.MakeProbe`), which
+// `h.night` leaves out: the probe stopped every spot-check at its first step because its pull
+// request was closed, by its merge, so all 12 on record failed (#3133).
+func TestSpotCheck_TheRealProbeLetsTheReviewOfAClosedMergedPullRequestRun(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	pr, sha := spotCheckMerged(t, h)
+	planned := flowMake(h.ctx)
+	assertEqual(t, []any{planned.Get("number"), planned.Get("spot_check")}, []any{pr, true})
+	r := workFake(map[string]runner.Handler{"review": workReviewer(workApprove)})
+	out := filepath.Join(h.root, "out-probed")
+	probe := cli.MakeProbe(h.ctx, &pr, h.cfg.Pool.Get(planned.Str("provider")), nil)
+	worker := work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, probe, nil,
+		h.ctx.Now, nil, nil, nil)
+	worker.GH = h.gh
+	worker.Run()
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	text, err := os.ReadFile(filepath.Join(out, "result.json"))
+	assertTrue(t, err == nil, err)
+	result := flowLoads(string(text))
+	assertEqual(t, []any{result.Get("status"), result.Get("verdict"), result.Get("reviewed_sha")},
+		[]any{"reviewed", "approve", sha}, result.Get("reason"))
+	assertEqual(t, len(r.Calls), 1)
+	entry := spotCheckEntry(t, h)
+	assertEqual(t, []any{entry.Get("status"), entry.Get("verdict"), entry.Get("tries")}, []any{"done", "clean", 0})
 }
 
 // Blocking findings open one follow-up issue, queued to build at `difficulty:medium`, with a
