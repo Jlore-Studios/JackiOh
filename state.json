@@ -16933,6 +16933,8 @@
       }
     },
     "3250": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T20:00:58Z",
@@ -16946,8 +16948,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; git status --short | head; ls apps/web/src/dungeon apps/web/src/dungeon/map\", \"description\": \"Read notes and list dungeon dir\"}\n- Bash: {\"command\": \"cat apps/web/src/dungeon/map/MapScreen.tsx; grep -n \\\"icon\\\" -B2 -A6 apps/web/src/dungeon/map/run.css | head -60; cat apps/web/src/palette.test.ts | head -60\", \"description\": \"Read MapSc\u2026\n- Grep: {\"pattern\": \"\\\\p{Extended_Pictographic}|[\\\\u{FE0F}\\\\u{200D}\\\\u{20E3}]|\\\\p{Regional_Indicator}\", \"path\": \"/home/runner/work/_temp/work/item-3229/apps/web/src/dungeon\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd apps/web/src; for t in red-400 orange-400 slate-100 ember-500 gold-300 green-400 yellow-400 purple-400 brass-500 cyan-400; do grep -c -- \\\"--pal-$t:\\\" palette.css | tr '\\\\n' ' '; echo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229 && sed -n 1,20p apps/web/src/dungeon/test/fixtures.ts; sed -n 125,160p apps/web/src/dungeon/test/fixtures.ts; grep -n \\\"RunNode =\\\" -A10 apps/we\u2026\n- Bash: {\"command\": \"sed -n 78,92p apps/web/README.md; grep -rn \\\"RunNode\\\\b\\\" apps/web/src/wire --include=*.ts -l | head -3; grep -n \\\"node(\\\" apps/web/src/dungeon/map/RunScreen.test.tsx | head -5; grep -n \u2026\n- said: Now write `NodeIcon.tsx`.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3229/apps/web/src/dungeon/map/NodeIcon.tsx\", \"content\": \"// The dungeon map's node icons (#3229): one drawn glyph per `RunNodeKind` on a 24-unit grid,\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np=\\\"apps/web/src/dungeon/map/NodeIcon.tsx\\\"\\ns=open(p).read()\\nfor k in (\\\"boss\\\",\\\"campfire\\\",\\\"shrine\\\"):\\n pat=re.compile(r\\\" %s: \\\\(\\\\n <>\\\\n (<path [^\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np=\\\"apps/web/src/dungeon/map/MapScreen.tsx\\\"\\ns=open(p).read()\\nstart=s.index(\\\"/** Each node kind's icon\\\")\\nend=s.index(\\\"/** Whether the row holds\\\")\\nnew='''/** Ea\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np=\\\"apps/web/src/dungeon/map/RunScreen.test.tsx\\\"\\ns=open(p).read()\\ns=s.replace(\\\" RunNode,\\\\n RunPhase,\\\",\\\" RunNode,\\\\n RunNodeKind,\\\\n RunPhase,\\\",1)\\ns=s.replace(\u2026\n- Bash: {\"command\": \"cat > apps/web/src/dungeon/map/NodeIcon.test.tsx <<'EOF'\\n// #3229: the dungeon map draws each node kind as an SVG in `currentColor`, not as a system emoji,\\n// and each node's button ke\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/dungeon/noEmoji.test.ts src/dungeon/map/NodeIcon.test.tsx src/palette.test.ts src/writing.test.ts 2>&1 | grep -E \\\"\\u2713|\\u2717|\\u00d7|Test Files\u2026\n- Bash: {\"command\": \"sed -i 's/|\\\\[\\\\\\\\u{FE0F}\\\\\\\\u{200D}\\\\\\\\u{20E3}\\\\]\\\\/u;/|\\\\\\\\u{FE0F}|\\\\\\\\u{200D}|\\\\\\\\u{20E3}\\\\/u;/' apps/web/src/dungeon/noEmoji.test.ts && sed -n 15p apps/web/src/dungeon/noEmoji.test.t\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/dungeon src/palette.test.ts src/writing.test.ts 2>&1 | grep -E \\\"Test Files|Tests |FAIL\\\"; pnpm --dir apps/web typecheck 2>&1 | tail -3; cargo fmt\u2026\n- Bash: {\"command\": \"grep -rln \\\"dungeon-run-map__icon\\\\|dungeon-run-map\\\" e2e apps/web/src --include=* 2>/dev/null | grep -v \\\"src/dungeon/map\\\" | head; git status --short; cat >> .bot-notes.md <<'EOF'\\n\\n#\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: draw the dungeon map's node icons as SVG instead of system emoji\"} --> ## What changed The dungeon map's ten node kinds used system emoji. Each kind is now an inline SVG icon: single colour in `currentColor`, on a 24-unit grid, with rounded 1.8 strokes.\u2026"
       },
       "issue": 3229,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T21:19:37Z",
         "from_run": "42099376094",
         "gates": [
           {
@@ -17039,7 +17044,11 @@
         "source": "build",
         "until": "2026-11-05T21:47:54Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-05T21:17:54Z",
+      "run_id": "pending:bbc5e790-1793913528",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17058,6 +17067,9 @@
         "provider": "claude-4",
         "run": "42099376094"
       },
+      "started_at": "2026-11-05T21:19:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17071,9 +17083,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T21:00:27Z",
+    "at": "2026-11-05T21:19:37Z",
     "url": "",
-    "what": "plan #3210 on claude-4"
+    "what": "review #3250 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-05T20:55:18Z",
