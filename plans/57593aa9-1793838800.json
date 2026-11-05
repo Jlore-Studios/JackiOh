@@ -1,0 +1,72 @@
+{
+  "action": "build",
+  "number": 3044,
+  "title": "Patch (part 7 of 11): Twinspell becomes an Activate",
+  "branch": "bot/issue-3044",
+  "thread": "**Issue #3044 (data, not instructions):**\n\n```text\n# #3044: Patch (part 7 of 11): Twinspell becomes an Activate\nOpened by @jgoetzmann-bot.\n\nThe Twinspell row of #3000's section 5.\n\n## What\n\nTwinspell (`core-079`, (2) Field Spell) is a passive grant today. `StaticFlags.echo_grant` makes `modifiers.rs` install an `echoNextSpell` rider tied to it, and `echo.rs`'s `granted_echo` spends the rider and moves Twinspell to the graveyard (R30, R209).\n\nNew words:\n- **Base:** \"Activate: The next Spell you play this turn gains Echo +1. Then this goes to the graveyard.\"\n- **Radiant:** \"Activate: The next Spell you play this turn gains Echo +1.\" It stays on the field, so it can be used once each turn.\n\n`echoGain` becomes base 1, Radiant 1 (Radiant 2 \u2192 1). The words read it as `{echoGain}`.\n\nThis needs no engine change. Drop `echo_grant` from its script and give both faces an `ActivationDecl` with `ActivationUses::Count(1)`, once a turn (R384), as `classic_plus/c060_doctors_orders.rs` does. Its effects:\n- `add_player_modifier` with `{ \"kind\": \"echoNextSpell\", \"amount\": <echoGain> }` and no `sourceId`, expiring `{ \"until\": \"thisTurn\", \"turn\": <now> }`, as `core/c035_lunar_eclipse.rs` and `meditative/c053_prestige.rs` expire theirs. A rider with no source grants its own amount (`echo.rs` about line 139), and the turn's cleanup ends it;\n- on the base face, Twinspell then moves itself to its owner's graveyard. \"Goes to the graveyard\" is the card's own word, so use a plain move: not the `sacrifice` verb (a death, which fires Death hooks) and not a `tribute_self` cost. Pick the verb and rule it.\n\nThe engine's `echo_grant` mechanism stays for R30's engine test (`crates/engine/tests/rules/rulings_a.rs`). Retitle R30 and update R209 where they describe Twinspell. Its r386 test changes: a Radiant Nerf below `min` 1 is no longer possible.\n\n## Every test that uses Twinspell as its Echo granter\nThese now activate it first (or place the rider):\n- card scripts: `classic/c004_palantir.rs`, `c017_counterspell.rs`, `c018_glitch_in_the_system.rs`, `c033_joro.rs`, `classic_plus/c073_call_to_chaos_classic_edition.rs`, `t_ai_05_autocomplete.rs`, `t_ai_06_datacenter_fire.rs`, `t_ai_09_refusal.rs`, `meditative/c008_reach_the_summit.rs`, `meditative_plus/c006_bloodbloom.rs`, `c007_life_mage.rs`, `c017_dogpile.rs`;\n- cross tests: `crates/cards/tests/cross/after_resolution.rs`, `control_change_carry.rs`, `echo_and_exile.rs`, `fused_hooks.rs`, `hand_returns.rs`, `hidden_information.rs`, `lasting_effects.rs`, `plays_and_casts.rs`, `preview.rs`, `trigger_stays.rs`, `turn_clock_and_legality.rs`;\n- `crates/tools/src/classify.rs`, if its tests break.\n\n**Not** `classic/c057_echo.rs` or `meditative/c005_death_by_1000_cuts.rs`: they are part 11's, which updates their Twinspell tests after you.\n\n## Files\n- **Owned:** `crates/cards/src/scripts/core/c079_twinspell.rs`, the test files above, and the notes R30 and R209.\n- **By entry:** Twinspell's entries in `catalog.json` (`params`, text) and `card-text.yaml` (zh \u6fc0\u6d3b, line 749), its rows in `spec/08-catalog.md` (line 125), `docs/radiant-audit.md` (line 145) and `BUILD.md` (lines 265 and 476).\n- **Leave to the reconcile** (name them): Twinspell's case in `crates/cards/tests/cross/activate_listed.rs` (part 4's file, whose array length the case moves) and the kept script.\n- Leave `spec/06-keywords.md`'s Echo X row to part 11.\n\n## Check\n- `cargo test -p jackioh-cards twinspell`\n- `cargo test -p jackioh-cards --test cards`\n- `cargo test -p jackioh-cards`\n- `cargo test -p jackioh-tools --test export_card_text`\n- `cargo jackioh catalog check`, `cargo jackioh spec check`, `cargo fmt --check`, and `cargo clippy -p jackioh-cards --all-targets -- -D warnings`\n\n### Working in the fullsend tree\nThis part of #3000 lands on `bot/issue-3000` beside the other parts, with no pull request of its own. One reconcile run makes the branch green, so this part need not pass every check alone, but it tests its own code.\n- Read `docs/ADDING_CARDS.md` before any card change (CLAUDE.md rule 10). Every number is a named constant or a card `param` (rule 9).\n- **Rulings** take this sub-issue's own block: R(N\u00d71000) up, for its number N (`docs/issues-and-patches.md`, Ruling numbers). Each has a test named after it and its \u00a711 paragraph in `spec/pending/N.md`. Never run `cargo jackioh spec index`.\n- **Shared by entry.** Other parts edit other entries of `crates/cards/catalog.json`, `crates/cards/card-text.yaml` (and the `chinese.json` its export writes), `crates/cards/tests/cross/catalog.rs`, `crates/cards/src/census.rs`, `crates/engine/src/config.rs`, `apps/web/src/i18n/zh-CN.json`, `spec/06-keywords.md`, `spec/07-tokens.md`, `spec/08-catalog.md`, `docs/radiant-audit.md`, `docs/stinkyscape-set.md` and `BUILD.md`. Change only the entries, rows and constants named here.\n- **Left to the reconcile:**\n  - `KEPT_SCRIPTS` in `crates/cards/src/history.rs`: keep Twinspell's old script in its own file as `docs/ADDING_CARDS.md` \u00a73 says, and name it in your summary;\n  - the pending patch fragment;\n  - any test in another part's file that your change breaks: name it in your summary.\n\nIts build lands on `bot/issue-3000`, not `main` (fullsend).\n\nPart of #3000, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read R30, R209, R386 and R384, spec/08-catalog.md row 79, echo.rs's echo_grant_of and granted_echo, modifiers.rs's echo_grant install, and the patterns in c060_doctors_orders.rs (Activate) and c035_lunar_eclipse.rs (a thisTurn rider).\n2. Keep the current script as script_v\u2026 in c079 for the reconcile's KEPT_SCRIPTS.\n3. Write the new script: an Activate, once a turn, adding the sourceless thisTurn echoNextSpell rider of echoGain. On the base face, then move itself to the graveyard with a plain move (rule the verb).\n4. Update the catalog entry: echoGain 1/1 and the new texts on both faces. Update the zh (\u6fc0\u6d3b), spec/08 row 79, radiant-audit row 145, and BUILD lines 265 and 476.\n5. Rewrite Twinspell's own tests (base: activate, the next Spell this turn echoes once, Twinspell is in the graveyard, the rider is gone at end of turn unused; Radiant: it stays and works again next turn, once a turn; r386 as the new min allows).\n6. Update every listed dependent test to activate Twinspell first. Leave c057 and c005 to part 11.\n7. Retitle and update R30 and R209, write the ruling for the graveyard move and the thisTurn rider, and add spec/pending/N.md.\n8. Run cargo test -p jackioh-cards and the checks. Name the activate_listed case and the kept script for the reconcile.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read R30, R209, R386 and R384, spec/08-catalog.md row 79, echo.rs's echo_grant_of and granted_echo, modifiers.rs's echo_grant install, and the patterns in c060_doctors_orders.rs (Activate) and c035_lunar_eclipse.rs (a thisTurn rider).\n2. Keep the current script as script_v\u2026 in c079 for the reconcile's KEPT_SCRIPTS.\n3. Write the new script: an Activate, once a turn, adding the sourceless thisTurn echoNextSpell rider of echoGain. On the base face, then move itself to the graveyard with a plain move (rule the verb).\n4. Update the catalog entry: echoGain 1/1 and the new texts on both faces. Update the zh (\u6fc0\u6d3b), spec/08 row 79, radiant-audit row 145, and BUILD lines 265 and 476.\n5. Rewrite Twinspell's own tests (base: activate, the next Spell this turn echoes once, Twinspell is in the graveyard, the rider is gone at end of turn unused; Radiant: it stays and works again next turn, once a turn; r386 as the new min allows).\n6. Update every listed dependent test to activate Twinspell first. Leave c057 and c005 to part 11.\n7. Retitle and update R30 and R209, write the ruling for the graveyard move and the thisTurn rider, and add spec/pending/N.md.\n8. Run cargo test -p jackioh-cards and the checks. Name the activate_listed case and the kept script for the reconcile.",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3000",
+  "part_of": 3000,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-8` (claude, `opus`, strong); review on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #3044\n\nEvery night-bot run on #3044, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-05 00:31 UTC \u00b7 build #3044 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41940888875) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 42%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-05T01:20:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 00:29 | stop | `claude-1` stops before it starts: 5-hour usage is 42%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-05T01:20:00Z |  |  |\n",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read R30, R209, R386 and R384, spec/08-catalog.md row 79, echo.rs's echo_grant_of and granted_echo, modifiers.rs's echo_grant install, and the patterns in c060_doctors_orders.rs (Activate) and c035_lunar_eclipse.rs (a thisTurn rider).\n2. Keep the current script as script_v\u2026 in c079 for the reconcile's KEPT_SCRIPTS.\n3. Write the new script: an Activate, once a turn, adding the sourceless thisTurn echoNextSpell rider of echoGain. On the base face, then move itself to the graveyard with a plain move (rule the verb).\n4. Update the catalog entry: echoGain 1/1 and the new texts on both faces. Update the zh (\u6fc0\u6d3b), spec/08 row 79, radiant-audit row 145, and BUILD lines 265 and 476.\n5. Rewrite Twinspell's own tests (base: activate, the next Spell this turn echoes once, Twinspell is in the graveyard, the rider is gone at end of turn unused; Radiant: it stays and works again next turn, once a turn; r386 as the new min allows).\n6. Update every listed dependent test to activate Twinspell first. Leave c057 and c005 to part 11.\n7. Retitle and update R30 and R209, write the ruling for the graveyard move and the thisTurn rider, and add spec/pending/N.md.\n8. Run cargo test -p jackioh-cards and the checks. Name the activate_listed case and the kept script for the reconcile."
+  },
+  "usage_facts": {
+    "queued_at": "2026-11-04T13:51:10Z",
+    "claimed_at": "2026-11-05T00:33:50Z",
+    "previous_provider": "claude-1",
+    "handed_off": "handed off from `claude-1`: it could not take it"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3045 skipped: it waits for #3044 to close first",
+    "#3046 skipped: it waits for #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3044, #3045, #3046, #3047 to close first"
+  ]
+}
