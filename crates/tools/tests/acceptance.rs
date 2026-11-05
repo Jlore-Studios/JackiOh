@@ -340,9 +340,9 @@ fn v28_no_typescript_is_left_where_the_rust_replaced_it() {
     );
 }
 
-/// ci.yml's `rust-test` groups by their `scripts/ci-scope.sh` line, in its order, each with the
-/// packages its `cargo test` names. The empty list is the last group's `--workspace --exclude …`:
-/// every package no other group names.
+/// ci.yml's `rust-test` groups (.github/ci/rust-test.toml) by their `scripts/ci-scope.sh` line, in
+/// its order, each with the packages its `cargo test` names. The empty list is the last group's
+/// `--workspace --exclude …`: every package no other group names.
 const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_engine_rules", &["jackioh-engine"]),
     ("rust_engine", &["jackioh-engine"]),
@@ -574,7 +574,7 @@ fn ci_scope_runs_each_rust_group_for_every_crate_it_builds_on() {
     let mismatches = rust_group_mismatches(&packages);
     assert!(
         mismatches.is_empty(),
-        "update the crate map in scripts/ci-scope.sh (and ci.yml's rust-test groups for a new crate): {mismatches:#?}"
+        "update the crate map in scripts/ci-scope.sh (and .github/ci/rust-test.toml's groups for a new crate): {mismatches:#?}"
     );
 }
 
