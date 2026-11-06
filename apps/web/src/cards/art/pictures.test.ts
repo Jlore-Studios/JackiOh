@@ -304,7 +304,7 @@ describe("R2943001 Set showcase's and Out of frame's pictures", () => {
     for (const set of SHIPPED_SETS) expect(showcaseFamilyOf(set), set).not.toBeNull();
     expect(new Set(SHIPPED_SETS.map((set) => showcaseFamilyOf(set))).size).toBe(FAMILIES.length);
     expect([showcaseFamilyOf("Classic+"), showcaseFamilyOf("Meditative+")]).toEqual([showcaseFamilyOf("Classic"), showcaseFamilyOf("Meditative")]);
-    expect([showcaseFamilyOf(null), showcaseFamilyOf("Boss"), showcaseFamilyOf("Custom")]).toEqual([null, null, null]);
+    expect([showcaseFamilyOf(null), showcaseFamilyOf("Boss"), showcaseFamilyOf("Boss-X")]).toEqual([null, null, null]);
     expect(new Set(Object.values(SHOWCASE_FAMILIES))).toEqual(new Set(FAMILIES));
     for (const family of FAMILIES) {
       const picture = `showcase-${family}` as const;
