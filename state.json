@@ -15887,7 +15887,7 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixed_head": "4926e1d2d87c1d29b4c3d4aa86300dd4f6d49b66",
+      "ci_fixed_head": "ca49be9a978e6a9f72851243122714830a09df92",
       "ci_fixes": 3,
       "ci_on_head": false,
       "ci_run_id": 42237602265,
@@ -15907,7 +15907,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-06T18:41:30Z",
+      "feedback_since": "2026-11-06T22:00:43Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-06T21:40:45Z",
@@ -15953,7 +15953,7 @@
         "provider": "claude-4",
         "run": "42288574255"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-06T22:00:43Z",
       "stop_requested": false,
       "taken_asks": [],
