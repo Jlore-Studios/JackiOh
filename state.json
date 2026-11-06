@@ -12683,6 +12683,11 @@
       "owner": "claude-4",
       "owner_since": "2026-11-06T03:52:58Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-06T06:59:37Z",
+        "interrupt": "usage",
+        "provider": "claude-4"
+      },
       "pending_request": false,
       "planned_at": "2026-11-06T04:24:28Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -12692,7 +12697,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T08:54:14Z",
       "requested_by": "squishy-squooby",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42176367784",
       "runs_on": "ubuntu-latest",
       "session": {
