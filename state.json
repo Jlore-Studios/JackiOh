@@ -15895,14 +15895,6 @@
         "reason": "`claude-4` stops: 5-hour usage is 51%, at or over its 50% cap outside its hours; it resets at 2026-11-06T23:00:00Z",
         "trail": "- said: Same picture as the last pass. The log is run 42237602265 again: it pulls the same web-build artifact (`13516837623`, same digest) and reports `.text.marks` at line 279, which is the pre-fix file. So this is the same old commit's run re-run, not a run of the current head. I'll confirm the fix survi\u2026\n- Bash: {\"command\": \"grep -n \\\"legacyText\\\\|\\\\.text\\\\.marks\\\" apps/web/src/cards/versionLooks6.test.tsx; git diff --stat 4926e1d2d8 6b094e5d4e | tail -1; git diff --name-only 4926e1d2d8 6b094e5d4e | grep -E \u2026\n- tool error: Exit code 1 22:import { legacyText } from \"../test/faceData.ts\"; 280: const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0; 226 files changed, 6102 insertions\u2026\n- said: The fix is in. Main's newest merge is large (226 files) and touches `crates/shared` (its `config.rs` among them), so I'll recheck the Rust side too, not just the web.\n- Bash: {\"command\": \"cat > .bot-notes.md <<'EOF'\\n## State\\n\\n#3017 / PR #3299. Built in pass 1 (all 16 plan steps; see the PR body). Revision passes are for CI.\\n- The CI log handed to passes 3, 4 and 5 is \u2026\n- said: Shared (199) and wasm-core (32) pass on the new merge. Now the wasm build, the web typecheck and lint.\n- Bash: {\"command\": \"timeout 3000 sh scripts/build-wasm.sh > /tmp/wasm6.log 2>&1; echo \\\"wasm exit $?\\\"; ls node_modules >/dev/null 2>&1 || timeout 900 pnpm install --frozen-lockfile > /tmp/install.log 2>&1;\u2026\n- Bash: {\"command\": \"timeout 5000 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-chan\u2026\n- Bash: {\"command\": \"cat > /tmp/wait_web4.sh <<'EOF'\\n#!/bin/sh\\nuntil grep -q \\\"^exit\\\" /tmp/web-changed4.log 2>/dev/null; do sleep 10; done\\ngrep -E \\\"Test Files|Tests |^ FAIL|^exit\\\" /tmp/web-changed4.log\u2026\n- Bash: {\"command\": \"timeout 590 /tmp/wait_web4.sh || echo still-running\", \"description\": \"Keep waiting for the web suite\", \"timeout\": 600000}\n- said: The changed-since-main web suite passes: 336 files, 6468 tests. Last, the repo checks.\n- Bash: {\"command\": \"timeout 3000 cargo jackioh spec check 2>&1 | tail -1; timeout 600 cargo jackioh patches check 2>&1 | tail -1; cargo fmt --check 2>&1 | head -3; echo fmt-done\", \"description\": \"Run spec c\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Pass 5: on 6b094e5d4e shared lib (199) and wasm-core (32) tests, wasm build, web typecheck, eslint, changed web\\n suite (336 files, 6468 tests), spec chec\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: many more card art variants, so every card has several\"} --> The CI failure handed to this pass is already fixed in the branch, so this pass changes no code. It is the third pass in a row fed the same stale run. A person may need to look at why run 4223\u2026"
       },
-      "hold": {
-        "ends": "2026-11-06T23:58:21Z",
-        "lifted": "2026-11-06T22:00:16Z",
-        "owner": "claude-4",
-        "since": "2026-11-06T21:58:21Z",
-        "until": "2026-11-06T22:00:00Z",
-        "why": "5-hour usage is 51%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
       "interruptions": 1,
       "issue": 3017,
       "kind": "revise",
@@ -15923,7 +15915,7 @@
         "c5dea7bb43580bdac9ebead09af276162397a84c": "053ba7eee01ca4fa6cdb83207efedf97dcc7b3bf"
       },
       "round_tier": "strong",
-      "run_id": "42288574255",
+      "run_id": "pending:b0d72fac-1794002396",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15944,7 +15936,7 @@
         "run": "42288574255"
       },
       "source": "ci",
-      "started_at": "2026-11-06T20:27:51Z",
+      "started_at": "2026-11-06T22:00:43Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -16963,9 +16955,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T21:23:09Z",
+    "at": "2026-11-06T22:00:43Z",
     "url": "",
-    "what": "build #3320 on claude-3"
+    "what": "revise #3299 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T21:46:10Z",
