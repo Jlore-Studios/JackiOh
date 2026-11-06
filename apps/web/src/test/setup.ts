@@ -3,7 +3,9 @@
 // (docs/v0.3.0/SURFACE.md §10.3) loads synchronously from the bytes `scripts/build-wasm.sh` (run by
 // `pretest`) writes, as jsdom cannot fetch a file URL, before any test file is imported. A test imports
 // from here the page-state switches (`setReducedMotion`, `setVisibility`, `resetVisibility`) and
-// `readSheet` (a stylesheet as text).
+// `readSheet` (a stylesheet as text). The tab's social socket (R3214000, `together/socialSocket.ts`) is
+// off in every test unless the test installs a factory of its own, since some tests stub `WebSocket`
+// and count the sockets a page opens.
 
 import "@testing-library/jest-dom/vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -12,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
 import { clearReadCache } from "../net/readCache.ts";
+import { setSocialSocketFactory } from "../together/socialSocket.ts";
 import { loadWasmSync } from "../wasm/index.ts";
 
 // A path, not `new URL(…, import.meta.url)`: Vite rewrites that into an asset URL against the page's
@@ -110,6 +113,7 @@ if (typeof window !== "undefined") ensurePointerEvent();
 
 beforeEach(() => {
   clearReadCache();
+  setSocialSocketFactory(null);
   try {
     window.sessionStorage.clear();
   } catch {

@@ -168,6 +168,31 @@ impl Served {
         path_and_query: &str,
         protocols: &[&str],
     ) -> (WsClient, Option<String>) {
+        let (stream, head) = self.handshake(path_and_query, protocols).await;
+        assert!(
+            head.starts_with("HTTP/1.1 101"),
+            "the upgrade of {path_and_query} was not accepted: {head}"
+        );
+        let protocol = head.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.trim()
+                .eq_ignore_ascii_case("sec-websocket-protocol")
+                .then(|| value.trim().to_string())
+        });
+        (WsClient::start(stream), protocol)
+    }
+
+    /// The status the server answers the upgrade of `path_and_query` with; the pipe is dropped after.
+    pub(super) async fn upgrade_status(&self, path_and_query: &str, protocols: &[&str]) -> u16 {
+        let (_stream, head) = self.handshake(path_and_query, protocols).await;
+        head.split_whitespace()
+            .nth(1)
+            .and_then(|status| status.parse().ok())
+            .unwrap_or_else(|| panic!("no status in {head}"))
+    }
+
+    /// Writes the upgrade of `path_and_query` over a new pipe and reads the head of the answer.
+    async fn handshake(&self, path_and_query: &str, protocols: &[&str]) -> (DuplexStream, String) {
         let (mut stream, server_end) = tokio::io::duplex(PIPE_BYTES);
         self.streams.send(server_end).expect("the listener is serving");
         let mut request = format!(
@@ -192,18 +217,7 @@ impl Served {
             assert_ne!(read, 0, "the server ended the connection during the handshake");
             head.push(byte[0]);
         }
-        let head = String::from_utf8_lossy(&head);
-        assert!(
-            head.starts_with("HTTP/1.1 101"),
-            "the upgrade of {path_and_query} was not accepted: {head}"
-        );
-        let protocol = head.lines().find_map(|line| {
-            let (name, value) = line.split_once(':')?;
-            name.trim()
-                .eq_ignore_ascii_case("sec-websocket-protocol")
-                .then(|| value.trim().to_string())
-        });
-        (WsClient::start(stream), protocol)
+        (stream, String::from_utf8_lossy(&head).into_owned())
     }
 }
 

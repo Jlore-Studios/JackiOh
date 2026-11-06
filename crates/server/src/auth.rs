@@ -1413,6 +1413,13 @@ impl E2eAuth {
         Some(token)
     }
 
+    /// R3214000: `token` stops verifying, as a session the provider ended does (R194); its user stays.
+    pub fn revoke_token(&self, token: &str) {
+        let mut state = self.lock();
+        state.tokens.shift_remove(token);
+        state.second_factor_tokens.shift_remove(token);
+    }
+
     /// Chooses what `delete_user` does (see `E2eDeletion`).
     pub fn set_deletion(&self, deletion: E2eDeletion) {
         self.lock().deletion = deletion;

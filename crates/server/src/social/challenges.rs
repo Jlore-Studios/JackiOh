@@ -9,6 +9,7 @@
 //!   challenger) close it and free its room (`actor::rooms::release_room`).
 //! - A challenge lapses `CHALLENGE_TTL_MS` after it was made, its room with it. The sweeper
 //!   (`run_sweeper`, every `CHALLENGE_SWEEP_INTERVAL_SECONDS`) then deletes its row.
+//! - R3214000: each change, a lapse among them, is pushed to both accounts' `/ws/social` sockets.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -26,6 +27,7 @@ use crate::app::App;
 use crate::config::{CHALLENGE_SWEEP_INTERVAL_SECONDS, CHALLENGE_TTL_MS};
 use crate::db::store::{ChallengeRow, ChallengeState, QueueMode, StoreError, Tx};
 use crate::social::friends::are_friends;
+use crate::social::live::{push_social, push_social_after};
 use crate::social::presence::{Status, standings};
 use crate::social::{PlayerRef, created, iso, no_content, not_found, param, profiles_by_id, refused};
 
@@ -110,6 +112,13 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         return refused(409, "already_challenged", "You've already challenged them.");
     }
     tx.commit().await?;
+    // R3214000: both are shown it now, and shown it gone once it lapses.
+    push_social(app, &[&me, &friend.id]).await;
+    push_social_after(
+        app,
+        vec![me.clone(), friend.id.clone()],
+        challenge.expires_at - now_ms(),
+    );
     log_info(
         "challenge.created",
         json!({
@@ -209,6 +218,8 @@ async fn close(
     }
     tx.commit().await?;
     if closed.is_some() {
+        // R3214000: both are shown it gone.
+        push_social(app, &[&challenge.from_profile, &challenge.to_profile]).await;
         log_info(
             "challenge.closed",
             json!({ "challengeId": challenge.id, "profileId": me, "state": state }),

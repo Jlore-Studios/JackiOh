@@ -8,7 +8,9 @@
 //! - `POST /api/blocks` `{profileId}` (B46): ends friendships, requests, challenges, shares,
 //!   watches (B50, B52) and mutes emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
 //!
-//! `GET /api/friends` reads everything in one transaction (`presence::standings`).
+//! `GET /api/friends` reads everything in one transaction (`presence::standings`). R3214000: each
+//! change nudges the `/ws/social` sockets of the accounts whose list it changed (`friends`), and one
+//! that ends a friendship or a challenge pushes both their social reads.
 
 use std::sync::Arc;
 
@@ -24,6 +26,7 @@ use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::MAX_FRIENDS;
 use crate::db::store::{ChallengeState, FriendRequestRow, Profile, StoreError, Tx};
+use crate::social::live::{nudge_friends, push_social};
 use crate::social::presence::{Standing, Status, standings};
 use crate::social::watch::{revoke_between, revoke_blocked};
 use crate::social::{PlayerRef, created, iso, no_content, not_found, param, profiles_by_id, refused};
@@ -201,6 +204,7 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
         }
         tx.friends_make(&me, &target.id, now).await?;
         tx.commit().await?;
+        nudge_friends(app, &[&me, &target.id]);
         log_info(
             "friends.added",
             json!({ "profileId": me, "friendProfileId": target.id, "mutual": true }),
@@ -218,6 +222,7 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
         return refused(409, "already_requested", "You've already sent them a request.");
     }
     tx.commit().await?;
+    nudge_friends(app, &[&me, &target.id]);
     log_info(
         "friends.requested",
         json!({ "requestId": request.id, "fromProfileId": me, "toProfileId": target.id }),
@@ -254,6 +259,7 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let standing = standings(&mut tx, app, &me, std::slice::from_ref(&sender)).await?;
     tx.commit().await?;
+    nudge_friends(app, &[&me, &sender_id]);
     log_info(
         "friends.added",
         json!({ "profileId": me, "friendProfileId": sender.id, "mutual": false }),
@@ -277,13 +283,13 @@ async fn remove_request(app: &App, req: Req, mine: fn(&FriendRequestRow, &str) -
     let me = caller_profile(&req)?.id;
     let request_id = param(&req, "id");
     let mut tx = app.db.begin(Some(&me)).await?;
-    match tx.friends_request_get(&request_id).await? {
-        Some(request) if mine(&request, &me) => {
-            tx.friends_request_delete(&request.id).await?;
-        }
+    let request = match tx.friends_request_get(&request_id).await? {
+        Some(request) if mine(&request, &me) => request,
         _ => return Err(not_found("no such friend request")),
-    }
+    };
+    tx.friends_request_delete(&request.id).await?;
     tx.commit().await?;
+    nudge_friends(app, &[&request.from_profile, &request.to_profile]);
     Ok(no_content())
 }
 
@@ -308,6 +314,10 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     // After the commit, so a hello judged from here on is refused and one judged before is revoked.
     let watchers = revoke_between(app, &me, &friend_id);
     if removed {
+        // R3214000: both lists lose the other, and both are shown the challenges and the unread
+        // counts between them gone.
+        nudge_friends(app, &[&me, &friend_id]);
+        push_social(app, &[&me, &friend_id]).await;
         log_info(
             "friends.removed",
             json!({
@@ -337,8 +347,8 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(not_found("no such player"));
     }
     tx.blocks_add(&me, &target, now).await?;
-    tx.friends_remove(&me, &target).await?;
-    tx.friends_requests_delete_between(&me, &target).await?;
+    let unfriended = tx.friends_remove(&me, &target).await?;
+    let requests = tx.friends_requests_delete_between(&me, &target).await?;
     // B46, B52: a share either way ends for good, so unblocking restores none.
     let shares = tx.shares_remove_between(&me, &target).await?;
     // B46, B49: an open challenge either way is canceled and its room freed.
@@ -354,6 +364,13 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     let watchers = revoke_blocked(app, &me, &target);
     // R1351000: and a match in memory between the two relays neither one's emotes from now on.
     let matches_muted = app.matches.mute_emotes_between(&me, &target);
+    // R3214000: the blocker's list shows the block. The blocked is told only of what it could already
+    // see go (a friend, a request, a challenge), so a block of a stranger reaches it not at all.
+    nudge_friends(app, &[&me]);
+    if unfriended || requests > 0 || !closed.is_empty() {
+        nudge_friends(app, &[&target]);
+        push_social(app, &[&me, &target]).await;
+    }
     log_info(
         "blocks.added",
         json!({
@@ -376,5 +393,7 @@ pub async fn delete_block(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&me)).await?;
     tx.blocks_remove(&me, &target).await?;
     tx.commit().await?;
+    // R3214000: only the blocker's own list changed.
+    nudge_friends(app, &[&me]);
     Ok(no_content())
 }

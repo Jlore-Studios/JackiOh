@@ -1145,6 +1145,21 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
     // end Social: watching and shared replays
+    // R3214000: `/ws/social`, a tab's challenges, unread counts and chat and friends nudges pushed
+    // (`social::live`); as on `/ws/match`, anything but an upgrade on its path is the API's.
+    let social_app = app.clone();
+    let social_cors = cors.clone();
+    let social_socket = move |request: Request| {
+        let app = social_app.clone();
+        let cors = social_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_social(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
     // api/replays.rs
 
     // end Social
@@ -1177,6 +1192,8 @@ pub fn router(app: Arc<App>) -> Router {
         .route(actor::ws_server::WS_PATH, axum::routing::any(socket))
         // Social (#939): S7's watch socket.
         .route(actor::ws_server::WATCH_PATH, axum::routing::any(watch))
+        // R3214000: the social socket.
+        .route(actor::ws_server::SOCIAL_PATH, axum::routing::any(social_socket))
         // Duos co-op (#946)
         .route(actor::ws_server::WS_DUOS_PATH, axum::routing::any(duos_socket))
         .fallback(fallback)

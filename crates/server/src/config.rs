@@ -727,11 +727,13 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// first hello of a new generation (a reattach) is always answered. A second: a page probes only once
 /// its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer ends the quiet (R1441),
 /// so a real page's probe never falls inside it, while a scripted flood costs one view a second.
+/// R3214000 holds a `/ws/social` socket's hellos to it too: one social read a second at most.
 pub const WATCH_HELLO_INTERVAL_MS: i64 = 1_000;
 /// Match sockets one client address may hold at once, counting handshakes still in progress. Not in
 /// SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it
 /// reconnects; ten leaves room for several players behind one home or campus address. Past it the
-/// upgrade is refused with 429 before the handshake is read.
+/// upgrade is refused with 429 before the handshake is read. `/ws/social`'s sockets are counted apart,
+/// against a cap of the same size, so idle tabs never take a match socket's room (R3214000).
 pub const WS_MAX_CONNECTIONS_PER_ADDRESS: usize = 10;
 /// SPEC §11 R1441: how often the server pings a match socket that is attached. Fifteen seconds is well
 /// under the 60-second idle limit common proxies hold a quiet connection to, so the ping also keeps
@@ -1226,13 +1228,25 @@ pub const CHAT_PAGE: i64 = 50;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
-/// B58: how often an open chat panel reads its conversation again.
+/// B58: how often an open chat panel reads its conversation again, while the tab's `/ws/social` is
+/// down (R3214000).
 pub const CHAT_POLL_MS: i64 = 4_000;
 /// §9.4: how often a signed-in client reads its unread counts and its challenges again (the challenge
 /// toast, on every screen, and Play together). A challenge lives CHALLENGE_TTL_MS, so ten seconds
 /// shows one within a twelfth of its life; the friends list itself is read once a heartbeat
-/// (PRESENCE_HEARTBEAT_MS), the pace a status changes at.
+/// (PRESENCE_HEARTBEAT_MS), the pace a status changes at. It runs only while the tab's `/ws/social`
+/// is down (R3214000).
 pub const SOCIAL_POLL_MS: i64 = 10_000;
+/// R3214000: how often an open `/ws/social` checks its session again, as the upgrade checked it (the
+/// token, the profile, §9.4's gate), so a session the provider ended (R194) or an account banned
+/// while the socket stays open is cut off within one R194 window, as a polling tab is refused. No
+/// longer than `AUTH_SESSION_LIVE_CACHE_SECONDS`. Server-only.
+pub const SOCIAL_SESSION_CHECK_SECONDS: i64 = AUTH_SESSION_LIVE_CACHE_SECONDS;
+const _: () = assert!(SOCIAL_SESSION_CHECK_SECONDS <= AUTH_SESSION_LIVE_CACHE_SECONDS);
+/// R3214000: the `/ws/social` sockets one account may hold at once, one per signed-in tab; the next
+/// is refused with 4403 "too many open tabs". Five: a person seldom keeps more tabs of the site open,
+/// and a tab past it still reads by its polls. Server-only.
+pub const SOCIAL_SOCKETS_PER_ACCOUNT: usize = 5;
 /// §9.5, §9.8: challenges one account may send in an hour; the next is 429. Each opens a room and a
 /// toast on the friend's screen, so a create-and-cancel loop is bounded; thirty is one every two
 /// minutes, a challenge's whole life, kept up for an hour.
