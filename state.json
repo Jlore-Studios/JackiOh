@@ -33451,6 +33451,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-06T18:28:51Z,claude-3,stream,call,42270775407,12,2026-11-06T21:50:00Z,,,allowed,,,"
+    ],
+    "runs": [
+      "2026-11-06T18:32:56Z,42270775407,claude-3,sonnet,review,3316,medium,approved,,4.3,16,3158,427444,0.3007,12,12,,,1.2,,none,,1"
     ]
   },
   "version": 1
