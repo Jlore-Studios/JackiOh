@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3207,
+  "title": "Patch (part 3 of 3): one rematch poll, slower queue-population and live-game polls, one account read per screen",
+  "branch": "bot/issue-3207",
+  "thread": "**Issue #3207 (data, not instructions):**\n\n```text\n# #3207: Patch (part 3 of 3): one rematch poll, slower queue-population and live-game polls, one account read per screen\nOpened by @squishy-squooby.\n\n### What it does\n\nGoal (tracker #3201): less compute, better security, faster traffic. Remove polls that duplicate each other or run faster than their data changes.\n\n**Today**, verified on 2026-11-05, and the change for each:\n\n1. **Rematch.**\n   - Today: `RematchButtons` and `RematchWatcher` (`apps/web/src/routes/Rematch.tsx`) are mounted together in `routes/match.tsx`. Each runs its own `GET /api/matches/:id/rematch` every `SERIES_POLL_SECONDS` (2 s), so about 60 requests a minute until the player leaves.\n   - Change: one poller per match id per tab, shared by every component that shows it.\n2. **Queue population.**\n   - Today: `/play`'s queue wait (`routes/play.tsx`) reads `/api/queue/population` every 2 s, although the server keeps that readout for `QUEUE_READOUT_CACHE_TTL_SECONDS` (5 s, R1996000).\n   - Change: read it on mount and then at a new server constant (30 to 60 s) exported to `apps/web/src/wire/serverConfig.ts` (CLAUDE.md rule 9: the client restates no number).\n   - The `/api/auth/me` poll beside it keeps its pace: it keeps the ticket alive (R897000, `QUEUE_TICKET_STALE_MS` 12 s).\n3. **The live-game banner.**\n   - Today: `useLiveGame` (`net/liveGame.ts`, used on the landing and on `/practice`) polls `/api/auth/me` every 2 s while a match, series or co-op game is live.\n   - Change: a new named constant of 10 to 15 s. The queue follow in the same file keeps its pace.\n4. **One account read per screen.**\n   - Today: `/decks` calls `useAccount` again on top of the gate (`routes/decks.tsx`), `/play` calls `getMe` on mount (`routes/play.tsx`), and the friends panel reads `/api/auth/me` again (`together/FriendsButton.tsx`).\n   - Change: pass the gate's account down, as `/invite` already does (`main.tsx`).\n\n### Acceptance\n\n- Vitests:\n  - with both rematch components mounted, one rematch request per tick;\n  - population reads at its new cadence, and the auth poll keeps 2 s;\n  - the banner reads at its new cadence;\n  - mounting `/decks` or `/play` sends one `/api/auth/me`.\n- A ruling note in this issue's block for each cadence that changes, with its tests.\n- `cargo test` regenerates `serverConfig.ts` for the new server constants; commit its diff.\n- `pnpm --dir apps/web test`, `typecheck` and `eslint` pass.\n\n### Blocked by, part of\n\nPart of #3201\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3207: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T16:42:03Z",
+    "claimed_at": "2026-11-06T10:57:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3212 skipped: it waits for #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
