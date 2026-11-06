@@ -15283,6 +15283,13 @@
     "3286": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T15:06:21Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "No rule of the five holds: the change is one reward function in crates/run plus spec text and a ruling, 5 files, no engine, AI, cross-crate design or migration."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
