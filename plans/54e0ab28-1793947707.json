@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3289,
+  "title": "Patch: three per-pull-request tests play their AI games at the test budget, not the quality gate's",
+  "branch": "bot/issue-3289",
+  "thread": "**Issue #3289 (data, not instructions):**\n\n```text\n# #3289: Patch: three per-pull-request tests play their AI games at the test budget, not the quality gate's\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome tests that run on every pull request play whole games between two full-strength AIs, only to collect game positions or to check that a file comes out the same on one thread and on four. They test nothing about how well the AI plays, yet every game costs as much thinking as a quality-gate game, and CI jobs keep running past their time budget.\n\nOnce this is built, those tests play at the small budget other such tests already use. Their checks stay the same and they finish much sooner.\n\n## Why\n\n- `r1006001_the_same_base_and_count_give_byte_identical_lines_on_one_or_four_threads` (`crates/tools/src/selfplay.rs:427-442`) plays 3 games twice through `play`, which plays at `AI_GATE_BUDGET`. `play_at` (`selfplay.rs:266`) already takes a budget.\n- `played(n)` (`crates/tools/src/positions.rs:410-412`) plays a gate-budget game. It is called five times (lines 448, 474, 501, 529 and 585), `played(1)` twice.\n- `ready_gap_counts_exactly_the_units_legal_actions_lists_an_attack_for_from_either_seat` (`crates/ai/tests/ai/lethal.rs:189-200`) plays two AI-vs-greedy games at `AI_GATE_BUDGET` to collect states.\n- `TEST_BUDGET` (`crates/tools/src/arena.rs:336-347`: 150 nodes, 40 lethal nodes, 1 determinization) is \"the budget a test decides at when it plays whole games to prove how a game is dealt, seated, replayed or filed, not how well it is played\". #3081 already moved three such tests to it.\n- Measured on this checkout: `jackioh selfplay --games 3 --seed selfplay-test` at the gate budget took 25.1 s on one thread in a release build with thin LTO. The test profile builds the AI at opt-level 1 and the tools crate unoptimized, so these tests cost more than that.\n- CI's `tools duos, selfplay` and `ai slow` groups (`scripts/ci-shards.toml`) run them on every engine, cards or AI change, and #3258 and #3162 were jobs that ran over seven minutes.\n\n## Proposal\n\n- `r1006001` calls `play_at(\u2026, TEST_BUDGET)`.\n- `played(n)` plays at `TEST_BUDGET`, each `n` once, cached in a `OnceLock` as `selfplay_records` does.\n- `lethal.rs`'s two games play at a test budget. If the coverage floor its comment names then fails, the fix is more seeds, never a lower floor.\n- Leave alone the tests whose names claim gate games: `match_.rs`'s b26 and r977000, and `decide.rs`'s r188.\n\n## Where it lands\n\n- `crates/tools/src/selfplay.rs` and `crates/tools/src/positions.rs`.\n- `crates/ai/tests/ai/lethal.rs`, plus a test-budget constant in the AI crate if the tools' one is out of reach there.\n\n## Acceptance criteria\n\n- [ ] The three tests' assertions are unchanged and pass, and no test is deleted, ignored or loosened.\n- [ ] The pull request reports each test's wall time before and after, on the same machine.\n- [ ] `lethal.rs`'s coverage floor still holds without being lowered.\n\n## Size and risks\n\nSmall, 3 files.\n\nRisks:\n- A lower budget falls back more often: R1489000 faults a game that falls back, but at 150 nodes the games filed clean (`arena.rs:340`).\n- The positions tests need games long enough to cover their cases, so the builder checks each one's game still reaches what it asserts.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-06T06:33:23Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3289: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T06:35:21Z",
+    "claimed_at": "2026-11-06T06:49:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3207 skipped: it waits for #3206 to close first",
+    "#3211 skipped: it waits for #3206 to close first",
+    "#3212 skipped: it waits for #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
