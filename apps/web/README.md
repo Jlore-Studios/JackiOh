@@ -580,9 +580,10 @@ routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
-routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
-                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
-                        read the owned cosmetics again; the page never scrolls, its body does
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, each folding the answer of a spend (a buy's, an
+                        opening's) that it shows, and the page reading the rest once, when the opening scene closes
+                        (R3211000), and at its foot one "Odds & pity" link to /purchases (R1665000); the scene's close
+                        has the open screen and the next read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
                         footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
                         (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
@@ -637,9 +638,10 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
                         inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
                         focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
-                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
-                        a redemption or a chase that lands makes the other panels, the opening's included,
-                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
+                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy or an opening
+                        that lands hands the page its answer (`onChanged`), which folds it into the panels that show it
+                        (`bought`, `opened`, `opening`), and the page reads what no answer carries once, when the
+                        opening scene closes (`onClosed`, `settled`, `revision`) (R3211000) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 
