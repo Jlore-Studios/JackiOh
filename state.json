@@ -16026,7 +16026,7 @@
       "started_at": "2026-11-06T20:00:55Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "claude",
