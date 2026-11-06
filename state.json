@@ -18274,15 +18274,24 @@
     "what": "plan #3289 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-06T06:22:13Z",
+    "at": "2026-11-06T06:37:40Z",
     "notes": [
-      "#3287 needs a plan",
-      "#3288 needs a plan",
+      "#3283 needs a plan",
+      "#3289 needs a plan",
       "#3017 is held for `claude-4` until 00:40 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "started plan #3287 on claude-6 (run 42174225662)",
-      "started plan #3288 on claude-7 (run 42174315314)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-06T07:40:00Z; it can start a build or a plan again in 13m; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 64h 33m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 22h 33m; waiting for their owners: #3017 held for `claude-4` until 00:40 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered plan #3288 on claude-7 (run 42174315314): planned",
+      "delivered plan #3287 on claude-6 (run 42174225662): planned",
+      "delivered revise #3268 on claude-8 (run 42169999177): blocked",
+      "delivered review #3068 on claude-3 (run 42157609198): approved",
+      "started revise #3068 on claude-3 (run 42176267303)",
+      "started build #3017 on claude-4 (run 42176367784)",
+      "started revise #3272 on claude-7 (run 42176472865)",
+      "started plan #3287 on claude-6 (run 42176568506)",
+      "started plan #3288 on claude-8 (run 42176661311)",
+      "started plan #3283 on claude-1 (run 42176760143)",
+      "started plan #3289 on claude-1 (run 42176859562)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18988,7 +18997,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T06:22:13Z",
+  "loop_tick": "2026-11-06T06:37:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
