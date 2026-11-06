@@ -20,8 +20,9 @@
 # by `selfplay` itself (R1006002). On GitHub's runners each shard keeps well under the 6-hour job
 # limit (about 1,500 games an hour on four vCPUs). On the local runner (`jackioh-selfplay-local`,
 # bot/machine/README.md, The local runner) every job runs there, the plan, the build and the count
-# too, and its shards run one after another, each for as long as it needs (about 2,500 games an hour
-# on six CPUs), in five rounds, so that no shard waits for the runner longer than its round takes
+# too, and its shards run two at a time, one on each half of the PC, each for as long as it needs (one
+# six-CPU runner played about 2,500 games an hour), in five rounds, so that no shard waits for the
+# runner longer than its round takes
 # (GitHub fails a job no self-hosted runner takes in 24 hours; selfplay-shards.yml). The export is
 # slow on purpose, and ci-duration.yml does not watch it.
 #
