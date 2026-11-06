@@ -233,9 +233,13 @@ a path the bot may not change) is a hand-over, `"human_required": true`, which i
 
 - **The question** goes on `bot:blocked` with **`needs decision`** beside it. Its comment says it
   as a person would: the problem; the numbered options, each with its trade-off; "**My
-  suggestion:** option N, because …"; and how to answer: "Reply with a number, or tell me
-  something else in your own words, and I'll revise it that way. If nobody answers by <time>, I go
-  ahead with option N." Setting the label assigns `decision_assignees` (both people, in each bot's
+  suggestion:** option N, because …"; and "**How to answer:**", in the one form the bot reads as
+  the answer (#3300): a plain comment from the person's own account, holding the option's number or
+  their own words, with no `@jgoetzmann-bot` and no `/harness` (a comment that names the bot is
+  read as a command); that the bot says ✅ **Answered** once it takes it; and that `/harness revise
+  <your answer>` (`build` on an issue) works too, as an ordinary run. Then "If nobody answers by
+  <time>, I go ahead with option N." Squishy's names `@squishy-squooby` and `/squishy`. Setting the
+  label assigns `decision_assignees` (both people, in each bot's
   `config.json`), and the record keeps which of them it assigned, so a person who was assigned
   already stays when they come off. Being assigned does not make the item a person's, as `human`
   does. The record keeps what was asked (`decision`: when, the problem, the options and the
