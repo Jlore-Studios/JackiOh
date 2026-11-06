@@ -16429,7 +16429,7 @@
       "started_at": "2026-11-06T18:02:18Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3315": {
       "action": "build",
