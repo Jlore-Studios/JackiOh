@@ -16421,15 +16421,8 @@
       "taken_asks": []
     },
     "3315": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42262590434",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-06T17:41:25Z",
-        "until": "2026-11-06T18:11:25Z"
-      },
       "difficulty_by": {
         "at": "2026-11-06T17:41:12Z",
         "difficulty": "medium",
@@ -16448,10 +16441,9 @@
         "reason": "planned on sonnet",
         "trail": "- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3315/apps/web/src/game/FieldBadges.tsx\"}\n- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; git log --oneline -3; git show 5afc00a43a --stat | head -40\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3315/apps/web/src/game/field-badges.test.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"field-badges\\\\|field-badges\\\" apps/web/src/game/board.css | head -40\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3315/apps/web/src/game/board.css\", \"offset\": 3070, \"limit\": 140}\n- Grep: {\"pattern\": \"DEF|marks|FieldBadges|field-badges|folds|\\\\+n\", \"path\": \"/home/runner/work/_temp/work/item-3315/e2e/cypress/component/board-layout.cy.tsx\", \"output_mode\": \"content\", \"-n\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3315/e2e/cypress/component/board-layout.cy.tsx\", \"offset\": 470, \"limit\": 180}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3315/e2e/cypress/component/board-layout.cy.tsx\", \"offset\": 860, \"limit\": 210}\n- Grep: {\"pattern\": \"field-badges|FieldBadges|\\\\+N|\\\\+n\", \"path\": \"/home/runner/work/_temp/work/item-3315/apps/web/README.md\", \"output_mode\": \"content\", \"-n\": true, \"-C\": 3}\n- Bash: {\"command\": \"git show 5afc00a43a -- apps/web/src/game/FieldBadges.tsx | head -250; ls /home/runner/work/_temp/work/item-3315 | head -50\"}\n- Bash: {\"command\": \"grep -n \\\"component\\\\|cypress\\\" .github/workflows/ci.yml | head -30; ls ~/.cache/Cypress 2>/dev/null; which chromium chromium-browser google-chrome 2>/dev/null; sed -n 120,175p apps/web/\u2026\n- Bash: {\"command\": \"grep -n \\\"cf-kw-more\\\\|\\\\.keyword-icon\\\\|\\\\.keyword\\\\b\\\" apps/web/src/cards/cards.css | head -30\"}\n- Bash: {\"command\": \"ls e2e/node_modules/.bin 2>/dev/null | grep -i cypress; ls ~/.cache 2>/dev/null; cd e2e && timeout 60 pnpm exec cypress verify 2>&1 | tail -5\"}\n- Bash: {\"command\": \"sed -n 2120,2156p apps/web/src/cards/cards.css; sed -n 60,120p apps/web/src/game/activate.css\"}\n- tool error: Exit code 2 sed: can't read apps/web/src/cards/cards.css: No such file or directory sed: can't read apps/web/src/game/activate.css: No such file or directory\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3315 && sed -n 2120,2156p apps/web/src/cards/cards.css; sed -n 60,120p apps/web/src/game/activate.css; cat e2e/package.json | grep -n \\\"component\\\"\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3315/e2e && (timeout 900 pnpm exec cypress run --component --browser chrome --spec cypress/component/board-layout.cy.tsx > /tmp/cy-baseline.log 2>&1 \u2026\n- Grep: {\"pattern\": \"no mark|no \\\\+n|room.*-1|never dropped|control alone|fit\\\\.room\", \"path\": \"/home/runner/work/_temp/work/item-3315\", \"glob\": \"*.{ts,tsx,css,md}\", \"output_mode\": \"content\", \"-n\": true, \"he\u2026\n- Grep: {\"pattern\": \"export function keywordChips\", \"path\": \"/home/runner/work/_temp/work/item-3315/apps/web/src/cards/MinionFace.tsx\", \"output_mode\": \"content\", \"-n\": true, \"-A\": 25}\n- Bash: {\"command\": \"sleep 60; tail -c 1500 /tmp/cy-baseline.log; pgrep -fa cypress | head -3\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -c 1500 /tmp/cy-baseline.log pgrep -fa cypress head -3. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; d\u2026\n- Bash: {\"command\": \"tail -c 1500 /tmp/cy-baseline.log; pgrep -fa cypress | head -3\"}\n- Bash: {\"command\": \"head -c 2500 /tmp/cy-baseline.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g'\"}\n- Bash: {\"command\": \"ls apps/web/node_modules 2>&1 | head -5; ls node_modules/@vitejs 2>&1 | head; ls e2e/node_modules 2>&1 | head -5; grep -n \\\"plugin-react\\\" apps/web/package.json package.json\"}\n- Bash: {\"command\": \"ls node_modules 2>&1 | head -3; ls -d ../*/node_modules 2>/dev/null | head; cd apps/web && timeout 120 pnpm exec vitest run src/game/field-badges.test.tsx 2>&1 | tail -15\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3315 && cd apps/web && timeout 120 pnpm exec vitest run src/game/field-badges.test.tsx 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | head -15\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3315 && sed -n 465,500p e2e/cypress/component/card-faces.cy.tsx; grep -n \\\"field-badges\\\\|FieldBadges\\\\|cf-kw-more\\\" apps/web/src/game/position-switc\u2026\n- Bash: {\"command\": \"sed -n 405,466p e2e/cypress/component/card-faces.cy.tsx; sed -n 120,180p apps/web/src/game/position-switch.test.tsx\"}\n- Bash: {\"command\": \"grep -n '\\\"test\\\"\\\\|\\\"typecheck\\\"\\\\|pretest\\\\|build-wasm' apps/web/package.json; grep -n \\\"KEYWORD_CHIPS_MAX\\\" apps/web/src/cards/*.ts* | head -3; grep -n \\\"typecheck\\\" package.json e2e/\u2026\n- said: Now I'll write the draft and the final plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3315/.bot-plan.md\", \"content\": \"# Draft plan #3315 (planner notes)\\n\\nFound: FieldBadges.tsx Stack steps `fit.room` to -1 when even the \\\"+n\\\" overflo\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of rules 1-5 holds: a web-only change to one component, its jsdom test, a Cypress component spec, one README paragraph and a CSS comment (about 5 files), with no engine, AI, cross-crate contract or migration.\"} --> ## Goal A DEF unit on a phone must n\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-06T17:32:32Z",
       "owner_why": "it plans it",
@@ -16464,19 +16456,19 @@
       "provider": "claude-3",
       "queued_at": "2026-11-06T17:30:40Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42262590434",
+      "run_id": "pending:0476fb60-1793987062",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3268,
-      "started_at": "2026-11-06T17:32:32Z",
+      "started_at": "2026-11-06T17:44:50Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T17:44:07Z",
+    "at": "2026-11-06T17:44:50Z",
     "url": "",
-    "what": "revise #3272 on claude-1"
+    "what": "build #3315 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T17:29:15Z",
