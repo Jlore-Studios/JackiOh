@@ -16220,15 +16220,8 @@
       "stop_requested": false
     },
     "3223": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42139400377",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-06T01:27:44Z",
-        "until": "2026-11-06T01:57:44Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16240,10 +16233,9 @@
         "reason": "planned on sonnet",
         "trail": "s.tsx; sed -n 236,270p routes/series.tsx; echo ===REPLAYS; sed -n 300,325p routes/replays.tsx; echo ==\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 222,262p replay/ReplayPlayer.tsx; sed -n 30,60p replay/OpenedReplay.tsx; sed -n 175,195p duos/DuosReplay.tsx; grep -n \\\"<h1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 2025,2045p game/board.css; sed -n 2848,2860p game/board.css; sed -n 3518,3535p game/board.css; sed -n 595,605p duos/duos.cs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 520,545p index.css; sed -n 10,24p auth/tavern.css; sed -n 112,122p auth/tavern.css; sed -n 825,850p auth/tavern.css\", \"desc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 812,826p auth/tavern.css; sed -n 850,876p auth/tavern.css; grep -n \\\"^\\\\.row\\\" index.css\", \"description\": \"landscape auth-s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -rn \\\"panel--auth\\\\b.*h2\\\\|> h2\\\\|\\\\bh2\\\\b\\\" --include=*.css . | grep -v \\\"^./fx\\\\|^./game/animations\\\\|^./cards\\\" | head -40\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 322,350p patches/patches.css; sed -n 10,30p dungeon/stats/dungeon-stats.css; sed -n 90,125p practice/practice.css; sed -n 1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; ls dungeon dungeon/start dungeon/stats dungeon/map | grep -i \\\"test\\\"; ls routes | grep -i \\\"terms\\\\|copyright\\\\|accessib\\\\|privac\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -rn \\\"\\\\.brand\\\\b\\\" --include=*.css . | grep -v \\\"brand-\\\" ; grep -n \\\"h1\\\\|replays\\\" routes/replays.css | head; sed -n 285,3\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; ls i18n | head -30; grep -rn \\\"\\\\\\\"Replay\\\\\\\"\\\" --include=*.ts --include=*.tsx --include=*.json . | head -5; grep -rln \\\"\\\\\\\"Dunge\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 8,76p net/head.ts; grep -n \\\"Replay\\\\|replay\\\" i18n/zh-CN.json | head -20; sed -n 1,40p i18n/i18n.test.ts | head -50\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; grep -rn \\\"Dungeon Run stats\\\\|Dungeon leaderboards\\\" --include=*.ts --include=*.tsx --include=*.json --include=*.md --include=*.mjs . 2>/dev/n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -n \\\"unused\\\\|stale\\\\|every key\\\\|not used\\\\|orphan\\\" i18n/i18n.test.ts | head; grep -rn \\\"Dungeon leaderboards\\\\|leaderboard\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 505,520p index.css; grep -n \\\"back\\\\b\\\" replay/ReplayPlayer.tsx | head; grep -rn \\\"DuosReplayBack\\\\|<ReplayPlayer\\\\|OpenedR\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 428,456p routes/practice.tsx; grep -n \\\"h1\\\\|heading\\\" routes/practice.test.tsx | head; sed -n 195,216p routes/practice-tut\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -n \\\"it(\\\\|describe(\\\\|BOARD\\\\|SHEETS\\\\|UNPALETTED\\\\|RAW\\\" palette.test.ts | head -30; grep -n \\\"patch-notes__head\\\" -r --inc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -n \\\"export default\\\" routes/ai.tsx routes/terms.tsx routes/copyright.tsx routes/accessibility.tsx routes/privacy.tsx routes/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; sed -n 50,80p routes/privacy.test.tsx; sed -n 25,60p routes/terms.tsx\", \"description\": \"agreedText function and terms page\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -n \\\"AGREED_TEXT\\\\|agreedText\\\" routes/privacy.test.tsx; sed -n '/R970001.*it(/,/^ });/p' routes/privacy.test.tsx | head -40;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; grep -n \\\"AGREED_TEXT\\\\|agreedText\\\\|TERMS_VERSION\\\" docs/compliance.md | head -20; sed -n 105,125p apps/web/src/routes/privacy.test.tsx\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; ls e2e/cypress/e2e | sed -n 30,45p; grep -rn \\\"heading-order\\\\|runOnly\\\\|rules:\\\" e2e/cypress/e2e/38* e2e/support/*.ts | head; grep -n \\\"h3\\\" a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; sed -n 1,70p e2e/support/a11y.ts | grep -n \\\"TAGS\\\\|wcag\\\\|best\\\" \", \"description\": \"axe tags\"}\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-3223/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery menu screen names itself with one `PageTitle` (the screen's only `h1`, `--font-display`, `--type-3xl`), dr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -n \\\"const title\\\\|title =\\\" routes/login.tsx | head; grep -c \\\"<h1\\\" main.tsx routes/landing.tsx settings/SettingsPanel.tsx \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"| `apps/web/src/{routes/stats.css,routes/together\\u2026}`: `rou\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223/apps/web/src; grep -rn \\\"db-title\\\\|stats-title\\\\|practice-lobby__title\\\\|practice-setup__heading\\\\|tutorial-path__title\\\\|play-hero__title\\\\|to\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"- [ ] Practice's two headings share `section-heading`; decks loading and l\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3223; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nstart=s.index(\\\"## Spec, docs\\\")\\nend=s.index(\\\"## Done when\\\")\\nspec=s[start:end]\\ns=s[\u2026\n- said: ## Goal Every menu screen names itself with one `PageTitle`: the screen's only `h1`, in `--font-display` at `--type-3xl`. It sits in the top bar's title slot (`BackLink`'s `title`, R3218000); on a phone the bar already puts it on a row under Back. The brand stops being an `h1` and becomes a non-hea\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-06T00:47:43Z",
       "owner_why": "it plans it",
@@ -16256,9 +16248,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-05T17:50:24Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42139400377",
+      "run_id": "pending:e99cf283-1793928669",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T00:47:43Z",
+      "started_at": "2026-11-06T01:31:54Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17595,9 +17587,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T01:30:55Z",
+    "at": "2026-11-06T01:31:54Z",
     "url": "",
-    "what": "build #3227 on claude-8"
+    "what": "build #3223 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T01:09:25Z",
