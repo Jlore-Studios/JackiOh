@@ -101,6 +101,8 @@ env:
 permissions:
   contents: write
   actions: read
+  # The production issue's Staging column: staging's newest deployment that succeeded.
+  deployments: read
   issues: write
   pull-requests: write
 

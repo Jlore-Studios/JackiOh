@@ -60,7 +60,7 @@ describe("R1017000 the extended description", () => {
   });
 
   it("R1017000 a face that prints its whole text has no extended description", () => {
-    render(<HoverPreview face={collection("core-052", true)} anchor={ANCHOR} />);
+    render(<HoverPreview face={collection("core-052")} anchor={ANCHOR} />);
     expect(screen.queryByTestId(INSPECT_EXTENDED)).toBeNull();
   });
 

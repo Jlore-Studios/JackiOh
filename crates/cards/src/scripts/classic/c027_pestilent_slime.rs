@@ -80,7 +80,7 @@ mod tests {
 
     const SLIME: &str = "classic-027";
     const OUTBREAK: &str = "classic-039"; // (1) Spell: place {tokens} on a permanent; own → draw per token.
-    const BOOK_OF_PLAGUE: &str = "classic-070"; // (1) Spell: Place 5 Plague Counters (5 placements).
+    const BOOK_OF_PLAGUE: &str = "classic-070"; // (1) Spell: Choose one: place 5 Plague Counters (5 placements), or add 3 Plague cards.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
     const VANILLA: &str = "core-008";
     const POSTDOC: &str = "core-061"; // Radiant: Cry: choose any Unit on the field, summon a Vanilla copy of it.
@@ -328,7 +328,7 @@ mod tests {
                 let slime = s.card(SLIME).clone();
                 let vanilla = s.card(VANILLA).clone();
 
-                s.play(BOOK_OF_PLAGUE, json!({}));
+                s.play(BOOK_OF_PLAGUE, json!({ "modes": ["counters"] }));
                 s.answer(json!([{ "pick": "instance", "instanceId": slime.id }]));
 
                 assert!(s.state().pending.is_none());

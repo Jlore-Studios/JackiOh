@@ -1,9 +1,9 @@
 //! The background loops' supervisor (#842). `app::serve` spawns each of its loops through
-//! `spawn_supervised`: SPEC §9.5's matchmaker sweep, series sweeper and reaper, the retention purge
-//! and the bot pool (R1454). A panic out of a loop is logged as `loop.crashed`, and a return, since
-//! every loop runs until aborted, as `loop.returned` (#1093), both alerts; either way the loop starts
-//! again `LOOP_RESTART_DELAY_SECONDS` later. A loop's per-tick `Result` handling is its own. No SPEC
-//! section or ruling: restarting is operational, not a rule.
+//! `spawn_supervised`: SPEC §9.5's matchmaker sweep, series sweeper and reaper, the retention purge,
+//! the bot pool (R1454) and the store's heartbeat (#3208). A panic out of a loop is logged as
+//! `loop.crashed`, and a return, since every loop runs until aborted, as `loop.returned` (#1093), both
+//! alerts; either way the loop starts again `LOOP_RESTART_DELAY_SECONDS` later. A loop's per-tick
+//! `Result` handling is its own. No SPEC section or ruling: restarting is operational, not a rule.
 //!
 //! The panic is caught on each poll of the loop's future (`catch_unwind`), as `actor/registry.rs`
 //! catches the engine's, so the loop runs on the supervisor's own task and aborting the returned

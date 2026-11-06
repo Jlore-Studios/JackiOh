@@ -1,7 +1,7 @@
 // R1852000–R1852007 (issue #1852): the Starship, Stinkyscape's mechanic ahead of its cards (SPEC §6.1
 // Starship Piece and Starship, §6.2 When launched, §6.3 Launch). A Starship Piece that dies fuses a copy
 // of itself into its owner's Dormant Starship, summoning one first (`starship::fuse_dead_piece`); the
-// Dormant Starship's one ability is the engine's launch, Activate: (3), whose awakening fires its fused
+// Dormant Starship's one ability is the engine's launch, Activate: (4), whose awakening fires its fused
 // Cries and then its fused "When launched"; it remembers its pieces; and a Stack card played onto it is
 // exiled before it resolves. Proved on the fixtures of `fixtures/starship.rs`.
 
@@ -353,7 +353,11 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
 
     #[test]
     fn r1852000_one_starship_at_a_time_it_is_no_token_and_after_a_launch_the_next_piece_starts_a_new_one() {
-        let mut s = built_ship(json!([bolt.id, bolt.id, booster.id]), None);
+        // The launch, then a booster at (1).
+        let mut s = built_ship(
+            json!([bolt.id, bolt.id, booster.id]),
+            Some(STARSHIP_LAUNCH_COST + 1),
+        );
         let first = ship_of(&s, P1);
         assert_eq!(piece_defs(&first), vec![booster.id.clone(), gunner.id.clone()]);
         assert!(s.unit(P1, 2).is_none(), "the gunner fused into the one Starship");
@@ -577,7 +581,7 @@ mod r1852003_the_launch {
     use super::*;
 
     #[test]
-    fn r1852003_activate_3_launches_it_its_cries_fire_with_their_prompts_then_its_when_launched() {
+    fn r1852003_activate_4_launches_it_its_cries_fire_with_their_prompts_then_its_when_launched() {
         let mut s = built_ship(json!([]), None);
         let ship = ship_of(&s, P1);
         let enemy = id_at(&s, P2, 1);
@@ -593,7 +597,8 @@ mod r1852003_the_launch {
         let health = health_of(&s, P2);
         launch(&mut s, &ship.id);
         assert_eq!(s.state().players.p1.mana.current, mana - STARSHIP_LAUNCH_COST);
-        // Awake, it took the Starship keyword and a name, and the launch is reported after the awakening.
+        // Awake, it took a name and, by its Starship tag, Flying and Ranged — no Starship keyword
+        // (R3038000, R3038001) — and the launch is reported after the awakening.
         let types = types_of(s.last_events());
         let awakened = types
             .iter()
@@ -606,7 +611,10 @@ mod r1852003_the_launch {
         assert!(awakened < launched);
         let card = s.card(&ship.id).clone();
         assert_eq!(card.slumber, None);
-        assert!(keywords_of(&s, &ship.id).contains(&KeywordKind::Starship));
+        let kinds = keywords_of(&s, &ship.id);
+        assert!(kinds.contains(&KeywordKind::Flying));
+        assert!(kinds.contains(&KeywordKind::Ranged));
+        assert!(!kinds.contains(&KeywordKind::Starship));
         assert!(
             card.starship
                 .as_ref()
@@ -741,6 +749,8 @@ mod r1852003_the_launch {
         let mine = id_at(&s, P1, 1);
         bolt_at(&mut s, &mine);
         s.play(booster.id.as_str(), json!({ "zone": 2 }));
+        // The booster's (1) leaves p1 short of the launch's price, so p1 has it again.
+        s.state_mut().players.p1.mana.current = STARSHIP_LAUNCH_COST;
         let p2_health = health_of(&s, P2);
         let ship = ship_of(&s, P1);
         launch(&mut s, &ship.id);
@@ -950,6 +960,119 @@ mod r1852004_the_name {
         assert!(
             matches!(name.as_deref(), Some("Ember of Departure" | "The Silent Choir")),
             "{name:?}"
+        );
+    }
+}
+
+/// R3038000–R3038001 (issue #3038): Starship is a tag, and every Starship has Flying and Ranged
+/// through the layers; the launch grants no keyword.
+mod r3038000_the_starship_tag {
+    use super::*;
+
+    fn view_kinds(s: &Scenario, viewer: PlayerId, id: &str) -> Vec<KeywordKind> {
+        let view = s.view(viewer);
+        let side = if viewer == P1 { &view.you } else { &view.opponent };
+        ship_unit(side, id).keywords.iter().map(Keyword::kind).collect()
+    }
+
+    #[test]
+    fn r3038000_starship_parses_as_written_follows_faction_and_names_no_tribe() {
+        let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
+        assert_eq!(Tag::Starship.as_str(), "Starship");
+        assert_eq!(json_as::<Tag>(json!("Starship")), Tag::Starship);
+        assert_eq!(at(Tag::Starship), at(Tag::Faction).map(|at| at + 1));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
+        assert!(!TRIBAL_TAGS.contains(&Tag::Starship));
+        assert!(!POOL_TOKEN_TAGS.contains(&Tag::Starship));
+    }
+
+    #[test]
+    fn r3038000_a_dormant_and_a_launched_starship_both_carry_the_tag_and_are_found() {
+        let mut s = built_ship(json!([]), None);
+        let ship = ship_of(&s, P1);
+        assert!(
+            tags_of(s.state(), s.card(&ship.id)).contains(&Tag::Starship),
+            "the Dormant Starship carries the tag"
+        );
+        assert_eq!(
+            dormant_starship_of(s.state(), P1).map(|card| card.id.clone()),
+            Some(ship.id.clone())
+        );
+        assert!(building_a_ship(s.state(), P1));
+        launch(&mut s, &ship.id);
+        let launched = s.card(&ship.id).clone();
+        assert!(
+            tags_of(s.state(), &launched).contains(&Tag::Starship),
+            "the launched Starship keeps the tag"
+        );
+        assert_eq!(
+            launched_starship_of(s.state(), P1).map(|card| card.id.clone()),
+            Some(ship.id.clone())
+        );
+        // Both seats' views list the tag's Flying and Ranged.
+        for viewer in [P1, P2] {
+            let kinds = view_kinds(&s, viewer, &ship.id);
+            assert!(kinds.contains(&KeywordKind::Flying), "{viewer:?}");
+            assert!(kinds.contains(&KeywordKind::Ranged), "{viewer:?}");
+        }
+    }
+
+    #[test]
+    fn r3038000_the_tag_alone_gives_flying_and_ranged_through_the_layers() {
+        // A plain Unit prints neither; given the tag, the layers list both, on both seats' views.
+        let mut s = board(
+            "p1",
+            json!([]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+            json!([]),
+            json!([]),
+        );
+        let unit = id_at(&s, P1, 1);
+        let kinds = keywords_of(&s, &unit);
+        assert!(!kinds.contains(&KeywordKind::Flying) && !kinds.contains(&KeywordKind::Ranged));
+        s.card_mut(&unit).granted_tags = Some(vec![Tag::Starship]);
+        let kinds = keywords_of(&s, &unit);
+        assert!(kinds.contains(&KeywordKind::Flying), "{kinds:?}");
+        assert!(kinds.contains(&KeywordKind::Ranged), "{kinds:?}");
+        for viewer in [P1, P2] {
+            let kinds = view_kinds(&s, viewer, &unit);
+            assert!(kinds.contains(&KeywordKind::Flying), "{viewer:?}");
+            assert!(kinds.contains(&KeywordKind::Ranged), "{viewer:?}");
+        }
+        // Each is listed once, the hull's printed pair and the tag's folding into one.
+        let s = built_ship(json!([]), None);
+        let ship = ship_of(&s, P1);
+        let listed = s.stats(&ship.id).keywords;
+        for kind in [KeywordKind::Flying, KeywordKind::Ranged] {
+            assert_eq!(listed.iter().filter(|keyword| keyword.kind() == kind).count(), 1);
+        }
+    }
+
+    #[test]
+    fn r3038001_the_launch_grants_no_starship_keyword() {
+        let mut s = built_ship(json!([]), None);
+        let ship = ship_of(&s, P1);
+        launch(&mut s, &ship.id);
+        let kinds = keywords_of(&s, &ship.id);
+        assert!(!kinds.contains(&KeywordKind::Starship));
+        assert!(kinds.contains(&KeywordKind::Flying));
+        assert!(kinds.contains(&KeywordKind::Ranged));
+        assert!(s.card(&ship.id).granted_keywords.is_empty());
+    }
+
+    #[test]
+    fn r3038000_a_starship_holding_human_and_starship_draws_frontiers_promise() {
+        assert_eq!(
+            launch_names(&[Tag::Human, Tag::Starship]),
+            vec!["Frontier's Promise"]
+        );
+    }
+
+    #[test]
+    fn r3038000_a_starship_holding_starship_alone_draws_an_untagged_name() {
+        assert_eq!(
+            launch_names(&[Tag::Starship]),
+            vec!["Ember of Departure", "The Silent Choir"]
         );
     }
 }

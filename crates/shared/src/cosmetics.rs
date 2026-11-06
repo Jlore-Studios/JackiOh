@@ -553,7 +553,7 @@ pub fn implied_by(cosmetic: &Cosmetic) -> &'static [&'static str] {
 }
 
 /// R2725002, R3015006: whether a ledger row of `held` owns `id` on the row's card: it is `id`, or a shipped retired
-/// entry that maps to the level `id` ([`implied_by`]). The mapping is read where it is worn; migration 0083 wrote
+/// entry that maps to the level `id` ([`implied_by`]). The mapping is read where it is worn; migration 0084 wrote
 /// each combination's levels as rows of their own.
 pub fn row_owns(held: &str, id: &str) -> bool {
     held == id

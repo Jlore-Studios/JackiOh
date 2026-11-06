@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { getMe, isQueueMode, type MeResponse, type QueueMode } from "./api.ts";
-import { pageWake } from "../game/net.ts";
+import { pageWake, pollWhileVisible } from "../game/net.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
@@ -80,13 +80,12 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
           reading = false;
         });
     };
-    const handle = setInterval(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
-    // A throttled tab's interval stalls; waking it reads the account again at once.
-    const stopWake = pageWake(check);
+    // R3205000: the banner holds no place the server expires, so a hidden tab reads nothing; a throttled
+    // tab's interval stalls, and showing the tab (or the network coming back) reads the account again at once.
+    const stopPolling = pollWhileVisible(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
     return () => {
       canceled = true;
-      stopWake();
-      clearInterval(handle);
+      stopPolling();
     };
   }, [token, me, watched]);
 
@@ -196,6 +195,7 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
         });
     };
     check();
+    // R3205000: the queue follow keeps running in a hidden tab; its reads keep the ticket alive (R897000).
     const handle = setInterval(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
     const stopWake = pageWake(check);
     return () => {

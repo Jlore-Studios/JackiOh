@@ -1,4 +1,4 @@
-//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 8/8 → 16/16, cost 4, Embiggened (5), Epic.
+//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 3/3 → 6/6, cost 4, Embiggened (5), Epic.
 //!   Base:    "Starship Piece, Flying
 //!            Cry: Choose one of 2 Miners and Equip it into this.
 //!            Embiggened (5): The Miners offered are Radiant."
@@ -104,6 +104,17 @@ mod tests {
         held
     }
 
+    /// #3142: 3/3 on its base face and 6/6 on its Radiant one, until a Miner is equipped.
+    #[test]
+    fn it_is_3_3_and_radiant_6_6_before_its_miner() {
+        for (radiant, stats) in [(false, 3), (true, 6)] {
+            let (s, host) = played(radiant, false);
+            assert!(s.state().pending.is_some(), "the offer is open: nothing is equipped yet");
+            let first = s.stats(host.as_str());
+            assert_eq!((first.attack, first.health), (stats, stats), "radiant {radiant}");
+        }
+    }
+
     #[test]
     fn r1872002_its_cry_offers_two_miners_and_equips_the_one_chosen() {
         let (mut s, host) = played(false, false);
@@ -121,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn radiant_16_16_and_two_offers_in_turn_the_second_without_the_first_pick() {
+    fn radiant_6_6_and_two_offers_in_turn_the_second_without_the_first_pick() {
         let (mut s, host) = played(true, false);
         // The Radiant host wears its Miners' Radiant faces (R77).
         answers(&mut s, &host, 2, true);

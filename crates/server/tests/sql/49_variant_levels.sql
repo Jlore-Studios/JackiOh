@@ -1,7 +1,7 @@
--- Card variants as ladders of levels (migration 0083, SPEC §14.2, §14.11; R3015000, R3015006; issue #3015).
+-- Card variants as ladders of levels (migration 0084, SPEC §14.2, §14.11; R3015000, R3015006; issue #3015).
 -- Runs after 48_drop_custom_cards.sql; profile 1 (11111111-…) exists by then. The first block checks the
 -- registry's new rows; the second gives profile 1 one card per combination an account could own before
--- #3015, applies the file again twice (/tmp/0083_variant_levels.sql, which run.sh copied there) and reads
+-- #3015, applies the file again twice (/tmp/0084_variant_levels.sql, which run.sh copied there) and reads
 -- the levels and ledger rows it wrote.
 \set ON_ERROR_STOP on
 
@@ -9,7 +9,7 @@
 -- could pass vacuously carries a guard, and every block runs inside a transaction that is rolled back.
 -- Nothing here selects into the log: the do blocks raise or say OK.
 
-\echo '### R3015000: 0083 wrote the fifteen new levels of public.cosmetics ###'
+\echo '### R3015000: 0084 wrote the fifteen new levels of public.cosmetics ###'
 begin;
 do $$
 declare
@@ -41,7 +41,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R3015006: 0083 turns every combination held into its levels, once, and takes nothing ###'
+\echo '### R3015006: 0084 turns every combination held into its levels, once, and takes nothing ###'
 begin;
 -- public.cosmetics is the registry's projection, which seed-catalog writes and this suite does not: the
 -- entries held before #3015 stand in for it, a full-art card's four retired full arts among them.
@@ -97,15 +97,15 @@ begin
   select count(*) into n from public.card_cosmetics
    where profile_id = '11111111-1111-1111-1111-111111111111' and card_id like 'r3015-%';
   if n <> 23 then
-    raise exception 'FAIL (R3015006): profile 1 holds % rows on the fixture cards before 0083 runs again, not 23', n;
+    raise exception 'FAIL (R3015006): profile 1 holds % rows on the fixture cards before 0084 runs again, not 23', n;
   end if;
 end $$;
 
 -- The migration, as it runs on a database these rows are held in, twice: the second finds every level
 -- held and writes nothing.
 set local client_min_messages = warning;
-\i /tmp/0083_variant_levels.sql
-\i /tmp/0083_variant_levels.sql
+\i /tmp/0084_variant_levels.sql
+\i /tmp/0084_variant_levels.sql
 set local client_min_messages = notice;
 
 do $$
@@ -146,7 +146,7 @@ declare
   n      bigint;
 begin
   for i in 1 .. array_length(expected, 1) loop
-    -- The levels held (and no retired row lost), then the ledger rows 0083 wrote.
+    -- The levels held (and no retired row lost), then the ledger rows 0084 wrote.
     select coalesce(string_agg(cosmetic_id, ', ' order by cosmetic_id), '') into v_text
       from public.card_cosmetics
      where profile_id = p1 and card_id = expected[i][1] and cosmetic_id like 'version-%';
@@ -154,7 +154,7 @@ begin
       raise exception 'FAIL (R3015006): % holds the levels [%], not [%]', expected[i][1], v_text, expected[i][2];
     end if;
     select count(*) into n from public.cosmetic_grants g
-     where g.profile_id = p1 and g.card_id = expected[i][1] and g.reason = 'launch' and g.ref = 'levels:0083'
+     where g.profile_id = p1 and g.card_id = expected[i][1] and g.reason = 'launch' and g.ref = 'levels:0084'
        and g.delta = 1
        and not exists (select 1 from public.cosmetic_grants b
                         where b.profile_id = p1 and b.card_id = g.card_id and b.cosmetic_id = g.cosmetic_id
@@ -164,7 +164,7 @@ begin
                 and not exists (select 1 from public.cosmetic_grants b
                                  where b.profile_id = p1 and b.card_id = c.card_id and b.cosmetic_id = c.cosmetic_id
                                    and b.ref = 'r3015:before')) then
-      raise exception 'FAIL (R3015006): % has % ledger rows of 0083, not one per level it wrote', expected[i][1], n;
+      raise exception 'FAIL (R3015006): % has % ledger rows of 0084, not one per level it wrote', expected[i][1], n;
     end if;
   end loop;
 
@@ -172,7 +172,7 @@ begin
   select count(*) into n from public.card_cosmetics
    where profile_id = p1 and card_id like 'r3015-%' and cosmetic_id not like 'version-%';
   if n <> 14 then
-    raise exception 'FAIL (R3015006): % of the 14 retired or augment rows held before 0083 remain', n;
+    raise exception 'FAIL (R3015006): % of the 14 retired or augment rows held before 0084 remain', n;
   end if;
   select count(*) into n from (
     select c.card_id, c.cosmetic_id from public.card_cosmetics c where c.profile_id = p1 and c.card_id like 'r3015-%'
@@ -185,11 +185,11 @@ begin
     raise exception 'FAIL (R3015006): % held rows on the fixture cards have no ledger summing to one', n;
   end if;
   select count(*) into n from public.cosmetic_grants
-   where profile_id = p1 and card_id like 'r3015-%' and ref = 'levels:0083';
+   where profile_id = p1 and card_id like 'r3015-%' and ref = 'levels:0084';
   if n <> 23 then
-    raise exception 'FAIL (R3015006): 0083 wrote % ledger rows over its two runs, not the 23 levels the first granted', n;
+    raise exception 'FAIL (R3015006): 0084 wrote % ledger rows over its two runs, not the 23 levels the first granted', n;
   end if;
 
-  raise notice 'OK (R3015006): 0083 maps every combination held to its levels, once, and every row held stays';
+  raise notice 'OK (R3015006): 0084 maps every combination held to its levels, once, and every row held stays';
 end $$;
 rollback;

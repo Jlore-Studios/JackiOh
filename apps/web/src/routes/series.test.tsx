@@ -5,13 +5,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "@jackioh/server-config";
+import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate } from "../net/navigate.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import SeriesRoute, { endReasonWords, seriesTestid } from "./series.tsx";
-import { setVisibility } from "../test/setup.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -299,6 +299,24 @@ describe("the series screen", () => {
     } finally {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
+    }
+  });
+
+  it("R3205000 the series pick keeps reading while the tab is hidden, for the pick clock expires it whichever tab is open (R333)", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const period = SERIES_POLL_SECONDS * MS_PER_SECOND;
+    try {
+      await renderSeries();
+      expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(1);
+
+      setVisibility("hidden");
+      await settle({ advance: period });
+      expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
+      await settle({ advance: period });
+      expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(3);
+    } finally {
+      resetVisibility();
+      vi.useRealTimers();
     }
   });
 

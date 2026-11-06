@@ -18,6 +18,7 @@ const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
 const HEROIC_POWER: &str = "core-098";
+const TWINSPELL: &str = "core-079";
 const INFINISCEPTER: &str = "classic-007";
 const NOSE_HUNTER: &str = "classic-015";
 const POWER_TO_PUNISH: &str = "classic-020";
@@ -40,6 +41,7 @@ const SCHOOL: &str = "meditative-097-3";
 const MEGA_CHURCH: &str = "meditative-097-4";
 const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
+const FENG_SHUI: &str = "meditative-040";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
@@ -47,17 +49,22 @@ const YILES_VIRUS: &str = "meditative-049-2";
 const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
 const LIVING_MANA_POTION: &str = "meditativeplus-011";
+const LIVING_BOMB: &str = "classic-062";
+const UNBIASED_IMMIGRATION: &str = "core-059";
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 71] = [
+const ACTIVATE_CARDS: [&str; 75] = [
     HEROIC_POWER,
+    TWINSPELL,
+    UNBIASED_IMMIGRATION,
     INFINISCEPTER,
     NOSE_HUNTER,
     POWER_TO_PUNISH,
     TURTINATOR,
     DEVILS_PACT,
     TRANSMUTABLE_TOXINS,
+    LIVING_BOMB,
     MALZAHARS_RECYCLER,
     CORPSE_PLANTATION,
     MUTATE_SPELL,
@@ -74,6 +81,7 @@ const ACTIVATE_CARDS: [&str; 71] = [
     MEGA_CHURCH,
     UNIVERSITY,
     HEADQUARTERS,
+    FENG_SHUI,
     MONEY_MACHINE,
     GACHAHOLIC,
     ALUNETH,
@@ -86,7 +94,6 @@ const ACTIVATE_CARDS: [&str; 71] = [
     "stinkyscape-018-1",
     "stinkyscape-018-2",
     "stinkyscape-018-3",
-    "stinkyscape-026",
     "stinkyscape-039",
     "stinkyscape-050",
     "stinkyscape-051",
@@ -114,6 +121,7 @@ const ACTIVATE_CARDS: [&str; 71] = [
     "stinkyscape-143",
     "stinkyscape-148",
     "stinkyscape-157",
+    "stinkyscape-168",
     "stinkyscape-169",
     "stinkyscape-170",
     "stinkyscape-171",
@@ -133,6 +141,7 @@ const X: &str = "core-020"; // library filler.
 const CONJURE_KY: &str = "core-057"; // (2) Spell: Add 3 random KY cards to your hand.
 const APPLE: &str = "classicplus-059"; // All Purpose Apple, Doctors Orders' card.
 const THE_COIN: &str = "core-t-coin"; // Money Machine's card.
+const AUSPICIOUS_ROCK: &str = "meditative-039-1"; // Feng Shui's card.
 
 fn on(def: &str, radiant: bool) -> Value {
     json!({ "def": def, "radiant": radiant })
@@ -278,6 +287,83 @@ fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_h
         by_script, covered,
         "a script's Activate does not match its card's text"
     );
+}
+
+/// Issue #3139: Core #59's Activate (both faces), once a turn with no price, as a client uses it.
+mod c_n59_unbiased_immigration {
+    use super::*;
+
+    fn standing(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "backrow": [on(UNBIASED_IMMIGRATION, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    fn adds_a_card(radiant: bool) {
+        let mut s = standing(radiant);
+        let id = s.card(UNBIASED_IMMIGRATION).id.clone();
+        let hand = s.hand(P1).len();
+        let mana = s.state().players.p1.mana.current;
+        let events = activate_listed(&mut s, UNBIASED_IMMIGRATION, any);
+        assert_eq!(s.hand(P1).len(), hand + 1);
+        assert_eq!(s.state().players.p1.mana.current, mana, "no price");
+        let added: Vec<&GameEvent> = events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::AddedToHand { .. }))
+            .collect();
+        assert_eq!(added.len(), 1);
+        let GameEvent::AddedToHand { instance_id, .. } = added[0] else {
+            unreachable!("filtered to an add")
+        };
+        assert_eq!(s.card(instance_id.as_str()).radiant, radiant);
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_base_activate_adds_a_random_card_once_a_turn() {
+        adds_a_card(false);
+    }
+
+    #[test]
+    fn r384_radiant_activate_adds_a_random_radiant_card_once_a_turn() {
+        adds_a_card(true);
+    }
+}
+
+/// Issue #3139: Classic #62's Radiant face Activates a Plague Counter (R689's prompt), once a turn; the base
+/// face has the Cry instead and lists no Activate.
+mod c_n62_living_bomb {
+    use super::*;
+
+    fn standing(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "backrow": [on(LIVING_BOMB, radiant)], "field": [VANILLA], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "field": [MENACE], "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    #[test]
+    fn r384_r689_radiant_activate_places_a_plague_counter_on_the_permanent_a_prompt_names_once_a_turn() {
+        let mut s = standing(true);
+        let id = s.card(LIVING_BOMB).id.clone();
+        activate_listed(&mut s, LIVING_BOMB, any);
+        let prey = s.card(MENACE).id.clone();
+        assert!(
+            s.state().pending.is_some(),
+            "R689: one prompt names the permanent"
+        );
+        s.answer(json!(prey));
+        assert_eq!(s.card(MENACE).counters.plague, Some(1));
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_the_base_face_lists_no_activate() {
+        let s = standing(false);
+        let id = s.card(LIVING_BOMB).id.clone();
+        assert!(listed(&s, &id).is_empty());
+    }
 }
 
 mod c_n98_heroic_power {
@@ -1154,6 +1240,56 @@ mod m_n97_9_jlockeeds_headquarters {
     }
 }
 
+mod m_n40_feng_shui {
+    use super::*;
+
+    /// R384, R3140000: the listed `activate` adds an Auspicious Rock, Radiant on the Radiant face, once a turn.
+    fn adds_a_rock(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(FENG_SHUI, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        activate_listed(&mut s, FENG_SHUI, any);
+        let rocks: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == AUSPICIOUS_ROCK)
+            .collect();
+        assert_eq!(rocks.len(), 1);
+        assert_eq!(rocks[0].radiant, radiant);
+        assert_eq!(s.state().players.p1.mana.current, mana);
+        s.expect_in_zone(FENG_SHUI, "field");
+        let id = s.card(FENG_SHUI).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_r3140000_base_adds_an_auspicious_rock_to_your_hand_once_a_turn() {
+        adds_a_rock(false);
+    }
+
+    #[test]
+    fn r384_r3140000_radiant_adds_a_radiant_auspicious_rock_to_your_hand_once_a_turn() {
+        adds_a_rock(true);
+    }
+
+    #[test]
+    fn r384_the_opponent_is_not_listed_it_on_their_own_turn() {
+        let s = scenario(json!({
+            "active": "p2",
+            "p1": { "backrow": [FENG_SHUI], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(FENG_SHUI).id.clone();
+        assert!(
+            !legal_actions(s.state(), P2).into_iter().any(
+                |action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
+            )
+        );
+    }
+}
+
 mod m_n54_money_machine {
     use super::*;
 
@@ -1794,16 +1930,8 @@ mod stinkyscape {
         }));
         let vanilla = s.card(VANILLA).id.clone();
         activate_listed(&mut s, "stinkyscape-018-1", any);
-        if !radiant {
-            let options = s
-                .state()
-                .pending
-                .as_ref()
-                .map(|pending| pending.options.clone())
-                .unwrap_or_default();
-            assert_eq!(options.len(), 3);
-            s.answer(json!(options[0].key.clone()));
-        }
+        // R3142001: neither face asks anything; each Unit draws its own keywords.
+        assert!(s.state().pending.is_none(), "nothing is asked");
         assert!(
             !s.card(&vanilla).granted_keywords.is_empty(),
             "the Vanilla gained a keyword"
@@ -1839,27 +1967,6 @@ mod stinkyscape {
             .filter_map(|entry| entry.watch.clone())
             .collect();
         assert!(watched.contains(&vanilla), "{watched:?}");
-    });
-
-    both_faces!(s_n26_zolarketh, |radiant: bool| {
-        let mut s = scenario(json!({
-            "p1": { "field": [on("stinkyscape-026", radiant)], "hand": [STOCKPILE], "library": [X, X] },
-            "p2": { "hand": [FILLER], "library": [X, X] },
-        }));
-        // #2657: its Activate is its own once its Cry chose it, which it remembers.
-        s.card_mut("stinkyscape-026")
-            .memory
-            .insert("gainedPieceActivate".to_string(), json!(true));
-        let events = activate_listed(&mut s, "stinkyscape-026", |_| true);
-        let pieces = summoned_defs(&events);
-        assert_eq!(pieces.len(), 1, "{events:?}");
-        assert!(
-            jackioh_cards::CATALOG[&pieces[0]]
-                .base
-                .keywords
-                .iter()
-                .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
-        );
     });
 
     mod s_n157_the_gauntlet {
@@ -1899,6 +2006,46 @@ mod stinkyscape {
         assert_eq!(s.hand(P1).len(), hand - 1, "the resume left the hand");
     });
 
+    // R3044000: Twinspell's Activate grants its controller's next Spell this turn Echo +1, a rider
+    // with no source; the base face then goes to the graveyard and the Radiant one stays.
+    both_faces!(c079_twinspell, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(TWINSPELL, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let twin = s.card(TWINSPELL).id.clone();
+        activate_listed(&mut s, TWINSPELL, any);
+        let riders = s
+            .state()
+            .players
+            .p1
+            .mods
+            .iter()
+            .map(|m| serde_json::to_value(m).expect("a modifier serializes"))
+            .filter(|m| m["kind"] == "echoNextSpell")
+            .count();
+        assert_eq!(riders, 1, "one Echo rider on its controller");
+        if radiant {
+            assert!(listed(&s, &twin).is_empty(), "once a turn");
+        } else {
+            s.expect_in_zone(&twin, "graveyard");
+        }
+    });
+
+    both_faces!(s_n168_drone_hanger, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-168", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let events = activate_listed(&mut s, "stinkyscape-168", any);
+        assert_eq!(
+            summoned_defs(&events),
+            vec!["stinkyscape-t-drone-interceptor".to_string()]
+        );
+        let drone = s.unit(P1, 1).expect("the Interceptor in the leftmost unit zone");
+        assert_eq!(drone.radiant, radiant);
+    });
+
     both_faces!(s_n148_alteran_reach, |radiant: bool| {
         let mut s = scenario(json!({
             "p1": { "backrow": [on("stinkyscape-148", radiant)], "hand": [STOCKPILE], "library": [X, X], "mana": 4 },
@@ -1917,7 +2064,7 @@ mod stinkyscape {
         use super::*;
 
         /// R1852003: a Starship Piece's death summons the Dormant Starship, whose launch is an Activate
-        /// the engine gives it (no script declares it), at (3).
+        /// the engine gives it (no script declares it), at `STARSHIP_LAUNCH_COST`.
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";
@@ -1934,7 +2081,10 @@ mod stinkyscape {
                 .clone();
             let mana = s.state().players.p1.mana.current;
             activate_listed(&mut s, &ship, any);
-            assert_eq!(s.state().players.p1.mana.current, mana - 3);
+            assert_eq!(
+                s.state().players.p1.mana.current,
+                mana - jackioh_engine::prelude::STARSHIP_LAUNCH_COST
+            );
         }
     }
 

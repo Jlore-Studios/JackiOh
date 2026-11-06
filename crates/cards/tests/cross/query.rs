@@ -222,23 +222,15 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             )))
             .contains(&"core-096".to_string())
         );
-        // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker and #87 Tatches the Totem
-        // (§8.8) are (1) KY cards too since the set ships (R1420). Re-pinned for v0.3.15 (Meditative+
-        // ships, #1187): M+ #25 KY's Intuition (§8.9) is a (1) KY card too. C+ #62 KY's Papaya costs (2)
-        // since #1704.
+        // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker (§8.8) is a (1) KY card too
+        // since the set ships (R1420). Meditative #87 Tatches the Totem costs (0) and M+ #25 KY's
+        // Intuition (§8.9) costs (2) since #3138; C+ #62 KY's Papaya costs (2) since #1704, and Core #82
+        // KY's Trial since #3136.
         assert_eq!(
             ids_of_defs(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
             ))),
-            strings(&[
-                "core-051",
-                "core-082",
-                "classicplus-041",
-                "classicplus-042",
-                "meditative-045",
-                "meditative-087",
-                "meditativeplus-025",
-            ])
+            strings(&["core-051", "classicplus-041", "classicplus-042", "meditative-045",])
         );
     }
 
@@ -471,8 +463,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     {
         register();
         // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10, Classic+ #22 Blood Moon
-        // (2) since #2179. The Stinkyscape set's (1) Cost ones join them from its release (#1884), and the
-        // Training Grounds set's from its own (#2204).
+        // (2) since #2179, and Classic #14 Shadowstep (1) since #3136. The Stinkyscape set's (1) Cost ones
+        // join them from its release (#1884), and the Training Grounds set's from its own (#2204).
         assert_eq!(
             ids_of_defs(query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
@@ -481,6 +473,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "core-060",
                 "core-071",
                 "core-096",
+                "classic-014",
                 "classic-063",
                 "meditative-064",
                 "meditative-068",
@@ -939,14 +932,16 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
     fn r1444_the_luck_based_pool_is_exactly_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
         register();
         // The query a card script writes, `query::luck_based()`, names no set (R1420). It holds the earlier
-        // sets' eight, §8.8's Meditative #36 CN Peptides and #86 Mayor Medinamogger (Lucky 1 on their Radiant
-        // faces) and #102 Catboy Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands. #65
-        // Keymaster Keenus (R1084, R781004) and Core #42 Selective Breeding (R831014) print no Lucky 1.
+        // sets' eight, C+ #16 Conjure Rush Token+ (whose base face flips a coin since #3140, R1440, R3140002),
+        // §8.8's Meditative #36 CN Peptides and #86 Mayor Medinamogger (Lucky 1 on their Radiant faces) and
+        // #102 Catboy Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands. #65 Keymaster
+        // Keenus (R1084, R781004) and Core #42 Selective Breeding (R831014) print no Lucky 1.
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
         let mut pool = strings(&[
             "core-004",
             "core-023",
             "classic-065",
+            "classicplus-016",
             "classicplus-025",
             "classicplus-053",
             "classicplus-065",
@@ -982,11 +977,32 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
             sorted(ids_of_defs(query(&luck_based()))),
             sorted(expected.clone())
         );
-        // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gives Luck and
-        // makes no roll; #101 Gachaholic gives Lucky and prints none.
+        // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gave Luck through
+        // v0.5.11r and makes no roll (R3140000: it gives none now); #101 Gachaholic gives Lucky and prints
+        // none; C+ #16 Conjure Rush Token+ flips a coin on its base face, which is the pool's text half.
+        assert!(expected.contains(&"classicplus-016".to_string()));
         assert!(expected.contains(&"meditative-036".to_string()));
         assert!(!expected.contains(&"meditative-040".to_string()));
         assert!(!expected.contains(&"meditative-101".to_string()));
+    }
+}
+
+mod r3140002_conjure_rush_token_plus_flips_a_coin {
+    use super::*;
+    use jackioh_cards::query::luck_based;
+
+    #[test]
+    fn r3140002_its_base_face_says_flip_a_coin_so_it_is_in_the_luck_based_pool_and_its_radiant_face_flips_nothing()
+     {
+        register();
+        let def = CATALOG.get("classicplus-016").expect("Conjure Rush Token+");
+        assert!(def.base.text.contains("Flip a coin"), "{}", def.base.text);
+        assert!(
+            !def.radiant.text.to_lowercase().contains("flip a coin"),
+            "{}",
+            def.radiant.text
+        );
+        assert!(ids_of_defs(query(&luck_based())).contains(&"classicplus-016".to_string()));
     }
 }
 

@@ -1,4 +1,4 @@
-//! C #73 Nurse Cleaver (SPEC §8.6 row 73). (2) Unit, Common, 3/6 → 6/12.
+//! C #73 Nurse Cleaver (SPEC §8.6 row 73). (2) Unit, Common, 3/4 → 6/8 (3/6 → 6/12 until issue #3136).
 //!   Base:    "Rush, Cleave, Lifesteal"
 //!   Radiant: "Charge, Cleave, Lifesteal"
 //!   Engine:  "Keywords only. Tunes: none."
@@ -23,7 +23,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 3/6 → 6/12: Rush,
+// C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 3/4 → 6/8: Rush,
 // Cleave, Lifesteal; Radiant: Charge, Cleave, Lifesteal.
 
 /// `describe("C #73 Nurse Cleaver")`.
@@ -72,10 +72,10 @@ mod tests {
 
         /// §4.1 Rush: it attacks a Unit the turn it enters, never the hero
         #[test]
-        fn s4_1_rush_it_attacks_a_unit_the_turn_it_enters_never_the_hero() {
+        fn issue_3136_s4_1_a_3_4_with_rush_it_attacks_a_unit_the_turn_it_enters_never_the_hero() {
             let mut s = scenario(json!({ "p1": { "hand": [CLEAVER, STOCKPILE], "library": spare()["library"] }, "p2": row() }));
             s.play(CLEAVER, json!({}));
-            s.expect_stats(CLEAVER, json!({ "attack": 3, "health": 6 }));
+            s.expect_stats(CLEAVER, json!({ "attack": 3, "health": 4 }));
             s.expect_refused(|s| s.attack(CLEAVER, "hero"));
             let middle = s.unit(P2, 2).expect("p2's middle unit");
             s.attack(CLEAVER, &middle);
@@ -113,15 +113,15 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// §4.1 6/12 Charge, Cleave, Lifesteal: it may attack the hero the turn it enters
+        /// §4.1 6/8 Charge, Cleave, Lifesteal: it may attack the hero the turn it enters
         #[test]
-        fn s4_1_6_12_charge_cleave_lifesteal_it_may_attack_the_hero_the_turn_it_enters() {
+        fn issue_3136_s4_1_6_8_charge_cleave_lifesteal_it_may_attack_the_hero_the_turn_it_enters() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": CLEAVER, "radiant": true }, STOCKPILE], "health": 10, "library": spare()["library"] },
                 "p2": spare(),
             }));
             s.play(CLEAVER, json!({}));
-            s.expect_stats(CLEAVER, json!({ "attack": 6, "health": 12 }));
+            s.expect_stats(CLEAVER, json!({ "attack": 6, "health": 8 }));
             s.attack(CLEAVER, "hero");
             s.expect_health(P2, 24).expect_health(P1, 16);
         }

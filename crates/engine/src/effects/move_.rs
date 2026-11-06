@@ -1,6 +1,7 @@
-//! Exile, Bounce, Discard and Counter: the moves that take a card off the field, out of a hand or off
-//! the stack (SPEC §6.3, §3.2, §2.4, R11, R12, R16, R78, R448). Every zone change goes through `zones.rs`;
-//! each sweep (§3.1) goes down its single-card form's helper, so "bounce" means one thing.
+//! Exile, Bounce, Discard, Counter and a plain move to the graveyard: the moves that take a card off the
+//! field, out of a hand or off the stack (SPEC §6.3, §3.2, §2.4, R11, R12, R16, R78, R448, R3044000).
+//! Every zone change goes through `zones.rs`; each sweep (§3.1) goes down its single-card form's helper,
+//! so "bounce" means one thing.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -355,6 +356,33 @@ pub fn bounce_all(args: BoardScope) -> Effect {
         for card in &cards {
             bounce_card(ctx, card);
         }
+    })
+}
+
+/// `sendToGraveyard`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SendToGraveyardArgs {
+    pub target: TargetSpec,
+}
+
+/// R3044000: a card on the field "goes to the graveyard" (Core #79 Twinspell's "Then this goes to the
+/// graveyard"), a plain move and not a death: no `destroyed`, no Death trigger, no Reborn, no count of
+/// deaths (R55), and Indestructible does not hold it. It lands as a dying card does, in the graveyard of
+/// the player it stood for (R2618000) or wherever a replacement sends it (B5 E5, R460); a unit token
+/// ceases to exist (R11). A card that is not on the field is left where it is.
+pub fn send_to_graveyard(args: SendToGraveyardArgs) -> Effect {
+    Effect::new("sendToGraveyard", move |ctx| {
+        let Some(mut card) = instance_of(ctx, &args.target) else {
+            return;
+        };
+        if card.zone.z() != ZoneName::Field {
+            return;
+        }
+        let moved = move_to_zone(ctx.state, &mut card, OffFieldZone::Graveyard, Default::default());
+        let landed = find_instance(ctx.state, &card.id).cloned().unwrap_or(card);
+        report_graveyard_landing(ctx, &landed, moved);
     })
 }
 

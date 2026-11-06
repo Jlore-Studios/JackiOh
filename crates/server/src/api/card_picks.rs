@@ -29,7 +29,7 @@ use crate::cosmetics::{
     VERSION_FULL_ART_ID, VERSION_ID_PREFIX, full_art_of, is_slug, level_of_pick, worn_level,
 };
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
-use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, CardPicksExt, FULL_ART_SETTING, setting_key};
+use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
 
 /// A card a deck may hold: in the catalog, and no token.
 pub(crate) fn is_playable(app: &App, card_id: &str) -> bool {
@@ -488,7 +488,7 @@ mod tests {
             VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
         };
         // Carnivorous Cube, offered Full art's ladder, owning the version and both augments, and the levels
-        // migration 0083 wrote for them (R3015006).
+        // migration 0084 wrote for them (R3015006).
         let cube = "core-022";
         let row = |id: &str| CardCosmetic {
             card_id: cube.to_string(),

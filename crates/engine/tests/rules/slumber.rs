@@ -3,7 +3,8 @@
 // zone, and until it awakens nothing else reaches it (`zones::active_units_of`, `zones::acts_on_field`,
 // `restrictions::unaffected_by`) and its lasting text is off (`preview::lasting_text_off`). Its countdown
 // runs at its controller's turn start, after the Brittle tick (`slumber::awaken_at_turn_start`), and its own
-// Activate may awaken it instead (`StaticFlags.slumber.wakesBy`). Proved on `fixtures/slumber.rs`.
+// Activate may awaken it instead (`StaticFlags.slumber.wakesBy`). An awakening is for good: an awakened card
+// never enters Dormant again, however it comes back (R3039000, issue #3039). Proved on `fixtures/slumber.rs`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -610,5 +611,199 @@ mod r1839003_a_stack_card_onto_a_dormant_one {
         s.play(copycat.id.as_str(), json!({ "zone": 1 }));
         assert_eq!(s.card(&dormant.id).def_id, imprisoned.id, "not made a copy");
         assert_eq!(slumber_of(&s, &dormant.id), dormant_for(2));
+    }
+}
+
+mod r3039000_an_awakened_card_is_never_dormant_again {
+    use super::*;
+    use crate::rules::fixtures::harness::apply_now;
+    use jackioh_engine::effects;
+
+    /// p1's turn with an Imprisoned Dormant in lane 1, which a Rouse awakens at once, and `hand` left to
+    /// play: the awakened card's id.
+    fn awakened_imprisoned(hand: Value) -> (Scenario, String) {
+        let mut cards = vec![json!(rouse.id)];
+        cards.extend(hand.as_array().cloned().unwrap_or_default());
+        cards.push(json!(plain.id));
+        let mut s = board(
+            "p1",
+            json!(cards),
+            json!([{ "def": imprisoned.id, "lane": 1, "slumber": { "turns": 2 } }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let id = id_at(&s, P1, 1);
+        assert_eq!(s.card(&id).awakened, None, "a Dormant card is not marked");
+        s.play(rouse.id.as_str(), json!({}));
+        assert_eq!(slumber_of(&s, &id), None);
+        assert_eq!(s.card(&id).awakened, Some(true), "its awakening marks it");
+        (s, id)
+    }
+
+    fn destroy(s: &mut Scenario, id: &str) {
+        apply_now(
+            s.state_mut(),
+            effects::destroy(json_as(
+                json!({ "target": { "of": "instance", "instanceId": id } }),
+            )),
+        );
+    }
+
+    fn play_into(id: &str, lane: i32) -> ActionBody {
+        ActionBody::Play {
+            instance_id: id.to_string(),
+            zone: Some(ZoneChoice {
+                row: Row::Units,
+                lane,
+            }),
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: None,
+        }
+    }
+
+    /// Awake on the field, a Unit for every rule, on both seats.
+    fn awake_on_field(s: &Scenario, id: &str, lane: i32) {
+        assert_eq!(id_at(s, P1, lane), id);
+        assert_eq!(slumber_of(s, id), None, "not Dormant");
+        for viewer in [P1, P2] {
+            let view = s.view(viewer);
+            let side = if viewer == P1 { &view.you } else { &view.opponent };
+            let unit = side.units[lane as usize - 1].as_ref().expect("the lane shows it");
+            assert_eq!(unit.slumber, None, "{viewer:?}");
+        }
+        assert!(
+            active_units_of(s.state(), P1).iter().any(|unit| unit.id == id),
+            "a Unit again"
+        );
+    }
+
+    #[test]
+    fn r3039000_every_awakening_marks_it_its_countdown_its_activate_and_the_awaken_verb() {
+        // Its countdown's end.
+        let mut s = board(
+            "p1",
+            json!([napper.id, plain.id]),
+            json!([]),
+            json!([plain.id]),
+            json!([]),
+        );
+        s.play(napper.id.as_str(), json!({ "zone": 1 }));
+        let napped = id_at(&s, P1, 1);
+        s.end_turn().end_turn();
+        assert_eq!(slumber_of(&s, &napped), None);
+        assert_eq!(s.card(&napped).awakened, Some(true), "its countdown's end");
+        // Its own Activate.
+        let mut s = board(
+            "p1",
+            json!([starship.id, plain.id]),
+            json!([]),
+            json!([plain.id]),
+            json!([]),
+        );
+        s.play(starship.id.as_str(), json!({ "zone": 1 }));
+        let ship = id_at(&s, P1, 1);
+        s.activate(&ship, json!({ "ability": LAUNCH }));
+        assert_eq!(s.card(&ship).awakened, Some(true), "its Activate");
+        // The Awaken verb, by another card; it does nothing to an awake card, which is not marked.
+        let mut s = board(
+            "p1",
+            json!([rouse.id, plain.id]),
+            json!([{ "def": imprisoned.id, "lane": 1, "slumber": { "turns": 2 } }, { "def": plain.id, "lane": 2 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let (dormant, awake) = (id_at(&s, P1, 1), id_at(&s, P1, 2));
+        s.play(rouse.id.as_str(), json!({}));
+        assert_eq!(s.card(&dormant).awakened, Some(true), "the Awaken verb");
+        assert_eq!(s.card(&awake).awakened, None, "a card that never slept");
+    }
+
+    #[test]
+    fn r3039000_played_again_from_its_graveyard_it_enters_awake() {
+        let (mut s, id) = awakened_imprisoned(json!([]));
+        destroy(&mut s, &id);
+        s.expect_in_zone(id.as_str(), "graveyard");
+        assert_eq!(
+            s.card(&id).awakened,
+            Some(true),
+            "kept through R78's and R766's resets"
+        );
+        // A Flashback given to it lets it be played from there (R783012).
+        s.card_mut(id.as_str()).granted_keywords.push(Keyword::Flashback);
+        s.act(play_into(&id, 2), P1, "play the Imprisoned from the graveyard");
+        awake_on_field(&s, &id, 2);
+    }
+
+    #[test]
+    fn r3039000_reborn_it_returns_awake() {
+        let (mut s, id) = awakened_imprisoned(json!([]));
+        s.card_mut(id.as_str()).granted_keywords.push(Keyword::Reborn);
+        destroy(&mut s, &id);
+        assert_eq!(s.card(&id).reborn_spent, Some(true), "back by its Reborn");
+        awake_on_field(&s, &id, 1);
+    }
+
+    #[test]
+    fn r3039000_returned_to_its_hand_and_played_again_it_enters_awake() {
+        let (mut s, id) = awakened_imprisoned(json!([flood.id]));
+        s.play(flood.id.as_str(), json!({}));
+        s.expect_in_zone(id.as_str(), "hand");
+        assert_eq!(s.card(&id).awakened, Some(true), "kept in the hand");
+        s.play(id.as_str(), json!({ "zone": 3 }));
+        awake_on_field(&s, &id, 3);
+    }
+
+    #[test]
+    fn r3039000_summoned_again_from_its_graveyard_it_enters_awake_and_a_new_one_is_dormant() {
+        let (mut s, id) = awakened_imprisoned(json!([call.id]));
+        destroy(&mut s, &id);
+        apply_now(
+            s.state_mut(),
+            effects::summon(json_as(
+                json!({ "instance": { "of": "instance", "instanceId": id } }),
+            )),
+        );
+        awake_on_field(&s, &id, 1);
+        // A summon by its definition makes a new card, which is Dormant.
+        s.play(call.id.as_str(), json!({}));
+        let fresh = id_at(&s, P1, 2);
+        assert_ne!(fresh, id);
+        assert_eq!(slumber_of(&s, &fresh), dormant_for(2));
+        assert_eq!(s.card(&fresh).awakened, None);
+    }
+
+    #[test]
+    fn r3039000_a_card_that_left_the_field_before_it_awakened_is_dormant_again() {
+        let mut s = board(
+            "p1",
+            json!([plain.id]),
+            json!([{ "def": imprisoned.id, "lane": 1, "slumber": { "turns": 1 } }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let id = id_at(&s, P1, 1);
+        // No effect reaches a Dormant card (R1839000), so it is moved to its hand as a rule's move would.
+        let mut card = s.card(&id).clone();
+        move_to_zone(
+            s.state_mut(),
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
+        s.expect_in_zone(id.as_str(), "hand");
+        assert_eq!(s.card(&id).slumber, None, "R78's reset took the status off");
+        assert_eq!(s.card(&id).awakened, None, "it never awakened");
+        s.play(id.as_str(), json!({ "zone": 1 }));
+        assert_eq!(
+            slumber_of(&s, &id),
+            dormant_for(2),
+            "Dormant again, its printed countdown afresh"
+        );
     }
 }

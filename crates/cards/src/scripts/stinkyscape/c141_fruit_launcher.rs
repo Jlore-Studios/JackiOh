@@ -1,4 +1,4 @@
-//! Stinkyscape #141 Fruit Launcher (SPEC §8.10 row 141). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
+//! Stinkyscape #141 Fruit Launcher (SPEC §8.10 row 141). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Choose a permanent. Cast a random Fruit on it."
 //!   Radiant: "Starship Piece, Equip
@@ -259,7 +259,7 @@ mod tests {
         fn its_health_is_doubled() {
             let s = board("s141", true);
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, 8));
+            assert_eq!((view.attack, view.health), (0, 4));
         }
     }
 }

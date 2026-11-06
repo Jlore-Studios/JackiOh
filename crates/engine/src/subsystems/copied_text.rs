@@ -7,7 +7,9 @@
 //! it is fixed, held in its memory from the resolving zone on (R546), so its declarations (R81), Echo
 //! repeats and prompt continuations keep that face until R215's reset as it lands. Declarations, target
 //! checks, `preview` (R280) and `conditionMet` (R195) read `text_face_of`; the view shows it (R243).
-//! X (R545): the copier pays its own price and a copied X-cost text chooses X (B5 E12). Text answering
+//! With no Spell played yet a copier has no text, unless it names a fallback (`staticFlags.copyFallback`,
+//! R3048000: Echo's is The Coin), which it then has and records. X (R545): the copier pays its own price
+//! and a copied X-cost text chooses X (B5 E12). Text answering
 //! from a pile the card has landed in (§5.1's return, #23, #24, #31) is not had (R547). Everything else
 //! (name, Cost, type, tags, "this") is the copier's own; a fused card is never a copier (R77).
 
@@ -43,12 +45,18 @@ fn face_script_of(state: &GameState, card: &CardInstance) -> ScriptRef {
     crate::scripts::script_of(state, card)
 }
 
+/// A copier's flags: those of the face it wears, none for a card whose running face does not copy the
+/// last Spell's text (`staticFlags.copiesLastSpell`), a fused card never one (R77).
+fn copier_flags_of(card: &CardInstance) -> Option<StaticFlags> {
+    if crate::catalog::fused_id_parts(None, &card.def_id).is_some() {
+        return None;
+    }
+    Some(registry_flags_of(card)).filter(|flags| flags.copies_last_spell == Some(true))
+}
+
 /// Whether this card's running face copies the last Spell's text (`staticFlags.copiesLastSpell`).
 pub fn copies_text(card: &CardInstance) -> bool {
-    if crate::catalog::fused_id_parts(None, &card.def_id).is_some() {
-        return false;
-    }
-    registry_flags_of(card).copies_last_spell == Some(true)
+    copier_flags_of(card).is_some()
 }
 
 /// `null` stays "fixed to nothing" (`Some(None)`), a record with a string `defId` is the copy
@@ -71,19 +79,28 @@ fn fixed_copy_of(card: &CardInstance) -> Option<Option<PlayRecord>> {
     record_from(raw)
 }
 
-/// R399, R546: the Spell whose text this card has now — the copy fixed on it while it is played, else
-/// the last Spell either player played — or null: not a copier, or nothing to copy.
+/// R399, R546, R3048000: the Spell whose text this card has now — the copy fixed on it while it is
+/// played, else the last Spell either player played, else the Spell the card names for when none has
+/// been (`staticFlags.copyFallback`, Echo's The Coin, on its base face) — or null: not a copier, or
+/// nothing to copy.
 pub fn copied_text_of(state: &GameState, card: &CardInstance) -> Option<PlayRecord> {
-    if !copies_text(card) {
-        return None;
-    }
+    let flags = copier_flags_of(card)?;
     if let Some(fixed) = fixed_copy_of(card) {
         return fixed;
     }
-    state.last_spell.as_ref().map(|last| PlayRecord {
-        def_id: last.def_id.clone(),
-        radiant: last.radiant,
-    })
+    state
+        .last_spell
+        .as_ref()
+        .map(|last| PlayRecord {
+            def_id: last.def_id.clone(),
+            radiant: last.radiant,
+        })
+        .or_else(|| {
+            flags.copy_fallback.map(|def_id| PlayRecord {
+                def_id,
+                radiant: false,
+            })
+        })
 }
 
 /// R546: fix the copy a copier resolves as its play or cast moves it into the resolving zone: `record`

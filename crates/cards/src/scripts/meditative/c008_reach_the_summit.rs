@@ -164,7 +164,7 @@ mod tests {
     const SUMMIT: &str = "meditative-008";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    const TWINSPELL: &str = "core-079"; // Field Spell: the next Spell gains Echo +1.
+    const TWINSPELL: &str = "core-079"; // Field Spell: Activate: the next Spell this turn gains Echo +1.
     const TAX: &str = "classic-009"; // (2) Trap.
 
     #[derive(Clone, Copy, Default)]
@@ -204,6 +204,10 @@ mod tests {
         let mut s = scenario(json!({ "seed": "summit", "p1": p1, "p2": p2 }));
         if let Some(times) = options.times_played {
             set_times_played(&mut s, SUMMIT, times);
+        }
+        if options.twinspell {
+            // R3044000: its Activate gives the next Spell this turn Echo +1.
+            s.activate(TWINSPELL, json!({}));
         }
         s
     }

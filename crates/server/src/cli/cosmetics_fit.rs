@@ -10,7 +10,7 @@
 //! and buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`): a seat by its account's age as its
 //! match began, a person by their age at their latest match. Each bucket of at least
 //! `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be pasted into `BOT_COSMETIC_FITS` in
-//! `crates/server/src/config.rs` by hand (CLAUDE.md rule 9); a smaller one prints a comment, so its row
+//! `crates/shared/src/config.rs` by hand (CLAUDE.md rule 9); a smaller one prints a comment, so its row
 //! keeps the prior. Ownership is read now, so a full art or an earned foil, finish or border granted after
 //! a match counts as not worn there; `full_art_wear` is the share that printed that one of its card's
 //! tiers (R2655000).
@@ -30,17 +30,17 @@ use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, level_of_pick, regis
 use crate::db::store::{Db, LoadoutSample, StoreError};
 use crate::economy::store::{FullArtPick, OwnedCosmetics};
 use crate::env::quoted;
-use crate::loadout::{CARD_SLOT_KINDS, CardPicksExt, DECK_SLOT_KINDS, SeatLoadoutExt};
+use crate::loadout::{CARD_SLOT_KINDS, DECK_SLOT_KINDS};
 
 const USAGE: &str = "Usage: jackioh-server cosmetics-fit
 
   Prints what people wear by account age (R1834006): one CosmeticFit row per age bucket, from the
   loadouts people's seats froze over the last BOT_COSMETIC_FIT_WINDOW_DAYS and what they own, to
-  paste into BOT_COSMETIC_FITS in crates/server/src/config.rs. Takes no options; reads
+  paste into BOT_COSMETIC_FITS in crates/shared/src/config.rs. Takes no options; reads
   DATABASE_URL.";
 
 const HEADER: &str =
-    "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs";
+    "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/shared/src/config.rs";
 
 /// One bucket's fit (`config::CosmeticFit`'s fields, as values).
 #[derive(Clone, Debug, PartialEq)]
