@@ -11,7 +11,7 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 | --- | --- | --- | --- |
 | Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, the dev dashboard's `admin.jackioh.com` for `jackioh-admin` and `admin-staging.jackioh.com` for `jackioh-admin-staging`, and `www.jackioh.com` once it serves); the Access applications and policies that keep staging to the team and the dev dashboard to the devs (R3074000) | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes) and `apps/admin/wrangler.jsonc` (the dashboard's two Workers), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
 | Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL, Redirect URLs and leaked-password protection | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
-| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), the `production` ruleset, and the repository's Actions settings (every action allowed; the workflow token reads by default and may approve pull requests, which the daily promotion needs) | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores); the organization's own Actions settings |
+| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), the `production` and `staging` rulesets, and the repository's Actions settings (every action allowed; the workflow token reads by default and may approve pull requests, which the daily promotion needs) | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores); the organization's own Actions settings |
 
 Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
 because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler.jsonc`'s `vars`.
@@ -139,6 +139,10 @@ queue: a merge button, `gh pr merge --auto` and the bots' auto-merge all put the
 queue once its own checks pass, and the queue lands it after ci.yml's `merge_group` run passes on
 `main` with it on top. Take the `merge_group` trigger in ci.yml to `main` before applying it: a
 queue whose checks never report takes every pull request out at the timeout.
+
+When a pull request leaves the queue, the queue builds every one behind it again, and GitHub leaves
+their old builds running; each new build cancels its own pull request's older ones (ci.yml's
+`queue-supersede`), so a dead build never holds the runners the live ones wait for.
 
 After the first `apply`, watch the first few merges. Each queued pull request shows a
 `gh-readonly-queue/main/pr-<n>-<sha>` run of CI; the squash commit on `main` should be the pull

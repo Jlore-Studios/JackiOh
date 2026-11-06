@@ -14,7 +14,7 @@ import "./entry-card.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getQuests, keptPaths, replaceQuest, type QuestsResponse } from "../net/api.ts";
-import { cachedRead } from "../net/readCache.ts";
+import { cachedRead, expireRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { messageOf } from "../net/errors.ts";
 
@@ -96,7 +96,7 @@ export function QuestsList({
   };
   return (
     <div className="account-quests" data-testid={questsTestid.panel}>
-      <h3 className="account-heading">{t("Quests")}</h3>
+      <h2 className="account-heading">{t("Quests")}</h2>
       {quests.quests.length === 0 ? (
         <EmptyState text={t("No quests yet.")} />
       ) : (
@@ -216,10 +216,13 @@ export function useQuests(token: string): {
     };
   }, [token, attempt]);
 
+  // R3206000: a read the player asked for (Try again) or a quest falling due must reach the server, so
+  // the kept quests stop being fresh first; a read that then fails still shows them.
   const reread = useCallback((): void => {
+    expireRead(token, keptPaths.quests);
     setError(null);
     setAttempt((before) => before + 1);
-  }, []);
+  }, [token]);
 
   // R2210000: the quests the server answers replace the ones shown; a refusal says why and reads the
   // quests again, since the day's replaces or the held quests are not what the panel showed.
@@ -229,6 +232,7 @@ export function useQuests(token: string): {
         setQuests(await replaceQuest(token, questId));
         return null;
       } catch (cause: unknown) {
+        expireRead(token, keptPaths.quests);
         setAttempt((before) => before + 1);
         return messageOf(cause);
       }
@@ -258,7 +262,7 @@ export function QuestsView({
   if (error !== null) {
     return (
       <div className="account-quests" data-testid={questsTestid.panel}>
-        <h3 className="account-heading">{t("Quests")}</h3>
+        <h2 className="account-heading">{t("Quests")}</h2>
         <p className="notice" role="alert" data-testid={questsTestid.error}>
           {t(error)}
         </p>
@@ -274,7 +278,7 @@ export function QuestsView({
     // Not the panel's testid: that stands for quests read, or a read that failed.
     return (
       <div className="account-quests">
-        <h3 className="account-heading">{t("Quests")}</h3>
+        <h2 className="account-heading">{t("Quests")}</h2>
         <Skeleton variant="rows" label={t("Loading your quests…")} testId={questsTestid.loading} />
       </div>
     );

@@ -237,7 +237,7 @@ export function PracticeSetup({
     <form className="practice-setup" data-testid={practiceTestid.setup} onSubmit={submit}>
       <fieldset className="practice-setup__difficulties">
         <legend className="practice-setup__legend">
-          <h2 className="practice-setup__heading">{t("Choose your opponent")}</h2>
+          <h2 className="section-heading">{t("Choose your opponent")}</h2>
         </legend>
         <div className="practice-tiers">
           {DIFFICULTIES.map((d) => {
@@ -284,7 +284,7 @@ export function PracticeSetup({
 
       <div className="practice-setup__footer">
         <div className="practice-setup__deck">
-          <h2 className="practice-setup__heading">
+          <h2 className="section-heading">
             <label className="practice-setup__deck-label" htmlFor={`${baseId}-deck`}>
               {t("Your deck")}
             </label>

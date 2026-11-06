@@ -7,17 +7,29 @@ import { useEffect, useState, type ReactElement } from "react";
 
 import FillBar from "../economy/FillBar.tsx";
 import { t } from "../i18n/i18n.ts";
-import { getTokens, keptPaths, type TokenBarsResponse } from "../net/api.ts";
+import { getTokens, keptPaths, type OpeningBarsAnswer, type TokenBarsResponse } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { nextStepWords, shopTestid } from "./shop.ts";
+import { nextStepWords, shopTestid, withOpeningBars } from "./shop.ts";
 import { messageOf } from "../net/errors.ts";
 import "./shop.css";
 
-/** The panel. `revision` is how many times the page has asked it to read again (another panel changed the account). */
-export default function TokenPicker({ token, revision = 0 }: { token: string; revision?: number }): ReactElement {
+/**
+ * The panel. `revision` is how many times the page has asked it to read again (the held counts, which no
+ * spend's answer carries); `opening` is the last opening's bars, whose points and sizes fold in with no read
+ * (R3211000).
+ */
+export default function TokenPicker({
+  token,
+  revision = 0,
+  opening,
+}: {
+  token: string;
+  revision?: number;
+  opening?: OpeningBarsAnswer | null;
+}): ReactElement {
   // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
   const [bars, setBars] = useState<TokenBarsResponse | null>(
     () => cachedRead<TokenBarsResponse>(token, keptPaths.tokens) ?? null,
@@ -56,9 +68,14 @@ export default function TokenPicker({ token, revision = 0 }: { token: string; re
     };
   }, [token, revision, attempt]);
 
+  useEffect(() => {
+    if (opening === undefined || opening === null) return;
+    setBars((before) => (before === null ? before : withOpeningBars(before, opening)));
+  }, [opening]);
+
   return (
     <div className="form-card token-panel" data-testid={shopTestid.tokenPanel}>
-      <h3 className="shop-heading">{t("Card and cosmetic tokens")}</h3>
+      <h2 className="shop-heading">{t("Card and cosmetic tokens")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.tokenLoadError}>
@@ -110,7 +127,7 @@ function TokenBody({ bars }: { bars: TokenBarsResponse }): ReactElement {
         </p>
       </div>
 
-      <h4 className="shop-subheading">{t("Card tokens")}</h4>
+      <h3 className="shop-subheading">{t("Card tokens")}</h3>
       <p className="token-held" data-testid={shopTestid.heldCard}>
         {t("Card tokens held: {count}", { count: bars.tokens.card })}
       </p>
@@ -120,7 +137,7 @@ function TokenBody({ bars }: { bars: TokenBarsResponse }): ReactElement {
         </p>
       ) : null}
 
-      <h4 className="shop-subheading">{t("Cosmetic tokens")}</h4>
+      <h3 className="shop-subheading">{t("Cosmetic tokens")}</h3>
       <p className="token-held" data-testid={shopTestid.heldRare}>
         {t("Rare tokens held: {count}", { count: bars.tokens.cosmeticRare })}
       </p>

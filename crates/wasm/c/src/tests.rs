@@ -1,8 +1,7 @@
 //! The C boundary's native tests (#3093): each export, called through the memory interface with JSON
-//! text, answers what `jackioh-wasm-core`'s body answers for the same JSON, with this module's own setup
-//! check where the body takes one. The browser module (wasm-bindgen) and the Luau module wrap the same
-//! bodies, so this holds the third wrapper to them, and `crates/wasm/tests/export_parity.rs` holds its
-//! list of exports to the browser module's.
+//! text, answers what `jackioh-wasm-core`'s body answers for the same JSON. The browser module (wasm-bindgen) wraps the same bodies, so this holds
+//! the second wrapper to them, and `crates/wasm/tests/export_parity.rs` holds its list of exports to the
+//! browser module's.
 
 use serde_json::{Value, json};
 
@@ -109,10 +108,7 @@ fn engine_exports_answer_what_the_core_bodies_answer() {
         seat,
         action,
     } = &game;
-    assert_eq!(
-        call!(create_game; args;),
-        expect(wasm_core::create_game(args, check_setup))
-    );
+    assert_eq!(call!(create_game; args;), expect(wasm_core::create_game(args)));
     assert_eq!(call!(begin_game; state;), expect(wasm_core::begin_game(state)));
     let reduced = call!(reduce; state, action;);
     assert_eq!(reduced, expect(wasm_core::reduce(state, action)));
@@ -134,10 +130,7 @@ fn engine_exports_answer_what_the_core_bodies_answer() {
     assert_eq!(call!(hash_state; state;), expect(wasm_core::hash_state(state)));
     let folded: Value = serde_json::from_str(args).expect("JSON");
     let folded = json!({ "seed": folded["seed"], "decks": folded["decks"], "log": [] }).to_string();
-    assert_eq!(
-        call!(fold; folded;),
-        expect(wasm_core::fold(&folded, check_setup))
-    );
+    assert_eq!(call!(fold; folded;), expect(wasm_core::fold(&folded)));
     assert_eq!(
         call!(last_board_for; state, seat;),
         expect(wasm_core::last_board_for(state, seat))
@@ -164,27 +157,11 @@ fn engine_exports_answer_what_the_core_bodies_answer() {
     );
     // A replay is opened from a record and its pages read from checkpoints, which `{}` is neither.
     let opened = call!(replay_open; "{}", "{}";);
-    assert_eq!(opened, expect(wasm_core::replay_open("{}", "{}", check_setup)));
+    assert_eq!(opened, expect(wasm_core::replay_open("{}", "{}")));
     assert_eq!(opened.status, STATUS_FAILED);
     let paged = call!(replay_page; "{}", "p1"; 0, 10);
     assert_eq!(paged, expect(wasm_core::replay_page("{}", "p1", 0, 10)));
     assert_eq!(paged.status, STATUS_FAILED);
-}
-
-#[test]
-fn a_game_with_custom_cards_is_refused_before_the_engine_is_called() {
-    let game = game();
-    let mut args: Value = serde_json::from_str(&game.args).expect("JSON");
-    args["customCards"] = json!([{
-        "id": "custom-c",
-        "version": 1,
-        "frame": { "name": "C", "type": "Unit", "cost": 1, "rarity": "Common", "attack": 1, "health": 1 },
-    }]);
-    let args = args.to_string();
-    for answer in [call!(create_game; args;), call!(fold; args;)] {
-        assert_eq!(answer.status, STATUS_FAILED);
-        assert!(answer.text.contains("R915009"), "{}", answer.text);
-    }
 }
 
 #[test]
@@ -276,6 +253,42 @@ fn static_exports_answer_what_the_core_bodies_answer() {
         }
     );
     assert_eq!(jackioh_result_len(), 0);
+}
+
+#[test]
+fn face_export_answers_what_the_core_body_answers() {
+    init();
+    let card = r#"{ "call": "card", "locale": "zh-CN", "source": { "defId": "core-020", "radiant": true } }"#;
+    let answer = call!(face; card;);
+    assert_eq!(answer, expect(wasm_core::face(card)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    let printed: Value = serde_json::from_str(&answer.text).expect("JSON");
+    assert_eq!(printed["answer"], "face");
+    assert_eq!(printed["face"]["defId"], "core-020");
+    // The words are the reader's: a reader of Chinese reads the card from the Chinese table.
+    assert_ne!(printed["face"]["name"], "Pointmaster");
+    // A call that does not parse is the one failure.
+    let broken = call!(face; "{}";);
+    assert_eq!(broken, expect(wasm_core::face("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
+fn log_export_answers_what_the_core_body_answers() {
+    init();
+    let gap = r#"{ "call": "gap", "locale": "zh-CN" }"#;
+    let answer = call!(log; gap;);
+    assert_eq!(answer, expect(wasm_core::log(gap)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    let line: Value = serde_json::from_str(&answer.text).expect("JSON");
+    assert_eq!(line["answer"], "line");
+    assert_eq!(line["line"]["event"], "gap");
+    // The words are the reader's: a reader of Chinese reads the line in Chinese.
+    assert_ne!(line["line"]["text"]["full"], "Some events may be missing here");
+    // A call that does not parse is the one failure.
+    let broken = call!(log; "{}";);
+    assert_eq!(broken, expect(wasm_core::log("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
 }
 
 #[test]
@@ -611,6 +624,10 @@ fn run_exports_answer_what_the_core_bodies_answer() {
     assert_eq!(
         call!(run_max_hp; state, content;),
         expect(wasm_core::run_max_hp(&state, &content))
+    );
+    assert_eq!(
+        call!(run_shop_prices; state, content;),
+        expect(wasm_core::run_shop_prices(&state, &content))
     );
     assert_eq!(
         call!(run_level_cost; "1";),

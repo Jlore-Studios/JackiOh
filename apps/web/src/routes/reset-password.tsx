@@ -29,6 +29,7 @@ import {
 import { loginPath, navigate, paths } from "../net/navigate.ts";
 import { forgetPendingAddresses, readSession, type Session } from "../net/session.ts";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/auth.css";
 import "../auth/tavern.css";
@@ -113,13 +114,10 @@ export default function ResetPasswordRoute(): ReactElement {
   if (held === null) {
     return (
       <div className="app-shell auth-screen tavern" data-testid={resetTestid.screen}>
-        <BackLink onLeave={abandonRecoverySession} showWallet={false} />
+        <BackLink onLeave={abandonRecoverySession} showWallet={false} title={t("Reset your password")} />
         <section className="panel panel--auth panel--split">
           <div className="auth-board__head">
-            <div className="brand">
-              <h1>JackiOh</h1>
-            </div>
-            <h2>{t("Reset your password")}</h2>
+            <Wordmark />
           </div>
           <div className="auth-board__body">
             <div className="auth-no-link" data-testid={resetTestid.noLink}>
@@ -250,13 +248,11 @@ export default function ResetPasswordRoute(): ReactElement {
           exitTo(paths.landing);
         }}
         showWallet={false}
+        title={t("Choose a new password")}
       />
       <section className="panel panel--auth panel--split">
         <div className="auth-board__head">
-          <div className="brand">
-            <h1>JackiOh</h1>
-          </div>
-          <h2>{t("Choose a new password")}</h2>
+          <Wordmark />
 
           {leaving === null ? null : (
             <div className="auth-link-error" data-testid={resetTestid.leaveConfirm} role="alert">

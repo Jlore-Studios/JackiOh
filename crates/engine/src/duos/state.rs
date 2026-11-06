@@ -212,10 +212,9 @@ fn create_duel(
         dealt,
         last_boards: None,
         glitch_boards: None,
-        // A co-op game is never a sandbox (R923000), holds no custom card (R915005) nor a deck mark
-        // (R2702000), and is handed no win-rate snapshot (R3049000).
+        // A co-op game is never a sandbox (R923000), holds no deck mark (R2702000), and is handed no
+        // win-rate snapshot (R3049000).
         sandbox: None,
-        custom_cards: None,
         deck_marks: None,
         win_rates: None,
     };

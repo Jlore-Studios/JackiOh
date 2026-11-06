@@ -15,6 +15,7 @@ import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
@@ -93,12 +94,9 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
   return (
     <div className="app-shell tavern leaderboard-screen one-screen" data-testid={leaderboardTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Leaderboard")} />
       <section className="panel panel--auth one-screen__frame">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Leaderboard")}</h2>
+        <Wordmark />
         <div className="row" role="group" aria-label={t("Ladder")} data-testid={leaderboardTestid.ladder}>
           {LADDERS.map((entry) => (
             <button
@@ -148,7 +146,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                   : t("You are {rank} — play rated games to climb", { rank: rankCaption(board.you) })}
               </p>
 
-              <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
+              <h2 className="section-heading leaderboard-heading">{t("Jlorious")}</h2>
               {board.jlorious.length === 0 ? (
                 <p>{t("No Jlorious players yet this season.")}</p>
               ) : (
@@ -164,9 +162,9 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
               {board.tiers.map((tier) => (
                 <section key={tier.tier} data-testid={leaderboardTestid.tier} data-tier={tier.tier}>
-                  <h3 className="leaderboard-heading">
+                  <h2 className="section-heading leaderboard-heading">
                     <RankCrest tier={tier.tier} size="small" /> {tierName(tier.tier)} ({tier.count})
-                  </h3>
+                  </h2>
                   {tier.players.length === 0 ? (
                     <p>{t("Nobody here yet.")}</p>
                   ) : (

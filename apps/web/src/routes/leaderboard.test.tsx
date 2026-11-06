@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getLeaderboard, keptPaths, type LeaderboardResponse } from "../net/api.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import LeaderboardRoute, { leaderboardTestid } from "./leaderboard.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -87,6 +88,15 @@ describe("the leaderboard screen", () => {
     await screen.findByTestId("leaderboard-season");
     expect(vi.mocked(getLeaderboard)).toHaveBeenCalledWith(TOKEN, "random");
     window.history.replaceState(null, "", "/leaderboard");
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    vi.mocked(getLeaderboard).mockResolvedValue(board());
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId("leaderboard-jlorious")).toHaveTextContent("Max");
+    expectOnePageTitle("Leaderboard");
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
   });
 
   it("lists Jlorious by position, the tiers with their counts, and the Raisins", async () => {

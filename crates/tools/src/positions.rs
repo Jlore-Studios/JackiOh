@@ -404,12 +404,18 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_ai::{AI_GATE_BUDGET, MatchHooks, card_id_of_key, dev_game_config, play_match};
+    use jackioh_ai::{MatchHooks, card_id_of_key, dev_game_config, play_match};
     use jackioh_engine::find_instance;
 
-    fn played(n: i32) -> (SelfplayGame, Vec<(GameState, usize)>) {
+    use crate::arena::TEST_BUDGET;
+    use std::sync::OnceLock;
+
+    /// A game as it was played and the true states before each of its actions.
+    type Played = (SelfplayGame, Vec<(GameState, usize)>);
+
+    fn play(n: i32) -> Played {
         jackioh_cards::register_all();
-        let config = dev_game_config(n, "positions-test", Some(AI_GATE_BUDGET));
+        let config = dev_game_config(n, "positions-test", Some(TEST_BUDGET));
         // The true states as the game was played, each with the number of actions before it.
         let mut live: Vec<(GameState, usize)> = Vec::new();
         let mut seen = 0usize;
@@ -441,6 +447,13 @@ mod tests {
         (game, live)
     }
 
+    /// Game `n` (1 to 4), played once at `TEST_BUDGET` for every test that asks for it: they prove how
+    /// a log folds, not how well the AI plays it.
+    fn played(n: i32) -> &'static Played {
+        static GAMES: [OnceLock<Played>; 4] = [const { OnceLock::new() }; 4];
+        GAMES[usize::try_from(n - 1).expect("game numbers start at 1")].get_or_init(|| play(n))
+    }
+
     /// R1006003, R1006004: the rows of a game's log are exactly the features computed on the true
     /// game, at the same steps, as it was played.
     #[test]
@@ -448,7 +461,7 @@ mod tests {
         let (game, live) = played(1);
         assert!(game.result.is_some(), "the test game finishes");
         let rows =
-            fold_game(&game, Every::Decision, jackioh_cards::catalog_version(), false).expect("it replays");
+            fold_game(game, Every::Decision, jackioh_cards::catalog_version(), false).expect("it replays");
         assert!(rows.len() > 10, "{} rows", rows.len());
         for row in &rows {
             let (state, _) = live
@@ -460,7 +473,7 @@ mod tests {
             assert_eq!(row.sparse, truth.sparse, "step {}", row.step);
         }
         let turns =
-            fold_game(&game, Every::Turn, jackioh_cards::catalog_version(), false).expect("it replays");
+            fold_game(game, Every::Turn, jackioh_cards::catalog_version(), false).expect("it replays");
         assert!(!turns.is_empty() && turns.len() < rows.len());
         let mut keys: Vec<(i32, PlayerId)> = turns.iter().map(|row| (row.turn, row.seat)).collect();
         keys.dedup();
@@ -485,7 +498,7 @@ mod tests {
             fold_game(&unfinished, Every::Turn, build, false),
             Err(Dropped::NoResult)
         );
-        let mut old = game;
+        let mut old = game.clone();
         old.catalog = "0.0.0-never".to_string();
         assert_eq!(
             fold_game(&old, Every::Turn, build, false),
@@ -500,7 +513,7 @@ mod tests {
     fn r1006006_reply_rows_are_the_search_s_simulated_replies_one_per_turn_end() {
         let (game, _) = played(3);
         let build = jackioh_cards::catalog_version();
-        let rows = fold_game(&game, Every::Reply, build, false).expect("it replays");
+        let rows = fold_game(game, Every::Reply, build, false).expect("it replays");
         let ends = game
             .log
             .iter()
@@ -511,8 +524,8 @@ mod tests {
             "{} rows for {ends} turn ends",
             rows.len()
         );
-        assert_eq!(rows, fold_game(&game, Every::Reply, build, false).expect("again"));
-        let turns = fold_game(&game, Every::Turn, build, false).expect("it replays");
+        assert_eq!(rows, fold_game(game, Every::Reply, build, false).expect("again"));
+        let turns = fold_game(game, Every::Turn, build, false).expect("it replays");
         // A reply row is the seat's position after the reply, a turn after the one it ended.
         for row in &rows {
             assert!(turns.iter().any(|turn| turn.turn > 0) && row.turn > 0);
@@ -524,11 +537,11 @@ mod tests {
     /// less their labels, and only a labeled file's header names the key layout.
     #[test]
     fn r1171000_policy_labels_over_a_log_are_deterministic_and_name_no_instance() {
-        // Game 4 reaches In Too Deep's graveyard reward with two (0) Cost Spells there that change
-        // nothing, which the AI replayed without end until R1965000.
+        // At the gate budget game 4 reached In Too Deep's graveyard reward with two (0) Cost Spells
+        // there that change nothing, which the AI replayed without end until R1965000.
         let (game, live) = played(4);
         let build = jackioh_cards::catalog_version();
-        let rows = fold_game(&game, Every::Decision, build, true).expect("it replays");
+        let rows = fold_game(game, Every::Decision, build, true).expect("it replays");
         assert!(rows.len() > 10, "{} rows", rows.len());
         for row in &rows {
             let label = row
@@ -561,9 +574,9 @@ mod tests {
         }
         assert_eq!(
             rows,
-            fold_game(&game, Every::Decision, build, true).expect("again")
+            fold_game(game, Every::Decision, build, true).expect("again")
         );
-        let plain = fold_game(&game, Every::Decision, build, false).expect("it replays");
+        let plain = fold_game(game, Every::Decision, build, false).expect("it replays");
         let cleared: Vec<PositionRow> = rows
             .iter()
             .cloned()
@@ -583,7 +596,7 @@ mod tests {
     #[test]
     fn r3112002_positions_count_the_cards_the_network_has_no_row_for() {
         let (game, _) = played(1);
-        let folded = fold_game(&game, Every::Turn, jackioh_cards::catalog_version(), false);
+        let folded = fold_game(game, Every::Turn, jackioh_cards::catalog_version(), false);
         let mut ids: Vec<&str> = folded
             .as_ref()
             .expect("it replays")

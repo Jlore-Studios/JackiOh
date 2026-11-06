@@ -25,6 +25,19 @@ pub const SERIES_MAX_GAMES: i32 = 7;
 /// SPEC §11 R333: how long both players have to pick their deck for the next game of a series.
 pub const SERIES_PICK_SECONDS: i64 = 60;
 
+/// #2437, R637, R2179001: the Temporary count at which a card in a hand is discarded at its owner's next end of
+/// turn. A plain Temporary is Temporary 1; the face model's Temporary badge counts above it (`face/state.rs`).
+pub const TEMPORARY_LAST_COUNT: i32 = 1;
+
+/// Glitch (issue #170, SPEC §7) prints corrupted words (`face/glitch.rs`): the fixed seed every host jumbles with,
+/// so every client prints the same jumble.
+pub const GLITCH_SEED: u32 = 170;
+/// Out of [`GLITCH_ODDS_SCALE`]: below this a Glitch character becomes a glyph.
+pub const GLITCH_SWAP_IN: u32 = 45;
+/// Out of [`GLITCH_ODDS_SCALE`]: below `GLITCH_SWAP_IN` plus this a Glitch character gains a combining mark.
+pub const GLITCH_MARK_IN: u32 = 35;
+pub const GLITCH_ODDS_SCALE: u32 = 100;
+
 // ---------------------------------------------------------------------------------------------
 // The match host's numbers (#3101): the clocks (SPEC §9.5, R79, R268, R744), the relays (R738) and
 // the rematch window (R672, R2685000) that `host` decides with. `crates/server/src/config.rs`
@@ -1939,3 +1952,20 @@ pub const QUEST_XP_PER_JLORE: i32 = 50;
 /// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
 /// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
 pub const QUEST_REPLACES_PER_DAY: i64 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// The practice session's numbers (#3099): what its host bounds a move and a hint by, and how many
+// finished games it keeps. `crates/wasm/core`'s `constants` carries them, which the web's practice
+// worker and a Roblox server read, so none restates one.
+// ---------------------------------------------------------------------------------------------
+
+/// Wall-clock safety cap for one decision of the practice AI (`AiOptions.should_stop`): 3 s since the
+/// budget doubled (R2575000). The machine puts it in the `decide` ask (`AiAsk`), and a host
+/// with a clock holds the search to it: the node budget stays the real bound (R2560000).
+pub const PRACTICE_AI_CLOCK_MS: i64 = 3000;
+/// R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn waits
+/// for: a check still running past it gives no hint, so a board whose lines are slow to play out never
+/// holds a click's answer back for long. Put in the `lethal` ask (`LethalAsk`).
+pub const PRACTICE_LETHAL_HINT_CLOCK_MS: i64 = 300;
+/// R768: the finished free games a device keeps for replay, the newest of them.
+pub const PRACTICE_REPLAYS_KEPT: u32 = 10;

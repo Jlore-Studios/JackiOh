@@ -5,7 +5,6 @@ import type { BoardSnapshot } from "./BoardSnapshot";
 import type { CardDef } from "./CardDef";
 import type { CardInstance } from "./CardInstance";
 import type { CastMode } from "./CastMode";
-import type { CustomCard } from "./CustomCard";
 import type { DeclaredAttack } from "./DeclaredAttack";
 import type { DelayedEffect } from "./DelayedEffect";
 import type { DispatchItem } from "./DispatchItem";
@@ -206,18 +205,6 @@ secrets?: Array<SecretRecord>,
  * is no sandbox hashes exactly as before this field existed. Only ever `Some(true)`.
  */
 sandbox?: true, 
-/**
- * R915006: this game's custom cards (SPEC §12), by id: each card's frame, version and card-kit
- * source as `create_game` was given it (`custom::custom_game_copy`), which a Luau host lent the
- * engine builds the scripts from (`custom::with_custom_scripts`). A `create_game` input, frozen
- * with the game. D14: empty, and absent from the JSON, in every game without one.
- */
-customCards?: { [key in string]: CustomCard }, 
-/**
- * R915000: the definition each of `custom_cards`' frames builds (`custom::custom_def`), which
- * `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
- */
-customDefs?: { [key in string]: CardDef }, 
 /**
  * R1850003: the permanents held beneath a card until it leaves the field (`effects::hold`), in the
  * order they were taken. D14: absent until the first is held, so a game that never holds one

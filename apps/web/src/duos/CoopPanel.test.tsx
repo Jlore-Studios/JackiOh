@@ -9,6 +9,7 @@ import { LEAN_NEWEST } from "@jackioh/shared";
 
 import { PLAY_LEAN_SET_KEY, leanLabel, readPlayLean } from "../game/LeanNewest.tsx";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { clearReadCache } from "../net/readCache.ts";
 import { COOP_LINK_STORAGE_KEY, findRoomLinkInText } from "../net/roomLink.ts";
 import type { Friend } from "../net/social.ts";
 import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
@@ -652,6 +653,8 @@ describe("R2094000 a co-op link fills the join form", () => {
       expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-control");
     }, SLOW);
     cleanup();
+    // R3206000: each visit below is to another server's decks, so nothing the one before kept is fresh for it.
+    clearReadCache();
     window.sessionStorage.clear();
 
     window.localStorage.removeItem(COOP_DECK_KEY);
@@ -665,6 +668,7 @@ describe("R2094000 a co-op link fills the join form", () => {
       expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-aggro");
     }, SLOW);
     cleanup();
+    clearReadCache();
     window.sessionStorage.clear();
 
     at("/together");

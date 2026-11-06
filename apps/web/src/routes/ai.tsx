@@ -14,6 +14,7 @@ import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -33,13 +34,10 @@ export default function AiRoute(): ReactElement {
   const locale = useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={aiTestid.screen}>
-      <BackLink />
+      <BackLink title={t("How JackiOh uses AI")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("How JackiOh uses AI")}</h2>
+        <Wordmark />
         {/* A translation says the English text governs; the English needs no such line. */}
         {locale === DEFAULT_LOCALE ? null : <p className="privacy-policy__governing">{t("The English text governs.")}</p>}
         <p className="privacy-policy__updated" data-testid={aiTestid.updated}>
@@ -47,7 +45,7 @@ export default function AiRoute(): ReactElement {
         </p>
 
         <section aria-labelledby="ai-opponents">
-          <h3 id="ai-opponents">The computer opponents</h3>
+          <h2 className="section-heading" id="ai-opponents">The computer opponents</h2>
           <p>
             JackiOh has three kinds of computer opponent. Each plays by the same rules you do and sees only what a
             player in its seat could see.
@@ -72,7 +70,7 @@ export default function AiRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="ai-made">
-          <h3 id="ai-made">Made with AI</h3>
+          <h2 className="section-heading" id="ai-made">Made with AI</h2>
           <ul>
             <li>
               The music, every track and the few bars each Legendary and Mythic card plays, was composed by an AI
@@ -90,7 +88,7 @@ export default function AiRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="ai-data">
-          <h3 id="ai-data">What AI does with your data</h3>
+          <h2 className="section-heading" id="ai-data">What AI does with your data</h2>
           <p>
             We don&rsquo;t send anything you write, or your account&rsquo;s details, to an AI service. Records of
             online games are used as the{" "}
@@ -103,7 +101,7 @@ export default function AiRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="ai-contact">
-          <h3 id="ai-contact">Questions</h3>
+          <h2 className="section-heading" id="ai-contact">Questions</h2>
           <p>
             Questions about how JackiOh uses AI: email <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>

@@ -4,7 +4,7 @@
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.tsx";
-import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
+import type { DeckSyncInput, DecksResponse } from "../../../apps/web/src/net/api.ts";
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
@@ -79,10 +79,15 @@ const FULL_DECKS: string[][] = [0, 1, 2].map((deck) =>
 function mountWorkshop(decks: readonly (readonly string[])[]): void {
   const open: WorkshopOpen = { kind: "deck", id: DECK_IDS[0] };
   const api = {
-    putDeck: cy.stub().resolves({}),
-    deleteDeck: cy.stub().resolves({}),
-    putTrio: cy.stub().resolves({}),
-    deleteTrio: cy.stub().resolves({}),
+    // R3212001: every item of a sync lands.
+    syncDecks: cy.stub().callsFake((input: DeckSyncInput) =>
+      Promise.resolve({
+        decks: input.decks.map(({ id }) => ({ id })),
+        trios: input.trios.map(({ id }) => ({ id })),
+        deletedTrios: input.deletedTrios.map((id) => ({ id })),
+        deletedDecks: input.deletedDecks.map((id) => ({ id })),
+      }),
+    ),
     importTrio: cy.stub().resolves({}),
     getDeckVersions: cy.stub().resolves({ versions: [] }),
     restoreDeckVersion: cy.stub().resolves({}),
@@ -263,7 +268,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // B15 with R1017000: only a face that prints less than its whole text (shortText.ts: a short form,
+  // B15 with R1017000: only a face that prints less than its whole text (the face model's `short`: a short form,
   // or its text cut at the box's last line, like Meditative+ #4's) may clamp, as card-faces.cy.tsx holds.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;

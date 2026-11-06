@@ -1,4 +1,4 @@
-//! R1846000–R1846002 (issue #1846, Stinkyscape's card metrics): the BUSTED and complicated pools, which
+//! R1846000 and R1846001 (issue #1846, Stinkyscape's card metrics): the BUSTED and complicated pools, which
 //! `crates/cards/build.rs` compiles in from every script's code lines; `everySet` (Stinkyscape #109's).
 //! Fixtures only (CLAUDE.md: the engine does not depend on crates/cards); the real lists are proved in
 //! `crates/cards/tests/cross/card_metrics.rs`.
@@ -25,8 +25,8 @@ fn card(id: &str, set: &str, index: &str, token: bool) -> CardDef {
     }))
 }
 
-/// Core cards on each side of both thresholds, a long Core token, a long card of each single-player set
-/// and of Custom, standing in for a set the catalog holds before it ships (R1420).
+/// Core cards on each side of both thresholds, a long Core token and a long card of each single-player
+/// set.
 fn defs() -> CardDefs {
     [
         card("core-001", "Core", "1", false),
@@ -37,7 +37,6 @@ fn defs() -> CardDefs {
         card("core-005-1", "Core", "5.1", true),
         card("boss-001", "Boss", "1", false),
         card("bossx-001", "Boss-X", "1", false),
-        card("held-001", "Custom", "1", false),
     ]
     .into_iter()
     .map(|def| (def.id.clone(), def))
@@ -54,7 +53,6 @@ fn code_lines() -> Vec<(&'static str, usize)> {
         ("core-005-1", BUSTED_CODE_LINES * 2),
         ("boss-001", BUSTED_CODE_LINES * 2),
         ("bossx-001", BUSTED_CODE_LINES * 2),
-        ("held-001", BUSTED_CODE_LINES * 2),
     ]
 }
 
@@ -100,7 +98,7 @@ fn r1846000_a_card_over_a_threshold_is_in_its_list_and_one_on_it_is_not() {
 fn r1846000_the_query_draws_the_busted_and_complicated_pools_from_the_sets_that_ship() {
     setup();
     // A pool that names no set draws from the sets that ship (R380, R1420), so the single-player sets
-    // and the held set are out, and a token only joins a pool that takes tokens (§5.1).
+    // are out, and a token only joins a pool that takes tokens (§5.1).
     assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
     assert_eq!(
         pool(json!({ "busted": true, "withTokens": true })),
@@ -127,12 +125,12 @@ fn r1846000_the_query_draws_the_busted_and_complicated_pools_from_the_sets_that_
 }
 
 #[test]
-fn r1846001_every_set_adds_the_single_player_sets_and_nothing_held() {
+fn r1846001_every_set_adds_the_single_player_sets() {
     setup();
     assert_eq!(SINGLE_PLAYER_SETS, [SetName::Boss, SetName::BossX]);
     assert!(SINGLE_PLAYER_SETS.iter().all(|set| !set_ships(*set)));
     // "Every BUSTED card the catalog holds, the single-player sets' included": the sets that ship,
-    // then Boss and Boss-X, in `query`'s order. A set held before it ships stays out (R1420).
+    // then Boss and Boss-X, in `query`'s order.
     assert_eq!(
         pool(json!({ "busted": true, "everySet": true })),
         vec!["core-001", "boss-001", "bossx-001"]
@@ -160,34 +158,17 @@ fn r1846001_every_set_adds_the_single_player_sets_and_nothing_held() {
         vec!["core-001"]
     );
     assert_eq!(
-        pool(json!({ "everySet": true, "defId": ["held-001"] })),
-        vec!["held-001"]
+        pool(json!({ "everySet": true, "defId": ["boss-001"] })),
+        vec!["boss-001"]
     );
     // Tokens keep §5.1's rule.
     assert_eq!(
         pool(json!({ "busted": true, "everySet": true, "withTokens": true })),
         vec!["core-001", "core-005-1", "boss-001", "bossx-001"]
     );
-    // A held set a thread previews is open, so it joins with or without `everySet` (R1420).
-    let _preview = preview_sets(&[SetName::Custom]);
-    assert_eq!(
-        pool(json!({ "busted": true, "everySet": true })),
-        vec!["core-001", "boss-001", "bossx-001", "held-001"]
-    );
-    clear_overrides();
-}
-
-#[test]
-fn r1846002_a_custom_card_counts_as_neither_whatever_a_table_lists() {
-    setup();
-    // Even a table listing a custom id (the build's never does) leaves a custom card neither, uncounted.
-    let mut lines = code_lines();
-    lines.push(("custom-long", BUSTED_CODE_LINES * 2));
-    register_code_lines(lines);
-    assert!(jackioh_engine::custom::is_custom_id("custom-long"));
-    assert_eq!(code_lines_of("custom-long"), None);
-    assert!(!is_busted("custom-long"));
-    assert!(!is_complicated("custom-long"));
+    // A set a thread previews is open, so it joins without `everySet` (R1420).
+    let _preview = preview_sets(&[SetName::Boss]);
+    assert_eq!(pool(json!({ "busted": true })), vec!["core-001", "boss-001"]);
     clear_overrides();
 }
 

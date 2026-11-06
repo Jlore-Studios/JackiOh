@@ -54,7 +54,7 @@ var RunnerRuns = 40
 var RunnerRows = 25
 
 // LocalLabel and GatherLabel are LOCAL_LABEL and GATHER_LABEL: the owner's PC's own label, and its
-// gather slot's, outside the PC's one job at a time (bot/machine/README.md, The local runner;
+// gather half's, which it holds while it has a job (bot/machine/README.md, The local runner;
 // #2134).
 var (
 	LocalLabel  = "jackioh-selfplay-local"
@@ -78,23 +78,24 @@ var Workflows = map[string]string{
 	"code-audit.yml":         "every three days: the code audit's issue for the night bot",
 	"cutover.yml":            "by hand: production's sign-in settings, email key, statistics logins and dev statistics",
 	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
-	"deploy-staging.yml":     "deploys main to staging after every green CI run on main",
+	"deploy-staging.yml":     "deploys the staging branch to staging.jackioh.com each time it moves",
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
 	"hygiene.yml":            "weekly: the hygiene issues for Squishy",
-	"learn-set.yml":          "a new set stops a learn export still early on the set before",
+	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
 	"learn.yml":              "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
 	"lock-conversations.yml": "locks every conversation to collaborators",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
-	"promote-production.yml": "production daily, from a passing super run on main; /promote sooner",
+	"promote-production.yml": "production daily, from a passing super run on staging; /promote sooner",
+	"promote-staging.yml":    "every two hours: staging takes main's newest commit whose CI passed",
 	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",
 	"selfplay-shards.yml":    "one round of a self-play export's shards",
 	"selfplay.yml":           "a self-play export, on the owner's PC unless asked otherwise",
 	"spec-fold.yml":          "folds the pending §11 paragraphs and rewrites the rulings index once a day",
 	"squishy-commands.yml":   "Squishy's ears and its sweep",
 	"squishy-run.yml":        "Squishy: gate, plan, `work` on its own Claude account, deliver",
-	"super.yml":              "the daily super run: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
+	"super.yml":              "the daily super run, on staging: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
 	"sweep.yml":              "sweeps the shadow bans again when the AI's generation moves",
 	"triage.yml":             "labels each new issue and pull request from fixed rules",
 	"voice.yml":              "renders a branch's voice lines (macOS `say`, Windows SAPI), checked on Linux",

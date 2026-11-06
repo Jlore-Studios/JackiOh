@@ -10593,6 +10593,301 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_jlore_get(&other.id)), 0);
     }
 
+    /// R3212000: Open all's batch writes, spends among them, leave what the same writes one at a time
+    /// would: each count moves by the sum of its grants and each grant writes its ledger row, in order;
+    /// a batch that would take a count below 0 where its grant falls (a spend before the grant that
+    /// would cover it too) or own a cosmetic owned already answers false and writes nothing; a
+    /// cosmetic listed twice, a clear, a grant of 0 and a second account are refused, writing nothing;
+    /// and an empty batch writes nothing.
+    async fn r3212000_batch_writes_with_spends_write_what_one_at_a_time_would(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let card = must(harness.playable_ids.first().cloned(), "a card");
+        let second = must(harness.playable_ids.get(1).cloned(), "a second card");
+        let tagged = |name: &str, key: &str, delta: i64, reference: &str| InventoryGrant {
+            reference: Some(reference.to_string()),
+            ..item(&owner.id, name, key, delta, now)
+        };
+
+        q!(harness, t => t.economy_inventory_grant(&tagged("set_pack", "Core", 3, "bought")));
+        assert!(q!(harness, t => t.economy_inventory_write_all(&[
+            tagged("set_pack", "Core", -1, "a"),
+            tagged("card_token", "", 2, "b"),
+            tagged("set_pack", "Core", -1, "c"),
+            tagged("global_pack", "", 1, "d"),
+        ])));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_inventory_get(&owner.id))),
+            json!([
+                { "item": "card_token", "key": "", "count": 2 },
+                { "item": "global_pack", "key": "", "count": 1 },
+                { "item": "set_pack", "key": "Core", "count": 1 },
+            ])
+        );
+        q!(harness, t => t.economy_counters_grant(&counter(&owner.id, "pity_epic", "", 2, now)));
+        assert!(q!(harness, t => t.economy_counters_write_all(&[
+            counter(&owner.id, "pity_epic", "", -2, now),
+            counter(&owner.id, "card_token_bar", "", 5, now),
+            counter(&owner.id, "pity_epic", "", 1, now),
+        ])));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_counters_get(&owner.id))),
+            json!([
+                { "counter": "card_token_bar", "pack": "", "value": 5 },
+                { "counter": "pity_epic", "pack": "", "value": 1 },
+            ])
+        );
+        assert!(q!(harness, t => t.economy_cosmetics_grant_all(&[
+            cosmetic(&owner.id, Some(&card), FOIL_COSMETIC, 1, now),
+            cosmetic(&owner.id, None, BOARD_COSMETIC, 1, now),
+        ])));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&owner.id))),
+            json!({ "cards": [{ "cardId": card, "cosmeticId": FOIL_COSMETIC }], "account": [BOARD_COSMETIC] })
+        );
+        for empty in [
+            q!(harness, t => t.economy_inventory_write_all(&[])),
+            q!(harness, t => t.economy_counters_write_all(&[])),
+            q!(harness, t => t.economy_cosmetics_grant_all(&[])),
+        ] {
+            assert!(empty, "{}: an empty batch fits", harness.name);
+        }
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        assert_eq!(
+            ledger
+                .inventory
+                .iter()
+                .map(|row| (row.reference.clone(), row.delta))
+                .collect::<Vec<_>>(),
+            [("bought", 3), ("a", -1), ("b", 2), ("c", -1), ("d", 1)]
+                .map(|(reference, delta)| (Some(reference.to_string()), delta))
+        );
+        assert_eq!(
+            ledger.counters.iter().map(|row| row.delta).collect::<Vec<_>>(),
+            [2, -2, 5, 1]
+        );
+        assert_eq!(ledger.cosmetics.len(), 2);
+
+        let before = economy_of(harness, &owner.id).await;
+        // One at a time would refuse each of these, so the batch writes none of it.
+        for (what, fits) in [
+            (
+                "two spends of one pack held",
+                q!(harness, t => t.economy_inventory_write_all(&[
+                    tagged("card_token", "", 1, "e"),
+                    tagged("set_pack", "Core", -1, "f"),
+                    tagged("set_pack", "Core", -1, "g"),
+                ])),
+            ),
+            (
+                "a spend before the grant that covers it",
+                q!(harness, t => t.economy_inventory_write_all(&[
+                    tagged("global_pack", "", -2, "h"),
+                    tagged("global_pack", "", 5, "i"),
+                ])),
+            ),
+            (
+                "a counter below 0",
+                q!(harness, t => t.economy_counters_write_all(&[
+                    counter(&owner.id, "pity_mythic", "", 1, now),
+                    counter(&owner.id, "card_token_bar", "", -6, now),
+                ])),
+            ),
+            (
+                "a cosmetic owned already",
+                q!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                    cosmetic(&owner.id, Some(&card), FOIL_COSMETIC, 1, now),
+                ])),
+            ),
+        ] {
+            assert!(!fits, "{}: {what}", harness.name);
+            assert_eq!(
+                economy_of(harness, &owner.id).await,
+                before,
+                "{}: {what}",
+                harness.name
+            );
+        }
+        let theirs = InventoryGrant {
+            profile_id: other.id.clone(),
+            ..tagged("card_token", "", 1, "j")
+        };
+        for (what, refused) in [
+            (
+                "two accounts' inventory",
+                call!(harness, t => t.economy_inventory_write_all(&[tagged("card_token", "", 1, "k"), theirs.clone()]))
+                    .is_err(),
+            ),
+            (
+                "a grant of 0",
+                call!(harness, t => t.economy_inventory_write_all(&[tagged("card_token", "", 0, "l")])).is_err(),
+            ),
+            (
+                "two accounts' counters",
+                call!(harness, t => t.economy_counters_write_all(&[
+                    counter(&owner.id, "pity_mythic", "", 1, now),
+                    counter(&other.id, "pity_mythic", "", 1, now),
+                ]))
+                .is_err(),
+            ),
+            (
+                "a cosmetic listed twice",
+                call!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                ]))
+                .is_err(),
+            ),
+            (
+                "a clear",
+                call!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&card), FOIL_COSMETIC, -1, now),
+                ]))
+                .is_err(),
+            ),
+            (
+                "two accounts' cosmetics",
+                call!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                    cosmetic(&other.id, Some(&second), FOIL_COSMETIC, 1, now),
+                ]))
+                .is_err(),
+            ),
+        ] {
+            assert!(refused, "{}: {what}", harness.name);
+        }
+        assert_eq!(
+            economy_of(harness, &owner.id).await,
+            before,
+            "a refused batch writes nothing"
+        );
+        assert_eq!(economy_of(harness, &other.id).await, no_economy());
+    }
+
+    /// `profile_id`'s economy and collection, its id written as `ID`, so two accounts' compare.
+    async fn holdings_of(harness: &StoreHarness, profile_id: &str) -> String {
+        json!({
+            "economy": economy_of(harness, profile_id).await,
+            "collection": j(&q!(harness, t => t.collection_get(profile_id))),
+        })
+        .to_string()
+        .replace(profile_id, "ID")
+    }
+
+    /// R3212000: an Open all of N packs (`open_packs_in`, one batch of writes) leaves every holding
+    /// and every ledger row, in order, that N openings one at a time (`open_pack_in`) leave from the
+    /// same seeds and the same records: the cards, the cosmetics on a card and on the account, the
+    /// pity counters, both bars and what they pay. More seeds than packs held is refused, writing
+    /// nothing.
+    async fn r3212000_open_all_of_n_writes_what_n_openings_one_at_a_time_write(harness: &StoreHarness) {
+        use jackioh_engine::SetName;
+        use jackioh_engine::wire::PrintedRarity;
+        use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
+        use jackioh_server::economy::packs::{open_pack_in, open_packs_in};
+        use jackioh_shared::economy::open::PackInputs;
+        use jackioh_shared::economy::roll::{PackKind, PoolCard, SlotGrant};
+
+        let fixture = |id: &str, kind: CosmeticKind, rarity: CosmeticRarity| Cosmetic {
+            id: id.to_string(),
+            kind,
+            name: id.to_string(),
+            rarity,
+            default: false,
+            starter: false,
+            chase: rarity.is_chase(),
+            jlorious: false,
+            card: None,
+            offer: Vec::new(),
+            level: None,
+        };
+        let rarities = [
+            PrintedRarity::Common,
+            PrintedRarity::Common,
+            PrintedRarity::Rare,
+            PrintedRarity::Rare,
+            PrintedRarity::Epic,
+            PrintedRarity::Legendary,
+        ];
+        let inputs = PackInputs {
+            pack: PackKind::Set(SetName::Core),
+            pool: harness
+                .playable_ids
+                .iter()
+                .zip(rarities)
+                .map(|(id, rarity)| PoolCard {
+                    id: id.clone(),
+                    rarity,
+                })
+                .collect(),
+            registry: vec![
+                fixture(FOIL_COSMETIC, CosmeticKind::Foil, CosmeticRarity::Rare),
+                fixture(BOARD_COSMETIC, CosmeticKind::Table, CosmeticRarity::Epic),
+            ],
+            catalog: CATALOG_VERSION.to_string(),
+        };
+        let packs = 6;
+        let one = pending_profile(harness, None).await;
+        let all = pending_profile(harness, None).await;
+        let short = pending_profile(harness, None).await;
+        let at = harness.now();
+        for profile in [&one, &all, &short] {
+            q!(harness, t => t.economy_inventory_grant(&InventoryGrant {
+                reason: from(json!("pack_purchase")),
+                reference: None,
+                ..item(&profile.id, "set_pack", "Core", packs, at)
+            }));
+        }
+        let seeds: Vec<String> = (0..packs).map(|n| format!("r3212000-{n}")).collect();
+
+        let mut opened = Vec::new();
+        for seed in &seeds {
+            opened.push(q!(harness, t => async {
+                t.economy_lock_account(&one.id).await?;
+                open_pack_in(&mut t, &one.id, &inputs, seed, at).await
+            }));
+        }
+        let batch = q!(harness, t => async {
+            t.economy_lock_account(&all.id).await?;
+            open_packs_in(&mut t, &all.id, &inputs, &seeds, at).await
+        });
+        assert_eq!(batch, opened, "{}", harness.name);
+        // Six cards in thirty slots: cards unlocked, then duplicates that drop cosmetics or fill the bars.
+        let slots: Vec<_> = opened.iter().flat_map(|opened| &opened.slots).collect();
+        assert!(slots.iter().any(|slot| slot.grant == SlotGrant::Card));
+        assert!(
+            slots
+                .iter()
+                .any(|slot| matches!(slot.grant, SlotGrant::Cosmetic { .. }))
+        );
+        assert!(
+            slots
+                .iter()
+                .any(|slot| matches!(slot.grant, SlotGrant::Bars { .. }))
+        );
+        assert_eq!(opened.last().map(|opened| opened.unopened), Some(0));
+        assert_eq!(
+            holdings_of(harness, &all.id).await,
+            holdings_of(harness, &one.id).await,
+            "{}",
+            harness.name
+        );
+
+        let before = holdings_of(harness, &short.id).await;
+        let more: Vec<String> = (0..=packs).map(|n| format!("r3212000-{n}")).collect();
+        assert!(
+            call!(harness, t => async {
+                t.economy_lock_account(&short.id).await?;
+                open_packs_in(&mut t, &short.id, &inputs, &more, at).await
+            })
+            .is_err(),
+            "{}",
+            harness.name
+        );
+        assert_eq!(holdings_of(harness, &short.id).await, before, "{}", harness.name);
+    }
+
     /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
     /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
     /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
@@ -10792,6 +11087,8 @@ mod economy {
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
         r3191000_batch_news_claims_and_payouts_write_what_one_at_a_time_would,
+        r3212000_batch_writes_with_spends_write_what_one_at_a_time_would,
+        r3212000_open_all_of_n_writes_what_n_openings_one_at_a_time_write,
         practice_claims_count_once_per_bucket_and_utc_day,
         r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
         r3013001_a_stamp_is_kept_only_at_or_below_its_level,
@@ -11829,4 +12126,57 @@ mod dev_dashboard {
         r3074001_standings_mark_a_hand_set_ladder,
         r3074003_posts_are_kept_listed_and_taken_down_once,
     );
+}
+
+mod r3290000_banned_standings {
+    use super::*;
+
+    /// R3290000: a season row reads `banned` from its player's `profiles.status`, on every ladder and in both
+    /// standings reads, and reads `false` again once the ban is lifted.
+    async fn r3290000_standings_mark_a_banned_account(harness: &StoreHarness) {
+        let banned = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let season: Season = from(json!({ "id": "v9.8", "patchVersion": "v9.8.1", "startedAt": now }));
+        q!(harness, t => t.ranked_create_season(&season));
+        for ladder in Ladder::ALL {
+            for profile in [&banned, &other] {
+                let row = SeasonRank {
+                    format: ladder,
+                    ..fresh_rank(&season.id, &profile.id, now)
+                };
+                q!(harness, t => t.ranked_put_rank(&row));
+            }
+        }
+        let marked = |standings: Vec<SeasonStanding>| -> Vec<(String, bool)> {
+            standings
+                .into_iter()
+                .map(|standing| (standing.rank.profile_id, standing.banned))
+                .collect()
+        };
+        // Active, banned, active again: the mark follows the account's status, read live.
+        for (account, is_banned) in [("active", false), ("banned", true), ("active", false)] {
+            q!(harness, t => t.profiles_set_status(&banned.id, status(account)));
+            let mut whole = vec![(banned.id.clone(), is_banned), (other.id.clone(), false)];
+            whole.sort();
+            for ladder in Ladder::ALL {
+                assert_eq!(
+                    marked(q!(harness, t => t.ranked_standings(&season.id, ladder))),
+                    whole,
+                    "{}: {account}, {ladder:?}",
+                    harness.name
+                );
+                assert_eq!(
+                    marked(
+                        q!(harness, t => t.ranked_standings_subset(&season.id, ladder, std::slice::from_ref(&banned.id), i32::MAX))
+                    ),
+                    vec![(banned.id.clone(), is_banned)],
+                    "{}: {account}, {ladder:?}, the subset",
+                    harness.name
+                );
+            }
+        }
+    }
+
+    both_stores!(r3290000_standings_mark_a_banned_account);
 }

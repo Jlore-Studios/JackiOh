@@ -93,28 +93,6 @@
   text-align: center;
 }
 
-/* Set as the tavern's screen titles are (tavern.css, the auth board's h2): solid pale gold in the
-   serif, over a plain shadow. Gold leaf is the wordmark's alone. */
-.app-shell .practice-lobby__title {
-  font-family: var(--tavern-serif);
-  font-size: clamp(28px, 5vw, 40px);
-  font-weight: 700;
-  line-height: 1.15;
-  color: var(--tavern-gold-pale);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
-/* "Choose your opponent" and "Your deck": the setup's two headings, in the same serif. */
-.app-shell .practice-setup__heading {
-  margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--tavern-gold-pale);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
 /* ---- setup -------------------------------------------------------------------------------- */
 
 .practice-setup {
@@ -593,10 +571,6 @@
   max-width: 480px;
   margin: 12vh auto 0;
   text-align: center;
-}
-
-.app-shell .practice-stage__title {
-  font-size: 24px;
 }
 
 .app-shell .practice-stage__status {
@@ -1285,7 +1259,7 @@
    deck and Start cannot all show at once, so Start leaves the footer panel and rides along the
    bottom of the viewport while the form scrolls under it. The footer's box goes
    (`display: contents`) and the deck picker becomes a panel of its own. */
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .practice-setup__footer {
     display: contents;
   }
@@ -1380,7 +1354,7 @@
 /* A short desktop (a 1280x720 laptop): the tiers and the deck fill the screen and Start sat on its
    fold, cut in half. As on a phone, Start leaves the footer panel and rides along the bottom of the
    viewport, over a halo in the page's color, while the form scrolls under it. */
-@media (min-width: 721px) and (min-height: 521px) and (max-height: 820px) {
+@media (min-width: 761px) and (min-height: 501px) and (max-height: 820px) {
   .practice-setup__footer {
     display: contents;
   }
@@ -1419,7 +1393,7 @@
 
 /* Landscape phones: the tiers tighten, so they, the deck and Start all fit on one screen
    with nothing floating over them. */
-@media (max-height: 520px) and (min-width: 721px) {
+@media (max-height: 500px) and (min-width: 761px) {
   .app-shell.practice--lobby {
     gap: 10px;
     padding-top: 8px;
@@ -1427,10 +1401,6 @@
 
   .practice-lobby__header {
     margin-top: -34px;
-  }
-
-  .app-shell .practice-lobby__title {
-    font-size: 24px;
   }
 
   .practice-setup {
@@ -1509,7 +1479,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .practice-hud {
     gap: 8px;
     padding: 5px 6px 5px 10px;
@@ -1550,7 +1520,7 @@
 }
 
 /* Landscape phones: the dialog loses height, not content. */
-@media (max-height: 520px) {
+@media (max-height: 500px) {
   .practice-result {
     gap: 6px;
     padding: 14px 20px 10px;
@@ -1596,7 +1566,7 @@
 }
 
 /* A landscape phone gives the table every pixel of height the HUD can spare. */
-@media (orientation: landscape) and (max-height: 520px) {
+@media (orientation: landscape) and (max-height: 500px) {
   .practice-hud {
     min-height: 0;
     padding: 2px 4px 2px 10px;

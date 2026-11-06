@@ -5,15 +5,18 @@
 // a copy, so the preview can't drift from the board. It wears the viewer's picks (`worn`, R1655000),
 // its foil, finish and border, and moves where the look is animated, honoring Reduce motion as every
 // face does. Presentation only (CLAUDE.md rule 7): it reads the catalog and the viewer's own picks and
-// decides nothing.
+// decides nothing. R3016001: `level` dresses the three in one level of the card's variants, owned or not, as the
+// equip and buy screen's hovered rung, writing no pick (`ShownLevel`).
 
-import type { ReactElement } from "react";
+import { useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
 import type { CardDef, UnitView } from "@jackioh/shared";
 
+import { OwnershipContext, type CardOwnership } from "../cards/cosmetics.ts";
+import { FullArtShown } from "../cards/fullArt.ts";
 import { CardFace, MinionFace, faceModel } from "../cards/index.ts";
 import { t } from "../i18n/i18n.ts";
-import { collectionTestid as T } from "./collection.ts";
+import { NO_FULL_ART_ID, collectionTestid as T } from "./collection.ts";
 
 /** Where a card stands on the board: a Unit in a lane, a Spell resolving, the rest in the backrow. */
 export type BoardForm = "minion" | "resolving" | "backrow";
@@ -58,8 +61,49 @@ const CAPTIONS: Readonly<Record<LookView, string>> = {
   board: "On the board",
 };
 
-/** R3016000: `def`'s look as the card, in hand and on the board, base or Radiant; `worn` is the viewer's own copy. */
-export default function LookViews({ def, radiant, worn }: { def: CardDef; radiant: boolean; worn: boolean }): ReactElement {
+/** R3016001: `owned` with `level` owned on `defId` too, so a copy shown wearing it wears it, a level it lacks among them. */
+export function lendLevel(owned: CardOwnership, defId: string, level: string): CardOwnership {
+  if (owned === "every" || level === NO_FULL_ART_ID) return owned;
+  const lent = new Map(owned);
+  lent.set(defId, new Set([...(owned.get(defId) ?? []), level]));
+  return lent;
+}
+
+/** R3016001: the viewer's copies of `defId` below wear `level` (the normal face for `NO_FULL_ART_ID`), owned or not, and no pick is written. */
+export function ShownLevel({ defId, level, children }: { defId: string; level: string; children: ReactNode }): ReactElement {
+  const owned = useContext(OwnershipContext);
+  const lent = useMemo(() => lendLevel(owned, defId, level), [owned, defId, level]);
+  return (
+    <OwnershipContext.Provider value={lent}>
+      <FullArtShown defId={defId} pick={level === NO_FULL_ART_ID ? false : level}>
+        {children}
+      </FullArtShown>
+    </OwnershipContext.Provider>
+  );
+}
+
+/**
+ * R3016000: `def`'s look as the card, in hand and on the board, base or Radiant; `worn` is the viewer's own copy.
+ * R3016001: with `level`, the viewer's copy wearing that one level.
+ */
+export default function LookViews({
+  def,
+  radiant,
+  worn,
+  level,
+}: {
+  def: CardDef;
+  radiant: boolean;
+  worn: boolean;
+  level?: string | undefined;
+}): ReactElement {
+  if (level !== undefined) {
+    return (
+      <ShownLevel defId={def.id} level={level}>
+        <LookViews def={def} radiant={radiant} worn />
+      </ShownLevel>
+    );
+  }
   const face = faceModel({ defId: def.id, def, radiant });
   // B2.7: a Radiant face may be another type than the base (Blood Moon's is a Field Trap), so the face's type decides.
   const form = boardFormOf(face.type);
@@ -88,6 +132,15 @@ export default function LookViews({ def, radiant, worn }: { def: CardDef; radian
         </figure>
       ))}
     </div>
+  );
+}
+
+/** R3016001: what opens a card's equip and buy screen (LooksScreen.tsx), on its hover panel and its fullscreen preview. */
+export function LooksButton({ onLooks }: { onLooks: () => void }): ReactElement {
+  return (
+    <button type="button" className="collection-look__looks" data-testid={T.looksOpen} onClick={onLooks}>
+      {t("Equip or buy")}
+    </button>
   );
 }
 

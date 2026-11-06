@@ -148,13 +148,8 @@ pub fn reset_match(sink: &mut EngineSink<'_>) {
         decks: opening.decks.clone(),
         handicaps: Some(handicaps),
         dealt: opening.dealt.clone(),
-        // R923000, R915006: the game's setup flags and cards are the reset game's too.
+        // R923000: the game's setup flag is the reset game's too.
         sandbox: old.sandbox,
-        custom_cards: if old.custom_cards.is_empty() {
-            None
-        } else {
-            Some(old.custom_cards.values().cloned().collect())
-        },
         // R2702000: the reset deals the marked cards again.
         deck_marks: opening.deck_marks.clone(),
         // R3049000: and its picks read the snapshot the game was handed.

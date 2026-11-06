@@ -132,14 +132,15 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
     const me = workshopAccount();
     const before = [cardId(1), cardId(2), cardId(3), cardId(4), cardId(5)];
     const added = cardId(6);
-    const decksUrl = apiUrl("/api/decks/*");
+    // R3212001: the autosave's one request a pass.
+    const syncUrl = apiUrl("/api/decks/sync");
 
     cy.saveDeck(me, { name: "Travel", cards: before }).then((deckId) => {
       openWorkshop(me);
       cy.get(ts(deckRowId(deckId))).click();
       cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(before.length));
 
-      cy.intercept({ method: "PUT", url: decksUrl }, { forceNetworkError: true }).as("unreachable");
+      cy.intercept({ method: "POST", url: syncUrl }, { forceNetworkError: true }).as("unreachable");
       cy.get(ts(addPoolId(added))).click();
       cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(before.length + 1));
       cy.wait("@unreachable");
@@ -158,7 +159,7 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
       cy.get(ts(deckCardId(added))).should("exist");
       cy.get(ts(SYNC_STATUS), { timeout: timeouts.view }).should("have.attr", "data-state", "offline");
 
-      cy.intercept({ method: "PUT", url: decksUrl }, (request) => {
+      cy.intercept({ method: "POST", url: syncUrl }, (request) => {
         request.continue();
       }).as("reachable");
       cy.wait("@reachable", { timeout: RETRY_TIMEOUT_MS });

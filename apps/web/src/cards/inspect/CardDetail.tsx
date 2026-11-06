@@ -11,8 +11,8 @@ import { readerName, readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
 import { isGlitch } from "../glitch.ts";
 import { showsFullArt, useFullArt, useOwnCopy } from "../fullArt.ts";
-import { faceModel, locWords, type FaceModel } from "../model.ts";
-import { glossaryFor } from "../rules.ts";
+import { faceModel, type FaceModel } from "../model.ts";
+import { locWords } from "./locWords.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { watermarkOf } from "../setMark.ts";
@@ -88,7 +88,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
         <p className="inspect-rules-line">
           <span className="inspect-rules-label">{t("Base")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={base.text.full} refs={base.refs} chinese={base.chinese === true} />
+            <RulesText rich={base.text} />
           </span>
         </p>
       )}
@@ -96,7 +96,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
         <p className="inspect-rules-line inspect-rules-line--radiant">
           <span className="inspect-rules-label">{t("Radiant")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} chinese={radiant.chinese === true} />
+            <RulesText rich={radiantLine} />
           </span>
         </p>
       )}
@@ -132,7 +132,7 @@ export function CardDetail({
 
   const base = faceModel({ defId: def.id, def, radiant: false, chinese: easter });
   const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: easter });
-  const glossary = mergeGlossary(glossaryFor(base), glossaryFor(radiant));
+  const glossary = mergeGlossary(base.glossary, radiant.glossary);
 
   return createPortal(
     <div className="inspect-layer inspect-layer--detail" {...OVERLAY_ROOT_PROPS}>

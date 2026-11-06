@@ -184,7 +184,7 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .tavern.app-shell .collection-cardview__panel {
     flex-direction: column;
     align-items: center;
@@ -199,7 +199,7 @@
   aspect-ratio: 5 / 7;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .tavern.app-shell .collection-cardview__stage {
     height: min(34vh, 300px);
   }
@@ -850,7 +850,7 @@
   color: var(--tavern-text-dim);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .tavern.app-shell .collection-look {
     --look-face-h: min(40vh, 300px, 64vw);
     flex-direction: column;
@@ -974,4 +974,144 @@
   text-align: center;
   line-height: 1.15;
   color: var(--tavern-text-dim);
+}
+
+/* ---- R3016001: a card's equip and buy screen (LooksScreen), over the fullscreen preview it may open from. Each
+   variant a ladder of rows, a level a row: its picture, its name and rarity, and Equip, Buy or what it needs. The
+   rows wrap, so nothing scrolls sideways at phone width; the panel scrolls down. */
+
+.tavern.app-shell .collection-look__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.tavern.app-shell .collection-looks {
+  position: fixed;
+  inset: 0;
+  /* The fullscreen preview's height (70, `--z-inspect-modal`), the one surfaces.css token there being `--z-toast`:
+     drawn after the preview, it lies over it. */
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.tavern.app-shell .collection-looks__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-black) 72%, transparent);
+}
+
+.tavern.app-shell .collection-looks__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: min(720px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-7);
+  border: 1px solid var(--tavern-brass);
+  border-radius: var(--radius-lg);
+  background: var(--tavern-night);
+}
+
+.tavern.app-shell .collection-looks__title,
+.tavern.app-shell .collection-looks__variant {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .collection-looks__ladder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tavern.app-shell .collection-looks__rungs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .collection-looks__rung {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 40%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.tavern.app-shell .collection-looks__rung[data-equipped="true"] {
+  border-color: var(--tavern-gold);
+}
+
+.tavern.app-shell .collection-looks__picture .collection-strip__picture {
+  height: 56px;
+}
+
+.tavern.app-shell .collection-looks__words {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tavern.app-shell .collection-looks__rarity,
+.tavern.app-shell .collection-looks__missing,
+.tavern.app-shell .collection-looks__needs {
+  font-size: var(--type-sm);
+  color: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .collection-looks__buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.tavern.app-shell .collection-looks__question {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--tavern-brass);
+  border-radius: var(--radius-sm);
+}
+
+.tavern.app-shell .collection-looks__question > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tavern.app-shell :is(.collection-looks__ways, .collection-looks__answers) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.tavern.app-shell .collection-looks__error {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--tavern-danger-text);
+}
+
+.tavern.app-shell .collection-looks__close {
+  align-self: center;
+}
+
+.tavern.app-shell .collection-looks__ways > button[aria-pressed="true"] {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 1px;
 }

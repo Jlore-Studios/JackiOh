@@ -5703,8 +5703,9 @@ pub async fn ranked_reset_ratings(
 }
 
 /// What `ranked_standings` and `ranked_standings_subset` select, up to their `where`: a season row
-/// joined to its player's CURRENT rating, a ladder bot's being the bot's own (R640000, R610).
-/// R2778000: `$2` is the ladder, whose rows, ratings and bot ratings it reads.
+/// joined to its player's CURRENT rating, a ladder bot's being the bot's own (R640000, R610), and to
+/// whether the account is banned (R3290000). R2778000: `$2` is the ladder, whose rows, ratings and bot
+/// ratings it reads.
 macro_rules! standings_from {
     () => {
         "select r.season_id, r.profile_id, r.format, r.games, r.wins, r.losses, r.draws, r.ladder,
@@ -5712,6 +5713,7 @@ macro_rules! standings_from {
                 coalesce(b.rating, case when r.format = 'random' then p.random_rating else p.rating end)
                   as rating,
                 p.kind,
+                p.status = 'banned' as banned,
                 h.profile_id is not null as hand_set
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
@@ -5723,17 +5725,20 @@ macro_rules! standings_from {
 }
 
 /// One `standings_from!` row: the rank's own fields plus the rating, through their serde form,
-/// marked `bot` for a ladder bot's row (R640000) and `handSet` for a hand-set rating's (R3074001).
+/// marked `bot` for a ladder bot's row (R640000), `handSet` for a hand-set rating's (R3074001) and
+/// `banned` for a banned account's (R3290000).
 fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
     let rank = to_season_rank(SeasonRankDbRow::read(row)?);
     let rating: f64 = get(row, "rating")?;
     let kind: String = get(row, "kind")?;
     let hand_set: bool = get(row, "hand_set")?;
+    let banned: bool = get(row, "banned")?;
     let mut standing = serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
     if let Value::Object(fields) = &mut standing {
         fields.insert(String::from("rating"), json!(rating));
         fields.insert(String::from("bot"), json!(kind == "bot"));
         fields.insert(String::from("handSet"), json!(hand_set));
+        fields.insert(String::from("banned"), json!(banned));
     }
     from_json(standing)
 }

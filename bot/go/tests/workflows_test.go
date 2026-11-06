@@ -825,8 +825,8 @@ func TestWorkflows_ItIsLinted(t *testing.T) {
 
 // ---------------------------------------------------------------------------- LearnSetWorkflowTests
 //
-// A new set stops a learn export still early on the set before (learn-set.yml); every learn run
-// plays the newest patch, reading main as it is when it starts (learn.yml, plan).
+// A new patch or set stops a learn export still early on the version before (learn-set.yml); every
+// learn run plays the newest version, reading main as it is when it starts (learn.yml, plan).
 
 func TestWorkflows_AShippedPatchOnMainStartsItOnGithubsRunner(t *testing.T) {
 	text := workflowsRead(t, "learn-set.yml")
@@ -839,16 +839,35 @@ func TestWorkflows_AShippedPatchOnMainStartsItOnGithubsRunner(t *testing.T) {
 	assertTrue(t, workflowsLinted(t, "learn-set.yml"))
 }
 
-func TestWorkflows_OnlyASetStopsARunAndOnlyBeforeHalfItsShards(t *testing.T) {
+func TestWorkflows_OnlyAPatchOrSetStopsARunAndOnlyBeforeHalfItsShards(t *testing.T) {
 	text := workflowsRead(t, "learn-set.yml")
 	learn := workflowsRead(t, "learn.yml")
-	assertIn(t, `select(.tier == "major")`, text)
+	// A micro (v0.Z.Xb) stops nothing: its tier is the one left out.
+	assertIn(t, `select(.tier == "major" or .tier == "patch")`, text)
+	assertNotIn(t, `"micro"`, text)
 	keep := regexp.MustCompile(`LEARN_SET_KEEP_SHARDS: "(\d+)"`).FindStringSubmatch(text)
 	shards := regexp.MustCompile(`shards: \$\{\{ inputs\.shards \|\| '(\d+)' \}\}`).FindStringSubmatch(learn)
 	assertTrue(t, keep != nil, "unexpectedly None")
 	assertTrue(t, shards != nil, "unexpectedly None")
 	assertEqual(t, workflowsInt(t, keep[1])*2, workflowsInt(t, shards[1]))
 	assertIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
+}
+
+// gather.yml plays a new patch or set and never a micro: a push plays only when one shipped since
+// the last push run that succeeded, and plays the commit it pushed, so the next run reads exactly
+// what it played.
+func TestWorkflows_GatherPlaysEachNewPatchAndNoMicro(t *testing.T) {
+	text := workflowsRead(t, "gather.yml")
+	job := workflowsJob(t, text, "gather")
+	assertIn(t, "ref: ${{ github.event_name == 'push' && github.sha || 'main' }}", job)
+	due := workflowsScript(t, job, "due (a new patch or set, not a micro)")
+	assertIn(t, "runs?event=push&status=success&per_page=1", due)
+	assertIn(t, `select(.tier != "micro")`, due)
+	for _, step := range []string{"uses: ./.github/actions/setup", "name: build",
+		"name: play (cargo jackioh stats --series gather)"} {
+		assertIn(t, "if: ${{ steps.due.outputs.play == 'true' }}", workflowsStep(t, job, step))
+	}
+	assertTrue(t, workflowsLinted(t, "gather.yml"))
 }
 
 func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {
@@ -938,4 +957,23 @@ func TestWorkflows_AFailedQueueBuildIsCancelledOnlyAfterItsCheckReported(t *test
 		assertIn(t, "if: ${{ failure() && github.event_name == 'merge_group' }}", cancel)
 		assertIn(t, `gh run cancel "$RUN"`, cancel)
 	}
+}
+
+// A queue build cancels its own pull request's older builds, which the queue rebuilt and GitHub
+// leaves running, and nothing else: only on `merge_group`, only runs older than itself on its pull
+// request's `gh-readonly-queue/<base>/pr-<n>-` branches, with no checkout. No required check waits
+// on it and it never fails the run, so it can only free runners; the bots leave a build cancelled
+// with no job failed alone (`events.QueueBuildFailed`).
+func TestWorkflows_AQueueBuildCancelsOnlyItsOwnPullRequestsOlderBuilds(t *testing.T) {
+	text := workflowsRead(t, "ci.yml")
+	job := workflowsJob(t, text, "queue-supersede")
+	assertIn(t, "if: ${{ github.event_name == 'merge_group' }}", job)
+	assertIn(t, "continue-on-error: true", job)
+	assertIn(t, "actions: write", job)
+	assertNotIn(t, "actions/checkout", job)
+	assertNotIn(t, "needs:", job)
+	assertIn(t, `prefix="${branch%-*}-"`, job)
+	assertIn(t, `gh-readonly-queue/*/pr-[0-9]*-) ;;`, job)
+	assertIn(t, `.databaseId < $RUN and (.headBranch | startswith(\"$prefix\"))`, job)
+	assertNotRegex(t, text, `(?m)^\s+needs:.*queue-supersede`) // no job waits on it
 }

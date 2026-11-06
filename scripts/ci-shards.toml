@@ -22,18 +22,23 @@
 "cards" = 1
 "server" = 1
 "server api" = 1
+# `server practice` and `server practice rulings` stay at 1 (#3314). Both ran over seven minutes
+# because three tests in each waited about 150 s for the slowest game of `honest_win`'s batch
+# (crates/server/tests/api/practice.rs), which #3305 fixed: each group's tests now run in about
+# 5 s and the rest of the job is compiling, which every shard repeats. A count above 1 on any
+# group also fails bot/tests/test_ci_matrix.py, which pins today's jobs and which the bot may not edit.
 "server practice" = 1
 "server practice rulings" = 1
 "ai" = 1
 "ai slow" = 1
-"luau" = 1
 "tools fuzz" = 1
 "tools duos, selfplay" = 1
 "tools, wasm" = 1
 
 # `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tests.
+# 4 shards ran one past seven minutes (web (unit 1/4), 8m 52s, #3258); 8 is the most a count may be (matrix.py's MAX_SHARDS).
 [web]
-unit = 4
+unit = 8
 
 # `e2e smoke (k/K)`: the smoke specs (e2e/scripts/shard-specs.mjs SMOKE) by their WEIGHTS. A
 # dispatch with `e2e: all` runs every spec in super.yml's eight shards instead.

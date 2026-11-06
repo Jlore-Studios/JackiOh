@@ -2110,6 +2110,51 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R636: the Drone Corvette's two attacks, its death and Reborn's return inside one autopilot action
+    /// (Stinkyscape #47, handicapped fuzz seed 7089): `p1`'s field holds `def` in lane 1 as the
+    /// returned body, and the events are its summon, two attacks at the hero and its summon again.
+    fn reborn_after_two_attacks(def: &str) -> Vec<String> {
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": def, "lane": 1 }] } }));
+        let back = g.unit_at(PlayerId::P1, 1).id;
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &back)
+            .expect("the returned body")
+            .summoned_turn = Some(turn);
+        let mut monitor = create_invariant_monitor(g.state());
+        let summoned = |via: Option<&str>| {
+            event(json!({
+                "type": "summoned", "player": "p1", "instanceId": back, "defId": def, "row": "units", "lane": 1,
+                "via": via,
+            }))
+        };
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": back, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        monitor.after(
+            &[summoned(None), declared(), declared(), summoned(Some("Reborn"))],
+            g.state(),
+        )
+    }
+
+    /// R636: a token whose text draws its keywords as it arrives and that is back on the field by the
+    /// action's end (Reborn) holds a new draw, which says nothing of the stint that attacked twice.
+    #[test]
+    fn r636_a_keyword_drawing_token_back_by_reborn_inside_the_action_may_have_attacked_twice() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        assert_eq!(reborn_after_two_attacks(DRONE_CORVETTE), no_violations());
+    }
+
+    /// R636, R171: a unit that draws no keywords gains nothing from coming back: its first stint's
+    /// second attack is still an extra one.
+    #[test]
+    fn r636_a_unit_with_no_drawn_keywords_back_by_reborn_inside_the_action_still_attacked_twice_too_many() {
+        let found = reborn_after_two_attacks(VANILLA);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
     /// R12, R636: a steal keeps a card on the field with the keywords it drew, so a Drone Corvette
     /// summoned, attacking twice, stolen and attacking twice more for its new controller, then
     /// bounced, all inside one AI turn, attacked legally.

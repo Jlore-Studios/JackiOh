@@ -24,9 +24,9 @@ use crate::resolve::{HookOptions, make_context};
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, DeckMark,
-    Enchantment, GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt,
-    RowFlags, SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, DeckMark, Enchantment,
+    GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
+    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1702,18 +1702,6 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub sandbox: Option<bool>,
-    /// R915006: this game's custom cards (SPEC §12), by id: each card's frame, version and card-kit
-    /// source as `create_game` was given it (`custom::custom_game_copy`), which a Luau host lent the
-    /// engine builds the scripts from (`custom::with_custom_scripts`). A `create_game` input, frozen
-    /// with the game. D14: empty, and absent from the JSON, in every game without one.
-    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, CustomCard>>", optional))]
-    pub custom_cards: IndexMap<String, CustomCard>,
-    /// R915000: the definition each of `custom_cards`' frames builds (`custom::custom_def`), which
-    /// `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
-    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, CardDef>>", optional))]
-    pub custom_defs: IndexMap<String, CardDef>,
     /// R1850003: the permanents held beneath a card until it leaves the field (`effects::hold`), in the
     /// order they were taken. D14: absent until the first is held, so a game that never holds one
     /// hashes exactly as before this field existed. Never in a view: the view sees `held` events.
@@ -2172,12 +2160,6 @@ pub struct CreateGameOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub sandbox: Option<bool>,
-    /// R915006: the game's custom cards (SPEC §12), which its decks may name. Setup, not an action: a
-    /// replay passes the same cards (`replay::ReplayInput.customCards`). The caller checks them with
-    /// `custom::check_custom_setup` first; the server never sets it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub custom_cards: Option<Vec<CustomCard>>,
     /// R2702000: each seat's deck marks, cards of its list dealt Radiant or Buffed at setup. Setup,
     /// not an action: a replay passes the same marks (`replay::ReplayInput.deckMarks`). Omitted,
     /// nothing is marked or stored.
@@ -2353,17 +2335,14 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
 /// other size is the handicap's, and the message says so. (TS throws; `create_game` panics with the
 /// message.)
 pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32) -> Result<(), EngineError> {
-    validate_deck_with(deck, catalog, &IndexMap::new(), label, size, MAX_COPIES)
+    validate_deck_with(deck, catalog, label, size, MAX_COPIES)
 }
 
-/// `validate_deck` for a game with custom cards (R915005): a custom id is one of `customs`, the
-/// game's own definitions, never the catalog's, and counts as one card of the deck. `copies` is the
-/// most copies of one id the seat's deck may hold: MAX_COPIES, or its handicap's `deckCopies`
-/// (R2433001).
+/// `validate_deck` with the most copies of one id the seat's deck may hold: MAX_COPIES, or its
+/// handicap's `deckCopies` (R2433001).
 pub fn validate_deck_with(
     deck: &[String],
     catalog: &CardDefs,
-    customs: &IndexMap<String, CardDef>,
     label: &str,
     size: i32,
     copies: i32,
@@ -2382,16 +2361,6 @@ pub fn validate_deck_with(
     }
     let mut seen: Vec<&str> = Vec::with_capacity(deck.len());
     for def_id in deck {
-        if crate::custom::is_custom_id(def_id) {
-            if !customs.contains_key(def_id) {
-                return Err(EngineError::new(format!(
-                    "{label}: \"{def_id}\" is a custom card the game was not given (R915005)"
-                )));
-            }
-            too_many_copies(&seen, def_id, label, copies)?;
-            seen.push(def_id);
-            continue;
-        }
         let Some(def) = catalog.get(def_id) else {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is not in the catalog (§9.4 L6)"
@@ -2493,13 +2462,11 @@ fn validate_deck_marks(options: &CreateGameOptions) -> Result<(), EngineError> {
 }
 
 /// R180, R184: every seat's handicap, then every seat's deck against its handicap's size, or
-/// `standard_deck_size` for a seat with none, then each seat's deck marks (R2702000). `customs` are
-/// the game's custom definitions (R915005). `create_game` panics with the message; a caller that must
-/// not panic checks this first.
+/// `standard_deck_size` for a seat with none, then each seat's deck marks (R2702000). `create_game`
+/// panics with the message; a caller that must not panic checks this first.
 pub fn validate_setup(
     options: &CreateGameOptions,
     catalog: &CardDefs,
-    customs: &IndexMap<String, CardDef>,
     kind: SetupKind,
 ) -> Result<(), EngineError> {
     let no_handicaps = PerPlayerOpt::default();
@@ -2517,14 +2484,7 @@ pub fn validate_setup(
             .get(player)
             .and_then(|h| h.deck_copies)
             .unwrap_or(MAX_COPIES);
-        validate_deck_with(
-            deck_of(options, seat),
-            catalog,
-            customs,
-            player.as_str(),
-            size,
-            copies,
-        )?;
+        validate_deck_with(deck_of(options, seat), catalog, player.as_str(), size, copies)?;
     }
     validate_deck_marks(options)
 }
@@ -2672,18 +2632,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
     let no_handicaps = PerPlayerOpt::default();
     let handicaps: &PerPlayerOpt<Handicap> = options.handicaps.as_ref().unwrap_or(&no_handicaps);
 
-    // R915006: the game's custom cards and their definitions, before the decks that name them.
-    let customs: &[CustomCard] = options.custom_cards.as_deref().unwrap_or(&[]);
-    let custom_cards: IndexMap<String, CustomCard> = customs
-        .iter()
-        .map(|card| (card.id.clone(), crate::custom::custom_game_copy(card)))
-        .collect();
-    let custom_defs: IndexMap<String, CardDef> = customs
-        .iter()
-        .map(|card| (card.id.clone(), crate::custom::custom_def(card)))
-        .collect();
-
-    if let Err(error) = validate_setup(options, catalog, &custom_defs, kind) {
+    if let Err(error) = validate_setup(options, catalog, kind) {
         panic!("{error}");
     }
     let standard = standard_deck_size(options, kind);
@@ -2740,8 +2689,6 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         glitch_boards: None,
         secrets: None,
         sandbox: options.sandbox.filter(|sandbox| *sandbox),
-        custom_cards,
-        custom_defs,
         held: None,
         marketplace: None,
         generators: IndexMap::new(),

@@ -15,7 +15,13 @@ bot?: boolean,
  * `hand_set_ratings`); never serialized when false. On a strict server (`DEV_STRICT`) the public
  * ladder, the percentiles and Jlorious read the rows without it.
  */
-handSet?: boolean, seasonId: string, profileId: string, 
+handSet?: boolean, 
+/**
+ * R3290000: the account's `profiles.status` is banned; never serialized when false. A server-side
+ * mark the standings reads set, no client read carries it. On every server the public ladder, the
+ * percentiles and Jlorious read the rows without it, until the ban is lifted.
+ */
+banned?: boolean, seasonId: string, profileId: string, 
 /**
  * R2778000: the ladder the row is on; a player holds one row per ladder per season.
  */

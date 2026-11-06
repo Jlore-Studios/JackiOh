@@ -8,11 +8,13 @@ import { versionNameFrom } from "@jackioh/cards";
 import { describe, expect, it, vi } from "vitest";
 
 import { DUOS_REPLAY_JSON_VERSION, duosReplayJson, parseDuosReplayJson } from "../duos/download.ts";
-import { catalogOf } from "../practice/core.ts";
 import { duosView } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, replayStepsOf } from "./download.ts";
 import { ReplayFailure } from "./source.ts";
+
+/** R1371000, R2532000: the catalog a kept game or save was played on, as it is named now. */
+const catalogOf = (kept: { catalog: string; versions?: number }): string => versionNameFrom(kept.versions ?? 1, kept.catalog);
 
 // The build as the v0.5 retcon left it, its catalog the old v0.5.11's under its new name. A file opens
 // only while the version it maps to is live, so the files below are read under that build.

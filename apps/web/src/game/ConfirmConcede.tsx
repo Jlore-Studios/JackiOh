@@ -3,7 +3,8 @@
 // asks first. Only "Concede" sends the action; "Keep playing" is the default: it takes the focus,
 // and Escape, Back (R2127000) or a click outside the panel means the same. It decides nothing
 // (CLAUDE.md rule 7): the caller dispatches `{ type: "concede" }`. Tab and Shift+Tab stay between the
-// two buttons, and the caller puts the focus back on the Concede control once it closes.
+// two buttons, and the caller puts the focus back on the Concede control once it closes. A route whose
+// concede costs more than the game (a dungeon fight ends its run, R2972000) passes its own body.
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 
@@ -17,12 +18,14 @@ export type ConfirmConcedeProps = {
   onConfirm(): void;
   /** "Keep playing", Escape, Back or a click outside the panel. */
   onCancel(): void;
+  /** What the dialog says, already translated; absent, `CONCEDE_BODY`. */
+  body?: string;
 };
 
 export const CONCEDE_TITLE = "Concede this game?";
 export const CONCEDE_BODY = "Your opponent wins and the game ends here.";
 
-export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedeProps): ReactElement {
+export default function ConfirmConcede({ onConfirm, onCancel, body }: ConfirmConcedeProps): ReactElement {
   useLocale();
   const titleId = useId();
   const bodyId = useId();
@@ -81,7 +84,7 @@ export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedePr
           {t(CONCEDE_TITLE)}
         </h2>
         <p className="concede-dialog__body" id={bodyId}>
-          {t(CONCEDE_BODY)}
+          {body ?? t(CONCEDE_BODY)}
         </p>
         <div className="concede-dialog__actions">
           <button

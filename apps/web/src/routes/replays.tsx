@@ -32,6 +32,7 @@ import type { ReplayJsonGame } from "../replay/download.ts";
 import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
@@ -292,16 +293,21 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     return (
       <CatalogContext.Provider value={lookup}>
         <FullArtOwned owned={FULL_ART_GATED && !practice ? NO_FULL_ART : "every"}>
-          {"duos" in open ? (
-            <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
-          ) : (
-            <ReplayPlayer
-              key={open.key}
-              source={open.source}
-              onLeave={() => setOpen(null)}
-              {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
-            />
-          )}
+          {/* This screen does not wait for the module (#778), and the board's cards are faces it works out. */}
+          <WhenEngineReady fallback={<Skeleton variant="panel" label={t("Loading the replay…")} />}>
+            {() =>
+              "duos" in open ? (
+                <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
+              ) : (
+                <ReplayPlayer
+                  key={open.key}
+                  source={open.source}
+                  onLeave={() => setOpen(null)}
+                  {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
+                />
+              )
+            }
+          </WhenEngineReady>
         </FullArtOwned>
       </CatalogContext.Provider>
     );
@@ -309,13 +315,12 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
 
   return (
     <div className="app-shell replays one-screen" data-testid={replaysTestid.root}>
-      <BackLink />
-      <h1>{t("Replays")}</h1>
+      <BackLink title={t("Replays")} />
       <div className="one-screen__body one-screen__stack">
         <OpenReplayJson ready={lookup !== null} onOpen={setOpen} />
 
         <section className="replays__section" aria-labelledby="replays-practice-heading">
-          <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
+          <h2 id="replays-practice-heading" className="section-heading">{t("Practice games on this device")}</h2>
           {practice.kind === "loading" ? (
             <Skeleton variant="rows" label={t("Reading the games kept on this device…")} />
           ) : null}
@@ -372,7 +377,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
         </section>
 
         <section className="replays__section" aria-labelledby="replays-online-heading">
-          <h2 id="replays-online-heading">{t("Online games")}</h2>
+          <h2 id="replays-online-heading" className="section-heading">{t("Online games")}</h2>
           {account.kind === "loading" ? <Skeleton variant="panel" label={t("Checking your account…")} /> : null}
           {account.kind === "anonymous" ? (
             <p data-testid={replaysTestid.signIn}>
