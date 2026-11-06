@@ -17467,15 +17467,8 @@
       }
     },
     "3260": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42141027784",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-06T01:26:53Z",
-        "until": "2026-11-06T01:56:53Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17487,10 +17480,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"git log --oneline -3 && git branch -a | head -20 && ls .bot-plan.md 2>&1; git rev-parse origin/claude/mobile-no-highlight claude/mobile-no-highlight 2>&1 | head\", \"description\": \"Check b\u2026\n- Grep: {\"pattern\": \"tap-highlight|user-select|touch-callout|2015\", \"path\": \"/home/runner/work/_temp/work/item-3260/apps/web/src\", \"output_mode\": \"content\", \"glob\": \"*.{css,tsx,ts}\"}\n- Bash: {\"command\": \"git show origin/claude/mobile-no-highlight --stat --format='%H %P %s' | head -20; git show origin/claude/mobile-no-highlight -- apps/web | head -250\", \"description\": \"Show the draft comm\u2026\n- Bash: {\"command\": \"grep -rn \\\"pointer: coarse\\\\|pointer:coarse\\\\|hover: none\\\" apps/web/src e2e --include=*.css --include=*.ts --include=*.tsx -l | head -30; echo ---; grep -rn \\\"tap-highlight\\\\|tap highli\u2026\n- Bash: {\"command\": \"sed -n 430,500p apps/web/src/index.css; echo ----; sed -n 180,260p apps/web/src/together/together.css; ls .claude/skills/ui-walkthrough 2>/dev/null\", \"description\": \"View index.css near \u2026\n- Bash: {\"command\": \"grep -rn \\\"chat-panel\\\\|chat-message\\\\|ChatPanel\\\" apps/web/src --include=*.tsx --include=*.ts --include=*.css -l; echo ---; sed -n 1,60p apps/web/src/together/ChatPanel.tsx; echo ---; g\u2026\n- Bash: {\"command\": \"ls apps/web/src/*.test.ts apps/web/src/**/*css*.test.* 2>/dev/null; sed -n 1,80p apps/web/src/surfaces.test.ts\", \"description\": \"Look at stylesheet lint tests\"}\n- Bash: {\"command\": \"sed -n 1,70p apps/web/src/cursors.test.ts; ls apps/web/src/wasm/pkg 2>&1 | head -3; ls node_modules 2>&1 | head -3; grep -rn \\\"contenteditable\\\" apps/web/src --include=*.tsx --include=*.\u2026\n- Bash: {\"command\": \"sed -n 60,400p apps/web/src/together/ChatPanel.tsx | grep -n \\\"onContextMenu\\\\|onTouch\\\\|onPointer\\\\|onLongPress\\\\|select\\\\|<ul\\\\|<li\\\\|textarea\\\\|<input\\\\|<form\\\\|testid\\\\|className\\\" |\u2026\n- Bash: {\"command\": \"grep -rln \\\"390\\\\|setTouchEmulation\\\\|hasTouch\\\\|pointer: coarse\\\\|touchstart\\\" e2e --include=*.ts --include=*.md 2>/dev/null | grep -v node_modules | head; echo ---; grep -n \\\"coarse\\\\|\u2026\n- Bash: {\"command\": \"sed -n 85,175p .claude/skills/ui-walkthrough/SKILL.md; echo ---; sed -n 1,60p e2e/cypress/e2e/47-tap-areas.cy.ts\", \"description\": \"Read the walkthrough phone section and the tap-areas e2\u2026\n- Bash: {\"command\": \"grep -n \\\"pointer\\\\|coarse\\\\|touch\\\" e2e/support/config.ts e2e/README.md | head -20; ls e2e/cypress/e2e | tail -8; grep -n \\\"scope\\\\|apps/web\\\\|e2e\\\" scripts/ci-scope.sh | head -30\", \"de\u2026\n- Bash: {\"command\": \"grep -n \\\"touch\\\\|phone\\\\|coarse\\\\|select\\\\|highlight\\\" apps/web/README.md | head -20; grep -rn \\\"#2015\\\\|2015\\\" --include=*.md . 2>/dev/null | grep -v \\\"node_modules\\\\|^./reviews\\\\|^./s\u2026\n- Bash: {\"command\": \"sed -n 62,80p apps/web/README.md | cut -c1-400; echo ---; cat .bot-journal.md | head -30; echo; grep -n \\\"typography\\\\|index.css\\\" apps/web/src/typography.test.ts | head -8; grep -n \\\"Ch\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/static-pages.ts | cut -c1-200; grep -rn \\\"index.css\\\" apps/web/src/main.tsx apps/web/index.html apps/web/static-pages.ts | head; grep -rn \\\"user-select: all\\\" -B6 a\u2026\n- Bash: {\"command\": \"grep -rn \\\"account-two-step__secret\\\" apps/web/src --include=*.tsx -B3 -A6 | head -40; grep -rn \\\"copy\\\\|clipboard\\\" apps/web/src/auth/*.tsx -il | head\", \"description\": \"Check how the 2F\u2026\n- Bash: {\"command\": \"grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10; grep -n \\\"no card\\\\|player-visible\\\\|web-only\\\\|client-only\\\" docs/issues-and-patches.md | head\", \"description\": \"Check whether \u2026\n- Bash: {\"command\": \"sed -n 364,382p docs/issues-and-patches.md | cut -c1-500\", \"description\": \"Read technical changes / technical log section\"}\n- Bash: {\"command\": \"grep -n \\\"^html\\\\| html {\\\\|^:root\\\\|@media (pointer\\\" apps/web/src/index.css | head -20; node --version; grep -n \\\"html\\\\b\\\" apps/web/src/typography.test.ts | head\", \"description\": \"Fin\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/plan3260/css && cd /tmp/plan3260 && for f in index.css together/together.css game/board.css; do mkdir -p css/$(dirname $f); git -C /home/runner/work/_temp/work/item-3260 sh\u2026\n- Bash: {\"command\": \"sed -n 1,20p apps/web/src/game/Zone.test.tsx; echo ...; sed -n 98,135p apps/web/src/game/Zone.test.tsx; grep -n \\\"readFileSync\\\\|dirname\\\\|fileURLToPath\\\\|join(\\\" apps/web/src/game/Zone.\u2026\n- Bash: {\"command\": \"cd /tmp/plan3260 && cat > proto.mjs <<'EOF'\\nimport { readFileSync } from \\\"node:fs\\\";\\nconst code = (s) => readFileSync(`css/${s}`, \\\"utf8\\\").replace(/\\\\/\\\\*[\\\\s\\\\S]*?\\\\*\\\\//g, \\\" \\\");\\\u2026\n- Bash: {\"command\": \"grep -rn \\\"two-step.css\\\\|account-two-step__secret\\\" apps/web/src e2e --include=*.ts --include=*.tsx | head; grep -n \\\"stylelint\\\" package.json apps/web/package.json | head -3; sed -n 20\u2026\n- Bash: {\"command\": \"cd apps/web/src && grep -rhE \\\"^(export )?type \\\\w+ = \\\\{\\\" --include=*.ts --include=*.tsx . | wc -l; grep -rhE \\\"^(export )?interface \\\\w+\\\" --include=*.ts --include=*.tsx . | wc -l; gr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3260/.bot-plan.md\", \"content\": \"# Plan draft, #3260 (planner notes)\\n\\nRead: issue + handoff, the draft commit `origin/claude/mobile-no-highlight` (8c\u2026\n- said: **Goal.** On a phone the web client highlights nothing but the chat. `html` takes no tap flash at any pointer. Under `(pointer: coarse)` it takes no text selection and no long-press callout. Fields (`input`, `textarea`, `contenteditable`) keep selection. `.chat-panel` restores all three. The #2015 \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-06T01:01:54Z",
       "owner_why": "it plans it",
@@ -17503,9 +17495,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-06T00:12:32Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42141027784",
+      "run_id": "pending:7c50726b-1793928730",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T01:01:54Z",
+      "started_at": "2026-11-06T01:32:51Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17587,9 +17579,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T01:31:54Z",
+    "at": "2026-11-06T01:32:51Z",
     "url": "",
-    "what": "build #3223 on claude-7"
+    "what": "build #3260 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-06T01:09:25Z",
