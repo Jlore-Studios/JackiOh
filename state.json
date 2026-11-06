@@ -15606,17 +15606,8 @@
       "waiting_comment": 6679397224
     },
     "3290": {
-      "action": "plan",
-      "asks": [
-        "c:6687642824"
-      ],
-      "build_next": {
-        "from_run": "42238532122",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-06T15:25:27Z",
-        "until": "2026-11-06T15:55:27Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-06T15:25:15Z",
         "difficulty": "medium",
@@ -15635,10 +15626,9 @@
         "reason": "planned on sonnet",
         "trail": ".rs\"}\n- Bash: {\"command\": \"grep -n \\\"hand_set\\\\|dev_strict\\\\|strict\\\\|fn r\\\\|ban\\\" crates/server/tests/api/ranked.rs | head -80; wc -l crates/server/tests/api/ranked.rs\"}\n- Bash: {\"command\": \"sed -n 1,215p crates/server/tests/api/ranked.rs\"}\n- Bash: {\"command\": \"sed -n 836,960p crates/server/tests/api/ranked.rs; sed -n 1015,1145p crates/server/tests/api/ranked.rs\"}\n- Bash: {\"command\": \"sed -n 488,625p crates/server/tests/api/ranked.rs; grep -n \\\"macro_rules! q\\\" -A25 crates/server/tests/support/store.rs | head -60\"}\n- Bash: {\"command\": \"sed -n 625,700p crates/server/tests/api/ranked.rs; grep -n \\\"fn seed_placed_bot\\\\|fn seed_bot\\\\|fn backs\\\" -A16 crates/server/tests/api/ranked.rs | head -70\"}\n- Bash: {\"command\": \"sed -n 530,550p crates/server/src/db/pg.rs; grep -rn \\\"status\\\" crates/server/migrations/*.sql | grep -i \\\"profiles\\\\|banned\\\" | head -12; sed -n 100,125p crates/server/README.md; sed -n\u2026\n- Bash: {\"command\": \"grep -n \\\"9.12\\\" spec/09-architecture.md | head; ls spec | head -40; grep -rn \\\"R3074001\\\" spec --include=*.md -l | head\"}\n- Bash: {\"command\": \"sed -n 243,275p spec/09-architecture.md | cut -c1-1400; grep -n \\\"R3074001\\\" spec/09-architecture.md | cut -c1-80\"}\n- Bash: {\"command\": \"sed -n 1,80p spec/README.md | cut -c1-600; cat spec/rulings/R3205000.md | head -20; ls spec/pending | head -3; cat spec/pending/3205.md | head -5 | cut -c1-500\"}\n- Bash: {\"command\": \"grep -rn \\\"counts(\\\\|standings_of\\\\|listed(\\\\|\\\\.hand_set\\\\|\\\\.bot\\\\b\\\" crates apps --include=*.rs | grep -v \\\"^crates/shared/tests\\\\|^crates/server/tests\\\" | grep -v \\\"^crates/shared/sr\u2026\n- Bash: {\"command\": \"grep -rn \\\"jlorious_order\\\\|ranked_standings\\\" crates --include=*.rs -l | grep -v tests; grep -rn \\\"SeasonStanding\\\\|ranked/board\\\\|RatingRecord\\\" crates/wasm crates/tools apps 2>/dev/nu\u2026\n- Bash: {\"command\": \"grep -n \\\"ts\\\" crates/shared/Cargo.toml | head; grep -rn \\\"banned\\\" crates/shared/src | head; sed -n 1,40p crates/server/src/bots/pool.rs | head -5; grep -n \\\"ranked_standings\\\" crates/s\u2026\n- Bash: {\"command\": \"sed -n 365,380p crates/server/src/db/fake.rs; grep -n \\\"pub fn seed_profile\\\" -A12 crates/server/src/db/fake.rs | head -30; grep -rn \\\"ranked_standings\\\" crates/server/tests/sql/*.sql | \u2026\n- Bash: {\"command\": \"grep -rn \\\"jackioh-shared\\\" --include=Cargo.toml . | grep -v target; sed -n 20,40p crates/shared/README.md | cut -c1-300; grep -n \\\"generated\\\" crates/shared/README.md | head\"}\n- Bash: {\"command\": \"sed -n 680,690p crates/shared/README.md | cut -c1-400; grep -n \\\"ts\\\\b\\\" crates/wasm/core/Cargo.toml crates/wasm/Cargo.toml | head; cargo --version 2>&1 | head -1; ls target 2>/dev/null \u2026\n- Bash: {\"command\": \"grep -n '\\\"id\\\": \\\"v[0-9]' crates/server/tests/store/contract.rs | head; grep -n \\\"ProfileStatus\\\\|profiles_set_status\\\" crates/server/tests/store/contract.rs | head; grep -n \\\"^use\\\\|^ \u2026\n- Bash: {\"command\": \"grep -rn \\\"ban_profile\\\\|unban_profile\\\" crates/server --include=*.rs | grep -v \\\"^crates/server/src/cli/moderate.rs\\\" | head; grep -n \\\"pub mod cli\\\" crates/server/src/lib.rs; sed -n 16\u2026\n- Bash: {\"command\": \"sed -n 1,12p crates/server/tests/store/moderate.rs; grep -n \\\"pub db\\\" crates/server/src/app.rs; tail -30 crates/server/tests/api/ranked.rs; grep -n \\\"pub mod moderate\\\" crates/server/sr\u2026\n- Bash: {\"command\": \"sed -n 11482,11500p crates/server/tests/store/contract.rs; grep -n \\\"async fn active_profile\\\" -A12 crates/server/tests/store/contract.rs | head -20; grep -n \\\"macro_rules! both_stores\\\"\u2026\n- Bash: {\"command\": \"grep -n \\\"cargo jackioh spec check. fails\\\" spec/README.md | head -2; awk '/cargo jackioh spec check. fails when/{print}' spec/README.md | cut -c590-2400; cat spec/rulings/R0640000.md 2>\u2026\n- Bash: {\"command\": \"git show --stat 5184ab2462 | head -50; cat spec/rulings/R640000.md | cut -c1-700 | head -14\"}\n- Bash: {\"command\": \"sed -n 310,345p crates/server/src/bots/pool.rs; grep -n \\\"season_ranks\\\\|status\\\" crates/server/tests/sql/01_schema_invariants.sql | sed -n '/1203/,+3p' | head; sed -n 1198,1215p crates/\u2026\n- Bash: {\"command\": \"grep -n \\\"hand-set\\\\|hand_set\\\\|R3074001\\\\|R640000\\\" crates/server/README.md crates/shared/README.md | cut -c1-260\"}\n- Bash: {\"command\": \"sed -n 855,868p crates/server/README.md | cut -c1-400; sed -n 1157,1164p crates/server/README.md | cut -c1-300; sed -n 462,470p crates/shared/README.md | cut -c1-300\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/shared/tests/ranked_game.rs; sed -n 75,140p crates/shared/tests/ranked_game.rs; grep -n \\\"^fn \\\\|^#\\\\[test\\\\]\\\" crates/shared/tests/ranked_game.rs | grep \\\"fn \\\" | he\u2026\n- Bash: {\"command\": \"sed -n 186,292p crates/shared/tests/ranked_game.rs\"}\n- Bash: {\"command\": \"sed -n 455,478p crates/server/tests/api/ranked.rs; grep -n \\\"^mod \\\\|^// ----\\\" crates/server/tests/api/ranked.rs | head -30; grep -n \\\"economy_live\\\" crates/server/tests/support/deps.rs\u2026\n- Bash: {\"command\": \"grep -rn \\\"R329[0-9]\\\" spec crates apps e2e docs 2>/dev/null --include=* -l | grep -v node_modules | head -3; ls spec/pending/3290.md 2>&1 | head -1; grep -n \\\"R3074001\\\" spec/09-archite\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -30; ls crates/server/tests | head -30\"}\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R(0603|0605|0612|0608|1555000|1436|0111)\\\\.md|^R0603|^R0605\\\"; grep -n \\\"^### 9.4\\\\|^### 9.12\\\" spec/09-architecture.md\"}\n- said: Everything I need is read. I'll write the draft to `.bot-plan.md`, then post the plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3290/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"No line of the rule holds: no engine, AI or migration, about 15 file\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; git status --porcelain | head\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No line of the rule holds: no engine, AI or migration, about 15 files; one optional field plumbed along R3074001's existing path (shared board -> two stores -> leaderboard loop).\"} --> ## Goal A banned account (`profiles.status = 'banned'`) leaves the publ\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-06T14:57:13Z",
       "owner_why": "it plans it",
@@ -15651,12 +15641,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-06T14:53:03Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42238532122",
+      "run_id": "pending:5b3e7001-1793978887",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T14:57:13Z",
+      "started_at": "2026-11-06T15:28:44Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6687642824"
+      ]
     },
     "3294": {
       "action": "review",
@@ -16217,9 +16209,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T15:27:50Z",
+    "at": "2026-11-06T15:28:44Z",
     "url": "",
-    "what": "review #3272 on claude-1"
+    "what": "build #3290 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T15:04:40Z",
