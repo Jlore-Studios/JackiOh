@@ -15151,7 +15151,7 @@
       }
     },
     "3272": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -15181,7 +15181,7 @@
       "issue": 3223,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
@@ -15189,7 +15189,7 @@
       "queued_at": "2026-11-06T12:41:08Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "42201354591",
+      "run_id": "pending:dd0e8ff1-1793969056",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15210,16 +15210,9 @@
         "run": "42193771194"
       },
       "source": "conflict",
-      "started_at": "2026-11-06T10:16:02Z",
+      "started_at": "2026-11-06T12:45:01Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-06T12:41:08Z",
-        "until": "2026-11-06T13:11:08Z",
-        "why": "it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
@@ -16017,9 +16010,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T12:44:01Z",
+    "at": "2026-11-06T12:45:01Z",
     "url": "",
-    "what": "review #3268 on claude-8"
+    "what": "revise #3272 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T12:23:55Z",
