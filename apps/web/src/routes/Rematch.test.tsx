@@ -229,10 +229,13 @@ describe("RematchButtons in the result panel (#477)", () => {
   it("the stylesheets lay the block into the panel's row and make Rematch the panel's primary", () => {
     const animations = gameCss("animations.css");
     const reveal = gameCss("reveal.css");
+    // #3219: the place's skin is the primary role's, in buttons.css; animations.css lays the row out.
+    const buttons = gameCss(join("..", "buttons.css"));
 
-    expect(animations).toContain(
+    expect(buttons).toContain(
       ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child { border-color: var(--primary-edge",
     );
+    expect(animations).not.toContain("--primary-face");
     expect(animations).toMatch(
       /\.result-overlay__actions > \.rematch button, \.result-overlay__reopen \{ min-height: 44px; padding: var\(--space-4\) var\(--space-7\); border-radius: var\(--radius-md\); font-weight: 700; \}/,
     );

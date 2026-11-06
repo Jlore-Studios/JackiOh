@@ -65,7 +65,7 @@ export default function DeckCosmeticsPicker({
       <button
         ref={buttonRef}
         type="button"
-        className="ws-cosmetics-button"
+        className="ws-cosmetics-button button-secondary"
         data-testid={DECK_COSMETICS_BUTTON}
         aria-label={t("Deck cosmetics")}
         title={t("Deck cosmetics")}

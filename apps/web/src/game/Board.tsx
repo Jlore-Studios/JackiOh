@@ -527,7 +527,7 @@ function ControlButton({
   return (
     <button
       type="button"
-      className={cx("control", `control-${control}`)}
+      className={cx("control", `control-${control}`, control === "end-turn" && "button-primary")}
       data-testid={testId}
       title={title}
       data-legal={legalAttr(legal)}

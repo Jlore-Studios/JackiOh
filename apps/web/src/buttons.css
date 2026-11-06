@@ -1,0 +1,162 @@
+/* The buttons' four roles (#3219), each with one skin, drawn the same on every screen: the tavern's
+   menus and the others, the board and its dialogs.
+
+     button-primary    the one way on, in the tavern's gold
+     button-secondary  any other control, on a <button> or an <a>; a <button> with no role wears it
+     button-danger     the act that cannot be taken back: Concede, Delete account, Leave
+     link-button       a quiet text action
+
+   A control keeps only its own layout (size, margin, place) and names its role for the skin; no
+   other sheet restates one (buttons.test.ts holds it, and its UNROLED lists the skins that remain).
+   The top bar's `top-bar-button` keeps its own (routes/top-bar.css, #3189), as card faces do.
+
+   Each role rule weighs one class (0,1,0), and a state of one adds what it names. A generic rule
+   that would outweigh a role (index.css's `.app-shell button:hover`, tavern.css's size rules and
+   its prose link) skips the roles through a weightless `:where(:not())`. The load order cannot be
+   relied on: main.tsx loads index.css, which imports this sheet, after the components' sheets.
+
+   A board sheet (palette.test.ts and the others count it so), and a skin only: no font size, no
+   transition, no radius. */
+
+:root {
+  /* The one primary button, in the tavern's gold (the landing's Play vs AI): End turn, the prompt's
+     Confirm, the result panel's first action and every menu's call to action, so a screen never
+     shows two kinds of "go". The hover mixes 7% white into each of the face's stops. */
+  --primary-edge: var(--pal-gold-200);
+  --primary-face: linear-gradient(180deg, var(--pal-parchment) 0%, var(--pal-gold-400) 42%, var(--pal-brass-500) 58%, var(--pal-brass-600) 100%);
+  --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
+  --primary-ink: var(--pal-brass-950);
+  --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  /* The same button in green once nothing else is left (B15, below). */
+  --primary-face-ready: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-500) 55%, var(--pal-green-700));
+  --primary-face-ready-hover: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-400) 55%, var(--pal-green-500));
+  --primary-shadow-ready: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-green-900);
+
+  /* The one red of an act that cannot be taken back: the opponent's, the color of a loss. */
+  --danger: var(--pal-red-600);
+}
+
+/* ---- secondary: and every <button> that names no role ------------------------------------- */
+
+button,
+.button-secondary {
+  border: 1px solid var(--line-bright);
+  background: var(--bg-raised);
+}
+
+.button-secondary {
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* The shell's and the forms' hover for a button with no role, at index.css's old weight (0,3,1). */
+.app-shell button:where(:not(.button-primary, .button-danger, .link-button)):hover:not(:disabled),
+.form-card button:where(:not(.button-primary, .button-danger, .link-button)):hover:not(:disabled),
+.button-secondary:hover:not(:disabled, [aria-disabled="true"]) {
+  border-color: var(--text-dim);
+  background: color-mix(in srgb, var(--bg-raised) 70%, var(--line-bright));
+}
+
+/* ---- primary ------------------------------------------------------------------------------- */
+
+.button-primary {
+  border: 1px solid var(--primary-edge);
+  text-decoration: none;
+}
+
+/* The result panel's first way on is the primary too, by its place (animations.css lays the row
+   out). When that is the rematch block, the block is no button: its first button, Rematch, is the
+   primary (#477: the rule used to paint the whole block gold and hand its ink to Double or nothing).
+   Its first child can be a note, so the place sets the edge's color and never the `border`. */
+.button-primary,
+.result-overlay__actions > :first-child:not(.result-overlay__view, .rematch),
+.result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child {
+  border-color: var(--primary-edge);
+  background: var(--primary-face);
+  color: var(--primary-ink);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
+  box-shadow: var(--primary-shadow);
+}
+
+.button-primary:hover:not(:disabled, [aria-disabled="true"]),
+.result-overlay__actions > :first-child:not(.result-overlay__view, .rematch):hover,
+.result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child:hover:not(:disabled) {
+  background: var(--primary-face-hover);
+}
+
+/* Not ready yet: the same button, unlit, its label still legible. A locked End turn is one (it is
+   `disabled`, so it was the bare button's raised face before #3219 too; Board.test.tsx holds it). */
+.button-primary:is(:disabled, [aria-disabled="true"]) {
+  border-color: var(--line-bright);
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  text-shadow: none;
+  box-shadow: none;
+}
+
+/* End turn once nothing else is left to do (B15): the button itself turns green, as Hearthstone's
+   does, and rings green like every other ready element (highlights.css). End turn is
+   `button-primary`, which the generic ring rule there outranks, so this one names the same button
+   more specifically. The ring is still the first box-shadow layer. */
+.board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]) {
+  border-color: var(--pal-green-200);
+  background: var(--primary-face-ready);
+  color: var(--pal-brass-950);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 30%, transparent);
+  box-shadow:
+    0 0 0 2px var(--glow-ready),
+    0 0 14px 3px color-mix(in srgb, var(--glow-ready) 55%, transparent),
+    var(--primary-shadow-ready);
+}
+
+.board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]):hover {
+  background: var(--primary-face-ready-hover);
+}
+
+/* End turn in the opponent's turn: its housing sunk into the rail and dimmed (board.css draws the
+   rest of the housing: its inset shadow, cursor and filter). */
+.board .control.control-end-turn[data-turn-state="enemy"] {
+  border-color: var(--pal-wood-800);
+  background: var(--bg-sunken);
+  color: color-mix(in srgb, var(--text) 52%, var(--pal-grey-500));
+}
+
+/* ---- danger -------------------------------------------------------------------------------- */
+
+.button-danger {
+  border: 1px solid color-mix(in srgb, var(--danger) 70%, var(--line-bright));
+  background: color-mix(in srgb, var(--danger) 22%, var(--bg-raised));
+  color: var(--text);
+  text-decoration: none;
+}
+
+.button-danger:hover:not(:disabled, [aria-disabled="true"]) {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 34%, var(--bg-raised));
+}
+
+/* ---- link: a quiet text action; the top bar's draw themselves ------------------------------ */
+
+.link-button:where(:not(.top-bar-button)) {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--pal-gold-400);
+  text-decoration: underline;
+  text-decoration-color: var(--line-bright);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  box-shadow: none;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.link-button:where(:not(.top-bar-button)):hover:not(:disabled) {
+  color: var(--pal-gold-200);
+  text-decoration-color: currentColor;
+}
+
+.link-button:where(:not(.top-bar-button)):disabled {
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+  text-decoration: none;
+  opacity: 1;
+}

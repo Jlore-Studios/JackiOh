@@ -221,7 +221,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
             }}
           />
           <div className="account-actions">
-            <button type="submit" data-testid={twoStepTestid.confirm} disabled={busy} aria-busy={busy}>
+            <button type="submit" className="button-primary" data-testid={twoStepTestid.confirm} disabled={busy} aria-busy={busy}>
               {busy ? t("Checking…") : t("Turn it on")}
             </button>
             <button

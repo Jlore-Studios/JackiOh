@@ -45,7 +45,7 @@ writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws wh
 at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
 no screen shows, still use filters).
 
-The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, `buttons.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
@@ -92,9 +92,20 @@ Back or Account link, Friends, language button and settings gear with one rule, 
 worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
 a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
 in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
-the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
-`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
-draws its own buttons.
+the replays and the deck screens are not `.tavern`, and the tavern's bare-button size rule and buttons.css's
+link-button skip `top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar
+(`placement="game"`) draws its own buttons.
+
+The buttons are four roles (#3219), each one skin in `src/buttons.css`, imported by `index.css` after the
+motion and drawn the same on every screen, in the tavern or not, on a menu or the board: `button-primary`
+(the one way on, `--primary-face`'s gold; the result panel's first action takes it by its place),
+`button-secondary` (on a `<button>` or an `<a>`), `button-danger` (`--danger`'s red, for the act that
+cannot be taken back: Concede, Delete account, Leave game, Leave fight) and `link-button` (a quiet text
+action). A `<button>` that names no role looks like the secondary. A control keeps only its own layout
+(size, margin, place), and the tavern only sizes its buttons. `src/buttons.test.ts` checks this: it draws
+each role inside and outside `.tavern`, finds no other sheet restating a role's skin or that of a one-off
+it replaced, and holds the button skins that remain no role's (the top bar's, card-like tiles, pressed
+toggles) to each sheet's count in `UNROLED`.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,

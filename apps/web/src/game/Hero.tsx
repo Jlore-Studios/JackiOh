@@ -304,7 +304,7 @@ function PowerButton({
   return (
     <button
       type="button"
-      className={cx("power-button", extra && "power-extra")}
+      className={cx("power-button", "button-secondary", extra && "power-extra")}
       data-testid={testId}
       data-instance-id={power.instanceId}
       data-legal={legalAttr(live)}

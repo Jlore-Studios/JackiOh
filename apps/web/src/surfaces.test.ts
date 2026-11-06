@@ -31,7 +31,10 @@ const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//
 
 /** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
-  (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
+  (sheet) =>
+    sheet === "index.css" ||
+    sheet === "buttons.css" ||
+    (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
 /** Every other sheet's own radii, shadows, layers and gradients, counted as the board's test finds them (card faces, the table and fx keep their gradients by design): one that moves values onto surfaces.css lowers its number, and none gains one. */
@@ -40,7 +43,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "auth/auth.css": 1,
   "auth/code-field.css": 23,
   "auth/consent.css": 3,
-  "auth/tavern.css": 56,
+  "auth/tavern.css": 27,
   "auth/two-step.css": 1,
   "cards/art/art.css": 7,
   "cards/cards.css": 162,
@@ -74,16 +77,16 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "packs/pack-object.css": 12,
   "packs/packs.css": 7,
   "patches/patches.css": 25,
-  "practice/practice.css": 87,
+  "practice/practice.css": 69,
   "practice/sandbox.css": 7,
   "rank/rankCrest.css": 1,
-  "routes/account.css": 2,
+  "routes/account.css": 1,
   "routes/command-menu.css": 3,
   "routes/dev-panel.css": 5,
   "routes/entry-card.css": 3,
-  "routes/game-banner.css": 21,
+  "routes/game-banner.css": 7,
   "routes/landing.css": 61,
-  "routes/lobby.css": 40,
+  "routes/lobby.css": 37,
   "routes/replays.css": 1,
   "routes/site-footer.css": 1,
   "routes/stats.css": 15,

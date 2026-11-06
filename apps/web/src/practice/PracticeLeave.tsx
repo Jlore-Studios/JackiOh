@@ -83,7 +83,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
           <button
             ref={stay}
             type="button"
-            className="practice-play"
+            className="practice-play button-primary"
             data-testid={practiceTestid.leaveStay}
             onClick={onStay}
           >
@@ -92,7 +92,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
           {canSave ? (
             <button
               type="button"
-              className="practice-result__secondary"
+              className="practice-result__secondary button-secondary"
               data-testid={practiceTestid.leaveSave}
               onClick={onSaveAndLeave}
             >
@@ -101,7 +101,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
           ) : null}
           <button
             type="button"
-            className="practice-result__secondary"
+            className="practice-result__secondary button-danger"
             data-testid={practiceTestid.leaveConfirm}
             onClick={onLeave}
           >

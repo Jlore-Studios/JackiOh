@@ -166,7 +166,7 @@ export function PracticeResult({
           <button
             ref={playAgain}
             type="button"
-            className="practice-play"
+            className="practice-play button-primary"
             data-testid={practiceTestid.playAgain}
             onClick={onPlayAgain}
           >
@@ -174,7 +174,7 @@ export function PracticeResult({
           </button>
           <button
             type="button"
-            className="practice-result__secondary"
+            className="practice-result__secondary button-secondary"
             data-testid={practiceTestid.changeSetup}
             onClick={onChangeSetup}
           >
@@ -184,12 +184,12 @@ export function PracticeResult({
         {onWatchReplay === undefined && onShareLastTurn === undefined ? null : (
           <div className="practice-result__replay">
             {onWatchReplay === undefined ? null : (
-              <button type="button" className="practice-result__secondary" data-testid={practiceTestid.watchReplay} onClick={onWatchReplay}>
+              <button type="button" className="practice-result__secondary button-secondary" data-testid={practiceTestid.watchReplay} onClick={onWatchReplay}>
                 {t("Watch the replay")}
               </button>
             )}
             {onShareLastTurn === undefined ? null : (
-              <button type="button" className="practice-result__secondary" data-testid={practiceTestid.shareLastTurn} onClick={onShareLastTurn}>
+              <button type="button" className="practice-result__secondary button-secondary" data-testid={practiceTestid.shareLastTurn} onClick={onShareLastTurn}>
                 {t("Share the last turn")}
               </button>
             )}
