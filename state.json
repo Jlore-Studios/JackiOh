@@ -18308,7 +18308,8 @@
       "started_at": "2026-11-06T06:49:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6679397224
     }
   },
   "labels_synced": "fce3910f5abefcbe",
