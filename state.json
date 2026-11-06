@@ -16504,10 +16504,17 @@
     "what": "build #3212 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-06T16:53:36Z",
+    "at": "2026-11-06T17:01:43Z",
     "notes": [
-      "#3299 is held for `claude-4` until 11:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "#3212 is held for `claude-4` until 11:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+      "#3299: `claude-4` can start again, so its hold is lifted",
+      "#3212: `claude-4` can start again, so its hold is lifted",
+      "started revise #3299 on claude-4 (run 42258216681)",
+      "started build #3212 on claude-4 (run 42258351222)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#3307: closed, so `bot:merging` is off",
+      "#3304: closed, so `bot:merging` is off",
+      "#3268: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17213,7 +17220,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T16:53:36Z",
+  "loop_tick": "2026-11-06T17:01:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
