@@ -14904,6 +14904,7 @@
     "3268": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -14919,7 +14920,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-06T01:46:14Z",
+      "feedback_since": "2026-11-06T11:40:56Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-06T06:36:02Z",
@@ -14933,13 +14934,15 @@
       "interruptions": 0,
       "issue": 3257,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-8",
-      "question": "At 390\u00d7664, for a DEF unit that has an Activate ability, which requirement gives way?",
+      "question": "",
       "queued_at": "2026-11-06T11:31:27Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "42212048369",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -14960,12 +14963,13 @@
         "provider": "claude-8",
         "run": "42169999177"
       },
-      "source": "request",
+      "source": "",
       "started_at": "2026-11-06T11:40:56Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6683783985"
       ],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
