@@ -99,7 +99,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "undo/undo.css": 3,
 };
 
-const RADII =[...read("surfaces.css").matchAll(/^\s*--radius-([\w-]+):\s*([\d.]+px|[\d.]+%);$/gm)].map((match) => [
+const RADII = [...read("surfaces.css").matchAll(/^\s*--radius-([\w-]+):\s*([\d.]+px|[\d.]+%);$/gm)].map((match) => [
   match[1] ?? "",
   match[2] ?? "",
 ]);
