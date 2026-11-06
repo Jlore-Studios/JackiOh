@@ -19,7 +19,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { TERM_HOVER_DELAY_MS } from "./constants.ts";
-import { GLOSSARY, type GlossaryTermId } from "./glossary.ts";
+import type { GlossaryEntry } from "../wire/generated/GlossaryEntry.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
 import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
 import { useRefsInteractive } from "./refContext.tsx";
@@ -58,9 +58,8 @@ function viewport(): { width: number; height: number } {
   return { width: window.innerWidth, height: window.innerHeight };
 }
 
-function TermTooltip({ id, term, anchor }: { id: string; term: GlossaryTermId; anchor: Rect }): ReactElement {
+function TermTooltip({ id, entry, anchor }: { id: string; entry: GlossaryEntry; anchor: Rect }): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
-  const entry = GLOSSARY[term];
   const placed = placePreview(anchor, viewport(), { width: 0, height: 0 }, "above");
 
   // Once laid out, place it again by its real size. jsdom has no layout and keeps the estimate.
@@ -82,7 +81,7 @@ function TermTooltip({ id, term, anchor }: { id: string; term: GlossaryTermId; a
       role="tooltip"
       className="cf-term-tip"
       data-testid={TERM_TOOLTIP_TESTID}
-      data-term={term}
+      data-term={entry.id}
       style={{ position: "fixed", left: placed.left, top: placed.top }}
     >
       <strong className="cf-term-tip-label">{entry.label}</strong> {entry.rule}
@@ -91,7 +90,7 @@ function TermTooltip({ id, term, anchor }: { id: string; term: GlossaryTermId; a
   );
 }
 
-function LiveTerm({ term, mode, children }: { term: GlossaryTermId; mode: "pointer" | "control"; children: ReactNode }): ReactElement {
+function LiveTerm({ entry, mode, children }: { entry: GlossaryEntry; mode: "pointer" | "control"; children: ReactNode }): ReactElement {
   const control = mode === "control";
   const tooltipId = useId();
   const ref = useRef<HTMLElement>(null);
@@ -197,7 +196,7 @@ function LiveTerm({ term, mode, children }: { term: GlossaryTermId; mode: "point
       <strong
         ref={ref}
         className="cf-term"
-        data-term={term}
+        data-term={entry.id}
         data-tip={mode}
         data-tip-open={anchor === null ? undefined : "true"}
         tabIndex={control ? 0 : undefined}
@@ -242,17 +241,17 @@ function LiveTerm({ term, mode, children }: { term: GlossaryTermId; mode: "point
       >
         {children}
       </strong>
-      {anchor === null ? null : <TermTooltip id={tooltipId} term={term} anchor={anchor} />}
+      {anchor === null ? null : <TermTooltip id={tooltipId} entry={entry} anchor={anchor} />}
     </>
   );
 }
 
 /** A glossary term in a card's text: plain everywhere, showing its rule where the surface allows. */
-export function TermTip({ term, children }: { term: GlossaryTermId; children: ReactNode }): ReactElement {
+export function TermTip({ entry, children }: { entry: GlossaryEntry; children: ReactNode }): ReactElement {
   const mode = useTermTipMode();
-  if (mode === "off") return <strong className="cf-term" data-term={term}>{children}</strong>;
+  if (mode === "off") return <strong className="cf-term" data-term={entry.id}>{children}</strong>;
   return (
-    <LiveTerm term={term} mode={mode}>
+    <LiveTerm entry={entry} mode={mode}>
       {children}
     </LiveTerm>
   );

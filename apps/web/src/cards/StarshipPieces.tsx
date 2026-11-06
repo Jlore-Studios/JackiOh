@@ -6,19 +6,20 @@ import type { ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CardRef } from "./CardRef.tsx";
-import type { StarshipPieceRef } from "./model.ts";
+import type { StarshipFace } from "../wire/generated/StarshipFace.ts";
 import { useDefResolver } from "./refContext.tsx";
 import { TermTip } from "./TermTip.tsx";
 
 export const STARSHIP_PIECES_TESTID = "starship-pieces";
 
-export function StarshipPieces({ list }: { list: readonly StarshipPieceRef[] }): ReactElement {
+export function StarshipPieces({ starship }: { starship: StarshipFace }): ReactElement {
+  const list = starship.list;
   useLocale();
   const resolve = useDefResolver();
   return (
     <span className="cf-starship" data-testid={STARSHIP_PIECES_TESTID} data-pieces={list.length}>
       <span className="cf-starship-head">
-        <TermTip term="Starship">{t("Starship")}</TermTip>
+        {starship.term === null ? t("Starship") : <TermTip entry={starship.term}>{t("Starship")}</TermTip>}
       </span>
       {list.length === 0 ? (
         <span className="cf-starship-empty">{t("No pieces yet")}</span>

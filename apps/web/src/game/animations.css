@@ -1691,11 +1691,11 @@
   z-index: var(--z-showcase);
   display: grid;
   justify-items: center;
-  gap: 6px;
+  gap: var(--space-3);
   box-sizing: border-box;
   width: max-content;
   max-width: calc(100vw - 32px);
-  padding: 20px 28px 22px;
+  padding: var(--space-8) calc(var(--space-9) + var(--space-2)) var(--space-8);
   border: 1px solid color-mix(in srgb, var(--selected) 45%, var(--line-bright));
   border-radius: var(--radius-lg);
   background: var(--bg-raised);
@@ -1739,8 +1739,8 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-top: 12px;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
 }
 
 /* A line of news under the ways on (the daily Jlore cap, R1483000): a row of its own, after "View
@@ -1761,7 +1761,7 @@
 .result-overlay__actions > .rematch button,
 .result-overlay__reopen {
   min-height: 44px;
-  padding: 8px 18px;
+  padding: var(--space-4) var(--space-7);
   border-radius: var(--radius-md);
   font-weight: 700;
 }
@@ -1799,11 +1799,11 @@
   flex: 0 0 auto;
   grid-auto-flow: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-6);
   width: max-content;
   max-width: calc(100% - 16px);
-  margin: 8px auto 0;
-  padding: 6px 8px 6px 18px;
+  margin: var(--space-4) auto 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-7);
   border-radius: var(--radius-pill);
 }
 
@@ -1818,7 +1818,7 @@
 
 /* A chipless chip keeps its right padding. */
 [data-form="chip"]:not(:has(> button)) {
-  padding-right: 18px;
+  padding-right: var(--space-7);
 }
 
 /* A phone's control bar is one row: the chip keeps to the outcome and its button, clear of the log

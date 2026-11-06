@@ -84,4 +84,30 @@ describe("R3217000 the providers' buttons", () => {
     expect(mark).not.toBeNull();
     expect(mark).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("R3217000 Roblox's button carries Roblox's official tilt mark, white and decorative", () => {
+    draw(["google", "custom:roblox"]);
+    const roblox = screen.getByRole("button", { name: "Continue with Roblox" });
+    const marks = roblox.querySelectorAll("svg.auth-oauth-mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveAttribute("aria-hidden", "true");
+    const path = marks[0]?.querySelector("path");
+    expect(path).toHaveAttribute(
+      "d",
+      "M31.6984 0L0 118.302L118.302 150L150 31.6984L31.6984 0ZM87.1031 95.9652L54.0454 87.1031L62.9075 54.0454L95.9784 62.9075L87.1031 95.9652Z",
+    );
+    expect(path).toHaveAttribute("fill", "currentColor");
+  });
+
+  it("R3217000 Roblox's mark is drawn at the Google mark's size and takes no focus", () => {
+    draw(["google", "custom:roblox"]);
+    const google = screen.getByRole("button", { name: "Continue with Google" }).querySelector("svg");
+    const roblox = screen.getByRole("button", { name: "Continue with Roblox" }).querySelector("svg");
+    expect(google).not.toBeNull();
+    expect(roblox).not.toBeNull();
+    expect(google?.getAttribute("width")).toBe("18");
+    expect(roblox?.getAttribute("width")).toBe(google?.getAttribute("width"));
+    expect(roblox?.getAttribute("height")).toBe(google?.getAttribute("height"));
+    expect(roblox).toHaveAttribute("focusable", "false");
+  });
 });

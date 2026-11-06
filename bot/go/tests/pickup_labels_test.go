@@ -137,6 +137,28 @@ func TestPickupLabels_AMixOfTiersIsPickedHighMediumNoneLow(t *testing.T) {
 	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{6, 5, 4, 3})
 }
 
+// #3275: the issue a red super run on `staging` (or on a promotion) opens goes before every tier,
+// `priority:high` included, whatever its labels: production waits on its fix.
+func TestPickupLabels_ARedSuperRunGoesBeforeEveryTier(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := testsupport.MakeCtx(gh)
+	pickupLabelsIssue(gh, 3, config.LabelBuild, pickupLabelsHigh)
+	gh.AddIssue(4, fakes.Issue{Title: "CI: daily super run failed", Labels: []string{config.LabelBuild, pickupLabelsHigh}})
+	gh.AddIssue(5, fakes.Issue{Title: "CI: super run failed on a production candidate", Labels: []string{config.LabelBuild}})
+	pickupLabelsIssue(gh, 6, config.LabelBuild)
+	gh.AddIssue(7, fakes.Issue{Title: "CI: daily super run failed (old)", Labels: []string{config.LabelBuild, pickupLabelsHigh}})
+	for _, c := range []struct {
+		number int
+		at     string
+	}{{3, "2026-09-20"}, {4, "2026-09-23"}, {5, "2026-09-24"}, {6, "2026-09-19"}, {7, "2026-09-21"}} {
+		pickupLabelsQueued(ctx, c.number, c.at+"T00:00:00Z")
+	}
+	// The two gate issues first, oldest first; then `priority:high` (only an exact title counts),
+	// then the rest.
+	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{4, 5, 3, 7, 6})
+	assertEqual(t, queue.PriorityNames[queue.GatePriority], "production gate")
+}
+
 func TestPickupLabels_TheChosenItemsTierIsInThePlan(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	pickupLabelsIssue(gh, 3, config.LabelBuild, pickupLabelsMedium)

@@ -577,7 +577,14 @@ func newEventsQueueWorld() *eventsQueueWorld {
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Body: "Closes #5", Labels: []string{config.LabelPR}, SHA: "s1"})
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(eventsTrust)})
 	flowUpdateItem(ctx, 9, pyjson.New("cleared", pyjson.New("sha", "s1")))
+	gh.Jobs["77"] = []*pyjson.Object{eventsQueueJob("rust (test engine)", "failure"), eventsQueueJob("rust", "failure"),
+		eventsQueueJob("web", "cancelled")} // its build failed a required check, which cancelled the rest
 	return &eventsQueueWorld{gh: gh, ctx: ctx}
+}
+
+// eventsQueueJob is a job of the merge queue's build, run 77.
+func eventsQueueJob(name, conclusion string) *pyjson.Object {
+	return pyjson.New("id", 7700+len(name), "name", name, "status", "completed", "conclusion", conclusion)
 }
 
 // queueCI is queue_ci(branch="gh-readonly-queue/main/pr-9-abc", conclusion="cancelled").
@@ -630,6 +637,29 @@ func TestEvents_OneStillQueuedAHeldOneOrAnUnclearedHeadIsLeftAlone(t *testing.T)
 	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR))
 	assertEqual(t, w.gh.BotComments(9), []string{})
 	assertEqual(t, w.gh.Reruns, []any{})
+}
+
+// A queue build cancelled with no job failed says nothing about its pull request: the queue built
+// it again after a pull request ahead of it left (ci.yml's `queue-supersede` cancelled the older
+// build), or a person stopped it. No CI fix; one the queue took out goes back in from the
+// housekeeping pass.
+func TestEvents_AQueueBuildCancelledWithNoJobFailedGetsNoCIFix(t *testing.T) {
+	w := newEventsQueueWorld()
+	w.gh.Jobs["77"] = []*pyjson.Object{eventsQueueJob("rust (test engine)", "success"), eventsQueueJob("web", "cancelled")}
+	notes := w.queueCI(eventsQueueBranch, "cancelled")
+	assertIn(t, "#9: its queue build was cancelled with no job failed", strings.Join(notes, " "))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR))
+	assertEqual(t, w.gh.BotComments(9), []string{})
+	assertNotIn(t, "source", dig(t, w.ctx.Store.Load(), "items", "9"))
+	w.gh.QueueRemovals["PR_9"] = eventsCopyMap(eventsQueue)
+	assertIn(t, "#9: back in the merge queue (taken out: CONFLICT)", w.housekeeping())
+	// A failed or timed-out job in a cancelled build counts, and so does a failed run.
+	w2 := newEventsQueueWorld()
+	w2.gh.Jobs["77"] = []*pyjson.Object{eventsQueueJob("db", "timed_out"), eventsQueueJob("web", "cancelled")}
+	assertEqual(t, w2.queueCI(eventsQueueBranch, "cancelled"), []string{"#9: queued a CI fix"})
+	w3 := newEventsQueueWorld()
+	w3.gh.Jobs["77"] = nil
+	assertEqual(t, w3.queueCI(eventsQueueBranch, "failure"), []string{"#9: queued a CI fix"})
 }
 
 func TestEvents_OneTakenOutWithNoFailedBuildGoesBackOncePerCommitOfMain(t *testing.T) {

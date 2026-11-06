@@ -1,10 +1,11 @@
 // `/shop` (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000): four panels, each reading with the caller's
 // token and the others again when one changes the account (#1309); odds and pity are `/purchases`'
 // (R1665000). Gated like `/collection` (its bounces are in gate.test.tsx); the account screen links it
-// only by the top bar's Jlore pill (R1646000, R1651000).
+// only by the top bar's Jlore pill (R1646000, R1651000). R3211000: a spend's answer folds into the panels
+// that show it and the page reads the rest once, when the opening closes (the last describe).
 
 import { CATALOG } from "@jackioh/cards";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
@@ -22,7 +23,7 @@ import { jlorePillTestid } from "../economy/JlorePill.tsx";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
-import { packsInfo } from "../packs/fixtures.ts";
+import { openedPack, packsInfo } from "../packs/fixtures.ts";
 import { packTestid } from "../packs/packs.ts";
 import {
   collectionOwningAllBut,
@@ -125,7 +126,8 @@ describe("#1577 the shop screen", () => {
       expect(calls.length, `${path} is read`).toBeGreaterThan(0);
       for (const call of calls) expect(call.headers.authorization, path).toBe(`Bearer ${TOKEN}`);
     }
-    expect(server.to("GET", "/api/packs"), "the shop's price and the opening's packs, once each").toHaveLength(2);
+    // R3206000: both panels ask at once, and one read answers both.
+    expect(server.to("GET", "/api/packs"), "the shop's price and the opening's packs share one read").toHaveLength(1);
   });
 
   it("a refused read says why on the screen, which keeps its heading", async () => {
@@ -196,7 +198,9 @@ describe("#1577 the shop screen", () => {
       "the opening holds the bought pack",
     ).toBeInTheDocument();
     expect(screen.queryByTestId(packTestid.none)).toBeNull();
-    expect(server.to("GET", "/api/packs")).toHaveLength(3);
+    // R3206000: the two panels' first reads were one, and the buy's answer folded into the kept packs,
+    // which the opening's read then found fresh: the screen shows what the server holds with one read.
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
 
     expect(await screen.findByTestId(shopTestid.cardBar, undefined, SLOW)).toHaveTextContent("149 / 150");
     fireEvent.click(await screen.findByTestId(shopTestid.open, undefined, SLOW));
@@ -338,7 +342,8 @@ describe("#1577 the /shop route through the route table", () => {
     expect(await screen.findByRole("heading", { name: "Shop" }, SLOW)).toBeInTheDocument();
     expect(await screen.findByTestId(shopTestid.wallet, undefined, SLOW)).toHaveTextContent("37 Jlore");
     expect(window.location.pathname).toBe(paths.shop);
-    expect(server.to("GET", "/api/packs")).toHaveLength(2);
+    // R3206000: the shop's panel and the opening's share the one read.
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
   });
 
   it("R1310000 an active account the server does not list as dev opens its card packs on the Shop", async () => {
@@ -415,5 +420,261 @@ describe("R1646000 the account screen links no Shop", () => {
     expect(Array.from(account.querySelectorAll(`a[href="${paths.shop}"]`))).toEqual([pill]);
     expect(pill.closest("nav")).not.toBeNull();
     expect(pill).toHaveAccessibleName(`${String(walletInfo().jlore)} Jlore`);
+  });
+});
+
+describe("R3211000 the Shop folds each spend's answer and reads once, when the opening closes", () => {
+  /** What an opening answers for the bars: the card bar paid a token and the cosmetic bar moved on. */
+  const OPENING_BARS = {
+    card: { before: 149, after: 41, size: 150, pays: 1 },
+    cosmetic: { before: 30, after: 77, size: 150, pays: 0 },
+    cosmeticPaid: [],
+    slotPoints: [0, 0, 0, 0, 0],
+  } as const;
+
+  /**
+   * A server that keeps the account: `held` Core packs, a wallet and the tokens, each moving with the spend
+   * that changes it, so what a read answers is what the spends left. `GET`s after the Shop is up are
+   * `reads()`, the `POST`s `spends()`.
+   */
+  function serveSpends(start: number): { server: StubServer; reads: () => string[]; spends: () => string[]; mark: () => void } {
+    let held = start;
+    let jlore = packsInfo().price + 50;
+    let bars = tokenBars();
+    const server = stubServer((call) => {
+      if (call.method === "GET") {
+        switch (call.path) {
+          case "/api/packs":
+            return { status: 200, body: { ...packsInfo(), unopened: held === 0 ? [] : [{ pack: "Core", count: held }] } };
+          case "/api/wallet":
+            return { status: 200, body: { jlore } };
+          case "/api/tokens":
+            return { status: 200, body: bars };
+          default:
+            return shopRead(call);
+        }
+      }
+      if (call.path === "/api/packs/buy") {
+        held += 1;
+        jlore = 12;
+        return { status: 200, body: { pack: "Core", jlore, unopened: held } };
+      }
+      if (call.path === "/api/packs/open") {
+        held -= 1;
+        bars = {
+          ...bars,
+          cardBar: { points: OPENING_BARS.card.after, size: OPENING_BARS.card.size },
+          cosmeticBar: { points: OPENING_BARS.cosmetic.after, size: OPENING_BARS.cosmetic.size },
+          tokens: { ...bars.tokens, card: bars.tokens.card + 1 },
+        };
+        return { status: 200, body: { ...openedPack(), unopened: held, bars: OPENING_BARS } };
+      }
+      return undefined;
+    });
+    let from = 0;
+    return {
+      server,
+      mark: () => {
+        from = server.calls.length;
+      },
+      reads: () => server.calls.slice(from).filter((call) => call.method === "GET").map((call) => call.path),
+      spends: () => server.calls.slice(from).filter((call) => call.method === "POST").map((call) => call.path),
+    };
+  }
+
+  /** The Shop with every panel read, so what is counted from here is what the spends cost. */
+  async function shopUp(): Promise<void> {
+    await screen.findByTestId(shopTestid.wallet, undefined, SLOW);
+    await screen.findByTestId(shopTestid.unopened, undefined, SLOW);
+    await screen.findByTestId(shopTestid.cardBar, undefined, SLOW);
+    await waitFor(() => {
+      expect(screen.queryByTestId(packTestid.held) ?? screen.queryByTestId(packTestid.none)).not.toBeNull();
+    }, SLOW);
+  }
+
+  const SETTLE_READS = ["/api/cosmetic-packs", "/api/tokens"];
+
+  it("R3211000 one buy then one open sends the two spends and at most two reads, after the scene closes", async () => {
+    const account = serveSpends(0);
+    render(<ShopRoute token={TOKEN} />);
+    await shopUp();
+    account.mark();
+
+    fireEvent.click(screen.getByTestId(shopTestid.buy("Core")));
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("12 Jlore");
+    }, SLOW);
+    expect(screen.getByTestId(shopTestid.held("Core"))).toHaveTextContent("Core pack: 1 unopened");
+    await waitFor(() => {
+      expect(screen.getByTestId(packTestid.heldRow("Core"))).toHaveTextContent("Core pack: 1 unopened");
+    }, SLOW);
+    expect(account.reads(), "a buy's answer is folded, nothing is read").toEqual([]);
+
+    fireEvent.click(screen.getByTestId(packTestid.open("Core")));
+    fireEvent.click(screen.getByTestId(packTestid.skipAll));
+    await screen.findByTestId(packTestid.outcome(0), undefined, SLOW);
+    expect(account.reads(), "nothing is read while the scene is open").toEqual([]);
+
+    fireEvent.click(screen.getByTestId(packTestid.close));
+    await waitFor(() => {
+      expect([...account.reads()].sort()).toEqual(SETTLE_READS);
+    }, SLOW);
+    // The Shop is settled: the reads are as many as they were, and the tokens read brought the held counts.
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.heldCard)).toHaveTextContent("Card tokens held: 2");
+    }, SLOW);
+    expect([...account.reads()].sort()).toEqual(SETTLE_READS);
+    expect(account.spends()).toEqual(["/api/packs/buy", "/api/packs/open"]);
+  });
+
+  it("R3211000 ten opens in a row send ten spends, no read while the scene is open, and at most two once it closes", async () => {
+    const account = serveSpends(10);
+    const fetchOwned = vi.fn(() => Promise.resolve(ownedCosmeticsOf()));
+    render(<ShopRoute token={TOKEN} />);
+    await shopUp();
+    account.mark();
+
+    fireEvent.click(screen.getByTestId(packTestid.openAll("Core")));
+    for (let pack = 1; pack <= 10; pack += 1) {
+      fireEvent.click(await screen.findByTestId(packTestid.skipAll, undefined, SLOW));
+      await screen.findByTestId(packTestid.outcome(0), undefined, SLOW);
+      if (pack < 10) {
+        fireEvent.click(screen.getByTestId(packTestid.next));
+        await waitFor(() => {
+          expect(screen.queryByTestId(packTestid.outcome(0))).toBeNull();
+        }, SLOW);
+      }
+    }
+    expect(account.spends()).toEqual(Array.from({ length: 10 }, () => "/api/packs/open"));
+    expect(account.reads(), "no read while the scene is open").toEqual([]);
+    await waitFor(() => {
+      expect(screen.getByTestId(packTestid.none), "the opening folded its count to none").toBeInTheDocument();
+      expect(screen.getByTestId(shopTestid.held("Core"))).toHaveTextContent("Core pack: 0 unopened");
+      expect(screen.getByTestId(shopTestid.cardBar)).toHaveTextContent("41 / 150");
+    }, SLOW);
+
+    // The ledger of owned cosmetics is read again once for the scene, not once for each opening.
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned, "no opening forgot it yet").toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId(packTestid.close));
+    await waitFor(() => {
+      expect([...account.reads()].sort()).toEqual(SETTLE_READS);
+    }, SLOW);
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned, "the close forgot it once").toHaveBeenCalledTimes(2);
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned).toHaveBeenCalledTimes(2);
+    expect(account.spends()).toHaveLength(10);
+  });
+
+  it("R3211000 the panels show the numbers of the answers", async () => {
+    // Every read answers the account as it was at the start: only an answer can have moved a panel.
+    const info = { ...packsInfo(), unopened: [{ pack: "Core", count: 2 }] };
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/packs") return { status: 200, body: info };
+      // Rich enough for a Buy to be pressed.
+      if (call.method === "GET" && call.path === "/api/wallet") return { status: 200, body: { jlore: info.price + 50 } };
+      if (call.method === "POST" && call.path === "/api/packs/buy") {
+        return { status: 200, body: { pack: "Core", jlore: 12, unopened: 3 } };
+      }
+      if (call.method === "POST" && call.path === "/api/packs/open") {
+        return { status: 200, body: { ...openedPack(), unopened: 2, bars: OPENING_BARS } };
+      }
+      return shopRead(call);
+    });
+    render(<ShopRoute token={TOKEN} />);
+    await shopUp();
+    const readsBefore = server.calls.filter((call) => call.method === "GET").length;
+
+    fireEvent.click(screen.getByTestId(shopTestid.buy("Core")));
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("12 Jlore");
+    }, SLOW);
+    expect(screen.getByTestId(shopTestid.held("Core"))).toHaveTextContent("Core pack: 3 unopened");
+    await waitFor(() => {
+      expect(screen.getByTestId(packTestid.heldRow("Core"))).toHaveTextContent("Core pack: 3 unopened");
+    }, SLOW);
+
+    fireEvent.click(screen.getByTestId(packTestid.open("Core")));
+    fireEvent.click(screen.getByTestId(packTestid.skipAll));
+    await screen.findByTestId(packTestid.outcome(0), undefined, SLOW);
+    // The open's answer holds 2 unopened, and the bars it settled: the shelf, the opening and the picker take them.
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.held("Core"))).toHaveTextContent("Core pack: 2 unopened");
+      expect(screen.getByTestId(packTestid.heldRow("Core"))).toHaveTextContent("Core pack: 2 unopened");
+      expect(screen.getByTestId(shopTestid.cardBar)).toHaveTextContent("41 / 150");
+      expect(screen.getByTestId(shopTestid.cosmeticBar)).toHaveTextContent("77 / 150");
+    }, SLOW);
+    expect(screen.getByTestId(shopTestid.wallet), "an opening spends no Jlore").toHaveTextContent("12 Jlore");
+    expect(server.calls.filter((call) => call.method === "GET")).toHaveLength(readsBefore);
+  });
+
+  it("R3211000 a cosmetic pack's opening folds its bars and reads the tokens once, and neither the packs nor the wallet", async () => {
+    let bars = tokenBars();
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/tokens") return { status: 200, body: bars };
+      if (call.method === "POST" && call.path === "/api/cosmetic-packs/open") {
+        bars = { ...bars, cardBar: { points: 7, size: 12 }, cosmeticBar: { points: 9, size: 30 } };
+        return { status: 200, body: { ...openedCosmeticPack(), shardBefore: 5, shardBar: { points: 6, size: 20 } } };
+      }
+      return shopRead(call);
+    });
+    render(<ShopRoute token={TOKEN} />);
+    await shopUp();
+    const mark = server.calls.length;
+
+    fireEvent.click(await screen.findByTestId(shopTestid.open, undefined, SLOW));
+    await screen.findByTestId(shopTestid.reveal, undefined, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.cardBar)).toHaveTextContent("7 / 12");
+    }, SLOW);
+    expect(screen.getByTestId(shopTestid.unopened)).toHaveTextContent("Cosmetic pack: 1 unopened");
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+    const reads = server.calls.slice(mark).filter((call) => call.method === "GET");
+    expect(reads.map((call) => call.path), "the tokens' held counts, once").toEqual(["/api/tokens"]);
+    expect(server.calls.slice(mark).filter((call) => call.method === "POST").map((call) => call.path)).toEqual([
+      "/api/cosmetic-packs/open",
+    ]);
+  });
+
+  it("R3211000 leaving the Shop with an opening unsettled has the owned cosmetics read again", async () => {
+    const account = serveSpends(1);
+    const fetchOwned = vi.fn(() => Promise.resolve(ownedCosmeticsOf()));
+    const shop = render(<ShopRoute token={TOKEN} />);
+    await shopUp();
+    await readOwnedFullArt(TOKEN, fetchOwned);
+
+    fireEvent.click(screen.getByTestId(packTestid.open("Core")));
+    fireEvent.click(screen.getByTestId(packTestid.skipAll));
+    await screen.findByTestId(packTestid.outcome(0), undefined, SLOW);
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned, "the scene is open: nothing forgot the ledger").toHaveBeenCalledTimes(1);
+
+    shop.unmount();
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned).toHaveBeenCalledTimes(2);
+    expect(account.spends()).toEqual(["/api/packs/open"]);
+  });
+
+  it("R3211000 leaving the Shop after the scene closed forgets the owned cosmetics no second time", async () => {
+    serveSpends(1);
+    const fetchOwned = vi.fn(() => Promise.resolve(ownedCosmeticsOf()));
+    const shop = render(<ShopRoute token={TOKEN} />);
+    await shopUp();
+
+    fireEvent.click(screen.getByTestId(packTestid.open("Core")));
+    fireEvent.click(screen.getByTestId(packTestid.skipAll));
+    await screen.findByTestId(packTestid.outcome(0), undefined, SLOW);
+    fireEvent.click(screen.getByTestId(packTestid.close));
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned).toHaveBeenCalledTimes(1);
+
+    shop.unmount();
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned, "the close had settled: leaving has nothing more to forget").toHaveBeenCalledTimes(1);
   });
 });

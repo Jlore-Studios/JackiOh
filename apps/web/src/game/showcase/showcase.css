@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
   pointer-events: none;
   transform: translateY(-50%);
   animation:
@@ -21,7 +21,7 @@
 }
 
 .showcase-caption {
-  padding: 4px 12px;
+  padding: var(--space-2) var(--space-6);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 90%, transparent);
@@ -64,11 +64,11 @@
   .showcase {
     --showcase-h: calc(100dvh - 90px);
 
-    gap: 4px;
+    gap: var(--space-2);
   }
 
   .showcase-caption {
-    padding: 2px 10px;
+    padding: var(--space-1) var(--space-5);
     font-size: var(--type-sm);
   }
 }
@@ -145,9 +145,9 @@
   z-index: var(--z-showcase);
   display: grid;
   justify-items: center;
-  gap: 6px;
+  gap: var(--space-3);
   max-width: calc(100vw - 32px);
-  padding: 10px 18px 12px;
+  padding: var(--space-5) var(--space-7) var(--space-6);
   border: 2px solid var(--radiant);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--pal-wood-900) 94%, transparent);
@@ -167,14 +167,14 @@
 
 .chaos-banner-lines {
   display: grid;
-  gap: 4px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .chaos-banner-line {
-  padding: 3px 12px;
+  padding: var(--space-1) var(--space-6);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   font-size: clamp(var(--type-md), 2.6vh, var(--type-2xl));
@@ -215,7 +215,7 @@
   position: absolute;
   width: 1px;
   height: 1px;
-  margin: -1px;
+  margin: 0;
   padding: 0;
   overflow: hidden;
   clip-path: inset(50%);

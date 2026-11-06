@@ -10,7 +10,8 @@
 // (VariantLadders.tsx): choosing an owned level wears that one level (`writeCardLevel`, R3015005), so a pick made
 // before #3015 becomes the level it names on its first edit, and only the next level of a ladder, every level below it
 // owned, is offered a held token (R3015004). R3013001: an owned card also shows its proficiency and its stamps
-// (ProficiencyPanel.tsx).
+// (ProficiencyPanel.tsx). R3016001: hovering a rung also opens that level's hover preview, the card, in hand and on
+// the board (LookHover.tsx), beside the rung.
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -33,9 +34,8 @@ import {
   type CardPicks,
 } from "../cards/cosmetics.ts";
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
-import { levelOfPick, wornLevel } from "../cards/versions.ts";
 import type { FaceModel } from "../cards/model.ts";
-import { t } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
@@ -45,12 +45,14 @@ import {
   cardStrip,
   collectionTestid as T,
   cosmeticKindWords,
+  equippedRung,
   type Rung,
   type StripGroup,
   type StripItem,
   type StripKind,
 } from "./collection.ts";
 import ItemPreview, { trapTab, usePreviewHold } from "./ItemPreview.tsx";
+import { LookHoverPanel, useLookHover } from "./LookHover.tsx";
 import ProficiencyPanel from "./ProficiencyPanel.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 import VariantLadders, { RungPicture } from "./VariantLadders.tsx";
@@ -105,16 +107,6 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: Shown | null }
       {sample}
     </span>
   );
-}
-
-/**
- * R3015005, R3015007: the rung a card's pick wears: the level it names (an older shape mapped as the server maps it),
- * else the highest one below it that `owns` takes; the normal face where that is none, and none with no pick at all
- * (the Full-art cards setting decides).
- */
-function equippedRung(defId: string, picks: CardPicks, owns: (defId: string, id: string) => boolean): string | null {
-  if (picks.fullArt === undefined && picks.augments === undefined) return null;
-  return wornLevel(levelOfPick(defId, picks.fullArt, picks.augments), (id) => owns(defId, id)) ?? NO_FULL_ART_ID;
 }
 
 /** One foil's, finish's or border's small live preview: the card wearing it. */
@@ -266,7 +258,11 @@ export default function CardCosmeticsView({
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
+  // R3016001: the hovered rung's preview in the three views.
+  const hover = useLookHover();
+  // A face is worded in the reader's language, so a switch of language makes it again.
+  const locale = useLocale();
+  const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def, locale]);
   const strip = cardStrip(def.id, canEquip);
   const ladders = cardLadders(def.id, canEquip);
   const rungs = ladders.flatMap((ladder) => ladder.rungs);
@@ -376,8 +372,10 @@ export default function CardCosmeticsView({
               }}
               equip={equipLevel}
               onPreview={(rung) => {
+                hover.close();
                 setPreviewing(rung.id);
               }}
+              hover={(rung) => hover.trigger(rung.id)}
             />
             {/* R3013001: an owned card's proficiency and the stamps it has unlocked. */}
             {owned ? <ProficiencyPanel def={def} /> : null}
@@ -398,6 +396,9 @@ export default function CardCosmeticsView({
             </div>
           </div>
         </div>
+        {hover.hovered === null || textOpen || previewing !== null ? null : (
+          <LookHoverPanel key={hover.hovered.id} def={def} owned={owned} anchor={hover.hovered.anchor} hover={hover} level={hover.hovered.id} />
+        )}
         {textOpen ? (
           <CardDetail
             def={def}

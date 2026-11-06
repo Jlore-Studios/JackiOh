@@ -5,12 +5,11 @@
 import { useState, type CSSProperties, type ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
-import { PILE_WORDS, stateBadges, type StateBadge, type StateBadgeKind } from "./cardState.ts";
 import { listSeparator } from "./chinese.ts";
 import { STATE_BADGES_SMALL_MAX } from "./constants.ts";
 import { Icon } from "./icons.tsx";
 import { MARK_PALETTES, TEMPORARY_LAST_COLOR } from "./marks.ts";
-import type { FaceModel } from "./model.ts";
+import type { FaceModel, StateBadge, StateBadgeKind } from "./model.ts";
 import { STACK_TITLE, STACK_UNKNOWN_NAME, default as StackSheet } from "./wheel/StackSheet.tsx";
 
 import "./cardstate.css";
@@ -18,6 +17,9 @@ import "./cardstate.css";
 export type CardStatesProps = { face: FaceModel; omit?: readonly StateBadgeKind[] };
 
 const NONE: readonly StateBadgeKind[] = [];
+
+/** E21: what a pile's depth badge says, a backrow pile's as a unit pile's (game/Card.tsx). */
+export const PILE_WORDS = "Cards buried under this pile";
 
 /** R2647000: the states no face draws, rarely relevant in combat; the inspect state notes still list them (StateNotes.tsx). */
 const NOT_ON_FACES: readonly StateBadgeKind[] = ["created"];
@@ -51,7 +53,7 @@ function Badge({ badge }: { badge: StateBadge }): ReactElement {
 
 export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement | null {
   useLocale();
-  const badges = stateBadges(face).filter((badge) => !omit.includes(badge.kind) && !NOT_ON_FACES.includes(badge.kind));
+  const badges = face.badges.filter((badge) => !omit.includes(badge.kind) && !NOT_ON_FACES.includes(badge.kind));
   if (badges.length === 0) return null;
   const folded = badges.slice(STATE_BADGES_SMALL_MAX);
   return (

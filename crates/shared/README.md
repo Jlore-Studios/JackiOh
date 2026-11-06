@@ -15,7 +15,8 @@ seasons and one rated game decided as data; the fifth, the ladder bots (#3103): 
 machine, and the queue's and the pool's decisions around it are here too; the sixth is the collection economy
 (SPEC §14, #3104): the cosmetics registry, the card and cosmetic pack rolls, pity, the token bars, the set-track
 curve and rewards, what a finished game pays and how a quest moves, each
-`decide(records, inputs, seed, now_ms) -> outcome`.
+`decide(records, inputs, seed, now_ms) -> outcome`; the seventh is what a card
+face prints (#3106), from `apps/web`; the eighth is the lines of the game log (#3108), from `apps/web`'s `Log.tsx`.
 
 ## Host contract
 
@@ -40,8 +41,12 @@ Every Part B issue follows it, and review holds each one to it.
 5. **Everything the host must do comes out as data:** rows to write, messages to send to a seat, timers
    to set. Never a trait object, a callback or a store handle across the boundary. The server's store
    code and a Roblox DataStore script then do the same job from the same output.
-6. **Data is compiled in** (`include_str!`, rule 4): quest pools, registries and translations. The
-   module carries it, and no host loads files.
+6. **Data is compiled in** (rule 4): quest pools, registries and translations. The module carries it, and
+   no host loads files. Small tables are read with `include_str!`; the face model's and the log's (the glossary,
+   the powers, the short forms, the Call to Chaos effects' names, the translations and the Chinese card
+   tables) are turned into immutable sorted tables by `build.rs` from `data/*.json` and
+   `crates/cards/chinese*.json`, so a call parses no JSON and the crate keeps no static of its own state or
+   cache.
 7. **Its numbers** are named constants in `src/config.rs` (rule 9) and join the `constants` export of
    `jackioh-wasm-core` under their own names, so no host restates them; that module's test holds its
    list to `config.rs`.
@@ -67,10 +72,12 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 ## `src/config.rs`
 
 `MS_PER_SECOND`, `SERIES_WINS_NEEDED` (R330), `SERIES_MAX_GAMES` (R334) and `SERIES_PICK_SECONDS`
-(R333), and the match host's: `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS`
-(R268), `DISCONNECT_GRACE_SECONDS`, `MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000),
-`BOT_WRITE_RETRY_MS` (R1452), `AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and
-the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672), the ranked ladder's (#3105): the hidden
+(R333); the face model's `TEMPORARY_LAST_COUNT` (R637, R2179001) and Glitch's `GLITCH_SEED`, `GLITCH_SWAP_IN`,
+`GLITCH_MARK_IN` and `GLITCH_ODDS_SCALE` (issue #170); the match host's: `TURN_CLOCK_SECONDS`,
+`PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS` (R268), `DISCONNECT_GRACE_SECONDS`,
+`MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000), `BOT_WRITE_RETRY_MS` (R1452),
+`AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and the rematch stakes `STAKE_NORMAL`
+and `STAKE_DOUBLE` (R672); and the ranked ladder's (#3105): the hidden
 rating's (`RATING_START`, `RATING_DEVIATION_START`, `RATING_VOLATILITY_START`, `GLICKO_TAU`, `GLICKO_SCALE`,
 `GLICKO_CONVERGENCE`, `GLICKO_MAX_ITERATIONS`; R603), the visible ladder's (`RANK_TIER_PERCENTS` and the
 `RANK_*` pips, divisions and placements, `JLORIOUS_SIZE`; R605 to R608), the seasons' (`SEASON_RESET_STRENGTH`,
@@ -85,8 +92,8 @@ a bot wears (`BOT_COSMETIC_*`, the `CosmeticFit` rows and their prior, R1834005,
 reads is only the server's and stays there), and
 the economy's (#3104): the drop tables (`CARD_TIER_WEIGHTS`, `COSMETIC_TIER_WEIGHTS`, `TIER_WEIGHT_TOTAL`, `PACK_SLOTS`, the floors, the global
 cosmetic roll), pity (`PITY_*_PACKS`), the token bars (`CARD_TOKEN_BAR_SIZE`, `COSMETIC_TOKEN_CYCLE` and the
-points per rarity), the cosmetic pack and Chase Shard bar, the set track's `SET_TRACK_XP_PER_LEVEL`, and what a game pays and a quest does (#3104, part 2): the Jlore and XP rates (`JLORE_*`, `XP_*`), the daily cap (`JLORE_GAMES_DAILY_CAP`, R1483000), the track levels (`SET_TRACK_LEVELS`, `SET_TRACK_UNLOCK_LEVEL`, `SET_TRACK_FIRST_LEVEL`) and the quest rhythm and pay (`QUEST_*`). The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name them as
-before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
+points per rarity), the cosmetic pack and Chase Shard bar, the set track's `SET_TRACK_XP_PER_LEVEL`, and what a game pays and a quest does (#3104, part 2): the Jlore and XP rates (`JLORE_*`, `XP_*`), the daily cap (`JLORE_GAMES_DAILY_CAP`, R1483000), the track levels (`SET_TRACK_LEVELS`, `SET_TRACK_UNLOCK_LEVEL`, `SET_TRACK_FIRST_LEVEL`) and the quest rhythm and pay (`QUEST_*`). The server re-exports the series', the match host's, the ranked ladder's, the bots' and the economy's
+from its own `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants` carries them all, which the browser and the C module
 (`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file, and `cosmetics-fit` prints the rows
 to paste over `BOT_COSMETIC_FITS`.
 
@@ -144,6 +151,100 @@ answers are `row`, `refused`, `seats`, `picked`, `view` and `score`. A call that
 refused by the body as an error (thrown in the browser, status 1 in the C module), and a rules refusal
 is never one. `apply` is the one function behind it, and `tests/boundary.rs` holds it to the functions it
 names.
+
+## `src/face/`: what a card face prints
+
+The face model of `apps/web/src/cards/model.ts` and its neighbours (`inPlay.ts`, `cardState.ts`,
+`shortText.ts`, `radiantDiff.ts`, `rules.ts`'s tokenizer, `glossary.ts`), moved here with the translations of
+the face and glossary strings, so a client lays out what this returns and writes none of it. The decision
+the owner took on #2956 (2026-11-05): the model itself is Rust, not only its wording. Nothing in it is a rule
+(CLAUDE.md rule 7): it reads the catalog, the definitions a view carries and what `view_for` says of a card,
+never state, so a hidden card cannot be named by it.
+
+| Call | Takes | Answers |
+| --- | --- | --- |
+| `card` | a `FaceSource` (a `defId`, optionally its `def`, the face, and, in a game, `inPlay`), `locale`, `defs` | the `FaceModel` |
+| `live` | a `LiveCard` (a `CardView`, `UnitView` or face-up backrow card as the view lists it), its `def`, `facts`, `locale` | the face in play the view says it has (R243) |
+| `view` | a `PlayerView`, `locale` | every face the view shows, by instance id: one call for a whole view |
+| `named` | a `PlayerView`, a `NamedCard`, `locale` | the face of a card an event or a prompt names, or `noFace` for the sentinel |
+| `text` | words from the engine or a card, `locale` | the same words as spans, the glossary's terms in bold |
+| `wordDiff` | two texts | what the newer adds and what the older loses, by word, in UTF-16 offsets (R277, R388) |
+
+```json
+{ "call": "card", "locale": "zh-CN", "source": { "defId": "core-020", "radiant": true } }
+{ "answer": "face", "face": { "name": "…", "text": { "full": "…", "spans": [ { "kind": "mark", "children": [ … ] } ] }, … } }
+```
+
+- **Spans, not markup.** A face's text is `RichText { full, spans }`: `full` the plain words (what a client
+  measures and keys on), `spans` the same words as `Span`s: `text`, `keyword` (the term and its glossary
+  entry), `number` (a number the view moved off its printed value, with whether that is better or worse and a
+  title that says so), `card` (a name that points at another card), `mark` (words a Radiant face adds to the
+  base face's, R277) and `value` (what a card's formula comes to, R280). `card` and `mark` hold their
+  children already nested, a mark that crosses a name's edge cut there. No HTML, Markdown or CSS: the web maps
+  spans to elements and Roblox to RichText.
+- **Final words.** Everything a face prints is in the reader's language: the name and text (from the Chinese
+  card table for a Chinese card, R1301, or for any card when the reader reads Chinese, R711000), the type line,
+  tag chips, keyword words, state badges and their sentences, the tuning chips and tooltips, the glossary
+  entries, a Heroic Power's rolled power and a Quest's stage. The translations of those strings are
+  `data/zh-CN.json` (English sentence to words; a key with `{name}` tokens also matches a finished sentence,
+  as the engine's quest texts arrive); the web's UI strings stay in `apps/web/src/i18n/`.
+- **What the rules box prints** is decided here too: `text` (the whole), `short` (a card's short form, issues
+  #814 and #1017: `data/short-forms.json`), `summit` (the Summit's header and the next Ascent line), `questBox`
+  (a Quest's one stage, R2450000) and `clamp`. Whether the text fits its box is the client's layout.
+- **A Starship's name** is the hull's (R3045000): the engine joins a fused card's names ("Dormant Starship +
+  Miner v1"), and the face prints the name the Starship launched under, else the Dormant Starship's, in Chinese
+  on a Chinese face, whenever the view says the unit is a Starship or the definition holds the hull among its
+  ingredients (`fused.rs` walks them, a fusion of fusions to its leaves, from the definition or the id it
+  spells). The web's art code reads the same ids in `apps/web/src/cards/fused.ts`.
+- **Locale and catalog come in as arguments.** The catalog is the engine's registered one, with the
+  definitions a view carries (`PlayerView.defs`) consulted next.
+- **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
+  held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
+  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+
+## `src/log/`: the game log's lines
+
+What `apps/web/src/game/Log.tsx` decided before it moved here (#3108): turning the events a player's view gives
+into readable lines, so a client draws what this returns and writes no line. The rule it keeps (CLAUDE.md rule
+7, R97): a line is built from the event's payload and the public board the view carries, so a card the viewer
+may not read is never named. `drawn`, `addedToHand` and `shuffledIn` carry a `defId` for the animation layer
+and read "drew a card"; the sentinel `hidden` is "a card" or "a hidden card" and opens nothing; an id is never
+printed; `cardResolved`, `cardAnnounced`, `manaSpent`, `translated` and `hookResolving` have no line.
+
+| Call | Takes | Answers |
+| --- | --- | --- |
+| `view` | a `PlayerView`, `locale` | `lines`: one entry for each event of `view.events`, in order, a `LogLine` or `null` where the log leaves the event out |
+| `gap` | `locale` | `line`: what a history says where a window shares no event with the one before (R745) |
+
+```json
+{ "call": "view", "locale": "zh-CN", "view": { "...": "the PlayerView" } }
+{ "answer": "lines", "lines": [ { "event": "cardPlayed", "text": { "full": "对手打出了…，花费2", "spans": [ … ] }, "card": { "defId": "core-032", "radiant": false, "instanceId": "c7" } }, null ] }
+```
+
+- **A line** is `LogLine { event, text, card }`. `event` is the event's type (`gap` for the gap line), what a client
+  keys a line's look on; `text` is `RichText` as a face's text is, `full` the sentence and `spans` the same words
+  as `Span`s: `text`, and a `keyword` (with its glossary entry in the reader's words) where a line is about one
+  (`keywordGranted`); `card` is the `NamedCard` the line opens, if it names one the viewer may read: what a
+  client resolves to the card's face for the hover and the sheet (`FaceCall::Named`, or `live` for a card the
+  view lists). A line opens at most one card, the one its event is chiefly about (the target of a hit, the attacker of an
+  attack).
+- **The window's own names.** A unit that has left the board is still named from the public events of the same
+  window (`public_names`), and a spell's aim from the announce of the same play (`announced_aims`, paired by
+  the play's place in the window). A history that keeps a line after its event leaves the window is the
+  client's: it keeps the `LogLine`s it was handed, and the face of the definition without the instance (R745).
+- **Final words.** Every sentence is an English key `data/zh-CN.json` translates, beside the face model's;
+  a card is named in the reader's language (R711000) or in Chinese where the view flags it (R1301), a fusion
+  holding the Dormant Starship by the hull's name in either (R3045000: `face/fused.rs`, as its face is); a list is
+  joined as the reader's language joins one; the engine's own sentences a line quotes (a modifier's label, a
+  quest's words, a Call to Chaos effect) are translated by the same dictionary, which holds the matching keys
+  of the web's, since a finished sentence from the engine matches the key its values were filled into. The web's
+  UI strings stay in `apps/web/src/i18n/`, and `tests/log.rs` holds each sentence of this module to its
+  entry.
+- **Shared with the web.** `data/chaos-names.json` is the table of the Call to Chaos cards' effects that the
+  web's reel and banner (`fx/chaos.ts`) read too, so the log and the reel say an effect alike. The sentences
+  of a finished game's result, a coin's or die's words and a mark's name are written here for the log and
+  again in the web, where the result panel, the roll panel and the mark badges still write them (`Result.tsx`,
+  `fx/rolls.ts`, `cards/marks.ts`).
 
 ## `src/host/`: the match host
 
@@ -571,7 +672,8 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
 unchanged, and `tests/boundary.rs` the JSON boundary; `tests/loadout.rs` holds the loadout visibility rule's, moved from
 `crates/server/src/loadout.rs`, its JSON calls among them, over a game dealt from the shipped cards (the
-`jackioh-cards` and `jackioh-ai` dependencies), and `tests/loadout_freeze.rs` the freezing's, on a registry of its own. The ladder bots': `tests/bots_decide.rs` (the decision and
+`jackioh-cards` and `jackioh-ai` dependencies), and `tests/loadout_freeze.rs` the freezing's, on a registry of its own; `tests/face.rs` the face model: a face as the web's
+tests held it, in both locales; `tests/log.rs` the game log: the web's `Log.test.tsx` cases, in both locales. The ladder bots': `tests/bots_decide.rs` (the decision and
 the think time), `tests/bots_signals.rs`, `tests/bots_persona.rs`, `tests/bots_pick.rs`, `tests/bots_cosmetics.rs` (the draw of a bot's wardrobe and loadout, R1834005) and
 `tests/bots_boundary.rs`, moved from the server's bot tests; the bot seat of the machine is in `tests/duel.rs`.
 The economy's rolls carry their tests in their modules

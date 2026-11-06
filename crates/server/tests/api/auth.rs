@@ -20,7 +20,8 @@ use tower::ServiceExt;
 use jackioh_server::app::App;
 use jackioh_server::auth::{Auth, AuthError, SupabaseAuth, SupabaseAuthInput};
 use jackioh_server::config::{
-    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
+    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_CHECK_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS,
+    AUTH_SESSION_OUTAGE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
 };
 use jackioh_server::db::store::{Db, Profile};
 
@@ -41,6 +42,9 @@ const CACHE_TTL_MS: i64 = 30_000;
 
 /// `AUTH_SESSION_LIVE_CACHE_SECONDS`, read as an order of magnitude (like `CACHE_TTL_MS`).
 const LIVE_TTL_MS: i64 = AUTH_SESSION_LIVE_CACHE_SECONDS * 1000;
+
+/// `AUTH_SESSION_OUTAGE_CACHE_SECONDS`: how long a silence about one session is remembered (R3209000).
+const OUTAGE_TTL_MS: i64 = AUTH_SESSION_OUTAGE_CACHE_SECONDS * 1000;
 
 /// A confirmed GoTrue user: `email_confirmed_at` is the only field §9.4 step 1 reads.
 pub(crate) fn confirmed_user(user_id: &str) -> Value {
@@ -837,15 +841,17 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         assert_eq!(outage.user_id, ALICE);
         // The admin lookup still decides the email, as before the session check existed (R159).
         assert_eq!(h.gotrue.total(), 1);
-        // Nothing was remembered: the next call asks the provider again.
+        // The silence is remembered only for the outage window (R3209000): past it the provider is
+        // asked again.
+        h.clock.charge(OUTAGE_TTL_MS).await;
         h.gotrue.answer_user(|_| UserReply::Ended);
         assert!(h.auth.verify(&token).await.is_err());
     }
 
     #[tokio::test(start_paused = true)]
     async fn r194_the_session_check_cannot_hang_a_request_it_goes_out_with_a_timeout() {
-        // `/auth/v1/user` never answers, and the request still comes back, on the provider's own
-        // timeout. The clock is paused so the timeout costs no real time.
+        // `/auth/v1/user` never answers, and the request still comes back, on the session check's own
+        // timeout (R3209000). The clock is paused so the timeout costs no real time.
         let h = with_sessions(|_| UserReply::Hang).await;
         let token = h.session_token_for(ALICE, "session-a");
         let bound = Duration::from_secs(u64::try_from(AUTH_PROVIDER_TIMEOUT_SECONDS * 2).expect("seconds"));
@@ -1612,7 +1618,7 @@ mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
     }
 
     /// Every future started before any is awaited (`join_all`); the answers in order.
-    async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
+    pub(super) async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
         let mut futures: Vec<Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
         let mut outputs: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
         poll_fn(|cx| {
@@ -1786,5 +1792,276 @@ mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
         assert!(auth.verify(&token).await.is_ok());
         let logged = log.text();
         assert!(logged.contains("auth.jwks.fetch_failed"), "{logged}");
+    }
+}
+
+// R3209000: requests that arrive together share one provider check
+
+/// R3209000 — requests that arrive together share one provider check, and a silence about a session
+/// is remembered briefly (§9.2, §9.4, R159, R194, R1144000).
+mod r3209000_requests_that_arrive_together_share_one_provider_check {
+    use super::r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys::join_all;
+    use super::*;
+    use crate::api::es256_test_only as es256;
+    use jackioh_server::config::JWKS_COOLDOWN_MS;
+
+    #[tokio::test]
+    async fn r3209000_ten_concurrent_requests_for_one_session_make_one_session_check() {
+        let h = with_sessions(|_| UserReply::Live(confirmed_user(ALICE))).await;
+        let token = h.session_token_for(ALICE, "session-a");
+
+        let results = join_all((0..10).map(|_| h.auth.verify(&token)).collect()).await;
+        for result in results {
+            let user = result.expect("a live session");
+            assert_eq!(user.user_id, ALICE);
+            assert!(user.email_verified);
+        }
+        // One question to the provider, whose answer is the authoritative user too: no admin lookup.
+        assert_eq!(h.gotrue.user_calls(), 1);
+        assert_eq!(h.gotrue.total(), 0);
+    }
+
+    #[tokio::test]
+    async fn r3209000_an_ended_session_is_refused_by_every_request_at_the_first_check_after_its_live_memo() {
+        let h = with_sessions(|_| UserReply::Live(confirmed_user(ALICE))).await;
+        let token = h.session_token_for(ALICE, "session-a");
+        assert_eq!(
+            h.auth.verify(&token).await.expect("a live session").user_id,
+            ALICE
+        );
+
+        // Signed out elsewhere: the live answer stands to the last moment of its window…
+        h.gotrue.answer_user(|_| UserReply::Ended);
+        h.clock.charge(LIVE_TTL_MS - 1).await;
+        assert!(h.auth.verify(&token).await.is_ok());
+        assert_eq!(h.gotrue.user_calls(), 1);
+
+        // …and the first check past it is refused, for every request that arrives together, on one call.
+        h.clock.charge(1).await;
+        let results = join_all((0..10).map(|_| h.auth.verify(&token)).collect()).await;
+        assert!(results.iter().all(Result::is_err));
+        assert_eq!(h.gotrue.user_calls(), 2);
+
+        // An ended answer is never kept, by the memo or by the flight: the next request asks again.
+        assert!(h.auth.verify(&token).await.is_err());
+        assert_eq!(h.gotrue.user_calls(), 3);
+    }
+
+    #[tokio::test]
+    async fn r3209000_an_outage_is_one_call_per_window_and_every_request_inside_it_answers_at_once() {
+        let h = with_sessions(|_| UserReply::Unreachable).await;
+        let token = h.session_token_for(ALICE, "session-a");
+
+        let results = join_all((0..10).map(|_| h.auth.verify(&token)).collect()).await;
+        for result in results {
+            assert_eq!(result.expect("the identity stands").user_id, ALICE);
+        }
+        // One session check, and the email decided by one admin lookup the ten shared (R159).
+        assert_eq!(h.gotrue.user_calls(), 1);
+        assert_eq!(h.gotrue.total(), 1);
+
+        // Inside the window nobody waits: a provider that would hang is not asked at all.
+        h.gotrue.answer_user(|_| UserReply::Hang);
+        h.clock.charge(OUTAGE_TTL_MS - 1).await;
+        for _ in 0..5 {
+            let user = tokio::time::timeout(Duration::from_secs(1), h.auth.verify(&token))
+                .await
+                .expect("answered from the memo")
+                .expect("the identity stands");
+            assert_eq!(user.user_id, ALICE);
+        }
+        assert_eq!(h.gotrue.user_calls(), 1);
+
+        // Past the window the provider is asked again, and an ending it now reports is believed.
+        h.gotrue.answer_user(|_| UserReply::Ended);
+        h.clock.charge(1).await;
+        assert!(h.auth.verify(&token).await.is_err());
+        assert_eq!(h.gotrue.user_calls(), 2);
+    }
+
+    #[tokio::test]
+    async fn r3209000_the_outage_memo_never_outlives_the_live_window() {
+        const { assert!(OUTAGE_TTL_MS <= LIVE_TTL_MS) };
+        let h = with_sessions(|_| UserReply::Unreachable).await;
+        let token = h.session_token_for(ALICE, "session-a");
+        assert!(h.auth.verify(&token).await.is_ok());
+
+        // The session ends during the outage: a live window on, it is refused, as R194 promises.
+        h.gotrue.answer_user(|_| UserReply::Ended);
+        h.clock.charge(LIVE_TTL_MS).await;
+        assert!(h.auth.verify(&token).await.is_err());
+        assert_eq!(h.gotrue.user_calls(), 2);
+    }
+
+    #[tokio::test]
+    async fn r3209000_the_session_check_gives_up_after_its_own_timeout_not_the_providers() {
+        const { assert!(AUTH_SESSION_CHECK_TIMEOUT_SECONDS < AUTH_PROVIDER_TIMEOUT_SECONDS) };
+        // In real time first: a live answer leaves Alice's confirmed email remembered, so the request
+        // below makes no admin lookup and waits on the session check alone.
+        let h = with_sessions(|_| UserReply::Live(confirmed_user(ALICE))).await;
+        let warm = h.session_token_for(ALICE, "session-warm");
+        h.auth.verify(&warm).await.expect("a live session");
+
+        // Another session, which the provider never answers about. The clock is paused so the wait
+        // costs no real time: it moves on to the first timer due, which is the session check's own.
+        h.gotrue.answer_user(|_| UserReply::Hang);
+        tokio::time::pause();
+        let started = tokio::time::Instant::now();
+        let verified = h.auth.verify(&h.session_token_for(ALICE, "session-hung")).await;
+        let waited = started.elapsed();
+        assert_eq!(verified.expect("the identity stands").user_id, ALICE);
+        let seconds = |seconds: i64| Duration::from_secs(u64::try_from(seconds).expect("seconds"));
+        assert!(
+            waited >= seconds(AUTH_SESSION_CHECK_TIMEOUT_SECONDS),
+            "{waited:?}"
+        );
+        assert!(waited < seconds(AUTH_PROVIDER_TIMEOUT_SECONDS), "{waited:?}");
+    }
+
+    #[tokio::test]
+    async fn r3209000_a_dropped_checking_request_hands_the_check_to_one_still_waiting() {
+        let h = with_sessions(|_| UserReply::Hang).await;
+        let token = h.session_token_for(ALICE, "session-a");
+        let hang_up = Duration::from_millis(300);
+
+        // The checking request hangs up mid-check (a client that disconnects) while a second request
+        // for the same session waits on it. The provider recovers meanwhile.
+        let checking = tokio::time::timeout(hang_up, h.auth.verify(&token));
+        let waiting = async {
+            // The hanging check has reached the provider before the second request joins it.
+            while h.gotrue.user_calls() < 1 {
+                tokio::task::yield_now().await;
+            }
+            h.gotrue.answer_user(|_| UserReply::Live(confirmed_user(ALICE)));
+            let joined = tokio::time::Instant::now();
+            let answer = tokio::time::timeout(
+                Duration::from_secs(u64::try_from(AUTH_SESSION_CHECK_TIMEOUT_SECONDS).expect("seconds")),
+                h.auth.verify(&token),
+            )
+            .await;
+            (answer, joined.elapsed())
+        };
+        let (checking, (waiting, waited)) = tokio::join!(checking, waiting);
+        assert!(checking.is_err(), "the checking request was dropped");
+        // The waiter took the check over once the first was dropped, instead of waiting forever.
+        assert!(
+            waiting
+                .expect("the waiter is not wedged")
+                .expect("a live session")
+                .email_verified
+        );
+        assert!(
+            waited >= hang_up / 2,
+            "the waiter joined the check in flight: {waited:?}"
+        );
+        assert_eq!(h.gotrue.user_calls(), 2);
+
+        // Its answer is remembered: a later request makes no call.
+        assert!(h.auth.verify(&token).await.is_ok());
+        assert_eq!(h.gotrue.user_calls(), 2);
+    }
+
+    #[tokio::test]
+    async fn r3209000_concurrent_misses_for_one_user_share_one_admin_lookup_and_two_users_never_share() {
+        let h = Harness::new().await;
+        let ids: Vec<&str> = [ALICE; 5].into_iter().chain([BOB; 5]).collect();
+        let tokens: Vec<String> = ids.iter().map(|id| h.token_for(id)).collect();
+
+        let results = join_all(tokens.iter().map(|token| h.auth.verify(token)).collect()).await;
+        for (result, id) in results.into_iter().zip(ids) {
+            let user = result.expect("verifies");
+            assert_eq!(user.user_id, id);
+            // The lookup's own answer, so one user's answer never reached the other's request.
+            assert_eq!(user.email.as_deref(), Some(format!("{id}@example.test").as_str()));
+            assert!(user.email_verified);
+        }
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1), (BOB, 1)]));
+    }
+
+    #[tokio::test]
+    async fn r3209000_one_session_id_under_two_users_is_checked_for_each_on_its_own() {
+        let h = Harness::new().await;
+        let alice = h.session_token_for(ALICE, "session-same");
+        let bob = h.session_token_for(BOB, "session-same");
+        let alices = alice.clone();
+        h.gotrue.answer_user(move |token| {
+            UserReply::Live(confirmed_user(if token == alices { ALICE } else { BOB }))
+        });
+
+        let results = join_all(
+            [&alice, &bob, &alice, &bob]
+                .map(|token| h.auth.verify(token))
+                .into(),
+        )
+        .await;
+        for (result, id) in results.into_iter().zip([ALICE, BOB, ALICE, BOB]) {
+            let user = result.expect("a live session");
+            assert_eq!(user.user_id, id);
+            assert_eq!(user.email.as_deref(), Some(format!("{id}@example.test").as_str()));
+        }
+        assert_eq!(h.gotrue.user_calls(), 2);
+
+        // Alice's session ends and Bob's stays live. Once both memos lapse, Bob's fresh live answer
+        // says nothing about Alice's: she is asked about on her own, and refused.
+        let alices = alice.clone();
+        h.gotrue.answer_user(move |token| {
+            if token == alices {
+                UserReply::Ended
+            } else {
+                UserReply::Live(confirmed_user(BOB))
+            }
+        });
+        h.clock.charge(LIVE_TTL_MS).await;
+        assert_eq!(h.auth.verify(&bob).await.expect("still live").user_id, BOB);
+        assert!(h.auth.verify(&alice).await.is_err());
+        assert_eq!(h.gotrue.user_calls(), 4);
+    }
+
+    #[tokio::test]
+    async fn r3209000_a_rotated_key_verifies_after_its_refetch_and_its_decoded_key_is_kept() {
+        let gotrue = GoTrue::start().await;
+        let clock = Clock::new();
+        let auth = supabase_auth_no_secret(&gotrue, &clock);
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let claims = || {
+            json!({
+                "email": format!("{ALICE}@example.test"),
+                "app_metadata": { "provider": "email" },
+            })
+        };
+        let token_a = es256::sign(&gotrue.issuer(), ALICE, claims());
+        let token_b = es256::sign_with_kid(es256::TEST_ONLY_ES256_KID_B, &gotrue.issuer(), ALICE, claims());
+
+        assert_eq!(
+            auth.verify(&token_a)
+                .await
+                .expect("the published key verifies")
+                .user_id,
+            ALICE
+        );
+        assert_eq!(gotrue.jwks_calls(), 1);
+
+        // The provider rotates to a new kid. A token under it inside the cooldown of the last fetch is
+        // answered from the set held: refused, with no fetch (R1144000).
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body_b()));
+        assert!(auth.verify(&token_b).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 1);
+
+        // Past the cooldown its miss refetches once, and the new key verifies…
+        clock.charge(JWKS_COOLDOWN_MS).await;
+        assert_eq!(
+            auth.verify(&token_b)
+                .await
+                .expect("the rotated key verifies")
+                .user_id,
+            ALICE
+        );
+        assert_eq!(gotrue.jwks_calls(), 2);
+        // …and again on the key decoded with its set, with no fetch.
+        assert!(auth.verify(&token_b).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+        // The set was replaced whole: the old kid is refused.
+        assert!(auth.verify(&token_a).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 2);
     }
 }

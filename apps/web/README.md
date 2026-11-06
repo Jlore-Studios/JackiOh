@@ -53,6 +53,8 @@ The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index
 
 The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` after the surfaces, names four durations (`--motion-instant` 80ms, `--motion-fast` 150ms, `--motion-base` 250ms, `--motion-slow` 400ms) and five curves (`--ease-standard`, `--ease-out`, `--ease-in`, `--ease-in-out`, `--ease-overshoot`). A board stylesheet gives every transition and animation a curve (or `linear`, or `steps()`; a `@keyframes` stop spells a curve's value out) and every duration a token, keeping its `* var(--anim-scale)`. These keep their own times: BUILD's (the event table in `game/animations.css`, the `activated` and `turnEnded` rows), R701's wobbles, the table's tap marks, loops, staggers, holds, the clock's 200ms repaint, and any time a `var()` feeds in. `src/motion.test.ts` checks this and lists each sheet's own times in `KEEP`. Every other stylesheet, the menus' among them, is held to its count of raw durations and curves in `UNTOKENED_MOTION` on the same terms.
 
+The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` after the motion, names eleven lengths, `--space-1` (2px) to `--space-11` (40px): 2px apart to 12px, where the board's own lengths sit, then 16, 20, 24, 32 and 40px. A board stylesheet gives every `gap`, `padding` and `margin` (and the `--gap` they read) a step, `0`, `auto`, or a `calc()`, `clamp()` or `max()` holding one, and may keep an `em` or `%` term (it scales with its box), a viewport or container term and `env()`, never a px or rem length of its own. A length that is no step is composed of steps (`calc(var(--space-9) + var(--space-2))`), and a negative one is a step times -1. `src/spacing.test.ts` checks this and holds every other stylesheet to its count of px and rem lengths in `UNMIGRATED`; a sheet that loses some lowers its number.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -73,6 +75,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 `::before`, so a small one takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
+
+A phone highlights nothing but the chat (#3260). `index.css` sets `-webkit-tap-highlight-color: transparent`
+on `html` at every pointer, since only touch browsers draw a tap flash, and under `(pointer: coarse)` sets
+`user-select: none` and `-webkit-touch-callout: none` there, so a narrow desktop window still selects text.
+Fields (`input`, `textarea`, `contenteditable`) take `user-select: text` back, since iOS will not type into
+or put a caret in one that cannot be selected. `.chat-panel` (`together/together.css`) restores all three,
+so a message can be pressed, selected and copied. The two-step sign-in's key keeps its `user-select: all`,
+since it has no copy button. No stylesheet sets the tap highlight back to `initial` outside `.chat-panel`
+(inherited, it would bring the flash back on every child); `src/highlight.test.ts` checks it.
 
 The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
 Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
@@ -144,6 +155,19 @@ first answer kept for another account does too; a reload starts empty. Never kep
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
 `key`, when the decks that land differ, since its store is made once.
+
+A kept answer carries the time its read finished (R3206000): one younger than `READ_CACHE_FRESH_MS`
+(`net/readCache.ts`, 45 s) is *fresh*, and `keptGet` returns it and sends no read behind it. The gate skips its
+`/api/auth/me` read the same way (`freshRead`, for an active account that owes nothing; the renewal timer and the
+401 path are as they were), and the wallet pill reads through `getWallet`, so a navigation inside the window sends
+nothing. An older answer is drawn and read again as above. A fold of a write's answer keeps the age it found,
+`expireRead` ends freshness and keeps the value (a quest falling due), and a gate or a poll that only finished a
+read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of one path and token while it is out
+(one fetch, on its own controller that the last caller to abort aborts); a write is never shared. `writeEpoch`
+counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
+`clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
+not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
+game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
@@ -289,7 +313,7 @@ play is built as a hand card's.
 as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
 and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
 #2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
-`Credits: <min>–<max>` under its text, its face's `resource` prices (`cards/model.ts`, R2521009).
+`Credits: <min>–<max>` under its text, its face's `resource` prices (the face model's `creditsLine`, jackioh-shared, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
@@ -529,7 +553,11 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
                         R2730000), a grid card as the card, in hand and on the board with a Radiant
                         toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
-                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx);
+                        Equip or buy on either opens the card's equip and buy screen
+                        (collection/LooksScreen.tsx, R3016001): its ladders, Equip on an owned level, Buy on
+                        the next with a held token or the full Chase Shard bar after a question, and what a
+                        later level needs; a rung hovered there or in the card view shows that level.
                         Only there does a locked item a held token covers offer the token (of a
                         ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
@@ -552,9 +580,10 @@ routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
-routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
-                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
-                        read the owned cosmetics again; the page never scrolls, its body does
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, each folding the answer of a spend (a buy's, an
+                        opening's) that it shows, and the page reading the rest once, when the opening scene closes
+                        (R3211000), and at its foot one "Odds & pity" link to /purchases (R1665000); the scene's close
+                        has the open screen and the next read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
                         footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
                         (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
@@ -609,9 +638,10 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
                         inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
                         focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
-                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
-                        a redemption or a chase that lands makes the other panels, the opening's included,
-                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
+                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy or an opening
+                        that lands hands the page its answer (`onChanged`), which folds it into the panels that show it
+                        (`bought`, `opened`, `opening`), and the page reads what no answer carries once, when the
+                        opening scene closes (`onClosed`, `settled`, `revision`) (R3211000) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 
@@ -1020,7 +1050,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - `src/wasm/index.ts` is the module's only caller. `main.tsx` starts `loadWasm()` at boot, and its
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
-  `test/setup.ts` loads it synchronously for jsdom.
+  `test/setup.ts` loads it synchronously for jsdom. A card's face is worked out by the module (#3106),
+  so a screen that does not wait for it (the landing, the shop, `/replays`) draws a face only through
+  `useEngineReady` or `WhenEngineReady` (`src/wasm/`), the way the landing's fan, "Your table" showcase and
+  the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match
@@ -1056,6 +1089,6 @@ apostrophe there or in a dictionary key, and no straight double quote there.
 
 ## Internationalisation
 
-The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
 
 The language button (`src/i18n/LanguageButton.tsx`) stays only until the device has settled on its language (R1916000): `localStorage["jackioh.locale.settledVisits"]` counts the boots, every language change and the settings' reset set it back to 0, and from the third unchanged boot the button leaves the top bar and the board while settings' Language row stays.

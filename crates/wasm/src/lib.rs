@@ -404,6 +404,24 @@ pub fn loadout(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::loadout(call_json))
 }
 
+// What a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/// One call of the face model: a `FaceCall` as JSON in, a `FaceAnswer` as JSON out. The catalog is the one
+/// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn face(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::face(call_json))
+}
+
+// The game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
+/// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn log(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::log(call_json))
+}
+
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
 
 /// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host

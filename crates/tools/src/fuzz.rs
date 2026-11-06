@@ -73,6 +73,26 @@
 //! holding one fused Unit (R179). Create, fold and checkpoint take the same inputs, so such a game still
 //! folds back to its live hash. The corpus replays from the plain start.
 //!
+//! # Dungeon-fight starts (#3283)
+//!
+//! A dungeon fight starts its game in ways no other game does (`crates/run/src/fight.rs`,
+//! `run_fight_setup`): some cards of the player's deck begin Radiant or Buffed (R2702000), each hero
+//! starts at a health of its own and may hold Armor (R290, R2922000), either seat may open with extra
+//! cards or crystals (R182, R181, R2922001), and a deck may hold other than `DECK_SIZE` cards (R184).
+//! On `RUN_START_SHARE` of seeds, in both 1v1 waves, the game starts as that: `StartKind::Run`. The
+//! seed is checked first, from a `run-start-` stream of its own, so every other seed draws the start
+//! it always drew, and a `Run` seed draws no board, for a dungeon fight has none. Its decks come from
+//! the `run-start-decks-` stream (`GameSetup::decks`): each of `RUN_START_DECK_MIN` to
+//! `RUN_START_DECK_MAX` cards, at least as many as `--cards` forces. Its handicaps and `deckMarks`
+//! come from the `start-inputs-` stream (`run_start_inputs`), the handicapped wave's tier kept on its
+//! rotated seat and the run's changes layered on it, each seat's hero health drawn from 1 to
+//! `RUN_START_HERO_HEALTH_MAX` with up to `RUN_START_ARMOR_MAX` Armor, up to `RUN_START_OPENING_MAX`
+//! opening cards and `RUN_START_MANA_MAX` crystals, and some cards marked Radiant or Buffed up to
+//! `RUN_START_BUFFS_MAX` times. Create, fold and checkpoint take the same handicaps and marks, so the
+//! game goes through every check above and folds back to its live hash. The summary's `starts:`
+//! line and `--json`'s `starts` count these games as `run`, and a failure's report and `--json` print
+//! the handicaps and marks, which `--from N --seeds 1` deals again from the seed alone.
+//!
 //! # The endings channel (#1572)
 //!
 //! The policy never concedes, offers or answers a draw, or emotes (R84), and `timeout`,
@@ -118,6 +138,8 @@
 //! A card dealt into many decks may never have its rules run, when the policy never plays it. Each wave
 //! reports, over the games that passed, the dealt ids no `CardPlayed`, `TrapFired` or `CardAnnounced`
 //! event named, setup's included (`Coverage`). It never fails a seed, and played is not every hook run.
+//! A second line names the dealt ids no `cardResolved` showed `radiant` (#3283), so a Radiant face no
+//! game ever played is listed too.
 //! The ids merge in seed order and the list is sorted, so any thread count gives the same report.
 
 use std::cell::RefCell;
@@ -136,13 +158,14 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
-    CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
-    EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS,
-    PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
-    create_game, create_recorded_game, find_instance, fold, has_standing_draw_offer, hash_state,
+    CreateGameOptions, DECK_SIZE, DeckMark, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
+    EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, HUMAN_HANDICAP, Handicap, KeywordKind, LastBoardEntry,
+    PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName, TURN_CAP_PLAYER_TURNS, UNIT_ZONES,
+    begin_game, create_game, create_recorded_game, find_instance, fold, has_standing_draw_offer, hash_state,
     legal_actions, made_by_a_rule, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems,
     validate_deck,
 };
+use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_ENEMY_HEALTH, RUN_STARTER_SIZE};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -444,6 +467,14 @@ pub fn decks_for_seed_from(seed: u32, pool: &[String]) -> (Vec<String>, Vec<Stri
     (p1, deal_deck(&mut shuffled, size))
 }
 
+/// One run-start deck's size (#3283): drawn from `RUN_START_DECK_MIN` to `RUN_START_DECK_MAX`, then
+/// raised to `forced` (`--cards`' cards, which a deck must hold whole) and held to the maximum.
+fn run_deck_size(rng: &mut Rng, forced: usize) -> usize {
+    let drawn = RUN_START_DECK_MIN + rng.int(RUN_START_DECK_MAX - RUN_START_DECK_MIN + 1);
+    let size = usize::try_from(drawn).unwrap_or(0).max(forced);
+    size.min(usize::try_from(RUN_START_DECK_MAX).unwrap_or(0))
+}
+
 /// The next `size` cards of a shuffled pool, as one deck, an id the deck already holds passed over
 /// (a forced card, #2387). R2511001: a Core card and its Legacy card are two cards, so a deck may hold
 /// both; over a pool of distinct ids this is the plain slice of the shuffle.
@@ -650,6 +681,8 @@ pub(crate) enum StartKind {
     LastBoards,
     /// The two boards a Glitch may put on the field (R678).
     GlitchBoards,
+    /// What a dungeon fight starts from (#3283): marks and a run's handicaps, no boards.
+    Run,
 }
 
 impl StartKind {
@@ -660,16 +693,18 @@ impl StartKind {
             StartKind::Dealt => "dealt",
             StartKind::LastBoards => "last-boards",
             StartKind::GlitchBoards => "glitch-boards",
+            StartKind::Run => "run",
         }
     }
 }
 
 /// Every start, in the order the summary and `--json` list them.
-pub(crate) const START_KINDS: [StartKind; 4] = [
+pub(crate) const START_KINDS: [StartKind; 5] = [
     StartKind::Plain,
     StartKind::Dealt,
     StartKind::LastBoards,
     StartKind::GlitchBoards,
+    StartKind::Run,
 ];
 
 /// The starts a seed that does not play the plain one draws from.
@@ -679,6 +714,48 @@ const DRAWN_STARTS: [StartKind; 3] = [StartKind::Dealt, StartKind::LastBoards, S
 /// own `start-` stream, so no other stream moves and a seed that draws `Plain` plays the game it
 /// always played.
 pub const START_STATE_SHARE: f64 = 0.5;
+
+/// The share of seeds, in both waves, that start as a dungeon fight does (#3283): marks, a drawn hero
+/// health and Armor, extra opening cards and crystals, and a deck of another size. A strawman. It is
+/// drawn from each seed's own `run-start-` stream and checked before the `start-` draw, so a seed
+/// outside it draws exactly the start it always drew.
+pub const RUN_START_SHARE: f64 = 0.15;
+
+/// The fewest cards a run-start deck holds: the deck a run begins with (`RUN_STARTER_SIZE`, DR3).
+const RUN_START_DECK_MIN: i32 = RUN_STARTER_SIZE as i32;
+
+/// The most cards a run-start deck holds: the engine's library cap, which `RUN_DECK_MAX` restates
+/// (R184), the most a handicap's `deckSize` may be.
+const RUN_START_DECK_MAX: i32 = RUN_DECK_MAX as i32;
+
+/// The most health a run-start hero begins with: the final boss's (`RUN_ENEMY_HEALTH`, DR5), the
+/// highest a dungeon fight starts a hero at. The least is 1 (R290), a hero a run brought down to its
+/// last point. A relic that raises the run's health only moves this up.
+const RUN_START_HERO_HEALTH_MAX: i32 = RUN_ENEMY_HEALTH.boss;
+
+/// The largest amount a placeholder Combat artifact's fight effect carries per level
+/// (`RunFightEffect`'s `n`, R2922001: `Temp Crown`'s Armor, `Temp Final Relic`'s opening cards).
+const RUN_START_EFFECT_AMOUNT: i32 = 2;
+
+/// The most Armor a run-start hero begins with (R2922000): one Combat artifact at its top level
+/// (`RUN_ARTIFACT_LEVEL_MAX`) gives its effect once per level (R2922001).
+const RUN_START_ARMOR_MAX: i32 = RUN_START_EFFECT_AMOUNT * RUN_ARTIFACT_LEVEL_MAX;
+
+/// The most opening cards a run-start seat draws beyond the usual (R182, R2922001), reached as Armor is.
+const RUN_START_OPENING_MAX: i32 = RUN_START_EFFECT_AMOUNT * RUN_ARTIFACT_LEVEL_MAX;
+
+/// The most crystals a run-start seat gains, added to its bonus and its cap together (R181). A
+/// strawman: the placeholder content's one mana curse gives the enemy one (R2922001), so three leaves
+/// room for the content that follows it.
+const RUN_START_MANA_MAX: i32 = 3;
+
+/// The most Buffs a marked card of a run-start deck is dealt with (R2702000). A strawman: a run's
+/// campfires and shops (`RUN_BUFF_TICKETS`) Buff a card as often as the player pays or rests.
+const RUN_START_BUFFS_MAX: i32 = 3;
+
+/// The chance, per card of a run-start deck, that it is drawn a mark (Radiant, Buffed or both; a
+/// draw of neither marks nothing).
+const RUN_START_MARK_CHANCE: f64 = 0.3;
 
 /// Which seats a `Dealt` start deals: p1's, p2's or both (R433).
 const DEALT_SEATS: [&[PlayerId]; 3] = [&[PlayerId::P1], &[PlayerId::P2], &[PlayerId::P1, PlayerId::P2]];
@@ -746,6 +823,51 @@ fn manufactured_board(rng: &mut Rng) -> Vec<LastBoardEntry> {
         });
     }
     board
+}
+
+/// What a dungeon fight sets at its start for both seats (#3283), drawn from `rng` alone, p1 then p2:
+/// each seat's handicap and its deck's marks. A seat starts from `base`'s handicap, the handicapped
+/// wave's tier for its rotated seat, else a human's (R180), and layers on `run_fight_setup`'s own
+/// changes (`crates/run/src/fight.rs`): the deck's size (R184), a hero health from 1 up to
+/// `RUN_START_HERO_HEALTH_MAX` (R290), Armor (R2922000), more opening cards (R182) and crystals (R181).
+/// `deck_marks` deal some cards Radiant or Buffed (R2702000). Every seat's handicap is explicit, so
+/// `standard_deck_size` never reads its deck's length (R1705003).
+fn run_start_inputs(
+    rng: &mut Rng,
+    base: Option<PerPlayerOpt<Handicap>>,
+    decks: &(Vec<String>, Vec<String>),
+) -> (PerPlayerOpt<Handicap>, PerPlayerOpt<Vec<DeckMark>>) {
+    let base = base.unwrap_or_default();
+    let mut handicaps = PerPlayerOpt::default();
+    let mut marks = PerPlayerOpt::default();
+    for (player, deck) in [(PlayerId::P1, &decks.0), (PlayerId::P2, &decks.1)] {
+        let mut handicap = base.get(player).copied().unwrap_or(HUMAN_HANDICAP);
+        handicap.deck_size = i32::try_from(deck.len()).unwrap_or(i32::MAX);
+        handicap.hero_health = Some(1 + rng.int(RUN_START_HERO_HEALTH_MAX));
+        let armor = rng.int(RUN_START_ARMOR_MAX + 1);
+        handicap.hero_armor = (armor > 0).then_some(armor);
+        handicap.extra_opening_cards += rng.int(RUN_START_OPENING_MAX + 1);
+        let mana = rng.int(RUN_START_MANA_MAX + 1);
+        handicap.mana_bonus += mana;
+        handicap.mana_cap += mana;
+        let mut list = Vec::new();
+        for index in 0..deck.len() {
+            if rng.chance(RUN_START_MARK_CHANCE) {
+                let radiant = rng.coin();
+                let upgrades = rng.int(RUN_START_BUFFS_MAX + 1);
+                if radiant || upgrades > 0 {
+                    list.push(DeckMark {
+                        index,
+                        radiant,
+                        upgrades,
+                    });
+                }
+            }
+        }
+        *handicaps.slot(player) = Some(handicap);
+        *marks.slot(player) = Some(list);
+    }
+    (handicaps, marks)
 }
 
 // The endings channel (#1572)
@@ -869,6 +991,8 @@ struct GameRun {
     paused: Vec<usize>,
     /// The def ids either seat played, set, fired or announced (#2426), setup's included.
     played: IndexSet<String>,
+    /// The def ids that resolved on their Radiant face (#3283), setup's included.
+    radiant: IndexSet<String>,
 }
 
 fn pending_label(state: &GameState) -> String {
@@ -936,9 +1060,18 @@ impl GameSetup {
         .with_drawn_endings()
     }
 
-    /// `self` with the start its seed draws (#1503): on `START_STATE_SHARE` of seeds one of
-    /// `DRAWN_STARTS`, else `Plain`. The draw reads the `start-` stream and nothing else.
+    /// `self` with the start its seed draws: on `RUN_START_SHARE` of seeds `Run` (#3283), drawn first
+    /// from the `run-start-` stream; else (#1503) on `START_STATE_SHARE` of seeds one of
+    /// `DRAWN_STARTS`, else `Plain`, drawn from the `start-` stream. A seed outside the run's share
+    /// reads the `start-` stream as it always did, and a run seed draws no board (a dungeon fight
+    /// starts with none).
     fn with_drawn_start(self) -> GameSetup {
+        if Rng::new(&self.stream("run-start-"), 0).chance(RUN_START_SHARE) {
+            return GameSetup {
+                start: StartKind::Run,
+                ..self
+            };
+        }
         let mut rng = Rng::new(&self.stream("start-"), 0);
         let start = if rng.chance(START_STATE_SHARE) {
             rng.pick(&DRAWN_STARTS).copied().unwrap_or(StartKind::Plain)
@@ -972,9 +1105,30 @@ impl GameSetup {
         })
     }
 
+    /// The two decks the game is dealt before `--cards` forces any (#3283): the wave's own, or for a
+    /// `Run` start each seat's deck of `RUN_START_DECK_MIN` to `RUN_START_DECK_MAX` cards from
+    /// `FUZZ_POOL`, both drawn from the `run-start-decks-` stream. `forced` is how many cards `--cards`
+    /// forces into each deck: a `Run` deck holds at least that many, so forced cards (which `force_into`
+    /// puts first) stay whole.
+    fn decks(&self, forced: usize) -> (Vec<String>, Vec<String>) {
+        if self.start == StartKind::Run {
+            let mut rng = Rng::new(&self.stream("run-start-decks-"), 0);
+            let first = run_deck_size(&mut rng, forced);
+            let second = run_deck_size(&mut rng, forced);
+            let mut shuffled = rng.shuffle(FUZZ_POOL.as_slice()).into_iter();
+            let p1 = deal_deck(&mut shuffled, first);
+            return (p1, deal_deck(&mut shuffled, second));
+        }
+        match self.rotation {
+            Some(SeedHandicap { seat, handicap, .. }) => handicap_decks_for_seed(self.seed, seat, &handicap),
+            None => decks_for_seed(self.seed),
+        }
+    }
+
     /// What `create_game` takes for this game (#1503): the game's stream, `decks`, the handicaps and
-    /// the start's one input, drawn from the `start-inputs-` stream. Equal on every call, which is
-    /// what lets the fold and the checkpoint rebuild the game from `fold_args`.
+    /// the start's inputs (a board's, the dealt seats, or a dungeon fight's handicaps and marks,
+    /// R2702000), drawn from the `start-inputs-` stream. Equal on every call, which is what lets the
+    /// fold and the checkpoint rebuild the game from `fold_args`.
     fn create_options(&self, decks: (Vec<String>, Vec<String>)) -> CreateGameOptions {
         let mut options = CreateGameOptions {
             seed: self.stream(""),
@@ -992,12 +1146,17 @@ impl GameSetup {
             StartKind::GlitchBoards => {
                 options.glitch_boards = Some((manufactured_board(&mut rng), manufactured_board(&mut rng)));
             }
+            StartKind::Run => {
+                let (handicaps, marks) = run_start_inputs(&mut rng, options.handicaps.take(), &options.decks);
+                options.handicaps = Some(handicaps);
+                options.deck_marks = Some(marks);
+            }
         }
         options
     }
 
     /// What `fold` takes to replay `log` over `decks`: the same setup `create_options` gives
-    /// `create_game` (§9.3, R180, R187, R433, R417, R678).
+    /// `create_game` (§9.3, R180, R187, R433, R417, R678, R2702000).
     fn fold_args(&self, decks: (Vec<String>, Vec<String>), log: Vec<Action>) -> FoldArgs {
         let CreateGameOptions {
             seed,
@@ -1006,6 +1165,7 @@ impl GameSetup {
             dealt,
             last_boards,
             glitch_boards,
+            deck_marks,
             ..
         } = self.create_options(decks);
         FoldArgs {
@@ -1016,6 +1176,7 @@ impl GameSetup {
             dealt,
             last_boards,
             glitch_boards,
+            deck_marks,
             ..FoldArgs::default()
         }
     }
@@ -1059,6 +1220,9 @@ fn play_game(
     // #2426: the cards the game played, from setup's events on (a cast on draw among them).
     let mut played: IndexSet<String> = IndexSet::new();
     note_played(&mut played, &begun.events);
+    // #3283: the cards that resolved Radiant, as `played` is gathered.
+    let mut radiant: IndexSet<String> = IndexSet::new();
+    note_radiant(&mut radiant, &begun.events);
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut opening = monitor.after(&begun.events, &state);
     opening.extend(monitor.hidden(&state));
@@ -1233,6 +1397,7 @@ fn play_game(
             ));
         }
         note_played(&mut played, &result.events);
+        note_radiant(&mut radiant, &result.events);
         last_events = result.events;
     }
 
@@ -1243,6 +1408,7 @@ fn play_game(
         heaviest,
         paused: paused_steps,
         played,
+        radiant,
     })
 }
 
@@ -1992,6 +2158,22 @@ impl Failure {
     fn cards(&self) -> impl Iterator<Item = &String> {
         self.decks.0.iter().chain(&self.decks.1)
     }
+
+    /// The handicaps and the deck marks a `Run` start dealt this seed (#3283), as JSON; `None` for any
+    /// other start. A failure holds neither, so they are drawn again from its seed and its decks, as
+    /// the fold draws them.
+    fn run_start_note(&self) -> Option<(Value, Value)> {
+        if self.start != StartKind::Run {
+            return None;
+        }
+        let setup = if self.rotation.is_some() {
+            GameSetup::handicapped(self.seed)
+        } else {
+            GameSetup::gate(self.seed)
+        };
+        let options = setup.create_options((*self.decks).clone());
+        Some((json!(options.handicaps), json!(options.deck_marks)))
+    }
 }
 
 /// The name of the gate's wave or of the handicapped one, in the report's heading and the exit message.
@@ -2279,6 +2461,10 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
             first.seed, first.turn, first.actions
         ));
         lines.push(format!("  start: {}", first.start.as_str()));
+        if let Some((handicaps, marks)) = first.run_start_note() {
+            lines.push(format!("  handicaps: {handicaps}"));
+            lines.push(format!("  marks: {marks}"));
+        }
         if !first.forced.is_empty() {
             lines.push(format!("  forced: {}", first.forced.join(", ")));
             lines.push(format!(
@@ -2375,6 +2561,20 @@ fn note_played(played: &mut IndexSet<String>, events: &[GameEvent]) {
     }
 }
 
+/// Adds to `radiant` the def id of every card `events` show resolved on its Radiant face (#3283).
+fn note_radiant(radiant: &mut IndexSet<String>, events: &[GameEvent]) {
+    for event in events {
+        if let GameEvent::CardResolved {
+            def_id,
+            radiant: Some(true),
+            ..
+        } = event
+        {
+            radiant.insert(def_id.clone());
+        }
+    }
+}
+
 /// Which cards a wave's passing games dealt and which either seat played (#2426): a report, never
 /// a failure. Played means an event named the card, so a card whose Death or trigger never fired
 /// counts as played and the list understates what the games missed.
@@ -2384,6 +2584,9 @@ struct Coverage {
     dealt: IndexSet<String>,
     /// Every id `note_played` found, cards no deck held (a token, a copy an effect made) included.
     played: IndexSet<String>,
+    /// Every id `note_radiant` found: cards that resolved on their Radiant face (#3283), tokens
+    /// and made copies included.
+    radiant: IndexSet<String>,
     /// For each id dealt, how many games dealt it into either deck (#3113), once a game however many
     /// copies or decks held it.
     deals: IndexMap<String, u32>,
@@ -2397,13 +2600,20 @@ impl Coverage {
             deals: dealt.iter().map(|id| (id.clone(), 1)).collect(),
             dealt,
             played,
+            radiant: IndexSet::new(),
         }
+    }
+
+    /// `self` with the ids its game's events show resolved Radiant (#3283).
+    fn with_radiant(self, radiant: IndexSet<String>) -> Coverage {
+        Coverage { radiant, ..self }
     }
 
     /// Adds another game's coverage; the wave adds them in seed order.
     fn merge(&mut self, other: Coverage) {
         self.dealt.extend(other.dealt);
         self.played.extend(other.played);
+        self.radiant.extend(other.radiant);
         for (id, games) in other.deals {
             *self.deals.entry(id).or_insert(0) += games;
         }
@@ -2445,21 +2655,39 @@ impl Coverage {
         never
     }
 
+    /// The dealt ids no game resolved on their Radiant face (#3283), sorted by id.
+    fn never_radiant(&self) -> Vec<&str> {
+        let mut never: Vec<&str> = self
+            .dealt
+            .iter()
+            .filter(|id| !self.radiant.contains(*id))
+            .map(String::as_str)
+            .collect();
+        never.sort_unstable();
+        never
+    }
+
+    /// `ids` as a summary line names them: the first `COVERAGE_SHOWN`, then a count of the rest, or
+    /// `none`.
+    fn shown(ids: &[&str]) -> String {
+        if ids.is_empty() {
+            "none".to_string()
+        } else if ids.len() > COVERAGE_SHOWN {
+            format!(
+                "{}, … (+{} more)",
+                ids[..COVERAGE_SHOWN].join(", "),
+                ids.len() - COVERAGE_SHOWN
+            )
+        } else {
+            ids.join(", ")
+        }
+    }
+
     /// The summary's line: the dealt cards never played, of those dealt, of the pool, then the
     /// first `COVERAGE_SHOWN` never-played ids.
     fn line(&self) -> String {
         let never = self.never_played();
-        let shown = if never.is_empty() {
-            "none".to_string()
-        } else if never.len() > COVERAGE_SHOWN {
-            format!(
-                "{}, … (+{} more)",
-                never[..COVERAGE_SHOWN].join(", "),
-                never.len() - COVERAGE_SHOWN
-            )
-        } else {
-            never.join(", ")
-        };
+        let shown = Coverage::shown(&never);
         format!(
             "  coverage: {} of {} dealt pool cards never played ({} of {} pool cards dealt): {shown}\n",
             never.len(),
@@ -2469,15 +2697,31 @@ impl Coverage {
         )
     }
 
+    /// The summary's second line (#3283): the dealt cards no game resolved on their Radiant face, of
+    /// those dealt, then the first `COVERAGE_SHOWN` of them.
+    fn radiant_line(&self) -> String {
+        let never = self.never_radiant();
+        format!(
+            "  coverage (Radiant faces): {} of {} dealt pool cards never resolved Radiant: {}\n",
+            never.len(),
+            self.dealt.len(),
+            Coverage::shown(&never),
+        )
+    }
+
     /// `--json`'s `coverage`: the pool's size, the ids dealt, the dealt ids played and every
-    /// never-played id, sorted.
+    /// never-played id, sorted; and (#3283) the dealt ids that resolved Radiant and every one that
+    /// never did, sorted.
     fn json(&self) -> Value {
         let never = self.never_played();
+        let never_radiant = self.never_radiant();
         json!({
             "pool": FUZZ_POOL.len(),
             "dealt": self.dealt.len(),
             "played": self.dealt.len() - never.len(),
             "neverPlayed": never,
+            "radiantResolved": self.dealt.len() - never_radiant.len(),
+            "neverRadiant": never_radiant,
         })
     }
 }
@@ -2500,7 +2744,8 @@ struct Passed {
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
 /// and fold `(seed, log)` to the same hash; a failure names every card in this seed's decks.
 fn fuzz_seed(seed: u32, forcing: &Forcing) -> Result<Passed, Failure> {
-    forcing.play(seed, decks_for_seed(seed), |decks| fuzz_deal(seed, decks))
+    let decks = GameSetup::gate(seed).decks(forcing.for_seed(seed).len());
+    forcing.play(seed, decks, |decks| fuzz_deal(seed, decks))
 }
 
 /// One game through the four assertions: `seed` names the game's and the policy's streams, `decks` the
@@ -2515,12 +2760,10 @@ fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer
 }
 
 /// One seed of the handicapped wave through the same checks as the gate's: its rotation's tier and
-/// seat (`handicap_for_seed`), its decks (`handicap_decks_for_seed`), its own streams.
+/// seat (`handicap_for_seed`), its decks (`GameSetup::decks`), its own streams.
 fn fuzz_handicap_seed(seed: u32, forcing: &Forcing) -> Result<Passed, Failure> {
-    let SeedHandicap { seat, handicap, .. } = handicap_for_seed(seed);
-    forcing.play(seed, handicap_decks_for_seed(seed, seat, &handicap), |decks| {
-        fuzz_handicap_deal(seed, decks, reduce)
-    })
+    let decks = GameSetup::handicapped(seed).decks(forcing.for_seed(seed).len());
+    forcing.play(seed, decks, |decks| fuzz_handicap_deal(seed, decks, reduce))
 }
 
 /// `decks` played as `seed`'s handicapped game, the probes' forged actions going through `probe`.
@@ -2559,7 +2802,7 @@ fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer
             checkpoint_paused: checkpoint.paused,
             checkpoint_ms: checkpoint.ms,
             start: setup.start,
-            coverage: Coverage::of_game(&run.decks, run.played),
+            coverage: Coverage::of_game(&run.decks, run.played).with_radiant(run.radiant),
         })
     }));
     let (stage, message, turn, actions) = match caught {
@@ -2789,6 +3032,7 @@ impl Wave {
             text.push_str(&line);
         }
         text.push_str(&self.coverage.line());
+        text.push_str(&self.coverage.radiant_line());
         text.push_str(&self.coverage.deals_line());
         text.push_str(&heaviest_lines(&self.heaviest));
         text
@@ -2812,6 +3056,8 @@ impl Wave {
                 "step": failure.actions,
                 "message": failure.message,
                 "forced": failure.forced,
+                "handicaps": failure.run_start_note().map(|(handicaps, _)| handicaps),
+                "marks": failure.run_start_note().map(|(_, marks)| marks),
             })).collect::<Vec<_>>(),
             "heaviest": self.heaviest,
             "starts": self.start_counts().collect::<IndexMap<_, _>>(),
@@ -3409,6 +3655,7 @@ pub(crate) mod tests {
                 heaviest: Heaviest::default(),
                 paused: Vec::new(),
                 played: IndexSet::new(),
+                radiant: IndexSet::new(),
             };
             assert_eq!(
                 check_termination(&GameSetup::plain(1), &run)
@@ -3442,6 +3689,7 @@ pub(crate) mod tests {
                     heaviest: Heaviest::default(),
                     paused: Vec::new(),
                     played: IndexSet::new(),
+                    radiant: IndexSet::new(),
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -4605,6 +4853,7 @@ pub(crate) mod tests {
                     StartKind::Dealt => (true, false, false),
                     StartKind::LastBoards => (false, true, false),
                     StartKind::GlitchBoards => (false, false, true),
+                    StartKind::Run => (false, false, false),
                 };
                 assert_eq!(inputs_set(&options), only, "{}", start.as_str());
                 let without = CreateGameOptions {
@@ -4793,14 +5042,14 @@ pub(crate) mod tests {
             };
             let summary = wave.summary();
             assert!(
-                summary.contains("\n  starts: plain=0 dealt=0 last-boards=0 glitch-boards=1\n"),
+                summary.contains("\n  starts: plain=0 dealt=0 last-boards=0 glitch-boards=1 run=0\n"),
                 "{summary}"
             );
             let json = wave.json();
             assert_eq!(json["failures"][0]["start"], json!("glitch-boards"));
             assert_eq!(
                 json["starts"],
-                json!({"plain": 0, "dealt": 0, "last-boards": 0, "glitch-boards": 1})
+                json!({"plain": 0, "dealt": 0, "last-boards": 0, "glitch-boards": 1, "run": 0})
             );
         }
 
@@ -4821,6 +5070,398 @@ pub(crate) mod tests {
                 fuzz_seed(seed, &Forcing::default()).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(drawn.start, StartKind::LastBoards);
             assert_ne!(replayed.hash, drawn.hash);
+        }
+    }
+
+    /// #3283: the dungeon-fight start `StartKind::Run`.
+    mod fuzz_run_starts {
+        use super::*;
+        use jackioh_engine::testkit::json_as;
+        use jackioh_engine::{SetupKind, validate_setup};
+
+        /// The seeds CI's `cargo jackioh fuzz --seeds 200` plays.
+        const CI_SEEDS: u32 = 200;
+
+        /// A wave's `GameSetup` for a seed.
+        type SetupOf = fn(u32) -> GameSetup;
+        /// One seed of a wave through the gate's checks (`fuzz_seed`, `fuzz_handicap_seed`).
+        type PlaySeed = fn(u32, &Forcing) -> Result<Passed, Failure>;
+        /// A wave's seeds `from..from + ran` played together (`play_wave`, `play_handicap_wave`).
+        type PlayWave = fn(u32, u32, &Forcing) -> Wave;
+
+        /// Each wave's name and `GameSetup`.
+        const WAVES: [(&str, SetupOf); 2] =
+            [("gate", GameSetup::gate), ("handicapped", GameSetup::handicapped)];
+
+        /// The seeds of `1..=CI_SEEDS` whose game `setup_of` starts as a dungeon fight.
+        fn run_seeds(setup_of: SetupOf) -> Vec<u32> {
+            (1..=CI_SEEDS)
+                .filter(|seed| setup_of(*seed).start == StartKind::Run)
+                .collect()
+        }
+
+        /// The first Run seed of a wave, and `fuzz_seed` or `fuzz_handicap_seed` to play it.
+        fn first_run_seed(setup_of: SetupOf) -> u32 {
+            *run_seeds(setup_of)
+                .first()
+                .expect("a seed of 1..=200 starts as a run")
+        }
+
+        fn passed(result: Result<Passed, Failure>) -> Passed {
+            result.unwrap_or_else(|failure| panic!("{}", failure.message))
+        }
+
+        #[test]
+        fn the_run_start_is_drawn_for_a_share_of_seeds_and_every_other_seed_starts_as_before() {
+            let names = |setup_of: SetupOf| -> Vec<&'static str> {
+                (1..=20).map(|seed| setup_of(seed).start.as_str()).collect()
+            };
+            // Pinned: the draws of `run-start-` and `start-` for the first twenty seeds. A seed that is
+            // not `run` keeps the start the `start-` stream alone gave it before #3283.
+            assert_eq!(
+                names(GameSetup::gate),
+                [
+                    "plain",
+                    "glitch-boards",
+                    "last-boards",
+                    "plain",
+                    "glitch-boards",
+                    "run",
+                    "run",
+                    "dealt",
+                    "plain",
+                    "plain",
+                    "dealt",
+                    "dealt",
+                    "plain",
+                    "run",
+                    "last-boards",
+                    "glitch-boards",
+                    "dealt",
+                    "plain",
+                    "glitch-boards",
+                    "dealt",
+                ]
+            );
+            assert_eq!(
+                names(GameSetup::handicapped),
+                [
+                    "plain",
+                    "dealt",
+                    "dealt",
+                    "glitch-boards",
+                    "dealt",
+                    "dealt",
+                    "dealt",
+                    "plain",
+                    "run",
+                    "last-boards",
+                    "plain",
+                    "plain",
+                    "plain",
+                    "plain",
+                    "plain",
+                    "glitch-boards",
+                    "last-boards",
+                    "plain",
+                    "plain",
+                    "plain",
+                ]
+            );
+            let share = f64::from(CI_SEEDS) * RUN_START_SHARE;
+            for (wave, setup_of) in WAVES {
+                let runs = run_seeds(setup_of).len() as f64;
+                assert!(
+                    runs > 0.5 * share && runs < 1.5 * share,
+                    "{wave}: {runs} of {CI_SEEDS} seeds run, near {share}"
+                );
+            }
+            for seed in 1..=CI_SEEDS {
+                assert_eq!(GameSetup::plain(seed).start, StartKind::Plain);
+            }
+        }
+
+        #[test]
+        fn a_seed_outside_the_share_deals_its_decks_and_options_exactly_as_before() {
+            register_all();
+            let _preview = preview_every_set();
+            for (wave, setup_of) in WAVES {
+                for seed in (1..=CI_SEEDS).filter(|seed| setup_of(*seed).start != StartKind::Run) {
+                    let setup = setup_of(seed);
+                    let decks = setup.decks(0);
+                    let before = match setup.rotation {
+                        Some(SeedHandicap { seat, handicap, .. }) => {
+                            handicap_decks_for_seed(seed, seat, &handicap)
+                        }
+                        None => decks_for_seed(seed),
+                    };
+                    assert_eq!(decks, before, "{wave} seed {seed}");
+                    let options = setup.create_options(decks);
+                    assert!(options.deck_marks.is_none(), "{wave} seed {seed}");
+                    assert_eq!(options.handicaps, setup.handicaps(), "{wave} seed {seed}");
+                }
+            }
+        }
+
+        #[test]
+        fn a_run_start_is_the_same_on_every_call_and_the_engine_takes_it() {
+            register_all();
+            let _preview = preview_every_set();
+            let mut sizes: IndexSet<usize> = IndexSet::new();
+            let mut marked = 0;
+            for (wave, setup_of) in WAVES {
+                for seed in run_seeds(setup_of) {
+                    let at = format!("{wave} seed {seed}");
+                    let setup = setup_of(seed);
+                    let decks = setup.decks(0);
+                    assert_eq!(decks, setup.decks(0), "{at}");
+                    let options = setup.create_options(decks.clone());
+                    assert_eq!(options, setup.create_options(decks.clone()), "{at}");
+
+                    let handicaps = options.handicaps.as_ref().expect("a run start sets handicaps");
+                    let marks = options.deck_marks.as_ref().expect("a run start sets marks");
+                    for (player, deck) in [(PlayerId::P1, &decks.0), (PlayerId::P2, &decks.1)] {
+                        let size = i32::try_from(deck.len()).unwrap_or(i32::MAX);
+                        assert!(
+                            (RUN_START_DECK_MIN..=RUN_START_DECK_MAX).contains(&size),
+                            "{at}: {size}"
+                        );
+                        sizes.insert(deck.len());
+                        let handicap = handicaps.get(player).expect("a run start handicaps both seats");
+                        assert_eq!(handicap.deck_size, size, "{at}");
+                        let health = handicap.hero_health.expect("a run start sets health");
+                        assert!(
+                            (1..=RUN_START_HERO_HEALTH_MAX).contains(&health),
+                            "{at}: {health}"
+                        );
+                        assert!(
+                            handicap
+                                .hero_armor
+                                .is_none_or(|armor| (1..=RUN_START_ARMOR_MAX).contains(&armor)),
+                            "{at}: {:?}",
+                            handicap.hero_armor
+                        );
+                        let list = marks.get(player).expect("a run start marks both seats");
+                        marked += list.len();
+                        for mark in list {
+                            assert!(mark.index < deck.len(), "{at}: {mark:?}");
+                            assert!(mark.radiant || mark.upgrades > 0, "{at}: {mark:?}");
+                            assert!(
+                                (0..=RUN_START_BUFFS_MAX).contains(&mark.upgrades),
+                                "{at}: {mark:?}"
+                            );
+                        }
+                    }
+                    assert_eq!(validate_setup(&options, &CATALOG, SetupKind::New), Ok(()), "{at}");
+
+                    let fold = setup.fold_args(decks.clone(), Vec::new());
+                    assert_eq!(fold.handicaps, options.handicaps, "{at}");
+                    assert_eq!(fold.deck_marks, options.deck_marks, "{at}");
+
+                    // `--cards`: a deck holds at least as many cards as are forced into it.
+                    let forced = usize::try_from(DECK_SIZE).unwrap_or(0);
+                    let (first, second) = setup.decks(forced);
+                    assert!(first.len() >= forced && second.len() >= forced, "{at}");
+                }
+            }
+            assert!(
+                sizes
+                    .iter()
+                    .any(|size| *size != usize::try_from(DECK_SIZE).unwrap_or(0)),
+                "{sizes:?}"
+            );
+            assert!(marked > 0, "no run start marks a card");
+        }
+
+        #[test]
+        fn a_run_start_game_plays_monitor_clean_and_folds_back_to_its_live_hash() {
+            register_all();
+            let waves: [(SetupOf, PlaySeed); 2] = [
+                (GameSetup::gate, fuzz_seed),
+                (GameSetup::handicapped, fuzz_handicap_seed),
+            ];
+            for (setup_of, play) in waves {
+                let seed = first_run_seed(setup_of);
+                let first = passed(play(seed, &Forcing::default()));
+                let again = passed(play(seed, &Forcing::default()));
+                assert_eq!(first.start, StartKind::Run, "seed {seed}");
+                assert_eq!(
+                    first.hash, again.hash,
+                    "seed {seed}: the start is not the same on every run"
+                );
+                // The same seed from the plain start, over the wave's own decks.
+                let plain_setup = GameSetup {
+                    start: StartKind::Plain,
+                    ..setup_of(seed)
+                };
+                let plain = passed(run_seed(&plain_setup, plain_setup.decks(0), reduce));
+                assert_ne!(first.hash, plain.hash, "seed {seed}");
+            }
+        }
+
+        #[test]
+        fn a_run_seed_played_alone_is_counted_as_run_in_the_summary_and_the_json() {
+            register_all();
+            let waves: [(SetupOf, PlayWave); 2] = [
+                (GameSetup::gate, play_wave),
+                (GameSetup::handicapped, play_handicap_wave),
+            ];
+            for (setup_of, play) in waves {
+                let seed = first_run_seed(setup_of);
+                let wave = play(seed, 1, &Forcing::default());
+                assert!(
+                    wave.failures.is_empty(),
+                    "seed {seed}: {}",
+                    report(&wave.failures, 1, 0.0)
+                );
+                let counts: Vec<(&str, usize)> = wave.start_counts().collect();
+                assert_eq!(
+                    counts,
+                    [
+                        ("plain", 0),
+                        ("dealt", 0),
+                        ("last-boards", 0),
+                        ("glitch-boards", 0),
+                        ("run", 1)
+                    ]
+                );
+                assert!(wave.summary().contains("run=1"), "{}", wave.summary());
+                assert_eq!(wave.json()["starts"]["run"], json!(1));
+            }
+        }
+
+        #[test]
+        fn a_run_failure_prints_its_handicaps_and_marks_in_the_report_and_the_json() {
+            register_all();
+            let _preview = preview_every_set();
+            let seed = first_run_seed(GameSetup::gate);
+            let failure = |start: StartKind, decks: (Vec<String>, Vec<String>)| Failure {
+                seed,
+                rotation: None,
+                start,
+                stage: FailureStage::Replay,
+                signature: String::new(),
+                message: "it broke".into(),
+                decks: Box::new(decks),
+                forced: Vec::new(),
+                turn: 2,
+                actions: 1,
+            };
+            let wave_of = |failure: Failure| Wave {
+                handicapped: false,
+                from: seed,
+                ran: 1,
+                failures: vec![failure],
+                reasons: IndexMap::new(),
+                actions_total: 0,
+                actions_max: 0,
+                turn_max: 0,
+                heaviest: Heaviest::default(),
+                elapsed_ms: 0.0,
+                checkpoint_paused: 0,
+                checkpoint_mid: 0,
+                checkpoint_max_ms: 0,
+                starts: IndexMap::new(),
+                endings: 0,
+                forcing: Forcing::default(),
+                coverage: Coverage::default(),
+            };
+
+            let run = failure(StartKind::Run, GameSetup::gate(seed).decks(0));
+            let options = GameSetup::gate(seed).create_options(GameSetup::gate(seed).decks(0));
+            let text = report(std::slice::from_ref(&run), 1, 0.0);
+            assert!(text.contains("\n  start: run\n  handicaps: {"), "{text}");
+            assert!(text.contains("\n  marks: {"), "{text}");
+            assert!(
+                text.contains(&format!("\n  handicaps: {}\n", json!(options.handicaps))),
+                "{text}"
+            );
+            assert!(
+                text.contains(&format!("\n  marks: {}\n", json!(options.deck_marks))),
+                "{text}"
+            );
+            let json = wave_of(run).json();
+            assert_eq!(json["failures"][0]["handicaps"], json!(options.handicaps));
+            assert_eq!(json["failures"][0]["marks"], json!(options.deck_marks));
+            assert!(!json["failures"][0]["handicaps"].is_null());
+            assert!(!json["failures"][0]["marks"].is_null());
+
+            let plain = failure(StartKind::Plain, (Vec::new(), Vec::new()));
+            let text = report(std::slice::from_ref(&plain), 1, 0.0);
+            assert!(!text.contains("handicaps:") && !text.contains("marks:"), "{text}");
+            let json = wave_of(plain).json();
+            assert!(json["failures"][0]["handicaps"].is_null());
+            assert!(json["failures"][0]["marks"].is_null());
+        }
+
+        #[test]
+        fn the_radiant_coverage_names_the_dealt_cards_no_game_resolved_on_their_radiant_face() {
+            let resolved = |radiant: Option<bool>, def_id: &str| -> GameEvent {
+                let mut event = json!({
+                    "type": "cardResolved",
+                    "player": "p1",
+                    "instanceId": "x",
+                    "defId": def_id,
+                    "permanent": false,
+                    "costPaid": 1,
+                });
+                if let Some(radiant) = radiant {
+                    event["radiant"] = json!(radiant);
+                }
+                json_as::<GameEvent>(event)
+            };
+            let mut radiant: IndexSet<String> = IndexSet::new();
+            note_radiant(
+                &mut radiant,
+                &[
+                    resolved(Some(false), "core-002"),
+                    resolved(None, "core-003"),
+                    resolved(Some(true), "core-001"),
+                ],
+            );
+            assert_eq!(
+                radiant.iter().map(String::as_str).collect::<Vec<_>>(),
+                ["core-001"]
+            );
+
+            let ids = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<IndexSet<String>>();
+            let coverage = Coverage {
+                dealt: ids(&["core-003", "core-001", "core-002"]),
+                radiant: ids(&["core-002", "fuzz-token"]),
+                ..Coverage::default()
+            };
+            assert_eq!(coverage.never_radiant(), ["core-001", "core-003"]);
+            assert_eq!(
+                coverage.radiant_line(),
+                "  coverage (Radiant faces): 2 of 3 dealt pool cards never resolved Radiant: core-001, core-003\n"
+            );
+            let json = coverage.json();
+            assert_eq!(json["radiantResolved"], json!(1));
+            assert_eq!(json["neverRadiant"], json!(["core-001", "core-003"]));
+
+            let mut merged = Coverage::default();
+            merged.merge(Coverage::default().with_radiant(ids(&["core-001"])));
+            merged.merge(Coverage::default().with_radiant(ids(&["core-002", "core-001"])));
+            assert_eq!(
+                merged.radiant.iter().map(String::as_str).collect::<Vec<_>>(),
+                ["core-001", "core-002"]
+            );
+
+            let many = Coverage {
+                dealt: (0..COVERAGE_SHOWN + 2)
+                    .rev()
+                    .map(|n| format!("core-{n:03}"))
+                    .collect(),
+                ..Coverage::default()
+            };
+            let line = many.radiant_line();
+            assert!(line.contains(": core-000, core-001, "), "{line}");
+            assert!(line.ends_with(", … (+2 more)\n"), "{line}");
+            assert!(
+                Coverage::default()
+                    .radiant_line()
+                    .ends_with("0 of 0 dealt pool cards never resolved Radiant: none\n")
+            );
         }
     }
 
@@ -5005,6 +5646,7 @@ pub(crate) mod tests {
                     heaviest: Heaviest::default(),
                     paused: Vec::new(),
                     played: IndexSet::new(),
+                    radiant: IndexSet::new(),
                 };
                 let failure = check_termination(&GameSetup::plain(1), &run)
                     .expect_err("a game without the channel cannot end by one of its endings");
@@ -5054,6 +5696,7 @@ pub(crate) mod tests {
                     heaviest: Heaviest::default(),
                     paused: Vec::new(),
                     played: IndexSet::new(),
+                    radiant: IndexSet::new(),
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -5674,6 +6317,8 @@ pub(crate) mod tests {
                     "dealt": 3,
                     "played": 1,
                     "neverPlayed": ["core-001", "core-003"],
+                    "radiantResolved": 0,
+                    "neverRadiant": ["core-001", "core-002", "core-003"],
                 })
             );
             assert_eq!(

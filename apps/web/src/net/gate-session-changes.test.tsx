@@ -14,6 +14,7 @@ import { jsonResponse } from "../test/stubServer.ts";
 import { ApiRequestError } from "./api.ts";
 import { callWithRenewal, renewAfterUnauthorized } from "./gate.ts";
 import { paths } from "./navigate.ts";
+import { expireRead } from "./readCache.ts";
 import { SESSION_STORAGE_KEY, clearSession, readSession } from "./session.ts";
 import { tokenFromProtocols } from "./socketProtocols.ts";
 
@@ -395,6 +396,8 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       expect(sockets).toHaveLength(1);
     }, SLOW);
 
+    // R3206000: inside the window the gate sends no read; this is the re-read after it.
+    expireRead(first, "/api/auth/me");
     store(renewed, "rt-2", Date.now() + 3_600_000);
     const reads = meReads();
     act(() => {
@@ -433,6 +436,8 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     await waitFor(() => {
       expect(sockets).toHaveLength(1);
     }, SLOW);
+    // R3206000: the renewal falls due inside the window, where the gate sends no read; this is the one after it.
+    expireRead(first, "/api/auth/me");
 
     await waitFor(() => {
       expect(readSession()?.accessToken).toBe(renewed);
