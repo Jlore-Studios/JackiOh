@@ -84,4 +84,31 @@ describe("R3217000 the providers' buttons", () => {
     expect(mark).not.toBeNull();
     expect(mark).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("R3217000 Roblox's button carries Roblox's tilt mark, unaltered, drawn inline at the Google mark's size", () => {
+    draw(["google", "custom:roblox"]);
+    const roblox = screen.getByRole("button", { name: "Continue with Roblox" });
+    const google = screen.getByRole("button", { name: "Continue with Google" });
+    expect(roblox.querySelectorAll("svg")).toHaveLength(1);
+    expect(roblox.querySelectorAll(".auth-oauth-mark")).toHaveLength(1);
+    const mark = roblox.querySelector("svg");
+    expect(mark).not.toBeNull();
+    expect(mark).toHaveClass("auth-oauth-mark");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark).toHaveAttribute("focusable", "false");
+    expect(mark).toHaveAttribute("viewBox", "0 0 150 150");
+    const paths = mark?.querySelectorAll("path");
+    expect(paths).toHaveLength(1);
+    expect(paths?.item(0)).toHaveAttribute(
+      "d",
+      "M31.6984 0L0 118.302L118.302 150L150 31.6984L31.6984 0ZM87.1031 95.9652L54.0454 87.1031L62.9075 54.0454L95.9784 62.9075L87.1031 95.9652Z",
+    );
+    // `currentColor` is the button's text color: white on Roblox's black face.
+    expect(paths?.item(0)).toHaveAttribute("fill", "currentColor");
+    const googleMark = google.querySelector("svg");
+    expect(googleMark).not.toBeNull();
+    expect(googleMark?.getAttribute("width")).toBe("18");
+    expect(mark?.getAttribute("width")).toBe(googleMark?.getAttribute("width"));
+    expect(mark?.getAttribute("height")).toBe(googleMark?.getAttribute("height"));
+  });
 });
