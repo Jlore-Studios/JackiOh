@@ -16278,9 +16278,9 @@
       "planned_tier": "medium",
       "provider": "claude-6",
       "round_tier": "",
-      "run_id": "42264228771",
+      "run_id": "pending:67a17f24-1793988918",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T17:43:20Z",
+      "started_at": "2026-11-06T18:15:48Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on sonnet wrote no plan: claude exited 1"
@@ -16550,9 +16550,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T18:15:03Z",
+    "at": "2026-11-06T18:15:48Z",
     "url": "",
-    "what": "review #3299 on claude-4"
+    "what": "plan #3308 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T17:56:46Z",
