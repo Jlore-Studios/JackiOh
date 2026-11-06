@@ -25861,6 +25861,10 @@
         {
           "at": "2026-11-06T19:16:06Z",
           "minutes": 51.0
+        },
+        {
+          "at": "2026-11-06T20:58:07Z",
+          "minutes": 51.6
         }
       ],
       "tokens_spent": [
@@ -27123,14 +27127,21 @@
           "cost": 4.4741,
           "input": 184,
           "output": 54509
+        },
+        {
+          "at": "2026-11-06T20:58:07Z",
+          "cache": 9590063,
+          "cost": 3.5314,
+          "input": 190,
+          "output": 32630
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-06T21:10:00Z",
-          "utilization": 0.28
+          "utilization": 0.45
         },
-        "observed_at": "2026-11-06T19:16:06Z",
+        "observed_at": "2026-11-06T20:58:07Z",
         "status": "allowed"
       }
     },
@@ -33783,6 +33794,21 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-06T19:28:11Z,claude-6,ping,before,42278590166,29,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:28:59Z,claude-6,stream,call,42278590166,30,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:29:29Z,claude-6,stream,call,42278590166,37,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:30:29Z,claude-6,stream,call,42278590166,38,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:33:59Z,claude-6,stream,call,42278590166,39,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:38:00Z,claude-6,stream,call,42278590166,40,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:53:45Z,claude-6,stream,call,42278590166,41,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:57:15Z,claude-6,stream,call,42278590166,42,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T19:58:00Z,claude-6,stream,call,42278590166,43,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T20:06:46Z,claude-6,stream,call,42278590166,44,2026-11-06T21:10:00Z,,,allowed,70,,",
+      "2026-11-06T20:19:31Z,claude-6,stream,call,42278590166,45,2026-11-06T21:10:00Z,,,allowed,100,,"
+    ]
   },
   "version": 1
 }
