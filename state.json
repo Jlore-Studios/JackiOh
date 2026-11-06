@@ -16481,7 +16481,7 @@
       "verdict_rounds": 1
     },
     "3316": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -16508,13 +16508,13 @@
       "interruptions": 0,
       "issue": 3315,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-06T18:43:29Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42270775407",
+      "run_id": "pending:475bc3f7-1793991168",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16535,7 +16535,7 @@
         "run": "42264455089"
       },
       "source": "ci",
-      "started_at": "2026-11-06T18:26:44Z",
+      "started_at": "2026-11-06T18:53:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16710,9 +16710,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T18:52:33Z",
+    "at": "2026-11-06T18:53:22Z",
     "url": "",
-    "what": "review #3318 on claude-3"
+    "what": "revise #3316 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T18:38:28Z",
