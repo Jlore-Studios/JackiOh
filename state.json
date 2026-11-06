@@ -16810,6 +16810,8 @@
       }
     },
     "3322": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-06T19:19:18Z",
@@ -16823,8 +16825,11 @@
         "trail": " --include=*.ts --include=*.mjs --include=*.js -l 2>/dev/null | grep -v node_modules | head\", \"description\": \"Locate the replay binar\u2026\n- Bash: {\"command\": \"grep -n 'target\\\\|release\\\\|env' e2e/support/tasks/replay-runner.ts | head\", \"description\": \"Read how replay-runner finds the binary\"}\n- Bash: {\"command\": \"sed -n '10,25p' e2e/support/tasks/replay-runner.ts\", \"description\": \"Read the replay-runner path setup\"}\n- Bash: {\"command\": \"grep -rn 'chdir\\\\|cwd' e2e/cypress.config.ts e2e/support/tasks/*.ts | head -5\", \"description\": \"Check whether Cypress config changes the cwd\"}\n- said: Spec 30's replay runs from the repo root. Building the e2e client, then starting the preview and server.\n- Bash: {\"command\": \"mkdir -p target/release && ln -sf \\\"$CARGO_TARGET_DIR/release/jackioh\\\" target/release/jackioh && ls -la target/release/; echo \\\"- e2e: symlinked target/release/jackioh -> \\\\$CARGO_TARGE\u2026\n- Bash: {\"command\": \"(E2E=1 nohup pnpm --dir apps/web exec vite preview --port 5173 --strictPort > /tmp/b3308-preview.log 2>&1 &) ; (CATALOG_VERSION=$($CARGO_TARGET_DIR/release/jackioh catalog-version) E2E=1\u2026\n- tool error: Permission to use Bash with command (E2E=1 nohup pnpm --dir apps/web exec vite preview --port 5173 --strictPort > /tmp/b3308-preview.log 2>&1 &) ; (CATALOG_VERSION=$($CARGO_TARGET_DIR/release/jackioh\u2026\n- Bash: {\"command\": \"E2E=1 pnpm --dir apps/web exec vite preview --port 5173 --strictPort > /tmp/b3308-preview.log 2>&1\", \"description\": \"Serve the built e2e client on port 5173\", \"timeout\": 7200000, \"run_in\u2026\n- Bash: {\"command\": \"CATALOG_VERSION=$(\\\"$CARGO_TARGET_DIR/release/jackioh\\\" catalog-version) E2E=1 \\\"$CARGO_TARGET_DIR/release/jackioh-server\\\" > /tmp/b3308-server.log 2>&1\", \"description\": \"Run the e2e gam\u2026\n- Bash: {\"command\": \"timeout 60 bash -c 'until curl -s -o /dev/null http://localhost:5173/ && curl -s -o /dev/null http://localhost:8787/healthz; do sleep 2; done'; curl -s -o /dev/null -w 'web %{http_code}\\\u2026\n- tool error: Permission to use Bash with command timeout 60 bash -c 'until curl -s -o /dev/null http://localhost:5173/ && curl -s -o /dev/null http://localhost:8787/healthz; do sleep 2; done'; curl -s -o /dev/nul\u2026\n- Bash: {\"command\": \"sleep 5; tail -5 /tmp/b3308-preview.log /tmp/b3308-server.log\", \"description\": \"Check the preview and server logs\"}\n- tool error: Exit code 1 error: unexpected argument '-5' found tip: to pass '-5' as a value, use '-- -5' Usage: tail [OPTION]... [FILE]... For more information, try '--help'.\n- Read: {\"file_path\": \"/tmp/b3308-server.log\"}\n- Read: {\"file_path\": \"/tmp/b3308-preview.log\"}\n- said: Both up. Running shard 6 plus specs 46 and 47.\n- Bash: {\"command\": \"echo \\\"- e2e: preview :5173 + server :8787 up; running shard 6 + 46 + 47 (log /tmp/b3308-e2e.log)\\\" >> .bot-notes.md\\ncd e2e && E2E=1 pnpm exec cypress run --browser chrome --spec \\\"$(no\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo jackioh spec check 2>&1 | tail -5\", \"description\": \"Check formatting and the ruling notes\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail -2\", \"description\": \"Run the catalog and patches checks\", \"timeout\": 600000}\n- Bash: {\"command\": \"git rev-parse --verify origin/main 2>&1 | head -1; cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Classify the change against main with its claims\",\u2026\n- Bash: {\"command\": \"echo \\\"- fmt, spec check, catalog check, patches check ok; classify --claims: Internal\\\" >> .bot-notes.md; timeout 590 bash -c 'until grep -q \\\"^exit\\\" /tmp/claude-1001/-home-runner-work\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b3308-e2e.log | grep -E '\\u2502 +(\\u2714|\\u2716)|All specs|failed \\\\(' | head -15\", \"description\": \"Show the e2e run's per-spec table\"}\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"b878o4f4n\"}\n- TaskStop: {\"task_id\": \"bmwiq7rk0\"}\n- Bash: {\"command\": \"rm target/release/jackioh && rmdir target/release target && git status --porcelain; echo \\\"- e2e: shard 6 (8 specs) + 46 + 47 all pass, 105/105; servers stopped, target/ symlink removed.\u2026\n- tool error: /home/runner/work/_temp/work/item-3308/target/release/jackioh resolves through a symlink to /home/runner/work/JackiOh/JackiOh/target/release/jackioh, which is outside the allowed working directories\n- Bash: {\"command\": \"find target -maxdepth 2 -type l -name jackioh -delete && rmdir target/release target && git status --porcelain\", \"description\": \"Delete the symlink itself, not its target\"}\n- Bash: {\"command\": \"ls \\\"$CARGO_TARGET_DIR/release/jackioh\\\" && echo \\\"- e2e: shard 6 (8 specs) + 46 + 47 all pass, 105/105; servers stopped, target/ symlink removed. Next: clippy engine+cards, engine windf\u2026\n- Bash: {\"command\": \"echo \\\"- clippy engine+cards --all-targets testkit: clean\\\" >> .bot-notes.md; cargo test -p jackioh-engine --features testkit --test 'rules*' windfury 2>&1 | grep -E 'test result|FAILED|\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-cards --test cards cross::invariants 2>&1 | grep -E 'test result|FAILED|panicked' | head; cargo test -p jackioh-engine --features testkit invariant 2>&1 | grep -E '\u2026\n- Bash: {\"command\": \"echo \\\"- engine rules windfury 9 pass; cards cross::invariants 74 pass; engine invariant 34 pass. Running CI fuzz gate 200 seeds\\\" >> .bot-notes.md; cargo jackioh fuzz --seeds 200 2>&1 |\u2026\n- Bash: {\"command\": \"git diff crates/ apps/\", \"description\": \"Review the Rust and CSS diff\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nnew='''## State\\n\\nBuild pass 1 (2026-11-06, opus), base fbfe94062a. DONE: ev\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} --> All three jobs that failed in super run 42238953974 now pass when I run them locally. Every change follows the plan as written. No test, bound or count was skipped, loosened or edited beyond what the plan names. ## `fuzz (3/4)`\u2026"
       },
       "issue": 3308,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-06T20:59:35Z",
         "from_run": "42278590166",
         "gates": [
           {
@@ -16916,7 +16921,11 @@
         "source": "build",
         "until": "2026-11-06T21:28:29Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-06T20:58:29Z",
+      "run_id": "pending:9efb706c-1793998755",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16935,6 +16944,9 @@
         "provider": "claude-6",
         "run": "42278590166"
       },
+      "started_at": "2026-11-06T20:59:35Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16948,9 +16960,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T20:42:41Z",
+    "at": "2026-11-06T20:59:35Z",
     "url": "",
-    "what": "revise #3319 on claude-8"
+    "what": "review #3322 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T20:49:40Z",
