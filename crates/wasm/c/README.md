@@ -149,7 +149,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | strings | whether the setup may start a run, a run started |
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | strings | a run after one action, a run file folded |
 | `run_fight_setup(state, content)`, `run_fight_report(game, human)` | strings | the fight being played, the `FightOver` it sends |
-| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_level_cost(level)` | strings | the score, the Embers it pays, the max HP, a level's cost |
+| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_shop_prices(state, content)`, `run_level_cost(level)` | strings | the score, the Embers it pays, the max HP, a shop's prices, a level's cost |
 | `run_seed(source)`, `run_daily_seed(date, n)` | strings | a seed, the daily run's seed |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | strings | #936's co-op wrapper; built without the `duos` feature each is status `1` with the reason |
 

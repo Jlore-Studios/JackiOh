@@ -233,7 +233,7 @@ present for exactly that window.
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
-back to the control when it closes. A hotseat hand-over or the game's end drops the question.
+back to the control when it closes. A hotseat hand-over or the game's end drops the question. A dungeon fight passes its own `concedeBody` saying the run ends (R2972000).
 
 **One press is sent once** (R3060000). `Game.tsx`'s `dispatch` remembers the last `endTurn`, `answer` or
 `mulligan` it sent and the view it was sent against, and drops an equal body against the same view, so a

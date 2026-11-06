@@ -80,6 +80,8 @@ export const dungeonMapTestid = {
   shopBuff: (index: number): string => `dungeon-run-shop-buff-${String(index)}`,
   /** B30: level one relic held, by its place in the run's list. */
   shopLevel: (index: number): string => `dungeon-run-shop-level-${String(index)}`,
+  /** B30: the note a relic at its highest level shows where its Level up button would be. */
+  shopLevelMax: (index: number): string => `dungeon-run-shop-level-max-${String(index)}`,
   /** B30: leave the shop. */
   shopLeave: "dungeon-run-shop-leave",
   /** B30: the campfire. */
@@ -108,6 +110,10 @@ export const dungeonMapTestid = {
   runOver: "dungeon-run-over",
   /** B31: the run's score. */
   endScore: "dungeon-run-end-score",
+  /** B31: the run's time, beside the score. */
+  endTime: "dungeon-run-end-time",
+  /** B31: the turns the run's fights took, beside the score. */
+  endTurns: "dungeon-run-end-turns",
   /** B31: the Embers the score pays. */
   endEmbers: "dungeon-run-end-embers",
   /** B31: the cards the run extracted. */

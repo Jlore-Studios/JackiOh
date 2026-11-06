@@ -42,7 +42,7 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | the run after one action, or a run file folded from its start: `{ state }` |
 | `run_fight_setup(state, content)` | the fight being played (`RunFightSetup`), or `null` outside one |
 | `run_fight_report(game, human)` | the `FightOver` a finished fight sends: `{ action }` |
-| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)` | the run's score, the Embers a score pays, the run's max HP |
+| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_shop_prices(state, content)` | the run's score, the Embers a score pays, the run's max HP, what a shop's services cost |
 | `run_level_cost(level)`, `run_constants()` | the Embers one level costs (or `null` at the top), and the run's numbers the screens show |
 | `run_seed(source)`, `run_daily_seed(date, n)` | a seed of capital letters, or the daily run's seed |
 
