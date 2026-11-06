@@ -15872,14 +15872,6 @@
         "reason": "`claude-4` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-06T18:00:00Z",
         "trail": "- said: CI failed in one place: after the merge from main, `faceModel(...).text` is a `RichText` with no `marks`, which breaks `versionLooks6.test.tsx` line 279. Checking how main's own part 5 test reads it now.\n- Bash: {\"command\": \"git log --oneline -3 && grep -n \\\"marked\\\\|marks\\\" apps/web/src/cards/versionLooks5.test.tsx | head; grep -n \\\"marks\\\" apps/web/src/cards/versionLooks6.test.tsx\", \"description\": \"Compare\u2026\n- Bash: {\"command\": \"grep -n \\\"legacyText\\\" apps/web/src/cards/versionLooks5.test.tsx | head -3; grep -rn \\\"export function legacyText\\\" apps/web/src | head\", \"description\": \"Find where legacyText comes from\u2026\n- said: Main moved the marks behind a `legacyText` helper; I'll make part 6's test read them the same way.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/versionLooks6.test.tsx'\\ns=open(p).read()\\nold=\\\"\\\"\\\" const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;\\\"\\\"\\\"\\nn\u2026\n- said: Only that one line reads `.text.marks`. This fresh worktree has no wasm build, so I'm building it before typecheck and tests.\n- Bash: {\"command\": \"echo \\\"- Pass 2 (ci): versionLooks6 read face.text.marks, which main's #3293 merge replaced by RichText; now reads legacyText(...).marks as versionLooks5 does. Building wasm, typecheck, \u2026\n- Bash: {\"command\": \"ls node_modules >/dev/null 2>&1 || timeout 900 pnpm install --frozen-lockfile > /tmp/install.log 2>&1; timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -5\", \"description\": \"Typechec\u2026\n- said: Typecheck is clean. Running the part 6 web test files, then the web suite on what changed since main.\n- Bash: {\"command\": \"cd apps/web && timeout 2400 pnpm exec vitest run src/cards/versionLooks6.test.tsx src/cards/versionLooks5.test.tsx src/cards/art/pictures.test.ts src/cards/versions.test.ts src/cards/cos\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3299 && timeout 3000 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/\u2026\n- said: The whole changed-since-main web suite passes: 334 files, 6402 tests. Now eslint on the file, the daily sweep, and the cheap repo checks against the newly merged main.\n- Bash: {\"command\": \"timeout 900 pnpm exec eslint apps/web/src/cards/versionLooks6.test.tsx 2>&1 | tail -5; cargo fmt --check 2>&1 | head -3; echo fmt-done\", \"description\": \"Lint the changed test and check R\u2026\n- Bash: {\"command\": \"cd apps/web && JACKIOH_DAILY=1 timeout 5000 pnpm exec vitest run src/cards/versionLooks6.test.tsx 2>&1 | grep -E \\\"Test Files|Tests |FAIL\\\" | head -5\", \"description\": \"Run the daily swee\u2026\n- Bash: {\"command\": \"timeout 3000 cargo jackioh spec check 2>&1 | tail -1; timeout 600 cargo jackioh patches check 2>&1 | tail -1\", \"description\": \"Run spec check and patches check\", \"timeout\": 3700000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3299/6c0cfb3f-8558-455c-8f0a-05206132f8fe/tasks/b7wp6td2r.output; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index\u2026\n- tool error: Exit code 1 Test Files 1 passed (1) Tests 84 passed (84) [exited with code 0] Traceback (most recent call last): File \"<stdin>\", line 3, in <module> ValueError: substring not found"
       },
-      "hold": {
-        "ends": "2026-11-06T18:21:09Z",
-        "lifted": "2026-11-06T17:02:23Z",
-        "owner": "claude-4",
-        "since": "2026-11-06T16:21:09Z",
-        "until": "2026-11-06T17:00:00Z",
-        "why": "5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "issue": 3017,
       "kind": "revise",
@@ -15899,7 +15891,7 @@
         "c5dea7bb43580bdac9ebead09af276162397a84c": "053ba7eee01ca4fa6cdb83207efedf97dcc7b3bf"
       },
       "round_tier": "strong",
-      "run_id": "42246836665",
+      "run_id": "pending:99678899-1793984606",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15920,7 +15912,7 @@
         "run": "42246836665"
       },
       "source": "ci",
-      "started_at": "2026-11-06T15:50:46Z",
+      "started_at": "2026-11-06T17:04:14Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16515,9 +16507,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T16:46:03Z",
+    "at": "2026-11-06T17:04:14Z",
     "url": "",
-    "what": "review #3312 on claude-3"
+    "what": "revise #3299 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T16:53:36Z",
