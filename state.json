@@ -17393,6 +17393,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 95,
       "started_at": "2026-11-06T02:33:06Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -34734,9 +34735,33 @@
         "title": "Patch: draw the dungeon map's node icons as SVG instead of system emoji",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "718dcedda95758450c96da1fddfd94e73b5dd59c",
+        "issue": 3206,
+        "merged_at": "2026-11-06T10:53:38Z",
+        "n": 95,
+        "pr": 3259,
+        "queued_at": "2026-11-06T10:53:38Z",
+        "sha": "db9d2dfab90659de50fad5877f096ed85b2f9f42",
+        "status": "queued",
+        "title": "Patch (part 2 of 3): share a read already in flight, and keep a fresh answer for a short window",
+        "tries": 0
       }
     ],
-    "count": 94
+    "count": 95
   },
   "statistics": {
     "at": "2026-11-06T10:24:08Z"
