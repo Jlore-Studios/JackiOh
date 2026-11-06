@@ -17919,32 +17919,6 @@
         "by": "`claude` (medium)",
         "sha": "6198b7d5bff7567f3131ac45887309e5a14f32a3"
       },
-      "decision": {
-        "asked_at": "2026-11-06T06:41:00Z",
-        "assigned": [
-          "jgoetzmann",
-          "MaxGoetzmann"
-        ],
-        "kind": "revise",
-        "model": "sonnet",
-        "options": [
-          {
-            "change": "Keep the control at the zone's top-left in DEF as it is now, and let it reach over the turned card's corner, partly covering the attack gem. The stack still folds all marks away (control only). This is what the branch does today, documented in the README, and the Cypress spec skips the control's no-overlap check only where the band is shorter than the control.",
-            "tradeoff": "Smallest change and the control stays anchored and tappable. At 390\u00d7664 in DEF the attack number is partly hidden, which the reviewer treated as blocking, and spec/04-combat.md \u00a74.3 says a defender strikes back with its full attack."
-          },
-          {
-            "change": "In DEF, where the band above the turned card is shorter than the control, move the whole stack onto the turned card's art, at the bottom-right of the zone. That is clear of the name, attack, health and the top-right switch. Only the control's own place changes, and only at that size.",
-            "tradeoff": "Attack, name and health always show. The stack's rects are no longer identical in ATK and DEF, and the control is no longer at the top-left there. That departs from the issue's 'identical rects' and anchor rules, and needs more CSS plus a spec change."
-          },
-          {
-            "change": "Shrink the DEF card further at cramped heights so a 20px band is left above it for the control.",
-            "tradeoff": "Anchor and identical control rect hold and nothing is covered. The DEF card would have to shrink to about 60% of its footprint at 390\u00d7664, which breaks #2556's 'DEF fits and fills its zone' and the issue's 'do not regress #2932'."
-          }
-        ],
-        "problem": "The reviewer's finding holds. A DEF card is turned 90\u00b0 clockwise, so its attack gem, the end of its name and its health stand in a strip down its left side. That strip sits right under the top-left corner where the badge stack lives. I fixed the part I can: over a DEF card the stack now stops above the turned card, so the marks that don't fit fold into `+N` (all the way out at the smallest room). I measured it in Chrome at all four phone sizes. The control and chips no longer touch the DEF card's name or stats at 390\u00d7844, 360\u00d7780 or 430\u00d7932.\n\nOne case has no answer inside the issue's own limits. At 390\u00d7664 a DEF unit has only 6px between the zone's top and the turned card, and the Activate control is 16px tall. If the control stays in the top-left corner (which the issue requires, and which keeps it identical in ATK and DEF), it covers about 6px of the attack gem's top. If it moves, the issue's top-left anchor and identical rects break. If it is hidden, the unit can't Activate from the board in DEF. The issue's own list (top-left anchor, identical rects in ATK and DEF, no overlap with name or stats, the DEF card filling its zone) cannot all hold at that size. A person has to say which gives way.",
-        "provider": "claude-8",
-        "question": "At 390\u00d7664, for a DEF unit that has an Activate ability, which requirement gives way?"
-      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
