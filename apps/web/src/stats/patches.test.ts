@@ -1,9 +1,20 @@
-// R1973002: the patch picker's choices and the patches either side of the one shown (stats/patches.ts).
+// R1973002, R3324000: the patch tabs and the patches either side of the one shown, the newest patch collecting its
+// data, and (R3324001) the current patch (stats/patches.ts).
 
 import { describe, expect, it } from "vitest";
 
+import { CATALOG_VERSION } from "@jackioh/cards";
 import { STATS_PATCH_MIN_GAMES, STATS_PATCHES_OFFERED } from "./config.ts";
-import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "./patches.ts";
+import {
+  currentVersion,
+  isCollecting,
+  neighbours,
+  offeredPatches,
+  patchIndex,
+  patchName,
+  patchTarget,
+  type PatchWindow,
+} from "./patches.ts";
 
 function patch(versions: string[], games: number): PatchWindow {
   return { versions, games, liveGames: 0 };
@@ -29,15 +40,35 @@ describe("R1973002 the patches /stats can show", () => {
     expect(patchIndex(PATCHES, "v9")).toBe(-1);
   });
 
-  it("R1973002 offers the newest STATS_PATCHES_OFFERED patches with STATS_PATCH_MIN_GAMES games, and the one shown", () => {
+  it("R1973002 R3324000 a tab for the newest patch, the newest STATS_PATCHES_OFFERED with STATS_PATCH_MIN_GAMES games, and the one shown", () => {
+    // The newest, v8, has too few games and a tab, first, whichever patch is shown.
     const offered = offeredPatches(PATCHES, 3);
-    expect(offered).toHaveLength(STATS_PATCHES_OFFERED);
-    expect(offered.map(patchName)).toEqual(["v7", "v5", "v4", "v3", "v2"]);
-    // The newest is shown with too few games: it is offered too, first.
+    expect(offered).toHaveLength(STATS_PATCHES_OFFERED + 1);
+    expect(offered.map(patchName)).toEqual(["v8", "v7", "v5", "v4", "v3", "v2"]);
     expect(offeredPatches(PATCHES, 0).map(patchName)).toEqual(["v8", "v7", "v5", "v4", "v3", "v2"]);
-    // So is an older one reached by stepping back.
-    expect(offeredPatches(PATCHES, 7).map(patchName)).toEqual(["v7", "v5", "v4", "v3", "v2", "v1"]);
+    // An older one reached by stepping back has one while it is shown.
+    expect(offeredPatches(PATCHES, 7).map(patchName)).toEqual(["v8", "v7", "v5", "v4", "v3", "v2", "v1"]);
+    expect(offeredPatches(PATCHES, 2).map(patchName)).toEqual(["v8", "v7", "v6", "v5", "v4", "v3", "v2"]);
+    // A newest patch with enough games counts among the five.
+    expect(offeredPatches(PATCHES.slice(1), 0).map(patchName)).toEqual(["v7", "v5", "v4", "v3", "v2"]);
     expect(offeredPatches([], -1)).toEqual([]);
+  });
+
+  it("R3324000 the newest patch is collecting its data until it has STATS_PATCH_MIN_GAMES games, and no older patch is", () => {
+    expect(isCollecting(PATCHES, 0)).toBe(true);
+    // v6 has no game at all, but a newer patch shipped: its collecting is over.
+    expect(isCollecting(PATCHES, 2)).toBe(false);
+    expect(isCollecting(PATCHES, 1)).toBe(false);
+    expect(isCollecting(PATCHES.slice(1), 0)).toBe(false);
+    expect(isCollecting([patch(["v9"], 0)], 0)).toBe(true);
+    expect(isCollecting(PATCHES, -1)).toBe(false);
+    expect(isCollecting([], 0)).toBe(false);
+  });
+
+  it("R3324001 the current patch is the newest version listed, else the client's own catalog version", () => {
+    expect(currentVersion(PATCHES)).toBe("v8b");
+    expect(currentVersion(PATCHES.slice(1))).toBe("v7");
+    expect(currentVersion([])).toBe(CATALOG_VERSION);
   });
 
   it("R1973002 steps to the patch before and after the one shown", () => {
