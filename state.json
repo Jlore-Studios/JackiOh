@@ -13715,15 +13715,8 @@
       "verdict_rounds": 2
     },
     "3214": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42305937872",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-06T23:10:26Z",
-        "until": "2026-11-06T23:40:26Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13735,10 +13728,9 @@
         "reason": "planned on opus",
         "trail": "ep -n 'fn remove_request' -A20 crates/server/src/social/friends.rs | tail -8\", \"description\": \"Rea\u2026\n- Bash: {\"command\": \"grep -n '^#\\\\+ \\\\|/ws\\\\|ws/duos\\\\|watch socket' docs/v0.3.0/SURFACE.md | head -40\", \"description\": \"Check SURFACE.md for socket listings\"}\n- Bash: {\"command\": \"grep -rn 'cy.clock\\\\|cy.tick\\\\|SOCIAL_POLL\\\\|CHAT_POLL' e2e/cypress | head; grep -n 'beforeEach' -A4 apps/web/src/test/setup.ts | head\", \"description\": \"Check e2e for fake clocks and set\u2026\n- Bash: {\"command\": \"sed -n 1,12p apps/web/src/wire/serverConfig.ts; grep -n 'SOCIAL_POLL_MS\\\\|CHAT_POLL_MS' apps/web/src/wire/serverConfig.ts; sed -n 1222,1236p crates/server/src/config.rs\", \"description\": \u2026\n- Bash: {\"command\": \"sed -n 730,760p crates/server/src/config.rs; sed -n 300,330p crates/server/src/config.rs\", \"description\": \"Read WS and auth config constant neighborhoods\"}\n- Bash: {\"command\": \"sed -n 40,80p apps/web/src/game/net.test.ts; sed -n 105,150p apps/web/src/game/net.test.ts\", \"description\": \"Read FakeSocket and manual-timers harness in net.test.ts\"}\n- said: Writing the full plan into the draft now.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"content\": \"## Goal\\n\\nA signed-in tab holds one WebSocket, `/ws/social`. The server pushes changes over it: the caller's challeng\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Bash: {\"command\": \"wc -l .bot-plan.md; tail -5 .bot-plan.md\", \"description\": \"Check the draft's current state\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"limit\": 3}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"content\": \"## Goal\\n\\nA signed-in tab holds one WebSocket, `/ws/social`. The server pushes the caller's challenges, unread counts\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words and characters in the plan\"}\n- said: The draft is complete but at about 3,200 words; trimming it under the 2,500-word limit.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"content\": \"## Goal\\n\\nEach signed-in tab holds one WebSocket at `/ws/social`. The server pushes changes over it as they happen:\\n\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"Each signed-in tab holds one WebSocket at `/ws/social`. The server pushes changes over it as \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"## Done when\\n\\n- [ ] `/ws/social` authenticates as `/ws/match`: subprotocol, 4429 budget, 44\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \" Body: steps 4\\u201312 and 18\\u201321 in prose, plus Hearthstone semantics (a friend's challe\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount words after trimming\"}\n- Bash: {\"command\": \"tr -d '|`*' < .bot-plan.md | sed 's/---//g' | wc -w\", \"description\": \"Count words excluding table and markdown punctuation\"}\n- Bash: {\"command\": \"grep -n 'r3214000_\\\\|^1[3-9]\\\\.\\\\|^2[0-4]\\\\.\\\\|^ *[0-9]\\\\+\\\\. \\\\*\\\\*' .bot-plan.md | cut -c1-120\", \"description\": \"Locate step and test lines for trimming\"}\n- Bash: {\"command\": \"sed -n 52,58p .bot-plan.md; sed -n 119,124p .bot-plan.md; sed -n 143,146p .bot-plan.md; sed -n 236,250p .bot-plan.md\", \"description\": \"View sections to compress\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"16. **`spec/09-architecture.md`.**\\n - \\u00a79.4 Presence, after the `SOCIAL_POLL_MS` sentenc\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"13. **`crates/server/README.md`.**\\n - Add \\\"### The social socket (\\u00a79.4, \\u00a79.5)\\\" a\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"- `cargo test -p jackioh-server --test server actor::social_live`\\n- `cargo test -p jackioh-s\u2026\n- Bash: {\"command\": \"tr -d '|`*' < .bot-plan.md | sed 's/---//g' | wc -w; sed -n 40,56p .bot-plan.md\", \"description\": \"Recount words and view do-not-touch section\"}\n- Bash: {\"command\": \"sed -n 58,100p .bot-plan.md\", \"description\": \"View server steps 1-10 for compression\"}\n- Bash: {\"command\": \"sed -n 140,185p .bot-plan.md\", \"description\": \"View client steps for compression\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"- **The challenger's follow.** It needs the push sent after the game starts (step 12).\\n- **A\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \"- **Friends' statuses are not pushed.** \\\"Online\\\" lapses on a clock (`PRESENCE_TTL_MS`), and\u2026\n- Bash: {\"command\": \"tr -d '|`*' < .bot-plan.md | sed 's/---//g' | wc -w; wc -c .bot-plan.md\", \"description\": \"Recount words and characters\"}\n- Bash: {\"command\": \"grep -n 'pub enum SocketErrorCode' -A12 crates/server/src/actor/protocol.rs | head -14; grep -n 'pub fn error_message' crates/server/src/actor/protocol.rs\", \"description\": \"Confirm Socke\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/.bot-plan.md\", \"old_string\": \" - steps 4\\u201312 and 18\\u201321, in prose;\", \"new_string\": \" - steps 4\\u201312 and 19\\u2013\u2026\n- said: ## Goal Each signed-in tab holds one WebSocket at `/ws/social`. The server pushes three kinds of frame over it: - `social`: the caller's challenges and unread counts, exactly the body `GET /api/social` returns. - `chat`: a nudge when a chat message is sent. - `friends`: a nudge when the caller's fr\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-06T22:35:52Z",
       "owner_why": "it plans it",
@@ -13751,9 +13743,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-05T16:46:17Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42305937872",
+      "run_id": "pending:79a4f74c-1794006775",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T22:35:52Z",
+      "started_at": "2026-11-06T23:13:22Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17191,9 +17183,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T23:12:40Z",
+    "at": "2026-11-06T23:13:22Z",
     "url": "",
-    "what": "review #3299 on claude-4"
+    "what": "build #3214 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-06T22:57:02Z",
