@@ -13882,14 +13882,26 @@
       "stop_requested": false
     },
     "3222": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-06T23:14:36Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-05T17:47:33Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:61a2c008-1794006849",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-06T23:14:36Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3223": {
       "action": "build",
@@ -17195,9 +17207,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T23:13:54Z",
+    "at": "2026-11-06T23:14:36Z",
     "url": "",
-    "what": "plan #3220 on claude-1"
+    "what": "plan #3222 on agy"
   },
   "last_sweep": {
     "at": "2026-11-06T22:57:02Z",
