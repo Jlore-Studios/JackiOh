@@ -14009,6 +14009,13 @@
     "3228": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42284791897",
+        "model": "sonnet",
+        "provider": "claude-7",
+        "since": "2026-11-06T20:10:13Z",
+        "until": "2026-11-06T20:40:13Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
