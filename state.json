@@ -16912,6 +16912,7 @@
       "run_id": "42296199966",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 115,
       "started_at": "2026-11-06T21:22:27Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -33543,9 +33544,33 @@
         "title": "Patch: a banned account leaves the ranked leaderboard, the percentiles and Jlorious",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "e89f19dfeacf05e6e74ff87c2fd1e6b9711acb85",
+        "issue": 3228,
+        "merged_at": "2026-11-06T21:48:58Z",
+        "n": 115,
+        "pr": 3323,
+        "queued_at": "2026-11-06T21:48:58Z",
+        "sha": "62504c103d770d14403520b85f39064d84bfcebc",
+        "status": "queued",
+        "title": "Patch: loading and empty states that keep the screen's frame and use the shared Skeleton and EmptyState",
+        "tries": 0
       }
     ],
-    "count": 114
+    "count": 115
   },
   "statistics": {
     "at": "2026-11-06T21:13:00Z"
