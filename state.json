@@ -18194,17 +18194,8 @@
       "waiting_comment": 6679452654
     },
     "3287": {
-      "action": "plan",
-      "asks": [
-        "c:6678293586"
-      ],
-      "build_next": {
-        "from_run": "42176568506",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-06T07:14:47Z",
-        "until": "2026-11-06T07:44:47Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-06T07:14:35Z",
         "difficulty": "hard",
@@ -18223,10 +18214,9 @@
         "reason": "planned on opus",
         "trail": ",30p crates/ai/tests/ai/freeze.rs\", \"description\": \"Check ai crate exports and a sample test file header\"}\n- said: Let me save a first draft, then verify the board values with a scratch test.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3287/.bot-plan.md\", \"content\": \"# Draft plan #3287 (opus re-plan, in progress)\\n\\nStarting from the earlier sonnet plan (in .bot-notes.md). Verified s\u2026\n- Bash: {\"command\": \"cat > crates/ai/tests/zz_scratch3287.rs <<'EOF'\\nuse jackioh_ai::*;\\nuse jackioh_engine::testkit::*;\\nuse jackioh_engine::testkit::PlayerId::{P1, P2};\\n\\nconst GAUNTLET: &str = \\\"stinkys\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn backrow_is_public\\\" -A 20 crates/engine/src/ | head -30\", \"description\": \"Check when a backrow card is public\"}\n- Bash: {\"command\": \"sed -n 80,100p crates/ai/README.md; echo ....; sed -n 160,172p crates/ai/README.md; echo ....; sed -n 270,300p crates/ai/README.md\", \"description\": \"Read README face_threat and generatio\u2026\n- Bash: {\"command\": \"grep -rn \\\"to_value(AI_EVAL\\\\|to_value(&AI_EVAL\\\\|serde_json::to_string(&AI_EVAL\\\\|AI_EVAL)\\\" --include=*.rs crates | grep -v \\\"^crates/ai/src/evaluate.rs\\\" | head; grep -rln \\\"stinkysca\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Read classify docs in tools README\"}\n- Bash: {\"command\": \"git show --stat --format='%h %s' 7b1304ea92 | head -20; git log --oneline -5 -- crates/ai/src/config.rs\", \"description\": \"Inspect the #1974 lethal fix commit and recent AI config commits\u2026\n- Bash: {\"command\": \"grep -rln \\\"face_threat\\\\|faceThreat\\\" spec/ | head; grep -rn \\\"face_threat\\\\|faceThreat\\\" spec/*.md | head -10\", \"description\": \"Check spec for face_threat mentions\"}\n- Bash: {\"command\": \"git show --stat --format='%h %s' e485107852 | head -20; git show --stat --format='%h %s' 69b0567001 | head -25\", \"description\": \"Inspect recent AI patch commits' file lists\"}\n- Bash: {\"command\": \"sed -n 1,30p spec/rulings/R1006000.md; echo ====; sed -n 1,30p spec/rulings/R1174000.md; echo ===; sed -n 1,25p spec/rulings/R2976000.md\", \"description\": \"Read rulings mentioning face_th\u2026\n- Bash: {\"command\": \"ls spec/; grep -n \\\"threat\\\" spec/09-architecture.md | head -20\", \"description\": \"Find threat wording in the spec's AI section\"}\n- Bash: {\"command\": \"grep -n \\\"INDEX\\\\|spec check\\\\|backlink\\\\|index\\\" spec/README.md | head -30; ls target/release/jackioh /home/runner/work/JackiOh/JackiOh/target/release/jackioh 2>&1 | head\", \"description\u2026\n- Bash: {\"command\": \"grep -n \\\"FEATURES_VERSION\\\" crates/ai/src/features.rs | head -5; git log --format='%h %ad %s' --date=short -S\\\"FEATURES_VERSION: u32 =\\\" -- crates/ai/src/features.rs | head; git log --f\u2026\n- Bash: {\"command\": \"grep -rn \\\"AI_EVAL\\\\|EvalWeights\\\\|GREEDY_EVAL\\\" crates/wasm crates/shared crates/server crates/tools/src 2>/dev/null | head\", \"description\": \"Check other crates for EvalWeights uses\"}\n- Bash: {\"command\": \"cat > crates/ai/tests/zz_scratch3287.rs <<'EOF'\\nuse jackioh_ai::*;\\nuse jackioh_engine::testkit::*;\\nuse jackioh_engine::testkit::PlayerId::{P1, P2};\\n\\nconst GAUNTLET: &str = \\\"stinkys\u2026\n- Bash: {\"command\": \"grep -rn \\\"GREEDY_EVAL\\\" --include=*.rs crates/ai/tests crates/tools | grep -v \\\"evaluate(\\\\|&GREEDY_EVAL)\\\" | head -15\", \"description\": \"Look for tests pinning GREEDY_EVAL\"}\n- Bash: {\"command\": \"sed -n 1985,2045p crates/ai/tests/ai/evaluate.rs\", \"description\": \"Read a flag test pattern in evaluate tests\"}\n- Bash: {\"command\": \"grep -rn \\\"fn assert_close\\\" crates/ai/tests/ | head; grep -n \\\"pub fn unit\\\\b\\\\|pub fn unit(\\\" -A6 crates/ai/tests/ai/support.rs; grep -n \\\"support\\\\|refuses a copy\\\\|copies\\\" crates/to\u2026\n- Bash: {\"command\": \"sed -n 1015,1045p crates/tools/tests/acceptance.rs; sed -n 1195,1240p crates/tools/tests/acceptance.rs\", \"description\": \"Read the shared-helper copy check in acceptance tests\"}\n- Bash: {\"command\": \"grep -n \\\"tests/ai/\\\\|freeze\\\\.rs\\\\|graveyard_plays\\\" crates/ai/README.md docs/polish/3-ai.md | head -10; grep -rn \\\"graveyard_plays\\\" --include=*.rs --include=*.md --include=*.sh --incl\u2026\n- Bash: {\"command\": \"grep -n -i \\\"promotion\\\\|arena\\\" crates/ai/README.md | head -15; grep -n \\\"generation\\\" crates/ai/README.md | head\", \"description\": \"Check README for promotion requirements on eval chang\u2026\n- Bash: {\"command\": \"grep -n -i \\\"gauntlet\\\\|R1849005\\\" spec/09-architecture.md spec/04-combat.md | head; grep -n \\\"spec/\\\" scripts/ci-scope.sh | head\", \"description\": \"Check spec mentions of Gauntlet and ci\u2026\n- Bash: {\"command\": \"grep -n \\\"face damage\\\\|threatens no face\\\\|may hit the hero\\\\|Deft\\\" crates/ai/README.md | head -20\", \"description\": \"Find face-damage wording in AI README\"}\n- Bash: {\"command\": \"sed -n 60,80p crates/ai/README.md; sed -n 376,392p crates/ai/README.md\", \"description\": \"Read README evaluation paragraph start and features list\"}\n- Bash: {\"command\": \"cat crates/ai/tests/ai.rs | head -20; grep -n \\\"support\\\\|freeze\\\\|graveyard\\\" crates/ai/tests/ai/mod.rs\", \"description\": \"Check how the ai test binary wires modules\"}\n- Bash: {\"command\": \"sed -n 2120,2175p crates/ai/src/evaluate.rs\", \"description\": \"Read how threat and pressure enter the score\"}\n- Bash: {\"command\": \"grep -rln \\\"threat_per_damage\\\\|threatPerDamage\\\" --include=* . 2>/dev/null | grep -v \\\"/target/\\\\|node_modules\\\\|\\\\.bot-\\\" | head; cat rustfmt.toml\", \"description\": \"Check for weight-na\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3287/.bot-plan.md\", \"content\": \"# Draft plan #3287 (opus re-plan): near final\\n\\nVerified (scratch test run, then deleted):\\n- Gauntlet in either back\u2026\n- Bash: {\"command\": \"git status --porcelain; sed -n 88,92p crates/ai/README.md\", \"description\": \"Confirm clean tree and README insertion point\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2 (the AI): it changes the AI's evaluation in crates/ai/src/evaluate.rs, which feeds its search, wall_switches and the learned features\"} --> ## Goal `face_threat_with` should count an attack as able to reach the hero only when `attack_restriction`\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-06T06:24:22Z",
       "owner_why": "it plans it",
@@ -18239,12 +18229,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-06T06:17:52Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42176568506",
+      "run_id": "pending:0aebf54b-1793949335",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T06:46:22Z",
+      "started_at": "2026-11-06T07:16:25Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6678293586"
+      ]
     },
     "3288": {
       "action": "plan",
@@ -18356,9 +18348,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T06:49:09Z",
+    "at": "2026-11-06T07:16:25Z",
     "url": "",
-    "what": "plan #3289 on claude-1"
+    "what": "build #3287 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T06:57:06Z",
