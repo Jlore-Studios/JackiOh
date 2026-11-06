@@ -34380,6 +34380,9 @@
       "2026-11-06T02:43:56Z,claude-4,stream,call,42151044890,1,2026-11-06T07:40:00Z,,,allowed,50,,",
       "2026-11-06T03:01:49Z,claude-4,stream,call,42151044890,1,2026-11-06T07:40:00Z,,,allowed,50,,",
       "2026-11-06T03:29:37Z,claude-4,stream,call,42151044890,2,2026-11-06T07:40:00Z,,,allowed,50,,"
+    ],
+    "runs": [
+      "2026-11-06T03:31:03Z,42151044890,claude-4,sonnet+opus,revise,3259,medium,approved,,19.8,49,10188,1626777,1.1322,0,2,,,0.7,claude-3,fresh,other,2"
     ]
   },
   "version": 1
