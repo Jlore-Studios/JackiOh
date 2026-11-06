@@ -15667,6 +15667,7 @@
       "run_id": "42191628076",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 100,
       "started_at": "2026-11-06T08:59:21Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -32055,9 +32056,33 @@
         "title": "Patch (part 2 of 3): share a read already in flight, and keep a fresh answer for a short window",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "9af8c93d069e29c1fbcae6617f90c2c58da0fdc8",
+        "issue": 3288,
+        "merged_at": "2026-11-06T12:55:44Z",
+        "n": 100,
+        "pr": 3296,
+        "queued_at": "2026-11-06T12:55:44Z",
+        "sha": "e30e74f84a556a1a7d7a78fb9339981f56091178",
+        "status": "queued",
+        "title": "Patch: delete the fuse-onto and clear-plague engine verbs that nothing has called since the custom-card host went",
+        "tries": 0
       }
     ],
-    "count": 99
+    "count": 100
   },
   "statistics": {
     "at": "2026-11-06T12:35:05Z"
