@@ -1907,6 +1907,29 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         assert!(!p1.contains("printedOn") && !p2.contains("printedOn"));
     }
 
+    /// I6: the card it names is one the viewer reads through the fused card, whose definition keeps its
+    /// `ingredients` (R468), so it is no hidden definition, though a copy of it waits in the other hand.
+    #[test]
+    fn r3291000_the_card_it_names_is_no_secret_while_a_copy_waits_in_the_other_hand() {
+        let mut state = playing("r3291000-i6");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        // Straight from the library, so no card p1 reads but the fused one carries the zapper's definition.
+        set_library(&mut state, P1, &[zapper.id.as_str()]);
+        let other = state.players[P1].library.remove(0);
+        fuse_onto(&mut state, vec![other], &card);
+        in_hand(&mut state, &zapper.id, P2, 1);
+        let view = jackioh_engine::view_for(&state, P1);
+        assert!(
+            json_of(&view)
+                .to_string()
+                .contains(&format!("\"printedOn\":{{\"defId\":\"{}\"", zapper.id))
+        );
+        assert_eq!(
+            hidden_information_violations(&state, P1, &view, &legal_actions(&state, P1)),
+            Vec::<String>::new()
+        );
+    }
+
     /// The Radiant face an ingredient went in on is named with it.
     #[test]
     fn r3291000_a_radiant_fusion_names_its_ingredients_radiant() {
