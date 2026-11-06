@@ -1158,9 +1158,10 @@ account and ladder, deleted by the reset; `rating_grants`, the append-only ratin
 marked `dev`; and `news_posts`, the posts with no reward, each id `post-` and a slug, which a take-down
 marks and keeps, and which outlive their author. The standings reads join `hand_set_ratings` to mark a
 row `hand_set` (`SeasonStanding`), which `api::ranked::counts` leaves out of the public ladder, the
-percentiles and Jlorious while `DEV_STRICT` is on. Their store methods are `admin::store`'s
-(`Tx::admin_*`). `tests/sql/46_dev_dashboard.sql` checks the tables, their privileges, triggers, checks,
-foreign keys, the cascade and set-null and the re-apply.
+percentiles and Jlorious while `DEV_STRICT` is on. They also mark a row `banned` from `profiles.status`,
+which `counts` and `listed` leave out on every server until the ban is lifted (R3290000). The dashboard's
+store methods are `admin::store`'s (`Tx::admin_*`). `tests/sql/46_dev_dashboard.sql` checks the tables, their
+privileges, triggers, checks, foreign keys, the cascade and set-null and the re-apply.
 
 Migration 0081 keeps card proficiency (R3013000, R3013001): `public.card_proficiency`, one row per account
 and card, its key `(profile_id, card_id)`, the card a slug with no foreign key (the catalog is data), `plays`

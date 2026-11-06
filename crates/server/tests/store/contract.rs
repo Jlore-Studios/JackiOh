@@ -11789,3 +11789,56 @@ mod dev_dashboard {
         r3074003_posts_are_kept_listed_and_taken_down_once,
     );
 }
+
+mod r3290000_banned_standings {
+    use super::*;
+
+    /// R3290000: a season row reads `banned` from its player's `profiles.status`, on every ladder and in both
+    /// standings reads, and reads `false` again once the ban is lifted.
+    async fn r3290000_standings_mark_a_banned_account(harness: &StoreHarness) {
+        let banned = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let season: Season = from(json!({ "id": "v9.8", "patchVersion": "v9.8.1", "startedAt": now }));
+        q!(harness, t => t.ranked_create_season(&season));
+        for ladder in Ladder::ALL {
+            for profile in [&banned, &other] {
+                let row = SeasonRank {
+                    format: ladder,
+                    ..fresh_rank(&season.id, &profile.id, now)
+                };
+                q!(harness, t => t.ranked_put_rank(&row));
+            }
+        }
+        let marked = |standings: Vec<SeasonStanding>| -> Vec<(String, bool)> {
+            standings
+                .into_iter()
+                .map(|standing| (standing.rank.profile_id, standing.banned))
+                .collect()
+        };
+        // Active, banned, active again: the mark follows the account's status, read live.
+        for (account, is_banned) in [("active", false), ("banned", true), ("active", false)] {
+            q!(harness, t => t.profiles_set_status(&banned.id, status(account)));
+            let mut whole = vec![(banned.id.clone(), is_banned), (other.id.clone(), false)];
+            whole.sort();
+            for ladder in Ladder::ALL {
+                assert_eq!(
+                    marked(q!(harness, t => t.ranked_standings(&season.id, ladder))),
+                    whole,
+                    "{}: {account}, {ladder:?}",
+                    harness.name
+                );
+                assert_eq!(
+                    marked(
+                        q!(harness, t => t.ranked_standings_subset(&season.id, ladder, std::slice::from_ref(&banned.id), i32::MAX))
+                    ),
+                    vec![(banned.id.clone(), is_banned)],
+                    "{}: {account}, {ladder:?}, the subset",
+                    harness.name
+                );
+            }
+        }
+    }
+
+    both_stores!(r3290000_standings_mark_a_banned_account);
+}

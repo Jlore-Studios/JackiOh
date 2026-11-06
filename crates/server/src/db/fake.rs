@@ -3478,8 +3478,9 @@ pub fn ranked_standings_subset(
     }))
 }
 
-/// The season's rows that `keep` keeps, each with its player's rating, its `bot` flag and its
-/// `hand_set` flag (R3074001), in profile-id order: what both standings reads answer.
+/// The season's rows that `keep` keeps, each with its player's rating, its `bot` flag, its
+/// `hand_set` flag (R3074001) and its `banned` flag (R3290000), in profile-id order: what both
+/// standings reads answer.
 fn season_standings(
     tables: &FakeTables,
     season_id: &str,
@@ -3512,6 +3513,7 @@ fn season_standings(
                 rating: own.map_or(profile.glicko(ladder).rating, |rating| rating.glicko.rating),
                 bot,
                 hand_set,
+                banned: profile.status == ProfileStatus::Banned,
             })
         })
         .collect();
