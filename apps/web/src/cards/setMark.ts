@@ -10,7 +10,7 @@
 //
 // R2718000: the same glyph, as one faint flat silhouette cut by an SVG filter, is the set's watermark
 // behind a face's rules text (`watermarkOf`), so a later set needs only its mark; a set with no glyph of
-// its own (Boss, Boss-X, Custom, one newer than this build) prints none, not the diamond.
+// its own (Boss, Boss-X, one newer than this build) prints none, not the diamond.
 
 import { t } from "../i18n/i18n.ts";
 

@@ -49,9 +49,9 @@ The colors are one palette (#2105): `src/palette.css`, imported by `index.css` a
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
-The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
+The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline. Every other stylesheet, the menus' among them, is held to its count of raw radii, shadows, layers and gradients in `UNTOKENED_SURFACES`: a sheet that moves values onto the tokens lowers its number, and none gains one (the dungeon's sheets state none).
 
-The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` after the surfaces, names four durations (`--motion-instant` 80ms, `--motion-fast` 150ms, `--motion-base` 250ms, `--motion-slow` 400ms) and five curves (`--ease-standard`, `--ease-out`, `--ease-in`, `--ease-in-out`, `--ease-overshoot`). A board stylesheet gives every transition and animation a curve (or `linear`, or `steps()`; a `@keyframes` stop spells a curve's value out) and every duration a token, keeping its `* var(--anim-scale)`. These keep their own times: BUILD's (the event table in `game/animations.css`, the `activated` and `turnEnded` rows), R701's wobbles, the table's tap marks, loops, staggers, holds, the clock's 200ms repaint, and any time a `var()` feeds in. `src/motion.test.ts` checks this and lists each sheet's own times in `KEEP`.
+The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` after the surfaces, names four durations (`--motion-instant` 80ms, `--motion-fast` 150ms, `--motion-base` 250ms, `--motion-slow` 400ms) and five curves (`--ease-standard`, `--ease-out`, `--ease-in`, `--ease-in-out`, `--ease-overshoot`). A board stylesheet gives every transition and animation a curve (or `linear`, or `steps()`; a `@keyframes` stop spells a curve's value out) and every duration a token, keeping its `* var(--anim-scale)`. These keep their own times: BUILD's (the event table in `game/animations.css`, the `activated` and `turnEnded` rows), R701's wobbles, the table's tap marks, loops, staggers, holds, the clock's 200ms repaint, and any time a `var()` feeds in. `src/motion.test.ts` checks this and lists each sheet's own times in `KEEP`. Every other stylesheet, the menus' among them, is held to its count of raw durations and curves in `UNTOKENED_MOTION` on the same terms.
 
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
@@ -73,6 +73,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 `::before`, so a small one takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
+
+A phone highlights nothing but the chat (#3260). `index.css` sets `-webkit-tap-highlight-color: transparent`
+on `html` at every pointer, since only touch browsers draw a tap flash, and under `(pointer: coarse)` sets
+`user-select: none` and `-webkit-touch-callout: none` there, so a narrow desktop window still selects text.
+Fields (`input`, `textarea`, `contenteditable`) take `user-select: text` back, since iOS will not type into
+or put a caret in one that cannot be selected. `.chat-panel` (`together/together.css`) restores all three,
+so a message can be pressed, selected and copied. The two-step sign-in's key keeps its `user-select: all`,
+since it has no copy button. No stylesheet sets the tap highlight back to `initial` outside `.chat-panel`
+(inherited, it would bring the flash back on every child); `src/highlight.test.ts` checks it.
 
 The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
 Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
@@ -144,6 +153,19 @@ first answer kept for another account does too; a reload starts empty. Never kep
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
 `key`, when the decks that land differ, since its store is made once.
+
+A kept answer carries the time its read finished (R3206000): one younger than `READ_CACHE_FRESH_MS`
+(`net/readCache.ts`, 45 s) is *fresh*, and `keptGet` returns it and sends no read behind it. The gate skips its
+`/api/auth/me` read the same way (`freshRead`, for an active account that owes nothing; the renewal timer and the
+401 path are as they were), and the wallet pill reads through `getWallet`, so a navigation inside the window sends
+nothing. An older answer is drawn and read again as above. A fold of a write's answer keeps the age it found,
+`expireRead` ends freshness and keeps the value (a quest falling due), and a gate or a poll that only finished a
+read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of one path and token while it is out
+(one fetch, on its own controller that the last caller to abort aborts); a write is never shared. `writeEpoch`
+counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
+`clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
+not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
+game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 

@@ -11,7 +11,6 @@ reader is ruled out: grep its path and its name across the tracked files, then c
 workflow, script, `build.rs`, `include_str!`, `import.meta.glob`, test glob, fixture macro or
 `spec/rulings/*` `proven_in` reads it. The last audit (#832) found these that look dead but are not:
 - `bot/prompts/*.md`, loaded by name;
-- Luau fixtures, loaded through a macro;
 - `crates/server/tests/sql/*.sql`, run by a glob;
 - the patch JSON, read through `import.meta.glob`;
 - the generated wire types, checked by CI;

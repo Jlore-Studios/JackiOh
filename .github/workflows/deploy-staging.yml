@@ -27,11 +27,10 @@
 #     the CI run's `deploy-image` artifact, which `db (deploy image)` built from the same Dockerfile;
 #     only without it is it built, on CI's layer cache. After a checked deploy, `prune` drops the
 #     registry's tags past the newest few.
-#   - the WASM modules: the production build of both (`JACKIOH_WASM_PREVIEW=0`, as apps/web's
-#     `prebuild:staging`), kept in GitHub's cache under a key of everything they are built from
-#     (WASM_CACHE), so a commit that changes nothing under crates/ skips the Luau module's five
-#     minutes. CI's own modules carry the `preview` feature a player's bundle must not, so they are
-#     not used.
+#   - the WASM module: the production build (`JACKIOH_WASM_PREVIEW=0`, as apps/web's
+#     `prebuild:staging`), kept in GitHub's cache under a key of everything it is built from
+#     (WASM_CACHE), so a commit that changes nothing under crates/ skips the build. CI's own module
+#     carries the `preview` feature a player's bundle must not, so it is not used.
 #
 # Needs CLOUDFLARE_API_TOKEN, the secret production's deploy uses, and for the live check an Access
 # service token that Cloudflare Access lets through to staging.jackioh.com, in CF_ACCESS_CLIENT_ID and
@@ -60,8 +59,8 @@ env:
   SITE: https://staging.jackioh.com
   # How long the live check waits for the server to report the deployed commit, as production's.
   LIVE_SECONDS: "900"
-  # The cache key's prefix for the production build of the WASM modules, shared with
-  # promote-production.yml's deploy job (the same modules), and the layer cache CI's deploy image
+  # The cache key's prefix for the production build of the WASM module, shared with
+  # promote-production.yml's deploy job (the same module), and the layer cache CI's deploy image
   # jobs write, which a server image built here reads.
   WASM_CACHE: wasm-player-v1
   IMAGE_CACHE_FROM: type=gha,scope=deploy-rehearsal
@@ -136,8 +135,8 @@ jobs:
         with:
           ref: ${{ steps.sha.outputs.sha }}
 
-      # The production build of both WASM modules, when nothing they are built from changed.
-      - name: the WASM modules, if cached
+      # The production build of the WASM module, when nothing it is built from changed.
+      - name: the WASM module, if cached
         id: wasm
         uses: actions/cache@v4
         with:
@@ -145,7 +144,7 @@ jobs:
           key: ${{ env.WASM_CACHE }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'crates/**', 'scripts/build-wasm.sh') }}
 
       # As production's deploy job: the Node half installs apps/edge's wrangler, and the Rust half is
-      # for the WASM build, which a cached pair skips.
+      # for the WASM build, which a cached module skips.
       - uses: ./.github/actions/setup
         with:
           rust: ${{ steps.wasm.outputs.cache-hit == 'true' && 'false' || 'true' }}
@@ -171,7 +170,7 @@ jobs:
 
       # From apps/web/.env.staging alone: the publishable key a repository variable may hold is
       # production's (promote-production.yml), and staging's Supabase project need not stay the same.
-      # With the modules cached, `build:staging` runs without `prebuild:staging`, the WASM build.
+      # With the module cached, `build:staging` runs without `prebuild:staging`, the WASM build.
       - name: build the web app for staging
         env:
           WASM_CACHED: ${{ steps.wasm.outputs.cache-hit }}

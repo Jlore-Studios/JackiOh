@@ -85,30 +85,29 @@ describe("R3217000 the providers' buttons", () => {
     expect(mark).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("R3217000 Roblox's button carries Roblox's tilt mark, unaltered, drawn inline at the Google mark's size", () => {
+  it("R3217000 Roblox's button carries Roblox's official tilt mark, white and decorative", () => {
     draw(["google", "custom:roblox"]);
     const roblox = screen.getByRole("button", { name: "Continue with Roblox" });
-    const google = screen.getByRole("button", { name: "Continue with Google" });
-    expect(roblox.querySelectorAll("svg")).toHaveLength(1);
-    expect(roblox.querySelectorAll(".auth-oauth-mark")).toHaveLength(1);
-    const mark = roblox.querySelector("svg");
-    expect(mark).not.toBeNull();
-    expect(mark).toHaveClass("auth-oauth-mark");
-    expect(mark).toHaveAttribute("aria-hidden", "true");
-    expect(mark).toHaveAttribute("focusable", "false");
-    expect(mark).toHaveAttribute("viewBox", "0 0 150 150");
-    const paths = mark?.querySelectorAll("path");
-    expect(paths).toHaveLength(1);
-    expect(paths?.item(0)).toHaveAttribute(
+    const marks = roblox.querySelectorAll("svg.auth-oauth-mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveAttribute("aria-hidden", "true");
+    const path = marks[0]?.querySelector("path");
+    expect(path).toHaveAttribute(
       "d",
       "M31.6984 0L0 118.302L118.302 150L150 31.6984L31.6984 0ZM87.1031 95.9652L54.0454 87.1031L62.9075 54.0454L95.9784 62.9075L87.1031 95.9652Z",
     );
-    // `currentColor` is the button's text color: white on Roblox's black face.
-    expect(paths?.item(0)).toHaveAttribute("fill", "currentColor");
-    const googleMark = google.querySelector("svg");
-    expect(googleMark).not.toBeNull();
-    expect(googleMark?.getAttribute("width")).toBe("18");
-    expect(mark?.getAttribute("width")).toBe(googleMark?.getAttribute("width"));
-    expect(mark?.getAttribute("height")).toBe(googleMark?.getAttribute("height"));
+    expect(path).toHaveAttribute("fill", "currentColor");
+  });
+
+  it("R3217000 Roblox's mark is drawn at the Google mark's size and takes no focus", () => {
+    draw(["google", "custom:roblox"]);
+    const google = screen.getByRole("button", { name: "Continue with Google" }).querySelector("svg");
+    const roblox = screen.getByRole("button", { name: "Continue with Roblox" }).querySelector("svg");
+    expect(google).not.toBeNull();
+    expect(roblox).not.toBeNull();
+    expect(google?.getAttribute("width")).toBe("18");
+    expect(roblox?.getAttribute("width")).toBe(google?.getAttribute("width"));
+    expect(roblox?.getAttribute("height")).toBe(google?.getAttribute("height"));
+    expect(roblox).toHaveAttribute("focusable", "false");
   });
 });

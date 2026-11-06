@@ -251,7 +251,6 @@ pub fn verify(
             glitch_boards: args.glitch_boards,
             sandbox: args.sandbox,
             deck_marks: args.deck_marks,
-            ..FoldArgs::default()
         },
     );
     Ok(Verified {

@@ -79,8 +79,8 @@ def binaries(root, group):
 
 
 def rust_test(root, groups, counts):
-    """The `rust-test` matrix: every group's jobs, each in its shards. The doc tests, the binaries
-    check and the Luau check go to the group's first job only."""
+    """The `rust-test` matrix: every group's jobs, each in its shards. The doc tests and the binaries
+    check go to the group's first job only."""
     entries = []
     for group in groups:
         total = count(counts.get(group["group"], 1), f'rust-test."{group["group"]}"')
@@ -94,7 +94,6 @@ def rust_test(root, groups, counts):
                     "test": test,
                     "doc": group.get("doc", "") if first else "",
                     "binaries": binaries(root, group) if first else "",
-                    "luau": bool(group.get("luau", False)) and first,
                     "shard": shard,
                     "shards": total,
                 })

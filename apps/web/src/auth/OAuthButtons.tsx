@@ -27,16 +27,26 @@ function GoogleMark(): ReactElement {
   );
 }
 
-/** R3217000: Roblox's official tilt mark, its path unaltered (`Roblox_Tilt_White.svg`, its clip path, which clips nothing, dropped). `currentColor` is the button's white on its black face (auth.css). */
+/** Roblox's official white tilt mark (`Roblox_Tilt_White.svg`, Roblox's brand assets), its path unaltered and
+ * filled with the button's white text color (R3217000). */
 function RobloxMark(): ReactElement {
   return (
     <svg className="auth-oauth-mark" viewBox="0 0 150 150" width={OAUTH_MARK_PX} height={OAUTH_MARK_PX} aria-hidden="true" focusable="false">
-      <path
-        fill="currentColor"
-        d="M31.6984 0L0 118.302L118.302 150L150 31.6984L31.6984 0ZM87.1031 95.9652L54.0454 87.1031L62.9075 54.0454L95.9784 62.9075L87.1031 95.9652Z"
-      />
+      <path fill="currentColor" d="M31.6984 0L0 118.302L118.302 150L150 31.6984L31.6984 0ZM87.1031 95.9652L54.0454 87.1031L62.9075 54.0454L95.9784 62.9075L87.1031 95.9652Z" />
     </svg>
   );
+}
+
+/** The brand mark a provider's button starts with, or null for a provider with none. */
+function mark(provider: OAuthProvider): ReactElement | null {
+  switch (provider) {
+    case "google":
+      return <GoogleMark />;
+    case "custom:roblox":
+      return <RobloxMark />;
+    default:
+      return null;
+  }
 }
 
 /** The class names of one provider's button: Google's and Roblox's share `auth-oauth-branded`'s size (R3217000). */
@@ -48,18 +58,6 @@ function buttonClass(provider: OAuthProvider): string {
       return "button-secondary auth-oauth-branded auth-oauth-roblox";
     default:
       return "button-secondary";
-  }
-}
-
-/** The brand mark before a provider's label; a provider with no brand rule has none (R3217000). */
-function providerMark(provider: OAuthProvider): ReactElement | null {
-  switch (provider) {
-    case "google":
-      return <GoogleMark />;
-    case "custom:roblox":
-      return <RobloxMark />;
-    default:
-      return null;
   }
 }
 
@@ -92,7 +90,7 @@ export default function OAuthButtons({
               onContinue(provider);
             }}
           >
-            {providerMark(provider)}
+            {mark(provider)}
             <span className="auth-oauth-label">
               {t("Continue with {provider}", { provider: OAUTH_PROVIDER_LABELS[provider] })}
             </span>
