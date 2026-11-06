@@ -16831,16 +16831,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/deckbuilder/DeckWorkshop.tsx"
+          ],
+          "from": "464cb6fbf5aa7a9658ab68c3d36675dc21f6248f",
+          "main": "9d8aaeae08f46998ca0f52c3c1b0c25c50c02f1d"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "42123457231",
+            "run": "42131305647",
             "tier": "strong"
           }
         ],
-        "sha": "464cb6fbf5aa7a9658ab68c3d36675dc21f6248f",
+        "sha": "9268ce6daa8ba857f996c4f26249c86bd0d95d74",
         "tiers": {
           "claude": "strong"
         }
