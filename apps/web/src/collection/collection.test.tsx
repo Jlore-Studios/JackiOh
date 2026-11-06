@@ -1,9 +1,10 @@
 // The collection screen's panels (#1307, SPEC §14), from fixture responses (nothing here asks the
 // server anything): owned cards, wallet and tracks. R1655000: a card in context and the account's
-// cosmetics as tiles. R1956000: the owned cards' grid wears their picks.
+// cosmetics as tiles. R1956000: the owned cards' grid wears their picks. R3015007 (#3015): a card's variants as
+// ladders of their levels, each rung owned, next or locked, a held token offered on the next one alone.
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLOBAL_PACK_NAME, PROFICIENCY_LEVELS, PROFICIENCY_LEVEL_PLAYS, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
@@ -20,28 +21,39 @@ import {
   resetCosmeticsForTests,
   subscribeCardPickWrites,
   writeCardFullArt,
+  writeCardLevel,
   writeCardPick,
   writeCosmetics,
   type CardPickChange,
+  type OwnedByCard,
 } from "../cards/cosmetics.ts";
 import { CHINESE } from "../cards/chinese.ts";
 import { STAMP_LEVELS, readOwnProficiency, replaceOwnProficiency, resetProficiencyForTests, subscribeStampWrites } from "../cards/stamps.ts";
 import { FullArtOwned } from "../cards/fullArt.ts";
-import { ownedCardCosmetics } from "../cards/ownedFullArt.ts";
+import { ViewerFullArt, ownedCardCosmetics, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
 import {
   AUGMENT_ANIMATED_ID,
   AUGMENT_SIGNATURE_ID,
   VERSION_ALT_ART_ID,
+  VERSION_ALT_FULL_ART_ANIMATED_ID,
   VERSION_ALT_FULL_ART_ID,
+  VERSION_ALT_FULL_ART_SIGNED_ID,
+  VERSION_ANIMATED_ID,
   VERSION_COMIC_ID,
   VERSION_EXTENDED_ART_ID,
+  VERSION_FULL_ART_ANIMATED_ID,
   VERSION_FULL_ART_ID,
+  VERSION_FULL_ART_SIGNED_ID,
   VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
   VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
+  VERSION_SKETCH_FULL_ART_ANIMATED_ID,
+  VERSION_SKETCH_FULL_ART_ID,
+  VERSION_SKETCH_FULL_ART_SIGNED_ID,
   VERSION_SKETCH_ID,
+  ladderOf,
   offeredOn,
 } from "../cards/versions.ts";
 import {
@@ -56,8 +68,10 @@ import {
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
-import { cosmeticPacksInfo, walletInfo } from "../shop/fixtures.ts";
+import { collectionOf, cosmeticPacksInfo, tokenBars, walletInfo } from "../shop/fixtures.ts";
 import { expectEmptyState } from "../test/empty.ts";
+import { settle } from "../test/settle.ts";
+import { stubServer } from "../test/stubServer.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
@@ -66,6 +80,7 @@ import {
   COLLECTED_DEFS,
   NO_FULL_ART_ID,
   accountTiles,
+  cardLadders,
   cardNameOf,
   cardStrip,
   collectionSectionOf,
@@ -370,6 +385,15 @@ describe("R1655000 a card in context", () => {
   };
   const shown = (): Element | null => screen.queryByTestId(T.cardViewPreview)?.querySelector(".cf") ?? null;
   const item = (id: string): HTMLElement => screen.getByTestId(T.stripItem(id));
+  /** R3015007: a ladder's rung, by its level's id (the normal face's `NO_FULL_ART_ID`). */
+  const rung = (id: string): HTMLElement => screen.getByTestId(T.rung(id));
+  /** R3015007: the open view's ladders, by variant, in order. */
+  const ladderIds = (): (string | undefined)[] => screen.getAllByTestId(/^collection-ladder-/u).map((section) => section.dataset.variant);
+  /** R3015007: each variant `defId` is offered, with its first rung and that rung's rarity. */
+  const firstLevels = (defId: string): (string | undefined)[][] =>
+    cardLadders(defId, () => true).map((ladder) => [ladder.variant, ladder.rungs[0]?.id, ladder.rungs[0]?.rarity]);
+  /** R3015007: every level `defId`'s ladders list. */
+  const listed = (defId: string): string[] => cardLadders(defId, () => true).flatMap((ladder) => ladder.rungs.map((each) => each.id));
 
   it("R1655000 a card opened in the Collection wears its own picks while another card draws the defaults", () => {
     // R1953001: the account's synced finish is worn by no card.
@@ -391,7 +415,7 @@ describe("R1655000 a card in context", () => {
     expect(large().getAttribute("data-cosmetic-foil")).toBeNull();
   });
 
-  it("R1655000 the strip holds each kind's registry entries and a version and augments only on a card offered them", () => {
+  it("R1655000 R3015007 the strip holds each kind's registry entries, and the ladders each variant the card is offered", () => {
     open(BIG_D);
     for (const kind of ["foil", "finish", "border"] as const) {
       const strip = screen.getByTestId(T.strip(kind));
@@ -399,15 +423,20 @@ describe("R1655000 a card in context", () => {
         expect(within(strip).getByTestId(T.stripItem(cosmetic.id))).toHaveTextContent(cosmetic.name);
       }
     }
-    // R2725000: the normal face, then the Full art version; the augments apart.
-    expect(within(screen.getByTestId(T.strip("version"))).getByTestId(T.stripItem(VERSION_FULL_ART_ID))).toHaveTextContent("Legendary");
-    expect(item(NO_FULL_ART_ID)).toHaveTextContent("Normal");
-    expect(within(screen.getByTestId(T.strip("augment"))).getByTestId(T.stripItem(AUGMENT_SIGNATURE_ID))).toHaveTextContent("Mythic");
-    expect(screen.getAllByRole("button", { name: /^Use default/u })).toHaveLength(5);
-
-    fireEvent.click(screen.getByTestId(T.card(PLAIN)));
+    // R3015007: the Default first, the normal face then its animated level, then Full art and the Sketch, which Big
+    // D-fender is offered; no strip of versions or augments.
+    expect(ladderIds()).toEqual(["default", "full-art", "sketch"]);
+    expect(within(screen.getByTestId(T.ladder("full-art"))).getByTestId(T.rung(VERSION_FULL_ART_ID))).toHaveTextContent("Legendary");
+    expect(within(screen.getByTestId(T.ladder("default"))).getByTestId(T.rung(NO_FULL_ART_ID))).toHaveTextContent("Normal");
+    expect(within(screen.getByTestId(T.ladder("full-art"))).getByTestId(T.rung(VERSION_FULL_ART_SIGNED_ID))).toHaveTextContent("Mythic");
     expect(screen.queryByTestId(T.strip("version"))).toBeNull();
     expect(screen.queryByTestId(T.strip("augment"))).toBeNull();
+    expect(screen.getAllByRole("button", { name: /^Use default/u })).toHaveLength(3);
+
+    // Speciesist is offered no variant but its Default.
+    fireEvent.click(screen.getByTestId(T.card(PLAIN)));
+    expect(ladderIds()).toEqual(["default"]);
+    expect(screen.queryByTestId(T.ladder("full-art"))).toBeNull();
     expect(screen.getAllByRole("button", { name: /^Use default/u })).toHaveLength(3);
   });
 
@@ -485,156 +514,192 @@ describe("R1655000 a card in context", () => {
     expect(JSON.parse(localStorage.getItem(COSMETICS_SETTINGS_KEY) ?? "{}")).toMatchObject({ border: "border-bone" });
   });
 
-  it("R1655000 a locked item shows its rarity and equips nothing", () => {
+  it("R1655000 R3015007 a locked rung shows its rarity and equips nothing", () => {
     open(BIG_D, new Map());
 
-    const art = item(VERSION_FULL_ART_ID);
+    const art = rung(VERSION_FULL_ART_ID);
     expect(art).toHaveAttribute("data-owned", "false");
-    expect(art).toHaveAttribute("aria-disabled", "true");
     expect(art).toHaveTextContent("Legendary");
-    expect(art).toHaveTextContent("Locked");
+    // R3015004: Full art's first level is next, every level below it (none) owned; the one above it needs it.
+    expect(art).toHaveAttribute("data-next", "true");
+    expect(art).toHaveTextContent("Next level");
+    expect(rung(VERSION_FULL_ART_ANIMATED_ID)).toHaveTextContent("Needs Full art");
     expect(item("border-wood")).toHaveAttribute("data-owned", "true");
-    expect(item(NO_FULL_ART_ID)).toHaveAttribute("data-owned", "true");
+    expect(rung(NO_FULL_ART_ID)).toHaveAttribute("data-owned", "true");
 
-    fireEvent.click(art);
     fireEvent.mouseEnter(art);
+    expect(large().getAttribute("data-full-art")).toBeNull();
+    fireEvent.mouseLeave(art);
+    // A click opens its preview and writes nothing.
+    fireEvent.click(art);
+    expect(screen.getByTestId(T.preview)).toBeInTheDocument();
     expect(readCardPicks(BIG_D)).toEqual({});
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBeNull();
     expect(art).toHaveAttribute("data-equipped", "false");
     expect(shown()).toBeNull();
 
-    // R2725002: the card's retired still Epic owns the Full art version, which is then picked by its id.
+    // R3015006: the card's retired still Epic owns Full art's first level, which is then picked by its id.
     cleanup();
     open(BIG_D, OWNS_BIG_D_ART);
-    expect(item(VERSION_FULL_ART_ID)).toHaveAttribute("data-owned", "true");
-    expect(item(VERSION_FULL_ART_ID)).not.toHaveTextContent("Locked");
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-owned", "false");
-    fireEvent.click(item(VERSION_FULL_ART_ID));
+    expect(rung(VERSION_FULL_ART_ID)).toHaveAttribute("data-owned", "true");
+    expect(rung(VERSION_FULL_ART_ID)).not.toHaveTextContent("Next level");
+    expect(rung(VERSION_ANIMATED_ID)).toHaveAttribute("data-owned", "false");
+    expect(rung(VERSION_FULL_ART_ANIMATED_ID)).toHaveAttribute("data-next", "true");
+    fireEvent.click(rung(VERSION_FULL_ART_ID));
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_ID });
-    expect(item(VERSION_FULL_ART_ID)).toHaveAttribute("data-equipped", "true");
+    expect(rung(VERSION_FULL_ART_ID)).toHaveAttribute("data-equipped", "true");
   });
 
-  it("R2655000 R2725002 a full-art card lists none of its retired tiers, and a retired pick looks as before until it is edited into a version and augments", () => {
+  it("R2655000 R3015005 R3015006 a full-art card lists none of its retired tiers, and a retired pick wears the level it maps to until it is edited into one level", () => {
     const SIGNED = `${BIG_D_ART}-signed`;
     open(BIG_D, owning(BIG_D_ART, SIGNED));
-    const strip = screen.getByTestId(T.strip("version"));
-    const items = within(strip).getAllByRole("button").filter((button) => button.dataset.testid !== T.stripDefault("version"));
-    // R2940000: and the Sketch, which Big D-fender is offered.
-    expect(items.map((button) => button.dataset.testid)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_SKETCH_ID].map(T.stripItem));
-    const augments = within(screen.getByTestId(T.strip("augment"))).getAllByRole("button").filter((button) => button.dataset.testid !== T.stripDefault("augment"));
-    expect(augments.map((button) => [button.dataset.testid, button.dataset.rarity, button.dataset.owned])).toEqual([
-      [T.stripItem(AUGMENT_ANIMATED_ID), "Epic", "true"],
-      [T.stripItem(AUGMENT_SIGNATURE_ID), "Mythic", "true"],
+    const rungsOf = (variant: string): (string | undefined)[][] =>
+      within(screen.getByTestId(T.ladder(variant)))
+        .getAllByRole("button")
+        .map((button) => [button.dataset.level, button.dataset.rarity, button.dataset.owned]);
+    // R3015006: the Mythic owns every level of Full art and the Default's animated one; the Sketch is owned nowhere.
+    expect(rungsOf("default")).toEqual([
+      [NO_FULL_ART_ID, "Common", "true"],
+      [VERSION_ANIMATED_ID, "Epic", "true"],
     ]);
-    for (const retired of [BIG_D_ART, `${BIG_D_ART}-animated`, SIGNED, BIG_D_MOVING]) {
+    expect(rungsOf("full-art")).toEqual([
+      [VERSION_FULL_ART_ID, "Legendary", "true"],
+      [VERSION_FULL_ART_ANIMATED_ID, "Mythic", "true"],
+      [VERSION_FULL_ART_SIGNED_ID, "Mythic", "true"],
+    ]);
+    expect(rungsOf("sketch").map(([, , owned]) => owned)).toEqual(["false", "false", "false", "false"]);
+    for (const retired of [BIG_D_ART, `${BIG_D_ART}-animated`, SIGNED, BIG_D_MOVING, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) {
       expect(screen.queryByTestId(T.stripItem(retired)), retired).toBeNull();
+      expect(screen.queryByTestId(T.rung(retired)), retired).toBeNull();
     }
     cleanup();
 
-    // A pick made before #2725 of the signed full art: the Mythic, all three parts worn.
+    // A pick made before #2725 of the signed full art: Full art's signed level, the Mythic's look.
     writeCardFullArt(BIG_D, SIGNED);
     open(BIG_D, owning(BIG_D_ART, SIGNED));
     expect(large().getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(large().getAttribute("data-level")).toBe(VERSION_FULL_ART_SIGNED_ID);
     expect(large().querySelector(".cf-signature")).not.toBeNull();
-    for (const id of [VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) expect(item(id), id).toHaveAttribute("data-equipped", "true");
-    expect(item(NO_FULL_ART_ID)).toHaveAttribute("data-equipped", "false");
+    expect(rung(VERSION_FULL_ART_SIGNED_ID)).toHaveAttribute("data-equipped", "true");
+    for (const id of [NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID]) expect(rung(id), id).toHaveAttribute("data-equipped", "false");
 
-    // Signature off: the pick becomes the version and the augment left, the Legendary's look.
-    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
-    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID] });
-    fireEvent.mouseLeave(item(AUGMENT_SIGNATURE_ID));
+    // Its animated level: the pick becomes that one level, the Legendary's look.
+    fireEvent.click(rung(VERSION_FULL_ART_ANIMATED_ID));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_ANIMATED_ID });
+    fireEvent.mouseLeave(rung(VERSION_FULL_ART_ANIMATED_ID));
     expect(large().getAttribute("data-full-art-tier")).toBe("Legendary");
     expect(large().querySelector(".cf-signature")).toBeNull();
-    // The normal face keeps the augment: the Animated art's look.
-    fireEvent.click(item(NO_FULL_ART_ID));
-    expect(readCardPicks(BIG_D)).toEqual({ fullArt: false, augments: [AUGMENT_ANIMATED_ID] });
-    fireEvent.mouseLeave(item(NO_FULL_ART_ID));
+    // The Default's animated level: the Animated art's look.
+    fireEvent.click(rung(VERSION_ANIMATED_ID));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_ANIMATED_ID });
+    fireEvent.mouseLeave(rung(VERSION_ANIMATED_ID));
     expect(large().getAttribute("data-full-art-tier")).toBe("Animated");
     expect(large().getAttribute("data-full-art")).toBeNull();
-    // Use default on the augments clears them, the version kept.
-    fireEvent.click(screen.getByTestId(T.stripDefault("augment")));
+    // The normal face: no level at all.
+    fireEvent.click(rung(NO_FULL_ART_ID));
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: false });
+    fireEvent.mouseLeave(rung(NO_FULL_ART_ID));
+    expect(large().getAttribute("data-full-art-tier")).toBeNull();
+    cleanup();
+
+    // R3015005: a pick of #2725's shape, the Full art version and Animated, wears Full art's animated level, and its
+    // first edit writes the one level it chose and clears the augments.
+    localStorage.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify({ [BIG_D]: { fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID] } }));
+    resetCosmeticsForTests();
+    open(BIG_D, owning(BIG_D_ART, SIGNED));
+    expect(rung(VERSION_FULL_ART_ANIMATED_ID)).toHaveAttribute("data-equipped", "true");
+    expect(large().getAttribute("data-full-art-tier")).toBe("Legendary");
+    fireEvent.click(rung(VERSION_FULL_ART_SIGNED_ID));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_SIGNED_ID });
   });
 
-  it("R2715000 R2725000 Animated is an augment, locked until owned, and layers on the face the card wears", () => {
-    // Not owned: locked, it previews and equips nothing.
+  it("R2715000 R3015007 Animated is the Default's second level, locked until owned and next above the normal face, and moves the face the card wears", () => {
+    // Not owned: locked but next, it previews and equips nothing.
     open(BIG_D, OWNS_BIG_D_ART);
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveTextContent("Animated");
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-rarity", "Epic");
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-owned", "false");
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveTextContent("Locked");
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    const animated = (): HTMLElement => rung(VERSION_ANIMATED_ID);
+    expect(animated()).toHaveTextContent("Animated");
+    expect(animated()).toHaveAttribute("data-rarity", "Epic");
+    expect(animated()).toHaveAttribute("data-owned", "false");
+    expect(animated()).toHaveAttribute("data-next", "true");
+    expect(animated()).toHaveTextContent("Next level");
+    fireEvent.click(animated());
     expect(readCardPicks(BIG_D)).toEqual({});
     cleanup();
 
-    // R2725002: the retired Animated art owns it. Shown on the large card, the normal face moving, then chosen.
+    // R3015006: the retired Animated art owns it. Shown on the large card, the normal face moving, then chosen.
     open(BIG_D, owning(BIG_D_MOVING));
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-owned", "true");
-    fireEvent.mouseEnter(item(AUGMENT_ANIMATED_ID));
+    expect(animated()).toHaveAttribute("data-owned", "true");
+    fireEvent.mouseEnter(animated());
     expect(large().getAttribute("data-full-art-tier")).toBe("Animated");
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(large().getAttribute("data-art-motion")).not.toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({});
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(BIG_D)).toEqual({ augments: [AUGMENT_ANIMATED_ID] });
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-equipped", "true");
-    fireEvent.mouseLeave(item(AUGMENT_ANIMATED_ID));
+    fireEvent.click(animated());
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_ANIMATED_ID });
+    expect(animated()).toHaveAttribute("data-equipped", "true");
+    fireEvent.mouseLeave(animated());
     expect(large().getAttribute("data-full-art-tier")).toBe("Animated");
-    expect(large().getAttribute("data-augments")).toBe(AUGMENT_ANIMATED_ID);
+    expect(large().getAttribute("data-level")).toBe(VERSION_ANIMATED_ID);
     expect(large().querySelector(".card-type")).not.toBeNull();
-    // A second press takes it off.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(BIG_D)).toEqual({});
+    // The normal face's rung takes it off.
+    fireEvent.click(rung(NO_FULL_ART_ID));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: false });
+    expect(large().getAttribute("data-art-motion")).toBeNull();
   });
 
-  it("R1655000 a full art is shown while it is shown, and stands once chosen", () => {
+  it("R1655000 R3015007 a level is shown while it is shown, and stands once chosen", () => {
     writeCardSettings({ fullArt: false });
     open(BIG_D, OWNS_BIG_D_ART);
     expect(large().getAttribute("data-full-art")).toBeNull();
 
-    fireEvent.mouseEnter(item(VERSION_FULL_ART_ID));
+    fireEvent.mouseEnter(rung(VERSION_FULL_ART_ID));
     expect(large().getAttribute("data-full-art")).toBe("true");
-    fireEvent.mouseLeave(item(VERSION_FULL_ART_ID));
+    fireEvent.mouseLeave(rung(VERSION_FULL_ART_ID));
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({});
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBeNull();
 
-    fireEvent.mouseEnter(item(VERSION_FULL_ART_ID));
-    fireEvent.click(item(VERSION_FULL_ART_ID));
-    fireEvent.mouseLeave(item(VERSION_FULL_ART_ID));
+    fireEvent.mouseEnter(rung(VERSION_FULL_ART_ID));
+    fireEvent.click(rung(VERSION_FULL_ART_ID));
+    fireEvent.mouseLeave(rung(VERSION_FULL_ART_ID));
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_ID });
     expect(large().getAttribute("data-full-art")).toBe("true");
 
-    // The normal face is a pick of its own, and it beats the setting being on.
+    // The normal face is a pick of its own, and it beats the setting being on; Full art's level, chosen again, wears it.
     writeCardSettings({ fullArt: true });
-    fireEvent.click(item(NO_FULL_ART_ID));
+    fireEvent.click(rung(NO_FULL_ART_ID));
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: false });
     expect(large().getAttribute("data-full-art")).toBeNull();
-    fireEvent.click(screen.getByTestId(T.stripDefault("version")));
-    expect(readCardPicks(BIG_D)).toEqual({});
+    fireEvent.click(rung(VERSION_FULL_ART_ID));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_ID });
     expect(large().getAttribute("data-full-art")).toBe("true");
   });
 
-  it("R1655000 a full art shown, not chosen, is not marked as worn: the strip says what the card wears", () => {
+  it("R1655000 R3015007 a level shown, not chosen, is not marked as worn: the ladders say what the card wears", () => {
     open(BIG_D, OWNS_BIG_D_ART);
-    const useDefault = screen.getByTestId(T.stripDefault("version"));
-    expect(useDefault).toHaveAttribute("aria-pressed", "true");
+    // With no pick of its own the setting decides, and no rung is marked.
+    const equipped = (): (string | undefined)[] =>
+      screen
+        .getAllByTestId(/^collection-rung-/u)
+        .filter((button) => button.dataset.equipped === "true")
+        .map((button) => button.dataset.level);
+    expect(equipped()).toEqual([]);
 
-    fireEvent.focus(item(VERSION_FULL_ART_ID));
+    fireEvent.focus(rung(VERSION_FULL_ART_ID));
     expect(large().getAttribute("data-full-art"), "the large card shows it").toBe("true");
-    expect(item(VERSION_FULL_ART_ID)).toHaveAttribute("aria-pressed", "false");
-    expect(item(VERSION_FULL_ART_ID)).toHaveAttribute("data-equipped", "false");
-    expect(useDefault).toHaveAttribute("aria-pressed", "true");
+    expect(rung(VERSION_FULL_ART_ID)).toHaveAttribute("aria-pressed", "false");
+    expect(rung(VERSION_FULL_ART_ID)).toHaveAttribute("data-equipped", "false");
+    expect(equipped()).toEqual([]);
 
-    fireEvent.click(item(VERSION_FULL_ART_ID));
-    expect(item(VERSION_FULL_ART_ID)).toHaveAttribute("aria-pressed", "true");
-    expect(useDefault).toHaveAttribute("aria-pressed", "false");
-    fireEvent.blur(item(VERSION_FULL_ART_ID));
-    expect(item(VERSION_FULL_ART_ID)).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(rung(VERSION_FULL_ART_ID));
+    expect(rung(VERSION_FULL_ART_ID)).toHaveAttribute("aria-pressed", "true");
+    expect(equipped()).toEqual([VERSION_FULL_ART_ID]);
+    fireEvent.blur(rung(VERSION_FULL_ART_ID));
+    expect(rung(VERSION_FULL_ART_ID)).toHaveAttribute("aria-pressed", "true");
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_FULL_ART_ID });
   });
 
-  it("R1834000 a shown full art writes no pick, so none is sent to the account, whether the view closes or the page is left", () => {
+  it("R1834000 R3015007 a shown level writes no pick, so none is sent to the account, whether the view closes or the page is left", () => {
     writeCardSettings({ fullArt: false });
     writeCardPick(BIG_D, "border", "border-bone");
     const stored = localStorage.getItem(CARD_PICKS_SETTINGS_KEY);
@@ -644,7 +709,7 @@ describe("R1655000 a card in context", () => {
     });
     open(BIG_D, OWNS_BIG_D_ART);
 
-    fireEvent.focus(item(VERSION_FULL_ART_ID));
+    fireEvent.focus(rung(VERSION_FULL_ART_ID));
     expect(large().getAttribute("data-full-art"), "the large card shows it").toBe("true");
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
     fireEvent.click(screen.getByTestId(T.cardViewClose));
@@ -652,8 +717,8 @@ describe("R1655000 a card in context", () => {
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
 
     fireEvent.click(screen.getByTestId(T.card(BIG_D)));
-    fireEvent.focus(item(NO_FULL_ART_ID));
-    fireEvent.focus(item(VERSION_FULL_ART_ID));
+    fireEvent.focus(rung(NO_FULL_ART_ID));
+    fireEvent.focus(rung(VERSION_FULL_ART_ID));
     act(() => {
       window.dispatchEvent(new Event("pagehide"));
     });
@@ -661,77 +726,82 @@ describe("R1655000 a card in context", () => {
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe(stored);
     expect(writes, "no preview reaches the account's sync").toEqual([]);
 
-    fireEvent.click(item(VERSION_FULL_ART_ID));
+    fireEvent.click(rung(VERSION_FULL_ART_ID));
     expect(writes).toEqual([[BIG_D, { fullArt: VERSION_FULL_ART_ID }]]);
     unsubscribe();
   });
 
-  it("R2725001 a card's strip lists only its offered versions and augments", () => {
-    // Carnivorous Cube, offered part 1's three with no full art of its own, and R2940000 Alt art; Speciesist, offered none.
-    const groups = (defId: string) => cardStrip(defId, () => true).map((group) => [group.kind, group.items.map((entry) => entry.id)]);
-    expect(groups(CUBE).slice(3)).toEqual([
-      ["version", [NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID]],
-      ["augment", [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]],
+  it("R2725001 R3015007 a card's ladders list only its offered levels", () => {
+    // Carnivorous Cube, offered Full art's ladder with no full art of its own, and R2940000 Alt art's; Speciesist, its
+    // Default alone; a Legacy card's ladders stop before animated (R2724000).
+    const ladders = (defId: string) => cardLadders(defId, () => true).map((ladder) => [ladder.variant, ladder.rungs.map((each) => each.id)]);
+    expect(ladders(CUBE)).toEqual([
+      ["default", [NO_FULL_ART_ID, VERSION_ANIMATED_ID]],
+      ["full-art", [VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID]],
+      ["alt-art", [VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ALT_FULL_ART_ANIMATED_ID, VERSION_ALT_FULL_ART_SIGNED_ID]],
     ]);
-    expect(groups(PLAIN).map(([kind]) => kind)).toEqual(["foil", "finish", "border"]);
-    // Owned on Speciesist by a grant no shop makes, none is listed, and a face there wears none.
-    writeCardFullArt(PLAIN, VERSION_FULL_ART_ID);
-    open(PLAIN, new Map([[PLAIN, new Set([VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID])]]));
-    expect(screen.queryByTestId(T.strip("version"))).toBeNull();
+    expect(ladders(PLAIN)).toEqual([["default", [NO_FULL_ART_ID, VERSION_ANIMATED_ID]]]);
+    expect(ladders("traininggrounds-044")).toEqual([
+      ["default", [NO_FULL_ART_ID]],
+      ["full-art", [VERSION_FULL_ART_ID]],
+      ["sketch", [VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID]],
+    ]);
+    expect(cardStrip(CUBE, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
+    // Owned on Speciesist by a grant no shop makes, Full art is listed nowhere, and a face there wears none.
+    writeCardLevel(PLAIN, VERSION_FULL_ART_ID);
+    open(PLAIN, new Map([[PLAIN, new Set([VERSION_FULL_ART_ID])]]));
+    expect(screen.queryByTestId(T.ladder("full-art"))).toBeNull();
+    expect(screen.queryByTestId(T.rung(VERSION_FULL_ART_ID))).toBeNull();
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(large().getAttribute("data-version")).toBeNull();
     cleanup();
-    // On the Cube, the version is picked, worn on the large card, and needs no setting.
+    // On the Cube, Full art's first level is picked, worn on the large card, and needs no setting; the level above it is
+    // next, the one past that locked.
     writeCardSettings({ fullArt: false });
-    open(CUBE, new Map([[CUBE, new Set([VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID])]]));
+    open(CUBE, new Map([[CUBE, new Set([VERSION_FULL_ART_ID])]]));
     expect(large().getAttribute("data-full-art")).toBeNull();
-    fireEvent.click(item(VERSION_FULL_ART_ID));
-    // R2949000: Signature, owned, waits for Animated, which is not: a click writes nothing.
-    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-owned", "true");
-    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
-    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
-    fireEvent.mouseLeave(item(AUGMENT_SIGNATURE_ID));
+    fireEvent.click(rung(VERSION_FULL_ART_ID));
+    fireEvent.mouseLeave(rung(VERSION_FULL_ART_ID));
     expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID });
     expect(large().getAttribute("data-full-art")).toBe("true");
     expect(large().getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
-    expect(large().getAttribute("data-augments")).toBeNull();
-    expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-owned", "false");
+    expect(large().getAttribute("data-level")).toBe(VERSION_FULL_ART_ID);
+    expect(rung(VERSION_FULL_ART_ANIMATED_ID)).toHaveAttribute("data-next", "true");
+    expect(rung(VERSION_FULL_ART_SIGNED_ID)).toHaveTextContent("Needs Full art, animated");
   });
 
-  it("R2949000 the Signature toggle waits for Full art and Animated, and turning either off turns it off", () => {
-    open(CUBE);
-    const signature = (): HTMLElement => item(AUGMENT_SIGNATURE_ID);
-    // On the normal face, and on Full art alone, it waits: it says what it needs, and a click writes nothing.
-    expect(signature()).toHaveAttribute("data-waits", "true");
-    expect(signature()).toHaveAttribute("aria-disabled", "true");
-    expect(signature()).toHaveTextContent("Needs Full art and Animated");
-    fireEvent.click(signature());
+  it("R2949000 R3015007 Full art's signed level is its third rung: locked until the two below it are owned, it signs over the card's own picture", () => {
+    open(CUBE, new Map([[CUBE, new Set([VERSION_FULL_ART_ID])]]));
+    const signed = (): HTMLElement => rung(VERSION_FULL_ART_SIGNED_ID);
+    // Past the next level it says what it needs, and a click opens its preview and writes nothing.
+    expect(signed()).toHaveAttribute("data-owned", "false");
+    expect(signed()).toHaveAttribute("data-next", "false");
+    expect(signed()).toHaveTextContent("Needs Full art, animated");
+    fireEvent.click(signed());
     expect(readCardPicks(CUBE)).toEqual({});
-    fireEvent.click(item(VERSION_FULL_ART_ID));
-    expect(signature()).toHaveAttribute("data-waits", "true");
-    fireEvent.click(signature());
-    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID });
-    // With both on it is a toggle like any other, and the large card signs.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(signature()).not.toHaveAttribute("data-waits");
-    expect(signature()).not.toHaveAttribute("aria-disabled");
-    expect(signature()).not.toHaveTextContent("Needs Full art and Animated");
-    fireEvent.click(signature());
-    fireEvent.mouseLeave(signature());
-    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] });
-    expect(signature()).toHaveAttribute("data-equipped", "true");
+    cleanup();
+    // With Full art's animated level owned too, it is next.
+    open(CUBE, new Map([[CUBE, new Set([VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID])]]));
+    expect(signed()).toHaveAttribute("data-next", "true");
+    expect(signed()).toHaveTextContent("Next level");
+    expect(signed()).not.toHaveTextContent("Needs");
+    cleanup();
+    // Owned, it is a rung like any other, and the large card signs over its animated full art, drawing no picture of its own.
+    open(CUBE);
+    fireEvent.click(signed());
+    fireEvent.mouseLeave(signed());
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_SIGNED_ID });
+    expect(signed()).toHaveAttribute("data-equipped", "true");
     expect(large().querySelector(".cf-signature")).not.toBeNull();
-    // Animated off takes Signature with it.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID });
-    expect(signature()).toHaveAttribute("data-equipped", "false");
-    expect(signature()).toHaveAttribute("data-waits", "true");
-    // Back on, Signature on again, then the normal face: Animated stays, Signature goes.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    fireEvent.click(signature());
-    fireEvent.click(item(NO_FULL_ART_ID));
-    fireEvent.mouseLeave(item(NO_FULL_ART_ID));
-    expect(readCardPicks(CUBE)).toEqual({ fullArt: false, augments: [AUGMENT_ANIMATED_ID] });
+    expect(large().getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBeNull();
+    // A level below it takes the signature off, and the normal face every level.
+    fireEvent.click(rung(VERSION_FULL_ART_ANIMATED_ID));
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ANIMATED_ID });
+    expect(signed()).toHaveAttribute("data-equipped", "false");
+    expect(large().querySelector(".cf-signature")).toBeNull();
+    fireEvent.click(rung(NO_FULL_ART_ID));
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: false });
     expect(large().querySelector(".cf-signature")).toBeNull();
   });
 
@@ -763,255 +833,247 @@ describe("R1655000 a card in context", () => {
     expect(screen.getByTestId(T.card(BIG_D))).toHaveFocus();
   });
 
-  it("R1655000 cardStrip offers each kind's registry entries, the versions and augments of a card offered them, and says which are locked", () => {
-    const strip = cardStrip(BIG_D, (_defId, cosmeticId) => cosmeticId !== VERSION_FULL_ART_ID && cosmeticId !== "foil-cracked-ice");
+  it("R1655000 R3015007 cardStrip offers each kind's registry entries and says which are locked, and cardLadders each level of each variant", () => {
+    const strip = cardStrip(BIG_D, (_defId, cosmeticId) => cosmeticId !== "foil-cracked-ice");
 
-    expect(strip.map((group) => group.kind)).toEqual(["foil", "finish", "border", "version", "augment"]);
+    expect(strip.map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
     expect(strip[0]?.items.map((entry) => entry.id)).toEqual(cosmeticsOf("foil").map((cosmetic) => cosmetic.id));
-    expect(strip.flatMap((group) => group.items).filter((entry) => !entry.owned).map((entry) => entry.id)).toEqual([
-      "foil-cracked-ice",
-      VERSION_FULL_ART_ID,
-    ]);
+    expect(strip.flatMap((group) => group.items).filter((entry) => !entry.owned).map((entry) => entry.id)).toEqual(["foil-cracked-ice"]);
     expect(strip[0]?.items[0]).toMatchObject({ id: "foil-none", name: "No foil", rarity: "Common", owned: true });
-    // R2725000: the normal face, then the Full art version, then R2940000 the Sketch, which Big D-fender is offered;
-    // the augments apart, the retired full arts nowhere.
-    expect(strip[3]?.items.map((entry) => [entry.id, entry.rarity])).toEqual([
-      [NO_FULL_ART_ID, "Common"],
-      [VERSION_FULL_ART_ID, "Legendary"],
-      [VERSION_SKETCH_ID, "Rare"],
+    // R3015007: the Default (the normal face, then its animated level), then Full art and R2940000 the Sketch, which Big
+    // D-fender is offered, each level a rung, the retired full arts and augments nowhere; Full art owned nowhere.
+    const ladders = cardLadders(BIG_D, (_defId, id) => !ladderOf("full-art").includes(id));
+    expect(ladders.map((ladder) => [ladder.variant, ladder.name])).toEqual([
+      ["default", "Default"],
+      ["full-art", "Full art"],
+      ["sketch", "Sketch"],
     ]);
-    expect(strip[4]?.items.map((entry) => [entry.id, entry.rarity])).toEqual([
-      [AUGMENT_ANIMATED_ID, "Epic"],
-      [AUGMENT_SIGNATURE_ID, "Mythic"],
+    expect(ladders.map((ladder) => ladder.rungs.map((each) => [each.id, each.rarity]))).toEqual([
+      [
+        [NO_FULL_ART_ID, "Common"],
+        [VERSION_ANIMATED_ID, "Epic"],
+      ],
+      [
+        [VERSION_FULL_ART_ID, "Legendary"],
+        [VERSION_FULL_ART_ANIMATED_ID, "Mythic"],
+        [VERSION_FULL_ART_SIGNED_ID, "Mythic"],
+      ],
+      [
+        [VERSION_SKETCH_ID, "Rare"],
+        [VERSION_SKETCH_FULL_ART_ID, "Epic"],
+        [VERSION_SKETCH_FULL_ART_ANIMATED_ID, "Legendary"],
+        [VERSION_SKETCH_FULL_ART_SIGNED_ID, "Mythic"],
+      ],
     ]);
+    // The first unowned level is next; each past it needs the highest level below it that is not owned.
+    expect(ladders[1]?.rungs.map(({ owned, next, needs }) => ({ owned, next, needs }))).toEqual([
+      { owned: false, next: true, needs: null },
+      { owned: false, next: false, needs: "Full art" },
+      { owned: false, next: false, needs: "Full art, animated" },
+    ]);
+    expect(ladders[0]?.rungs[0]).toMatchObject({ id: NO_FULL_ART_ID, name: "Normal", owned: true, next: false, needs: null });
     expect(cardStrip(PLAIN, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
+    expect(cardLadders(PLAIN, () => true).map((ladder) => ladder.variant)).toEqual(["default"]);
   });
 
-  it("R2940000 the strip lists each new version only where it is offered, each drawing its own picture", () => {
-    const versions = (defId: string) =>
-      cardStrip(defId, () => true)
-        .find((group) => group.kind === "version")
-        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // Transmogulate is offered all four versions (and R2942000 Comic, R2943000 Set showcase, R2944000 Immersive);
-    // Carnivorous Cube Alt art alone of the three, Big D-fender the Sketch alone; Call to Chaos (Classic+ Edition) the
-    // three and not Full art (and R2942000 Pixel and Comic, R2943000 Set showcase, R2944000 Immersive); Speciesist none.
+  it("R2940000 R3015007 the ladders list each new variant only where it is offered, each rung drawing its variant's picture", () => {
+    // Transmogulate is offered Full art, Alt art and the Sketch (and R2942000 Comic, R2943000 Set showcase, R2944000
+    // Immersive); Carnivorous Cube Alt art alone of the two new ones, Big D-fender the Sketch alone; Call to Chaos (Classic+
+    // Edition) both and not Full art (and R2942000 Pixel and Comic, R2943000 Set showcase, R2944000 Immersive); Speciesist
+    // neither. R3015000: Alt full art is Alt art's second level, no variant of its own.
     const ALL = "core-083";
     const NOT_FULL = "classicplus-073";
-    expect(versions(ALL)).toEqual([
-      [NO_FULL_ART_ID, "Common"],
-      [VERSION_FULL_ART_ID, "Legendary"],
-      [VERSION_ALT_ART_ID, "Rare"],
-      [VERSION_SKETCH_ID, "Rare"],
-      [VERSION_ALT_FULL_ART_ID, "Legendary"],
-      [VERSION_COMIC_ID, "Epic"],
-      [VERSION_SET_SHOWCASE_ID, "Legendary"],
-      [VERSION_IMMERSIVE_ID, "Mythic"],
+    expect(firstLevels(ALL)).toEqual([
+      ["default", NO_FULL_ART_ID, "Common"],
+      ["full-art", VERSION_FULL_ART_ID, "Legendary"],
+      ["alt-art", VERSION_ALT_ART_ID, "Rare"],
+      ["sketch", VERSION_SKETCH_ID, "Rare"],
+      ["comic", VERSION_COMIC_ID, "Epic"],
+      ["set-showcase", VERSION_SET_SHOWCASE_ID, "Legendary"],
+      ["immersive", VERSION_IMMERSIVE_ID, "Mythic"],
     ]);
-    expect(versions(CUBE).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID]);
-    expect(versions(BIG_D).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_SKETCH_ID]);
-    expect(versions(NOT_FULL).map(([id]) => id)).toEqual([
-      NO_FULL_ART_ID,
-      VERSION_ALT_ART_ID,
-      VERSION_SKETCH_ID,
-      VERSION_ALT_FULL_ART_ID,
-      VERSION_PIXEL_ID,
-      VERSION_COMIC_ID,
-      VERSION_SET_SHOWCASE_ID,
-      VERSION_IMMERSIVE_ID,
-    ]);
-    expect(versions(PLAIN)).toEqual([]);
-    // Whatever the strip lists is offered there, and nothing offered is left out.
+    expect(firstLevels(CUBE).map(([variant]) => variant)).toEqual(["default", "full-art", "alt-art"]);
+    expect(firstLevels(BIG_D).map(([variant]) => variant)).toEqual(["default", "full-art", "sketch"]);
+    expect(firstLevels(NOT_FULL).map(([variant]) => variant)).toEqual(["default", "alt-art", "sketch", "pixel", "comic", "set-showcase", "immersive"]);
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    // Whatever the ladders list is offered there, and nothing offered is left out.
     for (const defId of [ALL, CUBE, BIG_D, NOT_FULL, PLAIN]) {
-      for (const id of [VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID]) {
-        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      for (const id of [...ladderOf("alt-art"), ...ladderOf("sketch")]) {
+        expect(listed(defId).includes(id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
       }
     }
 
-    // Each tile draws the picture its version does: Alt art's for Alt art and Alt full art, the normal one sketched.
+    // R3015002: each rung draws its variant's picture: Alt art's at every level of Alt art, the normal one sketched at
+    // every level of the Sketch.
     const all = defOf(ALL);
     render(<OwnedCards collection={collectionOwning([ALL])} defs={[all]} />);
     fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(ALL)));
-    const picture = (id: string): string | null => item(id).querySelector(".cf-art")?.getAttribute("data-art-picture") ?? null;
+    const picture = (id: string): string | null => rung(id).querySelector(".cf-art")?.getAttribute("data-art-picture") ?? null;
     expect(picture(VERSION_FULL_ART_ID)).toBeNull();
-    expect(picture(VERSION_ALT_ART_ID)).toBe("alt");
-    expect(picture(VERSION_SKETCH_ID)).toBe("sketch");
-    expect(picture(VERSION_ALT_FULL_ART_ID)).toBe("alt");
+    for (const id of ladderOf("alt-art")) expect(picture(id), id).toBe("alt");
+    for (const id of ladderOf("sketch")) expect(picture(id), id).toBe("sketch");
     // Choosing Alt full art wears it, full bleed, with Alt art's picture.
-    fireEvent.click(item(VERSION_ALT_FULL_ART_ID));
+    fireEvent.click(rung(VERSION_ALT_FULL_ART_ID));
     expect(readCardPicks(ALL)).toEqual({ fullArt: VERSION_ALT_FULL_ART_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_ALT_FULL_ART_ID);
     expect(large().getAttribute("data-full-art")).toBe("true");
     expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("alt");
-    // R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(ALL)).toEqual({ fullArt: VERSION_ALT_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID] });
-    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
-    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
-    expect(readCardPicks(ALL)).toEqual({ fullArt: VERSION_ALT_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID] });
     expect(large().querySelector(".cf-signature")).toBeNull();
+    // R3015000: its signed level, two rungs up, signs over that same picture.
+    fireEvent.click(rung(VERSION_ALT_FULL_ART_SIGNED_ID));
+    expect(readCardPicks(ALL)).toEqual({ fullArt: VERSION_ALT_FULL_ART_SIGNED_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_ALT_FULL_ART_ID);
+    expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("alt");
+    expect(large().querySelector(".cf-signature")).not.toBeNull();
   });
 
-  it("R2942000 the strip lists each part 3 version only where it is offered, each drawing its own look", () => {
-    const versions = (defId: string) =>
-      cardStrip(defId, () => true)
-        .find((group) => group.kind === "version")
-        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
+  it("R2942000 R3015007 the ladders list each part 3 variant only where it is offered, each rung drawing its own look", () => {
     // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art (and R2944000 Prismatic); Scratch
-    // Pad, a Mythic Spell, Full art, Alt full art and all three (and R2944000 Immersive and Prismatic); Carnivorous Cube
-    // and Big D-fender none of the three; Speciesist nothing.
+    // Pad, a Mythic Spell, Full art, Alt art (R3015000: which took Alt full art's cards) and all three (and R2944000
+    // Immersive and Prismatic); Carnivorous Cube and Big D-fender none of the three; Speciesist nothing.
     const TYRANT = "classic-056";
     const PAD = "meditativeplus-026";
-    expect(versions(TYRANT)).toEqual([
-      [NO_FULL_ART_ID, "Common"],
-      [VERSION_SKETCH_ID, "Rare"],
-      [VERSION_EXTENDED_ART_ID, "Epic"],
-      [VERSION_PIXEL_ID, "Epic"],
-      [VERSION_COMIC_ID, "Epic"],
-      [VERSION_PRISMATIC_ID, "Mythic"],
+    expect(firstLevels(TYRANT)).toEqual([
+      ["default", NO_FULL_ART_ID, "Common"],
+      ["sketch", VERSION_SKETCH_ID, "Rare"],
+      ["extended-art", VERSION_EXTENDED_ART_ID, "Epic"],
+      ["pixel", VERSION_PIXEL_ID, "Epic"],
+      ["comic", VERSION_COMIC_ID, "Epic"],
+      ["prismatic", VERSION_PRISMATIC_ID, "Mythic"],
     ]);
-    expect(versions(PAD).map(([id]) => id)).toEqual([
-      NO_FULL_ART_ID,
-      VERSION_FULL_ART_ID,
-      VERSION_ALT_FULL_ART_ID,
-      VERSION_EXTENDED_ART_ID,
-      VERSION_PIXEL_ID,
-      VERSION_COMIC_ID,
-      VERSION_IMMERSIVE_ID,
-      VERSION_PRISMATIC_ID,
-    ]);
-    expect(versions(PLAIN)).toEqual([]);
-    // Whatever the strip lists is offered there, and nothing offered is left out.
+    expect(firstLevels(PAD).map(([variant]) => variant)).toEqual(["default", "full-art", "alt-art", "extended-art", "pixel", "comic", "immersive", "prismatic"]);
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    // Whatever the ladders list is offered there, and nothing offered is left out; each a ladder of two, art then animated.
     for (const defId of [TYRANT, PAD, CUBE, BIG_D, "core-083", "classicplus-073", PLAIN]) {
-      for (const id of [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID]) {
-        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      for (const first of [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID]) {
+        for (const id of [first, `${first}-animated`]) expect(listed(defId).includes(id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
       }
     }
+    expect(cardLadders(PAD, () => true).find((ladder) => ladder.variant === "pixel")?.rungs.map((each) => [each.id, each.rarity])).toEqual([
+      [VERSION_PIXEL_ID, "Epic"],
+      [`${VERSION_PIXEL_ID}-animated`, "Legendary"],
+    ]);
 
-    // Each tile draws its look: Extended art the normal picture past its window, Pixel and Comic restyled.
+    // Each rung draws its look across its tile: Extended art the normal picture, Pixel and Comic restyled, at both levels.
     const pad = defOf(PAD);
     render(<OwnedCards collection={collectionOwning([PAD])} defs={[pad]} />);
     fireEvent.click(screen.getByTestId(T.setToggle("Meditative+")));
     fireEvent.click(screen.getByTestId(T.card(PAD)));
-    const art = (id: string): Element | null => item(id).querySelector(".cf-art");
+    const art = (id: string): Element | null => rung(id).querySelector(".cf-art");
     expect(art(VERSION_EXTENDED_ART_ID)?.getAttribute("data-art-picture")).toBeNull();
     expect(art(VERSION_EXTENDED_ART_ID)?.classList.contains("cf-art--full")).toBe(true);
-    expect(art(VERSION_PIXEL_ID)?.getAttribute("data-art-picture")).toBe("pixel");
-    expect(art(VERSION_COMIC_ID)?.getAttribute("data-art-picture")).toBe("comic");
+    for (const id of [VERSION_PIXEL_ID, `${VERSION_PIXEL_ID}-animated`]) expect(art(id)?.getAttribute("data-art-picture"), id).toBe("pixel");
+    for (const id of [VERSION_COMIC_ID, `${VERSION_COMIC_ID}-animated`]) expect(art(id)?.getAttribute("data-art-picture"), id).toBe("comic");
     // Choosing Pixel wears it, its words kept, with Pixel's picture.
-    fireEvent.click(item(VERSION_PIXEL_ID));
+    fireEvent.click(rung(VERSION_PIXEL_ID));
     expect(readCardPicks(PAD)).toEqual({ fullArt: VERSION_PIXEL_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_PIXEL_ID);
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(large().querySelector(".card-text")).not.toBeNull();
     expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("pixel");
-    // R2942002, R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(PAD)).toEqual({ fullArt: VERSION_PIXEL_ID, augments: [AUGMENT_ANIMATED_ID] });
-    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
-    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
-    expect(readCardPicks(PAD)).toEqual({ fullArt: VERSION_PIXEL_ID, augments: [AUGMENT_ANIMATED_ID] });
+    // R2942002, R3015000: its animated level moves that picture, and no rung signs it.
+    fireEvent.click(rung(`${VERSION_PIXEL_ID}-animated`));
+    expect(readCardPicks(PAD)).toEqual({ fullArt: `${VERSION_PIXEL_ID}-animated` });
+    expect(large().getAttribute("data-version")).toBe(VERSION_PIXEL_ID);
+    expect(large().getAttribute("data-art-motion")).not.toBeNull();
     expect(large().querySelector(".cf-signature")).toBeNull();
   });
 
-  it("R2943000 the strip lists each part 4 version only where it is offered, each drawing its own look", () => {
-    const versions = (defId: string) =>
-      cardStrip(defId, () => true)
-        .find((group) => group.kind === "version")
-        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // BOOM! Big Max, a Legendary Unit, is offered both, beside Full art, Alt art, Alt full art and Pixel (and R2944000
-    // Immersive); Transmogulate, a Legendary Spell, Set showcase alone of the two; Carnivorous Cube, Big D-fender and
-    // Speciesist neither.
+  it("R2943000 R3015007 the ladders list each part 4 variant only where it is offered, each rung drawing its own look", () => {
+    // BOOM! Big Max, a Legendary Unit, is offered both, beside Full art, Alt art and Pixel (and R2944000 Immersive);
+    // Transmogulate, a Legendary Spell, Set showcase alone of the two; Carnivorous Cube, Big D-fender and Speciesist neither.
     const MAX = "classic-080";
-    expect(versions(MAX)).toEqual([
-      [NO_FULL_ART_ID, "Common"],
-      [VERSION_FULL_ART_ID, "Legendary"],
-      [VERSION_ALT_ART_ID, "Rare"],
-      [VERSION_ALT_FULL_ART_ID, "Legendary"],
-      [VERSION_PIXEL_ID, "Epic"],
-      [VERSION_SET_SHOWCASE_ID, "Legendary"],
-      [VERSION_OUT_OF_FRAME_ID, "Legendary"],
-      [VERSION_IMMERSIVE_ID, "Mythic"],
+    expect(firstLevels(MAX)).toEqual([
+      ["default", NO_FULL_ART_ID, "Common"],
+      ["full-art", VERSION_FULL_ART_ID, "Legendary"],
+      ["alt-art", VERSION_ALT_ART_ID, "Rare"],
+      ["pixel", VERSION_PIXEL_ID, "Epic"],
+      ["set-showcase", VERSION_SET_SHOWCASE_ID, "Legendary"],
+      ["out-of-frame", VERSION_OUT_OF_FRAME_ID, "Legendary"],
+      ["immersive", VERSION_IMMERSIVE_ID, "Mythic"],
     ]);
-    expect(versions(PLAIN)).toEqual([]);
-    // Whatever the strip lists is offered there, and nothing offered is left out.
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    // Whatever the ladders list is offered there, and nothing offered is left out.
     for (const defId of [MAX, "core-083", "classicplus-073", "classic-056", CUBE, BIG_D, PLAIN]) {
-      for (const id of [VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID]) {
-        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      for (const first of [VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID]) {
+        for (const id of [first, `${first}-animated`]) expect(listed(defId).includes(id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
       }
     }
 
-    // Each tile draws its look: Set showcase the picture in Classic's stone, Out of frame its subject alone.
+    // Each rung draws its look: Set showcase the picture in Classic's stone, Out of frame its subject alone, at both levels.
     const max = defOf(MAX);
     render(<OwnedCards collection={collectionOwning([MAX])} defs={[max]} />);
     fireEvent.click(screen.getByTestId(T.setToggle("Classic")));
     fireEvent.click(screen.getByTestId(T.card(MAX)));
-    const art = (id: string): Element | null => item(id).querySelector(".cf-art");
-    expect(art(VERSION_SET_SHOWCASE_ID)?.getAttribute("data-art-picture")).toBe("showcase-classic");
-    expect(art(VERSION_SET_SHOWCASE_ID)?.getAttribute("data-art-part")).toBeNull();
-    expect(art(VERSION_OUT_OF_FRAME_ID)?.getAttribute("data-art-picture")).toBeNull();
-    expect(art(VERSION_OUT_OF_FRAME_ID)?.getAttribute("data-art-part")).toBe("subject");
+    const art = (id: string): Element | null => rung(id).querySelector(".cf-art");
+    for (const id of [VERSION_SET_SHOWCASE_ID, `${VERSION_SET_SHOWCASE_ID}-animated`]) {
+      expect(art(id)?.getAttribute("data-art-picture"), id).toBe("showcase-classic");
+      expect(art(id)?.getAttribute("data-art-part"), id).toBeNull();
+    }
+    for (const id of [VERSION_OUT_OF_FRAME_ID, `${VERSION_OUT_OF_FRAME_ID}-animated`]) {
+      expect(art(id)?.getAttribute("data-art-picture"), id).toBeNull();
+      expect(art(id)?.getAttribute("data-art-part"), id).toBe("subject");
+    }
     // Choosing Set showcase wears Classic's look, its words kept.
-    fireEvent.click(item(VERSION_SET_SHOWCASE_ID));
+    fireEvent.click(rung(VERSION_SET_SHOWCASE_ID));
     expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_SET_SHOWCASE_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_SET_SHOWCASE_ID);
     expect(large().getAttribute("data-showcase")).toBe("classic");
     expect(large().querySelector(".card-text")).not.toBeNull();
     // Choosing Out of frame cuts its subject out over the frame, its words kept.
-    fireEvent.click(item(VERSION_OUT_OF_FRAME_ID));
+    fireEvent.click(rung(VERSION_OUT_OF_FRAME_ID));
     expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_OUT_OF_FRAME_ID);
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(large().querySelector(".card-text")).not.toBeNull();
     expect(large().querySelector(".cf-art-frame > .cf-art--cutout")?.getAttribute("data-art-part")).toBe("subject");
-    // R2943002, R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] });
-    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
-    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
-    expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] });
+    // R2943002, R3015000: its animated level moves the cut-out picture, and no rung signs it.
+    fireEvent.click(rung(`${VERSION_OUT_OF_FRAME_ID}-animated`));
+    expect(readCardPicks(MAX)).toEqual({ fullArt: `${VERSION_OUT_OF_FRAME_ID}-animated` });
+    expect(large().getAttribute("data-version")).toBe(VERSION_OUT_OF_FRAME_ID);
+    expect(large().getAttribute("data-art-motion")).not.toBeNull();
+    expect(large().querySelector(".cf-art-frame > .cf-art--cutout")?.getAttribute("data-art-part")).toBe("subject");
     expect(large().querySelector(".cf-signature")).toBeNull();
   });
 
-  it("R2944000 the strip lists each part 5 version only where it is offered, each drawing its own look", () => {
-    const versions = (defId: string) =>
-      cardStrip(defId, () => true)
-        .find((group) => group.kind === "version")
-        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // Ceaseless Void, a Mythic Unit, is offered both, last, beside Full art, the Sketch, Alt full art, Extended art, Set
-    // showcase and Out of frame; Spell Tyrant, a Legendary Unit, Prismatic alone of the two, and BOOM! Big Max Immersive
-    // alone; Carnivorous Cube, Big D-fender and Speciesist neither.
+  it("R2944000 R3015007 the ladders list each part 5 variant only where it is offered, each rung drawing its own look", () => {
+    // Ceaseless Void, a Mythic Unit, is offered both, last, beside Full art, Alt art (R3015000: which took Alt full art's
+    // cards), the Sketch, Extended art, Set showcase and Out of frame; Spell Tyrant, a Legendary Unit, Prismatic alone of
+    // the two, and BOOM! Big Max Immersive alone; Carnivorous Cube, Big D-fender and Speciesist neither.
     const VOID = "core-100";
-    expect(versions(VOID)).toEqual([
-      [NO_FULL_ART_ID, "Common"],
-      [VERSION_FULL_ART_ID, "Legendary"],
-      [VERSION_SKETCH_ID, "Rare"],
-      [VERSION_ALT_FULL_ART_ID, "Legendary"],
-      [VERSION_EXTENDED_ART_ID, "Epic"],
-      [VERSION_SET_SHOWCASE_ID, "Legendary"],
-      [VERSION_OUT_OF_FRAME_ID, "Legendary"],
-      [VERSION_IMMERSIVE_ID, "Mythic"],
-      [VERSION_PRISMATIC_ID, "Mythic"],
+    expect(firstLevels(VOID)).toEqual([
+      ["default", NO_FULL_ART_ID, "Common"],
+      ["full-art", VERSION_FULL_ART_ID, "Legendary"],
+      ["alt-art", VERSION_ALT_ART_ID, "Rare"],
+      ["sketch", VERSION_SKETCH_ID, "Rare"],
+      ["extended-art", VERSION_EXTENDED_ART_ID, "Epic"],
+      ["set-showcase", VERSION_SET_SHOWCASE_ID, "Legendary"],
+      ["out-of-frame", VERSION_OUT_OF_FRAME_ID, "Legendary"],
+      ["immersive", VERSION_IMMERSIVE_ID, "Mythic"],
+      ["prismatic", VERSION_PRISMATIC_ID, "Mythic"],
     ]);
-    expect(versions(PLAIN)).toEqual([]);
-    // Whatever the strip lists is offered there, and nothing offered is left out.
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    // Whatever the ladders list is offered there, and nothing offered is left out.
     for (const defId of [VOID, "classic-056", "classic-080", "core-083", "classicplus-073", "meditativeplus-026", CUBE, BIG_D, PLAIN]) {
-      for (const id of [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID]) {
-        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      for (const first of [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID]) {
+        for (const id of [first, `${first}-animated`]) expect(listed(defId).includes(id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
       }
     }
 
-    // Each tile draws its look: Immersive the whole picture hazed, Prismatic in chrome.
+    // Each rung draws its look: Immersive the whole picture hazed, Prismatic in chrome, at both levels.
     const voidDef = defOf(VOID);
     render(<OwnedCards collection={collectionOwning([VOID])} defs={[voidDef]} />);
     fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(VOID)));
-    const art = (id: string): Element | null => item(id).querySelector(".cf-art");
-    expect(art(VERSION_IMMERSIVE_ID)?.getAttribute("data-art-picture")).toBe("depth");
-    expect(art(VERSION_IMMERSIVE_ID)?.getAttribute("data-art-part")).toBeNull();
-    expect(art(VERSION_PRISMATIC_ID)?.getAttribute("data-art-picture")).toBe("prismatic");
+    const art = (id: string): Element | null => rung(id).querySelector(".cf-art");
+    for (const id of [VERSION_IMMERSIVE_ID, `${VERSION_IMMERSIVE_ID}-animated`]) {
+      expect(art(id)?.getAttribute("data-art-picture"), id).toBe("depth");
+      expect(art(id)?.getAttribute("data-art-part"), id).toBeNull();
+    }
+    for (const id of [VERSION_PRISMATIC_ID, `${VERSION_PRISMATIC_ID}-animated`]) expect(art(id)?.getAttribute("data-art-picture"), id).toBe("prismatic");
     // Choosing Immersive lays the subject on its near layer over the hazed backdrop, its words kept.
-    fireEvent.click(item(VERSION_IMMERSIVE_ID));
+    fireEvent.click(rung(VERSION_IMMERSIVE_ID));
     expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_IMMERSIVE_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_IMMERSIVE_ID);
     expect(large().getAttribute("data-full-art")).toBeNull();
@@ -1019,19 +1081,147 @@ describe("R1655000 a card in context", () => {
     expect(large().querySelector(".cf-art-frame > .cf-art")?.getAttribute("data-art-part")).toBe("backdrop");
     expect(large().querySelector(".cf-art-frame > .cf-immersive > .cf-art--near")?.getAttribute("data-art-part")).toBe("subject");
     // Choosing Prismatic draws it in chrome, its words kept.
-    fireEvent.click(item(VERSION_PRISMATIC_ID));
+    fireEvent.click(rung(VERSION_PRISMATIC_ID));
     expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
     expect(large().querySelector(".card-text")).not.toBeNull();
     expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("prismatic");
     expect(large().querySelector(".cf-immersive")).toBeNull();
-    // R2944002, R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
-    fireEvent.click(item(AUGMENT_ANIMATED_ID));
-    expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID, augments: [AUGMENT_ANIMATED_ID] });
-    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
-    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
-    expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID, augments: [AUGMENT_ANIMATED_ID] });
+    // R2944002, R3015000: its animated level moves the chrome, and no rung signs it.
+    fireEvent.click(rung(`${VERSION_PRISMATIC_ID}-animated`));
+    expect(readCardPicks(VOID)).toEqual({ fullArt: `${VERSION_PRISMATIC_ID}-animated` });
+    expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
+    expect(large().getAttribute("data-art-motion")).not.toBeNull();
     expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R3015007 each variant is a ladder: owned, next and locked", () => {
+    // Big D-fender, owning Full art's first level (its retired still Epic, R3015006) and the Sketch's first two.
+    open(BIG_D, owning(BIG_D_ART, VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID));
+    // One section per variant, the Default first, each named.
+    const sections = screen.getAllByTestId(/^collection-ladder-/u);
+    expect(sections.map((section) => [section.dataset.variant, section.getAttribute("aria-label")])).toEqual([
+      ["default", "Default"],
+      ["full-art", "Full art"],
+      ["sketch", "Sketch"],
+    ]);
+    // Each an ordered list of its levels, lowest first, each rung its level's state: owned, next or locked.
+    const state = (variant: string): (string | undefined)[][] =>
+      within(screen.getByTestId(T.ladder(variant)))
+        .getAllByRole("listitem")
+        .map((each) => {
+          const button = within(each).getByRole("button");
+          return [button.dataset.level, button.dataset.owned, button.dataset.next];
+        });
+    for (const section of sections) expect(section.querySelector(":scope > ol"), section.dataset.variant).not.toBeNull();
+    expect(state("default")).toEqual([
+      [NO_FULL_ART_ID, "true", "false"],
+      [VERSION_ANIMATED_ID, "false", "true"],
+    ]);
+    expect(state("full-art")).toEqual([
+      [VERSION_FULL_ART_ID, "true", "false"],
+      [VERSION_FULL_ART_ANIMATED_ID, "false", "true"],
+      [VERSION_FULL_ART_SIGNED_ID, "false", "false"],
+    ]);
+    expect(state("sketch")).toEqual([
+      [VERSION_SKETCH_ID, "true", "false"],
+      [VERSION_SKETCH_FULL_ART_ID, "true", "false"],
+      [VERSION_SKETCH_FULL_ART_ANIMATED_ID, "false", "true"],
+      [VERSION_SKETCH_FULL_ART_SIGNED_ID, "false", "false"],
+    ]);
+    // A next rung says so; a locked one past it names the level it needs first; an owned one says neither.
+    expect(rung(VERSION_SKETCH_FULL_ART_ANIMATED_ID)).toHaveTextContent("Next level");
+    expect(rung(VERSION_SKETCH_FULL_ART_SIGNED_ID)).toHaveTextContent("Needs Sketch full art, animated");
+    expect(rung(VERSION_FULL_ART_SIGNED_ID)).toHaveTextContent("Needs Full art, animated");
+    for (const id of [VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID, VERSION_FULL_ART_ID]) {
+      expect(rung(id), id).not.toHaveTextContent("Next level");
+      expect(rung(id), id).not.toHaveTextContent("Needs");
+    }
+    // An owned rung is worn on a click, the one worn marked; a locked one opens its preview and wears nothing.
+    fireEvent.click(rung(VERSION_SKETCH_FULL_ART_ID));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_SKETCH_FULL_ART_ID });
+    expect(rung(VERSION_SKETCH_FULL_ART_ID)).toHaveAttribute("data-equipped", "true");
+    expect(rung(VERSION_SKETCH_FULL_ART_ID)).toHaveAttribute("aria-pressed", "true");
+    expect(large().getAttribute("data-level")).toBe(VERSION_SKETCH_FULL_ART_ID);
+    expect(large().getAttribute("data-full-art")).toBe("true");
+    expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("sketch");
+    fireEvent.click(rung(VERSION_SKETCH_FULL_ART_SIGNED_ID));
+    expect(screen.getByTestId(T.preview)).toBeInTheDocument();
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: VERSION_SKETCH_FULL_ART_ID });
+    expect(rung(VERSION_SKETCH_FULL_ART_SIGNED_ID)).toHaveAttribute("data-equipped", "false");
+  });
+});
+
+describe("R3015007 a held token on a ladder", () => {
+  const TOKEN = "token-1";
+  const BIG_D = "core-001";
+  const HELD = { card: 0, cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9, cosmeticPack: 0 };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetOwnedFullArtForTests();
+  });
+
+  it("R3015007 a token is offered on the next level alone", async () => {
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/tokens") return { status: 200, body: { ...tokenBars(), tokens: HELD } };
+      if (call.method === "POST" && call.path === "/api/tokens/redeem-cosmetic") {
+        return { status: 200, body: { ...tokenBars(), tokens: { ...HELD, cosmeticRare: HELD.cosmeticRare - 1 } } };
+      }
+      return undefined;
+    });
+    // Nothing owned on Big D-fender, then, once the token is spent, the Sketch's first level.
+    const read = vi
+      .fn<(token: string) => Promise<OwnedByCard>>()
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValue(new Map([[BIG_D, new Set([VERSION_SKETCH_ID])]]));
+    render(
+      <ViewerFullArt token={TOKEN} gated read={read}>
+        <OwnedCards collection={collectionOf()} defs={[defOf(BIG_D)]} token={TOKEN} />
+      </ViewerFullArt>,
+    );
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    fireEvent.click(screen.getByTestId(T.card(BIG_D)));
+    const previewOf = (id: string): HTMLElement => {
+      fireEvent.keyDown(screen.getByTestId(T.rung(id)), { key: "i" });
+      return screen.getByTestId(T.preview);
+    };
+    const closePreview = (): void => {
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      expect(screen.queryByTestId(T.preview)).toBeNull();
+    };
+
+    // Each variant's next level offers the cheapest held token covering it: the Default's animated level an Epic, Full
+    // art's first a Legendary, the Sketch's first a Rare.
+    for (const [id, words] of [
+      [VERSION_ANIMATED_ID, "an Epic token"],
+      [VERSION_FULL_ART_ID, "a Legendary token"],
+      [VERSION_SKETCH_ID, "a Rare token"],
+    ] as const) {
+      expect(screen.getByTestId(T.rung(id)), id).toHaveAttribute("data-next", "true");
+      expect(await within(previewOf(id)).findByTestId(T.tokenOffer(id)), id).toHaveTextContent(`Unlock with ${words} (9 held)`);
+      closePreview();
+    }
+    // R3015004: a level past the next offers none, though a held token covers it: the Sketch's full art, an Epic.
+    expect(screen.getByTestId(T.rung(VERSION_SKETCH_FULL_ART_ID))).toHaveAttribute("data-next", "false");
+    previewOf(VERSION_SKETCH_FULL_ART_ID);
+    await settle();
+    expect(within(screen.getByTestId(T.preview)).queryByTestId(T.tokenOffer(VERSION_SKETCH_FULL_ART_ID))).toBeNull();
+    closePreview();
+
+    // Spending one on the Sketch's first level owns it, and the level above it is next and offered in turn.
+    fireEvent.click(await within(previewOf(VERSION_SKETCH_ID)).findByTestId(T.tokenOffer(VERSION_SKETCH_ID)));
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm(VERSION_SKETCH_ID)));
+    await waitFor(() => {
+      expect(screen.getByTestId(T.rung(VERSION_SKETCH_ID))).toHaveAttribute("data-owned", "true");
+    });
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Rare", cosmeticId: VERSION_SKETCH_ID, cardId: BIG_D });
+    closePreview();
+    expect(screen.getByTestId(T.rung(VERSION_SKETCH_FULL_ART_ID))).toHaveAttribute("data-next", "true");
+    expect(await within(previewOf(VERSION_SKETCH_FULL_ART_ID)).findByTestId(T.tokenOffer(VERSION_SKETCH_FULL_ART_ID))).toHaveTextContent(
+      "Unlock with an Epic token (9 held)",
+    );
   });
 });
 

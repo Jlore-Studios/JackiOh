@@ -847,6 +847,12 @@ pub static ROUTES: &[Route] = &[
         h!(crate::social::presence::heartbeat),
     ),
     (
+        "GET",
+        "/api/social",
+        AuthLevel::Active,
+        h!(crate::social::reads::get_social),
+    ),
+    (
         "POST",
         "/api/challenges",
         AuthLevel::Active,

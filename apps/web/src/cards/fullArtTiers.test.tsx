@@ -3,7 +3,9 @@
 // art, and the motion's gate and the signature's words. R2715000: the Animated art, the normal face
 // with its art moving; R2715001: whose art moves its own layers, as the Legendary's and the Mythic's
 // do. The pixels are e2e's cypress/component/full-art-tiers.cy.tsx and animated-art.cy.tsx; this
-// file holds the DOM.
+// file holds the DOM. R3015005 (#3015): each tier's pick wears the level it maps to, owned through the retired full art
+// that maps to it (R3015006), else the highest owned level below it; R3015002: a signed level is Full art's own picture,
+// moving, with the signature.
 
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -20,8 +22,8 @@ import {
   readCardPicks,
   resetCosmeticsForTests,
   writeCardFullArt,
+  writeCardLevel,
   writeCardPick,
-  writeCardVersion,
   type CardPicks,
   type OwnedByCard,
 } from "./cosmetics.ts";
@@ -48,7 +50,17 @@ import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID, augmentsOf, lookOf } from "./versions.ts";
+import {
+  AUGMENT_ANIMATED_ID,
+  AUGMENT_SIGNATURE_ID,
+  VERSION_ANIMATED_ID,
+  VERSION_FULL_ART_ANIMATED_ID,
+  VERSION_FULL_ART_ID,
+  VERSION_FULL_ART_SIGNED_ID,
+  impliedBy,
+  isFullBleed,
+  lookOfLevel,
+} from "./versions.ts";
 import { legacyText } from "../test/faceData.ts";
 
 /** R2655001: the fifteen cards #2655 adds to the six hero portraits' cards. */
@@ -81,9 +93,12 @@ function idOf(card: string, tier: FullArtTier): string {
   return id;
 }
 
-/** The ownership of `tiers` of each card in `cards`, as `GET /api/cosmetics` reads once mapped. */
+/**
+ * The ownership of `tiers` of each card in `cards`, as `GET /api/cosmetics` reads once mapped (`ownedCardCosmetics`):
+ * R3015006, each retired full art with the levels it maps to.
+ */
 function owning(cards: readonly string[], tiers: readonly FullArtTier[] = FULL_ART_TIERS): OwnedByCard {
-  return new Map(cards.map((card) => [card, new Set(tiers.map((tier) => idOf(card, tier)))]));
+  return new Map(cards.map((card) => [card, new Set(tiers.flatMap((tier) => [idOf(card, tier), ...impliedBy(idOf(card, tier))]))]));
 }
 
 function faceOf(id: string, chinese = false) {
@@ -235,26 +250,34 @@ describe("R2655000 the Legendary and Mythic tiers", () => {
     expect(fullArtIdOf("core-002", true)).toBeNull();
   });
 
-  it("R2655000 an unowned tier's pick prints no full art, and with no pick a card wears its Epic, never a rarer tier it owns", () => {
-    // The Mythic picked, only the Epic owned: no full art, not the Epic in its place.
+  it("R2655000 R3015005 R3015006 an unowned tier's pick wears the highest owned level below it, and with no pick a card wears its Epic, which any rarer tier owns", () => {
+    // R3015005: the Mythic picked, only the Epic owned: Full art's first level, the highest owned below its signed one.
     writeCardFullArt(VANILLA, idOf(VANILLA, "Mythic"));
-    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Epic"]) }))).toBeNull();
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Epic"]) }))).toBe("Epic");
+    cleanup();
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Epic", "Legendary"]) }))).toBe("Legendary");
     cleanup();
     expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Mythic"]) }))).toBe("Mythic");
     cleanup();
-    // The Epic picked, only the Mythic owned: none.
-    writeCardFullArt(VANILLA, true);
-    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Legendary", "Mythic"]) }))).toBeNull();
+    // The Animated art owns the Default's animated level alone, no level of Full art: no full art.
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Animated"]) }))).toBeNull();
     cleanup();
-    // No pick: the setting prints the Epic where it is owned, and nothing where only rarer tiers are.
+    // R3015006: the Epic picked, only the Legendary and the Mythic owned: each owns Full art's first level, the Epic.
+    writeCardFullArt(VANILLA, true);
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Legendary", "Mythic"]) }))).toBe("Epic");
+    cleanup();
+    // No pick: the setting prints the Epic where it, or a rarer tier mapping to it, is owned, and nothing otherwise.
     writeCardFullArt(VANILLA, null);
     expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA]) }))).toBe("Epic");
     cleanup();
-    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Legendary", "Mythic"]) }))).toBeNull();
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Legendary", "Mythic"]) }))).toBe("Epic");
     cleanup();
-    // Another card's tier, owned on that card, is no pick of this one.
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA], ["Animated"]) }))).toBeNull();
+    cleanup();
+    // R3015005: another card's tier, owned on that card, names no level of this one, which wears its normal face as the
+    // server freezes it.
     writeCardFullArt(VANILLA, idOf("core-004", "Mythic"));
-    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA, "core-004"]) }))).toBe("Epic");
+    expect(tierOf(drawn(VANILLA, { owned: owning([VANILLA, "core-004"]) }))).toBeNull();
   });
 
   it("R2655000 the opponent's copy shows the tier its owner's loadout names", () => {
@@ -356,11 +379,15 @@ describe("R2655002 a listed token wears its parent's full art", () => {
     }
   });
 
-  it("R2655002 a token whose parent's full art is unowned or off prints its normal face", () => {
+  it("R2655002 R3015005 a token whose parent's full art is unowned or off prints its normal face", () => {
     for (const [token, parent] of LISTED) {
-      // Unowned: the parent's pick names a tier the viewer does not own.
+      // Unowned: the parent's pick names a tier the viewer owns no level of Full art below (its Animated art owns the
+      // Default's animated level alone).
       writeCardFullArt(parent, idOf(parent, "Mythic"));
-      expect(tierOf(drawn(token, { owned: owning([parent], ["Epic", "Legendary"]) })), `${token} unowned`).toBeNull();
+      expect(tierOf(drawn(token, { owned: owning([parent], ["Animated"]) })), `${token} unowned`).toBeNull();
+      cleanup();
+      // R3015005: with the Epic and the Legendary owned, it wears the Legendary, the highest owned level below.
+      expect(tierOf(drawn(token, { owned: owning([parent], ["Epic", "Legendary"]) })), `${token} Legendary owned`).toBe("Legendary");
       cleanup();
       expect(tierOf(drawn(token, { owned: NO_FULL_ART })), `${token} nothing owned`).toBeNull();
       cleanup();
@@ -396,7 +423,7 @@ describe("R2655003 the signature's words", () => {
 });
 
 describe("R2715000 the Animated art", () => {
-  it("R2715000 an owned Animated pick prints the normal face with its art moving, an unowned one its still face", () => {
+  it("R2715000 R3015006 an owned Animated pick prints the normal face with its art moving, an unowned one its still face", () => {
     for (const id of FULL_ART_CARDS) {
       const animated = idOf(id, "Animated");
       expect(animated, id).toBe(`animated-${idOf(id, "Epic").slice("full-art-".length)}`);
@@ -414,13 +441,20 @@ describe("R2715000 the Animated art", () => {
       expect(cf.querySelector('.cf-art[data-art-moving="true"]'), id).not.toBeNull();
       expect(pictureOf(cf), id).toContain("art-m-particle");
       cleanup();
-      // Unowned, only its other tiers owned: the normal face, still.
-      const still = drawn(id, { owned: owning([id], ["Epic", "Legendary", "Mythic"]) });
+      // Unowned, only its still Epic owned: the normal face, still.
+      const still = drawn(id, { owned: owning([id], ["Epic"]) });
       expect(tierOf(still), id).toBeNull();
       expect(still.getAttribute("data-art-motion"), id).toBeNull();
       expect(still.querySelector('.cf-art[data-art-moving="true"]'), id).toBeNull();
       expect(pictureOf(still), id).not.toContain("art-m-");
       cleanup();
+      // R3015006: a Legendary or a Mythic owns the Default's animated level, so the pick moves with either.
+      for (const tier of ["Legendary", "Mythic"] as const) {
+        const moving = drawn(id, { owned: owning([id], [tier]) });
+        expect(tierOf(moving), `${id} ${tier}`).toBe("Animated");
+        expect(moving.getAttribute("data-art-motion"), `${id} ${tier}`).toBe("animated");
+        cleanup();
+      }
     }
   });
 
@@ -523,17 +557,15 @@ describe("R2715001 the moving art", () => {
   });
 });
 
-describe("R2725000 a card's version and augments on its face", () => {
+describe("R2725000 R3015000 a card's level on its face", () => {
   /**
-   * R2725001: two Units and two Spells offered the Full art version and both augments: The Mother Pancake and Dice
-   * of Doom, two of the 21, and Carnivorous Cube (an Epic Unit) and Transmogulate (a Legendary Spell), which have no
-   * retired full art.
+   * R2725001: two Units and two Spells offered every level of Full art and the Default's animated one: The Mother
+   * Pancake and Dice of Doom, two of the 21, and Carnivorous Cube (an Epic Unit) and Transmogulate (a Legendary Spell),
+   * which have no retired full art.
    */
   const CARDS = ["classicplus-012", "stinkyscape-154", "core-022", "core-083"] as const;
-  /** Every look of part 1: each version, with no augment, either and both. */
-  const LOOKS: readonly (readonly [false | string, readonly string[]])[] = ([false, VERSION_FULL_ART_ID] as const).flatMap((version) =>
-    [[], [AUGMENT_ANIMATED_ID], [AUGMENT_SIGNATURE_ID], [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]].map((augments) => [version, augments] as const),
-  );
+  /** R3015000: every level of part 1's two ladders: the normal face, the Default's animated level, and Full art's three. */
+  const LEVELS: readonly (string | null)[] = [null, VERSION_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID];
 
   function faceIn(id: string, radiant: boolean): HTMLElement {
     const def = CATALOG[id];
@@ -544,47 +576,53 @@ describe("R2725000 a card's version and augments on its face", () => {
     return cf;
   }
 
-  it("R2725003 R2949000 Animated layers on the normal face and on Full art, and Signature on Full art beside Animated alone", () => {
+  it("R2725003 R3015002 each level of the Default and Full art: animated moves the normal face and Full art, and Full art's signed level signs its own picture", () => {
     for (const id of CARDS) {
-      for (const [version, augments] of LOOKS) {
-        writeCardVersion(id, version, augments);
-        // A border and a finish wear on every look, and a foil on these cards, none of which wears a rarity foil.
+      const pictures = new Map<string | null, string>();
+      for (const level of LEVELS) {
+        writeCardLevel(id, level);
+        // A border and a finish wear on every level, and a foil on these cards, none of which wears a rarity foil.
         writeCardPick(id, "border", "border-runes");
         writeCardPick(id, "finish", "finish-stained-glass");
         writeCardPick(id, "foil", "foil-galaxy");
         const cf = faceIn(id, false);
-        const where = `${id} ${String(version)} ${augments.join("+")}`;
-        const full = version !== false;
-        const animated = augments.includes(AUGMENT_ANIMATED_ID);
-        // R2949000: Signature only beside the Full art version and Animated; the store keeps no other.
-        const signed = full && animated && augments.includes(AUGMENT_SIGNATURE_ID);
-        const worn = augmentsOf(lookOf(version, augments));
-        expect(worn.includes(AUGMENT_SIGNATURE_ID), where).toBe(signed);
+        const where = `${id} ${String(level)}`;
+        const full = isFullBleed(level);
+        const { animated, signed } = lookOfLevel(level);
         expect(cf.getAttribute("data-full-art"), where).toBe(full ? "true" : null);
         expect(cf.getAttribute("data-version"), where).toBe(full ? VERSION_FULL_ART_ID : null);
-        expect(cf.getAttribute("data-augments"), where).toBe(worn.length > 0 ? worn.join(" ") : null);
-        // Full art has no words; the normal face keeps its type line and rules box under every augment.
+        expect(cf.getAttribute("data-level"), where).toBe(level);
+        // R3015000: the augments are retired; a face names its one level.
+        expect(cf.hasAttribute("data-augments"), where).toBe(false);
+        // Full art has no words; the normal face keeps its type line and rules box at both its levels.
         expect(cf.querySelector(".card-text") === null, where).toBe(full);
         expect(cf.querySelector(".card-name"), where).not.toBeNull();
-        // Animated moves the art's own layers, taking a slot; on Full art it also lays the band.
+        // An animated level moves the art's own layers, taking a slot; on Full art it also lays the band.
         expect(cf.getAttribute("data-art-motion"), where).toBe(animated ? "animated" : null);
         if (animated) expect(pictureOf(cf), where).toContain("art-m-");
         expect(cf.classList.contains("cf-full-art--animated"), where).toBe(full && animated);
-        // R2949000: Signature signs over the art on Full art beside Animated, never in the art window, and its art is
-        // the Signature look's own picture.
+        // R3015002: the signed level signs over Full art's own picture, moving, never in the art window, and draws no
+        // picture of its own.
         const signature = cf.querySelector(".cf-signature");
         expect(signature !== null, where).toBe(signed);
+        expect(cf.classList.contains("cf-full-art--signed"), where).toBe(signed);
         expect(cf.querySelector(".cf-art-frame > .cf-signature"), where).toBeNull();
-        expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), where).toBe(signed ? "signature" : null);
+        expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), where).toBeNull();
         expect(cf.getAttribute("data-full-art-motion"), where).toBe(full && animated ? "animated" : null);
         expect(cf.getAttribute("data-frame"), where).toBe("border-runes");
         expect(cf.getAttribute("data-finish"), where).toBe("finish-stained-glass");
         expect(cf.getAttribute("data-cosmetic-foil"), where).toBe("foil-galaxy");
+        pictures.set(level, pictureOf(cf));
         cleanup();
       }
+      // R3015002: one picture at every level: the still ones draw the same, and every moving one the same with its motion.
+      expect(pictures.get(VERSION_FULL_ART_ID), id).toBe(pictures.get(null));
+      expect(pictures.get(VERSION_FULL_ART_SIGNED_ID), id).toBe(pictures.get(VERSION_FULL_ART_ANIMATED_ID));
+      expect(pictures.get(VERSION_FULL_ART_ANIMATED_ID), id).toBe(pictures.get(VERSION_ANIMATED_ID));
+      expect(pictures.get(VERSION_FULL_ART_SIGNED_ID), id).not.toBe(pictures.get(null));
     }
     // Still under reduced motion and with Animated foil off: the art holds, its slot given back.
-    writeCardVersion("core-022", VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+    writeCardLevel("core-022", VERSION_FULL_ART_SIGNED_ID);
     setReducedMotion(true);
     const reduced = faceIn("core-022", false);
     expect(reduced.getAttribute("data-art-motion")).toBe("static");
@@ -597,10 +635,12 @@ describe("R2725000 a card's version and augments on its face", () => {
     expect(off.getAttribute("data-full-art-motion")).toBe("static");
   });
 
-  it("R2725000 a shown pick with no augments layers none of the store's, and one with augments layers its own", () => {
-    // A Collection edit of a retired Mythic stores the Full art version with both augments; the Stats drill-down's
-    // art buttons (R2756000) then show a pick alone, as one's own copy, with every cosmetic counted as owned.
-    writeCardVersion(VANILLA, VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+  it("R2725000 R3015005 a shown pick wears the level it names and none of the store's, an older shape's augments stepping it up", () => {
+    // A Collection edit of a retired Mythic stores Full art's signed level; the Stats drill-down's art buttons
+    // (R2756000) then show a pick alone, as one's own copy, with every cosmetic counted as owned.
+    writeCardLevel(VANILLA, VERSION_FULL_ART_SIGNED_ID);
+    expect(readCardPicks(VANILLA).fullArt).toBe(VERSION_FULL_ART_SIGNED_ID);
+    expect(readCardPicks(VANILLA).augments).toBeUndefined();
     function shown(pick: boolean | string, augments?: readonly string[]): HTMLElement {
       const def = CATALOG[VANILLA];
       if (def === undefined) throw new Error(`no ${VANILLA}`);
@@ -617,74 +657,89 @@ describe("R2725000 a card's version and augments on its face", () => {
     }
     const expectations: readonly (readonly [boolean | string, readonly string[] | undefined, string | null, string | null])[] = [
       [false, undefined, null, null],
-      [true, undefined, "Epic", null],
-      [idOf(VANILLA, "Legendary"), undefined, "Legendary", AUGMENT_ANIMATED_ID],
-      // R2949000: never on the normal face.
+      [true, undefined, "Epic", VERSION_FULL_ART_ID],
+      [idOf(VANILLA, "Legendary"), undefined, "Legendary", VERSION_FULL_ART_ANIMATED_ID],
+      [VERSION_ANIMATED_ID, undefined, "Animated", VERSION_ANIMATED_ID],
+      [VERSION_FULL_ART_SIGNED_ID, undefined, "Mythic", VERSION_FULL_ART_SIGNED_ID],
+      // R2949000: never signed on the normal face.
       [false, [AUGMENT_SIGNATURE_ID], null, null],
-      [true, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID], "Mythic", `${AUGMENT_ANIMATED_ID} ${AUGMENT_SIGNATURE_ID}`],
+      [true, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID], "Mythic", VERSION_FULL_ART_SIGNED_ID],
     ];
-    for (const [pick, augments, tier, worn] of expectations) {
+    for (const [pick, augments, tier, level] of expectations) {
       const cf = shown(pick, augments);
       const where = `${String(pick)} ${augments?.join("+") ?? "(none given)"}`;
       expect(cf.getAttribute("data-full-art-tier"), where).toBe(tier);
-      expect(cf.getAttribute("data-augments"), where).toBe(worn);
-      expect(cf.querySelector(".cf-signature") !== null, where).toBe(worn?.includes(AUGMENT_SIGNATURE_ID) ?? false);
+      expect(cf.getAttribute("data-level"), where).toBe(level);
+      expect(cf.querySelector(".cf-signature") !== null, where).toBe(level === VERSION_FULL_ART_SIGNED_ID);
       cleanup();
     }
   });
 
-  it("R2725000 R2725001 the other seat's copy wears the version and augments its owner's frozen loadout names, and nothing its card is not offered", () => {
+  it("R2725000 R2725001 R3015005 the other seat's copy wears the level its owner's frozen loadout names, an older frame's shape mapped, and nothing its card is not offered", () => {
     // The cards' entries as the server froze and sent them (a `cardLoadouts` frame, R1834003), read as the board
-    // reads them. Carnivorous Cube is offered the version and both augments; Speciesist (core-002, a Common) is offered none,
-    // so a frame naming them there (a newer client's, or a forged one) draws its normal face.
+    // reads them: Transmogulate's as frozen since #3015, one level's id; Carnivorous Cube's as a replay frozen before
+    // it, the Full art version and both augments, which name the same level. Speciesist (core-002, a Common) is offered
+    // no level of Full art, so a frame naming one there (a newer client's, or a forged one) draws its normal face.
     const OFFERED = "core-022";
+    const LEVELLED = "core-083";
     const UNOFFERED = "core-002";
-    expect(COSMETIC_OFFERS[VERSION_FULL_ART_ID]).toContain(OFFERED);
-    for (const id of [VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) expect(COSMETIC_OFFERS[id]).not.toContain(UNOFFERED);
+    for (const id of ladderOfFullArt()) {
+      expect(COSMETIC_OFFERS[id], id).toContain(OFFERED);
+      expect(COSMETIC_OFFERS[id], id).toContain(LEVELLED);
+      expect(COSMETIC_OFFERS[id], id).not.toContain(UNOFFERED);
+    }
     const frame = parseCardLoadouts({
       seat: "p2",
       cards: [
         { cardId: OFFERED, fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, "augment-from-a-newer-client"] },
-        { cardId: UNOFFERED, fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] },
+        { cardId: LEVELLED, fullArt: VERSION_FULL_ART_SIGNED_ID },
+        { cardId: UNOFFERED, fullArt: VERSION_FULL_ART_SIGNED_ID },
       ],
     });
     if (frame === null) throw new Error("the frame did not parse");
     const theirs = (face: ReactElement) => <TheirCopy loadout={loadout(frame.cards)}>{face}</TheirCopy>;
     // The viewer owns nothing and picks nothing of their own: what prints is the owner's.
-    writeCardVersion(OFFERED, false, []);
-    const worn = drawn(OFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
-    expect(worn.getAttribute("data-full-art")).toBe("true");
-    expect(worn.getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
-    expect(worn.getAttribute("data-augments")).toBe(`${AUGMENT_ANIMATED_ID} ${AUGMENT_SIGNATURE_ID}`);
-    expect(worn.getAttribute("data-full-art-tier")).toBe("Mythic");
-    expect(worn.getAttribute("data-art-motion")).toBe("animated");
-    expect(worn.querySelector(".cf-signature text")?.textContent).toBe(CATALOG[OFFERED]?.name);
-    cleanup();
+    for (const id of [OFFERED, LEVELLED]) {
+      writeCardLevel(id, null);
+      const worn = drawn(id, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+      expect(worn.getAttribute("data-full-art"), id).toBe("true");
+      expect(worn.getAttribute("data-version"), id).toBe(VERSION_FULL_ART_ID);
+      expect(worn.getAttribute("data-level"), id).toBe(VERSION_FULL_ART_SIGNED_ID);
+      expect(worn.getAttribute("data-full-art-tier"), id).toBe("Mythic");
+      expect(worn.getAttribute("data-art-motion"), id).toBe("animated");
+      expect(worn.querySelector(".cf-signature text")?.textContent, id).toBe(CATALOG[id]?.name);
+      cleanup();
+    }
     const refused = drawn(UNOFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
     expect(refused.getAttribute("data-full-art")).toBeNull();
     expect(refused.getAttribute("data-version")).toBeNull();
-    expect(refused.getAttribute("data-augments")).toBeNull();
+    expect(refused.getAttribute("data-level")).toBeNull();
     expect(refused.querySelector(".cf-signature")).toBeNull();
     cleanup();
-    // The Full-art cards setting off: the other seat's copy prints its normal face, augments and all off.
+    // The Full-art cards setting off: the other seat's copy prints its normal face, every level off.
     writeCardSettings({ fullArt: false });
     const off = drawn(OFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
     expect(off.getAttribute("data-full-art")).toBeNull();
     expect(off.getAttribute("data-version")).toBeNull();
-    expect(off.getAttribute("data-augments")).toBeNull();
+    expect(off.getAttribute("data-level")).toBeNull();
     expect(off.querySelector(".cf-signature")).toBeNull();
   });
 
-  /** R2725001: the cards offered the Full art version and the Animated augment, and each offered card by its set. */
+  /** R3015000: Full art's three levels, lowest first. */
+  function ladderOfFullArt(): readonly string[] {
+    return [VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID];
+  }
+
+  /** R2725001: the cards offered Full art and the Default's animated level (R3015000), and each offered card by its set. */
   const OFFERED_FULL_ART = COSMETIC_OFFERS[VERSION_FULL_ART_ID] ?? [];
-  const OFFERED_ANIMATED = new Set(COSMETIC_OFFERS[AUGMENT_ANIMATED_ID] ?? []);
+  const OFFERED_ANIMATED = new Set(COSMETIC_OFFERS[VERSION_ANIMATED_ID] ?? []);
   const OFFERED_BY_SET = new Map<string, string[]>();
   for (const id of new Set([...OFFERED_FULL_ART, ...OFFERED_ANIMATED])) {
     const set = CATALOG[id]?.set ?? "";
     OFFERED_BY_SET.set(set, [...(OFFERED_BY_SET.get(set) ?? []), id]);
   }
 
-  it("R2725001 the Full art version and the Animated augment are offered in every set that ships", () => {
+  it("R2725001 R3015000 Full art and the Default's animated level are offered in every set that ships", () => {
     expect(OFFERED_FULL_ART.length).toBeGreaterThan(FULL_ART_CARDS.size);
     expect([...OFFERED_BY_SET.keys()].sort()).toEqual([...SHIPPED_SETS].sort());
   });
@@ -694,27 +749,27 @@ describe("R2725000 a card's version and augments on its face", () => {
   for (const [set, ids] of OFFERED_BY_SET) {
     for (let from = 0; from < ids.length; from += OFFERED_CARDS_PER_TEST) {
       const some = ids.slice(from, from + OFFERED_CARDS_PER_TEST);
-      it(`R2725001 every ${set} card offered the Full art version or the Animated augment, ${some[0] ?? ""} to ${some.at(-1) ?? ""}, draws it, base and Radiant, apart from its normal face`, () => {
+      it(`R2725001 R3015000 every ${set} card offered Full art or the Default's animated level, ${some[0] ?? ""} to ${some.at(-1) ?? ""}, draws it, base and Radiant, apart from its normal face`, () => {
         drawsEveryOfferedLook(some);
       });
     }
   }
 
-  /** R2725001: each of `ids` draws its normal face, and the Full art version and the Animated augment where offered. */
+  /** R2725001: each of `ids` draws its normal face, and Full art's first level and the Default's animated one where offered. */
   function drawsEveryOfferedLook(ids: readonly string[]): void {
     const fullArt = OFFERED_FULL_ART;
     const animated = OFFERED_ANIMATED;
     for (const id of ids) {
       for (const radiant of [false, true]) {
         const where = `${id} ${radiant ? "Radiant" : "base"}`;
-        writeCardVersion(id, false, []);
+        writeCardLevel(id, null);
         const normal = faceIn(id, radiant);
         const normalMarkup = normal.outerHTML;
         const stillPicture = pictureOf(normal);
         expect(normal.getAttribute("data-full-art"), where).toBeNull();
         cleanup();
         if (fullArt.includes(id)) {
-          writeCardVersion(id, VERSION_FULL_ART_ID, []);
+          writeCardLevel(id, VERSION_FULL_ART_ID);
           const full = faceIn(id, radiant);
           expect(full.getAttribute("data-full-art"), where).toBe("true");
           expect(full.getAttribute("data-version"), where).toBe(VERSION_FULL_ART_ID);
@@ -722,7 +777,7 @@ describe("R2725000 a card's version and augments on its face", () => {
           cleanup();
         }
         if (animated.has(id)) {
-          writeCardVersion(id, false, [AUGMENT_ANIMATED_ID]);
+          writeCardLevel(id, VERSION_ANIMATED_ID);
           const moving = faceIn(id, radiant);
           expect(moving.getAttribute("data-art-motion"), where).toBe("animated");
           expect(pictureOf(moving), where).toContain("art-m-");
@@ -733,77 +788,83 @@ describe("R2725000 a card's version and augments on its face", () => {
     }
   }
 
-  /** R2949000: the cards offered Signature, by set: those offered both the Full art version and Animated. */
-  const OFFERED_SIGNATURE = COSMETIC_OFFERS[AUGMENT_SIGNATURE_ID] ?? [];
-  const SIGNATURE_BY_SET = new Map<string, string[]>();
-  for (const id of OFFERED_SIGNATURE) {
+  /** R3015000: the cards offered Full art's signed level, by set: those offered Full art, but a Legacy card. */
+  const OFFERED_SIGNED = COSMETIC_OFFERS[VERSION_FULL_ART_SIGNED_ID] ?? [];
+  const SIGNED_BY_SET = new Map<string, string[]>();
+  for (const id of OFFERED_SIGNED) {
     const set = CATALOG[id]?.set ?? "";
-    SIGNATURE_BY_SET.set(set, [...(SIGNATURE_BY_SET.get(set) ?? []), id]);
+    SIGNED_BY_SET.set(set, [...(SIGNED_BY_SET.get(set) ?? []), id]);
   }
 
-  it("R2949000 Signature is offered in every set that ships, only on cards offered both Full art and Animated", () => {
-    expect([...SIGNATURE_BY_SET.keys()].sort()).toEqual([...SHIPPED_SETS].sort());
-    for (const id of OFFERED_SIGNATURE) expect(OFFERED_FULL_ART.includes(id) && OFFERED_ANIMATED.has(id), id).toBe(true);
+  it("R2949000 R3015000 Full art's signed level is offered in every set that ships, only on cards offered Full art and its animated level", () => {
+    expect([...SIGNED_BY_SET.keys()].sort()).toEqual([...SHIPPED_SETS].sort());
+    const fullArtAnimated = new Set(COSMETIC_OFFERS[VERSION_FULL_ART_ANIMATED_ID] ?? []);
+    for (const id of OFFERED_SIGNED) expect(OFFERED_FULL_ART.includes(id) && fullArtAnimated.has(id) && OFFERED_ANIMATED.has(id), id).toBe(true);
   });
 
-  /** How many Signature cards one test draws (ten faces each), so that no test nears the timeout on a loaded runner. */
-  const SIGNATURE_CARDS_PER_TEST = 7;
-  for (const [set, ids] of SIGNATURE_BY_SET) {
-    for (let from = 0; from < ids.length; from += SIGNATURE_CARDS_PER_TEST) {
-      const some = ids.slice(from, from + SIGNATURE_CARDS_PER_TEST);
-      it(`R2949000 every ${set} card offered Signature, ${some[0] ?? ""} to ${some.at(-1) ?? ""}, draws the Signature look, base and Radiant, apart from its Full art, Animated and normal faces`, () => {
-        drawsTheSignatureLook(some);
+  /** How many signed cards one test draws (ten faces each), so that no test nears the timeout on a loaded runner. */
+  const SIGNED_CARDS_PER_TEST = 7;
+  for (const [set, ids] of SIGNED_BY_SET) {
+    for (let from = 0; from < ids.length; from += SIGNED_CARDS_PER_TEST) {
+      const some = ids.slice(from, from + SIGNED_CARDS_PER_TEST);
+      it(`R3015002 every ${set} card offered Full art's signed level, ${some[0] ?? ""} to ${some.at(-1) ?? ""}, draws it, base and Radiant, as its animated full art with the signature`, () => {
+        drawsTheSignedLevel(some);
       });
     }
   }
 
-  /** R2949000: each of `ids` draws the Signature look, its own picture and motion and the signature, apart from every other look. */
-  function drawsTheSignatureLook(ids: readonly string[]): void {
-    const others: readonly (readonly [false | string, readonly string[]])[] = [
-      [false, []],
-      [false, [AUGMENT_ANIMATED_ID]],
-      [VERSION_FULL_ART_ID, []],
-      [VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID]],
-    ];
+  /**
+   * R3015002 (replacing R2949000's Signature look): each of `ids` draws Full art's signed level as its animated full art,
+   * the same picture moving the same way, with the signature, and no picture of its own.
+   */
+  function drawsTheSignedLevel(ids: readonly string[]): void {
+    const below: readonly (string | null)[] = [null, VERSION_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID];
     for (const id of ids) {
       for (const radiant of [false, true]) {
         const where = `${id} ${radiant ? "Radiant" : "base"}`;
-        const pictures = others.map(([version, augments]) => {
-          writeCardVersion(id, version, augments);
+        const pictures = below.map((level) => {
+          writeCardLevel(id, level);
           const cf = faceIn(id, radiant);
-          expect(cf.querySelector(".cf-signature"), `${where} ${String(version)} ${augments.join("+")}`).toBeNull();
-          expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), `${where} ${String(version)}`).toBeNull();
+          expect(cf.querySelector(".cf-signature"), `${where} ${String(level)}`).toBeNull();
+          expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), `${where} ${String(level)}`).toBeNull();
           const picture = pictureOf(cf);
           cleanup();
           return picture;
         });
-        writeCardVersion(id, VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+        writeCardLevel(id, VERSION_FULL_ART_SIGNED_ID);
         const signed = faceIn(id, radiant);
         expect(signed.getAttribute("data-full-art-tier"), where).toBe("Mythic");
+        expect(signed.getAttribute("data-level"), where).toBe(VERSION_FULL_ART_SIGNED_ID);
         expect(signed.querySelector(".cf-signature"), where).not.toBeNull();
         const art = signed.querySelector(".cf-art");
-        expect(art?.getAttribute("data-art-picture"), where).toBe("signature");
+        expect(art?.getAttribute("data-art-picture"), where).toBeNull();
         // R2725004: the Radiant marks under it.
         expect(art?.getAttribute("data-art-variant"), where).toBe(radiant ? "radiant" : "base");
         expect(signed.getAttribute("data-radiant-face"), where).toBe(radiant ? "true" : null);
         const picture = pictureOf(signed);
         expect(picture, where).toContain("art-m-");
-        for (const other of pictures) expect(picture, where).not.toBe(other);
+        // The animated full art's picture and motion, which the Default's animated level moves the same way.
+        expect(picture, where).toBe(pictures[3]);
+        expect(picture, where).toBe(pictures[1]);
+        expect(picture, where).not.toBe(pictures[0]);
+        expect(picture, where).not.toBe(pictures[2]);
         cleanup();
       }
     }
   }
 
-  it("R2949000 no face signs without Full art and Animated, the normal face included", () => {
+  it("R2949000 R3015005 no face signs below Full art's signed level, the normal face included", () => {
     const unfit: readonly (readonly [false | string, readonly string[]])[] = [
       [false, [AUGMENT_SIGNATURE_ID]],
       [false, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]],
       [VERSION_FULL_ART_ID, [AUGMENT_SIGNATURE_ID]],
+      [VERSION_ANIMATED_ID, [AUGMENT_SIGNATURE_ID]],
+      [VERSION_FULL_ART_ANIMATED_ID, []],
     ];
     const unsigned = (cf: HTMLElement, where: string): void => {
       expect(cf.querySelector(".cf-signature"), where).toBeNull();
       expect(cf.classList.contains("cf-full-art--signed"), where).toBe(false);
-      expect(cf.getAttribute("data-augments")?.includes(AUGMENT_SIGNATURE_ID) ?? false, where).toBe(false);
+      expect(cf.getAttribute("data-level"), where).not.toBe(VERSION_FULL_ART_SIGNED_ID);
       expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), where).toBeNull();
     };
     for (const id of CARDS) {
@@ -833,37 +894,40 @@ describe("R2725000 a card's version and augments on its face", () => {
     }
   });
 
-  it("R2949000 a retired Mythic's pick shows the Signature look", () => {
+  it("R2949000 R3015002 R3015005 a retired Mythic's pick wears Full art's signed level: the Legendary's own picture, moving, signed", () => {
     writeCardFullArt(VANILLA, idOf(VANILLA, "Mythic"));
     const mythic = drawn(VANILLA);
     expect(mythic.getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(mythic.getAttribute("data-level")).toBe(VERSION_FULL_ART_SIGNED_ID);
     expect(mythic.querySelector(".cf-signature")).not.toBeNull();
-    expect(mythic.querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("signature");
-    const signature = pictureOf(mythic);
+    expect(mythic.querySelector(".cf-art")?.getAttribute("data-art-picture")).toBeNull();
+    const signed = pictureOf(mythic);
     cleanup();
-    // The Legendary, Full art and Animated without Signature, draws the card's own picture.
+    // The Legendary, Full art's animated level, draws the same picture moving the same way: nothing is redrawn.
     writeCardFullArt(VANILLA, idOf(VANILLA, "Legendary"));
     const legendary = drawn(VANILLA);
+    expect(legendary.getAttribute("data-level")).toBe(VERSION_FULL_ART_ANIMATED_ID);
     expect(legendary.querySelector(".cf-art")?.getAttribute("data-art-picture")).toBeNull();
-    expect(pictureOf(legendary)).not.toBe(signature);
+    expect(pictureOf(legendary)).toBe(signed);
   });
 
-  it('R2725004 a Radiant face keeps data-radiant-face and data-art-variant="radiant" under every look; a base face has neither', () => {
+  it('R2725004 a Radiant face keeps data-radiant-face and data-art-variant="radiant" at every level; a base face has neither', () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
       const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
-      for (const [version, augments] of LOOKS) {
-        writeCardVersion(id, version, augments);
+      for (const level of LEVELS) {
+        writeCardLevel(id, level);
         for (const radiant of [false, true]) {
           const cf = faceIn(id, radiant);
-          const where = `${id} ${radiant ? "Radiant" : "base"} ${String(version)} ${augments.join("+")}`;
+          const where = `${id} ${radiant ? "Radiant" : "base"} ${String(level)}`;
           // The gold-foil frame, and the art's Radiant paint.
           expect(cf.getAttribute("data-radiant-face"), where).toBe(radiant ? "true" : null);
           expect(cf.querySelector(".cf-art")?.getAttribute("data-art-variant"), where).toBe(radiant ? "radiant" : "base");
-          // R277's marks wherever the words show: never on a base face, on a Radiant normal face that differs.
+          // R277's marks wherever the words show: never on a base face, on a Radiant normal face that differs, at
+          // either of the Default's levels.
           const marks = cf.querySelectorAll('.cf-mark[data-mark="radiant"]').length;
-          if (!radiant || version !== false) expect(marks, where).toBe(0);
+          if (!radiant || isFullBleed(level)) expect(marks, where).toBe(0);
           else expect(marks > 0, where).toBe(marked);
           // A Unit's gold stats: what its Radiant face raises.
           if (def.type === "Unit") {

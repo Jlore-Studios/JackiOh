@@ -2,9 +2,11 @@
 //! blocks, presence, challenges and chat between friends.
 //!
 //! - `friends`: the friend list, requests (B43–B45) and blocks (B46).
-//! - `presence`: the heartbeat and each friend's status, `offline`, `online` or `inMatch` (B47).
+//! - `presence`: the heartbeat and each friend's status, `offline`, `online` or `inMatch` (B47); every
+//!   signed-in request counts (R3210000).
 //! - `challenges`: a challenge to a friend (B48, B49).
 //! - `chat`: messages between friends and retention purge (B53).
+//! - `reads`: `GET /api/social`, the social poll's one read (R3210000).
 //!
 //! Every route is `AuthLevel::Active` and acts for its caller, named by the token. A player is
 //! named by profile id everywhere and shown by username (`PlayerRef`, R1436); no log line carries a
@@ -14,6 +16,7 @@ pub mod challenges;
 pub mod chat;
 pub mod friends;
 pub mod presence;
+pub mod reads;
 pub mod shares;
 pub mod watch;
 
@@ -46,6 +49,8 @@ pub struct Social {
     pub chat: RateLimiter,
     /// B48: `CHALLENGES_PER_HOUR` challenges an hour per challenger.
     pub challenges: RateLimiter,
+    /// R3210000: the router's presence touches.
+    pub presence: presence::PresenceTouches,
 }
 
 impl Default for Social {
@@ -54,6 +59,7 @@ impl Default for Social {
             friend_requests: create_rate_limiter(FRIEND_REQUESTS_PER_HOUR, MS_PER_HOUR),
             chat: create_rate_limiter(CHAT_MESSAGES_PER_MINUTE, MS_PER_MINUTE),
             challenges: create_rate_limiter(CHALLENGES_PER_HOUR, MS_PER_HOUR),
+            presence: presence::PresenceTouches::default(),
         }
     }
 }

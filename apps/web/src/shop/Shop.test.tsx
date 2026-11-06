@@ -39,6 +39,7 @@ import {
 import {
   REGISTRY,
   SHOP_FLY_MS,
+  buyableThere,
   chaseCandidates,
   cosmeticSlotOutcome,
   quantitiesOf,
@@ -81,6 +82,19 @@ describe("#1309 the shop model", () => {
     const [foil, , bars] = openedCosmeticPack().slots;
     expect(cosmeticSlotOutcome(foil!, 0)).toBe("New cosmetic: Mr. Vanilla full art");
     expect(cosmeticSlotOutcome(bars!, 4)).toBe("Duplicate: +4 card token bar, +4 cosmetic token bar");
+  });
+
+  it("R3015004 a level is a chase only on a card where every level below it is owned", () => {
+    // The fixture account holds Gary's retired full art on core-004: Full art's first level there (R3015006).
+    const quantities = quantitiesOf(collectionOf());
+    const owned = ownedCosmeticsOf();
+    expect(buyableThere("version-full-art-animated", "core-004", owned), "the next level").toBe(true);
+    expect(buyableThere("version-full-art", "core-004", owned), "owned there").toBe(false);
+    expect(buyableThere("version-full-art-signed", "core-004", owned), "its animated level is not owned").toBe(false);
+    expect(buyableThere("version-full-art-animated", "core-008", owned), "core-008 holds no Full art").toBe(false);
+    const ids = chaseCandidates(owned, quantities).map((entry) => entry.id);
+    expect(ids).toContain("version-full-art-animated");
+    expect(ids, "no card the account owns holds Full art's animated level").not.toContain("version-full-art-signed");
   });
 
   it("a full shard bar buys Legendary or Mythic, a chase included, and nothing below", () => {
@@ -1247,9 +1261,10 @@ describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", 
     expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equipped");
     expect(screen.getByTestId(T.equip(0))).toBeDisabled();
 
-    // A full art goes on the card it was granted on, which is not the first slot's.
+    // A full art goes on the card it was granted on, which is not the first slot's: a retired one, from an opening
+    // before #3015, as the level it maps to (R3015005).
     fireEvent.click(screen.getByTestId(T.equip(1)));
-    expect(readCardPicks("core-008").fullArt).toBe(true);
+    expect(readCardPicks("core-008").fullArt).toBe("version-full-art");
     expect(readCardPicks("core-004").fullArt).toBeUndefined();
 
     expect(screen.queryByTestId(T.equip(2)), "bars offer none").toBeNull();
@@ -1270,6 +1285,28 @@ describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", 
     expect(screen.queryByTestId(T.equip(3)), "a portrait is a deck's pick").toBeNull();
     expect(screen.queryByTestId(T.equip(4))).toBeNull();
     expect(screen.getByTestId(T.equipLink)).toBeInTheDocument();
+  });
+
+  it("R3015003 an out-of-order pull says it granted every level below it, and equips its own level", async () => {
+    const skip: Slot = {
+      rarity: "Mythic",
+      grant: {
+        kind: "cosmetic",
+        cosmeticId: "version-full-art-signed",
+        cosmeticRarity: "Mythic",
+        cardId: "core-004",
+        cardGranted: false,
+        below: ["version-full-art", "version-full-art-animated"],
+      },
+    };
+    await opened([skip, cosmetic("version-animated", "core-008"), openedCosmeticPack().slots[2]!]);
+    expect(screen.getByTestId(T.below(0))).toHaveTextContent("and every level below it");
+    expect(screen.queryByTestId(T.below(1)), "an in-order pull, its next level alone").toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.equip(0)));
+    expect(readCardPicks("core-004").fullArt).toBe("version-full-art-signed");
+    fireEvent.click(screen.getByTestId(T.equip(1)));
+    expect(readCardPicks("core-008").fullArt).toBe("version-animated");
   });
 
   it("R1955000 a cosmetic the store already holds shows Equipped from the reveal", async () => {

@@ -359,7 +359,8 @@ part that narrows the task shows the gap instead of hiding it.
   toggle) and its change, never from a pull request's title, and never say what the game does not
   do yet.
 - **Today's words.** Deck and Tribute, "(N) Cost" and "costs (N)", Nerf and Buff (R373, R432,
-  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
+  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json` and every pending
+  fragment's, so an old word fails the fragment's own pull request, not its promotion.
 - **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
   (`apps/web/src/patches/releases.ts`), with a summary and its technical changes. The line opens at
   its major, the n-th major the n-th line (R1369000), so no version is written there. A set the owner

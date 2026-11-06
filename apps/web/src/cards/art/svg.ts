@@ -168,9 +168,9 @@ export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId
 
 // The memo behind `CardArt`, keyed as the Surface fixes plus the motif (R503). Transient `t-<n>` defs
 // can be minted without bound, so the map is cleared rather than grown. R2715001: a moving picture adds
-// `|moving` (a card's motion is fixed by its id, motion.ts), so the still one keeps its key. R2949000: a
-// picture of its own is keyed by its seed (`artSeedOf`) in the card's id's place, so the Signature look's
-// picture and motion are never served for the card's normal or Animated one.
+// `|moving` (a card's motion is fixed by its id, motion.ts), so the still one keeps its key. R2940001: a
+// picture of its own is keyed by its seed (`artSeedOf`) in the card's id's place, so Alt art's picture is
+// never served for the card's normal one.
 const proceduralCache = new Map<string, string>();
 
 /** R2715001: what a moving picture's memo key ends with. */
