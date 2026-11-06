@@ -88,7 +88,8 @@
 # red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
 # the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
-# and stops once one of the five has failed (`queue-cancel-*`, at the end).
+# stops once one of the five has failed (`queue-cancel-*`, at the end), and cancels its own pull
+# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`).
 name: CI
 
 on:
@@ -1532,3 +1533,43 @@ jobs:
           REPO: ${{ github.repository }}
           RUN: ${{ github.run_id }}
         run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"
+
+  # A merge-queue build the queue has rebuilt is dead: when a pull request leaves the queue (it
+  # failed, conflicted, or was taken out), the queue builds every one behind it again on a new
+  # `gh-readonly-queue/main/pr-<n>-<sha>` branch, and GitHub leaves the old build running. Each old
+  # build holds the runners every live one waits for (on 2026-11-06, #3249's and #3216's old builds
+  # were still queued an hour after the queue had rebuilt both). So each build cancels the older ones
+  # of its own pull request at its start, beside `changes` and with no checkout, as the
+  # `queue-cancel-*` jobs do: a pull request has one entry in the queue, so only its newest build
+  # counts. A same-named branch's older build is already the concurrency group's to cancel. The bots
+  # leave a build cancelled with no job failed alone (bot/go/internal/events `QueueBuildFailed`), and
+  # no required check needs this job, so it can only free runners. Never fails the run.
+  queue-supersede:
+    name: cancel the pull request's older queue builds
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the older builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+          REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          branch=${REF#refs/heads/}
+          prefix="${branch%-*}-"
+          case "$prefix" in
+            gh-readonly-queue/*/pr-[0-9]*-) ;;
+            *) echo "not a queue branch: $branch"; exit 0 ;;
+          esac
+          gh run list -R "$REPO" --workflow ci.yml --event merge_group --limit 100 \
+            --json databaseId,headBranch,status \
+            --jq ".[] | select(.status != \"completed\" and .databaseId < $RUN and (.headBranch | startswith(\"$prefix\"))) | .databaseId" |
+            while read -r id; do
+              echo "run $id is an older queue build of this pull request; cancelling it"
+              gh run cancel "$id" -R "$REPO" || echo "run $id had ended"
+            done

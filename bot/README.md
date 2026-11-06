@@ -1200,7 +1200,10 @@ required job went red in its third, so the harness does not wait for it on a bot
 - **No jobs are skipped on the fix commit**: no path filter or `[skip ci]`; every required check
   runs in full on every head, and the merge queue runs them again.
 - **The merge queue's own CI** is left as it was: ci.yml's `queue-cancel-*` jobs stop a failed
-  build there, and `events.OnQueueCI` queues its fix at once.
+  build there, and `events.OnQueueCI` queues its fix at once. A build the queue rebuilt (a pull
+  request ahead of it left the queue) is cancelled by its newer build (ci.yml's `queue-supersede`),
+  since GitHub leaves it running; a build cancelled with no job failed says nothing about its pull
+  request, so `OnQueueCI` leaves it alone (`events.QueueBuildFailed`).
 
 Squishy runs the same code under its own labels (`squishy:revise`, `squishy:fixing-ci`) and branches
 (`squishy/…`), with no status loop of its own: its sweep, which the night bot's loop runs for it
@@ -1417,7 +1420,12 @@ independent measure of this self-review.
   pull request ahead, the queue's timeout) goes back in from the housekeeping pass, once for each
   commit `main` is at (`queue.RequeueCleared`), unless a person took it out. Every hold
   (`queue.HoldMerge`: a revision asked for, `/harness stop`) also takes it out of the queue, where
-  it has no auto-merge left to turn off.
+  it has no auto-merge left to turn off. So does a conflict with `main`: the housekeeping pass takes
+  a conflicted bot pull request out of the queue before it queues the revision that resolves it
+  (below), whose auto-merge queues it again at the back. A conflict with a pull request ahead of it
+  in the queue cannot be resolved until that one lands: the queue takes it out, it goes back in once
+  `main` moves, and once the one ahead has landed the conflict is with `main`, which that revision
+  resolves.
 - **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
   (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
   runs or before, the revision that resolves them needs no review run: its builder resolves the
