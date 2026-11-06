@@ -9,7 +9,6 @@ import { act, cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  GLOSSARY,
   INSPECT_CLOSE,
   INSPECT_LIST_BACK,
   INSPECT_LIST_CARD,
@@ -20,6 +19,7 @@ import {
   INSPECT_LIST_SHEET,
   closeInspect,
 } from "../cards/index.ts";
+import { GLOSSARY } from "../test/faceData.ts";
 import { must } from "../test/stubServer.ts";
 import { HOVER_DELAY_MS, LIST_PREVIEW_MAX, LONG_PRESS_MS } from "../cards/inspect/index.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";

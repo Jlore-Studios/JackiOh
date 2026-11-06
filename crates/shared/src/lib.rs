@@ -14,16 +14,20 @@
 //! ladder bots (#3103): a bot is a seat of that machine, and [`bots`] holds what its moves, pace, aim, emotes
 //! and habits are made of, the loadout it wears (R1834005) and the queue's and the pool's decisions around it.
 //!
-//! Last, the collection economy's rolls (#3104): [`cosmetics`] is the cosmetics registry (data compiled in,
+//! Then the collection economy's rolls (#3104): [`cosmetics`] is the cosmetics registry (data compiled in,
 //! SPEC §14.2) and [`economy`] what is decided over plain records: a card pack's and a cosmetic pack's
 //! roll, pity, the token bars, the set-track curve and its reward table (SPEC §14.3 to §14.7), each
 //! `decide(records, inputs, seed, now_ms) -> outcome`, the grants and the new records as data.
+//!
+//! Last, [`face`] is what a card face prints, worked out from the catalog and a view in the reader's words
+//! (#3106).
 
 pub mod bots;
 pub mod config;
 pub mod cosmetics;
 pub mod deck;
 pub mod economy;
+pub mod face;
 pub mod host;
 pub mod loadout;
 pub mod ranked;

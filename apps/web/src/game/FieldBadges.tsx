@@ -23,14 +23,16 @@ export type FieldBadgesProps = {
   /** The card as the view lists it: the `UnitView` of a unit, else the face-up `BackrowView`; its `activations` are the control's. */
   card: CardView;
   unit: UnitView | null | undefined;
-  /** R1301: a Chinese unit's keywords are named in the table's words. */
-  chinese: boolean;
+  /** The unit's keywords in the face's words, in order (`FaceModel.keywordWords`; R1301: a Chinese unit's are the table's). */
+  words: readonly string[];
+  /** What joins a list of them (`FaceModel.keywordJoin`). */
+  join: string;
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
 };
 
-export default function FieldBadges({ card, unit, chinese, highlight, animating, onClick }: FieldBadgesProps): ReactElement | null {
+export default function FieldBadges({ card, unit, words, join, highlight, animating, onClick }: FieldBadgesProps): ReactElement | null {
   const keywords = unit?.keywords ?? [];
   // A unit whose keywords the face draws as states (Taunt's frame, a Divine Shield's bubble) or that do nothing on the field has no mark to hang.
   const { shown, folded } = keywordChips(keywords, unit?.armor ?? 0);
@@ -38,7 +40,7 @@ export default function FieldBadges({ card, unit, chinese, highlight, animating,
   return (
     <span className="field-badges">
       <ActivateControls card={card} highlight={highlight} animating={animating} onClick={onClick} />
-      {unit != null && <KeywordIcons keywords={keywords} armor={unit.armor} chinese={chinese} />}
+      {unit != null && <KeywordIcons keywords={keywords} words={words} join={join} armor={unit.armor} />}
     </span>
   );
 }
