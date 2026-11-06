@@ -74,6 +74,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
 
+A phone highlights nothing but the chat (#3260). `index.css` sets `-webkit-tap-highlight-color: transparent`
+on `html` at every pointer, since only touch browsers draw a tap flash, and under `(pointer: coarse)` sets
+`user-select: none` and `-webkit-touch-callout: none` there, so a narrow desktop window still selects text.
+Fields (`input`, `textarea`, `contenteditable`) take `user-select: text` back, since iOS will not type into
+or put a caret in one that cannot be selected. `.chat-panel` (`together/together.css`) restores all three,
+so a message can be pressed, selected and copied. The two-step sign-in's key keeps its `user-select: all`,
+since it has no copy button. No stylesheet sets the tap highlight back to `initial` outside `.chat-panel`
+(inherited, it would bring the flash back on every child); `src/highlight.test.ts` checks it.
+
 The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
 Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
 worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
@@ -144,6 +153,19 @@ first answer kept for another account does too; a reload starts empty. Never kep
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
 `key`, when the decks that land differ, since its store is made once.
+
+A kept answer carries the time its read finished (R3206000): one younger than `READ_CACHE_FRESH_MS`
+(`net/readCache.ts`, 45 s) is *fresh*, and `keptGet` returns it and sends no read behind it. The gate skips its
+`/api/auth/me` read the same way (`freshRead`, for an active account that owes nothing; the renewal timer and the
+401 path are as they were), and the wallet pill reads through `getWallet`, so a navigation inside the window sends
+nothing. An older answer is drawn and read again as above. A fold of a write's answer keeps the age it found,
+`expireRead` ends freshness and keeps the value (a quest falling due), and a gate or a poll that only finished a
+read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of one path and token while it is out
+(one fetch, on its own controller that the last caller to abort aborts); a write is never shared. `writeEpoch`
+counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
+`clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
+not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
+game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
