@@ -41,16 +41,29 @@ pub fn mark_hook(sink: &mut EngineSink<'_>, card: &CardInstance, controller: Pla
     push_marker(sink, card.id.clone(), def_id, controller, hook, hidden);
 }
 
-/// R127: the marker of a Cry that runs with no card (one out of a graveyard, R467), which names its
-/// definition alone, `sourceId` `""` as on `rolled` (R2652001).
-pub fn mark_cardless_hook(sink: &mut EngineSink<'_>, def_id: &str, controller: PlayerId, hook: HookKind) {
+/// R127: the marker of a hook that runs with no card as its `self`: a Cry out of a graveyard (R467), an
+/// Activate whose card its cost took. R3182000: `sourceId` is still the card the hook belongs to
+/// (`card`), so the view judges the marker by it as it judges the card's other events (R97), and the
+/// seats that cannot read that card where it stands now are recorded as `mark_hook` records them; it is
+/// `""`, as on `rolled` (R2652001), only for a hook no card holds at all.
+pub fn mark_cardless_hook(
+    sink: &mut EngineSink<'_>,
+    card: Option<&str>,
+    def_id: &str,
+    controller: PlayerId,
+    hook: HookKind,
+) {
+    let hidden = card
+        .and_then(|id| find_instance(sink.state, id))
+        .map(|live| crate::effects::card_scope::unreadable_by(sink.state, live))
+        .unwrap_or_default();
     push_marker(
         sink,
-        String::new(),
+        card.unwrap_or_default().to_string(),
         def_id.to_string(),
         controller,
         hook,
-        Vec::new(),
+        hidden,
     );
 }
 

@@ -27,24 +27,6 @@
   }
 }
 
-/* BackLink's bar: the pair sits at the far end of the row, as the gear alone did. */
-.screen-nav .language-button {
-  margin-left: auto;
-  margin-right: 8px;
-}
-
-.screen-nav__extra + .language-button,
-.screen-nav .language-button + .settings-gear {
-  margin-left: 0;
-}
-
-/* A phone: the screen's own line takes a row of its own, and the pair goes right on Back's row. */
-@media (max-width: 560px) {
-  .screen-nav__extra + .language-button {
-    margin-left: auto;
-  }
-}
-
 /* The top bar's button (routes/top-bar.css draws it): as tall as a round one, and wide enough for "中文". */
 :is(.screen-nav, .landing-corner) .language-button--nav {
   min-width: 44px;

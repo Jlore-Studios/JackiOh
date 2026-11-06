@@ -21,6 +21,7 @@ import { replayTestid, useBoardBusy } from "../replay/ReplayPlayer.tsx";
 import { ReplayToolbar, isTyping } from "../replay/ReplayToolbar.tsx";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
+import { BackLink } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -185,12 +186,7 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
 }
 
 export function DuosReplayBack({ onLeave }: { onLeave: () => void }): ReactElement {
-  useLocale();
-  return (
-    <button type="button" className="link-button" data-testid={replayTestid.back} onClick={onLeave}>
-      {t("← Back")}
-    </button>
-  );
+  return <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} />;
 }
 
 export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLeave: () => void }): ReactElement {

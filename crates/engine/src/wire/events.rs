@@ -1214,8 +1214,9 @@ pub enum GameEvent {
     // -------------------------------------------------------------------------------------------
     // Issue #2783: the event stream says why (R2783000, R2783001)
     // -------------------------------------------------------------------------------------------
-    /// R2783000: the card `source_id` (of `def_id`, `""` for a Cry that runs with no card, R127)
-    /// begins to resolve its `hook` for `controller`, just before the hook's effects, a hook that
+    /// R2783000: the card `source_id` (of `def_id`; for a hook that runs with no card, R127, the card it
+    /// belongs to, R3182000, and `""` only where no card holds it) begins to resolve its `hook` for
+    /// `controller`, just before the hook's effects, a hook that
     /// fizzles included; a continuation after a prompt has none. A marker nothing answers: it takes no
     /// number in R68's order and moves no hash. One whose card a seat could not read where it stood as
     /// the hook began never reaches that seat; otherwise its card is named as the card itself is (R97).

@@ -154,7 +154,11 @@ has the rest, the server's fixture reseed among it.
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
 `bot selftest`. A pull request lands through `main`'s merge queue (`infra/github.tf`), which runs them again on
 `main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`): one the queue takes
-out failed there, against the newer `main`, and its fix starts from merging `main`. Run
+out failed there, against the newer `main`, and its fix starts from merging `main`. So never merge `main` into
+a pull request only to bring it up to date: one that merges cleanly needs no update, since the queue tests it on
+the newest `main`, and every push runs its CI again on the organization's shared runners. Merge `main` in when
+GitHub shows a conflict or the queue took it out, and turn auto-merge on once it is ready, so the queue takes it
+as soon as its checks pass. Run
 `cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
 `rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
 whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the

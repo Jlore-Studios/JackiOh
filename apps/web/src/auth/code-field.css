@@ -237,12 +237,9 @@
 
 /* --- the invite screen ------------------------------------------------------------------------ */
 
-/* The top bar is BackLink's nav: Back, then who is signed in and Sign out, then the gear at the far
-   end (settings.css places the slot, and moves it under Back and the gear on a phone). */
-.invite-screen__top > .screen-nav {
-  width: 100%;
-}
-
+/* The top bar is BackLink's nav: Back, then who is signed in and Sign out as its extras, then the gear
+   at the far end (routes/top-bar.css places the slots, and moves the extras under Back and the gear on a
+   phone). */
 .invite-screen__account {
   display: flex;
   flex-wrap: wrap;
@@ -441,11 +438,12 @@
   color: color-mix(in srgb, var(--tavern-parchment) 66%, transparent);
 }
 
-/* A phone: who is signed in and Sign out take their own row under Back and the gear (settings.css),
+/* A phone: who is signed in and Sign out take their own row under Back and the gear (top-bar.css),
    the address first and wrapping where it must, Sign out at the row's end. At 390 px the address
    used to share Back's row and ran off the screen mid-string (integration QA). */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .invite-screen__account {
+    flex: 1 1 auto;
     flex-wrap: nowrap;
     justify-content: space-between;
   }

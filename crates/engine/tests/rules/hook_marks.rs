@@ -102,6 +102,26 @@ fn body() -> CardDef {
 fn quiet() -> CardDef {
     unit("quiet", 27842)
 }
+/// R3182000: a Cry that returns a random card from its controller's graveyard to hand. Triggered out of
+/// a graveyard (R467), where "this" finds nothing, the one card there is itself.
+fn recaller() -> CardDef {
+    unit("recaller", 27843)
+}
+/// R3182000: a Unit token whose Activate tributes it for its cost: it ceases to exist (R11), so the
+/// ability resolves with no card anywhere.
+fn spent() -> CardDef {
+    def(
+        "spent",
+        27844,
+        "Unit",
+        json!({
+            "token": true,
+            "rarity": "Token",
+            "base": { "attack": 1, "health": 1, "keywords": [], "text": "spent" },
+            "radiant": { "attack": 2, "health": 2, "keywords": [], "text": "spent" },
+        }),
+    )
+}
 
 fn defs() -> Vec<CardDef> {
     vec![
@@ -118,6 +138,8 @@ fn defs() -> Vec<CardDef> {
         hidden(),
         body(),
         quiet(),
+        recaller(),
+        spent(),
     ]
 }
 
@@ -249,6 +271,35 @@ fn scripts() -> Vec<(String, CardScripts)> {
             }),
         ),
         (body().id, both(Script::default())),
+        (
+            recaller().id,
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![effects::add_random_from_graveyard(json_as(json!({ "count": 1 })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            spent().id,
+            both(Script {
+                activations: vec![ActivationDecl {
+                    id: "spend".to_string(),
+                    label: "Tribute this: deal 1 damage to the enemy hero".to_string(),
+                    uses: ActivationUses::Count(1),
+                    cost: Some(ActivationCost {
+                        tribute_self: Some(true),
+                        ..ActivationCost::default()
+                    }),
+                    targets: vec![],
+                    modes: vec![],
+                    can_activate: None,
+                    has: None,
+                    run: hook(|_ctx| vec![hit_enemy_hero()]),
+                }],
+                ..Script::default()
+            }),
+        ),
         (
             quiet().id,
             both(Script {
@@ -779,4 +830,88 @@ fn r2783000_a_round_tripped_state_replays_its_markers_and_they_take_no_number() 
     assert_eq!(hash_state(&live.state), hash_state(&replayed.state));
     // The hook's queue entry takes its number, and its marker none (R68's one counter).
     assert_eq!(live.state.next_seq, bare.next_seq + 1);
+}
+
+// R3182000: a hook that runs with no card as its `self` still names the card it belongs to.
+
+/// `trigger_cry` on `card` for p1, as Rewind's list runs it (R467), its events kept as one action.
+fn trigger_cry_for_p1(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
+    let ((), events) = run_on_sink(state, |sink| {
+        {
+            let mut ctx = make_context(
+                sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            (effects::trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
+        }
+        settle(sink, Default::default());
+    });
+    state.applied.push(AppliedAction {
+        nonce: "hook-marks-grave-cry".into(),
+        events: events.clone(),
+    });
+    events
+}
+
+#[test]
+fn r3182000_a_graveyard_crys_marker_names_its_card_and_is_hidden_once_the_cry_returns_it_to_a_hand() {
+    let mut state = playing("grave-cry");
+    let card = new_instance(&mut state, &recaller().id, P1, Zone::Graveyard { player: P1 });
+    state.players.p1.graveyard.push(card.clone());
+
+    let events = trigger_cry_for_p1(&mut state, &card);
+    // Out of the graveyard "this" finds nothing (R467), yet the marker is the card's, not `""`.
+    assert_eq!(
+        markers(&events),
+        vec![(card.id.clone(), recaller().id, P1, HookKind::Cry)]
+    );
+    let back = find_instance(&state, &card.id).expect("the card is still in the game");
+    assert_eq!(back.zone.z(), ZoneName::Hand);
+
+    // Its owner reads it; the other seat reads that a hook began, never whose (R97), as the card's
+    // `addedToHand` hides it.
+    assert_eq!(
+        view_markers(&state, P1),
+        vec![
+            json!({ "type": "hookResolving", "sourceId": card.id, "defId": recaller().id, "controller": "p1", "hook": "cry" })
+        ]
+    );
+    assert_eq!(
+        view_markers(&state, P2),
+        vec![
+            json!({ "type": "hookResolving", "sourceId": HIDDEN_ID, "defId": HIDDEN_ID, "controller": "p1", "hook": "cry" })
+        ]
+    );
+    assert!(!names_anywhere(&view_events(&state, P2), &recaller().id));
+    assert!(!names_anywhere(&view_events(&state, P2), &card.id));
+}
+
+#[test]
+fn r3182000_an_activate_whose_cost_took_its_card_out_of_the_game_still_names_that_card() {
+    let mut state = playing("spent");
+    let token = put(&mut state, &spent().id, slot(P1, Row::Units, 1), json!({}));
+    let used = act_ok(
+        &state,
+        json!({ "type": "activate", "instanceId": token.id, "ability": "spend", "playerId": "p1" }),
+    );
+    // The token ceased to exist as its cost tributed it (R11): the ability resolves with no card.
+    assert!(find_instance(&used.state, &token.id).is_none());
+    assert_eq!(used.state.players.p2.hero.health, HERO_HEALTH - 1);
+    assert_eq!(
+        markers(&used.events),
+        vec![(token.id.clone(), spent().id, P1, HookKind::Activate)]
+    );
+    // Its every event was public, so both seats read it, as they read its `destroyed`.
+    for viewer in [P1, P2] {
+        assert_eq!(
+            view_markers(&used.state, viewer),
+            vec![
+                json!({ "type": "hookResolving", "sourceId": token.id, "defId": spent().id, "controller": "p1", "hook": "activate" })
+            ]
+        );
+    }
 }
