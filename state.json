@@ -32622,6 +32622,12 @@
         "number": 3066,
         "title": "Patch: Embers buy a starting level for an unlocked dungeon artifact",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-06T14:47:01Z",
+        "number": 3281,
+        "title": "Patch: practice games pay at most a day's cap of XP, so a forged practice log cannot farm set-track rewards",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-06T14:46:51Z",
