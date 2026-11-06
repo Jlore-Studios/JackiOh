@@ -16787,6 +16787,11 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
+      "ci_early": false,
+      "ci_fixes": 1,
+      "ci_on_head": false,
+      "ci_run_id": 42200468051,
+      "ci_sha": "9268ce6daa8ba857f996c4f26249c86bd0d95d74",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -16815,7 +16820,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-05T23:40:07Z",
+      "queued_at": "2026-11-06T10:26:28Z",
+      "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "42131305647",
       "runs_on": "ubuntu-latest",
@@ -16837,7 +16843,7 @@
         "provider": "claude-8",
         "run": "42123457231"
       },
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-05T23:41:22Z",
       "stop_requested": false,
       "taken_asks": [],
