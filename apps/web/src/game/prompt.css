@@ -220,19 +220,10 @@
   color: var(--text);
 }
 
-/* Confirm is the one primary action: filled in End turn's amber (index.css --primary-*), so the
-   game has a single "go" color rather than a blue one beside a gold one. */
+/* Confirm is the one primary action, a `button-primary` (buttons.css) as End turn is, so the game
+   has a single "go" color rather than a blue one beside a gold one. */
 .prompt [data-testid="prompt-submit"]:not([aria-disabled="true"]) {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
   font-weight: 800;
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-  box-shadow: var(--primary-shadow);
-}
-
-.prompt [data-testid="prompt-submit"]:not([aria-disabled="true"]):hover {
-  background: var(--primary-face-hover);
 }
 
 /* R831004: a set's mark beside its name (#82 KY's Trial's first Discover), the glyph a card's frame

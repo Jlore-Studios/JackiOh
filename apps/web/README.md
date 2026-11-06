@@ -45,7 +45,7 @@ writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws wh
 at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
 no screen shows, still use filters).
 
-The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, `buttons.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
@@ -92,9 +92,20 @@ Back or Account link, Friends, language button and settings gear with one rule, 
 worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
 a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
 in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
-the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
-`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
-draws its own buttons.
+the replays and the deck screens are not `.tavern`, and the tavern's bare-button size rule and buttons.css's
+link-button skip `top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar
+(`placement="game"`) draws its own buttons.
+
+The buttons are four roles (#3219), each one skin in `src/buttons.css`, imported by `index.css` after the
+motion and drawn the same on every screen, in the tavern or not, on a menu or the board: `button-primary`
+(the one way on, `--primary-face`'s gold; the result panel's first action takes it by its place),
+`button-secondary` (on a `<button>` or an `<a>`), `button-danger` (`--danger`'s red, for the act that
+cannot be taken back: Concede, Delete account, Leave game, Leave fight) and `link-button` (a quiet text
+action). A `<button>` that names no role looks like the secondary. A control keeps only its own layout
+(size, margin, place), and the tavern only sizes its buttons. `src/buttons.test.ts` checks this: it draws
+each role inside and outside `.tavern`, finds no other sheet restating a role's skin or that of a one-off
+it replaced, and holds the button skins that remain no role's (the top bar's, card-like tiles, pressed
+toggles) to each sheet's count in `UNROLED`.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
@@ -122,9 +133,25 @@ line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer 
 `data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
 root that clips them, so the one-screen rule holds. Over them the blocks' layer draws the JackiOh
 mark, still, in a dark halo (`skeleton.css`), but in a shell panel, which the logo heads. `main.tsx`'s `Loading` takes `skeleton` for the
-same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+same drawing. A route that waits before it can draw its screen draws that screen's own frame around the
+skeleton, not a plain page: `/decks` does so through `game/deckbuilder/WorkshopFrame.tsx`, which the loaded
+workshop draws too, so the bar (Back, the title, the gear) and the background stay put and only the body changes
+when the read lands (R3228000). Still text: the deck builder's win-rate line and the chat's and the replays' "show
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
-boards' "Joining …" panels.
+boards' "Joining …" panels, and, each for its reason:
+
+- A button's or field's own busy word ("Checking…" and "Starting…" on a button, "Show older games" and "Show
+  earlier messages" while they load, the username field's inline "Checking…"): a label or a field's status,
+  not a wait for a panel.
+- The deck history popover's "Loading…" and "No versions kept yet": the popover sizes itself to its words,
+  which a full-width skeleton or empty state would stretch.
+- One line inside a panel that already has content: the account's "No finished matches yet" and "No season
+  best yet" (the figures above say it), the leaderboard's "No Jlorious players yet this season" (one section
+  among the tiers, whose height spec 46 measures), the stats' "No … yet" sub-lines, the trio editor's slot
+  "No cards yet." and the chat's "No messages yet" row.
+- An option's text: "No other decks yet" and "No friends to invite yet".
+- A card face's "No pieces yet", and the accessibility statement's and the invite page's sentences, which are
+  prose of the page and not a panel's empty.
 
 A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
 the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
@@ -546,7 +573,8 @@ routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, bot
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
                         R338): choose a deck that has not won, lock it in, wait sealed; one clock
 routes/SeriesBanner.tsx the board's banner for a series game, each side's won decks as pips, and its
-                        "Continue" once the game is over
+                        "Continue" once the game is over; while the match socket is open it takes the
+                        socket's `series` frames and reads nothing after the result (R3213000)
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing, on Constructed or All
                         Random by its switch (`?ladder=random`, R2778000); rank/rank.ts says

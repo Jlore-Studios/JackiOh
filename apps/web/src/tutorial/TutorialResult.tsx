@@ -174,7 +174,7 @@ export function TutorialResult({
     title = conceded ? t("Lesson lost") : t("Not quite");
     line = notQuiteLine(outcome, result.reason);
     primaryButton = (
-      <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.retry} onClick={onRetry}>
+      <button ref={primary} type="button" className="practice-play button-primary" data-testid={tutorialTestid.retry} onClick={onRetry}>
         {t("Retry")}
       </button>
     );
@@ -185,7 +185,7 @@ export function TutorialResult({
       <button
         ref={primary}
         type="button"
-        className="practice-play"
+        className="practice-play button-primary"
         data-testid={tutorialTestid.playPractice}
         onClick={onPlayPractice}
       >
@@ -198,7 +198,7 @@ export function TutorialResult({
       ? t("Lesson {number}: {title} is unlocked.", { number: next.number, title: t(next.title) })
       : t("Next up: Lesson {number}: {title}.", { number: next.number, title: t(next.title) });
     primaryButton = (
-      <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.next} onClick={onNext}>
+      <button ref={primary} type="button" className="practice-play button-primary" data-testid={tutorialTestid.next} onClick={onNext}>
         {t("Next lesson")}
       </button>
     );
@@ -230,7 +230,7 @@ export function TutorialResult({
           {primaryButton}
           <button
             type="button"
-            className="practice-result__secondary"
+            className="practice-result__secondary button-secondary"
             data-testid={tutorialTestid.back}
             onClick={onBack}
           >

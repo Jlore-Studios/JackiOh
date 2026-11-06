@@ -107,17 +107,6 @@
   white-space: nowrap;
 }
 
-.deckbuilder.app-shell .ws-action--primary {
-  border-color: color-mix(in srgb, var(--you) 70%, white);
-  background: color-mix(in srgb, var(--you) 55%, var(--bg-raised));
-  color: #fff;
-}
-
-.deckbuilder.app-shell .ws-action--danger {
-  border-color: color-mix(in srgb, var(--opponent) 65%, var(--line-bright));
-  background: color-mix(in srgb, var(--opponent) 14%, var(--bg-raised));
-}
-
 .deckbuilder.app-shell .ws-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -1019,8 +1008,14 @@
     min-width: 0;
   }
 
-  .portrait-current {
+  .deckbuilder.app-shell .portrait-current {
     padding: 0;
+  }
+
+  /* #3218's two-row top bar made the header taller on a phone; a tighter padding keeps the pool's
+     first row on the first screen (deckbuilder-layout.cy.tsx). */
+  .deckbuilder.workshop .db-header {
+    padding: 0 var(--space-1) var(--space-2);
   }
 
   .ws-compare-pick {
@@ -1072,18 +1067,6 @@
 
   .deckbuilder.app-shell .ws-actions .ws-action {
     padding-inline: 5px;
-  }
-
-  /* #3320: R3218000's bar puts the extras on the title's row, a row of 44 px controls, which made the
-     header 25 px taller than #2099 sized it; the header's hairline and the sidebar's gaps and padding
-     close to keep the pool's first row on the first screen (BUILD M5-T1). */
-  .workshop .db-header {
-    padding-bottom: var(--space-2);
-  }
-
-  .workshop .db-sidebar {
-    gap: var(--space-3);
-    padding: var(--space-4);
   }
 }
 

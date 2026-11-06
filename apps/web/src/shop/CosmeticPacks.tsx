@@ -444,7 +444,7 @@ function ShardBar({
         ) : null}
       </div>
       {!full || !reached ? null : candidates.length === 0 ? (
-        <p data-testid={shopTestid.shardEmpty}>{t("Nothing to buy yet")}</p>
+        <EmptyState text={t("Nothing to buy yet")} testId={shopTestid.shardEmpty} />
       ) : (
         <div data-testid={shopTestid.shardChoice}>
           {/* The moment, with its sting, only for the opening that filled the bar; read full, the words at once. */}

@@ -359,8 +359,8 @@
   margin: 0;
 }
 
-/* The line's whole heading is its control. `link-button` keeps the tavern's wood-button rule off it
-   (auth/tavern.css); the rule below takes the link look off again. */
+/* The line's whole heading is its control. `link-button` keeps the tavern's bare-button size rule off
+   it (auth/tavern.css); the rule below takes the link look off again. */
 .tavern.app-shell .patch-notes .patch-set__toggle {
   display: flex;
   flex-wrap: wrap;
@@ -683,7 +683,7 @@
 }
 
 /* A card's name as a control: gold prose over a brass hairline, as the tavern writes a link. The
-   `link-button` class keeps the tavern's wood-button rule off it (auth/tavern.css). */
+   `link-button` class keeps the tavern's bare-button size rule off it (auth/tavern.css). */
 .tavern.app-shell .patch-notes .patch-name {
   display: inline-flex;
   align-items: center;

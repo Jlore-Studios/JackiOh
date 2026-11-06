@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getMe, type MeResponse } from "../net/api.ts";
 import { keptAccount, withSession } from "../net/gate.ts";
@@ -210,9 +211,10 @@ function FriendsPanel({
           />
         ) : null}
         {list !== null && all.length === 0 ? (
-          <p className="lobby-note" data-testid={togetherTestid.noFriends}>
-            {t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
-          </p>
+          <EmptyState
+            text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
+            testId={togetherTestid.noFriends}
+          />
         ) : null}
         {all.length > 0 ? (
           <ul className="together-list">

@@ -641,6 +641,7 @@ describe("deleting the account", () => {
       await userEvent.click(screen.getByTestId("account-delete"));
 
       const confirm = screen.getByTestId("account-delete-confirm");
+      expect(confirm, "#3219: deleting the account is the danger role").toHaveClass("button-danger");
       expect(confirm, "nothing typed yet").toBeDisabled();
       await userEvent.type(screen.getByTestId("account-delete-input"), "delet");
       expect(confirm).toBeDisabled();

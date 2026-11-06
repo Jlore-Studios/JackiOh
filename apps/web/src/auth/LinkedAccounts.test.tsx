@@ -4,7 +4,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_MESSAGES, startIdentityLink } from "../net/auth.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { settle } from "../test/settle.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import LinkedAccounts, { linkedTestid } from "./LinkedAccounts.tsx";
 import { holdLinkResult } from "./redirect.ts";
 import { linkAfterSignIn, rememberLinkAfterSignIn } from "../net/session.ts";
@@ -73,6 +75,16 @@ describe("R3025000 linking on the account screen", () => {
     expect(row("google")).toHaveAttribute("data-linked", "false");
     fireEvent.click(screen.getByTestId(linkedTestid.link));
     expect(startIdentityLink).toHaveBeenCalledWith("google", TOKEN);
+  });
+
+  it("R3228000 the list waits as a skeleton of rows whose sentence stays a status line, and the rows replace it", async () => {
+    serve([{ identity_id: "id-email", provider: "email" }]);
+    render(<LinkedAccounts token={TOKEN} />);
+    expectSkeleton(screen.getByText("Loading…"), "rows");
+    await settle();
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+    expect(row("google")).toHaveAttribute("data-linked", "false");
   });
 
   it("R3025000 a linked provider offers Unlink, which removes it and reads the list again", async () => {

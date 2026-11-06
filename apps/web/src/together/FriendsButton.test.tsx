@@ -16,6 +16,7 @@ import { stubPhoneBar } from "../test/phoneBar.ts";
 import { keepRead } from "../net/readCache.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -372,7 +373,7 @@ describe("#1831 the panel", () => {
       serve(world({ friends: [] }));
       shell();
       const panel = await openPanel();
-      expect(await within(panel).findByTestId(togetherTestid.noFriends, undefined, SLOW)).toBeInTheDocument();
+      expectEmptyState(await within(panel).findByTestId(togetherTestid.noFriends, undefined, SLOW));
       expect(within(panel).getByTestId(togetherTestid.addInput)).toBeInTheDocument();
     },
     TEST_MS,

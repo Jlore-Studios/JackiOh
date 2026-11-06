@@ -29,6 +29,7 @@ import {
 import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { SKELETON_DELAY_MS, skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import DecksRoute from "./decks.tsx";
@@ -306,7 +307,24 @@ describe("what the screen opens with", () => {
     expect(getDecks).toHaveBeenCalledTimes(2);
   });
 
-  it("#1524 the loading screens offer Back and no settings gear, so a dialog opened there cannot close when the decks arrive", async () => {
+  /** What the bar and the frame around it draw, as the tests compare them across the states. */
+  function barOf() {
+    const bar = document.querySelector<HTMLElement>(".screen-nav");
+    if (bar === null) throw new Error("the screen draws no top bar");
+    const end = bar.querySelector(".screen-nav__end");
+    const ends = Array.from(end?.querySelectorAll("[data-testid]") ?? []);
+    return {
+      frame: bar.closest(".app-shell")?.className,
+      first: bar.firstElementChild?.getAttribute("data-testid"),
+      back: screen.getByTestId(navTestid.back).textContent,
+      title: expectOnePageTitle("Decks").textContent,
+      last: ends.at(-1)?.getAttribute("data-testid"),
+    };
+  }
+
+  const WORKSHOP_BAR = { first: "nav-back", back: "← Back", title: "Decks", last: "settings-open-nav" };
+
+  it("R3228000 #1524 the loading screens draw the workshop's own bar, the gear included, and the same bar and title stand when the decks land", async () => {
     let land: (body: DecksResponse) => void = () => undefined;
     vi.mocked(getDecks).mockReturnValue(
       new Promise<DecksResponse>((resolve) => {
@@ -315,16 +333,21 @@ describe("what the screen opens with", () => {
     );
     render(<DecksRoute />);
     expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("workshop")).toBeNull();
     expectSkeleton(screen.getByTestId("deckbuilder-loading"), "rows");
-    expect(screen.queryByTestId("settings-open-nav"), "while the account is read").toBeNull();
+    const whileAccount = barOf();
+    expect(whileAccount, "while the account is read").toMatchObject(WORKSHOP_BAR);
+    expect(whileAccount.frame).toContain("tavern");
+    expect(whileAccount.frame).toContain("deckbuilder");
+    expect(whileAccount.frame).toContain("workshop");
 
     await waitFor(() => {
       expect(getDecks).toHaveBeenCalledWith(TOKEN);
     });
     expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
     expectSkeleton(screen.getByTestId("deckbuilder-loading"), "rows");
-    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
-    expect(screen.queryByTestId("settings-open-nav"), "while the decks are read").toBeNull();
+    const whileDecks = barOf();
+    expect(whileDecks, "while the decks are read").toEqual(whileAccount);
 
     await act(async () => {
       land(decksResponse([], [], catalog.version));
@@ -333,8 +356,33 @@ describe("what the screen opens with", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workshop")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("settings-open-nav"), "the workshop's own gear").toBeInTheDocument();
     expect(screen.queryByTestId("deckbuilder-loading")).toBeNull();
+    expect(barOf(), "when the decks land").toEqual(whileDecks);
+  });
+
+  it("R3228000 R2108000 the frame's skeleton shows its blocks only after SKELETON_DELAY_MS, and a read that answers sooner never shows them", async () => {
+    render(<DecksRoute />);
+    const quick = screen.getByTestId(skeletonTestid.root);
+    expect(quick).toHaveAttribute("data-shown", "false");
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(quick, "a read that answers sooner flashes nothing").toHaveAttribute("data-shown", "false");
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+    cleanup();
+
+    vi.mocked(getDecks).mockReturnValue(new Promise<DecksResponse>(() => undefined));
+    render(<DecksRoute />);
+    const slow = screen.getByTestId(skeletonTestid.root);
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+    expect(slow).toHaveAttribute("data-shown", "false");
+    await waitFor(
+      () => {
+        expect(slow).toHaveAttribute("data-shown", "true");
+      },
+      { timeout: SKELETON_DELAY_MS * 5 },
+    );
+    expect(screen.getByTestId(navTestid.back), "the bar stood from the first draw").toBeInTheDocument();
   });
 });
 

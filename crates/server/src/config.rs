@@ -934,8 +934,12 @@ pub const SERIES_START_GIVE_UP_SECONDS: i64 = 120;
 /// transition landed, and a series has at most a handful of writers, so three losses in a row is a
 /// storm, not a race worth waiting out.
 pub const SERIES_WRITE_ATTEMPTS: usize = 3;
-/// How often the series screen and the match screen's series banner re-read the series.
+/// How often the series screen and the match screen's series banner re-read the series, the banner
+/// (and the rematch buttons, R3207002) only while no open match socket pushes it (R3213000).
 pub const SERIES_POLL_SECONDS: i64 = 2;
+/// SPEC §11 R3213000: the version of the match socket's post-game frames (`jackioh_shared::host::post_game`);
+/// a client reads only the one it knows and polls otherwise, so a changed shape takes the next number.
+pub const POST_GAME_FRAME_VERSION: u32 = 1;
 /// SPEC §11 R3207001: how often the live-game banner (the landing page's and the practice page's) re-reads
 /// the account for the game it names, in seconds. A game outlasts it by minutes, and a missed tick only
 /// shows the banner a few seconds late; the queue follow keeps `SERIES_POLL_SECONDS` for the ticket's

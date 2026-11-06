@@ -502,7 +502,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             {practicePath === null ? null : (
               <button
                 type="button"
-                className="ws-action"
+                className="ws-action button-secondary"
                 data-testid={DECK_TO_PRACTICE}
                 data-route={practicePath}
                 aria-label={t("Practice with this deck")}
@@ -513,12 +513,12 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 {t("Practice")}
               </button>
             )}
-            <button type="button" className="ws-action" data-testid={DECK_COPY_CODE} onClick={copyCode}>
+            <button type="button" className="ws-action button-secondary" data-testid={DECK_COPY_CODE} onClick={copyCode}>
               {t("Copy code")}
             </button>
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={DECK_DUPLICATE}
               disabled={atCap}
               aria-describedby={atCap ? duplicateReasonId : undefined}
@@ -528,7 +528,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             </button>
             <button
               type="button"
-              className="ws-action ws-action--danger"
+              className="ws-action button-danger"
               data-testid={DECK_DELETE}
               onClick={onDelete}
             >

@@ -61,12 +61,12 @@ export default function ConfirmLeaveFight({ onStay, onLeave }: ConfirmLeaveFight
           {t("It ends here and the fight starts over from its first turn.")}
         </p>
         <div className="practice-leave__actions">
-          <button ref={stay} type="button" className="practice-play" data-testid={fightTestid.leaveStay} onClick={onStay}>
+          <button ref={stay} type="button" className="practice-play button-primary" data-testid={fightTestid.leaveStay} onClick={onStay}>
             {t("Keep playing")}
           </button>
           <button
             type="button"
-            className="practice-result__secondary"
+            className="practice-result__secondary button-danger"
             data-testid={fightTestid.leaveConfirm}
             onClick={onLeave}
           >
