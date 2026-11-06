@@ -22,6 +22,11 @@
 "cards" = 1
 "server" = 1
 "server api" = 1
+# `server practice` and `server practice rulings` stay at 1 (#3314). Both ran over seven minutes
+# because three tests in each waited about 150 s for the slowest game of `honest_win`'s batch
+# (crates/server/tests/api/practice.rs), which #3305 fixed: each group's tests now run in about
+# 5 s and the rest of the job is compiling, which every shard repeats. A count above 1 on any
+# group also fails bot/tests/test_ci_matrix.py, which pins today's jobs and which the bot may not edit.
 "server practice" = 1
 "server practice rulings" = 1
 "ai" = 1
