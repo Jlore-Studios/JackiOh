@@ -13639,14 +13639,6 @@
         "reason": "`claude-4` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-06T18:00:00Z",
         "trail": "md\", \"descrip\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"skeleton and an error show on a first\u2026\n- said: Now typecheck and lint.\n- Bash: {\"command\": \"timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -30\", \"description\": \"Typecheck the web app\", \"timeout\": 920000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/packs.rs'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep('''//! Rulings: R1301002\u2026\n- Bash: {\"command\": \"CARGO_TERM_COLOR=never timeout 1200 cargo test -p jackioh-server --test server r3212000 2>&1 | grep -E '^(error|warning)|^test |panicked|left|right|FAILED|test result' -A4 | head -100\", \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/routes/shop.test.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\" function open(): Open\u2026\n- Bash: {\"command\": \"timeout 1200 pnpm exec eslint apps/web e2e 2>&1 | tail -40\", \"description\": \"Lint the web app and e2e\", \"timeout\": 1220000}\n- Bash: {\"command\": \"cp crates/server/src/economy/packs.rs /tmp/packs.rs.bak && sed -i 's/ records.owned.insert(card.card_id.clone(), card.quantity);/ let _ = card;/' crates/server/src/economy/packs.rs && se\u2026\n- said: Lint is clean. Checking whether e2e has its own typecheck.\n- Bash: {\"command\": \"ls e2e/; grep -n '\\\"typecheck\\\\|\\\"lint\\\\|tsc' e2e/package.json package.json\", \"description\": \"Look for an e2e typecheck script\"}\n- Bash: {\"command\": \"timeout 900 pnpm exec tsc -p e2e/tsconfig.json 2>&1 | tail -15; echo \\\"e2e exit ${PIPESTATUS[0]}\\\"; timeout 900 pnpm exec tsc -p e2e/cypress/component/tsconfig.json 2>&1 | tail -15; echo\u2026\n- said: Both pass. Now the named test directories together.\n- Bash: {\"command\": \"cd apps/web && timeout 1200 pnpm exec vitest run src/game/deckbuilder src/packs src/routes/shop src/routes/decks src/net src/emotes/PortraitPicker.test.tsx 2>&1 | grep -E \\\"Test Files|Te\u2026\n- Bash: {\"command\": \"echo \\\"- build pass 1: 5 R3212000 route tests in tests/api/packs.rs pass (mutation of records_after makes the N=N test fail). Next: decks tests, contract tests.\\\" >> .bot-notes.md; grep \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3212/crates/server/tests/api/decks.rs\", \"offset\": 1, \"limit\": 420}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3212/crates/server/tests/api/decks.rs\", \"offset\": 420, \"limit\": 160}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3212/crates/server/tests/api/decks.rs\", \"offset\": 1309, \"limit\": 80}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3212/crates/server/tests/api/decks.rs\", \"offset\": 1841, \"limit\": 75}\n- Bash: {\"command\": \"grep -n 'D2\\\\b\\\\|D1\\\\b' crates/engine/src/validator*.rs crates/engine/src/validator/*.rs 2>/dev/null | head -10; grep -n 'fn fail_on\\\\|pub fn uuid' -A3 crates/server/tests/support/store.\u2026\n- Bash: {\"command\": \"grep -rn '\\\"trios\\\\.\\\\(upsert\\\\|remove\\\\)\\\"\\\\|\\\"decks\\\\.\\\\(upsert\\\\|remove\\\\)\\\"' crates/server/src/db/ | head\", \"description\": \"Find fake call names for deck/trio writes\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/decks.rs'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep('''//! Rulings: R250, R2\u2026\n- said: One skipped; let me confirm it is not something I touched.\n- Bash: {\"command\": \"cd apps/web && grep -rln \\\"skipIf\\\\|\\\\.skip\\\\b\\\\|daily(\\\" src/game/deckbuilder src/packs src/routes/shop* src/routes/decks* src/net src/emotes/PortraitPicker.test.tsx 2>/dev/null; git di\u2026\n- Bash: {\"command\": \"cd apps/web && cp src/game/deckbuilder/sync.ts /tmp/sync.ts.bak3212 && cp src/packs/PackOpening.tsx /tmp/PackOpening.tsx.bak3212 && \\\\\\nsed -i 's/let room = DECK_SYNC_ITEMS_MAX;/let room\u2026\n- said: Both caps' tests fail under mutation; files restored. Verifying the restore, then a second mutation for the per-item refusal (a store that halts the whole pass on one refusal).\n- Bash: {\"command\": \"cd apps/web && grep -n \\\"let room = DECK_SYNC_ITEMS_MAX;\\\" src/game/deckbuilder/sync.ts && grep -n \\\"onOpen(pack, Math.min(count, PACKS_OPEN_ALL_MAX));\\\" src/packs/PackOpening.tsx && \\\\\\\u2026\n- said: Restored (no `break;` left). Now the full web suite.\n- Bash: {\"command\": \"cd apps/web && timeout 3000 pnpm exec vitest run > /tmp/vitest-full-3212.log 2>&1; echo \\\"exit $?\\\" >> /tmp/vitest-full-3212.log; tail -15 /tmp/vitest-full-3212.log\", \"description\": \"Run\u2026\n- said: While that runs, let me review my diff.\n- Bash: {\"command\": \"git diff -- apps/web/src/packs/PackOpening.tsx apps/web/src/game/deckbuilder/sync.ts apps/web/src/game/deckbuilder/testkit.ts\", \"description\": \"Show the diff of the main source files\"}\n- said: The diff reads as intended. Checking for docs outside my scope that describe the old per-item autosave, so I can flag them.\n- Bash: {\"command\": \"grep -rn \\\"putDeck\\\\|deleteTrio\\\\|packs/open-all\\\\|decks/sync\\\\|every save is\\\" docs/v0.3.0/SURFACE.md docs/architecture.md crates/server/README.md 2>/dev/null | head -20\", \"description\"\u2026\n- Bash: {\"command\": \"grep -rln \\\"api/packs/open\\\\b\\\\|PUT /api/decks\\\\|/api/decks/:id\\\" docs/*.md docs/v0.3.0/*.md 2>/dev/null | head; grep -n \\\"packs/open\\\\|api/decks\\\" docs/v0.3.0/SURFACE.md | head\", \"descr\u2026\n- said: Nothing to flag there. Listing every R3212000/R3212001 mention I wrote, for the ruling notes.\n- Bash: {\"command\": \"grep -rn \\\"R3212000\\\\|R3212001\\\" apps/web/src e2e apps/web/README.md | grep -v \\\"^apps/web/src/wire/\\\" | awk -F: '{print $1}' | sort | uniq -c; echo ---; grep -rn \\\"it(\\\\\\\"R3212000\\\\|it(\u2026\n- Bash: {\"command\": \"for id in R3212000 R3212001; do echo \\\"== $id\\\"; grep -rl \\\"$id\\\" apps/web/src e2e apps/web/README.md | grep -v \\\"/wire/\\\" | sort; done\", \"description\": \"Split the citing files by ruling\u2026\n- tool error: Exit code 137 470:// All nine routes are `AuthLevel::Active` rows of `app.rs`'s `ROUTES`, so a pending account gets 403"
       },
-      "hold": {
-        "ends": "2026-11-06T19:20:57Z",
-        "lifted": "2026-11-06T18:00:18Z",
-        "owner": "claude-4",
-        "since": "2026-11-06T17:20:57Z",
-        "until": "2026-11-06T18:00:00Z",
-        "why": "5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -13669,7 +13661,7 @@
       "queued_at": "2026-11-05T16:45:39Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "42258351222",
+      "run_id": "pending:e0fe7861-1793987991",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -13688,7 +13680,7 @@
         "provider": "claude-4",
         "run": "42245337882"
       },
-      "started_at": "2026-11-06T17:05:07Z",
+      "started_at": "2026-11-06T18:00:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16504,9 +16496,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T17:44:50Z",
+    "at": "2026-11-06T18:00:35Z",
     "url": "",
-    "what": "build #3315 on claude-3"
+    "what": "build #3212 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T17:58:56Z",
