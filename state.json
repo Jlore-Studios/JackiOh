@@ -16394,6 +16394,13 @@
     "3314": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T17:58:00Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "none of the rule's five lines holds: the only change is a comment in scripts/ci-shards.toml (no engine, AI, cross-crate, migration or 40-file change); the slowness itself was already fixed by #3305."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
