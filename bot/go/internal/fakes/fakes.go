@@ -124,6 +124,11 @@ type FakeGitHub struct {
 
 	ids  int // itertools.count(1000)
 	shas int // itertools.count(1)
+
+	// What each run's jobs wait on for a reviewer, by run id, and the approvals given
+	// (`GitHub.pending_deployments`, the runner gate).
+	Pending   map[string][]*pyjson.Object
+	Approvals []Approval
 }
 
 // Dispatch is one entry of `dispatches`: {"workflow", "ref", "inputs"}.
@@ -164,6 +169,8 @@ func NewFakeGitHub() *FakeGitHub {
 		ArtifactZips:   map[int][]byte{},
 		Reruns:         []any{},
 		Cancels:        []any{},
+		Pending:        map[string][]*pyjson.Object{},
+		Approvals:      []Approval{},
 		FullReruns:     []any{},
 		Reacted:        []Reaction{},
 		AutoMerge:      map[string]string{},
@@ -903,6 +910,31 @@ func (o *Own) ListRuns(workflow string, status string, limit int, cached bool) [
 }
 
 func (o *Own) RerunFailedJobs(runID any) { o.Reruns = append(o.Reruns, runID) }
+
+// Approval is one approval of a run's waiting jobs (`ApproveDeployments`).
+type Approval struct {
+	Run          string
+	Environments []any
+	Comment      string
+}
+
+func (o *Own) PendingDeployments(runID any) []*pyjson.Object {
+	return deepList(o.Pending[py.Str(runID)])
+}
+
+// ApproveDeployments records the approval and starts the run, as GitHub does: it is no longer
+// waiting. GitHub refuses a run with nothing waiting.
+func (o *Own) ApproveDeployments(runID any, environmentIDs []any, comment string) {
+	key := py.Str(runID)
+	if len(o.Pending[key]) == 0 {
+		panic(githubError("No pending deployments for this run.", 422))
+	}
+	o.Approvals = append(o.Approvals, Approval{Run: key, Environments: environmentIDs, Comment: comment})
+	delete(o.Pending, key)
+	if run, ok := o.Runs.Get(key).(*pyjson.Object); ok {
+		run.Set("status", "queued")
+	}
+}
 
 // CancelRun records the cancel, and ends the run as cancelled (its jobs still going too), as
 // GitHub does within seconds; GitHub refuses one that had ended.
