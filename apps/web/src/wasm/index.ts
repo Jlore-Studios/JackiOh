@@ -49,6 +49,8 @@ import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 import type { FaceAnswer } from "../wire/generated/FaceAnswer.ts";
 import type { FaceCall } from "../wire/generated/FaceCall.ts";
+import type { LogAnswer } from "../wire/generated/LogAnswer.ts";
+import type { LogCall } from "../wire/generated/LogCall.ts";
 
 // loading
 
@@ -652,4 +654,15 @@ export function validator<T>(name: ValidatorCall, input: unknown): T {
  */
 export function face(request: FaceCall): FaceAnswer {
   return call("face", () => parsed<FaceAnswer>(normal.face(json(request))));
+}
+
+// the game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/**
+ * One call of the game log (`crates/shared/src/log`): a `LogCall` in, a `LogAnswer` out, both the generated
+ * wire types. The catalog is the module's own and the locale is an argument, so each line is final text as
+ * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes).
+ */
+export function log(request: LogCall): LogAnswer {
+  return call("log", () => parsed<LogAnswer>(normal.log(json(request))));
 }
