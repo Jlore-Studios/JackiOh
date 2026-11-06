@@ -16431,9 +16431,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-06T03:30:22Z",
-      "owner_why": "its turn came (it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "claude-7",
+      "owner_since": "2026-11-06T03:40:18Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-05T19:35:10Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -17173,7 +17173,7 @@
       }
     },
     "3253": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -17203,15 +17203,15 @@
       "issue": 3225,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-06T03:30:22Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "42139225191",
+      "run_id": "pending:b0408aa5-1793936374",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17232,16 +17232,9 @@
         "run": "42128715530"
       },
       "source": "conflict",
-      "started_at": "2026-11-06T00:46:07Z",
+      "started_at": "2026-11-06T03:40:18Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-06T03:30:22Z",
-        "until": "2026-11-06T04:00:22Z",
-        "why": "it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -18171,9 +18164,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T03:39:21Z",
+    "at": "2026-11-06T03:40:18Z",
     "url": "",
-    "what": "spot-check #3250 on claude-1"
+    "what": "revise #3253 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T03:34:45Z",
