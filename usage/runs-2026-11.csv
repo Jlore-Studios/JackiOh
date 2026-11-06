@@ -789,3 +789,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-05T23:27:16Z,42115538244,claude-1,opus,build,3210,hard,built,,51.7,231,65181,16909586,6.193,2,18,,,301.1,claude-4,fresh,other,1
 2026-11-05T23:32:01Z,42123457231,claude-8,opus,revise,3245,hard,approved,,21.3,69,17798,2579934,1.9641,47,55,,,0.6,claude-8,fresh,,2
 2026-11-05T23:30:39Z,42123315420,claude-3,sonnet+opus,revise,3249,medium,built,,10.5,17,5669,851861,1.0896,33,37,,,6.7,claude-3,resumed,,1
+2026-11-05T23:49:48Z,42118404075,claude-3,sonnet+opus,build,3206,medium,built,,42.1,297,132071,37506993,6.4178,20,37,,,323.2,claude-3,fresh,,1
+2026-11-06T00:09:16Z,42133207281,claude-3,sonnet,review,3259,medium,approved,,2.5,35,14938,1927391,0.7937,1,3,,,1.3,,none,,1
+2026-11-06T00:23:11Z,42135507275,claude-3,opus,review,3256,hard,reviewed,,4.1,56,21536,3108160,1.9596,4,6,,,45.7,,none,,1
+2026-11-06T00:19:00Z,42128598406,claude-7,opus,build,3254,hard,built,,14.4,66,13162,1887296,1.0487,0,2,,,36.5,claude-7,fresh,,1
