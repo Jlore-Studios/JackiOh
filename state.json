@@ -16205,23 +16205,6 @@
       "round_tier": "",
       "run_id": "42264228771",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "plan",
-        "artifact": 13525198423,
-        "artifact_bytes": 577966,
-        "artifact_name": "work",
-        "at": "2026-11-06T17:42:25Z",
-        "bytes": 758788,
-        "cwd": "/home/runner/work/_temp/work/item-3308",
-        "ended": "failed: RuntimeError: the planner on sonnet wrote no plan: claude exited 1",
-        "head": "ffa18b45f73f0cad33f4ba2c004657722d22aec9",
-        "id": "1ad23b49-277f-45c7-9fa6-ae358be44ad3",
-        "kind": "plan",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-3308",
-        "provider": "claude-6",
-        "run": "42249382832"
-      },
       "started_at": "2026-11-06T17:43:20Z",
       "stop_requested": false,
       "strike_log": [
