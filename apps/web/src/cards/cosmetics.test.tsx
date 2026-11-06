@@ -1620,4 +1620,62 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     expect([...pictures.PRISMATIC_SHEEN].reverse()).toEqual([...pictures.PRISMATIC_SHEEN]);
     expect(pictures.PRISMATIC_SHEEN.slice(0, pictures.PRISMATIC_SPECTRUM.length)).toEqual([...pictures.PRISMATIC_SPECTRUM]);
   });
+
+  it("R3017002 part 6's colours keep out of the Radiant gold window", () => {
+    const hex = (level: number): string => Math.round(Math.min(1, Math.max(0, level)) * 255).toString(16).padStart(2, "0");
+    const rgb = (color: string): [number, number, number] => [1, 3, 5].map((at) => parseInt(color.slice(at, at + 2), 16) / 255) as [number, number, number];
+    const of = (channels: readonly number[]): string => `#${channels.map(hex).join("")}`;
+    /** The colour `level` of the way from `from` to `to`, as a tone map, a gradient or a layer at that opacity draws it. */
+    const along = (from: string, to: string, level: number): string => {
+      const [a, b] = [rgb(from), rgb(to)];
+      return of(a.map((channel, at) => (1 - level) * channel + level * (b[at] ?? 0)));
+    };
+    const steps = Array.from({ length: 11 }, (_, at) => at / 10);
+    const greys = steps.map((level) => of([level, level, level]));
+    const prefixes = ["NIGHT_", "WATERCOLOR_", "STAINED_GLASS_", "TAROT_", "WOODCUT_", "NEON_"];
+    // Every part 6 colour constant, its lists' among them.
+    const constants = Object.entries(pictures)
+      .filter(([name]) => prefixes.some((prefix) => name.startsWith(prefix)))
+      .flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter((each): each is string => typeof each === "string" && each.startsWith("#")).map((each) => [name, each] as const));
+    expect(constants.length).toBeGreaterThanOrEqual(15);
+    for (const [name, value] of constants) expect(inRadiantGold(value.slice(1)), `${name}: ${value}`).toBe(false);
+    // The filters' and their markup's own colours, on both faces (Woodcut's tone map names none as a `#…`: its numbers
+    // are those of the colours checked below).
+    const draws = [pictures.nightSvg, pictures.watercolorSvg, pictures.stainedGlassSvg, pictures.tarotSvg, pictures.woodcutSvg, pictures.neonSvg];
+    let named = 0;
+    for (const radiant of [false, true]) {
+      for (const draw of draws) {
+        const colors = hexes(draw("<svg></svg>", radiant));
+        named += colors.length;
+        for (const color of colors) expect(inRadiantGold(color), `${draw.name}: #${color}`).toBe(false);
+      }
+    }
+    expect(named).toBeGreaterThan(draws.length);
+    // Night: a grey picture dimmed and mixed toward the sky, and the moon's glow over that at any strength.
+    const night = greys.map((grey) => along(along("#000000", grey, pictures.NIGHT_DIM), pictures.NIGHT_SKY, pictures.NIGHT_SKY_MIX));
+    const glowing = night.flatMap((tone) => steps.map((level) => along(tone, pictures.NIGHT_MOON, level * pictures.NIGHT_GLOW_OPACITY)));
+    // Tarot card: its duotone all along it; Woodcut: its print at each tone, the gouges' ink over its middle one.
+    const duotone = steps.map((level) => along(pictures.TAROT_DARK, pictures.TAROT_LIGHT, level));
+    const printed = pictures.WOODCUT_LEVELS.map((level) => along(pictures.WOODCUT_INK, pictures.WOODCUT_PAPER, level));
+    const middle = along(pictures.WOODCUT_INK, pictures.WOODCUT_PAPER, pictures.WOODCUT_LEVELS[1] ?? 0);
+    const gouged = steps.map((level) => along(middle, pictures.WOODCUT_INK, level));
+    // Stained-glass window: its 27 colours, lit by the light behind them (a screen of it at its opacity) and under the
+    // lead at any opacity, as a blurred came's edge lies.
+    const levels = pictures.STAINED_GLASS_LEVELS;
+    const panes = levels.flatMap((r) => levels.flatMap((g) => levels.map((b) => [r, g, b] as const)));
+    expect(panes).toHaveLength(27);
+    const light = rgb(pictures.STAINED_GLASS_LIGHT).map((channel) => channel * pictures.STAINED_GLASS_GLOW_OPACITY);
+    const lit = panes.map((pane) => of(pane.map((channel, at) => channel + (light[at] ?? 0) * (1 - channel))));
+    const leaded = lit.flatMap((pane) => steps.map((level) => along(pane, pictures.STAINED_GLASS_LEAD, level)));
+    // Neon sign: its tubes all along their range, and their glow over the wall at any strength.
+    const tubes = steps.map((level) => along(pictures.NEON_TUBE_DARK, pictures.NEON_TUBE_LIGHT, level));
+    const glow = tubes.flatMap((tube) => steps.map((level) => along(pictures.NEON_WALL, tube, level)));
+    // The wall showing a picture at its share: never lighter than the window's floor, whatever the picture.
+    const wall = [...greys, ...panes.map((pane) => of(pane))].map((color) => along(pictures.NEON_WALL, color, pictures.NEON_PICTURE_SHOW));
+    for (const color of [...night, ...glowing, ...duotone, ...printed, ...gouged, ...lit, ...leaded, ...tubes, ...glow, ...wall]) {
+      expect(inRadiantGold(color.slice(1)), color).toBe(false);
+    }
+    // The window does hold the Radiant face's own golds, so the test can fail.
+    expect(inRadiantGold("ffd24a")).toBe(true);
+  });
 });

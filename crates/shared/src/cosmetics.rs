@@ -60,7 +60,7 @@
 //! ([`level_of_pick`]), every older shape mapped to the level it drew.
 //!
 //! R3017000: #3017 appends six two-level variants, each an art level and its animated one: Night
-//! ([`VERSION_NIGHT_ID`]), Watercolour ([`VERSION_WATERCOLOUR_ID`]) and Woodcut ([`VERSION_WOODCUT_ID`]), Rare, and
+//! ([`VERSION_NIGHT_ID`]), Watercolor ([`VERSION_WATERCOLOR_ID`]) and Woodcut ([`VERSION_WOODCUT_ID`]), Rare, and
 //! Neon sign ([`VERSION_NEON_ID`]), Stained-glass window ([`VERSION_STAINED_GLASS_ID`]) and Tarot card
 //! ([`VERSION_TAROT_ID`]), Epic. R3017001: they make three pairs, each splitting every card between its two by one
 //! seed, a sample's `from` ([`OfferSample`]) taking the cards the other's percent leaves, so every card, Legacy ones
@@ -1209,9 +1209,9 @@ pub const VERSION_NIGHT_ID: &str = "version-night";
 /// R3017000: the Neon sign variant's first level, Epic: the card's own picture as glowing tubes on a dark wall.
 pub const VERSION_NEON_ID: &str = "version-neon";
 
-/// R3017000: the Watercolour variant's first level, Rare: a new picture of the card's subject in washes on paper.
+/// R3017000: the Watercolor variant's first level, Rare: a new picture of the card's subject in washes on paper.
 /// It pairs with Stained-glass window (R3017001).
-pub const VERSION_WATERCOLOUR_ID: &str = "version-watercolour";
+pub const VERSION_WATERCOLOR_ID: &str = "version-watercolor";
 
 /// R3017000: the Stained-glass window variant's first level, Epic: a new picture of the card's subject in leaded
 /// panes of flat colour.
@@ -4233,10 +4233,10 @@ mod tests {
             ],
         ),
         (
-            "watercolour",
+            "watercolor",
             &[
-                (VERSION_WATERCOLOUR_ID, Art, Rare),
-                ("version-watercolour-animated", Animated, Epic),
+                (VERSION_WATERCOLOR_ID, Art, Rare),
+                ("version-watercolor-animated", Animated, Epic),
             ],
         ),
         (
@@ -4265,7 +4265,7 @@ mod tests {
     /// R3017001: #3017's three pairs, each splitting every card between its two variants' first levels.
     const R3017001_PAIRS: [(&str, &str); 3] = [
         (VERSION_NIGHT_ID, VERSION_NEON_ID),
-        (VERSION_WATERCOLOUR_ID, VERSION_STAINED_GLASS_ID),
+        (VERSION_WATERCOLOR_ID, VERSION_STAINED_GLASS_ID),
         (VERSION_WOODCUT_ID, VERSION_TAROT_ID),
     ];
 
@@ -4663,7 +4663,9 @@ mod tests {
                 .collect::<Vec<_>>(),
             R3017000_LADDERS
                 .iter()
-                .flat_map(|(_, levels)| levels.iter().map(|(id, adds, rarity)| (*id, Some(*adds), *rarity)))
+                .flat_map(|(_, levels)| levels
+                    .iter()
+                    .map(|(id, adds, rarity)| (*id, Some(*adds), *rarity)))
                 .collect::<Vec<_>>()
         );
         for cosmetic in new {
@@ -4704,7 +4706,7 @@ mod tests {
         }
 
         // check_pick refuses each level where it is not offered, owned or not, and takes it where it is offered and
-        // owned: night, stained-glass and tarot on one card, neon, watercolour and woodcut on the other.
+        // owned: night, stained-glass and tarot on one card, neon, watercolor and woodcut on the other.
         const ONE: &str = "meditativeplus-026";
         const OTHER: &str = "core-002";
         let owned = OwnedCosmetics {
@@ -4777,7 +4779,10 @@ mod tests {
         let all: BTreeSet<&str> = defs.keys().map(String::as_str).collect();
         assert!(taken(&lower).is_disjoint(&taken(&upper)));
         assert_eq!(
-            taken(&lower).union(&taken(&upper)).copied().collect::<BTreeSet<_>>(),
+            taken(&lower)
+                .union(&taken(&upper))
+                .copied()
+                .collect::<BTreeSet<_>>(),
             all
         );
         assert!(!taken(&upper).is_empty() && !taken(&lower).is_empty());
@@ -4867,7 +4872,10 @@ mod tests {
         assert!(legacy > 0);
         for (variant, _) in R3017000_LADDERS {
             let animated = format!("{VERSION_ID_PREFIX}{variant}-animated");
-            assert!(!offered(by_id(&animated), Some(LEGACY_DUPLICATING_FELINORS)), "{animated}");
+            assert!(
+                !offered(by_id(&animated), Some(LEGACY_DUPLICATING_FELINORS)),
+                "{animated}"
+            );
         }
         // Each pair shares one seed, each clause of the first ending where the second's begins.
         for (a, b) in R3017001_PAIRS {
@@ -4934,7 +4942,11 @@ mod tests {
             assert!(cards.len() >= VERSION_OFFER_MIN_CARDS, "{}", cosmetic.id);
             for set in SHIPPED_SETS {
                 let in_set = cards.iter().filter(|card| defs[**card].set == set).count();
-                assert!(in_set >= VERSION_OFFER_MIN_PER_SET, "{} in {set}: {in_set}", cosmetic.id);
+                assert!(
+                    in_set >= VERSION_OFFER_MIN_PER_SET,
+                    "{} in {set}: {in_set}",
+                    cosmetic.id
+                );
             }
         }
     }

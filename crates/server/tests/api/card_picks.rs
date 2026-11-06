@@ -939,10 +939,10 @@ async fn r3017000_a_part_six_level_not_offered_is_400_and_writes_nothing() {
     .await;
     a_part_s_versions(
         PART_SIX,
-        &["version-neon", "version-watercolour", "version-woodcut"],
+        &["version-neon", "version-watercolor", "version-woodcut"],
         BARE,
         "version-woodcut",
-        &["version-neon", "version-watercolour"],
+        &["version-neon", "version-watercolor"],
         "version-neon-animated",
         "version-neon",
     )
