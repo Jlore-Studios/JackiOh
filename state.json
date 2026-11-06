@@ -33576,7 +33576,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-06T22:09:44Z",
         "every": 5,
+        "findings": 0,
         "head": "e89f19dfeacf05e6e74ff87c2fd1e6b9711acb85",
         "issue": 3228,
         "merged_at": "2026-11-06T21:48:58Z",
@@ -33589,12 +33591,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:37db9958-1794002458",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42301424402",
         "sha": "62504c103d770d14403520b85f39064d84bfcebc",
         "started_at": "2026-11-06T22:01:21Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: loading and empty states that keep the screen's frame and use the shared Skeleton and EmptyState",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 115
