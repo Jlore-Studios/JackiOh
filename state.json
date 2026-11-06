@@ -12683,11 +12683,6 @@
       "owner": "claude-4",
       "owner_since": "2026-11-06T03:52:58Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-06T04:59:14Z",
-        "interrupt": "usage",
-        "provider": "claude-4"
-      },
       "pending_request": false,
       "planned_at": "2026-11-06T04:24:28Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
