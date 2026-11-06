@@ -314,6 +314,47 @@ describe("R2035000 the landing's quests bookmark", () => {
     expect(screen.getByTestId(questsTestid.next)).toHaveTextContent("Next quest in 1:00:00");
   });
 
+  it("R3206000 the next quest falling due reads inside the window, and a visit inside it reads nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(NOW);
+    signIn();
+    const server = serve([
+      book({ quests: [quest()], nextDueAt: NOW + 2_000 }),
+      book({
+        quests: [
+          quest(),
+          quest({ questId: "traps-3", title: "Play 3 Traps", progress: 0, jlore: 60, xp: 3000 }),
+        ],
+        nextDueAt: NOW + 2_000 + 3_600_000,
+      }),
+    ]);
+    render(<LandingRoute />);
+    await act(async () => {
+      // The mount's read lands.
+    });
+    expect(questReads(server)).toBe(1);
+
+    // Two seconds on, well inside the window: the quest that fell due is read, not taken from the kept answer.
+    fireEvent.click(screen.getByTestId(landingTestid.questsBookmark));
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    await act(async () => {
+      // The due time's read lands.
+    });
+    expect(questReads(server)).toBe(2);
+    expect(screen.getAllByTestId(questsTestid.quest)).toHaveLength(2);
+
+    // The answer that read left is fresh: coming back to the landing inside the window sends no read.
+    cleanup();
+    render(<LandingRoute />);
+    await act(async () => {
+      // Whatever a mount would send has gone out.
+    });
+    expect(questReads(server)).toBe(2);
+    expect(screen.getByTestId(landingTestid.questsCount)).toHaveTextContent("2");
+  });
+
   it("R2035000 a failed read shows the alert and Try again in the panel, and Try again reads again", async () => {
     signIn();
     const server = serve([refusal(503, "unavailable", "the server refused"), book()]);

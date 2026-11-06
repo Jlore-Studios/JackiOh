@@ -17,7 +17,6 @@ import { CardFace, faceText } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
 import { useFullArt, useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
-import { glossaryFor } from "../rules.ts";
 import {
   PREVIEW_EXTENDED_WIDTH_PX,
   PREVIEW_GLOSSARY_GAP_PX,
@@ -39,7 +38,6 @@ import { useDefResolver } from "../refContext.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { ShortcutHint } from "../../shortcuts/Kbd.tsx";
 import type { Shortcut } from "../../shortcuts/shortcuts.ts";
-import { ascentLevelOf } from "../shortText.ts";
 import { OVERLAY_ROOT_PROPS } from "./store.ts";
 import { INSPECT_FACE, INSPECT_HOVER } from "./testids.ts";
 import "./inspect.css";
@@ -62,7 +60,7 @@ function estimatedSize(withGlossary: boolean, withRefs: boolean, withExtended: b
 
 export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }: HoverPreviewProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
-  const entries = glossaryFor(face);
+  const entries = face.glossary;
   const resolve = useDefResolver();
   const fullArtOn = useFullArt(face.defId);
   // R1655000: the viewer's own card's preview wears its cosmetics, as it prints its full art.
@@ -71,7 +69,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
   const notes = hasStateNotes(face);
   const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
   const side = notes || face.printed !== null || flavoured;
-  const ascentLevel = ascentLevelOf(face.values);
+  const ascentLevel = face.ascent;
   const extended = faceText(face, ascentLevel, fullArtOn).less;
   const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0, extended), prefer);
 

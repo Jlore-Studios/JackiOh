@@ -126,7 +126,8 @@ describe("#1577 the shop screen", () => {
       expect(calls.length, `${path} is read`).toBeGreaterThan(0);
       for (const call of calls) expect(call.headers.authorization, path).toBe(`Bearer ${TOKEN}`);
     }
-    expect(server.to("GET", "/api/packs"), "the shop's price and the opening's packs, once each").toHaveLength(2);
+    // R3206000: both panels ask at once, and one read answers both.
+    expect(server.to("GET", "/api/packs"), "the shop's price and the opening's packs share one read").toHaveLength(1);
   });
 
   it("a refused read says why on the screen, which keeps its heading", async () => {
@@ -205,7 +206,9 @@ describe("#1577 the shop screen", () => {
       "the opening holds the bought pack",
     ).toBeInTheDocument();
     expect(screen.queryByTestId(packTestid.none)).toBeNull();
-    expect(server.to("GET", "/api/packs")).toHaveLength(3);
+    // R3206000: the two panels' first reads were one, and the buy's answer folded into the kept packs,
+    // which the opening's read then found fresh: the screen shows what the server holds with one read.
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
 
     expect(await screen.findByTestId(shopTestid.cardBar, undefined, SLOW)).toHaveTextContent("149 / 150");
     fireEvent.click(await screen.findByTestId(shopTestid.open, undefined, SLOW));
@@ -347,7 +350,8 @@ describe("#1577 the /shop route through the route table", () => {
     expect(await screen.findByRole("heading", { name: "Shop" }, SLOW)).toBeInTheDocument();
     expect(await screen.findByTestId(shopTestid.wallet, undefined, SLOW)).toHaveTextContent("37 Jlore");
     expect(window.location.pathname).toBe(paths.shop);
-    expect(server.to("GET", "/api/packs")).toHaveLength(2);
+    // R3206000: the shop's panel and the opening's share the one read.
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
   });
 
   it("R1310000 an active account the server does not list as dev opens its card packs on the Shop", async () => {

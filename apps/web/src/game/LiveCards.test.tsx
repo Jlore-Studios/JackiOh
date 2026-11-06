@@ -10,14 +10,12 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  CONCEALED_TEXT,
   CardDetail,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
   INSPECT_HOVER,
   INSPECT_PRINTED,
-  VANILLA_TEXT,
   closeInspect,
 } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
@@ -60,6 +58,10 @@ function text(root: Element, selector: string): string {
 }
 
 /* match-made cards */
+
+/** What a Call to Chaos card and a Vanilla unit print in play (jackioh-shared `face/power.rs`). */
+const CONCEALED_TEXT = "???";
+const VANILLA_TEXT = "Vanilla: its text is gone";
 
 describe("R243 a fused card says what it is: name, text, tags, keywords and stats, never a blank face", () => {
   // #99 Craft a Card's result in hand, and #85's fusion of a played unit onto one on the field.

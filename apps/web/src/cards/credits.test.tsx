@@ -12,7 +12,7 @@ import type { CardDef } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
 import { flushFits } from "./fit.ts";
-import { creditsLine, faceModel } from "./model.ts";
+import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 
@@ -63,7 +63,7 @@ describe("R2521009 a Resource's face prints its Credits", () => {
     const korrelite = def(KORRELITE);
     const inHand = faceModel({ defId: KORRELITE, def: korrelite, radiant: false, liveCost: 0, inPlay: {} });
     expect(inHand.inPlay).toBe(true);
-    expect(creditsLine(inHand)).toBe("Credits: 2–5");
+    expect(inHand.creditsLine).toBe("Credits: 2–5");
   });
 
   it("R2521009 a card that is no Resource prints no Credits line on either face", () => {
@@ -72,7 +72,7 @@ describe("R2521009 a Resource's face prints its Credits", () => {
     for (const radiant of [false, true]) {
       const face = faceModel({ defId: NO_RESOURCE, def: card, radiant });
       expect(face.credits).toBeNull();
-      expect(creditsLine(face)).toBe("");
+      expect(face.creditsLine).toBe("");
       expect(printedCredits(NO_RESOURCE, radiant)).toBeNull();
     }
     // A card nobody can name has no definition, so no prices either.
@@ -83,7 +83,7 @@ describe("R2521009 a Resource's face prints its Credits", () => {
     for (const card of Object.values(CATALOG)) {
       for (const radiant of [false, true]) {
         const price = card.resource === undefined ? undefined : radiant ? card.resource.radiant : card.resource.base;
-        const line = creditsLine(faceModel({ defId: card.id, def: card, radiant }));
+        const line = faceModel({ defId: card.id, def: card, radiant }).creditsLine;
         expect(line, `${card.id} ${radiant ? "radiant" : "base"}`).toBe(
           price === undefined ? "" : `Credits: ${String(price.sellMin)}–${String(price.sellMax)}`,
         );
@@ -93,6 +93,6 @@ describe("R2521009 a Resource's face prints its Credits", () => {
 
   it("R2521009 a Chinese reader reads the line in Chinese, with the same numbers", async () => {
     await setLocale("zh-CN");
-    expect(creditsLine(faceModel({ defId: KORRELITE, def: def(KORRELITE), radiant: true }))).toBe("信用点：4–10");
+    expect(faceModel({ defId: KORRELITE, def: def(KORRELITE), radiant: true }).creditsLine).toBe("信用点：4–10");
   });
 });

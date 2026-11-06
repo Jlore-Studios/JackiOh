@@ -6,7 +6,7 @@
 import type { CardView, GameEvent, Keyword, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { TEMPORARY_GLYPH } from "../../cards/cardState.ts";
+const TEMPORARY_GLYPH = "\u231B\uFE0E";
 import { KEYWORD_CALLOUT_ICONS } from "../../cards/keywordVisuals.ts";
 import { animTestid, planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { testid } from "../../game/contract.ts";

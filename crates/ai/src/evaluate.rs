@@ -33,10 +33,10 @@ use jackioh_engine::{
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
     card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
     exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering, is_standing_unit,
-    is_starship_piece, is_temporary_card, launched_starship_of, left_field_after, legal_actions,
-    lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at,
-    playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
+    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
+    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
+    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
+    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
     stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
     unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
 };
@@ -907,8 +907,17 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
 /// Taunts soak the smallest first (`damage_past_taunts`); each remaining attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
+/// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
+/// Gauntlet, R1849005) lands nothing past the Taunts.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
+    // R1849005, #3287: while The Gauntlet acts, `attack_restriction` bars a Unit in its lanes from the hero.
+    // The board is asked once; a unit's restriction only then, so a board with no Gauntlet reads as before
+    // (`active_units_of` and `can_swing` already drop the other refusals, Dormant and "can't attack").
+    let gauntlet = w.gauntlet_bars_face_attacks && gauntlet_acts(state);
+    let hero = AttackTarget::Hero {
+        player: attacker.opponent(),
+    };
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
         let ready = view.position == Position::Atk || (w.deft_defense_attacks && deft_in_defense(&view));
@@ -919,9 +928,10 @@ pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) 
             continue;
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
-        // Nor is it summoning sick then, so every swing may hit the hero.
+        // Nor is it summoning sick then, so only a restriction (`may_hit_hero`) keeps a swing off the hero.
+        let may_hit_hero = !gauntlet || attack_restriction(state, unit, &hero).is_ok();
         for _ in 0..attacks_per_turn(state, unit) {
-            attacks.push((unit, view.attack, true));
+            attacks.push((unit, view.attack, may_hit_hero));
         }
     }
     damage_past_taunts(state, attacker.opponent(), &attacks)
