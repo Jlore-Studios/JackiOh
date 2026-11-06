@@ -18010,6 +18010,15 @@
       "failures": 0,
       "feedback_since": "2026-11-06T06:45:27Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-06T07:39:01Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "\n## State (CI fix)\nCI web unit 1/8 failed: surfaces.test.ts UNTOKENED_SURFACES auth/tavern.css 59 -> 56 (deleted .panel--auth h2 rules). Lowered it; surfaces, palette, typescale, page-title tests green locally.\n",
+        "provider": "claude-7",
+        "reason": "built and checked; its own review run, on this subscription, reviews it next",
+        "trail": "- Bash: {\"command\": \"git status --short | head; pnpm --dir apps/web exec vitest run src/surfaces.test.ts 2>&1 | tail -40\", \"timeout\": 400000}\n- Bash: {\"command\": \"cd apps/web && grep -n 'tavern.css' src/surfaces.test.ts; git log --oneline -3 -- src/surfaces.test.ts; git diff origin/main -- src/surfaces.test.ts | head; sed -n 250,300p src/surfaces.\u2026\n- Bash: {\"command\": \"sed -i '43s/59/56/' src/surfaces.test.ts && sed -n 41,45p src/surfaces.test.ts; (sh ../../scripts/build-wasm.sh >/tmp/wasm.log 2>&1; tail -3 /tmp/wasm.log)\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3272 && pnpm --dir apps/web exec vitest run src/surfaces.test.ts src/palette.test.ts src/typescale.test.ts src/routes/page-title.test.ts 2>&1 | tail \u2026\n- Bash: {\"command\": \"printf '\\\\n## State (CI fix)\\\\nCI web unit 1/8 failed: surfaces.test.ts UNTOKENED_SURFACES auth/tavern.css 59 -> 56 (deleted .panel--auth h2 rules). Lowered it; surfaces, palette, typesc\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one page-title treatment for every menu screen\"} --> # Patch: one page-title treatment for every menu screen Closes #3223 ## What changed Every menu screen now names itself with one `PageTitle`. It is the screen's only `h1`, set in `--font-display` at `\u2026"
+      },
       "interruptions": 0,
       "issue": 3223,
       "kind": "revise",
