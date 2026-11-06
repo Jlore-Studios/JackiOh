@@ -23,7 +23,8 @@ import {
 import { flightsMs } from "../economy/bars.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
+import { keptPaths, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { expireRead } from "../net/readCache.ts";
 import { whileSpending } from "../net/spending.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { expectEmptyState } from "../test/empty.ts";
@@ -844,6 +845,8 @@ describe("#1308 the card packs panel", () => {
 
     // Another panel bought a pack: the page asks this one to read again.
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
+    // R3206000: the kept packs are inside the window and the opening folded into them; this read is the one after it.
+    expireRead(TOKEN, keptPaths.packs);
     rerender(<PackOpening token={TOKEN} revision={1} onChanged={onChanged} />);
     await waitFor(() => {
       expect(server.to("GET", "/api/packs")).toHaveLength(2);
@@ -1106,19 +1109,19 @@ describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
     expect(screen.getByTestId(T.equip(2))).toBeDisabled();
   });
 
-  it("R1955000 a full art's Equip turns that card's full art on", () => {
+  it("R1955000 R3015005 a retired full art's Equip, an opening's from before #3015, wears Full art's first level", () => {
     torn();
     fireEvent.click(screen.getByTestId(T.flip(2)));
     expect(readCardPicks("core-004").fullArt).toBeUndefined();
 
     fireEvent.click(screen.getByTestId(T.equip(2)));
-    expect(readCardPicks("core-004").fullArt).toBe(true);
+    expect(readCardPicks("core-004").fullArt).toBe("version-full-art");
     expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
     expect(screen.getByTestId(T.equip(2))).toBeDisabled();
   });
 
-  it("R2655000 a chase full art's Equip picks that tier", () => {
-    // The card wears its Epic already: the Mythic it just drew is still one to equip.
+  it("R2655000 R3015005 a retired chase full art's Equip picks the level it maps to", () => {
+    // The card wears its Epic already: the Mythic it drew before #3015 is still one to equip, as Full art's signed level.
     writeCardFullArt("core-004", true);
     torn({ opened: granting({ kind: "cosmetic", cosmeticId: "full-art-gary-the-gambler-signed", cosmeticRarity: "Mythic" }) });
     fireEvent.click(screen.getByTestId(T.flip(2)));
@@ -1126,13 +1129,13 @@ describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
     expect(screen.getByTestId(T.equip(2))).toBeEnabled();
 
     fireEvent.click(screen.getByTestId(T.equip(2)));
-    expect(readCardPicks("core-004").fullArt).toBe("full-art-gary-the-gambler-signed");
+    expect(readCardPicks("core-004").fullArt).toBe("version-full-art-signed");
     expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
     expect(screen.getByTestId(T.equip(2))).toBeDisabled();
   });
 
-  it("R2715000 an Animated art's Equip picks it by its id", () => {
-    // The card wears its Epic already: the Animated art it just drew is still one to equip.
+  it("R2715000 R3015005 a retired Animated art's Equip picks the Default variant's animated level", () => {
+    // The card wears its Epic already: the Animated art it drew before #3015 is still one to equip, as Default's level 2.
     writeCardFullArt("core-004", true);
     torn({ opened: granting({ kind: "cosmetic", cosmeticId: "animated-gary-the-gambler", cosmeticRarity: "Epic" }) });
     fireEvent.click(screen.getByTestId(T.flip(2)));
@@ -1140,9 +1143,29 @@ describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
     expect(screen.getByTestId(T.equip(2))).toBeEnabled();
 
     fireEvent.click(screen.getByTestId(T.equip(2)));
-    expect(readCardPicks("core-004").fullArt).toBe("animated-gary-the-gambler");
+    expect(readCardPicks("core-004").fullArt).toBe("version-animated");
     expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
     expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
+  it("R3015003 an out-of-order pull says it granted every level below it, an in-order one does not", () => {
+    torn({
+      opened: granting(
+        {
+          kind: "cosmetic",
+          cosmeticId: "version-full-art-signed",
+          cosmeticRarity: "Mythic",
+          below: ["version-full-art", "version-full-art-animated"],
+        },
+        { kind: "cosmetic", cosmeticId: "version-full-art", cosmeticRarity: "Legendary" },
+      ),
+    });
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    expect(screen.getByTestId(T.below(2))).toHaveTextContent("and every level below it");
+    expect(screen.queryByTestId(T.below(3)), "the next level alone").toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCardPicks("core-004").fullArt, "the level granted, not one below it").toBe("version-full-art-signed");
   });
 
   it("R1955000 skip-all shows every Equip at once; an account cosmetic writes the account's pick, a portrait, a card and bars offer none", () => {

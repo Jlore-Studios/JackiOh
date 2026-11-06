@@ -33,7 +33,7 @@ Every issue carries at least one type label:
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
 | `tracking` | A tracker, the production issue (beside `production merge`) and the status issues (the night bot's status issue, #148, and its usage issue, #2749): the bots may comment on one and rewrite their own, but never queue, plan, build or split it, nor adopt it as a fullsend tree, whatever else it is labelled. The night bot puts it on its status issue and on the open production issue itself (#2748) |
-| `production merge` | The production issue `promote-production.yml` keeps open (`Production: …`, with the queue of what is not live yet; a fresh one takes over each week, and the closed ones are its history) and the pull requests that promote main into production, which the super run tests. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Production moves only on a comment: `/promote [sha]`, `/skip-super <reason>` (the emergency way, past the super run) and `/cancel` (`docs/deploy-cloudflare.md`, section 2.1); staging deploys every green commit of main by itself |
+| `production merge` | The production issue `promote-production.yml` keeps open (`Production: …`, with the queue of what is not live yet; a fresh one takes over each week, and the closed ones are its history) and the pull requests that promote main into production, which the super run tests. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Production moves once a day by itself, from the daily super run on the `staging` branch, and sooner on a comment: `/promote [sha]`, `/skip-super <reason>` (the emergency way, past the super run) and `/cancel` (`docs/deploy-cloudflare.md`, section 2.1); `staging` moves by itself every two hours to main's newest green commit (`promote-staging.yml`, #3275) |
 
 A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
 (`cargo jackioh classify`, R1365000), which CI's `rust (classify)` puts on and keeps up to date with
@@ -359,7 +359,8 @@ part that narrows the task shows the gap instead of hiding it.
   toggle) and its change, never from a pull request's title, and never say what the game does not
   do yet.
 - **Today's words.** Deck and Tribute, "(N) Cost" and "costs (N)", Nerf and Buff (R373, R432,
-  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
+  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json` and every pending
+  fragment's, so an old word fails the fragment's own pull request, not its promotion.
 - **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
   (`apps/web/src/patches/releases.ts`), with a summary and its technical changes. The line opens at
   its major, the n-th major the n-th line (R1369000), so no version is written there. A set the owner

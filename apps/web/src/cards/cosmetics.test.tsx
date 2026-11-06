@@ -58,21 +58,25 @@ import {
   type CosmeticId,
   type CosmeticKind,
 } from "./cosmetics.ts";
-import { FullArtOwned, OwnCopy } from "./fullArt.ts";
+import { FullArtOwned, OwnCopy, artMotionOf } from "./fullArt.ts";
 import {
-  AUGMENT_ANIMATED_ID,
-  AUGMENT_SIGNATURE_ID,
   VERSION_ALT_FULL_ART_ID,
+  VERSION_ALT_FULL_ART_SIGNED_ID,
+  VERSION_ANIMATED_ID,
   VERSION_FULL_ART_ID,
+  VERSION_FULL_ART_SIGNED_ID,
   VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
+  VERSION_SKETCH_FULL_ART_SIGNED_ID,
+  isFullBleed,
+  lookOfLevel,
   offeredOn,
 } from "./versions.ts";
-import { FULL_ART_MOTION, SIGNATURE_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
+import { FULL_ART_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
 import * as pictures from "./art/pictures.ts";
-import { COMIC_DOT_OPACITY, COMIC_INK, COMIC_LEVELS, PIXEL_LEVELS, SKETCH_INK, SKETCH_PAPER, artSeedOf, comicSvg, pixelSvg, sketchSvg, type ShowcaseFamily } from "./art/pictures.ts";
+import { COMIC_DOT_OPACITY, COMIC_INK, COMIC_LEVELS, PIXEL_LEVELS, SKETCH_INK, SKETCH_PAPER, comicSvg, pixelSvg, sketchSvg, type ShowcaseFamily } from "./art/pictures.ts";
 import { PIXEL_NAME_INK, PIXEL_NAME_SHADOW } from "./pixelName.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
@@ -82,7 +86,7 @@ import { INSPECT_FACE, INSPECT_FACE_BASE, INSPECT_FACE_RADIANT } from "./inspect
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -1336,16 +1340,25 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
           // its tier's class, which CardFace sets on every full face of that tier (fullArtTiers.test.tsx).
           expect(animates(cosmeticsCss, '.cf.cf-full-art--animated[data-full-art-motion="animated"] '), id).toBe(true);
           break;
-        case "version":
+        case "version": {
           // R2725000: the Full art version is still, as the Epic full art was; Animated moves it (R2725003). R2940002:
           // so is Alt full art, which Animated moves as it does Full art; R2943002: and Set showcase and Out of frame;
           // R2944002: and Prismatic. Immersive's depth moves by itself, by its attribute, which CardFace sets on every
-          // full face wearing it (versionLooks5.test.tsx).
+          // full face wearing it (versionLooks5.test.tsx). R3015000: every animated level moves its picture's own
+          // layers by its card's motion, drawn inside the picture (art/motion.ts, motion.test.ts), and a full-art one
+          // its band too; a signed level signs itself by its class on the face.
+          const look = lookOfLevel(id);
+          const card = COSMETIC_OFFERS[id]?.[0] ?? "";
           if (id === VERSION_IMMERSIVE_ID) expect(animates(cardsCss, '.cf[data-immersive-motion="animated"] '), id).toBe(true);
+          else if (look.signed) expect(animates(cosmeticsCss, '.cf.cf-full-art--signed[data-full-art-motion="animated"] '), id).toBe(true);
+          else if (look.animated && isFullBleed(id)) expect(animates(cosmeticsCss, '.cf.cf-full-art--animated[data-full-art-motion="animated"] '), id).toBe(true);
+          else if (look.animated) expect(artMotionOf(card), `${id} on ${card}`).not.toBeNull();
           else expect([VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PRISMATIC_ID]).toContain(id);
           break;
+        }
         case "augment":
-          // R2725000: the Signature signs itself wherever it is worn, by its class on the face.
+          // R2725000: the Signature signs itself wherever it is worn, by its class on the face. R3015000: retired, kept
+          // with its owners; a signed level signs by the same class.
           expect(animates(cosmeticsCss, '.cf.cf-full-art--signed[data-full-art-motion="animated"] '), id).toBe(true);
           break;
         default:
@@ -1450,8 +1463,9 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     // The window does hold the Radiant face's own golds, so the test can fail.
     expect(inRadiantGold("ffd24a") && inRadiantGold("f6d77a")).toBe(true);
 
-    // R2725000: a card offered Animated with no motion of its own borrows one that draws no gold particle.
-    const borrowers = ["core-022", "core-083", "classic-044", "stinkyscape-001"].filter((id) => offeredOn(AUGMENT_ANIMATED_ID, id) && FULL_ART_MOTION[id] === undefined);
+    // R2725000: a card offered Animated (R3015000: an animated level) with no motion of its own borrows one that draws no
+    // gold particle.
+    const borrowers = ["core-022", "core-083", "classic-044", "stinkyscape-001"].filter((id) => offeredOn(VERSION_ANIMATED_ID, id) && FULL_ART_MOTION[id] === undefined);
     expect(borrowers.length).toBeGreaterThan(1);
     for (const id of borrowers) {
       const markup = particleMarkup(artMotionFor(id), id);
@@ -1471,15 +1485,20 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     expect(levels.length).toBe(PROFICIENCY_LEVELS - 1);
   });
 
-  it("R2949000 the Signature look's colours are clear of the Radiant gold window", () => {
-    // Its motion's particles, the signature's ink, on every card it is offered on, placed by the look's own seed.
-    const cards = Object.keys(CATALOG).filter((id) => offeredOn(AUGMENT_SIGNATURE_ID, id));
+  it("R2725004 R3015002 a signed level's motion draws no gold on any card but a full-art card, whose own motion it keeps", () => {
+    // R3015002 replaces R2949000's Signature look, its ink motion included: a signed level moves by its card's one motion,
+    // so on every card it is offered on but the 21, whose own motions they kept (R2715001), it borrows one with no gold
+    // particle, placed by the card's own id.
+    const signed = [VERSION_FULL_ART_SIGNED_ID, VERSION_ALT_FULL_ART_SIGNED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID];
+    const cards = Object.keys(CATALOG).filter((id) => signed.some((level) => offeredOn(level, id)) && FULL_ART_MOTION[id] === undefined);
     expect(cards.length).toBeGreaterThan(0);
     for (const id of cards) {
-      const markup = particleMarkup(SIGNATURE_MOTION, artSeedOf(id, "signature"));
-      const colors = hexes(markup);
+      const motion = artMotionOf(id);
+      expect(motion, id).not.toBeNull();
+      if (motion === null) continue;
+      const colors = hexes(particleMarkup(motion, id));
       expect(colors.length, id).toBeGreaterThan(0);
-      for (const hex of colors) expect(inRadiantGold(hex), `${id}'s Signature particles: #${hex}`).toBe(false);
+      for (const hex of colors) expect(inRadiantGold(hex), `${id}'s signed level's particles: #${hex}`).toBe(false);
     }
   });
 

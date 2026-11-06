@@ -61,10 +61,15 @@ fn replay_json(input: Value) -> Result<Value> {
         return duos_json(input);
     }
     let shipped = pinned_catalog(&input, jackioh_cards::versions::scheme_of(&input))?;
-    let args: FoldArgs = serde_json::from_value(input).context("the input is not {seed, decks, log, …}")?;
-    if args.custom_cards.as_ref().is_some_and(|cards| !cards.is_empty()) {
+    // The engine has no custom cards (#2956), so a stored game that carries some would fold as a
+    // different game, or not at all: refused here, by the key it was stored under.
+    if input["customCards"]
+        .as_array()
+        .is_some_and(|cards| !cards.is_empty())
+    {
         bail!("the game carries custom cards, which are removed (#2956): it is not folded");
     }
+    let args: FoldArgs = serde_json::from_value(input).context("the input is not {seed, decks, log, …}")?;
     let folded = with_shipped(shipped, || fold(&args));
     Ok(json!({
         "hash": hash_state(&folded.state),

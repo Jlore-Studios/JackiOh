@@ -13,7 +13,15 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
-import { forgetRead, rememberRead, updateCachedRead } from "./readCache.ts";
+import {
+  forgetRead,
+  freshRead,
+  keepRead,
+  noteWrite,
+  rememberRead,
+  updateCachedRead,
+  writeEpoch,
+} from "./readCache.ts";
 import { whileSpending } from "./spending.ts";
 
 const DEFAULT_HTTP_URL = "http://localhost:8787";
@@ -121,11 +129,27 @@ function errorBodyOf(value: unknown, status: number): ApiErrorBody {
   return { code: "internal", message: `the server answered ${String(status)}` };
 }
 
-/** One request: the parsed body on 2xx, else `ApiRequestError`, so no caller checks `response.ok`. */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+const signedInListeners = new Set<() => void>();
+
+/**
+ * R3210000: hears every request that carries a token as it goes out; the server counts each as presence
+ * (`together/presence.ts`). Answers the function that stops hearing. A read that joins one already out
+ * (R3206000) or is answered by a fresh kept answer sends nothing, so it is not heard: the server did not
+ * see it either.
+ */
+export function onSignedInRequest(listener: () => void): () => void {
+  signedInListeners.add(listener);
+  return () => {
+    signedInListeners.delete(listener);
+  };
+}
+
+/** One request, as it goes out: the parsed body on 2xx, else `ApiRequestError`, so no caller checks `response.ok`. */
+async function send<T>(path: string, options: RequestOptions): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.token !== undefined && options.token !== null && options.token.length > 0) {
     headers.authorization = `Bearer ${options.token}`;
+    for (const listener of signedInListeners) listener();
   }
   if (options.body !== undefined) headers["content-type"] = "application/json";
   if (options.idempotencyKey !== undefined) headers["idempotency-key"] = options.idempotencyKey;
@@ -184,6 +208,72 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   return parsed as T;
 }
 
+/** A `GET` of one account's path that is out, and how many callers still wait on it. */
+type Flight = { controller: AbortController; waiting: number; answer: Promise<unknown> };
+
+const flights = new Map<string, Flight>();
+
+/**
+ * R3206000: a `GET` while one of the same path and token is out waits on that one's answer instead of
+ * sending another. The read runs on its own controller, which the last caller to leave aborts, so one
+ * caller's abort never reaches the others'. The write count (`writeEpoch`) is in the key: a read asked
+ * after a write never joins one sent before it.
+ */
+async function sharedGet<T>(path: string, token: string | null | undefined, outer: AbortSignal | undefined): Promise<T> {
+  if (outer?.aborted === true) throw new ApiUnreachableError(outer.reason);
+  const key = `${String(writeEpoch())}\n${token ?? ""}\n${path}`;
+  let flight = flights.get(key);
+  if (flight === undefined) {
+    const controller = new AbortController();
+    const made: Flight = { controller, waiting: 0, answer: send<unknown>(path, { token, signal: controller.signal }) };
+    flights.set(key, made);
+    const settled = (): void => {
+      if (flights.get(key) === made) flights.delete(key);
+    };
+    void made.answer.then(settled, settled);
+    flight = made;
+  }
+  const mine = flight;
+  mine.waiting += 1;
+  if (outer === undefined) return (await mine.answer) as T;
+
+  let onAbort = (): void => undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => {
+      mine.waiting -= 1;
+      if (mine.waiting === 0) {
+        mine.controller.abort();
+        if (flights.get(key) === mine) flights.delete(key);
+      }
+      reject(new ApiUnreachableError(outer.reason));
+    };
+  });
+  outer.addEventListener("abort", onAbort, { once: true });
+  try {
+    return (await Promise.race([mine.answer, aborted])) as T;
+  } finally {
+    outer.removeEventListener("abort", onAbort);
+  }
+}
+
+/**
+ * One request: the parsed body on 2xx, else `ApiRequestError`, so no caller checks `response.ok`. A `GET`
+ * shares a read of the same path and token that is already out (R3206000); anything else is sent as it
+ * is and never shared. A spend (the one request that sends an `Idempotency-Key`, R2124000) counts as a
+ * write once it settles, answer or refusal: one that failed may still have run, so a read out beside it
+ * is not kept. Any other write counts only when its caller folds, remembers or drops a kept read.
+ */
+export function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const isRead =
+    (options.method ?? "GET") === "GET" &&
+    options.body === undefined &&
+    options.keepalive !== true &&
+    options.idempotencyKey === undefined;
+  if (isRead) return sharedGet<T>(path, options.token, options.signal);
+  const sent = send<T>(path, options);
+  return options.idempotencyKey === undefined ? sent : sent.finally(noteWrite);
+}
+
 /**
  * R2125000: the menu reads whose last answer is kept (`net/readCache.ts`), by path; also `cardStatsPath`
  * and `FRIENDS_PATH` (`net/social.ts`). Nothing a match, a duos room, a watch or a replay reads is here.
@@ -201,11 +291,23 @@ export const keptPaths = {
   leaderboard: "/api/leaderboard",
 } as const;
 
-/** R2125000: a `GET` whose answer is kept for the next visit. A refusal or a failed read keeps what was there. */
+/**
+ * R2125000: a `GET` whose answer is kept for the next visit. A refusal or a failed read keeps what was
+ * there. R3206000: an answer younger than `READ_CACHE_FRESH_MS` is the answer, and no read is sent; and
+ * one that finished after a write landed is not kept, since it may show what the write has changed.
+ */
 async function keptGet<T>(path: string, token: string | null, signal?: AbortSignal): Promise<T> {
+  const fresh = freshRead<T>(token, path);
+  if (fresh !== undefined) return fresh;
+  const epoch = writeEpoch();
   const answer = await apiRequest<T>(path, { token, signal });
-  rememberRead(token, path, answer);
+  if (writeEpoch() === epoch) keepRead(token, path, answer);
   return answer;
+}
+
+/** R3206000: drops the kept answers a write changed and its own answer does not carry. */
+function forgetReads(token: string, paths: readonly string[]): void {
+  for (const path of paths) forgetRead(token, path);
 }
 
 // R2124000: a spend runs once. Every spend sends an `Idempotency-Key` minted at the press and resent by
@@ -487,7 +589,8 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
 /**
  * One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt`
  * may be false, true (the Epic) or a full art's id (R2655000) or a version's (R2725000), `augments` the
- * augment ids layered on it.
+ * augment ids layered on it. R3015005: a pick written since #3015 is one level's id and no augments; an older
+ * one is read by versions.ts's `levelOfPick`.
  */
 export type CardPicksEntry = {
   cardId: string;
@@ -604,6 +707,8 @@ export type PacksResponse = {
     flooredSlot: TierOdds;
     duplicateCosmetic: TierOdds;
     globalCosmetic: { chance: number; tiers: TierOdds };
+    /** R3015003: the chance, where a higher level of a variant is left, that a pull drops it and every level below it instead of the next. */
+    levelSkip: number;
   };
   /** One entry per kind of pack held (a shipped set's name, or `global`), the global pack first. */
   unopened: { pack: string; count: number }[];
@@ -612,7 +717,13 @@ export type PacksResponse = {
 /** What a slot became (R1301002). A cosmetic's rarity is its own scale, never the slot's card's (R1333000). */
 export type PackSlotGrant =
   | { kind: "card" }
-  | { kind: "cosmetic"; cosmeticId: string; cosmeticRarity: CosmeticRarity }
+  | {
+      kind: "cosmetic";
+      cosmeticId: string;
+      cosmeticRarity: CosmeticRarity;
+      /** R3015003: the levels granted with it, lowest first, by an out-of-order pull; absent when none. */
+      below?: string[];
+    }
   | { kind: "bars"; cosmeticRarity: CosmeticRarity };
 
 export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotGrant };
@@ -671,6 +782,8 @@ export async function openPack(token: string, pack: string): Promise<OpenedPackR
     pity: answer.pity,
     unopened: withUnopened(before.unopened, answer.pack, answer.unopened),
   }));
+  // R3206000: the opening granted cards, cosmetics, token points and maybe a cosmetic pack.
+  forgetReads(token, [keptPaths.collection, keptPaths.cosmetics, keptPaths.tokens, keptPaths.cosmeticPacks]);
   return answer;
 }
 
@@ -739,6 +852,8 @@ export function getTokens(token: string): Promise<TokenBarsResponse> {
 export async function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
   const answer = await spendRequest<TokenBarsResponse>("/api/tokens/redeem-card", token, { cardId });
   rememberRead(token, keptPaths.tokens, answer);
+  // R3206000: the card is in the collection now.
+  forgetReads(token, [keptPaths.collection]);
   return answer;
 }
 
@@ -758,6 +873,8 @@ export async function redeemCosmeticToken(
     cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
   );
   rememberRead(token, keptPaths.tokens, answer);
+  // R3206000: the cosmetic is owned now.
+  forgetReads(token, [keptPaths.cosmetics]);
   return answer;
 }
 
@@ -765,7 +882,8 @@ export async function redeemCosmeticToken(
 export type CosmeticPacksResponse = {
   shardBar: TokenBarState;
   unopened: number;
-  odds: { slot: TierOdds; flooredSlot: TierOdds };
+  /** R3015003 `levelSkip`: as `PacksResponse`'s. */
+  odds: { slot: TierOdds; flooredSlot: TierOdds; levelSkip: number };
 };
 
 export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
@@ -782,6 +900,8 @@ export type CosmeticSlotGrant =
       cardId: string | null;
       /** Whether the account lacked that card, so the slot grants it too. */
       cardGranted: boolean;
+      /** R3015003: the levels granted with it, lowest first, by an out-of-order pull; absent when none. */
+      below?: string[];
     }
   | { kind: "bars" };
 
@@ -803,6 +923,8 @@ export async function openCosmeticPack(token: string): Promise<OpenedCosmeticPac
     shardBar: answer.shardBar,
     unopened: answer.unopened,
   }));
+  // R3206000: the opening granted cosmetics, maybe a card, and token points.
+  forgetReads(token, [keptPaths.collection, keptPaths.cosmetics, keptPaths.tokens]);
   return answer;
 }
 
@@ -814,6 +936,8 @@ export async function buyChase(token: string, cosmeticId: string, cardId?: strin
     cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
   );
   rememberRead(token, keptPaths.cosmeticPacks, answer);
+  // R3206000: the cosmetic is owned now, and its card with it when the account lacked it.
+  forgetReads(token, [keptPaths.collection, keptPaths.cosmetics]);
   return answer;
 }
 
@@ -862,6 +986,23 @@ const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>>
   // One inventory item: the tokens' `cosmeticPack` and the cosmetic packs' `unopened`.
   cosmeticPack: [keptPaths.tokens, keptPaths.cosmeticPacks],
 };
+
+/**
+ * R3206000: what a game's payout (Jlore, XP, a level's or a quest's reward) and its ladder move change,
+ * which no answer carries: the wallet, the quests, the tracks, the packs held, the tokens and both
+ * ladders' boards. Dropped when a paid result arrives (`economy/wallet.ts` `announceWallet`).
+ */
+export function forgetPaidReads(token: string): void {
+  forgetReads(token, [
+    keptPaths.wallet,
+    keptPaths.quests,
+    keptPaths.tracks,
+    keptPaths.packs,
+    keptPaths.tokens,
+    ladderPath(keptPaths.leaderboard, "constructed"),
+    ladderPath(keptPaths.leaderboard, "random"),
+  ]);
+}
 
 /** `POST /api/news/:id/claim` (R2875000): a spend, so it sends an `Idempotency-Key` (R2124000). */
 export async function claimNews(token: string, id: string): Promise<NewsResponse> {

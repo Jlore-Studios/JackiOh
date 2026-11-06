@@ -31,7 +31,6 @@ const NAMES = [
   "rust_server",
   "rust_ai",
   "rust_ai_slow",
-  "rust_luau",
   "rust_tools_wasm",
   "web",
   "web_promote",
@@ -50,7 +49,6 @@ const RUST = [
   "rust_server",
   "rust_ai",
   "rust_ai_slow",
-  "rust_luau",
   "rust_tools_wasm",
 ] as const satisfies readonly Name[];
 
@@ -201,9 +199,11 @@ describe("scripts/ci-scope.sh", () => {
     ".github/workflows/ci.yml",
     ".github/workflows/super.yml",
     ".github/coverage-floor.txt",
-    // promote-production.test.ts runs the script and reads the workflow.
+    // promote-production.test.ts runs the script and reads the workflow; promote-staging.test.ts too.
     ".github/workflows/promote-production.yml",
     "scripts/promote-production.sh",
+    ".github/workflows/promote-staging.yml",
+    "scripts/promote-staging.sh",
     // Staging's deploy, and the live check it shares with production's.
     ".github/workflows/deploy-staging.yml",
     ".github/actions/poll-live/action.yml",
@@ -367,10 +367,6 @@ describe("scripts/ci-scope.sh", () => {
         "crates/engine/clippy.toml",
         "rustfmt.toml",
         ".cargo/config.toml",
-        // The same job runs luau-analyze over the card scripts' typed module (#442 L10).
-        "crates/cards/luau/jackioh.luau",
-        "crates/luau/src/kit/kit.luau",
-        "crates/cards/src/scripts/.luaurc",
       ],
       off: ["apps/web/src/main.tsx", "crates/cards/catalog.json", "crates/server/migrations/0034_new.sql", "docs/architecture.md"],
     },
@@ -384,9 +380,9 @@ describe("scripts/ci-scope.sh", () => {
         "crates/shared/src/series.rs",
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
-        "crates/luau/Cargo.toml",
-        // Every cargo command loads a manifest; nothing in the web builds or loads the C module itself (#3093).
+        // `web (wasm c module)` builds the C module and reads its imports (#3093, #3097).
         "crates/wasm/c/Cargo.toml",
+        "crates/wasm/c/src/lib.rs",
         "crates/server/src/env.rs",
         // apps/edge's config test holds the probe routes the Worker calls.
         "crates/server/src/app.rs",
@@ -409,13 +405,12 @@ describe("scripts/ci-scope.sh", () => {
       off: [
         "crates/server/src/api/queue.rs",
         "crates/tools/src/fuzz.rs",
-        "crates/luau/src/lib.rs",
         "crates/engine/tests/rules/after_attack.rs",
         "crates/cards/tests/cross/catalog.rs",
         "crates/ai/tests/ai/shadow_ban.rs",
         "crates/wasm/tests/x.rs",
         "crates/shared/tests/series.rs",
-        "crates/wasm/c/src/lib.rs",
+        "crates/wasm/c/src/tests.rs",
         "crates/wasm/c/README.md",
         "crates/server/README.md",
         "crates/engine/README.md",
@@ -470,6 +465,7 @@ describe("scripts/ci-scope.sh", () => {
         "vitest.config.ts",
         "scripts/browse.sh",
         "scripts/promote-production.sh",
+        "scripts/promote-staging.sh",
         "scripts/server-image.sh",
         "scripts/worktree.sh",
       ],
@@ -492,6 +488,9 @@ describe("scripts/ci-scope.sh", () => {
       "apps/web/src/net/promote-production.test.ts",
       ".github/workflows/promote-production.yml",
       ".github/workflows/super.yml",
+      "scripts/promote-staging.sh",
+      "apps/web/src/net/promote-staging.test.ts",
+      ".github/workflows/promote-staging.yml",
       "package.json",
       "apps/web/package.json",
       "pnpm-lock.yaml",
@@ -559,7 +558,6 @@ describe("scripts/ci-scope.sh", () => {
     // The shared crate (#3098) is built by the server and by the WASM bodies, and no other group tests it.
     ["crates/shared/src/series.rs", ["rust_server", "rust_tools_wasm"]],
     ["crates/wasm/c/src/lib.rs", ["rust_tools_wasm"]],
-    ["crates/luau/src/lib.rs", ["rust_luau", "rust_tools_wasm"]],
     ["crates/scratch/src/lib.rs", [...RUST]],
     // The engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads engineConfig.ts (#3093).
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server", "rust_tools_wasm"]],
@@ -574,8 +572,6 @@ describe("scripts/ci-scope.sh", () => {
     // R1994000: the tools' test of `stats report --games` reads the notebooks' record files and reports.
     ["analysis/fixtures/games.report.json", ["rust_tools_wasm"]],
     ["analysis/fixtures/dev-40.jsonl", ["rust_tools_wasm"]],
-    // crates/wasm/tests/export_parity.rs holds the Luau module's factory types the script writes.
-    ["scripts/build-wasm.sh", ["rust_tools_wasm"]],
     // The tools' export_card_text.rs writes it from crates/cards/card-text.yaml (#2498).
     ["apps/web/src/audio/voice-text.json", ["rust_tools_wasm"]],
     // The tools' export_card_modes.rs writes it from the card scripts (#2646).
@@ -601,6 +597,8 @@ describe("scripts/ci-scope.sh", () => {
       "wrangler.jsonc",
       "apps/edge/src/index.ts",
       "infra/versions.tf",
+      // No Rust test reads it: the web's build-wasm-cache.test.ts and `web (wasm c module)` run it.
+      "scripts/build-wasm.sh",
     ]) {
       expect(groups(file), file).toEqual([]);
       expect(groups(ENGINE, file), `engine + ${file}`).toEqual([...RUST]);

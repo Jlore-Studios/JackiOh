@@ -139,6 +139,8 @@ pub async fn post_consent(app: &Arc<App>, req: Req) -> ApiResult {
     tx.consent_record_terms(&profile.id, TERMS_VERSION, source, now)
         .await?;
     tx.commit().await?;
+    // R3210000: a touch that found the terms owed waits out its period; the next request counts now.
+    app.social.presence.forget(&profile.id);
     Ok(json(200, json!({ "ageCheckOwed": false, "termsOwed": false })))
 }
 

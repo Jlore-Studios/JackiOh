@@ -17,7 +17,6 @@
 #                      practice` and `server practice rulings`)
 #   rust_ai
 #   rust_ai_slow
-#   rust_luau
 #   rust_tools_wasm
 #   web                `web (typecheck, eslint)` and `web (unit k/4)`; the WASM modules and the client
 #                      build run on `web` or `e2e`
@@ -80,13 +79,12 @@
 #    a pull request leaves runs in the daily super run (docs/v0.3.0/README.md §7), and its skip
 #    passes the check.
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
-#    .cargo/, and any Luau source or .luaurc (the same job runs luau-analyze, #442 L10).
+#    .cargo/.
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine or
 #    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
 #    runs its two groups (ai and ai slow), server and tools, wasm; the server runs
-#    server; tools and wasm run tools, wasm; luau runs luau and tools, wasm (the tools build on it);
-#    the shared crate (`jackioh-shared`, which the server builds on, #3098) runs server and tools, wasm.
+#    server; tools and wasm run tools, wasm; the shared crate (`jackioh-shared`, which the server builds on, #3098) runs server and tools, wasm.
 #    A crate the map does not know runs every group. A crate's Cargo.toml also runs tools, wasm,
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
 #    on the pull request that adds it.
@@ -102,8 +100,7 @@
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
 #    counts.report.json (the tools' test that holds `stats report --games` to them, R1994000) tools,
-#    wasm; scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
-#    types it writes to the C bindings) tools, wasm; apps/web/src/audio/voice-text.json (the
+#    wasm; apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
 #    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md and spec/README.md (acceptance.rs holds
@@ -117,21 +114,21 @@
 #    all ship (#2257), so a diff there that adds a line holding a reader call (`readFileSync(`,
 #    `include_str!(`, `include_bytes!(`, `read_to_string(`), `CARGO_MANIFEST_DIR`, `#[ignore` or
 #    `preview_sets(` runs tools, wasm.
-#  - web runs for everything but what no web test, build or typecheck reads: the server's, the
-#    tools', luau's and the C module's (crates/wasm/c/, #3093: nothing in the web builds or loads it)
-#    crates (except each manifest, which every cargo command loads, and the files
+#  - web runs for everything but what no web test, build or typecheck reads: the server's and the
+#    tools' crates (except each manifest, which every cargo command loads, and the files
 #    the web's tests read there: env.rs, app.rs (whose probe routes apps/edge's config test holds),
 #    the Dockerfile, tests/deploy/, the practice claim fixture,
 #    tests/fixtures/practice-claim.json, which the worker's claim test plays), every crate's README, the
 #    engine's, the cards', the AI's, the shared crate's tests (its source and data run it: the shared crate's
 #    quest pool, quests.json, has titles the quests panel's test holds to zh-CN, #3104) and the WASM crate's tests (except the engine's tests/fixtures/,
-#    which two web tests read), docs/, training/, reviews/, analysis/, infra/ and the top-level
+#    which two web tests read), the C module's tests (crates/wasm/c/src/tests.rs; its other sources run
+#    `web`, since `web (wasm c module)` builds them, #3097), docs/, training/, reviews/, analysis/, infra/ and the top-level
 #    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
 #    the file.
-#  - web_promote runs for what promote-production.test.ts runs and reads: scripts/promote-production.sh,
-#    the two workflows it reads, promote-production.yml and super.yml (under .github/, so every job
-#    runs), and the test itself,
+#  - web_promote runs for what promote-production.test.ts and promote-staging.test.ts run and read:
+#    scripts/promote-production.sh and scripts/promote-staging.sh, the workflows they read (under
+#    .github/, so every job runs), and the tests themselves,
 #    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.
@@ -161,8 +158,8 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm web web_promote e2e infra"
-RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_tools_wasm web web_promote e2e infra"
+RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_tools_wasm"
 
 # Every line, set to $1.
 every() {
@@ -256,7 +253,6 @@ for file in $files; do
 
   case "$file" in
     *.rs | Cargo.toml | */Cargo.toml | Cargo.lock | clippy.toml | */clippy.toml | rustfmt.toml | rust-toolchain.toml | .cargo/*) on clippy ;;
-    *.luau | *.luaurc) on clippy ;;
   esac
 
   # The crate map, which acceptance.rs holds to `cargo metadata`.
@@ -267,7 +263,6 @@ for file in $files; do
     crates/server/tests/actor/* | crates/server/tests/api/* | crates/server/tests/bots/* | crates/server/tests/loops/* | \
       crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
-    crates/luau/*) on rust_luau rust_tools_wasm ;;
     crates/shared/*) on rust_server rust_tools_wasm ;;
     crates/run/* | crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
     crates/*)
@@ -277,7 +272,7 @@ for file in $files; do
     apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
     docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
-    apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
+    apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
     spec/15-dungeon-run.md | spec/README.md) on rust_tools_wasm ;;
@@ -291,11 +286,12 @@ for file in $files; do
   esac
 
   case "$file" in
-    crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml | crates/wasm/c/Cargo.toml) on web ;;
+    crates/server/Cargo.toml | crates/tools/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
     crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json) on web ;;
-    crates/server/* | crates/tools/* | crates/luau/* | crates/wasm/c/* | crates/*/README.md) ;;
+    crates/server/* | crates/tools/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;
+    crates/wasm/c/src/tests.rs) ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;
@@ -303,6 +299,7 @@ for file in $files; do
 
   case "$file" in
     scripts/promote-production.sh | apps/web/src/net/promote-production.test.ts) on web web_promote ;;
+    scripts/promote-staging.sh | apps/web/src/net/promote-staging.test.ts) on web web_promote ;;
     package.json | apps/web/package.json | pnpm-lock.yaml | pnpm-workspace.yaml | .nvmrc) on web web_promote ;;
     vitest.config.ts | apps/web/vitest.config.ts | apps/web/src/test/*) on web web_promote ;;
   esac
@@ -313,7 +310,7 @@ for file in $files; do
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
-    scripts/browse.sh | scripts/promote-production.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done
