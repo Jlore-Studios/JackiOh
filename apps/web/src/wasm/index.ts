@@ -272,8 +272,7 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
 /**
  * R3100000: what each attack `seat` may declare would do, as the board shows it, and whether the attackers
  * that may reach the enemy hero finish it (`engine::combat_forecast`). The tutorial's coach names its
- * attacks by it. It is the normal module's own, as the Duos bindings are: a lesson holds no custom card
- * (R915009), so the Luau module has no copy.
+ * attacks by it.
  */
 export function combatForecast(state: GameState, seat: PlayerId): CombatForecast {
   return call("combatForecast", () => parsed<CombatForecast>(normal.combat_forecast(stateJson(state), seat)));

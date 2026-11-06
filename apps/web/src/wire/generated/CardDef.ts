@@ -28,7 +28,7 @@ index: string, name: string, set: SetName, type: CardType, tags: Array<Tag>, rar
 printedRarity?: PrintedRarity, 
 /**
  * R1437000: what kind of thing the card is, for its animations only: no rule, pool, query,
- * validator or AI reads it. A transient or custom definition carries none, so a state that
+ * validator or AI reads it. A transient definition carries none, so a state that
  * holds one serializes as before.
  */
 flavor?: Flavor, token: boolean, cost: CardCost, 

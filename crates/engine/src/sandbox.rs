@@ -30,8 +30,7 @@ pub fn is_sandbox(state: &GameState) -> bool {
 }
 
 /// R923001: the definition a spawn may make: a card or a token of a set a player may hold (R1420).
-/// A transient definition (a Fuse's, a crafted card's) is no card to spawn, and a custom card's is of
-/// the Custom set, which never ships.
+/// A transient definition (a Fuse's, a crafted card's) is no card to spawn.
 fn spawnable<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
     if state.transient_defs.contains_key(def_id) {
         return None;

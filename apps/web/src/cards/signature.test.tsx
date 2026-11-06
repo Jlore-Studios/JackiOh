@@ -160,7 +160,7 @@ describe("R2715002 the signature's faces", () => {
     expect(signatureFaceOf("core-008")).toBe("script");
     expect(signatureFaceOf("core-086")).toBe("copperplate");
     expect(signatureFaceOf("classicplus-019-1")).toBe(SIGNATURE_FACE_OF_SET["classicplus"]);
-    expect(signatureFaceOf("custom-1")).toBe(DEFAULT_SIGNATURE_FACE);
+    expect(signatureFaceOf("nonesuch-1")).toBe(DEFAULT_SIGNATURE_FACE);
   });
 
   it("R2715002 a Mythic face signs its name to a known length in its face, with its pen, burst, flourish and shine", () => {

@@ -17,8 +17,8 @@
 #   `<group> k/K`, each running the tests whose names hash to it (`matrix.py shard`), every test in
 #   exactly one shard for any K. Each shard compiles the group's binaries again, so a count splits
 #   the run, not the compile: a group slow to compile needs its tests in more binaries instead (a new
-#   target that its `tests` pattern matches runs in a job of its own by itself). The doc tests, the
-#   binaries check and the Luau module's check run in shard 1.
+#   target that its `tests` pattern matches runs in a job of its own by itself). The doc tests and the
+#   binaries check run in shard 1.
 #
 # One job compiling the whole workspace took 14 minutes, nearly all of it compiling, so each group
 # compiles only its own crates and what they build on (the engine and the cards at opt-level 2,
@@ -33,9 +33,7 @@
 # The engine's two features: testkit, which its `rules` binaries require, and ts, whose
 # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
 # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
-# group wrote must be what is committed (V20), so every group checks. The same holds for the card
-# scripts' typed module (#442 L10), which the group with `luau` (the one that runs crates/luau's
-# tests) checks once it exists.
+# group wrote must be what is committed (V20), so every group checks.
 #
 # Each `--config` stays one word: the `cargo test` step splits `test` and `doc` on spaces.
 
@@ -151,39 +149,26 @@ scope = "ai_slow"
 cache = "ai"
 test = "-p jackioh-ai --test ai_slow"
 
-# The Luau host's tests, with its `ts` feature on so that `export_api` writes the card scripts' typed
-# module, which the group's last step holds to what is committed. In `tools, wasm` that second
-# compile of the engine and the cards, with `ts`, ran after the group's own and took the job past
-# seven minutes (#959).
-[[group]]
-group = "luau"
-scope = "luau"
-cache = "luau"
-test = "-p jackioh-luau --features ts"
-luau = true
-
 # The tools' unit tests, the `jackioh` binary's (about 160 s of games on four threads), in three
 # groups by test name, all on the `rust_tools_wasm` line and sharing one cache, as `ai slow` shares
 # `ai`'s: in one group they took the job past seven minutes (#1929). A name filter matches anywhere
 # in a test's path, so `tools, wasm` skips exactly what the other two run (`fuzz::` matches
 # `duos_fuzz::` too). Those two run the binary alone, so a test elsewhere (an integration test, a doc
 # test) whose path held `fuzz::`, `selfplay::` or `positions::` would run in no group: name none so.
-# No card script is Luau, so only `tools, wasm`'s few custom-card tests reach the Luau host, and each
-# group builds jackioh-luau at opt-level 0 (about 25 s less compiling; mlua stays at Cargo.toml's 2).
 [[group]]
 group = "tools fuzz"
 scope = "tools_wasm"
 cache = "tools-wasm"
-test = "-p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- fuzz:: positions:: --skip duos_fuzz::"
+test = "-p jackioh-tools --bin jackioh -- fuzz:: positions:: --skip duos_fuzz::"
 
 [[group]]
 group = "tools duos, selfplay"
 scope = "tools_wasm"
 cache = "tools-wasm"
-test = "-p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- duos_fuzz:: selfplay::"
+test = "-p jackioh-tools --bin jackioh -- duos_fuzz:: selfplay::"
 
 [[group]]
 group = "tools, wasm"
 scope = "tools_wasm"
 cache = "tools-wasm"
-test = "--workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau --config profile.test.package.jackioh-luau.opt-level=0 -- --skip fuzz:: --skip selfplay:: --skip positions::"
+test = "--workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai -- --skip fuzz:: --skip selfplay:: --skip positions::"
