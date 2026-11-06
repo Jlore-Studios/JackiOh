@@ -18227,6 +18227,13 @@
     "3283": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42183685759",
+        "model": "sonnet",
+        "provider": "claude-1",
+        "since": "2026-11-06T08:02:16Z",
+        "until": "2026-11-06T08:32:16Z"
+      },
       "difficulty_by": {
         "at": "2026-11-06T08:02:05Z",
         "difficulty": "medium",
