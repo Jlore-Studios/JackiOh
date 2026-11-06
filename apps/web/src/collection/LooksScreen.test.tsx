@@ -175,24 +175,26 @@ describe("R3016001 a card's equip and buy screen", () => {
     expect(stub.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(0);
   });
 
-  it("R3016001 Buy is disabled and says what is missing when nothing can pay", async () => {
+  // Each case is its own test: setup clears the kept reads between tests (test/setup.ts), so one case's Chase Shard
+  // bar or tokens can't answer the next one's first read.
+  it("R3016001 Buy is disabled and says no held token covers a level that is no chase", async () => {
     // No token held covers the Sketch's full art, an Epic, and it is no chase.
     server({ tokens: { cosmeticRare: 3 }, shardFull: true });
     await screenOf(owning(VERSION_SKETCH_ID));
     expect(screen.getByTestId(T.looksBuy(VERSION_SKETCH_FULL_ART_ID))).toBeDisabled();
     expect(screen.getByTestId(T.looksMissing(VERSION_SKETCH_FULL_ART_ID))).toHaveTextContent("No token you hold covers it");
-    cleanup();
+  });
 
-    // A chase: no token, and the bar not full.
+  it("R3016001 Buy is disabled on a chase with no token and the Chase Shard bar not full", async () => {
     server({ shardFull: false });
     await screenOf(owning(VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID));
     expect(screen.getByTestId(T.looksBuy(VERSION_SKETCH_FULL_ART_ANIMATED_ID))).toBeDisabled();
     expect(screen.getByTestId(T.looksMissing(VERSION_SKETCH_FULL_ART_ANIMATED_ID))).toHaveTextContent(
       "No token you hold covers it, and the Chase Shard bar isn't full",
     );
-    cleanup();
+  });
 
-    // A card short of MAX_COPIES takes no per-card cosmetic, whatever is held.
+  it("R3016001 Buy is disabled on a card short of MAX_COPIES, whatever is held", async () => {
     server({ tokens: { cosmeticLegendary: 9, cosmeticEpic: 9 }, shardFull: true });
     await screenOf(owning(VERSION_SKETCH_ID), MAX_COPIES - 1);
     expect(screen.getByTestId(T.looksBuy(VERSION_SKETCH_FULL_ART_ID))).toBeDisabled();
