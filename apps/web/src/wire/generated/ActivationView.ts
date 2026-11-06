@@ -13,4 +13,4 @@ export type ActivationView = { ability: string, label: string, usesLeft: number 
  * ability is the card's own text or the engine's (the Dormant Starship's launch, a Cloaked card's
  * reveal): the picker then wears the card's own art.
  */
-source?: ActivationSource, };
+printedOn?: ActivationSource, };

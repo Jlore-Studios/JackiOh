@@ -167,7 +167,7 @@ describe("#2646 route 2: a play's short choices are choice cards", () => {
     const BEAM = "stinkyscape-050";
     const OWN = "classic-020";
     const activations: ActivationView[] = [
-      { ability: "beam", label: "Deal damage to an enemy Unit, with Cleave and Pierce", usesLeft: 1, usable: true, source: { defId: BEAM } },
+      { ability: "beam", label: "Deal damage to an enemy Unit, with Cleave and Pierce", usesLeft: 1, usable: true, printedOn: { defId: BEAM } },
       { ability: "punish", label: "Choose one", usesLeft: 1, usable: true },
     ];
     const view = baseView({

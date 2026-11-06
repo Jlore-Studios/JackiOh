@@ -179,7 +179,7 @@ type PickerItem = {
   code?: boolean;
   /**
    * R3291000: the card whose art a choice card wears in place of its seeded picture: an Activate option's,
-   * the card that prints the ability (`ActivationView.source`, else the activated card).
+   * the card that prints the ability (`ActivationView.printedOn`, else the activated card).
    */
   art?: ChoiceArt;
 };
@@ -562,8 +562,8 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
           // R3291000: it wears the art of the card that prints the ability: a fused ingredient's (a
           // Starship's Weapon), else the activated card's own.
           const art: ChoiceArt | undefined =
-            act?.source !== undefined
-              ? { defId: act.source.defId, radiant: act.source.radiant === true }
+            act?.printedOn !== undefined
+              ? { defId: act.printedOn.defId, radiant: act.printedOn.radiant === true }
               : played === null
                 ? undefined
                 : { defId: played.defId, radiant: played.radiant };

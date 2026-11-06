@@ -419,7 +419,7 @@ pub struct ActivationView {
     /// reveal): the picker then wears the card's own art.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub source: Option<ActivationSource>,
+    pub printed_on: Option<ActivationSource>,
 }
 
 /// R3291000: the card whose text prints an Activate ability of a fused card, as `fuse.rs` composed it:

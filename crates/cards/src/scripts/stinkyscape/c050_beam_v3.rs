@@ -211,15 +211,15 @@ mod tests {
         s.expect_health(P2, HERO_HEALTH);
     }
 
-    /// R3291000: an ability's id, and the card and face its `source` names, if any.
+    /// R3291000: an ability's id, and the card and face its `printed_on` names, if any.
     type Sourced = (String, Option<(String, Option<bool>)>);
 
-    /// R3291000: each ability p1's view lists on `id`, with the card (and face) its `source` names.
+    /// R3291000: each ability p1's view lists on `id`, with the card (and face) its `printed_on` names.
     fn sources(s: &Scenario, id: &str) -> Vec<Sourced> {
         jackioh_engine::subsystems::activate::activation_views_for(s.state(), P1, s.card(id))
             .expect("the card lists its abilities")
             .into_iter()
-            .map(|view| (view.ability, view.source.map(|source| (source.def_id, source.radiant))))
+            .map(|view| (view.ability, view.printed_on.map(|card| (card.def_id, card.radiant))))
             .collect()
     }
 

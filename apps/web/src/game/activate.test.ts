@@ -598,7 +598,7 @@ describe("R3291000 a launched Starship asks which weapon fires, even when it has
     label: "Deal damage to an enemy Unit, with Cleave and Pierce",
     usesLeft: 1,
     usable: true,
-    source: { defId: "stinkyscape-050" },
+    printedOn: { defId: "stinkyscape-050" },
   };
   const LAUNCH: ActivationView = { ability: "launch", label: "Launch (4)", usesLeft: 1, usable: true };
   const HULL = "stinkyscape-t-dormant-starship";

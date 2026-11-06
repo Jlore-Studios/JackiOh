@@ -1202,7 +1202,7 @@ pub fn activation_views_for(
     Some(
         abilities
             .into_iter()
-            .map(|(decl, source)| {
+            .map(|(decl, printed_on)| {
                 let gate = why_cannot_activate_ability(state, viewer, &card.id, Some(&decl.id))
                     .err()
                     .map(|error| error.message);
@@ -1224,7 +1224,7 @@ pub fn activation_views_for(
                     uses_left,
                     usable,
                     reason,
-                    source,
+                    printed_on,
                 }
             })
             .collect(),

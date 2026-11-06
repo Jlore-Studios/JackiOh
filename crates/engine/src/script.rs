@@ -1019,7 +1019,7 @@ pub struct Script {
     /// field (`subsystems::activate`).
     pub activations: Vec<ActivationDecl>,
     /// R3291000: on a fused script, the ingredient whose text prints each of `activations`, one per
-    /// ability in the same order (`fuse.rs` `script_record`), which `ActivationView.source` reports.
+    /// ability in the same order (`fuse.rs` `script_record`), which `ActivationView.printed_on` reports.
     /// Empty on a card's own script: every ability is its own text.
     pub activation_sources: Vec<ActivationSource>,
     /// §10.6: the named predicates a declaration's `TargetFilter.check` points at, for a filter no data

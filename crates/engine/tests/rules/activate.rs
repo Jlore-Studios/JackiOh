@@ -1809,12 +1809,12 @@ mod r1751000_fused_activates_have_separate_cooldowns {
 mod r3291000_each_ability_names_the_card_that_prints_it {
     use super::*;
 
-    /// Each ability the controller's view lists, with the definition its `source` names, if any.
+    /// Each ability the controller's view lists, with the definition its `printed_on` names, if any.
     fn sources(state: &GameState, id: &str) -> Vec<(String, Option<String>)> {
         jackioh_engine::subsystems::activate::activation_views_for(state, P1, card(state, id))
             .expect("the card lists its abilities")
             .into_iter()
-            .map(|view| (view.ability, view.source.map(|source| source.def_id)))
+            .map(|view| (view.ability, view.printed_on.map(|card| card.def_id)))
             .collect()
     }
 
@@ -1893,6 +1893,20 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         );
     }
 
+    /// It dresses the view alone, so the golden traces' view text leaves it out and a trace recorded on
+    /// either side of it replays on the other.
+    #[test]
+    fn r3291000_the_golden_view_text_leaves_it_out() {
+        let mut state = playing("r3291000-golden");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card);
+        let view = json_of(jackioh_engine::view_for(&state, P1)).to_string();
+        assert!(view.contains("\"printedOn\""), "the view names it");
+        let [p1, p2] = jackioh_engine::testkit::golden::view_texts(&state);
+        assert!(!p1.contains("printedOn") && !p2.contains("printedOn"));
+    }
+
     /// The Radiant face an ingredient went in on is named with it.
     #[test]
     fn r3291000_a_radiant_fusion_names_its_ingredients_radiant() {
@@ -1912,9 +1926,9 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
                 .expect("listed");
         assert!(
             views.iter().all(|view| view
-                .source
+                .printed_on
                 .as_ref()
-                .is_some_and(|source| source.radiant == Some(true))),
+                .is_some_and(|card| card.radiant == Some(true))),
             "{views:?}"
         );
     }
