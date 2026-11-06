@@ -18135,7 +18135,9 @@
     },
     "3283": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6678783026"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18181,9 +18183,7 @@
       "started_at": "2026-11-06T06:48:13Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6678783026"
-      ]
+      "taken_asks": []
     },
     "3287": {
       "action": "plan",
