@@ -4,4 +4,4 @@ import type { CosmeticRarity } from "./CosmeticRarity";
 /**
  * What one slot grants (§14.3's dupe chain, R1301002).
  */
-export type SlotGrant = { "kind": "card" } | { "kind": "cosmetic", cosmeticId: string, cosmeticRarity: CosmeticRarity, } | { "kind": "bars", cosmeticRarity: CosmeticRarity, };
+export type SlotGrant = { "kind": "card" } | { "kind": "cosmetic", cosmeticId: string, cosmeticRarity: CosmeticRarity, below?: Array<string>, } | { "kind": "bars", cosmeticRarity: CosmeticRarity, };

@@ -86,6 +86,7 @@ fn test_registry() -> Vec<Cosmetic> {
         jlorious: false,
         card: None,
         offer: Vec::new(),
+        level: None,
     };
     let mut cosmetics = registry().to_vec();
     cosmetics.push(earned("foil-prism", CosmeticKind::Foil, CosmeticRarity::Rare));

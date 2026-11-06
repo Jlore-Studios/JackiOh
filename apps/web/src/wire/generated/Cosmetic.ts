@@ -2,6 +2,7 @@
 import type { CosmeticKind } from "./CosmeticKind";
 import type { CosmeticRarity } from "./CosmeticRarity";
 import type { OfferClause } from "./OfferClause";
+import type { VariantLevel } from "./VariantLevel";
 
 export type Cosmetic = { 
 /**
@@ -44,4 +45,9 @@ card?: string | null,
  * R2725001: a version's or an augment's offer, the cards that may own and wear it: a card is offered it
  * when one clause takes it ([`offered`]). No other kind has one.
  */
-offer?: Array<OfferClause>, };
+offer?: Array<OfferClause>, 
+/**
+ * R3015000: a version's place on its variant's ladder; no other kind has one. An opening's log written before
+ * #3015 holds none ([`crate::economy::roll::OpeningLog`]), so it is read as absent there.
+ */
+level?: VariantLevel | null, };

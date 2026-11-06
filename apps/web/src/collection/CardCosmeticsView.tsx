@@ -1,17 +1,16 @@
 // A card in context (#1662, R1655000, part of #1651): the Collection's card view, the card large in its
-// own picks under a strip of live previews of what it may wear (R2655000: a full-art card's full arts
-// are none, its Epic, its animated Legendary and its signed Mythic). Clicking an owned item equips it
+// own picks under a strip of live previews of what it may wear. Clicking an owned item equips it
 // on this card alone; `Use default` clears the pick (R1953001). Holding an item, or its inspect key,
 // previews it fullscreen (ItemPreview.tsx), and there only a locked one a held token covers offers it
 // (R2730000). It decides nothing (CLAUDE.md rule 7): a pick goes to the device's store, which
 // `cards/cardPicksSync.ts` sends to the account (R1834000) and an online match freezes for the
 // opponent's sight (R1834002). So a preview writes no pick, lest it stand as one opponents are shown:
 // it is an unworn copy of the face dressed by `SampleFace` (CosmeticLook.tsx), or a `FullArtShown`.
-// R2725000: a card's version is one of the normal face and the versions it is offered, and each augment it is
-// offered toggles on top; either write keeps the other (`writeCardVersion`), so a retired full art's pick becomes
-// the version and the augments it combines on its first edit (R2725002). R2949000: Signature waits, listed and
-// previewed but not chosen, until the card wears the Full art version and Animated, and turning either off turns
-// it off (`updateCardPicks`). R3013001: an owned card also shows its proficiency and its stamps (ProficiencyPanel.tsx).
+// R3015007: the strip holds the foils, finishes and borders, and the card's versions are its variants' ladders
+// (VariantLadders.tsx): choosing an owned level wears that one level (`writeCardLevel`, R3015005), so a pick made
+// before #3015 becomes the level it names on its first edit, and only the next level of a ladder, every level below it
+// owned, is offered a held token (R3015004). R3013001: an owned card also shows its proficiency and its stamps
+// (ProficiencyPanel.tsx).
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -19,7 +18,7 @@ import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CardArt, CardDetail, CardFace, INSPECT_KEY_SHORTCUT, faceModel, useCardSettings } from "../cards/index.ts";
+import { CardDetail, CardFace, INSPECT_KEY_SHORTCUT, faceModel, useCardSettings } from "../cards/index.ts";
 import {
   DEFAULT_CARD_COSMETICS,
   OwnershipContext,
@@ -29,12 +28,12 @@ import {
   useCanEquip,
   useCardPicks,
   wornCosmetics,
+  writeCardLevel,
   writeCardPick,
-  writeCardVersion,
   type CardPicks,
 } from "../cards/cosmetics.ts";
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
-import { AUGMENT_SIGNATURE_ID, artPartOf, artPictureOf, augmentPicksOf, augmentsOf, lookOf, signatureFits, versionPickOf } from "../cards/versions.ts";
+import { levelOfPick, wornLevel } from "../cards/versions.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
@@ -42,9 +41,11 @@ import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import {
   NO_FULL_ART_ID,
+  cardLadders,
   cardStrip,
   collectionTestid as T,
   cosmeticKindWords,
+  type Rung,
   type StripGroup,
   type StripItem,
   type StripKind,
@@ -52,16 +53,27 @@ import {
 import ItemPreview, { trapTab, usePreviewHold } from "./ItemPreview.tsx";
 import ProficiencyPanel from "./ProficiencyPanel.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
+import VariantLadders, { RungPicture } from "./VariantLadders.tsx";
 
-/** The card in its own picks and, over it while a foil, finish or border is shown, a copy wearing that. */
-function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | null }): ReactElement {
+/** What the view shows on the large card: a strip item, or a ladder's rung (R3015007). */
+type Shown = StripItem | Rung;
+
+function isStripItem(shown: Shown): shown is StripItem {
+  return "kind" in shown;
+}
+
+/**
+ * The card in its own picks and, over it while a foil, finish or border is shown, a copy wearing that; R3015007: or,
+ * while an owned rung is shown, its own copy wearing that level (`FullArtShown`).
+ */
+function LargeFace({ face, preview }: { face: FaceModel; preview: Shown | null }): ReactElement {
   const { rarityFoil } = useCardSettings();
   const own = useOwnCopy();
   const card = useCardPicks(face.defId);
   const owned = useContext(OwnershipContext);
   const largeFace = <CardFace face={face} layout="full" worn={own} />;
   let sample: ReactElement | null = null;
-  if (preview !== null && preview.kind !== "version" && preview.kind !== "augment") {
+  if (preview !== null && isStripItem(preview)) {
     const picks: CardPicks = { ...card };
     picks[preview.kind] = resolveCosmetic(preview.kind, preview.id);
     // What it would wear were it the card's pick: the shown item, and the card's other picks where
@@ -82,8 +94,8 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   return (
     <span className="collection-cardview__stage">
       <span className="collection-cardview__face" data-testid={T.cardViewFace}>
-        {preview !== null && (preview.kind === "version" || preview.kind === "augment") && preview.owned ? (
-          <FullArtShown defId={face.defId} {...lookShown(card, preview)}>
+        {preview !== null && !isStripItem(preview) && preview.owned ? (
+          <FullArtShown defId={face.defId} pick={preview.id === NO_FULL_ART_ID ? false : preview.id}>
             {largeFace}
           </FullArtShown>
         ) : (
@@ -96,66 +108,19 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
 }
 
 /**
- * R2725000: the pick a card would hold were `item` chosen: a version in place of its own, or an augment toggled
- * (on where it is off, off where it is on), the other part kept as `versionPickOf` and `augmentPicksOf` keep it.
+ * R3015005, R3015007: the rung a card's pick wears: the level it names (an older shape mapped as the server maps it),
+ * else the highest one below it that `owns` takes; the normal face where that is none, and none with no pick at all
+ * (the Full-art cards setting decides).
  */
-function chosen(picks: CardPicks, item: StripItem): { fullArt: boolean | string | null; augments: string[] } {
-  const augments = augmentPicksOf(picks.fullArt, picks.augments);
-  if (item.kind === "version") return { fullArt: item.id === NO_FULL_ART_ID ? false : item.id, augments };
-  const on = augments.includes(item.id);
-  return { fullArt: versionPickOf(picks.fullArt), augments: on ? augments.filter((id) => id !== item.id) : [...augments, item.id] };
+function equippedRung(defId: string, picks: CardPicks, owns: (defId: string, id: string) => boolean): string | null {
+  if (picks.fullArt === undefined && picks.augments === undefined) return null;
+  return wornLevel(levelOfPick(defId, picks.fullArt, picks.augments), (id) => owns(defId, id)) ?? NO_FULL_ART_ID;
 }
 
-/** R2725000: what the large face shows while a version or an augment is previewed: that version, or that augment on. */
-function lookShown(picks: CardPicks, item: StripItem): { pick?: boolean | string; augments: string[] } {
-  const augments = augmentPicksOf(picks.fullArt, picks.augments);
-  if (item.kind === "version") return { pick: item.id === NO_FULL_ART_ID ? false : item.id, augments };
-  const pick = versionPickOf(picks.fullArt);
-  return { ...(pick === null ? {} : { pick }), augments: augments.includes(item.id) ? augments : [...augments, item.id] };
-}
-
-/** R2725000: a version the card's pick names, or an augment it layers on (a retired full art's among them). */
-function isEquipped(item: StripItem, picks: CardPicks): boolean {
-  if (item.kind === "version") {
-    if (picks.fullArt === undefined) return false;
-    const version = lookOf(picks.fullArt).version;
-    return item.id === NO_FULL_ART_ID ? version === null : version === item.id;
-  }
-  if (item.kind === "augment") return augmentsOf(lookOf(picks.fullArt, picks.augments)).includes(item.id);
-  return picks[item.kind] === item.id;
-}
-
-/** R2949000: whether `item` is Signature on a card whose pick does not wear the Full art version and Animated, which it needs. */
-function signatureWaits(item: StripItem, picks: CardPicks): boolean {
-  return item.kind === "augment" && item.id === AUGMENT_SIGNATURE_ID && !signatureFits(picks.fullArt, picks.augments);
-}
-
-/**
- * One item's small live preview: the card wearing it, or for a version the art across the whole face, R2940001 the
- * picture that version draws; R2943001 Set showcase's in the card's set's treatment, and Out of frame's subject alone.
- */
-function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item: StripItem }): ReactElement {
+/** One foil's, finish's or border's small live preview: the card wearing it. */
+function StripPicture({ face, item }: { face: FaceModel; item: StripItem }): ReactElement {
   const { rarityFoil } = useCardSettings();
-  if (item.kind === "version" && item.id !== NO_FULL_ART_ID) {
-    return (
-      <span className="collection-strip__picture collection-strip__picture--full-art">
-        <CardArt
-          defId={def.id}
-          radiant={false}
-          tags={def.tags}
-          type={def.type}
-          name={def.name}
-          shape="full"
-          picture={artPictureOf(item.id, def.set)}
-          part={artPartOf(item.id)}
-        />
-      </span>
-    );
-  }
-  const wears =
-    item.kind === "version" || item.kind === "augment"
-      ? wornCosmetics(face, normalizeCosmetics({}), {}, () => true, rarityFoil)
-      : wornCosmetics(face, normalizeCosmetics({ [item.kind]: item.id }), {}, () => true, rarityFoil);
+  const wears = wornCosmetics(face, normalizeCosmetics({ [item.kind]: item.id }), {}, () => true, rarityFoil);
   return (
     <span className="collection-strip__picture">
       <SampleFace face={face} layout="compact" wears={wears} />
@@ -163,26 +128,19 @@ function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item
   );
 }
 
-/**
- * R2730000: one strip item: a hold or the inspect key previews it fullscreen, a click equips it. R2949000: one that
- * `waits` previews as ever and says what it needs, and a click equips nothing.
- */
+/** R2730000: one strip item: a hold or the inspect key previews it fullscreen, a click equips it. */
 function StripItemButton({
-  def,
   face,
   item,
   equipped,
-  waits,
   show,
   hide,
   equip,
   onPreview,
 }: {
-  def: CardDef;
   face: FaceModel;
   item: StripItem;
   equipped: boolean;
-  waits: boolean;
   show: (item: StripItem) => void;
   hide: (item: StripItem) => void;
   equip: (item: StripItem) => void;
@@ -196,9 +154,8 @@ function StripItemButton({
       data-owned={String(item.owned)}
       data-equipped={String(equipped)}
       data-rarity={item.rarity}
-      data-waits={waits ? "true" : undefined}
       aria-pressed={equipped}
-      aria-disabled={item.owned && !waits ? undefined : true}
+      aria-disabled={item.owned ? undefined : true}
       aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
       {...usePreviewHold(`strip-${item.id}`, () => {
         onPreview(item);
@@ -225,18 +182,16 @@ function StripItemButton({
         hide(item);
       }}
     >
-      <StripPicture def={def} face={face} item={item} />
+      <StripPicture face={face} item={item} />
       <span className="collection-strip__name">{item.name}</span>
       <span className="collection-strip__rarity">{t(item.rarity)}</span>
       {item.owned ? null : <span className="collection-strip__lock">{t("Locked")}</span>}
-      {item.owned && waits ? <span className="collection-strip__lock">{t("Needs Full art and Animated")}</span> : null}
     </button>
   );
 }
 
 function StripKindGroup({
   group,
-  def,
   face,
   picks,
   show,
@@ -246,7 +201,6 @@ function StripKindGroup({
   onPreview,
 }: {
   group: StripGroup;
-  def: CardDef;
   face: FaceModel;
   picks: CardPicks;
   show: (item: StripItem) => void;
@@ -256,12 +210,6 @@ function StripKindGroup({
   /** R2730000: what a held or inspected item opens: its fullscreen preview. */
   onPreview: (item: StripItem) => void;
 }): ReactElement {
-  const own =
-    group.kind === "version"
-      ? picks.fullArt
-      : group.kind === "augment"
-        ? augmentPicksOf(picks.fullArt, picks.augments)[0]
-        : picks[group.kind];
   return (
     <section className="collection-strip" data-testid={T.strip(group.kind)} aria-label={cosmeticKindWords(group.kind)}>
       <div className="collection-strip__head">
@@ -270,7 +218,7 @@ function StripKindGroup({
           type="button"
           className="collection-strip__default"
           data-testid={T.stripDefault(group.kind)}
-          aria-pressed={own === undefined}
+          aria-pressed={picks[group.kind] === undefined}
           onClick={() => {
             clear(group.kind);
           }}
@@ -282,11 +230,9 @@ function StripKindGroup({
         {group.items.map((item) => (
           <li key={item.id}>
             <StripItemButton
-              def={def}
               face={face}
               item={item}
-              equipped={isEquipped(item, picks)}
-              waits={signatureWaits(item, picks)}
+              equipped={picks[item.kind] === item.id}
               show={show}
               hide={hide}
               equip={equip}
@@ -316,17 +262,20 @@ export default function CardCosmeticsView({
 }): ReactElement {
   const canEquip = useCanEquip();
   const picks = useCardPicks(def.id);
-  const [preview, setPreview] = useState<StripItem | null>(null);
+  const [preview, setPreview] = useState<Shown | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
   const strip = cardStrip(def.id, canEquip);
-  // R1953001: the held tokens are read only where one may be offered: a locked item on a card owned at
-  // MAX_COPIES, the only card a token's per-card cosmetic goes on (the server's `choice_of`).
-  const offering = copies >= MAX_COPIES && strip.some((group) => group.items.some((item) => !item.owned));
+  const ladders = cardLadders(def.id, canEquip);
+  const rungs = ladders.flatMap((ladder) => ladder.rungs);
+  // R1953001: the held tokens are read only where one may be offered: a locked item, or R3015004 a ladder's next
+  // level, on a card owned at MAX_COPIES, the only card a token's per-card cosmetic goes on (the server's `choice_of`).
+  const offering = copies >= MAX_COPIES && (strip.some((group) => group.items.some((item) => !item.owned)) || rungs.some((rung) => rung.next));
   const [tokens, setTokens] = useHeldTokens(offering ? token : null);
-  const previewed = strip.flatMap((group) => group.items).find((item) => item.id === previewing) ?? null;
+  const shown: Shown[] = [...strip.flatMap((group) => group.items), ...rungs];
+  const previewed = shown.find((item) => item.id === previewing) ?? null;
 
   // Focus moves in and goes back to the card that opened the view; Escape closes it, unless the card's text is over it.
   useLayoutEffect(() => {
@@ -351,20 +300,19 @@ export default function CardCosmeticsView({
   useBackLayer(onClose);
 
   const equip = (item: StripItem): void => {
-    if (!item.owned || signatureWaits(item, picks)) return;
-    if (item.kind === "version" || item.kind === "augment") {
-      const next = chosen(picks, item);
-      writeCardVersion(def.id, next.fullArt, next.augments);
-    } else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
+    if (item.owned) writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
+  };
+  // R3015005: an owned rung wears that one level, the normal face's `false`.
+  const equipLevel = (rung: Rung): void => {
+    if (rung.owned) writeCardLevel(def.id, rung.id === NO_FULL_ART_ID ? null : rung.id);
   };
   const clear = (kind: StripKind): void => {
-    if (kind === "version") writeCardVersion(def.id, null, augmentPicksOf(picks.fullArt, picks.augments));
-    else if (kind === "augment") writeCardVersion(def.id, versionPickOf(picks.fullArt), []);
-    else writeCardPick(def.id, kind, null);
+    writeCardPick(def.id, kind, null);
   };
-  const offer = (item: StripItem): ReactElement | null => {
+  // R3015004: a locked strip item, or a ladder's next level alone, is offered a held token that covers it.
+  const offer = (item: Shown): ReactElement | null => {
     const cosmetic = COSMETICS.find((entry) => entry.id === item.id);
-    const tier = cosmetic === undefined || !offering ? null : offerTier(cosmetic, tokens);
+    const tier = cosmetic === undefined || !offering || (!isStripItem(item) && !item.next) ? null : offerTier(cosmetic, tokens);
     if (token === null || tokens === null || tier === null) return null;
     return (
       <TokenOffer
@@ -400,7 +348,6 @@ export default function CardCosmeticsView({
               <StripKindGroup
                 key={group.kind}
                 group={group}
-                def={def}
                 face={face}
                 picks={picks}
                 show={(item) => {
@@ -416,6 +363,22 @@ export default function CardCosmeticsView({
                 }}
               />
             ))}
+            <VariantLadders
+              def={def}
+              face={face}
+              ladders={ladders}
+              equipped={equippedRung(def.id, picks, canEquip)}
+              show={(rung) => {
+                setPreview(rung);
+              }}
+              hide={(rung) => {
+                setPreview((current) => (current?.id === rung.id ? null : current));
+              }}
+              equip={equipLevel}
+              onPreview={(rung) => {
+                setPreviewing(rung.id);
+              }}
+            />
             {/* R3013001: an owned card's proficiency and the stamps it has unlocked. */}
             {owned ? <ProficiencyPanel def={def} /> : null}
             <div className="collection-cardview__actions">
@@ -452,8 +415,8 @@ export default function CardCosmeticsView({
           rarity={previewed.rarity}
           owned={previewed.owned}
           picture={
-            (previewed.kind === "version" || previewed.kind === "augment") && !previewed.owned ? (
-              <StripPicture def={def} face={face} item={previewed} />
+            !isStripItem(previewed) && !previewed.owned ? (
+              <RungPicture def={def} face={face} rung={previewed} />
             ) : (
               <LargeFace face={face} preview={previewed} />
             )
