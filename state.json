@@ -13574,10 +13574,12 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "at": "2026-11-05T22:01:49Z",
+        "at": "2026-11-06T00:44:49Z",
         "built_by": "claude-7",
         "by": "`claude` (strong)",
-        "sha": "8aa5a9c7a36bbec8d7a0ebba19e8f20c8d342fc4"
+        "carried_from": "8aa5a9c7a36bbec8d7a0ebba19e8f20c8d342fc4",
+        "resolved_by": "`claude` (strong)",
+        "sha": "f4de596d16527e39141f2f60cbb500d9b6e93cb9"
       },
       "cross_rounds": 1,
       "died": 0,
