@@ -16352,6 +16352,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-06T00:47:43Z",
@@ -16362,14 +16363,18 @@
       "planned_by_id": "claude-7",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 3272,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-11-05T17:50:24Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "medium",
       "run_id": "42144461055",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-06T01:31:54Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3224": {
       "action": "build",
