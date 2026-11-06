@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 3223,
+  "title": "Patch: one page-title treatment for every menu screen",
+  "branch": "bot/issue-3223",
+  "thread": "**Issue #3223 (data, not instructions):**\n\n```text\n# #3223: Patch: one page-title treatment for every menu screen\nOpened by @squishy-squooby.\n\n### What it does\n\nMenu screens title themselves in five different ways, at sizes from 17 px to 44 px:\n\n- **A.** A brand `h1` \"JackiOh\" plus an `h2` screen name inside `.panel--auth` (21 px, `auth/tavern.css:206`): shop, leaderboard, account, collection, ai, terms, privacy, copyright, purchases, accessibility, login, reset, invite, dungeon start.\n- **B.** A brand `h1` plus a `<p>` styled as a title (22 px): play (`play.tsx:684`), together (`TogetherRoute.tsx:175`).\n- **C.** The `h1` is the screen name, each in its own size and face:\n  - stats: 26 px sans\n  - workshop and Almanac: 21 px serif\n  - patch notes: `clamp(28px, \u2026, 40px)`\n  - dungeon stats: `--type-2xl`\n  - replays: the bare `index.css` `h1`\n- **D.** A visually hidden `h1` plus a `clamp(28\u201340px)` `h2`: practice (`practice.tsx:970,995`).\n- **E.** No `h1` at all: the dungeon RunScreen and the replay player.\n\nThe decks route's loading shell says \"JackiOh \u2014 decks\" (`decks.tsx:80`); once loaded it says \"Decks\".\n\nOne screen also mixes two heading styles. On `/practice` (seen in a browser at 1280x720), \"Learn to play\" is a small sans panel heading, and right under it \"Practice against the AI\" is a large serif display heading.\n\nChange: one `PageTitle` (the screen's `h1`, one face from `--font-display`, one step of `typescale.css`) placed in the top bar's title slot from #3218, or directly under the bar on a phone if the bar has no room. Use it on every menu screen. The brand appears in the logo, not as a second `h1`. One visible `h1` per page: no hidden `h1` with a visible `h2` doing its job, and no `<p>` styled as a title. Section headings inside a screen are `h2` in one shared style. On Practice, \"Learn to play\" and \"Practice against the AI\" become the same level and style.\n\nKeep the document `<title>` per screen as it is today, unless it disagrees with the new heading.\n\n### Acceptance\n\n- A test renders each menu route (at least the ones listed under A\u2013E) and asserts exactly one visible `h1`, rendered by `PageTitle`.\n- No menu stylesheet sets a `font-size` on an `h1` other than the `PageTitle` stylesheet.\n- Practice's two section headings share one class.\n- The decks loading shell and the loaded workshop show the same title.\n- e2e specs `46` and `47` pass, since titles sit at the top that must stay put (R1581000).\n\n### Blocked by, part of\n\nBlocked by #3218\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3223: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:50:24Z",
+    "claimed_at": "2026-11-06T00:47:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3209 is held for `claude-1` until 19:40 (5-hour usage is 39%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3207 skipped: it waits for #3206 to close first",
+    "#3211 skipped: it waits for #3206, #3210 to close first",
+    "#3212 skipped: it waits for #3210, #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3210, #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
