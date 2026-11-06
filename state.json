@@ -20141,10 +20141,6 @@
       "refused_until": "2026-11-05T18:10:00Z",
       "spent": [
         {
-          "at": "2026-10-29T11:40:53Z",
-          "minutes": 151.2
-        },
-        {
           "at": "2026-10-29T11:49:18Z",
           "minutes": 55.1
         },
@@ -20939,16 +20935,13 @@
         {
           "at": "2026-11-06T17:41:08Z",
           "minutes": 3.5
+        },
+        {
+          "at": "2026-11-06T17:57:55Z",
+          "minutes": 13.7
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-28T19:30:00Z",
-          "cache": 3404952,
-          "cost": 1.6739,
-          "input": 94,
-          "output": 27397
-        },
         {
           "at": "2026-10-28T21:02:36Z",
           "cache": 28855961,
@@ -22341,14 +22334,21 @@
           "cost": 0.6939,
           "input": 41,
           "output": 23684
+        },
+        {
+          "at": "2026-11-06T17:57:55Z",
+          "cache": 4266567,
+          "cost": 1.2675,
+          "input": 93,
+          "output": 40300
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-06T21:50:00Z",
-          "utilization": 0.07
+          "utilization": 0.1
         },
-        "observed_at": "2026-11-06T17:41:08Z",
+        "observed_at": "2026-11-06T17:57:55Z",
         "status": "allowed"
       }
     },
@@ -33312,6 +33312,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-06T17:35:00Z,claude-3,stream,call,42262466253,4,2026-11-06T21:50:00Z,,,allowed,,,",
+      "2026-11-06T17:38:46Z,claude-3,stream,call,42262466253,6,2026-11-06T21:50:00Z,,,allowed,,,",
+      "2026-11-06T17:40:01Z,claude-3,stream,call,42262466253,7,2026-11-06T21:50:00Z,,,allowed,,,",
+      "2026-11-06T17:41:01Z,claude-3,stream,call,42262466253,8,2026-11-06T21:50:00Z,,,allowed,,,",
+      "2026-11-06T17:44:46Z,claude-3,stream,call,42262466253,9,2026-11-06T21:50:00Z,,,allowed,,,",
+      "2026-11-06T17:48:01Z,claude-3,stream,call,42262466253,10,2026-11-06T21:50:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
