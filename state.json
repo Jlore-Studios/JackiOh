@@ -13750,8 +13750,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-7",
-      "owner_since": "2026-11-06T09:01:34Z",
-      "owner_why": "its approval shipped `868c6a380e1e`, and the last approver owns the merge, so it fixes what CI found",
+      "owner_since": "2026-11-06T12:41:08Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-06T01:27:36Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
@@ -15094,14 +15094,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3223,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-11-06T10:14:24Z",
+      "queued_at": "2026-11-06T12:41:08Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "42201354591",
@@ -15124,10 +15124,17 @@
         "provider": "claude-7",
         "run": "42193771194"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-06T10:16:02Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-7",
+        "since": "2026-11-06T12:41:08Z",
+        "until": "2026-11-06T13:11:08Z",
+        "why": "it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
@@ -15148,17 +15155,6 @@
         "tiers": {
           "claude": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3245
-        ],
-        "ends": "2026-11-06T12:31:43Z",
-        "from_run": "42201354591",
-        "head": "6a487f1b3392332769bf69e5eb0b890eb38092a8",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-06T10:31:43Z"
       }
     },
     "3277": {
