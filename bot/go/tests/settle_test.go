@@ -475,6 +475,22 @@ func TestSettle_AConflictRevisionGoesToTheMergeOwnersLaneFirst(t *testing.T) {
 	assertEqual(t, crossStr(t, h.ctx.Store.Load(), "items", "30", "live"), "resolving")
 }
 
+// A bot pull request `main` conflicts with while it waits in `main`'s merge queue is taken out of
+// the queue, with `bot:merging` off, before its conflict revision is queued: a queued pull request
+// has no auto-merge left to turn off (`queue.HoldMerge`). The revision's auto-merge queues it
+// again at the back.
+func TestSettle_AConflictedPullRequestInTheMergeQueueIsTakenOutAndItsConflictResolved(t *testing.T) {
+	h := ownReviewHarness(t, nil)
+	settleConflicted(t, h, config.LabelMerging)
+	h.gh.MergeQueue = map[string]bool{"PR_30": true}
+	notes := plan.Housekeeping(h.ctx, h.ctx.Store.Load())
+	assertIn(t, "queued #30: it conflicts with main; `agy`, its merge owner, resolves it", notes)
+	assertEqual(t, h.gh.MergeQueue, map[string]bool{})
+	assertNotIn(t, config.LabelMerging, h.gh.LabelNames(30))
+	assertIn(t, config.LabelRevise, h.gh.LabelNames(30))
+	assertEqual(t, crossStr(t, h.ctx.Store.Load(), "items", "30", "source"), "conflict")
+}
+
 // A pull request a person merges gives up its lane's ownership once its CI is green, and only then:
 // its merge owner's claim goes (`merge_owner_gave_up` keeps whose it was), so a conflict later goes
 // to the item's owner, not first to that lane.

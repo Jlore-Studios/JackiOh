@@ -1,7 +1,7 @@
 //! Plague Counters on an instance and Locks on a zone (BUILD M3-T1): §6.3's Plague Counter row with
 //! R78's reset, and §3.2's Lock, which the current occupant survives and which outlives it.
 
-use jackioh_engine::effects::{clear_plague, lock, plague};
+use jackioh_engine::effects::{lock, plague};
 use jackioh_engine::testkit::*;
 use jackioh_engine::{
     PlayerId::{P1, P2},
@@ -109,7 +109,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
     }
 
     #[test]
-    fn takes_tokens_off_floors_the_count_at_0_and_clears_the_counter_outright() {
+    fn takes_tokens_off_floors_the_count_at_0_and_taking_them_all_clears_the_counter() {
         let mut state = new_game("plague-clear", None);
         let card = put(&mut state, &mana_well().id, slot(P1, Backrow, 1), json!({}));
         let mut sink = Bench::new(&state);
@@ -139,15 +139,10 @@ mod plague_s6_3_plague_counter_m3_t1 {
         assert_eq!(live(&state, &card).counters.plague, None);
         assert_eq!(counter_values(&sink.events), vec![3, 1, 0]);
 
-        // A count that does not change emits nothing: no tokens to remove, none to clear.
+        // A count that does not change emits nothing: no tokens to remove.
         run(
             &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": -1 }))),
-            as_self(),
-        );
-        run(
-            &mut sink.sink(&mut state),
-            clear_plague(json_as(json!({ "target": { "of": "self" } }))),
             as_self(),
         );
         assert_eq!(
@@ -162,7 +157,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
         );
         run(
             &mut sink.sink(&mut state),
-            clear_plague(Default::default()),
+            plague(json_as(json!({ "amount": -4 }))),
             as_self(),
         );
         assert_eq!(live(&state, &card).counters.plague, None);
