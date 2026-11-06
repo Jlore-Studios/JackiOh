@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 3227,
+  "title": "Patch: a named set of width and height breakpoints for every stylesheet",
+  "branch": "bot/issue-3227",
+  "thread": "**Issue #3227 (data, not instructions):**\n\n```text\n# #3227: Patch: a named set of width and height breakpoints for every stylesheet\nOpened by @squishy-squooby.\n\n### What it does\n\nThe stylesheets use 31 distinct width breakpoints, several of them off-by-one pairs:\n\n- 600 (43 uses) / 601 / min 600\n- 1024 (18) / 1025\n- 560 (16) / 561 / min 560\n- 760 / 761\n- 900 / 899 / max 900 / min 900\n- 720 / 721\n- 1100 / 1101\n- 640, 620 / 619, 520, 480, 420, 400, 380, 360, 820\n\n`(max-width: 600px)` in `auth/tavern.css:818` and `(min-width: 600px)` in `routes/landing.css:788` both match at exactly 600 px, so both rule sets apply there. The top bar switches at 560 px while its touch rule switches at 600 px (`index.css:428`); #3218 reconciles that one.\n\nHeight queries add 500 / 501 (51 uses), 520, 540, 560, 655, 679, 800, 820, 860 and 900.\n\nAbout 44 stylesheets have width queries, so this is `difficulty:hard` (CLAUDE.md rule 11).\n\nChange: name a small set of breakpoints and hold every stylesheet to it. A suggested set, to adjust to what the layouts need:\n- phone: \u2264 560\n- tablet: \u2264 900\n- desktop: \u2265 1025\n- short: \u2264 500 tall\n- the existing `(pointer: coarse)` touch query\n\nCSS cannot read a custom property inside `@media`, so either:\n- (a) add PostCSS custom media (`@custom-media --phone (max-width: 560px)`) to the Vite build, if a dependency already in the workspace can do it, or\n- (b) keep literal values and add `src/breakpoints.ts` plus a test that allows only the named values (each `max-width: N` paired with `min-width: N+1`, never both at N).\n\nPick the one that needs no new package, or say why one is needed (a new package goes to a person, `bot/README.md`).\n\nThen move each query onto the nearest named breakpoint. Where moving one changes a layout visibly, keep the query and list it with its reason. Off-by-one pairs collapse to one boundary. The JS-side queries (`TOUCH_ONLY_QUERY`, `(pointer: coarse), (max-width: 600px)`, `settings/motion.ts`) use the same named values.\n\n### Acceptance\n\n- One module or stylesheet names the breakpoints, and the README states them.\n- A test fails on any `@media` width or height value in `apps/web/src/**/*.css` (and JS `matchMedia` strings) that is not a named breakpoint or listed with its reason.\n- No `max-width: N` and `min-width: N` pair matches the same width.\n- e2e specs `46` and `47` and the component and pixel specs pass at 1280x720, 768x1024 and 390x844.\n\n### Blocked by, part of\n\nBlocked by #3218\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3227: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:52:22Z",
+    "claimed_at": "2026-11-06T00:46:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3209 is held for `claude-1` until 19:40 (5-hour usage is 39%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3207 skipped: it waits for #3206 to close first",
+    "#3211 skipped: it waits for #3206, #3210 to close first",
+    "#3212 skipped: it waits for #3210, #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3210, #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
