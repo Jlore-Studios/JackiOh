@@ -34704,7 +34704,8 @@
       "2026-11-06T06:54:36Z,42176859562,claude-1,opus,plan,3289,medium,planned,,3.4,43,28521,1656927,0.8075,92,97,,,13.8,,fresh,,1",
       "2026-11-06T06:47:15Z,42176367784,claude-4,opus,build,3017,hard,interrupted,5-hour cap,0,0,0,0,,53,53,,,2750.2,claude-4,none,,0",
       "2026-11-06T06:45:36Z,42176267303,claude-3,opus,revise,3068,hard,not_approved,,0,0,0,0,,,,,,0.6,claude-3,none,,0",
-      "2026-11-06T06:58:30Z,42176760143,claude-1,opus,plan,3283,medium,interrupted,refusal,8.3,97,66399,8114083,2.3347,90,100,,,13.2,,fresh,,1"
+      "2026-11-06T06:58:30Z,42176760143,claude-1,opus,plan,3283,medium,interrupted,refusal,8.3,97,66399,8114083,2.3347,90,100,,,13.2,,fresh,,1",
+      "2026-11-06T07:00:11Z,42176568506,claude-6,opus,plan,3287,hard,planned,,10,101,46554,5183549,3.0072,4,10,,,28.5,claude-6,fresh,,1"
     ]
   },
   "version": 1
