@@ -16811,11 +16811,13 @@
     "what": "revise #3319 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-06T20:25:37Z",
+    "at": "2026-11-06T20:39:53Z",
     "notes": [
-      "#3299: approved and green, so its strikes are cleared",
-      "started revise #3299 on claude-4 (run 42288574255)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #3320 on claude-3 (run 42281125306): failed",
+      "started plan #3320 on claude-3 (run 42290542460)",
+      "started revise #3319 on claude-8 (run 42290653443)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17521,7 +17523,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T20:25:37Z",
+  "loop_tick": "2026-11-06T20:39:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
