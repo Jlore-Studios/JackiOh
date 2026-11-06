@@ -15844,7 +15844,9 @@
     "3299": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_early": false,
+      "ci_fixed_head": "cc6ba3bf687f0d0631dbbd5f78baa7654b438561",
       "ci_fixes": 1,
       "ci_on_head": false,
       "ci_run_id": 42237602265,
@@ -15864,7 +15866,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-06T07:51:05Z",
+      "feedback_since": "2026-11-06T17:04:14Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-06T16:11:05Z",
@@ -15883,6 +15885,7 @@
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-11-06T15:47:50Z",
       "requested_by": "jgoetzmann-bot",
       "requeued": {
@@ -15909,7 +15912,7 @@
         "provider": "claude-4",
         "run": "42246836665"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-06T17:04:14Z",
       "stop_requested": false,
       "taken_asks": [],
