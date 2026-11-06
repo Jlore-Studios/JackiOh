@@ -13629,16 +13629,26 @@
         ],
         "builder": "claude",
         "built_by": "claude-7",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/wire/generated/BotCall.ts",
+            "crates/shared/README.md",
+            "crates/shared/tests/bots_boundary.rs"
+          ],
+          "from": "8aa5a9c7a36bbec8d7a0ebba19e8f20c8d342fc4",
+          "main": "3a1ef0212d9176536ee7cc646e1379522d53848a"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "42099189327",
+            "run": "42126252774",
             "tier": "strong"
           }
         ],
-        "sha": "8aa5a9c7a36bbec8d7a0ebba19e8f20c8d342fc4",
+        "sha": "f4de596d16527e39141f2f60cbb500d9b6e93cb9",
         "tiers": {
           "claude": "strong"
         }
