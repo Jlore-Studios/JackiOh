@@ -765,7 +765,8 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap, path: &str) -> Resul
         return Err(refuse_rate_limited(app, path, &key, now, wait));
     }
 
-    let mut tx = app.db.begin(None).await?;
+    // #3208: the user id is the profile id (`pg::profiles_get_by_user_id`), so the lookup is stamped once.
+    let mut tx = app.db.begin(Some(&user.user_id)).await?;
     if let Some(existing) = tx.profiles_get_by_user_id(&user.user_id).await? {
         tx.commit().await?;
         app.known_profiles.remember(&user.user_id, &existing.id);
@@ -890,7 +891,8 @@ pub async fn upgrade_profile(app: &App, user: &AuthUser, path: &str) -> Result<O
     if let Some((key, wait)) = spent_account(app, &user.user_id, now) {
         return Err(refuse_rate_limited(app, path, &key, now, wait));
     }
-    let mut tx = app.db.begin(None).await?;
+    // #3208: the user id is the profile id (`pg::profiles_get_by_user_id`), so the lookup is stamped once.
+    let mut tx = app.db.begin(Some(&user.user_id)).await?;
     let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
     tx.commit().await?;
     let Some(profile) = profile else {

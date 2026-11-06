@@ -625,9 +625,8 @@ export default function StatsRoute(): ReactElement {
   return (
     <CardDefsProvider defs={CATALOG}>
       <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
-        <header className="stats-header">
-          <BackLink />
-          <h1 className="stats-title">{t("Statistics")}</h1>
+        <header>
+          <BackLink title={<h1 className="stats-title">{t("Statistics")}</h1>} />
         </header>
 
         {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top */}
