@@ -1080,6 +1080,27 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 // `gh-readonly-queue/<base>/pr-<number>-<sha>`.
 var QueueBranch = "gh-readonly-queue/"
 
+// QueueBuildFailed is whether a merge-queue build that ended red failed a job of its own. A build
+// a required check failed in is cancelled once that check reports (ci.yml's `queue-cancel-*`), so
+// a cancelled one counts only with a failed or timed-out job in it: one cancelled with none was
+// replaced by a newer build of the same pull request (ci.yml's `queue-supersede`) or stopped by
+// hand. Any other red conclusion counts, and so does a cancelled one whose jobs cannot be read.
+func QueueBuildFailed(ctx *hctx.Context, run *pyjson.Object) bool {
+	if run.Get("conclusion") != "cancelled" {
+		return true
+	}
+	var jobs []*pyjson.Object
+	if _, failed := herr.Catch[*herr.GitHubError](func() { jobs = ctx.GH.ListJobs(run.Get("id"), false) }); failed {
+		return true
+	}
+	for _, job := range jobs {
+		if py.In(job.Get("conclusion"), "failure", "timed_out") {
+			return true
+		}
+	}
+	return false
+}
+
 // OnQueueCI is on_queue_ci: CI failed on the merge queue's build of a pull request
 // (infra/github.tf): `main` with every pull request ahead of it and this one on top. Its own CI ran
 // on an older `main`, so the rest of `on_ci` never hears of it. One still in the queue was built
@@ -1089,7 +1110,10 @@ var QueueBranch = "gh-readonly-queue/"
 // same way again (four of the five red runs on main of 2026-10-29). The revision merges `main`
 // first and is reviewed as any, and its auto-merge queues it again at the back. A held pull
 // request (a revision, a stop, `queue.hold_merge`) and a head the reviews never cleared are left
-// alone.
+// alone. So is a build cancelled with no job failed (`QueueBuildFailed`): a newer build of the same
+// pull request replaced it (ci.yml's `queue-supersede`), or a person stopped it, so it says nothing
+// about the pull request; one the queue took out with no failed build goes back in from the
+// housekeeping pass (`queue.RequeueCleared`).
 func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	pattern := regexp.MustCompile("^" + QueueBranch + regexp.QuoteMeta(ctx.Cfg.DefaultBranch) + `/pr-(\d+)-`)
 	found := pattern.FindStringSubmatch(py.OrStr(run.Get("head_branch"), ""))
@@ -1103,6 +1127,10 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	}
 	if pull.Get("state") != "open" {
 		return []string{fmt.Sprintf("#%d: closed", number)}
+	}
+	if !QueueBuildFailed(ctx, run) {
+		return []string{fmt.Sprintf("#%d: its queue build was cancelled with no job failed (a newer build "+
+			"replaced it, or a person stopped it), so it says nothing about it", number)}
 	}
 	var queued bool
 	if exc, ok := herr.Catch[*herr.GitHubError](func() { queued = ctx.GH.InMergeQueue(py.Str(py.Item(pull, "node_id"))) }); ok {

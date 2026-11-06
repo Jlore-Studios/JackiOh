@@ -98,4 +98,16 @@ describe("R3217000 the providers' buttons", () => {
     );
     expect(path).toHaveAttribute("fill", "currentColor");
   });
+
+  it("R3217000 Roblox's mark is drawn at the Google mark's size and takes no focus", () => {
+    draw(["google", "custom:roblox"]);
+    const google = screen.getByRole("button", { name: "Continue with Google" }).querySelector("svg");
+    const roblox = screen.getByRole("button", { name: "Continue with Roblox" }).querySelector("svg");
+    expect(google).not.toBeNull();
+    expect(roblox).not.toBeNull();
+    expect(google?.getAttribute("width")).toBe("18");
+    expect(roblox?.getAttribute("width")).toBe(google?.getAttribute("width"));
+    expect(roblox?.getAttribute("height")).toBe(google?.getAttribute("height"));
+    expect(roblox).toHaveAttribute("focusable", "false");
+  });
 });

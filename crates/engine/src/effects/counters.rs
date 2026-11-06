@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
-use crate::plague::{place_plague_on, plague_on, remove_plague};
+use crate::plague::{place_plague_on, remove_plague};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row};
@@ -36,26 +36,6 @@ pub fn plague(args: PlagueArgs) -> Effect {
         } else {
             remove_plague(ctx, &card, -amount);
         }
-    })
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct ClearPlagueArgs {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub target: Option<TargetSpec>,
-}
-
-/// Clear every Plague Counter on a permanent.
-pub fn clear_plague(args: ClearPlagueArgs) -> Effect {
-    Effect::new("clearPlague", move |ctx| {
-        let this = TargetSpec::SelfCard;
-        let Some(card) = instance_of(ctx, args.target.as_ref().unwrap_or(&this)) else {
-            return;
-        };
-        let on = plague_on(&card);
-        remove_plague(ctx, &card, on);
     })
 }
 

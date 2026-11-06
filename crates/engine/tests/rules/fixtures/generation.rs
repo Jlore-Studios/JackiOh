@@ -9,9 +9,9 @@ use std::cell::Cell;
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    choose_mode, chosen_options, damage, discover_from_catalog, fuse_cards, fuse_generated,
-    fuse_onto_your_card, fuse_random_into, place_plague, place_plague_each, place_plague_random,
-    place_plague_tokens, recruit_all, transform_beneath,
+    choose_mode, chosen_options, damage, discover_from_catalog, fuse_cards, fuse_generated, fuse_random_into,
+    place_plague, place_plague_each, place_plague_random, place_plague_tokens, recruit_all,
+    transform_beneath,
 };
 use jackioh_engine::testkit::*;
 
@@ -170,8 +170,6 @@ pub static ai_spell: LazyLock<CardDef> = LazyLock::new(|| {
 /// Classic+ #73's deck fusion: every card of your deck, each keeping its cost.
 pub static deck_fusion: LazyLock<CardDef> =
     LazyLock::new(|| def("deck-fusion", 4623, "Spell", json!({ "cost": 4 })));
-/// Classic #78 Radiant's shape: fuse the declared enemy card onto one of yours of its type, then 1 damage.
-pub static mutate: LazyLock<CardDef> = LazyLock::new(|| def("mutate", 4624, "Spell", json!({})));
 /// Classic+ #30 Felinor Fuser: Discover a Felinor Unit, then another, and fuse both into this.
 pub static fuser: LazyLock<CardDef> =
     LazyLock::new(|| unit("fuser", 4625, 3, 3, json!({ "tags": ["Felinor"], "cost": 3 })));
@@ -524,23 +522,6 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             }),
         ),
         (
-            mutate.id.clone(),
-            both(Script {
-                targets: vec![TargetDecl::target(
-                    1,
-                    1,
-                    json!({ "side": "enemy", "of": ["unit", "backrow"] }),
-                )],
-                cry: Some(hook(|_ctx| {
-                    vec![
-                        fuse_onto_your_card(json_as(json!({ "target": { "of": "chosen" } }))),
-                        damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 }))),
-                    ]
-                })),
-                ..Script::default()
-            }),
-        ),
-        (
             fuser.id.clone(),
             CardScripts {
                 base: fuser_script(),
@@ -607,7 +588,6 @@ pub static GEN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         ai_unit.clone(),
         ai_spell.clone(),
         deck_fusion.clone(),
-        mutate.clone(),
         fuser.clone(),
         felinor_a.clone(),
         felinor_b.clone(),

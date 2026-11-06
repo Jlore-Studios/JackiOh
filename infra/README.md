@@ -140,6 +140,10 @@ queue once its own checks pass, and the queue lands it after ci.yml's `merge_gro
 `main` with it on top. Take the `merge_group` trigger in ci.yml to `main` before applying it: a
 queue whose checks never report takes every pull request out at the timeout.
 
+When a pull request leaves the queue, the queue builds every one behind it again, and GitHub leaves
+their old builds running; each new build cancels its own pull request's older ones (ci.yml's
+`queue-supersede`), so a dead build never holds the runners the live ones wait for.
+
 After the first `apply`, watch the first few merges. Each queued pull request shows a
 `gh-readonly-queue/main/pr-<n>-<sha>` run of CI; the squash commit on `main` should be the pull
 request's title and number, as before (if it is the bot's own commit message instead, set Settings

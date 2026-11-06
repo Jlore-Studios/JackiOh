@@ -240,9 +240,13 @@ a path the bot may not change) is a hand-over, `"human_required": true`, which i
 
 - **The question** goes on `bot:blocked` with **`needs decision`** beside it. Its comment says it
   as a person would: the problem; the numbered options, each with its trade-off; "**My
-  suggestion:** option N, because …"; and how to answer: "Reply with a number, or tell me
-  something else in your own words, and I'll revise it that way. If nobody answers by <time>, I go
-  ahead with option N." Setting the label assigns `decision_assignees` (both people, in each bot's
+  suggestion:** option N, because …"; and "**How to answer:**", in the one form the bot reads as
+  the answer (#3300): a plain comment from the person's own account, holding the option's number or
+  their own words, with no `@jgoetzmann-bot` and no `/harness` (a comment that names the bot is
+  read as a command); that the bot says ✅ **Answered** once it takes it; and that `/harness revise
+  <your answer>` (`build` on an issue) works too, as an ordinary run. Then "If nobody answers by
+  <time>, I go ahead with option N." Squishy's names `@squishy-squooby` and `/squishy`. Setting the
+  label assigns `decision_assignees` (both people, in each bot's
   `config.json`), and the record keeps which of them it assigned, so a person who was assigned
   already stays when they come off. Being assigned does not make the item a person's, as `human`
   does. The record keeps what was asked (`decision`: when, the problem, the options and the
@@ -1207,7 +1211,10 @@ required job went red in its third, so the harness does not wait for it on a bot
 - **No jobs are skipped on the fix commit**: no path filter or `[skip ci]`; every required check
   runs in full on every head, and the merge queue runs them again.
 - **The merge queue's own CI** is left as it was: ci.yml's `queue-cancel-*` jobs stop a failed
-  build there, and `events.OnQueueCI` queues its fix at once.
+  build there, and `events.OnQueueCI` queues its fix at once. A build the queue rebuilt (a pull
+  request ahead of it left the queue) is cancelled by its newer build (ci.yml's `queue-supersede`),
+  since GitHub leaves it running; a build cancelled with no job failed says nothing about its pull
+  request, so `OnQueueCI` leaves it alone (`events.QueueBuildFailed`).
 
 Squishy runs the same code under its own labels (`squishy:revise`, `squishy:fixing-ci`) and branches
 (`squishy/…`), with no status loop of its own: its sweep, which the night bot's loop runs for it
@@ -1424,7 +1431,12 @@ independent measure of this self-review.
   pull request ahead, the queue's timeout) goes back in from the housekeeping pass, once for each
   commit `main` is at (`queue.RequeueCleared`), unless a person took it out. Every hold
   (`queue.HoldMerge`: a revision asked for, `/harness stop`) also takes it out of the queue, where
-  it has no auto-merge left to turn off.
+  it has no auto-merge left to turn off. So does a conflict with `main`: the housekeeping pass takes
+  a conflicted bot pull request out of the queue before it queues the revision that resolves it
+  (below), whose auto-merge queues it again at the back. A conflict with a pull request ahead of it
+  in the queue cannot be resolved until that one lands: the queue takes it out, it goes back in once
+  `main` moves, and once the one ahead has landed the conflict is with `main`, which that revision
+  resolves.
 - **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
   (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
   runs or before, the revision that resolves them needs no review run: its builder resolves the

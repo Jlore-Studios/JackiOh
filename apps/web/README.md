@@ -553,7 +553,11 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
                         R2730000), a grid card as the card, in hand and on the board with a Radiant
                         toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
-                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx);
+                        Equip or buy on either opens the card's equip and buy screen
+                        (collection/LooksScreen.tsx, R3016001): its ladders, Equip on an owned level, Buy on
+                        the next with a held token or the full Chase Shard bar after a question, and what a
+                        later level needs; a rung hovered there or in the card view shows that level.
                         Only there does a locked item a held token covers offer the token (of a
                         ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
@@ -576,9 +580,10 @@ routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
-routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
-                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
-                        read the owned cosmetics again; the page never scrolls, its body does
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, each folding the answer of a spend (a buy's, an
+                        opening's) that it shows, and the page reading the rest once, when the opening scene closes
+                        (R3211000), and at its foot one "Odds & pity" link to /purchases (R1665000); the scene's close
+                        has the open screen and the next read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
                         footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
                         (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
@@ -633,9 +638,10 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
                         inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
                         focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
-                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
-                        a redemption or a chase that lands makes the other panels, the opening's included,
-                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
+                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy or an opening
+                        that lands hands the page its answer (`onChanged`), which folds it into the panels that show it
+                        (`bought`, `opened`, `opening`), and the page reads what no answer carries once, when the
+                        opening scene closes (`onClosed`, `settled`, `revision`) (R3211000) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 
@@ -1092,6 +1098,6 @@ apostrophe there or in a dictionary key, and no straight double quote there.
 
 ## Internationalisation
 
-The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
 
 The language button (`src/i18n/LanguageButton.tsx`) stays only until the device has settled on its language (R1916000): `localStorage["jackioh.locale.settledVisits"]` counts the boots, every language change and the settings' reset set it back to 0, and from the third unchanged boot the button leaves the top bar and the board while settings' Language row stays.

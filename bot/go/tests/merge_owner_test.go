@@ -19,8 +19,11 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
 
-// mergeOwnerQueueFailed is CI failing on the merge queue's build of pull request `pr`.
+// mergeOwnerQueueFailed is CI failing on the merge queue's build of pull request `pr`: a required
+// check failed, which cancelled the rest of the build (ci.yml's `queue-cancel-*`).
 func mergeOwnerQueueFailed(h *flowHarness, pr int) []string {
+	h.gh.Jobs["77"] = []*pyjson.Object{pyjson.New("id", 7701, "name", "rust", "status", "completed",
+		"conclusion", "failure")}
 	run := pyjson.New("name", "CI", "conclusion", "cancelled",
 		"head_branch", fmt.Sprintf("gh-readonly-queue/main/pr-%d-abc", pr), "head_sha", "mg", "id", 77,
 		"html_url", "q", "pull_requests", []any{}, "event", "merge_group")

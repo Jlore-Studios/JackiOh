@@ -6,7 +6,9 @@
 // Escape, a scroll or the window's blur, and on a press on the card, which is a tap or a hold of its
 // own (R2730000). Touch has no hover: a long press opens the fullscreen preview (ItemPreview.tsx), which
 // shows the same views. Both "Hover previews" switches govern it, as they govern the board's
-// (useInspectTrigger.tsx). Presentation only (CLAUDE.md rule 7).
+// (useInspectTrigger.tsx). Presentation only (CLAUDE.md rule 7). R3016001: the same panel shows one level of a card's
+// variants (`level`) where a ladder's rung is hovered, and a grid card's carries "Equip or buy" (`onLooks`), which opens
+// the card's equip and buy screen (LooksScreen.tsx).
 
 import { useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type PointerEvent, type ReactElement, type RefObject } from "react";
 
@@ -18,7 +20,7 @@ import { placePreview, rectOf, type Rect } from "../cards/inspect/placement.ts";
 import { readCardSettings } from "../cards/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { collectionTestid as T } from "./collection.ts";
-import LookViews, { RadiantToggle } from "./LookViews.tsx";
+import LookViews, { LooksButton, RadiantToggle } from "./LookViews.tsx";
 
 /** Once the pointer has left the card, how long the panel waits for it to arrive on the panel. */
 export const LOOK_HOVER_CLOSE_MS = 200;
@@ -116,8 +118,9 @@ export function useLookHover(): LookHover {
       },
       onPointerLeave: leave,
       onPointerDown: close,
+      // The focus may land on a button inside the trigger (a rung's Equip or Buy): it is that one the keyboard brought.
       onFocus: (event) => {
-        if (!hoverAllowed() || !focusedByKeyboard(event.currentTarget)) return;
+        if (!hoverAllowed() || !(event.target instanceof Element) || !focusedByKeyboard(event.target)) return;
         arm(id, event.currentTarget);
       },
       onBlur: (event) => {
@@ -149,8 +152,25 @@ export function useLookHover(): LookHover {
   return { hovered, trigger: handlers.trigger, stay: handlers.stay, leave: handlers.leave, close: handlers.close, panel };
 }
 
-/** R3016000: the hover preview of `def`, beside `anchor`: its three views and a Radiant toggle, base first. */
-export function LookHoverPanel({ def, owned, anchor, hover }: { def: CardDef; owned: boolean; anchor: Rect; hover: LookHover }): ReactElement {
+/**
+ * R3016000: the hover preview of `def`, beside `anchor`: its three views and a Radiant toggle, base first. R3016001:
+ * `level` the one level it shows (a hovered rung's), and `onLooks` an "Equip or buy" that opens the card's screen.
+ */
+export function LookHoverPanel({
+  def,
+  owned,
+  anchor,
+  hover,
+  level,
+  onLooks,
+}: {
+  def: CardDef;
+  owned: boolean;
+  anchor: Rect;
+  hover: LookHover;
+  level?: string | undefined;
+  onLooks?: (() => void) | undefined;
+}): ReactElement {
   const [radiant, setRadiant] = useState(false);
   const placed = placePreview(anchor, { width: window.innerWidth, height: window.innerHeight }, LOOK_HOVER_ESTIMATE);
 
@@ -174,6 +194,7 @@ export function LookHoverPanel({ def, owned, anchor, hover }: { def: CardDef; ow
       data-testid={T.lookHover}
       data-item={def.id}
       data-owned={String(owned)}
+      data-level={level}
       data-side={placed.side}
       role="group"
       aria-label={readerName(def)}
@@ -182,14 +203,17 @@ export function LookHoverPanel({ def, owned, anchor, hover }: { def: CardDef; ow
       onPointerLeave={hover.leave}
     >
       <div aria-hidden="true">
-        <LookViews def={def} radiant={radiant} worn={owned} />
+        <LookViews def={def} radiant={radiant} worn={owned} level={level} />
       </div>
-      <RadiantToggle
-        radiant={radiant}
-        onToggle={() => {
-          setRadiant((shown) => !shown);
-        }}
-      />
+      <div className="collection-look__actions">
+        <RadiantToggle
+          radiant={radiant}
+          onToggle={() => {
+            setRadiant((shown) => !shown);
+          }}
+        />
+        {onLooks === undefined ? null : <LooksButton onLooks={onLooks} />}
+      </div>
     </div>
   );
 }
