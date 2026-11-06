@@ -22322,10 +22322,6 @@
       "refused_until": "2026-11-05T18:10:00Z",
       "spent": [
         {
-          "at": "2026-10-29T05:27:29Z",
-          "minutes": 23.1
-        },
-        {
           "at": "2026-10-29T05:56:34Z",
           "minutes": 0.9
         },
@@ -23120,16 +23116,13 @@
         {
           "at": "2026-11-06T06:41:37Z",
           "minutes": 124.1
+        },
+        {
+          "at": "2026-11-06T11:22:39Z",
+          "minutes": 5.9
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-28T14:18:28Z",
-          "cache": 1833568,
-          "cost": 1.1388,
-          "input": 54,
-          "output": 13621
-        },
         {
           "at": "2026-10-28T15:35:11Z",
           "cache": 8603347,
@@ -24522,14 +24515,21 @@
           "cost": 5.8671,
           "input": 26,
           "output": 7518
+        },
+        {
+          "at": "2026-11-06T11:22:39Z",
+          "cache": 4589564,
+          "cost": 2.7527,
+          "input": 67,
+          "output": 31812
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-06T10:00:00Z",
-          "utilization": 0.73
+          "resets_at": "2026-11-06T16:10:00Z",
+          "utilization": 0.05
         },
-        "observed_at": "2026-11-06T06:41:37Z",
+        "observed_at": "2026-11-06T11:22:39Z",
         "status": "allowed"
       }
     },
@@ -35182,6 +35182,15 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-06T11:13:24Z,claude-3,stream,call,42206434816,1,2026-11-06T16:10:00Z,,,allowed,,,",
+      "2026-11-06T11:14:09Z,claude-3,stream,call,42206434816,2,2026-11-06T16:10:00Z,,,allowed,,,",
+      "2026-11-06T11:14:54Z,claude-3,stream,call,42206434816,3,2026-11-06T16:10:00Z,,,allowed,,,",
+      "2026-11-06T11:16:24Z,claude-3,stream,call,42206434816,4,2026-11-06T16:10:00Z,,,allowed,,,",
+      "2026-11-06T11:17:39Z,claude-3,stream,call,42206434816,5,2026-11-06T16:10:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
