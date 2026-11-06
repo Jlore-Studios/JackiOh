@@ -16,9 +16,10 @@ use jackioh_server::config::{
 };
 use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
-    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID,
-    VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID,
-    VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
+    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ANIMATED_ID, VERSION_COMIC_ID,
+    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
+    VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID,
+    VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -230,6 +231,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         jlorious: false,
         card: None,
         offer: Vec::new(),
+        level: None,
     }
 }
 
@@ -981,6 +983,9 @@ async fn r2728000_a_legendary_token_refuses_a_mythic_an_owned_one_and_an_unowned
     own(&app, &cards[..2]).await;
     let full_art_card = "classicplus-019".to_string();
     own(&app, std::slice::from_ref(&full_art_card)).await;
+    // R3015004: Full art's first two levels owned there, so its signed level, a Mythic, is the next one.
+    own_cosmetic(&app, &full_art_card, VERSION_FULL_ART_ID).await;
+    own_cosmetic(&app, &full_art_card, VERSION_FULL_ART_ANIMATED_ID).await;
     let registry = registry(&cards);
     grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 3).await;
     redeem_cosmetic_token(
@@ -1013,12 +1018,12 @@ async fn r2728000_a_legendary_token_refuses_a_mythic_an_owned_one_and_an_unowned
         .await;
         assert_eq!(refused.unwrap_err().status(), 409, "{cosmetic_id}");
     }
-    // Through the route: the shipped Mythic playmat and Mythic Signature augment (R2725000).
+    // Through the route: the shipped Mythic playmat and Full art's signed level, a Mythic (R3015001).
     for body in [
         json!({ "token": "Legendary", "cosmeticId": "table-astral" }),
         json!({
             "token": "Legendary",
-            "cosmeticId": AUGMENT_SIGNATURE_ID,
+            "cosmeticId": VERSION_FULL_ART_SIGNED_ID,
             "cardId": full_art_card,
         }),
     ] {
@@ -1272,12 +1277,15 @@ async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_
     };
     let before = everything(&app).await;
 
-    // R2725000: League of Losers' four full arts are retired: no token of any tier buys one, a 400.
+    // R2725000: League of Losers' four full arts are retired, and (R3015000) the two augments: no token of any tier
+    // buys one, a 400.
     for cosmetic in [
         "full-art-league-of-losers",
         "full-art-league-of-losers-animated",
         "full-art-league-of-losers-signed",
         "animated-league-of-losers",
+        AUGMENT_ANIMATED_ID,
+        AUGMENT_SIGNATURE_ID,
     ] {
         for token in ["Rare", "Epic", "Legendary"] {
             let (status, answer) =
@@ -1289,11 +1297,11 @@ async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_
             );
         }
     }
-    // R2725001: the version and the augments on a card they are not offered: a 400, whatever the token.
+    // R2725001: Full art's levels on a card they are not offered: a 400, whatever the token.
     for (cosmetic, token) in [
         (VERSION_FULL_ART_ID, "Legendary"),
-        (AUGMENT_ANIMATED_ID, "Epic"),
-        (AUGMENT_SIGNATURE_ID, "Legendary"),
+        (VERSION_FULL_ART_ANIMATED_ID, "Legendary"),
+        (VERSION_FULL_ART_SIGNED_ID, "Legendary"),
     ] {
         let (status, answer) =
             redeem(json!({ "token": token, "cosmeticId": cosmetic, "cardId": bare })).await;
@@ -1304,25 +1312,26 @@ async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_
         );
     }
     // On the card they are offered, the Full art version is a Legendary chase, which no Rare or Epic token
-    // buys (R1305003, R2728000), and Signature a Mythic, which no token buys: 409. A Mythic token is no token.
+    // buys (R1305003, R2728000), and the Default variant's animated level an Epic: 409. A Mythic token is no
+    // token.
     for (cosmetic, token) in [
         (VERSION_FULL_ART_ID, "Rare"),
         (VERSION_FULL_ART_ID, "Epic"),
-        (AUGMENT_SIGNATURE_ID, "Legendary"),
-        (AUGMENT_ANIMATED_ID, "Rare"),
+        (VERSION_ANIMATED_ID, "Rare"),
     ] {
         let (status, answer) =
             redeem(json!({ "token": token, "cosmeticId": cosmetic, "cardId": card })).await;
         assert_eq!(status, 409, "{cosmetic} for {token}: {answer}");
     }
     let (status, answer) =
-        redeem(json!({ "token": "Mythic", "cosmeticId": AUGMENT_SIGNATURE_ID, "cardId": card })).await;
+        redeem(json!({ "token": "Mythic", "cosmeticId": VERSION_FULL_ART_SIGNED_ID, "cardId": card })).await;
     assert_eq!(status, 400, "{answer}");
     assert_eq!(everything(&app).await, before);
 }
 
 #[tokio::test]
-async fn r2715000_r2725002_an_epic_token_buys_the_animated_augment_unless_a_retired_animated_art_owns_it() {
+async fn r2715000_r2725002_an_epic_token_buys_the_default_animated_level_unless_a_retired_animated_art_owns_it()
+ {
     let (app, token) = setup().await;
     let card = "classicplus-019".to_string();
     let other = "classicplus-012".to_string();
@@ -1338,30 +1347,39 @@ async fn r2715000_r2725002_an_epic_token_buys_the_animated_augment_unless_a_reti
         }
     };
 
-    // The Animated augment is an Epic, above a Rare token's tier: refused, and every token kept.
+    // R3015000: the Animated augment is retired, a 400; the Default variant's animated level in its place is an
+    // Epic, above a Rare token's tier: refused, and every token kept.
     let before = everything(&app).await;
     let (status, answer) =
-        redeem(json!({ "token": "Rare", "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card })).await;
+        redeem(json!({ "token": "Epic", "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card })).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that cosmetic is retired")),
+        "{answer}"
+    );
+    let (status, answer) =
+        redeem(json!({ "token": "Rare", "cosmeticId": VERSION_ANIMATED_ID, "cardId": card })).await;
     assert_eq!(status, 409, "{answer}");
     assert_eq!(everything(&app).await, before);
 
-    // It is no chase, so an Epic token buys it, on an owned card it is offered.
+    // It is no chase and the next level of its ladder, the normal face below it owned by everyone, so an Epic
+    // token buys it, on an owned card it is offered.
     let (status, answer) =
-        redeem(json!({ "token": "Epic", "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card })).await;
+        redeem(json!({ "token": "Epic", "cosmeticId": VERSION_ANIMATED_ID, "cardId": card })).await;
     assert_eq!(status, 200, "{answer}");
     assert!(
         ledger(&app).await.cosmetics.iter().any(
-            |row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == AUGMENT_ANIMATED_ID
+            |row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == VERSION_ANIMATED_ID
         )
     );
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);
 
-    // R2725002: The Mother Pancake's retired Animated art owns the augment there, so it is already owned.
+    // R2725002, R3015006: The Mother Pancake's retired Animated art owns that level there, so it is already owned.
     own_cosmetic(&app, &other, "animated-the-mother-pancake").await;
     let before = everything(&app).await;
     let (status, answer) =
-        redeem(json!({ "token": "Epic", "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": other })).await;
+        redeem(json!({ "token": "Epic", "cosmeticId": VERSION_ANIMATED_ID, "cardId": other })).await;
     assert_eq!(status, 409, "{answer}");
     assert_eq!(everything(&app).await, before);
 }
@@ -1373,7 +1391,7 @@ async fn r2940000_a_token_refuses_a_version_not_offered() {
     let card = "core-083".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;
-    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 2).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 3).await;
     grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 1).await;
     let redeem = |body: Value| {
         let (app, token) = (app.clone(), token.clone());
@@ -1397,11 +1415,20 @@ async fn r2940000_a_token_refuses_a_version_not_offered() {
             "{cosmetic}: {answer}"
         );
     }
+    // R3015004: Alt full art is Alt art's second level, so before Alt art it is a 400 too, spending nothing.
+    let (status, answer) =
+        redeem(json!({ "token": "Legendary", "cosmeticId": VERSION_ALT_FULL_ART_ID, "cardId": card })).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that level needs every level below it owned first")),
+        "{answer}"
+    );
     assert_eq!(everything(&app).await, before);
-    // On the card it is offered, a Rare token buys the Sketch, and a Legendary token Alt full art, a Legendary
-    // chase (R2728000).
+    // On the card it is offered, a Rare token buys the Sketch and Alt art, and a Legendary token then Alt full art, a
+    // Legendary chase (R2728000).
     for (cosmetic, tier) in [
         (VERSION_SKETCH_ID, "Rare"),
+        (VERSION_ALT_ART_ID, "Rare"),
         (VERSION_ALT_FULL_ART_ID, "Legendary"),
     ] {
         let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": card })).await;
@@ -1568,4 +1595,59 @@ async fn r2944000_no_token_buys_a_mythic_version_and_none_where_not_offered() {
     // Nothing written or spent: both Legendary tokens are still held.
     assert_eq!(everything(&app).await, before);
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 2);
+}
+
+#[tokio::test]
+async fn r3015004_a_token_buys_only_the_next_level() {
+    let (app, token) = setup().await;
+    // Transmogulate, a Legendary Spell, is offered the Sketch's ladder: Rare, Epic, Legendary, Mythic.
+    let card = "core-083".to_string();
+    own(&app, std::slice::from_ref(&card)).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 2).await;
+    let redeem = |tier: &str, id: &str| {
+        let (app, token) = (app.clone(), token.clone());
+        let body = json!({ "token": tier, "cosmeticId": id, "cardId": card });
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let skip = (400, json!("that level needs every level below it owned first"));
+    let (full_art, animated) = ("version-sketch-full-art", "version-sketch-full-art-animated");
+    for (tier, bought, refused) in [
+        (
+            "Rare",
+            VERSION_SKETCH_ID,
+            vec![("Epic", full_art), ("Legendary", animated)],
+        ),
+        ("Epic", full_art, vec![("Legendary", animated)]),
+        ("Legendary", animated, vec![]),
+    ] {
+        // A level past the next, with a token of its tier held: a 400, writing and spending nothing.
+        let before = everything(&app).await;
+        for (refused_tier, id) in refused {
+            let (status, answer) = redeem(refused_tier, id).await;
+            assert_eq!(
+                (status, answer["error"]["message"].clone()),
+                skip,
+                "{id}: {answer}"
+            );
+        }
+        assert_eq!(everything(&app).await, before);
+        // The next level: a 200, one token of its tier spent.
+        let held_before = held(&app, InventoryItem::CosmeticToken, tier).await;
+        let (status, answer) = redeem(tier, bought).await;
+        assert_eq!(status, 200, "{bought}: {answer}");
+        assert_eq!(
+            held(&app, InventoryItem::CosmeticToken, tier).await,
+            held_before - 1,
+            "{bought}"
+        );
+    }
+    // Its signed level is a Mythic, the next level now, which no token buys (R2728000): a 409.
+    let (status, answer) = redeem("Legendary", "version-sketch-full-art-signed").await;
+    assert_eq!(status, 409, "{answer}");
 }

@@ -24,7 +24,7 @@ use crate::api::http::{
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{CHALLENGE_SWEEP_INTERVAL_SECONDS, CHALLENGE_TTL_MS};
-use crate::db::store::{ChallengeRow, ChallengeState, QueueMode};
+use crate::db::store::{ChallengeRow, ChallengeState, QueueMode, StoreError, Tx};
 use crate::social::friends::are_friends;
 use crate::social::presence::{Status, standings};
 use crate::social::{PlayerRef, created, iso, no_content, not_found, param, profiles_by_id, refused};
@@ -129,13 +129,27 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let now = now_ms();
     let mut tx = app.db.begin(Some(&me)).await?;
-    let open = tx.challenges_open_of(&me, now).await?;
+    let (incoming, outgoing) = open_challenges(&mut tx, &me, now).await?;
+    tx.commit().await?;
+    Ok(ok(json!({
+        "incoming": to_json(&incoming)?,
+        "outgoing": to_json(&outgoing)?,
+    })))
+}
+
+/// `GET /api/challenges`' answer, also `GET /api/social`'s (R3210000): `me`'s open challenges that
+/// have not lapsed by `now`, received and sent, oldest first, read in `tx`.
+pub(crate) async fn open_challenges(
+    tx: &mut Tx<'_>,
+    me: &str,
+    now: i64,
+) -> Result<(Vec<Challenge>, Vec<Challenge>), StoreError> {
+    let open = tx.challenges_open_of(me, now).await?;
     let named: Vec<String> = open
         .iter()
         .flat_map(|row| [row.from_profile.clone(), row.to_profile.clone()])
         .collect();
-    let profiles = profiles_by_id(&mut tx, &named).await?;
-    tx.commit().await?;
+    let profiles = profiles_by_id(tx, &named).await?;
 
     let challenge_of = |row: &ChallengeRow| -> Option<Challenge> {
         Some(Challenge {
@@ -157,10 +171,7 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
         .filter(|row| row.from_profile == me)
         .filter_map(&challenge_of)
         .collect();
-    Ok(ok(json!({
-        "incoming": to_json(&incoming)?,
-        "outgoing": to_json(&outgoing)?,
-    })))
+    Ok((incoming, outgoing))
 }
 
 /// `POST /api/challenges/:id/decline` (B49): its friend declines it. 204, or 404.

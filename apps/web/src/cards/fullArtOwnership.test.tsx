@@ -50,11 +50,15 @@ function owningFullArt(ids: Iterable<string>): OwnedByCard {
   return new Map([...ids].map((id) => [id, new Set([FULL_ART_OF_CARD.get(id) ?? `no full art for ${id}`])]));
 }
 
-/** `owningFullArt`, as `ownedCardCosmetics` reads it: each still Epic owning the Full art version it implies (R2725002). */
+/**
+ * `owningFullArt`, as `ownedCardCosmetics` reads it: each still Epic owning Full art's first level, which it maps to
+ * (R2725002, R3015006). A face wears that level (R3015005), so every face below reads ownership in this form, as the
+ * read hands it over.
+ */
 function readingFullArt(ids: Iterable<string>): OwnedByCard {
   return new Map([...owningFullArt(ids)].map(([id, held]) => [id, new Set([...held, "version-full-art"])]));
 }
-const EVERY_HERO = owningFullArt(HERO_IDS);
+const EVERY_HERO = readingFullArt(HERO_IDS);
 /** Mr. Vanilla, whose full art the viewer owns below, and Big D-fender, whose they do not. */
 const OWNED = "core-008";
 const NOT_OWNED = "core-001";
@@ -146,7 +150,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
   });
 
   it("R1313000 with the economy live your own copy prints full art only once you own it", async () => {
-    const read = vi.fn((): Promise<OwnedByCard> => Promise.resolve(owningFullArt([OWNED])));
+    const read = vi.fn((): Promise<OwnedByCard> => Promise.resolve(readingFullArt([OWNED])));
     const { container } = render(
       <ViewerFullArt token="e2e-token-p1" gated read={read}>
         <CardFace face={heroFace(OWNED)} layout="full" worn />
@@ -172,7 +176,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     );
     const face = container.querySelector<HTMLElement>(".cf");
     expect(face?.hasAttribute("data-full-art")).toBe(false);
-    await act(async () => answer(owningFullArt([OWNED])));
+    await act(async () => answer(readingFullArt([OWNED])));
     expect(face?.getAttribute("data-full-art")).toBe("true");
     cleanup();
 
@@ -218,7 +222,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     };
     const board = (wearCosmetics: boolean) => (
       <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
-        <FullArtOwned owned={owningFullArt([OWNED])}>
+        <FullArtOwned owned={readingFullArt([OWNED])}>
           <Board view={view()} wearCosmetics={wearCosmetics} />
         </FullArtOwned>
       </CatalogContext.Provider>
@@ -249,7 +253,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
   it("R1313000 your own card's hover preview follows your ownership; another's prints its words", () => {
     const preview = (own: boolean): boolean => {
       render(
-        <FullArtOwned owned={owningFullArt([OWNED])}>
+        <FullArtOwned owned={readingFullArt([OWNED])}>
           <OwnCopy own={own}>
             <HoverPreview face={heroFace(OWNED)} anchor={ANCHOR} />
           </OwnCopy>
@@ -264,7 +268,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     // An inner OwnCopy never takes back an outer one's word.
     expect(
       printsFullArt(OWNED, false, (face) => (
-        <FullArtOwned owned={owningFullArt([OWNED])}>
+        <FullArtOwned owned={readingFullArt([OWNED])}>
           <OwnCopy own>
             <OwnCopy own={false}>{face}</OwnCopy>
           </OwnCopy>
@@ -391,11 +395,11 @@ describe("R1655000 a full art is a pick of its card, worn behind ownership", () 
 
     expect(printsFullArt(OWNED, true, under(null))).toBe(true);
     expect(printsFullArt(NOT_OWNED, true, under("every"))).toBe(true);
-    expect(printsFullArt(OWNED, true, under(owningFullArt([OWNED])))).toBe(true);
-    expect(printsFullArt(NOT_OWNED, true, under(owningFullArt([OWNED])))).toBe(false);
+    expect(printsFullArt(OWNED, true, under(readingFullArt([OWNED])))).toBe(true);
+    expect(printsFullArt(NOT_OWNED, true, under(readingFullArt([OWNED])))).toBe(false);
     expect(printsFullArt(OWNED, true, under(NO_FULL_ART))).toBe(false);
     // Another's copy of the owned card is not the viewer's own: it draws the setting (off).
-    expect(printsFullArt(OWNED, false, under(owningFullArt([OWNED])))).toBe(false);
+    expect(printsFullArt(OWNED, false, under(readingFullArt([OWNED])))).toBe(false);
     // A tutorial lesson prints none, a pick or not.
     expect(printsFullArt(OWNED, true, (face) => <FullArtAllowed allowed={false}>{face}</FullArtAllowed>)).toBe(false);
   });
@@ -420,7 +424,7 @@ describe("R1655000 a full art is a pick of its card, worn behind ownership", () 
     writeCardSettings({ fullArt: false });
     writeCardFullArt(OWNED, true);
     writeCardFullArt(NOT_OWNED, true);
-    const read = vi.fn((): Promise<OwnedByCard> => Promise.resolve(owningFullArt([OWNED])));
+    const read = vi.fn((): Promise<OwnedByCard> => Promise.resolve(readingFullArt([OWNED])));
     const { container } = render(
       <ViewerFullArt token="e2e-token-p1" gated read={read}>
         <CardFace face={heroFace(OWNED)} layout="full" worn />
