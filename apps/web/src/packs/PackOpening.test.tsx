@@ -23,7 +23,8 @@ import {
 import { flightsMs } from "../economy/bars.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
+import { keptPaths, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { expireRead } from "../net/readCache.ts";
 import { whileSpending } from "../net/spending.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { expectEmptyState } from "../test/empty.ts";
@@ -844,6 +845,8 @@ describe("#1308 the card packs panel", () => {
 
     // Another panel bought a pack: the page asks this one to read again.
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
+    // R3206000: the kept packs are inside the window and the opening folded into them; this read is the one after it.
+    expireRead(TOKEN, keptPaths.packs);
     rerender(<PackOpening token={TOKEN} revision={1} onChanged={onChanged} />);
     await waitFor(() => {
       expect(server.to("GET", "/api/packs")).toHaveLength(2);

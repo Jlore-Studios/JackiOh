@@ -13,7 +13,7 @@ import {
 import { opponentOf, type CardDef, type CardDefs, type PlayerId, type PlayerView, type SandboxOp, type SpawnZone } from "@jackioh/shared";
 
 import { CardFace, faceModel } from "../cards/index.ts";
-import { t } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { searchCards, spawnableDefs, visibleCards, type VisibleCard } from "./sandbox.ts";
 import { practiceTestid } from "./testids.ts";
@@ -76,7 +76,9 @@ function SeatPicker({ value, onChange, testid }: { value: Seat; onChange(seat: S
 }
 
 function ResultCard({ def, radiant, picked, onPick }: { def: CardDef; radiant: boolean; picked: boolean; onPick(): void }): ReactElement {
-  const face = useMemo(() => faceModel({ defId: def.id, def, radiant }), [def, radiant]);
+  // A face is worded in the reader's language, so a switch of language makes it again.
+  const locale = useLocale();
+  const face = useMemo(() => faceModel({ defId: def.id, def, radiant }), [def, radiant, locale]);
   return (
     <li className="sandbox-panel__result">
       <button

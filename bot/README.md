@@ -164,6 +164,13 @@ more than one, the highest counts, and any other `priority:*` label counts as no
 the order is the usual one ([who takes what](#subscriptions)), and a forced item still goes before
 every tier. A priority label never makes work eligible or ineligible.
 
+**The production gate** goes before all three (#3275): the issue `super.yml`'s report opens when the
+super run production waits on is red, "CI: daily super run failed" (the daily run on the `staging`
+branch) or "CI: super run failed on a production candidate", found by its exact title
+(`GateTitles` in [`go/internal/queue`](go/internal/queue/candidates.go)), is built before any
+`priority:high` item, whatever its labels, since production moves only once that run passes. The
+queue and the status issue name its tier `production gate`.
+
 **`human`** takes work away from the bot altogether: people do it. That is a decision, an
 account or a secret, repository work the bot may not do (a change to `bot/`, `.harness/` or
 `.github/`), or work a person is already building. No model picks it up, whatever else it is

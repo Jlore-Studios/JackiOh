@@ -17,8 +17,8 @@ import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
-import { clearReadCache } from "../net/readCache.ts";
+import { keptPaths, type BoughtPackResponse, type OpenedCosmeticPackResponse } from "../net/api.ts";
+import { clearReadCache, expireRead } from "../net/readCache.ts";
 import { whileSpending } from "../net/spending.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -354,6 +354,9 @@ describe("#1309 the Jlore shop", () => {
     expect(server.to("GET", "/api/wallet")).toHaveLength(1);
 
     jlore = 88;
+    // R3206000: answers inside the window are used with no read; these are as old as a past visit's.
+    expireRead(TOKEN, keptPaths.wallet);
+    expireRead(TOKEN, keptPaths.packs);
     rerender(<Shop token={TOKEN} revision={1} />);
 
     await waitFor(() => {
@@ -616,6 +619,8 @@ describe("#1309 the cosmetic packs", () => {
     expect(pack).toHaveAttribute("data-size", "shelf");
     expect(pack.compareDocumentPosition(screen.getByTestId(T.open)) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     cosmeticServer({ packs: { status: 200, body: { ...cosmeticPacksInfo(), unopened: 0 } } });
     render(<CosmeticPacks token={TOKEN} />);

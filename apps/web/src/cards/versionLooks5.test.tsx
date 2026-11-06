@@ -36,6 +36,7 @@ import { IMMERSIVE_X_PROPERTY, IMMERSIVE_Y_PROPERTY, pointerShift, tiltShift } f
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { legacyText } from "../test/faceData.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import {
   AUGMENT_ANIMATED_ID,
@@ -484,7 +485,7 @@ describe("R2944001 Radiant under part 5's looks", () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
-      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
       for (const version of PART_FIVE.filter((each) => offeredOn(each, id))) {
         for (const level of [version, `${version}-animated`]) {
           writeCardLevel(id, level);

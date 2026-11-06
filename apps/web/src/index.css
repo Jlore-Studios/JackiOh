@@ -3,6 +3,7 @@
 @import "./typescale.css";
 @import "./surfaces.css";
 @import "./motion.css";
+@import "./spacing.css";
 @import "./buttons.css";
 
 /* Base reset and the design tokens the board and the prompts share.
@@ -35,7 +36,7 @@
 
   --card-w: 82px;
   --card-h: 112px;
-  --gap: 6px;
+  --gap: var(--space-3);
   /* Frozen for non-board sheets (duos/, the deck builder): board sheets name surfaces.css.
      Nothing in board scope uses it. */
   --radius: 7px;
@@ -122,7 +123,7 @@ button {
   font: inherit;
   color: inherit;
   border-radius: var(--radius-sm);
-  padding: 5px 10px;
+  padding: var(--space-2) var(--space-5);
   cursor: var(--cursor-glove-point, pointer);
 }
 
@@ -133,10 +134,10 @@ button:disabled {
 }
 
 .app-shell {
-  padding: 12px;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-5);
   max-width: 100%;
 }
 
@@ -168,7 +169,7 @@ button:disabled {
   border: 1px solid var(--opponent);
   background: var(--bg-raised);
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
+  padding: var(--space-5) var(--space-6);
   max-width: 60ch;
 }
 
@@ -209,10 +210,10 @@ h3,
    --------------------------------------------------------------------------------------------- */
 
 .app-shell {
-  padding: 32px 20px 48px;
+  padding: var(--space-10) var(--space-8) calc(var(--space-10) + var(--space-7));
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-7);
   max-width: 960px;
   margin: 0 auto;
   font-size: var(--type-lg);
@@ -221,8 +222,8 @@ h3,
 /* A match fills the viewport; it must not be squeezed into the reading column above. */
 .app-shell.app-shell--wide {
   max-width: 100%;
-  padding: 12px;
-  gap: 10px;
+  padding: var(--space-6);
+  gap: var(--space-5);
   font-size: var(--type-md);
 }
 
@@ -262,7 +263,7 @@ h3,
 .brand {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--space-5);
 }
 
 .brand h1 {
@@ -275,10 +276,10 @@ h3,
   border: 1px solid var(--line);
   background: var(--bg-raised);
   border-radius: var(--radius-md);
-  padding: 18px;
+  padding: var(--space-7);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-6);
 }
 
 /* An auth screen is one column, centered, and should not drift to the left edge of a wide page. */
@@ -293,7 +294,7 @@ h3,
   border: 1px solid var(--line-bright);
   background: var(--bg-raised);
   border-radius: var(--radius-sm);
-  padding: 11px 14px;
+  padding: var(--space-5) var(--space-6);
   max-width: 64ch;
   color: var(--text-dim);
 }
@@ -315,7 +316,7 @@ h3,
   color: var(--text);
   background: var(--bg-sunken);
   border-radius: var(--radius-xs);
-  padding: 1px 5px;
+  padding: 0 var(--space-2);
   font-size: var(--type-sm-em);
 }
 
@@ -324,7 +325,7 @@ h3,
 .app-shell button,
 .form-card button {
   border-radius: var(--radius-sm);
-  padding: 9px 16px;
+  padding: var(--space-4) var(--space-7);
   font-weight: 550;
   transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), transform var(--motion-instant) var(--ease-standard);
 }
@@ -342,7 +343,7 @@ h3,
 .app-shell a.button-danger {
   display: inline-block;
   border-radius: var(--radius-sm);
-  padding: 9px 16px;
+  padding: var(--space-4) var(--space-7);
   font-weight: 550;
   text-decoration: none;
   transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
@@ -389,6 +390,30 @@ h3,
   }
 }
 
+/* No highlighting on a phone but in the chat (#3260, after #2015): a tap flashes nothing (a phone greys
+   anything with an onclick), and under a finger a press selects no text and opens no long-press callout,
+   so a long press on a card or a button never lights the page. The tap highlight is set at every
+   pointer, since only touch browsers draw one; the rest wait for a coarse pointer, so a narrow desktop
+   window still selects. Fields keep their text, since iOS will not type into or place a caret in one
+   that cannot be selected. `together/together.css` gives the chat panel all three back, so a message
+   can be pressed, selected and copied. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (pointer: coarse) {
+  html {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  :where(input, textarea, [contenteditable]:not([contenteditable="false"])) {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
 :where(button, input, a):focus-visible {
   outline: 2px solid var(--radiant);
   outline-offset: 2px;
@@ -403,7 +428,7 @@ h3,
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-2);
   max-width: 100%;
 }
 
@@ -415,7 +440,7 @@ h3,
 .form-card label {
   color: var(--text-dim);
   font-size: var(--type-md);
-  margin-top: 7px;
+  margin-top: var(--space-3);
 }
 
 .form-card input {
@@ -424,7 +449,7 @@ h3,
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
+  padding: var(--space-5) var(--space-6);
   min-width: 0;
   transition: border-color var(--motion-fast) var(--ease-standard);
 }
@@ -434,14 +459,14 @@ h3,
 }
 
 .form-card button[type="submit"] {
-  margin-top: 14px;
+  margin-top: var(--space-6);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5);
 }
 
 /* --- landing ------------------------------------------------------------------------------- */
@@ -449,14 +474,14 @@ h3,
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 3vh 0 6px;
+  gap: var(--space-6);
+  padding: 3vh 0 var(--space-3);
 }
 
 /* --- screen nav ---------------------------------------------------------------------------- */
 
 .screen-nav {
-  margin-bottom: -4px;
+  margin-bottom: calc(var(--space-2) * -1);
 }
 
 /* --- an input with a control inside it (the password reveal) --------------------------------- */
@@ -464,7 +489,7 @@ h3,
 .input-with-affix {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .input-with-affix input {
@@ -475,7 +500,7 @@ h3,
 /* Reads as a control on the field, not a second call to action beside it: a `button-secondary`. */
 .affix-button {
   border-radius: var(--radius-sm);
-  padding: 0 12px;
+  padding: 0 var(--space-6);
   font-weight: 500;
   cursor: var(--cursor-glove-point, pointer);
   flex: 0 0 auto;
@@ -486,14 +511,14 @@ h3,
 .stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: 10px;
+  gap: var(--space-5);
 }
 
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-6);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--bg-sunken);
@@ -530,11 +555,11 @@ h3,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-4);
   border: 1px solid var(--line);
   background: var(--bg-raised);
   border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-6);
   color: var(--text-dim);
 }
 
@@ -547,7 +572,7 @@ h3,
 .hotseat-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5);
 }
 
 .hotseat-bar > span {
@@ -564,7 +589,7 @@ h3,
 
 @media (max-width: 560px) {
   .app-shell {
-    padding: 20px 16px 36px;
+    padding: var(--space-8) var(--space-7) calc(var(--space-10) + var(--space-2));
   }
 
   .app-shell h1 {

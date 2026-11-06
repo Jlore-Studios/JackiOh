@@ -136,8 +136,8 @@ const UNROLED: Record<string, number> = {
 };
 
 describe("#3219 the button roles", () => {
-  it("#3219 index.css imports buttons.css sixth, and only buttons.css declares the role tokens", () => {
-    expect(read("index.css")).toMatch(/^@import "\.\/fonts\.css";\n(?:@import "[^"]+";\n){4}@import "\.\/buttons\.css";\n/);
+  it("#3219 index.css imports buttons.css seventh, after the token sheets, and only buttons.css declares the role tokens", () => {
+    expect(read("index.css")).toMatch(/^@import "\.\/fonts\.css";\n(?:@import "[^"]+";\n){5}@import "\.\/buttons\.css";\n/);
     for (const token of ["--primary-face", "--danger"]) {
       const declaring = SHEETS.filter((sheet) => new RegExp(String.raw`${token}\s*:`).test(code(sheet)));
       expect(declaring, token).toEqual(["buttons.css"]);

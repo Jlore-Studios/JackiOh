@@ -199,9 +199,11 @@ describe("scripts/ci-scope.sh", () => {
     ".github/workflows/ci.yml",
     ".github/workflows/super.yml",
     ".github/coverage-floor.txt",
-    // promote-production.test.ts runs the script and reads the workflow.
+    // promote-production.test.ts runs the script and reads the workflow; promote-staging.test.ts too.
     ".github/workflows/promote-production.yml",
     "scripts/promote-production.sh",
+    ".github/workflows/promote-staging.yml",
+    "scripts/promote-staging.sh",
     // Staging's deploy, and the live check it shares with production's.
     ".github/workflows/deploy-staging.yml",
     ".github/actions/poll-live/action.yml",
@@ -463,6 +465,7 @@ describe("scripts/ci-scope.sh", () => {
         "vitest.config.ts",
         "scripts/browse.sh",
         "scripts/promote-production.sh",
+        "scripts/promote-staging.sh",
         "scripts/server-image.sh",
         "scripts/worktree.sh",
       ],
@@ -485,6 +488,9 @@ describe("scripts/ci-scope.sh", () => {
       "apps/web/src/net/promote-production.test.ts",
       ".github/workflows/promote-production.yml",
       ".github/workflows/super.yml",
+      "scripts/promote-staging.sh",
+      "apps/web/src/net/promote-staging.test.ts",
+      ".github/workflows/promote-staging.yml",
       "package.json",
       "apps/web/package.json",
       "pnpm-lock.yaml",

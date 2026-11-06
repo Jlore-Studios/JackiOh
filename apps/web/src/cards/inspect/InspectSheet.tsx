@@ -12,8 +12,6 @@ import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardFace } from "../CardFace.tsx";
 import { useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
-import { glossaryFor } from "../rules.ts";
-import { ascentLevelOf } from "../shortText.ts";
 import { Extended } from "./Extended.tsx";
 import { Flavour } from "./Flavour.tsx";
 import { Glossary } from "./Glossary.tsx";
@@ -33,7 +31,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const swipe = useSheetSwipe(modal.close);
-  const ascentLevel = ascentLevelOf(face.values);
+  const ascentLevel = face.ascent;
   // R1655000: the viewer's own card's sheet wears its cosmetics, as it prints its full art.
   const own = useOwnCopy();
 
@@ -60,7 +58,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
             <StateNotes face={face} />
             <Printed face={face} />
           </RefsInteractive>
-          <Glossary entries={glossaryFor(face)} />
+          <Glossary entries={face.glossary} />
           {face.known ? <Flavour defId={face.defId} easter={face.flagged === true} /> : null}
           <LocLine face={face} />
         </div>
