@@ -13895,15 +13895,8 @@
       "stop_requested": false
     },
     "3222": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42310549550",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-06T23:57:15Z",
-        "until": "2026-11-07T00:27:15Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13915,10 +13908,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-194\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|wasm|rustc\"\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3222/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-194\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|wasm|rustc\"\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && cargo fmt --check && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-246\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-194\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|wasm|rustc\"\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-246\"}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3222/.bot-plan.md\", \"StartLine\": 1}\n- said: ## Goal Implement a unified `Tabs` component and a unified `Segmented` component with a single shared stylesheet (`tabs.css`) for menus' tabs and filter controls across the web app. Migrate `SettingsPanel` and statistics views (`/stats`) to `Tabs`, giving `stats` full WAI-ARIA arrow key navigation,\u2026\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-246\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && pnpm --dir apps/web test src/buttons.test.ts\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-246\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-246\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3222/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-262\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-246\"}\n- said: ## Goal Implement a unified `Tabs` component and a unified `Segmented` component with a single shared stylesheet (`tabs.css`) for menus' tabs and filter controls across the web app. Migrate `SettingsPanel` and statistics views (`/stats`) to `Tabs`, giving `stats` full WAI-ARIA arrow key navigation,\u2026\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"34b24e53-9c17-4b12-a8c1-318220ae87e8/task-262\"}\n- said: ## Goal Implement a unified `Tabs` component and a unified `Segmented` component with a single shared stylesheet (`tabs.css`) for menus' tabs and filter controls across the web app. Migrate `SettingsPanel` and statistics views (`/stats`) to `Tabs`, giving `stats` full WAI-ARIA arrow key navigation,\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-06T23:14:36Z",
       "owner_why": "it plans it",
@@ -13931,9 +13923,9 @@
       "provider": "agy",
       "queued_at": "2026-11-05T17:47:33Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42310549550",
+      "run_id": "pending:8bc5aee7-1794009526",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-06T23:14:36Z",
+      "started_at": "2026-11-06T23:59:19Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17341,9 +17333,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T23:58:32Z",
+    "at": "2026-11-06T23:59:19Z",
     "url": "",
-    "what": "build #3220 on claude-3"
+    "what": "build #3222 on agy"
   },
   "last_sweep": {
     "at": "2026-11-06T23:39:11Z",
