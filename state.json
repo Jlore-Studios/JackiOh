@@ -32770,7 +32770,8 @@
       "2026-11-06T13:30:13Z,claude-4,stream,call,42222098064,6,2026-11-06T18:00:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-06T13:17:47Z,42215316037,claude-3,opus,revise,3271,hard,approved,,19.2,51,10292,1544672,1.3508,6,8,,,0.5,claude-8,fresh,other,2"
+      "2026-11-06T13:17:47Z,42215316037,claude-3,opus,revise,3271,hard,approved,,19.2,51,10292,1544672,1.3508,6,8,,,0.5,claude-8,fresh,other,2",
+      "2026-11-06T13:31:13Z,42222098064,claude-4,opus,plan,3305,medium,planned,,23.8,95,64065,4321390,1.5957,2,6,,,4.4,,fresh,,1"
     ]
   },
   "version": 1
