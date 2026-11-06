@@ -557,7 +557,7 @@ async fn r1452_bot_match_replays_from_seed_and_log() {
     );
     let folded = fold(
         Pinned::default(),
-        &fold_args(&m.seed, &row.decks, log, None, None, None),
+        &fold_args(&m.seed, &row.decks, log, None, None, None, row.win_rates.clone()),
     );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&m.actor.engine_state()));
@@ -647,7 +647,15 @@ async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
         .collect();
     let folded = fold(
         Pinned::default(),
-        &fold_args(&m.seed, &row.decks, actions, None, None, None),
+        &fold_args(
+            &m.seed,
+            &row.decks,
+            actions,
+            None,
+            None,
+            None,
+            row.win_rates.clone(),
+        ),
     );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&revived.engine_state()));
@@ -1361,7 +1369,7 @@ async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
     // frozen, once; the bot's frames are shaped as the person's.
     let opening = create_game(
         Pinned::default(),
-        &create_game_args(&m.seed, &both, None, None, None),
+        &create_game_args(&m.seed, &both, None, None, None, None),
     );
     let dealt = dealt_cards(&begin_game(Pinned::default(), &opening).state);
     let mut view: Option<Value> = None;

@@ -82,6 +82,10 @@ pub(crate) fn fold_args_of(row: &MatchRow, log: Vec<Value>) -> Result<FoldArgs, 
     if let Some(glitch_boards) = &row.glitch_boards {
         args.insert("glitchBoards".into(), serde_json::to_value(glitch_boards)?);
     }
+    // R3049000: and so is its win-rate snapshot, or CN Tech and NA Tech pick other cards.
+    if let Some(win_rates) = &row.win_rates {
+        args.insert("winRates".into(), serde_json::to_value(win_rates)?);
+    }
     serde_json::from_value(Value::Object(args))
 }
 

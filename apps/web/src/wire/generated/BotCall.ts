@@ -8,8 +8,18 @@ import type { GameFacts } from "./GameFacts";
 import type { PlayerId } from "./PlayerId";
 import type { SeriesRow } from "./SeriesRow";
 import type { TicketFacts } from "./TicketFacts";
+import type { WinRateTable } from "./WinRateTable";
 
 /**
  * One call of the ladder bots' decisions.
  */
-export type BotCall = { "call": "poolTarget", weekly: number, } | { "call": "planPool", bots: Array<BotFacts>, target: number, } | { "call": "planGrind", bots: Array<BotFacts>, people: Array<number>, ladder: BotLadder, } | { "call": "newBot", seed: string, profileId: string, now: number, } | { "call": "botTargetStrength", strength: number, } | { "call": "drawDecks", seed: string, lists: unknown, catalog: CatalogSnapshot, strength: number, } | { "call": "drawTrio", seed: string, own: Array<BotDeck>, catalog: CatalogSnapshot, strength: number, } | { "call": "fallbackSeconds", key: string, ticketId: string, } | { "call": "fallbackDue", key: string, ticket: TicketFacts, now: number, hidden: boolean, } | { "call": "hourOf", now: number, } | { "call": "chooseBot", ticket: TicketFacts, bots: Array<BotFacts>, recent: Array<string>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "chooseBotPair", bots: Array<BotFacts>, recent: Array<[string, Array<string>]>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "botMatches", inMatch: Array<string | null>, } | { "call": "botMatchGapPassed", games: Array<GameFacts>, now: number, } | { "call": "pickDueAt", series: SeriesRow, seat: PlayerId, } | { "call": "pickIsDue", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "pickSlot", series: SeriesRow, seat: PlayerId, } | { "call": "botPick", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "eligibleCosmetics", owners: Array<CosmeticOwners>, now: number, } | { "call": "redrawCosmetics", seed: string, bot: BotFacts, eligible: Array<[string, string | null]>, now: number, };
+export type BotCall = { "call": "poolTarget", weekly: number, } | { "call": "planPool", bots: Array<BotFacts>, target: number, } | { "call": "planGrind", bots: Array<BotFacts>, people: Array<number>, ladder: BotLadder, } | { "call": "newBot", seed: string, profileId: string, now: number, } | { "call": "botTargetStrength", strength: number, } | { "call": "drawDecks", seed: string, lists: unknown, catalog: CatalogSnapshot, strength: number, 
+/**
+ * R3049002: the win-rate table the random decks lean on, as the server hands its snapshot of
+ * its cached card stats; omitted, they lean on nothing.
+ */
+winRates?: WinRateTable, } | { "call": "drawTrio", seed: string, own: Array<BotDeck>, catalog: CatalogSnapshot, strength: number, 
+/**
+ * R3049002: as `DrawDecks`' `winRates`.
+ */
+winRates?: WinRateTable, } | { "call": "fallbackSeconds", key: string, ticketId: string, } | { "call": "fallbackDue", key: string, ticket: TicketFacts, now: number, hidden: boolean, } | { "call": "hourOf", now: number, } | { "call": "chooseBot", ticket: TicketFacts, bots: Array<BotFacts>, recent: Array<string>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "chooseBotPair", bots: Array<BotFacts>, recent: Array<[string, Array<string>]>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "botMatches", inMatch: Array<string | null>, } | { "call": "botMatchGapPassed", games: Array<GameFacts>, now: number, } | { "call": "pickDueAt", series: SeriesRow, seat: PlayerId, } | { "call": "pickIsDue", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "pickSlot", series: SeriesRow, seat: PlayerId, } | { "call": "botPick", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "eligibleCosmetics", owners: Array<CosmeticOwners>, now: number, } | { "call": "redrawCosmetics", seed: string, bot: BotFacts, eligible: Array<[string, string | null]>, now: number, };

@@ -1,14 +1,16 @@
 //! R388, R767000 (#1085): a live 1v1 match is played, rebuilt and reaped under the catalog
 //! version its row froze when it started, as Duos is. A start on a version this build neither is
 //! nor carries is refused; a rebuild of such a match logs `match.catalog.unpinned` and plays on
-//! this build's own catalog. The win-rate table is the started-on version's too (R1266000, R1329000).
+//! this build's own catalog. The win-rate table is the snapshot the match started with, frozen on
+//! its row (R3049000); a row with none, as every match from before it, folds against the
+//! started-on version's frozen table (R1266000, R1329000).
 
 use std::sync::Arc;
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
-use jackioh_engine::testkit::{clear_overrides, register_catalog, register_shipped, register_win_rates};
+use jackioh_engine::testkit::{clear_overrides, register_catalog, register_shipped};
 use jackioh_engine::{
     Action, ActionBody, CardCost, CardDefs, PLAYER_IDS, PlayerId, ReplayOpen, ReplayRecord, ReplayRefusal,
     ShippedCatalog, WinRateRow, WinRateTable,
@@ -24,6 +26,7 @@ use crate::support::engine::{
     tech_test_catalog, test_catalog,
 };
 use crate::support::socket::create_fake_socket;
+use crate::support::store::fake;
 
 const MATCH_ID: &str = "match-pinned";
 const P1: &str = "profile-1";
@@ -229,7 +232,15 @@ async fn r388_r767000_a_rebuilt_match_folds_under_the_catalog_it_started_on_as_i
 
     let (row, log) = match_log(&app).await;
     let (last_boards, glitch_boards) = last_boards_of(&row);
-    let args = fold_args(&row.seed, &row.decks, log, last_boards, glitch_boards, None);
+    let args = fold_args(
+        &row.seed,
+        &row.decks,
+        log,
+        last_boards,
+        glitch_boards,
+        None,
+        row.win_rates.clone(),
+    );
     assert!(
         matches!(
             replay_open(
@@ -248,27 +259,31 @@ async fn r388_r767000_a_rebuilt_match_folds_under_the_catalog_it_started_on_as_i
     clear_overrides();
 }
 
-// R1266000, R1329000: rebuilt match folds against the win-rate table of started-on version.
-#[tokio::test(start_paused = true)]
-async fn r1266000_r1329000_a_rebuilt_match_folds_against_the_win_rate_table_of_the_version_it_started_on() {
-    /// The leader of the table `PLAYED_ON` shipped with.
-    const SHIPPED_LEADER: &str = "core-001";
-    /// The leader of this build's own table.
-    const BUILD_LEADER: &str = "core-008";
+/// The leader of the table `PLAYED_ON` shipped with.
+const SHIPPED_LEADER: &str = "core-001";
+/// The leader of the snapshot the match is handed.
+const SNAPSHOT_LEADER: &str = "core-008";
+
+/// R1266000, R3049000: the tech cards, with `PLAYED_ON` carried and shipped with `SHIPPED_LEADER`'s
+/// table, and a match started on it with `TEST_TECH` in both decks, handed `SNAPSHOT_LEADER`'s
+/// snapshot.
+async fn tech_match() -> Arc<App> {
     install_tech_test_cards();
     register_shipped(vec![
         ShippedCatalog::new(PLAYED_ON, tech_test_catalog(), IndexMap::new())
             .with_win_rates(led_by(SHIPPED_LEADER)),
     ]);
-    register_win_rates(led_by(BUILD_LEADER));
     let app = world().await;
-    app.matches
-        .start(&app, start_input_with(PLAYED_ON, &[TEST_TECH]))
-        .await
-        .expect("the match starts");
-    let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the actor");
-    keep_both(&actor).await;
-    let seat = actor.engine_state().active;
+    let input = StartMatchInput {
+        win_rates: Some(led_by(SNAPSHOT_LEADER)),
+        ..start_input_with(PLAYED_ON, &[TEST_TECH])
+    };
+    app.matches.start(&app, input).await.expect("the match starts");
+    app
+}
+
+/// `seat` plays its `TEST_TECH` through the actor, as the started-on catalog allows.
+async fn play_tech(actor: &MatchActor, seat: PlayerId) {
     let tech = hand_card(&actor.engine_state(), seat, TEST_TECH).expect("Quickdraw deals it");
     let pinned = Pinned::of(PLAYED_ON).expect("the played-on catalog");
     let body = legal_actions(pinned, &actor.engine_state(), seat)
@@ -281,12 +296,28 @@ async fn r1266000_r1329000_a_rebuilt_match_folds_against_the_win_rate_table_of_t
         json!("ack"),
         "the play: {reply:?}"
     );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1266000_r3049000_a_rebuilt_match_folds_against_the_snapshot_on_its_row() {
+    let app = tech_match().await;
+    let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the actor");
+    keep_both(&actor).await;
+    let seat = actor.engine_state().active;
+    play_tech(&actor, seat).await;
     let hand = hand_defs(&actor, seat);
     assert!(
-        hand.iter().any(|id| id == SHIPPED_LEADER) && !hand.iter().any(|id| id == BUILD_LEADER),
-        "the shipped table's leader, never the build's: {hand:?}"
+        hand.iter().any(|id| id == SNAPSHOT_LEADER) && !hand.iter().any(|id| id == SHIPPED_LEADER),
+        "the snapshot's leader, never the version's frozen table's: {hand:?}"
     );
     let live = hash_state(&actor.engine_state());
+    let (row, log) = match_log(&app).await;
+    assert!(row.win_rates.is_some(), "the row keeps the snapshot");
+    assert_eq!(
+        row.win_rates,
+        actor.engine_state().win_rates,
+        "as the game kept it"
+    );
 
     app.matches.stop(MATCH_ID).await;
     let rebuilt = app
@@ -297,12 +328,51 @@ async fn r1266000_r1329000_a_rebuilt_match_folds_against_the_win_rate_table_of_t
     assert_eq!(hand_defs(&rebuilt, seat), hand, "the hand its players hold");
     assert_eq!(hash_state(&rebuilt.engine_state()), live);
 
-    let (row, log) = match_log(&app).await;
+    let pinned = Pinned::of(PLAYED_ON).expect("the played-on catalog");
     let (last_boards, glitch_boards) = last_boards_of(&row);
-    let args = fold_args(&row.seed, &row.decks, log, last_boards, glitch_boards, None);
-    assert_eq!(hash_state(&fold(pinned, &args).state), live, "a whole refold");
-    // Under this build's own catalog its own table's leader is added: another game.
-    assert_ne!(hash_state(&fold(Pinned::default(), &args).state), live);
+    let args = |win_rates| {
+        fold_args(
+            &row.seed,
+            &row.decks,
+            log.clone(),
+            last_boards.clone(),
+            glitch_boards.clone(),
+            None,
+            win_rates,
+        )
+    };
+    assert_eq!(
+        hash_state(&fold(pinned, &args(row.win_rates.clone())).state),
+        live,
+        "a whole refold with the row's snapshot"
+    );
+    // Without it, the fold reads the version's frozen table: another game.
+    assert_ne!(hash_state(&fold(pinned, &args(None)).state), live);
+    clear_overrides();
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1266000_r1329000_a_row_with_no_snapshot_folds_against_its_versions_frozen_table() {
+    let app = tech_match().await;
+    app.matches.stop(MATCH_ID).await;
+    // A match started before #3049 has no snapshot on its row.
+    for row in &mut fake(&app).lock().await.tables.matches {
+        row.win_rates = None;
+    }
+    let rebuilt = app
+        .matches
+        .actor_for(&app, MATCH_ID)
+        .await
+        .expect("the rebuilt actor");
+    assert_eq!(rebuilt.engine_state().win_rates, None);
+    keep_both(&rebuilt).await;
+    let seat = rebuilt.engine_state().active;
+    play_tech(&rebuilt, seat).await;
+    let hand = hand_defs(&rebuilt, seat);
+    assert!(
+        hand.iter().any(|id| id == SHIPPED_LEADER) && !hand.iter().any(|id| id == SNAPSHOT_LEADER),
+        "the started-on version's frozen table's leader: {hand:?}"
+    );
     clear_overrides();
 }
 

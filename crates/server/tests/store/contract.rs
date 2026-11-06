@@ -3023,6 +3023,47 @@ mod last_boards {
     );
 }
 
+mod win_rate_snapshot {
+    use super::*;
+
+    async fn r3049000_a_match_row_keeps_its_win_rate_snapshot(harness: &StoreHarness) {
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let snapshot = json!({
+            "patch": "v-r3049000",
+            "source": "live",
+            "cards": [
+                { "id": "core-001", "wins": 25, "games": 32 },
+                { "id": "core-008", "wins": 300, "games": 450 },
+            ],
+        });
+        let row: MatchRow = from(spread(
+            j(&match_row(&id(), &p1.id, &p2.id, harness, harness.now())),
+            json!({ "winRates": snapshot }),
+        ));
+        q!(harness, t => t.matches_create(&row));
+        assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row.clone()));
+        let live = q!(harness, t => t.matches_live());
+        let found = must(
+            live.iter().find(|candidate| candidate.id == row.id),
+            "the live match",
+        );
+        assert_eq!(j(found)["winRates"], snapshot);
+        // A match handed none, as every match from before migration 0085, keeps none.
+        let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
+        q!(harness, t => t.matches_create(&plain));
+        assert!(absent(
+            &j(&must(
+                q!(harness, t => t.matches_get(&plain.id)),
+                "the plain match"
+            )),
+            "winRates"
+        ));
+    }
+
+    both_stores!(r3049000_a_match_row_keeps_its_win_rate_snapshot);
+}
+
 mod player_stats {
     use super::*;
 

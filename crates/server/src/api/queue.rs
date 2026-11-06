@@ -677,6 +677,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
                 seats,
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await;
@@ -1191,6 +1192,7 @@ async fn start_bot_match(
                     seats,
                     mode: None,
                     stake: None,
+                    win_rates: None,
                 },
             )
             .await
@@ -1336,6 +1338,7 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
                     seats,
                     mode: Some(QueueMode::Bo1),
                     stake: None,
+                    win_rates: None,
                 },
             )
             .await

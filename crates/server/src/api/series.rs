@@ -220,6 +220,7 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
                 seats: seats.clone(),
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await;

@@ -9,6 +9,7 @@
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
+use jackioh_engine::WinRateTable;
 use jackioh_engine::validator::CatalogSnapshot;
 use jackioh_engine::wire::ListTotal;
 
@@ -124,6 +125,11 @@ pub enum BotCall {
         lists: Vec<ListTotal>,
         catalog: Box<CatalogSnapshot>,
         strength: f64,
+        /// R3049002: the win-rate table the random decks lean on, as the server hands its snapshot of
+        /// its cached card stats; omitted, they lean on nothing.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        win_rates: Option<WinRateTable>,
     },
     /// R641000: a Conquest trio for a bot, from its Best-of-1 decks first.
     DrawTrio {
@@ -131,6 +137,10 @@ pub enum BotCall {
         own: Vec<BotDeck>,
         catalog: Box<CatalogSnapshot>,
         strength: f64,
+        /// R3049002: as `DrawDecks`' `winRates`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        win_rates: Option<WinRateTable>,
     },
     /// R1453: the ticket's fallback time under the host's secret `key`.
     FallbackSeconds { key: String, ticket_id: String },
@@ -325,16 +335,18 @@ pub fn apply(call: BotCall) -> BotAnswer {
             lists,
             catalog,
             strength,
+            win_rates,
         } => BotAnswer::Decks {
-            decks: draw_decks(&seed, &lists, &catalog, strength),
+            decks: draw_decks(&seed, &lists, &catalog, strength, win_rates.as_ref()),
         },
         BotCall::DrawTrio {
             seed,
             own,
             catalog,
             strength,
+            win_rates,
         } => BotAnswer::Trio {
-            trio: draw_trio(&seed, &own, &catalog, strength).map(Box::new),
+            trio: draw_trio(&seed, &own, &catalog, strength, win_rates.as_ref()).map(Box::new),
         },
         BotCall::FallbackSeconds { key, ticket_id } => BotAnswer::Seconds {
             seconds: fallback_seconds_keyed(&key, &ticket_id),

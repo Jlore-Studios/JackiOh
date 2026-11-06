@@ -572,7 +572,7 @@ the machine's (above); these are the modules the machine and the queue are made 
 | `aim` | the arrow a person's client would show | R738 |
 | `pick` | its sealed picks in a Conquest series | R641000 |
 | `fallback` | the empty-queue pairing: a ticket's fallback time, which bot it pairs with, two bots' kickoff | R1453, R641000, R1555000 |
-| `pool` | the pool's size, who retires, returns and grinds, a new bot, its decks and trio | R1454, R750000, R1555000 |
+| `pool` | the pool's size, who retires, returns and grinds, a new bot, its decks and trio | R1454, R750000, R1555000, R3049002 |
 | `names` | a new bot's username shapes and word lists; what a name may be is the host's (`draw_username`'s `accepts`) | R1454 |
 | `cosmetics` | the loadout it wears: which cosmetics people own widely and long enough for a bot to hold (`eligible`), its wardrobe from the pool's seed (`draw_wardrobe`) at the share of people of its account age that own each (`fit_for`), its account's picks, each deck's slots and its cards' own picks (`draw_account`, `draw_slots`, `draw_card_picks`), and what a refresh changes of all that (`redraw`) | R1834005, R2755000 |
 
@@ -600,7 +600,9 @@ the machine's (above); these are the modules the machine and the queue are made 
 `hourOf`, `chooseBot`, `chooseBotPair`, `botMatches`, `botMatchGapPassed`, `pickDueAt`, `pickIsDue`, `pickSlot`,
 `botPick`, `eligibleCosmetics` (answered `holdings`) and `redrawCosmetics` (answered `dressed`); `bots::boundary::apply` is the one function behind it, and `tests/bots_boundary.rs` holds it to
 the functions it names. The deals read the catalog the module registered, a cosmetics call the shipped registry
-and fits, and a new bot's username is the host's to give.
+and fits, and a new bot's username is the host's to give. `drawDecks` and `drawTrio` take the win-rate table
+the random decks lean on as `winRates`, which the server hands as its snapshot of its cached card stats;
+omitted, they lean on nothing (R3049002).
 
 ## `src/cosmetics.rs` and `cosmetics.json`: the registry
 

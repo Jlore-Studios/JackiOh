@@ -31,7 +31,7 @@ use jackioh_engine::wire::{
     CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, RecordsKey,
     StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
 };
-use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
+use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
 
 use crate::auth::is_uuid;
 use crate::bots::cosmetics::BotCosmetics;
@@ -278,6 +278,18 @@ fn loadouts_or_none(value: Option<Value>) -> Result<Option<(Loadout, Loadout)>, 
         .map(|value| {
             serde_json::from_value(value)
                 .map_err(|error| StoreError::from(format!("expected both seats' loadouts: {error}")))
+        })
+        .transpose()
+}
+
+/// R3049000: `matches.win_rates`, the game's kept win-rate snapshot, or `null` on a match handed none
+/// and on one from before 0085.
+fn win_rates_or_none(value: Option<Value>) -> Result<Option<WinRateTable>, StoreError> {
+    value
+        .filter(|value| !value.is_null())
+        .map(|value| {
+            serde_json::from_value(value)
+                .map_err(|error| StoreError::from(format!("expected a win-rate snapshot: {error}")))
         })
         .transpose()
 }
@@ -594,6 +606,7 @@ struct MatchDbRow {
     stake: Option<i16>,
     final_hash: Option<String>,
     loadouts: Option<Value>,
+    win_rates: Option<Value>,
 }
 
 impl MatchDbRow {
@@ -625,6 +638,7 @@ impl MatchDbRow {
             stake: get(row, "stake")?,
             final_hash: get(row, "final_hash")?,
             loadouts: get(row, "loadouts")?,
+            win_rates: get(row, "win_rates")?,
         })
     }
 }
@@ -634,7 +648,7 @@ macro_rules! match_columns {
         "id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
   ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, ranked, p1_portrait, p2_portrait,
-  mode, stake, p1_glitch_board, p2_glitch_board, final_hash, loadouts"
+  mode, stake, p1_glitch_board, p2_glitch_board, final_hash, loadouts, win_rates"
     };
 }
 
@@ -724,6 +738,7 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         portraits,
         loadouts: loadouts_or_none(row.loadouts)?,
         final_hash: row.final_hash,
+        win_rates: win_rates_or_none(row.win_rates)?,
     })
 }
 
@@ -2913,12 +2928,12 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
                turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
                grace_deadline_at, ceiling_at, created_at, ended_at, p1_last_board, p2_last_board,
                p1_portrait, p2_portrait, mode, stake, ranked, started_at, last_seq, p1_glitch_board, p2_glitch_board,
-               loadouts)
+               loadouts, win_rates)
              values ($1::uuid, ",
             match_values!(),
             ", $21::boolean, ",
             ts!("$15"),
-            ", 0, $24::jsonb, $25::jsonb, $26::jsonb)"
+            ", 0, $24::jsonb, $25::jsonb, $26::jsonb, $27::jsonb)"
         )
     } else {
         concat!(
@@ -2950,7 +2965,8 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
              p1_last_board = $17::jsonb, p2_last_board = $18::jsonb,
              p1_portrait = $19::text, p2_portrait = $20::text, ranked = $21::boolean,
              mode = $22::text, stake = $23::smallint,
-             p1_glitch_board = $24::jsonb, p2_glitch_board = $25::jsonb, loadouts = $26::jsonb
+             p1_glitch_board = $24::jsonb, p2_glitch_board = $25::jsonb, loadouts = $26::jsonb,
+             win_rates = $27::jsonb
            where id = $1::uuid"
         )
     };
@@ -3009,6 +3025,8 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
             m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1),
         )?)
         .bind(json_or_null(&m.loadouts)?)
+        // R3049000: the game's kept win-rate snapshot (migration 0085), null when handed none.
+        .bind(json_or_null(&m.win_rates)?)
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
@@ -3524,7 +3542,7 @@ pub async fn replays_list_with_modes(
                 m.catalog_version, m.turn_deadline_at, m.prompt_deadline_at, m.p1_disconnected_at,
                 m.p2_disconnected_at, m.ceiling_at, m.created_at, m.ended_at, m.p1_last_board,
                 m.p2_last_board, m.ranked, m.p1_portrait, m.p2_portrait, m.mode, m.stake,
-                m.p1_glitch_board, m.p2_glitch_board, m.final_hash, m.loadouts,
+                m.p1_glitch_board, m.p2_glitch_board, m.final_hash, m.loadouts, m.win_rates,
                 r.match_id as r_match_id, r.p1_profile_id as r_p1_profile_id,
                 r.p2_profile_id as r_p2_profile_id, r.winner_profile_id as r_winner_profile_id,
                 r.reason as r_reason, r.turns as r_turns,

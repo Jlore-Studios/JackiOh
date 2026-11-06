@@ -272,6 +272,7 @@ pub fn replay(
             last_boards,
             glitch_boards,
             dealt,
+            match_row.win_rates.clone(),
         ),
     )
     .state;

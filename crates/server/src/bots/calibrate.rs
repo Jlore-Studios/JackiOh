@@ -80,7 +80,10 @@ pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winne
         engine::deal_random_deck(&format!("{seed}:p1-deck"), None),
         engine::deal_random_deck(&format!("{seed}:p2-deck"), None),
     );
-    let created = engine::create_game(pinned, &engine::create_game_args(seed, &decks, None, None, None));
+    let created = engine::create_game(
+        pinned,
+        &engine::create_game_args(seed, &decks, None, None, None, None),
+    );
     let mut state = engine::begin_game(pinned, &created).state;
     let strengths = PerPlayer::new(p1, p2);
     let mut streams = PerPlayer::new(

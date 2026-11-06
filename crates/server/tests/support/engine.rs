@@ -476,15 +476,16 @@ pub fn tech_test_catalog() -> CardDefs {
     defs
 }
 
-/// R1266000, R1329000: `install_test_cards`' cards plus `TEST_TECH`, which reads the win-rate table
-/// the fold it runs in reads (`win_rate_leader`).
+/// R1266000, R1329000, R3049000: `install_test_cards`' cards plus `TEST_TECH`, which reads the
+/// win-rate table its game reads (`win_rate_leader`): its snapshot, else the frozen table of the
+/// version the fold runs under.
 pub fn install_tech_test_cards() {
     jackioh_cards::register_all();
     register_catalog(tech_test_catalog());
     let script = Script {
         static_flags: quickdraw(),
-        cry: Some(hook(|_ctx| {
-            win_rate_leader(TEST_TECH)
+        cry: Some(hook(|ctx| {
+            win_rate_leader(&*ctx.state, TEST_TECH)
                 .map_or_else(Vec::new, |id| vec![add_to_hand(json_as(json!({ "defId": id })))])
         })),
         ..Script::default()

@@ -82,7 +82,6 @@ struct Registered {
     defs: CardDefs,
     version: String,
     index: indexmap::IndexMap<String, usize, IdHash>,
-    win_rates: crate::win_rates::WinRateTable,
     code_blocks: CodeBlocks,
 }
 
@@ -121,21 +120,15 @@ fn registered() -> &'static CardDefs {
     }
 }
 
-/// Registers the catalog with its compiled win-rate table (ME-STATS, MD-D1) and code blocks (R1183004).
+/// Registers the catalog with its code blocks (R1183004); no win-rate table is compiled in (R3049000).
 /// Set once per process: a second call is ignored (SURFACE §3); a test that needs another catalog sets
 /// the testkit's override instead (SURFACE §8).
-pub fn register_catalog(
-    defs: CardDefs,
-    catalog_version: &str,
-    win_rates: crate::win_rates::WinRateTable,
-    code_blocks: CodeBlocks,
-) {
+pub fn register_catalog(defs: CardDefs, catalog_version: &str, code_blocks: CodeBlocks) {
     let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
     let _ = REGISTERED.set(Registered {
         defs,
         version: catalog_version.to_string(),
         index,
-        win_rates,
         code_blocks,
     });
 }
@@ -158,8 +151,9 @@ fn find_code_block(blocks: CodeBlocks, def_id: &str) -> Option<&'static str> {
         .map(|at| blocks[at].1)
 }
 
-/// ME-STATS: the win-rate table CN Tech reads: a shipped catalog's while a replay folds under it
-/// (R1266000), else the testkit's override, else the registered table, else an empty one.
+/// ME-STATS, R3049000: the win-rate table a state handed no snapshot reads (`win_rates::win_rates_of`):
+/// the frozen table of the shipped catalog a replay folds under (R1266000), else the testkit's
+/// override, else an empty one, since no table is compiled in.
 pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
     if let Some(shipped) = folding() {
         return &shipped.win_rates;
@@ -168,10 +162,7 @@ pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
     if let Some(table) = crate::testkit::scenario::win_rates_override() {
         return table;
     }
-    match REGISTERED.get() {
-        Some(registered) => &registered.win_rates,
-        None => EMPTY_WIN_RATES.get_or_init(crate::win_rates::WinRateTable::default),
-    }
+    EMPTY_WIN_RATES.get_or_init(crate::win_rates::WinRateTable::default)
 }
 
 static EMPTY_WIN_RATES: OnceLock<crate::win_rates::WinRateTable> = OnceLock::new();

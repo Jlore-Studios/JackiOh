@@ -10,13 +10,15 @@
 //! New bots draw strength (R610), persona (R645), schedule, and username (`bots::names`).
 //! Bo1 decks draw from human decklists and random decks (R750000, R1453), each kept only when legal
 //! and dealt again on a new catalog or deck size (R1705001), then the Conquest trio (R641000, R253).
+//! The random decks lean on the win-rate table the host hands the deal, the server's snapshot of its
+//! cached card stats, and on nothing without one (R3049002).
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput};
 use jackioh_engine::wire::ListTotal;
-use jackioh_engine::{DECK_SIZE, Rng, pick_portrait_from_seed};
+use jackioh_engine::{DECK_SIZE, Rng, WinRateTable, pick_portrait_from_seed};
 
 use crate::bots::cosmetics::BotCosmetics;
 use crate::bots::fallback::holds_deck_size;
@@ -441,9 +443,15 @@ fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
 }
 
 /// `build_ai_deck`'s deal for a ladder bot (#750, R1454): the engine's All Random deal exactly at strength
-/// 0.0, leaning on the cards that win as far as `strength` (0 to 1) says; `excluded` cards are banned
-/// from it (a trio's decks share none, R253). Reads the registered catalog.
-pub fn deal_bot_deck(seed: &str, excluded: Option<&[String]>, strength: f64) -> Vec<String> {
+/// 0.0, leaning on the cards that win as far as `strength` (0 to 1) says, by `win_rates` (R3049002: the
+/// host's snapshot, none leaning on nothing); `excluded` cards are banned from it (a trio's decks share
+/// none, R253). Reads the registered catalog.
+pub fn deal_bot_deck(
+    seed: &str,
+    excluded: Option<&[String]>,
+    strength: f64,
+    win_rates: Option<&WinRateTable>,
+) -> Vec<String> {
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
     // the AI's own decks, not a player's), and `DECK_SIZE` is the size L2 asks of every deck.
     jackioh_ai::build_ai_deck(
@@ -454,16 +462,23 @@ pub fn deal_bot_deck(seed: &str, excluded: Option<&[String]>, strength: f64) -> 
             lean_set: None,
             gated_sets: Some(vec![]),
             strength: Some(strength),
+            win_rates: win_rates.cloned(),
             ..jackioh_ai::AiDeckOptions::default()
         },
     )
 }
 
 /// R1454: draws legal Best-of-1 decks for a bot: human lists first, ranked by strength and the rest
-/// shuffled (R750000), then random decks (R1453) leaning on winning cards by strength, up to
-/// `BOT_DECK_DRAW_ATTEMPTS`. `lists` are live Best-of-1 human decklists (R1044000). The host registers
-/// the catalog the deal reads (`jackioh_cards::register_all`).
-pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &CatalogSnapshot, strength: f64) -> Vec<BotDeck> {
+/// shuffled (R750000), then random decks (R1453) leaning on winning cards by strength, by `win_rates`
+/// (R3049002), up to `BOT_DECK_DRAW_ATTEMPTS`. `lists` are live Best-of-1 human decklists (R1044000).
+/// The host registers the catalog the deal reads (`jackioh_cards::register_all`).
+pub fn draw_decks(
+    seed: &str,
+    lists: &[ListTotal],
+    catalog: &CatalogSnapshot,
+    strength: f64,
+    win_rates: Option<&WinRateTable>,
+) -> Vec<BotDeck> {
     let mut rng = Rng::new(&format!("{seed}:decks"), 0);
     let wanted = usize::try_from(int_in(
         &mut rng,
@@ -476,7 +491,12 @@ pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &CatalogSnapshot, st
     candidates.extend(rng.shuffle(&unranked));
     candidates.truncate(BOT_DECK_DRAW_ATTEMPTS);
     for index in candidates.len()..BOT_DECK_DRAW_ATTEMPTS {
-        candidates.push(deal_bot_deck(&format!("{seed}:deck:{index}"), None, strength));
+        candidates.push(deal_bot_deck(
+            &format!("{seed}:deck:{index}"),
+            None,
+            strength,
+            win_rates,
+        ));
     }
     let mut input = deck_input(catalog);
     let mut decks: Vec<BotDeck> = Vec::new();
@@ -498,13 +518,14 @@ pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &CatalogSnapshot, st
 }
 
 /// R641000: draws a Conquest trio from disjoint decks in `own`, filling shortfalls with strength-weighted
-/// random decks excluding used cards (R750000), portraits from seed (R642). Returns `None` if fewer than
+/// random decks excluding used cards (R750000, by `win_rates`, R3049002), portraits from seed (R642). Returns `None` if fewer than
 /// 3 valid decks are found or if the trio fails rules (§9.4, R253): no Conquest until next refresh.
 pub fn draw_trio(
     seed: &str,
     own: &[BotDeck],
     catalog: &CatalogSnapshot,
     strength: f64,
+    win_rates: Option<&WinRateTable>,
 ) -> Option<FrozenTrio> {
     let mut input = deck_input(catalog);
     let mut kept: Vec<BotDeck> = Vec::new();
@@ -525,7 +546,12 @@ pub fn draw_trio(
             break;
         }
         let excluded: Vec<String> = used.iter().cloned().collect();
-        let cards = deal_bot_deck(&format!("{seed}:trio-deck:{attempt}"), Some(&excluded), strength);
+        let cards = deal_bot_deck(
+            &format!("{seed}:trio-deck:{attempt}"),
+            Some(&excluded),
+            strength,
+            win_rates,
+        );
         if shares_none(&cards, &used) && deck_is_legal(&mut input, &cards) {
             used.extend(cards.iter().cloned());
             kept.push(BotDeck {
