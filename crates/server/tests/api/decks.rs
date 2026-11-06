@@ -194,8 +194,7 @@ impl Ctx {
 
     /// R3212001: `POST /api/decks/sync`.
     async fn sync(&self, body: Value, bearer: &str) -> (u16, Value) {
-        self.request("POST", "/api/decks/sync", Some(body), bearer)
-            .await
+        self.request("POST", "/api/decks/sync", Some(body), bearer).await
     }
 
     async fn get_decks(&self, bearer: &str) -> Value {
@@ -1942,9 +1941,13 @@ mod r3212001_a_sync_runs_each_item_as_its_own_route_would {
             .await;
         ctx.put_deck(deck_body(json!({ "name": "Going" })), &uuid(9), &ctx.token)
             .await;
-        ctx.put_trio(json!({ "name": "Old", "deckIds": [uuid(9), null, null] }), &uuid(109), &ctx.token)
-            .await;
-        tokio::time::advance(Duration::from_millis(1_000)).await;
+        ctx.put_trio(
+            json!({ "name": "Old", "deckIds": [uuid(9), null, null] }),
+            &uuid(109),
+            &ctx.token,
+        )
+        .await;
+        tokio::time::advance(past_the_debounce()).await;
 
         let (status, body) = ctx
             .sync(
@@ -1999,10 +2002,14 @@ mod r3212001_a_sync_runs_each_item_as_its_own_route_would {
     async fn r3212001_a_refused_item_answers_as_its_own_route_and_the_rest_still_save() {
         let ctx = setup().await;
         for n in 1..MAX_SAVED_DECKS {
-            ctx.put_deck(deck_body(json!({ "name": format!("Deck {n}") })), &uuid(n), &ctx.token)
-                .await;
+            ctx.put_deck(
+                deck_body(json!({ "name": format!("Deck {n}") })),
+                &uuid(n),
+                &ctx.token,
+            )
+            .await;
         }
-        let too_big = cards(DECK_SIZE + 1, 0);
+        let too_big = cards(DECK_SIZE as usize + 1, 0);
         let drafted = deck_body(json!({ "cards": too_big }));
         let stale = deck_body(json!({ "catalogVersion": "stale-0" }));
         let unknown = json!({ "name": "Waiting", "deckIds": [uuid(500), null, null] });
@@ -2045,7 +2052,10 @@ mod r3212001_a_sync_runs_each_item_as_its_own_route_would {
         );
         let (drafted_status, drafted) = ctx.put_deck(drafted, &uuid(50), &ctx.token).await;
         assert_eq!(drafted_status, 400, "{drafted}");
-        assert_eq!(drafted["error"]["details"], draft_issues("Aggro", &cards(DECK_SIZE + 1, 0)));
+        assert_eq!(
+            drafted["error"]["details"],
+            draft_issues("Aggro", &cards(DECK_SIZE as usize + 1, 0))
+        );
         assert_eq!(
             body["decks"][0],
             merged(json!({ "id": uuid(50) }), refusal(drafted_status, &drafted))
@@ -2096,7 +2106,10 @@ mod r3212001_a_sync_runs_each_item_as_its_own_route_would {
         assert_eq!(status, 200, "{again}");
         assert_eq!(again["decks"], once["decks"]);
         assert_eq!(again["trios"], once["trios"]);
-        assert_eq!(again["deletedDecks"], json!([{ "id": uuid(9), "deleted": false }]));
+        assert_eq!(
+            again["deletedDecks"],
+            json!([{ "id": uuid(9), "deleted": false }])
+        );
         assert_eq!(ctx.decks_table().await, decks);
         assert_eq!(ctx.trios_table().await, trios);
     }

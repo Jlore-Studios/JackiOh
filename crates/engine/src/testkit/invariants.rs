@@ -735,6 +735,11 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
         for piece in crate::starship::starship_pieces_of(card) {
             defs.shift_remove(&piece.def_id);
         }
+        // R3291000, R468: a fused card's abilities name the ingredient each is printed on
+        // (`ActivationView.printedOn`), read off the card: its definition keeps its `ingredients`.
+        for source in &crate::scripts::script_of(state, card).activation_sources {
+            defs.shift_remove(&source.def_id);
+        }
         // R1956001: a Created card's owner is told the card that generated it (`CardView.createdBy`),
         // read off the card, as an Echo's copied Spell is.
         if card.owner == viewer

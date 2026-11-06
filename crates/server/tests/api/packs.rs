@@ -1997,7 +1997,12 @@ async fn open_all_state(packs: usize) -> (Arc<App>, String) {
         buy(&app, &token, "Core").await;
     }
     set_counter(&app, Counter::CardTokenBar, CARD_TOKEN_BAR_SIZE - 1).await;
-    set_counter(&app, Counter::PityEpic, i64::try_from(PITY_EPIC_PACKS).expect("a pity size") - 1).await;
+    set_counter(
+        &app,
+        Counter::PityEpic,
+        i64::try_from(PITY_EPIC_PACKS).expect("a pity size") - 1,
+    )
+    .await;
     (app, token)
 }
 
@@ -2021,15 +2026,32 @@ async fn r3212000_open_all_of_n_equals_n_opens_for_the_same_seeds_and_state() {
     let mut opened = Vec::new();
     for seed in &seeds {
         opened.push(
-            open_pack(&one_at_a_time, PROFILE, PackKind::Set(SetName::Core), &registry, seed)
-                .await
-                .expect("an opening"),
+            open_pack(
+                &one_at_a_time,
+                PROFILE,
+                PackKind::Set(SetName::Core),
+                &registry,
+                seed,
+            )
+            .await
+            .expect("an opening"),
         );
     }
-    let batch = open_packs(&all_at_once, PROFILE, PackKind::Set(SetName::Core), &registry, &seeds)
-        .await
-        .expect("the openings");
-    assert_eq!(batch, OpenedPacks { openings: opened.clone() });
+    let batch = open_packs(
+        &all_at_once,
+        PROFILE,
+        PackKind::Set(SetName::Core),
+        &registry,
+        &seeds,
+    )
+    .await
+    .expect("the openings");
+    assert_eq!(
+        batch,
+        OpenedPacks {
+            openings: opened.clone()
+        }
+    );
     assert_eq!(
         opened.iter().map(|opened| opened.unopened).collect::<Vec<_>>(),
         [5, 4, 3, 2, 1]
@@ -2075,11 +2097,15 @@ async fn r3212000_open_all_costs_the_same_store_calls_for_two_packs_as_for_ten()
     for _ in 0..12 {
         buy(&app, &token, "Core").await;
     }
-    let (two_status, two, two_calls) =
-        store_calls(&app, || open_all(&app, &token, json!({ "pack": "Core", "count": 2 }), None)).await;
+    let (two_status, two, two_calls) = store_calls(&app, || {
+        open_all(&app, &token, json!({ "pack": "Core", "count": 2 }), None)
+    })
+    .await;
     assert_eq!(two_status, 200, "{two}");
-    let (ten_status, ten, ten_calls) =
-        store_calls(&app, || open_all(&app, &token, json!({ "pack": "Core", "count": 10 }), None)).await;
+    let (ten_status, ten, ten_calls) = store_calls(&app, || {
+        open_all(&app, &token, json!({ "pack": "Core", "count": 10 }), None)
+    })
+    .await;
     assert_eq!(ten_status, 200, "{ten}");
     assert_eq!(two["openings"].as_array().map(Vec::len), Some(2));
     assert_eq!(ten["openings"].as_array().map(Vec::len), Some(10));
@@ -2098,7 +2124,10 @@ async fn r3212000_open_all_costs_the_same_store_calls_for_two_packs_as_for_ten()
         "economy.counters.grant",
         "economy.cosmetics.grant",
     ] {
-        assert!(!ten_calls.iter().any(|call| call == single), "{single}: {ten_calls:?}");
+        assert!(
+            !ten_calls.iter().any(|call| call == single),
+            "{single}: {ten_calls:?}"
+        );
     }
 }
 
@@ -2118,7 +2147,11 @@ async fn r3212000_open_all_with_its_key_replays_and_the_key_is_its_own_route() {
     let (again_status, again) = open_all(&app, &token, body, Some(&key)).await;
     assert_eq!(again_status, 200, "{again}");
     assert_eq!(again, first, "the retry answers the first try's openings");
-    assert_eq!(everything(&app).await, after_first, "the retry rolls and grants nothing");
+    assert_eq!(
+        everything(&app).await,
+        after_first,
+        "the retry rolls and grants nothing"
+    );
 
     // The same key with another count, or on the single open, is another request.
     for (path, body) in [
@@ -2177,7 +2210,11 @@ async fn r3212000_open_all_is_refused_off_short_or_miscounted_and_writes_nothing
     // More than are held: all or nothing.
     let (status, answer) = open_all(&app, &token, json!({ "pack": "Core", "count": 3 }), None).await;
     assert_eq!(
-        (status, answer["error"]["code"].clone(), answer["error"]["message"].clone()),
+        (
+            status,
+            answer["error"]["code"].clone(),
+            answer["error"]["message"].clone()
+        ),
         (409, json!("conflict"), json!("no unopened pack of that kind")),
         "{answer}"
     );

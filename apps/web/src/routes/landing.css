@@ -785,7 +785,7 @@
    So the title and the hand share the left column and the calls to action take the right, and all
    of it fits the first screen. */
 
-@media (orientation: landscape) and (max-height: 540px) and (min-width: 600px) {
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 601px) {
   .landing .landing-hero {
     min-height: 0;
     padding-bottom: 24px;
@@ -1075,7 +1075,7 @@
 }
 
 /* A phone on its side has the height for the card and the caption beside it, not above. */
-@media (orientation: landscape) and (max-height: 540px) {
+@media (orientation: landscape) and (max-height: 500px) {
   .landing .landing-showcase {
     --showcase-card-w: clamp(64px, 26vh, 110px);
     grid-template-areas: "stage caption";

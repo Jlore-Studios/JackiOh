@@ -409,7 +409,9 @@ pub async fn open_packs_once(
         .openings
         .iter()
         .map(opened_counts)
-        .fold((0, 0), |(cards, spent), (more, also)| (cards + more, spent + also));
+        .fold((0, 0), |(cards, spent), (more, also)| {
+            (cards + more, spent + also)
+        });
     tracing::info!(
         event = "packs.opened_all",
         "profileId" = %profile_id,

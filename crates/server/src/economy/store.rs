@@ -1380,7 +1380,10 @@ mod pg {
     /// one inserted with it, and every grant writes its ledger row in the order given. The update and
     /// the insert are apart because Postgres checks a proposed upsert row (`count >= 0`) before the
     /// conflict, as `jlore_grant` says. Answers `ok`.
-    pub async fn inventory_write_all(t: &mut PgTx<'_>, grants: &[InventoryGrant]) -> Result<bool, StoreError> {
+    pub async fn inventory_write_all(
+        t: &mut PgTx<'_>,
+        grants: &[InventoryGrant],
+    ) -> Result<bool, StoreError> {
         let Some(first) = grants.first() else {
             return Ok(true);
         };

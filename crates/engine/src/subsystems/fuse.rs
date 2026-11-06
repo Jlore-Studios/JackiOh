@@ -32,8 +32,8 @@ use crate::script::{
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
-    AttackHealth, CardCost, CardDef, CardFace, CardType, FusedIngredient, GameEvent, Keyword, KeywordKind,
-    PlayerId, Rarity, Selection, SetName, Tag, TargetDecl, Zone, ZoneName, keyword_key,
+    ActivationSource, AttackHealth, CardCost, CardDef, CardFace, CardType, FusedIngredient, GameEvent,
+    Keyword, KeywordKind, PlayerId, Rarity, Selection, SetName, Tag, TargetDecl, Zone, ZoneName, keyword_key,
 };
 
 /// The `Script` key of the step table a continuation re-enters (`prompts::RESUME_HOOK`).
@@ -1197,6 +1197,7 @@ fn combine_objects(records: &[Script]) -> Script {
         // R2321000: a fusion keeps every ingredient's counts, in ingredient order, as it previews.
         tallies: eager_condition(records.iter().map(|s| s.tallies.clone()).collect()),
         activations: concat(records.iter().map(|s| s.activations.clone())),
+        activation_sources: concat(records.iter().map(|s| s.activation_sources.clone())),
         target_checks: combine_target_checks(records),
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
@@ -1315,8 +1316,9 @@ fn fused_attack_mods(faces: &[Face]) -> Option<AttackModHook> {
 /// combine on their own: `setStat`, `conditionMet` (R195's glow answers a boolean, so or-ed, R196),
 /// `tributeWhen` and `wouldCounter` (R403, R667), `plagueMultiplier` (R471), `attackMods` (R1120, summed),
 /// `echoX` (R802, the larger). Trigger ids and Activate abilities are namespaced, so two "turn-end"s stay
-/// distinct, each running in its ingredient's place (R102, R384).
-fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
+/// distinct, each running in its ingredient's place (R102, R384), and each ability keeps the card whose text
+/// prints it (R3291000): a fused ingredient's own sources, else this ingredient on the form it went in on.
+fn script_record(script: &Script, def_id: &str, radiant: bool, index: usize) -> Script {
     let namespaced = |list: &[TriggerDef]| -> Vec<TriggerDef> {
         list.iter()
             .map(|trigger| TriggerDef {
@@ -1346,12 +1348,26 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
             .iter()
             .map(|decl| in_activation_ingredient(decl, index))
             .collect(),
+        activation_sources: activation_sources_of(script, def_id, radiant),
         preview: script
             .preview
             .clone()
             .map(|preview| in_preview_ingredient(preview, index)),
         ..script.clone()
     }
+}
+
+/// R3291000: the card whose text prints each of an ingredient's abilities, in order. A fused ingredient
+/// already names its own (the innermost card); any other's are all its own text, on the form it went in on.
+fn activation_sources_of(script: &Script, def_id: &str, radiant: bool) -> Vec<ActivationSource> {
+    if script.activation_sources.len() == script.activations.len() {
+        return script.activation_sources.clone();
+    }
+    let own = ActivationSource {
+        def_id: def_id.to_string(),
+        radiant: radiant.then_some(true),
+    };
+    vec![own; script.activations.len()]
 }
 
 /// R280, R2476000: an ingredient's `preview` asked as that ingredient's text reads the card
@@ -1564,9 +1580,11 @@ fn fused_highest_extra(
 }
 
 /// One ingredient's face script: a registered card's borrowed from the registry, a fused one's composed.
+/// `radiant`: the form it was composed on (R469), which its abilities' `ActivationSource` names (R3291000).
 #[derive(Clone)]
 struct Face {
     def_id: String,
+    radiant: bool,
     script: crate::scripts::ScriptRef,
 }
 
@@ -1738,16 +1756,20 @@ fn fused_script(
 ) -> Script {
     let faces: Vec<Face> = specs
         .iter()
-        .map(|spec| Face {
-            def_id: spec.def_id.clone(),
-            script: face_for(state, &spec.def_id, radiant || spec.radiant == Some(true), seen),
+        .map(|spec| {
+            let radiant = radiant || spec.radiant == Some(true);
+            Face {
+                def_id: spec.def_id.clone(),
+                radiant,
+                script: face_for(state, &spec.def_id, radiant, seen),
+            }
         })
         .collect();
     let scripts: Vec<&Script> = faces.iter().map(|face| &*face.script).collect();
     let records: Vec<Script> = faces
         .iter()
         .enumerate()
-        .map(|(index, face)| script_record(&face.script, &face.def_id, index))
+        .map(|(index, face)| script_record(&face.script, &face.def_id, face.radiant, index))
         .collect();
     let mut combined = combine_objects(&records);
     combined.tribute_when = fused_tribute_when(&scripts);

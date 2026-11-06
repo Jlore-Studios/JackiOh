@@ -81,6 +81,10 @@ type Activating = {
   ability?: string;
   candidates: ActionBody[];
   picked: Partial<PlayBuild>;
+  /**
+   * The abilities the card lists, set when a press asks which first: a card with several (R1751000), or a
+   * launched Starship with any (R3291000), so the weapon is seen before it fires.
+   */
   cardAbilities?: string[];
 };
 type Building = Playing | Activating;
@@ -269,6 +273,22 @@ export function activationsOnField(view: PlayerView, instanceId: string): readon
 }
 
 /**
+ * R3291000: whether the card is a Starship that has launched, as the view says (`UnitView.starship.launched`),
+ * standing in a unit zone or in the backrow (R2249000). A Dormant one's launch is no weapon, so it does not ask.
+ */
+export function isLaunchedStarship(view: PlayerView, instanceId: string): boolean {
+  for (const side of [view.you, view.opponent]) {
+    for (const pile of side.units) {
+      if (pile !== null && pile.instanceId === instanceId) return pile.starship?.launched !== undefined;
+    }
+    for (const slot of side.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.unit?.starship?.launched !== undefined;
+    }
+  }
+  return false;
+}
+
+/**
  * R384, R510: every control an activation lights. A body the view places nowhere lights the
  * control its type has always meant: `power` for `activatePower`, `activate-<id>` for `activate`.
  */
@@ -417,14 +437,14 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
 
-  // R1751000: an activation on a card with several abilities asks which one first.
+  // R1751000: an activation on a card with several abilities asks which one first; R3291000: so does a
+  // launched Starship's, one or more (`cardAbilities`).
   if (interaction.stage === "activating" && interaction.picked.ability === undefined) {
-    const cardAbilities = interaction.cardAbilities;
     const remaining = remainingCandidates(interaction);
     const fields = remaining.map(fieldsOf);
     const legalAbilities = [...new Set(fields.flatMap((c) => (c.ability === undefined ? [] : [c.ability])))];
-    const hasMultiple = (cardAbilities !== undefined && cardAbilities.length > 1) || legalAbilities.length > 1;
-    if (hasMultiple && legalAbilities.length > 0) {
+    const asks = interaction.cardAbilities !== undefined || legalAbilities.length > 1;
+    if (asks && legalAbilities.length > 0) {
       return { kind: "ability", min: 1, max: 1, abilities: legalAbilities };
     }
   }
@@ -877,7 +897,9 @@ function startActivation(
   const candidates = activationsFor(legal, target.instanceId, target.ability);
   if (candidates.length === 0) return { interaction };
   const listed = view ? activationsOnField(view, target.instanceId) : null;
-  const cardAbilities = listed && listed.length > 1 ? listed.map((a) => a.ability) : undefined;
+  // R1751000: several abilities ask which; R3291000: a launched Starship asks for its one too.
+  const asks = listed !== null && (listed.length > 1 || (view !== undefined && isLaunchedStarship(view, target.instanceId)));
+  const cardAbilities = asks ? listed.map((a) => a.ability) : undefined;
   return settle({
     stage: "activating",
     instanceId: target.instanceId,

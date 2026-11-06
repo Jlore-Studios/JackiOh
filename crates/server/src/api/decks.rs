@@ -932,7 +932,9 @@ fn sync_list<'b>(body: &'b Value, key: &str) -> Result<&'b [Value], ApiError> {
 fn sync_answer(id: &Value, outcome: Result<Value, ApiError>) -> Result<Value, ApiError> {
     let mut answer = match outcome {
         Ok(answer) => answer,
-        Err(error) if StatusCode::from_u16(error.status()).map_or(true, |status| status.is_server_error()) => {
+        Err(error)
+            if StatusCode::from_u16(error.status()).map_or(true, |status| status.is_server_error()) =>
+        {
             return Err(error);
         }
         Err(error) => {

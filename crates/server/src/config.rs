@@ -589,9 +589,15 @@ pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
 /// R640002: the expected wait is rounded up to the next multiple of this many seconds.
 pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
 /// SPEC §11 R1996000: how long the server keeps the queue readout it counted, in seconds, so the
-/// `SERIES_POLL_SECONDS` polls of every waiting client inside it share one count. Short beside the
+/// polls of every waiting client inside it share one count. Short beside the
 /// `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so a kept answer is never visibly late.
 pub const QUEUE_READOUT_CACHE_TTL_SECONDS: i64 = 5;
+/// SPEC §11 R3207000: how often the lobby's wait re-reads the queue readout, in seconds, after the
+/// read it makes when it opens. Beyond `QUEUE_READOUT_CACHE_TTL_SECONDS`, so every read counts anew,
+/// and well inside the `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so the readout is never visibly
+/// late. The wait's `GET /api/auth/me` read keeps `SERIES_POLL_SECONDS`: it keeps the ticket alive
+/// (R897000), and the readout does not.
+pub const QUEUE_POPULATION_POLL_SECONDS: i64 = 30;
 
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
@@ -930,6 +936,11 @@ pub const SERIES_START_GIVE_UP_SECONDS: i64 = 120;
 pub const SERIES_WRITE_ATTEMPTS: usize = 3;
 /// How often the series screen and the match screen's series banner re-read the series.
 pub const SERIES_POLL_SECONDS: i64 = 2;
+/// SPEC §11 R3207001: how often the live-game banner (the landing page's and the practice page's) re-reads
+/// the account for the game it names, in seconds. A game outlasts it by minutes, and a missed tick only
+/// shows the banner a few seconds late; the queue follow keeps `SERIES_POLL_SECONDS` for the ticket's
+/// sake (R897000).
+pub const LIVE_GAME_POLL_SECONDS: i64 = 10;
 /// How long the lobby shows "Match found! Taking you to your game…" before navigating to the
 /// paired game, so the pairing reads as an arrival instead of a silent vanish. A `setStatus`
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render

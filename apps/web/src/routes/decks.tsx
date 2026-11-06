@@ -28,9 +28,10 @@ import {
   syncDecks,
   type CollectionResponse,
   type DecksResponse,
+  type MeResponse,
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
-import { useAccount } from "../net/gate.ts";
+import { useAccount, type Account } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -82,12 +83,38 @@ function Shell({ children, settings = true }: { children: ReactNode; settings?: 
   );
 }
 
+export type DecksRouteProps = {
+  /** R3207003: the account the gate read for this screen, so it reads none of its own. */
+  account?: { token: string; me: MeResponse };
+  portraitsGated?: boolean;
+};
+
 /**
  * `portraitsGated`: whether ownership decides the picker's portraits (R1827000), as for full art
  * (`FULL_ART_GATED`, R1310004); otherwise every portrait is offered and nothing is read.
+ * R3207003: `account` is what the gate read (`main.tsx`); without one the screen reads it itself.
  */
-export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portraitsGated?: boolean } = {}) {
-  const account = useAccount();
+export default function DecksRoute({ account, portraitsGated = FULL_ART_GATED }: DecksRouteProps = {}) {
+  if (account !== undefined) return <HandedDecks account={account} portraitsGated={portraitsGated} />;
+  return <ReadingDecks portraitsGated={portraitsGated} />;
+}
+
+function ReadingDecks({ portraitsGated }: { portraitsGated: boolean }) {
+  return <DecksScreen account={useAccount()} portraitsGated={portraitsGated} />;
+}
+
+function HandedDecks({
+  account: { token, me },
+  portraitsGated,
+}: {
+  account: { token: string; me: MeResponse };
+  portraitsGated: boolean;
+}) {
+  const account = useMemo<Account>(() => ({ kind: "ready", token, me }), [token, me]);
+  return <DecksScreen account={account} portraitsGated={portraitsGated} />;
+}
+
+function DecksScreen({ account, portraitsGated }: { account: Account; portraitsGated: boolean }) {
   const [screen, setScreen] = useState<Screen>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
 

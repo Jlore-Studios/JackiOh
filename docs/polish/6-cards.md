@@ -657,7 +657,7 @@ so the other cards do not re-render.
   - `inspect-face-base` and `inspect-face-radiant`, side by side at every width;
   - a meta line: `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` when there are any;
   - `.inspect-rules`, the base text and the radiant clause again at reading size, shown on screens
-    ≤ 560 px wide and for any card whose printed text is tier `xl` or `xxl`, or whose face prints
+    ≤ 600 px wide and for any card whose printed text is tier `xl` or `xxl`, or whose face prints
     less than its whole text (`faceText`, R1017000) (`data-long`), because
     two faces side by side on a phone print a long card at about 5 px;
   - the glossary of both faces;

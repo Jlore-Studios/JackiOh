@@ -265,6 +265,14 @@ pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, String
     to_json(&jackioh_run::run_max_hp(&state, &content))
 }
 
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+pub fn run_shop_prices(state_json: &str, content_json: &str) -> Result<String, String> {
+    let state: RunState = parse("runShopPrices: the state", state_json)?;
+    let content: RunContent = parse("runShopPrices: the content", content_json)?;
+    to_json(&jackioh_run::run_shop_prices(&state, &content))
+}
+
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
 pub fn run_level_cost(level_json: &str) -> Result<String, String> {
     let level: usize = parse("runLevelCost: the level", level_json)?;
@@ -1227,6 +1235,18 @@ mod run_body_tests {
         assert_eq!(
             serde_json::from_str::<i32>(&text).unwrap(),
             jackioh_run::run_max_hp(&state, &content)
+        );
+    }
+
+    // B12: the shop-prices body serializes `run_shop_prices`.
+    #[test]
+    fn run_shop_prices_body_serializes_prices() {
+        let content = content();
+        let state = state(&content);
+        let text = run_shop_prices(&json_of(&state), &json_of(&content)).unwrap();
+        assert_eq!(
+            serde_json::from_str::<jackioh_run::RunShopPrices>(&text).unwrap(),
+            jackioh_run::run_shop_prices(&state, &content)
         );
     }
 
