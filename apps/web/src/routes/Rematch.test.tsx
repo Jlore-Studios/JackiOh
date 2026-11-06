@@ -408,3 +408,95 @@ describe("R3205000 the rematch status in a hidden tab", () => {
     expect(reads()).toBe(first + 2);
   });
 });
+
+describe("R3207002 one rematch poll per match id", () => {
+  const PERIOD = SERIES_POLL_SECONDS * 1000;
+  const reads = (): number => vi.mocked(rematchStatus).mock.calls.length;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetVisibility();
+  });
+
+  it("R3207002 the buttons and the watcher together send one rematch read per tick", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    render(
+      <>
+        <RematchButtons token={TOKEN} matchId={MATCH_ID} connection="open" ranked />
+        <RematchWatcher token={TOKEN} matchId={MATCH_ID} />
+      </>,
+    );
+    await settle({ advance: 0 });
+    expect(reads()).toBe(1);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(2);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(3);
+    // The one answer reached both: the buttons drew it.
+    expect(screen.getByTestId(rematchTestid.offer)).toBeInTheDocument();
+  });
+
+  it("R3207002 a component mounted later takes the answer already read, and the poll ends with the last one", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    vi.mocked(rematchStatus).mockResolvedValue(statusOf({ youOffered: 1 }));
+    const watcher = render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+    await settle({ advance: 0 });
+    expect(reads()).toBe(1);
+
+    const buttons = renderButtons();
+    // It draws the answer the watcher's poll already holds, and sends no request of its own.
+    expect(screen.getByTestId(rematchTestid.status)).toHaveTextContent(/waiting for your opponent/i);
+    await settle({ advance: 0 });
+    expect(reads()).toBe(1);
+
+    watcher.unmount();
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(2);
+
+    buttons.unmount();
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(2);
+
+    // A component that mounts after the poll ended starts a fresh one.
+    render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+    await settle({ advance: 0 });
+    expect(reads()).toBe(3);
+  });
+
+  it("R3207002 an answer navigates through every listener, and a listener that left hears nothing more", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const watcher = render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+    renderButtons();
+    await settle({ advance: 0 });
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    vi.mocked(rematchStatus).mockResolvedValue(statusOf({ youOffered: 1, opponentOffer: 1, matchId: "match-9" }));
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(2);
+    expect(vi.mocked(navigate)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.match("match-9"));
+
+    watcher.unmount();
+    vi.mocked(navigate).mockClear();
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(3);
+    expect(vi.mocked(navigate)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207002 each match id has its own poll", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    render(
+      <>
+        <RematchWatcher token={TOKEN} matchId="match-1" />
+        <RematchWatcher token={TOKEN} matchId="match-2" />
+        <RematchWatcher token={TOKEN} matchId="match-2" />
+      </>,
+    );
+    await settle({ advance: 0 });
+    expect(reads()).toBe(2);
+    expect(vi.mocked(rematchStatus)).toHaveBeenCalledWith(TOKEN, "match-1");
+    expect(vi.mocked(rematchStatus)).toHaveBeenCalledWith(TOKEN, "match-2");
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(4);
+  });
+});

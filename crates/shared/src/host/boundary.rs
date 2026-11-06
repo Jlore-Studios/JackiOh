@@ -11,6 +11,7 @@ use jackioh_engine::{LeanPick, PlayerId, PlayerView};
 use super::again::{AgainBook, AgainClaim, AgainSeen, in_again_window};
 use super::duel::{DuelHost, DuelSetup};
 use super::duos::{DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, step_duos};
+use super::practice::boundary::{PracticeAnswer, PracticeCall};
 use super::rematch::{
     OfferFacts, OfferOutcome, RematchBook, RematchRefusal, RematchSeen, RematchStakes, check_offer,
     in_rematch_window,
@@ -157,6 +158,8 @@ pub enum HostCall {
         now: i64,
         live: Vec<String>,
     },
+    /// A call of the practice session (#3099), tagged `op` beside this one's `call`.
+    Practice(Box<PracticeCall>),
 }
 
 /// What a [`HostCall`] answers.
@@ -220,6 +223,8 @@ pub enum HostAnswer {
         book: RematchBook,
         removed: usize,
     },
+    /// The answer to a [`HostCall::Practice`], tagged `reply` beside this one's `answer`.
+    Practice(Box<PracticeAnswer>),
 }
 
 /// The one function behind the boundary.
@@ -342,6 +347,7 @@ pub fn apply(call: HostCall) -> HostAnswer {
             let removed = book.sweep(now, |id| live.iter().any(|live| live == id));
             HostAnswer::Swept { book, removed }
         }
+        HostCall::Practice(call) => HostAnswer::Practice(Box::new(super::practice::boundary::apply(*call))),
     }
 }
 

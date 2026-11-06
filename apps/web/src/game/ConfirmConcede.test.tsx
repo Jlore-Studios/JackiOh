@@ -43,6 +43,14 @@ describe("ConfirmConcede on its own", () => {
     expect(screen.getByTestId("concede-cancel")).toHaveClass("button-primary");
   });
 
+  it("says its caller's body in place of the usual one", () => {
+    render(<ConfirmConcede onConfirm={vi.fn()} onCancel={vi.fn()} body="Custom" />);
+    const dialog = screen.getByTestId("concede-dialog");
+    expect(dialog).toHaveAccessibleDescription("Custom");
+    expect(dialog).not.toHaveTextContent(CONCEDE_BODY);
+    expect(dialog).toHaveAccessibleName(CONCEDE_TITLE);
+  });
+
   it("starts with the focus on Keep playing, the safe choice", () => {
     render(<ConfirmConcede onConfirm={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByTestId("concede-cancel")).toHaveFocus();
@@ -110,6 +118,21 @@ describe("the board's Concede control asks first, in every mode (Game.tsx)", () 
     fireEvent.click(control);
     expect(screen.getByTestId("concede-dialog")).toBeInTheDocument();
     expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("keeps the usual wording unless the route passes its own concedeBody", () => {
+    const { onAction } = renderGame();
+    fireEvent.click(screen.getByTestId("concede"));
+    expect(screen.getByTestId("concede-dialog")).toHaveAccessibleDescription(CONCEDE_BODY);
+    cleanup();
+
+    render(<Game view={baseView()} legal={LEGAL} onAction={onAction} concedeBody="Custom" />);
+    fireEvent.click(screen.getByTestId("concede"));
+    expect(screen.getByTestId("concede-dialog")).toHaveAccessibleDescription("Custom");
+    // Only the words change: Concede still sends the one concede.
+    fireEvent.click(screen.getByTestId("concede-confirm"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith({ type: "concede" });
   });
 
   it("only the dialog's Concede sends { type: \"concede\" }, once, and the dialog closes", () => {

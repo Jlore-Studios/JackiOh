@@ -2301,6 +2301,12 @@ button.modifier-badge[data-open="true"] {
   line-height: 1.3;
 }
 
+/* A line that is about a glossary term (jackioh-shared's log, #3108) carries the term as a face's text does, a <strong>;
+   the log reads in one weight, as it always has. */
+.log-line strong {
+  font-weight: inherit;
+}
+
 /* R745: a rule before each turn's first line; `display: block` keeps it out of the list's numbering. */
 .log-divider {
   display: block;
@@ -2923,6 +2929,21 @@ button.modifier-badge[data-open="true"] {
     max-width: 100%;
   }
 
+  /* #3257: an empty zone shows the box a field card takes there (above), less an inset, so the
+     unit's oval and the backrow's outline keep a card's shape (its width over its height is
+     `--field-ratio-min` to `--field-ratio-max`, less the inset's share) instead of the whole row's
+     height at the hand card's width. `cqw`/`cqh` read the zone, the pseudo-element's container; a
+     pseudo-element is content-box, so its 1px border is counted in the size. Still hidden once a
+     card stands in the zone, still hit-less, still the drop spot's green (highlights.css). */
+  .zone::before {
+    --field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));
+    --field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));
+    --zone-pad-inset: 2px;
+    box-sizing: border-box;
+    width: calc(var(--field-card-w) - 2 * var(--zone-pad-inset));
+    height: calc(var(--field-card-h) - 2 * var(--zone-pad-inset));
+  }
+
   .board > * {
     grid-column: 1 / -1;
   }
@@ -3063,53 +3084,66 @@ button.modifier-badge[data-open="true"] {
     transform: translateY(-10px);
   }
 
-  /* #2932: a field card's Activate control and keyword marks hang off the card's top-left corner,
-     outside the face (game/FieldBadges.tsx), so the face keeps its whole width for the name, art,
-     cost, attack and health: the card is not made wider to fit them. The stack is a sibling of the
-     card, as the switch is, so DEF's rotation never turns or moves it; its corner is the card's own,
-     worked out from the card's size below (the zone centres the card, so the card's top-left is the
-     zone's middle less half the card). It overlaps the card by 2px, clear of the name box (which
-     starts about 4px in), and the zone left of it is under it by what hangs out.
-     That zone's own switch (⟳) sits at its top-right, exactly where this stack hangs (the zones are
-     4px apart), so the stack starts below the switch's target (`--badges-top`, the target's own
-     height) and never over it: a press on the neighbour's ⟳ is never this unit's Activate. The
-     Activate control comes first, the marks under it; what does not fit the zone's height wraps into
-     a column to its left (every item is a flex item of the stack), so the stack never reaches the
-     row below. */
+  /* #3257: a field card's Activate control and keyword marks stand in the top-left inner corner of
+     the card's own zone (game/FieldBadges.tsx), wholly inside it: no mark and no press band crosses
+     the zone's border into another lane, so a mark never reads as belonging to the empty zone beside
+     its card. The stack is a sibling of the card, as the switch is, so DEF's rotation never turns or
+     moves it: its rects are the same in ATK and DEF. It may cover the top-left of the card's art and
+     its cost (the cost gem steps aside, below), never the name, the attack or the health, and never
+     the zone's own switch (⟳, top-right): it stops above the name plate (`max-height`), and
+     FieldBadges.tsx folds the marks that do not fit into the face's "+n". The Activate control comes
+     first, the marks under it. */
   .board .zone > .field-badges {
     /* The card's own size, repeated here so `cqw`/`cqh` read this stack's container (its zone, as
        the card's do): a custom property set on the zone would read the lane instead. */
     --field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));
     --field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));
-    /* The switch's own target (`.zone > .switch-button`, above): at most 44px, and never past the
-       zone's middle less the clear it keeps, which is the height its top-right target takes. */
-    --switch-target: 44px;
-    --switch-clear: 6px;
-    --badges-top: max(calc((100cqh - var(--field-card-h)) / 2), min(var(--switch-target), calc(50cqh - var(--switch-clear))));
+    --badges-inset: 2px;
+    /* The face's own gem and name plate (cards.css: `--mf-stat` is `min(30cqmin, 26cqh)` and
+       `--mf-plate` is `max(11cqh, 10px)`, read off the card's own box), worked out from the card's
+       size here, since the stack is no child of the card and cannot read its container. */
+    --badges-stat: min(calc(min(var(--field-card-w), var(--field-card-h)) * 0.3), calc(var(--field-card-h) * 0.26));
+    --badges-plate: max(calc(var(--field-card-h) * 0.11), 10px);
     position: absolute;
-    top: var(--badges-top);
-    right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);
+    top: var(--badges-inset);
+    left: var(--badges-inset);
     z-index: var(--z-popover);
     display: flex;
     flex-direction: column;
-    /* `wrap-reverse` swaps the cross axis, so its start is the right edge: `flex-start` keeps every
-       mark flush with the card's edge, and a column that wraps goes to the left of the first. */
-    flex-wrap: wrap-reverse;
     align-items: flex-start;
-    max-height: calc(100cqh - var(--badges-top));
     gap: var(--space-1);
-    /* The stack hangs over the zone beside it: only the Activate control takes a press
-       (activate.css), the marks and the gaps let it through. */
+    /* The top of the name plate (the card is centred in its zone, so its bottom is the zone's middle
+       and half the card's height down), less the stack's own inset: the room the marks have. */
+    max-height: calc((100cqh + var(--field-card-h)) / 2 - var(--badges-stat) - var(--badges-plate) - var(--badges-inset));
+    /* Only the Activate control takes a press (activate.css): the marks and the gaps let a press
+       through to the card. */
     pointer-events: none;
   }
 
-  /* Lane 1 has no zone to its left: no switch to keep clear of, so its stack starts at the card's own
-     top, with the zone's whole height to stand in, and no column to its left to wrap into (it would
-     be off the screen), so it never wraps: what could not fit would run down, not out of sight. */
-  .board .zone[data-lane="1"] > .field-badges {
-    --badges-top: calc((100cqh - var(--field-card-h)) / 2);
-    flex-wrap: nowrap;
-    align-items: flex-end;
+  /* A DEF card is turned a quarter clockwise, so its attack gem, its name plate and its health stand
+     in a strip down its left side, right under the corner where the stack is: the stack stops above
+     the turned card instead, at the top of its box (the card's width, scaled by `--def-scale`, is the
+     box's height, and the zone centres it). The stack's own rects do not move, as the switch's do
+     not, so a DEF card's stack is the ATK stack cut shorter: FieldBadges.tsx re-measures when the
+     card's position changes, and the marks that no longer fit fold into the "+n". The Activate
+     control is never dropped (it is the only way to use the ability), and nor is the "+n" while the
+     unit has a mark to draw (#3315), so where the band above the turned card is shorter than the
+     control and the +N (a phone as short as 664px) they overlap the turned card's top-left, its
+     attack gem and the start of its name, by the difference: the owner's call on #3268. */
+  .board .zone:has(> .card[data-position="DEF"]) > .field-badges {
+    --def-scale: min(1, tan(atan2(100cqw, var(--field-card-h))), tan(atan2(100cqh, var(--field-card-w))));
+    max-height: calc((100cqh - var(--field-card-w) * var(--def-scale)) / 2 - var(--badges-inset));
+  }
+
+  /* Flex items shrink by default: the control was squeezed to 12px in a short column. */
+  .board .field-badges :is(.activate-control, .keyword, .cf-kw-more) {
+    flex: none;
+  }
+
+  /* The owner's call (#3257): the marks may cover the card's cost, which then steps aside instead
+     of showing under them. */
+  .board .zone:has(> .field-badges :is(.activate-control, .keyword, .cf-kw-more)) > .card .cost-gem {
+    visibility: hidden;
   }
 
   /* The marks' wrapper is no box: each mark is a flex item of the stack (the Activate control's

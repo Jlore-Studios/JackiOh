@@ -266,7 +266,7 @@ h3,
   gap: var(--space-5);
 }
 
-.brand h1 {
+.brand__word {
   color: var(--text);
 }
 
@@ -587,7 +587,7 @@ html {
   flex: none;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .app-shell {
     padding: var(--space-8) var(--space-7) calc(var(--space-10) + var(--space-2));
   }

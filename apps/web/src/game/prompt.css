@@ -631,7 +631,7 @@
   text-align: center;
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .prompt .prompt-rewards > button {
     width: calc(50% - 5px);
     min-height: 120px;
@@ -706,7 +706,7 @@
   }
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .prompt {
     width: 100%;
     padding: var(--space-5);

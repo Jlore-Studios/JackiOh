@@ -31,6 +31,7 @@ import type {
   RunFightSetup,
   RunFile,
   RunSetup,
+  RunShopPrices,
   RunState,
   RunUnlocks,
 } from "@jackioh/run";
@@ -41,6 +42,8 @@ import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosTeamRules } from "../wire/generated/DuosTeamRules.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
+import type { PracticeAnswer } from "../wire/generated/PracticeAnswer.ts";
+import type { PracticeCall } from "../wire/generated/PracticeCall.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
 import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
 import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
@@ -49,6 +52,8 @@ import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 import type { FaceAnswer } from "../wire/generated/FaceAnswer.ts";
 import type { FaceCall } from "../wire/generated/FaceCall.ts";
+import type { LogAnswer } from "../wire/generated/LogAnswer.ts";
+import type { LogCall } from "../wire/generated/LogCall.ts";
 
 // loading
 
@@ -401,6 +406,15 @@ export function runMaxHp(state: RunState, content: RunContent): number {
   return call("runMaxHp", () => parsed<number>(normal.run_max_hp(json(state), json(content))));
 }
 
+/**
+ * What a shop's services cost this run, as the run spends them: the remove price after the shop
+ * discount, the Radiant and buff Tickets, each held relic's next level (null at its top) and each
+ * stock item's Coins after the discount.
+ */
+export function runShopPrices(state: RunState, content: RunContent): RunShopPrices {
+  return call("runShopPrices", () => parsed<RunShopPrices>(normal.run_shop_prices(json(state), json(content))));
+}
+
 /** The Embers that raise the starting deck from `level` to the next, or null at the ladder's top. */
 export function runLevelCost(level: number): number | null {
   return call("runLevelCost", () => parsed<number | null>(normal.run_level_cost(json(level))));
@@ -482,6 +496,34 @@ export function duosLegalActions(state: DuosState, seat: DuosSeat): DuosActionBo
 /** The seat's `DuosView`: its own duel, its teammate's from the teammate's seat, both teams' life (B23). */
 export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
   return call("duosViewFor", () => parsed<DuosView>(normal.duos_view_for(duosStateJson(state), seat)));
+}
+
+// the practice session (#3099)
+
+/**
+ * One call of the practice session, `jackioh-shared`'s machine behind `host(call)` (the host contract,
+ * `crates/shared/README.md`): a game against the AI seat as a `PracticeHost` the caller holds as JSON and
+ * hands back on every call, and the outputs to carry out. A refusal of a start or a resume is the
+ * returned `refused`, never thrown; only a call that does not parse is.
+ */
+export function practiceCall(practice: PracticeCall): PracticeAnswer {
+  return call("host", () => parsed<PracticeAnswer>(normal.host(json({ call: "practice", ...practice }))));
+}
+
+/** The practice session's numbers (`crates/shared/src/config.rs`, #3099): the caps its asks carry and the games it keeps. */
+export type PracticeConstants = {
+  PRACTICE_AI_CLOCK_MS: number;
+  PRACTICE_LETHAL_HINT_CLOCK_MS: number;
+  PRACTICE_REPLAYS_KEPT: number;
+};
+
+let practiceConstantsCache: PracticeConstants | null = null;
+
+export function practiceConstants(): PracticeConstants {
+  return call("constants", () => {
+    practiceConstantsCache ??= parsed<PracticeConstants>(normal.constants());
+    return practiceConstantsCache;
+  });
 }
 
 // the AI (SURFACE §9)
@@ -652,4 +694,15 @@ export function validator<T>(name: ValidatorCall, input: unknown): T {
  */
 export function face(request: FaceCall): FaceAnswer {
   return call("face", () => parsed<FaceAnswer>(normal.face(json(request))));
+}
+
+// the game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/**
+ * One call of the game log (`crates/shared/src/log`): a `LogCall` in, a `LogAnswer` out, both the generated
+ * wire types. The catalog is the module's own and the locale is an argument, so each line is final text as
+ * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes).
+ */
+export function log(request: LogCall): LogAnswer {
+  return call("log", () => parsed<LogAnswer>(normal.log(json(request))));
 }

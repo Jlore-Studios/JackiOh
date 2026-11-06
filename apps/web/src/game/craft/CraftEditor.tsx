@@ -22,6 +22,7 @@ import {
   CRAFT_VERB_PRICES,
 } from "../../wire/engineConfig.ts";
 import { craftPreview } from "../../wire/engine.ts";
+import { PHONE_SHEET_QUERY } from "../../breakpoints.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
 import { readerTerms } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
@@ -64,8 +65,8 @@ import "./craft.css";
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
-/** `prompt.css`:608 — the phone sheet query. Read in a try/catch, as `tutorial/Coach.tsx` does. */
-const CRAFT_SHEET_QUERY = "(max-width: 600px), (orientation: landscape) and (max-height: 500px)";
+/** The phone sheet query (`PHONE_SHEET_QUERY`). Read in a try/catch, as `tutorial/Coach.tsx` does. */
+const CRAFT_SHEET_QUERY = PHONE_SHEET_QUERY;
 
 function sheetQuery(): MediaQueryList | null {
   try {

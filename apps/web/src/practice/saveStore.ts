@@ -1,45 +1,15 @@
 // `resume.ts` holds only page setup; worker-side logs name hidden AI cards (SPEC §9.9, R668; rule 7).
 // R768 retains finished games for replay. Unavailable storage is no save; failed writes never end play.
 
-import type { Handicap } from "@jackioh/engine/config";
-import type { Action, PlayerId } from "@jackioh/shared";
-
-import type { LastBoardCard, PracticeReplaySummary, PracticeStartConfig } from "./protocol.ts";
-
-/** R668: the worker-only state a game in progress resumes from. */
-export type PracticeSave = {
-  catalog: string;
-  /** R1371000: the scheme `catalog` is named by; a save kept before the version retcon has none. */
-  versions?: number;
-  config: PracticeStartConfig;
-  log: Action[];
-  aiCursor: number;
-  hash: string;
-};
+import type { PracticeReplay } from "../wire/generated/PracticeReplay.ts";
+import type { PracticeReplaySetup } from "../wire/generated/PracticeReplaySetup.ts";
+import type { PracticeSave } from "../wire/generated/PracticeSave.ts";
 
 /**
- * R767000: the setup a kept game was dealt, as `createGame` had it, so a game played on an older
- * catalog version folds under that version without dealing it again from this build's catalog.
+ * R668, R767000, R768: the worker-only state a game in progress resumes from, the setup a kept game was dealt
+ * and a kept game itself, as the practice session writes them (`crates/shared`, #3099).
  */
-export type PracticeReplaySetup = {
-  decks: [string[], string[]];
-  handicaps: Partial<Record<PlayerId, Handicap>>;
-  lastBoards?: [LastBoardCard[], LastBoardCard[]];
-  dealt?: PlayerId[];
-};
-
-export type PracticeReplay = {
-  catalog: string;
-  versions?: number;
-  config: PracticeStartConfig;
-  /** R767000: absent on a game kept before setups were (it folds only on its own catalog version). */
-  setup?: PracticeReplaySetup;
-  log: Action[];
-  hash: string;
-  /** R677: the seat the human played when the game ended. */
-  endSeat: PlayerId;
-  summary: PracticeReplaySummary;
-};
+export type { PracticeReplay, PracticeReplaySetup, PracticeSave };
 
 export type PracticeSaveStore = {
   /** Settles once the stored save, if any, is read; it never rejects. */

@@ -304,6 +304,22 @@ pub extern "C" fn run_max_hp(
     })
 }
 
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_shop_prices(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    content_json_ptr: *const u8,
+    content_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("runShopPrices: the state", state_json_ptr, state_json_len)?;
+        let content = arg("runShopPrices: the content", content_json_ptr, content_json_len)?;
+        wasm_core::run_shop_prices(state, content)
+    })
+}
+
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
 #[unsafe(no_mangle)]
 pub extern "C" fn run_level_cost(level_json_ptr: *const u8, level_json_len: usize) -> i32 {
@@ -784,6 +800,15 @@ pub extern "C" fn loadout(call_json_ptr: *const u8, call_json_len: usize) -> i32
 #[unsafe(no_mangle)]
 pub extern "C" fn face(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::face(arg("face: the call", call_json_ptr, call_json_len)?))
+}
+
+// The game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
+/// `init` registered; the host passes the locale in (`crates/shared/README.md`, the host contract).
+#[unsafe(no_mangle)]
+pub extern "C" fn log(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::log(arg("log: the call", call_json_ptr, call_json_len)?))
 }
 
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)

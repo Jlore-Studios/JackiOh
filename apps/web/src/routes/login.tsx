@@ -81,6 +81,7 @@ import {
 } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 
 import "../auth/auth.css";
@@ -1069,15 +1070,12 @@ export default function LoginRoute(): ReactElement {
 
   return (
     <div className="app-shell auth-screen tavern one-screen">
-      <BackLink showWallet={false} />
+      <BackLink showWallet={false} title={title} />
       {/* Two parts, so a phone held sideways can set them side by side (auth/tavern.css): what is
-          going on (the title and every notice) beside the form. Elsewhere they are one column. */}
+          going on (the wordmark and every notice) beside the form. Elsewhere they are one column. */}
       <section className="panel panel--auth panel--split one-screen__body">
         <div className="auth-board__head">
-          <div className="brand">
-            <h1>JackiOh</h1>
-          </div>
-          <h2>{title}</h2>
+          <Wordmark />
 
           {secondFactor ? (
             <p className="notice" data-testid={loginTestid.notice} role="status">

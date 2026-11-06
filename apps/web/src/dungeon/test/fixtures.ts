@@ -16,7 +16,7 @@ import type {
   RunUnlocks,
 } from "@jackioh/run";
 
-/** DR3's ladder, its 10 cards and its 3 artifacts worth 8 points, and the five tiers' points. */
+/** DR3's ladder, its 10 cards and its 3 artifacts worth 8 points, the five tiers' points and a campfire's two cards. */
 export const CONSTANTS: RunConstants = {
   slotLadder: [
     [5, 4, 0, 0, 0, 1],
@@ -36,6 +36,8 @@ export const CONSTANTS: RunConstants = {
     ["platinum", 4],
     ["diamond", 5],
   ],
+  // A campfire removes two cards.
+  campfireRemove: 2,
 };
 
 /** The Embers each level costs from the one before it: `LEVEL_EMBERS[0]` buys level 2. */

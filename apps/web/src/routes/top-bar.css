@@ -107,6 +107,23 @@
     flex: 1 1 100%;
   }
 
+  /* #3223: a board's rail (the replay player's) carries the screen's title too, and its height budget
+     (game/board.css: --board-rail-phone-h, and the top strip's one row) is one row of buttons, so
+     there the line stays beside Back and the title is a step smaller, on one line, ellipsized rather
+     than wrapped. It is still the screen's `h1`, never hidden. */
+  .board-rail .screen-nav__line {
+    order: 0;
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+  }
+
+  .board-rail .screen-nav .page-title {
+    overflow: hidden;
+    font-size: var(--type-xl);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .screen-nav:has(.friends-button),
   .landing .landing-corner:has(> .friends-button) {
     gap: 6px;

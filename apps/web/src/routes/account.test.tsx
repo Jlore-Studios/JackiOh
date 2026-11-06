@@ -25,6 +25,7 @@ import {
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packTestid } from "../packs/packs.ts";
 import { shopTestid } from "../shop/shop.ts";
@@ -135,6 +136,15 @@ describe("the account screen", () => {
     expect(statusWords("pending")).toBe("Waiting for an invite code");
     expect(statusWords("active")).toBe("Active");
     expect(statusWords("banned")).toBe("Banned");
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId("account-email")).toHaveTextContent("player1@example.com");
+    expectOnePageTitle("Your account");
+    expect(screen.getAllByRole("heading", { level: 2 }).length, "section headings are h2, under the h1").toBeGreaterThan(0);
   });
 
   it("shows which account you are signed in as, and its record", async () => {

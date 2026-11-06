@@ -537,7 +537,7 @@
   }
 }
 
-@media (width <= 560px) {
+@media (max-width: 600px) {
   .duos-life__bar {
     width: 40px;
   }

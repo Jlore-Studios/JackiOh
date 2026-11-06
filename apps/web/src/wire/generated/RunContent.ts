@@ -6,8 +6,7 @@ import type { RunPassiveDef } from "./RunPassiveDef";
 import type { RunPoolCard } from "./RunPoolCard";
 
 /**
- * What a run deals from: the designer's lists, or `run_placeholder_content` until they land. A
- * Sandbox run's caller adds the player's custom cards to `pool` (DR1).
+ * What a run deals from: the designer's lists, or `run_placeholder_content` until they land.
  */
 export type RunContent = { 
 /**

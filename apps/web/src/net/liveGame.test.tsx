@@ -4,7 +4,7 @@
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { LIVE_GAME_POLL_SECONDS, MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { MeResponse } from "./api.ts";
 import type { Account } from "./gate.ts";
 import {
@@ -28,7 +28,10 @@ vi.mock("./navigate.ts", async (importOriginal) => {
   return { ...actual, navigate: vi.fn() };
 });
 
+/** The queue follow's pace (R897000). */
 const POLL_MS = SERIES_POLL_SECONDS * 1000;
+/** R3207001: the live-game banner's. */
+const BANNER_MS = LIVE_GAME_POLL_SECONDS * 1000;
 
 function me(
   currentMatchId: string | null,
@@ -105,33 +108,33 @@ describe("R765 the live game an account read names", () => {
     expect(renderHook(() => useLiveGame(ready(me(null)), read)).result.current).toBeNull();
   });
 
-  it("R765 a live game is read again every SERIES_POLL_SECONDS, and is gone once a read says it ended", async () => {
+  it("R765 a live game is read again every LIVE_GAME_POLL_SECONDS, and is gone once a read says it ended", async () => {
     vi.useFakeTimers();
     const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
     const account = ready(me("m-1"));
     const { result } = renderHook(() => useLiveGame(account, read));
     expect(read).not.toHaveBeenCalled();
 
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(read).toHaveBeenCalledTimes(1);
     expect(read).toHaveBeenCalledWith("tok-1");
     expect(result.current?.path).toBe("/match/m-1");
 
     read.mockRejectedValueOnce(new Error("network down"));
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(result.current?.path).toBe("/match/m-1");
 
     read.mockResolvedValue(me(null));
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(result.current).toBeNull();
 
     // No game left: no more reads.
     const reads = read.mock.calls.length;
-    await advance(POLL_MS * 3);
+    await advance(BANNER_MS * 3);
     expect(read).toHaveBeenCalledTimes(reads);
   });
 
-  it("R1566000 useLiveGame offers a live co-op game, read again every SERIES_POLL_SECONDS, and gone once a read says it ended", async () => {
+  it("R1566000 useLiveGame offers a live co-op game, read again every LIVE_GAME_POLL_SECONDS, and gone once a read says it ended", async () => {
     vi.useFakeTimers();
     const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null, null, "d-1"));
     const account = ready(me(null, null, "d-1"));
@@ -139,12 +142,12 @@ describe("R765 the live game an account read names", () => {
     expect(result.current).toEqual({ kind: "duos", id: "d-1", path: "/duos/d-1" });
     expect(read).not.toHaveBeenCalled();
 
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(read).toHaveBeenCalledTimes(1);
     expect(result.current?.path).toBe("/duos/d-1");
 
     read.mockResolvedValue(me(null));
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(result.current).toBeNull();
   });
 
@@ -155,7 +158,7 @@ describe("R765 the live game an account read names", () => {
       const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
       const account = ready(me("m-1"));
       const { result } = renderHook(() => useLiveGame(account, read));
-      await advance(POLL_MS);
+      await advance(BANNER_MS);
       expect(read).toHaveBeenCalledTimes(1);
 
       // A hidden tab reads nothing; a visible one reads once.
@@ -206,25 +209,41 @@ describe("R765 the live game an account read names", () => {
     vi.useFakeTimers();
     const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
     renderHook(() => useLiveGame(ready(me("m-1")), read));
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(read).toHaveBeenCalledTimes(1);
 
     setVisibility("hidden");
-    await advance(3 * POLL_MS);
+    await advance(3 * BANNER_MS);
     expect(read).toHaveBeenCalledTimes(1);
 
     setVisibility("visible");
     await flush();
     expect(read).toHaveBeenCalledTimes(2);
-    await advance(POLL_MS);
+    await advance(BANNER_MS);
     expect(read).toHaveBeenCalledTimes(3);
+  });
+
+  it("R3207001 the live-game banner reads at LIVE_GAME_POLL_SECONDS, slower than the queue follow", async () => {
+    vi.useFakeTimers();
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
+    renderHook(() => useLiveGame(ready(me("m-1")), read));
+
+    // Not at the queue follow's pace, nor a tick before its own.
+    await advance(POLL_MS);
+    expect(read).not.toHaveBeenCalled();
+    await advance(BANNER_MS - POLL_MS - 1);
+    expect(read).not.toHaveBeenCalled();
+    await advance(1);
+    expect(read).toHaveBeenCalledTimes(1);
+    await advance(BANNER_MS);
+    expect(read).toHaveBeenCalledTimes(2);
   });
 
   it("R765 an account with no live game is not polled", async () => {
     vi.useFakeTimers();
     const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
     renderHook(() => useLiveGame(ready(me(null)), read));
-    await advance(POLL_MS * 3);
+    await advance(BANNER_MS * 3);
     expect(read).not.toHaveBeenCalled();
   });
 });
@@ -408,6 +427,21 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     expect(read).toHaveBeenCalledTimes(2);
     await advance(POLL_MS);
     expect(read).toHaveBeenCalledTimes(3);
+  });
+
+  it("R3207001 the queue follow keeps SERIES_POLL_SECONDS", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));
+    render(<Follower path={paths.practice} read={read} />);
+
+    await flush();
+    expect(read).toHaveBeenCalledTimes(1);
+    for (let round = 2; round <= 4; round += 1) {
+      await advance(POLL_MS);
+      expect(read).toHaveBeenCalledTimes(round);
+    }
   });
 
   it("R765 a Conquest pairing goes to the series screen", async () => {

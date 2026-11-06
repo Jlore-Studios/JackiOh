@@ -22,8 +22,8 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::generation::{
     GEN_SCRIPTS, LAB_POOL, Run, advance, ai_spell, ai_unit, answer, big_unit, body, deck_fusion, felinor_a,
-    felinor_b, felinor_c, field_trap, frozen, fuse_a, fuse_b, fuser, hand_card, immutable, lab, mutate, pick,
-    plain_trap, playing, replayed, slime, slop, x_unit,
+    felinor_b, felinor_c, field_trap, frozen, fuse_a, fuse_b, fuser, hand_card, immutable, lab, pick,
+    playing, replayed, slime, slop, x_unit,
 };
 use crate::rules::fixtures::harness::{
     Bench, ids, input, json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
@@ -98,14 +98,6 @@ fn digest_shaped(id: &str) -> bool {
 fn stats(state: &GameState, card: &CardInstance) -> (i32, i32) {
     let view = unit_view(state, card);
     (view.attack, view.max_health)
-}
-
-fn with_state(run: &Run, state: GameState) -> Run {
-    Run {
-        start: run.start.clone(),
-        log: run.log.clone(),
-        state,
-    }
 }
 
 mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredient_list {
@@ -774,198 +766,6 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
         );
         assert_eq!(sink.rng.cursor(), cursor);
         assert!(sink.events.is_empty());
-    }
-}
-
-// An enemy card onto one of yours of its type (Classic #78 Mutate Spell, Radiant).
-
-struct MutateBoard {
-    run: Run,
-    enemy: CardInstance,
-    field: CardInstance,
-    in_hand: CardInstance,
-    deck: Vec<CardInstance>,
-}
-
-fn mutate_board(seed: &str) -> MutateBoard {
-    let mut start = playing(seed);
-    let enemy = put(&mut start.state, &fuse_a.id, slot(P2, Row::Units, 1), json!({}));
-    let field = put(&mut start.state, &body.id, slot(P1, Row::Units, 1), json!({}));
-    put(
-        &mut start.state,
-        &immutable.id,
-        slot(P1, Row::Units, 2),
-        json!({}),
-    );
-    start.state.players.p1.hand = vec![];
-    let in_hand = hand_card(&mut start.state, &fuse_b.id, P1);
-    hand_card(&mut start.state, &slop.id, P1); // a Spell, not of the enemy card's type
-    let deck = set_library(
-        &mut start.state,
-        P1,
-        &[felinor_c.id.clone(), lab.id.clone(), felinor_a.id.clone()],
-    );
-    MutateBoard {
-        run: start,
-        enemy,
-        field,
-        in_hand,
-        deck,
-    }
-}
-
-mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
-    use super::*;
-
-    #[test]
-    fn r470_the_controller_picks_among_their_cards_of_its_type_on_the_field_in_hand_and_in_deck_the_answer_fuses_it_there()
-     {
-        let MutateBoard {
-            run: mut start,
-            enemy,
-            field,
-            in_hand,
-            deck,
-        } = mutate_board("fuse-mutate");
-        let spell = hand_card(&mut start.state, &mutate.id, P1);
-        let mut run1 = frozen(&start);
-        let enemy_hero = run1.state.players.p2.hero.health;
-        run1 = advance(
-            &run1,
-            input(
-                json!({ "type": "play", "instanceId": spell.id, "targets": [pick(&enemy.id)], "playerId": "p1" }),
-            ),
-        );
-
-        let pending = must(run1.state.pending.clone(), "the pick");
-        assert_eq!(pending.player_id, P1);
-        // Field in lane order, hand in hand order, the deck's Units in an order of their own (name).
-        let felinor_a_in_deck = must(deck.get(2).cloned(), "felinor-a");
-        let felinor_c_in_deck = must(deck.first().cloned(), "felinor-c");
-        assert_eq!(
-            pending
-                .options
-                .iter()
-                .map(|option| option.selection.clone())
-                .collect::<Vec<_>>(),
-            vec![
-                pick(&field.id),
-                pick(&in_hand.id),
-                pick(&felinor_a_in_deck.id),
-                pick(&felinor_c_in_deck.id),
-            ]
-        );
-        // The rest of the Spell waits for the answer (R113).
-        assert_eq!(run1.state.players.p2.hero.health, enemy_hero);
-
-        // The other player sees an open prompt, nothing more; the chooser sees its deck cards (§10.8).
-        assert_eq!(
-            json_of(view_for(&run1.state, P2))["pending"],
-            json!({ "forYou": false, "pendingFor": "p1" })
-        );
-        assert!(
-            !serde_json::to_string(&view_for(&run1.state, P2))
-                .expect("a view serializes")
-                .contains(&felinor_a_in_deck.id)
-        );
-        let mine = json_of(view_for(&run1.state, P1))["pending"].clone();
-        assert_eq!(mine["forYou"], json!(true), "expected p1's prompt");
-        let offered = mine["options"]
-            .as_array()
-            .and_then(|options| {
-                options
-                    .iter()
-                    .find(|option| option["instanceId"] == json!(felinor_a_in_deck.id))
-            })
-            .map(|option| option["defId"].clone());
-        assert_eq!(offered, Some(json!(felinor_a.id.clone())));
-
-        // JSON mid-prompt, and the answer: onto the deck card, which stays in the deck.
-        let round = round_trip(&run1.state);
-        assert_eq!(round, run1.state);
-        let live_run = answer(&run1, pick(&felinor_a_in_deck.id), None);
-        let from_json = answer(&with_state(&run1, round), pick(&felinor_a_in_deck.id), None);
-        assert_eq!(hash_state(&from_json.state), hash_state(&live_run.state));
-        assert_eq!(hash_state(&replayed(&live_run)), hash_state(&live_run.state));
-
-        let kept = must(
-            find_instance(&live_run.state, &felinor_a_in_deck.id).cloned(),
-            "the deck card",
-        );
-        assert_eq!(kept.zone, Zone::Library { player: P1 });
-        assert_eq!(
-            fused_id_parts(Some(&live_run.state), &kept.def_id),
-            Some(vec![fuse_a.id.clone(), felinor_a.id.clone()])
-        );
-        assert!(find_instance(&live_run.state, &enemy.id).is_none());
-        assert!(live_run.state.players.p2.units[0].is_none());
-        assert_eq!(live_run.state.players.p2.hero.health, enemy_hero - 1);
-    }
-
-    #[test]
-    fn r470_onto_a_field_card_it_is_r77s_target_a_trap_counts_as_a_field_trap_with_none_of_its_type_the_card_is_exiled()
-     {
-        let mut start = playing("fuse-mutate-trap");
-        let enemy_trap = put(
-            &mut start.state,
-            &plain_trap.id,
-            slot(P2, Row::Backrow, 2),
-            json!({}),
-        );
-        let mine_trap = put(
-            &mut start.state,
-            &field_trap.id,
-            slot(P1, Row::Backrow, 4),
-            json!({}),
-        );
-        let spell = hand_card(&mut start.state, &mutate.id, P1);
-        let mut run1 = frozen(&start);
-        run1 = advance(
-            &run1,
-            input(
-                json!({ "type": "play", "instanceId": spell.id, "targets": [pick(&enemy_trap.id)], "playerId": "p1" }),
-            ),
-        );
-        assert_eq!(
-            run1.state.pending.as_ref().map(|pending| pending
-                .options
-                .iter()
-                .map(|option| option.selection.clone())
-                .collect::<Vec<_>>()),
-            Some(vec![pick(&mine_trap.id)])
-        );
-        run1 = answer(&run1, pick(&mine_trap.id), None);
-        let kept = must(
-            find_instance(&run1.state, &mine_trap.id).cloned(),
-            "the Field Trap",
-        );
-        assert_eq!(
-            json_of(def_of(Some(&run1.state), &kept.def_id).type_),
-            json!("Field Trap")
-        );
-        assert_eq!(
-            kept.zone,
-            Zone::Field {
-                player: P1,
-                row: Row::Backrow,
-                lane: 4,
-            }
-        );
-
-        let mut lonely = playing("fuse-mutate-none");
-        let target = put(&mut lonely.state, &fuse_a.id, slot(P2, Row::Units, 3), json!({}));
-        lonely.state.players.p1.library = vec![];
-        lonely.state.players.p1.hand = vec![];
-        let again = hand_card(&mut lonely.state, &mutate.id, P1);
-        let mut run2 = frozen(&lonely);
-        run2 = advance(
-            &run2,
-            input(
-                json!({ "type": "play", "instanceId": again.id, "targets": [pick(&target.id)], "playerId": "p1" }),
-            ),
-        );
-        assert!(run2.state.pending.is_none());
-        assert_eq!(ids(&run2.state.players.p2.exile), vec![target.id.clone()]);
     }
 }
 

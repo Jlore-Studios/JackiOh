@@ -117,6 +117,13 @@ pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, JsErro
     js(wasm_core::run_max_hp(state_json, content_json))
 }
 
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[wasm_bindgen]
+pub fn run_shop_prices(state_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_shop_prices(state_json, content_json))
+}
+
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
 #[wasm_bindgen]
 pub fn run_level_cost(level_json: &str) -> Result<String, JsError> {
@@ -411,6 +418,15 @@ pub fn loadout(call_json: &str) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn face(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::face(call_json))
+}
+
+// The game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
+/// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn log(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::log(call_json))
 }
 
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)

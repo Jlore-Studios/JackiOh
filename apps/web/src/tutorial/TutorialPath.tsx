@@ -217,7 +217,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
     >
       <div className="tutorial-path__head">
         <div className="tutorial-path__heading">
-          <h2 className="tutorial-path__title" id={headingId}>
+          <h2 className="section-heading" id={headingId}>
             {t("Learn to play")}
           </h2>
         </div>

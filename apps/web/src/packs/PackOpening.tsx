@@ -3,7 +3,9 @@
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `PackScene` never rolls: it draws the slots `POST
 // /api/packs/open` already settled, and nothing on screen changes before that answer; skip-all, the
-// holds and the flips only choose how fast it is shown, and reduced motion shows it at once. The pack
+// holds and the flips only choose how fast it is shown, and reduced motion shows it at once. Open all
+// is one `POST /api/packs/open-all` of up to `PACKS_OPEN_ALL_MAX` packs (R3212000), whose openings the
+// scene then shows one pack at a time, sending nothing more. The pack
 // is a `PackObject` (#1663); the token bars (`OpeningBars`, SPEC §14.5) play once every card shows
 // (R1953000, R1999000). A new cosmetic offers Equip (R1955000), a portrait's none. The scene is a
 // modal overlay (#1757).
@@ -23,6 +25,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { CATALOG } from "@jackioh/cards";
+import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
@@ -42,10 +45,19 @@ import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
-import { getPacks, keptPaths, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import {
+  getPacks,
+  keptPaths,
+  openAllPacks,
+  openPack,
+  type BoughtPackResponse,
+  type OpenedPackResponse,
+  type PacksResponse,
+} from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import { useSetting } from "../settings/store.ts";
+import { withBought } from "../shop/shop.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
@@ -383,20 +395,27 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   );
 }
 
-type SceneState = { pack: string; left: number };
+/** `all`: the scene was begun by Open all, whose first tear opens every pack of it at once (R3212000). */
+type SceneState = { pack: string; left: number; all: boolean };
 
 /**
- * The panel. `revision` is how many times the page has asked it to read the packs again (another
- * panel bought one, #1309); `onChanged` tells the page an opening changed the account.
+ * The panel. `revision` is how many times the page has asked it to read the packs again; `bought` is the
+ * last pack the page bought, whose count the panel takes with no read (R3211000). `onChanged` hands the
+ * page each opening's answer, and `onClosed` tells it the scene closed after at least one opening, the
+ * one moment it reads what the answers did not carry.
  */
 export default function PackOpening({
   token,
   revision = 0,
+  bought,
   onChanged,
+  onClosed,
 }: {
   token: string;
   revision?: number;
-  onChanged?: () => void;
+  bought?: BoughtPackResponse | null;
+  onChanged?: (opened: OpenedPackResponse) => void;
+  onClosed?: () => void;
 }): ReactElement {
   // R2125000: a revisit starts on the packs the last visit kept and reads again behind them.
   const [info, setInfo] = useState<PacksResponse | null>(
@@ -412,6 +431,10 @@ export default function PackOpening({
   const [reading, setReading] = useState(true);
   // A swipe's pointerup is followed by a click, and both ask to open: the ref answers the second at once.
   const inFlight = useRef(false);
+  // Whether the scene has opened a pack since it began, so closing it tells the page once (R3211000).
+  const spent = useRef(false);
+  // R3212000: the openings an Open all answered that the scene has not shown yet, in order.
+  const queued = useRef<OpenedPackResponse[]>([]);
   const spendOut = useSpendOut();
 
   useEffect(() => {
@@ -444,6 +467,12 @@ export default function PackOpening({
     };
   }, [token, revision, attempt]);
 
+  // R3211000: a buy's answer holds the count it left; the panel shows it with no read.
+  useEffect(() => {
+    if (bought === undefined || bought === null) return;
+    setInfo((before) => (before === null ? before : { ...before, unopened: withBought(before.unopened, bought) }));
+  }, [bought]);
+
   const begin = (next: SceneState | null): void => {
     setScene(next);
     setOpened(null);
@@ -451,21 +480,37 @@ export default function PackOpening({
   };
 
   const start = (pack: string, count: number): void => {
-    begin({ pack, left: count - 1 });
+    queued.current = [];
+    begin({ pack, left: count - 1, all: count > 1 });
     setRound((before) => before + 1);
   };
 
   const tear = (): void => {
-    if (scene === null || inFlight.current || opened !== null || spendOutNow()) return;
+    if (scene === null || inFlight.current || opened !== null) return;
+    // R3212000: a pack an Open all already opened shows with no request.
+    const shown = queued.current.shift();
+    if (shown !== undefined) {
+      setOpened(shown);
+      return;
+    }
+    if (spendOutNow()) return;
     inFlight.current = true;
     setBusy(true);
     setOpenError(null);
-    openPack(token, scene.pack)
+    const opening = scene.all
+      ? openAllPacks(token, scene.pack, scene.left + 1).then(({ openings }) => openings)
+      : openPack(token, scene.pack).then((one) => [one]);
+    opening
       .then(
-        (next) => {
-          setOpened(next);
-          setInfo((before) => (before === null ? before : withOpening(before, next)));
-          onChanged?.();
+        ([first, ...rest]) => {
+          const last = rest.at(-1) ?? first;
+          if (first === undefined || last === undefined) return;
+          queued.current = rest;
+          setOpened(first);
+          // The last opening's counters are the account's; the panel and the page take them once.
+          setInfo((before) => (before === null ? before : withOpening(before, last)));
+          spent.current = true;
+          onChanged?.(last);
         },
         (cause: unknown) => {
           setOpenError(messageOf(cause));
@@ -481,17 +526,24 @@ export default function PackOpening({
 
   const next = (): void => {
     if (scene === null || left < 1 || spendOutNow()) return;
-    begin({ pack: scene.pack, left: left - 1 });
+    begin({ ...scene, left: left - 1 });
     setRound((before) => before + 1);
   };
 
+  // Done, Close and Escape all end here; "Next pack" keeps the scene, so a batch settles once (R3211000).
   const close = (): void => {
-    if (!busy) begin(null);
+    if (busy) return;
+    queued.current = [];
+    begin(null);
+    if (spent.current) {
+      spent.current = false;
+      onClosed?.();
+    }
   };
 
   return (
     <div className="form-card packs-panel" data-testid={packTestid.panel}>
-      <h3 className="shop-heading">{t("Card packs")}</h3>
+      <h2 className="shop-heading">{t("Card packs")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={packTestid.loadError}>
@@ -537,8 +589,8 @@ export default function PackOpening({
 }
 
 /**
- * The unopened packs the account holds, each opened alone or, from two, all in a row; `waiting` while
- * one of the tab's spends is out (R2378000).
+ * The unopened packs the account holds, each opened alone or, from two, all in a row (up to
+ * `PACKS_OPEN_ALL_MAX` at a press, R3212000); `waiting` while one of the tab's spends is out (R2378000).
  */
 function PacksHeld({
   info,
@@ -578,10 +630,10 @@ function PacksHeld({
                 disabled={waiting}
                 aria-busy={waiting}
                 onClick={() => {
-                  onOpen(pack, count);
+                  onOpen(pack, Math.min(count, PACKS_OPEN_ALL_MAX));
                 }}
               >
-                {t("Open all {count}", { count })}
+                {t("Open all {count}", { count: Math.min(count, PACKS_OPEN_ALL_MAX) })}
               </button>
             ) : null}
           </div>

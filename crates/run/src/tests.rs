@@ -317,6 +317,142 @@ fn a_lost_fight_ends_the_run() {
     assert!(run_reduce(&state, &content, &RunAction::Go { col: 0 }).is_err());
 }
 
+/// The map's mini-boss rows, the first act's first.
+fn mini_boss_rows(state: &RunState) -> Vec<usize> {
+    (0..state.map.len())
+        .filter(|r| state.map[*r][0].kind == RunNodeKind::MiniBoss)
+        .collect()
+}
+
+/// `state` in the fight on column 0 of `row`, as the walk to it would leave it.
+fn fighting_on(state: &RunState, row: usize) -> RunState {
+    let mut state = state.clone();
+    state.row = Some(row);
+    state.col = 0;
+    state.phase = RunPhase::Fight;
+    state
+}
+
+fn hold(state: &mut RunState, id: &str) {
+    state.artifacts.push(RunArtifact {
+        id: id.into(),
+        level: 1,
+    });
+}
+
+/// The artifact a won fight's reward offers.
+fn offered(state: &RunState) -> Option<String> {
+    match &state.phase {
+        RunPhase::Reward { artifact, .. } => artifact.clone(),
+        other => panic!("not a reward: {other:?}"),
+    }
+}
+
+/// Whether a relic is one a roll may deal at `RUN_MINI_BOSS_DROP_TIER` or better.
+fn gold_or_better_player_relic(content: &RunContent, id: &str) -> bool {
+    let def = passive_def(content, id).expect("an offered relic is in the content");
+    matches!(def.kind, RunPassiveKind::Combat | RunPassiveKind::Economic)
+        && !def.unobtainable
+        && def.tier >= Some(RUN_MINI_BOSS_DROP_TIER)
+}
+
+#[test]
+fn r3286000_a_won_mini_boss_whose_drop_is_held_offers_another_relic_of_gold_or_better() {
+    let content = content();
+    for n in 0..20 {
+        let run_setup = RunSetup {
+            seed: run_seed(&format!("r3286000-{n}")),
+            ..setup(&content)
+        };
+        let mut state = run_create(&run_setup, &RunUnlocks::default(), &content).unwrap();
+        let row = mini_boss_rows(&state)[0];
+        let drop_id = state.map[row][0]
+            .artifact
+            .clone()
+            .expect("a mini-boss is dealt a drop");
+        hold(&mut state, &drop_id);
+        let fight = fighting_on(&state, row);
+        let reward = act(&fight, &content, won(20));
+        let other = offered(&reward).expect("a relic is offered");
+        assert_ne!(other, drop_id, "seed {n}");
+        assert!(!held_ids(&state).contains(&other.as_str()), "seed {n}");
+        assert!(gold_or_better_player_relic(&content, &other), "seed {n}");
+        assert_eq!(
+            offered(&act(&fight, &content, won(20))),
+            Some(other),
+            "one state, one offer"
+        );
+    }
+}
+
+#[test]
+fn r3286000_two_mini_bosses_dealt_one_drop_offer_it_at_the_first_and_another_relic_at_the_second() {
+    let content = content();
+    let state = (0..200)
+        .map(|n| RunSetup {
+            seed: run_seed(&format!("r3286000-both-{n}")),
+            ..setup(&content)
+        })
+        .map(|run_setup| run_create(&run_setup, &RunUnlocks::default(), &content).unwrap())
+        .find(|s| {
+            let rows = mini_boss_rows(s);
+            s.map[rows[0]][0].artifact == s.map[rows[1]][0].artifact
+        })
+        .expect("a seed deals both mini-bosses one drop");
+    let rows = mini_boss_rows(&state);
+    let drop_id = state.map[rows[0]][0]
+        .artifact
+        .clone()
+        .expect("a mini-boss is dealt a drop");
+
+    let first = act(&fighting_on(&state, rows[0]), &content, won(20));
+    assert_eq!(offered(&first), Some(drop_id.clone()));
+    let taken = act(&first, &content, RunAction::TakeArtifact { take: true });
+    assert!(held_ids(&taken).contains(&drop_id.as_str()));
+
+    let second = act(&fighting_on(&taken, rows[1]), &content, won(20));
+    let other = offered(&second).expect("a relic is offered at the second mini-boss");
+    assert_ne!(other, drop_id);
+    assert!(!held_ids(&taken).contains(&other.as_str()));
+    assert!(gold_or_better_player_relic(&content, &other));
+}
+
+#[test]
+fn r3286000_with_no_relic_left_to_offer_the_reward_has_none() {
+    let content = content();
+    let mut state = start(&content);
+    let gold_or_better: Vec<String> = content
+        .passives
+        .iter()
+        .filter(|p| gold_or_better_player_relic(&content, &p.id))
+        .map(|p| p.id.clone())
+        .collect();
+    assert!(gold_or_better.len() >= 2, "{gold_or_better:?}");
+    for id in &gold_or_better {
+        if !held_ids(&state).contains(&id.as_str()) {
+            hold(&mut state, id);
+        }
+    }
+    let below_gold_is_open = content.passives.iter().any(|p| {
+        matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic)
+            && !p.unobtainable
+            && !held_ids(&state).contains(&p.id.as_str())
+            && p.tier < Some(RUN_MINI_BOSS_DROP_TIER)
+    });
+    assert!(below_gold_is_open, "the floor, not an empty pool, leaves nothing");
+
+    let rows = mini_boss_rows(&state);
+    assert!(!rows.is_empty());
+    for row in rows {
+        let reward = act(&fighting_on(&state, row), &content, won(20));
+        assert!(
+            matches!(reward.phase, RunPhase::Reward { artifact: None, ref packs } if !packs.is_empty()),
+            "{:?}",
+            reward.phase
+        );
+    }
+}
+
 #[test]
 fn the_artifact_comes_before_the_pack_and_greedy_keeps_one_more() {
     let content = content();
@@ -412,6 +548,84 @@ fn a_shop_refuses_what_the_run_cannot_pay() {
             .unwrap_err()
             .contains("Tickets needed")
     );
+}
+
+#[test]
+fn the_shop_prices_are_what_each_service_spends_with_a_discount_held_and_none_for_a_top_level_relic() {
+    let content = content();
+    let mut state = start(&content);
+    state.artifacts = vec![
+        RunArtifact {
+            id: "temp-coupon".into(),
+            level: 2,
+        },
+        RunArtifact {
+            id: "temp-greedy".into(),
+            level: 1,
+        },
+        RunArtifact {
+            id: "temp-big-heart".into(),
+            level: RUN_ARTIFACT_LEVEL_MAX,
+        },
+    ];
+    state.coins = 1_000;
+    state.tickets = 1_000;
+    state.phase = RunPhase::Shop {
+        stock: roll_shop(&state, &content, &mut Rng::new("shop", 0)),
+    };
+    let prices = run_shop_prices(&state, &content);
+    assert!(
+        prices.remove_coins < RUN_REMOVE_PRICE,
+        "the held coupon discounts"
+    );
+
+    // What an action takes from the purse, as (Coins, Tickets).
+    let spent = |action: RunAction| {
+        let after = act(&state, &content, action);
+        (state.coins - after.coins, state.tickets - after.tickets)
+    };
+    assert_eq!(
+        spent(RunAction::RemoveCard { index: 0 }),
+        (prices.remove_coins, 0)
+    );
+    assert_eq!(
+        spent(RunAction::MakeRadiant { index: 0 }),
+        (0, prices.radiant_tickets)
+    );
+    assert_eq!(spent(RunAction::Buff { index: 0 }), (0, prices.buff_tickets));
+
+    assert_eq!(
+        prices.level_tickets,
+        vec![Some(RUN_LEVEL_TICKETS * 2), Some(RUN_LEVEL_TICKETS), None]
+    );
+    for (index, price) in prices.level_tickets.iter().enumerate() {
+        match price {
+            Some(price) => assert_eq!(spent(RunAction::LevelArtifact { index }), (0, *price)),
+            None => assert!(run_reduce(&state, &content, &RunAction::LevelArtifact { index }).is_err()),
+        }
+    }
+
+    let RunPhase::Shop { stock } = &state.phase else {
+        panic!("a shop is open")
+    };
+    assert_eq!(prices.stock_coins.len(), stock.len());
+    for (index, coins) in prices.stock_coins.iter().enumerate() {
+        let after = act(&state, &content, RunAction::Buy { index });
+        assert_eq!(state.coins - after.coins, *coins, "stock item {index}");
+    }
+    assert!(
+        prices
+            .stock_coins
+            .iter()
+            .zip(stock)
+            .any(|(coins, item)| *coins < item.price),
+        "the discount reaches the stock"
+    );
+
+    let plain = start(&content);
+    let outside = run_shop_prices(&plain, &content);
+    assert!(outside.stock_coins.is_empty(), "no stock outside a shop");
+    assert_eq!(outside.remove_coins, RUN_REMOVE_PRICE, "no discount relic held");
 }
 
 #[test]

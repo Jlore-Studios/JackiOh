@@ -15,9 +15,12 @@ import {
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
   QUEUE_ENDED_AFTER_READS,
+  QUEUE_POPULATION_POLL_SECONDS,
   SERIES_POLL_SECONDS,
 } from "@jackioh/server-config";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
+import { expireRead, keepRead } from "../net/readCache.ts";
+import { clearSession, writeSession } from "../net/session.ts";
 import {
   ApiRequestError,
   cancelRoom,
@@ -57,6 +60,7 @@ import PlayRoute, {
   roomLinkStatus,
 } from "./play.tsx";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -334,6 +338,16 @@ describe("R1578000 the Play hub", () => {
     [playTestid.together, paths.together],
     [playTestid.replays, paths.replays],
   ];
+
+  it("R3223000 the hub has one visible h1, the PageTitle, signed in and signed out", async () => {
+    await renderLobby();
+    expectOnePageTitle("Play");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+
+    cleanup();
+    render(<PlayRoute token={null} />);
+    expectOnePageTitle("Play");
+  });
 
   it("R1578000 the hub puts online first with every mode reachable", async () => {
     await renderLobby();
@@ -1456,5 +1470,140 @@ describe("R767 a room shared as a link", () => {
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(writeText).not.toHaveBeenCalled();
     expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+});
+
+describe("R3207000 the queue readout's pace", () => {
+  const POPULATION_MS = QUEUE_POPULATION_POLL_SECONDS * 1000;
+  const ACCOUNT_MS = SERIES_POLL_SECONDS * 1000;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R3207000 the queue wait reads the population on mount, then every QUEUE_POPULATION_POLL_SECONDS, while its account read keeps SERIES_POLL_SECONDS", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    rememberQueued("bo1");
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    // The ticket's read has its own pace: one every SERIES_POLL_SECONDS, and none of them reads the readout.
+    await settle({ advance: ACCOUNT_MS });
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    await settle({ advance: POPULATION_MS - ACCOUNT_MS - 1 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+    await settle({ advance: 1 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(getMe).mock.calls.length).toBe(1 + POPULATION_MS / ACCOUNT_MS);
+
+    await settle({ advance: POPULATION_MS });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(3);
+  });
+
+  it("R3207000 an idle lobby reads the population once", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    await settle({ advance: 3 * POPULATION_MS });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207000 leaving the wait ends the population poll", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    rememberQueued("bo1");
+    vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await settle({ advance: 0 });
+    await settle({ advance: 3 * POPULATION_MS });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** The account a gate that read `body` just now hands the lobby: signed in, and kept fresh as `useAccount` keeps it. */
+function handedFresh(body: ReturnType<typeof me>): ReturnType<typeof me> {
+  writeSession({ accessToken: TOKEN });
+  keepRead(TOKEN, "/api/auth/me", body);
+  return body;
+}
+
+describe("R3207003 the lobby takes the gate's account", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    clearSession();
+  });
+
+  it("R3207003 a lobby handed an account that names no game reads none at mount", async () => {
+    render(<PlayRoute token={TOKEN} me={handedFresh(me(null))} />);
+    await waitFor(() => {
+      expect(vi.mocked(getDecks)).toHaveBeenCalled();
+    });
+    await settle({ macrotasks: 3 });
+
+    expect(vi.mocked(getMe)).not.toHaveBeenCalled();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+  });
+
+  it("R3207003 a queue wait handed an account that names no game starts its reads at its first tick", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    rememberQueued("bo1");
+    render(<PlayRoute token={TOKEN} me={handedFresh(me(null))} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getMe)).not.toHaveBeenCalled();
+
+    await settle({ advance: SERIES_POLL_SECONDS * 1000 });
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207003 an account the gate opened on from an old kept answer is read again at mount, and a game that started since takes the player there", async () => {
+    // The gate opens on a kept answer of any age (R2630000) and reads again behind it: this one is old, so it
+    // is no stand-in for the mount read, and the game it does not know of is found.
+    const stale = handedFresh(me(null));
+    expireRead(TOKEN, "/api/auth/me");
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} me={stale} />);
+
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207003 an account that names a match is read again, and a match that ended keeps the player in the lobby", async () => {
+    // The gate's answer may be 45 s old (R3206000): it says a match, the server now says none.
+    vi.mocked(getMe).mockResolvedValue(me(null));
+    render(<PlayRoute token={TOKEN} me={handedFresh(me("match-42"))} />);
+    await waitFor(() => {
+      expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+    });
+    await settle({ macrotasks: 3 });
+
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
+  });
+
+  it("R3207003 an account that names a match, read again, still takes the player there while the match is on", async () => {
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} me={handedFresh(me("match-42"))} />);
+
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
   });
 });

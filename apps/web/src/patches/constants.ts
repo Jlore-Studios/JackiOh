@@ -1,5 +1,7 @@
 // The Patch notes page's numbers (CLAUDE.md rule 9). Sizes and spacing live in patches.css.
 
+import { upTo } from "../breakpoints.ts";
+
 /** How many release lines, newest first, are open when the page opens (R724000); the others show their name, span and count. */
 export const RELEASES_OPEN_ON_LOAD = 1;
 
@@ -31,7 +33,7 @@ export const RELEASE_ART_MAJOR_CARD_SCALE = 0.85;
 export const RELEASE_ART_LEGACY_MICRO_LAST = "v0.5.11n";
 
 /** R3012000: the width at and under which the Patch notes legend collapses into a drawer; patches.css's phone block holds the same number. */
-export const PATCH_LEGEND_PHONE_QUERY = "(max-width: 760px)";
+export const PATCH_LEGEND_PHONE_QUERY = upTo("narrow");
 
 /** R3012000: the band of the viewport, from its top, in which an entry counts as the one in view (an IntersectionObserver `rootMargin`). */
 export const PATCH_LEGEND_BAND_MARGIN = "0px 0px -80% 0px";

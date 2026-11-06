@@ -16,9 +16,10 @@ import { createPortal } from "react-dom";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { getMe } from "../net/api.ts";
-import { withSession } from "../net/gate.ts";
+import { getMe, type MeResponse } from "../net/api.ts";
+import { keptAccount, withSession } from "../net/gate.ts";
 import { bannerGameOf, type LiveGame } from "../net/liveGame.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
@@ -62,6 +63,16 @@ function onlineFirst(friends: readonly Friend[]): Friend[] {
   return [...friends].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
 }
 
+/**
+ * R3207003: the account the page already read stands for the panel; one that names a game is read again,
+ * since that game may have ended and Challenge must not stay off. The server still refuses a challenge
+ * from a player in a game (CLAUDE.md rule 7).
+ */
+function readAccount(): Promise<MeResponse> {
+  const kept = keptAccount();
+  return kept !== undefined && bannerGameOf(kept) === null ? Promise.resolve(kept) : withSession(getMe);
+}
+
 function FriendsPanel({
   id,
   unread,
@@ -79,7 +90,7 @@ function FriendsPanel({
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
-  const [me] = usePolled(() => withSession(getMe), null);
+  const [me] = usePolled(readAccount, null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -200,9 +211,10 @@ function FriendsPanel({
           />
         ) : null}
         {list !== null && all.length === 0 ? (
-          <p className="lobby-note" data-testid={togetherTestid.noFriends}>
-            {t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
-          </p>
+          <EmptyState
+            text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
+            testId={togetherTestid.noFriends}
+          />
         ) : null}
         {all.length > 0 ? (
           <ul className="together-list">

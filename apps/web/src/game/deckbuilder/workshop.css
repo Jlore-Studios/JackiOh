@@ -1008,8 +1008,14 @@
     min-width: 0;
   }
 
-  .portrait-current {
+  .deckbuilder.app-shell .portrait-current {
     padding: 0;
+  }
+
+  /* #3218's two-row top bar made the header taller on a phone; a tighter padding keeps the pool's
+     first row on the first screen (deckbuilder-layout.cy.tsx). */
+  .deckbuilder.workshop .db-header {
+    padding: 0 var(--space-1) var(--space-2);
   }
 
   .ws-compare-pick {
@@ -1038,7 +1044,7 @@
 /* A phone: the title and the extras (Undo, Redo, the cosmetics button and the save status) share the
    row under Back and the gear (routes/top-bar.css), so the header keeps two rows and the pool's first
    row stays on the first screen (BUILD M5-T1). Undo and Redo stay 44 px tall and 40 wide. */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .ws-history {
     gap: 4px;
   }

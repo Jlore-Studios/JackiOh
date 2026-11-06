@@ -205,12 +205,13 @@ pub struct RatedDecision {
 }
 
 /// A season row's move: as it stood, and after this game. `bot` marks a ladder bot's (R640000), `hand_set` a
-/// hand-set rating's (R3074001).
+/// hand-set rating's (R3074001), `banned` a banned account's (R3290000).
 struct RankChange {
     before: Option<SeasonRank>,
     after: SeasonRank,
     bot: bool,
     hand_set: bool,
+    banned: bool,
     rating: f64,
 }
 
@@ -333,6 +334,7 @@ pub fn decide(input: &RateGameInput) -> RatedDecision {
                 after: row_after,
                 bot,
                 hand_set: standing.is_some_and(|standing| standing.hand_set),
+                banned: standing.is_some_and(|standing| standing.banned),
                 rating: after[index].rating,
             },
         );
@@ -349,6 +351,7 @@ pub fn decide(input: &RateGameInput) -> RatedDecision {
             rating: change.rating,
             bot: change.bot,
             hand_set: change.hand_set,
+            banned: change.banned,
         });
     }
     let jlorious_after = jlorious_order(&standings_of(&standings_after, strict));
@@ -421,6 +424,7 @@ pub fn decide(input: &RateGameInput) -> RatedDecision {
                 rating: change.rating,
                 bot: change.bot,
                 hand_set: change.hand_set,
+                banned: change.banned,
             };
             record_of(&standing, now_in.contains(profile_id.as_str()), strict)
         })

@@ -18,39 +18,33 @@ import {
   getWallet,
   keptPaths,
   type BoughtPackResponse,
+  type OpenedPackResponse,
   type PacksResponse,
   type WalletResponse,
 } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import PackObject from "../packs/PackObject.tsx";
-import { packName } from "../packs/packs.ts";
+import { packName, withOpening } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf } from "./shop.ts";
+import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf, withBought } from "./shop.ts";
 import { messageOf } from "../net/errors.ts";
 import "./shop.css";
 
-/** The counts after a bought pack: the answer's count for its kind, every other kind untouched. */
-function withBought(
-  unopened: PacksResponse["unopened"],
-  bought: BoughtPackResponse,
-): PacksResponse["unopened"] {
-  const counts = new Map(unopened.map((entry) => [entry.pack, entry.count]));
-  counts.set(bought.pack, bought.unopened);
-  return shopPacks()
-    .filter((pack) => (counts.get(pack) ?? 0) > 0)
-    .map((pack) => ({ pack, count: counts.get(pack) ?? 0 }));
-}
-
-/** `revision` counts the page's asks to read again; `onChanged` tells it a bought pack changed the account. */
+/**
+ * `revision` counts the page's asks to read again; `onChanged` hands it the answer of a bought pack
+ * (R3211000), and `opened` is the last card pack the page opened, whose count the shelf takes with no read.
+ */
 export default function Shop({
   token,
   revision = 0,
+  opened,
   onChanged,
 }: {
   token: string;
   revision?: number;
-  onChanged?: () => void;
+  opened?: OpenedPackResponse | null;
+  onChanged?: (bought: BoughtPackResponse) => void;
 }): ReactElement {
   // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
   const [info, setInfo] = useState<PacksResponse | null>(
@@ -102,6 +96,12 @@ export default function Shop({
     };
   }, [token, revision, attempt]);
 
+  // R3211000: an opening's answer holds the count it left; the shelf shows it with no read.
+  useEffect(() => {
+    if (opened === undefined || opened === null) return;
+    setInfo((before) => (before === null ? before : withOpening(before, opened)));
+  }, [opened]);
+
   const buy = (pack: string): void => {
     if (busy !== null || spendOutNow()) return;
     setBusy(pack);
@@ -112,7 +112,7 @@ export default function Shop({
         setInfo((before) => (before === null ? before : { ...before, unopened: withBought(before.unopened, bought) }));
         setFlights((before) => ({ ...before, [bought.pack]: (before[bought.pack] ?? 0) + 1 }));
         announceWallet(bought.jlore);
-        onChanged?.();
+        onChanged?.(bought);
       },
       (cause: unknown) => {
         setError(messageOf(cause));
@@ -124,7 +124,7 @@ export default function Shop({
 
   return (
     <div className="form-card shop-panel" data-testid={shopTestid.panel}>
-      <h3 className="shop-heading">{t("Jlore shop")}</h3>
+      <h2 className="shop-heading">{t("Jlore shop")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.loadError}>

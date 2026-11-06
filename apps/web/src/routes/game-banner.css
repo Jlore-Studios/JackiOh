@@ -82,7 +82,7 @@
 }
 
 /* On a phone the way back takes the whole width under the words, an easy thumb target. */
-@media (max-width: 520px) {
+@media (max-width: 600px) {
   .tavern section.game-banner > .game-banner__action.button-primary {
     flex: 1 1 100%;
   }

@@ -55,6 +55,8 @@ The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` 
 
 The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` after the motion, names eleven lengths, `--space-1` (2px) to `--space-11` (40px): 2px apart to 12px, where the board's own lengths sit, then 16, 20, 24, 32 and 40px. A board stylesheet gives every `gap`, `padding` and `margin` (and the `--gap` they read) a step, `0`, `auto`, or a `calc()`, `clamp()` or `max()` holding one, and may keep an `em` or `%` term (it scales with its box), a viewport or container term and `env()`, never a px or rem length of its own. A length that is no step is composed of steps (`calc(var(--space-9) + var(--space-2))`), and a negative one is a step times -1. `src/spacing.test.ts` checks this and holds every other stylesheet to its count of px and rem lengths in `UNMIGRATED`; a sheet that loses some lowers its number.
 
+The breakpoints are one named set (#3227), `src/breakpoints.ts`'s `BREAKPOINT_PX`. Each is the widest (or tallest) window of the smaller layout: `(max-width: N)` holds up to N and the layout above starts at `(min-width: N+1)`. They are `phone` 600 px (a phone held upright), `narrow` 760 px (a small tablet upright), `medium` 899 px (a tablet upright), `tablet` 1024 px (the desktop starts at 1025) and, for height, `short` 500 px (a phone on its side). Touch is `(pointer: coarse)`. A sheet spells the number out (CSS reads no custom property in `@media`), and a script builds its query with `upTo()`, `over()` and `PHONE_SHEET_QUERY`. `src/breakpoints.test.ts` holds both, its `KEEP` listing each other value with its reason.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -112,6 +114,13 @@ rule's) the line takes a row under Back and the end group. Only `routes/top-bar.
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
 
+A menu names itself with one `PageTitle` (#3223, R3223000): its only `h1`, in `--font-display` at `--type-3xl`
+(`routes/PageTitle.tsx`, `routes/page-title.css`). A menu passes its name as BackLink's `title`, so it sits in the bar's
+title slot, and never draws an `h1` of its own (`routes/page-title.test.ts` counts them); the two prompts that
+replace a menu and have no bar (the username's and the consent's) draw a `PageTitle` in their panel. The brand is
+`Wordmark` (`routes/Wordmark.tsx`), not a heading. A section inside a screen is an `h2` of class `section-heading`
+from the same sheet. No other sheet sets a font-size on an `h1`.
+
 The dungeon map's node icons are drawn SVGs (`dungeon/map/NodeIcon.tsx`): single color in `currentColor` on a
 24-unit grid, colored by `data-kind` in `dungeon/map/run.css` from the palette. No system emoji appears
 anywhere under `dungeon/`, held by `dungeon/noEmoji.test.ts`; add a node kind's glyph there, never a
@@ -124,9 +133,25 @@ line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer 
 `data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
 root that clips them, so the one-screen rule holds. Over them the blocks' layer draws the JackiOh
 mark, still, in a dark halo (`skeleton.css`), but in a shell panel, which the logo heads. `main.tsx`'s `Loading` takes `skeleton` for the
-same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+same drawing. A route that waits before it can draw its screen draws that screen's own frame around the
+skeleton, not a plain page: `/decks` does so through `game/deckbuilder/WorkshopFrame.tsx`, which the loaded
+workshop draws too, so the bar (Back, the title, the gear) and the background stay put and only the body changes
+when the read lands (R3228000). Still text: the deck builder's win-rate line and the chat's and the replays' "show
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
-boards' "Joining …" panels.
+boards' "Joining …" panels, and, each for its reason:
+
+- A button's or field's own busy word ("Checking…" and "Starting…" on a button, "Show older games" and "Show
+  earlier messages" while they load, the username field's inline "Checking…"): a label or a field's status,
+  not a wait for a panel.
+- The deck history popover's "Loading…" and "No versions kept yet": the popover sizes itself to its words,
+  which a full-width skeleton or empty state would stretch.
+- One line inside a panel that already has content: the account's "No finished matches yet" and "No season
+  best yet" (the figures above say it), the leaderboard's "No Jlorious players yet this season" (one section
+  among the tiers, whose height spec 46 measures), the stats' "No … yet" sub-lines, the trio editor's slot
+  "No cards yet." and the chat's "No messages yet" row.
+- An option's text: "No other decks yet" and "No friends to invite yet".
+- A card face's "No pieces yet", and the accessibility statement's and the invite page's sentences, which are
+  prose of the page and not a panel's empty.
 
 A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
 the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
@@ -160,8 +185,9 @@ packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's
 `FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
 reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
 skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
-`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
-accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+`openAllPacks` (its last opening's), `openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios'
+save, delete, sync (each item that landed) and import, a friend accepted or removed), so a revisit never shows
+the old value first. `clearSession` empties the cache and the
 first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
@@ -242,7 +268,7 @@ present for exactly that window.
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
-back to the control when it closes. A hotseat hand-over or the game's end drops the question.
+back to the control when it closes. A hotseat hand-over or the game's end drops the question. A dungeon fight passes its own `concedeBody` saying the run ends (R2972000).
 
 **One press is sent once** (R3060000). `Game.tsx`'s `dispatch` remembers the last `endTurn`, `answer` or
 `mulligan` it sent and the view it was sent against, and drops an equal body against the same view, so a
@@ -353,12 +379,23 @@ hidden visually, the crests and the names carrying it), and the control bar keep
 between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by height; the seats are one
 fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
 A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
-stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
-never turns it. The zone left of it holds its own switch (⟳) at that corner, so the stack starts below
-that switch's target (`--badges-top`, the target's own height) and what does not fit its zone's height
-wraps into a column to its left: a press on a neighbour's ⟳ is never this unit's Activate, and the stack
-never reaches the row below. The Activate control's tap band (up to 44px) reaches down from the control
-only, never up over that switch; the marks let a tap through.
+stack standing in the top-left inner corner of the card's own zone (#3257) as a sibling of the card, as
+the switch is, so DEF's rotation never turns it. It never leaves the zone, so no mark reads as a
+neighbour's and a press on a neighbour's ⟳ is never this unit's Activate, and it stays above the card's
+name plate (`max-height`): the marks that do not fit fold into the face's `+N`, which `FieldBadges.tsx`
+measures. It may cover the card's art and its cost, and the cost gem is hidden while it does; it never
+covers the name, the attack or the health, nor the zone's own switch (⟳, top-right). A DEF card is
+turned a quarter, which puts its name, attack and health in a strip down its left, under that corner, so
+over a DEF card the stack starts at the same corner and stops above the turned card's box: the same
+control, the named marks that fit in the band above it and a `+N` for the rest (`FieldBadges.tsx`
+measures again when a card's position changes). The Activate control is never dropped, and nor is the
+`+N` while the unit has a mark to draw (#3315), so a DEF unit's keywords never vanish with no sign.
+Where the band above the turned card is shorter than they are (about 4px at 390x664, 18 to 28px at the
+other phones) they overlap the turned card's top-left, its attack gem and the start of its name, by the
+difference. The control's tap band (up to
+44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
+zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
+the unit's oval and the backrow's outline keep a card's shape.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
@@ -478,7 +515,8 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000);
+                        takes the gate's account and reads none of its own (R3207003)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
                         grid mounting only the rows of its 700 cards near the view, poolWindow.ts, #2334),
@@ -487,7 +525,9 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
-                        autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
+                        autosave with a local mirror of unsaved edits (sync.ts, R256): one POST
+                        /api/decks/sync a pass of at most `DECK_SYNC_ITEMS_MAX` items, decks, then trios,
+                        then trio and deck deletions, each item judged alone (R3212001); a trio import is
                         one POST /api/trios/import, never the autosave (R341); the open deck's History
                         popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
                         kept, newest first, each with its date and the cards in and out since the one
@@ -508,7 +548,10 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
                         its join form (R767); a queue the server no longer holds ends the wait with a
-                        rejoin message (R897000)
+                        rejoin message (R897000); it takes the gate's account (`me`) and sends no
+                        /api/auth/me read at mount for a fresh one that names no game, reads the queue readout on
+                        mount and then every QUEUE_POPULATION_POLL_SECONDS while it waits, its account
+                        read keeping SERIES_POLL_SECONDS for the ticket (R3207000, R3207003)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
@@ -520,8 +563,8 @@ net/spending.ts         R2378000: whether one of the tab's spends is out, from i
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
-                        banner offers (R1566000); an ended queue is forgotten after
-                        QUEUE_ENDED_AFTER_READS reads (R897000)
+                        banner offers (R1566000), read every LIVE_GAME_POLL_SECONDS (R3207001); an ended
+                        queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
                         on / and /practice); game-banner.css draws it as the tavern's notice
@@ -564,7 +607,11 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
                         R2730000), a grid card as the card, in hand and on the board with a Radiant
                         toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
-                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx);
+                        Equip or buy on either opens the card's equip and buy screen
+                        (collection/LooksScreen.tsx, R3016001): its ladders, Equip on an owned level, Buy on
+                        the next with a held token or the full Chase Shard bar after a question, and what a
+                        later level needs; a rung hovered there or in the card view shows that level.
                         Only there does a locked item a held token covers offer the token (of a
                         ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
@@ -587,9 +634,10 @@ routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
-routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
-                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
-                        read the owned cosmetics again; the page never scrolls, its body does
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, each folding the answer of a spend (a buy's, an
+                        opening's) that it shows, and the page reading the rest once, when the opening scene closes
+                        (R3211000), and at its foot one "Odds & pity" link to /purchases (R1665000); the scene's close
+                        has the open screen and the next read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
                         footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
                         (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
@@ -621,7 +669,9 @@ packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, �
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
                         foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
                         that follow the pointer, a press and a tear, the shelf and the scene drawing the
-                        same object), and the scene that opens one (`POST /api/packs/open`), its token bars
+                        same object), and the scene that opens one (`POST /api/packs/open`; Open all is one
+                        `POST /api/packs/open-all` of up to `PACKS_OPEN_ALL_MAX`, shown a pack at a time with
+                        nothing more sent, R3212000), its token bars
                         pinned at the top from the answer and played once every card shows
                         (economy/OpeningBars.tsx, R1953000); the pity counters and the odds are on
                         /purchases, not here (R1665000); the scene: a tear or swipe, the best rarity tinting the
@@ -644,9 +694,10 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
                         inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
                         focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
-                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
-                        a redemption or a chase that lands makes the other panels, the opening's included,
-                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
+                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy or an opening
+                        that lands hands the page its answer (`onChanged`), which folds it into the panels that show it
+                        (`bought`, `opened`, `opening`), and the page reads what no answer carries once, when the
+                        opening scene closes (`onClosed`, `settled`, `revision`) (R3211000) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 
@@ -657,13 +708,13 @@ Remove on a friend's row take the item off the screen at once and show a toast, 
 deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
 `UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
 motion). The request waits for the window to close and goes at once when a second deletion takes the
-toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
+toast, when the page hides (the pass's sync as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
 goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, since the item
 counts against the server's caps until then.
 A deletion within `UNDO_REPEAT_MS` of the one taken is a double click's second press: `hold` refuses it
 (returns `false`) and every caller leaves the item in place and stays where it is (R3059000).
 Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
-trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
+trio whose deletion could not reach the server stays deleted and is retried (R256). While a deck's or
 trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
 and `unhide` (Undo) brings it and its trio slots back. Block and Concede still ask.
 
@@ -788,17 +839,23 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 
 ## Practice
 
-`/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The engine
-and the AI (`crates/engine`, `crates/ai`, as WebAssembly) run in a Web Worker, which stands where SPEC §9.1 puts the server, so
-rule 7 holds exactly as it does online:
+`/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The practice
+session itself is Rust, `crates/shared`'s `host/practice` (#3099): the engine, the AI and that machine
+(as WebAssembly) run in a Web Worker, which stands where SPEC §9.1 puts the server, so
+rule 7 holds exactly as it does online. The worker's driver feeds the machine's events and carries out its
+outputs; it decides no rule (how a game is dealt, the nonces and seats, what the AI may take, the save, the kept
+games and the claim are the machine's, and the server's claim check steps the same machine natively):
 
 ```
 src/practice/
   protocol.ts         the request/response shapes: everything the page ever learns about a game
-  core.ts             the ONLY practice file that imports @jackioh/engine, @jackioh/cards or
-                      @jackioh/ai; holds the GameState, runs both seats and the AI
-  practice.worker.ts  the worker entry: core.handle per message
-  host.ts             a module Worker in a browser, the in-thread core in jsdom; one answer per
+  driver.ts           the ONLY practice file that holds the game (the machine's `PracticeHost`, with the
+                      GameState inside it) and calls the AI's `decide` and `lethalHint`: it feeds the
+                      machine its events through `wasm/index.ts`'s `practiceCall` and carries out the
+                      outputs (the save store, the AI's search and the lethal check under their wall-clock
+                      caps, the public catalog, a preset's cards and a lesson's decks put into the config)
+  practice.worker.ts  the worker entry: driver.handle per message
+  host.ts             a module Worker in a browser, the in-thread driver in jsdom; one answer per
                       request, strictly in order
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
@@ -828,7 +885,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
 - In every game against the AI (each tier, a sandbox game, a lesson) the snapshot adds
   `lethal: true` while the human has a sure win this turn by what they can see (R2102000, R2291000):
-  the core asks `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
+  the machine asks (a `lethal` output) and the driver runs `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
   redaction, so the AI's hidden cards never change it, under a wall-clock cap of its own
   (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). The route passes it to `Game`'s `lethalHint`
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
@@ -839,12 +896,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
   (`tutorial/advice.ts`), so the client does no combat maths.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
+- A question sequence's 60 seconds (Meditative+ #20 KY's Competition, R1563006) are the machine's: an answer carries `timers`
+  (`PracticeTimer`, a delay in ms from the answer), the controller keeps each as a timeout and sends `timerFired` when it is
+  due, and the machine answers Stop for the human. The prompt's countdown (`game/sequenceClock.ts`) only shows the seconds left.
 - A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
-- A free game in progress survives a reload (R668). After every answer the core writes its save
-  to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
+- A free game in progress survives a reload (R668). After every answer the machine's `save` output is written
+  to the worker's store by the driver, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the
   route forgets it when the player leaves. A visit with no parameter that starts a game sends
-  `{ type: "resume", config }`, and the core folds the log back under the same nonces to the saved
+  `{ type: "resume", config }`, and the machine folds the log back under the same nonces to the saved
   hash, with the AI's stream at its saved cursor, or answers `failed` and the route shows the setup.
   A lesson is never kept, so only a lesson in progress asks before the page unloads.
 - Keeping a free game is the player's choice when they leave it (R765). "Leave this game?" offers
@@ -1081,7 +1141,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
-  (hotseat's port), `practice/core.ts` (the practice worker's game, and the only caller of the AI's
+  (hotseat's port), `practice/driver.ts` (the practice worker's game, and the only caller of the AI's
   `decide`) and `duos/DevDuosRoute.tsx` (the Duos dev hotseat's `DuosState`, opaque, through the WASM
   Duos bindings, which only the normal module carries), with `tutorial/harness.ts` for tests.
 
@@ -1094,6 +1154,6 @@ apostrophe there or in a dictionary key, and no straight double quote there.
 
 ## Internationalisation
 
-The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
 
 The language button (`src/i18n/LanguageButton.tsx`) stays only until the device has settled on its language (R1916000): `localStorage["jackioh.locale.settledVisits"]` counts the boots, every language change and the settings' reset set it back to 0, and from the third unchanged boot the button leaves the top bar and the board while settings' Language row stays.

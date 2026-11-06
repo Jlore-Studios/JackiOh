@@ -63,7 +63,7 @@
   color: var(--text);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .tutorial-path-hidden {
     padding: 10px 12px;
   }

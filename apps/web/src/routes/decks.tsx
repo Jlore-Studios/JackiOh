@@ -2,7 +2,7 @@
 // pending accounts is UX; active-only endpoints enforce the gate. Writes use the current token only while
 // it remains that profile (R194, R256). Without the collection's L5 quantities, ownership is unknown.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
@@ -16,28 +16,26 @@ import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
 import { collectionFrom } from "../game/deckbuilder/loadout.ts";
 import type { DeckSyncApi } from "../game/deckbuilder/sync.ts";
 import { DECKBUILDER_ERROR, DECKBUILDER_LOADING, DECKBUILDER_RETRY } from "../game/deckbuilder/testids.ts";
+import { WorkshopFrame } from "../game/deckbuilder/WorkshopFrame.tsx";
 import {
   ApiUnreachableError,
-  deleteDeck,
-  deleteTrio,
   getCollection,
   getDeckVersions,
   getDecks,
   getOwnedCosmetics,
   importTrio,
   keptPaths,
-  putDeck,
-  putTrio,
   restoreDeckVersion,
+  syncDecks,
   type CollectionResponse,
   type DecksResponse,
+  type MeResponse,
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
-import { useAccount } from "../net/gate.ts";
+import { useAccount, type Account } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { BackLink } from "./nav.tsx";
 import { messageOf } from "../net/errors.ts";
 
 type Loaded = {
@@ -74,23 +72,43 @@ type Screen =
   /** `generation` counts the workshop's reopenings (R2125000): its store is made once, from the decks it opens on. */
   | { kind: "ready"; profileId: string; data: Loaded; generation: number };
 
-/** `settings` is off on the Loading… screens: a dialog opened from their gear would close when the decks arrive (#1524). */
-function Shell({ children, settings = true }: { children: ReactNode; settings?: boolean }) {
-  return (
-    <div className="app-shell">
-      <BackLink showSettings={settings} to={paths.collection} />
-      <h1>{t("JackiOh — decks")}</h1>
-      {children}
-    </div>
-  );
-}
+export type DecksRouteProps = {
+  /** R3207003: the account the gate read for this screen, so it reads none of its own. */
+  account?: { token: string; me: MeResponse };
+  portraitsGated?: boolean;
+};
 
 /**
  * `portraitsGated`: whether ownership decides the picker's portraits (R1827000), as for full art
  * (`FULL_ART_GATED`, R1310004); otherwise every portrait is offered and nothing is read.
+ * R3207003: `account` is what the gate read (`main.tsx`); without one the screen reads it itself.
  */
-export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portraitsGated?: boolean } = {}) {
-  const account = useAccount();
+export default function DecksRoute({ account, portraitsGated = FULL_ART_GATED }: DecksRouteProps = {}) {
+  if (account !== undefined) return <HandedDecks account={account} portraitsGated={portraitsGated} />;
+  return <ReadingDecks portraitsGated={portraitsGated} />;
+}
+
+function ReadingDecks({ portraitsGated }: { portraitsGated: boolean }) {
+  return <DecksScreen account={useAccount()} portraitsGated={portraitsGated} />;
+}
+
+function HandedDecks({
+  account: { token, me },
+  portraitsGated,
+}: {
+  account: { token: string; me: MeResponse };
+  portraitsGated: boolean;
+}) {
+  const account = useMemo<Account>(() => ({ kind: "ready", token, me }), [token, me]);
+  return <DecksScreen account={account} portraitsGated={portraitsGated} />;
+}
+
+/**
+ * R3228000: every state of `/decks` (the account's read, the decks' read, an error, a ban) draws the
+ * workshop's own frame, gear included, so the bar and the title stay where they are when the decks land
+ * and only the body changes. A settings dialog opened during the wait closes when they do (#1524).
+ */
+function DecksScreen({ account, portraitsGated }: { account: Account; portraitsGated: boolean }) {
   const [screen, setScreen] = useState<Screen>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -122,10 +140,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
       return session.token;
     };
     return {
-      putDeck: async (id, input) => putDeck(await current(), id, input),
-      deleteDeck: async (id, options) => deleteDeck(await current(), id, options),
-      putTrio: async (id, input) => putTrio(await current(), id, input),
-      deleteTrio: async (id, options) => deleteTrio(await current(), id, options),
+      syncDecks: async (input, options) => syncDecks(await current(), input, options),
       importTrio: async (input) => importTrio(await current(), input),
       getDeckVersions: async (id) => getDeckVersions(await current(), id),
       restoreDeckVersion: async (id, versionId, catalogVersion) => restoreDeckVersion(await current(), id, versionId, catalogVersion),
@@ -190,7 +205,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
 
   if (account.kind === "error") {
     return (
-      <Shell>
+      <WorkshopFrame>
         <AccountError
           message={account.message}
           retryAfterMs={account.retryAfterMs}
@@ -200,32 +215,32 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
           testId={DECKBUILDER_ERROR}
           retryTestId={DECKBUILDER_RETRY}
         />
-      </Shell>
+      </WorkshopFrame>
     );
   }
 
   if (account.kind === "loading" || account.kind === "anonymous" || blocked) {
     return (
-      <Shell settings={false}>
+      <WorkshopFrame>
         <Skeleton variant="rows" label={t("Loading…")} testId={DECKBUILDER_LOADING} />
-      </Shell>
+      </WorkshopFrame>
     );
   }
 
   if (account.kind === "ready" && account.me.profile.status === "banned") {
     // §9.4 has no banned screen: the server refuses reads and redemption is pending → active.
     return (
-      <Shell>
+      <WorkshopFrame>
         <p className="notice" data-testid={DECKBUILDER_ERROR}>
           {t("This account cannot edit decks.")}
         </p>
-      </Shell>
+      </WorkshopFrame>
     );
   }
 
   if (screen.kind === "error") {
     return (
-      <Shell>
+      <WorkshopFrame>
         <p className="notice" data-testid={DECKBUILDER_ERROR}>
           {t(screen.message)}
         </p>
@@ -241,15 +256,15 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
             {t("Try again")}
           </button>
         </div>
-      </Shell>
+      </WorkshopFrame>
     );
   }
 
   if (screen.kind === "loading") {
     return (
-      <Shell settings={false}>
+      <WorkshopFrame>
         <Skeleton variant="rows" label={t("Loading…")} testId={DECKBUILDER_LOADING} />
-      </Shell>
+      </WorkshopFrame>
     );
   }
 

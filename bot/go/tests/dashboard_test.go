@@ -332,7 +332,7 @@ func TestDashboard_ARunThePcsRunnerNeverTookOrTookInPart(t *testing.T) {
 	some = slices.Insert(some, 1, never("export / shard from 5001"), took("export / shard from 1"))
 	assertEqual(t, outcome(some, "cancelled"), "screened out")
 	assertEqual(t, outcome([]*pyjson.Object{took("plan"), skipped()}, "cancelled"), "⏹️ cancelled")
-	// Stopped in its export, by a person or a new set (learn-set.yml): cancelled, not lost.
+	// Stopped in its export, by a person or a new patch or set (learn-set.yml): cancelled, not lost.
 	stopped := []*pyjson.Object{took("plan"), took("export / round 1 / shard from 1"),
 		took("export / round 1 / shard from 5001", "cancelled"),
 		never("export / round 1 / shard from 10001")}
@@ -1613,7 +1613,7 @@ func TestDashboard_TheOwnersPCFromItsHeartbeat(t *testing.T) {
 		r.pc(r.beat(1, pyjson.New("runners", []any{})), "g1"))
 }
 
-// Gather's label has a slot of its own on the PC, outside the learn lane's one job at a time
+// Gather's label has a half of the PC to itself while it has a job, beside the learn lane's
 // (#2134), so the two run together and the group names both.
 func TestDashboard_LearnAndGatherSideBySide(t *testing.T) {
 	r := newDashboardRunners(t)

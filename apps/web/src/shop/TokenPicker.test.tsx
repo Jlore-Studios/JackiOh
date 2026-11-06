@@ -13,8 +13,9 @@ import { paths } from "../net/navigate.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
+import { openedPack } from "../packs/fixtures.ts";
 import { collectionOf, tokenBars } from "./fixtures.ts";
-import { fittingCards, quantitiesOf, shopTestid as T, type RegistryCosmetic } from "./shop.ts";
+import { fittingCards, quantitiesOf, shopTestid as T, withOpeningBars, type RegistryCosmetic } from "./shop.ts";
 import TokenPicker from "./TokenPicker.tsx";
 
 afterEach(() => {
@@ -214,5 +215,62 @@ describe("#1309 the token picker", () => {
     expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
     expect(screen.queryByTestId(T.tokenLoadError)).toBeNull();
     expect(server.to("GET", "/api/tokens")).toHaveLength(2);
+  });
+});
+
+describe("R3211000 the picker folds an opening's bars", () => {
+  it("R3211000 withOpeningBars takes the bars' points and sizes and keeps the held counts", () => {
+    const before = tokenBars();
+    const { bars } = openedPack();
+    const after = withOpeningBars(before, bars);
+    expect(after.cardBar).toEqual({ points: bars.card.after, size: bars.card.size });
+    expect(after.cosmeticBar).toEqual({ points: bars.cosmetic.after, size: bars.cosmetic.size });
+    // The answer does not carry these, and the server decides them (CLAUDE.md rule 7).
+    expect(after.tokens).toBe(before.tokens);
+    expect(after.nextStep).toBe(before.nextStep);
+    expect(before.cardBar, "the bars read are not changed in place").toEqual({ points: 149, size: 150 });
+  });
+
+  it("R3211000 an opening's bars fold into the picker with no read, and the revision's read brings the held counts", async () => {
+    const answers: { bars?: Reply } = {};
+    const server = tokenServer(answers);
+    const { rerender } = render(<TokenPicker token={TOKEN} />);
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+
+    const { bars } = openedPack();
+    rerender(<TokenPicker token={TOKEN} opening={bars} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.cardBar)).toHaveTextContent("7 / 12");
+    });
+    expect(screen.getByTestId(T.cosmeticBar)).toHaveTextContent("9 / 30");
+    expect(screen.getByTestId(T.heldCard), "the held counts wait for the read").toHaveTextContent("Card tokens held: 1");
+    expect(server.to("GET", "/api/tokens"), "the fold is no read").toHaveLength(1);
+
+    // The page reads once what the answer left out: the server's held counts replace the fold.
+    const read = tokenBars();
+    answers.bars = {
+      status: 200,
+      body: {
+        ...read,
+        cardBar: { points: 7, size: 12 },
+        cosmeticBar: { points: 9, size: 30 },
+        tokens: { ...read.tokens, card: 2 },
+      } satisfies TokenBarsResponse,
+    };
+    expireRead(TOKEN, keptPaths.tokens);
+    rerender(<TokenPicker token={TOKEN} opening={bars} revision={1} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.heldCard)).toHaveTextContent("Card tokens held: 2");
+    });
+    expect(screen.getByTestId(T.cardBar)).toHaveTextContent("7 / 12");
+    expect(server.to("GET", "/api/tokens")).toHaveLength(2);
+  });
+
+  it("R3211000 an opening that arrives before the first read lands is not folded into nothing", async () => {
+    tokenServer();
+    const { bars } = openedPack();
+    render(<TokenPicker token={TOKEN} opening={bars} />);
+    // The panel has nothing to fold into yet: the read is what it shows, the server's numbers.
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
   });
 });
