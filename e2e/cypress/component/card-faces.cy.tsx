@@ -177,7 +177,11 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
 /* R1017002 */
 
 describe("R1017002: every card the homescreen's hand can deal prints whole on a fan card", () => {
-  const FAN_DEFS = rotationPool(true);
+  // Worked out through the face model, so only once the module is loaded (support/component.tsx).
+  let FAN_DEFS: ReturnType<typeof rotationPool> = [];
+  before(() => {
+    FAN_DEFS = rotationPool(true);
+  });
   const fanBox: FitBox = { width: FAN_CARD_MAX_PX, clampAllowed: false };
 
   for (const face of FACES) {
@@ -581,28 +585,32 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
   const fusedPair = fusedDef([catalogDef("core-011"), catalogDef("core-020")], 1);
   const crafted = fusedDef([catalogDef("core-002"), catalogDef("core-012"), catalogDef("core-053")], 2);
   const heroic = catalogDef("core-098");
-  const ENTRIES: readonly Entry[] = [
-    { key: "fused-base", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: false, inPlay: {} }) },
-    { key: "fused-radiant", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: true, inPlay: {} }) },
-    { key: "crafted", face: faceModel({ defId: crafted.id, def: crafted, radiant: false, liveCost: 0, inPlay: {} }) },
-    ...Object.keys(POWER_WORDS).flatMap((name) =>
-      [false, true].map((radiant) => ({
-        key: `power-${name}-${String(radiant)}`,
-        face: faceModel({ defId: heroic.id, def: heroic, radiant, liveCost: 0, inPlay: { power: { name } } }),
-      })),
-    ),
-    { key: "chaos", face: faceModel({ defId: "core-095", def: catalogDef("core-095"), radiant: true, inPlay: {} }) },
-    {
-      key: "vanilla",
-      face: faceModel({
-        defId: "core-056",
-        def: catalogDef("core-056"),
-        radiant: false,
-        live: { attack: 3, health: 2, maxHealth: 2, keywords: [{ kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }] },
-        inPlay: { vanilla: true },
-      }),
-    },
-  ];
+  // Worked out through the face model, so only once the module is loaded (support/component.tsx).
+  let ENTRIES: readonly Entry[] = [];
+  before(() => {
+    ENTRIES = [
+      { key: "fused-base", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: false, inPlay: {} }) },
+      { key: "fused-radiant", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: true, inPlay: {} }) },
+      { key: "crafted", face: faceModel({ defId: crafted.id, def: crafted, radiant: false, liveCost: 0, inPlay: {} }) },
+      ...Object.keys(POWER_WORDS).flatMap((name) =>
+        [false, true].map((radiant) => ({
+          key: `power-${name}-${String(radiant)}`,
+          face: faceModel({ defId: heroic.id, def: heroic, radiant, liveCost: 0, inPlay: { power: { name } } }),
+        })),
+      ),
+      { key: "chaos", face: faceModel({ defId: "core-095", def: catalogDef("core-095"), radiant: true, inPlay: {} }) },
+      {
+        key: "vanilla",
+        face: faceModel({
+          defId: "core-056",
+          def: catalogDef("core-056"),
+          radiant: false,
+          live: { attack: 3, health: 2, maxHealth: 2, keywords: [{ kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }] },
+          inPlay: { vanilla: true },
+        }),
+      },
+    ];
+  });
 
   function InPlayGrid({ width }: { width: number }) {
     return (

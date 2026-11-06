@@ -122,9 +122,25 @@ line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer 
 `data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
 root that clips them, so the one-screen rule holds. Over them the blocks' layer draws the JackiOh
 mark, still, in a dark halo (`skeleton.css`), but in a shell panel, which the logo heads. `main.tsx`'s `Loading` takes `skeleton` for the
-same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+same drawing. A route that waits before it can draw its screen draws that screen's own frame around the
+skeleton, not a plain page: `/decks` does so through `game/deckbuilder/WorkshopFrame.tsx`, which the loaded
+workshop draws too, so the bar (Back, the title, the gear) and the background stay put and only the body changes
+when the read lands (R3228000). Still text: the deck builder's win-rate line and the chat's and the replays' "show
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
-boards' "Joining …" panels.
+boards' "Joining …" panels, and, each for its reason:
+
+- A button's or field's own busy word ("Checking…" and "Starting…" on a button, "Show older games" and "Show
+  earlier messages" while they load, the username field's inline "Checking…"): a label or a field's status,
+  not a wait for a panel.
+- The deck history popover's "Loading…" and "No versions kept yet": the popover sizes itself to its words,
+  which a full-width skeleton or empty state would stretch.
+- One line inside a panel that already has content: the account's "No finished matches yet" and "No season
+  best yet" (the figures above say it), the leaderboard's "No Jlorious players yet this season" (one section
+  among the tiers, whose height spec 46 measures), the stats' "No … yet" sub-lines, the trio editor's slot
+  "No cards yet." and the chat's "No messages yet" row.
+- An option's text: "No other decks yet" and "No friends to invite yet".
+- A card face's "No pieces yet", and the accessibility statement's and the invite page's sentences, which are
+  prose of the page and not a panel's empty.
 
 A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
 the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
@@ -158,8 +174,9 @@ packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's
 `FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
 reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
 skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
-`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
-accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+`openAllPacks` (its last opening's), `openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios'
+save, delete, sync (each item that landed) and import, a friend accepted or removed), so a revisit never shows
+the old value first. `clearSession` empties the cache and the
 first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
@@ -497,7 +514,9 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
-                        autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
+                        autosave with a local mirror of unsaved edits (sync.ts, R256): one POST
+                        /api/decks/sync a pass of at most `DECK_SYNC_ITEMS_MAX` items, decks, then trios,
+                        then trio and deck deletions, each item judged alone (R3212001); a trio import is
                         one POST /api/trios/import, never the autosave (R341); the open deck's History
                         popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
                         kept, newest first, each with its date and the cards in and out since the one
@@ -639,7 +658,9 @@ packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, �
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
                         foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
                         that follow the pointer, a press and a tear, the shelf and the scene drawing the
-                        same object), and the scene that opens one (`POST /api/packs/open`), its token bars
+                        same object), and the scene that opens one (`POST /api/packs/open`; Open all is one
+                        `POST /api/packs/open-all` of up to `PACKS_OPEN_ALL_MAX`, shown a pack at a time with
+                        nothing more sent, R3212000), its token bars
                         pinned at the top from the answer and played once every card shows
                         (economy/OpeningBars.tsx, R1953000); the pity counters and the odds are on
                         /purchases, not here (R1665000); the scene: a tear or swipe, the best rarity tinting the
@@ -676,13 +697,13 @@ Remove on a friend's row take the item off the screen at once and show a toast, 
 deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
 `UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
 motion). The request waits for the window to close and goes at once when a second deletion takes the
-toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
+toast, when the page hides (the pass's sync as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
 goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, since the item
 counts against the server's caps until then.
 A deletion within `UNDO_REPEAT_MS` of the one taken is a double click's second press: `hold` refuses it
 (returns `false`) and every caller leaves the item in place and stays where it is (R3059000).
 Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
-trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
+trio whose deletion could not reach the server stays deleted and is retried (R256). While a deck's or
 trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
 and `unhide` (Undo) brings it and its trio slots back. Block and Concede still ask.
 

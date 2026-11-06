@@ -13,6 +13,7 @@
 
 use std::sync::Arc;
 
+use axum::http::StatusCode;
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
@@ -28,8 +29,8 @@ use crate::api::http::{
 };
 use crate::app::App;
 use crate::config::{
-    DECK_NAME_MAX_LENGTH, DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, DRAFT_ISSUES_REPORTED_MAX,
-    MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
+    DECK_NAME_MAX_LENGTH, DECK_SYNC_ITEMS_MAX, DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT,
+    DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
 };
 use crate::cosmetics::{self, CosmeticKind};
 use crate::db::store::{
@@ -466,7 +467,7 @@ fn trio_outcome_name(outcome: &TrioUpsertOutcome) -> &'static str {
 
 // Routes
 
-// All eight routes are `AuthLevel::Active` rows of `app.rs`'s `ROUTES`, so a pending account gets 403
+// All nine routes are `AuthLevel::Active` rows of `app.rs`'s `ROUTES`, so a pending account gets 403
 // (§9.4: "no collection, loadout, queue or match").
 
 /// `GET /api/decks`. Everything the builder opens on, oldest first, with the server's catalog
@@ -499,13 +500,20 @@ pub async fn list_decks(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "deck")?;
-    let raw_name = name_of(&req.body)?;
-    let cards = string_list(&req.body, "cards")?;
-    let catalog_version = str(&req.body, "catalogVersion")?;
-    let portrait = optional_str(&req.body, "portrait")?;
-    let table_cosmetic = deck_cosmetic(&req.body, "tableCosmetic", CosmeticKind::Table)?;
-    let field_cosmetic = deck_cosmetic(&req.body, "fieldCosmetic", CosmeticKind::Field)?;
-    let card_back_cosmetic = deck_cosmetic(&req.body, "cardBackCosmetic", CosmeticKind::CardBack)?;
+    let deck = save_deck(app, &profile.id, &id, &req.body).await?;
+    ok_of(&json!({ "deck": deck }))
+}
+
+/// [`put_deck`]'s save of deck `id` from `body`, for the caller `profile_id`: also each deck of a
+/// sync (R3212001).
+async fn save_deck(app: &App, profile_id: &str, id: &str, body: &Value) -> Result<DeckView, ApiError> {
+    let raw_name = name_of(body)?;
+    let cards = string_list(body, "cards")?;
+    let catalog_version = str(body, "catalogVersion")?;
+    let portrait = optional_str(body, "portrait")?;
+    let table_cosmetic = deck_cosmetic(body, "tableCosmetic", CosmeticKind::Table)?;
+    let field_cosmetic = deck_cosmetic(body, "fieldCosmetic", CosmeticKind::Field)?;
+    let card_back_cosmetic = deck_cosmetic(body, "cardBackCosmetic", CosmeticKind::CardBack)?;
 
     assert_current_catalog(app, &catalog_version)?;
     let name = validator::normalize_name(&raw_name);
@@ -515,14 +523,14 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let now = now_ms();
-    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let mut tx = app.db.begin(Some(profile_id)).await?;
     let picks = [
         ("tableCosmetic", CosmeticKind::Table, &table_cosmetic),
         ("fieldCosmetic", CosmeticKind::Field, &field_cosmetic),
         ("cardBackCosmetic", CosmeticKind::CardBack, &card_back_cosmetic),
     ];
     if portrait.is_some() || picks.iter().any(|(_, _, pick)| pick.is_some()) {
-        let owned = tx.economy_cosmetics_get(&profile.id).await?;
+        let owned = tx.economy_cosmetics_get(profile_id).await?;
         // R1827000: on top of D5, a portrait the account does not own is refused, in D5's shape.
         if let Some(picked) = portrait.as_deref()
             && !cosmetics::owns_portrait(portrait_or_default(Some(picked)), &owned.account)
@@ -549,8 +557,8 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let outcome = tx
         .decks_upsert(
             &SavedDeck {
-                id: id.clone(),
-                profile_id: profile.id.clone(),
+                id: id.to_string(),
+                profile_id: profile_id.to_string(),
                 name: name.clone(),
                 cards: cards.clone(),
                 portrait: portrait.clone(),
@@ -578,30 +586,30 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     // R2100000: the save keeps a version, or replaces the newest within the window.
     let kept = tx
         .deck_versions_keep(
-            &deck_version_of(&id, &profile.id, &name, &cards, now),
+            &deck_version_of(id, profile_id, &name, &cards, now),
             Some(DECK_VERSION_DEBOUNCE_MS),
             DECK_VERSIONS_KEPT as i64,
         )
         .await?;
 
     // Read back rather than echo the request, so the answer carries the kept `created_at`.
-    let saved = tx.decks_get(&id).await?;
+    let saved = tx.decks_get(id).await?;
     tx.commit().await?;
     // Deleted between the write and the read by the same player's other tab: say so plainly.
-    let Some(saved) = saved.filter(|deck| deck.profile_id == profile.id) else {
+    let Some(saved) = saved.filter(|deck| deck.profile_id == profile_id) else {
         return Err(not_found("deck"));
     };
     log_info(
         "deck.saved",
         json!({
-            "profileId": profile.id,
+            "profileId": profile_id,
             "deckId": id,
             "outcome": upsert_outcome_name(&outcome),
             "cards": cards.len(),
             "version": kept.as_str(),
         }),
     );
-    ok_of(&json!({ "deck": deck_view(&saved) }))
+    Ok(deck_view(&saved))
 }
 
 /// `DELETE /api/decks/:id`. Idempotent: `deleted: false` when this profile has no deck with that
@@ -610,13 +618,19 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn delete_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "deck")?;
-    let mut tx = app.db.begin(Some(&profile.id)).await?;
-    let deleted = tx.decks_remove(&profile.id, &id).await?;
+    let deleted = remove_deck(app, &profile.id, &id).await?;
+    ok_of(&json!({ "deleted": deleted }))
+}
+
+/// [`delete_deck`]'s deletion, for the caller `profile_id`: also each of a sync's (R3212001).
+async fn remove_deck(app: &App, profile_id: &str, id: &str) -> Result<bool, ApiError> {
+    let mut tx = app.db.begin(Some(profile_id)).await?;
+    let deleted = tx.decks_remove(profile_id, id).await?;
     tx.commit().await?;
     if deleted {
-        log_info("deck.deleted", json!({ "profileId": profile.id, "deckId": id }));
+        log_info("deck.deleted", json!({ "profileId": profile_id, "deckId": id }));
     }
-    ok_of(&json!({ "deleted": deleted }))
+    Ok(deleted)
 }
 
 /// `GET /api/decks/:id/versions`. R2100000: the deck's earlier versions, newest first. Another
@@ -703,8 +717,15 @@ pub async fn restore_deck_version(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "trio")?;
-    let raw_name = name_of(&req.body)?;
-    let deck_ids = slots_of(&req.body)?;
+    let trio = save_trio(app, &profile.id, &id, &req.body).await?;
+    ok_of(&json!({ "trio": trio }))
+}
+
+/// [`put_trio`]'s save of trio `id` from `body`, for the caller `profile_id`: also each trio of a
+/// sync (R3212001).
+async fn save_trio(app: &App, profile_id: &str, id: &str, body: &Value) -> Result<TrioView, ApiError> {
+    let raw_name = name_of(body)?;
+    let deck_ids = slots_of(body)?;
 
     let name = validator::normalize_name(&raw_name);
     let issues = trio_draft_issues(&name, &deck_ids)?;
@@ -715,12 +736,12 @@ pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let slots = trio_slots_of(&deck_ids)?;
 
     let now = now_ms();
-    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let mut tx = app.db.begin(Some(profile_id)).await?;
     let outcome = tx
         .trios_upsert(
             &SavedTrio {
-                id: id.clone(),
-                profile_id: profile.id.clone(),
+                id: id.to_string(),
+                profile_id: profile_id.to_string(),
                 name,
                 deck_ids: slots,
                 created_at: now,
@@ -748,16 +769,16 @@ pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
         TrioUpsertOutcome::Created | TrioUpsertOutcome::Updated => {}
     }
 
-    let saved = tx.trios_get(&id).await?;
+    let saved = tx.trios_get(id).await?;
     tx.commit().await?;
-    let Some(saved) = saved.filter(|trio| trio.profile_id == profile.id) else {
+    let Some(saved) = saved.filter(|trio| trio.profile_id == profile_id) else {
         return Err(not_found("trio"));
     };
     log_info(
         "trio.saved",
-        json!({ "profileId": profile.id, "trioId": id, "outcome": trio_outcome_name(&outcome) }),
+        json!({ "profileId": profile_id, "trioId": id, "outcome": trio_outcome_name(&outcome) }),
     );
-    ok_of(&json!({ "trio": trio_view(&saved) }))
+    Ok(trio_view(&saved))
 }
 
 /// `POST /api/trios/import`. R340, R341: a trio code's decks and the trio naming them, all or
@@ -881,13 +902,122 @@ pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn delete_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "trio")?;
-    let mut tx = app.db.begin(Some(&profile.id)).await?;
-    let deleted = tx.trios_remove(&profile.id, &id).await?;
+    let deleted = remove_trio(app, &profile.id, &id).await?;
+    ok_of(&json!({ "deleted": deleted }))
+}
+
+/// [`delete_trio`]'s deletion, for the caller `profile_id`: also each of a sync's (R3212001).
+async fn remove_trio(app: &App, profile_id: &str, id: &str) -> Result<bool, ApiError> {
+    let mut tx = app.db.begin(Some(profile_id)).await?;
+    let deleted = tx.trios_remove(profile_id, id).await?;
     tx.commit().await?;
     if deleted {
-        log_info("trio.deleted", json!({ "profileId": profile.id, "trioId": id }));
+        log_info("trio.deleted", json!({ "profileId": profile_id, "trioId": id }));
     }
-    ok_of(&json!({ "deleted": deleted }))
+    Ok(deleted)
+}
+
+/// A sync's list under `key`: absent or null is none; anything but a list is 400.
+fn sync_list<'b>(body: &'b Value, key: &str) -> Result<&'b [Value], ApiError> {
+    match body.get(key) {
+        None | Some(Value::Null) => Ok(&[]),
+        Some(Value::Array(items)) => Ok(items),
+        Some(_) => Err(bad_request(format!("\"{key}\" must be an array"))),
+    }
+}
+
+/// One item's answer in a sync, `id` as the request sent it: its route's own answer, or the error
+/// its route would answer, with that status. A fault of the server's fails the whole request: an
+/// item saved before it is saved, and saving it again changes nothing (R256).
+fn sync_answer(id: &Value, outcome: Result<Value, ApiError>) -> Result<Value, ApiError> {
+    let mut answer = match outcome {
+        Ok(answer) => answer,
+        Err(error)
+            if StatusCode::from_u16(error.status()).map_or(true, |status| status.is_server_error()) =>
+        {
+            return Err(error);
+        }
+        Err(error) => {
+            let mut body = error.body();
+            body["status"] = json!(error.status());
+            body
+        }
+    };
+    answer["id"] = id.clone();
+    Ok(answer)
+}
+
+/// A sync item's id, as its route's path would carry it.
+fn sync_id_of(raw: Option<&Value>, what: &str) -> Result<String, ApiError> {
+    path_id_of(raw.and_then(Value::as_str).map(str::to_string).as_ref(), what)
+}
+
+/// `POST /api/decks/sync`. R3212001: the deck builder's whole autosave pass in one request, `{ decks,
+/// trios, deletedTrios, deletedDecks }`: each deck and trio carries its `id` beside its `PUT`'s body,
+/// each deletion is an id. They run in that order (a trio may name a deck saved just before it), each
+/// as its own route runs it, in its own transaction, so each is as idempotent as its `PUT` or `DELETE`
+/// (R256). A refused item refuses alone, answered as its route would answer it, and the rest still
+/// save. The answer holds one entry per item, in the request's order: `{ id, deck }`, `{ id, trio }`
+/// or `{ id, deleted }`, or `{ id, status, error }` for a refusal. More than `DECK_SYNC_ITEMS_MAX`
+/// items is 400, running none. No spend: no turn, no key.
+pub async fn sync_decks(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let decks = sync_list(&req.body, "decks")?;
+    let trios = sync_list(&req.body, "trios")?;
+    let deleted_trios = sync_list(&req.body, "deletedTrios")?;
+    let deleted_decks = sync_list(&req.body, "deletedDecks")?;
+    let items = decks.len() + trios.len() + deleted_trios.len() + deleted_decks.len();
+    if items > DECK_SYNC_ITEMS_MAX {
+        return Err(bad_request(format!(
+            "A sync carries {DECK_SYNC_ITEMS_MAX} items at most, not {items}."
+        )));
+    }
+    let mut saved_decks = Vec::with_capacity(decks.len());
+    for item in decks {
+        let outcome = match sync_id_of(item.get("id"), "deck") {
+            Ok(id) => save_deck(app, &profile.id, &id, item)
+                .await
+                .map(|deck| json!({ "deck": deck })),
+            Err(error) => Err(error),
+        };
+        saved_decks.push(sync_answer(item.get("id").unwrap_or(&Value::Null), outcome)?);
+    }
+    let mut saved_trios = Vec::with_capacity(trios.len());
+    for item in trios {
+        let outcome = match sync_id_of(item.get("id"), "trio") {
+            Ok(id) => save_trio(app, &profile.id, &id, item)
+                .await
+                .map(|trio| json!({ "trio": trio })),
+            Err(error) => Err(error),
+        };
+        saved_trios.push(sync_answer(item.get("id").unwrap_or(&Value::Null), outcome)?);
+    }
+    let mut removed_trios = Vec::with_capacity(deleted_trios.len());
+    for item in deleted_trios {
+        let outcome = match sync_id_of(Some(item), "trio") {
+            Ok(id) => remove_trio(app, &profile.id, &id)
+                .await
+                .map(|deleted| json!({ "deleted": deleted })),
+            Err(error) => Err(error),
+        };
+        removed_trios.push(sync_answer(item, outcome)?);
+    }
+    let mut removed_decks = Vec::with_capacity(deleted_decks.len());
+    for item in deleted_decks {
+        let outcome = match sync_id_of(Some(item), "deck") {
+            Ok(id) => remove_deck(app, &profile.id, &id)
+                .await
+                .map(|deleted| json!({ "deleted": deleted })),
+            Err(error) => Err(error),
+        };
+        removed_decks.push(sync_answer(item, outcome)?);
+    }
+    ok_of(&json!({
+        "decks": saved_decks,
+        "trios": saved_trios,
+        "deletedTrios": removed_trios,
+        "deletedDecks": removed_decks,
+    }))
 }
 
 // The queue-time half: what a ticket or a room is made with (R253, R257, R264)

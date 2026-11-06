@@ -18,6 +18,7 @@ import {
 } from "../net/auth.ts";
 import { t } from "../i18n/i18n.ts";
 import { forgetLinkAfterSignIn, linkAfterSignIn } from "../net/session.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { takeLinkResult } from "./redirect.ts";
 
 import "./two-step.css";
@@ -107,7 +108,7 @@ function LinkedPanel({ token, providers }: { token: string; providers: OAuthProv
           })}
         </p>
       ) : null}
-      {phase.kind === "loading" ? <p>{t("Loading…")}</p> : null}
+      {phase.kind === "loading" ? <Skeleton variant="rows" label={t("Loading…")} /> : null}
       {phase.kind === "unknown" ? (
         <div className="account-actions">
           <p>{t("Couldn't load your sign-in methods.")}</p>

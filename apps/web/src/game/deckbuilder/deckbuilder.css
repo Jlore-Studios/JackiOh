@@ -1187,6 +1187,7 @@
     grid-template-areas:
       "sidebar"
       "browse";
+    gap: var(--space-5);
   }
 
   .db-pool {
