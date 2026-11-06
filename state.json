@@ -16133,6 +16133,14 @@
           "claude": "medium"
         }
       }
+    },
+    "3309": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-06T15:10:10Z",
+      "issue": 3286,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
