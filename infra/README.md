@@ -11,7 +11,7 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 | --- | --- | --- | --- |
 | Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, the dev dashboard's `admin.jackioh.com` for `jackioh-admin` and `admin-staging.jackioh.com` for `jackioh-admin-staging`, and `www.jackioh.com` once it serves); the Access applications and policies that keep staging to the team and the dev dashboard to the devs (R3074000) | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes) and `apps/admin/wrangler.jsonc` (the dashboard's two Workers), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
 | Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL, Redirect URLs and leaked-password protection | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
-| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), the `production` and `staging` rulesets, and the repository's Actions settings (every action allowed; the workflow token reads by default and may approve pull requests, which the daily promotion needs) | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores); the organization's own Actions settings |
+| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), the `production` and `staging` rulesets, the runner gate (the `ci-runners` environment and the `CI_GATE_ENVIRONMENT` variable), and the repository's Actions settings (every action allowed; the workflow token reads by default and may approve pull requests, which the daily promotion needs) | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores); the organization's own Actions settings |
 
 Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
 because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler.jsonc`'s `vars`.
@@ -129,6 +129,21 @@ the merge, and `promote-production.yml` makes `jackioh-admin` on the next promot
 run, apply staging's alone with `-target=cloudflare_workers_custom_domain.admin_staging_jackioh_com`
 (Terraform takes its Access application and policy with it). Each domain waits on its Access
 application (`depends_on`), so the hostname never serves a request Access has not seen.
+
+## The runner gate
+
+`ci-runners` is the environment a pull request's CI and a merge-queue build wait in, holding no
+runner, until the night bot's account, its one required reviewer, approves them once GitHub's
+runners have room (bot/README.md "The runner gate", bot/go/internal/cigate). The
+`CI_GATE_ENVIRONMENT` variable is what turns it on: ci.yml's `changes` job names the environment
+through it, so with the variable unset nothing waits. Neither existed, so the first `apply` creates
+both (`Plan: 2 to add`). Apply it only once the status loop runs a `main` that has
+bot/go/internal/cigate: until then nothing would approve the runs, and the sweep, which ticks the
+gate too, comes only every few minutes. After the `apply`, a pull request's next run shows
+"Waiting" on `what the change touches` and starts within 30 seconds while runners are free; the
+loop's log says `runner gate: started …`. To undo it, delete the variable (its resource here, or
+Settings -> Secrets and variables -> Actions) and apply: runs that start after it never wait, and an
+admin may approve one still waiting by hand.
 
 ## The merge queue
 
