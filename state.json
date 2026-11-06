@@ -15194,6 +15194,8 @@
       "question": "",
       "queued_at": "2026-11-06T12:54:50Z",
       "requested_by": "jgoetzmann-bot",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "",
       "run_id": "42221850643",
       "runs_on": "ubuntu-latest",
