@@ -15170,13 +15170,13 @@
         "approver": {
           "family": "claude",
           "model": "sonnet",
-          "provider": "claude-7",
+          "provider": "claude-1",
           "tier": "medium"
         },
-        "at": "2026-11-06T10:31:40Z",
+        "at": "2026-11-06T13:11:16Z",
         "built_by": "claude-7",
         "by": "`claude` (medium)",
-        "sha": "6a487f1b3392332769bf69e5eb0b890eb38092a8"
+        "sha": "508106d458a505726392004505e34d1ec377a896"
       },
       "cross_rounds": 0,
       "died": 0,
@@ -15189,7 +15189,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-7",
+      "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
