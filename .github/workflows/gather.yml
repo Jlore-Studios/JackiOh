@@ -1,12 +1,16 @@
-# The gather workflow (#1976, R1976000; training/gather.md): development games of each card patch as it
-# ships, played on the owner's PC and filed as totals only into both projects' card statistics,
+# The gather workflow (#1976, R1976000; training/gather.md): development games of each new card patch
+# as it ships, played on the owner's PC and filed as totals only into both projects' card statistics,
 # JackiOh-Staging's and JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section 8), so each
 # site's figures have development games to pad a patch with until it has its live games.
 #
 # A card change ships as a new patch (patches-ship.yml), and a changed card's figures start again on
 # it (R1367000). The learn lane's exports file a patch's games too (learn.yml, `import`), but one
 # export takes about 40 hours of the PC, so a patch shipped between two has none until the next. This
-# plays GATHER_GAMES games of the newest patch as soon as it ships: `cargo jackioh stats --series
+# plays GATHER_GAMES games of a new patch or set (a `patch` or `major` tier, v0.Z.X; never a micro,
+# v0.Z.Xb, docs/issues-and-patches.md, Version numbers) as soon as it ships. A push that ships only
+# micros since the last push run that succeeded plays nothing (the `due` step), so a micro's changed
+# cards wait for the next patch's games or the next export's. A push plays the commit it pushed, so
+# the next run knows exactly what this one played. `cargo jackioh stats --series
 # gather`, AI against AI on R258's All Random deals at the browser's budget, the records filed with
 # `jackioh-server stats-import --totals-only` over STATS_IMPORT_DATABASE_URL (staging's) and then
 # PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per game, the file claimed once by its SHA-256 in each
@@ -16,16 +20,15 @@
 #
 # Off until the repository variable GATHER_ON_PATCH is `true` (Settings -> Secrets and variables ->
 # Actions -> Variables). Each patch's development totals take about 3 MB of the database however few
-# its games (#1976), and patches ship 2 to 7 times a day: more than the free plan's 500 MB holds for
-# long, so it waits for the Pro plan. A dispatch (`gh workflow run gather.yml -f games=…`) runs
-# whatever the variable says.
+# its games (#1976). A dispatch (`gh workflow run gather.yml -f games=…`) plays main's newest
+# version, a micro too, whatever the variable says.
 #
 # Its one job runs on the PC under a label of its own (`jackioh-selfplay-local-gather`,
-# bot/machine/README.md, The local runner; #2134). The supervisor's config.json gives that label a
-# slot outside maxJobs and `priority`, so gather runs beside the learn lane's shard instead of
-# waiting behind it, at the full six CPUs: it takes the CPU ahead of the shard while both want it,
-# and both give way to the owner's own programs. Without either secret it plays, keeps the file, and
-# files it only where a secret is set.
+# bot/machine/README.md, The local runner; #2134). The supervisor's config.json makes it an
+# `ownSlot` label: gather has one of the PC's two halves (four CPUs) to itself while it has a job,
+# beside the learn lane on the other, and once it has played its games the learn lane trains on
+# both. Both give way to the owner's own programs alike. Without either secret it plays, keeps the
+# file, and files it only where a secret is set.
 name: gather
 
 on:
@@ -41,10 +44,12 @@ on:
 
 permissions:
   contents: read
+  # The `due` step reads the last gather run that succeeded.
+  actions: read
 
 env:
-  # Games a run plays of the newest patch: about half an hour of the PC's six CPUs.
-  GATHER_GAMES: "2000"
+  # Games a run plays of each new patch, on the PC's gather half.
+  GATHER_GAMES: "5000"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
   GATHER_STRIDE: "100000"
   # Days the run's record file is kept as its artifact.
@@ -63,17 +68,54 @@ jobs:
     # The PC's runner slows a job to half a CPU while the PC is busy, so allow a day.
     timeout-minutes: 1440
     steps:
+      # A push plays the commit it pushed, so the `due` step of the next run reads exactly what this
+      # one played; a dispatch plays main as it is when the job starts.
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event_name == 'push' && github.sha || 'main' }}
           persist-credentials: false
+      # A new patch or set since the last push run that succeeded, whether it played or found only
+      # micros. A run that failed or was cancelled moves nothing, so the next push plays what it
+      # missed. Of a run waiting behind another, only the newest push waits (`concurrency`), and it
+      # reads every version shipped since the last success, those of the pushes it replaced too.
+      - name: due (a new patch or set, not a micro)
+        id: due
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != push ]; then
+            echo "play=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base=$(gh api "repos/$REPO/actions/workflows/gather.yml/runs?event=push&status=success&per_page=1" \
+            --jq '.workflow_runs[0].head_sha // empty')
+          old='[]'
+          if [ -n "$base" ]; then
+            old=$(gh api -H "Accept: application/vnd.github.raw+json" \
+              "repos/$REPO/contents/crates/cards/patches/patches.json?ref=$base" --jq '[.[].version]')
+          fi
+          new=$(jq -r --argjson old "$old" '[.[] | select(.version | IN($old[]) | not)
+            | select(.tier != "micro") | .version] | join(", ")' crates/cards/patches/patches.json)
+          if [ -n "$new" ]; then
+            echo "play=true" >> "$GITHUB_OUTPUT"
+            echo "new since the last gather: $new" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "play=false" >> "$GITHUB_OUTPUT"
+            echo "only micros since the last gather (${base:0:7}): nothing to play until the next patch" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: ./.github/actions/setup
+        if: ${{ steps.due.outputs.play == 'true' }}
         with:
           node: "false"
       - name: build
+        if: ${{ steps.due.outputs.play == 'true' }}
         run: cargo build --release -q -p jackioh-tools -p jackioh-server
       - name: play (cargo jackioh stats --series gather)
         id: play
+        if: ${{ steps.due.outputs.play == 'true' }}
         env:
           GAMES: ${{ inputs.games || env.GATHER_GAMES }}
           RUN: ${{ github.run_number }}
@@ -98,7 +140,7 @@ jobs:
             echo "$filed of $GAMES games finished and were filed."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: file them (stats-import --totals-only), into staging's and production's
-        if: ${{ steps.play.outputs.filed != '0' }}
+        if: ${{ steps.play.outputs.filed != '' && steps.play.outputs.filed != '0' }}
         env:
           STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
           PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
