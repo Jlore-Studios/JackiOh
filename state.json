@@ -17628,13 +17628,9 @@
     "what": "revise #3068 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-06T01:54:03Z",
+    "at": "2026-11-06T02:09:55Z",
     "notes": [
-      "delivered review #3249 on claude-1 (run 42144673456): interrupted",
-      "started review #3249 on claude-4 (run 42147142400)",
-      "started revise #3068 on claude-3 (run 42147242454)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #3249 on claude-4 (run 42147142400): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18340,7 +18336,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T01:54:03Z",
+  "loop_tick": "2026-11-06T02:09:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
