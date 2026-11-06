@@ -16138,6 +16138,23 @@
         }
       }
     },
+    "3308": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-6",
+      "owner_since": "2026-11-06T16:07:15Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-6",
+      "run_id": "pending:b5f99a6e-1793981199",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-06T16:07:15Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "3309": {
       "action": "review",
       "asks": [],
@@ -16195,9 +16212,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T16:06:25Z",
+    "at": "2026-11-06T16:07:15Z",
     "url": "",
-    "what": "review #3309 on claude-8"
+    "what": "plan #3308 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T15:48:37Z",
