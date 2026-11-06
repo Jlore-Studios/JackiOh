@@ -131,6 +131,10 @@ function routeHost(options: HostOptions = {}): RouteHost {
           // R2706000: a lesson is no dungeon run's fight, so it reports nothing to a run.
           response = { id: mine, type: "failed", message: "this practice game is not a dungeon run's fight" };
           break;
+        case "timerFired":
+          // R1563006: a lesson sets no timer, so none comes due.
+          response = { id: mine, type: "failed", message: "a lesson sets no timer" };
+          break;
         case "debug":
           response = {
             id: mine,

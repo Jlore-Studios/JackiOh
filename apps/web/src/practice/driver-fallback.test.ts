@@ -9,7 +9,7 @@ import { legalActions, type GameState } from "@jackioh/engine";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { ActionBody, PlayerId } from "@jackioh/shared";
 
-import { createPracticeCore } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
 import type { PracticeDebug, PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeSnapshot } from "./protocol.ts";
 import { snapshotOf } from "../test/fixtures.ts";
 
@@ -51,7 +51,7 @@ const AI: PlayerId = "p1";
 type Driver = { send(body: PracticeRequestBody): PracticeResponse };
 
 function driver(): Driver {
-  const core = createPracticeCore({ now: () => 0, dev: true, budget: AI_GATE_BUDGET });
+  const core = createPracticeDriver({ now: () => 0, dev: true, budget: AI_GATE_BUDGET });
   let id = 0;
   return {
     send(body) {

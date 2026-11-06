@@ -798,17 +798,23 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 
 ## Practice
 
-`/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The engine
-and the AI (`crates/engine`, `crates/ai`, as WebAssembly) run in a Web Worker, which stands where SPEC §9.1 puts the server, so
-rule 7 holds exactly as it does online:
+`/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The practice
+session itself is Rust, `crates/shared`'s `host/practice` (#3099): the engine, the AI and that machine
+(as WebAssembly) run in a Web Worker, which stands where SPEC §9.1 puts the server, so
+rule 7 holds exactly as it does online. The worker's driver feeds the machine's events and carries out its
+outputs; it decides no rule (how a game is dealt, the nonces and seats, what the AI may take, the save, the kept
+games and the claim are the machine's, and the server's claim check steps the same machine natively):
 
 ```
 src/practice/
   protocol.ts         the request/response shapes: everything the page ever learns about a game
-  core.ts             the ONLY practice file that imports @jackioh/engine, @jackioh/cards or
-                      @jackioh/ai; holds the GameState, runs both seats and the AI
-  practice.worker.ts  the worker entry: core.handle per message
-  host.ts             a module Worker in a browser, the in-thread core in jsdom; one answer per
+  driver.ts           the ONLY practice file that holds the game (the machine's `PracticeHost`, with the
+                      GameState inside it) and calls the AI's `decide` and `lethalHint`: it feeds the
+                      machine its events through `wasm/index.ts`'s `practiceCall` and carries out the
+                      outputs (the save store, the AI's search and the lethal check under their wall-clock
+                      caps, the public catalog, a preset's cards and a lesson's decks put into the config)
+  practice.worker.ts  the worker entry: driver.handle per message
+  host.ts             a module Worker in a browser, the in-thread driver in jsdom; one answer per
                       request, strictly in order
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
@@ -838,7 +844,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
 - In every game against the AI (each tier, a sandbox game, a lesson) the snapshot adds
   `lethal: true` while the human has a sure win this turn by what they can see (R2102000, R2291000):
-  the core asks `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
+  the machine asks (a `lethal` output) and the driver runs `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
   redaction, so the AI's hidden cards never change it, under a wall-clock cap of its own
   (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). The route passes it to `Game`'s `lethalHint`
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
@@ -849,12 +855,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
   (`tutorial/advice.ts`), so the client does no combat maths.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
+- A question sequence's 60 seconds (Meditative+ #20 KY's Competition, R1563006) are the machine's: an answer carries `timers`
+  (`PracticeTimer`, a delay in ms from the answer), the controller keeps each as a timeout and sends `timerFired` when it is
+  due, and the machine answers Stop for the human. The prompt's countdown (`game/sequenceClock.ts`) only shows the seconds left.
 - A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
-- A free game in progress survives a reload (R668). After every answer the core writes its save
-  to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
+- A free game in progress survives a reload (R668). After every answer the machine's `save` output is written
+  to the worker's store by the driver, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the
   route forgets it when the player leaves. A visit with no parameter that starts a game sends
-  `{ type: "resume", config }`, and the core folds the log back under the same nonces to the saved
+  `{ type: "resume", config }`, and the machine folds the log back under the same nonces to the saved
   hash, with the AI's stream at its saved cursor, or answers `failed` and the route shows the setup.
   A lesson is never kept, so only a lesson in progress asks before the page unloads.
 - Keeping a free game is the player's choice when they leave it (R765). "Leave this game?" offers
@@ -1091,7 +1100,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
-  (hotseat's port), `practice/core.ts` (the practice worker's game, and the only caller of the AI's
+  (hotseat's port), `practice/driver.ts` (the practice worker's game, and the only caller of the AI's
   `decide`) and `duos/DevDuosRoute.tsx` (the Duos dev hotseat's `DuosState`, opaque, through the WASM
   Duos bindings, which only the normal module carries), with `tutorial/harness.ts` for tests.
 

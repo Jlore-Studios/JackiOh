@@ -68,12 +68,14 @@ FROM chef AS deps
 COPY --from=planner /src/recipe.json recipe.json
 RUN cargo chef cook --release --locked -p jackioh-server --recipe-path recipe.json
 
-# The crates the server builds on, the engine, the cards, the AI and the shared logic: the real manifests and
+# The crates the server builds on, the engine, the cards, the AI, the dungeon run (which the shared logic calls,
+# #3099) and the shared logic: the real manifests and
 # their sources over the skeleton, built by the server's own command below (so with its features) while
-# the server is still the skeleton's empty crate. Only these four of crates/ are copied, so this
+# the server is still the skeleton's empty crate. Only these five of crates/ are copied, so this
 # layer is rebuilt only when they, a manifest or the lock file change: a change to the server alone,
 # or to crates/tools or crates/wasm, reuses it (#2013). A crate the server comes to
-# build on needs a COPY line here, or the server's build below fails on its empty skeleton.
+# build on, directly or through another, needs a COPY line here, or the server's build below fails on
+# its empty skeleton.
 # `cargo clean -p jackioh-server` then drops what the empty server left in target/, as `cargo chef
 # cook` drops the skeleton's compiled crates: the server's sources copied below keep the build
 # context's times, older than this build, so cargo would take the empty build script for fresh
@@ -85,6 +87,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/engine ./crates/engine
 COPY crates/cards ./crates/cards
 COPY crates/ai ./crates/ai
+COPY crates/run ./crates/run
 COPY crates/shared ./crates/shared
 RUN cargo build --release --locked -p jackioh-server --lib \
  && cargo clean --release --locked -p jackioh-server

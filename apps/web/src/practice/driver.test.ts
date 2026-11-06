@@ -1,6 +1,6 @@
 // The practice core, for real: B34, B35, B38 and B39 of docs/polish/3-ai.md, and R187 / R188.
 //
-// It drives the REAL `createPracticeCore` with a frozen clock (`now: () => 0`, so every decision is a
+// It drives the REAL `createPracticeDriver` with a frozen clock (`now: () => 0`, so every decision is a
 // pure function of the node budget) and the gates' smaller budget, so a whole game fits a test. The only
 // door into the true state is `debug`; comparing a response with its `viewFor` / `legalActions` is
 // CLAUDE.md rule 7 stated as a test.
@@ -22,20 +22,20 @@ import {
   viewFor,
 } from "@jackioh/engine";
 import type { GameState, Rng } from "@jackioh/engine";
-import { AI_TUTORIAL, TUTORIAL_HUMAN, type Difficulty } from "@jackioh/engine/config";
+import { AI_TUTORIAL, KY_COMPETITION_SECONDS, TUTORIAL_HUMAN, type Difficulty } from "@jackioh/engine/config";
 import { AI_DECK, AI_GATE_BUDGET, FIXTURE_BANNED_IDS, SHADOW_BAN_IDS, aiToAct, buildAiDeck, lethalHint } from "@jackioh/ai";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 
-import { createPracticeCore } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { PRACTICE_PRESETS } from "./decks.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
 import { seedWhere } from "../test/seedSearch.ts";
-import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
+import type { PracticeDriver, PracticeDriverEnv } from "./driver.ts";
 import type {
   PracticeDebug,
   PracticeRequest,
@@ -48,7 +48,7 @@ import { snapshotOf } from "../test/fixtures.ts";
 
 // the driver
 
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 
 /** Most requests one walk sends before it gives up on the game ending by itself. */
 const WALK_CAP = 200;
@@ -56,13 +56,13 @@ const WALK_CAP = 200;
 type Exchange = { request: PracticeRequest; response: PracticeResponse };
 
 type Driver = {
-  core: PracticeCore;
+  core: PracticeDriver;
   send(body: PracticeRequestBody): PracticeResponse;
   exchanges: Exchange[];
 };
 
-function driver(env: PracticeCoreEnv = ENV): Driver {
-  const core = createPracticeCore(env);
+function driver(env: PracticeDriverEnv = ENV): Driver {
+  const core = createPracticeDriver(env);
   const exchanges: Exchange[] = [];
   let id = 0;
   return {
@@ -1297,6 +1297,37 @@ describe("R923000 a practice sandbox game", () => {
     const setup = { seed, decks, handicaps, log, ...(dealt === undefined ? {} : { dealt }) };
     expect(hashState(fold({ ...setup, sandbox: true }).state)).toBe(after.hash);
     expect(fold(setup).errors.length, "folded as no sandbox, the log's tools are refused").toBeGreaterThan(0);
+  });
+
+  it("R1563006 the machine sets KY's Competition's window as a timer the driver relays in ms, and its firing answers Stop for the human", { timeout: 120_000 }, () => {
+    const d = driver();
+    const opened = snapshotOf(d.send({ type: "start", config: sandboxConfig("r1563006-ky") }));
+    untilHumanMain(d, "p1", opened);
+    expect(snapshotOf(d.send({ type: "act", action: { type: "sandbox", op: { kind: "setMana", player: "p1", current: 10, max: 10 } } })).error).toBeNull();
+    const last = snapshotOf(d.send({ type: "act", action: { type: "sandbox", op: { kind: "spawn", player: "p1", defId: "meditativeplus-020", to: { zone: "hand" } } } }));
+    expect(last.error).toBeNull();
+    const card = stateOf(debugOf(d)).players.p1.hand.find((held) => held.defId === "meditativeplus-020");
+    const play = last.legal.find((action) => action.type === "play" && action.instanceId === card?.id);
+    if (play === undefined) throw new Error("the human cannot cast KY's Competition");
+
+    const cast = d.send({ type: "act", action: play });
+    if (cast.type !== "snapshot") throw new Error(`expected a snapshot, got ${JSON.stringify(cast).slice(0, 300)}`);
+    // The window is the machine's, relayed with the answer as a delay (the frozen clock reads 0).
+    expect(cast.timers).toEqual([{ command: "set", key: { kind: "sequence" }, timer: expect.any(Number) as number, inMs: KY_COMPETITION_SECONDS * 1000 }]);
+    expect(cast.snapshot.view.pending?.forYou && cast.snapshot.view.pending.streak).toBe(0);
+
+    const timer = cast.timers?.[0];
+    if (timer === undefined) throw new Error("no timer");
+    const fired = d.send({ type: "timerFired", key: timer.key, timer: timer.timer });
+    if (fired.type !== "snapshot") throw new Error(`expected a snapshot, got ${JSON.stringify(fired).slice(0, 300)}`);
+    expect(fired.snapshot.view.pending, "the sequence ended").toBeNull();
+    const logged = debugOf(d).log.at(-1);
+    expect([logged?.type, logged?.playerId, logged?.nonce.startsWith("h")]).toEqual(["answer", "p1", true]);
+    expect(JSON.stringify(logged)).toContain("none");
+    // A timer that is not the machine's current one does nothing.
+    const answered = debugOf(d).log.length;
+    expect(d.send({ type: "timerFired", key: timer.key, timer: timer.timer }).type).toBe("snapshot");
+    expect(debugOf(d).log.length).toBe(answered);
   });
 
   it("R923000 the AI never takes a tool: its steps in a sandbox game log none", { timeout: 120_000 }, () => {

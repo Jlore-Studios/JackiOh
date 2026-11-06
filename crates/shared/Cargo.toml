@@ -10,7 +10,8 @@ build = "build.rs"
 
 [dependencies]
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
-# the cards, the AI and the run, and none of them takes it.
+# the cards, the AI and the run, and none of them takes it. The host machine's and the
+# loadout's tests play whole games under the real catalog, which these dependencies carry.
 jackioh-engine = { workspace = true }
 # The host machine asks the AI who owes a move (`ai_to_act`) and reads a panic's text (`panic_message`).
 jackioh-ai = { workspace = true }
@@ -19,6 +20,9 @@ jackioh-ai = { workspace = true }
 # (`tests/loadout.rs`), the face tests register it the way a host does (`jackioh_cards::register_all`), and
 # the host machine's tests play whole games under it.
 jackioh-cards = { workspace = true }
+# The practice session reads a dungeon run's fight (`run_fight_report`, R2706000); `serde_json` also carries the
+# cosmetics of a saved deck, which only the page reads.
+jackioh-run = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }
@@ -28,7 +32,7 @@ indexmap = { workspace = true }
 ts-rs = { workspace = true, optional = true }
 
 [features]
-ts = ["dep:ts-rs", "jackioh-engine/ts"]
+ts = ["dep:ts-rs", "jackioh-engine/ts", "jackioh-run/ts"]
 
 [build-dependencies]
 # build.rs reads data/*.json and the cards' Chinese tables: a build script runs at compile time, which
