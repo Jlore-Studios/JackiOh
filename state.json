@@ -13630,6 +13630,7 @@
     "3212": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
