@@ -451,7 +451,6 @@ fn a_view() -> jackioh_engine::wire::PlayerView {
         last_boards: None,
         glitch_boards: None,
         sandbox: None,
-        custom_cards: None,
         deck_marks: None,
     });
     let state = jackioh_engine::begin_game(&state).state;
