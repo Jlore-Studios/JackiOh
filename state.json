@@ -18289,9 +18289,20 @@
     "what": "revise #3268 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-06T05:50:01Z",
+    "at": "2026-11-06T06:02:39Z",
     "notes": [
-      "#3017 is held for `claude-4` until Fri 00:40 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+      "#3017 is held for `claude-4` until 00:40 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+      "delivered suggest on claude-3 (run 42168917862): suggested",
+      "#3290: typed it Feature",
+      "#3289: typed it Task",
+      "#3288: typed it Task",
+      "#3287: typed it Task",
+      "#3286: typed it Task",
+      "#3285: typed it Task",
+      "#3284: typed it Task",
+      "#3283: typed it Task",
+      "#3282: typed it Task",
+      "#3281: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18997,7 +19008,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T05:50:01Z",
+  "loop_tick": "2026-11-06T06:02:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
