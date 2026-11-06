@@ -18368,17 +18368,8 @@
       ]
     },
     "3289": {
-      "action": "plan",
-      "asks": [
-        "c:6678796752"
-      ],
-      "build_next": {
-        "from_run": "42176859562",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-06T06:58:52Z",
-        "until": "2026-11-06T07:28:52Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-06T06:58:39Z",
         "difficulty": "medium",
@@ -18397,18 +18388,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the three test sites and the budget constants.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/selfplay.rs\", \"offset\": 200, \"limit\": 280}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/arena.rs\", \"offset\": 300, \"limit\": 80}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/positions.rs\", \"offset\": 340, \"limit\": 290}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/tests/ai/lethal.rs\", \"offset\": 1, \"limit\": 260}\n- Grep: {\"pattern\": \"TEST_BUDGET|TINY_BUDGET|AI_TEST_BUDGET|budget tiny|AI_SMOKE_BUDGET\", \"output_mode\": \"content\", \"glob\": \"*.{rs,md,toml}\", \"-n\": true}\n- Grep: {\"pattern\": \"pub const AI_GATE_BUDGET|pub const AI_BUDGET|pub struct SearchBudget\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-3289/crates/ai\", \"-n\": true, \"-A\": 25}\n- Grep: {\"pattern\": \"SearchBudget|budget\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/tests\", \"-n\": true, \"head_limit\": 80}\n- Grep: {\"pattern\": \"pub fn game_config|pub fn dev_game_config|pub enum Matchup|pub fn play_match\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/src\", \"-n\": true, \"-A\":\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/src/dev_run.rs\", \"offset\": 60, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/src/gate.rs\", \"offset\": 196, \"limit\": 110}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/src/gate.rs\", \"offset\": 150, \"limit\": 48}\n- Grep: {\"pattern\": \"fn random_policy_states\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/tests/ai/support.rs\", \"-n\": true, \"-A\": 40}\n- Grep: {\"pattern\": \"AI_GATE_BUDGET|AI_GATE\\\\b\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-3289/crates/ai/tests/ai/lethal.rs\", \"-n\": true}\n- Bash: {\"command\": \"git log --oneline --all -i --grep='3081' | head; git log -3 --format='%H %s' -- crates/tools/src/selfplay_records.rs\"}\n- Grep: {\"pattern\": \"selfplay|positions|lethal|tools duos|ai slow\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-3289/scripts/ci-shards.toml\", \"-n\": true, \"-C\": 2}\n- Bash: {\"command\": \"git show --stat 165b67e6e9 | head -30; git show 165b67e6e9 -- crates/tools/src/arena.rs | head -120\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/selfplay.rs\", \"offset\": 1, \"limit\": 70}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/selfplay_records.rs\", \"offset\": 180, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/positions.rs\", \"offset\": 1, \"limit\": 60}\n- Bash: {\"command\": \"cat rust-toolchain.toml; grep -n \\\"profile\\\" -A6 Cargo.toml | head -60; grep -rn \\\"\\\\[const \\\" crates/tools/src | head -3; ls target 2>/dev/null | head; grep -n \\\"Rc<\\\\|RefCell\\\\|Cell<\\\"\u2026\n- Bash: {\"command\": \"grep -n \\\"difficulty\\\\|patch fragment\\\\|test-only\\\\|tests only\\\" docs/issues-and-patches.md | head -30; ls patches 2>/dev/null | head; ls patches/pending 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -rn \\\"crates/ai\\\" crates/tools/src/classify*.rs crates/tools/src/classify/ 2>/dev/null | head -20; grep -n \\\"AI_GATE_BUDGET\\\\|SearchBudget\\\\|^use\\\\|^pub const\\\\|^pub fn\\\" crates/ai/\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/ai/tests/ai/main.rs 2>/dev/null; grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A5 crates/ai/Cargo.toml\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/crates/tools/src/classify.rs\", \"offset\": 225, \"limit\": 70}\n- Bash: {\"command\": \"sed -n 1,30p crates/ai/tests/ai/support.rs; sed -n 38,46p crates/ai/tests/ai/support.rs; sed -n 1320,1345p crates/ai/tests/ai/search.rs; cat crates/ai/tests/ai_slow.rs | head -30; grep -\u2026\n- Bash: {\"command\": \"grep -n \\\"support\\\" crates/tools/tests/acceptance.rs | head -20; grep -rn \\\"nodes: 150\\\\|nodes: 1[0-9][0-9],\\\" crates/*/src crates/*/tests 2>/dev/null | head\"}\n- Bash: {\"command\": \"cat crates/ai/clippy.toml | head -30; grep -n \\\"budget\\\\|test budget\\\\|TEST_BUDGET\\\" crates/tools/README.md | head -10\"}\n- Bash: {\"command\": \"sed -n 15,40p crates/ai/tests/ai/sim_panics.rs; sed -n 1010,1040p crates/tools/tests/acceptance.rs; cd crates/ai && grep -n \\\"const\\\\b\\\" tests/ai/support.rs | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3289 && cat rustfmt.toml 2>/dev/null; sed -n 1,25p crates/tools/Cargo.toml; grep -n \\\"tools duos, selfplay\\\\|ai slow\\\" -r scripts/*.sh scripts/*.toml\u2026\n- Bash: {\"command\": \"grep -rn \\\"In Too Deep\\\" --include=*.md --include=*.rs -l . 2>/dev/null | head -8; grep -rn \\\"R1965000\\\" -l spec crates 2>/dev/null | head\"}\n- Bash: {\"command\": \"cat spec/rulings/R1965000.md | head -30; grep -n \\\"R1965000\\\" crates/tools/src/positions.rs crates/ai/tests/ai/lethal.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"selfplay::play\\\\b\\\\|selfplay::play(\\\\|[^_a-z]play(\\\\\\\"\\\" crates/tools/src crates/tools/tests | head; grep -rn \\\"fn play(\\\" crates/tools/src/selfplay.rs\"}\n- Bash: {\"command\": \"grep -n \\\"SearchBudget\\\\|lethal_nodes\\\\|AI_GATE_BUDGET\\\\|_BUDGET\\\" crates/tools/tests/acceptance.rs | head; sed -n 50,62p crates/ai/tests/ai/support.rs; grep -rn \\\"AI_GATE_BUDGET\\\" crate\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3289/.bot-plan.md\", \"content\": \"# Draft plan #3289 (planner notes)\\n\\nRead: selfplay.rs (play/play_at/play_chunks_at, r1006001), positions.rs tests (`\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Test-only change in four files (two tools test modules, two AI test files); no line of the rule holds: nothing in crates/engine/src or crates/ai/src changes, no migration, far under 40 files.\"} --> ## Goal Three per-pull-request tests stop playing whole ga\u2026"
       },
-      "hold": {
-        "ends": "2026-11-06T09:12:55Z",
-        "lifted": "2026-11-06T07:47:41Z",
-        "owner": "claude-1",
-        "since": "2026-11-06T07:12:55Z",
-        "until": "2026-11-06T07:40:00Z",
-        "why": "5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-06T06:49:09Z",
       "owner_why": "it plans it",
@@ -18421,20 +18403,22 @@
       "provider": "claude-1",
       "queued_at": "2026-11-06T06:35:21Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42176859562",
+      "run_id": "pending:b9333e07-1793951537",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T06:49:09Z",
+      "started_at": "2026-11-06T07:52:56Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6678796752"
+      ],
       "waiting_comment": 6679397224
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T07:51:58Z",
+    "at": "2026-11-06T07:52:56Z",
     "url": "",
-    "what": "plan #3283 on claude-1"
+    "what": "build #3289 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-06T07:32:01Z",
