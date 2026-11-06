@@ -18227,6 +18227,13 @@
     "3283": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T08:02:05Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Tools-only change (crates/tools/src/fuzz.rs plus its README row); it reads constants from crates/run but changes no engine, AI or run rule and needs no agreement across crates, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
