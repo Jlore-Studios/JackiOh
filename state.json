@@ -15218,18 +15218,28 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/auth/OAuthButtons.test.tsx",
+            "apps/web/src/auth/OAuthButtons.tsx",
+            "spec/rulings/R3217000.md"
+          ],
+          "from": "e8557fae5325302fa80797288deb52cdf78954aa",
+          "main": "db9d2dfab90659de50fad5877f096ed85b2f9f42"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "42164798335",
-            "tier": "medium"
+            "run": "42206313999",
+            "tier": "strong"
           }
         ],
-        "sha": "e8557fae5325302fa80797288deb52cdf78954aa",
+        "sha": "6b50e290832a6f05855fbf1dd96d12686249405b",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
