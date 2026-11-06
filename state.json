@@ -15303,17 +15303,8 @@
       ]
     },
     "3286": {
-      "action": "plan",
-      "asks": [
-        "c:6687616330"
-      ],
-      "build_next": {
-        "from_run": "42238407924",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-06T15:06:40Z",
-        "until": "2026-11-06T15:36:40Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-06T15:06:21Z",
         "difficulty": "medium",
@@ -15332,10 +15323,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the spec and the code the change touches.\n- Bash: {\"command\": \"ls && cat .bot-plan.md 2>/dev/null | head -50; sed -n 150,230p spec/15-dungeon-run.md\"}\n- Grep: {\"pattern\": \"fn fight_won|fn random_artifact|fn deal_map|RUN_ARTIFACT_PERCENT|RUN_MINI_BOSS_DROP_TIER\", \"path\": \"/home/runner/work/_temp/work/item-3286/crates/run/src\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3286/crates/run/src/lib.rs\", \"offset\": 935, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3286/crates/run/src/lib.rs\", \"offset\": 1400, \"limit\": 180}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3286/crates/run/src/config.rs\", \"offset\": 90, \"limit\": 40}\n- Bash: {\"command\": \"ls spec/rulings | grep -E 'R32[0-9]{2}|R3[0-9]{3}' | head -30; ls spec/pending | head -30; ls spec/rulings | tail -5; grep -n \\\"Ruling numbers\\\" -A25 docs/issues-and-patches.md | head -7\u2026\n- Bash: {\"command\": \"wc -l crates/run/src/tests.rs; grep -n \\\"^fn \\\\|^ fn \\\\|^mod \\\\|^use \\\\|#\\\\[test\\\\]\\\" crates/run/src/tests.rs | head -150\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3286/crates/run/src/tests.rs\", \"limit\": 135}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3286/crates/run/src/tests.rs\", \"offset\": 255, \"limit\": 115}\n- Bash: {\"command\": \"cd crates/run/src; grep -n \\\"fn held_ids\\\\|fn run_reduce\\\\|fn run_create\\\\|fn gain_artifact\\\\|fn rng_for\\\\|fn new_rng\\\\|Rng::\\\\|fn passive_def\\\\|pub struct RunState\\\\|pub struct RunNode\\\u2026\n- Bash: {\"command\": \"cd crates/run/src; python3 -I - <<'EOF'\\nimport json\\nd=json.load(open('placeholder.json'))\\nprint(d.keys())\\nfor p in d['passives']:\\n print(p['id'],p.get('kind'),p.get('tier'),p.get('u\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; sed -n 40,60p crates/run/src/lib.rs; sed -n 86,160p crates/run/src/lib.rs; sed -n 420,445p crates/run/src/lib.rs; sed -n 686,760p crates/run/sr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -rn \\\"already held\\\\|unless already\\\\|held drop\\\\|RUN_ARTIFACT_PERCENT\\\\|RUN_MINI_BOSS_DROP_TIER\\\" --include=*.md --include=*.rs --include\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; ls spec/rulings | grep -E \\\"^R(2972|2706|2922|2701|3205|3206|3209)\\\" ; cat spec/rulings/R2972000.md | head -40; echo ----; cat spec/pending/321\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; sed -n 128,146p spec/15-dungeon-run.md; echo; grep -n \\\"R2706000\\\\|R2922001\\\\|R2701000\\\" spec/15-dungeon-run.md | head; cat spec/rulings/R27060\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; sed -n 50,110p spec/README.md; cat spec/rulings/R2922001.md | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; ls crates/run crates/run/src; grep -n \\\"run_node\\\\|fn rng\\\\|Rng\\\" crates/run/src/lib.rs | head -30; sed -n 1,40p crates/run/src/lib.rs; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -rln \\\"run_fold\\\\|RunFile\\\\|runFold\\\" --include=*.rs --include=*.ts --include=*.tsx --include=*.json --include=*.md . 2>/dev/null | grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; sed -n 1,80p crates/run/README.md; grep -n \\\"artifact\\\\|held\\\" crates/run/README.md | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -n \\\"log\\\\b\\\\|log:\\\" apps/web/src/dungeon/test/fixtures.ts | head -20; grep -n \\\"run_fold\\\\|RunFile\\\\|fn \\\\|#\\\\[test\\\\]\\\" crates/run/src/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -n \\\"artifact\\\" apps/web/src/dungeon/**/*.ts apps/web/src/dungeon/*.ts 2>/dev/null | grep -i \\\"node\\\\.\\\\|\\\\.artifact\\\\b\\\" | grep -v test |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; sed -n 185,215p apps/web/src/dungeon/test/fixtures.ts; grep -rn \\\"TakeArtifact\\\\|takeArtifact\\\" apps/web/src --include=*.ts --include=*.tsx -l \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -n -i \\\"drop\\\\|already\\\" docs/dungeon-run.md | head -20; sed -n 20,45p spec/15-dungeon-run.md; grep -n \\\"R3286\\\\|3286\\\" -r spec docs crate\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -rn \\\"crates/run\\\" crates/tools/src/*.rs scripts/ci-scope.sh | head -10; grep -n \\\"pub fn of\\\\|pub struct RunByFight\\\" -B2 -A12 crates/run\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3286; grep -rn \\\"\\\\.artifact\\\\b\\\" apps/web/src/dungeon --include=*.ts --include=*.tsx | grep -v \\\"test\\\\|fixtures\\\" | head; ls reviews | tail -3; sed\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3286/.bot-plan.md\", \"content\": \"# Draft plan for #3286 (planner notes)\\n\\nRead: spec/15-dungeon-run.md (\\u00a715.4 line 141, \\u00a715.6 line 175, \\u00\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No rule of the five holds: the change is one reward function in crates/run plus spec text and a ruling, 5 files, no engine, AI, cross-crate design or migration.\"} --> ## Goal A won boss whose dealt drop is already held (taken at the first mini-boss, bought\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-06T14:56:23Z",
       "owner_why": "it plans it",
@@ -15348,12 +15338,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-06T14:51:08Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42238407924",
+      "run_id": "pending:5a91fea7-1793977765",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T14:56:23Z",
+      "started_at": "2026-11-06T15:10:10Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6687616330"
+      ]
     },
     "3287": {
       "action": "build",
@@ -16093,9 +16085,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T15:09:10Z",
+    "at": "2026-11-06T15:10:10Z",
     "url": "",
-    "what": "build #3285 on claude-7"
+    "what": "build #3286 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T14:53:41Z",
