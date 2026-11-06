@@ -16560,6 +16560,8 @@
       }
     },
     "3318": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T18:02:18Z",
@@ -16573,8 +16575,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md | head -80 && git log --oneline -3 && git status --short\", \"description\": \"Read bot notes and branch state\"}\n- Grep: {\"pattern\": \"server api|server practice\", \"path\": \"/home/runner/work/_temp/work/item-3314/scripts/ci-shards.toml\", \"output_mode\": \"content\", \"-n\": true, \"-C\": 6}\n- Bash: {\"command\": \"sed -n 1,17p scripts/ci-shards.toml; echo ----; sed -n 80,200p .bot-notes.md; echo ----; cat .bot-journal.md | head -60; git log --oneline -8 -- crates/server/tests/api/practice.rs\", \"de\u2026\n- Bash: {\"command\": \"git merge-base --is-ancestor 952de68e32 HEAD && echo \\\"fix is ancestor of HEAD\\\"; grep -n \\\"server practice\\\" -B8 -A4 .github/ci/rust-test.toml | head -60; grep -n \\\"shards\\\\|(1, 1)\\\" bo\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3314/scripts/ci-shards.toml\", \"old_string\": \"\\\"server api\\\" = 1\\n\\\"server practice\\\" = 1\", \"new_string\": \"\\\"server api\\\" = 1\\n# \u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State (build pass, sonnet)\\n\\n- Plan checked: #3305's fix (952de68e32) is an ancestor of the branch base, so no count is needed.\\n- Done: comment block\u2026\n- said: Now the practice groups' timings (cold build, runs in the background) and the ci-scope test.\n- Bash: {\"command\": \"(cargo test -p jackioh-server --test server -- api::practice::r > /tmp/practice-r.log 2>&1; cargo test -p jackioh-server --test server -- api::practice:: --skip api::practice::r > /tmp/p\u2026\n- Bash: {\"command\": \"timeout 280 pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts 2>&1 | tail -15\", \"description\": \"Run the ci-scope web test\", \"timeout\": 300000}\n- Bash: {\"command\": \"timeout 280 pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts 2>&1 | head -20\", \"description\": \"See the head of the vitest failure\", \"timeout\": 300000}\n- Bash: {\"command\": \"until [ -f /tmp/practice.done ]; do sleep 10; done; grep -E \\\"test result|Running|error\\\" /tmp/practice-r.log /tmp/practice-rest.log\", \"description\": \"Wait for both practice runs to fini\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo \\\"fmt ok\\\"; cargo jackioh spec check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -3\", \"description\": \"Ru\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | tail -8; echo ---; (sh scripts/build-wasm.sh > /tmp/wasm.log 2>&1; echo \\\"wasm exit $?\\\"; tail -3 /tmp/wasm.log)\", \"description\"\u2026\n- Bash: {\"command\": \"timeout 280 pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts 2>&1 | tail -8; git status --short\", \"description\": \"Rerun ci-scope test with wasm built; check status\", \"timeout\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Ran: matrix.py exit 0; bot test_ci_matrix 15 OK; practice::r 27 passed in 5.74s; practice rest 19 passed in 5.12s (local, mostly warm build); fmt, spec ch\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 7 minutes\"} --> I made no count change, because the cause of the 7-minute jobs is already fixed on `main`. This PR only adds a comment to `scripts/ci-shards.toml` saying so, so the next bot doesn't raise the count. The real fix is #3305 (PR \u2026"
       },
       "issue": 3314,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-06T18:52:33Z",
         "from_run": "42267057460",
         "gates": [
           {
@@ -16666,7 +16671,11 @@
         "source": "build",
         "until": "2026-11-06T19:20:20Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-06T18:50:20Z",
+      "run_id": "pending:a01a9dab-1793991123",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16685,6 +16694,9 @@
         "provider": "claude-3",
         "run": "42267057460"
       },
+      "started_at": "2026-11-06T18:52:33Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16698,9 +16710,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T18:41:30Z",
+    "at": "2026-11-06T18:52:33Z",
     "url": "",
-    "what": "revise #3299 on claude-4"
+    "what": "review #3318 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T18:38:28Z",
