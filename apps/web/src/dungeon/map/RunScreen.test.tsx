@@ -20,6 +20,7 @@ import { navTestid } from "../../routes/nav.tsx";
 import { at } from "../../test/stubServer.ts";
 import { fightTestid } from "../fight/testids.ts";
 import type { Dungeon } from "../store.ts";
+import { expectOnePageTitle } from "../../test/pageTitle.ts";
 import { RUN_STAT_LABELS } from "./RunOverScreen.tsx";
 import { RunScreen } from "./RunScreen.tsx";
 import { dungeonMapTestid } from "./testids.ts";
@@ -201,6 +202,13 @@ function expectHud(): void {
   expect(chip).toHaveTextContent("Level 2");
   expect(screen.getByTestId(dungeonMapTestid.score)).toHaveTextContent("130");
 }
+
+describe("R3223000 the run screen's title", () => {
+  it("R3223000 the screen has one visible h1, the PageTitle", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
+    expectOnePageTitle("Dungeon Run");
+  });
+});
 
 describe("B24 the run's time on screen between fights", () => {
   // B24

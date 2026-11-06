@@ -43,7 +43,8 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
   "2026-10-31/2026-10-31": "5ac8a025c4405ca53208415c1aa5af89e7c6dceae143d442c3e36d5d5b3fc0a3",
   "2026-10-31/2026-11-01": "b21cb121e8ed21750bf3a141392ed8f0238f8cb657b05833d802e55094387dd2",
-  "2026-11-05/2026-11-05": "85285ca4c01ff4e3e39548d8795ffe6709cc7b58ea2538b557fca1b4dd7cfabb",
+  // Re-hashed for #3223 (R3223000): the page title moved into the top bar, so the text reads in another order; the words are unchanged.
+  "2026-11-05/2026-11-05": "6675858b7550f3446fa1237691722c26bdb5de0a4cf16739959fe64a5998553e",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -65,7 +66,7 @@ function canonical(): string | null {
 const region = (name: string): HTMLElement => screen.getByRole("region", { name });
 
 /** The headings of the rendered page's sections, in order. */
-const headings = (): string[] => [...document.querySelectorAll("h3")].map((heading) => heading.textContent ?? "");
+const headings = (): string[] => [...document.querySelectorAll("h2")].map((heading) => heading.textContent ?? "");
 
 beforeEach(() => {
   window.localStorage.clear();

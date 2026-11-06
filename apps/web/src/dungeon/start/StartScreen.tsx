@@ -17,6 +17,7 @@ import { CardFace, faceModel } from "../../cards/index.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
+import { Wordmark } from "../../routes/Wordmark.tsx";
 import { runCheckSetup, runConstants, runDailySeed, runLevelCost } from "../../wasm/index.ts";
 import { DUNGEON_FIRST_LEVEL, DUNGEON_LEVEL_STEP } from "../config.ts";
 import { isTypedSeed, randomSeed, seedLength, todayDate } from "../seed.ts";
@@ -455,12 +456,9 @@ export function StartScreen({ dungeon, onEnter }: StartScreenProps): ReactElemen
   const unfinished = dungeon.run !== null && !runFinished(dungeon.run);
   return (
     <div className="app-shell tavern dungeon-screen" data-testid={dungeonTestid.start}>
-      <BackLink to={paths.play} />
+      <BackLink to={paths.play} title={t("Dungeon Run")} />
       <section className="panel panel--auth dungeon-panel">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Dungeon Run")}</h2>
+        <Wordmark />
         <Progress dungeon={dungeon} />
         {unfinished ? <SavedRun dungeon={dungeon} onEnter={onEnter} /> : <Setup dungeon={dungeon} onEnter={onEnter} />}
       </section>

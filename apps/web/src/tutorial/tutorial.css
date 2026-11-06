@@ -66,12 +66,6 @@
   min-width: 0;
 }
 
-.app-shell .tutorial-path__title {
-  color: var(--text);
-  font-size: 21px;
-  font-weight: 750;
-}
-
 .tutorial-path__summary {
   display: flex;
   flex-wrap: wrap;
@@ -1088,10 +1082,6 @@
   .tutorial-path {
     gap: 12px;
     padding: 14px 12px 14px;
-  }
-
-  .app-shell .tutorial-path__title {
-    font-size: 20px;
   }
 }
 

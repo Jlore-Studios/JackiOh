@@ -15,6 +15,7 @@ import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
@@ -93,12 +94,9 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
   return (
     <div className="app-shell tavern leaderboard-screen one-screen" data-testid={leaderboardTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Leaderboard")} />
       <section className="panel panel--auth one-screen__frame">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Leaderboard")}</h2>
+        <Wordmark />
         <div className="row" role="group" aria-label={t("Ladder")} data-testid={leaderboardTestid.ladder}>
           {LADDERS.map((entry) => (
             <button

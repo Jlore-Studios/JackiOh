@@ -178,7 +178,7 @@
   justify-content: center;
 }
 
-.tavern.app-shell .brand h1 {
+.tavern.app-shell .brand__word {
   font-family: var(--tavern-serif);
   font-size: 44px;
   font-weight: 700;
@@ -200,38 +200,6 @@
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 1px #3a1f0c;
   filter: drop-shadow(0 0 10px rgba(255, 170, 60, 0.35)) drop-shadow(0 2px 0 #3a1f0c);
-}
-
-/* The screen's title, set between two brass rules. */
-.tavern.app-shell .panel--auth > h2,
-.tavern.app-shell .panel--auth > .auth-board__head > h2 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: -4px;
-  font-family: var(--tavern-serif);
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--tavern-gold-pale);
-  text-align: center;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
-.tavern.app-shell .panel--auth > h2::before,
-.tavern.app-shell .panel--auth > h2::after,
-.tavern.app-shell .panel--auth > .auth-board__head > h2::before,
-.tavern.app-shell .panel--auth > .auth-board__head > h2::after {
-  content: "";
-  flex: 1 1 24px;
-  min-width: 16px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--tavern-brass));
-}
-
-.tavern.app-shell .panel--auth > h2::after,
-.tavern.app-shell .panel--auth > .auth-board__head > h2::after {
-  background: linear-gradient(270deg, transparent, var(--tavern-brass));
 }
 
 /* ---- notices: gold for a message, ember for a problem -------------------------------------- */
@@ -793,7 +761,7 @@
     padding: 24px 20px 28px;
   }
 
-  .tavern.app-shell .brand h1 {
+  .tavern.app-shell .brand__word {
     font-size: 38px;
   }
 }
@@ -805,7 +773,7 @@
     padding-top: 20px;
   }
 
-  .tavern.app-shell .brand h1 {
+  .tavern.app-shell .brand__word {
     font-size: 34px;
   }
 }
@@ -843,7 +811,7 @@
 
   .tavern.app-shell.auth-screen > .panel--auth {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     position: relative;
     z-index: 1;
   }
@@ -879,28 +847,8 @@
     padding-top: 4px;
   }
 
-  .tavern.app-shell .panel--split .brand h1 {
+  .tavern.app-shell .panel--split .brand__word {
     font-size: 36px;
-  }
-
-  /* The title in a narrow column may take two lines, so its brass rules go under it, as one short
-     rule, rather than squeezing to nothing on either side. */
-  .tavern.app-shell .panel--split > .auth-board__head > h2 {
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 0;
-    font-size: 19px;
-    text-wrap: balance;
-  }
-
-  .tavern.app-shell .panel--split > .auth-board__head > h2::before {
-    display: none;
-  }
-
-  .tavern.app-shell .panel--split > .auth-board__head > h2::after {
-    flex: none;
-    width: 72px;
-    background: linear-gradient(90deg, transparent, var(--tavern-brass), transparent);
   }
 
   .tavern.app-shell .panel--split .form-card label {

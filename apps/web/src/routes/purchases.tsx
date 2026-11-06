@@ -23,6 +23,7 @@ import { ODDS_RARITIES, PITY_RARITIES, percent } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import type { SkeletonVariant } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -295,13 +296,10 @@ export default function PurchasesRoute(): ReactElement {
   const [signInBefore = "", signInAfter = ""] = t("{signIn} to see the odds and your pity counters.").split("{signIn}");
   return (
     <div className="app-shell tavern privacy-screen purchases-screen" data-testid={purchasesTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Purchases")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Purchases")}</h2>
+        <Wordmark />
         <p data-testid={purchasesTestid.disclaimer}>
           {t("You buy packs with Jlore, which you earn by playing. Jlore is never sold for real money.")}
         </p>

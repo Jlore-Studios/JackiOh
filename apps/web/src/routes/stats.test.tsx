@@ -23,6 +23,7 @@ import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 import StatsRoute from "./stats.tsx";
 
@@ -326,6 +327,13 @@ describe("R654 public statistics route", () => {
     expect(screen.queryByText("Provisional statistics")).toBeNull();
     expect(screen.queryByText("How to read these statistics")).toBeNull();
     expect(document.body.textContent).not.toContain("AI games + live games (provisional)");
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.summaryTiles, undefined, SLOW)).toBeInTheDocument();
+    expectOnePageTitle("Statistics");
   });
 
   it("R1646000 the fixed top keeps one summary tile, the patch's games, and no top or lowest card", async () => {

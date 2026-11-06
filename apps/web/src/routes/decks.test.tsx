@@ -30,6 +30,7 @@ import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import DecksRoute from "./decks.tsx";
 import { navTestid } from "./nav.tsx";
 
@@ -128,6 +129,16 @@ describe("the gate (§9.4)", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/login");
     });
+  });
+
+  it("R3223000 the loading shell and the loaded workshop have one visible h1, the PageTitle, with one title", async () => {
+    render(<DecksRoute />);
+    expect(screen.queryByTestId("workshop")).toBeNull();
+    const loading = expectOnePageTitle("Decks");
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(expectOnePageTitle("Decks").textContent).toBe(loading.textContent);
   });
 
   it("keeps an active account on the workshop", async () => {

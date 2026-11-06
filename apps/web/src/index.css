@@ -279,7 +279,7 @@ h3,
   gap: 10px;
 }
 
-.brand h1 {
+.brand__word {
   color: var(--text);
 }
 

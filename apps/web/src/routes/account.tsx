@@ -44,6 +44,7 @@ import {
 import { hasLinkResult } from "../auth/redirect.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import LinkedAccounts from "../auth/LinkedAccounts.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
@@ -285,13 +286,10 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
   return (
     <div className="app-shell tavern account-screen one-screen" data-testid={accountTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Your account")} />
 
       <section className="panel panel--auth one-screen__frame">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Your account")}</h2>
+        <Wordmark />
         <div className="one-screen__body one-screen__stack">
           {error !== null ? (
             <>

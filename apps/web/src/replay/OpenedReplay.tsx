@@ -41,7 +41,7 @@ export default function OpenedReplay({ load, onLeave, ...player }: OpenedReplayP
   if (source !== null) return <ReplayPlayer source={source} onLeave={onLeave} {...player} />;
   return (
     <div className="app-shell">
-      <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} />
+      <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} title={t("Replays")} />
       {failure === null ? (
         <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
       ) : (

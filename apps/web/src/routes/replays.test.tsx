@@ -37,6 +37,7 @@ import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -135,6 +136,17 @@ describe("R768000 /replays", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("R3223000 the list and an opened replay each have one visible h1, the PageTitle, and the lists are h2 section headings", async () => {
+    renderRoute(await storeWithGame());
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    expectOnePageTitle("Replays");
+    for (const section of screen.getAllByRole("heading", { level: 2 })) expect(section).toHaveClass("section-heading");
+
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await screen.findByTestId(replayTestid.player);
+    expectOnePageTitle("Replays");
   });
 
   it("R768000 says so when the device keeps no game", async () => {
