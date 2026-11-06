@@ -34620,6 +34620,9 @@
       "2026-11-06T06:52:55Z,claude-1,stream,call,42176859562,95,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
       "2026-11-06T06:53:40Z,claude-1,stream,call,42176859562,96,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
       "2026-11-06T06:54:35Z,claude-1,stream,call,42176859562,97,2026-11-06T07:40:00Z,,,allowed_warning,100,,"
+    ],
+    "runs": [
+      "2026-11-06T06:54:36Z,42176859562,claude-1,opus,plan,3289,medium,planned,,3.4,43,28521,1656927,0.8075,92,97,,,13.8,,fresh,,1"
     ]
   },
   "version": 1
