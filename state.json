@@ -24640,6 +24640,10 @@
         {
           "at": "2026-11-06T11:32:15Z",
           "minutes": 7.6
+        },
+        {
+          "at": "2026-11-06T12:25:15Z",
+          "minutes": 14.4
         }
       ],
       "tokens_spent": [
@@ -25860,14 +25864,21 @@
           "cost": 1.571,
           "input": 53,
           "output": 60897
+        },
+        {
+          "at": "2026-11-06T12:25:15Z",
+          "cache": 7530705,
+          "cost": 1.9664,
+          "input": 116,
+          "output": 53809
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-06T16:10:00Z",
-          "utilization": 0.04
+          "utilization": 0.1
         },
-        "observed_at": "2026-11-06T11:32:15Z",
+        "observed_at": "2026-11-06T12:25:15Z",
         "status": "allowed"
       }
     },
@@ -32317,7 +32328,13 @@
     "readings": [
       "2026-11-06T11:09:48Z,claude-1,ping,before,42206313999,43,2026-11-06T12:40:00Z,,,allowed,100,,",
       "2026-11-06T11:10:36Z,claude-1,stream,call,42206313999,44,2026-11-06T12:40:00Z,,,allowed,100,,",
-      "2026-11-06T11:54:34Z,claude-1,stream,call,42206313999,54,2026-11-06T12:40:00Z,,,allowed,100,,"
+      "2026-11-06T11:54:34Z,claude-1,stream,call,42206313999,54,2026-11-06T12:40:00Z,,,allowed,100,,",
+      "2026-11-06T11:47:21Z,claude-6,ping,before,42212286175,5,2026-11-06T16:10:00Z,,,allowed,70,,",
+      "2026-11-06T11:48:05Z,claude-6,stream,call,42212286175,6,2026-11-06T16:10:00Z,,,allowed,70,,",
+      "2026-11-06T11:51:50Z,claude-6,stream,call,42212286175,7,2026-11-06T16:10:00Z,,,allowed,70,,",
+      "2026-11-06T11:52:50Z,claude-6,stream,call,42212286175,8,2026-11-06T16:10:00Z,,,allowed,70,,",
+      "2026-11-06T11:55:05Z,claude-6,stream,call,42212286175,9,2026-11-06T16:10:00Z,,,allowed,70,,",
+      "2026-11-06T11:56:35Z,claude-6,stream,call,42212286175,10,2026-11-06T16:10:00Z,,,allowed,70,,"
     ],
     "runs": [
       "2026-11-06T11:54:54Z,42206313999,claude-1,sonnet+opus,revise,3277,medium,approved,,9.4,30,8142,1036237,1.0612,43,54,,,0.6,claude-1,resumed,,2"
