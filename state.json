@@ -18225,17 +18225,8 @@
       }
     },
     "3283": {
-      "action": "plan",
-      "asks": [
-        "c:6678783026"
-      ],
-      "build_next": {
-        "from_run": "42183685759",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-06T08:02:16Z",
-        "until": "2026-11-06T08:32:16Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-06T08:02:05Z",
         "difficulty": "medium",
@@ -18254,10 +18245,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3283; git status --short | head -5; git log --oneline -1; git diff --stat HEAD | tail -1; grep -n \\\"RUN_START\\\\|StartKind::Run\\\" crates/tools/src/fuz\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Tools-only change (crates/tools/src/fuzz.rs plus its README row); it reads constants from crates/run but changes no engine, AI or run rule and needs no agreement across crates, so none of the five hard lines holds.\"} --> ## Goal `cargo jackioh fuzz`, in bo\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-06T06:48:13Z",
       "owner_why": "it plans it",
@@ -18270,12 +18260,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-06T06:35:00Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42183685759",
+      "run_id": "pending:aaad5d27-1793952187",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T07:51:58Z",
+      "started_at": "2026-11-06T08:03:48Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6678783026"
+      ],
       "waiting_comment": 6679452654
     },
     "3287": {
@@ -18417,9 +18409,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T07:52:56Z",
+    "at": "2026-11-06T08:03:48Z",
     "url": "",
-    "what": "build #3289 on claude-1"
+    "what": "build #3283 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-06T07:46:56Z",
