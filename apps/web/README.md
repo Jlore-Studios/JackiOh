@@ -83,6 +83,13 @@ the replays and the deck screens are not `.tavern`, and the tavern's wood-button
 `top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
 draws its own buttons.
 
+The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
+(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
+language, the gear, so Back is the leftmost control and the gear the rightmost. On a phone (600 px, the touch
+rule's) the line takes a row under Back and the end group. Only `routes/top-bar.css` places those controls:
+a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
+a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`

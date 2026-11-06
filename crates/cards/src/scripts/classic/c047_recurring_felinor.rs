@@ -97,6 +97,7 @@ mod tests {
     const FELINOR: &str = "classic-047";
     const ACQUISITION: &str = "classic-034";
     const GAMBIT: &str = "classic-052";
+    const REWIND: &str = "classic-054";
     const SHEEPISH: &str = "core-041"; // Trap: when your opponent plays a Unit, after its Cry: transform it into a Sheep.
     const BREAD: &str = "core-018"; // Field Trap: when a turn ends with mana unspent, summon a Bread Token.
     const VANILLA: &str = "core-008";
@@ -303,6 +304,32 @@ mod tests {
                     .map(|card| card["defId"].clone())
                     .collect();
                 assert!(!graveyard_defs.contains(&json!(FELINOR)));
+            }
+
+            // Issue #3182's seed 118: Rewind triggers this Cry out of the graveyard, where it runs with
+            // no card, and the Ancient Acquisition it casts returns this card to its owner's hand.
+            #[test]
+            fn r3182000_rewound_out_of_your_graveyard_its_cry_returns_it_and_the_opponent_never_reads_whose_hook_ran() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [REWIND, FILLER], "graveyard": [FELINOR] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                let felinor = s.card(FELINOR).id.clone();
+                s.play(REWIND, json!({ "targets": pick::id(&felinor) }));
+                s.expect_in_zone(FELINOR, "hand");
+                let marker = |viewer: PlayerId| -> Vec<Value> {
+                    js(&s.view(viewer))["events"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|event| event["type"] == "hookResolving" && event["hook"] == "cry")
+                        .filter(|event| event["controller"] == "p1" && event["defId"] != ACQUISITION && event["defId"] != REWIND)
+                        .collect()
+                };
+                assert_eq!(marker(P1), vec![json!({ "type": "hookResolving", "sourceId": felinor, "defId": FELINOR, "controller": "p1", "hook": "cry" })]);
+                assert_eq!(marker(P2), vec![json!({ "type": "hookResolving", "sourceId": HIDDEN_ID, "defId": HIDDEN_ID, "controller": "p1", "hook": "cry" })]);
+                assert!(!js(&s.view(P2)).to_string().contains(FELINOR));
             }
         }
 
