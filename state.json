@@ -17354,15 +17354,8 @@
       }
     },
     "3257": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42139501613",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-06T01:43:55Z",
-        "until": "2026-11-06T02:13:55Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17374,10 +17367,9 @@
         "reason": "planned on sonnet",
         "trail": "st you = zon\u2026\n- Bash: {\"command\": \"sed -n 1,120p apps/web/src/cards/fit.ts\"}\n- Bash: {\"command\": \"cat > /tmp/p3257-proto.js <<'EOF'\\n() => {\\n document.getElementById('proto-style')?.remove();\\n document.querySelectorAll('.field-badges').forEach((e) => e.remove());\\n const style = do\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh resize 390 664 >/dev/null 2>&1; sh scripts/browse.sh eval \\\"() => {\\n const z = document.querySelector('.board .field .zone[data-side=\\\\\\\"you\\\\\\\"][data-row=\\\\\\\"units\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh resize 390 844 >/dev/null 2>&1; sh scripts/browse.sh eval \\\"$(cat /tmp/p3257-proto.js)\\\" --raw 2>&1 | tail -1 | cut -c1-80; sh scripts/browse.sh screenshot --filenam\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3257/.cache/browse/p3257-proto-844.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh click \\\"getByText('View the board')\\\" >/dev/null 2>&1; sh scripts/browse.sh eval \\\"$(cat /tmp/p3257-proto.js)\\\" --raw 2>&1 | tail -1 | cut -c1-60; sh scripts/browse.\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3257/.cache/browse/p3257-proto-844.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh eval \\\"() => { const j = window.__jackioh; const v = j.view(); const sw = j.legal().filter(a => a.type === 'switchPosition'); return JSON.stringify({n: sw.length, ac\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh resize 390 664 >/dev/null 2>&1; sh scripts/browse.sh eval \\\"() => {\\n const zs = [...document.querySelectorAll('.board .field .zone[data-side=\\\\\\\"you\\\\\\\"][data-row=\\\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh goto \\\"http://localhost:5173/dev/hotseat?seed=7&a=first20&b=cheap20\\\" >/dev/null 2>&1; sh scripts/browse.sh eval \\\"async () => {\\n const until = Date.now() + 10000;\\\u2026\n- Bash: {\"command\": \"cat > /tmp/p3257-proto2.js <<'EOF'\\n(args) => {\\n const [K, withControl] = [3, true];\\n document.getElementById('proto-style')?.remove();\\n document.querySelectorAll('.field-badges').for\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh eval \\\"$(cat /tmp/p3257-proto2.js)\\\" --raw 2>&1 | head -12\"}\n- Bash: {\"command\": \"sed -i 's| const results = {};| const results = {}; const zb = z.getBoundingClientRect(); const cs = getComputedStyle(z);|; s| const zb = z.getBoundingClientRect(); const cs = getCompute\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='/tmp/p3257-proto2.js'\\ns=open(p).read()\\ns=s.replace(\\\"const over = s.scrollHeight > s.clientHeight + 1;\\\",\\\"const items = [...s.querySelectorAll('.activ\u2026\n- Bash: {\"command\": \"sed -n 209,330p apps/web/src/test/fixtures.ts | grep -n \\\"keywords\\\\|activations\\\\|position\\\\|defId\\\" | head -40; grep -rn \\\"VIEWPORTS\\\" e2e/cypress/component/card-faces.cy.tsx | head -3\u2026\n- Bash: {\"command\": \"cat > /tmp/p3257-pad.js <<'EOF'\\n() => {\\n document.getElementById('proto-pad')?.remove();\\n const style = document.createElement('style');\\n style.id = 'proto-pad';\\n style.textContent \u2026\n- Bash: {\"command\": \"sh scripts/browse.sh click \\\"getByText('View the board')\\\" >/dev/null 2>&1; sh scripts/browse.sh resize 390 844 >/dev/null 2>&1; sh scripts/browse.sh eval \\\"$(cat /tmp/p3257-pad.js)\\\" --\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3257/.cache/browse/p3257-pad-844.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh eval \\\"() => {\\n const zs = [...document.querySelectorAll('.board .field .zone[data-side=\\\\\\\"you\\\\\\\"][data-row=\\\\\\\"units\\\\\\\"]')];\\n const c = zs[0].querySelector(':s\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3257/.cache/browse/p3257-def-844.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh resize 390 664 >/dev/null 2>&1; sh scripts/browse.sh eval \\\"() => {\\n const z = [...document.querySelectorAll('.board .field .zone[data-side=\\\\\\\"you\\\\\\\"][data-row=\\\\\u2026\n- Bash: {\"command\": \"timeout 280 pnpm --dir apps/web exec vitest run src/game/position-switch.test.tsx src/game/field-badges.test.tsx 2>&1 | tail -15\", \"timeout\": 300000}\n- Bash: {\"command\": \"grep -n \\\"ResizeObserver\\\" apps/web/src/test/setup.ts | head -3; grep -n \\\"export function readSheet\\\" -A 12 apps/web/src/test/setup.ts | head -20; sed -n 25,60p apps/web/src/test/phoneB\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh close >/dev/null 2>&1; pkill -f \\\"vite --port 5173\\\" ; sleep 1; git status --short | head -5; echo clean-check-done\"}\n- tool error: Exit code 144\n- Bash: {\"command\": \"git status --short | head -5; echo done\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3257/.bot-plan.md\", \"content\": \"# Draft plan for #3257 (planner notes; final message is the plan)\\n\\n## Measured in real Chromium (390x664 / 360x780 /\u2026\n- Bash: {\"command\": \"grep -rn \\\"hang\\\\|hung\\\" apps/web/src/game/*.ts apps/web/src/game/*.tsx apps/web/src/game/*.css apps/web/README.md e2e/cypress/component/board-layout.cy.tsx e2e/cypress/component/card-fa\u2026\n- Bash: {\"command\": \"grep -rnwE \\\"hang|hangs|hanging|hung\\\" apps/web/src/game apps/web/README.md e2e/cypress/component/board-layout.cy.tsx e2e/cypress/component/card-faces.cy.tsx 2>/dev/null | grep -v \\\"boar\u2026\n- Bash: {\"command\": \"ls e2e/node_modules 2>/dev/null | head -3; ls e2e/node_modules/.bin 2>/dev/null | grep -c . ; grep -n \\\"typecheck\\\" e2e/package.json | head -4\"}\n- Bash: {\"command\": \"cd e2e && timeout 280 pnpm exec tsc -p cypress/component/tsconfig.json 2>&1 | tail -5; echo \\\"exit $?\\\"\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3257 && git status --short | head; timeout 250 pnpm --dir e2e exec tsc -p cypress/component/tsconfig.json 2>&1 | tail -3; echo \\\"tsc exit ${PIPESTATU\u2026\n- Bash: {\"command\": \"sed -n 370,392p e2e/cypress/component/card-faces.cy.tsx; sed -n 380,399p e2e/cypress/component/card-faces.cy.tsx >/dev/null; grep -n \\\"fullBoardView\\\\|activations\\\" e2e/cypress/component\u2026\n- said: ## Goal On the phone portrait layout only (`@media (max-width: 600px)` in `apps/web/src/game/board.css`), make two changes: 1. **Empty zones.** Each empty zone's `::before` placeholder (the unit oval and the backrow dashed outline) is sized to the box a field card takes there, less a 2px inset. Its\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-06T00:48:32Z",
       "owner_why": "it plans it",
@@ -17390,9 +17382,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-05T23:31:35Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42139501613",
+      "run_id": "pending:8444414a-1793929533",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T00:48:32Z",
+      "started_at": "2026-11-06T01:46:14Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17618,9 +17610,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T01:45:19Z",
+    "at": "2026-11-06T01:46:14Z",
     "url": "",
-    "what": "build #3209 on claude-6"
+    "what": "build #3257 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T01:25:13Z",
