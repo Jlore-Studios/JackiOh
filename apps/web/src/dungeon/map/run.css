@@ -335,7 +335,7 @@ button.dungeon-run-card:disabled {
 
 /* A narrow screen stacks the map's nodes and narrows the card grid; the body keeps the page's
    only scrollbar. */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .dungeon-run-screen {
     padding: 8px;
   }

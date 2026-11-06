@@ -458,7 +458,7 @@
 }
 
 /* A phone on its side: the slots give up a little height so Redeem stays on the first screen. */
-@media (orientation: landscape) and (max-height: 500px) and (min-width: 600px) {
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 601px) {
   .tavern .code-field__segment {
     min-height: 46px;
     font-size: 18px;

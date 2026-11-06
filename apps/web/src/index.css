@@ -640,7 +640,7 @@ h3,
   flex: none;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .app-shell {
     padding: 20px 16px 36px;
   }
