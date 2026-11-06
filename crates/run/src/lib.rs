@@ -977,6 +977,22 @@ fn random_artifact(
     rng.pick(&open).map(|p| p.id.clone())
 }
 
+/// §15.7's roll for a won fight's artifact: one at `RUN_ARTIFACT_PERCENT` of `kind`, of `least` or
+/// better, never one held.
+fn roll_reward_artifact(
+    state: &RunState,
+    content: &RunContent,
+    kind: RunNodeKind,
+    least: Option<RunTier>,
+    rng: &mut Rng,
+) -> Option<String> {
+    if rng.int(PERCENT) < RUN_ARTIFACT_PERCENT.of(kind) {
+        random_artifact(content, &held_ids(state), least, rng)
+    } else {
+        None
+    }
+}
+
 fn fight_node(content: &RunContent, kind: RunNodeKind, held: &[&str], rng: &mut Rng) -> RunNode {
     if kind == RunNodeKind::Ghost {
         // DR5: a ghost is a player's deck from a death near here; until snapshots exist, a random one.
@@ -1476,11 +1492,14 @@ fn fight_won(state: &mut RunState, content: &RunContent, report: &FightReport, r
         });
     earn(state, coins, tickets);
     let artifact = match node.artifact {
-        Some(id) => Some(id).filter(|id| !held_ids(state).contains(&id.as_str())),
-        None if rng.int(PERCENT) < RUN_ARTIFACT_PERCENT.of(kind) => {
-            random_artifact(content, &held_ids(state), None, rng)
+        Some(id) if !held_ids(state).contains(&id.as_str()) => Some(id),
+        // R3286000: a drop already held is replaced by a roll; a mini-boss's is of
+        // `RUN_MINI_BOSS_DROP_TIER` or better, as its own dealt drop is (§15.6).
+        Some(_) => {
+            let least = (kind == RunNodeKind::MiniBoss).then_some(RUN_MINI_BOSS_DROP_TIER);
+            roll_reward_artifact(state, content, kind, least, rng)
         }
-        None => None,
+        None => roll_reward_artifact(state, content, kind, None, rng),
     };
     state.phase = RunPhase::Reward {
         artifact,
