@@ -16412,17 +16412,16 @@
     "what": "plan #3213 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-06T17:01:43Z",
+    "at": "2026-11-06T17:17:27Z",
     "notes": [
-      "#3299: `claude-4` can start again, so its hold is lifted",
-      "#3212: `claude-4` can start again, so its hold is lifted",
-      "started revise #3299 on claude-4 (run 42258216681)",
-      "started build #3212 on claude-4 (run 42258351222)",
-      "nothing more to start: nothing is queued",
+      "#3213 needs a plan",
+      "delivered build #3212 on claude-4 (run 42258351222): interrupted",
+      "delivered review #3312 on claude-3 (run 42255434055): approved",
+      "started review #3268 on claude-3 (run 42260849923)",
+      "started plan #3213 on claude-8 (run 42260970465)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` is idle, but nothing queued is for it; `claude-4` 5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-06T18:00:00Z; it can start a build or a plan again in 37m; `claude-6` is idle, but nothing queued is for it; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 53h 37m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 11h 37m; waiting for their owners: #3212 held for `claude-4` until 12:00 (5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%))",
       "pruned 1 plan file(s) older than 7 days",
-      "#3307: closed, so `bot:merging` is off",
-      "#3304: closed, so `bot:merging` is off",
-      "#3268: closed, so `bot:merging` is off"
+      "#3309: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17128,7 +17127,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T17:01:43Z",
+  "loop_tick": "2026-11-06T17:17:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
