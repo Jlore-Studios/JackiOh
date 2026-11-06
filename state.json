@@ -15670,13 +15670,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-4",
       "queued_at": "2026-11-06T08:57:44Z",
-      "run_id": "42191628076",
+      "run_id": "pending:be8b87d1-1793969966",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 100,
-      "started_at": "2026-11-06T08:59:21Z",
+      "started_at": "2026-11-06T13:00:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16053,9 +16054,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T12:59:11Z",
+    "at": "2026-11-06T13:00:04Z",
     "url": "",
-    "what": "review #3272 on claude-1"
+    "what": "spot-check #3296 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T12:40:21Z",
@@ -32241,7 +32242,15 @@
         "n": 100,
         "pr": 3296,
         "queued_at": "2026-11-06T12:55:44Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:be8b87d1-1793969966",
         "sha": "e30e74f84a556a1a7d7a78fb9339981f56091178",
+        "started_at": "2026-11-06T13:00:04Z",
         "status": "queued",
         "title": "Patch: delete the fuse-onto and clear-plague engine verbs that nothing has called since the custom-card host went",
         "tries": 0
