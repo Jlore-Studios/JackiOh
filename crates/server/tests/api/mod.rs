@@ -47,6 +47,7 @@ pub mod seats;
 pub mod series;
 pub mod settings;
 pub mod shares;
+pub mod social;
 pub mod stats;
 pub mod tokens;
 pub mod tutorial;

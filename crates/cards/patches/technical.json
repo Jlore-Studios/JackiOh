@@ -5543,5 +5543,28 @@
     "title": "production draws Google's own sign-in button again, now that Google lists jackioh.com",
     "kind": "app",
     "player": "On jackioh.com, Google's sign-in names JackiOh again, not the supabase.co address."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "1a6e7b8e700126decef5427b0987cca6bd4ffa07",
+    "pr": 3197,
+    "title": "bot: build pass 1 for #3189",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "46a434515d720418a7b658e394882b057ceb7c29",
+    "pr": 3195,
+    "title": "the Collection previews a card on hover, as the card, in hand and on the board",
+    "kind": "app",
+    "player": "Rest the mouse on a card in the Collection to see it as a card, in your hand and on the board, with its Radiant face one click away."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "2b6855b2e7f7292c691f92900ee5665c2633e0e1",
+    "pr": 3200,
+    "title": "two-step sign-in shows its QR code: the auth server's own SVG is drawn",
+    "kind": "app",
+    "player": "Turning on two-step sign-in shows the QR code to scan again, not only the key."
   }
 ]

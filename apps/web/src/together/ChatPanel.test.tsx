@@ -53,8 +53,7 @@ function serve(messages: ChatMessage[], special?: (call: Call) => Reply | undefi
       messages.push(sent);
       return { status: 201, body: { message: sent } };
     }
-    if (call.method === "GET" && call.path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
-    if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: { incoming: [], outgoing: [] } };
+    if (call.method === "GET" && call.path === "/api/social") return { status: 200, body: { incoming: [], outgoing: [], unread: {} } };
     return undefined;
   });
 }
@@ -692,7 +691,7 @@ describe("B58 chat from the Friends panel", () => {
       </>,
     );
     await settle({ advance: SOCIAL_POLL_MS + 1 });
-    expect(server.to("GET", "/api/chat/unread")).toHaveLength(2);
+    expect(server.to("GET", "/api/social")).toHaveLength(2);
     expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
     expect(screen.queryByTestId("chat-input")).toBeNull();
     expect(server.calls.some((call) => call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`)).toBe(false);

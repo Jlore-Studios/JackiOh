@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0084: a match keeps the win-rate snapshot it started with
+-- Migration 0085: a match keeps the win-rate snapshot it started with
 -- (SPEC §8.8 row 50, §8.9 row 2, §9.3; R3049000; issue #3049)
 -- ============================================================================
 -- Serves R3049000: M #50 CN Tech and M+ #2 NA Tech read the server's cached
@@ -18,7 +18,7 @@
 -- No row is rewritten and nothing is granted: service_role reads and writes
 -- matches as before, and app.live_matches() returns the whole row.
 --
--- Apply order: ... -> 0004 (matches) -> ... -> 0081 -> 0082 -> 0083 -> 0084 (this file).
+-- Apply order: ... -> 0004 (matches) -> ... -> 0081 -> 0082 -> 0083 -> 0084 -> 0085 (this file).
 -- Safe to re-apply: add-column-if-not-exists, drop-constraint-if-exists then
 -- add.
 -- ============================================================================
@@ -32,4 +32,4 @@ comment on column public.matches.win_rates is
   $$R3049000: the win-rate snapshot the match started with, as the game kept it
   ({ patch, source, cards: [{ id, wins, games }] }), which every fold of the
   match is handed; NULL on a match handed none and on every match from before
-  migration 0084, which folds against its version's frozen table (R1266000).$$;
+  migration 0085, which folds against its version's frozen table (R1266000).$$;

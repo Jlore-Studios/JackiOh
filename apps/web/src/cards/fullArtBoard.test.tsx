@@ -15,7 +15,7 @@ import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { readSheet } from "../test/setup.ts";
 import { unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
-import { resetCosmeticsForTests, writeCardFullArt, writeCardVersion } from "./cosmetics.ts";
+import { resetCosmeticsForTests, writeCardFullArt, writeCardLevel } from "./cosmetics.ts";
 import {
   FULL_ART_CARDS,
   FULL_ARTS_OF_CARD,
@@ -28,15 +28,17 @@ import {
   type FullArtOwnership,
 } from "./fullArt.ts";
 import { MinionFace } from "./MinionFace.tsx";
+import { ownedCardCosmetics } from "./ownedFullArt.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import {
-  AUGMENT_ANIMATED_ID,
-  AUGMENT_SIGNATURE_ID,
   NORMAL_LOOK,
   VERSION_ALT_FULL_ART_ID,
+  VERSION_ANIMATED_ID,
+  VERSION_FULL_ART_ANIMATED_ID,
   VERSION_FULL_ART_ID,
-  lookOf,
+  VERSION_FULL_ART_SIGNED_ID,
+  lookOfLevel,
 } from "./versions.ts";
 
 const DEFS = Object.values(CATALOG);
@@ -94,9 +96,9 @@ function follows(earlier: Element | null, later: Element | null): boolean {
   return (earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
-/** The pick that makes `id`'s version `version`, worn: a card pick the store keeps on the device. */
-function wear(id: string, version: string | null, augments: readonly string[] = []): void {
-  writeCardVersion(id, version, augments);
+/** The pick that makes `id` wear the level `level` (R3015005; null the normal face): a card pick the store keeps on the device. */
+function wear(id: string, level: string | null): void {
+  writeCardLevel(id, level);
 }
 
 /** The card ids `version` is offered on that the Full-art cards setting does not already print full art on. */
@@ -191,7 +193,8 @@ describe("R3046000 a full-art Unit on the board", () => {
 
     // Where ownership decides, only the viewer's own unit whose full art is owned prints it (R1313000).
     const epic = FULL_ARTS_OF_CARD.get("core-004")?.get("Epic") ?? "";
-    const owned: FullArtOwnership = new Map([["core-004", new Set([epic])]]);
+    // R3015006: a retired full art owns the levels it maps to, as the client reads the ledger.
+    const owned: FullArtOwnership = ownedCardCosmetics({ cards: [{ cardId: "core-004", cosmeticId: epic }], account: [] });
     expect(minionOf("core-004", { owned }).getAttribute("data-full-art"), "owned, own copy").toBe("true");
     cleanup();
     expect(minionOf("core-004", { owned: NO_FULL_ART }).hasAttribute("data-full-art"), "unowned").toBe(false);
@@ -248,7 +251,8 @@ describe("R3046000 a full-art Unit on the board", () => {
   });
 
   it("R3046000 the board holds the art still: Animated and Signature move and sign a full face alone", () => {
-    wear("core-004", VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+    // R3015000: Full art's signed level, animated and signed.
+    wear("core-004", VERSION_FULL_ART_SIGNED_ID);
     const full = (() => {
       const { container } = render(<CardFace face={faceModel({ defId: "core-004", def: defOf("core-004"), radiant: false })} layout="full" worn />);
       return container.querySelector<HTMLElement>(".cf");
@@ -271,7 +275,8 @@ describe("R3046000 a full-art Unit on the board", () => {
   });
 
   it("R3046000 a card that wears Animated alone, on its normal face, keeps its window", () => {
-    wear("core-002", null, [AUGMENT_ANIMATED_ID]);
+    // R3015000: the Default variant's animated level.
+    wear("core-002", VERSION_ANIMATED_ID);
     const cf = minionOf("core-002");
     expect(cf.hasAttribute("data-full-art")).toBe(false);
     expect(cf.querySelector(".cf-art--oval")).not.toBeNull();
@@ -324,7 +329,8 @@ describe("R3046000 a full-art face-up backrow card", () => {
     cleanup();
 
     const epic = FULL_ARTS_OF_CARD.get("core-018")?.get("Epic") ?? "";
-    const owned: FullArtOwnership = new Map([["core-018", new Set([epic])]]);
+    // R3015006: a retired full art owns the levels it maps to, as the client reads the ledger.
+    const owned: FullArtOwnership = ownedCardCosmetics({ cards: [{ cardId: "core-018", cosmeticId: epic }], account: [] });
     expect(backrowOf("core-018", { owned }).getAttribute("data-full-art"), "owned, own card").toBe("true");
     cleanup();
     expect(backrowOf("core-018", { owned: NO_FULL_ART }).hasAttribute("data-full-art"), "unowned").toBe(false);
@@ -346,14 +352,21 @@ describe("R3046000 boardLookOf", () => {
   it("R3046000 gives the version still where the full face prints full art, and null where it does not", () => {
     const face = faceModel({ defId: "core-004", def: defOf("core-004"), radiant: false });
     const plain = faceModel({ defId: "core-002", def: defOf("core-002"), radiant: false });
-    const full = lookOf(true);
-    expect(boardLookOf(face, full)).toEqual({ version: VERSION_FULL_ART_ID, animated: false, signed: false });
-    // The augments are the full face's alone.
-    expect(boardLookOf(face, lookOf(true, [AUGMENT_ANIMATED_ID]))).toEqual({ version: VERSION_FULL_ART_ID, animated: false, signed: false });
+    const full = lookOfLevel(VERSION_FULL_ART_ID);
+    const still = { level: VERSION_FULL_ART_ID, version: VERSION_FULL_ART_ID, animated: false, signed: false };
+    expect(boardLookOf(face, full)).toEqual(still);
+    // Motion and a signature are the full face's alone (R3015000: the levels above the art).
+    expect(boardLookOf(face, lookOfLevel(VERSION_FULL_ART_ANIMATED_ID))).toEqual(still);
+    expect(boardLookOf(face, lookOfLevel(VERSION_FULL_ART_SIGNED_ID))).toEqual(still);
     expect(boardLookOf(face, NORMAL_LOOK)).toBeNull();
     expect(boardLookOf(plain, full)).toBeNull();
     // Alt full art lays its art across the face as Full art does (R2940001); `useCardLook` holds a pick to the offer.
-    expect(boardLookOf(face, lookOf(VERSION_ALT_FULL_ART_ID))).toEqual({ version: VERSION_ALT_FULL_ART_ID, animated: false, signed: false });
+    expect(boardLookOf(face, lookOfLevel(VERSION_ALT_FULL_ART_ID))).toEqual({
+      level: VERSION_ALT_FULL_ART_ID,
+      version: VERSION_ALT_FULL_ART_ID,
+      animated: false,
+      signed: false,
+    });
   });
 });
 

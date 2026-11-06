@@ -649,7 +649,7 @@ pub struct MatchRow {
     pub final_hash: Option<String>,
     /// R3049000: the win-rate snapshot the match was handed as it started, as the game kept it
     /// (`GameState.winRates`), a `create_game` input frozen on the row (`matches.win_rates`, migration
-    /// 0084) so every rebuild and replay folds the same picks. Absent on every match started before
+    /// 0085) so every rebuild and replay folds the same picks. Absent on every match started before
     /// it, which folds against its version's frozen table (R1266000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rates: Option<WinRateTable>,

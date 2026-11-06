@@ -1,22 +1,24 @@
-// R2725003, R2725004, R2949000: a card's versions and augments in a real browser. apps/web's vitest suite proves the
-// attributes each look wears (cards/fullArtTiers.test.tsx) and the stylesheet's colors (cards/cosmetics.test.tsx);
-// what only a layout and style engine can say is measured here. Part 1's two versions, the normal face and Full art,
-// and the Signature look (Full art with Animated and Signature, R2949000), on one Unit and one Spell, base and
-// Radiant, the normal face bare and with Animated, the Unit with a foil: every part keeps clear of every other, only
-// the Signature look signs and it draws a picture of its own, a Radiant face keeps its gold frame and its art's
-// Radiant paint under every look, and under Reduce motion nothing moves.
-// R2940001, R2940002: part 2's versions, Alt art, the Sketch and Alt full art, each bare and with Animated (the Unit
-// with a foil under it), on a Unit and a Spell offered all three, base and Radiant: every part shows and none signs,
-// each draws its own picture (the Sketch in pencil on paper), and a Radiant face keeps its gold frame.
-// R2942001, R2942002: part 3's versions, Extended art, Pixel and Comic, each bare and with Animated (the Unit with a
-// foil under it), on a Unit and a Spell offered all three, base and Radiant: every part shows and none signs, Extended
-// art's picture runs past its window, Pixel's and Comic's are their own (a base Pixel in its palette's levels), and a
-// Radiant face keeps its gold frame.
-// R2943001, R2943002: part 4's versions, Set showcase and Out of frame, each bare and with Animated (the first Unit with
-// a foil under it), on two Units offered both and a Spell offered Set showcase, base and Radiant: every part shows and
+// R2725003, R2725004: a card's looks in a real browser. apps/web's vitest suite proves the attributes each look wears
+// (cards/fullArtTiers.test.tsx) and the stylesheet's colors (cards/cosmetics.test.tsx); what only a layout and style
+// engine can say is measured here. R3015000 (#3015): each look is a level of a variant's ladder, and the Animated and
+// Signature augments are retired. Part 1's two ladders, the Default (the normal face, then animated) and Full art (its
+// still level, animated, then signed), on one Unit and one Spell, base and Radiant, the Unit with a foil: every part
+// keeps clear of every other, only the signed level signs, R3015002 over its animated full art's own picture (R2949000's
+// Signature look and its picture of its own are gone), a Radiant face keeps its gold frame and its art's Radiant paint
+// at every level, and under Reduce motion nothing moves.
+// R2940001, R2940002: part 2's ladders, Alt art and the Sketch: Alt art, the Sketch, Alt full art and each full art's
+// animated level (the Unit with a foil under it), and R3015005 an older pick of Alt art with Animated, which wears Alt
+// art's first level, on a Unit and a Spell offered both, base and Radiant: every part shows and none signs, each draws
+// its own picture (the Sketch in pencil on paper), and a Radiant face keeps its gold frame.
+// R2942001, R2942002: part 3's versions, Extended art, Pixel and Comic, each at both its levels (the Unit with a foil
+// under it), on a Unit and a Spell offered all three, base and Radiant: every part shows and none signs, Extended art's
+// picture runs past its window, Pixel's and Comic's are their own (a base Pixel in its palette's levels), and a Radiant
+// face keeps its gold frame.
+// R2943001, R2943002: part 4's versions, Set showcase and Out of frame, each at both its levels (the first Unit with a
+// foil under it), on two Units offered both and a Spell offered Set showcase, base and Radiant: every part shows and
 // none signs, Set showcase's picture is its set's own, Out of frame's subject rises out of its window inside the face
 // and leaves the cost gem and the stats as they were, and a Radiant face keeps its gold frame.
-// R2944001, R2944002: part 5's versions, Immersive and Prismatic, each bare and with Animated (the Unit with a foil under
+// R2944001, R2944002: part 5's versions, Immersive and Prismatic, each at both its levels (the Unit with a foil under
 // it), on a Unit and a Spell offered both, base and Radiant: every part shows and none signs, Immersive's near layer
 // fills its window and follows the pointer (and rests under Reduce motion), Prismatic's base frame is its rainbow and
 // chrome, each picture is its own, and a Radiant face keeps its gold frame.
@@ -33,20 +35,26 @@ import { IMMERSIVE_SHIFT_PCT } from "../../../apps/web/src/cards/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import {
   AUGMENT_ANIMATED_ID,
-  AUGMENT_SIGNATURE_ID,
   VERSION_ALT_ART_ID,
+  VERSION_ALT_FULL_ART_ANIMATED_ID,
   VERSION_ALT_FULL_ART_ID,
+  VERSION_ANIMATED_ID,
   VERSION_COMIC_ID,
   VERSION_EXTENDED_ART_ID,
+  VERSION_FULL_ART_ANIMATED_ID,
   VERSION_FULL_ART_ID,
+  VERSION_FULL_ART_SIGNED_ID,
   VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
   VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
+  VERSION_SKETCH_FULL_ART_ANIMATED_ID,
   VERSION_SKETCH_ID,
   artPictureOf,
   isFullBleed,
+  levelOfPick,
+  lookOfLevel,
   offeredOn,
 } from "../../../apps/web/src/cards/versions.ts";
 import { showcaseFamilyOf } from "../../../apps/web/src/cards/art/pictures.ts";
@@ -54,43 +62,47 @@ import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/se
 
 type CardDef = (typeof CATALOG)[string];
 
-/** One Unit and one Spell offered both versions and both augments (R2725001). */
+/** One Unit and one Spell offered every level of the Default and of Full art (R2725001, R3015000). */
 const CARDS = [
   { id: "classicplus-012", why: "a Unit (The Mother Pancake: stats in the bottom corners, a Legendary crest)" },
   { id: "stinkyscape-154", why: "a Spell (Dice of Doom: no stats, a Mythic crest)" },
 ] as const;
 
-/** The Unit wears a foil under its augment stack. */
+/** The Unit wears a foil under every level. */
 const FOIL = "foil-rainbow";
-/** R2949000: what Signature needs beside it, and itself. */
-const STACK = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] as const;
 
-/** The normal face bare and with Animated, Full art bare, and the Signature look. */
+/** R3015000: the Default's two levels, the normal face and animated, and Full art's three: still, animated and signed. */
 const LOOKS = [
   { name: "normal", pick: false, augments: [] },
-  { name: "normal-animated", pick: false, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "normal-animated", pick: VERSION_ANIMATED_ID, augments: [] },
   { name: "full", pick: VERSION_FULL_ART_ID, augments: [] },
-  { name: "signature", pick: VERSION_FULL_ART_ID, augments: STACK },
+  { name: "full-animated", pick: VERSION_FULL_ART_ANIMATED_ID, augments: [] },
+  { name: "signed", pick: VERSION_FULL_ART_SIGNED_ID, augments: [] },
 ] as const;
 
-/** R2940001: one Unit and one Spell offered each of part 2's versions and Animated. */
+/** R2940001: one Unit and one Spell offered each level of part 2's ladders. */
 const NEW_CARDS = [
   { id: "classicplus-012", why: "a Unit (The Mother Pancake: stats in the bottom corners, a Legendary crest)" },
   { id: "core-083", why: "a Spell (Transmogulate: no stats, a Legendary crest)" },
 ] as const;
 
-/** R2940002: the normal face to compare with, then each of part 2's versions bare and with Animated, Signature on none. */
+/**
+ * R2940002: the normal face to compare with, then part 2's levels, none signed: Alt art, the Sketch, Alt full art and the
+ * animated level of each full art (the "-stack" looks, which #2940 drew as Animated layered on the version). R3015005:
+ * "alt-stack" is an older pick, Alt art with Animated, which wears Alt art's first level, still: the motion of a
+ * normal-frame Alt art or Sketch no longer exists.
+ */
 const NEW_LOOKS = [
   { name: "normal", pick: false, augments: [] },
   { name: "alt", pick: VERSION_ALT_ART_ID, augments: [] },
   { name: "alt-stack", pick: VERSION_ALT_ART_ID, augments: [AUGMENT_ANIMATED_ID] },
   { name: "sketch", pick: VERSION_SKETCH_ID, augments: [] },
-  { name: "sketch-stack", pick: VERSION_SKETCH_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "sketch-stack", pick: VERSION_SKETCH_FULL_ART_ANIMATED_ID, augments: [] },
   { name: "alt-full", pick: VERSION_ALT_FULL_ART_ID, augments: [] },
-  { name: "alt-full-stack", pick: VERSION_ALT_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "alt-full-stack", pick: VERSION_ALT_FULL_ART_ANIMATED_ID, augments: [] },
 ] as const;
 
-/** R2940001: the looks the screenshot compares, the Sketch with its stack too (Animated + the Unit's foil). */
+/** R2940001: the looks the screenshot compares, the Sketch's animated full art too (the Unit's foil under it). */
 const SHOT_LOOKS = NEW_LOOKS.filter((look) => ["normal", "alt", "sketch", "sketch-stack", "alt-full"].includes(look.name));
 /** Small enough that every face of the screenshot lies inside the viewport it captures: three rows of nine. */
 const SHOT_WIDTH = 120;
@@ -100,24 +112,27 @@ const SKETCH_BEZEL = "#3f4964";
 /** R2940001: the most a base Sketch's sampled pixels may hold of colour on average (max channel less min, of 255): graphite on paper. */
 const SKETCH_CHROMA_MAX = 48;
 
-/** R2942001: one Unit and one Spell offered each of part 3's versions and Animated. */
+/** R2942001: one Unit and one Spell offered both levels of each of part 3's versions. */
 const PART_THREE_CARDS = [
   { id: "classic-056", why: "a Unit (Spell Tyrant: stats in the bottom corners, a Legendary crest)" },
   { id: "meditative-042", why: "a Spell (CN Flea Market: no stats, a Legendary crest)" },
 ] as const;
 
-/** R2942002: the normal face to compare with, then each of part 3's versions bare and with Animated, Signature on none. */
+/**
+ * R2942002: the normal face to compare with, then each of part 3's versions at both its levels (R3015000: its animated
+ * level the "-stack", which #2942 drew as Animated layered on it), none signed.
+ */
 const PART_THREE_LOOKS = [
   { name: "normal", pick: false, augments: [] },
   { name: "extended", pick: VERSION_EXTENDED_ART_ID, augments: [] },
-  { name: "extended-stack", pick: VERSION_EXTENDED_ART_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "extended-stack", pick: `${VERSION_EXTENDED_ART_ID}-animated`, augments: [] },
   { name: "pixel", pick: VERSION_PIXEL_ID, augments: [] },
-  { name: "pixel-stack", pick: VERSION_PIXEL_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "pixel-stack", pick: `${VERSION_PIXEL_ID}-animated`, augments: [] },
   { name: "comic", pick: VERSION_COMIC_ID, augments: [] },
-  { name: "comic-stack", pick: VERSION_COMIC_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "comic-stack", pick: `${VERSION_COMIC_ID}-animated`, augments: [] },
 ] as const;
 
-/** R2942001: the looks the screenshot compares, Pixel with its stack too (Animated + the Unit's foil). */
+/** R2942001: the looks the screenshot compares, Pixel's animated level too (the Unit's foil under it). */
 const PART_THREE_SHOT_LOOKS = PART_THREE_LOOKS.filter((look) => ["normal", "extended", "pixel", "pixel-stack", "comic"].includes(look.name));
 
 /** R2942001: the base bezels of Pixel and Comic, palette.css's `--pal-slate-400` and `--pal-white`. */
@@ -132,41 +147,47 @@ const BESIDE_STEP_PX = 2;
 /** How far the strip beside a window keeps from it and from the face's edge: clear of the bezel and the rim. */
 const BESIDE_CLEARANCE_PX = 4;
 
-/** R2943001: two Units offered both of part 4's versions and Animated, and a Spell offered Set showcase and Animated. */
+/** R2943001: two Units offered both levels of both of part 4's versions, and a Spell offered both of Set showcase. */
 const PART_FOUR_CARDS = [
   { id: "stinkyscape-080", why: "a Unit (Galaxy: Stinkyscape's painter, stats in the bottom corners, a Legendary crest)" },
   { id: "classic-080", why: "a Unit (BOOM! Big Max: the procedural painter, stats, a Legendary crest)" },
   { id: "core-083", why: "a Spell (Transmogulate: no stats, a Legendary crest; Out of frame is a Unit's)" },
 ] as const;
 
-/** R2943002: the normal face to compare with, then each of part 4's versions bare and with Animated, Signature on none. */
+/**
+ * R2943002: the normal face to compare with, then each of part 4's versions at both its levels (R3015000: its animated
+ * level the "-stack"), none signed.
+ */
 const PART_FOUR_LOOKS = [
   { name: "normal", pick: false, augments: [] },
   { name: "showcase", pick: VERSION_SET_SHOWCASE_ID, augments: [] },
-  { name: "showcase-stack", pick: VERSION_SET_SHOWCASE_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "showcase-stack", pick: `${VERSION_SET_SHOWCASE_ID}-animated`, augments: [] },
   { name: "out", pick: VERSION_OUT_OF_FRAME_ID, augments: [] },
-  { name: "out-stack", pick: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "out-stack", pick: `${VERSION_OUT_OF_FRAME_ID}-animated`, augments: [] },
 ] as const;
 
-/** R2943001: the looks the screenshot compares, Out of frame with its stack too (Animated + the first Unit's foil). */
+/** R2943001: the looks the screenshot compares, Out of frame's animated level too (the first Unit's foil under it). */
 const PART_FOUR_SHOT_LOOKS = PART_FOUR_LOOKS.filter((look) => ["normal", "showcase", "out", "out-stack"].includes(look.name));
 
-/** R2944001: a Unit and a Spell offered both of part 5's versions and Animated. */
+/** R2944001: a Unit and a Spell offered both levels of both of part 5's versions. */
 const PART_FIVE_CARDS = [
   { id: "stinkyscape-006", why: "a Unit (Tylannt: Stinkyscape's painter, stats in the bottom corners, a Mythic crest)" },
   { id: "core-097", why: "a Spell (Zephrys: the procedural painter, no stats, a Mythic crest)" },
 ] as const;
 
-/** R2944002: the normal face to compare with, then each of part 5's versions bare and with Animated, Signature on none. */
+/**
+ * R2944002: the normal face to compare with, then each of part 5's versions at both its levels (R3015000: its animated
+ * level the "-stack"), none signed.
+ */
 const PART_FIVE_LOOKS = [
   { name: "normal", pick: false, augments: [] },
   { name: "immersive", pick: VERSION_IMMERSIVE_ID, augments: [] },
-  { name: "immersive-stack", pick: VERSION_IMMERSIVE_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "immersive-stack", pick: `${VERSION_IMMERSIVE_ID}-animated`, augments: [] },
   { name: "prismatic", pick: VERSION_PRISMATIC_ID, augments: [] },
-  { name: "prismatic-stack", pick: VERSION_PRISMATIC_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "prismatic-stack", pick: `${VERSION_PRISMATIC_ID}-animated`, augments: [] },
 ] as const;
 
-/** R2944001: the looks the screenshot compares, Prismatic with its stack too (Animated + the Unit's foil). */
+/** R2944001: the looks the screenshot compares, Prismatic's animated level too (the Unit's foil under it). */
 const PART_FIVE_SHOT_LOOKS = PART_FIVE_LOOKS.filter((look) => ["normal", "immersive", "prismatic", "prismatic-stack"].includes(look.name));
 
 /** R2944001: Prismatic's base bezel, palette.css's `--pal-slate-100`, and the first colour of its edge, `--pal-red-400`. */
@@ -180,9 +201,14 @@ const SAME_PLACE_PX = 0.5;
 type Card = { readonly id: string; readonly why: string };
 type Look = { readonly name: string; readonly pick: false | string; readonly augments: readonly string[] };
 
-/** R2943001: the looks of `looks` card `id` is offered: the normal face, and each version where it is offered. */
+/** R2943001: the looks of `looks` card `id` is offered: the normal face, and each level where it is offered. */
 function offeredLooks(id: string, looks: readonly Look[]): Look[] {
   return looks.filter((look) => look.pick === false || offeredOn(look.pick, id));
+}
+
+/** R3015005: the level `look` names on `id`, an older pick's shape mapped as the server maps it; null for the normal face. */
+function levelOfLook(id: string, look: Look): string | null {
+  return levelOfPick(id, look.pick, look.augments);
 }
 
 type Point = { x: number; y: number };
@@ -193,8 +219,19 @@ const SAMPLE_STEP_PX = 6;
 const SAMPLE_INSET_PX = 3;
 /** A channel must differ this much for a point to count as different: more than compression noise. */
 const PIXEL_DELTA_MIN = 4;
-/** R2949000: the share of the upper half of the art window that must differ between Full art and the Signature look. */
+/** The share of an art window that must differ between two pictures apart (R2940001 and after). */
 const PICTURE_SHARE_MIN = 0.2;
+/**
+ * R3015002: the most of the art window above the signature that may differ between Full art's animated level and its
+ * signed one, which draws the same picture and adds only the signature: noise.
+ */
+const PICTURE_SAME_MAX = 0.05;
+/**
+ * R3015002: how far a channel must move for two levels of one picture to count as drawn differently there: past the few
+ * levels a signed face's light shifts its art by (measured at 3 to 5 on Dice of Doom's Radiant face at 170px), far
+ * below what another picture moves.
+ */
+const SAME_PIXEL_DELTA_MIN = 16;
 /** Enough room for the faces to mount and the art to draw. */
 const SETTLE_TIMEOUT_MS = 8_000;
 
@@ -302,12 +339,12 @@ function windowOffsets(box: DOMRect): Point[] {
   return points;
 }
 
-/** The share of `offsets` at which the windows `a` and `b` of `shot` differ. */
-function differingShare(shot: Shot, a: DOMRect, b: DOMRect, offsets: readonly Point[]): number {
+/** The share of `offsets` at which the windows `a` and `b` of `shot` differ by `delta` or more in a channel. */
+function differingShare(shot: Shot, a: DOMRect, b: DOMRect, offsets: readonly Point[], delta: number = PIXEL_DELTA_MIN): number {
   const differing = offsets.filter((offset) => {
     const one = pixelAt(shot, { x: a.left + offset.x, y: a.top + offset.y });
     const two = pixelAt(shot, { x: b.left + offset.x, y: b.top + offset.y });
-    return one.some((channel, i) => Math.abs(channel - (two[i] ?? -1)) >= PIXEL_DELTA_MIN);
+    return one.some((channel, i) => Math.abs(channel - (two[i] ?? -1)) >= delta);
   });
   return differing.length / offsets.length;
 }
@@ -321,7 +358,7 @@ function upperOffsets(box: DOMRect): Point[] {
   return points;
 }
 
-describe("R2725003 a card's versions and augments on real faces", () => {
+describe("R2725003 R3015000 a card's levels on real faces", () => {
   beforeEach(() => {
     __resetSettingsForTests();
     resetCosmeticsForTests();
@@ -337,7 +374,7 @@ describe("R2725003 a card's versions and augments on real faces", () => {
   });
 
   for (const width of WIDTHS) {
-    it(`R2725003 R2949000 every look keeps its parts apart, and only the Signature look signs, at ${width}px`, () => {
+    it(`R2725003 R3015002 every level keeps its parts apart, and only the signed level signs, over its variant's own picture, at ${width}px`, () => {
       cy.mount(<Faces width={width} />);
       cy.document().should((doc) => {
         for (const { id, why } of CARDS) {
@@ -346,15 +383,17 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
-              const full = look.pick !== false;
+              const level = levelOfLook(id, look);
+              const full = isFullBleed(level);
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-full-art"), where).to.eq(full ? "true" : null);
-              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
-              // The foil wears under the augments on the Unit's base faces; a Radiant face wears none.
+              expect(cf.getAttribute("data-level"), where).to.eq(level);
+              // The foil wears under every level on the Unit's base faces; a Radiant face wears none.
               if (id === CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
-              // R2949000: the Signature look alone signs, and draws a picture of its own.
-              const signed = look.name === "signature";
-              expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(signed ? "signature" : null);
+              // R3015002: the signed level alone signs, and draws no picture of its own: every level the normal one.
+              const signed = lookOfLevel(level).signed;
+              expect(signed, where).to.eq(look.name === "signed");
+              expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(null);
               const signature = boxes(cf, ".cf-signature");
               expect(signature.length, `${where}: the signature`).to.eq(signed ? 1 : 0);
               for (const box of signature) {
@@ -393,10 +432,10 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               cf.getAnimations({ subtree: true }).filter((animation) => animation.playState === "running").length,
               `${where}: nothing moves`,
             ).to.eq(0);
-            if (look.augments.length > 0) {
+            if (lookOfLevel(levelOfLook(id, look)).animated) {
               expect(cf.getAttribute("data-art-motion"), `${where}: the art holds still`).to.eq("static");
             }
-            if (look.name === "signature") {
+            if (look.name === "signed") {
               const text = cf.querySelector(".cf-signature text")?.getBoundingClientRect();
               expect(text?.width ?? 0, `${where}: the name is drawn`).to.be.greaterThan(0);
             }
@@ -406,18 +445,20 @@ describe("R2725003 a card's versions and augments on real faces", () => {
     });
   });
 
-  it("R2949000 the Signature look draws a picture of its own on a Unit and a Spell, base and Radiant", () => {
+  it("R3015002 the signed level draws its animated full art's own picture on a Unit and a Spell, base and Radiant", () => {
     // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
     writeCardSettings({ animatedFoil: false });
     cy.mount(<Faces width={170} />);
-    cy.get('.cf[data-art-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", CARDS.length * 2 * 2);
+    // The Default's animated level, Full art's and its signed one, each Card base and Radiant.
+    cy.get('.cf[data-art-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", CARDS.length * 2 * 3);
     cy.get('[data-art-moving="true"]').should("not.exist");
     cy.get("[data-face] .cf-art[data-art-pending]").should("not.exist");
-    cy.get('.cf-art[data-art-picture="signature"]').should("have.length", CARDS.length * 2);
+    // No level draws a picture of its own: R2949000's Signature picture is gone.
+    cy.get(".cf-art[data-art-picture]").should("not.exist");
     cy.document().its("fonts.status").should("eq", "loaded");
-    const taken: { windows?: Map<string, [DOMRect, DOMRect]> } = {};
+    const taken: { windows?: Map<string, [DOMRect, DOMRect, DOMRect]> } = {};
     cy.document().then((doc) => {
-      const windows = new Map<string, [DOMRect, DOMRect]>();
+      const windows = new Map<string, [DOMRect, DOMRect, DOMRect]>();
       for (const { id } of CARDS) {
         for (const radiant of [false, true]) {
           const art = (look: string): DOMRect => {
@@ -425,24 +466,22 @@ describe("R2725003 a card's versions and augments on real faces", () => {
             if (box === undefined) throw new Error(`no art window for ${id} ${look}`);
             return box;
           };
-          windows.set(`${id} ${radiant ? "Radiant" : "base"}`, [art("full"), art("signature")]);
+          const [signature] = boxes(faceIn(doc, id, "signed", radiant), ".cf-signature");
+          if (signature === undefined) throw new Error(`no signature for ${id}`);
+          windows.set(`${id} ${radiant ? "Radiant" : "base"}`, [art("full-animated"), art("signed"), signature]);
         }
       }
       taken.windows = windows;
     });
-    screenshot("signature-picture").then((shot) => {
+    screenshot("signed-picture").then((shot) => {
       const shares: Record<string, number> = {};
-      for (const [where, [full, signature]] of taken.windows ?? new Map<string, [DOMRect, DOMRect]>()) {
-        expect(Math.round(full.width), `${where}: the two windows match`).to.eq(Math.round(signature.width));
-        const offsets = upperOffsets(full);
+      for (const [where, [full, signed, signature]] of taken.windows ?? new Map<string, [DOMRect, DOMRect, DOMRect]>()) {
+        expect(Math.round(full.width), `${where}: the two windows match`).to.eq(Math.round(signed.width));
+        // What lies above the signature, which the signed level adds, and inside what the screenshot captured.
+        const offsets = upperOffsets(full).filter((offset) => signed.top + offset.y < signature.top - SAMPLE_INSET_PX && Math.ceil((signed.top + offset.y) * shot.scale) < shot.height);
         expect(offsets.length, `${where}: sampled points`).to.be.greaterThan(20);
-        const differing = offsets.filter((offset) => {
-          const a = pixelAt(shot, { x: full.left + offset.x, y: full.top + offset.y });
-          const b = pixelAt(shot, { x: signature.left + offset.x, y: signature.top + offset.y });
-          return a.some((channel, i) => Math.abs(channel - (b[i] ?? -1)) >= PIXEL_DELTA_MIN);
-        });
-        shares[where] = differing.length / offsets.length;
-        expect(shares[where], `${where}: the Signature look's picture differs from Full art's`).to.be.at.least(PICTURE_SHARE_MIN);
+        shares[where] = differingShare(shot, full, signed, offsets, SAME_PIXEL_DELTA_MIN);
+        expect(shares[where], `${where}: the signed level's picture is its animated full art's`).to.be.at.most(PICTURE_SAME_MAX);
       }
       expect(Object.keys(shares).length, "every card and face sampled").to.eq(CARDS.length * 2);
       cy.task("layout:report", { spec: "card-versions", shares });
@@ -460,16 +499,17 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
-              const version = look.pick === false ? null : look.pick;
+              const level = levelOfLook(id, look);
+              const version = lookOfLevel(level).version;
               const full = isFullBleed(version);
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
               expect(cf.getAttribute("data-full-art"), where).to.eq(full ? "true" : null);
-              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
+              expect(cf.getAttribute("data-level"), where).to.eq(level);
               if (id === NEW_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
               const picture = artPictureOf(version);
               expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
-              // R2949000: Signature on none of them.
+              // R3015000: none of them is signed.
               expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
               // Every version keeps the cost gem, the crest, the name and a Unit's stats; the normal frame its words.
               const kept = [".cost-gem", ".cf-crest", ".card-name", ...(full ? [] : [".card-type", ".card-text"]), ...(id === NEW_CARDS[0].id ? [".cf-atk", ".cf-hp"] : [])];
@@ -556,16 +596,17 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
-              const version = look.pick === false ? null : look.pick;
+              const level = levelOfLook(id, look);
+              const version = lookOfLevel(level).version;
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
               expect(cf.getAttribute("data-full-art"), where).to.eq(null);
-              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
+              expect(cf.getAttribute("data-level"), where).to.eq(level);
               if (id === PART_THREE_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
               const picture = artPictureOf(version);
               const art = cf.querySelector<HTMLElement>(".cf-art");
               expect(art?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
-              // R2949000: Signature on none of them.
+              // R3015000: none of them is signed.
               expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
               // Every version keeps the cost gem, the crest, the name, the type line, the rules box and a Unit's stats.
               const kept = [".cost-gem", ".cf-crest", ".card-name", ".card-type", ".card-text", ...(id === PART_THREE_CARDS[0].id ? [".cf-atk", ".cf-hp"] : [])];
@@ -685,18 +726,19 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
-              const version = look.pick === false ? null : look.pick;
+              const level = levelOfLook(id, look);
+              const version = lookOfLevel(level).version;
               const set = CATALOG[id]?.set ?? null;
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
               expect(cf.getAttribute("data-full-art"), where).to.eq(null);
-              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
+              expect(cf.getAttribute("data-level"), where).to.eq(level);
               if (id === PART_FOUR_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
               expect(cf.getAttribute("data-showcase"), `${where}: the set's look`).to.eq(version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(set) : null);
               const picture = artPictureOf(version, set);
               const art = cf.querySelector<HTMLElement>(".cf-art:not(.cf-art--cutout)");
               expect(art?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
-              // R2949000: Signature on neither.
+              // R3015000: neither is signed.
               expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
               // Every version keeps the cost gem, the crest, the name, the type line, the rules box and a Unit's stats.
               const kept = [".cost-gem", ".cf-crest", ".card-name", ".card-type", ".card-text", ...(unit ? [".cf-atk", ".cf-hp"] : [])];
@@ -818,16 +860,17 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
-              const version = look.pick === false ? null : look.pick;
+              const level = levelOfLook(id, look);
+              const version = lookOfLevel(level).version;
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
               expect(cf.getAttribute("data-full-art"), where).to.eq(null);
-              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
+              expect(cf.getAttribute("data-level"), where).to.eq(level);
               if (id === PART_FIVE_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
               const picture = artPictureOf(version);
               const art = cf.querySelector<HTMLElement>(".cf-art-frame > .cf-art");
               expect(art?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
-              // R2949000: Signature on neither.
+              // R3015000: neither is signed.
               expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
               // Every version keeps the cost gem, the crest, the name, the type line, the rules box and a Unit's stats.
               const kept = [".cost-gem", ".cf-crest", ".card-name", ".card-type", ".card-text", ...(unit ? [".cf-atk", ".cf-hp"] : [])];

@@ -349,8 +349,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0083_starship_tag.sql"),
     ),
     (
-        "0084_match_win_rates.sql",
-        include_str!("../../migrations/0084_match_win_rates.sql"),
+        "0084_variant_levels.sql",
+        include_str!("../../migrations/0084_variant_levels.sql"),
+    ),
+    (
+        "0085_match_win_rates.sql",
+        include_str!("../../migrations/0085_match_win_rates.sql"),
     ),
 ];
 
