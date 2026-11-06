@@ -1843,7 +1843,7 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         let mut state = playing("r3291000-fused");
         let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         assert_eq!(
             sources(&state, &card.id),
             named(&[("zap", &zapper.id), ("recall", &keeper.id)])
@@ -1852,7 +1852,7 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         let mut state = playing("r3291000-copies");
         let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         let copy = in_hand(&mut state, &keeper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![copy], &card);
+        fuse_card_onto(&mut state, vec![copy], &card);
         assert_eq!(
             sources(&state, &card.id),
             named(&[("recall", &keeper.id), ("recall#2", &keeper.id)])
@@ -1864,9 +1864,9 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         let mut state = playing("r3291000-nested");
         let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         let outer = in_hand(&mut state, &endless.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![outer], &card);
+        fuse_card_onto(&mut state, vec![outer], &card);
         assert_eq!(
             sources(&state, &card.id),
             named(&[
@@ -1883,7 +1883,7 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         let mut state = playing("r3291000-has");
         let card = put(&mut state, &zapper.id, slot(P1, Row::Backrow, 1), json!({}));
         let first = in_hand(&mut state, &chooser.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![first], &card);
+        fuse_card_onto(&mut state, vec![first], &card);
         card_mut(&mut state, &card.id)
             .memory
             .insert(PICK_KEY.to_string(), json!("beta"));
@@ -1900,7 +1900,7 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         let mut state = playing("r3291000-golden");
         let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         let view = json_of(jackioh_engine::view_for(&state, P1)).to_string();
         assert!(view.contains("\"printedOn\""), "the view names it");
         let [p1, p2] = jackioh_engine::testkit::golden::view_texts(&state);
@@ -1916,7 +1916,7 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         // Straight from the library, so no card p1 reads but the fused one carries the zapper's definition.
         set_library(&mut state, P1, &[zapper.id.as_str()]);
         let other = state.players[P1].library.remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         in_hand(&mut state, &zapper.id, P2, 1);
         let view = jackioh_engine::view_for(&state, P1);
         assert!(
@@ -1943,7 +1943,7 @@ mod r3291000_each_ability_names_the_card_that_prints_it {
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
         card_mut(&mut state, &other.id).radiant = true;
         let other = card(&state, &other.id).clone();
-        fuse_onto(&mut state, vec![other], &kept);
+        fuse_card_onto(&mut state, vec![other], &kept);
         let views =
             jackioh_engine::subsystems::activate::activation_views_for(&state, P1, card(&state, &kept.id))
                 .expect("listed");
