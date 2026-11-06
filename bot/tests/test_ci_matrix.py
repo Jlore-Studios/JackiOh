@@ -70,7 +70,7 @@ class MatrixTests(unittest.TestCase):
     def test_the_committed_files_give_todays_jobs(self):
         out = matrix.outputs()
         self.assertEqual([job["group"] for job in out["rust_test"]], JOBS)
-        self.assertEqual(out["web_unit_shards"], [1, 2, 3, 4])
+        self.assertEqual(out["web_unit_shards"], [1, 2, 3, 4, 5, 6, 7, 8])
         self.assertEqual(out["e2e_smoke_shards"], [1, 2])
         jobs = {job["group"]: job for job in out["rust_test"]}
         for n, name in enumerate(["rules", "rules_2", "rules_3"]):
@@ -114,7 +114,7 @@ class MatrixTests(unittest.TestCase):
                                  "engine rules 3 1/2", "engine rules 3 2/2"])
 
     def test_the_web_and_e2e_counts_come_from_the_file(self):
-        self.repo.edit(matrix.COUNTS, "unit = 4", "unit = 5")
+        self.repo.edit(matrix.COUNTS, "unit = 8", "unit = 5")
         self.repo.edit(matrix.COUNTS, "smoke = 2", "smoke = 3")
         out = self.repo.outputs()
         self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"]), ([1, 2, 3, 4, 5], [1, 2, 3]))
@@ -127,8 +127,8 @@ class MatrixTests(unittest.TestCase):
             ('"cards" = 1', '"cards" = 1.5', "from 1 to 8"),
             ('"cards" = 1', '"cards" = true', "from 1 to 8"),
             ('"cards" = 1', '"cards" = 1\n"card" = 2', "names no group"),
-            ("unit = 4", "unit = 0", "from 1 to 8"),
-            ("unit = 4", "units = 4", "holds only `unit`"),
+            ("unit = 8", "unit = 0", "from 1 to 8"),
+            ("unit = 8", "units = 8", "holds only `unit`"),
             ("[e2e]\nsmoke = 2", "[e2e]", "has no `smoke`"),
             ("[web]", "[wbe]\nunit = 1\n[web]", "no job reads the table wbe"),
         ]:

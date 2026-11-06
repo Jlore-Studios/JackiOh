@@ -25,12 +25,11 @@ import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace, faceText } from "./CardFace.tsx";
-import { questProgress, questWords, stageWords } from "./cardState.ts";
+import { questFaceText, questProgress, questWords, stageWords } from "../test/faceWords.ts";
 import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_EXTENDED, INSPECT_FACE, INSPECT_HOVER, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
-import { questFaceText } from "./questFace.ts";
 
 afterEach(() => {
   act(() => {
@@ -591,7 +590,7 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
       const off = questFace(ITD, face.radiant);
       expect(questFaceText(off), face.label).toBeNull();
       // R2655001: this card prints full art now; the test reads its words.
-      expect(faceText(off, undefined, false).shown, face.label).toBe(full);
+      expect(faceText(off, undefined, false).shown.full, face.label).toBe(full);
     }
   });
 

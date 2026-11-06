@@ -30,7 +30,6 @@
 import { hasKeyword, type GameEvent, type Keyword, type KeywordKind, type PlayerId, type PlayerView, type UnitView } from "@jackioh/shared";
 
 import { animTestid, animationRow, HIDDEN_ID, locateInstance, targetFor, type AnimationEntry } from "../../game/animations.ts";
-import { TEMPORARY_GLYPH } from "../../cards/cardState.ts";
 import { temporaryLeft } from "../../cards/keywordVisuals.ts";
 import { sideOf, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
@@ -59,6 +58,9 @@ import { shieldCues } from "../shield.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "../types.ts";
 import { flies, hit, hitAnchor, isFirstEntry, MOTIF_FOOT, MOTIF_TUNING, motifBurst, motifRing, motifShot, placeOf, sourceOf, timesOf, type CueSpec } from "./build.ts";
 import { calloutCue } from "./callout.ts";
+
+/** #2437: the Temporary badge's glyph, an hourglass in text presentation (U+FE0E), as the face model draws it. */
+const TEMPORARY_GLYPH = "\u231B\uFE0E";
 
 /** The keywords with a beat: the nine combat ones in the order a hit's beats play, then R2791000's ten. */
 export const FX_BEAT_KEYWORDS = [

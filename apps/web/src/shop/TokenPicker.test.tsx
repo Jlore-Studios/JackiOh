@@ -7,7 +7,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { TokenBarsResponse } from "../net/api.ts";
+import { keptPaths, type TokenBarsResponse } from "../net/api.ts";
+import { expireRead } from "../net/readCache.ts";
 import { paths } from "../net/navigate.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -172,6 +173,8 @@ describe("#1309 the token picker", () => {
     expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
 
     bars = { ...bars, cardBar: { ...bars.cardBar, points: 3 } };
+    // R3206000: a fresh answer needs no read; the openings that move the bars drop it, and this one has aged out.
+    expireRead(TOKEN, keptPaths.tokens);
     rerender(<TokenPicker token={TOKEN} revision={1} />);
 
     await waitFor(() => {

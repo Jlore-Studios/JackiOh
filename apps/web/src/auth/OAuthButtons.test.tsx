@@ -84,4 +84,18 @@ describe("R3217000 the providers' buttons", () => {
     expect(mark).not.toBeNull();
     expect(mark).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("R3217000 Roblox's button carries Roblox's official tilt mark, white and decorative", () => {
+    draw(["google", "custom:roblox"]);
+    const roblox = screen.getByRole("button", { name: "Continue with Roblox" });
+    const marks = roblox.querySelectorAll("svg.auth-oauth-mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveAttribute("aria-hidden", "true");
+    const path = marks[0]?.querySelector("path");
+    expect(path).toHaveAttribute(
+      "d",
+      "M31.6984 0L0 118.302L118.302 150L150 31.6984L31.6984 0ZM87.1031 95.9652L54.0454 87.1031L62.9075 54.0454L95.9784 62.9075L87.1031 95.9652Z",
+    );
+    expect(path).toHaveAttribute("fill", "currentColor");
+  });
 });

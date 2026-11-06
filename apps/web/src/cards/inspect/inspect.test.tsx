@@ -7,15 +7,15 @@ import { useState, type ReactElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef, PlayerView, UnitView } from "@jackioh/shared";
+import type { CardDef, Keyword, PlayerView, UnitView } from "@jackioh/shared";
 
 import { testid, type ClickTarget } from "../../game/contract.ts";
 import { renderBoard } from "../../test/board.tsx";
 import { fullBoardView } from "../../test/fixtures.ts";
 import { must } from "../../test/stubServer.ts";
-import { GLOSSARY, type GlossaryTermId } from "../glossary.ts";
+import { GLOSSARY, type GlossaryTermId } from "../../test/faceData.ts";
+import { glossaryFor } from "../../test/faceWords.ts";
 import { faceModel, type FaceModel } from "../model.ts";
-import { glossaryFor } from "../rules.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
 import { CardDetail, closeInspect, isInspectKey, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
@@ -1185,38 +1185,23 @@ describe("events inside an overlay stay inside it (B25)", () => {
 });
 
 describe("the glossary (B26)", () => {
-  const ORDERED_FACE: FaceModel = {
-    defId: "glossary-order-probe",
-    known: true,
-    name: "Glossary Order Probe",
-    type: "Unit",
-    tags: [],
-    rarity: "Common",
-    index: "0",
-    set: "Core",
-    radiant: true,
-    cost: { text: "1", value: "1", tone: "base", alt: null },
-    stats: { attack: 1, health: 1, maxHealth: 1, attackTone: "base", healthTone: "base" },
-    text: { full: "Death: deal 2. Cry: draw 1. Lifesteal. Cry: again", marks: [] },
-    refs: [],
-    values: [],
-    keywords: [{ kind: "Taunt" }, { kind: "Lifesteal" }, { kind: "Rush" }],
-    inPlay: false,
-    vanilla: false,
-    gained: [],
-    grants: [],
-    printed: null,
-  };
+  /** A face of a definition made for this test: the text and the keywords it names, one face for both. */
+  function probe(id: string, name: string, text: string, keywords: Keyword[], radiant: boolean): FaceModel {
+    const base = defOf("core-001");
+    const def: CardDef = { ...base, id, name, base: { ...base.base, text, keywords }, radiant: { ...base.radiant, text, keywords } };
+    return faceModel({ defId: id, def, radiant });
+  }
+
+  const ORDERED_FACE: FaceModel = probe(
+    "glossary-order-probe",
+    "Glossary Order Probe",
+    "Death: deal 2. Cry: draw 1. Lifesteal. Cry: again",
+    [{ kind: "Taunt" }, { kind: "Lifesteal" }, { kind: "Rush" }],
+    true,
+  );
   const ORDER: GlossaryTermId[] = ["Death", "Cry", "Lifesteal", "Taunt", "Rush"];
 
-  const BARE_FACE: FaceModel = {
-    ...ORDERED_FACE,
-    defId: "glossary-empty-probe",
-    name: "Glossary Empty Probe",
-    radiant: false,
-    text: { full: "", marks: [] },
-    keywords: [],
-  };
+  const BARE_FACE: FaceModel = probe("glossary-empty-probe", "Glossary Empty Probe", "", [], false);
 
   it("B26 lists the text's terms in order, then keywords not yet listed, each with its label and rule", () => {
     expect(glossaryFor(ORDERED_FACE).map((entry) => entry.id), "glossaryFor agrees with the order B26 states").toEqual(ORDER);

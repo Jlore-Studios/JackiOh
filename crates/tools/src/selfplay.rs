@@ -254,14 +254,9 @@ fn play_chunks_at(
     Ok(())
 }
 
-/// Plays the games and returns their lines, in game order (the tests' way in; `run` streams).
-#[cfg(test)]
-pub(crate) fn play(base: &str, from: i32, games: i32, commit: &str) -> anyhow::Result<Vec<SelfplayGame>> {
-    play_at(base, from, games, commit, AI_GATE_BUDGET)
-}
-
-/// `play` with both seats deciding at `budget`, for a test that proves how a game files, not how
-/// well it is played.
+/// Plays the games and returns their lines, in game order, both seats deciding at `budget` (the
+/// tests' way in; `run` streams). A test that proves how a game files, not how well it is played,
+/// passes `TEST_BUDGET`.
 #[cfg(test)]
 pub(crate) fn play_at(
     base: &str,
@@ -330,6 +325,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arena::TEST_BUDGET;
 
     #[test]
     fn r1006002_a_gate_or_dev_set_base_is_refused_and_any_other_is_not() {
@@ -436,8 +432,8 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n")
         };
-        let a = one.install(|| play("selfplay-test", 1, 3, "test").unwrap());
-        let b = four.install(|| play("selfplay-test", 1, 3, "test").unwrap());
+        let a = one.install(|| play_at("selfplay-test", 1, 3, "test", TEST_BUDGET).unwrap());
+        let b = four.install(|| play_at("selfplay-test", 1, 3, "test", TEST_BUDGET).unwrap());
         assert_eq!(a.len(), 3);
         assert_eq!(text(a), text(b));
     }

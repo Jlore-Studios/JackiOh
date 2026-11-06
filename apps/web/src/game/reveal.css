@@ -5,10 +5,10 @@
 .their-hand {
   display: grid;
   justify-items: center;
-  gap: 6px;
+  gap: var(--space-3);
   max-width: min(640px, calc(100vw - 88px));
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
   border-top: 1px solid var(--line);
 }
 
@@ -37,10 +37,10 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-3);
   max-height: 42vh;
   margin: 0;
-  padding: 2px;
+  padding: var(--space-1);
   overflow-y: auto;
   list-style: none;
 }
@@ -104,7 +104,7 @@
 .result-overlay__their-hand,
 .result-overlay__open {
   min-height: 44px;
-  padding: 8px 14px;
+  padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-md);
   font-weight: 700;
 }

@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import type { CardDef } from "@jackioh/shared";
 
-import { wordDiff } from "../cards/radiantDiff.ts";
 import {
   changedWords,
   costText,
@@ -20,6 +19,7 @@ import {
 import { FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./fixtures.ts";
 import { versionBefore } from "./history.ts";
 import { realPatchSource, type PatchChange, type Snapshot } from "./source.ts";
+import { wordDiff } from "../cards/model.ts";
 
 function changed(delta: CardDelta | null): readonly FieldChange[] {
   if (delta?.kind !== "changed") throw new Error(`expected a changed card, got ${delta?.kind ?? "nothing"}`);

@@ -16,7 +16,7 @@ import { setAudioEngineForTests } from "../audio/engine.ts";
 import type { AudioEngine } from "../audio/types.ts";
 import { resetAudioSettingsForTests } from "../audio/settings.ts";
 import { marksTestid } from "../cards/CardMarks.tsx";
-import { SHORT_REMINDERS } from "../cards/glossary.ts";
+import { SHORT_REMINDERS } from "./faceData.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { INSPECT_GLOSSARY, INSPECT_LIST_CARD, INSPECT_LIST_SHEET } from "../cards/inspect/testids.ts";
 import { closeInspect, costPhrase, faceDownLabel } from "../cards/index.ts";

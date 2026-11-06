@@ -348,6 +348,11 @@ pub struct EvalWeights {
     /// turn) keeps its whole attack in `unit_worth` and counts as an attacker in `face_threat`. Off, it
     /// is read as any Defense-Position unit is.
     pub deft_defense_attacks: bool,
+    /// R1849005, #3287: whether `face_threat` counts an attack only when `attack_restriction` lets its
+    /// unit hit the hero. While The Gauntlet acts, a Unit in its lanes (`GAUNTLET_LANES`) never may, so
+    /// its attacks land nothing, and the threat and pressure terms, `wall_switches` and the learned
+    /// features count none of them. Off, every unit that may swing counts, as before.
+    pub gauntlet_bars_face_attacks: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -525,6 +530,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     attack: 1.2,
     defense_attack_share: 0.5,
     deft_defense_attacks: true,
+    gauntlet_bars_face_attacks: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -744,7 +750,7 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
-/// `standing_unit_priced_once`) is off.
+/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -756,6 +762,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     attack: 1.2,
     defense_attack_share: 0.5,
     deft_defense_attacks: false,
+    gauntlet_bars_face_attacks: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
