@@ -14007,15 +14007,8 @@
       "verdict_rounds": 1
     },
     "3228": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42284791897",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-06T20:10:13Z",
-        "until": "2026-11-06T20:40:13Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14027,10 +14020,9 @@
         "reason": "planned on sonnet",
         "trail": "h: {\"command\": \"cat empty/empty.css; grep -rn \\\"No Jlorious\\\\|Nothing to buy yet\\\\|shardEmpty\\\\|noFriends\\\\|No finished matches yet\\\\|Loading\\u2026\\\\|No versions kept\\\" --include=*.test.tsx --include=*.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; ls e2e/cypress/e2e | sed -n 40,60p; grep -rn \\\"No decks yet\\\\|ws-hint\\\\|deckbuilder-loading\\\\|Loading\\u2026\\\\|Checking\\u2026\\\" e2e/cypress | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; grep -n \\\"decks\\\\|loading\\\\|skeleton\\\" e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -30; grep -n \\\"decks\\\\|loading\\\" e2e/cypress/e2e/47\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; sed -n 240,290p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts; grep -n \\\"zh-CN\\\\|json\\\" apps/web/src/i18n/i18n.test.ts | head -20; grep -rn \\\"i\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; grep -rn \\\"empty-state\\\\|emptyStateTestid\\\\|No decks yet\\\\|workshop-empty\\\\|WORKSHOP_EMPTY\\\" --include=*.ts --include=*.tsx game r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; grep -rln \\\"e2e/support/testids\\\" apps/web/src scripts crates 2>/dev/null | head; sed -n 230,262p apps/web/src/game/deckbuilder/DeckWorkshop.te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; grep -n \\\"expectEmptyState\\\" -r . | head -5; cat test/emptyState.ts 2>/dev/null | head -30; grep -n \\\"Loading\\\\|loading\\\\|Checking\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; cat test/empty.ts; sed -n 1,80p auth/LinkedAccounts.test.tsx; sed -n 1,70p auth/LinkedAccounts.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; cat spec/rulings/R3223000.md; ls spec/pending | head; cat spec/pending/3223.md 2>/dev/null | head -20; ls spec/rulings | grep -E \\\"R32(18|23|28\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; git show --stat ced31f77b5 | grep -v \\\"apps/web/src/.*test\\\" | head -60; ls spec/rulings | tail -5; grep -n \\\"R3228\\\\|3228\\\" -r spec docs/issue\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; git show --stat ced31f77b5 | grep -v \\\"apps/web/src/\\\" | sed -n 14,60p; sed -n 1,30p spec/rulings/R3218000.md | cut -c1-250; grep -n \\\"Ruling n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; sed -n 365,400p e2e/cypress/e2e/47-tap-areas.cy.ts; grep -n \\\"button-secondary\\\" apps/web/src/index.css | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src/game/deckbuilder; grep -n \\\"ws-versions-panel\\\\|ws-cosmetics-panel\\\" -A14 workshop.css | sed -n 1,60p; grep -rn \\\"No versions kept\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; sed -n 1,60p economy/JlorePill.tsx; grep -n \\\"useAccount\\\\|useSession\\\\|readSession\\\\|placement\\\" together/FriendsButton.tsx | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; ls test; grep -n \\\"gear\\\\|settings-open-nav\\\\|compareDocumentPosition\\\\|DOCUMENT_POSITION\\\" routes/nav.test.tsx | head -20; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; sed -n 15,60p routes/nav.test.tsx; cat test/phoneBar.ts | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; grep -n \\\"SKELETON_DELAY_MS\\\\|data-shown\\\\|useFakeTimers\\\\|advanceTimers\\\" skeleton/Skeleton.test.tsx routes/*.test.tsx auth/*.tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; grep -rn \\\"workshop.css\\\\|deckbuilder.css\\\\|tavern.css\\\" --include=*.ts --include=*.tsx . | grep -v \\\"^./auth/\\\\(Consent\\\\|Usernam\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; grep -n \\\"1524\\\\|decks route\\\\|/decks\\\\|workshop\\\" apps/web/README.md | head -20; grep -rn \\\"1524\\\" --include=*.md . 2>/dev/null | grep -v node\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; grep -rn \\\"\\\\\\\"New deck\\\\\\\"\\\\|name: \\\\\\\"New deck\\\\|/New deck/\\\" apps/web/src e2e --include=*.ts --include=*.tsx | head; grep -rn \\\"getByRole(\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src/game/deckbuilder; sed -n 150,190p DeckWorkshop.tsx; grep -n \\\"newDeck\\\\b\\\" DeckWorkshop.tsx | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; sed -n 592,606p shop/Shop.test.tsx; sed -n 355,385p together/FriendsButton.test.tsx; grep -n \\\"^import\\\" shop/Shop.test.tsx | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; grep -rn \\\"Checking\\u2026\\\\|Checking\\\\.\\\\.\\\\.\\\\|\\\\\\\"Loading\\\" apps/web/src --include=*.test.tsx --include=*.test.ts e2e/cypress e2e/support | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; grep -rln \\\"DECKBUILDER_LOADING\\\\|deckbuilder-loading\\\\|DecksRoute\\\\|routes/decks\\\" apps/web/src e2e --include=*.ts --include=*.tsx | head; gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; sed -n 40,100p auth/TwoStepSettings.tsx; sed -n 50,75p auth/TwoStepSettings.test.tsx; grep -n \\\"function mount\\\\|const mount\\\\|DEC\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/e2e; grep -n \\\"ONE_SCREEN\\\\b\\\" -B2 -A8 cypress/e2e/46-menus-fit-one-screen.cy.ts | sed -n 1,50p; grep -rn \\\"export function expectOnScreen\\\" -A2\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228/apps/web/src; sed -n 560,592p shop/Shop.test.tsx | grep -n \\\"it(\\\" ; cat ../../../spec/pending/3207.md | head -5 | cut -c1-200; grep -n \\\"ws-gro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3228; echo \\\"\\n## Status: all reading done; final plan delivered as the final message (WorkshopFrame, decks.tsx Shell replaced, rail EmptyState, Skel\u2026\n- said: ## Goal The `/decks` route draws the workshop's own frame in every state, with the shared `Skeleton` in the body while it waits. The frame is the tavern `app-shell`, the `db-header` bar from #3218 with Back left and the gear right, and the `PageTitle` \"Decks\" from #3223. When the decks land, only t\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-06T20:01:44Z",
       "owner_why": "it plans it",
@@ -14043,9 +14035,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-05T17:53:32Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42284791897",
+      "run_id": "pending:e843eaa2-1793995965",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T20:01:44Z",
+      "started_at": "2026-11-06T20:13:15Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16867,9 +16859,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T20:01:44Z",
+    "at": "2026-11-06T20:13:15Z",
     "url": "",
-    "what": "plan #3228 on claude-7"
+    "what": "build #3228 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T19:58:20Z",
