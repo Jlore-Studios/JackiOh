@@ -17354,7 +17354,7 @@
       "verdict_rounds": 1
     },
     "3259": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -17379,22 +17379,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3206,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-06T02:32:26Z",
       "round_tier": "medium",
-      "run_id": "42151044890",
+      "run_id": "pending:12eff379-1793962526",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 95,
-      "started_at": "2026-11-06T02:33:06Z",
+      "started_at": "2026-11-06T10:56:10Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -18663,9 +18664,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T10:55:10Z",
+    "at": "2026-11-06T10:56:10Z",
     "url": "",
-    "what": "revise #3277 on claude-1"
+    "what": "spot-check #3259 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T10:41:44Z",
@@ -34747,7 +34748,15 @@
         "n": 95,
         "pr": 3259,
         "queued_at": "2026-11-06T10:53:38Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:12eff379-1793962526",
         "sha": "db9d2dfab90659de50fad5877f096ed85b2f9f42",
+        "started_at": "2026-11-06T10:56:10Z",
         "status": "queued",
         "title": "Patch (part 2 of 3): share a read already in flight, and keep a fresh answer for a short window",
         "tries": 0
