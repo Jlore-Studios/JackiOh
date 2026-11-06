@@ -499,7 +499,7 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
                         its join form (R767); a queue the server no longer holds ends the wait with a
                         rejoin message (R897000); it takes the gate's account (`me`) and sends no
-                        /api/auth/me read at mount for one that names no game, reads the queue readout on
+                        /api/auth/me read at mount for a fresh one that names no game, reads the queue readout on
                         mount and then every QUEUE_POPULATION_POLL_SECONDS while it waits, its account
                         read keeping SERIES_POLL_SECONDS for the ticket (R3207000, R3207003)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the

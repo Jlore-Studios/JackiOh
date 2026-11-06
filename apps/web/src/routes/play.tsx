@@ -54,6 +54,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
+import { isFreshAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankCaption } from "../rank/rank.ts";
@@ -384,7 +385,7 @@ export { MATCH_FOUND_STATUS };
  * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
  * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead. R3207003:
  * `known` is the account the gate read for this screen, which the first run takes as its mount read
- * unless it names a game.
+ * when it is fresh and names no game.
  */
 function useLobbyWatch(
   token: string,
@@ -451,12 +452,13 @@ function useLobbyWatch(
     // R3205000: this wait keeps reading in a hidden tab, unlike the polls on `pollWhileVisible`: a queue
     // wait's reads keep its ticket alive (R897000), and a room wait's host holds a room that expires.
     // Check every mount so a reload after pairing cannot strand the player.
-    // R3207003: the first run starts from the account the gate read for this screen. An answer that names
-    // no game is not read again; one that does is (an answer inside READ_CACHE_FRESH_MS can predate that
-    // game's end, and must not send the player back into it).
+    // R3207003: the first run starts from the account the gate read for this screen, when that answer is
+    // fresh (inside READ_CACHE_FRESH_MS) and names no game. A kept answer the gate opened on may be of any
+    // age, and one that names a game may have ended since (it must not send the player back into it): both
+    // are read again.
     const handed = gateMe.current;
     gateMe.current = undefined;
-    if (handed === undefined || pairTargetOf(handed) !== null) check();
+    if (handed === undefined || pairTargetOf(handed) !== null || !isFreshAccount(handed)) check();
     if (!waiting) {
       return () => {
         canceled = true;

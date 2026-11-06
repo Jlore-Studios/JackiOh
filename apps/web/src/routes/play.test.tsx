@@ -19,6 +19,8 @@ import {
   SERIES_POLL_SECONDS,
 } from "@jackioh/server-config";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
+import { expireRead, keepRead } from "../net/readCache.ts";
+import { clearSession, writeSession } from "../net/session.ts";
 import {
   ApiRequestError,
   cancelRoom,
@@ -1516,13 +1518,21 @@ describe("R3207000 the queue readout's pace", () => {
   });
 });
 
+/** The account a gate that read `body` just now hands the lobby: signed in, and kept fresh as `useAccount` keeps it. */
+function handedFresh(body: ReturnType<typeof me>): ReturnType<typeof me> {
+  writeSession({ accessToken: TOKEN });
+  keepRead(TOKEN, "/api/auth/me", body);
+  return body;
+}
+
 describe("R3207003 the lobby takes the gate's account", () => {
   afterEach(() => {
     vi.useRealTimers();
+    clearSession();
   });
 
   it("R3207003 a lobby handed an account that names no game reads none at mount", async () => {
-    render(<PlayRoute token={TOKEN} me={me(null)} />);
+    render(<PlayRoute token={TOKEN} me={handedFresh(me(null))} />);
     await waitFor(() => {
       expect(vi.mocked(getDecks)).toHaveBeenCalled();
     });
@@ -1535,7 +1545,7 @@ describe("R3207003 the lobby takes the gate's account", () => {
   it("R3207003 a queue wait handed an account that names no game starts its reads at its first tick", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     rememberQueued("bo1");
-    render(<PlayRoute token={TOKEN} me={me(null)} />);
+    render(<PlayRoute token={TOKEN} me={handedFresh(me(null))} />);
     await settle({ advance: 0 });
     expect(vi.mocked(getMe)).not.toHaveBeenCalled();
 
@@ -1543,10 +1553,27 @@ describe("R3207003 the lobby takes the gate's account", () => {
     expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
   });
 
+  it("R3207003 an account the gate opened on from an old kept answer is read again at mount, and a game that started since takes the player there", async () => {
+    // The gate opens on a kept answer of any age (R2630000) and reads again behind it: this one is old, so it
+    // is no stand-in for the mount read, and the game it does not know of is found.
+    const stale = handedFresh(me(null));
+    expireRead(TOKEN, "/api/auth/me");
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} me={stale} />);
+
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+  });
+
   it("R3207003 an account that names a match is read again, and a match that ended keeps the player in the lobby", async () => {
     // The gate's answer may be 45 s old (R3206000): it says a match, the server now says none.
     vi.mocked(getMe).mockResolvedValue(me(null));
-    render(<PlayRoute token={TOKEN} me={me("match-42")} />);
+    render(<PlayRoute token={TOKEN} me={handedFresh(me("match-42"))} />);
     await waitFor(() => {
       expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
     });
@@ -1558,7 +1585,7 @@ describe("R3207003 the lobby takes the gate's account", () => {
 
   it("R3207003 an account that names a match, read again, still takes the player there while the match is on", async () => {
     vi.mocked(getMe).mockResolvedValue(me("match-42"));
-    render(<PlayRoute token={TOKEN} me={me("match-42")} />);
+    render(<PlayRoute token={TOKEN} me={handedFresh(me("match-42"))} />);
 
     await waitFor(
       () => {
