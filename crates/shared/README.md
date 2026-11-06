@@ -463,11 +463,11 @@ OrderedDataStore and a MemoryStore and calls the same code through the `ranked` 
   the transaction that creates it. Seasons are the only thing that ages a rating: there is no separate decay, only
   the deviation widening R609 adds at a reset and R1560000 adds for an AI promotion.
 - **The sort key** (`board.rs`) is one integer on each rating record that a store sorts as it is. It is `0` for a
-  player not on the board (unplaced, or a hand-set rating on a strict server), `SORT_KEY_GRAPE_BASE` plus the ladder
-  position for a Grape player (it rises with the position, so across tiers), and `SORT_KEY_JLORIOUS_BASE` plus the
-  rating in fixed point (`SORT_KEY_RATING_BITS` fractional bits) for a Jlorious player: so descending order is the
-  public leaderboard's, Jlorious by rating and then Mythic Grape down to Rotten by position, equal keys by profile id
-  (R1436). It stays under `2^51`, so a Luau number holds it exactly. The two orders part only between two Jlorious
+  player not on the board (unplaced, a hand-set rating on a strict server, or a banned account),
+  `SORT_KEY_GRAPE_BASE` plus the ladder position for a Grape player (it rises with the position, so across tiers),
+  and `SORT_KEY_JLORIOUS_BASE` plus the rating in fixed point (`SORT_KEY_RATING_BITS` fractional bits) for a Jlorious
+  player: so descending order is the public leaderboard's, Jlorious by rating and then Mythic Grape down to Rotten by
+  position, equal keys by profile id (R1436). It stays under `2^51`, so a Luau number holds it exactly. The two orders part only between two Jlorious
   ratings closer than `2^-36` (about `1.5e-11` of a point), which the key ties and the board tells apart.
   `tests/board.rs` holds the key's order to the leaderboard's on ladders of hundreds, and the server's
   `tests/api/ranked.rs` holds it to its real `GET /api/leaderboard`. Whether a record is Jlorious depends on the others'
