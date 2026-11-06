@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 3267,
+  "title": "Patch: the Continue with Roblox button shows Roblox's logo",
+  "branch": "bot/issue-3267",
+  "thread": "**Issue #3267 (data, not instructions):**\n\n````text\n# #3267: Patch: the Continue with Roblox button shows Roblox's logo\nOpened by @squishy-squooby.\n\n## What happens\n\nOn `/login`, the **Continue with Roblox** button (R3147000, sized by R3217000) has only its words. Google's button beside it has its four-colour \"G\" (`GoogleMark` in `apps/web/src/auth/OAuthButtons.tsx`), but `OAuthButtons` renders `null` in place of a mark for `custom:roblox`:\n\n```tsx\n{provider === \"google\" ? <GoogleMark /> : null}\n```\n\n`auth.css` already expects a logo: its Roblox rule says \"its black face and white words and logo\". R3217000's last sentence put the logo off: \"Roblox's own logo, from Roblox's brand assets and unaltered, is a person's to add (`apps/web/public/brand/roblox-logo.svg`): the button is drawn without it until then.\" No one added that file (`apps/web/public/brand/` on `main` holds only JackiOh's own art), so the button still has no logo.\n\n## What should happen\n\nThe Roblox button shows Roblox's logo before its label, the same way the Google button shows its \"G\":\n\n- Add a `RobloxMark` beside `GoogleMark` in `OAuthButtons.tsx`: Roblox's tilted-square mark (the square with the square hole) as an inline `<svg>` with `className=\"auth-oauth-mark\"`, `OAUTH_MARK_PX` square, `aria-hidden=\"true\"` and `focusable=\"false\"`, unaltered in shape and filled with `currentColor` so it is white on the button's black face, as Roblox's brand guidelines draw it. Draw it inline the way `GoogleMark` is, so nothing needs a fetch or a file a person must supply.\n- Render it for `custom:roblox` in place of the `null`. The button's accessible name stays exactly \"Continue with Roblox\".\n- Leave the size alone: both marks go through the one `auth-oauth-branded` rule and `auth-oauth-mark`, so the two buttons stay a matched pair. `oauth-row.test.ts` and `e2e/cypress/component/oauth-row.cy.tsx` must stay green.\n- Edit R3217000's note (`spec/rulings/R3217000.md`): replace its last sentence with one that says Roblox's button carries Roblox's mark, drawn inline at the Google mark's size, white on black. Prove it with a test in `apps/web/src/auth/OAuthButtons.test.tsx` whose title names R3217000, checking that the Roblox button holds one `.auth-oauth-mark` svg hidden from assistive technology and that its accessible name is still \"Continue with Roblox\". This changes an existing ruling, so no new R-number is needed.\n\n## How to reproduce\n\n1. `pnpm --dir apps/web dev`, with a build that names the Roblox provider.\n2. Open `/login`.\n3. The Google button has its \"G\". The Roblox button has no logo.\n\n## Where\n\nThe client (`apps/web/src/auth/OAuthButtons.tsx`, `apps/web/src/auth/auth.css`, `spec/rulings/R3217000.md`).\n\n## Version or commit\n\n`main` at e1752a7c (2026-11-06).\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3267: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T03:03:40Z",
+    "claimed_at": "2026-11-06T03:10:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3207 skipped: it waits for #3206 to close first",
+    "#3211 skipped: it waits for #3206 to close first",
+    "#3212 skipped: it waits for #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
