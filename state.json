@@ -15646,6 +15646,9 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-06T09:52:38Z",
+      "requeued": {
+        "c5dea7bb43580bdac9ebead09af276162397a84c": "053ba7eee01ca4fa6cdb83207efedf97dcc7b3bf"
+      },
       "run_id": "42198555346",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
