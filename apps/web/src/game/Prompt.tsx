@@ -88,7 +88,7 @@ import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { abilityLabel, usesWords } from "./ActivateControl.tsx";
-import { ChoiceCard, choiceSeed } from "./ChoiceCard.tsx";
+import { ChoiceCard, choiceSeed, type ChoiceArt } from "./ChoiceCard.tsx";
 import { useChoiceHoverEmitter, type ChoiceHover } from "./choiceHover.ts";
 import LanePick, { neighbourZone, type LaneChoice } from "./LanePick.tsx";
 import { modeText } from "./modeText.ts";
@@ -177,6 +177,11 @@ type PickerItem = {
    * Intuition): its label is the code, drawn as code, untranslated, and it names no card.
    */
   code?: boolean;
+  /**
+   * R3291000: the card whose art a choice card wears in place of its seeded picture: an Activate option's,
+   * the card that prints the ability (`ActivationView.source`, else the activated card).
+   */
+  art?: ChoiceArt;
 };
 
 type EmbiggenPrice = "normal" | "embiggen";
@@ -554,7 +559,15 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
           const label = info && played?.card ? abilityLabel(info, played.card, rawLabel) : rawLabel;
           // A choice card says what it does (#2646): how often the ability may still be used.
           const detail = act === undefined ? t("Use this ability.") : usesWords(act.usesLeft);
-          return { key: abilityId, label: t(label), detail };
+          // R3291000: it wears the art of the card that prints the ability: a fused ingredient's (a
+          // Starship's Weapon), else the activated card's own.
+          const art: ChoiceArt | undefined =
+            act?.source !== undefined
+              ? { defId: act.source.defId, radiant: act.source.radiant === true }
+              : played === null
+                ? undefined
+                : { defId: played.defId, radiant: played.radiant };
+          return { key: abilityId, label: t(label), detail, ...(art === undefined ? {} : { art }) };
         }),
         submit: (keys) => (keys[0] === undefined ? {} : play({ ability: keys[0] })),
       };
@@ -956,6 +969,7 @@ function ChoiceOption(props: { item: PickerItem; seed: string; pressed: boolean;
         label={item.label}
         {...(detail === undefined ? {} : { detail })}
         {...(item.set === undefined ? {} : { set: item.set })}
+        {...(item.art === undefined ? {} : { art: item.art })}
       />
     </button>
   );

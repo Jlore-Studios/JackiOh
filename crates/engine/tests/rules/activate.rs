@@ -1806,6 +1806,120 @@ mod r1751000_fused_activates_have_separate_cooldowns {
     }
 }
 
+mod r3291000_each_ability_names_the_card_that_prints_it {
+    use super::*;
+
+    /// Each ability the controller's view lists, with the definition its `source` names, if any.
+    fn sources(state: &GameState, id: &str) -> Vec<(String, Option<String>)> {
+        jackioh_engine::subsystems::activate::activation_views_for(state, P1, card(state, id))
+            .expect("the card lists its abilities")
+            .into_iter()
+            .map(|view| (view.ability, view.source.map(|source| source.def_id)))
+            .collect()
+    }
+
+    fn named(pairs: &[(&str, &str)]) -> Vec<(String, Option<String>)> {
+        pairs
+            .iter()
+            .map(|(ability, def)| ((*ability).to_string(), Some((*def).to_string())))
+            .collect()
+    }
+
+    #[test]
+    fn r3291000_an_unfused_cards_abilities_name_no_source() {
+        let mut state = playing("r3291000-own");
+        let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
+        card_mut(&mut state, &card.id)
+            .memory
+            .insert(PICK_KEY.to_string(), json!("alpha"));
+        assert_eq!(
+            sources(&state, &card.id),
+            vec![("alpha".to_string(), None), ("gamma".to_string(), None)]
+        );
+    }
+
+    #[test]
+    fn r3291000_a_fused_cards_abilities_each_name_their_ingredient_two_copies_both_name_it() {
+        let mut state = playing("r3291000-fused");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card);
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[("zap", &zapper.id), ("recall", &keeper.id)])
+        );
+
+        let mut state = playing("r3291000-copies");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let copy = in_hand(&mut state, &keeper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![copy], &card);
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[("recall", &keeper.id), ("recall#2", &keeper.id)])
+        );
+    }
+
+    #[test]
+    fn r3291000_a_fuse_of_a_fuse_names_the_card_inside() {
+        let mut state = playing("r3291000-nested");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card);
+        let outer = in_hand(&mut state, &endless.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![outer], &card);
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[
+                ("again", &endless.id),
+                ("zap", &zapper.id),
+                ("recall", &keeper.id)
+            ])
+        );
+    }
+
+    /// An ability `has` leaves out takes its source with it: the ones after it keep their own.
+    #[test]
+    fn r3291000_an_ability_the_card_lacks_leaves_the_others_sources_in_place() {
+        let mut state = playing("r3291000-has");
+        let card = put(&mut state, &zapper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let first = in_hand(&mut state, &chooser.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![first], &card);
+        card_mut(&mut state, &card.id)
+            .memory
+            .insert(PICK_KEY.to_string(), json!("beta"));
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[("beta", &chooser.id), ("gamma", &chooser.id), ("zap", &zapper.id)])
+        );
+    }
+
+    /// The Radiant face an ingredient went in on is named with it.
+    #[test]
+    fn r3291000_a_radiant_fusion_names_its_ingredients_radiant() {
+        let mut state = playing("r3291000-radiant");
+        let kept = put(
+            &mut state,
+            &keeper.id,
+            slot(P1, Row::Backrow, 1),
+            json!({ "radiant": true }),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        card_mut(&mut state, &other.id).radiant = true;
+        let other = card(&state, &other.id).clone();
+        fuse_onto(&mut state, vec![other], &kept);
+        let views =
+            jackioh_engine::subsystems::activate::activation_views_for(&state, P1, card(&state, &kept.id))
+                .expect("listed");
+        assert!(
+            views.iter().all(|view| view
+                .source
+                .as_ref()
+                .is_some_and(|source| source.radiant == Some(true))),
+            "{views:?}"
+        );
+    }
+}
+
 mod r1876000_r1876001_another_cards_activate {
     use super::*;
     use jackioh_engine::effects::{ActivationOfArgs, refuse_own_activate, run_activation};

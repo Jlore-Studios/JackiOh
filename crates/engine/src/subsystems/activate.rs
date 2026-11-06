@@ -42,7 +42,8 @@ use crate::targeting::why_targeting_discards_unpayable;
 use crate::targeting_point::pay_targeting_discards;
 use crate::tuning::tuned_count;
 use crate::wire::{
-    ActionBody, ActivationView, GameEvent, ManaSpentFor, Phase, PlayerId, Row, Selection, ZoneName,
+    ActionBody, ActivationSource, ActivationView, GameEvent, ManaSpentFor, Phase, PlayerId, Row, Selection,
+    ZoneName,
 };
 use crate::work::{paused, push_work};
 use crate::zones::{active_units_of, acts_on_field, slot_of};
@@ -165,12 +166,24 @@ fn cloaked_reveal_decl() -> ActivationDecl {
 /// fused card (R102), less any `ActivationDecl.has` refuses. A card set by its Cloaked has its Reveal
 /// alone (R783006), a Dormant card its `wakesBy` ability alone, or none (R1839002).
 pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDecl> {
+    sourced_abilities_of(state, card)
+        .into_iter()
+        .map(|(decl, _)| decl)
+        .collect()
+}
+
+/// `abilities_of`, each with the fused ingredient whose text prints it (R3291000), `None` when it is the
+/// card's own text or the engine's (the Cloaked Reveal, the Starship launch).
+fn sourced_abilities_of(
+    state: &GameState,
+    card: &CardInstance,
+) -> Vec<(ActivationDecl, Option<ActivationSource>)> {
     if crate::alt_play::is_cloaked_set(card) {
-        return vec![cloaked_reveal_decl()];
+        return vec![(cloaked_reveal_decl(), None)];
     }
     // R1852003: a Dormant Starship has the engine's launch, and nothing its text declares.
     if crate::starship::is_dormant_starship(card) {
-        return vec![crate::starship::launch_decl(state, card)];
+        return vec![(crate::starship::launch_decl(state, card), None)];
     }
     let wakes_by = if crate::slumber::is_slumbering(card) {
         match crate::slumber::wakes_by_of(state, card) {
@@ -180,10 +193,15 @@ pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDec
     } else {
         None
     };
-    activation_decls(&crate::scripts::script_of(state, card))
+    let script = crate::scripts::script_of(state, card);
+    // `activation_decls` keeps the order and the count, so the i-th ability is the i-th source's.
+    let sources = &script.activation_sources;
+    activation_decls(&script)
         .into_iter()
-        .filter(|decl| wakes_by.as_ref().is_none_or(|id| &decl.id == id))
-        .filter(|decl| {
+        .enumerate()
+        .map(|(at, decl)| (decl, sources.get(at).cloned()))
+        .filter(|(decl, _)| wakes_by.as_ref().is_none_or(|id| &decl.id == id))
+        .filter(|(decl, _)| {
             decl.has.as_ref().is_none_or(|has| {
                 has(HookArgs {
                     state,
@@ -1172,9 +1190,9 @@ pub fn activation_views_for(
     if !is_acting_on_field(state, card) && !reveals_cloaked(state, card) {
         return None;
     }
-    let abilities: Vec<ActivationDecl> = abilities_of(state, card)
+    let abilities: Vec<(ActivationDecl, Option<ActivationSource>)> = sourced_abilities_of(state, card)
         .into_iter()
-        .filter(|decl| {
+        .filter(|(decl, _)| {
             card.controller == viewer || decl.cost.is_some_and(|cost| cost.either_player == Some(true))
         })
         .collect();
@@ -1183,29 +1201,30 @@ pub fn activation_views_for(
     }
     Some(
         abilities
-            .iter()
-            .map(|decl| {
+            .into_iter()
+            .map(|(decl, source)| {
                 let gate = why_cannot_activate_ability(state, viewer, &card.id, Some(&decl.id))
                     .err()
                     .map(|error| error.message);
-                let usable = gate.is_none() && !offered_actions(state, viewer, card, decl).is_empty();
+                let usable = gate.is_none() && !offered_actions(state, viewer, card, &decl).is_empty();
                 let reason = if usable {
                     None
                 } else {
-                    gate.or_else(|| why_no_action_listed(state, viewer, card, decl))
+                    gate.or_else(|| why_no_action_listed(state, viewer, card, &decl))
                 };
                 let uses_left = match decl.uses {
                     ActivationUses::Unlimited => None,
                     ActivationUses::Count(_) => Some(
-                        (uses_allowed(card, decl) - ability_uses_this_turn(state, card, &decl.id)).max(0),
+                        (uses_allowed(card, &decl) - ability_uses_this_turn(state, card, &decl.id)).max(0),
                     ),
                 };
                 ActivationView {
-                    ability: decl.id.clone(),
-                    label: decl.label.clone(),
+                    ability: decl.id,
+                    label: decl.label,
                     uses_left,
                     usable,
                     reason,
+                    source,
                 }
             })
             .collect(),

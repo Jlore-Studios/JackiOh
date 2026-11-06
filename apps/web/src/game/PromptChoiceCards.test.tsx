@@ -12,6 +12,7 @@ import type { ActionBody, ActivationView, PendingOption, PendingView, PlayerView
 
 import { CARD_SETTINGS_DEFAULTS, INSPECT_HOVER, INSPECT_SHEET, closeInspect, writeCardSettings } from "../cards/index.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "../cards/inspect/constants.ts";
+import { stinkySubject } from "../cards/art/stinkyscape.ts";
 import { setMarkOf } from "../cards/setMark.ts";
 import type { Interaction } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
@@ -160,6 +161,36 @@ describe("#2646 route 2: a play's short choices are choice cards", () => {
 
     renderBuild(viewWith(OVER), activating(OVER));
     expectList("mode");
+  });
+
+  it("R3291000 an ability's choice card wears the art of the card that prints it, else the activated card's own", () => {
+    const BEAM = "stinkyscape-050";
+    const OWN = "classic-020";
+    const activations: ActivationView[] = [
+      { ability: "beam", label: "Deal damage to an enemy Unit, with Cleave and Pierce", usesLeft: 1, usable: true, source: { defId: BEAM } },
+      { ability: "punish", label: "Choose one", usesLeft: 1, usable: true },
+    ];
+    const view = baseView({
+      you: emptySide("p1", { backrow: [faceUpBackrow("p1", { instanceId: "h1", defId: OWN, activations }), null, null, null, null] }),
+      opponent: emptySide("p2", { hand: { count: 3 } }),
+    });
+    const onAction = renderBuild(view, {
+      stage: "activating",
+      instanceId: "h1",
+      candidates: activations.map((a): ActionBody => ({ type: "activate", instanceId: "h1", ability: a.ability })),
+      picked: {},
+      cardAbilities: activations.map((a) => a.ability),
+    });
+    expectCards("discover");
+    const beam = expectChoiceCard("beam");
+    expect(beam.querySelector(".choice-card")).toHaveAttribute("data-art-of", BEAM);
+    // The Stinkyscape painter draws Beam v3's subject, which the seeded picture never would.
+    const def = CATALOG[BEAM];
+    if (def === undefined) throw new Error(`the catalog has no ${BEAM}`);
+    expect(beam.querySelector(".cf-art")).toHaveAttribute("data-art-family", stinkySubject(BEAM, def.name, def.tags, def.type).family);
+    expect(expectChoiceCard("punish").querySelector(".choice-card")).toHaveAttribute("data-art-of", OWN);
+    fireEvent.click(screen.getByTestId("prompt-option-beam"));
+    expect(onAction).toHaveBeenCalledWith({ type: "activate", instanceId: "h1", ability: "beam" });
   });
 
   it("#2646 Equip or Stack (R1086) is two choice cards, Equip first", () => {

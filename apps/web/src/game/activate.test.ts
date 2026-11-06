@@ -591,3 +591,52 @@ describe("R658 a backrow card whose ability aims at nothing is dragged onto the 
     expect(planDrag(view, [unaimedUnit], IDLE, { on: "unit", instanceId: "act1", side: "you", lane: 1 })).toBeNull();
   });
 });
+
+describe("R3291000 a launched Starship asks which weapon fires, even when it has one", () => {
+  const BEAM: ActivationView = {
+    ability: "beam",
+    label: "Deal damage to an enemy Unit, with Cleave and Pierce",
+    usesLeft: 1,
+    usable: true,
+    source: { defId: "stinkyscape-050" },
+  };
+  const LAUNCH: ActivationView = { ability: "launch", label: "Launch (4)", usesLeft: 1, usable: true };
+  const HULL = "stinkyscape-t-dormant-starship";
+  const PIECES = [{ defId: "stinkyscape-050" }];
+  const BEAM_E1: ActionBody = { type: "activate", instanceId: "ship", ability: "beam", targets: [at("e1")] };
+  const LAUNCH_IT: ActionBody = { type: "activate", instanceId: "ship", ability: "launch" };
+
+  /** p1's Starship `ship`, launched or Dormant, standing in the middle of the backrow (R2249000) or in unit lane 1. */
+  function shipView(activation: ActivationView, launched: boolean, where: "backrow" | "units"): PlayerView {
+    const starship = launched ? { pieces: PIECES, name: "Test Ship", launched: 1 } : { pieces: PIECES };
+    const ship = unit("p1", { instanceId: "ship", defId: HULL, activations: [activation], starship });
+    const base = activateView();
+    const you =
+      where === "units"
+        ? { ...base.you, units: [ship, null, null, null, null] }
+        : {
+            ...base.you,
+            backrow: [null, null, faceUpBackrow("p1", { instanceId: "ship", defId: HULL, type: "Unit", activations: [activation], unit: ship }), null, null],
+          };
+    return { ...base, you };
+  }
+
+  for (const where of ["backrow", "units"] as const) {
+    it(`R3291000 pressed in the ${where}, its one ability asks, and the pick sends the activate naming it`, () => {
+      const pressed = onClickTarget(shipView(BEAM, true, where), [BEAM_E1], IDLE, { on: "activate", instanceId: "ship" });
+      expect(pressed.action).toBeUndefined();
+      expect(outstandingNeed(pressed.interaction)).toEqual({ kind: "ability", min: 1, max: 1, abilities: ["beam"] });
+      expect(pickInPlay(pressed.interaction, { ability: "beam" }).action).toEqual(BEAM_E1);
+    });
+  }
+
+  it("R3291000 a Dormant Starship's launch is no weapon: it sends on the press", () => {
+    const pressed = onClickTarget(shipView(LAUNCH, false, "backrow"), [LAUNCH_IT], IDLE, { on: "activate", instanceId: "ship" });
+    expect(pressed.action).toEqual(LAUNCH_IT);
+  });
+
+  it("R3291000 any other card with one ability still sends on the press", () => {
+    const pressed = onClickTarget(activateView(), [PING_E1], IDLE, { on: "activate", instanceId: "act1" });
+    expect(pressed.action).toEqual(PING_E1);
+  });
+});

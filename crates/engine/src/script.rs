@@ -16,8 +16,8 @@ use serde_json::Value;
 use crate::rng::Rng;
 use crate::state::{CardInstance, CostRule, EventStay, GameState, PlayRecord};
 use crate::wire::{
-    CardType, GameEvent, GameEventType, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag,
-    TargetDecl, string_union,
+    ActivationSource, CardType, GameEvent, GameEventType, Keyword, ModeDecl, PlayerId, PreviewValue,
+    Selection, Tag, TargetDecl, string_union,
 };
 
 // The sink and the context
@@ -1018,6 +1018,10 @@ pub struct Script {
     /// B3.2, R384: the card's Activate abilities, used by the `activate` action while it acts on the
     /// field (`subsystems::activate`).
     pub activations: Vec<ActivationDecl>,
+    /// R3291000: on a fused script, the ingredient whose text prints each of `activations`, one per
+    /// ability in the same order (`fuse.rs` `script_record`), which `ActivationView.source` reports.
+    /// Empty on a card's own script: every ability is its own text.
+    pub activation_sources: Vec<ActivationSource>,
     /// §10.6: the named predicates a declaration's `TargetFilter.check` points at, for a filter no data
     /// field can say (Classic #32's lane rule, #48's lines of code). A pure read, like `conditionMet`.
     pub target_checks: IndexMap<&'static str, TargetCheck>,

@@ -413,6 +413,30 @@ pub struct ActivationView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub reason: Option<String>,
+    /// R3291000: the fused ingredient whose text prints the ability (a Starship's Weapon piece, an
+    /// Equipped Unit's Weapon), whose art the Activate picker's choice card wears. Absent when the
+    /// ability is the card's own text or the engine's (the Dormant Starship's launch, a Cloaked card's
+    /// reveal): the picker then wears the card's own art.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub source: Option<ActivationSource>,
+}
+
+/// R3291000: the card whose text prints an Activate ability of a fused card, as `fuse.rs` composed it:
+/// the innermost ingredient (a Fuse of a Fuse names the card inside), on the face it went in on.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivationSource {
+    pub def_id: String,
+    /// Only ever `Some(true)`: the ingredient runs on its Radiant face.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant: Option<bool>,
 }
 
 /// R280: one number a card's formula comes to now, and the formula it is ("+1 per card in your exile").
