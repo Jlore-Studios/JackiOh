@@ -16062,9 +16062,14 @@
     "what": "plan #3290 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-06T14:44:21Z",
+    "at": "2026-11-06T14:53:41Z",
     "notes": [
-      "delivered review #3307 on claude-4 (run 42235144288): approved"
+      "#3286 needs a plan",
+      "#3290 needs a plan",
+      "started plan #3285 on claude-7 (run 42238286013)",
+      "started plan #3286 on claude-7 (run 42238407924)",
+      "started plan #3290 on claude-3 (run 42238532122)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16770,7 +16775,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T14:44:21Z",
+  "loop_tick": "2026-11-06T14:53:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
