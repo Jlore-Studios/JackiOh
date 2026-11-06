@@ -33755,7 +33755,8 @@
       "2026-11-06T00:30:21Z,42136884095,claude-3,opus,review,3262,hard,reviewed,,1,19,5185,490956,0.521,7,8,,,0.2,,none,,1",
       "2026-11-06T00:25:32Z,42128715530,claude-4,sonnet+opus,revise,3253,medium,built,,32.7,4,997,73752,0.4747,2,3,,,5.8,claude-3,fresh,other,1",
       "2026-11-06T00:40:28Z,42128487499,claude-8,opus,review,3255,hard,approved,,45,131,34255,4469015,3.0397,51,1,,,1.4,,fresh,,3",
-      "2026-11-06T00:25:46Z,42126252774,claude-7,opus,revise,3068,hard,approved,,45.8,44,13718,5851564,23.4165,30,4,,,0.5,claude-7,resumed,,2"
+      "2026-11-06T00:25:46Z,42126252774,claude-7,opus,revise,3068,hard,approved,,45.8,44,13718,5851564,23.4165,30,4,,,0.5,claude-7,resumed,,2",
+      "2026-11-06T00:47:44Z,42131407315,claude-6,sonnet+opus,revise,3250,medium,approved,,10.9,31,6104,809823,0.7027,43,1,,,14.8,claude-4,fresh,other,2"
     ]
   },
   "version": 1
