@@ -2,7 +2,8 @@
 // one size (`OAUTH_BUTTON_WIDTH_PX` by `OAUTH_BUTTON_HEIGHT_PX`, set once in auth.css's
 // `auth-oauth-branded` rule) so they read as a matched pair, and sit side by side, wrapping one above the
 // other only when the screen is too narrow for both. A build that names one provider shows it alone,
-// centered. The route owns what a click does (PKCE, R666; GIS's token, R2983000); this draws and reports.
+// centered. Each brand's mark (Google's "G", Roblox's tilted square) is drawn inline at `OAUTH_MARK_PX`.
+// The route owns what a click does (PKCE, R666; GIS's token, R2983000); this draws and reports.
 
 import type { ReactElement } from "react";
 
