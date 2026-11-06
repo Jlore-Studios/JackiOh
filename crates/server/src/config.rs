@@ -319,6 +319,14 @@ pub const AUTH_SESSION_LIVE_CACHE_SECONDS: i64 = 30;
 pub const EMAIL_CONFIRMED_CACHE_TTL_MS: i64 = 30_000;
 /// A request to the auth provider that has not answered in this long is a network failure.
 pub const AUTH_PROVIDER_TIMEOUT_SECONDS: i64 = 30;
+/// R3209000: how long the API remembers that the provider did not answer about one session (R194's
+/// check), so an outage costs that session one wait per window, not one per request. Never longer
+/// than `AUTH_SESSION_LIVE_CACHE_SECONDS` (`auth.rs` asserts it). Server-only.
+pub const AUTH_SESSION_OUTAGE_CACHE_SECONDS: i64 = 15;
+/// R3209000: how long R194's in-request session check (and tier 3's lookup by token, which shares
+/// the call) waits before the provider counts as unreachable. The sign-in grant keeps
+/// `AUTH_PROVIDER_TIMEOUT_SECONDS`. Server-only.
+pub const AUTH_SESSION_CHECK_TIMEOUT_SECONDS: i64 = 5;
 // ---------------------------------------------------------------------------------------------
 // The sign-in key set (SPEC §9.2, R1144000). The server verifies Supabase's asymmetric tokens
 // against the project's published JWKS, fetched on first use. A fetched set is kept this long
