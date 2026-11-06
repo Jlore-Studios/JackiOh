@@ -1880,6 +1880,14 @@ pub struct InvariantMonitor {
     dormant: IndexSet<String>,
 }
 
+/// R781004: whether `later`, the rest of an action's events, summons `id` again (back through Reborn): an
+/// arrival whose fresh draw is the one the state the action leaves holds.
+fn summoned_later(id: &str, later: &[GameEvent]) -> bool {
+    later
+        .iter()
+        .any(|event| matches!(event, GameEvent::Summoned { instance_id, .. } if instance_id == id))
+}
+
 pub fn create_invariant_monitor(start: &GameState) -> InvariantMonitor {
     InvariantMonitor::new(start)
 }
@@ -1927,9 +1935,12 @@ impl InvariantMonitor {
     /// Keenus' Aura, the Stinkyscape Drones') keeps them in its memory, which leaving the field resets
     /// (R78). One gone from the field by the action's end leaves no state to say whether it drew
     /// Windfury, so its attacks in this stint count as Windfury's (Keenus onto C+ #26: Duos seed 679).
-    fn note_drawn_windfury(&mut self, id: &str, def_id: &str, state: &GameState) {
+    /// So does one summoned again later in the action (`summoned_again`, back through Reborn): the
+    /// field the action leaves holds that later arrival's draw, not this stint's (handicapped fuzz seed
+    /// 7089, a Drone Corvette that drew Reborn and Windfury, attacked twice, died and came back).
+    fn note_drawn_windfury(&mut self, id: &str, def_id: &str, state: &GameState, summoned_again: bool) {
         let draws = match find_instance(state, id) {
-            Some(card) if card.zone.z() == ZoneName::Field => false,
+            Some(card) if card.zone.z() == ZoneName::Field && !summoned_again => false,
             Some(card) => crate::scripts::script_of(state, card)
                 .conditional_keywords
                 .is_some(),
@@ -2484,7 +2495,8 @@ impl InvariantMonitor {
                     self.enter(instance_id);
                     self.note_entry_windfury(instance_id, state);
                     if let GameEvent::Summoned { def_id, .. } = event {
-                        self.note_drawn_windfury(instance_id, def_id, state);
+                        let again = summoned_later(instance_id, &events[index + 1..]);
+                        self.note_drawn_windfury(instance_id, def_id, state, again);
                     }
                     // R12, R781004: a steal keeps the card on the field, its drawn keywords with it.
                     if matches!(event, GameEvent::ControlChanged { .. })
@@ -2608,7 +2620,8 @@ impl InvariantMonitor {
                     ..
                 } => {
                     self.note_entry_windfury(result_instance_id, state);
-                    self.note_drawn_windfury(result_instance_id, def_id, state);
+                    let again = summoned_later(result_instance_id, &events[index + 1..]);
+                    self.note_drawn_windfury(result_instance_id, def_id, state, again);
                 }
                 GameEvent::KeywordGranted {
                     instance_id,

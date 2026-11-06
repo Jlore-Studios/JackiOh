@@ -522,6 +522,11 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
 
     cy.get(`${inHand("core-095")} .card-text`).should("have.text", "???");
 
+    // KY's Trial costs 2 since #3125, so it is played on p1's second turn, the first with 2 mana.
+    cy.advanceToTurn(3);
+    cy.jackioh().then((handle) => {
+      if (handle.seat !== "p1") cy.handOver();
+    });
     cy.playByName("KY's Trial");
 // R831004: three sets first, each with its mark; the names below are Core's, so Core when offered.
 // The `mode` prompt draws as a Discover pop-up, offering DISCOVER_OPTION_LIMIT or fewer (`boardKind` in support/playthrough.ts).

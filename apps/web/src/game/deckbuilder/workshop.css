@@ -1073,6 +1073,18 @@
   .deckbuilder.app-shell .ws-actions .ws-action {
     padding-inline: 5px;
   }
+
+  /* #3320: R3218000's bar puts the extras on the title's row, a row of 44 px controls, which made the
+     header 25 px taller than #2099 sized it; the header's hairline and the sidebar's gaps and padding
+     close to keep the pool's first row on the first screen (BUILD M5-T1). */
+  .workshop .db-header {
+    padding-bottom: var(--space-2);
+  }
+
+  .workshop .db-sidebar {
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
 }
 
 /* Touch sizing: every control a finger hits is at least 44 px, as on the board and in the pool. */
