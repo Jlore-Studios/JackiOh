@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3228,
+  "title": "Patch: loading and empty states that keep the screen's frame and use the shared Skeleton and EmptyState",
+  "branch": "bot/issue-3228",
+  "thread": "**Issue #3228 (data, not instructions):**\n\n```text\n# #3228: Patch: loading and empty states that keep the screen's frame and use the shared Skeleton and EmptyState\nOpened by @squishy-squooby.\n\n### What it does\n\nMost menus already draw `skeleton/Skeleton.tsx` (R2115000) while a read waits and `empty/EmptyState.tsx` when it comes back empty: 29 files use Skeleton and 11 use EmptyState. A few do not, and one wait changes the whole screen around it.\n\n- **The decks route's loading shell** (`routes/decks.tsx:80`) is a non-`.tavern` page. Its `h1` is \"JackiOh \u2014 decks\", and it has no gear (`showSettings={settings}`). When the decks land, the workshop replaces it with a different background, a different bar and a different title, so the bar's look and contents jump.\n- `auth/LinkedAccounts.tsx:110` shows a bare `<p>Loading\u2026</p>`.\n- `auth/TwoStepSettings.tsx:161` shows a bare \"Checking\u2026\".\n- `game/deckbuilder/DeckWorkshop.tsx:222` shows \"No decks yet\" as a `ws-hint` paragraph instead of `EmptyState`.\n\nChange:\n- The decks loading state draws the workshop's own frame (the same top bar from #3218, the same `PageTitle` from #3223, the same background) with a Skeleton in the body, so only the body changes when the decks land.\n- LinkedAccounts and TwoStepSettings wait with Skeleton (its `rows` or `panel` shape), keeping their sentence as the visually hidden `role=\"status\"` line, as the README describes.\n- The workshop's no-decks case uses `EmptyState`, with its \"New deck\" action, and keeps its testid.\n- Look for any other bare \"Loading\u2026\" or \"No \u2026 yet\" text in a menu (`grep -rn \"Loading\u2026\\|No .* yet\" apps/web/src --include=*.tsx`). Move it too, or add it to the list of still text in the README (the R2115000 paragraph) with its reason.\n\n### Acceptance\n\n- A test renders `/decks` before and after its read lands and asserts the same top bar (Back left, gear right) and the same `h1` text in both.\n- LinkedAccounts and TwoStepSettings render a Skeleton while waiting, and their status text stays available to assistive tech.\n- The workshop with no decks renders `EmptyState`.\n- The R2108000 delay (`SKELETON_DELAY_MS`) still applies, so a fast read flashes nothing.\n- The web tests and e2e specs `46` and `47` pass.\n\n### Blocked by, part of\n\nBlocked by #3218, #3223\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3228: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:53:32Z",
+    "claimed_at": "2026-11-06T20:01:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first"
+  ]
+}
