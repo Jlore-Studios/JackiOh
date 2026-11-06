@@ -13687,15 +13687,8 @@
       "waiting_comment": 6689698471
     },
     "3213": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42260970465",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-06T17:59:06Z",
-        "until": "2026-11-06T18:29:06Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13707,10 +13700,9 @@
         "reason": "planned on opus",
         "trail": " crates/server/tests/server.rs | head -40; grep -n \\\"SERIES_POLL_SECONDS\\\" -B4 crates/server/src/config.rs | head -20\", \"description\": \"Check server test harness modules and poll cons\u2026\n- Bash: {\"command\": \"grep -rln \\\"rematch\\\" e2e/cypress/e2e | head; grep -n \\\"smoke\\\" e2e/README.md | head -10\", \"description\": \"Find e2e rematch specs and smoke list\"}\n- Bash: {\"command\": \"sed -n 55,62p e2e/README.md; grep -n \\\"intercept\\\\|rematch\\\\|wait(\\\" e2e/cypress/e2e/37-rematch.cy.ts | head -30\", \"description\": \"Read e2e smoke list and rematch spec usage\"}\n- Bash: {\"command\": \"grep -rn \\\"intercept\\\" e2e/cypress/e2e/37-rematch.cy.ts e2e/cypress/e2e/*.cy.ts | grep -i \\\"rematch\\\\|series\\\" | head; sed -n 400,450p e2e/cypress/e2e/37-rematch.cy.ts\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"spectatorEmote\\\\\\\"\\\\|type === \\\\\\\"view\\\\\\\"\\\\|case \\\\\\\"view\\\\\\\"\\\\|frame.type\\\\|message.type\\\" e2e/*.ts e2e/support e2e/cypress/plugins e2e/tasks 2>/dev/null | head -10; ls \u2026\n- Bash: {\"command\": \"sed -n 405,430p apps/web/src/routes/match.tsx; sed -n 474,492p apps/web/src/routes/match.tsx; sed -n 548,562p apps/web/src/routes/match.tsx\", \"description\": \"Read rematch mounts in match\u2026\n- Bash: {\"command\": \"grep -n \\\"rematch\\\\|again\\\" crates/shared/README.md | head; grep -n \\\"TimerKey\\\\|BotOffer\\\\|bot_rematch\\\\|PresenceChanged\\\\|presence\\\" crates/shared/README.md | head\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"sed -n 255,325p crates/shared/README.md\", \"description\": \"Read shared README machine event/output tables\"}\n- Bash: {\"command\": \"cat apps/web/src/test/settle.ts | head -40\", \"description\": \"Read the settle test helper\"}\n- Bash: {\"command\": \"grep -n \\\"fn r639000\\\\|linger\\\\|presence\\\\|fn \\\\w*(\\\" crates/server/tests/actor/bot_seat.rs | head -40\", \"description\": \"Find bot linger tests in actor tests\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3213/crates/server/tests/actor/bot_seat.rs\", \"offset\": 1, \"limit\": 200}\n- Bash: {\"command\": \"grep -rn \\\"DuelOutput::\\\" crates/shared/src/host/boundary.rs crates/shared/tests/host_boundary.rs crates/wasm 2>/dev/null | head; grep -rn \\\"DuelOutput::Pushed\\\\b\\\\|DuelOutput::Changed\\\"\u2026\n- Bash: {\"command\": \"git show --stat 38d6e4794d | head -60\", \"description\": \"See files changed by the #3207 patch commit\"}\n- Bash: {\"command\": \"grep -n -i \\\"rematch\\\\|R3207002\\\\|SERIES_POLL\\\" apps/web/README.md | head; git show 38d6e4794d -- apps/web/README.md | head -40\", \"description\": \"Check web README rematch notes from #320\u2026\n- Bash: {\"command\": \"grep -n \\\"game/net.ts\\\" apps/web/README.md | head -5; grep -n \\\"routes/Rematch\\\\|routes/match.tsx\\\" apps/web/README.md | head\", \"description\": \"Find net.ts and match route lines in web R\u2026\n- Bash: {\"command\": \"sed -n 236,330p crates/server/tests/actor/bot_seat.rs; sed -n 505,532p crates/server/tests/actor/bot_seat.rs\", \"description\": \"Read bot_seat helpers and the R610 test\"}\n- Bash: {\"command\": \"cd apps/web/src/wire/generated && cat SeriesView.ts SeriesViewYou.ts SeriesViewGame.ts SeriesViewResult.ts SeriesStatus.ts SeriesSeat.ts 2>/dev/null | grep -v \\\"^//\\\\|^import\\\\|^$\\\"; gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3213 && pwd && git status --porcelain | head -3\", \"description\": \"Return to worktree root and check status\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"content\": \"**Goal.** While a seat's match socket is open, the server pushes that seat a versioned `rematch` frame (a match in no \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; grep -n \\\"^indexmap\\\\|indexmap\\\" crates/server/Cargo.toml\", \"description\": \"Count plan words and check indexmap dependency\"}\n- Bash: {\"command\": \"sed -n 88,110p crates/server/tests/api/series.rs; grep -n \\\"pub fn transport_closed\\\" -A14 crates/server/src/actor/ws_server.rs | head -20\", \"description\": \"Read assert_hides_alice and s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"- `crates/shared/tests/duel.rs`: `Table.presence_changes: usize`, counted in `run`. `r3213000\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"helper `held_match(app, id, a, b, ranked)` = `start_live` with `ranked`, both seats attached,\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"- `crates/server/tests/api/series.rs`: `pick_both`, attach fake sockets to `FIRST_MATCH`, cle\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"- Determinism: nothing touches `GameState` or the log; the new timer shifts later timer ids o\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed -n 1,12p .bot-plan.md | cut -c1-200\", \"description\": \"Count plan words and check its opening\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"| `apps/web/src/wire/generated/{PostGameFrame,RematchMode}.ts` | new | generated |\\n| `apps/w\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"- `Rematch.test.tsx`: `R3213000` pushed \\u2192 no reads; offer \\u2192 no read after it; `push\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3213/.bot-plan.md\", \"old_string\": \"- [ ] the listed tests and every harness check pass (rustfmt, catalog, patches, rulings, clip\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; git status --porcelain | head\", \"description\": \"Recount plan and confirm no tracked changes\"}\n- said: **Goal.** While a seat's match socket is open, the server pushes that seat a versioned frame. A match in no series gets a `rematch` frame and a Conquest game gets a `series` frame. The server sends one on every greeting and again whenever the rematch book, a seat's presence or the series changes. E\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-06T17:21:55Z",
       "owner_why": "it plans it",
@@ -13723,9 +13715,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-05T16:46:14Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42260970465",
+      "run_id": "pending:93e19424-1793988049",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T17:21:55Z",
+      "started_at": "2026-11-06T18:01:28Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16496,9 +16488,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T18:00:35Z",
+    "at": "2026-11-06T18:01:28Z",
     "url": "",
-    "what": "build #3212 on claude-4"
+    "what": "build #3213 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-06T17:58:56Z",
