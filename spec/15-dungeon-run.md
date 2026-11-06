@@ -138,7 +138,7 @@ Max HP is `RUN_MAX_HP` plus the max-HP effects. A rise heals by the rise, and HP
 
 **Fight effects** (a Combat artifact's): more cards in the opening hand, or Armor the hero starts each fight with ([[R2922000]]).
 
-No run holds an artifact twice. Every roll (reward, chest, event, shop) deals a Combat or Economic artifact that is neither Unobtainable nor held, and a boss drop already held is not offered.
+No run holds an artifact twice. Every roll (reward, chest, event, shop) deals a Combat or Economic artifact that is neither Unobtainable nor held, and a boss drop already held is replaced by another ([[§15.7]], [[R3286000]]).
 
 Unobtainable: a final boss's own artifact. Nothing else deals it, and it can neither start a run nor be extracted.
 
@@ -186,7 +186,7 @@ A won fight pays in this order.
 
 **First, currencies:** `RUN_COINS` and `RUN_TICKETS` by kind, plus the passives'.
 
-**Second, an artifact:** a boss's drop unless already held, otherwise one at `RUN_ARTIFACT_PERCENT`. It is taken or left before any pack.
+**Second, an artifact:** a boss's drop; a drop already held, or none, is replaced by a roll at `RUN_ARTIFACT_PERCENT`, a mini-boss's replacement of `RUN_MINI_BOSS_DROP_TIER` or better ([[R3286000]]). There is none when no artifact is left to roll. It is taken or left before any pack.
 
 **Third, four packs:** the beaten enemy's deck with its boss cards, a random one, a set's, and one of a card type, tag or rarity (a random pack when the pool lacks one).
 
