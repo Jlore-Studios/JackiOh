@@ -33,7 +33,7 @@ export function ChoiceCard(props: { seed: string; label: string; detail?: string
       {props.detail === undefined || props.detail === "" ? null : (
         <span className="choice-card-text">
           <TermTips>
-            <RulesText text={props.detail} />
+            <RulesText words={props.detail} />
           </TermTips>
         </span>
       )}

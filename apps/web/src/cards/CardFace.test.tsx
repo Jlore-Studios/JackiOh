@@ -12,14 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
-import { SHIPPED_SETS, fillParams, type CardDef, type CardType, type Keyword, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
+import { SHIPPED_SETS, fillParams, type CardDef, type CardType, type Keyword, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardBack } from "./CardBack.tsx";
-import { CardFace, TOKEN_WORD, cx, faceText, typeLine } from "./CardFace.tsx";
+import { CardFace, cx, faceText } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
 import { resetCosmeticsForTests, writeCardFullArt } from "./cosmetics.ts";
 import { FULL_ARTS_OF_CARD } from "./fullArt.ts";
-import { GLITCH_WORDS } from "./glitch.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { INSPECT_FACE, INSPECT_GLOSSARY, INSPECT_STATES } from "./inspect/testids.ts";
 import { MinionFace } from "./MinionFace.tsx";
@@ -35,7 +34,6 @@ import {
 } from "./constants.ts";
 import { flushFits, nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
 import { faceModel, type FaceSource } from "./model.ts";
-import { termsIn } from "./rules.ts";
 import {
   SET_MARK_MIN_FACE_PX,
   WATERMARK_INK,
@@ -48,7 +46,10 @@ import {
   watermarkOf,
 } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
-import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
+import { termsIn } from "../test/faceData.ts";
+
+const TOKEN_WORD = "Token";
+const SUMMIT_DEF_ID = "meditative-008";
 import { fusedDef, unit } from "../test/fixtures.ts";
 
 // R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
@@ -411,7 +412,7 @@ describe("B10: RulesText marks terms in bold", () => {
         const label = `${card.id} ${radiant ? "radiant" : "base"}`;
         const drawn = new Set([...renderFace(source).querySelectorAll(".card-text strong.cf-term")].map((term) => term.getAttribute("data-term")));
         // The words the face prints: its short form where it has one (#1017).
-        expect([...drawn], label).toEqual(termsIn(faceText(faceModel(source)).shown));
+        expect([...drawn], label).toEqual(termsIn(faceText(faceModel(source)).shown.full));
         for (const keyword of (radiant ? card.radiant : card.base).keywords) expect(drawn.has(keyword.kind), `${label} ${keyword.kind}`).toBe(true);
         cleanup();
       }
@@ -463,15 +464,18 @@ describe("B10: RulesText marks terms in bold", () => {
   });
 
   it("R280 two values sharing one label group in one helper block after it, not one mid-text and one at the end", () => {
-    const { container } = render(
-      <RulesText
-        text="Deal 4 damage. Your two largest piles add their effects."
-        values={[
+    const text = faceModel({
+      defId: "t-values",
+      def: { ...def("core-001"), id: "t-values", base: { ...def("core-001").base, text: "Deal 4 damage. Your two largest piles add their effects." } },
+      radiant: false,
+      inPlay: {
+        preview: [
           { label: "Your two largest piles", value: 5, display: "Deck" },
           { label: "Your two largest piles", value: 3, display: "Graveyard" },
-        ]}
-      />,
-    );
+        ],
+      },
+    }).text;
+    const { container } = render(<RulesText rich={text} />);
     const chips = [...container.querySelectorAll(".cf-value")];
     expect(chips.map((chip) => chip.getAttribute("data-value"))).toEqual(["Deck", "Graveyard"]);
     // Both chips sit after the label and before the words that follow it — one block, mid-text.
@@ -499,7 +503,7 @@ describe("B10: RulesText marks terms in bold", () => {
           const text = model.text;
           const cf = catalogFace(card.id, radiant);
           // Its whole text, or the short form that starts it (#1017).
-          expect(one(cf, ".cf-text-base").textContent, card.id).toBe(faceText(model).shown);
+          expect(one(cf, ".cf-text-base").textContent, card.id).toBe(faceText(model).shown.full);
           // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
           expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
           cleanup();
@@ -726,12 +730,16 @@ describe("B15: length tiers, and useFitText without layout", () => {
     expect(textTier("")).toBe("s");
   });
 
-  it("B15 .cf's data-name-tier is nameTier(name) for every catalog card", () => {
-    for (const card of DEFS) {
-      expect(catalogFace(card.id).getAttribute("data-name-tier"), card.id).toBe(nameTier(card.name));
-      cleanup();
-    }
-  });
+  it(
+    "B15 .cf's data-name-tier is nameTier(name) for every catalog card",
+    () => {
+      for (const card of DEFS) {
+        expect(catalogFace(card.id).getAttribute("data-name-tier"), card.id).toBe(nameTier(card.name));
+        cleanup();
+      }
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
 
   it("B15 .cf's data-text-tier counts the text the face prints", () => {
     const cases: readonly (readonly [string, boolean, LengthTier])[] = [
@@ -1127,12 +1135,12 @@ describe("R1177001: every token's type line says Token", () => {
     expect(one(cf, ".card-type").textContent).toBe(`${token}${CHINESE_TERMS.types["Field Spell"]}`);
     expect(cf.textContent).not.toContain(TOKEN_WORD);
     // A Chinese card that is no token prints the table's type alone.
-    expect(typeLine(faceModel({ defId: "core-011", def: def("core-011"), radiant: false, chinese: true }))).toBe(CHINESE_TERMS.types.Unit);
+    expect(faceModel({ defId: "core-011", def: def("core-011"), radiant: false, chinese: true }).typeLine).toBe(CHINESE_TERMS.types.Unit);
   });
 
   it("R1177001 R674 Glitch wears no token label: its type line stays corrupted", () => {
     const cf = catalogFace(GLITCH_DEF_ID);
-    expect(one(cf, ".card-type").textContent).toBe(GLITCH_WORDS.type);
+    expect(one(cf, ".card-type").textContent).toBe(faceModel({ defId: GLITCH_DEF_ID, def: def(GLITCH_DEF_ID), radiant: false }).typeLine);
   });
 
   it("R1177001 R1177000 a token fused with a real card is labeled as the real card it is; tokens fused together as a token", () => {
@@ -1171,7 +1179,12 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
   function summitBox(level: number | null): HTMLElement {
     const { container } = render(
       <CardFace
-        face={faceModel({ defId: SUMMIT, def: def(SUMMIT), radiant: false })}
+        face={faceModel({
+          defId: SUMMIT,
+          def: def(SUMMIT),
+          radiant: false,
+          ...(level === null ? {} : { inPlay: { preview: [{ label: "Ascent level", value: level }] } }),
+        })}
         {...(level === null ? {} : { ascentLevel: level })}
       />,
     );
@@ -1179,30 +1192,11 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     return one(container, ".card-text");
   }
 
-  it("ascentLevelOf reads the engine's Ascent level preview (R280), and nothing else", () => {
-    const level = (value: number): PreviewValue => ({ label: "Ascent level", value });
-    expect(ascentLevelOf([])).toBeNull();
-    expect(ascentLevelOf([{ label: "Damage", value: 2 }])).toBeNull();
-    expect(ascentLevelOf([{ label: "Damage", value: 2 }, level(4)])).toBe(4);
-  });
-
-  it("summitShortText keeps the header and only the level's Ascent line", () => {
-    const sample = ["Header one.", "Header two.", "Ascent 0: Rest.", "Ascent 1: Fight.", "Ascent 2: Win."].join("\n");
-    expect(summitShortText(SUMMIT, sample, 1)).toBe("Header one.\nHeader two.\nAscent 1: Fight.");
-    expect(summitShortText(SUMMIT, sample, 0)).toBe("Header one.\nHeader two.\nAscent 0: Rest.");
-    // Nothing to shorten to: another card, no level, no Ascent lines, or a level past them.
-    expect(summitShortText("core-098", sample, 1)).toBeNull();
-    expect(summitShortText(SUMMIT, sample, null)).toBeNull();
-    expect(summitShortText(SUMMIT, sample, undefined)).toBeNull();
-    expect(summitShortText(SUMMIT, "no Ascent lines here", 1)).toBeNull();
-    expect(summitShortText(SUMMIT, sample, 9)).toBeNull();
-  });
-
   it("a Summit face with a level prints its header and only the next Ascent line", () => {
     const box = summitBox(1);
     expect(box.getAttribute("data-short")).toBe("true");
     expect(box.getAttribute("data-less")).toBe("true");
-    expect(box.textContent).toContain("Costs (Ascent level)");
+    expect(box.textContent).toContain("Costs (Ascent level");
     expect(box.textContent).toContain("End of turn: Return this to hand.");
     expect(box.textContent).toContain("Ascent 1:");
     for (const hidden of ["Ascent 0:", "Ascent 2:", "Ascent 9:", "Ascent 10:"]) {

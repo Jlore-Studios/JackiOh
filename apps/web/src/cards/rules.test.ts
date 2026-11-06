@@ -1,5 +1,6 @@
-// Polish 6, slice B: the rules-text tokenizer and the glossary, tested pure (docs/polish/6-cards.md,
-// behaviors B10–B11); the rendered half of B10 is in CardFace.test.tsx. The glossary's rules are its
+// Polish 6, slice B: the rules-text tokenizer and the glossary (docs/polish/6-cards.md, behaviors B10–B11), now
+// jackioh-shared's (#3106): the glossary is its data file and the tokenizer is asked of the module (`richWords`),
+// so these still hold what a face prints to the spec; the rendered half of B10 is in CardFace.test.tsx. The glossary's rules are its
 // own reviewed data, in a player's words (#133), so nothing here compares a sentence with the spec's:
 // the tie is structure, the term names in the first column of spec/06-keywords.md's three tables.
 // A row added without a glossary entry fails; a reworded rule fails nothing.
@@ -13,20 +14,22 @@ import { describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { KEYWORD_KINDS, fillParams, setShips, type KeywordKind } from "@jackioh/shared";
 
+import { KEYWORD_MARK } from "./keywordMarks.ts";
 import {
   GLOSSARY,
-  KEYWORD_MARK,
   PLAIN_SPELLINGS,
   RULED_TERMS,
   SHORT_REMINDERS,
   SHORT_TERMS,
+  termsIn,
+  tokenizeRules,
   type GlossaryEntry,
   type GlossaryTermId,
+  type RulesToken,
   type StatusTermId,
   type TriggerTermId,
   type VerbTermId,
-} from "./glossary.ts";
-import { termsIn, tokenizeRules, type RulesToken } from "./rules.ts";
+} from "../test/faceData.ts";
 
 /* helpers */
 

@@ -6,8 +6,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../auth/testids.ts";
+import { testid } from "../game/contract.ts";
 import { WORKSHOP } from "../game/deckbuilder/testids.ts";
 import { decksResponse } from "../game/deckbuilder/testkit.ts";
+import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION } from "../stats/config.ts";
+import { STAGE_INSTANCE_ID } from "../stats/showcaseStage.ts";
+import { dropPlayerStatsCache } from "../stats/store.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 
@@ -53,6 +57,8 @@ vi.doMock("../wasm/index.ts", async (importOriginal) => {
 
 const wasm = await import("../wasm/index.ts");
 const { App } = await import("../main.tsx");
+const { CosmeticLook } = await import("../collection/CosmeticLook.tsx");
+const { WhenEngineReady } = await import("../wasm/WhenEngineReady.tsx");
 
 async function arrive(): Promise<void> {
   await act(async () => {
@@ -150,6 +156,76 @@ describe("#778 the screens that never call the engine", () => {
     expect(screen.queryByTestId(shellTestid.engineLoading)).toBeNull();
     expect(screen.queryByTestId(shellTestid.loadFailed)).toBeNull();
     expect(arrived).toBe(false);
+  });
+
+  it("#778 / after a played game keeps its screen while the module is still loading, and draws the showcased card once it is in", async () => {
+    // A game played (the e2e of R765 plays one, then visits `/`): the landing shows "Your table" with a card
+    // whose face the module works out, which it cannot do before it has arrived.
+    window.localStorage.setItem(
+      PLAYER_STATS_KEY,
+      JSON.stringify({
+        v: PLAYER_STATS_VERSION,
+        games: 1,
+        wins: 1,
+        losses: 0,
+        draws: 0,
+        cards: { "core-004": { seen: 1, played: 5, playedInWin: 5 } },
+      }),
+    );
+    dropPlayerStatsCache();
+    signIn();
+    serveAs("active");
+    at("/");
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(<App />);
+
+    expect(await screen.findByTestId(landingTestid.stats, undefined, SLOW)).toBeTruthy();
+    expect(screen.getByTestId(landingTestid.root)).toBeTruthy();
+    expect(screen.queryByTestId(shellTestid.loadFailed)).toBeNull();
+    // The showcase's code arrives long before the module does (a cached chunk against a 2 MB download).
+    await act(async () => {
+      await import("../stats/StatShowcase.tsx");
+    });
+    expect(screen.getByTestId(landingTestid.root)).toBeTruthy();
+    expect(screen.queryByTestId(shellTestid.loadFailed)).toBeNull();
+    expect(screen.queryByTestId(testid.card(STAGE_INSTANCE_ID))).toBeNull();
+
+    await arrive();
+
+    const card = await screen.findByTestId(testid.card(STAGE_INSTANCE_ID), undefined, SLOW);
+    expect(card.querySelector(".cf")).not.toBeNull();
+    expect(screen.queryByTestId(shellTestid.loadFailed)).toBeNull();
+  });
+
+  it("#778 a face drawn where no gate waits for the module stands aside until it is in", async () => {
+    // The shop's pack reveal and cosmetic samples are such places (#1577); `WhenEngineReady` and `CosmeticLook`
+    // work a face out only when the module has arrived, and throw nothing before.
+    const worked: string[] = [];
+    const { container } = render(
+      <>
+        <WhenEngineReady fallback={<p data-testid="waiting">waiting</p>}>
+          {() => {
+            worked.push(wasm.catalogVersion());
+            return <p data-testid="drawn">drawn</p>;
+          }}
+        </WhenEngineReady>
+        <CosmeticLook id="foil-holo-sweep" cardId="core-004" />
+      </>,
+    );
+
+    expect(screen.getByTestId("waiting")).toBeTruthy();
+    expect(screen.queryByTestId("drawn")).toBeNull();
+    expect(worked).toEqual([]);
+    expect(container.querySelector(".cf")).toBeNull();
+
+    await arrive();
+
+    expect(await screen.findByTestId("drawn")).toBeTruthy();
+    expect(screen.queryByTestId("waiting")).toBeNull();
+    expect(worked).toHaveLength(1);
+    await waitFor(() => {
+      expect(container.querySelector(".cf")).not.toBeNull();
+    });
   });
 
   it("#778 /invite shows a pending account the code screen while the module is still loading", async () => {

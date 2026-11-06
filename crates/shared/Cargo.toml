@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+# Compiles the face model's data in (the glossary, the powers, the short forms, the translations): build.rs.
+build = "build.rs"
 
 [dependencies]
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
@@ -14,7 +16,8 @@ jackioh-engine = { workspace = true }
 jackioh-ai = { workspace = true }
 # The cosmetics registry is parsed here (`cosmetics.json`, compiled in), and an offer is judged against the
 # shipped catalog (`jackioh_cards::catalog_json`); the loadout tests deal a real game from it
-# (`tests/loadout.rs`), and the host machine's tests play whole games under it.
+# (`tests/loadout.rs`), the face tests register it the way a host does (`jackioh_cards::register_all`), and
+# the host machine's tests play whole games under it.
 jackioh-cards = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -27,3 +30,7 @@ ts-rs = { workspace = true, optional = true }
 [features]
 ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
+[build-dependencies]
+# build.rs reads data/*.json and the cards' Chinese tables: a build script runs at compile time, which
+# is where data reaches a pure crate (rule 4).
+serde_json = { workspace = true }

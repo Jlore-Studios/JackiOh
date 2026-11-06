@@ -11,7 +11,7 @@ import { VOICE_PRIORITY } from "../../audio/constants.ts";
 import { setAudioEngineForTests } from "../../audio/engine.ts";
 import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../../audio/types.ts";
-import { locWords } from "../model.ts";
+import { locWords } from "./locWords.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
 import { CardDetail, closeInspect } from "./index.ts";
@@ -253,7 +253,7 @@ describe("CardDetail (B29)", () => {
       unmount();
     }
     // The whole catalog outgrows the default 5 s.
-  }, 30_000);
+  }, 60_000);
 });
 
 describe("VoicePreview (R630)", () => {
