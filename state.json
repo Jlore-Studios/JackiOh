@@ -17048,6 +17048,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 90,
       "started_at": "2026-11-05T23:42:12Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -33678,9 +33679,33 @@
         "title": "Patch: the component specs for R2803000's shift ghosts and phone frame budget hold up on a loaded runner",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "324330509ec5e7ba3103648c867c95de31d7bc66",
+        "issue": 3229,
+        "merged_at": "2026-11-06T03:33:28Z",
+        "n": 90,
+        "pr": 3250,
+        "queued_at": "2026-11-06T03:33:28Z",
+        "sha": "105211cd4221f4c5bace65dbb850b5b0a79ef301",
+        "status": "queued",
+        "title": "Patch: draw the dungeon map's node icons as SVG instead of system emoji",
+        "tries": 0
       }
     ],
-    "count": 89
+    "count": 90
   },
   "statistics": {
     "at": "2026-11-06T03:17:25Z"
