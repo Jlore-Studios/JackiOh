@@ -203,6 +203,7 @@ pub fn settle_bars(counters: &AccountCounters, slot_points: Vec<i64>) -> (BarsSe
             key: String::new(),
             delta: card_pays,
             cause: Cause::TokenBar,
+            reference: None,
         });
     } else {
         grants.extend(LedgerGrant::counter(
@@ -230,6 +231,7 @@ pub fn settle_bars(counters: &AccountCounters, slot_points: Vec<i64>) -> (BarsSe
                 key,
                 delta: 1,
                 cause: Cause::TokenBar,
+                reference: None,
             });
         }
         grants.extend(LedgerGrant::counter(
@@ -350,6 +352,7 @@ pub fn fill_bar(bar: BarKind, counters: &AccountCounters) -> BarFill {
             key: String::new(),
             delta: pays,
             cause: Cause::Dev,
+            reference: None,
         }),
         BarKind::Cosmetic => {
             for paid in 0..pays {
@@ -359,6 +362,7 @@ pub fn fill_bar(bar: BarKind, counters: &AccountCounters) -> BarFill {
                     key,
                     delta: 1,
                     cause: Cause::Dev,
+                    reference: None,
                 });
             }
             grants.push(LedgerGrant::Counter {
@@ -522,7 +526,8 @@ mod tests {
                     item: InventoryItem::CardToken,
                     key: String::new(),
                     delta: 1,
-                    cause: Cause::TokenBar
+                    cause: Cause::TokenBar,
+                    reference: None,
                 },
                 LedgerGrant::Counter {
                     counter: Counter::CosmeticTokenBar,
@@ -534,6 +539,7 @@ mod tests {
                     key: "Epic".to_string(),
                     delta: 1,
                     cause: Cause::TokenBar,
+                    reference: None,
                 },
                 LedgerGrant::Counter {
                     counter: Counter::CosmeticTokenCycle,
@@ -608,6 +614,7 @@ mod tests {
                     key: "Epic".to_string(),
                     delta: 1,
                     cause: Cause::Dev,
+                    reference: None,
                 },
                 LedgerGrant::Counter {
                     counter: Counter::CosmeticTokenCycle,

@@ -1011,11 +1011,11 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   such verdict rounds (`max_review_cycles`), then its kept work goes to its final audit; a hard
   item stays with Opus for up to 10, then the [strikes](#rating-strikes-and-the-step-up). Only
   rounds that end in a readable verdict count: usage pauses, infra failures, halts and stops keep
-  the work and pause the count, across runs too. Before a review in a one-run flow (Squishy's),
-  the run merges `main` again when it moved and merges cleanly, and runs the checks on the merged
-  head, so what is approved still merges; an own review run never merges a `main` that merges
-  cleanly (the merge queue tests the two together), and its final check merges one that conflicts
-  ([The own review run](#the-own-review-run), #2948).
+  the work and pause the count, across runs too. No run merges a `main` that merges cleanly
+  before its review, a one-run flow's (Squishy's) included: `main`'s merge queue tests the two
+  together, and the merge would only run the checks, and CI, again. An own review run's final
+  check merges one that conflicts ([The own review run](#the-own-review-run), #2948); a one-run
+  flow leaves it for the conflict path.
 - **Review runs.** They are the lane's final audit, for a head its own review run did not
   approve or could not start for in time (or one a person asked to have reviewed), and they go before every build and revision,
   whatever their priority, since they unblock merges, but for a subscription's own work, which goes

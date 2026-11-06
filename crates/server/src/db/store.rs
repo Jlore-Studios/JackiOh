@@ -1427,7 +1427,7 @@ pub enum Db {
 
 /// One transaction on the store. Dropped without `commit`, it rolls back.
 pub enum Tx<'a> {
-    Pg(sqlx::Transaction<'a, sqlx::Postgres>),
+    Pg(pg::PgTx<'a>),
     Fake(fake::FakeTx<'a>),
 }
 
@@ -1437,10 +1437,11 @@ impl Db {
         Db::Fake(Arc::new(tokio::sync::Mutex::new(fake::FakeData::default())))
     }
 
-    /// Opens one transaction, the only way to a `Tx`. Postgres (`pg::begin`): `BEGIN`, then `db::pg`'s
-    /// `SESSION_SQL` switches to `service_role` and sets `request.jwt.claim.sub` to `claim_sub`, the
-    /// profile the call is about, or `""` for a call about nobody. The fake: takes the tables' lock and a
-    /// snapshot to restore if the transaction is dropped uncommitted.
+    /// Opens one transaction, the only way to a `Tx`. Postgres (`pg::begin`): `BEGIN`, switched to
+    /// `service_role` with `request.jwt.claim.sub` set to `claim_sub`, the profile the call is about, or
+    /// `""` for a call about nobody; in one round trip for a uuid subject or none (#3208), and with the
+    /// subject bound, after `BEGIN`, for any other. The fake: takes the tables' lock and a snapshot to
+    /// restore if the transaction is dropped uncommitted.
     pub async fn begin(&self, claim_sub: Option<&str>) -> Result<Tx<'_>, StoreError> {
         match self {
             Db::Pg(pool) => Ok(Tx::Pg(pg::begin(pool, claim_sub).await?)),
@@ -1473,7 +1474,7 @@ impl Db {
 }
 
 /// One method body: the same call against whichever store this transaction is on. Postgres's
-/// methods are async over the open `sqlx::Transaction`; the fake's are plain functions over the
+/// methods are async over the open transaction (`pg::PgTx`); the fake's are plain functions over the
 /// locked tables.
 macro_rules! dispatch {
     ($self:ident, $name:ident ( $($arg:expr),* $(,)? )) => {

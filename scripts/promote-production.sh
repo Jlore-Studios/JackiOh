@@ -73,7 +73,9 @@
 #
 # It talks to GitHub through `gh` and to git through the checkout's own credentials: the workflow
 # checks out main with its whole history. Two tokens. What moves production (the push of the promote
-# branch, its pull request, closing it, the merge, the branch's deletion) goes out as PROMOTE_TOKEN,
+# branch, its pull request, closing it, the `/skip-super` note on it, the merge, the branch's
+# deletion) goes out as PROMOTE_TOKEN, which can also comment on the bot's pull request after
+# lock-conversations.yml locks it (the Actions token cannot comment on a locked thread),
 # and the checkout pushes with the same one: whenever main changed a file under .github/workflows
 # since production, GitHub refuses that ref update from the Actions token ("refusing to allow a GitHub
 # App to create or update workflow ... without `workflows` permission"), and no `permissions:` entry
@@ -333,7 +335,9 @@ skip_super() {
     esac
     num=$PR_NUMBER head=$BRANCH
   fi
-  try gh pr comment "$num" --body "@$who merges this without the super run, the emergency way (\`/skip-super\`): $reason"
+  # As the bot: lock-conversations.yml locks the pull request the bot opened for `/promote`, and the
+  # Actions token cannot comment on a locked thread, so its comment failed the run before the merge.
+  try promoter pr comment "$num" --body "@$who merges this without the super run, the emergency way (\`/skip-super\`): $reason"
   merge_pr "$num" "$head" "$CAND"
 }
 
