@@ -1,4 +1,4 @@
-// #2110: the board's motions come from motion.css's four durations and five curves; BUILD's event durations keep their numbers, and what else keeps its own time is in KEEP.
+// #2110: the board's motions come from motion.css's four durations and five curves; BUILD's event durations keep their numbers, and what else keeps its own time is in KEEP. Every other sheet's raw durations and curves are counted in UNTOKENED_MOTION (#3224).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -64,6 +64,45 @@ const KEEP: Record<string, string[]> = {
 const ANIM_SCALED: Record<string, number> = {
   "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 12, "game/drag/blocked.css": 1, "game/facedown.css": 2,
   "game/highlights.css": 2, "game/notices.css": 1, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
+};
+
+/** Every other sheet's own durations (`ownTimes`) plus its transitions and animations that name no curve (`offCurve`), loops, art and the table's marks among them: one that moves onto motion.css lowers its number, and none gains one. */
+const UNTOKENED_MOTION: Record<string, number> = {
+  "auth/code-field.css": 13,
+  "auth/tavern.css": 11,
+  "cards/cards.css": 7,
+  "cards/cosmetics.css": 40,
+  "cards/dormant.css": 1,
+  "cards/glitch.css": 6,
+  "cards/inspect/inspect.css": 20,
+  "cards/keywords.css": 27,
+  "cards/marks.css": 7,
+  "cards/wheel/wheel.css": 4,
+  "collection/collection.css": 9,
+  "duos/duos.css": 6,
+  "economy/economy.css": 5,
+  "economy/spend.css": 1,
+  "economy/xp.css": 1,
+  "emotes/emotes.css": 20,
+  "emotes/portrait.css": 5,
+  "fx/aura/aura.css": 2,
+  "fx/fx.css": 61,
+  "game/deckbuilder/deckbuilder.css": 16,
+  "game/deckbuilder/workshop.css": 2,
+  "game/table.css": 27,
+  "packs/pack-object.css": 12,
+  "packs/packs.css": 4,
+  "practice/practice.css": 49,
+  "rank/rankCrest.css": 2,
+  "routes/game-banner.css": 6,
+  "routes/landing.css": 25,
+  "routes/lobby.css": 14,
+  "routes/stats.css": 6,
+  "settings/settings.css": 14,
+  "shop/shop.css": 1,
+  "skeleton/skeleton.css": 2,
+  "tutorial/tutorial.css": 20,
+  "undo/undo.css": 2,
 };
 
 /** `value` split at its top-level commas. */
@@ -190,5 +229,20 @@ describe("#2110 the board moves on the vocabulary", () => {
     );
     const scaled = BOARD_SHEETS.map((sheet) => [sheet, (codeOf(sheet).match(/var\(--anim-scale/g) ?? []).length] as const);
     expect(Object.fromEntries(scaled.filter((entry) => entry[1] > 0))).toEqual(ANIM_SCALED);
+  });
+});
+
+describe("#2110 the menus' motion is counted", () => {
+  it("#2110 no other stylesheet gains a duration or a curve of its own", () => {
+    const counts: Record<string, number> = {};
+    for (const sheet of SHEETS) {
+      if (BOARD_SHEETS.includes(sheet)) continue;
+      const css = codeOf(sheet);
+      const own = offCurve(css).length + ownTimes(sheet, css).length;
+      if (own > 0) counts[sheet] = own;
+    }
+    expect(counts, "name a duration and a curve (motion.css) instead; a sheet that loses some lowers its number in UNTOKENED_MOTION").toEqual(
+      UNTOKENED_MOTION,
+    );
   });
 });

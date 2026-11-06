@@ -54,7 +54,6 @@ mod harness {
             last_boards: None,
             glitch_boards: None,
             sandbox: None,
-            custom_cards: None,
             deck_marks: None,
         }
     }

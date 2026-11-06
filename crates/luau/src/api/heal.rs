@@ -1,4 +1,0 @@
-
-verbs! {
-    verb!(heal, HealArgs);
-}

@@ -27,26 +27,37 @@
 //! (Epic) and Signature (Mythic). The 84 full arts before it are retired: kept with their owners, dropped by nothing,
 //! and each counts as owning the version and augments it combines ([`implied_by`], [`row_owns`], R2725002).
 //!
-//! R2949000: Signature is worn only beside the Full art version and Animated ([`signature_fits`]). R2949001: an
+//! R2949000: Signature was worn only beside the Full art version and Animated, now Full art's signed level
+//! (R3015005). R2949001: an
 //! offer clause may take a seeded share of its cards ([`OfferSample`]), so Full art lands on some cards and not
 //! others, and Signature's offer lies inside Full art's and Animated's.
 //!
 //! R2940000: #2940 appends three versions, Alt art ([`VERSION_ALT_ART_ID`], Rare), Sketch ([`VERSION_SKETCH_ID`],
 //! Rare) and Alt full art ([`VERSION_ALT_FULL_ART_ID`], Legendary), each offered on a seeded share of its own, so no
-//! two versions take the same cards. Signature fits none of them ([`signature_fits`]).
+//! two versions take the same cards.
 //!
 //! R2942000: #2942 appends three Epic versions, Extended art ([`VERSION_EXTENDED_ART_ID`]), Pixel
 //! ([`VERSION_PIXEL_ID`]) and Comic ([`VERSION_COMIC_ID`]), each offered on a seeded share of its own, so no two
-//! versions take the same cards. Signature fits none of them ([`signature_fits`]).
+//! versions take the same cards.
 //!
 //! R2943000: #2943 appends two Legendary chase versions, Set showcase ([`VERSION_SET_SHOWCASE_ID`]) and Out of
 //! frame ([`VERSION_OUT_OF_FRAME_ID`]), each offered on a seeded share of its own, so no two versions take the same
-//! cards. Signature fits neither of them ([`signature_fits`]).
+//! cards.
 //!
 //! R2944000: #2944 appends two Mythic chase versions, Immersive ([`VERSION_IMMERSIVE_ID`]) and Prismatic
 //! ([`VERSION_PRISMATIC_ID`]), each offered on cards of its own: Immersive on a seeded share of the Legendary and
 //! Mythic cards, Prismatic on every Mythic card and a seeded share of the Legendary ones. No token buys either, as
-//! no token buys a Mythic (R2728000). Signature fits neither of them ([`signature_fits`]).
+//! no token buys a Mythic (R2728000).
+//!
+//! R3015000: every version is a **level** of a **variant** ([`VariantLevel`]): a variant is one picture of a card
+//! and its levels a ladder, its art levels first (its normal-frame form, then its full-art form where it has one),
+//! then animated, then signed above a full art alone ([`problems`]). The Default variant's first level is the
+//! normal face, which no entry names. Every level of a variant is offered where its first is, but an animated or
+//! signed one never on a Legacy card, whose picture never moves ([`offered`], R2724000). #3015 appends fifteen
+//! levels; the Animated and Signature augments are retired with the full arts ([`Cosmetic::is_retired`]), each row
+//! of one still owning the levels it maps to ([`implied_by`], R3015006). R3015003: owning a level means owning
+//! every level below it ([`levels_below`], [`is_next`]). R3015005: a card's pick names one level
+//! ([`level_of_pick`]), every older shape mapped to the level it drew.
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -56,7 +67,7 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_engine::replay::fnv1a32_utf16_u32;
 use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId};
-use jackioh_engine::{CardDef, CardDefs, CardType, Rarity, SetName};
+use jackioh_engine::{CardDef, CardDefs, CardType, Rarity, SetName, Tag};
 
 use crate::config::{
     GLOBAL_COSMETIC_FLOOR_RARITY, OFFER_SAMPLE_PERCENT_SCALE, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
@@ -337,6 +348,56 @@ pub struct Cosmetic {
     /// when one clause takes it ([`offered`]). No other kind has one.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub offer: Vec<OfferClause>,
+    /// R3015000: a version's place on its variant's ladder; no other kind has one. An opening's log written before
+    /// #3015 holds none ([`crate::economy::roll::OpeningLog`]), so it is read as absent there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<VariantLevel>,
+}
+
+impl Cosmetic {
+    /// R3015000: a retired entry, kept with its owners and read for what it maps to ([`implied_by`]), but dropped,
+    /// sold and picked by nothing: the full arts (R2725000) and the Animated and Signature augments.
+    pub fn is_retired(&self) -> bool {
+        matches!(self.kind, CosmeticKind::FullArt | CosmeticKind::Augment)
+    }
+}
+
+/// R3015000: what a level adds to the one below it: the variant's picture in its normal frame (`Art`), across the
+/// whole face (`FullArt`), its picture's own layers moving (`Animated`, R2715001) or a signature (`Signed`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum LevelAdds {
+    Art,
+    FullArt,
+    Animated,
+    Signed,
+}
+
+impl LevelAdds {
+    /// Whether the level moves: an animated one and the signed one above it, never on a Legacy card (R2724000).
+    pub fn moves(self) -> bool {
+        matches!(self, Self::Animated | Self::Signed)
+    }
+}
+
+/// R3015000: one level of a variant: its variant's slug, its rank on the ladder from 1 (2 for the Default
+/// variant, whose first level is the normal face) and what it adds.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(deny_unknown_fields)]
+pub struct VariantLevel {
+    pub variant: String,
+    pub rank: u8,
+    pub adds: LevelAdds,
 }
 
 /// R2725001: one clause of an offer. It takes a non-token card of the catalog when each field it fills lists
@@ -411,75 +472,188 @@ pub fn shipped_defs() -> &'static CardDefs {
 
 /// R2725001: whether `cosmetic` may be owned and worn on `card` (on the account, or every card, when `None`).
 /// A full art on its own card alone (R1313000); a version or an augment on a non-token card of the shipped
-/// catalog that a clause of its offer takes; any other cosmetic anywhere.
+/// catalog that a clause of its offer takes; any other cosmetic anywhere. R3015000: a level that moves never on a
+/// Legacy card, whose picture never moves (R2724000), so its ladders stop before animated.
 pub fn offered(cosmetic: &Cosmetic, card: Option<&str>) -> bool {
     match cosmetic.kind {
         CosmeticKind::FullArt => cosmetic.card.as_deref() == card,
         CosmeticKind::Version | CosmeticKind::Augment => card.is_some_and(|card| {
             shipped_defs().get(card).is_some_and(|def| {
-                !def.is_token() && cosmetic.offer.iter().any(|clause| clause.takes(card, def))
+                !def.is_token()
+                    && !(moves(cosmetic) && def.tags.contains(&Tag::Legacy))
+                    && cosmetic.offer.iter().any(|clause| clause.takes(card, def))
             })
         }),
         _ => true,
     }
 }
 
-/// R2725002: what owning the retired full art `cosmetic` counts as owning on its card, beside itself: an Animated
-/// art (`animated-…`) the Animated augment; a still Epic the Full art version; a Legendary that and Animated; a
-/// Mythic those and Signature. Nothing for any other entry.
+/// R3015000: whether `cosmetic` is a level that moves ([`LevelAdds::moves`]).
+fn moves(cosmetic: &Cosmetic) -> bool {
+    cosmetic.level.as_ref().is_some_and(|level| level.adds.moves())
+}
+
+/// R3015000: the levels of `variant` in `registry`, lowest first.
+pub fn ladder<'r>(registry: &'r [Cosmetic], variant: &str) -> Vec<&'r Cosmetic> {
+    let mut levels: Vec<&Cosmetic> = registry
+        .iter()
+        .filter(|cosmetic| {
+            cosmetic
+                .level
+                .as_ref()
+                .is_some_and(|level| level.variant == variant)
+        })
+        .collect();
+    levels.sort_by_key(|cosmetic| cosmetic.level.as_ref().map(|level| level.rank));
+    levels
+}
+
+/// R3015003: the levels of `cosmetic`'s variant below it, lowest first: none for anything but a level.
+pub fn levels_below<'r>(registry: &'r [Cosmetic], cosmetic: &Cosmetic) -> Vec<&'r Cosmetic> {
+    let Some(level) = &cosmetic.level else {
+        return Vec::new();
+    };
+    ladder(registry, &level.variant)
+        .into_iter()
+        .filter(|below| below.level.as_ref().is_some_and(|at| at.rank < level.rank))
+        .collect()
+}
+
+/// R3015003, R3015004: whether `cosmetic` is a next level where `held` says what is owned: every level below it
+/// is. Anything but a level always is.
+pub fn is_next(registry: &[Cosmetic], cosmetic: &Cosmetic, held: impl Fn(&Cosmetic) -> bool) -> bool {
+    levels_below(registry, cosmetic).into_iter().all(held)
+}
+
+/// R2725002, R3015006: the levels owning the retired entry `cosmetic` counts as owning on its card, beside itself:
+/// an Animated art (`animated-…`) and the Animated augment the Default variant's animated level; a still Epic full
+/// art Full art's first level; a Legendary that, its animated level and the Default one; a Mythic those and its
+/// signed level. Signature alone, and any other entry, nothing.
 pub fn implied_by(cosmetic: &Cosmetic) -> &'static [&'static str] {
-    if cosmetic.kind != CosmeticKind::FullArt {
-        return &[];
-    }
-    if cosmetic.id.starts_with(ANIMATED_ART_ID_PREFIX) {
-        return &[AUGMENT_ANIMATED_ID];
-    }
-    match cosmetic.rarity {
-        CosmeticRarity::Epic => &[VERSION_FULL_ART_ID],
-        CosmeticRarity::Legendary => &[VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID],
-        CosmeticRarity::Mythic => &[VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID],
+    match cosmetic.kind {
+        CosmeticKind::Augment if cosmetic.id == AUGMENT_ANIMATED_ID => &[VERSION_ANIMATED_ID],
+        CosmeticKind::FullArt if cosmetic.id.starts_with(ANIMATED_ART_ID_PREFIX) => &[VERSION_ANIMATED_ID],
+        CosmeticKind::FullArt => match cosmetic.rarity {
+            CosmeticRarity::Epic => &[VERSION_FULL_ART_ID],
+            CosmeticRarity::Legendary => &[
+                VERSION_FULL_ART_ID,
+                VERSION_FULL_ART_ANIMATED_ID,
+                VERSION_ANIMATED_ID,
+            ],
+            CosmeticRarity::Mythic => &[
+                VERSION_FULL_ART_ID,
+                VERSION_FULL_ART_ANIMATED_ID,
+                VERSION_FULL_ART_SIGNED_ID,
+                VERSION_ANIMATED_ID,
+            ],
+            _ => &[],
+        },
         _ => &[],
     }
 }
 
-/// R2725002: the shipped retired full arts of `card` whose row owns `id` there beside themselves ([`implied_by`]):
-/// none unless `id` is a version's or an augment's.
-pub fn implying<'a>(card: &'a str, id: &'a str) -> impl Iterator<Item = &'static str> + 'a {
-    let implied = id.starts_with(VERSION_ID_PREFIX) || id.starts_with(AUGMENT_ID_PREFIX);
-    registry()
-        .iter()
-        .filter(move |cosmetic| {
-            implied && cosmetic.card.as_deref() == Some(card) && implied_by(cosmetic).contains(&id)
-        })
-        .map(|cosmetic| cosmetic.id.as_str())
-}
-
-/// R2725002: whether a ledger row of `held` owns `id` on the row's card: it is `id`, or a shipped retired full
-/// art that implies it ([`implied_by`]). The implication is read, never written: no row is granted for it.
+/// R2725002, R3015006: whether a ledger row of `held` owns `id` on the row's card: it is `id`, or a shipped retired
+/// entry that maps to the level `id` ([`implied_by`]). The mapping is read where it is worn; migration 0084 wrote
+/// each combination's levels as rows of their own.
 pub fn row_owns(held: &str, id: &str) -> bool {
     held == id
-        || ((id.starts_with(VERSION_ID_PREFIX) || id.starts_with(AUGMENT_ID_PREFIX))
+        || (id.starts_with(VERSION_ID_PREFIX)
             && registry()
                 .iter()
                 .find(|cosmetic| cosmetic.id == held)
                 .is_some_and(|cosmetic| implied_by(cosmetic).contains(&id)))
 }
 
-/// R2949000: whether a pick of `full_art` and `augments` wears the Full art version and Animated, as Signature
-/// needs: `full_art` names the version, `true` (a full-art card's still Epic) or a retired full art implying it
-/// (R2725002), and Animated is listed or implied by that full art. Reads no ownership and no offer.
-pub fn signature_fits(full_art: Option<&FullArtPick>, augments: &[String]) -> bool {
-    let worn: &[&str] = match full_art {
-        Some(FullArtPick::On(true)) => &[VERSION_FULL_ART_ID],
-        Some(FullArtPick::Id(id)) if id == VERSION_FULL_ART_ID => &[VERSION_FULL_ART_ID],
-        Some(FullArtPick::Id(id)) => registry()
+/// R2725002, R3015006: the shipped retired entries a row of which owns the level `id` beside itself
+/// ([`implied_by`]): none unless `id` is a level's.
+pub fn implying(id: &str) -> impl Iterator<Item = &'static str> + '_ {
+    let level = id.starts_with(VERSION_ID_PREFIX);
+    registry()
+        .iter()
+        .filter(move |cosmetic| level && implied_by(cosmetic).contains(&id))
+        .map(|cosmetic| cosmetic.id.as_str())
+}
+
+/// R3015005: the level a card's pick of `full_art` and `augments` names on `card`, owned or not: none for no pick
+/// or `false`; Full art's first level for `true` on a full-art card (its still Epic, R2655000); a level by its id;
+/// a retired full art of the card the highest level it maps to ([`implied_by`]), a non-Default one first. Then
+/// each old augment steps up one rank where the next adds it: Animated (from no level, the Default variant's
+/// animated level), then Signature. So R2949000's Signature look is Full art's signed level, and Alt art or Sketch
+/// with Animated, which has a full-art level above it, stays at its first.
+pub fn level_of_pick<'r>(
+    registry: &'r [Cosmetic],
+    card: &str,
+    full_art: Option<&FullArtPick>,
+    augments: &[String],
+) -> Option<&'r Cosmetic> {
+    let level = |id: &str| {
+        registry
             .iter()
-            .find(|cosmetic| cosmetic.id == *id)
-            .map_or(&[], implied_by),
-        Some(FullArtPick::On(false)) | None => &[],
+            .find(|cosmetic| cosmetic.id == id && cosmetic.level.is_some())
     };
-    worn.contains(&VERSION_FULL_ART_ID)
-        && (worn.contains(&AUGMENT_ANIMATED_ID) || augments.iter().any(|id| id == AUGMENT_ANIMATED_ID))
+    let mut worn = match full_art {
+        None | Some(FullArtPick::On(false)) => None,
+        Some(FullArtPick::On(true)) => full_art_of(registry, card).and(level(VERSION_FULL_ART_ID)),
+        Some(FullArtPick::Id(id)) => match registry.iter().find(|cosmetic| cosmetic.id == *id) {
+            Some(cosmetic) if cosmetic.level.is_some() => Some(cosmetic),
+            Some(cosmetic)
+                if cosmetic.kind == CosmeticKind::FullArt && cosmetic.card.as_deref() == Some(card) =>
+            {
+                implied_by(cosmetic)
+                    .iter()
+                    .filter_map(|id| level(id))
+                    .max_by_key(|cosmetic| {
+                        cosmetic
+                            .level
+                            .as_ref()
+                            .map(|level| (level.variant != DEFAULT_VARIANT, level.rank))
+                    })
+            }
+            _ => None,
+        },
+    };
+    let step = |worn: Option<&'r Cosmetic>, adds: LevelAdds| -> Option<&'r Cosmetic> {
+        let Some(at) = worn.and_then(|cosmetic| cosmetic.level.as_ref()) else {
+            return (adds == LevelAdds::Animated)
+                .then(|| level(VERSION_ANIMATED_ID))
+                .flatten()
+                .or(worn);
+        };
+        ladder(registry, &at.variant)
+            .into_iter()
+            .find(|above| {
+                above
+                    .level
+                    .as_ref()
+                    .is_some_and(|up| up.rank == at.rank + 1 && up.adds == adds)
+            })
+            .or(worn)
+    };
+    if augments.iter().any(|id| id == AUGMENT_ANIMATED_ID) {
+        worn = step(worn, LevelAdds::Animated);
+    }
+    if augments.iter().any(|id| id == AUGMENT_SIGNATURE_ID) {
+        worn = step(worn, LevelAdds::Signed);
+    }
+    worn
+}
+
+/// R3015005: what a card wears of the level `level` on `card`: it, where `wears` takes it (owned and offered
+/// there), else the highest level below it that `wears` takes, so a pick of an older shape whose augment was not
+/// owned wears what it wore; none when no level does.
+pub fn worn_level<'r>(
+    registry: &'r [Cosmetic],
+    level: Option<&'r Cosmetic>,
+    wears: impl Fn(&Cosmetic) -> bool,
+) -> Option<&'r Cosmetic> {
+    let level = level?;
+    if wears(level) {
+        return Some(level);
+    }
+    levels_below(registry, level)
+        .into_iter()
+        .rev()
+        .find(|below| wears(below))
 }
 
 #[derive(Deserialize)]
@@ -649,7 +823,123 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
             out.push(format!("the kind {kind:?} has {defaults} defaults, not one"));
         }
     }
+    level_problems(cosmetics, &mut out);
     out
+}
+
+/// R3015000, R3015001: what is wrong with the registry's ladders. A version has a level and nothing else does, its
+/// variant a slug; each variant's ranks run gapless from 1 (from 2 for the Default variant, whose first level is
+/// the normal face); its levels add, in rank order, an art level, then a full-art one (at least one of the two, and
+/// neither in the Default variant), then animated, then signed only above a full art; each is rarer than the one
+/// below it but at Mythic, and a signed one is Mythic; each is offered as its variant's first level is; and the
+/// Default variant's offer takes every non-token card, so every card has at least the Default ladder.
+fn level_problems(cosmetics: &[Cosmetic], out: &mut Vec<String>) {
+    let mut variants: Vec<&str> = Vec::new();
+    for cosmetic in cosmetics {
+        let id = cosmetic.id.as_str();
+        match (&cosmetic.level, cosmetic.kind == CosmeticKind::Version) {
+            (None, true) => out.push(format!("the version {id:?} has no level")),
+            (Some(_), false) => out.push(format!(
+                "the {:?} {id:?} has a level, which only a version has",
+                cosmetic.kind
+            )),
+            (Some(level), true) => {
+                if !is_slug(&level.variant) {
+                    out.push(format!(
+                        "the level {id:?} names the variant {:?}, which is not a lower-case slug",
+                        level.variant
+                    ));
+                }
+                if !variants.contains(&level.variant.as_str()) {
+                    variants.push(&level.variant);
+                }
+            }
+            (None, false) => {}
+        }
+    }
+    for variant in variants {
+        let levels = ladder(cosmetics, variant);
+        let first: u8 = if variant == DEFAULT_VARIANT { 2 } else { 1 };
+        let ranks: Vec<u8> = levels
+            .iter()
+            .filter_map(|c| c.level.as_ref().map(|l| l.rank))
+            .collect();
+        if !ranks
+            .iter()
+            .zip(first..)
+            .all(|(rank, expected)| *rank == expected)
+        {
+            out.push(format!(
+                "the variant {variant:?} has the ranks {ranks:?}, which must run gapless from {first}"
+            ));
+        }
+        let adds: Vec<LevelAdds> = levels
+            .iter()
+            .filter_map(|c| c.level.as_ref().map(|l| l.adds))
+            .collect();
+        if !ladder_shape_holds(&adds, variant == DEFAULT_VARIANT) {
+            out.push(format!(
+                "the variant {variant:?} adds {adds:?}, but a ladder adds its art (none in the Default variant), then \
+                 its full art, then animated, then signed above a full art alone"
+            ));
+        }
+        for pair in levels.windows(2) {
+            let (below, above) = (pair[0], pair[1]);
+            if above.rarity <= below.rarity && above.rarity != CosmeticRarity::Mythic {
+                out.push(format!(
+                    "the level {:?} is {}, not rarer than {:?} below it, {}",
+                    above.id, above.rarity, below.id, below.rarity
+                ));
+            }
+        }
+        for level in &levels {
+            if level.level.as_ref().is_some_and(|l| l.adds == LevelAdds::Signed)
+                && level.rarity != CosmeticRarity::Mythic
+            {
+                out.push(format!(
+                    "the signed level {:?} is {}, not Mythic",
+                    level.id, level.rarity
+                ));
+            }
+            if let Some(lowest) = levels.first()
+                && level.offer != lowest.offer
+            {
+                out.push(format!(
+                    "the level {:?} is offered otherwise than {:?}, its variant's first",
+                    level.id, lowest.id
+                ));
+            }
+        }
+        if variant == DEFAULT_VARIANT
+            && let Some(lowest) = levels.first()
+        {
+            for (card, def) in shipped_defs().iter().filter(|(_, def)| !def.is_token()) {
+                if !lowest.offer.iter().any(|clause| clause.takes(card, def)) {
+                    out.push(format!(
+                        "the Default variant's offer does not take {card:?}, but every card has the Default ladder"
+                    ));
+                }
+            }
+        }
+    }
+}
+
+/// R3015000: whether a ladder's `adds`, in rank order, read `Art? FullArt? Animated Signed?`, at least one art
+/// level outside the Default variant and none in it, and `Signed` only above a `FullArt`.
+fn ladder_shape_holds(adds: &[LevelAdds], default: bool) -> bool {
+    let mut rest = adds;
+    let mut take = |want: LevelAdds| {
+        let found = rest.first() == Some(&want);
+        if found {
+            rest = &rest[1..];
+        }
+        found
+    };
+    let art = take(LevelAdds::Art);
+    let full_art = take(LevelAdds::FullArt);
+    let animated = take(LevelAdds::Animated);
+    let signed = take(LevelAdds::Signed);
+    rest.is_empty() && animated && (art || full_art) != default && (!signed || full_art)
 }
 
 /// The registry in `json`, or every problem with it joined by "; ".
@@ -762,35 +1052,14 @@ pub fn full_art_of<'r>(registry: &'r [Cosmetic], card: &str) -> Option<&'r Cosme
     })
 }
 
-/// R2655000: the full art of `card` that `pick` names, owned or not: none for `false`, the card's
-/// Epic for `true` ([`full_art_of`]), that full art for an id of `card`'s, none otherwise. R2725000: an id
-/// may name a version instead, the one look the card wears, when the card is offered it.
-pub fn full_art_picked<'r>(registry: &'r [Cosmetic], card: &str, pick: &FullArtPick) -> Option<&'r Cosmetic> {
-    match pick {
-        FullArtPick::On(false) => None,
-        FullArtPick::On(true) => full_art_of(registry, card),
-        FullArtPick::Id(id) => registry.iter().find(|cosmetic| {
-            cosmetic.id == *id
-                && match cosmetic.kind {
-                    CosmeticKind::FullArt => cosmetic.card.as_deref() == Some(card),
-                    CosmeticKind::Version => offered(cosmetic, Some(card)),
-                    _ => false,
-                }
-        }),
-    }
-}
-
 /// The cosmetics a duplicate may drop (R1301002): the per-card ones neither default nor starter, in
 /// registry order, each on a card it is offered (`economy::roll::duplicate_grant`, R2725001). R2725000: never
-/// a retired full art.
+/// a retired full art, nor (R3015000) a retired augment.
 pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| {
-            cosmetic.kind.is_per_card()
-                && cosmetic.kind != CosmeticKind::FullArt
-                && !cosmetic.default
-                && !cosmetic.starter
+            cosmetic.kind.is_per_card() && !cosmetic.is_retired() && !cosmetic.default && !cosmetic.starter
         })
         .cloned()
         .collect()
@@ -815,15 +1084,12 @@ pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
 /// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
 /// not a default or a starter, in the registry's order. A chase drops when a slot lands on its
 /// tier (R1333000), and a per-card one on a card it is offered (R2725001). A Jlorious one never drops
-/// (R2755000), nor a retired full art (R2725000).
+/// (R2755000), nor a retired full art (R2725000) or augment (R3015000).
 pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| {
-            !cosmetic.default
-                && !cosmetic.starter
-                && !cosmetic.jlorious
-                && cosmetic.kind != CosmeticKind::FullArt
+            !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious && !cosmetic.is_retired()
         })
         .cloned()
         .collect()
@@ -851,13 +1117,31 @@ pub const VERSION_ID_PREFIX: &str = "version-";
 /// R2725000: what an augment's registry id starts with, each one a card pick's `augments` may list.
 pub const AUGMENT_ID_PREFIX: &str = "augment-";
 
-/// R2725000: the Full art version, Legendary, the card's art across its whole face.
+/// R2725000: the Full art version, Legendary, the card's art across its whole face: R3015000's Full art variant's
+/// first level.
 pub const VERSION_FULL_ART_ID: &str = "version-full-art";
 
+/// R3015000: the Default variant, whose first level is the normal face, which no entry names.
+pub const DEFAULT_VARIANT: &str = "default";
+
+/// R3015000: the Default variant's second level, the normal face with its picture's own layers moving (R2715001).
+pub const VERSION_ANIMATED_ID: &str = "version-animated";
+
+/// R3015000: Full art's second level, its full art animated.
+pub const VERSION_FULL_ART_ANIMATED_ID: &str = "version-full-art-animated";
+
+/// R3015000: Full art's third level, its full art animated and signed: R2949000's Signature look (R3015005).
+pub const VERSION_FULL_ART_SIGNED_ID: &str = "version-full-art-signed";
+
+/// R3015000, R3015002: Sketch's second level, the sketch's own picture across the whole face.
+pub const VERSION_SKETCH_FULL_ART_ID: &str = "version-sketch-full-art";
+
 /// R2725000: the Animated augment, Epic: the art's own elements move (R2715001) on whichever version is worn.
+/// R3015000: retired; a row of it owns the Default variant's animated level ([`implied_by`]).
 pub const AUGMENT_ANIMATED_ID: &str = "augment-animated";
 
-/// R2725000: the Signature augment, Mythic: the card's name signed across its art.
+/// R2725000: the Signature augment, Mythic: the card's name signed across its art. R3015000: retired; a row of it
+/// alone owns no level.
 pub const AUGMENT_SIGNATURE_ID: &str = "augment-signature";
 
 /// R2940000: the Alt art version, Rare: a new picture of the card's subject in the normal frame.
@@ -947,6 +1231,7 @@ mod tests {
             jlorious: false,
             card: None,
             offer: Vec::new(),
+            level: None,
         }
     }
 
@@ -981,6 +1266,17 @@ mod tests {
         ];
         cosmetics.extend(portraits());
         cosmetics
+    }
+
+    /// R3015005: the id of the level a card's pick of `full_art` and `augments` names on `card`, owned or not.
+    fn picked<'r>(
+        registry: &'r [Cosmetic],
+        card: &str,
+        full_art: FullArtPick,
+        augments: &[&str],
+    ) -> Option<&'r str> {
+        let augments: Vec<String> = augments.iter().map(|id| (*id).to_owned()).collect();
+        level_of_pick(registry, card, Some(&full_art), &augments).map(|level| level.id.as_str())
     }
 
     /// R1833000: the 36 #1833 appends, in the registry's order: six of each kind a player picks.
@@ -1126,10 +1422,24 @@ mod tests {
         ),
     ];
 
+    /// R3015000: the fifteen levels #3015 appends after #2944's two, last in the registry.
+    const R3015000_NEW: usize = 15;
+
+    /// The shipped registry before #3015's fifteen levels (R3015000), which every slice below is taken from.
+    fn before_r3015000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[..cosmetics.len() - R3015000_NEW]
+    }
+
+    /// The fifteen #3015 appends, last in the registry (R3015000).
+    fn r3015000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[cosmetics.len() - R3015000_NEW..]
+    }
+
     /// The shipped registry before #1833: every entry but #2944's two, #2943's two before them, #2942's three
     /// before those, #2940's three before those, #2725's three before those, #2715's 21 before those, #2755's one
     /// before those, #2655's 57 before it and #1833's 36 before those (R1833000).
     fn before_r1833000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         &cosmetics[..cosmetics.len()
             - R2944000_NEW.len()
             - R2943000_NEW.len()
@@ -1145,6 +1455,7 @@ mod tests {
     /// The 57 #2655 appends, last in the registry but for #2755's one, #2715's 21, #2725's three, #2940's
     /// three, #2942's three, #2943's two and #2944's two (R2655000).
     fn r2655000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         let end = cosmetics.len()
             - R2944000_NEW.len()
             - R2943000_NEW.len()
@@ -1159,6 +1470,7 @@ mod tests {
     /// The 21 #2715 appends, last in the registry but for #2725's three, #2940's three, #2942's three, #2943's
     /// two and #2944's two (R2715000).
     fn r2715000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         let end = cosmetics.len()
             - R2944000_NEW.len()
             - R2943000_NEW.len()
@@ -1171,6 +1483,7 @@ mod tests {
     /// The three #2725 appends, last in the registry but for #2940's three, #2942's three, #2943's two and
     /// #2944's two (R2725000).
     fn r2725000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         let end = cosmetics.len()
             - R2944000_NEW.len()
             - R2943000_NEW.len()
@@ -1182,24 +1495,28 @@ mod tests {
     /// The three #2940 appends, last in the registry but for #2942's three, #2943's two and #2944's two
     /// (R2940000).
     fn r2940000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         let end = cosmetics.len() - R2944000_NEW.len() - R2943000_NEW.len() - R2942000_NEW.len();
         &cosmetics[end - R2940000_NEW.len()..end]
     }
 
     /// The three #2942 appends, last in the registry but for #2943's two and #2944's two (R2942000).
     fn r2942000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         let end = cosmetics.len() - R2944000_NEW.len() - R2943000_NEW.len();
         &cosmetics[end - R2942000_NEW.len()..end]
     }
 
     /// The two #2943 appends, last in the registry but for #2944's two (R2943000).
     fn r2943000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         let end = cosmetics.len() - R2944000_NEW.len();
         &cosmetics[end - R2943000_NEW.len()..end]
     }
 
-    /// The two #2944 appends, last in the registry (R2944000).
+    /// The two #2944 appends, last in the registry but for #3015's fifteen (R2944000).
     fn r2944000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3015000(cosmetics);
         &cosmetics[cosmetics.len() - R2944000_NEW.len()..]
     }
 
@@ -1398,21 +1715,28 @@ mod tests {
             ..full_art("full-art-a-signed", "core-001", CosmeticRarity::Mythic)
         });
         assert_eq!(problems(&unmarked).len(), 1, "{:?}", problems(&unmarked));
-        let picked = |card: &str, pick: FullArtPick| {
-            full_art_picked(&tiers, card, &pick).map(|cosmetic| cosmetic.id.as_str())
-        };
-        assert_eq!(picked("core-001", FullArtPick::On(true)), Some("full-art-a"));
-        assert_eq!(picked("core-001", FullArtPick::On(false)), None);
+        // R3015005: a card's pick names a level, so `true` on a full-art card names Full art's first level (its still
+        // Epic's look), and a full art's id the highest level it maps to, on its own card alone.
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let worn = |card: &str, pick: FullArtPick| picked(&cosmetics, card, pick, &[]);
+        let id = |id: &str| FullArtPick::Id(id.to_owned());
+        assert_eq!(worn("core-008", FullArtPick::On(true)), Some(VERSION_FULL_ART_ID));
+        assert_eq!(worn("core-008", FullArtPick::On(false)), None);
         assert_eq!(
-            picked("core-001", FullArtPick::Id("full-art-a-signed".to_owned())),
-            Some("full-art-a-signed")
+            worn("core-008", id("full-art-mr-vanilla")),
+            Some(VERSION_FULL_ART_ID)
         );
         assert_eq!(
-            picked("core-004", FullArtPick::Id("full-art-a-signed".to_owned())),
-            None
+            worn("core-008", id("full-art-mr-vanilla-animated")),
+            Some(VERSION_FULL_ART_ANIMATED_ID)
         );
-        assert_eq!(picked("core-001", FullArtPick::Id("foil-none".to_owned())), None);
-        assert_eq!(picked("core-002", FullArtPick::On(true)), None);
+        assert_eq!(
+            worn("core-008", id("full-art-mr-vanilla-signed")),
+            Some(VERSION_FULL_ART_SIGNED_ID)
+        );
+        assert_eq!(worn("core-004", id("full-art-mr-vanilla-signed")), None);
+        assert_eq!(worn("core-008", id("foil-none")), None);
+        assert_eq!(worn("core-002", FullArtPick::On(true)), None);
     }
 
     #[test]
@@ -1447,11 +1771,11 @@ mod tests {
                 "{}",
                 cosmetic.id
             );
-            // `true` still names the still Epic, and the id names the Animated art.
+            // `true` still names the still Epic, and the id (R3015005) the Default variant's animated level it maps to.
             assert!(still.id.starts_with(FULL_ART_ID_PREFIX), "{card}");
             assert_eq!(
-                full_art_picked(&cosmetics, card, &FullArtPick::Id(cosmetic.id.clone())),
-                Some(cosmetic),
+                picked(&cosmetics, card, FullArtPick::Id(cosmetic.id.clone()), &[]),
+                Some(VERSION_ANIMATED_ID),
                 "{card}"
             );
         }
@@ -1520,20 +1844,24 @@ mod tests {
                 )]
             );
         }
-        // `true` names the still Epic even with the Animated one listed first; its id names it.
-        let picked = |card: &str, pick: FullArtPick| {
-            full_art_picked(&tiers, card, &pick).map(|cosmetic| cosmetic.id.as_str())
-        };
-        assert_eq!(picked("core-001", FullArtPick::On(true)), Some("full-art-a"));
+        // `true` names the still Epic even with the Animated one listed first; R3015005: an Animated art's id names
+        // the Default variant's animated level it maps to, on its own card alone.
         assert_eq!(
             full_art_of(&tiers, "core-001").map(|cosmetic| cosmetic.id.as_str()),
             Some("full-art-a")
         );
+        let animated = tiers
+            .iter()
+            .find(|cosmetic| cosmetic.id == "animated-a")
+            .unwrap_or_else(|| panic!("animated-a is listed"));
+        assert_eq!(implied_by(animated), [VERSION_ANIMATED_ID]);
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let animated = || FullArtPick::Id("animated-mr-vanilla".to_owned());
         assert_eq!(
-            picked("core-001", FullArtPick::Id("animated-a".to_owned())),
-            Some("animated-a")
+            picked(&cosmetics, "core-008", animated(), &[]),
+            Some(VERSION_ANIMATED_ID)
         );
-        assert_eq!(picked("core-004", FullArtPick::Id("animated-a".to_owned())), None);
+        assert_eq!(picked(&cosmetics, "core-004", animated(), &[]), None);
     }
 
     #[test]
@@ -1566,9 +1894,10 @@ mod tests {
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
         }
         // Nothing before them is a version or an augment, or has an offer; only #2940's three, #2942's three,
-        // #2943's two and #2944's two come after them.
+        // #2943's two, #2944's two and #3015's fifteen (R3015000) come after them.
         assert!(
             cosmetics[..cosmetics.len()
+                - R3015000_NEW
                 - R2944000_NEW.len()
                 - R2943000_NEW.len()
                 - R2942000_NEW.len()
@@ -1599,6 +1928,15 @@ mod tests {
             offer: offer.clone(),
             ..entry(id, CosmeticKind::Version, false)
         };
+        // R3015000: a version is a level of a ladder, which its own check holds
+        // (`r3015000_the_check_refuses_a_broken_ladder`); these stand alone, so the one problem that check finds
+        // with each, its missing level, is set aside here.
+        let found = |cosmetics: &[Cosmetic]| -> Vec<String> {
+            problems(cosmetics)
+                .into_iter()
+                .filter(|problem| !problem.ends_with("\" has no level"))
+                .collect()
+        };
         let mut fine = defaults();
         fine.extend([
             version("version-a"),
@@ -1607,11 +1945,11 @@ mod tests {
                 ..version("augment-a")
             },
         ]);
-        assert!(problems(&fine).is_empty(), "{:?}", problems(&fine));
+        assert!(found(&fine).is_empty(), "{:?}", found(&fine));
         let refused = |wrong: Cosmetic, problem: &str| {
             let mut cosmetics = defaults();
             cosmetics.push(wrong);
-            assert_eq!(problems(&cosmetics), vec![problem.to_owned()]);
+            assert_eq!(found(&cosmetics), vec![problem.to_owned()]);
         };
         refused(
             Cosmetic {
@@ -1687,11 +2025,12 @@ mod tests {
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_offered())
             .collect();
-        // R2940000, R2942000, R2943000, R2944000: #2725's three, #2940's three, #2942's three, #2943's two and
-        // #2944's two.
+        // R2940000, R2942000, R2943000, R2944000, R3015000: #2725's three, #2940's three, #2942's three, #2943's
+        // two, #2944's two and #3015's fifteen levels, each reaching the floor as its variant's first does.
         assert_eq!(
             offered_kinds.len(),
-            R2725000_NEW.len()
+            R3015000_NEW
+                + R2725000_NEW.len()
                 + R2940000_NEW.len()
                 + R2942000_NEW.len()
                 + R2943000_NEW.len()
@@ -1790,21 +2129,24 @@ mod tests {
             PickRefusal::NotOffered.message("augments"),
             "\"augments\" is not offered on this card"
         );
+        // R3015005: a pick names the level, worn only where it is offered.
         let named = |card: &str| {
-            full_art_picked(&cosmetics, card, &FullArtPick::Id(VERSION_FULL_ART_ID.to_owned()))
-                .map(|cosmetic| cosmetic.id.as_str())
+            let level = level_of_pick(
+                &cosmetics,
+                card,
+                Some(&FullArtPick::Id(VERSION_FULL_ART_ID.to_owned())),
+                &[],
+            );
+            worn_level(&cosmetics, level, |level| offered(level, Some(card))).map(|level| level.id.as_str())
         };
         assert_eq!(named("core-022"), Some(VERSION_FULL_ART_ID));
         assert_eq!(named("core-002"), None);
-        // `true` still names a full-art card's retired still Epic alone.
-        assert_eq!(
-            full_art_picked(&cosmetics, "core-022", &FullArtPick::On(true)),
-            None
-        );
+        // `true` names Full art's first level on a full-art card alone (its retired still Epic's, R2655000).
+        assert_eq!(picked(&cosmetics, "core-022", FullArtPick::On(true), &[]), None);
     }
 
     #[test]
-    fn r2725002_a_retired_full_art_owns_what_it_implies() {
+    fn r2725002_r3015006_a_retired_row_owns_the_levels_it_maps_to() {
         use crate::cosmetics::CardCosmetic;
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let by_id = |id: &str| {
@@ -1813,58 +2155,90 @@ mod tests {
                 .find(|cosmetic| cosmetic.id == id)
                 .unwrap_or_else(|| panic!("{id} ships"))
         };
+        let levels: Vec<&Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.level.is_some())
+            .collect();
+        // Each retired full art on its card, as R3015006 maps it: the still Epic Full art's first level, the
+        // Legendary that, its animated level and the Default one, the Mythic those and its signed level, the
+        // Animated art the Default variant's animated level.
+        let mut retired: Vec<(&str, String, Vec<&str>)> = Vec::new();
         for (card, slug) in R2655001_CARDS {
-            for (held, implied) in [
-                (format!("full-art-{slug}"), vec![VERSION_FULL_ART_ID]),
+            retired.extend([
+                (card, format!("full-art-{slug}"), vec![VERSION_FULL_ART_ID]),
                 (
+                    card,
                     format!("full-art-{slug}-animated"),
-                    vec![VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID],
+                    vec![
+                        VERSION_FULL_ART_ID,
+                        VERSION_FULL_ART_ANIMATED_ID,
+                        VERSION_ANIMATED_ID,
+                    ],
                 ),
                 (
+                    card,
                     format!("full-art-{slug}-signed"),
-                    vec![VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID],
+                    vec![
+                        VERSION_FULL_ART_ID,
+                        VERSION_FULL_ART_ANIMATED_ID,
+                        VERSION_FULL_ART_SIGNED_ID,
+                        VERSION_ANIMATED_ID,
+                    ],
                 ),
-                (format!("animated-{slug}"), vec![AUGMENT_ANIMATED_ID]),
-            ] {
-                assert_eq!(implied_by(by_id(&held)), implied.as_slice(), "{held}");
-                let owned = OwnedCosmetics {
-                    cards: vec![CardCosmetic {
-                        card_id: card.to_owned(),
-                        cosmetic_id: held.clone(),
-                    }],
-                    account: Vec::new(),
-                };
-                for (id, _, _) in R2725000_NEW {
-                    let entry = by_id(id);
-                    // Owned on its own card exactly where implied, and never on another card.
-                    assert_eq!(
-                        owns(entry, Some(card), &owned),
-                        implied.contains(&id),
-                        "{held} → {id}"
-                    );
-                    assert_eq!(row_owns(&held, id), implied.contains(&id), "{held} → {id}");
-                    assert!(!owns(entry, Some("core-022"), &owned), "{held} → {id} elsewhere");
-                    assert_eq!(
-                        implying(card, id).any(|retired| retired == held),
-                        implied.contains(&id),
-                        "{held} → {id}"
-                    );
-                }
-                // It still owns itself, and no other retired full art.
-                assert!(owns(by_id(&held), Some(card), &owned));
-                assert!(row_owns(&held, &held));
-            }
+                (card, format!("animated-{slug}"), vec![VERSION_ANIMATED_ID]),
+            ]);
         }
-        // Nothing else implies anything, and an implication is never of another kind.
+        // The retired augments, on any card: Animated the Default variant's animated level, Signature alone nothing.
+        retired.push((
+            "core-022",
+            AUGMENT_ANIMATED_ID.to_owned(),
+            vec![VERSION_ANIMATED_ID],
+        ));
+        retired.push(("core-022", AUGMENT_SIGNATURE_ID.to_owned(), Vec::new()));
+        for (card, held, implied) in &retired {
+            assert_eq!(implied_by(by_id(held)), implied.as_slice(), "{held}");
+            let owned = OwnedCosmetics {
+                cards: vec![CardCosmetic {
+                    card_id: (*card).to_owned(),
+                    cosmetic_id: held.clone(),
+                }],
+                account: Vec::new(),
+            };
+            let elsewhere = if *card == "core-022" {
+                "core-008"
+            } else {
+                "core-022"
+            };
+            for level in &levels {
+                let id = level.id.as_str();
+                // Owned on its own card exactly where it maps, and never on another card.
+                assert_eq!(
+                    owns(level, Some(card), &owned),
+                    implied.contains(&id),
+                    "{held} → {id}"
+                );
+                assert_eq!(row_owns(held, id), implied.contains(&id), "{held} → {id}");
+                assert!(!owns(level, Some(elsewhere), &owned), "{held} → {id} elsewhere");
+                assert_eq!(
+                    implying(id).any(|retired| retired == held),
+                    implied.contains(&id),
+                    "{held} → {id}"
+                );
+            }
+            // It still owns itself, and no other retired entry.
+            assert!(owns(by_id(held), Some(card), &owned));
+            assert!(row_owns(held, held));
+        }
+        // Nothing but a retired entry maps to anything, and a mapping is only ever to a level.
         assert!(
             cosmetics
                 .iter()
-                .filter(|cosmetic| cosmetic.kind != CosmeticKind::FullArt)
+                .filter(|cosmetic| !cosmetic.is_retired())
                 .all(|cosmetic| implied_by(cosmetic).is_empty())
         );
         assert!(!row_owns("full-art-mr-vanilla", "foil-galaxy"));
         assert!(!row_owns("foil-galaxy", VERSION_FULL_ART_ID));
-        assert!(implying("core-008", "foil-galaxy").next().is_none());
+        assert!(implying("foil-galaxy").next().is_none());
     }
 
     #[test]
@@ -1872,9 +2246,13 @@ mod tests {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         for list in [pack_cosmetics(&cosmetics), cosmetic_pack_cosmetics(&cosmetics)] {
             assert!(list.iter().all(|cosmetic| cosmetic.kind != CosmeticKind::FullArt));
-            // The version and both augments drop in their place.
-            for (id, _, _) in R2725000_NEW {
-                assert!(list.iter().any(|cosmetic| cosmetic.id == id), "{id}");
+            // The Full art version drops in their place; R3015000: the augments are retired beside them.
+            for (id, kind, _) in R2725000_NEW {
+                assert_eq!(
+                    list.iter().any(|cosmetic| cosmetic.id == id),
+                    kind == CosmeticKind::Version,
+                    "{id}"
+                );
             }
         }
         // They stay in the registry, so every owner keeps them by id (§14.12).
@@ -1888,39 +2266,99 @@ mod tests {
     }
 
     #[test]
-    fn r2949000_signature_fits_only_beside_the_full_art_version_and_animated() {
-        let pick = |id: &str| Some(FullArtPick::Id(id.to_owned()));
-        let list = |ids: &[&str]| ids.iter().map(|id| (*id).to_owned()).collect::<Vec<String>>();
-        let both = list(&[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
-        let animated = list(&[AUGMENT_ANIMATED_ID]);
-        // The version, `true` (a full-art card's still Epic) or a retired full art implying it, with Animated
-        // listed or implied.
-        for (full_art, augments) in [
-            (pick(VERSION_FULL_ART_ID), both.clone()),
-            (Some(FullArtPick::On(true)), animated.clone()),
-            (pick("full-art-mr-vanilla-animated"), Vec::new()),
-            (pick("full-art-mr-vanilla-signed"), Vec::new()),
-            (pick("full-art-mr-vanilla"), animated.clone()),
+    fn r2949000_r3015005_level_of_pick_maps_every_old_shape_to_the_level_it_drew() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let id = |id: &str| Some(FullArtPick::Id(id.to_owned()));
+        let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+        let animated = [AUGMENT_ANIMATED_ID];
+        let signature = [AUGMENT_SIGNATURE_ID];
+        // On Mr. Vanilla, a full-art card; the mapping reads no offer and no ownership, which the callers hold.
+        for (full_art, augments, level) in [
+            // R2949000's Signature look, the Full art version with both augments, is Full art's signed level.
+            (
+                id(VERSION_FULL_ART_ID),
+                &both[..],
+                Some(VERSION_FULL_ART_SIGNED_ID),
+            ),
+            (
+                Some(FullArtPick::On(true)),
+                &animated[..],
+                Some(VERSION_FULL_ART_ANIMATED_ID),
+            ),
+            (id(VERSION_FULL_ART_ID), &signature[..], Some(VERSION_FULL_ART_ID)),
+            // A retired full art the highest level it maps to, a non-Default one first.
+            (id("full-art-mr-vanilla"), &[][..], Some(VERSION_FULL_ART_ID)),
+            (
+                id("full-art-mr-vanilla"),
+                &animated[..],
+                Some(VERSION_FULL_ART_ANIMATED_ID),
+            ),
+            (
+                id("full-art-mr-vanilla-animated"),
+                &[][..],
+                Some(VERSION_FULL_ART_ANIMATED_ID),
+            ),
+            (
+                id("full-art-mr-vanilla-signed"),
+                &[][..],
+                Some(VERSION_FULL_ART_SIGNED_ID),
+            ),
+            (
+                id("animated-mr-vanilla"),
+                &animated[..],
+                Some(VERSION_ANIMATED_ID),
+            ),
+            // Animated on the normal face, or on an id this build does not know, the Default variant's animated
+            // level; Signature on no full art steps nowhere.
+            (Some(FullArtPick::On(false)), &both[..], Some(VERSION_ANIMATED_ID)),
+            (None, &both[..], Some(VERSION_ANIMATED_ID)),
+            (None, &signature[..], None),
+            (None, &[][..], None),
+            (
+                id("version-from-a-newer-client"),
+                &both[..],
+                Some(VERSION_ANIMATED_ID),
+            ),
+            (id("version-from-a-newer-client"), &[][..], None),
+            // A normal-frame art with Animated stays at its first level where the next is its full art.
+            (id(VERSION_ALT_ART_ID), &both[..], Some(VERSION_ALT_ART_ID)),
+            (id(VERSION_SKETCH_ID), &animated[..], Some(VERSION_SKETCH_ID)),
+            (
+                id(VERSION_ALT_FULL_ART_ID),
+                &both[..],
+                Some("version-alt-full-art-signed"),
+            ),
+            (
+                id(VERSION_ALT_FULL_ART_ID),
+                &animated[..],
+                Some("version-alt-full-art-animated"),
+            ),
+            (id(VERSION_PIXEL_ID), &both[..], Some("version-pixel-animated")),
+            // A level's id is that level.
+            (
+                id("version-sketch-full-art-animated"),
+                &[][..],
+                Some("version-sketch-full-art-animated"),
+            ),
         ] {
-            assert!(
-                signature_fits(full_art.as_ref(), &augments),
+            let listed: Vec<String> = augments.iter().map(|id| (*id).to_owned()).collect();
+            assert_eq!(
+                level_of_pick(&cosmetics, "core-008", full_art.as_ref(), &listed)
+                    .map(|level| level.id.as_str()),
+                level,
                 "{full_art:?} {augments:?}"
             );
         }
-        // Without Animated, without the version, or with a version this build does not know.
-        for (full_art, augments) in [
-            (pick(VERSION_FULL_ART_ID), list(&[AUGMENT_SIGNATURE_ID])),
-            (pick("full-art-mr-vanilla"), Vec::new()),
-            (pick("animated-mr-vanilla"), animated.clone()),
-            (Some(FullArtPick::On(false)), both.clone()),
-            (None, both.clone()),
-            (pick("version-from-a-newer-client"), both.clone()),
-        ] {
-            assert!(
-                !signature_fits(full_art.as_ref(), &augments),
-                "{full_art:?} {augments:?}"
-            );
-        }
+        // Another card's retired full art names nothing on this one.
+        assert_eq!(
+            picked(
+                &cosmetics,
+                "core-004",
+                FullArtPick::Id("full-art-mr-vanilla".to_owned()),
+                &[]
+            ),
+            None
+        );
     }
 
     #[test]
@@ -1976,10 +2414,15 @@ mod tests {
             }],
             ..entry("version-a", CosmeticKind::Version, false)
         };
+        // R3015000: this version stands alone, so the ladders' check's one problem with it, its missing level, is set
+        // aside (`r3015000_the_check_refuses_a_broken_ladder` holds that check).
         let checked = |sample: OfferSample| {
             let mut cosmetics = defaults();
             cosmetics.push(entry_with(sample));
             problems(&cosmetics)
+                .into_iter()
+                .filter(|problem| !problem.ends_with("\" has no level"))
+                .collect::<Vec<_>>()
         };
         assert!(checked(half.clone()).is_empty());
         assert!(checked(sample("version-full-art", OFFER_SAMPLE_PERCENT_SCALE - 1)).is_empty());
@@ -2075,12 +2518,18 @@ mod tests {
                 cosmetic.id
             );
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
-            // R2949001: every clause samples by the version's own id, so it lands on cards of its own.
+            // R2949001: every clause samples by its version's own id, so it lands on cards of its own. R3015000: Alt
+            // art's levels share Alt art's clause and Alt full art's, each sampled by one of the two.
+            let seeds: &[&str] = if cosmetic.id == VERSION_SKETCH_ID {
+                &[VERSION_SKETCH_ID]
+            } else {
+                &[VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID]
+            };
             assert!(
                 cosmetic.offer.iter().all(|clause| clause
                     .sample
                     .as_ref()
-                    .is_some_and(|sample| sample.seed == cosmetic.id)),
+                    .is_some_and(|sample| seeds.contains(&sample.seed.as_str()))),
                 "{}",
                 cosmetic.id
             );
@@ -2104,22 +2553,18 @@ mod tests {
             .filter(|(_, def)| !def.is_token())
             .map(|(id, _)| id.as_str())
             .collect();
-        // Each version on a set of cards of its own: no two of the four alike, none on every card.
-        let versions = [
-            VERSION_FULL_ART_ID,
-            VERSION_ALT_ART_ID,
-            VERSION_SKETCH_ID,
-            VERSION_ALT_FULL_ART_ID,
-        ];
+        // Each version on a set of cards of its own: no two of the three alike (R3015000: Alt full art, Alt art's second level, offered as Alt art is), none on every card.
+        let versions = [VERSION_FULL_ART_ID, VERSION_ALT_ART_ID, VERSION_SKETCH_ID];
         for (at, a) in versions.iter().enumerate() {
             assert!(on(a).len() < non_tokens.len(), "{a}");
             for b in &versions[at + 1..] {
                 assert_ne!(on(a), on(b), "{a} and {b}");
             }
         }
-        // Alt art the widest of the three.
+        // Alt art the widest of them, and Alt full art on every card Alt art is (R3015000), each card it took before
+        // among them.
         assert!(on(VERSION_ALT_ART_ID).len() > on(VERSION_SKETCH_ID).len());
-        assert!(on(VERSION_ALT_ART_ID).len() > on(VERSION_ALT_FULL_ART_ID).len());
+        assert_eq!(on(VERSION_ALT_ART_ID), on(VERSION_ALT_FULL_ART_ID));
         // R2940001: never Alt art or Alt full art on a Legacy card (R2511000), whose one picture is its Core card's.
         let legacy: Vec<&str> = defs
             .iter()
@@ -2132,11 +2577,18 @@ mod tests {
             assert!(!offered(by_id(VERSION_ALT_FULL_ART_ID), Some(card)), "{card}");
         }
 
-        // R2949000: Signature fits none of them, Animated listed or not.
-        for (id, _, _) in R2940000_NEW {
-            let augments = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(str::to_owned);
-            assert!(
-                !signature_fits(Some(&FullArtPick::Id(id.to_owned())), &augments),
+        // R3015005: a pick of one with the old Animated and Signature steps up where its variant's next levels add
+        // them: Alt art and the Sketch stay at their first level, whose next is a full art, and Alt full art, now Alt
+        // art's second level, becomes its signed level.
+        for (id, level) in [
+            (VERSION_ALT_ART_ID, VERSION_ALT_ART_ID),
+            (VERSION_SKETCH_ID, VERSION_SKETCH_ID),
+            (VERSION_ALT_FULL_ART_ID, "version-alt-full-art-signed"),
+        ] {
+            let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+            assert_eq!(
+                picked(&cosmetics, "core-022", FullArtPick::Id(id.to_owned()), &both),
+                Some(level),
                 "{id}"
             );
         }
@@ -2167,17 +2619,19 @@ mod tests {
                 Ok(()),
                 "{id}"
             );
-            assert_eq!(
-                full_art_picked(&cosmetics, ALL_SIX, &FullArtPick::Id(id.to_owned()))
-                    .map(|cosmetic| cosmetic.id.as_str()),
-                Some(id)
-            );
-            assert_eq!(
-                full_art_picked(&cosmetics, BARE, &FullArtPick::Id(id.to_owned())),
-                None
-            );
-            // No retired full art implies one: owning a part 1 look never owns a part 2 one.
-            assert!(implying("core-008", id).next().is_none(), "{id}");
+            // R3015005: a card's pick names the level, and it is worn only where it is offered.
+            let worn = |card: &str| {
+                worn_level(
+                    &cosmetics,
+                    level_of_pick(&cosmetics, card, Some(&FullArtPick::Id(id.to_owned())), &[]),
+                    |level| offered(level, Some(card)),
+                )
+                .map(|level| level.id.as_str())
+            };
+            assert_eq!(worn(ALL_SIX), Some(id));
+            assert_eq!(worn(BARE), None);
+            // No retired entry owns one: owning a part 1 look never owns a part 2 one (R3015006).
+            assert!(implying(id).next().is_none(), "{id}");
         }
     }
 
@@ -2238,13 +2692,12 @@ mod tests {
             .filter(|(_, def)| !def.is_token())
             .map(|(id, _)| id.as_str())
             .collect();
-        // Each version on a set of cards of its own: no two of the seven alike, none on every card, and each of
+        // Each version on a set of cards of its own: no two of the six alike (R3015000: Alt full art, Alt art's second level, offered as Alt art is), none on every card, and each of
         // part 3's with a card no other version takes.
         let versions = [
             VERSION_FULL_ART_ID,
             VERSION_ALT_ART_ID,
             VERSION_SKETCH_ID,
-            VERSION_ALT_FULL_ART_ID,
             VERSION_EXTENDED_ART_ID,
             VERSION_PIXEL_ID,
             VERSION_COMIC_ID,
@@ -2295,11 +2748,14 @@ mod tests {
             );
         }
 
-        // R2949000: Signature fits none of them, Animated listed or not.
+        // R3015005: a pick of one with the old Animated and Signature is its animated level: Signature steps nowhere,
+        // no level of a one-art variant being signed.
         for (id, _, _) in R2942000_NEW {
-            let augments = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(str::to_owned);
-            assert!(
-                !signature_fits(Some(&FullArtPick::Id(id.to_owned())), &augments),
+            let animated = format!("{id}-animated");
+            let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+            assert_eq!(
+                picked(&cosmetics, "core-022", FullArtPick::Id(id.to_owned()), &both),
+                Some(animated.as_str()),
                 "{id}"
             );
         }
@@ -2330,17 +2786,19 @@ mod tests {
                 Ok(()),
                 "{id}"
             );
-            assert_eq!(
-                full_art_picked(&cosmetics, ALL_THREE, &FullArtPick::Id(id.to_owned()))
-                    .map(|cosmetic| cosmetic.id.as_str()),
-                Some(id)
-            );
-            assert_eq!(
-                full_art_picked(&cosmetics, BARE, &FullArtPick::Id(id.to_owned())),
-                None
-            );
-            // No retired full art implies one: owning a part 1 look never owns a part 3 one.
-            assert!(implying("core-008", id).next().is_none(), "{id}");
+            // R3015005: a card's pick names the level, and it is worn only where it is offered.
+            let worn = |card: &str| {
+                worn_level(
+                    &cosmetics,
+                    level_of_pick(&cosmetics, card, Some(&FullArtPick::Id(id.to_owned())), &[]),
+                    |level| offered(level, Some(card)),
+                )
+                .map(|level| level.id.as_str())
+            };
+            assert_eq!(worn(ALL_THREE), Some(id));
+            assert_eq!(worn(BARE), None);
+            // No retired entry owns one: owning a part 1 look never owns a part 3 one (R3015006).
+            assert!(implying(id).next().is_none(), "{id}");
         }
     }
 
@@ -2401,12 +2859,11 @@ mod tests {
             .filter(|(_, def)| !def.is_token())
             .map(|(id, _)| id.as_str())
             .collect();
-        // Each version on a set of cards of its own: no two of the nine alike, none on every card.
+        // Each version on a set of cards of its own: no two of the eight alike (R3015000: Alt full art, Alt art's second level, offered as Alt art is), none on every card.
         let versions = [
             VERSION_FULL_ART_ID,
             VERSION_ALT_ART_ID,
             VERSION_SKETCH_ID,
-            VERSION_ALT_FULL_ART_ID,
             VERSION_EXTENDED_ART_ID,
             VERSION_PIXEL_ID,
             VERSION_COMIC_ID,
@@ -2444,11 +2901,14 @@ mod tests {
             assert!(!out_of_frame.contains(card.as_str()), "{card}");
         }
 
-        // R2949000: Signature fits neither of them, Animated listed or not.
+        // R3015005: a pick of one with the old Animated and Signature is its animated level: Signature steps nowhere,
+        // no level of a one-art variant being signed.
         for (id, _, _) in R2943000_NEW {
-            let augments = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(str::to_owned);
-            assert!(
-                !signature_fits(Some(&FullArtPick::Id(id.to_owned())), &augments),
+            let animated = format!("{id}-animated");
+            let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+            assert_eq!(
+                picked(&cosmetics, "core-022", FullArtPick::Id(id.to_owned()), &both),
+                Some(animated.as_str()),
                 "{id}"
             );
         }
@@ -2479,17 +2939,19 @@ mod tests {
                 Ok(()),
                 "{id}"
             );
-            assert_eq!(
-                full_art_picked(&cosmetics, PART_FOUR, &FullArtPick::Id(id.to_owned()))
-                    .map(|cosmetic| cosmetic.id.as_str()),
-                Some(id)
-            );
-            assert_eq!(
-                full_art_picked(&cosmetics, BARE, &FullArtPick::Id(id.to_owned())),
-                None
-            );
-            // No retired full art implies one: owning a part 1 look never owns a part 4 one.
-            assert!(implying("core-008", id).next().is_none(), "{id}");
+            // R3015005: a card's pick names the level, and it is worn only where it is offered.
+            let worn = |card: &str| {
+                worn_level(
+                    &cosmetics,
+                    level_of_pick(&cosmetics, card, Some(&FullArtPick::Id(id.to_owned())), &[]),
+                    |level| offered(level, Some(card)),
+                )
+                .map(|level| level.id.as_str())
+            };
+            assert_eq!(worn(PART_FOUR), Some(id));
+            assert_eq!(worn(BARE), None);
+            // No retired entry owns one: owning a part 1 look never owns a part 4 one (R3015006).
+            assert!(implying(id).next().is_none(), "{id}");
         }
     }
 
@@ -2553,12 +3015,11 @@ mod tests {
             .filter(|(_, def)| !def.is_token())
             .map(|(id, _)| id.as_str())
             .collect();
-        // Each version on a set of cards of its own: no two of the eleven alike, none on every card.
+        // Each version on a set of cards of its own: no two of the ten alike (R3015000: Alt full art, Alt art's second level, offered as Alt art is), none on every card.
         let versions = [
             VERSION_FULL_ART_ID,
             VERSION_ALT_ART_ID,
             VERSION_SKETCH_ID,
-            VERSION_ALT_FULL_ART_ID,
             VERSION_EXTENDED_ART_ID,
             VERSION_PIXEL_ID,
             VERSION_COMIC_ID,
@@ -2592,11 +3053,14 @@ mod tests {
             assert!(prismatic.contains(card), "{card}");
         }
 
-        // R2949000, R2944002: Signature fits neither of them, Animated listed or not.
+        // R3015005: a pick of one with the old Animated and Signature is its animated level: Signature steps nowhere,
+        // no level of a one-art variant being signed.
         for (id, _, _) in R2944000_NEW {
-            let augments = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(str::to_owned);
-            assert!(
-                !signature_fits(Some(&FullArtPick::Id(id.to_owned())), &augments),
+            let animated = format!("{id}-animated");
+            let both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+            assert_eq!(
+                picked(&cosmetics, "core-022", FullArtPick::Id(id.to_owned()), &both),
+                Some(animated.as_str()),
                 "{id}"
             );
         }
@@ -2627,17 +3091,19 @@ mod tests {
                 Ok(()),
                 "{id}"
             );
-            assert_eq!(
-                full_art_picked(&cosmetics, PART_FIVE, &FullArtPick::Id(id.to_owned()))
-                    .map(|cosmetic| cosmetic.id.as_str()),
-                Some(id)
-            );
-            assert_eq!(
-                full_art_picked(&cosmetics, BARE, &FullArtPick::Id(id.to_owned())),
-                None
-            );
-            // No retired full art implies one: owning a part 1 look never owns a part 5 one.
-            assert!(implying("core-008", id).next().is_none(), "{id}");
+            // R3015005: a card's pick names the level, and it is worn only where it is offered.
+            let worn = |card: &str| {
+                worn_level(
+                    &cosmetics,
+                    level_of_pick(&cosmetics, card, Some(&FullArtPick::Id(id.to_owned())), &[]),
+                    |level| offered(level, Some(card)),
+                )
+                .map(|level| level.id.as_str())
+            };
+            assert_eq!(worn(PART_FIVE), Some(id));
+            assert_eq!(worn(BARE), None);
+            // No retired entry owns one: owning a part 1 look never owns a part 5 one (R3015006).
+            assert!(implying(id).next().is_none(), "{id}");
         }
     }
 
@@ -2931,12 +3397,22 @@ mod tests {
         // then #2655's 42 full arts, a Legendary and a Mythic on each of 21 cards (R2655000), then #2725's
         // Full art version and Signature augment (R2725000), then #2940's Alt full art version (R2940000), then
         // #2943's Set showcase and Out of frame versions (R2943000), then #2944's Immersive and Prismatic versions
-        // (R2944000).
+        // (R2944000), then #3015's thirteen Legendary and Mythic levels (R3015000, R3015001).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let chases: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.chase).collect();
-        assert_eq!(chases.len(), 17 + 42 + 7);
+        assert_eq!(chases.len(), 17 + 42 + 7 + 13);
         assert_eq!(
-            chases[17 + 42..]
+            chases[17 + 42 + 7..]
+                .iter()
+                .map(|cosmetic| cosmetic.id.as_str())
+                .collect::<Vec<_>>(),
+            R3015000_NEW_IDS
+                .into_iter()
+                .filter(|id| ![VERSION_ANIMATED_ID, VERSION_SKETCH_FULL_ART_ID].contains(id))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            chases[17 + 42..17 + 42 + 7]
                 .iter()
                 .map(|cosmetic| cosmetic.id.as_str())
                 .collect::<Vec<_>>(),
@@ -3053,25 +3529,33 @@ mod tests {
         );
         // A duplicate drops #1833's 18 per-card ones, then #2725's version and augments (R2725000), which
         // retire every full art: those six, #2655's 57 and #2715's 21; then #2940's three versions (R2940000),
-        // #2942's three (R2942000), #2943's two (R2943000) and #2944's two (R2944000).
+        // #2942's three (R2942000), #2943's two (R2943000), #2944's two (R2944000) and #3015's fifteen levels
+        // (R3015000), which retire the two augments.
         let mut dropped: Vec<Cosmetic> = cosmetics[earlier.len()..earlier.len() + R1833000_NEW.len()]
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_per_card())
             .cloned()
             .collect();
         assert_eq!(dropped.len(), 18);
-        dropped.extend(r2725000_new(&cosmetics).iter().cloned());
+        dropped.extend(
+            r2725000_new(&cosmetics)
+                .iter()
+                .filter(|cosmetic| !cosmetic.is_retired())
+                .cloned(),
+        );
         dropped.extend(r2940000_new(&cosmetics).iter().cloned());
         dropped.extend(r2942000_new(&cosmetics).iter().cloned());
         dropped.extend(r2943000_new(&cosmetics).iter().cloned());
         dropped.extend(r2944000_new(&cosmetics).iter().cloned());
+        dropped.extend(r3015000_new(&cosmetics).iter().cloned());
         assert_eq!(
             dropped.len(),
-            18 + R2725000_NEW.len()
+            18 + R2725000_NEW.len() - 2
                 + R2940000_NEW.len()
                 + R2942000_NEW.len()
                 + R2943000_NEW.len()
                 + R2944000_NEW.len()
+                + R3015000_NEW
         );
         assert_eq!(pack_cosmetics(&cosmetics), dropped);
         let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
@@ -3230,11 +3714,12 @@ mod tests {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
         // #1833's 72, #2655's 57 after them (R2655000), #2755's one (R2755000), #2715's 21 (R2715000),
-        // #2725's three (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000)
-        // and #2944's two last (R2944000).
+        // #2725's three (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000),
+        // #2944's two (R2944000) and #3015's fifteen last (R3015000).
         assert_eq!(
             cosmetics.len(),
-            72 + R2655000_NEW
+            72 + R3015000_NEW
+                + R2655000_NEW
                 + R2755000_NEW
                 + R2715000_NEW
                 + R2725000_NEW.len()
@@ -3471,9 +3956,10 @@ mod tests {
     fn r2755000_the_jlorious_card_back_ships_after_the_full_arts_mythic_and_no_pool_offers_it() {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         // Appended after #2655's full arts, with only #2715's Animated arts (R2715000), #2725's three
-        // (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000) and #2944's two
-        // (R2944000) after it.
+        // (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000), #2944's two
+        // (R2944000) and #3015's fifteen (R3015000) after it.
         let back = &cosmetics[cosmetics.len()
+            - R3015000_NEW
             - R2944000_NEW.len()
             - R2943000_NEW.len()
             - R2942000_NEW.len()
@@ -3539,5 +4025,488 @@ mod tests {
                 problems(&cosmetics)
             );
         }
+    }
+
+    use CosmeticRarity::{Epic, Legendary, Mythic, Rare};
+    use LevelAdds::{Animated, Art, FullArt, Signed};
+
+    /// One level as R3015000's table lists it: its id, what it adds and its rarity.
+    type TableLevel = (&'static str, LevelAdds, CosmeticRarity);
+
+    /// R3015000, R3015001: every variant's ladder as the registry ships it, lowest level first: each level's id,
+    /// what it adds and its rarity. The Default variant's first level, the normal face, names no entry.
+    const R3015000_LADDERS: [(&str, &[TableLevel]); 11] = [
+        (DEFAULT_VARIANT, &[(VERSION_ANIMATED_ID, Animated, Epic)]),
+        (
+            "full-art",
+            &[
+                (VERSION_FULL_ART_ID, FullArt, Legendary),
+                (VERSION_FULL_ART_ANIMATED_ID, Animated, Mythic),
+                (VERSION_FULL_ART_SIGNED_ID, Signed, Mythic),
+            ],
+        ),
+        (
+            "alt-art",
+            &[
+                (VERSION_ALT_ART_ID, Art, Rare),
+                (VERSION_ALT_FULL_ART_ID, FullArt, Legendary),
+                ("version-alt-full-art-animated", Animated, Mythic),
+                ("version-alt-full-art-signed", Signed, Mythic),
+            ],
+        ),
+        (
+            "sketch",
+            &[
+                (VERSION_SKETCH_ID, Art, Rare),
+                (VERSION_SKETCH_FULL_ART_ID, FullArt, Epic),
+                ("version-sketch-full-art-animated", Animated, Legendary),
+                ("version-sketch-full-art-signed", Signed, Mythic),
+            ],
+        ),
+        (
+            "extended-art",
+            &[
+                (VERSION_EXTENDED_ART_ID, Art, Epic),
+                ("version-extended-art-animated", Animated, Legendary),
+            ],
+        ),
+        (
+            "pixel",
+            &[
+                (VERSION_PIXEL_ID, Art, Epic),
+                ("version-pixel-animated", Animated, Legendary),
+            ],
+        ),
+        (
+            "comic",
+            &[
+                (VERSION_COMIC_ID, Art, Epic),
+                ("version-comic-animated", Animated, Legendary),
+            ],
+        ),
+        (
+            "set-showcase",
+            &[
+                (VERSION_SET_SHOWCASE_ID, Art, Legendary),
+                ("version-set-showcase-animated", Animated, Mythic),
+            ],
+        ),
+        (
+            "out-of-frame",
+            &[
+                (VERSION_OUT_OF_FRAME_ID, Art, Legendary),
+                ("version-out-of-frame-animated", Animated, Mythic),
+            ],
+        ),
+        (
+            "immersive",
+            &[
+                (VERSION_IMMERSIVE_ID, Art, Mythic),
+                ("version-immersive-animated", Animated, Mythic),
+            ],
+        ),
+        (
+            "prismatic",
+            &[
+                (VERSION_PRISMATIC_ID, Art, Mythic),
+                ("version-prismatic-animated", Animated, Mythic),
+            ],
+        ),
+    ];
+
+    /// R3015000: the fifteen levels #3015 appends, in the registry's order.
+    const R3015000_NEW_IDS: [&str; R3015000_NEW] = [
+        VERSION_ANIMATED_ID,
+        VERSION_FULL_ART_ANIMATED_ID,
+        VERSION_FULL_ART_SIGNED_ID,
+        "version-alt-full-art-animated",
+        "version-alt-full-art-signed",
+        VERSION_SKETCH_FULL_ART_ID,
+        "version-sketch-full-art-animated",
+        "version-sketch-full-art-signed",
+        "version-extended-art-animated",
+        "version-pixel-animated",
+        "version-comic-animated",
+        "version-set-showcase-animated",
+        "version-out-of-frame-animated",
+        "version-immersive-animated",
+        "version-prismatic-animated",
+    ];
+
+    #[test]
+    fn r3015000_every_variant_is_a_ladder_of_levels() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
+        // #3015's fifteen are appended last, none a default or a starter.
+        assert_eq!(
+            r3015000_new(&cosmetics)
+                .iter()
+                .map(|cosmetic| cosmetic.id.as_str())
+                .collect::<Vec<_>>(),
+            R3015000_NEW_IDS
+        );
+        assert!(
+            r3015000_new(&cosmetics)
+                .iter()
+                .all(|cosmetic| !cosmetic.default && !cosmetic.starter)
+        );
+        // Every version is a level of one of the eleven ladders, ranked gaplessly from its first, which is 2 for
+        // the Default variant, and nothing else has a level.
+        let mut listed = 0;
+        for (variant, levels) in R3015000_LADDERS {
+            let first: u8 = if variant == DEFAULT_VARIANT { 2 } else { 1 };
+            assert_eq!(
+                ladder(&cosmetics, variant)
+                    .iter()
+                    .map(|cosmetic| cosmetic.level.as_ref().map(|level| (
+                        cosmetic.id.as_str(),
+                        level.rank,
+                        level.adds
+                    )))
+                    .collect::<Vec<_>>(),
+                levels
+                    .iter()
+                    .zip(first..)
+                    .map(|((id, adds, _), rank)| Some((*id, rank, *adds)))
+                    .collect::<Vec<_>>(),
+                "{variant}"
+            );
+            // The art first, then animated, then signed above an animated full art alone.
+            let adds: Vec<LevelAdds> = levels.iter().map(|(_, adds, _)| *adds).collect();
+            let animated = adds.iter().position(|adds| *adds == Animated);
+            assert!(
+                animated.is_some_and(|at| adds[..at].iter().all(|adds| matches!(adds, Art | FullArt))),
+                "{variant}"
+            );
+            if let Some(signed) = adds.iter().position(|adds| *adds == Signed) {
+                assert_eq!(Some(signed - 1), animated, "{variant}");
+                assert_eq!(adds.get(signed.wrapping_sub(2)), Some(&FullArt), "{variant}");
+            }
+            listed += levels.len();
+        }
+        assert_eq!(
+            cosmetics
+                .iter()
+                .filter(|cosmetic| cosmetic.kind == CosmeticKind::Version)
+                .count(),
+            listed
+        );
+        assert!(
+            cosmetics
+                .iter()
+                .all(|cosmetic| cosmetic.level.is_some() == (cosmetic.kind == CosmeticKind::Version))
+        );
+        // Every card has at least the Default ladder, and each level is offered where its variant's first is, but
+        // a level that moves never on a Legacy card.
+        let defs = shipped_defs();
+        let default_first = cosmetics
+            .iter()
+            .find(|cosmetic| cosmetic.id == VERSION_ANIMATED_ID)
+            .unwrap_or_else(|| panic!("the Default variant's animated level ships"));
+        for (card, def) in defs.iter().filter(|(_, def)| !def.is_token()) {
+            assert!(
+                default_first.offer.iter().any(|clause| clause.takes(card, def)),
+                "{card}"
+            );
+            let legacy = def.tags.contains(&Tag::Legacy);
+            for (variant, _) in R3015000_LADDERS {
+                let levels = ladder(&cosmetics, variant);
+                let first = levels
+                    .first()
+                    .is_some_and(|first| first.offer.iter().any(|clause| clause.takes(card, def)));
+                for level in levels {
+                    let moves = level.level.as_ref().is_some_and(|at| at.adds.moves());
+                    assert_eq!(
+                        offered(level, Some(card)),
+                        first && !(legacy && moves),
+                        "{} on {card}",
+                        level.id
+                    );
+                }
+            }
+        }
+        // The retired entries keep their ids and drop, sell and wear nowhere (R3015006 reads them).
+        assert!(
+            cosmetics
+                .iter()
+                .filter(|cosmetic| cosmetic.is_retired())
+                .all(|cosmetic| matches!(cosmetic.kind, CosmeticKind::FullArt | CosmeticKind::Augment))
+        );
+        assert_eq!(
+            cosmetics
+                .iter()
+                .filter(|cosmetic| cosmetic.kind == CosmeticKind::Augment)
+                .map(|cosmetic| cosmetic.id.as_str())
+                .collect::<Vec<_>>(),
+            [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]
+        );
+    }
+
+    #[test]
+    fn r3015000_no_animated_or_signed_level_on_a_legacy_card() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let legacy: Vec<&str> = shipped_defs()
+            .iter()
+            .filter(|(_, def)| !def.is_token() && def.tags.contains(&Tag::Legacy))
+            .map(|(card, _)| card.as_str())
+            .collect();
+        assert!(legacy.contains(&LEGACY_DUPLICATING_FELINORS), "{legacy:?}");
+        let mut stopped = 0;
+        for card in &legacy {
+            for level in cosmetics.iter().filter(|cosmetic| cosmetic.level.is_some()) {
+                let adds = level.level.as_ref().map(|at| at.adds);
+                if adds.is_some_and(LevelAdds::moves) {
+                    assert!(!offered(level, Some(card)), "{} on {card}", level.id);
+                } else if offered(level, Some(card)) {
+                    stopped += 1;
+                }
+            }
+            // The Default ladder is the normal face alone there.
+            assert!(
+                ladder(&cosmetics, DEFAULT_VARIANT)
+                    .iter()
+                    .all(|level| !offered(level, Some(card)))
+            );
+        }
+        // Some Legacy card is offered an art level, its ladder stopping before animated.
+        assert!(stopped > 0);
+        // A level that moves is refused a Legacy card even where its clauses take every card.
+        let mut tiers = defaults();
+        tiers.push(Cosmetic {
+            starter: false,
+            offer: vec![OfferClause::default()],
+            level: Some(VariantLevel {
+                variant: DEFAULT_VARIANT.to_owned(),
+                rank: 2,
+                adds: Animated,
+            }),
+            ..entry(VERSION_ANIMATED_ID, CosmeticKind::Version, false)
+        });
+        assert!(offered(&tiers[tiers.len() - 1], Some("core-022")));
+        assert!(!offered(
+            &tiers[tiers.len() - 1],
+            Some(LEGACY_DUPLICATING_FELINORS)
+        ));
+    }
+
+    #[test]
+    fn r3015000_the_check_refuses_a_broken_ladder() {
+        let level = |id: &str, variant: &str, rank: u8, adds: LevelAdds, rarity: CosmeticRarity| Cosmetic {
+            rarity,
+            chase: rarity.is_chase(),
+            starter: false,
+            offer: vec![OfferClause::default()],
+            level: Some(VariantLevel {
+                variant: variant.to_owned(),
+                rank,
+                adds,
+            }),
+            ..entry(id, CosmeticKind::Version, false)
+        };
+        let ladders = || {
+            let mut cosmetics = defaults();
+            cosmetics.extend([
+                level("version-animated", DEFAULT_VARIANT, 2, Animated, Epic),
+                level("version-a", "a", 1, Art, Rare),
+                level("version-a-full-art", "a", 2, FullArt, Epic),
+                level("version-a-animated", "a", 3, Animated, Legendary),
+                level("version-a-signed", "a", 4, Signed, Mythic),
+                level("version-b", "b", 1, Art, Epic),
+                level("version-b-animated", "b", 2, Animated, Legendary),
+            ]);
+            cosmetics
+        };
+        assert!(problems(&ladders()).is_empty(), "{:?}", problems(&ladders()));
+        let refused = |change: &dyn Fn(&mut Vec<Cosmetic>), problem: &str| {
+            let mut cosmetics = ladders();
+            change(&mut cosmetics);
+            let found = problems(&cosmetics);
+            assert!(
+                found.iter().any(|found| found.starts_with(problem)),
+                "{problem:?} not in {found:?}"
+            );
+        };
+        let at = |cosmetics: &mut Vec<Cosmetic>, id: &str| -> usize {
+            cosmetics
+                .iter()
+                .position(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} is listed"))
+        };
+        let set_level = |cosmetics: &mut Vec<Cosmetic>, id: &str, rank: u8, adds: LevelAdds| {
+            let i = at(cosmetics, id);
+            if let Some(level) = cosmetics[i].level.as_mut() {
+                level.rank = rank;
+                level.adds = adds;
+            }
+        };
+        // A version without a level, and a level on another kind.
+        refused(
+            &|c| {
+                c.push(Cosmetic {
+                    level: None,
+                    ..level("version-c", "c", 1, Art, Rare)
+                })
+            },
+            "the version \"version-c\" has no level",
+        );
+        refused(
+            &|c| {
+                c.push(Cosmetic {
+                    kind: CosmeticKind::Foil,
+                    offer: Vec::new(),
+                    ..level("foil-c", "c", 1, Art, Rare)
+                })
+            },
+            "the Foil \"foil-c\" has a level, which only a version has",
+        );
+        // A variant that is no slug.
+        refused(
+            &|c| {
+                c.push(level("version-c", "C", 1, Art, Rare));
+                c.push(level("version-c-animated", "C", 2, Animated, Epic));
+            },
+            "the level \"version-c\" names the variant \"C\", which is not a lower-case slug",
+        );
+        // Ranks with a gap, or the Default variant's from 1.
+        refused(
+            &|c| set_level(c, "version-a-signed", 5, Signed),
+            "the variant \"a\" has the ranks [1, 2, 3, 5]",
+        );
+        refused(
+            &|c| set_level(c, "version-animated", 1, Animated),
+            "the variant \"default\" has the ranks [1]",
+        );
+        // Signed with no animated level below it, signed above a normal-frame art, no animated level, two art
+        // levels, an art level in the Default variant, and a level after signed.
+        refused(
+            &|c| {
+                let i = at(c, "version-a-animated");
+                c.remove(i);
+                set_level(c, "version-a-signed", 3, Signed);
+            },
+            "the variant \"a\" adds [Art, FullArt, Signed]",
+        );
+        refused(
+            &|c| c.push(level("version-b-signed", "b", 3, Signed, Mythic)),
+            "the variant \"b\" adds [Art, Animated, Signed]",
+        );
+        refused(
+            &|c| {
+                let i = at(c, "version-b-animated");
+                c.remove(i);
+            },
+            "the variant \"b\" adds [Art]",
+        );
+        refused(
+            &|c| set_level(c, "version-a-full-art", 2, Art),
+            "the variant \"a\" adds [Art, Art, Animated, Signed]",
+        );
+        refused(
+            &|c| {
+                set_level(c, "version-animated", 3, Animated);
+                c.push(level("version-default-art", DEFAULT_VARIANT, 2, Art, Rare));
+            },
+            "the variant \"default\" adds [Art, Animated]",
+        );
+        refused(
+            &|c| c.push(level("version-a-more", "a", 5, Animated, Mythic)),
+            "the variant \"a\" adds [Art, FullArt, Animated, Signed, Animated]",
+        );
+        // R3015001: a level no rarer than the one below it but at Mythic, and a signed level below Mythic.
+        refused(
+            &|c| {
+                let i = at(c, "version-a-full-art");
+                c[i] = level("version-a-full-art", "a", 2, FullArt, Rare);
+            },
+            "the level \"version-a-full-art\" is Rare, not rarer than \"version-a\" below it, Rare",
+        );
+        refused(
+            &|c| {
+                for (id, rarity) in [
+                    ("version-a", CosmeticRarity::Common),
+                    ("version-a-full-art", Rare),
+                    ("version-a-animated", Epic),
+                    ("version-a-signed", Legendary),
+                ] {
+                    let i = at(c, id);
+                    let (rank, adds) = c[i]
+                        .level
+                        .as_ref()
+                        .map_or((0, Art), |level| (level.rank, level.adds));
+                    c[i] = level(id, "a", rank, adds, rarity);
+                }
+            },
+            "the signed level \"version-a-signed\" is Legendary, not Mythic",
+        );
+        // A level offered otherwise than its variant's first.
+        refused(
+            &|c| {
+                let i = at(c, "version-a-animated");
+                c[i].offer = vec![OfferClause {
+                    rarities: vec![Rarity::Legendary],
+                    ..OfferClause::default()
+                }];
+            },
+            "the level \"version-a-animated\" is offered otherwise than \"version-a\", its variant's first",
+        );
+        // A Default ladder that leaves a card out.
+        refused(
+            &|c| {
+                let i = at(c, "version-animated");
+                c[i].offer = vec![OfferClause {
+                    rarities: vec![Rarity::Mythic],
+                    ..OfferClause::default()
+                }];
+            },
+            "the Default variant's offer does not take",
+        );
+    }
+
+    #[test]
+    fn r3015001_each_level_has_the_table_s_rarity() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        for (variant, levels) in R3015000_LADDERS {
+            let shipped: Vec<(&str, CosmeticRarity, bool)> = ladder(&cosmetics, variant)
+                .iter()
+                .map(|cosmetic| (cosmetic.id.as_str(), cosmetic.rarity, cosmetic.chase))
+                .collect();
+            // Each level its table's rarity, a chase exactly at Legendary and up (R1333000).
+            assert_eq!(
+                shipped,
+                levels
+                    .iter()
+                    .map(|(id, _, rarity)| (*id, *rarity, rarity.is_chase()))
+                    .collect::<Vec<_>>(),
+                "{variant}"
+            );
+            // Rising up the ladder until Mythic, and a signed level Mythic.
+            for pair in levels.windows(2) {
+                assert!(pair[1].2 > pair[0].2 || pair[1].2 == Mythic, "{pair:?}");
+            }
+            for (id, adds, rarity) in levels.iter() {
+                assert!(*adds != Signed || *rarity == Mythic, "{id}");
+            }
+            // A variant's first level keeps the rarity its version had before #3015.
+            if let Some((first, _, rarity)) = levels.first()
+                && variant != DEFAULT_VARIANT
+            {
+                assert_eq!(
+                    before_r3015000(&cosmetics)
+                        .iter()
+                        .find(|cosmetic| cosmetic.id == *first)
+                        .map(|cosmetic| cosmetic.rarity),
+                    Some(*rarity),
+                    "{first}"
+                );
+            }
+        }
+        // The Default variant's animated level is the retired Animated augment's Epic.
+        assert_eq!(
+            cosmetics
+                .iter()
+                .find(|cosmetic| cosmetic.id == AUGMENT_ANIMATED_ID)
+                .map(|cosmetic| cosmetic.rarity),
+            Some(Epic)
+        );
     }
 }

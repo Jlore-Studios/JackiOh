@@ -116,6 +116,19 @@ function rectOf(cf: HTMLElement, selector: string): DOMRect {
   return part(cf, selector).getBoundingClientRect();
 }
 
+/** A box's edges in its card's own frame. */
+type Edges = { top: number; bottom: number; left: number; right: number; width: number; height: number };
+
+/**
+ * `box` as its card stands upright: a DEF card is turned a quarter clockwise (Card.tsx's inline `rotate(90deg)`), so on
+ * the screen its top is its right edge and its foot its left, and turned back its art and its name line up as an ATK
+ * card's do. Only differences between edges are compared, so the frame's origin does not matter.
+ */
+function upright(box: DOMRect, turned: boolean): Edges {
+  if (!turned) return box;
+  return { top: -box.right, bottom: -box.left, left: box.top, right: box.bottom, width: box.height, height: box.width };
+}
+
 /** The art and the name's band of a full-art face line up: the art fills the panel down to the band, which lies at the foot. */
 function expectArtAboveBand(cf: HTMLElement, artSelector: string, where: string): void {
   const panel = rectOf(cf, ".cf-scale");
@@ -354,17 +367,23 @@ describe("R3046000 the real board", () => {
         const units = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .card[data-face="minion"] > .cf[data-full-art="true"]`)];
         // Gary and Tempo Timmy on your side, Mr. Vanilla and Jlockeed Shredder-10 on the other's.
         expect(units.length, "the board's full-art Units").to.be.at.least(4);
+        // Jlockeed Shredder-10 stands in DEF, turned sideways: it is measured upright, in its own frame.
+        expect(units.some((cf) => cf.parentElement?.getAttribute("data-position") === "DEF"), "a full-art Unit in DEF").to.eq(true);
         for (const cf of units) {
-          const where = `${cf.parentElement?.getAttribute("data-def-id") ?? "?"} at ${viewport.label}`;
-          const art = cf.querySelector<HTMLElement>(".cf-portrait")?.getBoundingClientRect();
-          const name = cf.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
-          const panel = cf.querySelector<HTMLElement>(".cf-scale")?.getBoundingClientRect();
-          if (art === undefined || name === undefined || panel === undefined) throw new Error(`${where}: no art, name or panel`);
+          const turned = cf.parentElement?.getAttribute("data-position") === "DEF";
+          const where = `${cf.parentElement?.getAttribute("data-def-id") ?? "?"}${turned ? " in DEF" : ""} at ${viewport.label}`;
+          const artBox = cf.querySelector<HTMLElement>(".cf-portrait")?.getBoundingClientRect();
+          const nameBox = cf.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
+          const panelBox = cf.querySelector<HTMLElement>(".cf-scale")?.getBoundingClientRect();
+          if (artBox === undefined || nameBox === undefined || panelBox === undefined) throw new Error(`${where}: no art, name or panel`);
+          const art = upright(artBox, turned);
+          const name = upright(nameBox, turned);
+          const panel = upright(panelBox, turned);
           expect(art.bottom, `${where}: the art ends where the name's band begins`).to.be.closeTo(name.top, EDGE_TOLERANCE_PX);
           expect(name.bottom, `${where}: the band lies at the foot`).to.be.closeTo(panel.bottom, EDGE_TOLERANCE_PX);
           expect(art.width, `${where}: the art fills the panel`).to.be.closeTo(panel.width, EDGE_TOLERANCE_PX);
           for (const stat of cf.querySelectorAll<HTMLElement>(".stat-attack, .stat-health")) {
-            expect(stat.getBoundingClientRect().bottom, `${where}: a stat is clear of the name`).to.be.at.most(name.top + EDGE_TOLERANCE_PX);
+            expect(upright(stat.getBoundingClientRect(), turned).bottom, `${where}: a stat is clear of the name`).to.be.at.most(name.top + EDGE_TOLERANCE_PX);
           }
         }
         const backrow = doc.querySelector<HTMLElement>(`${BOARD} .field .card[data-face="compact"] > .cf[data-full-art="true"]`);

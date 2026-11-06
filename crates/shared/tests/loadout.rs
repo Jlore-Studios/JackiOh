@@ -46,7 +46,6 @@ fn begun() -> (GameState, (Vec<String>, Vec<String>)) {
         last_boards: None,
         glitch_boards: None,
         sandbox: None,
-        custom_cards: None,
         deck_marks: None,
     });
     (begin_game(&state).state, decks)

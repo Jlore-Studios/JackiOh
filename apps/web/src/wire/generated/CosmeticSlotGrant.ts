@@ -4,4 +4,4 @@ import type { CosmeticRarity } from "./CosmeticRarity";
 /**
  * What one cosmetic pack slot grants (R1306000, R1306001).
  */
-export type CosmeticSlotGrant = { "kind": "cosmetic", cosmeticId: string, cosmeticRarity: CosmeticRarity, cardId: string | null, cardGranted: boolean, } | { "kind": "bars" };
+export type CosmeticSlotGrant = { "kind": "cosmetic", cosmeticId: string, cosmeticRarity: CosmeticRarity, cardId: string | null, cardGranted: boolean, below?: Array<string>, } | { "kind": "bars" };

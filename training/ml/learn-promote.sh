@@ -108,7 +108,7 @@ while [ "$attempt" -lt "$tries" ]; do
   # move for move: the promoted AI plays it differently, so it records it again into the promotion
   # commit, the one file outside crates/ai/** and training/history/** CI lets a lane change.
   say "the practice-claim fixture, recorded again by the promoted AI"
-  JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh > "$out/wasm-$attempt.txt" 2>&1
+  sh scripts/build-wasm.sh > "$out/wasm-$attempt.txt" 2>&1
   JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts \
     > "$out/claim-$attempt.txt" 2>&1
   pnpm --dir apps/web exec vitest run src/practice/claim.test.ts >> "$out/claim-$attempt.txt" 2>&1

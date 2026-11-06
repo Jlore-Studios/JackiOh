@@ -18,19 +18,19 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `hash_state(state)`, `fold(args)` | the state hash, and a log folded (`{ state, errors }`) |
 | `replay_open(args, record)`, `replay_page(checkpoints, seat, from, count)` | R768's `ReplayOpen`, then `ReplayPage` |
 | `last_board_for`, `seat_played_by`, `find_instance` | as the engine's |
-| `combat_forecast(state, seat)` | R3100000: `{ attacks, lethal }`, what each attack `seat` may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether the shield breaks) and whether the attackers that reach the enemy hero finish it, as the board shows it (`jackioh_engine::combat_forecast`); the practice worker asks it of a tutorial lesson's game, and the coach names its attacks by it. The normal and C modules bind it; the Luau module has no copy (a lesson holds no custom card) |
+| `combat_forecast(state, seat)` | R3100000: `{ attacks, lethal }`, what each attack `seat` may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether the shield breaks) and whether the attackers that reach the enemy hero finish it, as the board shows it (`jackioh_engine::combat_forecast`); the practice worker asks it of a tutorial lesson's game, and the coach names its attacks by it. The browser and C modules bind it |
 | `deal_emote_hand(seed, seat)` | `EmoteId[]`: the seat's hand of eight emotes for that seed, as the server deals it (R1341), for hotseat and practice |
 | `ai_to_act(state, seat)`, `ai_decide(state, seat, options, deadline_ms)` | the AI; `options` is `{ rngSeed, rngCursor, budget? }`, the answer `{ decision, rngCursor }` |
 | `lethal_hint(state, seat, deadline_ms)` | R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`), for the practice AI's lethal hint; a search still running at `deadline_ms` (as `ai_decide`'s) answers no |
 | `build_ai_deck(options)` | `{ deck, rngCursor }`; `options` is `{ rngSeed, rngCursor, size }` and `AiDeckOptions`' own keys, `leanSet` among them (R1370) |
 | `choose_action(state, seat, rng_seed, rng_cursor)` | spec §10.7's random policy, `{ action, rngCursor }` |
 | `validator(call, input)` | one of the validator's functions (`validateDeck`, `validateTrio`, `checkDeckDraft`, `checkImportRoom`, …) by name |
-| `series(call)` | #3098: one call of `jackioh-shared`'s Conquest series rules (SPEC §9.5, R330 to R337): a `SeriesCall` (`{ "call": "pickDeck", "series": …, "seat": "p1", "slot": 2, "now": … }`), answered as a `SeriesAnswer` (`{ "row": … }` to write back, `{ "refused": … }`, or a read). The host holds the series row and passes the time in (`crates/shared/README.md`, the host contract); a rules refusal is the returned `refused`, never thrown. Not in the Luau module, which never plays a series (`export_parity.rs`'s `NORMAL_ONLY`); the C module binds it as `series(call_ptr, call_len)` |
-| `host(call)` | #3101: one call of `jackioh-shared`'s match host machine (the clocks, the disconnect grace, the rematch offers and the aim relay as one pure state machine): a `HostCall` (`{ "call": "stepDuel", "host": …, "event": …, "now": … }`, or `stepDuos` for the co-op host, whose answer is `steppedDuos`), answered as a `HostAnswer` (`{ "answer": "stepped", "host": …, "outputs": [ … ] }` or a read; the rematch and Play again books' calls answer their next state). The host holds the `DuelHost` and passes the time in (`crates/shared/README.md`, the host contract); the outputs are timers to set, messages to send, rows to append and moves to decide, carried out in order. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`) |
-| `loadout(call)` | #3102, #3103: one call of `jackioh-shared`'s loadout rule (SPEC §10.8, R1834002, R1834003, R3013002), which decides what a seat wears when its match starts and when a card's cosmetics may be shown without leaking a decklist: a `LoadoutCall` (`{ "call": "dealtCards", "state": … }`, `{ "call": "shownDefs", "view": …, "dealt": … }`, `{ "call": "cardsDue", "shown": …, "loadouts": …, "sent": … }`, `{ "call": "freezeSeat", "picks": …, "deck": …, "deckCards": … }`, `defaultLoadout`, `accountPicks` or `wornStamps`), answered as a `LoadoutAnswer` (`{ "dealt": … }`, `{ "shown": … }`, `{ "due": { "cards": …, "sent": … } }`, `{ "frozen": … }`, `{ "account": … }` or `{ "stamps": … }`). The host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract). Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`); the C module binds it as `loadout(call_ptr, call_len)` |
-| `ranked(call)` | #3105: one call of `jackioh-shared`'s ranked ladder (SPEC §9.12, R603 to R612): a `RankedCall` (`{ "call": "rateGame", "game": { "standings": …, "sides": …, "season": …, "nowMs": … } }`, `planSeason`, `softReset`, `visibleRank`, `peakBadge` or `jloriousOrder`), answered as a `RankedAnswer` (`{ "game": { "sides": …, "ranks": …, "peaks": …, "records": … } }`, `{ "season": … }`, …). The host holds the ladder's records, passes the time and the season's dates in, and writes what the answer says; each record carries the integer key a leaderboard sorts by (`crates/shared/README.md`, `src/ranked/`). Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`); the C module binds it as `ranked(call_ptr, call_len)` |
-| `bots(call)`, `bot_decide(call, deadline_ms)` | #3103: the ladder bots. `bots` is one call of `jackioh-shared`'s decisions around a bot (the pool's size and who grinds, a new bot, its decks and trio, the empty-queue pairing, a Conquest series pick, the cosmetics it wears): a `BotCall` (`{ "call": "chooseBot", "ticket": …, "bots": …, … }`) answered as a `BotAnswer`, over plain records the host read from its store. `bot_decide` is the move a bot owes: a `DecideCall` (the `DuelHost` and the `DecideRequest` a machine `decide` output made) answered as the `BotChoice` the host feeds back as `decided`; once `Date.now()` passes `deadline_ms` the search answers with its best line (`<= 0`: no clock). A bot at a seat is the machine's (`host`): its pace, aim, emotes and habits come out as its timers and actions. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`) |
-| `economy(call)` | #3104: one call of `jackioh-shared`'s collection economy (SPEC §14.3 to §14.7): an `EconomyCall` (`{ "call": "openCardPack", "records": …, "pack": "global", "seed": "…", "now": … }`; `openCosmeticPack`, `fillBar` and `levelReward` beside it), answered as an `EconomyAnswer` (`{ "opened": … }`, `{ "cosmeticOpened": … }`, `{ "filled": … }`, `{ "reward": … }` or `{ "refused": … }`). The host reads the records from its store, passes the seed and the time in (`crates/shared/README.md`, the host contract) and writes the answer's `grants` back; a pool, registry or catalog version a call leaves out is the compiled-in one, and a rules refusal is the returned `refused`, never thrown. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`); the C module binds it as `economy(call_ptr, call_len)` |
+| `series(call)` | #3098: one call of `jackioh-shared`'s Conquest series rules (SPEC §9.5, R330 to R337): a `SeriesCall` (`{ "call": "pickDeck", "series": …, "seat": "p1", "slot": 2, "now": … }`), answered as a `SeriesAnswer` (`{ "row": … }` to write back, `{ "refused": … }`, or a read). The host holds the series row and passes the time in (`crates/shared/README.md`, the host contract); a rules refusal is the returned `refused`, never thrown. The C module binds it as `series(call_ptr, call_len)` |
+| `host(call)` | #3101: one call of `jackioh-shared`'s match host machine (the clocks, the disconnect grace, the rematch offers and the aim relay as one pure state machine): a `HostCall` (`{ "call": "stepDuel", "host": …, "event": …, "now": … }`, or `stepDuos` for the co-op host, whose answer is `steppedDuos`), answered as a `HostAnswer` (`{ "answer": "stepped", "host": …, "outputs": [ … ] }` or a read; the rematch and Play again books' calls answer their next state). The host holds the `DuelHost` and passes the time in (`crates/shared/README.md`, the host contract); the outputs are timers to set, messages to send, rows to append and moves to decide, carried out in order. |
+| `loadout(call)` | #3102, #3103: one call of `jackioh-shared`'s loadout rule (SPEC §10.8, R1834002, R1834003, R3013002), which decides what a seat wears when its match starts and when a card's cosmetics may be shown without leaking a decklist: a `LoadoutCall` (`{ "call": "dealtCards", "state": … }`, `{ "call": "shownDefs", "view": …, "dealt": … }`, `{ "call": "cardsDue", "shown": …, "loadouts": …, "sent": … }`, `{ "call": "freezeSeat", "picks": …, "deck": …, "deckCards": … }`, `defaultLoadout`, `accountPicks` or `wornStamps`), answered as a `LoadoutAnswer` (`{ "dealt": … }`, `{ "shown": … }`, `{ "due": { "cards": …, "sent": … } }`, `{ "frozen": … }`, `{ "account": … }` or `{ "stamps": … }`). The host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract). The C module binds it as `loadout(call_ptr, call_len)` |
+| `ranked(call)` | #3105: one call of `jackioh-shared`'s ranked ladder (SPEC §9.12, R603 to R612): a `RankedCall` (`{ "call": "rateGame", "game": { "standings": …, "sides": …, "season": …, "nowMs": … } }`, `planSeason`, `softReset`, `visibleRank`, `peakBadge` or `jloriousOrder`), answered as a `RankedAnswer` (`{ "game": { "sides": …, "ranks": …, "peaks": …, "records": … } }`, `{ "season": … }`, …). The host holds the ladder's records, passes the time and the season's dates in, and writes what the answer says; each record carries the integer key a leaderboard sorts by (`crates/shared/README.md`, `src/ranked/`). The C module binds it as `ranked(call_ptr, call_len)` |
+| `bots(call)`, `bot_decide(call, deadline_ms)` | #3103: the ladder bots. `bots` is one call of `jackioh-shared`'s decisions around a bot (the pool's size and who grinds, a new bot, its decks and trio, the empty-queue pairing, a Conquest series pick, the cosmetics it wears): a `BotCall` (`{ "call": "chooseBot", "ticket": …, "bots": …, … }`) answered as a `BotAnswer`, over plain records the host read from its store. `bot_decide` is the move a bot owes: a `DecideCall` (the `DuelHost` and the `DecideRequest` a machine `decide` output made) answered as the `BotChoice` the host feeds back as `decided`; once `Date.now()` passes `deadline_ms` the search answers with its best line (`<= 0`: no clock). A bot at a seat is the machine's (`host`): its pace, aim, emotes and habits come out as its timers and actions. |
+| `economy(call)` | #3104: one call of `jackioh-shared`'s collection economy (SPEC §14.3 to §14.7): an `EconomyCall` (`{ "call": "openCardPack", "records": …, "pack": "global", "seed": "…", "now": … }`; `openCosmeticPack`, `fillBar`, `levelReward`, `payGame` (a finished game's Jlore, XP, track levels and quests), `payXp`, `startingRewards` and the quest calls `topUpQuests`, `replaceQuest`, `giveQuest` and `completeQuest` beside it), answered as an `EconomyAnswer` (`{ "opened": … }`, `{ "cosmeticOpened": … }`, `{ "filled": … }`, `{ "reward": … }`, `{ "paid": … }`, `{ "granted": … }` (the writes, in order), `{ "toppedUp": … }` or `{ "refused": … }`). The host reads the records from its store, passes the seed and the time in (`crates/shared/README.md`, the host contract) and writes the answer's `grants` back; a pool, registry or catalog version a call leaves out is the compiled-in one, and a rules refusal is the returned `refused`, never thrown. The C module binds it as `economy(call_ptr, call_len)` |
 | `constants()`, `engine_tables()` | every rules, AI and run number a client reads, as one flat object (#3093): the AI budgets, shadow-ban ids and deck builder's numbers (`AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `FIXTURE_BANNED_IDS`, `AI_DECK`), `RUN` (`run_constants`'s object) and each constant of `apps/web/src/wire/engineConfig.ts` under its own name (`DECK_SIZE`, …), so a host restates none (CLAUDE.md rule 9); the three Call to Chaos tables (Core's, Classic+'s and Meditative's) and the Heroic Power table the web's tests check the card text against (`wire/engine.ts`'s `subsystems`) |
 | `preview_sets(sets)` | R1400, R1420: treat `SetName[]` as shipped for the module's life (the dev hotseat's E2E injection); a module built without the `preview` feature refuses any set |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | #936: the Duos wrapper for `/dev/duos`: a `DuosState` (its four decks and handicaps checked first, as `create_game`'s setup is), then `{ state, events, error? }`, `DuosActionBody[]` and `DuosView`; the seat crosses as its string (`"a1"`). Built only with the `duos` feature (the dev server's build only: `JACKIOH_WASM_DUOS=1`, off by default); without it each throws the reason |
@@ -76,7 +76,7 @@ and on only for `predev` (`JACKIOH_WASM_DUOS=1`), so no other module, the one a 
 included, carries them.
 
 It keeps nothing between builds itself: both deploys build on GitHub's runners, whose setup action
-restores `target/` and `.cache/emsdk`, so cargo rebuilds only what changed.
+restores `target/`, so cargo rebuilds only what changed.
 
 `apps/web/src/wasm/index.ts` is the only caller: `loadWasm()` (or `loadWasmSync(bytes)` under jsdom)
 and one typed function per binding, named as the TypeScript engine named it. `apps/web/src/wire/`
@@ -90,68 +90,29 @@ cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown
 
 ## The shared bodies (`core/`, #1505)
 
-The three wrappers wrap one set of bodies: `crates/wasm/core` (`jackioh-wasm-core`) holds the
-JSON helpers, the state cache and every binding's work as `Result<String, String>` (or
-`Result<bool | (), String>`) functions. `src/lib.rs` keeps only the wasm-bindgen wrappers, the
-panic hook, the clock and the custom-card refusal (R915009); `luau/src/main.rs` keeps only the C
-wrappers through emscripten, the panic hook, the clock, the custom-card setup check (R915005,
-R915006) and `check_custom_card`; `c/src/lib.rs` keeps only the C wrappers on a plain
-`wasm32-unknown-unknown` link, the memory interface, the panic hook, no clock and the custom-card
-refusal. The exports stay identical, and behavior does not change.
+The two wrappers wrap one set of bodies: `crates/wasm/core` (`jackioh-wasm-core`) holds the
+JSON helpers, the state cache, the setup check and every binding's work as `Result<String, String>`
+(or `Result<bool | (), String>`) functions. `src/lib.rs` keeps only the wasm-bindgen wrappers, the
+panic hook and the clock; `c/src/lib.rs` keeps only the C wrappers on a plain
+`wasm32-unknown-unknown` link, the memory interface, the panic hook and no clock. The exports stay
+identical, and behavior does not change.
 
-A binding cannot be added to one side and forgotten in the other: `tests/export_parity.rs`
-compares each module's export list to a declared allow-list (`SHARED`, the bindings both export;
-`NORMAL_ONLY`, `learned_parity`, the Duos bindings, `series`, `host`, `loadout`, `ranked`, `bots`, `bot_decide` and `economy` with the reason; `LUAU_ONLY`, the creator's
-check and the C boundary's strings) and fails when a binding is bound in only one module. The C
-module is held to every binding the browser module binds, so one added for the web reaches a host that
-is not JavaScript by itself; its allow-list (`C_ONLY`) names only its memory interface, and
-`LUAU_NOT_IN_C` the two Luau bindings that leave with the Luau host (#2956 part 5), each with its
-reason. The test also holds `.cargo/config.toml`'s `EXPORTED_FUNCTIONS` and the factory types
-`scripts/build-wasm.sh` writes to every Luau-module C binding, and the C module's sources to importing
-nothing from the host.
+A binding cannot be added to one side and forgotten in the other: `tests/export_parity.rs` reads each
+module's export list and fails when the C module lacks a binding the browser module binds, or exports
+one of its own that `C_ONLY` (its memory interface, with the reason) does not name. There is no list of
+bindings to edit: a binding added for the web is bound in `src/lib.rs`, exported in `c/src/lib.rs` and
+tested in `c/src/tests.rs`, and the C module, the one a Roblox port translates (#2898), has it by
+itself. The test also holds the C module's sources to importing nothing from the host.
 
 ```
 cargo test -p jackioh-wasm --test export_parity
-```
-
-## The Luau module (`luau/`, #919)
-
-`crates/wasm/luau` (`jackioh-wasm-luau`) is the same engine, cards, AI and validator with the card
-kit's host (`jackioh_luau::custom::KitHost`) lent to the engine around every call, so a game whose
-state carries custom cards runs their scripts (SPEC §12, R915009). It is a second module, loaded only
-for a practice game whose human deck holds a custom card and for the card creator; a normal game,
-practice or online, never loads it, and the normal module refuses a game with custom cards.
-
-- **Its target** is `wasm32-unknown-emscripten`, the one WebAssembly target `mlua` builds Luau for.
-  The crate is a binary whose `main` does nothing; each binding is an `extern "C"` function over
-  UTF-8 C strings (`_create_game`, `_reduce`, …), the same names and JSON as the bindings above, plus
-  `check_custom_card(card)`: the engine validator's issues with the frame, the Luau module's problems
-  with the script (the lint, Luau's compiler and the kit's own checks, each with its line when it has
-  one) and the definition the frame builds, `{ frame, script, def }`, which the creator shows. A
-  binding's error is kept for `_jackioh_last_error`, and every string it returns is freed with
-  `_jackioh_free`. `.cargo/config.toml` holds the `emcc` link's `-s` flags, `EXPORTED_FUNCTIONS`
-  among them.
-- **Its build** is the second half of `scripts/build-wasm.sh`, unless `JACKIOH_WASM_LUAU=0`: it adds
-  the target, clones and installs the pinned emsdk (`EMSDK_VERSION`) into `.cache/emsdk` when it is
-  missing (CI's setup action caches that directory, keyed on the pin), builds the crate with
-  `emcc`/`em++` on `PATH` (Luau itself is C++), and copies the MODULARIZE factory and its `.wasm` into
-  `apps/web/src/wasm/pkg/luau/`, with a `.d.ts` it writes for the factory. Inside `pkg/`, it is
-  gitignored, linted by nothing and carried by CI's `web-build` artifact with the normal module.
-- **Its seam** is `apps/web/src/wasm/luau.ts`, imported only dynamically by `wasm/index.ts`:
-  `useLuauModule(on)` switches the bindings every engine call goes through, which the practice worker
-  does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it for the creator
-  without switching. `apps/web/src/wasm/luau.test.ts` holds that no other file imports it.
-
-```
-sh scripts/build-wasm.sh                                  # both modules
-JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh              # the normal module alone
 ```
 
 ## The C module (`c/`, #3093)
 
 `crates/wasm/c` (`jackioh-wasm-c`) is the engine's C boundary on its own: every binding the browser
 module binds, as an `extern "C"` function over JSON strings, built as a plain `wasm32-unknown-unknown`
-`cdylib` with no emscripten, no Luau VM, no wasm-bindgen glue, no JavaScript and no system interface,
+`cdylib` with no emscripten, no wasm-bindgen glue, no JavaScript and no system interface,
 so its import section is empty. A host that is not JavaScript (a Roblox port's translation of it,
 #2898) runs it as it is, with the numbers it needs read from `constants()` and none restated. Its
 memory interface (`jackioh_alloc`, `jackioh_free`, `jackioh_result_ptr`, `jackioh_result_len`), its
@@ -162,5 +123,5 @@ search ends at its `budget`.
 ```
 cargo test -p jackioh-wasm-c                                  # each export against its core body
 cargo build -p jackioh-wasm-c --release --target wasm32-unknown-unknown
-JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh   # the same, and checks its imports with node
+JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh   # the same, and checks its imports with node; CI's `web (wasm c module)` runs it and records the size
 ```
