@@ -157,7 +157,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
 
   return (
     <div className="account-two-step" data-testid={twoStepTestid.section}>
-      <h3 className="account-heading">{t("Two-step sign-in")}</h3>
+      <h2 className="account-heading">{t("Two-step sign-in")}</h2>
       {phase.kind === "loading" ? <p className="auth-hint">{t("Checking…")}</p> : null}
       {phase.kind === "unknown" ? (
         <>

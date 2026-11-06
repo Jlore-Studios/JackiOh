@@ -10,13 +10,6 @@
   color: var(--text, #e8eaf2);
 }
 
-.stats-title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
 /* Summary tiles */
 .stats-summary-tiles {
   display: grid;

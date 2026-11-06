@@ -35,6 +35,7 @@ import {
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
+import { Wordmark } from "../routes/Wordmark.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
 import { UndoToast } from "../undo/UndoToast.tsx";
@@ -166,13 +167,10 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
 
   return (
     <div className="app-shell tavern lobby together-screen one-screen" data-testid={togetherTestid.root}>
-      <BackLink />
+      <BackLink title={t("Play together")} />
 
       <header className="together-hero">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <p className="together-hero__title">{t("Play together")}</p>
+        <Wordmark />
       </header>
 
       {error === null ? null : (

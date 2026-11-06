@@ -35,6 +35,7 @@ import {
 } from "../shop/fixtures.ts";
 import { shopTestid } from "../shop/shop.ts";
 import { at, meBody, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { accountTestid } from "./account.tsx";
 import { purchasesTestid } from "./purchases.tsx";
 import ShopRoute, { shopRouteTestid } from "./shop.tsx";
@@ -147,6 +148,14 @@ describe("#1577 the shop screen", () => {
       "the shop is closed",
     );
     expect(screen.getByRole("heading", { name: "Shop" })).toBeInTheDocument();
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    serveShop();
+    render(<ShopRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(shopTestid.wallet, undefined, SLOW)).toHaveTextContent("37 Jlore");
+    expectOnePageTitle("Shop");
   });
 
   it("R1580000 buying and opening are on the Shop, and the opening plays over the screen", async () => {

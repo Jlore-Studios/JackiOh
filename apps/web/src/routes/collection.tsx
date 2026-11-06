@@ -32,6 +32,7 @@ import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import QuestsPanel from "./QuestsPanel.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -135,7 +136,7 @@ function Section<T>({
 }): ReactElement {
   return (
     <section className="collection-section">
-      <h3 className="account-heading">{title}</h3>
+      <h2 className="account-heading">{title}</h2>
       {read.kind === "loading" ? (
         <Skeleton variant="rows" label={loading} testId={collectionTestid.loading(part)} />
       ) : read.kind === "error" ? (
@@ -162,11 +163,12 @@ export default function CollectionRoute({ token }: { token: string }): ReactElem
       data-testid={collectionTestid.screen}
       data-section={section ?? "hub"}
     >
-      <BackLink to={section === null ? paths.landing : paths.collection} />
+      <BackLink
+        to={section === null ? paths.landing : paths.collection}
+        title={section === null ? t("Your collection") : section === "cards" ? t("Cards") : t("Cosmetics")}
+      />
       <section className="panel panel--auth">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
+        <Wordmark />
         {section === "cards" ? (
           <CardsSection token={token} />
         ) : section === "cosmetics" ? (
@@ -183,7 +185,6 @@ export default function CollectionRoute({ token }: { token: string }): ReactElem
 function Hub(): ReactElement {
   return (
     <>
-      <h2>{t("Your collection")}</h2>
       <nav className="collection-hub" aria-label={t("Collection")}>
         <a
           className="collection-door"
@@ -222,7 +223,6 @@ function CardsSection({ token }: { token: string }): ReactElement {
 
   return (
     <>
-      <h2>{t("Cards")}</h2>
       <div className="collection-body" data-testid={collectionTestid.body}>
         <Section part="cards" title={t("Owned cards")} loading={t("Loading your cards…")} read={cards}>
           {(collection) => <OwnedCards collection={collection} token={token} />}
@@ -248,10 +248,9 @@ function CardsSection({ token }: { token: string }): ReactElement {
 function CosmeticsSection({ token }: { token: string }): ReactElement {
   return (
     <>
-      <h2>{t("Cosmetics")}</h2>
       <div className="collection-body" data-testid={collectionTestid.body}>
         <section className="collection-section">
-          <h3 className="account-heading">{t("Equipped")}</h3>
+          <h2 className="account-heading">{t("Equipped")}</h2>
           <p>
             {t(
               "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",

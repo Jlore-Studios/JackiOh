@@ -228,7 +228,7 @@ export default function ReplayPlayer({
     };
   }, [playing, busy, at, current, last, fx.speed, show]);
 
-  const back = <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} />;
+  const back = <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} title={t("Replays")} />;
 
   if (failure !== null) {
     return (

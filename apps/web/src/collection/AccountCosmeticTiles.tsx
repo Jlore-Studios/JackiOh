@@ -104,7 +104,7 @@ function TileRow({
 }): ReactElement {
   return (
     <section className="collection-tiles" data-testid={T.tiles(kind)} aria-label={cosmeticKindWords(kind)}>
-      <h4 className="collection-tiles__title">{cosmeticKindWords(kind)}</h4>
+      <h3 className="collection-tiles__title">{cosmeticKindWords(kind)}</h3>
       <p className="settings-hint">{t(hint)}</p>
       <ul className="collection-tiles__list">
         {tiles.map((tile) => (

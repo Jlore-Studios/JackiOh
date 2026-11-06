@@ -6,7 +6,7 @@
 // with the `DOM` lib the rest of `apps/web` compiles against.
 
 import { loadWasm } from "../wasm/index.ts";
-import { createPracticeCore } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeResponse } from "./protocol.ts";
 import { messageOf } from "../net/errors.ts";
@@ -19,8 +19,8 @@ type PracticeWorkerScope = {
 const scope = self as unknown as PracticeWorkerScope;
 
 const saves = defaultSaveStore();
-const core = createPracticeCore({
-  // `Date.now`, the clock the WebAssembly side measures the AI's deadline on (`core.ts`).
+const core = createPracticeDriver({
+  // `Date.now`, the clock the WebAssembly side measures the AI's deadline on (`driver.ts`).
   now: () => Date.now(),
   dev: import.meta.env.MODE !== "production",
   saves,

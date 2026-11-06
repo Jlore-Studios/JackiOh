@@ -1,4 +1,4 @@
-// Today's deal (SPEC §9.9, R2882000): one random practice deal a UTC day, the same on every device. Page-safe: it never imports core.ts and decides no rule (CLAUDE.md rule 7).
+// Today's deal (SPEC §9.9, R2882000): one random practice deal a UTC day, the same on every device. Page-safe: it never imports driver.ts and decides no rule (CLAUDE.md rule 7).
 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { LeanPick, PlayerId } from "@jackioh/shared";
