@@ -32916,7 +32916,9 @@
           "provider": "claude-3"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-06T18:11:52Z",
         "every": 5,
+        "findings": 0,
         "head": "7c20d931bb9ef1b6e8f09985b04e5fc6a0afc04a",
         "issue": 3290,
         "merged_at": "2026-11-06T17:53:47Z",
@@ -32929,12 +32931,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:cc042811-1793988154",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42267180053",
         "sha": "8f9f0dcbb788e803e08340b995815e4273ae1dd4",
         "started_at": "2026-11-06T18:03:10Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a banned account leaves the ranked leaderboard, the percentiles and Jlorious",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 110
