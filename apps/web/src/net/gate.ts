@@ -1,7 +1,8 @@
 // Client view of SPEC §9.4's server gate (CLAUDE.md rule 7): `/api/auth/me` sends pending accounts
 // to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401. R632
 // re-reads a tab-owned session after storage or back/forward-cache changes. R2630000: a new screen's
-// gate starts from the page's last answer for an active account that owes nothing and reads again.
+// gate starts from the page's last answer for an active account that owes nothing and reads again;
+// R3206000: unless that answer is inside `READ_CACHE_FRESH_MS`, when it reads nothing.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -12,7 +13,7 @@ import {
 import { sessionIdFromToken, subjectFromToken } from "../auth/redirect.ts";
 import { ApiRequestError, getMe, retryAfterMsOf, type MeResponse } from "./api.ts";
 import { AuthError, authConfig, refreshSession, revokeSession, sessionNearExpiry } from "./auth.ts";
-import { cachedRead, forgetRead, rememberRead } from "./readCache.ts";
+import { cachedRead, forgetRead, freshRead, keepRead } from "./readCache.ts";
 import {
   E2E_SESSION_STORAGE_KEY,
   SESSION_STORAGE_KEY,
@@ -150,6 +151,16 @@ function startingAccount(): Account {
   return me !== undefined && opensAtOnce(me) ? readyAccount(session, me) : { kind: "loading" };
 }
 
+/**
+ * R3206000: the kept answer when it is inside `READ_CACHE_FRESH_MS` and the account owes nothing: the
+ * gate opens on it and sends no `/api/auth/me` read. A pending, banned or owing account is always read.
+ * The server still enforces every gate (CLAUDE.md rule 7): a refusal arrives on the next request that needs it.
+ */
+function freshAccount(session: Session): MeResponse | undefined {
+  const me = freshRead<MeResponse>(session.accessToken, ME_PATH);
+  return me !== undefined && opensAtOnce(me) ? me : undefined;
+}
+
 function readyAccount(session: Session, me: MeResponse): Account {
   return {
     kind: "ready",
@@ -172,6 +183,9 @@ async function resolveAccount(retry: () => void): Promise<Account> {
     session = renewal.session;
     renewed = true;
   }
+
+  const kept = freshAccount(session);
+  if (kept !== undefined) return readyAccount(session, kept);
 
   try {
     const me = await getMe(session.accessToken);
@@ -383,8 +397,12 @@ export function useAccount(): Account {
 
   // R2630000: each answer is kept for the next screen's gate, by account, in the tab's memory. Kept
   // in the commit that draws it, so a change announced once it shows is never undone by a late effect.
+  // R3206000: only an answer the gate was not already opened on: keeping that one again would make it
+  // fresh again, and the window would never close.
   useLayoutEffect(() => {
-    if (account.kind === "ready") rememberRead(account.token, ME_PATH, account.me);
+    if (account.kind === "ready" && cachedRead(account.token, ME_PATH) !== account.me) {
+      keepRead(account.token, ME_PATH, account.me);
+    }
   }, [account]);
 
   useEffect(() => {

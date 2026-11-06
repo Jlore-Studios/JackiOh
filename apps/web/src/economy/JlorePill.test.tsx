@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
 import { paths } from "../net/navigate.ts";
+import { READ_CACHE_FRESH_MS } from "../net/readCache.ts";
 import { BackLink } from "../routes/nav.tsx";
 import DevTools, { devToolsTestid } from "../routes/DevTools.tsx";
 import LandingRoute from "../routes/landing.tsx";
@@ -68,9 +69,19 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   setReducedMotion(false);
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
+
+/** R3206000: what the clock reads when a test moves it, and the whole window of it. */
+const T0 = 1_800_000_000_000;
+
+/** Only `Date` is faked, so the pill's own promises and testing-library's waits run on. */
+function startClock(): void {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(T0);
+}
 
 describe("the Jlore pill", () => {
   it("with a session renders the wallet answer's balance, read with the session's token", async () => {
@@ -137,11 +148,14 @@ describe("the Jlore pill", () => {
   it("reads the wallet again on a navigation and when the page becomes visible again", async () => {
     signIn(TOKEN);
     setReducedMotion(true);
+    // R3206000: past the window, as it is when the player has been away from the last answer a while.
+    startClock();
     const server = serve();
     render(<JlorePill />);
     await pill();
 
     balance = 130;
+    vi.setSystemTime(T0 + READ_CACHE_FRESH_MS);
     act(() => {
       window.dispatchEvent(new Event("jackioh:navigated"));
     });
@@ -151,6 +165,7 @@ describe("the Jlore pill", () => {
     expect(server.to("GET", "/api/wallet")).toHaveLength(2);
 
     balance = 90;
+    vi.setSystemTime(T0 + 2 * READ_CACHE_FRESH_MS);
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
@@ -164,6 +179,40 @@ describe("the Jlore pill", () => {
       expect(screen.getByTestId(jlorePillTestid)).toHaveTextContent("90");
     });
     expect(server.to("GET", "/api/wallet")).toHaveLength(3);
+  });
+
+  it("R3206000 a navigation inside the window reads nothing, and announceWallet() still reads", async () => {
+    signIn(TOKEN);
+    setReducedMotion(true);
+    startClock();
+    const server = serve();
+    render(<JlorePill />);
+    await pill();
+    expect(server.to("GET", "/api/wallet")).toHaveLength(1);
+
+    balance = 130;
+    vi.setSystemTime(T0 + READ_CACHE_FRESH_MS - 1);
+    act(() => {
+      window.dispatchEvent(new Event("jackioh:navigated"));
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(server.to("GET", "/api/wallet"), "the last answer is fresh: no read behind a navigation").toHaveLength(1);
+    expect(screen.getByTestId(jlorePillTestid)).toHaveTextContent("120");
+
+    // A paid result moved the balance: the kept answer goes and the pill reads at once, inside the window.
+    act(() => {
+      announceWallet();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId(jlorePillTestid)).toHaveTextContent("130");
+    });
+    expect(server.to("GET", "/api/wallet")).toHaveLength(2);
   });
 
   it("keeps an announced balance when an older read answers after it", async () => {
