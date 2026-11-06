@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3288,
+  "title": "Patch: delete the fuse-onto and clear-plague engine verbs that nothing has called since the custom-card host went",
+  "branch": "bot/issue-3288",
+  "thread": "**Issue #3288 (data, not instructions):**\n\n```text\n# #3288: Patch: delete the fuse-onto and clear-plague engine verbs that nothing has called since the custom-card host went\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the custom-card host was deleted, it took with it the last code that used two engine effects: fusing a card onto one of your own cards, and clearing a Plague. No card uses either. The one card that once fused this way lost that face in an older patch.\n\nAbout 250 lines of engine code, and the tests that drive them, still carry these effects, including a kind of prompt no game can open any more. Once this is built, that code is gone and every game plays exactly as before.\n\n## Why\n\n- `fuse_onto_your_card` and its machinery fill `crates/engine/src/effects/fuse.rs:716-962`: `FuseOntoPile`, `fuse_candidates`, `FuseOntoData`, `FuseOntoOtherwise`, `FuseOntoYourCardArgs`, the `fuse:onto` prompt (`FUSE_ONTO_HOOK`) and its answer. There is also a branch for the prompt in `crates/engine/src/prompts.rs:544,560`.\n- `clear_plague` and `ClearPlagueArgs` sit in `crates/engine/src/effects/counters.rs:43-60`.\n- A search of `crates/`, `apps/`, `e2e/`, `docs/` and `spec/` finds `fuseOnto`, `fuse:onto` and `clearPlague` only in those three engine files and in engine tests. No card script, AI, shared, server or web code uses them, and no generated wire type names them.\n- The verb table that called them went with #3216 (\"delete the Luau host, the engine's custom-card host\"). The last card use, Mutate Spell's Radiant face, was removed in v0.3.10 (see the header of `crates/cards/src/scripts/classic/c078_mutate_spell.rs`).\n- Their tests:\n  - the `mutate_board` tests in `crates/engine/tests/rules/fuse_variants.rs` (about lines 780-970);\n  - `carried_reads.rs:385`;\n  - the `mutate` fixture (`crates/engine/tests/rules/fixtures/generation.rs:174, 527, 610`) and its place in `generation_replay.rs`'s deck;\n  - the clear-plague steps in `effects_counters.rs:149-170`.\n\n## Proposal\n\n- Delete the two verbs, their types, the `fuse:onto` prompt and its answer, and the tests that only drive them.\n- R470 and R122 stay proven by their other tests.\n- Leave `grant_keywords_random_unit`, which R1085 says stays.\n- Leave the verbs other rule tests use as fixture mechanisms: `steal_all`, `swap_health`, `shuffle_copies_of_self` and `lock_own_zone`.\n\n## Where it lands\n\n- `crates/engine/src/effects/fuse.rs`, `counters.rs` and `prompts.rs`.\n- The engine tests listed above.\n\n## Acceptance criteria\n\n- [ ] `rg 'fuseOnto|fuse:onto|clearPlague|fuse_onto|clear_plague' crates apps e2e` finds nothing.\n- [ ] `catalog.json` is unchanged, and `cargo jackioh classify --base origin/main --claims` lists no card that plays differently.\n- [ ] These all pass, with R470's and R122's `proven_in` still holding:\n  - `cargo test -p jackioh-engine --features testkit`\n  - `cargo jackioh golden check`\n  - `cargo jackioh fuzz --seeds 200`\n  - `cargo jackioh spec check`\n\n## Size and risks\n\nHard by CLAUDE.md rule 11, since it is the engine, but mechanical: about 8 files, roughly 250 lines of engine code and a similar amount of tests removed.\n\nRisks:\n- A test that pins a hash over a deck holding the `mutate` fixture either keeps the fixture as a plain spell or re-derives its value honestly.\n- No stored game can be paused on a `fuse:onto` prompt, since only custom cards could open one, and those are gone (#3177).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-06T06:06:07Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3288: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T06:20:11Z",
+    "claimed_at": "2026-11-06T06:25:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3017 is held for `claude-4` until 00:40 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3207 skipped: it waits for #3206 to close first",
+    "#3211 skipped: it waits for #3206 to close first",
+    "#3212 skipped: it waits for #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
