@@ -18,9 +18,11 @@
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use jackioh_engine::{LeanPick, PlayerId};
+use indexmap::IndexSet;
+use jackioh_engine::{LeanPick, PerPlayer, PlayerId};
 use jackioh_shared::host::rematch::{
-    OfferFacts, OfferOutcome, RematchBook, RematchRefusal, check_offer, stakes_of as stakes_requested,
+    OfferFacts, OfferOutcome, RematchBook, RematchRefusal, RematchSeen, check_offer,
+    stakes_of as stakes_requested,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -77,7 +79,26 @@ pub fn rematch_offer_count(app: &App) -> usize {
 
 /// Sweeps expired rematch offers older than `REMATCH_OFFER_TTL_MS` with no live actor.
 pub fn sweep_rematch_offers(app: &App, now: i64) -> usize {
-    offers(app).sweep(now, |match_id| app.matches.has(match_id))
+    // R3213000: the book is a leaf lock, taken under nothing but an actor's own (which reads it to tell
+    // its seats), so the live matches are read before it, never under it.
+    let live: IndexSet<String> = app.matches.live().into_iter().collect();
+    offers(app).sweep(now, |match_id| live.contains(match_id))
+}
+
+/// R3213000: what each seat of `match_id` is told of its rematch at `now`, in seat order, under one look at
+/// the book.
+pub(crate) fn rematch_seen(app: &App, match_id: &str, now: i64) -> PerPlayer<RematchSeen> {
+    let mut book = offers(app);
+    let p1 = book.seen(match_id, PlayerId::P1, now);
+    let p2 = book.seen(match_id, PlayerId::P2, now);
+    PerPlayer::new(p1, p2)
+}
+
+/// R3213000: the book changed for `match_id`: its live actor tells each open seat its status again.
+fn tell_seats(app: &App, match_id: &str) {
+    if let Some(actor) = app.matches.get(match_id) {
+        actor.tell_rematch();
+    }
 }
 
 // Small private copies (fullsend rule 5): the error shapes
@@ -462,6 +483,8 @@ async fn offer_as(
             .await;
             if let Err(error) = created {
                 offers(app).release(&match_row.id, generation);
+                // R3213000: the offer stands while the claim is given back, and the seats are told so.
+                tell_seats(app, &match_row.id);
                 return Err(error);
             }
             Some(new_id)
@@ -474,6 +497,8 @@ async fn offer_as(
     {
         actor.on_rematch_offer(seat, stakes);
     }
+    // R3213000: each open seat of the finished match is told the book as it is now.
+    tell_seats(app, &match_row.id);
     Ok(match_id)
 }
 
