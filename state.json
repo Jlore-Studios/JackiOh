@@ -13532,15 +13532,8 @@
       "verdict_rounds": 0
     },
     "3211": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42206683102",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-06T11:32:32Z",
-        "until": "2026-11-06T12:02:32Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13552,10 +13545,9 @@
         "reason": "planned on sonnet",
         "trail": "teCachedRead\\\\|expireRead\\\\|noteWrite\\\\|writeEpoch\\\\|keptPaths\\\\|export async functio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211/apps/web/src/net; sed -n 205,345p api.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211/apps/web/src/net; sed -n 690,960p api.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; ls spec/rulings | grep -E \\\"R32|R3211|R3206\\\" ; cat spec/rulings/R3206000.md; ls spec/pending | cat; cat spec/pending/3206.md 2>/dev/null\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; git show --stat HEAD~3 | head -50; grep -rn \\\"3203\\\\|3211\\\" docs/issues-and-patches.md | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -rn \\\"3203\\\\|#3211\\\\|3207\\\\|3208\\\" --include=*.md --include=*.ts --include=*.tsx --include=*.rs -l . 2>/dev/null | grep -v node_modules | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"R2125000\\\\|R2378000\\\\|R1953000\\\\|R1953001\\\\|R1955000\\\\|R1580000\\\\|R1309\\\\|R2683000\\\" -r spec/rulings/*.md -l | head -20; sed -n 1,60p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; cat spec/rulings/R1580000.md; echo ----; grep -rln \\\"ShopRoute\\\\|routes/shop\\\" apps/web/src e2e 2>/dev/null; grep -rn \\\"onChanged\\\\|revision\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; wc -l apps/web/src/routes/shop.test.tsx; cat apps/web/src/routes/shop.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"ShopRoute\\\\|shop\\\" e2e/cypress/component/shop-screen.cy.tsx | head -30; grep -n \\\"onChanged\\\\|revision\\\" apps/web/src/shop/Shop.test.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -rn \\\"cosmeticPack\\\\|CosmeticPack\\\" crates/shared/src/economy/*.rs | head -30; ls crates/shared/src/economy/\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; cat apps/web/src/packs/fixtures.ts | head -120; grep -n \\\"export function\\\" apps/web/src/shop/fixtures.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 1,200p apps/web/src/collection/EquipButton.tsx; sed -n 1,90p apps/web/src/cards/ownedFullArt.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"^describe\\\\|^ it(\\\\|^ describe\\\" apps/web/src/shop/Shop.test.tsx | sed -n 1,120p\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 690,725p apps/web/src/shop/Shop.test.tsx; sed -n 941,1070p apps/web/src/shop/Shop.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"react-hooks\\\\|react-compiler\\\\|refs\\\" eslint.config.js | head; sed -n 1,80p apps/web/src/packs/packs.ts | head -120; grep -n \\\"export\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 1,60p apps/web/src/economy/wallet.ts; sed -n 1,80p apps/web/src/test/stubServer.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 1,140p apps/web/src/shop/fixtures.ts; cat apps/web/src/economy/OpeningBars.tsx | sed -n 1,60p\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"api/collection\\\\|api/cosmetics\\\\|\\\\.to(\\\\\\\"GET\\\\\\\"\\\\|toHaveBeenCalledTimes\\\\|calls.length\\\" apps/web/src/shop/Shop.test.tsx | head -6\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"shopPacks\\\" -B2 -A10 apps/web/src/shop/shop.ts | head -40; grep -n \\\"^import\\\" apps/web/src/shop/shop.ts; grep -n \\\"TokenBarsResponse\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 1,120p apps/web/src/packs/PackOpening.test.tsx | sed -n 1,120p; sed -n 820,870p apps/web/src/packs/PackOpening.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -ln \\\"forgetOwnedCosmetics\\\\|read again\\\\|reads again\\\\|others read\\\\|readAgain\\\" spec/rulings/*.md | head -30; cat spec/rulings/R1955000.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"Adding a ruling\\\" -A 40 spec/README.md | head -80; grep -n \\\"R3211\\\\|3211\\\" docs/issues-and-patches.md | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"read again\\\\|reads again\\\\|read them again\\\" spec/14-economy.md spec/10-engine-guide.md | head; grep -n \\\"10.10\\\" spec/10-engine-guid\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"struct BarSettle\\\" -B6 -A12 crates/shared/src/economy/*.rs | head -50; grep -rn \\\"after\\\" crates/shared/src/economy/bars.rs | head -2\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3211/.bot-plan.md\", \"content\": \"# Draft plan #3211 (planner notes)\\n\\nRead: routes/shop.tsx, shop/{Shop,CosmeticPacks,TokenPicker}.tsx, packs/PackOpen\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n \\\"plugin\\\\|import \\\" eslint.config.js | head -20; grep -n \\\"useEffect(() => {\\\" -A6 apps/web/src/collection/TokenOffer.tsx | head -30; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -n -i \\\"shop\\\" apps/web/README.md | head -20; grep -rn \\\"readAgain\\\\|changedBy\\\" --include=*.md . 2>/dev/null | grep -v node_modules | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 1,60p spec/pending/3205.md | cut -c1-200 | head -3; ls spec/pending | head -3; grep -n \\\"pending\\\" docs/issues-and-patches.md | head -5;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; sed -n 574,580p apps/web/README.md; sed -n 604,640p apps/web/README.md; grep -n \\\"\\u00a714.3\\\\|### 14.1\\\\|^### 14\\\" spec/14-economy.md | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3211; grep -rln \\\"shopTestid\\\\|packTestid\\\" e2e/cypress | head; grep -n \\\"useModalOverlay\\\" -A12 apps/web/src/cards/inspect/store.ts | head -30\"}\n- said: **Goal.** A pack buy sends one spend and no reads. An open sends one spend and no reads until its scene closes. When it closes, the Shop makes at most two reads, `/api/tokens` and `/api/cosmetic-packs`. Each spend's answer is folded into the panels that show it: the wallet, the unopened counts, pit\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-06T10:58:15Z",
       "owner_why": "it plans it",
@@ -13568,9 +13560,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-05T16:45:29Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42206683102",
+      "run_id": "pending:5507bb73-1793965329",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T10:58:15Z",
+      "started_at": "2026-11-06T11:42:52Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15792,9 +15784,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T11:41:54Z",
+    "at": "2026-11-06T11:42:52Z",
     "url": "",
-    "what": "build #3207 on claude-7"
+    "what": "build #3211 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T11:20:43Z",
