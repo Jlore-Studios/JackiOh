@@ -6,8 +6,8 @@
 
 use indexmap::IndexSet;
 use jackioh_ai::{
-    AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus,
-    MatchHooks, Matchup, NextSwing, NodeCounter, Prices, action_key, candidate_actions, create_node_counter,
+    AI_BUDGET, AI_EVAL, AI_GATE, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus, MatchHooks,
+    Matchup, NextSwing, NodeCounter, Prices, action_key, candidate_actions, create_node_counter,
     damage_past_taunts, determinize, evaluate, face_threat, find_lethal, find_lethal_with_quick_nodes,
     game_config, line_status, play_match, ready_gap, redact, search_signature, simulate,
 };
@@ -18,7 +18,7 @@ use jackioh_engine::testkit::{
 };
 
 use super::support::{
-    AI, HUMAN, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
+    AI, HUMAN, TEST_BUDGET, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
 };
 
 /// p1 (the AI), 4 crystals, holds a Radiant Lava Golem and two cheap spells; p2 is at 10 behind two Taunts.
@@ -193,13 +193,9 @@ mod the_lethal_solvers_walks {
         // The third and fourth series and the second played match keep the coverage floor below honest.
         states.extend(random_policy_states("lethal-ready-gap-3", 3, 600));
         states.extend(random_policy_states("lethal-ready-gap-4", 3, 600));
+        // The two played matches only collect states, so they decide at TEST_BUDGET, not the gate's.
         for game_index in [1, 2] {
-            let mut config = game_config(
-                Matchup::AiVsGreedy,
-                game_index,
-                AI_GATE_BUDGET,
-                AI_GATE.seed_series,
-            );
+            let mut config = game_config(Matchup::AiVsGreedy, game_index, TEST_BUDGET, AI_GATE.seed_series);
             config.max_actions = Some(150);
             let mut played: Vec<GameState> = Vec::new();
             {
