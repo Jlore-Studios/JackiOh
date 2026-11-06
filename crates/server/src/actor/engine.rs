@@ -13,9 +13,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
-    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameState, GameSummary, Handicap, LastBoardEntry,
-    LeanPick, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal,
-    Rng, SetName, ShippedCatalog,
+    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameState, GameSummary, LastBoardEntry, LeanPick,
+    PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal, Rng,
+    SetName, ShippedCatalog,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -248,21 +248,6 @@ pub fn deal_random_deck_with_strength(seed: &str, lean: Option<SetName>, strengt
             lean_set: lean,
             gated_sets: Some(vec![]),
             strength: Some(strength),
-            ..AiDeckOptions::default()
-        },
-    )
-}
-
-/// §9.9, #1303: deck practice AI plays in a free game on `seed`: weighted draw under shadow
-/// ban (R186) and soft gate (R1390), at tier deck size and curved to mana cap, on stream
-/// `"{seed}:ai-deck"`. Reads catalog caller's `Pinned` runs it under.
-pub fn deal_practice_ai_deck(seed: &str, handicap: &Handicap) -> Vec<String> {
-    registered();
-    build_ai_deck(
-        &mut Rng::new(&format!("{seed}:ai-deck"), 0),
-        handicap.deck_size,
-        &AiDeckOptions {
-            mana_cap: Some(handicap.mana_cap),
             ..AiDeckOptions::default()
         },
     )

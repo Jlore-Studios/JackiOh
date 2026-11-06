@@ -24,7 +24,7 @@ import type { OnlineReplayListing } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
-import type { PracticeCoreEnv } from "../practice/core.ts";
+import type { PracticeDriverEnv } from "../practice/driver.ts";
 import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
@@ -45,7 +45,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 });
 
 const TOKEN = "e2e-token-p1";
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 const HUMAN: PlayerId = "p2";
 const steps = foldedReplaySteps();
 

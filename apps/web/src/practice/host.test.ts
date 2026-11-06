@@ -1,11 +1,11 @@
-// B37: Worker mode uses the module worker; the in-thread host must match `createPracticeCore(...).handle`.
+// B37: Worker mode uses the module worker; the in-thread host must match `createPracticeDriver(...).handle`.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 
-import { createPracticeCore } from "./core.ts";
-import type { PracticeCoreEnv } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
+import type { PracticeDriverEnv } from "./driver.ts";
 import { createPracticeHost } from "./host.ts";
 import type {
   PracticeRequest,
@@ -14,7 +14,7 @@ import type {
   PracticeStartConfig,
 } from "./protocol.ts";
 
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 
 const CONFIG: PracticeStartConfig = { seed: "host-b37", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } };
 
@@ -175,7 +175,7 @@ function withoutId(response: PracticeResponse): Record<string, unknown> {
 }
 
 function direct(bodies: readonly PracticeRequestBody[]): PracticeResponse[] {
-  const core = createPracticeCore(ENV);
+  const core = createPracticeDriver(ENV);
   return bodies.map((body, index) => core.handle({ id: index + 1, ...body } as PracticeRequest));
 }
 
@@ -189,11 +189,11 @@ describe("B37 without a Worker, the host answers exactly as the core does", () =
     host.dispose();
   });
 
-  it("B37 a request sequence gets the same answers, in the same order, as createPracticeCore(...).handle", { timeout: 120_000 }, async () => {
+  it("B37 a request sequence gets the same answers, in the same order, as createPracticeDriver(...).handle", { timeout: 120_000 }, async () => {
     vi.stubGlobal("Worker", undefined);
 
     // R9 keeps the human mulligan whole; R265 opens both mulligans at once.
-    const probe = createPracticeCore(ENV).handle({ id: 1, type: "start", config: CONFIG });
+    const probe = createPracticeDriver(ENV).handle({ id: 1, type: "start", config: CONFIG });
     if (probe.type !== "started") throw new Error(`the core refused to start: ${JSON.stringify(probe)}`);
     const pending = probe.snapshot.view.pending;
     if (pending === null || !pending.forYou) throw new Error("the human's own mulligan is open from the start (R265)");
@@ -241,7 +241,7 @@ describe("B37 without a Worker, the host answers exactly as the core does", () =
 
   it("B37 a non-dev env passes through: debug is refused in-thread exactly as the core refuses it", async () => {
     vi.stubGlobal("Worker", undefined);
-    const env: PracticeCoreEnv = { ...ENV, dev: false };
+    const env: PracticeDriverEnv = { ...ENV, dev: false };
     const bodies: PracticeRequestBody[] = [{ type: "start", config: CONFIG }, { type: "debug" }];
 
     const host = createPracticeHost({ forceInThread: true, env });
@@ -249,7 +249,7 @@ describe("B37 without a Worker, the host answers exactly as the core does", () =
     for (const body of bodies) answers.push(await host.request(body));
     host.dispose();
 
-    const core = createPracticeCore(env);
+    const core = createPracticeDriver(env);
     const expected = bodies.map((body, index) => core.handle({ id: index + 1, ...body } as PracticeRequest));
     expect(answers.map((response) => response.type)).toEqual(["started", "failed"]);
     expect(answers.map(withoutId)).toEqual(expected.map(withoutId));

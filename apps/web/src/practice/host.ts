@@ -1,9 +1,9 @@
-// The core runs in a module worker, or in-thread under jsdom (answering on a macrotask, as a worker would).
-// Type-only imports keep the core out of the page bundle. The engine and AI are WebAssembly
+// The driver runs in a module worker, or in-thread under jsdom (answering on a macrotask, as a worker would).
+// Type-only imports keep the driver out of the page bundle. The engine and AI are WebAssembly
 // (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
 
 import { loadWasm } from "../wasm/index.ts";
-import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
+import type { PracticeDriver, PracticeDriverEnv } from "./driver.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
 import { messageOf } from "../net/errors.ts";
@@ -15,7 +15,7 @@ export type PracticeHost = {
 
 type PracticeHostOptions = {
   forceInThread?: boolean;
-  env?: Partial<PracticeCoreEnv>;
+  env?: Partial<PracticeDriverEnv>;
 };
 
 const CLOSED_MESSAGE = "the practice game was closed";
@@ -106,18 +106,18 @@ function macrotask(): Promise<void> {
   });
 }
 
-function createInThreadHost(env: Partial<PracticeCoreEnv>): PracticeHost {
+function createInThreadHost(env: Partial<PracticeDriverEnv>): PracticeHost {
   let nextId = 1;
   let disposed = false;
-  let core: Promise<PracticeCore> | null = null;
+  let core: Promise<PracticeDriver> | null = null;
   let chain: Promise<unknown> = Promise.resolve();
 
-  function load(): Promise<PracticeCore> {
+  function load(): Promise<PracticeDriver> {
     if (core === null) {
       // R668: an injected save store outlives the host; otherwise use this scope's store.
       const saves = env.saves ?? defaultSaveStore();
-      core = Promise.all([import("./core.ts"), saves.ready, loadWasm()]).then(([mod]) =>
-        mod.createPracticeCore({
+      core = Promise.all([import("./driver.ts"), saves.ready, loadWasm()]).then(([mod]) =>
+        mod.createPracticeDriver({
           now: () => Date.now(),
           dev: import.meta.env.MODE !== "production",
           ...env,
