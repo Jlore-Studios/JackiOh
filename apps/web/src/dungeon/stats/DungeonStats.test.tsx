@@ -12,6 +12,7 @@ import { emptyStateTestid } from "../../empty/EmptyState.tsx";
 import { formatDateTime, formatNumber } from "../../i18n/i18n.ts";
 import { navTestid } from "../../routes/nav.tsx";
 import type { RunRecord } from "../store.ts";
+import { expectOnePageTitle } from "../../test/pageTitle.ts";
 import { DungeonStats } from "./DungeonStats.tsx";
 import { dungeonStatsTestid, type DungeonLeaderboard } from "./testids.ts";
 
@@ -211,6 +212,15 @@ describe("B32 the device leaderboards and each run's stats", () => {
       timeMs: 120_000,
       endedAt: "2026-10-06T21:45:00.000Z",
     });
+
+  it("R3223000 the screen has one visible h1, the PageTitle, named as its tab is, with and without runs", () => {
+    render(<DungeonStats />);
+    expectOnePageTitle("Dungeon Run stats");
+    cleanup();
+    historyPlan.records = [runA()];
+    render(<DungeonStats />);
+    expectOnePageTitle("Dungeon Run stats");
+  });
 
   it("B32 ranks the four device leaderboards and every entry opens the run's complete stats", () => {
     const [a, b, c] = [runA(), runB(), runC()];

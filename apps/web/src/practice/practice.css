@@ -93,28 +93,6 @@
   text-align: center;
 }
 
-/* Set as the tavern's screen titles are (tavern.css, the auth board's h2): solid pale gold in the
-   serif, over a plain shadow. Gold leaf is the wordmark's alone. */
-.app-shell .practice-lobby__title {
-  font-family: var(--tavern-serif);
-  font-size: clamp(28px, 5vw, 40px);
-  font-weight: 700;
-  line-height: 1.15;
-  color: var(--tavern-gold-pale);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
-/* "Choose your opponent" and "Your deck": the setup's two headings, in the same serif. */
-.app-shell .practice-setup__heading {
-  margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--tavern-gold-pale);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
 /* ---- setup -------------------------------------------------------------------------------- */
 
 .practice-setup {
@@ -593,10 +571,6 @@
   max-width: 480px;
   margin: 12vh auto 0;
   text-align: center;
-}
-
-.app-shell .practice-stage__title {
-  font-size: 24px;
 }
 
 .app-shell .practice-stage__status {
@@ -1427,10 +1401,6 @@
 
   .practice-lobby__header {
     margin-top: -34px;
-  }
-
-  .app-shell .practice-lobby__title {
-    font-size: 24px;
   }
 
   .practice-setup {

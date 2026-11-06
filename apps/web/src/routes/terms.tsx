@@ -14,6 +14,7 @@ import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -29,13 +30,10 @@ export default function TermsRoute(): ReactElement {
   const locale = useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={termsTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Terms of service")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Terms of service")}</h2>
+        <Wordmark />
         {/* A translation says the English text governs; the English needs no such line. */}
         {locale === DEFAULT_LOCALE ? null : <p className="privacy-policy__governing">{t("The English text governs.")}</p>}
         <p className="privacy-policy__updated" data-testid={termsTestid.updated}>
@@ -50,7 +48,7 @@ export default function TermsRoute(): ReactElement {
           . You must be {MIN_ACCOUNT_AGE_YEARS} or older.
         </p>
         <section aria-labelledby="terms-fair">
-          <h3 id="terms-fair">Play fair</h3>
+          <h2 className="section-heading" id="terms-fair">Play fair</h2>
           <p>
             Don&rsquo;t cheat, exploit bugs, use bots, or try to break the service or get into anything that
             isn&rsquo;t yours. Don&rsquo;t harass, threaten, spam or share anyone&rsquo;s personal info. We may
@@ -58,7 +56,7 @@ export default function TermsRoute(): ReactElement {
           </p>
         </section>
         <section aria-labelledby="terms-content">
-          <h3 id="terms-content">Your content</h3>
+          <h2 className="section-heading" id="terms-content">Your content</h2>
           <p>
             You keep the rights to what you create or post. You let us store it and show it to the players
             it&rsquo;s meant for. Don&rsquo;t post what you don&rsquo;t have the rights to. We remove infringing
@@ -70,25 +68,25 @@ export default function TermsRoute(): ReactElement {
           </p>
         </section>
         <section aria-labelledby="terms-ai">
-          <h3 id="terms-ai">AI opponents</h3>
+          <h2 className="section-heading" id="terms-ai">AI opponents</h2>
           <p>
             When no one near your rank is available, ranked may match you against an AI opponent. Nothing in the
             game marks which opponents are AI.
           </p>
         </section>
         <section aria-labelledby="terms-guarantees">
-          <h3 id="terms-guarantees">No guarantees</h3>
+          <h2 className="section-heading" id="terms-guarantees">No guarantees</h2>
           <p>
             JackiOh is free and provided &ldquo;as is.&rdquo; We may change or end it at any time. As far as the
             law allows, we aren&rsquo;t liable for damages from using it.
           </p>
         </section>
         <section aria-labelledby="terms-changes">
-          <h3 id="terms-changes">Changes</h3>
+          <h2 className="section-heading" id="terms-changes">Changes</h2>
           <p>When these Terms change, we&rsquo;ll ask you to agree again.</p>
         </section>
         <section aria-labelledby="terms-contact">
-          <h3 id="terms-contact">Contact</h3>
+          <h2 className="section-heading" id="terms-contact">Contact</h2>
           <p>
             <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>
           </p>

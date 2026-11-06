@@ -38,6 +38,7 @@ import { SETTINGS_GROUPS } from "../settings/groups.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { navTestid } from "./nav.tsx";
 import CollectionRoute from "./collection.tsx";
 import { questsTestid } from "./QuestsPanel.tsx";
@@ -161,7 +162,7 @@ describe("#1307 the collection route", () => {
       expect(await screen.findByTestId(T.error(part))).toHaveTextContent("the server refused");
     }
     expect(await screen.findByTestId(questsTestid.error)).toHaveTextContent("the server refused");
-    expect(screen.getByRole("heading", { name: "Cards", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cards", level: 1 })).toBeInTheDocument();
   });
 
   it("#1691 a panel whose read failed offers Try again, which reads it again", async () => {
@@ -342,6 +343,24 @@ describe("R1579000 the Collection hub", () => {
     expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "hub");
     expect(screen.getByTestId(T.door("decks"))).toBeInTheDocument();
     for (const read of READS) expect(read).not.toHaveBeenCalled();
+  });
+
+  it("R3223000 the hub and each section have one visible h1, the PageTitle, and the wordmark is no heading", async () => {
+    answerAll();
+    render(<CollectionRoute token={TOKEN} />);
+    expectOnePageTitle("Your collection");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+
+    cleanup();
+    window.history.replaceState(null, "", paths.collectionSection("cards"));
+    render(<CollectionRoute token={TOKEN} />);
+    await screen.findByTestId(T.body);
+    expectOnePageTitle("Cards");
+
+    cleanup();
+    window.history.replaceState(null, "", paths.collectionSection("cosmetics"));
+    render(<CollectionRoute token={TOKEN} />);
+    expectOnePageTitle("Cosmetics");
   });
 });
 

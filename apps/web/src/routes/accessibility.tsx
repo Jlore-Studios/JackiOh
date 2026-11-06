@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { formatDay, t } from "../i18n/i18n.ts";
 import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -21,19 +22,16 @@ export default function AccessibilityRoute(): ReactElement {
   const [helpBefore = "", helpAfter = ""] = t("If something is hard to use, please tell us: {link}.").split("{link}");
   return (
     <div className="app-shell tavern privacy-screen" data-testid={accessibilityTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Accessibility")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Accessibility")}</h2>
+        <Wordmark />
         <p className="privacy-policy__updated" data-testid={accessibilityTestid.updated}>
           {t("Last updated")} <time dateTime={ACCESSIBILITY_LAST_UPDATED}>{formatDay(ACCESSIBILITY_LAST_UPDATED)}</time>
         </p>
 
         <section aria-labelledby="a11y-goal">
-          <h3 id="a11y-goal">{t("Our goal")}</h3>
+          <h2 className="section-heading" id="a11y-goal">{t("Our goal")}</h2>
           <p>
             {t(
               "We want JackiOh to be usable by as many players as we can make it. It has had an automated check against the Web Content Accessibility Guidelines (WCAG) 2.2 at levels A and AA, and no audit by a person. We do not claim that it conforms to WCAG.",
@@ -41,7 +39,7 @@ export default function AccessibilityRoute(): ReactElement {
           </p>
         </section>
         <section aria-labelledby="a11y-checked">
-          <h3 id="a11y-checked">{t("What we checked")}</h3>
+          <h2 className="section-heading" id="a11y-checked">{t("What we checked")}</h2>
           <p>
             {t(
               "On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer's size and at a phone's, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except those listed below. The same check runs every day, and fails when a new one appears.",
@@ -57,7 +55,7 @@ export default function AccessibilityRoute(): ReactElement {
           </ul>
         </section>
         <section aria-labelledby="a11y-features">
-          <h3 id="a11y-features">{t("Current support")}</h3>
+          <h2 className="section-heading" id="a11y-features">{t("Current support")}</h2>
           <ul>
             <li>{t("Menus, the deck builder, and the board's cards, zones and prompts can be used from the keyboard.")}</li>
             <li>{t("Focused controls are marked, and each screen has headings.")}</li>
@@ -66,7 +64,7 @@ export default function AccessibilityRoute(): ReactElement {
           </ul>
         </section>
         <section aria-labelledby="a11y-gaps">
-          <h3 id="a11y-gaps">{t("Known gaps")}</h3>
+          <h2 className="section-heading" id="a11y-gaps">{t("Known gaps")}</h2>
           <ul>
             <li>{t("A card shown as a button, on the home page, in the Almanac's card pool and in a game's prompts, is named by a short summary that names the card, not by all the text on its face.")}</li>
             <li>{t("In the deck builder, a card in the pool is named by the same short summary, and a card in the open deck by what pressing it does, “Remove” and the card's name, not by the cost shown beside it.")}</li>
@@ -77,7 +75,7 @@ export default function AccessibilityRoute(): ReactElement {
           </ul>
         </section>
         <section aria-labelledby="a11y-help">
-          <h3 id="a11y-help">{t("Report an issue")}</h3>
+          <h2 className="section-heading" id="a11y-help">{t("Report an issue")}</h2>
           <p>
             {helpBefore}
             <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>

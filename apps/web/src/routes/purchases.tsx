@@ -24,6 +24,7 @@ import { ODDS_RARITIES, PITY_RARITIES, percent } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import type { SkeletonVariant } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -262,7 +263,7 @@ function Published({ token }: { token: string }): ReactElement {
   return (
     <>
       <section aria-labelledby="purchases-card-packs-title" data-testid={purchasesTestid.cardPacks}>
-        <h3 id="purchases-card-packs-title">{t("Card packs")}</h3>
+        <h2 id="purchases-card-packs-title" className="section-heading">{t("Card packs")}</h2>
         <Answered read={packs} place="card-packs" loading={t("Loading your packs…")} skeleton="table">
           {({ odds, price, slots }) => (
             <>
@@ -279,13 +280,13 @@ function Published({ token }: { token: string }): ReactElement {
         </Answered>
       </section>
       <section aria-labelledby="purchases-duplicates-title" data-testid={purchasesTestid.duplicates}>
-        <h3 id="purchases-duplicates-title">{t("Duplicates")}</h3>
+        <h2 id="purchases-duplicates-title" className="section-heading">{t("Duplicates")}</h2>
         <Answered read={packs} place="duplicates" loading={t("Loading your packs…")} skeleton="table">
           {({ odds }) => <DuplicateOdds odds={odds} />}
         </Answered>
       </section>
       <section aria-labelledby="purchases-cosmetic-packs-title" data-testid={purchasesTestid.cosmeticPacks}>
-        <h3 id="purchases-cosmetic-packs-title">{t("Cosmetic packs")}</h3>
+        <h2 id="purchases-cosmetic-packs-title" className="section-heading">{t("Cosmetic packs")}</h2>
         <Answered read={cosmetic} place="cosmetic-packs" loading={t("Loading your cosmetic packs…")} skeleton="panel">
           {({ odds }) => (
             <>
@@ -301,7 +302,7 @@ function Published({ token }: { token: string }): ReactElement {
         </Answered>
       </section>
       <section aria-labelledby="purchases-pity-title">
-        <h3 id="purchases-pity-title">{t("Pity")}</h3>
+        <h2 id="purchases-pity-title" className="section-heading">{t("Pity")}</h2>
         <Answered read={packs} place="pity" loading={t("Loading your packs…")} skeleton="rows">
           {(info) => <Pity info={info} />}
         </Answered>
@@ -317,13 +318,10 @@ export default function PurchasesRoute(): ReactElement {
   const [signInBefore = "", signInAfter = ""] = t("{signIn} to see the odds and your pity counters.").split("{signIn}");
   return (
     <div className="app-shell tavern privacy-screen purchases-screen" data-testid={purchasesTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Purchases")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Purchases")}</h2>
+        <Wordmark />
         <p data-testid={purchasesTestid.disclaimer}>
           {t("You buy packs with Jlore, which you earn by playing. Jlore is never sold for real money.")}
         </p>

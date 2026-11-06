@@ -1,13 +1,13 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), with its token bars
 // (#1663, R1953000, R1999000), the page's fresh read (#1309) and one spend at a time (R2378000).
-// Nothing here rolls a pack: the fixtures are what `GET /api/packs` and `POST /api/packs/open`
-// answer, and the audio engine is the recording fake the audio suite's own wiring test uses.
+// Nothing here rolls a pack: the fixtures are what `GET /api/packs` and `POST /api/packs/open` (one
+// opening of `POST /api/packs/open-all`'s, R3212000) answer, and the audio engine is the recording fake the audio suite's own wiring test uses.
 
 import { CATALOG } from "@jackioh/cards";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
+import { GLOBAL_PACK_NAME, PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
@@ -625,14 +625,28 @@ describe("#1308 the pack-opening scene", () => {
 
 type Answers = { info?: Reply; open?: (call: number) => Reply };
 
-/** The two routes, answered from the fixtures unless a test says otherwise. */
+/**
+ * The three routes, answered from the fixtures unless a test says otherwise. R3212000: an open-all is
+ * `open` once per pack, in order, all or nothing: one refused opening refuses the lot.
+ */
 function packsServer(answers: Answers = {}): ReturnType<typeof stubServer> {
   let opens = 0;
+  const open = (): Reply => {
+    opens += 1;
+    return answers.open?.(opens) ?? { status: 200, body: openedPack() };
+  };
   return stubServer((call) => {
     if (call.method === "GET" && call.path === "/api/packs") return answers.info ?? { status: 200, body: packsInfo() };
-    if (call.method === "POST" && call.path === "/api/packs/open") {
-      opens += 1;
-      return answers.open?.(opens) ?? { status: 200, body: openedPack() };
+    if (call.method === "POST" && call.path === "/api/packs/open") return open();
+    if (call.method === "POST" && call.path === "/api/packs/open-all") {
+      const { count } = call.body as { count: number };
+      const openings: unknown[] = [];
+      for (let pack = 0; pack < count; pack += 1) {
+        const reply = open();
+        if (reply.status !== 200) return reply;
+        openings.push(reply.body);
+      }
+      return { status: 200, body: { openings } };
     }
     return undefined;
   });
@@ -736,7 +750,7 @@ describe("#1308 the card packs panel", () => {
     expect(server.to("POST", "/api/packs/open")).toHaveLength(1);
   });
 
-  it("batch opening opens the packs in a row, with skip-all between them", async () => {
+  it("R3212000 Open all opens the packs in one request and shows them in a row, with skip-all between them", async () => {
     const server = packsServer({
       open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: call === 1 ? 1 : 0 } satisfies OpenedPackResponse }),
     });
@@ -748,6 +762,10 @@ describe("#1308 the card packs panel", () => {
     await screen.findByTestId(T.outcome(0));
     const next = screen.getByTestId(T.next);
     expect(next).toHaveTextContent("Next pack (1 left)");
+    const sent = server.to("POST", "/api/packs/open-all");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toEqual({ pack: "Core", count: 2 });
+    expect(sent[0]?.headers["idempotency-key"], "a spend").toBeDefined();
 
     fireEvent.click(next);
     expect(screen.queryByTestId(T.outcome(0)), "a fresh pack, sealed").toBeNull();
@@ -756,11 +774,46 @@ describe("#1308 the card packs panel", () => {
     await screen.findByTestId(T.outcome(0));
     expect(screen.queryByTestId(T.next)).toBeNull();
     expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
-    expect(server.to("POST", "/api/packs/open")).toHaveLength(2);
+    expect(server.to("POST", "/api/packs/open-all"), "the second pack was in the first answer").toHaveLength(1);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
 
     fireEvent.click(screen.getByTestId(T.close));
     expect(screen.queryByTestId(T.heldRow("Core"))).toBeNull();
     expect(screen.getByTestId(T.heldRow(GLOBAL_PACK_NAME))).toBeInTheDocument();
+  });
+
+  it("R3212000 Open all past PACKS_OPEN_ALL_MAX opens the cap", async () => {
+    const held = PACKS_OPEN_ALL_MAX + 5;
+    const server = packsServer({
+      info: { status: 200, body: { ...packsInfo(), unopened: [{ pack: "Core", count: held }] } satisfies PacksResponse },
+      open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: held - call } satisfies OpenedPackResponse }),
+    });
+    await panel();
+    expect(screen.getByTestId(T.openAll("Core"))).toHaveTextContent(`Open all ${String(PACKS_OPEN_ALL_MAX)}`);
+
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    expect(server.to("POST", "/api/packs/open-all").map((call) => call.body)).toEqual([{ pack: "Core", count: PACKS_OPEN_ALL_MAX }]);
+    expect(screen.getByTestId(T.next)).toHaveTextContent(`Next pack (${String(PACKS_OPEN_ALL_MAX - 1)} left)`);
+    expect(text(T.heldRow("Core")), "the last opening's count").toContain(`Core pack: ${String(held - PACKS_OPEN_ALL_MAX)} unopened`);
+  });
+
+  it("R3212000 a refused Open all shows the server's words and keeps the pack sealed", async () => {
+    const server = packsServer({ open: () => refusal(409, "conflict", NO_PACK) });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.pack));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent(NO_PACK);
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+    expect(screen.getByTestId(T.pack), "nothing is out, so it can be torn again").toBeEnabled();
+    expect(screen.queryByTestId(T.slots)).toBeNull();
+    expect(server.to("POST", "/api/packs/open-all")).toHaveLength(1);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(text(T.heldRow("Core")), "nothing was opened").toContain("Core pack: 2 unopened");
   });
 
   it("a batch stops when the server holds fewer packs than it was told", async () => {
@@ -1272,24 +1325,23 @@ describe("R3211000 the panel folds the page's answers and tells it once when the
     expect(onChanged).not.toHaveBeenCalled();
     expect(onClosed).not.toHaveBeenCalled();
 
-    // A batch of two: each answer goes to the page as it comes, and the close once, after the last.
+    // A batch of two is one answer (R3212000): its last opening goes to the page once, and the close
+    // once, after the last pack.
     fireEvent.click(screen.getByTestId(T.openAll("Core")));
     fireEvent.click(screen.getByTestId(T.skipAll));
     await screen.findByTestId(T.outcome(0));
     expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 1 }));
+    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 0 }));
     fireEvent.click(screen.getByTestId(T.next));
     fireEvent.click(screen.getByTestId(T.skipAll));
-    await waitFor(() => {
-      expect(onChanged).toHaveBeenCalledTimes(2);
-    });
     await screen.findByTestId(T.outcome(0));
     expect(onClosed, "the scene is still open between the packs of a batch").not.toHaveBeenCalled();
-    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 0 }));
+    expect(onChanged, "the second pack was in the first answer").toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId(T.close));
     expect(onClosed).toHaveBeenCalledTimes(1);
-    expect(server.to("POST", "/api/packs/open")).toHaveLength(3);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(1);
+    expect(server.to("POST", "/api/packs/open-all")).toHaveLength(1);
 
     // The next scene starts again from nothing: closing one with no opening does not tell the page.
     fireEvent.click(screen.getByTestId(T.open(GLOBAL_PACK_NAME)));

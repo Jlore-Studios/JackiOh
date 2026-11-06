@@ -321,23 +321,6 @@
   max-width: var(--tavern-content);
 }
 
-.tavern.app-shell .patch-notes__head {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: center;
-}
-
-.tavern.app-shell .patch-notes__title {
-  margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: clamp(28px, 6vw, 40px);
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--tavern-gold);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 24px rgba(243, 201, 105, 0.25);
-}
-
 .tavern.app-shell .patch-notes .patch-status {
   align-items: center;
   text-align: center;

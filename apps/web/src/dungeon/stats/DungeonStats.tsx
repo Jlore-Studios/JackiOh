@@ -301,10 +301,9 @@ export function DungeonStats(): ReactElement {
 
   return (
     <div className="app-shell tavern one-screen" data-testid={dungeonStatsTestid.root}>
-      <BackLink to={paths.dungeon} />
+      <BackLink to={paths.dungeon} title={t("Dungeon Run stats")} />
       <main className="one-screen__body">
         <div className="dungeon-stats">
-          <h1 className="dungeon-stats__title">{t("Dungeon leaderboards")}</h1>
           {history.length === 0 ? (
             <EmptyState
               text={t("No finished runs on this device yet.")}

@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 /** `b1` a unit with an Activate ability and two keywords that draw a mark; `t1` one that has only Taunt (drawn as a frame). */
-function view(position: "ATK" | "DEF" = "ATK"): PlayerView {
+function view(position: "ATK" | "DEF" = "ATK", activate = true): PlayerView {
   return baseView({
     you: emptySide("p1", {
       units: [
@@ -37,7 +37,7 @@ function view(position: "ATK" | "DEF" = "ATK"): PlayerView {
           defId: "classicplus-076-1",
           position,
           keywords: [{ kind: "Rush" }, { kind: "Can't Defend" }],
-          activations: [PING],
+          activations: activate ? [PING] : [],
         }),
         unit("p1", { instanceId: "t1", keywords: [{ kind: "Taunt" }] }),
         null,
@@ -50,10 +50,10 @@ function view(position: "ATK" | "DEF" = "ATK"): PlayerView {
   });
 }
 
-function renderGame(position: "ATK" | "DEF" = "ATK"): void {
+function renderGame(position: "ATK" | "DEF" = "ATK", activate = true): void {
   render(
     <CatalogContext.Provider value={lookup}>
-      <Game view={view(position)} legal={[]} onAction={() => undefined} />
+      <Game view={view(position, activate)} legal={[]} onAction={() => undefined} />
     </CatalogContext.Provider>,
   );
 }
@@ -181,12 +181,43 @@ describe("#3257 the marks that do not fit above the name plate fold into the +n"
     expect(document.querySelector(".field-badges .activate-control"), "the control stays").not.toBeNull();
   });
 
-  it("a stack with no room for a second item keeps the Activate control and draws no mark and no +n", () => {
+  it("a stack with no room for a second item keeps the Activate control and the +n, and draws no named mark", () => {
     restore = stubPhonePortrait(true);
     stubLayout("10px");
     renderGame();
     expect(keywordsOf()).toEqual([]);
-    expect(more()).toBeNull();
+    expect(more()?.textContent, "the +n is never dropped while a mark is to be drawn").toBe("+2");
+    expect(more()?.getAttribute("title")).toContain("Rush");
     expect(document.querySelector(".field-badges .activate-control"), "the control stays").not.toBeNull();
+  });
+});
+
+describe("#3315 a DEF unit's keywords never vanish from the board", () => {
+  // The unit `b1`'s own stack: the face-up backrow card `fs1` has a control stack of its own.
+  const stack = (): HTMLElement | null => el("card-b1").parentElement?.querySelector<HTMLElement>(":scope > .field-badges") ?? null;
+  const keywordsOf = (): string[] => [...(stack()?.querySelectorAll(".keyword-icon") ?? [])].map((mark) => mark.getAttribute("data-keyword") ?? "");
+  const more = (): HTMLElement | null => stack()?.querySelector<HTMLElement>(".cf-kw-more") ?? null;
+
+  it("a DEF unit with Activate, over a band shorter than the control, keeps the control and a +n for both marks", () => {
+    restore = stubPhonePortrait(true);
+    stubLayout("3.7px");
+    renderGame("DEF");
+    expect(keywordsOf(), "no named mark fits").toEqual([]);
+    expect(stack()?.querySelector(".activate-control"), "the control stays").not.toBeNull();
+    expect(more()?.textContent).toBe("+2");
+    expect(more()?.getAttribute("title")).toContain("Rush");
+    expect(more()?.getAttribute("title")).toContain("Can't Defend");
+  });
+
+  it("a DEF unit with no Activate, over a band shorter than one mark, keeps the +n for both marks", () => {
+    restore = stubPhonePortrait(true);
+    stubLayout("3.7px");
+    renderGame("DEF", false);
+    expect(stack(), "the stack is still there").not.toBeNull();
+    expect(stack()?.querySelector(".activate-control"), "no ability, no control").toBeNull();
+    expect(keywordsOf()).toEqual([]);
+    expect(more()?.textContent).toBe("+2");
+    expect(more()?.getAttribute("title")).toContain("Rush");
+    expect(more()?.getAttribute("title")).toContain("Can't Defend");
   });
 });

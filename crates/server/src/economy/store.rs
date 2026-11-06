@@ -458,6 +458,18 @@ fn check_payout<'g>(owners: impl IntoIterator<Item = (&'g str, i64)>) -> Result<
     Ok(())
 }
 
+/// R3212000: a batch that spends as well as pays (an Open all's writes) is still one account's: every
+/// grant names the first one's account.
+fn check_one_account<'g>(owners: impl IntoIterator<Item = &'g str>) -> Result<(), StoreError> {
+    let mut first = None;
+    for owner in owners {
+        if *first.get_or_insert(owner) != owner {
+            return Err(refused("a batch grant pays one account".to_string()));
+        }
+    }
+    Ok(())
+}
+
 fn check_counter(grant: &CounterGrant) -> Result<(), StoreError> {
     check_delta(grant.delta)?;
     check_dev(grant.reason == EconomyReason::Dev, grant.dev)?;
@@ -663,6 +675,22 @@ impl Tx<'_> {
         economy_dispatch!(self, inventory_grant_all(grants))
     }
 
+    /// R3212000: [`Tx::economy_inventory_grant`] of several grants to one account, spends among
+    /// them, in one statement: each item and key moves by the sum of its grants and each grant
+    /// writes its own ledger row, in the order given. False, writing nothing, when a grant would
+    /// take its count below 0 where it falls in that order, as one grant at a time would refuse it.
+    /// Nothing to grant writes nothing.
+    pub async fn economy_inventory_write_all(&mut self, grants: &[InventoryGrant]) -> StoreResult<bool> {
+        for grant in grants {
+            check_inventory(grant)?;
+        }
+        check_one_account(grants.iter().map(|grant| grant.profile_id.as_str()))?;
+        if grants.is_empty() {
+            return Ok(true);
+        }
+        economy_dispatch!(self, inventory_write_all(grants))
+    }
+
     /// §14.4–§14.6: the account's counters, by counter and pack.
     pub async fn economy_counters_get(&mut self, profile_id: &str) -> StoreResult<Vec<CounterEntry>> {
         economy_dispatch!(self, counters_get(profile_id))
@@ -673,6 +701,18 @@ impl Tx<'_> {
     pub async fn economy_counters_grant(&mut self, grant: &CounterGrant) -> StoreResult<Option<i64>> {
         check_counter(grant)?;
         economy_dispatch!(self, counters_grant(grant))
+    }
+
+    /// R3212000: [`Tx::economy_inventory_write_all`] over the counters.
+    pub async fn economy_counters_write_all(&mut self, grants: &[CounterGrant]) -> StoreResult<bool> {
+        for grant in grants {
+            check_counter(grant)?;
+        }
+        check_one_account(grants.iter().map(|grant| grant.profile_id.as_str()))?;
+        if grants.is_empty() {
+            return Ok(true);
+        }
+        economy_dispatch!(self, counters_write_all(grants))
     }
 
     /// §14.7: the account's set tracks, by set; a track not yet written has no row.
@@ -734,6 +774,36 @@ impl Tx<'_> {
     pub async fn economy_cosmetics_grant(&mut self, grant: &CosmeticGrant) -> StoreResult<bool> {
         check_cosmetic(grant)?;
         economy_dispatch!(self, cosmetics_grant(grant))
+    }
+
+    /// R3212000: [`Tx::economy_cosmetics_grant`] owning several cosmetics for one account, in one
+    /// statement, each writing its own ledger row in the order given. False, writing nothing, when
+    /// any is owned already. A clear (−1) or a cosmetic listed twice on the same card (or twice on
+    /// the account) is refused, writing nothing. Nothing to grant writes nothing.
+    pub async fn economy_cosmetics_grant_all(&mut self, grants: &[CosmeticGrant]) -> StoreResult<bool> {
+        for (index, grant) in grants.iter().enumerate() {
+            check_cosmetic(grant)?;
+            if grant.delta != 1 {
+                return Err(refused(format!(
+                    "a batch of cosmetics only owns, not {}; a clear goes one grant at a time",
+                    grant.delta
+                )));
+            }
+            if grants[..index]
+                .iter()
+                .any(|before| before.card_id == grant.card_id && before.cosmetic_id == grant.cosmetic_id)
+            {
+                return Err(refused(format!(
+                    "{} on {:?} is listed twice",
+                    grant.cosmetic_id, grant.card_id
+                )));
+            }
+        }
+        check_one_account(grants.iter().map(|grant| grant.profile_id.as_str()))?;
+        if grants.is_empty() {
+            return Ok(true);
+        }
+        economy_dispatch!(self, cosmetics_grant_all(grants))
     }
 
     /// R1834000: the account's per-card picks, by card.
@@ -1304,6 +1374,86 @@ mod pg {
         Ok(())
     }
 
+    /// One statement for every grant (`unnest`), spends among them: `s` sums each item and key's
+    /// grants and finds the lowest its running count falls to in their order (`low`); if every one
+    /// held stays at 0 or above all the way (`ok`), a held row is updated by its sum and an absent
+    /// one inserted with it, and every grant writes its ledger row in the order given. The update and
+    /// the insert are apart because Postgres checks a proposed upsert row (`count >= 0`) before the
+    /// conflict, as `jlore_grant` says. Answers `ok`.
+    pub async fn inventory_write_all(
+        t: &mut PgTx<'_>,
+        grants: &[InventoryGrant],
+    ) -> Result<bool, StoreError> {
+        let Some(first) = grants.first() else {
+            return Ok(true);
+        };
+        run_as(t, Some(first.profile_id.as_str())).await?;
+        let items = grants
+            .iter()
+            .map(|grant| literal(&grant.item))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        let reasons = grants
+            .iter()
+            .map(|grant| literal(&grant.reason))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        let fits: bool = sqlx::query_scalar(
+            "with g as (
+               select * from unnest($2::text[], $3::text[], $4::int8[], $5::text[], $6::text[],
+                                    $7::boolean[], $8::int8[])
+                        with ordinality as g(item, key, delta, reason, ref, dev, at, n)
+             ), s as (
+               select item, key, sum(delta)::bigint as delta, min(run)::bigint as low
+                 from (select item, key, delta,
+                              sum(delta) over (partition by item, key order by n) as run
+                         from g) as r
+                group by item, key
+             ), h as (
+               select s.item, s.key, s.delta, s.low, i.count
+                 from s left join public.inventory i
+                   on i.profile_id = $1::uuid and i.item = s.item and i.key = s.key
+             ), ok as (
+               select coalesce(bool_and(coalesce(h.count, 0) + h.low >= 0), true) as fits from h
+             ), moved as (
+               update public.inventory i set count = i.count + h.delta
+                 from h, ok
+                where ok.fits and h.count is not null
+                  and i.profile_id = $1::uuid and i.item = h.item and i.key = h.key
+             ), added as (
+               insert into public.inventory (profile_id, item, key, count)
+               select $1::uuid, h.item, h.key, h.delta from h, ok where ok.fits and h.count is null
+               on conflict (profile_id, item, key)
+               do update set count = public.inventory.count + excluded.count
+             ), rows as (
+               insert into public.inventory_grants (profile_id, item, key, delta, reason, ref, dev, at)
+               select $1::uuid, g.item, g.key, g.delta, g.reason, g.ref, g.dev,
+                      to_timestamp(g.at::double precision / 1000.0)
+                 from g, ok where ok.fits order by g.n
+             )
+             select fits from ok",
+        )
+        .bind(first.profile_id.as_str())
+        .bind(items)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.key.clone())
+                .collect::<Vec<String>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
+        .bind(reasons)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.reference.clone())
+                .collect::<Vec<Option<String>>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
+        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
+        .fetch_one(&mut **t)
+        .await?;
+        Ok(fits)
+    }
+
     pub async fn counters_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<CounterEntry>, StoreError> {
         run_as(t, Some(profile_id)).await?;
         let rows = sqlx::query(
@@ -1379,6 +1529,79 @@ mod pg {
         .execute(&mut **t)
         .await?;
         Ok(Some(value))
+    }
+
+    /// `inventory_write_all`'s one statement, over `economy_counters`.
+    pub async fn counters_write_all(t: &mut PgTx<'_>, grants: &[CounterGrant]) -> Result<bool, StoreError> {
+        let Some(first) = grants.first() else {
+            return Ok(true);
+        };
+        run_as(t, Some(first.profile_id.as_str())).await?;
+        let counters = grants
+            .iter()
+            .map(|grant| literal(&grant.counter))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        let reasons = grants
+            .iter()
+            .map(|grant| literal(&grant.reason))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        let fits: bool = sqlx::query_scalar(
+            "with g as (
+               select * from unnest($2::text[], $3::text[], $4::int8[], $5::text[], $6::text[],
+                                    $7::boolean[], $8::int8[])
+                        with ordinality as g(counter, pack, delta, reason, ref, dev, at, n)
+             ), s as (
+               select counter, pack, sum(delta)::bigint as delta, min(run)::bigint as low
+                 from (select counter, pack, delta,
+                              sum(delta) over (partition by counter, pack order by n) as run
+                         from g) as r
+                group by counter, pack
+             ), h as (
+               select s.counter, s.pack, s.delta, s.low, c.value
+                 from s left join public.economy_counters c
+                   on c.profile_id = $1::uuid and c.counter = s.counter and c.pack = s.pack
+             ), ok as (
+               select coalesce(bool_and(coalesce(h.value, 0) + h.low >= 0), true) as fits from h
+             ), moved as (
+               update public.economy_counters c set value = c.value + h.delta
+                 from h, ok
+                where ok.fits and h.value is not null
+                  and c.profile_id = $1::uuid and c.counter = h.counter and c.pack = h.pack
+             ), added as (
+               insert into public.economy_counters (profile_id, counter, pack, value)
+               select $1::uuid, h.counter, h.pack, h.delta from h, ok where ok.fits and h.value is null
+               on conflict (profile_id, counter, pack)
+               do update set value = public.economy_counters.value + excluded.value
+             ), rows as (
+               insert into public.economy_counter_grants
+                      (profile_id, counter, pack, delta, reason, ref, dev, at)
+               select $1::uuid, g.counter, g.pack, g.delta, g.reason, g.ref, g.dev,
+                      to_timestamp(g.at::double precision / 1000.0)
+                 from g, ok where ok.fits order by g.n
+             )
+             select fits from ok",
+        )
+        .bind(first.profile_id.as_str())
+        .bind(counters)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.pack.clone())
+                .collect::<Vec<String>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
+        .bind(reasons)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.reference.clone())
+                .collect::<Vec<Option<String>>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
+        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
+        .fetch_one(&mut **t)
+        .await?;
+        Ok(fits)
     }
 
     fn track_of(row: &PgRow) -> Result<SetTrack, StoreError> {
@@ -1684,6 +1907,76 @@ mod pg {
         .execute(&mut **t)
         .await?;
         Ok(true)
+    }
+
+    /// One statement for every grant (`unnest`), each owning a cosmetic (`Tx::economy_cosmetics_grant_all`
+    /// refuses a clear and a pair listed twice): if none is owned already (`ok`), each is owned on its
+    /// card or on the account and writes its ledger row, in the order given. Answers `ok`.
+    pub async fn cosmetics_grant_all(t: &mut PgTx<'_>, grants: &[CosmeticGrant]) -> Result<bool, StoreError> {
+        let Some(first) = grants.first() else {
+            return Ok(true);
+        };
+        run_as(t, Some(first.profile_id.as_str())).await?;
+        let reasons = grants
+            .iter()
+            .map(|grant| literal(&grant.reason))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        let fits: bool = sqlx::query_scalar(
+            "with g as (
+               select * from unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::boolean[],
+                                    $7::int8[])
+                        with ordinality as g(card_id, cosmetic_id, reason, ref, dev, at, n)
+             ), ok as (
+               select not exists (
+                 select 1 from g
+                  where (g.card_id is not null and exists (
+                           select 1 from public.card_cosmetics c
+                            where c.profile_id = $1::uuid and c.card_id = g.card_id
+                              and c.cosmetic_id = g.cosmetic_id))
+                     or (g.card_id is null and exists (
+                           select 1 from public.account_cosmetics a
+                            where a.profile_id = $1::uuid and a.cosmetic_id = g.cosmetic_id))
+               ) as fits
+             ), cards as (
+               insert into public.card_cosmetics (profile_id, card_id, cosmetic_id)
+               select $1::uuid, g.card_id, g.cosmetic_id from g, ok where ok.fits and g.card_id is not null
+             ), account as (
+               insert into public.account_cosmetics (profile_id, cosmetic_id)
+               select $1::uuid, g.cosmetic_id from g, ok where ok.fits and g.card_id is null
+             ), rows as (
+               insert into public.cosmetic_grants
+                      (profile_id, card_id, cosmetic_id, delta, reason, ref, dev, at)
+               select $1::uuid, g.card_id, g.cosmetic_id, 1, g.reason, g.ref, g.dev,
+                      to_timestamp(g.at::double precision / 1000.0)
+                 from g, ok where ok.fits order by g.n
+             )
+             select fits from ok",
+        )
+        .bind(first.profile_id.as_str())
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.card_id.clone())
+                .collect::<Vec<Option<String>>>(),
+        )
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.cosmetic_id.clone())
+                .collect::<Vec<String>>(),
+        )
+        .bind(reasons)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.reference.clone())
+                .collect::<Vec<Option<String>>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
+        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
+        .fetch_one(&mut **t)
+        .await?;
+        Ok(fits)
     }
 
     /// R2725000: a pick's augments as migration 0079's column holds them: NULL for none.
@@ -2561,6 +2854,19 @@ mod fake {
         Some(count)
     }
 
+    /// One call for the lot, as Postgres's one statement: each grant in order, as one at a time
+    /// would write it, and none of them once one finds too few held.
+    pub fn inventory_write_all(f: &mut FakeTx<'_>, grants: &[InventoryGrant]) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.inventory.writeAll")?;
+        let (inventory, rows) = (tables.inventory.clone(), tables.inventory_grants.len());
+        if grants.iter().all(|grant| add_item(tables, grant).is_some()) {
+            return Ok(true);
+        }
+        tables.inventory = inventory;
+        tables.inventory_grants.truncate(rows);
+        Ok(false)
+    }
+
     pub fn counters_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<CounterEntry>, StoreError> {
         let tables = call(f, "economy.counters.get")?;
         let mut rows = Vec::new();
@@ -2578,13 +2884,27 @@ mod fake {
     }
 
     pub fn counters_grant(f: &mut FakeTx<'_>, grant: &CounterGrant) -> Result<Option<i64>, StoreError> {
-        let tables = call(f, "economy.counters.grant")?;
+        Ok(add_count(call(f, "economy.counters.grant")?, grant))
+    }
+
+    /// `inventory_write_all` over the counters.
+    pub fn counters_write_all(f: &mut FakeTx<'_>, grants: &[CounterGrant]) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.counters.writeAll")?;
+        let (counters, rows) = (tables.counters.clone(), tables.counter_grants.len());
+        if grants.iter().all(|grant| add_count(tables, grant).is_some()) {
+            return Ok(true);
+        }
+        tables.counters = counters;
+        tables.counter_grants.truncate(rows);
+        Ok(false)
+    }
+
+    /// A grant's counter move and ledger row, or `None` below 0.
+    fn add_count(tables: &mut EconomyTables, grant: &CounterGrant) -> Option<i64> {
         let held = tables.counters.iter_mut().find(|(owner, entry)| {
             *owner == grant.profile_id && entry.counter == grant.counter && entry.pack == grant.pack
         });
-        let Some(value) = count_after(held.as_ref().map(|(_, entry)| entry.value), grant.delta) else {
-            return Ok(None);
-        };
+        let value = count_after(held.as_ref().map(|(_, entry)| entry.value), grant.delta)?;
         match held {
             Some((_, entry)) => entry.value = value,
             None => tables.counters.push((
@@ -2597,7 +2917,7 @@ mod fake {
             )),
         }
         tables.counter_grants.push(grant.clone());
-        Ok(Some(value))
+        Some(value)
     }
 
     pub fn tracks_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SetTrack>, StoreError> {
@@ -2740,7 +3060,29 @@ mod fake {
     }
 
     pub fn cosmetics_grant(f: &mut FakeTx<'_>, grant: &CosmeticGrant) -> Result<bool, StoreError> {
-        let tables = call(f, "economy.cosmetics.grant")?;
+        Ok(change_cosmetic(call(f, "economy.cosmetics.grant")?, grant))
+    }
+
+    /// `inventory_write_all` over the cosmetics: none of them once one is owned already.
+    pub fn cosmetics_grant_all(f: &mut FakeTx<'_>, grants: &[CosmeticGrant]) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.cosmetics.grantAll")?;
+        let (cards, account, rows) = (
+            tables.card_cosmetics.clone(),
+            tables.account_cosmetics.clone(),
+            tables.cosmetic_grants.len(),
+        );
+        if grants.iter().all(|grant| change_cosmetic(tables, grant)) {
+            return Ok(true);
+        }
+        tables.card_cosmetics = cards;
+        tables.account_cosmetics = account;
+        tables.cosmetic_grants.truncate(rows);
+        Ok(false)
+    }
+
+    /// A grant's holding change and ledger row, or false when it is owned already or, for a clear,
+    /// not owned.
+    fn change_cosmetic(tables: &mut EconomyTables, grant: &CosmeticGrant) -> bool {
         let owns = grant.delta > 0;
         let changed = match grant.card_id.as_deref() {
             Some(card_id) => {
@@ -2789,7 +3131,7 @@ mod fake {
         if changed {
             tables.cosmetic_grants.push(grant.clone());
         }
-        Ok(changed)
+        changed
     }
 
     pub fn card_picks_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<CardPicks>, StoreError> {

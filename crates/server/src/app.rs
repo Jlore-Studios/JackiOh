@@ -299,6 +299,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::economy::packs::post_open),
     ),
+    // R3212000: Open all, one spend for several packs of a kind.
+    (
+        "POST",
+        "/api/packs/open-all",
+        AuthLevel::Active,
+        h!(crate::economy::packs::post_open_all),
+    ),
     // economy/tokens.rs (SPEC §14.5; #1305)
     (
         "GET",
@@ -511,6 +518,13 @@ pub static ROUTES: &[Route] = &[
         "/api/decks/:id",
         AuthLevel::Active,
         h!(api::decks::delete_deck),
+    ),
+    // R3212001: every dirty deck and trio, and every deletion, in one request.
+    (
+        "POST",
+        "/api/decks/sync",
+        AuthLevel::Active,
+        h!(api::decks::sync_decks),
     ),
     // R2100000: a deck's earlier versions, and the restore of one.
     (

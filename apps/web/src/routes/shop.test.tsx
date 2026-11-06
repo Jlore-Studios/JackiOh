@@ -35,6 +35,7 @@ import {
 } from "../shop/fixtures.ts";
 import { shopTestid } from "../shop/shop.ts";
 import { at, meBody, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { accountTestid } from "./account.tsx";
 import { purchasesTestid } from "./purchases.tsx";
 import ShopRoute, { shopRouteTestid } from "./shop.tsx";
@@ -147,6 +148,14 @@ describe("#1577 the shop screen", () => {
       "the shop is closed",
     );
     expect(screen.getByRole("heading", { name: "Shop" })).toBeInTheDocument();
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    serveShop();
+    render(<ShopRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(shopTestid.wallet, undefined, SLOW)).toHaveTextContent("37 Jlore");
+    expectOnePageTitle("Shop");
   });
 
   it("R1580000 buying and opening are on the Shop, and the opening plays over the screen", async () => {
@@ -459,18 +468,24 @@ describe("R3211000 the Shop folds each spend's answer and reads once, when the o
         jlore = 12;
         return { status: 200, body: { pack: "Core", jlore, unopened: held } };
       }
-      if (call.path === "/api/packs/open") {
-        held -= 1;
-        bars = {
-          ...bars,
-          cardBar: { points: OPENING_BARS.card.after, size: OPENING_BARS.card.size },
-          cosmeticBar: { points: OPENING_BARS.cosmetic.after, size: OPENING_BARS.cosmetic.size },
-          tokens: { ...bars.tokens, card: bars.tokens.card + 1 },
-        };
-        return { status: 200, body: { ...openedPack(), unopened: held, bars: OPENING_BARS } };
+      if (call.path === "/api/packs/open") return { status: 200, body: open() };
+      // R3212000: each pack as `/api/packs/open` would open it, in one answer.
+      if (call.path === "/api/packs/open-all") {
+        const { count } = call.body as { count: number };
+        return { status: 200, body: { openings: Array.from({ length: count }, open) } };
       }
       return undefined;
     });
+    function open() {
+      held -= 1;
+      bars = {
+        ...bars,
+        cardBar: { points: OPENING_BARS.card.after, size: OPENING_BARS.card.size },
+        cosmeticBar: { points: OPENING_BARS.cosmetic.after, size: OPENING_BARS.cosmetic.size },
+        tokens: { ...bars.tokens, card: bars.tokens.card + 1 },
+      };
+      return { ...openedPack(), unopened: held, bars: OPENING_BARS };
+    }
     let from = 0;
     return {
       server,
@@ -527,7 +542,7 @@ describe("R3211000 the Shop folds each spend's answer and reads once, when the o
     expect(account.spends()).toEqual(["/api/packs/buy", "/api/packs/open"]);
   });
 
-  it("R3211000 ten opens in a row send ten spends, no read while the scene is open, and at most two once it closes", async () => {
+  it("R3211000 R3212000 Open all of ten sends one spend, no read while the scene is open, and at most two once it closes", async () => {
     const account = serveSpends(10);
     const fetchOwned = vi.fn(() => Promise.resolve(ownedCosmeticsOf()));
     render(<ShopRoute token={TOKEN} />);
@@ -545,7 +560,7 @@ describe("R3211000 the Shop folds each spend's answer and reads once, when the o
         }, SLOW);
       }
     }
-    expect(account.spends()).toEqual(Array.from({ length: 10 }, () => "/api/packs/open"));
+    expect(account.spends()).toEqual(["/api/packs/open-all"]);
     expect(account.reads(), "no read while the scene is open").toEqual([]);
     await waitFor(() => {
       expect(screen.getByTestId(packTestid.none), "the opening folded its count to none").toBeInTheDocument();
@@ -564,7 +579,7 @@ describe("R3211000 the Shop folds each spend's answer and reads once, when the o
     expect(fetchOwned, "the close forgot it once").toHaveBeenCalledTimes(2);
     await readOwnedFullArt(TOKEN, fetchOwned);
     expect(fetchOwned).toHaveBeenCalledTimes(2);
-    expect(account.spends()).toHaveLength(10);
+    expect(account.spends()).toHaveLength(1);
   });
 
   it("R3211000 the panels show the numbers of the answers", async () => {

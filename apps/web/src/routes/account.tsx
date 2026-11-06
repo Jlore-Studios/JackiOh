@@ -44,6 +44,7 @@ import {
 import { hasLinkResult } from "../auth/redirect.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import LinkedAccounts from "../auth/LinkedAccounts.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
@@ -285,13 +286,10 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
   return (
     <div className="app-shell tavern account-screen one-screen" data-testid={accountTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Your account")} />
 
       <section className="panel panel--auth one-screen__frame">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Your account")}</h2>
+        <Wordmark />
         <div className="one-screen__body one-screen__stack">
           {error !== null ? (
             <>
@@ -339,17 +337,17 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             <>
               <AccountIdentity email={profile.email} status={profile.status} />
 
-              <h3 className="account-heading">{t("Rank")}</h3>
+              <h2 className="account-heading">{t("Rank")}</h2>
               {rank !== null ? (
                 <>
-                  <h4 className="account-heading">{t("Constructed")}</h4>
+                  <h3 className="account-heading">{t("Constructed")}</h3>
                   <LadderRank
                     rank={rank}
                     testids={{ rank: accountTestid.rank, seasonRecord: accountTestid.seasonRecord, badges: accountTestid.badges }}
                   />
                   {randomRank !== null ? (
                     <>
-                      <h4 className="account-heading">{t("All Random")}</h4>
+                      <h3 className="account-heading">{t("All Random")}</h3>
                       <LadderRank
                         rank={randomRank}
                         testids={{
@@ -373,7 +371,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 </>
               ) : null}
 
-              <h3 className="account-heading">{t("Record")}</h3>
+              <h2 className="account-heading">{t("Record")}</h2>
               <div className="stat-row">
                 <div className="stat">
                   <span className="stat-value" data-testid={accountTestid.winRate}>

@@ -103,6 +103,13 @@ rule's) the line takes a row under Back and the end group. Only `routes/top-bar.
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
 
+A menu names itself with one `PageTitle` (#3223, R3223000): its only `h1`, in `--font-display` at `--type-3xl`
+(`routes/PageTitle.tsx`, `routes/page-title.css`). A menu passes its name as BackLink's `title`, so it sits in the bar's
+title slot, and never draws an `h1` of its own (`routes/page-title.test.ts` counts them); the two prompts that
+replace a menu and have no bar (the username's and the consent's) draw a `PageTitle` in their panel. The brand is
+`Wordmark` (`routes/Wordmark.tsx`), not a heading. A section inside a screen is an `h2` of class `section-heading`
+from the same sheet. No other sheet sets a font-size on an `h1`.
+
 The dungeon map's node icons are drawn SVGs (`dungeon/map/NodeIcon.tsx`): single color in `currentColor` on a
 24-unit grid, colored by `data-kind` in `dungeon/map/run.css` from the palette. No system emoji appears
 anywhere under `dungeon/`, held by `dungeon/noEmoji.test.ts`; add a node kind's glyph there, never a
@@ -151,8 +158,9 @@ packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's
 `FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
 reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
 skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
-`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
-accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+`openAllPacks` (its last opening's), `openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios'
+save, delete, sync (each item that landed) and import, a friend accepted or removed), so a revisit never shows
+the old value first. `clearSession` empties the cache and the
 first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
@@ -352,10 +360,12 @@ measures. It may cover the card's art and its cost, and the cost gem is hidden w
 covers the name, the attack or the health, nor the zone's own switch (⟳, top-right). A DEF card is
 turned a quarter, which puts its name, attack and health in a strip down its left, under that corner, so
 over a DEF card the stack starts at the same corner and stops above the turned card's box: the same
-control, and only the marks that fit in the band above it (the rest fold into `+N`, and
-`FieldBadges.tsx` measures again when a card's position changes). The Activate control is never
-dropped, so where that band is shorter than the control (a phone as short as 664px) the control overlaps
-the turned card's attack gem by the difference. The control's tap band (up to
+control, the named marks that fit in the band above it and a `+N` for the rest (`FieldBadges.tsx`
+measures again when a card's position changes). The Activate control is never dropped, and nor is the
+`+N` while the unit has a mark to draw (#3315), so a DEF unit's keywords never vanish with no sign.
+Where the band above the turned card is shorter than they are (about 4px at 390x664, 18 to 28px at the
+other phones) they overlap the turned card's top-left, its attack gem and the start of its name, by the
+difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's oval and the backrow's outline keep a card's shape.
@@ -488,7 +498,9 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
-                        autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
+                        autosave with a local mirror of unsaved edits (sync.ts, R256): one POST
+                        /api/decks/sync a pass of at most `DECK_SYNC_ITEMS_MAX` items, decks, then trios,
+                        then trio and deck deletions, each item judged alone (R3212001); a trio import is
                         one POST /api/trios/import, never the autosave (R341); the open deck's History
                         popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
                         kept, newest first, each with its date and the cards in and out since the one
@@ -631,7 +643,9 @@ packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, �
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
                         foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
                         that follow the pointer, a press and a tear, the shelf and the scene drawing the
-                        same object), and the scene that opens one (`POST /api/packs/open`), its token bars
+                        same object), and the scene that opens one (`POST /api/packs/open`; Open all is one
+                        `POST /api/packs/open-all` of up to `PACKS_OPEN_ALL_MAX`, shown a pack at a time with
+                        nothing more sent, R3212000), its token bars
                         pinned at the top from the answer and played once every card shows
                         (economy/OpeningBars.tsx, R1953000); the pity counters and the odds are on
                         /purchases, not here (R1665000); the scene: a tear or swipe, the best rarity tinting the
@@ -668,13 +682,13 @@ Remove on a friend's row take the item off the screen at once and show a toast, 
 deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
 `UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
 motion). The request waits for the window to close and goes at once when a second deletion takes the
-toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
+toast, when the page hides (the pass's sync as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
 goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, since the item
 counts against the server's caps until then.
 A deletion within `UNDO_REPEAT_MS` of the one taken is a double click's second press: `hold` refuses it
 (returns `false`) and every caller leaves the item in place and stays where it is (R3059000).
 Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
-trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
+trio whose deletion could not reach the server stays deleted and is retried (R256). While a deck's or
 trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
 and `unhide` (Undo) brings it and its trio slots back. Block and Concede still ask.
 
