@@ -15799,12 +15799,11 @@
     "what": "revise #3271 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-06T11:56:08Z",
+    "at": "2026-11-06T12:05:35Z",
     "notes": [
-      "delivered revise #3277 on claude-1 (run 42206313999): approved",
-      "#3295: closed, so `bot:merging` is off",
-      "#3294: closed, so `bot:merging` is off",
-      "#3271: auto-merge is off and it is out of the merge queue, so `bot:merging` is off"
+      "started revise #3271 on claude-3 (run 42215316037)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16510,7 +16509,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T11:56:08Z",
+  "loop_tick": "2026-11-06T12:05:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
