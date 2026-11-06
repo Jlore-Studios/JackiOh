@@ -16357,6 +16357,14 @@
           "claude": "medium"
         }
       }
+    },
+    "3312": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-06T15:28:44Z",
+      "issue": 3290,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
