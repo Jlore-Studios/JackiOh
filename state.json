@@ -13850,15 +13850,8 @@
       "verdict_rounds": 2
     },
     "3220": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42312463460",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-06T23:56:08Z",
-        "until": "2026-11-07T00:26:08Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13870,10 +13863,9 @@
         "reason": "planned on opus",
         "trail": " props `role: \\\"dialog\\\"|\\\"alertdialog\\\"`, `title`, `description?`, `onClose`, `cance\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; grep -rn \\\"practice-result\\\\b\\\\|practice-result__\\\\|practice-result-scrim\\\\|\\\\.concede-\\\\|practice-leave\\\\|dialog__\\\\|\\\\.dialog\\\\b\\\" e2e --incl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; grep -rln \\\"PracticeResult\\\\|PracticeLeave\\\\|ConfirmConcede\\\\|ConfirmLeave\\\" e2e apps/web/src --include=*.tsx --include=*.ts | grep -v node_mod\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; grep -n \\\"PracticeResult\\\\|PracticeLeave\\\\|ConfirmConcede\\\\|ConfirmLeave\\\\|scrim\\\\|practice-result\\\" e2e/cypress/component/practice-table.cy.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; sed -n 355,395p apps/web/src/net/backLayers.test.tsx; sed -n 110,140p e2e/cypress/component/practice-table.cy.tsx; sed -n 390,410p e2e/cypress/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; cat test/history.ts | head -40; grep -n \\\"^function visit\\\\|^function concedeOnBoard\\\\|^async function concede\\\\|function concede(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rn \\\"result:\\\" wire/generated/PlayerView.ts | head -3; cat wire/generated/GameResult.ts 2>/dev/null | tail -5; grep -n \\\"res\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rn \\\"var(--z-toast)\\\\|z-index: 70\\\\|z-index: 6[0-9]\\\\|z-index: 7[0-9]\\\\|z-index: 8[0-9]\\\\|z-index: 9[0-9]\\\\|z-index: 1[0-9][\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -n \\\"anim-scale\\\\|5s\\\" game/notices.css; sed -n 86,112p game/notices.css\", \"description\": \"Check anim-scale uses in notices.c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rn \\\"notices.css\\\\|practice/practice.css\\\\|\\\\./practice.css\\\" --include=*.tsx --include=*.ts . | grep -v test | head -20; gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; sed -n 530,560p practice/practice.css\", \"description\": \"Read practice-play rule\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rn \\\"\\u2715\\\" --include=*.tsx . | grep -v test | head -8\", \"description\": \"Find existing \\u2715 close buttons\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; sed -n 238,252p settings/SettingsPanel.tsx\", \"description\": \"Read SettingsPanel close button\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rn -B2 \\\"^ if (.*) return;$\\\" --include=*.tsx --include=*.ts game/*.tsx | grep -A2 \\\"Effect(() => {\\\" | head -12; grep -n \\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; sed -n 403,420p game/Clock.tsx\", \"description\": \"Read Clock effect with early return and cleanup\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rln \\\"useBackLayer\\\\|useModalKeys\\\" --include=*.test.ts --include=*.test.tsx .; grep -n \\\"export function readSheet\\\" -A6 te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -n \\\"useBackLayer\\\\|useModalKeys\\\" net/backLayers.test.tsx | head; sed -n 1,30p ../../../scripts/ci-scope.sh | head -30\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rln \\\"README.md\\\" --include=*.test.ts --include=*.test.tsx . | head; grep -n \\\"fontSize\\\\|font-size\\\" typescale.test.ts | se\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; sed -n 190,205p typescale.test.ts; grep -n \\\"README\\\" practice/claim.test.ts | head -3\", \"description\": \"Read typescale inline che\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rln \\\"data-testid=\\\\\\\\\\\\\\\\\\\\|testid.*readFileSync\\\\|TESTID.*unique\\\\|duplicate testid\\\" --include=*.test.ts --include=*.test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -8; git show --stat HEAD | head -40\", \"description\": \"Check Patch title meaning and the #3\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; git show --stat HEAD | grep -i \\\"patch\\\\|pending\\\\|spec/\\\" | head; ls patches 2>/dev/null | head -3; ls crates/cards/patches 2>/dev/null | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; grep -rln \\\"concede-dialog\\\\|practice-result\\\\|practice-leave\\\\|leave-match\\\\|fight-leave\\\\|concede-scrim\\\" --include=*.snap . ; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220/apps/web/src; sed -n 312,340p dungeon/fight/FightScreen.test.tsx\", \"description\": \"Read FightScreen leave dialog test\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; cat >> .bot-plan.md <<'EOF'\\n- FINAL (run 2): twins in practice.css: `.practice-result` +`.dialog.practice-result`; landscape `.practice-result\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3220/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe client gets one `Dialog` (`apps/web/src/game/Dialog.tsx`, `game/dialog.css`). It has one scrim color (`\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; wc -w .bot-plan.md; wc -c .bot-plan.md; grep -n \\\"toHaveAccessibleName\\\" apps/web/src/game/ConfirmConcede.test.tsx | head -1; grep -n \\\"export \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3220/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe client gets one `Dialog` (`apps/web/src/game/Dialog.tsx`, `game/dialog.css`). It has one scrim color, o\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3220; wc -w .bot-plan.md\", \"description\": \"Count plan words\"}\n- said: ## Goal The client gets one `Dialog` (`apps/web/src/game/Dialog.tsx`, `game/dialog.css`). It has one scrim color, one layer token (`--z-dialog`, which is `--z-toast-top: 72` renamed, a level above `--z-modal`), and `role=\"dialog\"`/`\"alertdialog\"` with an `h2` title. A `dialog` has a \u2715 named \"Close\"\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-06T23:31:22Z",
       "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-07T03:40:00Z; it can start again only in 3h 08m, more than the 120 minutes an item waits for its owner",
@@ -13886,9 +13878,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-05T17:44:39Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42312463460",
+      "run_id": "pending:0f4d5b74-1794009476",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T23:31:22Z",
+      "started_at": "2026-11-06T23:58:32Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17339,9 +17331,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T23:41:47Z",
+    "at": "2026-11-06T23:58:32Z",
     "url": "",
-    "what": "build #3329 on claude-6"
+    "what": "build #3220 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T23:39:11Z",
