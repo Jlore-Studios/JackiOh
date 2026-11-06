@@ -18277,6 +18277,14 @@
         "sha": "d5feca9b64a79763dd7ce772a566c017e78ebf05",
         "tiers": {}
       }
+    },
+    "3277": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-06T03:38:29Z",
+      "issue": 3267,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
