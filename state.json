@@ -18273,12 +18273,8 @@
     "what": "plan #3017 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-06T04:05:01Z",
-    "notes": [
-      "delivered review #3250 on claude-1 (run 42157860894): reviewed",
-      "delivered review #3271 on claude-8 (run 42157698943): approved",
-      "#3245: auto-merge is off and it is out of the merge queue, so `bot:merging` is off"
-    ],
+    "at": "2026-11-06T04:14:33Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18983,7 +18979,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T04:05:01Z",
+  "loop_tick": "2026-11-06T04:14:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
