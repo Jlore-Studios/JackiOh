@@ -16508,6 +16508,15 @@
       "failures": 0,
       "feedback_since": "2026-11-06T18:53:22Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-06T18:59:50Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "- 2026-11-06 (run 3, ci feedback): CI run 42270566127 failed `web (unit 8/8)` on src/wording.test.ts \"R373 no text \u2026 library or sacrifice\" timing out at 5000ms (59 workers on a loaded shard); `web` failed only as the aggregate of that. Locally on this branch (main merged): wording.test.ts 15/15 pass, the R373 test alone takes 2.4s. Nothing on this branch touches it (it scans apps/web/src for words). No change made; reply \"ci_local\": \"passed\".\n",
+        "provider": "claude-3",
+        "reason": "the failing CI check passed locally and nothing needed changing, so CI runs again on the same head, with no commit",
+        "trail": "- Bash: {\"command\": \"git status --short | head; git log --oneline -3; (pnpm --dir apps/web test src/wording.test.ts 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E \\\"Test Files|Tests |FAIL|\\u2713|Duration|ms\\\\)\u2026\n- Bash: {\"command\": \"(pnpm --dir apps/web exec vitest run src/wording.test.ts --reporter=verbose 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E \\\"R373|Tests \\\" ); git diff origin/main --stat | tail -3; git log\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- 2026-11-06 (run 3, ci feedback): CI run 42270566127 failed `web (unit 8/8)` on src/wording.test.ts \\\"R373 no text \\u2026 library or sacrifice\\\" timing out\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a phone's DEF unit keeps a +N for its keyword marks when no mark fits above the turned card\", \"ci_local\": \"passed\"} --> I changed nothing in this run. The only red check passes here, and nothing on this branch affects it. ## The CI failure In CI run 422\u2026"
+      },
       "interruptions": 0,
       "issue": 3315,
       "kind": "revise",
