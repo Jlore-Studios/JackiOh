@@ -18242,25 +18242,36 @@
       ]
     },
     "3289": {
-      "asks": [
-        "c:6678796752"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-1",
+      "owner_since": "2026-11-06T06:49:09Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-06T06:35:21Z",
       "requested_by": "jgoetzmann",
+      "run_id": "pending:54e0ab28-1793947707",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-06T06:49:09Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6678796752"
+      ]
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T06:48:13Z",
+    "at": "2026-11-06T06:49:09Z",
     "url": "",
-    "what": "plan #3283 on claude-1"
+    "what": "plan #3289 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-06T06:22:13Z",
