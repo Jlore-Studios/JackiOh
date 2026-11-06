@@ -17907,6 +17907,14 @@
       "queued_at": "2026-11-06T03:03:40Z",
       "requested_by": "squishy-squooby",
       "stop_requested": false
+    },
+    "3268": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-06T01:46:14Z",
+      "issue": 3257,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
