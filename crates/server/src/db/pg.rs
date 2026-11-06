@@ -8,20 +8,22 @@
 //!    one where the port's shape admits it, and says why when it is not.
 //! 2. The server is `service_role`, never the owner: every transaction switches to it and stamps
 //!    `request.jwt.claim.sub` (the GUC `auth.uid()` reads) with the call's profile. `SET LOCAL` is a no-op
-//!    outside a transaction, so every method re-stamps its subject inside the one `begin` opened (`run_as`);
-//!    `SESSION_SQL` alone sets either GUC (`tests/store/postgres.rs`).
+//!    outside a transaction, so every method stamps its subject inside the one `begin` opened (`run_as`),
+//!    which sends the stamp only when the subject differs from the one the transaction holds (#3208);
+//!    `SESSION_SQL` and `begin_statement` alone set either GUC (`tests/store/postgres.rs`).
 //! 3. `src/db/fake.rs` is the behavioral specification: `tests/store/contract.rs` runs the invariants against
 //!    both stores; where they cannot agree the divergence is listed in `KNOWN DIVERGENCES` at the bottom.
 
+use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use sqlx::postgres::{PgPool, PgPoolOptions, PgRow};
+use sqlx::postgres::{PgConnection, PgPool, PgPoolOptions, PgRow};
 use sqlx::types::Json;
-use sqlx::{Postgres, Row, Transaction};
+use sqlx::{AssertSqlSafe, Connection, Postgres, Row, Transaction};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -33,7 +35,10 @@ use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
 use crate::bots::cosmetics::BotCosmetics;
-use crate::config::{NANOS_PER_MS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
+use crate::config::{
+    NANOS_PER_MS, POOL_HEARTBEAT_MS, POOL_MIN_CONNECTIONS, POOL_PING_AFTER_IDLE_MS, RATING_DEVIATION_START,
+    RATING_START, RATING_VOLATILITY_START,
+};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
@@ -56,7 +61,31 @@ use crate::ranked::ladder::{Ladder, SeasonRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
 use crate::username::{render_username, username_key};
 
-pub type PgTx<'a> = Transaction<'a, Postgres>;
+/// One open transaction, and the subject its last session statement stamped (#3208): `""` for nobody, and
+/// `None` until one has run. `run_as` reads it to skip a stamp that would change nothing. The memo lives
+/// exactly one transaction, because `SET LOCAL` ends at commit or rollback, and it is true only while
+/// nothing but `begin` and `run_as` sets either GUC: no method may run a `set_config` or `SET` of its own,
+/// and a method that rolls back to a savepoint (which undoes a `SET LOCAL` made after it) must stamp its
+/// subject before it takes one, as `tickets_claim_pair` does. A store method reaches the connection with
+/// `&mut **t`, as it did when this was sqlx's `Transaction` itself.
+pub struct PgTx<'a> {
+    tx: Transaction<'a, Postgres>,
+    stamped: Option<String>,
+}
+
+impl Deref for PgTx<'_> {
+    type Target = PgConnection;
+
+    fn deref(&self) -> &PgConnection {
+        &self.tx
+    }
+}
+
+impl DerefMut for PgTx<'_> {
+    fn deref_mut(&mut self) -> &mut PgConnection {
+        &mut self.tx
+    }
+}
 
 /// The endings that always have a winner (`GameOverReason`; `won-by-effect` R1412, `voted-out` R1843000,
 /// `fled-decisive` R1843002). The others are draws, but `alt-win` is either (two players holding an
@@ -375,28 +404,69 @@ fn json_col<T: DeserializeOwned>(row: &PgRow, column: &str) -> Result<T, StoreEr
 /// transaction holds, which is what makes SPEC §9.4's "Redemption is one server-side transaction" and R263's
 /// one-transaction result, series record and rating move true. A failed statement aborts the transaction, so
 /// a caller that catches a store error and goes on (`api/queue.rs`, `api/results.rs`) begins a fresh `Tx`.
+///
+/// #3208: `BEGIN` and the session statement go in one round trip (`begin_statement`) when the subject is
+/// nobody or a uuid, which every profile id is; any other subject is bound, in a second one (`run_as`).
 pub async fn begin(pool: &PgPool, claim_sub: Option<&str>) -> Result<PgTx<'static>, StoreError> {
-    let mut t = pool.begin().await.map_err(db_error)?;
+    let subject = claim_sub.unwrap_or("");
+    if let Some(statement) = begin_statement(subject) {
+        let tx = pool
+            .begin_with(AssertSqlSafe(statement))
+            .await
+            .map_err(db_error)?;
+        return Ok(PgTx {
+            tx,
+            stamped: Some(subject.to_string()),
+        });
+    }
+    let tx = pool.begin().await.map_err(db_error)?;
+    let mut t = PgTx { tx, stamped: None };
     run_as(&mut t, claim_sub).await?;
     Ok(t)
 }
 
-pub async fn commit(t: PgTx<'_>) -> Result<(), StoreError> {
-    t.commit().await.map_err(db_error)
+/// `begin`'s one simple query: `SESSION_SQL`'s two `SET LOCAL`s with their values written into the text,
+/// then `BEGIN`. The subject is written verbatim, so only `""` (nobody) or a uuid may be: every form
+/// `Uuid::parse_str` accepts is hex digits, hyphens, braces and `urn:uuid:`, never a quote or a backslash.
+/// `None` for anything else, which `begin` binds instead.
+///
+/// The `select` comes first so that its failure leaves nothing open. It runs in the message's implicit
+/// transaction, which the `BEGIN` after it turns into the transaction block it stays part of, its settings
+/// with it (the protocol's "Multiple Statements in a Simple Query"); if it fails, the implicit transaction
+/// rolls back and `BEGIN` never runs. The other order would leave a failed block open on the connection,
+/// which sqlx does not roll back (it counts no transaction yet) and would hand to the next request.
+fn begin_statement(subject: &str) -> Option<String> {
+    if !(subject.is_empty() || is_uuid(subject)) {
+        return None;
+    }
+    Some(format!(
+        "select set_config('role', '{ACTING_ROLE}', true), \
+         set_config('request.jwt.claim.sub', '{subject}', true); begin"
+    ))
 }
 
-/// Re-stamps the subject inside an open transaction (the role stays `service_role` until commit): the
+pub async fn commit(t: PgTx<'_>) -> Result<(), StoreError> {
+    t.tx.commit().await.map_err(db_error)
+}
+
+/// Stamps the subject inside an open transaction (the role stays `service_role` until commit): the
 /// profile the call is about, or `None` for a call about nobody. The method's later statements commit or
 /// roll back with it, which `matches_create` (read-lock, then write) and `tickets_claim_pair` (claim, then
 /// link) need to be safe, and a mid-method error leaves nothing behind. The co-op and economy stores'
-/// methods re-stamp theirs with it too (`duos::store`, `economy::store`).
+/// methods stamp theirs with it too (`duos::store`, `economy::store`). #3208: a subject the transaction
+/// already holds is not sent again (`PgTx`).
 pub(crate) async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
+    let subject = subject.unwrap_or("");
+    if t.stamped.as_deref() == Some(subject) {
+        return Ok(());
+    }
     sqlx::query(SESSION_SQL)
         .bind(ACTING_ROLE)
-        .bind(subject.unwrap_or(""))
+        .bind(subject)
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
+    t.stamped = Some(subject.to_string());
     Ok(())
 }
 
@@ -1564,7 +1634,9 @@ const POOL_MAX_DEFAULT: u32 = 10;
 
 /// Supabase's Supavisor closes a client idle on its side and the driver learns it only on use, as
 /// `read ETIMEDOUT` on a request that did nothing wrong; recycling an idle connection after 10 s retires it
-/// first.
+/// first. #3208: `heartbeat` pings the warm connections (`POOL_MIN_CONNECTIONS`) every
+/// `POOL_HEARTBEAT_MS`, so they never sit idle this long; only the connections a burst opened past them
+/// are retired by it.
 const POOL_IDLE_TIMEOUT_MS: u64 = 10_000;
 
 /// Fail a checkout that cannot get a connection rather than hanging the request forever.
@@ -1603,18 +1675,87 @@ fn to_redeem_result(value: Option<String>) -> Result<RedeemResult, StoreError> {
     )))
 }
 
+// The pool's warm connections can never reach the idle timeout, and a warm one is never pinged at checkout.
+const _: () = assert!(POOL_HEARTBEAT_MS < POOL_PING_AFTER_IDLE_MS);
+const _: () = assert!(POOL_PING_AFTER_IDLE_MS < POOL_IDLE_TIMEOUT_MS as i64);
+const _: () = assert!(POOL_MIN_CONNECTIONS <= POOL_MAX_DEFAULT);
+
+/// A count of milliseconds from `config.rs` as a `Duration`, a negative one as none (as `loops.rs` reads
+/// its seconds).
+fn millis(ms: i64) -> Duration {
+    Duration::from_millis(u64::try_from(ms).unwrap_or(0))
+}
+
+/// #3208: whether a connection that sat idle `idle_for` is pinged before a request gets it. One idle
+/// less than `ping_after_idle` is handed over untested, which saves a round trip on most requests; one
+/// that died that quickly fails its request once, and the idle timeout bounds how stale one can be.
+pub fn ping_due(idle_for: Duration, ping_after_idle: Duration) -> bool {
+    idle_for >= ping_after_idle
+}
+
+/// The options of the pool `Db::Pg` holds, at most `max` connections, `POOL_MIN_CONNECTIONS` of them kept
+/// warm (`heartbeat`). sqlx's own checkout ping (`test_before_acquire`) is off: `before_acquire` pings only
+/// a connection idle past `ping_after_idle` (`ping_due`; `POOL_PING_AFTER_IDLE_MS` in production).
+pub fn pool_options(max: u32, ping_after_idle: Duration) -> PgPoolOptions {
+    PgPoolOptions::new()
+        .max_connections(max)
+        .min_connections(POOL_MIN_CONNECTIONS.min(max))
+        .idle_timeout(Duration::from_millis(POOL_IDLE_TIMEOUT_MS))
+        .acquire_timeout(Duration::from_millis(POOL_ACQUIRE_TIMEOUT_MS))
+        .test_before_acquire(false)
+        .before_acquire(move |conn, meta| {
+            Box::pin(async move {
+                if ping_due(meta.idle_for, ping_after_idle) {
+                    conn.ping().await?;
+                }
+                Ok(true)
+            })
+        })
+}
+
 /// The pool `Db::Pg` holds. The connection string is checked here, not on first use, so a misconfigured
 /// deployment fails at boot naming the variable and end-to-end mode's
 /// `DATABASE_URL=memory://e2e-fixture-store` placeholder can never be mistaken for a database. The pool
 /// connects lazily.
 pub fn create_postgres_store(options: &PostgresStoreOptions) -> Result<PgPool, StoreError> {
     assert_postgres_url(&options.connection_string)?;
-    PgPoolOptions::new()
-        .max_connections(options.max.unwrap_or(POOL_MAX_DEFAULT))
-        .idle_timeout(Duration::from_millis(POOL_IDLE_TIMEOUT_MS))
-        .acquire_timeout(Duration::from_millis(POOL_ACQUIRE_TIMEOUT_MS))
-        .connect_lazy(&options.connection_string)
-        .map_err(db_error)
+    pool_options(
+        options.max.unwrap_or(POOL_MAX_DEFAULT),
+        millis(POOL_PING_AFTER_IDLE_MS),
+    )
+    .connect_lazy(&options.connection_string)
+    .map_err(db_error)
+}
+
+/// One beat of `heartbeat`: pings each idle connection of a pool no larger than its warm size, one at a
+/// time, so a request still finds the others idle. A connection whose ping fails or takes longer than a
+/// beat is closed, and sqlx opens another in its place. A pool a burst grew past its warm size is left
+/// alone, so the idle timeout retires the extra connections as before. Answers how many answered.
+pub async fn heartbeat_tick(pool: &PgPool) -> usize {
+    if pool.size() > pool.options().get_min_connections() {
+        return 0;
+    }
+    let mut pinged = 0;
+    for _ in 0..pool.num_idle() {
+        let Some(mut conn) = pool.try_acquire() else {
+            break;
+        };
+        match tokio::time::timeout(millis(POOL_HEARTBEAT_MS), conn.ping()).await {
+            Ok(Ok(())) => pinged += 1,
+            _ => conn.close_on_drop(),
+        }
+    }
+    pinged
+}
+
+/// #3208: keeps the pool's warm connections open while the server is quiet, a beat every
+/// `POOL_HEARTBEAT_MS`, under both the checkout ping's threshold and the idle timeout, so a request after
+/// a quiet minute neither reconnects nor pings. `app::serve` runs it as the `db.heartbeat` loop.
+pub async fn heartbeat(pool: PgPool) {
+    loop {
+        tokio::time::sleep(millis(POOL_HEARTBEAT_MS)).await;
+        heartbeat_tick(&pool).await;
+    }
 }
 
 pub async fn close(pool: &PgPool) {
@@ -7818,6 +7959,56 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
     .await
     .map_err(db_error)?;
     rows.iter().map(|row| uuid_text(row, "friend")).collect()
+}
+
+/// #3208's checks that need no database; `tests/store/round_trips.rs` and `tests/store/postgres.rs` hold
+/// the ones that do.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_begin_statement_writes_a_uuid_subject_into_its_text() {
+        assert_eq!(
+            begin_statement("67e55044-10b1-426f-9247-bb680e5fe0c8").as_deref(),
+            Some(
+                "select set_config('role', 'service_role', true), \
+                 set_config('request.jwt.claim.sub', '67e55044-10b1-426f-9247-bb680e5fe0c8', true); begin"
+            )
+        );
+    }
+
+    #[test]
+    fn the_begin_statement_writes_nobody_as_the_empty_subject() {
+        assert_eq!(
+            begin_statement("").as_deref(),
+            Some(
+                "select set_config('role', 'service_role', true), \
+                 set_config('request.jwt.claim.sub', '', true); begin"
+            )
+        );
+    }
+
+    #[test]
+    fn the_begin_statement_never_writes_a_subject_that_is_no_uuid() {
+        for subject in [
+            "x'y",
+            "67e55044-10b1-426f-9247-bb680e5fe0c8'; drop table public.profiles; --",
+            "e2e-p1",
+            " ",
+            "67e55044-10b1-426f-9247-bb680e5fe0c8\\",
+        ] {
+            assert_eq!(begin_statement(subject), None, "{subject:?}");
+        }
+    }
+
+    #[test]
+    fn a_connection_is_pinged_only_once_idle_past_the_threshold() {
+        let threshold = millis(POOL_PING_AFTER_IDLE_MS);
+        assert!(!ping_due(Duration::ZERO, threshold));
+        assert!(!ping_due(threshold - Duration::from_millis(1), threshold));
+        assert!(ping_due(threshold, threshold));
+    }
 }
 
 // KNOWN DIVERGENCES from `src/db/fake.rs`
