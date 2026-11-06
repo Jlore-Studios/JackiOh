@@ -599,6 +599,7 @@ describe("#1309 the cosmetic packs", () => {
     expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("20 / 20");
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.getByTestId(T.shardEmpty)).toHaveTextContent("Nothing to buy yet");
+    expectEmptyState(screen.getByTestId(T.shardEmpty));
   });
 
   it("the panel shows no odds: they are on the Purchases screen", async () => {
