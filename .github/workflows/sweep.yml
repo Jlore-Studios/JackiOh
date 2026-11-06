@@ -301,7 +301,7 @@ jobs:
         if: ${{ steps.record.outputs.ban_changed == 'true' }}
         run: |
           set -euo pipefail
-          JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh
+          sh scripts/build-wasm.sh
           JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
           pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
       - name: close the superseded pull request

@@ -42,7 +42,7 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::{CUSTOM_ID_PREFIX, DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
+use crate::config::{DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -1118,7 +1118,6 @@ fn find_def_in<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
     state
         .transient_defs
         .get(def_id)
-        .or_else(|| state.custom_defs.get(def_id))
         .or_else(|| registered_catalog().get(def_id))
 }
 
@@ -1664,10 +1663,7 @@ fn shown_option_count(state: &GameState, viewer: PlayerId, pending: &PendingChoi
         return None;
     }
     let scripts = crate::scripts::script_of(state, def_id);
-    if def_id.starts_with(CUSTOM_ID_PREFIX)
-        || scripts.base.secret_option_counts
-        || scripts.radiant.secret_option_counts
-    {
+    if scripts.base.secret_option_counts || scripts.radiant.secret_option_counts {
         return None;
     }
     // R1184000: a question sequence's Stop is a button, never a card.
@@ -2079,16 +2075,6 @@ fn redact_event(
     let instance = text_at(&shown, "instanceId");
 
     match event.event_type() {
-        // R915004: a custom card's failure names the card as the card itself is named: a viewer who may
-        // not read it learns that a script failed, never whose or why.
-        GameEventType::ScriptFailed => {
-            if !instance.is_empty() && hidden(&instance) {
-                hide(&mut shown, &["instanceId", "defId"]);
-                shown.insert("message".to_string(), Value::String("a script failed".to_string()));
-            }
-            rebuild(shown)
-        }
-
         // R1853003: a card bought at the Marketplace is named as on `addedToHand`, its face with it.
         GameEventType::MarketBought => {
             if hidden(&instance) {
@@ -2910,9 +2896,6 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
                 }
                 if let Some(def) = state.transient_defs.get(text) {
                     defs.insert(text.clone(), def.clone());
-                } else if let Some(def) = state.custom_defs.get(text) {
-                    // R915000: a custom card's definition, which no client catalog holds either.
-                    defs.insert(text.clone(), def.clone());
                 }
             }
             Value::Array(items) => {
@@ -2929,7 +2912,7 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
         }
     }
     let mut defs: IndexMap<String, CardDef> = IndexMap::new();
-    if state.transient_defs.is_empty() && state.custom_defs.is_empty() {
+    if state.transient_defs.is_empty() {
         return defs;
     }
     match serde_json::to_value(view) {

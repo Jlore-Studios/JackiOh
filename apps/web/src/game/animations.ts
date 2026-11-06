@@ -762,16 +762,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // A hook that failed and did nothing; the hero stands in for an unseen card.
-  scriptFailed: {
-    animation: "jk-badge-fade",
-    durationMs: 400,
-    testid: "card-<instanceId>",
-    target: (e, view) =>
-      e.instanceId === null
-        ? testid.hero(sideOf(view, e.player))
-        : instanceOrPile(view, e.instanceId, testid.hero(sideOf(view, e.player))),
-  },
   // C+ #62 KY's Papaya (R831003): the curve is drawn across the board, cell to cell in lane order,
   // before what it meets is exiled.
   curveDrawn: {

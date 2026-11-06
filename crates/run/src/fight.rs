@@ -224,7 +224,7 @@ impl Tally {
 /// at the end; `damage_dealt` every `damage` event's amount on a target the enemy controls, its hero
 /// or a unit; `healing_done` every `healed` event's on `human`'s side; `cards_drawn` `human`'s draws
 /// after the opening deal; `turns` the game's. A setup the engine refuses, or a game with no result,
-/// is refused, and so is a game whose decks name a custom card: a run plays none.
+/// is refused.
 pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String> {
     // The fold's JSON is `createGame`'s plus its `log` (as the browser's `fold` reads it), so every
     // setup field the record carries, the deck marks among them, reaches the game unnamed here.
@@ -235,9 +235,8 @@ pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction
         Some(catalog) => catalog,
         None => registered_catalog(),
     };
-    // `create_recorded_game` panics on a setup it refuses: refuse it here instead. A run gives the
-    // game no custom card, so a deck that names one is refused as a card the game was not given.
-    validate_setup(&options, catalog, &CardDefs::new(), SetupKind::Recorded).map_err(|e| e.to_string())?;
+    // `create_recorded_game` panics on a setup it refuses: refuse it here instead.
+    validate_setup(&options, catalog, SetupKind::Recorded).map_err(|e| e.to_string())?;
 
     let mut tally = Tally::default();
     let start = create_recorded_game(&options);
