@@ -45,14 +45,28 @@ function seriesOf(answer: unknown): SeriesView | null {
   return typeof (series as { id?: unknown }).id === "string" ? (series as SeriesView) : null;
 }
 
-/** Poll on mount and, once a game ends, while its series continues; ignore optional-banner failures. */
-export function useMatchSeries(token: string, matchId: string, gameOver: boolean): SeriesView | null {
+/**
+ * Poll on mount and, once a game ends, while its series continues; ignore optional-banner failures.
+ * R3213000: while the match socket holds a pushed view (`MatchSnapshot.series`), that is the series and
+ * nothing is read; once it goes back to null (the socket dropped) the reads start again.
+ */
+export function useMatchSeries(
+  token: string,
+  matchId: string,
+  gameOver: boolean,
+  pushed: SeriesView | null = null,
+): SeriesView | null {
   const [series, setSeries] = useState<SeriesView | null>(null);
   const [notSeries, setNotSeries] = useState(false);
   const poll = gameOver && series !== null && series.status !== "over";
+  const live = pushed !== null;
 
   useEffect(() => {
-    if (notSeries) return;
+    if (pushed !== null) setSeries(pushed);
+  }, [pushed]);
+
+  useEffect(() => {
+    if (notSeries || live) return;
     let canceled = false;
     const read = (): void => {
       attempt(() => getSeriesForMatch(token, matchId)).then(
@@ -78,9 +92,9 @@ export function useMatchSeries(token: string, matchId: string, gameOver: boolean
       canceled = true;
       stopPolling();
     };
-  }, [token, matchId, gameOver, poll, notSeries]);
+  }, [token, matchId, gameOver, poll, notSeries, live]);
 
-  return notSeries ? null : series;
+  return pushed ?? (notSeries ? null : series);
 }
 
 export function nextStep(series: SeriesView, matchId: string): { href: string; label: string } | null {

@@ -20,6 +20,7 @@ import {
   unlocks,
   wasmBindings,
 } from "../test/fixtures.ts";
+import { expectOnePageTitle } from "../../test/pageTitle.ts";
 import { StartScreen } from "./StartScreen.tsx";
 
 vi.mock("../../wasm/index.ts", async (importOriginal) => ({
@@ -35,6 +36,7 @@ function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
     progress: { unlocks: unlocks(), embers: 0 },
     run: null,
     startedAt: null,
+    timeMs: null,
     start: vi.fn(() => null),
     act: vi.fn(() => null),
     abandon: vi.fn(),
@@ -79,6 +81,14 @@ describe("B14 the modes", () => {
     expect(byId(dungeonTestid.modeCampaign)).toBeDisabled();
     expect(byId(dungeonTestid.modeCampaign)).not.toBeChecked();
     expect(byId(dungeonTestid.campaignNote)).toHaveTextContent("Sign in to play the Campaign: coming with accounts.");
+  });
+});
+
+describe("R3223000 the start screen's title", () => {
+  it("R3223000 the screen has one visible h1, the PageTitle", () => {
+    show();
+    expectOnePageTitle("Dungeon Run");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
   });
 });
 

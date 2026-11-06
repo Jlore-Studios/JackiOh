@@ -589,9 +589,15 @@ pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
 /// R640002: the expected wait is rounded up to the next multiple of this many seconds.
 pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
 /// SPEC §11 R1996000: how long the server keeps the queue readout it counted, in seconds, so the
-/// `SERIES_POLL_SECONDS` polls of every waiting client inside it share one count. Short beside the
+/// polls of every waiting client inside it share one count. Short beside the
 /// `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so a kept answer is never visibly late.
 pub const QUEUE_READOUT_CACHE_TTL_SECONDS: i64 = 5;
+/// SPEC §11 R3207000: how often the lobby's wait re-reads the queue readout, in seconds, after the
+/// read it makes when it opens. Beyond `QUEUE_READOUT_CACHE_TTL_SECONDS`, so every read counts anew,
+/// and well inside the `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so the readout is never visibly
+/// late. The wait's `GET /api/auth/me` read keeps `SERIES_POLL_SECONDS`: it keeps the ticket alive
+/// (R897000), and the readout does not.
+pub const QUEUE_POPULATION_POLL_SECONDS: i64 = 30;
 
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
@@ -838,6 +844,10 @@ pub const MAX_SAVED_TRIOS: usize = 5;
 /// "Midrange Humans (anti-aggro)", short enough for a tab, a list row and a sentence in a message.
 /// Mirrored in `app.settings` (0007).
 pub const DECK_NAME_MAX_LENGTH: usize = 40;
+/// SPEC §9.4, R3212001: the most items one `POST /api/decks/sync` carries, its saves and its
+/// deletions together: every deck and trio a profile can hold saved and deleted in one request, so
+/// one autosave pass always fits. A longer list is 400, running none of it.
+pub const DECK_SYNC_ITEMS_MAX: usize = 2 * (MAX_SAVED_DECKS + MAX_SAVED_TRIOS);
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about fifty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
@@ -924,8 +934,17 @@ pub const SERIES_START_GIVE_UP_SECONDS: i64 = 120;
 /// transition landed, and a series has at most a handful of writers, so three losses in a row is a
 /// storm, not a race worth waiting out.
 pub const SERIES_WRITE_ATTEMPTS: usize = 3;
-/// How often the series screen and the match screen's series banner re-read the series.
+/// How often the series screen and the match screen's series banner re-read the series, the banner
+/// (and the rematch buttons, R3207002) only while no open match socket pushes it (R3213000).
 pub const SERIES_POLL_SECONDS: i64 = 2;
+/// SPEC §11 R3213000: the version of the match socket's post-game frames (`jackioh_shared::host::post_game`);
+/// a client reads only the one it knows and polls otherwise, so a changed shape takes the next number.
+pub const POST_GAME_FRAME_VERSION: u32 = 1;
+/// SPEC §11 R3207001: how often the live-game banner (the landing page's and the practice page's) re-reads
+/// the account for the game it names, in seconds. A game outlasts it by minutes, and a missed tick only
+/// shows the banner a few seconds late; the queue follow keeps `SERIES_POLL_SECONDS` for the ticket's
+/// sake (R897000).
+pub const LIVE_GAME_POLL_SECONDS: i64 = 10;
 /// How long the lobby shows "Match found! Taking you to your game…" before navigating to the
 /// paired game, so the pairing reads as an arrival instead of a silent vanish. A `setStatus`
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render
@@ -1298,6 +1317,11 @@ pub use jackioh_shared::config::{
 };
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
 pub const PACK_PRICE_JLORE: i32 = 100;
+/// SPEC §14.3, R3212000: the most packs one Open all (`POST /api/packs/open-all`) opens. Each pack
+/// writes about seven ledger rows, each carrying its opening's log (tens of KB) as its `ref`, and
+/// the batch binds them all in one statement per ledger, so twenty keeps a statement to a few MB;
+/// a player holding more presses again.
+pub const PACKS_OPEN_ALL_MAX: usize = 20;
 /// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
 /// reach each of its proficiency levels, lowest first (#3013: the first comes in a game or two, the
 /// last after 200 plays, a season's commitment to one card). Level n unlocks stamp n (R3013001).

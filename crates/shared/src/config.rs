@@ -1952,3 +1952,20 @@ pub const QUEST_XP_PER_JLORE: i32 = 50;
 /// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
 /// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
 pub const QUEST_REPLACES_PER_DAY: i64 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// The practice session's numbers (#3099): what its host bounds a move and a hint by, and how many
+// finished games it keeps. `crates/wasm/core`'s `constants` carries them, which the web's practice
+// worker and a Roblox server read, so none restates one.
+// ---------------------------------------------------------------------------------------------
+
+/// Wall-clock safety cap for one decision of the practice AI (`AiOptions.should_stop`): 3 s since the
+/// budget doubled (R2575000). The machine puts it in the `decide` ask (`AiAsk`), and a host
+/// with a clock holds the search to it: the node budget stays the real bound (R2560000).
+pub const PRACTICE_AI_CLOCK_MS: i64 = 3000;
+/// R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn waits
+/// for: a check still running past it gives no hint, so a board whose lines are slow to play out never
+/// holds a click's answer back for long. Put in the `lethal` ask (`LethalAsk`).
+pub const PRACTICE_LETHAL_HINT_CLOCK_MS: i64 = 300;
+/// R768: the finished free games a device keeps for replay, the newest of them.
+pub const PRACTICE_REPLAYS_KEPT: u32 = 10;

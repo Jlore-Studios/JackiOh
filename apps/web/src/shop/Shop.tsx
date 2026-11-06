@@ -124,7 +124,7 @@ export default function Shop({
 
   return (
     <div className="form-card shop-panel" data-testid={shopTestid.panel}>
-      <h3 className="shop-heading">{t("Jlore shop")}</h3>
+      <h2 className="shop-heading">{t("Jlore shop")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.loadError}>

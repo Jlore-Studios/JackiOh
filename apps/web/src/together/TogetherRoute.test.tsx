@@ -13,6 +13,7 @@ import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { UNDO_REPEAT_MS, UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { togetherTestid } from "./testids.ts";
@@ -319,6 +320,12 @@ describe("B54 /together is gated as /play is", () => {
 // B55: friends, requests, blocked, the add form
 
 describe("B55 the friends list", () => {
+  it("R3223000 the page has one visible h1, the PageTitle, and the wordmark is no heading", async () => {
+    await renderPage();
+    expectOnePageTitle("Play together");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+  });
+
   it("B55 lists one row per friend, each with the friend's name#tag", async () => {
     await renderPage();
     const names = rows().map((row) => row.textContent ?? "");

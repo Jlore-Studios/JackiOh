@@ -369,6 +369,12 @@ button.dungeon-run-card:disabled {
   margin: 0;
 }
 
+.dungeon-run-end__time,
+.dungeon-run-end__turns {
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
 .dungeon-run-end__embers {
   font-variant-numeric: tabular-nums;
   font-weight: 700;

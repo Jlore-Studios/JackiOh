@@ -7,6 +7,7 @@ Every value here is a constant named in backticks, never a number (CLAUDE.md rul
 | Constant | What it holds | Where |
 | --- | --- | --- |
 | `PACK_PRICE_JLORE` | The Jlore a card pack costs | [[§14.3]] |
+| `PACKS_OPEN_ALL_MAX` | The most card packs one Open all opens | [[§14.3]] |
 | `PACK_SLOTS` | The slots of a card pack | [[§14.3]] |
 | `PACK_UNOWNED_WEIGHTS` | How a slot's card draw leans toward the cards the account does not own | [[§14.3]] |
 | `TIER_WEIGHT_TOTAL` | The fixed total every tier weight table is out of | [[§14.3]] |
@@ -96,7 +97,7 @@ A cosmetic is an entry of the cosmetics registry, one data file the server and t
 
 ### 14.3 Card packs and the slot roll
 
-There is a card pack for each set that ships ([[R1420]]) and a global card pack, whose pool is every set that ships. Each costs `PACK_PRICE_JLORE` and holds `PACK_SLOTS` slots. Buying one debits the wallet and adds the pack, unopened, to the account's inventory, in one transaction. Packs also come from set track rewards ([[§14.7]]) and news rewards ([[§14.13]]). Opening a pack rolls every slot and grants what each holds, its pity counters and bars included, in one transaction or not at all.
+There is a card pack for each set that ships ([[R1420]]) and a global card pack, whose pool is every set that ships. Each costs `PACK_PRICE_JLORE` and holds `PACK_SLOTS` slots. Buying one debits the wallet and adds the pack, unopened, to the account's inventory, in one transaction. Packs also come from set track rewards ([[§14.7]]) and news rewards ([[§14.13]]). Opening a pack rolls every slot and grants what each holds, its pity counters and bars included, in one transaction or not at all. Open all opens up to `PACKS_OPEN_ALL_MAX` packs of one kind in one spend: each rolls from a seed of its own on what the pack before it left, exactly as that many openings one after another would, and every grant is written in one transaction whose statements do not grow with the count, or none is ([[R3212000]]).
 
 Every drop of the economy, a card pack slot's, a duplicate's cosmetic and a cosmetic pack slot's ([[§14.6]]), is a **tiered roll** of two draws ([[R1339000]]). The first is the tier: one integer draw below `TIER_WEIGHT_TOTAL` against a table that sets a weight for each tier above the lowest. The lowest tier is the fallback and takes whatever weight is left, `TIER_WEIGHT_TOTAL` less the rest, computed and never stored, so raising one tier takes from the fallback alone. A tier's chance is its weight over `TIER_WEIGHT_TOTAL`: the table is the published odds. A floor is a fallback too: a slot that must be at least some tier rolls the same table, and any result below the floor becomes the floor tier, the tiers above it keeping their own odds. The second draw picks the item within the tier, as the roll's rules say. Every roll goes through one pure function, from the set tiers' weights, the fallback, an optional floor and a draw to a tier, which refuses set weights summing past `TIER_WEIGHT_TOTAL`; each roll's draws are seeded and logged with its opening ([[§14.11]], [[R1339002]]).
 

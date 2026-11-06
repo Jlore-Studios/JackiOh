@@ -19,13 +19,6 @@
   text-align: center;
 }
 
-.tavern.together-screen .together-hero__title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-}
-
 .tavern.together-screen .together-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);

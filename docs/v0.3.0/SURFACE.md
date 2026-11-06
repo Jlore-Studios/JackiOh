@@ -366,7 +366,7 @@ for state, views and events; the server's tests prove it for REST and WebSocket 
 ### 5.2 The state hash
 
 `hash_state(state)` reproduces TS's `hashState` (`packages/engine/src/replay.ts:12-37`) **exactly**,
-because practice saves on players' devices store it (`apps/web/src/practice/core.ts:279` refuses a
+because practice saves on players' devices store it (the practice session, `crates/shared`'s `host/practice`, refuses a
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
@@ -1062,6 +1062,16 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in
   `apps/web/src/game/net.ts` and `src/cards/loadouts.ts`; without them every seat but the viewer's
   draws the defaults.
+- **Post-game frames** (#3213, R3213000): two frames ride beside `portraits` on `/ws/match`, never in
+  `PlayerView`, each built for its seat alone (`jackioh_shared::host::post_game::PostGameFrame`, generated
+  to `apps/web/src/wire/generated/PostGameFrame.ts`). A match in no series sends `{ "type": "rematch",
+  "v", "youOffered", "opponentOffer", "opponentHere", "matchId", "mode" }` (`mode` `"bo1"` or `"random"`,
+  `RematchMode`), the seat's `GET /api/matches/:matchId/rematch` answer; a Conquest game sends
+  `{ "type": "series", "v", "series" }`, the seat's `SeriesView` as `GET /api/matches/:matchId/series`
+  answers it. Each goes after the portraits of every `hello` and attach, and again when the rematch book,
+  a seat's presence or the series changes; `v` is the server's `POST_GAME_FRAME_VERSION` (exported to
+  `serverConfig.ts`), and the client reads only a frame of the version it knows, keeps the newest in its
+  match snapshot and polls neither GET while its open socket has sent one.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
   rematch offers held in memory, finished actors kept in memory through their rematch window (`Registry::reap_finished`), the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.

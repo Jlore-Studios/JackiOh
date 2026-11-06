@@ -9,7 +9,7 @@
 //!
 //! | Record | Key |
 //! | --- | --- |
-//! | not on the board: unplaced (a Raisin, counted but not listed), or a hand-set rating on a strict server (R3074001) | `0` |
+//! | not on the board: unplaced (a Raisin, counted but not listed), a hand-set rating on a strict server (R3074001), or a banned account (R3290000) | `0` |
 //! | Grape, not Jlorious | `SORT_KEY_GRAPE_BASE` + the ladder position |
 //! | Jlorious (R608: a placed person in Mythic Grape, among the top `JLORIOUS_SIZE` by rating) | `SORT_KEY_JLORIOUS_BASE` + the rating in fixed point |
 //!
@@ -47,6 +47,11 @@ pub struct SeasonStanding {
     /// ladder, the percentiles and Jlorious read the rows without it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub hand_set: bool,
+    /// R3290000: the account's `profiles.status` is banned; never serialized when false. A server-side
+    /// mark the standings reads set, no client read carries it. On every server the public ladder, the
+    /// percentiles and Jlorious read the rows without it, until the ban is lifted.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub banned: bool,
 }
 
 /// A standing and the integer a leaderboard sorts it by (see this module).
@@ -65,9 +70,10 @@ pub struct RatingRecord {
     pub sort_key: i64,
 }
 
-/// Whether the public board lists a standing at all: a hand-set rating is left off a strict server's (R3074001).
+/// Whether the public board lists a standing at all: a banned account is left off every server's
+/// (R3290000), a hand-set rating off a strict server's (R3074001).
 pub fn listed(standing: &SeasonStanding, strict: bool) -> bool {
-    !(strict && standing.hand_set)
+    !standing.banned && !(strict && standing.hand_set)
 }
 
 /// A rating in fixed point, `SORT_KEY_RATING_BITS` fractional bits, under `2^50`.
@@ -103,14 +109,15 @@ pub fn record_of(standing: &SeasonStanding, jlorious: bool, strict: bool) -> Rat
 
 /// Whether a season row counts toward the percentiles, Jlorious and the public leaderboard. R640000:
 /// a person's, never a ladder bot's. R3074001: on a strict server (`DEV_STRICT`), not a hand-set
-/// rating's either, until it is reset to the one its games earned.
+/// rating's either, until it is reset to the one its games earned. R3290000: nor a banned account's,
+/// on any server, until the ban is lifted.
 pub fn counts(standing: &SeasonStanding, strict: bool) -> bool {
-    !standing.bot && !(strict && standing.hand_set)
+    !standing.bot && listed(standing, strict)
 }
 
 /// The season as the ladder's percentiles and Jlorious read it: the rows that [`counts`] keeps.
 /// R640000: people only, so a ladder bot never takes a Jlorious place from a person; R3074001: nor,
-/// on a strict server, a hand-set rating.
+/// on a strict server, a hand-set rating; R3290000: nor a banned account.
 pub fn standings_of(standings: &[SeasonStanding], strict: bool) -> Vec<Standing> {
     standings
         .iter()

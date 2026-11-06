@@ -63,6 +63,8 @@ import {
   DECK_IMPORT_PREVIEW,
   DECK_IMPORT_SUBMIT,
   DECK_LIST,
+  DECK_LIST_EMPTY,
+  DECK_LIST_EMPTY_NEW,
   DECK_NAME_INPUT,
   DECK_NEW,
   DECK_REDO,
@@ -257,6 +259,19 @@ describe("R2108000 the workshop's empty state", () => {
     );
     fireEvent.click(within(root).getByText("Make a deck"));
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+  });
+
+  it("R3228000 with no deck the rail's list is an empty state with a New deck action, which makes and opens a deck", () => {
+    mount();
+    const words = screen.getByTestId(DECK_LIST_EMPTY);
+    expect(words).toHaveTextContent("No decks yet. Make one, or import a code someone shared.");
+    const root = expectEmptyState(words);
+    fireEvent.click(within(root).getByTestId(DECK_LIST_EMPTY_NEW));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+
+    cleanup();
+    mount({ decks: [savedDeck("a", "Aggro", ONE.slice(0, 3), 1)] });
+    expect(screen.queryByTestId(DECK_LIST_EMPTY)).toBeNull();
   });
 });
 

@@ -39,6 +39,7 @@ import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
 import { guardLeaving } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
+import { PageTitle } from "../../routes/PageTitle.tsx";
 import { useSetting } from "../../settings/store.ts";
 import { runFightSetup } from "../../wasm/index.ts";
 import type { Dungeon } from "../store.ts";
@@ -204,7 +205,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     return (
       <Shell variant="lobby">
         <div className="practice-stage">
-          <h1 className="practice-stage__title">{t("The fight stopped")}</h1>
+          <PageTitle>{t("The fight stopped")}</PageTitle>
           <p className="notice" data-testid={fightTestid.failed} role="alert">
             {t(state.failure ?? "Something went wrong while the game was running.")}
           </p>
@@ -300,6 +301,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
         enemy: <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />,
       }}
       resultActions={resultActions}
+      // R2972000: a lost fight ends the run for good (§15.6), so the Concede dialog says so.
+      concedeBody={t("Your opponent wins, and the whole run ends here for good.")}
     />
   );
 

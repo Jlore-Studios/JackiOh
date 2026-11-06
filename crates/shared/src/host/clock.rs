@@ -309,8 +309,9 @@ impl MatchClock {
 
     /// R1563006: a sequence's first question (streak 0, a prompt id this clock has not started on) arms
     /// a fresh window; a later question keeps it; none open clears it. A question met mid-sequence with
-    /// no window (a rebuilt host) arms a fresh one, as the turn clock does.
-    fn sync_sequence(&mut self, view: &ClockView, now: i64, fx: &mut Fx) {
+    /// no window (a rebuilt host) arms a fresh one, as the turn clock does. [`MatchClock::sync`] runs it with
+    /// the rest; the practice session (`host::practice`, which keeps no turn clock) runs it alone.
+    pub fn sync_sequence(&mut self, view: &ClockView, now: i64, fx: &mut Fx) {
         let Some(question) = &view.sequence else {
             self.sequence.cancel(TimerKey::Sequence, fx);
             self.sequence_first = None;
@@ -548,6 +549,7 @@ impl MatchClock {
             | TimerKey::BotAim { .. }
             | TimerKey::BotEmote { .. }
             | TimerKey::BotLongTurn { .. }
+            | TimerKey::BotLeaves { .. }
             | TimerKey::DuosMulligan
             | TimerKey::DuosRound
             | TimerKey::DuosPrompt { .. }

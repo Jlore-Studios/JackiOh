@@ -7,14 +7,14 @@
 #
 #   plan      names the export's seed base (`learned-<catalog>-<date>-<run>`, never a gate's or the dev
 #             set's, R1006002) from main as it is when the run starts, so the export plays the newest
-#             patch however long the run waited; a new set stops an export still on the one before
-#             (learn-set.yml). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
+#             patch however long the run waited; a new patch or set (not a micro) stops an export
+#             still early on the version before (learn-set.yml). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
 #             is closed and the run goes on, so a stuck promotion never holds the lane. One whose
 #             checks are green or running is left to merge, and the export goes ahead beside it: by the
 #             time this run gates, about 40 hours on, it has merged (and when it has not, this run's
 #             pass waits behind it, as its artifact)
-#   export    selfplay.yml, called: `games` games in `shards` jobs, one after another on the local
-#             runner, in five rounds; none with `export_run`, which retrains on an earlier run's
+#   export    selfplay.yml, called: `games` games in `shards` jobs, two at a time on the local
+#             runner's two halves, in five rounds; none with `export_run`, which retrains on an earlier run's
 #             export (its artifacts are kept 30 days)
 #   retrain   on main: training/ml/retrain.sh over the shards that finished (a shard the PC lost costs
 #             the export its games, not the run), its positions folded by the export's own
@@ -44,9 +44,10 @@
 #             same export starts (at most LEARN_CHAIN_MAX in a row), on main as it is by then.
 #
 # Every job runs on the owner's PC, the local runner (`jackioh-selfplay-local`, bot/machine/README.md,
-# The local runner), and none on GitHub's runners. It takes one job at a time, and only while the PC is
-# otherwise idle, so a run's 100,000 games take about 40 hours of an idle PC (about 2,500 games an hour
-# on its six CPUs) and a run may take several days. A job no runner takes in 24 hours (the PC off,
+# The local runner), and none on GitHub's runners. It takes two jobs at a time, one on each half of the
+# PC (gather's half goes to gather while it plays a new patch), and only while the PC is otherwise
+# idle. A run's 100,000 games took about 40 hours of an idle PC on one six-CPU runner (about 2,500
+# games an hour), somewhat less on both halves, and a run may take several days. A job no runner takes in 24 hours (the PC off,
 # asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next run comes
 # anyway (training/learn.md, Running unattended).
 #

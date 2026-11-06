@@ -54,4 +54,8 @@ emotesMuted: boolean,
 /**
  * Each bot home's plan for the end of a ranked match, and when its linger ends.
  */
-botRematch: PerPlayer<Linger | null>, botRematchAnswered: PerPlayer<boolean>, botRematchReplying: PerPlayer<boolean>, botOfferTimer: PerPlayer<number | null>, botReplyTimer: PerPlayer<number | null>, botReplyStakes: PerPlayer<number>, };
+botRematch: PerPlayer<Linger | null>, botRematchAnswered: PerPlayer<boolean>, botRematchReplying: PerPlayer<boolean>, botOfferTimer: PerPlayer<number | null>, 
+/**
+ * R3213000: the timer that marks the end of each bot home's linger, when its absence is told.
+ */
+botLeaveTimer: PerPlayer<number | null>, botReplyTimer: PerPlayer<number | null>, botReplyStakes: PerPlayer<number>, };

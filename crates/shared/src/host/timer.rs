@@ -50,6 +50,8 @@ pub enum TimerKey {
     BotEmote { player: PlayerId },
     /// R645: the wait that makes a person's turn long to the bot at this home seat.
     BotLongTurn { player: PlayerId },
+    /// R3213000: the end of the post-game linger of the bot at this home seat (R639000).
+    BotLeaves { player: PlayerId },
     /// Duos' (`host::duos`, S6): the one mulligan clock over the four open mulligans (B2, R268).
     DuosMulligan,
     /// Duos': the clock of the current round (B38).

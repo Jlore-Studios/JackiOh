@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { BackLink, navTestid } from "./nav.tsx";
 
 beforeEach(() => {
@@ -21,7 +22,7 @@ afterEach(() => {
 describe("R3218000 BackLink's slots", () => {
   it("R3218000 the nav holds Back, then the line (the title, then the extras), then the end group with the gear last", () => {
     render(
-      <BackLink showWallet={false} title={<h1>Screen</h1>}>
+      <BackLink showWallet={false} title="Screen">
         <button type="button">Extra</button>
       </BackLink>,
     );
@@ -42,6 +43,13 @@ describe("R3218000 BackLink's slots", () => {
     const end = Array.from((slots[2] as HTMLElement).querySelectorAll("[data-testid]"));
     expect(end.at(-1)).toBe(screen.getByTestId("settings-open-nav"));
     expect(end.map((node) => node.getAttribute("data-testid"))).toEqual(["language-nav", "settings-open-nav"]);
+  });
+
+  it("R3223000 the bar's title is the PageTitle, the only h1, first in the line", () => {
+    render(<BackLink showWallet={false} title="Screen" />);
+
+    const line = screen.getByRole("navigation").querySelector(".screen-nav__line");
+    expect(line?.firstElementChild).toBe(expectOnePageTitle("Screen"));
   });
 
   it("R3218000 a bar with no title and no extras has no line, and the end group follows Back", () => {
