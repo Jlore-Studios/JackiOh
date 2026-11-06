@@ -34757,7 +34757,9 @@
           "provider": "claude-4"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-06T11:22:46Z",
         "every": 5,
+        "findings": 0,
         "head": "718dcedda95758450c96da1fddfd94e73b5dd59c",
         "issue": 3206,
         "merged_at": "2026-11-06T10:53:38Z",
@@ -34770,12 +34772,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:12eff379-1793962526",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42206434816",
         "sha": "db9d2dfab90659de50fad5877f096ed85b2f9f42",
         "started_at": "2026-11-06T10:56:10Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch (part 2 of 3): share a read already in flight, and keep a fresh answer for a short window",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 96
