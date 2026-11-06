@@ -502,7 +502,10 @@ pool as data) moves in its second part.
 Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
 `Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
 offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
-lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
+lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). Each version is a level
+of a variant's ladder (`level`, `ladder`, `levels_below`, `is_next`), each ladder held by `level_problems`
+(R3015000, R3015001); a retired row owns the levels it maps to (`implied_by`, R3015006), and a card's pick is read
+as the level it names (`level_of_pick`, `worn_level`, R3015005). A cosmetic's offer is
 judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
 (`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
 `cosmetics` module re-exports all of it, and `crates/server/tests/export_cosmetics.rs` writes the registry into
@@ -529,7 +532,8 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
   an opening replays however the live catalog or registry has moved (R1301003). A call across the boundary that
   leaves them out gets the compiled-in ones.
 - **Every draw is the roll's, in the order its docs state (R1339002):** `Rng::new(seed, 0)`, the slot tiers first
-  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's and the pick's. A replayed
+  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's, the out-of-order draw's
+  where a level past the next is open (R3015003) and the pick's. A replayed
   opening grants the same.
 - **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
   (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one),

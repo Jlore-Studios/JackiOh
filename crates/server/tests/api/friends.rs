@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use jackioh_server::app::App;
+use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{FRIEND_REQUESTS_PER_HOUR, MAX_FRIENDS, PRESENCE_TTL_MS, TERMS_VERSION};
 use jackioh_server::db::store::StartMatchInput;
 
@@ -697,21 +697,30 @@ mod b47_status {
         let app = empty_test_app().await;
         let ada = account(&app, 1, "Ada").await;
         let bea = account(&app, 2, "Bea").await;
-        befriend(&app, &ada, &bea).await;
-        // The terms changed since Bea agreed: she holds no agreement to the version in force.
+        // The terms changed since Bea agreed: she holds no agreement to the version in force. Taken
+        // before she befriends, since every signed-in request counts as presence (R3210000).
         fake(&app)
             .lock()
             .await
             .tables
             .terms_acceptances
             .retain(|row| row.profile_id != bea.id);
+        befriend(&app, &ada, &bea).await;
 
         heartbeat(&app, &bea).await;
         assert_eq!(
             friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
             "offline"
         );
-        assert!(fake(&app).lock().await.tables.social.presence.is_empty());
+        assert!(
+            !fake(&app)
+                .lock()
+                .await
+                .tables
+                .social
+                .presence
+                .contains_key(&bea.id)
+        );
 
         // Once she agrees, her next beat counts.
         let (status, body) = api(
@@ -905,6 +914,14 @@ mod b47_status {
         for friend in [&cyd, &dov, &eli, &fay] {
             befriend(&app, &ada, friend).await;
         }
+        // R3210000: Fay's accept counted; she has said nothing for longer than the TTL.
+        fake(&app)
+            .lock()
+            .await
+            .tables
+            .social
+            .presence
+            .insert(fay.id.clone(), now_ms() - PRESENCE_TTL_MS - 1);
         live_match(&app, &uuid(510), &cyd, &rex, false).await;
         let trio = json!({
             "name": "T",

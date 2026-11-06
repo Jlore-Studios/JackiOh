@@ -7,6 +7,7 @@ import { CATALOG } from "@jackioh/cards";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
+import { FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { FX_DRAWN_MOTIFS, type DrawnMotif } from "../../../apps/web/src/fx/motifs/names.ts";
 import {
   galleryCardEvents,
@@ -14,6 +15,7 @@ import {
   galleryPlayOf,
   type GalleryCardPlay,
 } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import {
   baseView,
   card,
@@ -146,25 +148,30 @@ describe("R2803000 the gallery captures every motif mid-flight", () => {
   after(() => {
     Cypress.config("defaultCommandTimeout", 4_000);
   });
+  // The effects speed `shift` sets is the settings store's; put back after every test, a failed one included.
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
   // R2803000: `shift` proves its own visual. Its entry plans 20 ghosts + 20 canvas bursts
   // (unit), the director fires all of them in the browser (20 ghosts mount), but the canvas
   // stays dark there: firing 40 cues in one tick forces a full-board reflow per cue in software
   // rendering, stalling the frame loop ~700 ms, so the short-lived bursts age out before a frame
   // paints them (measured with rAF + canvas-pixel + director-play/fire timelines in headless
   // Chromium; see the audit report §7). The ghosts are the motif's signature — every moved
-  // card's path walked in the DOM (board.ts) — so `shift` asserts them, at 0.25× effects speed
-  // so their window outlasts the command queue, and through `watchGhosts` so a runner that stalls
-  // the page past even that window still counts the ghosts it mounted; the tier test proves every
-  // cue's timing.
+  // card's path walked in the DOM (board.ts) — so `shift` asserts them, at the slowest effects
+  // speed (FX_SPEED_MIN) so their window outlasts the command queue, and through `watchGhosts` so
+  // a runner that stalls the page past even that window still counts the ghosts it mounted; the
+  // tier test proves every cue's timing. The speed is set through the store (`setFxSettings`):
+  // `getFxSettings()` keeps its first read in memory, so a value written to storage after an
+  // earlier test had loaded it was never read. The ghosts kept their full-speed 200 ms, mounting
+  // all twenty outlasted it, and a frame removed them unseen.
   for (const motif of FX_DRAWN_MOTIFS) {
     if (motif === "shift") {
       it(`R2803000 shift renders mid-flight`, () => {
         cy.viewport(1280, 720);
-        cy.window({ timeout: 20_000 }).then((win) => {
-          win.localStorage.setItem(
-            "jackioh.fx.v1",
-            JSON.stringify({ speed: 0.25, intensity: "normal", motion: "system", bigMoments: "full" }),
-          );
+        cy.then(() => {
+          setFxSettings({ speed: FX_SPEED_MIN });
         });
         const { defId, play } = cardForMotif(motif);
         const view = fullBoardView();
@@ -179,9 +186,6 @@ describe("R2803000 the gallery captures every motif mid-flight", () => {
           expect(ghostsSeen(win), "the ghosts of the moved cards mount").to.be.greaterThan(0);
         });
         cy.screenshot(`gallery-motif-shift-mid`, { capture: "viewport", overwrite: true });
-        cy.window().then((win) => {
-          win.localStorage.removeItem("jackioh.fx.v1");
-        });
       });
       continue;
     }

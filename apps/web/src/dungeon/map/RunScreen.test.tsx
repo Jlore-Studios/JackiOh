@@ -11,6 +11,7 @@ import type {
   RunAction,
   RunContent,
   RunNode,
+  RunNodeKind,
   RunPhase,
   RunState,
   RunStats,
@@ -116,6 +117,11 @@ function statsWith(values: Partial<RunStats> = {}): RunStats {
 
 function node(kind: RunNode["kind"], extra: Partial<RunNode> = {}): RunNode {
   return { kind, enemy: null, event: null, artifact: null, ...extra };
+}
+
+/** The node's drawn icon (#3229): an SVG tagged with its kind, in place of a system emoji. */
+function expectIcon(button: HTMLElement, kind: RunNodeKind): void {
+  expect(button.querySelector(`svg[data-icon="${kind}"]`)).toBeInTheDocument();
 }
 
 function enemy(name: string): RunNode["enemy"] {
@@ -253,21 +259,21 @@ describe("B27 the map shows the current act and only the next row goes", () => {
     // The whole first act: rows 0–3, each node's kind with its icon and label.
     for (const row of [0, 1, 2, 3]) expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
     expect(screen.queryByTestId(dungeonMapTestid.mapRow(4))).not.toBeInTheDocument();
-    const kinds: [number, number, string, string][] = [
-      [0, 0, "Fight", "⚔️"],
-      [0, 1, "Elite", "🛡️"],
-      [1, 0, "Shop", "🛒"],
-      [1, 1, "Campfire", "🔥"],
-      [1, 2, "Event", "❓"],
-      [1, 3, "Shrine", "⛩️"],
-      [1, 4, "Chest", "🎁"],
-      [2, 0, "Campfire", "🔥"],
-      [3, 0, "Mini-boss", "🐲"],
+    const kinds: [number, number, string, RunNodeKind][] = [
+      [0, 0, "Fight", "fight"],
+      [0, 1, "Elite", "elite"],
+      [1, 0, "Shop", "shop"],
+      [1, 1, "Campfire", "campfire"],
+      [1, 2, "Event", "event"],
+      [1, 3, "Shrine", "shrine"],
+      [1, 4, "Chest", "chest"],
+      [2, 0, "Campfire", "campfire"],
+      [3, 0, "Mini-boss", "miniBoss"],
     ];
-    for (const [row, col, label, icon] of kinds) {
+    for (const [row, col, label, kind] of kinds) {
       const held = within(screen.getByTestId(dungeonMapTestid.mapNode(row, col)));
       expect(held.getByText(label)).toBeInTheDocument();
-      expect(screen.getByTestId(dungeonMapTestid.mapNode(row, col))).toHaveTextContent(icon);
+      expectIcon(screen.getByTestId(dungeonMapTestid.mapNode(row, col)), kind);
     }
     // The fight's name, the boss's preseeded relic, and where the player stands.
     expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).toHaveTextContent("Cave Troll");
@@ -300,11 +306,11 @@ describe("B27 the map shows the current act and only the next row goes", () => {
     expect(screen.queryByTestId(dungeonMapTestid.mapCurrent)).not.toBeInTheDocument();
     const ghost = screen.getByTestId(dungeonMapTestid.mapNode(4, 1));
     expect(ghost).toHaveTextContent("Ghost");
-    expect(ghost).toHaveTextContent("👻");
+    expectIcon(ghost, "ghost");
     expect(ghost).toBeEnabled();
     const boss = screen.getByTestId(dungeonMapTestid.mapNode(6, 0));
     expect(boss).toHaveTextContent("Final boss");
-    expect(boss).toHaveTextContent("👑");
+    expectIcon(boss, "boss");
     expect(boss).toBeDisabled();
     expect(screen.getByTestId(dungeonMapTestid.mapArtifact(6, 0))).toHaveTextContent("Boss Crown");
     expect(screen.getByTestId(dungeonMapTestid.mapNode(5, 0))).toBeDisabled();

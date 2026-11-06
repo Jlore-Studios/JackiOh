@@ -29,7 +29,7 @@ function serve(): void {
         },
       };
     }
-    if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: { incoming: [], outgoing: [] } };
+    if (call.method === "GET" && call.path === "/api/social") return { status: 200, body: { incoming: [], outgoing: [], unread: {} } };
     if (call.method === "POST" && call.path === "/api/presence") return { status: 204 };
     return undefined;
   });

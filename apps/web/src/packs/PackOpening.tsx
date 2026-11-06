@@ -293,6 +293,12 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}
                     </p>
+                    {/* R3015003: an out-of-order pull granted the levels below it too. */}
+                    {cosmetic !== null && (cosmetic.below?.length ?? 0) > 0 ? (
+                      <p className="pack-slot__below" data-testid={packTestid.below(index)}>
+                        {t("and every level below it")}
+                      </p>
+                    ) : null}
                     {/* R1833000: a cosmetic's own rarity, never its card's (R1333000), a chase marked. */}
                     {cosmetic === null ? null : (
                       <p className="pack-slot__cosmetic-rarity">

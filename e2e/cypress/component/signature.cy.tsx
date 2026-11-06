@@ -8,6 +8,10 @@
 //
 // The component runner serves no /fonts, so each hand is checked as the face the stylesheet asks for
 // (its computed family), not as glyphs; the file and licence of each are cards/signature.test.tsx's.
+//
+// R3015005 (#3015): each card's retired Mythic full art is picked as before, which names Full art's signed level, and
+// R3015002 that level signs over the card's own full art, moving by its own motion: no picture or motion of the
+// Signature look's own (R2949000's is gone) stands behind the name.
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, FACE_ASPECT, faceModel } from "../../../apps/web/src/cards/index.ts";
@@ -21,6 +25,7 @@ import {
 } from "../../../apps/web/src/cards/FullArtSignature.tsx";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import { SIGNATURE_FACES, signatureFaceOf } from "../../../apps/web/src/cards/signatureFaces.ts";
+import { VERSION_FULL_ART_SIGNED_ID } from "../../../apps/web/src/cards/versions.ts";
 import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/settings/index.ts";
 
 type CardDef = (typeof CATALOG)[string];
@@ -183,6 +188,12 @@ describe("R2715002 the signature signs fast and lands hard, in its card's hand",
     cy.mount(<Mythics />);
     cy.get(".cf-signature", { timeout: SETTLE_TIMEOUT_MS }).should("have.length", CARDS.length);
     cy.document().then((doc) => {
+      // R3015005, R3015002: Full art's signed level, over the card's own picture.
+      for (const { id, why } of CARDS) {
+        const cf = must(doc.querySelector<HTMLElement>(`[data-face="${id}"] > .cf`), `${id}'s face`);
+        expect(cf.getAttribute("data-level"), why).to.eq(VERSION_FULL_ART_SIGNED_ID);
+        expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture") ?? null, `${why}: no picture of its own`).to.eq(null);
+      }
       // Two hands, each its set's.
       const families = CARDS.map(({ id, why }) => {
         const text = must(signatureOf(doc, id).querySelector(".cf-signature-ink > text"), `${id}'s name`);
