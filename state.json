@@ -13411,15 +13411,8 @@
       "verdict_rounds": 1
     },
     "3207": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42206556598",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-06T11:33:28Z",
-        "until": "2026-11-06T12:03:28Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13431,10 +13424,9 @@
         "reason": "planned on sonnet",
         "trail": "9-architecture.md | cut -c1-420 | head -30; grep -n \\\"^## \\\\|^### \\\" spec/09-architecture.m\u2026\n- Bash: {\"command\": \"sed -n 62p spec/09-architecture.md | grep -o \\\".\\\\{250\\\\}R1996000.\\\\{250\\\\}\\\"; sed -n 62p spec/09-architecture.md | grep -o \\\".\\\\{200\\\\}SERIES_POLL.\\\\{200\\\\}\\\"; sed -n 68p spec/09-archit\u2026\n- Bash: {\"command\": \"sed -n 62p spec/09-architecture.md | grep -o \\\".\\\\{600\\\\}R1996000.\\\\{900\\\\}\\\"; echo ----; sed -n 68p spec/09-architecture.md | grep -o \\\"Rematch\\\\..\\\\{900\\\\}\\\"\", \"description\": \"Spec \\u0\u2026\n- Bash: {\"command\": \"sed -n 62p spec/09-architecture.md | grep -o \\\"client shows the queue.\\\\{900\\\\}\\\"; echo; sed -n 68p spec/09-architecture.md | grep -o \\\".\\\\{300\\\\}poll.\\\\{300\\\\}\\\"; sed -n 68p spec/09-arc\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nlines = open(\\\"spec/09-architecture.md\\\", encoding=\\\"utf8\\\").read().split(\\\"\\\\n\\\")\\nfor n in (62, 68, 55):\\n line = lines[n-1]\\n for key in (\\\"client shows the queu\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nlines = open(\\\"spec/09-architecture.md\\\", encoding=\\\"utf8\\\").read().split(\\\"\\\\n\\\")\\nl = lines[67]\\nprint(len(l)); print(l[-900:])\\nprint(\\\"=====\\\")\\nl = lines[61]\\n\u2026\n- Bash: {\"command\": \"cat spec/README.md | sed -n 1,80p | grep -n \\\"ruling\\\\|Adding\\\" | head; ls spec/rulings | grep -c .; grep -n \\\"section\\\\|sections\\\\|\\u00a7\\\" spec/rulings/R3205000.md | head -3; sed -n 1,\u2026\n- Bash: {\"command\": \"grep -rn \\\"CI_RUNS_CACHE_TTL_SECONDS\\\\|QUEUE_READOUT_CACHE_TTL_SECONDS\\\" --include=*.md --include=*.ts --include=*.tsx --include=*.json --include=*.rs --include=*.sh . -l 2>/dev/null | g\u2026\n- Bash: {\"command\": \"sed -n 1585,1600p crates/server/tests/export_config.rs 2>/dev/null | head -5; grep -n \\\"QUEUE_READOUT\\\" apps/web/src/wire/serverConfig.ts; grep -n \\\"ENDED_AFTER\\\\|QUEUE_\\\" apps/web/src/w\u2026\n- Bash: {\"command\": \"grep -n \\\"rematch\\\\|Rematch\\\\|population\\\\|live-game\\\\|useLiveGame\\\\|R3205000\\\\|R3206000\\\\|friends panel\\\\|FriendsButton\\\" apps/web/README.md | cut -c1-260 | head -30\", \"description\": \"w\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/together/FriendsButton.tsx | head -0; sed -n 200,357p apps/web/src/together/FriendsButton.tsx; grep -n \\\"getMe\\\\|auth/me\\\" apps/web/src/together/*.test.tsx | he\u2026\n- Bash: {\"command\": \"sed -n 1,140p apps/web/src/together/FriendsButton.test.tsx; grep -n \\\"in a game\\\\|finish your\\\\|currentMatchId\\\\|state.me\\\" apps/web/src/together/FriendsButton.test.tsx | head -20\", \"des\u2026\n- Bash: {\"command\": \"sed -n 690,780p apps/web/src/together/FriendsButton.test.tsx; grep -n \\\"me.test\\\\|username\\\" apps/web/src/together/FriendsButton.test.tsx | sed -n 1,20p\", \"description\": \"FriendsButton i\u2026\n- Bash: {\"command\": \"sed -n 1,35p apps/web/src/routes/decks.test.tsx; sed -n 56,135p apps/web/src/routes/decks.test.tsx\", \"description\": \"decks.test.tsx header and helpers\"}\n- Bash: {\"command\": \"grep -rln \\\"config.rs\\\" crates/server/tests crates/tools/src 2>/dev/null | head; grep -rn \\\"QUEUE_ENDED_AFTER_READS\\\" crates --include=*.rs -l | head; grep -rn \\\"unused\\\\|pub const\\\" cra\u2026\n- Bash: {\"command\": \"grep -rn \\\"banner\\\\|liveGame\\\\|live-game\\\" e2e/cypress e2e/support --include=*.ts -il | head; grep -rn \\\"landingTestid.*[Bb]anner\\\\|resume\\\\|returnToGame\\\\|live-game\\\" apps/web/src/auth/\u2026\n- Bash: {\"command\": \"grep -n -i \\\"banner\\\" e2e/cypress/e2e/37-rematch.cy.ts e2e/cypress/e2e/19-queue-modes-and-series.cy.ts e2e/cypress/e2e/13-practice-vs-ai.cy.ts e2e/cypress/e2e/05-reconnect.cy.ts e2e/supp\u2026\n- Bash: {\"command\": \"sed -n 362,392p e2e/cypress/e2e/19-queue-modes-and-series.cy.ts\", \"description\": \"e2e spec 19 banner section\"}\n- Bash: {\"command\": \"sed -n 503,514p apps/web/README.md; grep -n \\\"Rematch.tsx\\\\|routes/play.tsx\\\\|routes/decks.tsx\\\\|SERIES_POLL\\\\|polls\\\" apps/web/README.md | cut -c1-200 | head -30; sed -n 1,60p apps/web/\u2026\n- Bash: {\"command\": \"grep -n \\\"POLL_MS\\\\|describe(\\\\| it(\\\" apps/web/src/net/liveGame.test.tsx | cut -c1-200; sed -n 20,60p apps/web/src/net/liveGame.test.tsx\", \"description\": \"liveGame.test.tsx structure an\u2026\n- Bash: {\"command\": \"sed -n 50,75p spec/README.md | cut -c1-900; for f in spec/pending/*.md; do echo \\\"$f $(grep -c '^\\\\*\\\\*\\\\[\\\\[R' $f)\\\"; done | awk '$2>1' | head\", \"description\": \"Spec README Adding a rul\u2026\n- Bash: {\"command\": \"cat -A spec/pending/3135.md | cut -c1-80 | head -8\", \"description\": \"Pending file paragraph separators\"}\n- Bash: {\"command\": \"grep -n \\\"paths.play\\\\|playTestid\\\" apps/web/src/routes/shell-gate.test.tsx | head; grep -n \\\"export function meBody\\\\|export function signIn\\\\|export function at\\\\b\\\\|export function at\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3207/.bot-plan.md\", \"content\": \"# Draft plan for #3207 (planner notes; final plan = last message)\\n\\n## Design decided (all code read; plan is being w\u2026\n- Bash: {\"command\": \"sed -n 140,190p apps/web/src/game/net.ts; sed -n 313,342p apps/web/src/net/liveGame.test.tsx; sed -n 485,492p apps/web/README.md; sed -n 466,470p apps/web/README.md\", \"description\": \"pol\u2026\n- Bash: {\"command\": \"grep -n \\\"R2630000\\\\|R3206000\\\" spec/09-architecture.md spec/10-engine-guide.md | cut -c1-80; python3 -I - <<'EOF'\\nlines = open(\\\"spec/09-architecture.md\\\", encoding=\\\"utf8\\\").read().sp\u2026\n- Bash: {\"command\": \"sed -n 280,290p spec/10-engine-guide.md | cut -c1-1500; git log -3 --format=%s -- spec/10-engine-guide.md | head -3\", \"description\": \"Read \\u00a710 text on the gate and kept reads\"}\n- Bash: {\"command\": \"awk 'NR<=286 && /^##+ /{h=$0; n=NR} END{print n\\\": \\\"h}' spec/10-engine-guide.md; git status --short | head\", \"description\": \"Section heading above the gate paragraph\"}\n- Bash: {\"command\": \"cat tsconfig.base.json | head -40; grep -n \\\"pairTargetOf\\\" -r apps/web/src --include=*.ts --include=*.tsx | head\", \"description\": \"TS strictness flags\"}\n- said: ## Goal Four changes, per the issue's four numbered items. Each cadence change gets a server constant and a ruling. 1. Rematch: the status is polled once per match id per tab, however many components show it. 2. Queue population: `/play`'s wait reads the readout on mount, then every new `QUEUE_POPU\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-06T10:57:12Z",
       "owner_why": "it plans it",
@@ -13447,9 +13439,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-05T16:42:03Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42206556598",
+      "run_id": "pending:626d355b-1793965271",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T10:57:12Z",
+      "started_at": "2026-11-06T11:41:54Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15800,9 +15792,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T11:40:56Z",
+    "at": "2026-11-06T11:41:54Z",
     "url": "",
-    "what": "revise #3268 on claude-8"
+    "what": "build #3207 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T11:20:43Z",
