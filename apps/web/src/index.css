@@ -458,6 +458,30 @@ h3,
   }
 }
 
+/* No highlighting on a phone but in the chat: a tap flashes nothing (a phone greys anything with an
+   onclick, #2015), and under a finger a press selects no text and opens no callout, so a long press
+   on a card or a button never lights the page. The chat panel gives all three back
+   (`together/together.css`), so a message can be selected and copied, and every field keeps its
+   text, since iOS will not type into or place a caret in one that cannot be selected. The tap
+   highlight is set at every pointer, since only touch browsers draw one; the rest wait for a
+   coarse pointer, so a narrow desktop window still selects. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (pointer: coarse) {
+  html {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  :where(input, textarea, [contenteditable]:not([contenteditable="false"])) {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
 :where(button, input, a):focus-visible {
   outline: 2px solid var(--radiant);
   outline-offset: 2px;

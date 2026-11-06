@@ -1,5 +1,5 @@
-// B3.1 rule 6, R383, R64: what a held zone's icon says it is held for. #2015: a zone the player
-// cannot pick draws no tap highlight.
+// B3.1 rule 6, R383, R64: what a held zone's icon says it is held for. #2015: a phone highlights
+// nothing but the chat, a zone included.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -123,12 +123,21 @@ describe("#2015 a zone the player cannot pick draws no tap feedback", () => {
     expect(onClick).toHaveBeenCalledWith({ on: "zone", side: "you", row: "units", lane: 1 });
   });
 
-  it("#2015 board.css drops the tap highlight on a zone that is not legal, and only there", () => {
-    // The zone keeps its onClick (#757), so React gives its div an onclick and a phone greys it on
-    // a tap; the rule keys on the `data-legal="false"` the zone always writes.
-    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "board.css"), "utf8");
-    expect(css).toMatch(/\.zone:not\(\[data-legal="true"\]\)\s*\{[^}]*-webkit-tap-highlight-color:\s*transparent/);
-    expect(css).toMatch(/\.zone:not\(\[data-legal="true"\]\) > \*\s*\{[^}]*-webkit-tap-highlight-color:\s*initial/);
-    expect(css).not.toMatch(/\.zone\[data-legal="true"\][^{]*\{[^}]*tap-highlight/);
+  it("#2015 a phone highlights nothing but the chat: no tap flash, no text selection, no callout", () => {
+    // The zone keeps its onClick (#757), so React gives its div an onclick and a phone would grey it
+    // on a tap; index.css turns the flash off for the whole page, and under a finger the selection
+    // and the long-press callout too. The chat panel alone gives all three back.
+    const read = (path: string): string => readFileSync(join(dirname(fileURLToPath(import.meta.url)), path), "utf8");
+    const index = read("../index.css");
+    expect(index).toMatch(/\nhtml\s*\{\s*-webkit-tap-highlight-color:\s*transparent;\s*\}/);
+    const coarse = index.slice(index.indexOf("@media (pointer: coarse) {\n  html {"));
+    expect(coarse).toMatch(/^@media \(pointer: coarse\) \{\s*html \{[^}]*-webkit-touch-callout:\s*none;[^}]*-webkit-user-select:\s*none;[^}]*\buser-select:\s*none;/);
+    expect(coarse).toMatch(/:where\(input, textarea[^)]*\)\)?\s*\{[^}]*\buser-select:\s*text;/);
+    const chat = read("../together/together.css").match(/\n\.chat-panel\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(chat).toMatch(/-webkit-tap-highlight-color:\s*initial;/);
+    expect(chat).toMatch(/-webkit-touch-callout:\s*default;/);
+    expect(chat).toMatch(/\buser-select:\s*text;/);
+    // Nothing on the board gives the flash back (a zone's children once took `initial`).
+    expect(read("board.css")).not.toMatch(/tap-highlight-color:\s*initial/);
   });
 });
