@@ -17140,15 +17140,8 @@
       }
     },
     "3329": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42311617385",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-06T23:40:31Z",
-        "until": "2026-11-07T00:10:31Z"
-      },
       "handoff": {
         "at": "2026-11-06T23:29:58Z",
         "family": "claude",
@@ -17158,33 +17151,32 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"cost-gem\", \"path\": \"/home/runner/work/_temp/work/item-3329/apps/web/src\", \"output_mode\": \"content\", \"glob\": \"*.css\"}\n- Bash: {\"command\": \"ls apps/web/src/cards/ | head -80 && git log --oneline -3\", \"description\": \"List cards dir and recent commits\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3329/apps/web/src/cards/cards.css\", \"offset\": 300, \"limit\": 90}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3329/apps/web/src/game/board.css\", \"offset\": 1225, \"limit\": 40}\n- Bash: {\"command\": \"cd apps/web/src && sed -n 1320,1335p game/board.css; sed -n 3140,3155p game/board.css; sed -n 1625,1650p cards/cards.css; sed -n 1820,1850p cards/cards.css; sed -n 10,40p cards/glitch.cs\u2026\n- Grep: {\"pattern\": \"cost-gem\", \"path\": \"/home/runner/work/_temp/work/item-3329\", \"output_mode\": \"files_with_matches\", \"glob\": \"!{node_modules,target,.git}/**\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3329 && grep -rln \\\"cards.css\\\\|\\\\.css?raw\\\\|readFileSync.*\\\\.css\\\" apps/web/src apps/web/*.ts e2e 2>/dev/null | grep -v node_modules | head -30\", \"d\u2026\n- Bash: {\"command\": \"grep -n \\\"cost-gem\\\" apps/web/src/typography.test.ts apps/web/src/cards/cosmetics.css apps/web/src/cards/glitch.css apps/web/src/cards/cosmetics.test.tsx apps/web/src/cards/glitch.test.t\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/cards/cosmetics.test.tsx; sed -n 1170,1230p apps/web/src/cards/cosmetics.test.tsx\", \"description\": \"Look at cosmetics test css helpers\"}\n- Bash: {\"command\": \"sed -n 1,50p apps/web/src/cards/borders.test.ts; grep -n \\\"cardsCss\\\\|readFileSync\\\" apps/web/src/cards/*.test.ts* | head -50\", \"description\": \"Look at borders test and cardsCss uses\"}\n- Bash: {\"command\": \"sed -n 50,140p apps/web/src/cards/borders.test.ts; wc -l apps/web/src/cards/borders.test.ts; grep -n \\\"ruleBody\\\" apps/web/src/cards/CardFace.test.tsx | head -8; grep -n \\\"cost-gem\\\\|cos\u2026\n- Bash: {\"command\": \"grep -rn \\\"shadow\\\" apps/web/src/typography.test.ts | head; sed -n 150,170p apps/web/src/typography.test.ts; grep -n \\\"drop-shadow\\\\|box-shadow\\\" apps/web/src/cards/cards.css | sed -n 1,\u2026\n- Bash: {\"command\": \"sed -n 1350,1375p apps/web/src/cards/CardFace.test.tsx; sed -n 1480,1500p apps/web/src/cards/CardFace.test.tsx; sed -n 325,375p apps/web/src/cards/CardFace.test.tsx; sed -n 70,82p apps/w\u2026\n- Bash: {\"command\": \"ls docs/ | head -50; ls .github/pull_request_template.md 2>/dev/null; grep -rn \\\"patches\\\\|Patch:\\\" docs/issues-and-patches.md | head -30\", \"description\": \"Check docs and patches convent\u2026\n- Bash: {\"command\": \"grep -rln \\\"box-shadow\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"box-shadow: none\\\" apps/web/src/cards/*.css | head -5; ls e2e/cypress/component | head -\u2026\n- Bash: {\"command\": \"ls crates/cards/patches/pending 2>/dev/null | head; grep -n \\\"Patch\\\\|patch\\\" docs/polish/6-cards.md | head -5; sed -n 1,40p apps/web/src/cards/foil.test.ts\", \"description\": \"Check pendi\u2026\n- Bash: {\"command\": \"ls apps/web/src/cards/*.css apps/web/src/cards/*/*.css; grep -rn \\\"boxShadow\\\\|box-shadow\\\" e2e/cypress/component/card-faces.cy.tsx e2e/cypress/e2e/17-card-showcase-and-hovers.cy.ts | he\u2026\n- Bash: {\"command\": \"sed -n 430,460p apps/web/src/cards/CardFace.test.tsx; grep -n \\\"cardsCss\\\\b\\\" apps/web/src/cards/TermTip.test.tsx | head -3; sed -n 150,175p apps/web/src/cards/TermTip.test.tsx; cat apps\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards && node -e '\\nconst fs=require(\\\"fs\\\"),path=require(\\\"path\\\");\\nconst files=[...fs.readdirSync(\\\".\\\").filter(f=>f.endsWith(\\\".css\\\")).map(f=>f),...[\\\"inspect\\\",\\\"ar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3329 && sed -n 10,30p apps/web/package.json; ls apps/web/src/wasm/pkg 2>/dev/null | head -3; sed -n 1,30p apps/web/src/test/setup.ts | head -30\", \"de\u2026\n- Bash: {\"command\": \"grep -n \\\"readSheet\\\" -B3 -A22 apps/web/src/test/setup.ts | sed -n 1,70p; grep -rln \\\"readSheet\\\" apps/web/src | head -5\", \"description\": \"Inspect readSheet helper\"}\n- Bash: {\"command\": \"grep -n \\\"readSheet\\\" apps/web/src/cards/dormant.test.tsx apps/web/src/cards/keywordVisuals.test.tsx | head -6\", \"description\": \"See readSheet usage\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3329/.bot-plan.md\", \"content\": \"# Draft plan #3329 (planner notes)\\n\\nFound: apps/web/src/cards/cards.css:324 `.cf .cost-gem` resets border/border-rad\u2026\n- said: ## Goal The card face's cost gem (hand preview, inspect view, almanac) stops drawing a square shadow behind its hexagon. `.cf .cost-gem` in `apps/web/src/cards/cards.css` gets `box-shadow: none;` beside its other resets. A web unit test pins that reset so it can't be dropped again. The hexagon's ow\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-06T23:23:44Z",
       "owner_why": "it plans it",
       "pending_at": "2026-11-06T23:25:28Z",
       "pending_by": "squishy-squooby",
-      "pending_request": true,
+      "pending_request": false,
       "planned_at": "2026-11-06T23:40:23Z",
       "planned_by": "`claude-6` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-6",
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-6",
-      "run_id": "42311617385",
+      "run_id": "pending:db3e9371-1794008473",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T23:23:44Z",
+      "started_at": "2026-11-06T23:41:47Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T23:31:22Z",
+    "at": "2026-11-06T23:41:47Z",
     "url": "",
-    "what": "plan #3220 on claude-3"
+    "what": "build #3329 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T23:28:55Z",
