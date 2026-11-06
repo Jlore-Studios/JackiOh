@@ -18148,9 +18148,11 @@
         "by": "`claude` (medium)",
         "sha": "35b522fc3e20ca88f58ced81d79980f1077b1e09"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T01:31:54Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-06T03:43:59Z",
         "family": "claude",
@@ -18160,6 +18162,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -30; grep -n \\\"What we collect\\\" -r apps/web/src --include=*.ts --include=*.tsx | head; sed -n 340,400p apps/web/src/static-pages.test.ts\"}\n- Bash: {\"command\": \"sed -i 's/\\\"section h3, section p, section li\\\"/\\\"section h2, section h3, section p, section li\\\"/' apps/web/src/static-pages.test.ts && git diff --stat && pnpm exec vitest run --project\u2026\n- Bash: {\"command\": \"grep -rn \\\"section h3\\\\|privacy-collect\\\\|legal.*h3\\\" apps/web/src e2e --include=*.ts --include=*.tsx | grep -v \\\"^apps/web/src/routes/privacy.tsx\\\" | head; pnpm --dir apps/web typecheck\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one page-title treatment for every menu screen\"} --> ## What changed Every menu screen now names itself with one `PageTitle`. It is the screen's only `h1`, set in `--font-display` at `--type-3xl`, and it sits in the top bar's title slot (`BackLink`'s `t\u2026"
       },
+      "interruptions": 0,
       "issue": 3223,
       "kind": "review",
       "live": "reviewing",
