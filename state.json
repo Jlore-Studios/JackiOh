@@ -16366,6 +16366,7 @@
       "run_id": "42255434055",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 110,
       "started_at": "2026-11-06T16:46:03Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -32865,9 +32866,33 @@
         "title": "Patch: phone board: empty zones keep a card shape, keyword and Activate badges inside their own zone's top-left",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-3",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "7c20d931bb9ef1b6e8f09985b04e5fc6a0afc04a",
+        "issue": 3290,
+        "merged_at": "2026-11-06T17:53:47Z",
+        "n": 110,
+        "pr": 3312,
+        "queued_at": "2026-11-06T17:53:47Z",
+        "sha": "8f9f0dcbb788e803e08340b995815e4273ae1dd4",
+        "status": "queued",
+        "title": "Patch: a banned account leaves the ranked leaderboard, the percentiles and Jlorious",
+        "tries": 0
       }
     ],
-    "count": 109
+    "count": 110
   },
   "statistics": {
     "at": "2026-11-06T17:51:29Z"
