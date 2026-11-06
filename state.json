@@ -15836,8 +15836,14 @@
       "interruptions": 0,
       "issue": 3017,
       "kind": "revise",
+      "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-4",
+      "paused": {
+        "at": "2026-11-06T16:17:34Z",
+        "interrupt": "usage",
+        "provider": "claude-4"
+      },
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-06T15:47:50Z",
@@ -15845,6 +15851,7 @@
       "requeued": {
         "c5dea7bb43580bdac9ebead09af276162397a84c": "053ba7eee01ca4fa6cdb83207efedf97dcc7b3bf"
       },
+      "round_tier": "strong",
       "run_id": "42246836665",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15869,6 +15876,7 @@
       "started_at": "2026-11-06T15:50:46Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
