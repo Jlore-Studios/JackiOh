@@ -15904,15 +15904,8 @@
       }
     },
     "3305": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42222098064",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-06T13:35:51Z",
-        "until": "2026-11-06T14:05:51Z"
-      },
       "difficulty_by": {
         "at": "2026-11-06T13:35:38Z",
         "difficulty": "medium",
@@ -15929,9 +15922,8 @@
         "reason": "planned on sonnet",
         "trail": "a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a com\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/build.log; do sleep 5; done; tail -8 /tmp/build.log | cut -c1-200\", \"description\": \"Wait until the background build finishes\", \"timeout\": 900000, \"run_in_bac\u2026\n- Bash: {\"command\": \"sed -n 1864,1960p crates/server/tests/api/practice.rs\", \"description\": \"Read the last ruling test in practice.rs\"}\n- Bash: {\"command\": \"tail -2 /tmp/build.log | cut -c1-160\", \"description\": \"Check build progress\"}\n- Monitor: {\"command\": \"until grep -q \\\"^real\\\" /tmp/build.log; do sleep 10; done; tail -6 /tmp/build.log | cut -c1-200\", \"description\": \"server test binary build finishing\", \"timeout_ms\": 600000}\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -q \"^real\" /tmp/build.log; do sleep 10; done; tail -6 /tmp/build.log\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3305/140b0e25-eef8-451a-a668-73e9e175c415/tasks/bg7nubtoh.output 2>/dev/null | tail -5; tail -2 /tmp/build.log | cut -c1-160; ps au\u2026\n- Bash: {\"command\": \"timeout 590 sh -c 'until grep -q \\\"^real\\\" /tmp/build.log; do sleep 10; done'; tail -6 /tmp/build.log | cut -c1-200\", \"description\": \"Wait for the build to finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"( time cargo test -p jackioh-server --test server -- api::practice::r --list --format terse ) 2>&1 | grep -v \\\"^$\\\" | tail -40\", \"description\": \"List tests in the practice rulings group\"}\n- Bash: {\"command\": \"( time cargo test -p jackioh-server --test server -- api::practice::r ) > /tmp/run-all.log 2>&1; tail -12 /tmp/run-all.log | cut -c1-200\", \"description\": \"Run the whole practice rulings \u2026\n- Bash: {\"command\": \"( time cargo test -p jackioh-server --test server -- --exact api::practice::r1304001_a_paid_practice_game_moves_the_quests_by_what_it_did ) 2>&1 | tail -8 | cut -c1-200; ( time cargo tes\u2026\n- Bash: {\"command\": \"sed -n 1,200p Cargo.toml | grep -n \\\"profile\\\" -A6; cat .cargo/config.toml 2>/dev/null\", \"description\": \"Read workspace Cargo.toml profile section and cargo config\"}\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server -- --exact api::practice::r1304001_a_paid_practice_game_moves_the_quests_by_what_it_did > /tmp/one.log 2>&1 &\\nsleep 20; for i in 1 2 3 4 5 6; \u2026\n- Bash: {\"command\": \"sed -n 525,600p crates/server/tests/api/practice.rs\", \"description\": \"Read r1304001 test body\"}\n- Bash: {\"command\": \"cat /sys/fs/cgroup/cpu.max 2>&1; nproc; python3 -c \\\"import os;print(len(os.sched_getaffinity(0)))\\\"; tail -3 /tmp/one.log | cut -c1-160\", \"description\": \"Check CPU quota in this sandbox\u2026\n- Bash: {\"command\": \"cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us 2>&1 | head -1\\nBIN=$(ls -t target/debug/deps/server-* 2>/dev/null | grep -v '\\\\.d$' | head -1); echo $BIN\\n$BIN --exact api::practice::r1304001_a\u2026\n- Bash: {\"command\": \"BIN=/home/runner/work/JackiOh/JackiOh/target/debug/deps/server-7efc45761ed2419f; ls -la $BIN | head -1\\n$BIN --exact api::practice::r1304001_a_paid_practice_game_moves_the_quests_by_what\u2026\n- Bash: {\"command\": \"echo \\\"T=$CARGO_TARGET_DIR\\\"; cargo metadata --no-deps --format-version 1 2>/dev/null | python3 -c \\\"import sys,json;print(json.load(sys.stdin)['target_directory'])\\\"; du -sh --exclude=t\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/scratch && rsync -a --exclude=.git --exclude=node_modules --exclude=target --exclude=.bot-plan.md ./ /tmp/scratch/ && cd /tmp/scratch && cat >> crates/server/tests/api/prac\u2026\n- tool error: Permission to use Bash with command mkdir -p /tmp/scratch && rsync -a --exclude=.git --exclude=node_modules --exclude=target --exclude=.bot-plan.md ./ /tmp/scratch/ && cd /tmp/scratch && cat >> crate\u2026\n- Bash: {\"command\": \"BIN=/home/runner/work/JackiOh/JackiOh/target/debug/deps/server-7efc45761ed2419f\\n$BIN --exact api::practice::r1304001_a_paid_practice_game_moves_the_quests_by_what_it_did > /tmp/one3.log\u2026\n- Bash: {\"command\": \"sed -n 1,62p crates/server/tests/api/practice.rs; grep -rn \\\"pub struct PracticeSetup\\\" -B4 crates/server/src | head -12\", \"description\": \"Read practice.rs imports and PracticeSetup deri\u2026\n- Bash: {\"command\": \"BIN=/home/runner/work/JackiOh/JackiOh/target/debug/deps/server-7efc45761ed2419f\\n( time $BIN api::practice:: --skip api::practice::r --skip an_honest_win_pays --skip a_paid_claim_answers\u2026\n- Bash: {\"command\": \"which gdb perf strace ltrace 2>&1 | head; \", \"description\": \"Check for debugging tools\"}\n- Bash: {\"command\": \"BIN=/home/runner/work/JackiOh/JackiOh/target/debug/deps/server-7efc45761ed2419f\\n( time taskset -c 0 $BIN --exact api::practice::r1304001_a_paid_practice_game_moves_the_quests_by_what_it\u2026\n- Bash: {\"command\": \"grep -rn \\\"honest_win\\\\|WIN_SEEDS\\\\|2223\\\" --include=*.md --include=*.rs --include=*.toml --include=*.yml . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\" | grep -v \\\"^./spec/\\\" | he\u2026\n- Bash: {\"command\": \"sed -n 178,200p crates/server/tests/api/practice.rs; sed -n 1660,1690p crates/server/tests/api/practice.rs\", \"description\": \"Read Human enum and a plain #[test] example\"}\n- Bash: {\"command\": \"sed -n 63,112p crates/server/tests/api/practice.rs\", \"description\": \"Read pinned() and setup() helpers\"}\n- Bash: {\"command\": \"grep -rn \\\"register_all\\\" crates/server/tests/support crates/server/src/app.rs crates/cards/src/lib.rs | head; grep -n \\\"pub fn catalog_version\\\" -B2 -A8 crates/cards/src/lib.rs | head -\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3305/.bot-plan.md\", \"content\": \"# Draft plan #3305 (planner notes) \\u2014 final shape\\n\\n## Measured (local, 4 cores, built server test binary, engine\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the fix is one test-support file in crates/server/tests/ (no engine rules, no AI, no cross-crate contract, no migration, about 1 file).\"} --> ## Goal `rust (test server practice rulings)` must finish well under 5 minutes,\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-06T13:01:00Z",
       "owner_why": "it plans it",
@@ -15942,18 +15934,18 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-4",
-      "run_id": "42222098064",
+      "run_id": "pending:7d7cc884-1793972336",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T13:01:00Z",
+      "started_at": "2026-11-06T13:39:47Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T13:01:00Z",
+    "at": "2026-11-06T13:39:47Z",
     "url": "",
-    "what": "plan #3305 on claude-4"
+    "what": "build #3305 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T13:24:19Z",
