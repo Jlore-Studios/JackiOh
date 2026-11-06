@@ -18350,21 +18350,13 @@
     "what": "plan #3017 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-06T03:29:45Z",
+    "at": "2026-11-06T03:48:09Z",
     "notes": [
-      "#3253: its turn came (it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
-      "delivered plan #3267 on claude-1 (run 42154922212): planned",
-      "delivered review #3268 on claude-3 (run 42154823873): approved",
-      "delivered review #3265 on claude-8 (run 42153627934): approved",
-      "delivered revise #3068 on claude-3 (run 42147242454): built",
-      "delivered build #3227 on claude-8 (run 42144348227): built",
-      "started review #3068 on claude-3 (run 42157609198)",
-      "started review #3271 on claude-8 (run 42157698943)",
-      "started build #3267 on claude-1 (run 42157782894)",
-      "started review #3250 on claude-1 (run 42157860894)",
-      "started revise #3253 on claude-7 (run 42157956173)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered revise #3259 on claude-4 (run 42151044890): approved",
+      "delivered build #3223 on claude-7 (run 42144461055): built",
+      "started review #3272 on claude-7 (run 42159100368)",
+      "started plan #3017 on claude-4 (run 42159183780)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19070,7 +19062,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T03:29:45Z",
+  "loop_tick": "2026-11-06T03:48:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
