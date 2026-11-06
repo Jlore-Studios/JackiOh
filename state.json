@@ -18242,11 +18242,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-06T06:39:14Z",
+        "at": "2026-11-06T07:33:29Z",
         "difficulty": "hard",
-        "provider": "claude-7",
-        "tier": "medium",
-        "why": "Rule 1: it removes an engine effect and a prompt-hook branch from crates/engine/src/ (effects/fuse.rs, effects/counters.rs, prompts.rs), though no card, wire type or other crate changes behavior."
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule 1, engine rules: it removes an effect verb and a prompt answerer from crates/engine/src (effects/fuse.rs, effects/counters.rs, prompts.rs)"
       },
       "failures": 0,
       "forced": false,
