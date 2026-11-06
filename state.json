@@ -15903,6 +15903,8 @@
       }
     },
     "3304": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T11:41:54Z",
@@ -15916,8 +15918,11 @@
         "trail": "pps/web/src/routes/account-reads.test.tsx <<'EOF'\\n// R3207003: a screen reads the account once. `/decks` and `/play` are driven through\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; for i in $(seq 1 55); do if pgrep -f build-wasm.sh >/dev/null; then sleep 10; else break; fi; done; tail -5 /tmp/wasm.log; ls apps/web/src/wasm\u2026\n- Bash: {\"command\": \"sleep 100; tail -3 /tmp/wasm.log; ls /home/runner/work/_temp/work/item-3207/apps/web/src/wasm/pkg 2>/dev/null | head -3\"}\n- tool error: <tool_use_error>Blocked: sleep 100 followed by: tail -3 /tmp/wasm.log ls /home/runner/work/_temp/work/item-3207/apps/web/src/wasm/pkg head -3. To wait for a condition, use Monitor with an until-loop \u2026\n- Monitor: {\"command\": \"until ! pgrep -f build-wasm.sh >/dev/null; do sleep 5; done; tail -3 /tmp/wasm.log\", \"description\": \"wait for the wasm build to finish\", \"timeout_ms\": 600000}\n- tool error: tail in '/tmp/wasm.log' was blocked. For security, Claude Code may only read the end of files from the allowed working directories for this session: '/home/runner/work/_temp/work/item-3207'.\n- Monitor: {\"command\": \"until ! pgrep -f build-wasm.sh >/dev/null; do sleep 5; done; echo done\", \"description\": \"wait for the wasm build to finish\", \"timeout_ms\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index(\\\"## State\\\")\\nb=s.index(\\\"## Goal\\\")\\nnew='''## State\\n\\nRun 2 (sonnet, buil\u2026\n- Monitor: {\"command\": \"until ! pgrep -f build-wasm.sh >/dev/null; do sleep 5; done; echo done\", \"description\": \"wait again for the wasm build\", \"timeout_ms\": 600000}\n- Read: {\"file_path\": \"/tmp/wasm.log\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; timeout 110 pnpm exec eslint apps/web/src/routes/Rematch.tsx apps/web/src/routes/play.tsx apps/web/src/net/gate.ts apps/web/src/net/liveGame.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; timeout 115 pnpm exec eslint apps/web/src/routes/Rematch.test.tsx apps/web/src/routes/play.test.tsx apps/web/src/net/liveGame.test.tsx apps/web\u2026\n- Monitor: {\"command\": \"until ! pgrep -f build-wasm.sh >/dev/null; do sleep 5; done; echo done\", \"description\": \"wait for wasm build (third watch)\", \"timeout_ms\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; ps aux | grep -E \\\"wasm|rustc|cargo|wasm-bindgen|wasm-opt\\\" | grep -v grep | awk '{print $3, $11, $12, $13, $14, $15}' | head\"}\n- Monitor: {\"command\": \"until [ -f apps/web/src/wasm/pkg/jackioh_wasm.js ] && ! pgrep -f build-wasm.sh >/dev/null; do sleep 3; done; echo ready\", \"description\": \"wait until the wasm pkg exists\", \"timeout_ms\": 6\u2026\n- Monitor: {\"command\": \"until [ -f apps/web/src/wasm/pkg/jackioh_wasm.js ] && ! pgrep -f build-wasm.sh >/dev/null; do sleep 3; done; echo ready2\", \"description\": \"second wait for the wasm pkg\", \"timeout_ms\": 60\u2026\n- Monitor: {\"command\": \"until [ -f apps/web/src/wasm/pkg/jackioh_wasm.js ] && ! pgrep -f build-wasm.sh >/dev/null; do sleep 3; done; echo ready3\", \"description\": \"third wait for the wasm pkg\", \"timeout_ms\": 600\u2026\n- Read: {\"file_path\": \"/tmp/wasm.log\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207/apps/web; ls src/wasm/pkg | head -3; timeout 600 pnpm exec vitest run src/routes/Rematch.test.tsx src/net/liveGame.test.tsx src/routes/decks.tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207/apps/web; timeout 600 pnpm exec vitest run src/routes/play.test.tsx src/together/FriendsButton.test.tsx 2>&1 | tail -60\", \"timeout\": 620000}\n- said: Now check the key tests discriminate: temporarily revert main.tsx's hand-down and the Rematch sharing.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207/apps/web; cp src/main.tsx /tmp/main.tsx.bak; sed -i 's|<PlayRoute token={account.token} me={account.me} />|<PlayRoute token={account.token} />|'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; grep -n '\\\"typecheck\\\"' apps/web/package.json; (cd apps/web && timeout 600 pnpm typecheck 2>&1 | tail -20); cargo fmt --check 2>&1 | tail -20\",\u2026\n- said: Typecheck and fmt clean. Now spec check and clippy.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; (timeout 600 cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -15) \", \"timeout\": 620000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; (timeout 590 cargo jackioh spec check 2>&1 | tail -15)\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; git rev-parse --verify origin/main 2>&1 | head -2; (timeout 300 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15)\", \"timeout\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207/apps/web; grep -rln \\\"SERIES_POLL_SECONDS\\\\|RematchWatcher\\\\|RematchButtons\\\\|PlayRoute\\\\|DecksRoute\\\\|useLiveGame\\\\|FriendsButton\\\" src --inclu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; timeout 590 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/car\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; (cargo jackioh patches check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -3); git status --short\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; grep -rln \\\"QUEUE_ENDED_AFTER_READS\\\" --include=*.md --include=*.ts --include=*.rs --include=*.json . 2>/dev/null | grep -v node_modules | grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3207; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index(\\\"## State\\\")\\nb=s.index(\\\"## Goal\\\")\\nnew='''## State\\n\\nRun 2 (sonnet, buil\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one rematch poll, slower queue-population and live-game polls, one account read per screen\"} --> ## What changed This is part 3 of tracker #3201. It removes polls that duplicated each other or ran faster than their data changes. 1. **Rematch.** The tab \u2026"
       },
       "issue": 3207,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-06T12:58:16Z",
         "from_run": "42212166771",
         "gates": [
           {
@@ -16009,7 +16014,11 @@
         "source": "build",
         "until": "2026-11-06T13:26:51Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-06T12:56:51Z",
+      "run_id": "pending:e8277f0c-1793969857",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16028,6 +16037,9 @@
         "provider": "claude-7",
         "run": "42212166771"
       },
+      "started_at": "2026-11-06T12:58:16Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16041,9 +16053,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T12:45:01Z",
+    "at": "2026-11-06T12:58:16Z",
     "url": "",
-    "what": "revise #3272 on claude-7"
+    "what": "review #3304 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-06T12:40:21Z",
