@@ -18635,11 +18635,8 @@
     "what": "revise #3272 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-06T09:24:29Z",
-    "notes": [
-      "delivered review #3298 on claude-1 (run 42193609565): approved",
-      "delivered review #3296 on claude-8 (run 42191628076): approved"
-    ],
+    "at": "2026-11-06T09:35:37Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19344,7 +19341,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T09:24:29Z",
+  "loop_tick": "2026-11-06T09:35:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
