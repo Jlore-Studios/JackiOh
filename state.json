@@ -15672,7 +15672,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-06T08:57:44Z",
-      "run_id": "pending:be8b87d1-1793969966",
+      "run_id": "42221961672",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
