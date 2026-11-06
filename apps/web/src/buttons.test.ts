@@ -110,8 +110,9 @@ const stated = (body: string, pattern: RegExp): number => [...body.matchAll(patt
 const UNROLED: Record<string, number> = {
   // Google's and Roblox's own sign-in buttons, drawn to their brands' rules.
   "auth/auth.css": 7,
-  // The collection's strip and tiles: their pressed, equipped and hovered states (the tabs/segmented issue).
-  "collection/collection.css": 11,
+  // The collection's strip and tiles: their pressed, equipped and hovered states (the tabs/segmented issue),
+  // and a variant ladder's next rung, its dashed teal edge.
+  "collection/collection.css": 12,
   // The dev bar's owed and pressed toggles.
   "duos/duos.css": 2,
   // An open modifier badge's edge (`button.modifier-badge[data-open]`).
