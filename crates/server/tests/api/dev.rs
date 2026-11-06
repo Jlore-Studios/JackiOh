@@ -468,7 +468,7 @@ fn offered_pairs<'a>(registry: &'a [Cosmetic], cards: &'a [String]) -> Vec<(&'a 
 }
 
 #[tokio::test]
-async fn r2725001_dev_fill_grants_each_version_on_every_offered_card() {
+async fn r2725001_r3017000_dev_fill_grants_each_version_on_every_offered_card() {
     let (app, dev, _other) = dev_app().await;
     let cards = collectable(&app);
     let registry = shipped().expect("the registry parses");
