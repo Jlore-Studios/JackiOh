@@ -122,9 +122,25 @@ line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer 
 `data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
 root that clips them, so the one-screen rule holds. Over them the blocks' layer draws the JackiOh
 mark, still, in a dark halo (`skeleton.css`), but in a shell panel, which the logo heads. `main.tsx`'s `Loading` takes `skeleton` for the
-same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+same drawing. A route that waits before it can draw its screen draws that screen's own frame around the
+skeleton, not a plain page: `/decks` does so through `game/deckbuilder/WorkshopFrame.tsx`, which the loaded
+workshop draws too, so the bar (Back, the title, the gear) and the background stay put and only the body changes
+when the read lands (R3228000). Still text: the deck builder's win-rate line and the chat's and the replays' "show
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
-boards' "Joining …" panels.
+boards' "Joining …" panels, and, each for its reason:
+
+- A button's or field's own busy word ("Checking…" and "Starting…" on a button, "Show older games" and "Show
+  earlier messages" while they load, the username field's inline "Checking…"): a label or a field's status,
+  not a wait for a panel.
+- The deck history popover's "Loading…" and "No versions kept yet": the popover sizes itself to its words,
+  which a full-width skeleton or empty state would stretch.
+- One line inside a panel that already has content: the account's "No finished matches yet" and "No season
+  best yet" (the figures above say it), the leaderboard's "No Jlorious players yet this season" (one section
+  among the tiers, whose height spec 46 measures), the stats' "No … yet" sub-lines, the trio editor's slot
+  "No cards yet." and the chat's "No messages yet" row.
+- An option's text: "No other decks yet" and "No friends to invite yet".
+- A card face's "No pieces yet", and the accessibility statement's and the invite page's sentences, which are
+  prose of the page and not a panel's empty.
 
 A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
 the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
