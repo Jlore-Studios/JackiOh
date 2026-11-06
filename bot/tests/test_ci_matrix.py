@@ -27,7 +27,7 @@ _spec.loader.exec_module(matrix)
 JOBS = [
     "engine rules", "engine rules 2", "engine rules 3", "engine", "engine golden", "cards lib",
     "cards", "server", "server api", "server practice", "server practice rulings", "ai", "ai slow",
-    "luau", "tools fuzz", "tools duos, selfplay", "tools, wasm",
+    "tools fuzz", "tools duos, selfplay", "tools, wasm",
 ]
 
 RULES = ("-p jackioh-engine --features jackioh-engine/testkit --test {} "
@@ -79,7 +79,6 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual(jobs["cards"]["binaries"], "jackioh-cards cards")
         self.assertEqual(jobs["ai"]["binaries"], "jackioh-ai ai ai_slow")
         self.assertEqual({name for name, job in jobs.items() if job["doc"]}, {"engine", "cards", "ai"})
-        self.assertEqual({name for name, job in jobs.items() if job["luau"]}, {"luau"})
         self.assertEqual({(job["shard"], job["shards"]) for job in jobs.values()}, {(1, 1)})
         self.assertEqual(jobs["tools, wasm"]["test"].split(" -- ")[1],
                          "--skip fuzz:: --skip selfplay:: --skip positions::")

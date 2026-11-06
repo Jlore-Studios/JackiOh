@@ -32,7 +32,6 @@ pub mod counter_warning;
 pub mod crater;
 pub mod credit;
 pub mod cry_trigger;
-pub mod custom;
 pub mod damage;
 pub mod draw;
 pub mod draw_complete;

@@ -853,7 +853,7 @@ pub const CATALOG_NUMBER_SET_STRIDE: i32 = 1000;
 
 /// SPEC §11 R255, R339, R1410, R3114000: a set's offset in a version 2 deck or trio code, its place in
 /// the catalog order (`CATALOG_SETS`, the set table's order) times `CATALOG_NUMBER_SET_STRIDE`, or
-/// `None` for a set the catalog does not order (Boss, Boss-X, Custom). Meditative's offset was the
+/// `None` for a set the catalog does not order (Boss, Boss-X). Meditative's offset was the
 /// next thousand in catalog order (R1420), and so was Meditative+'s after it (v0.3.15, issue #1187,
 /// R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
 /// Stinkyscape's (issue #2204); a set's row is appended to the table and never moved, so none moves

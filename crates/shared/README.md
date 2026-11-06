@@ -23,9 +23,7 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first, `loadout`
-   the next: a binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its
-   `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them, with no list to edit. A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -60,10 +58,10 @@ static. Two things hold it, as in the other pure crates:
 - `Cargo.toml` takes `serde`, `serde_json` (also a saved deck's cosmetics in the practice session, which only the
   page reads), `indexmap`, the engine, the AI (the host machine asks it who owes a move), the cards (the cosmetics
   registry judges an offer against the shipped catalog; the practice session names a kept game's catalog as they do),
-  the run (a dungeon run's fight report, R2706000) and, behind the off-by-default `ts` feature, `ts-rs`. It never
-  takes `jackioh-luau`, and none of them takes it.
-- `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
-  the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
+  the run (a dungeon run's fight report, R2706000) and, behind the off-by-default `ts` feature, `ts-rs`. None of
+  them takes it.
+- `clippy.toml` is the other four pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
+  the five the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
 
 A transition never reads a clock: it takes `now`, and the host passes the time it read.
@@ -246,7 +244,7 @@ Notes for a host:
 
 The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
 `checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
-holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`). The practice session's calls ride the same
+holds it to the functions it names. The practice session's calls ride the same
 export (below).
 
 The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
@@ -551,8 +549,7 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
 ```
 
 The calls are `openCardPack`, `openCosmeticPack`, `fillBar` and `levelReward`; the answers are `opened`,
-`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it. Not in the
-Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it.
 
 The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
 pool as data) moves in its second part.
@@ -618,8 +615,7 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
 
 The calls are `openCardPack`, `openCosmeticPack`, `fillBar`, `levelReward`, `payGame`, `payXp`,
 `startingRewards`, `topUpQuests`, `replaceQuest`, `giveQuest` and `completeQuest`; the answers are `opened`,
-`cosmeticOpened`, `filled`, `reward`, `paid`, `granted` (the writes, in order), `toppedUp` and `refused`. `boundary::apply` is the one function behind it. Not in the
-Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+`cosmeticOpened`, `filled`, `reward`, `paid`, `granted` (the writes, in order), `toppedUp` and `refused`. `boundary::apply` is the one function behind it.
 
 ## `src/deck.rs`
 

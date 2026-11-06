@@ -41,7 +41,7 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 - **Fights.** In `RunPhase::Fight` the caller starts the game from `run_fight_setup` (the human P1, the
   enemy P2), plays it against `run_enemy`, and sends the `RunAction::FightOver` that `run_fight_report`
   folds from the finished game: the hero's health at the end and what the score reads (damage dealt,
-  healing done, cards drawn, turns). A game whose decks name a custom card is refused: a run plays none.
+  healing done, cards drawn, turns).
 
 ## What it does not do yet
 

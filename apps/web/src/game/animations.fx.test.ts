@@ -166,7 +166,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
-  scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "core-001", message: "cry failed on line 3: boom" },
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
@@ -307,8 +306,6 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   secretChosen: null,
   secretRevealed: null,
   predicted: null,
-  // #915 (R915004): the card's fade is the notice; no effect decorates it.
-  scriptFailed: null,
   // #831's patch (R831003): KY's Papaya's curve runs from cell to cell across the board.
   curveDrawn: "curve",
   autopilotEngaged: "banner",
@@ -459,7 +456,6 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
   secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
   predicted: ["jk-badge-fade", 400, "hero-<side>"],
-  scriptFailed: ["jk-badge-fade", 400, "card-<instanceId>"],
   curveDrawn: ["jk-curve-drawn", 700, "board"],
   autopilotEngaged: ["jk-banner", 600, "turn-banner"],
   awakened: ["jk-radiant-pulse", 400, "card-<instanceId>"],
@@ -495,9 +491,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 29 rows without an effect have no fx value at all", () => {
+  it("B1 the 28 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(29);
+    expect(bare).toHaveLength(28);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

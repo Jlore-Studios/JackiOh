@@ -8,7 +8,7 @@ publish.workspace = true
 
 [dependencies]
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
-# the cards, the AI and the run, never jackioh-luau, and none of them takes it. The host machine's and the
+# the cards, the AI and the run, and none of them takes it. The host machine's and the
 # loadout's tests play whole games under the real catalog, which these dependencies carry.
 jackioh-engine = { workspace = true }
 # The host machine asks the AI who owes a move (`ai_to_act`) and reads a panic's text (`panic_message`).
