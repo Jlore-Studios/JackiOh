@@ -117,9 +117,8 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
         body: { friends: state.friends, incoming: state.incoming, outgoing: state.outgoing, blocked: state.blocked },
       };
     }
-    if (method === "GET" && path === "/api/challenges") return { status: 200, body: { incoming: [], outgoing: [] } };
+    if (method === "GET" && path === "/api/social") return { status: 200, body: { incoming: [], outgoing: [], unread: {} } };
     if (method === "GET" && path === "/api/replays/shared") return { status: 200, body: { shared: state.shared } };
-    if (method === "GET" && path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
     if (method === "GET" && path.startsWith("/api/chat/")) return { status: 200, body: { messages: [], nextCursor: null } };
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     if (method === "GET" && path === "/api/decks") return { status: 200, body: DECKS };
