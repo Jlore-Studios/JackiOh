@@ -12741,15 +12741,8 @@
       "stop_requested": false
     },
     "3017": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42159183780",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-06T04:24:36Z",
-        "until": "2026-11-06T04:54:36Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12761,10 +12754,9 @@
         "reason": "planned on opus",
         "trail": " \"description\": \"Read the restyle cache helpers in svg.ts\"}\n- Bash: {\"command\": \"grep -rn \\\"OfferSample {\\\" crates apps --include=*.rs | head; grep -rn \\\"sample.percent\\\\|\\\\.percent\\\\b\\\" crates --include=*.rs | grep -v \\\"^crates/shared/src/cosmetics.rs:4[0-9][0-9]:\\\"\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3017/crates/shared/src/cosmetics.rs\", \"offset\": 2365, \"limit\": 85}\n- Bash: {\"command\": \"cat >> /tmp/plan3017/new.py <<'EOF'\\nprint()\\nA = {'night','watercolour','woodcut'}; B = {'neon','stained-glass','tarot'}\\nfor t in ['Unit','Spell']:\\n for want in (A, B):\\n found = [cid\u2026\n- said: No migration is needed for #3017. Appending N new `version-*` entries only needs the registry edit, because every boot upserts the whole registry into `public.cosmetics`. Two server tests hard-code counts or id lists and will break. The per-variant tests from #3050 are the pattern to copy. ## 1. Ho\u2026\n- Bash: {\"command\": \"sleep 60; echo done\", \"description\": \"Wait briefly for the server survey agent\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: echo done. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_\u2026\n- Bash: {\"command\": \"sed -n 780,920p crates/server/tests/api/card_picks.rs\", \"description\": \"Read the per-part card-pick test helper\"}\n- Bash: {\"command\": \"cd /tmp/plan3017 && python3 - <<'EOF'\\nimport re, json, sys\\nsys.argv=['x']\\nsrc = open('/home/runner/work/_temp/work/item-3017/apps/web/src/wire/generated/cosmetics.ts').read()\\nstart =\u2026\n- Bash: {\"command\": \"grep -rn \\\"VERSION_OFFER_MIN\\\\|LEVEL_SKIP_WEIGHT\\\" apps/web/src --include=*.ts --include=*.tsx | head -5; grep -rn \\\"from \\\\\\\"@jackioh/shared\\\\\\\"\\\" apps/web/src --include=*.ts* | head -3\u2026\n- Bash: {\"command\": \"sed -n 84,94p crates/wasm/core/src/constants.rs; sed -n 237,275p crates/wasm/core/src/constants.rs | grep -n \\\"VERSION_OFFER\\\\|OFFER_SAMPLE\\\" \", \"description\": \"Read the wasm shared-cons\u2026\n- Bash: {\"command\": \"grep -n \\\"VERSION_OFFER_MIN_PER_SET\\\" crates/wasm/core/src/constants.rs crates/server/src/config.rs; grep -n \\\"fn constants_carry_the_shared_logics_numbers\\\" -A25 crates/wasm/core/src/co\u2026\n- Bash: {\"command\": \"grep -n \\\"Prismatic\\\\|Immersive\\\" apps/web/README.md crates/shared/README.md docs/*.md 2>/dev/null | head; grep -n \\\"\\\\\\\"Prismatic\\\\|\\\\\\\"Pixel\\\\|\\\\\\\"Comic\\\" apps/web/src/i18n/zh-CN.json\"\u2026\n- Bash: {\"command\": \"grep -oE \\\"\\\\-\\\\-pal-(indigo|blue|violet|purple|pink|rose|cyan|teal|emerald|green|red|slate|sky)-[0-9]+:\\\\s*#[0-9a-fA-F]{6}\\\" apps/web/src/palette.css | tr '\\\\n' ' '\", \"description\": \"Li\u2026\n- Bash: {\"command\": \"grep -n \\\"ts\\\\b\\\\|features\\\" crates/shared/Cargo.toml | head; grep -rn \\\"jackioh-shared\\\" crates/server/Cargo.toml crates/wasm/core/Cargo.toml | head -4\", \"description\": \"Check how the s\u2026\n- Bash: {\"command\": \"grep -rln \\\"\\\\\\\"version-\\\" crates/shared/src/economy crates/shared/tests crates/server/tests crates/server/src | xargs -I{} sh -c 'echo \\\"{}: $(grep -c \\\"\\\\\\\"version-\\\" {})\\\"'\", \"descrip\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"version-\\\" crates/shared/src/economy/roll.rs crates/shared/src/economy/cosmetic_pack.rs | head -20\", \"description\": \"Show literal version ids in the shared roll tests\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"Stained glass\\\\\\\"\\\\|\\\\\\\"Tarot\\\\\\\"\\\\|\\\\\\\"Neon\\\\|\\\\\\\"Night\\\\|\\\\\\\"Watercolour\\\\|\\\\\\\"Woodcut\\\" apps/web/src/i18n/zh-CN.json\", \"description\": \"Check existing zh-CN keys for the \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## More facts (server/web agents)\\n- No migration: seed-catalog upserts registry into public.cosmetics at `release` (crates/server/src/cli/seed_catalog.rs:\u2026\n- Bash: {\"command\": \"grep -n \\\"component\\\\|card-versions\\\\|variant-ladders\\\" .github/workflows/ci.yml | head -10; grep -n \\\"classicplus-012\\\" e2e/cypress/component/variant-ladders.cy.tsx | head -3; python3 -\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3017/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd six new variants: Night, Neon sign, Watercolour, Stained-glass window, Woodcut and Tarot card. Each is \u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3017/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"cp .bot-plan.md /tmp/plan3017/notes.md; wc -w /tmp/plan3017/notes.md\", \"description\": \"Back up planner notes before rewriting the draft\"}\n- Bash: {\"command\": \"grep -m1 \\\"^name\\\" crates/wasm/core/Cargo.toml; ls crates/server/tests | head -30; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -30\", \"description\": \"Check crate and\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3017/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd six new variants: Night, Neon sign, Watercolour, Stained-glass window, Woodcut and Tarot card. Each is \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words and characters in the plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3017/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe registry gains six variants, Night, Neon sign, Watercolour, Stained-glass window, Woodcut and Tarot car\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount words in the trimmed plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3017/.bot-plan.md\", \"old_string\": \"`check_pick` gives `NotOffered` and `Ok`: the night half is bare on `core-002` and offered on\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; cat /tmp/plan3017/notes.md >> /dev/null\", \"description\": \"Recount plan words after the edit\"}\n- said: ## Goal The registry gains six variants: Night, Neon sign, Watercolour, Stained-glass window, Woodcut and Tarot card. Each is a two-level ladder, art then animated (Rare\u2192Epic or Epic\u2192Legendary). - **Pictures.** Four are new pictures: the painter is re-seeded, then given a treatment of its own. Two \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-06T03:52:58Z",
       "owner_why": "it plans it",
@@ -12777,9 +12769,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T08:54:14Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42159183780",
+      "run_id": "pending:99c37c83-1793939119",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T03:52:58Z",
+      "started_at": "2026-11-06T04:26:01Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18289,9 +18281,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T03:52:58Z",
+    "at": "2026-11-06T04:26:01Z",
     "url": "",
-    "what": "plan #3017 on claude-4"
+    "what": "build #3017 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T04:14:33Z",
