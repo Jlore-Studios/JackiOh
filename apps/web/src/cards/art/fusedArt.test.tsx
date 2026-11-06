@@ -109,7 +109,8 @@ describe("R3045000: a fused Weapon keeps its host's art", () => {
 
   it("R3045000 it keeps the host's seed, whichever picture the card is drawn in", () => {
     const equipped = fusedDef([def(BEAM_V3), def(POINTMASTER)]);
-    for (const picture of ["normal", "alt", "signature"] as const) {
+    // R3015002: a signed level draws its variant's own picture, so there is no Signature picture of its own.
+    for (const picture of ["normal", "alt"] as const) {
       const seen = looks(def(POINTMASTER), equipped, defsWith(equipped), { picture });
       expect(seen.fusion, picture).toEqual(seen.host);
     }

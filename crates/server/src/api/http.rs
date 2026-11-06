@@ -1213,9 +1213,12 @@ async fn run_route(
     }
 
     // SPEC §11 R897000: every signed-in request passing auth and the gate refreshes its caller's
-    // queue presence; a queued client already polls `GET /api/auth/me`.
+    // queue presence; a queued client already polls `GET /api/auth/me`. R3210000: and, for an active
+    // account, its friends' presence (B47), at most once a `PRESENCE_TOUCH_EVERY_MS`; never for a
+    // request refused above.
     if let Some(resolved) = &caller {
         app.queue_presence.touch(&resolved.profile.id, now_ms());
+        crate::social::presence::touch_on_request(app, &resolved.profile).await;
     }
 
     let req = Req {

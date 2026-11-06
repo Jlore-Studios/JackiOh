@@ -81,8 +81,9 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
     if (answer !== undefined) return answer;
     const { method, path } = call;
     if (path === "/api/auth/me") return { status: 200, body: meBody(state.me) };
-    if (method === "GET" && path === "/api/challenges") return { status: 200, body: { incoming: state.incoming, outgoing: state.outgoing } };
-    if (method === "GET" && path === "/api/chat/unread") return { status: 200, body: { unread: state.unread } };
+    if (method === "GET" && path === "/api/social") {
+      return { status: 200, body: { incoming: state.incoming, outgoing: state.outgoing, unread: state.unread } };
+    }
     if (method === "GET" && path === "/api/friends") {
       return { status: 200, body: { friends: state.friends, incoming: state.requests, outgoing: [], blocked: [] } };
     }
@@ -220,7 +221,7 @@ describe("#1831 who sees the button", () => {
       shell();
       await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
-      expect(server.to("GET", "/api/challenges")).toHaveLength(0);
+      expect(server.to("GET", "/api/social")).toHaveLength(0);
     },
     TEST_MS,
   );
@@ -231,12 +232,12 @@ describe("#1831 who sees the button", () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       signIn("tok-pending");
       const server = serve(world(), (call) =>
-        call.path === "/api/challenges" ? refusal(403, "forbidden", "Your account is not active yet.") : undefined,
+        call.path === "/api/social" ? refusal(403, "forbidden", "Your account is not active yet.") : undefined,
       );
       shell();
       await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
-      expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
+      expect(server.to("GET", "/api/social").length).toBeGreaterThan(0);
     },
     TEST_MS,
   );
@@ -246,7 +247,7 @@ describe("#1831 who sees the button", () => {
     async () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       signIn("tok-down");
-      serve(world(), (call) => (call.path === "/api/challenges" ? refusal(500, "internal", "boom") : undefined));
+      serve(world(), (call) => (call.path === "/api/social" ? refusal(500, "internal", "boom") : undefined));
       shell();
       await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();

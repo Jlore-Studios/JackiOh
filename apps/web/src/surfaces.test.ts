@@ -1,7 +1,8 @@
 // #2109: the board's corners, stacking and neutral shadows come from one named surface scale, surfaces.css;
 // no stylesheet gains a radius, a shadow or a layer of its own unless this file says so. Gradients stay only
 // on card faces (src/cards/), the main button (--primary-face*), the table (game/table.css and board.css's
-// `.field`) and the named texture keeps below.
+// `.field`) and the named texture keeps below. Every other stylesheet, the menus' included, is held to its
+// count of them in UNTOKENED_SURFACES (#3224).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -32,6 +33,71 @@ const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//
 const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
+
+/** Every other sheet's own radii, shadows, layers and gradients, counted as the board's test finds them (card faces, the table and fx keep their gradients by design): one that moves values onto surfaces.css lowers its number, and none gains one. */
+const UNTOKENED_SURFACES: Record<string, number> = {
+  "audio/audio.css": 4,
+  "auth/auth.css": 1,
+  "auth/code-field.css": 23,
+  "auth/consent.css": 3,
+  "auth/tavern.css": 59,
+  "auth/two-step.css": 1,
+  "cards/art/art.css": 7,
+  "cards/cards.css": 162,
+  "cards/cardstate.css": 24,
+  "cards/cosmetics.css": 38,
+  "cards/dormant.css": 7,
+  "cards/glitch.css": 9,
+  "cards/inspect/inspect.css": 36,
+  "cards/inspect/list-play.css": 2,
+  "cards/keywords.css": 19,
+  "cards/marks.css": 7,
+  "cards/setmark.css": 6,
+  "cards/stamps.css": 1,
+  "cards/wheel/wheel.css": 6,
+  "collection/collection.css": 27,
+  "collection/cosmeticLook.css": 1,
+  "collection/tokenOffer.css": 1,
+  "duos/duos.css": 24,
+  "economy/economy.css": 8,
+  "economy/jlore-pill.css": 4,
+  "economy/spend.css": 1,
+  "emotes/emotes.css": 17,
+  "emotes/portrait.css": 20,
+  "empty/empty.css": 1,
+  "fx/aura/aura.css": 3,
+  "fx/fx.css": 106,
+  "game/deckbuilder/deckbuilder.css": 66,
+  "game/deckbuilder/workshop.css": 30,
+  "game/table.css": 44,
+  "notfound/notfound.css": 2,
+  "packs/pack-object.css": 12,
+  "packs/packs.css": 7,
+  "patches/patches.css": 25,
+  "practice/practice.css": 87,
+  "practice/sandbox.css": 7,
+  "rank/rankCrest.css": 1,
+  "routes/account.css": 2,
+  "routes/command-menu.css": 3,
+  "routes/dev-panel.css": 5,
+  "routes/entry-card.css": 3,
+  "routes/game-banner.css": 21,
+  "routes/landing.css": 61,
+  "routes/lobby.css": 40,
+  "routes/replays.css": 1,
+  "routes/site-footer.css": 1,
+  "routes/stats.css": 15,
+  "routes/top-bar.css": 3,
+  "settings/changeEmail.css": 2,
+  "settings/settings.css": 25,
+  "shop/shop.css": 2,
+  "skeleton/skeleton.css": 4,
+  "stats/tier.css": 1,
+  "together/together.css": 16,
+  "tutorial/path-visibility.css": 2,
+  "tutorial/tutorial.css": 44,
+  "undo/undo.css": 3,
+};
 
 const RADII = [...read("surfaces.css").matchAll(/^\s*--radius-([\w-]+):\s*([\d.]+px|[\d.]+%);$/gm)].map((match) => [
   match[1] ?? "",
@@ -216,6 +282,19 @@ describe("#2109 no one-off surfaces", () => {
       expect(codeOf(sheet), sheet).not.toMatch(/var\(--radius\)/);
       expect(codeOf(sheet), sheet).not.toMatch(/var\(--seat-radius\)/);
     }
+  });
+
+  it("#2109 no other stylesheet gains a radius, a shadow, a layer or a gradient of its own", () => {
+    const counts: Record<string, number> = {};
+    for (const sheet of SHEETS) {
+      if (BOARD_SHEETS.includes(sheet)) continue;
+      const css = codeOf(sheet);
+      const own = offSurface(css).length + offShadow(css).length;
+      if (own > 0) counts[sheet] = own;
+    }
+    expect(counts, "name a radius, a shadow and a layer (surfaces.css) instead; a sheet that loses some lowers its number in UNTOKENED_SURFACES").toEqual(
+      UNTOKENED_SURFACES,
+    );
   });
 
   it("#2109 the board's components set none inline", () => {

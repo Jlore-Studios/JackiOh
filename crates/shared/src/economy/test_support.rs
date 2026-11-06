@@ -3,7 +3,7 @@
 
 use jackioh_engine::wire::PrintedRarity;
 
-use crate::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
+use crate::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, LevelAdds, OfferClause, VariantLevel};
 
 /// A printed rarity's place in `PrintedRarity::ALL`, commonest first.
 pub(crate) fn card_place(rarity: PrintedRarity) -> usize {
@@ -26,6 +26,21 @@ pub(crate) fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         jlorious: false,
         card: None,
         offer: Vec::new(),
+        level: None,
+    }
+}
+
+/// R3015000: a level of `variant` at `rank`, adding `adds`, offered on every non-token card, as a version is.
+pub(crate) fn level(id: &str, variant: &str, rank: u8, adds: LevelAdds, rarity: CosmeticRarity) -> Cosmetic {
+    Cosmetic {
+        kind: CosmeticKind::Version,
+        offer: vec![OfferClause::default()],
+        level: Some(VariantLevel {
+            variant: variant.to_owned(),
+            rank,
+            adds,
+        }),
+        ..foil(id, rarity)
     }
 }
 

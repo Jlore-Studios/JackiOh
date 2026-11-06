@@ -11018,6 +11018,39 @@ mod cosmetic_loadouts {
         );
     }
 
+    /// R3015005: a card's pick keeps every level's id as written (each within migration 0079's `full_art_id`
+    /// check), the one level its card wears, through a put and an upload; the store reads no ownership or offer,
+    /// which the route holds.
+    async fn r3015005_card_picks_keep_every_level_id(harness: &StoreHarness) {
+        use jackioh_server::cosmetics::registry;
+        let profile = active_profile(harness, None).await;
+        let mut at = harness.now();
+        let levels: Vec<&str> = registry()
+            .iter()
+            .filter(|cosmetic| cosmetic.level.is_some())
+            .map(|cosmetic| cosmetic.id.as_str())
+            .collect();
+        assert_eq!(levels.len(), 26);
+        let mut last = Value::Null;
+        for id in levels {
+            at += 1;
+            last = json!({ "cardId": "core-022", "fullArt": id });
+            q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(last.clone()), at));
+            assert_eq!(picks_of(harness, &profile.id).await, json!([last]), "{id}");
+        }
+        // The upload writes a level on a card with no row, and leaves the held one.
+        let signed = json!({ "cardId": "core-004", "fullArt": "version-full-art-signed" });
+        let upload = vec![
+            picks(signed.clone()),
+            picks(json!({ "cardId": "core-022", "fullArt": false })),
+        ];
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, at + 1)),
+            1
+        );
+        assert_eq!(picks_of(harness, &profile.id).await, json!([signed, last]));
+    }
+
     /// R1834002: a Best-of-1 ticket and a room freeze their deck's slots beside the deck, a trio's
     /// decks theirs inside it, a match both seats' loadouts, and a bot's decks and trio theirs; each
     /// reads back as it was written, and one written without them reads back without them.
@@ -11288,6 +11321,7 @@ mod cosmetic_loadouts {
         r2655000_card_picks_keep_a_full_art_id,
         r2715000_card_picks_keep_an_animated_art_id,
         r2725000_card_picks_keep_augments,
+        r3015005_card_picks_keep_every_level_id,
         r1834002_frozen_slots_and_loadouts_round_trip,
         r1834005_bots_keep_their_cosmetics,
         r1834005_cosmetic_owners_count_people_and_their_first_grant,
