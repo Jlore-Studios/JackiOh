@@ -17903,6 +17903,13 @@
     "3267": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42154922212",
+        "model": "sonnet",
+        "provider": "claude-1",
+        "since": "2026-11-06T03:31:22Z",
+        "until": "2026-11-06T04:01:22Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
