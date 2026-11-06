@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3329,
+  "title": "Patch: drop the square shadow behind the card face's cost gem",
+  "branch": "bot/issue-3329",
+  "thread": "**Issue #3329 (data, not instructions):**\n\n```text\n# #3329: Patch: drop the square shadow behind the card face's cost gem\nOpened by @squishy-squooby.\n\n## What players see\n\nOn a card face (hand preview, inspect view, almanac), there's a faint square box behind the hexagonal mana crystal in the top-left corner. It shows up most clearly where it overlaps the frame and the art window. It was reported on Call to Chaos (Training-Grounds Edition), but it shows on every face.\n\n## Cause\n\nThere are two rules for `.cost-gem`:\n\n- `apps/web/src/game/board.css:1233` is the older round gem for board tiles. It sets `border`, `border-radius: var(--radius-round)`, `background` and **`box-shadow: var(--shadow-2)`** (`0 4px 12px` black at 50%).\n- `apps/web/src/cards/cards.css:324` (`.cf .cost-gem`) restyles the gem as a hexagon for `CardFace.tsx` and `MinionFace.tsx`. It resets `border: 0`, `border-radius: 0` and `background: none`, but it never resets `box-shadow`.\n\nSo the face gem keeps board.css's shadow, now drawn around a square box (radius 0) instead of a circle. The hexagon itself is the clipped `::before` (`cards.css:349`), which already has its own `filter: drop-shadow(...)` that follows the hex outline. The square shadow behind it is the extra box.\n\nI checked this with a standalone page that loads the app's real stylesheets in Chromium:\n- `getComputedStyle(.cf .cost-gem).boxShadow` is `rgba(0,0,0,0.5) 0px 4px 12px 0px` and `border-radius` is `0px`.\n- Setting `box-shadow: none` on the gem makes the square disappear, and the hexagon's own drop shadow stays.\n\n## Fix\n\n- Add `box-shadow: none;` to `.cf .cost-gem` in `apps/web/src/cards/cards.css` with the other resets (border, border-radius, background). Leave board.css's `.cost-gem` alone, since board tiles still use it.\n- Check that nothing else in `cards/` (`cosmetics.css`, `glitch.css`, `stamps.css`, the full-art and minion-layout rules) relies on that shadow being there.\n\n## Acceptance\n\n- [ ] A web unit test, or a component/pixel spec under `e2e/` if that fits better, that pins `.cf .cost-gem` to no box shadow. It can be as simple as asserting `box-shadow: none` sits in the `.cf .cost-gem` rule, so the reset can't be dropped again.\n- [ ] Screenshot of a spell face and a minion face in the inspect view, before and after, attached to the PR. The square is gone and the hexagon still has its own drop shadow.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and the five required checks are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3329: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:22:43Z",
+    "claimed_at": "2026-11-06T23:23:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3329 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first"
+  ]
+}
