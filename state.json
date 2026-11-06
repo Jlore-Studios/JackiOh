@@ -12739,14 +12739,26 @@
       "stop_requested": false
     },
     "3017": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-4",
+      "owner_since": "2026-11-06T03:52:58Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-04T08:54:14Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:61acfc53-1793937140",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-06T03:52:58Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3032": {
       "action": "review",
@@ -18333,9 +18345,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T03:52:06Z",
+    "at": "2026-11-06T03:52:58Z",
     "url": "",
-    "what": "review #3272 on claude-7"
+    "what": "plan #3017 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T03:29:45Z",
