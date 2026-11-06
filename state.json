@@ -12689,10 +12689,12 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3299,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-11-04T08:54:14Z",
       "requested_by": "squishy-squooby",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "42183591068",
       "runs_on": "ubuntu-latest",
       "session": {
