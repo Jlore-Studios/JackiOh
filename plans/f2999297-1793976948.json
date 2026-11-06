@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3286,
+  "title": "Patch: a boss whose drop is already held offers another relic, as \u00a715.7 says",
+  "branch": "bot/issue-3286",
+  "thread": "**Issue #3286 (data, not instructions):**\n\n```text\n# #3286: Patch: a boss whose drop is already held offers another relic, as \u00a715.7 says\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nBeating a dungeon mini-boss is meant to always offer a relic. When the map is made, though, each of a run's two mini-bosses picks its relic from the same few top relics, and nothing stops them picking the same one. A player who took it from the first mini-boss, or bought it in a shop, beats the second and is offered nothing.\n\nThe spec says a relic you already hold is replaced by a random one. Once this is built, a boss whose relic you hold offers a different relic of at least the same tier.\n\n## Why\n\n- \u00a715.7 (`spec/15-dungeon-run.md:189`) says the reward is \"a boss's drop unless already held, otherwise one at `RUN_ARTIFACT_PERCENT`\". That percent is 100 for a mini-boss and for the boss (`crates/run/src/config.rs:109-115`).\n- \u00a715.6 (`:175`) says \"A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_DROP_TIER` or better\".\n- `fight_won` (`crates/run/src/lib.rs:1478-1484`) turns a held drop into `None` and never rolls. The percent is read only for a node that had no drop.\n- `deal_map` gives each mini-boss a drop from the same `held` list, the starting relics (`lib.rs:1006-1013, 1071`), so the two drops can match.\n- How often:\n  - The placeholder content (`crates/run/src/placeholder.json`) has five obtainable relics of Gold or better, and names no drop for either mini-boss. So roughly one run in five deals both the same relic.\n  - A shop or chest that sells the relic before its boss leads to the same empty reward.\n\n## Proposal\n\n- In `fight_won`, when the node's drop is already held, roll `random_artifact(content, held, tier, rng)` at `RUN_ARTIFACT_PERCENT.of(kind)`. Pass `Some(RUN_MINI_BOSS_DROP_TIER)` as the tier for a mini-boss.\n- Keeping the Gold floor for this fallback is a decision \u00a715.7 does not make, so it gets a ruling in the issue's block.\n- The roll draws from the random stream only in this case, so every run that never hits it deals and folds exactly as before.\n- When no relic is left to offer, the reward has none, as today.\n- Rejected: making the two mini-bosses' drops distinct when the map is dealt. That would move every seed's map, the daily run's included.\n\n## Where it lands\n\n- `crates/run/src/lib.rs` and `crates/run/src/tests.rs`.\n- The \u00a715.7 sentence, a new ruling note and `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n\n- [ ] A test: a won mini-boss whose drop is already held offers a different relic of Gold or better.\n- [ ] A test: a run dealt the same drop at both mini-bosses, which takes it at the first, is offered a relic at the second.\n- [ ] A test: with no relic left to offer, the reward has none.\n- [ ] The existing walk and fold tests pass unchanged.\n- [ ] The ruling's proving test is named after it, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nSmall, 3 to 4 files.\n\nRisk: a Sandbox run kept on a device that already hit this case folds differently after the change. Its next logged action may be refused, and the client then drops that one kept run while keeping its progress and history (`apps/web/src/dungeon/store.ts:220-238`). That is rare, and Sandbox only.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-06T14:48:10Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3286: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T14:51:08Z",
+    "claimed_at": "2026-11-06T14:56:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3212 skipped: it waits for #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
