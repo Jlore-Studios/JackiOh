@@ -19,6 +19,7 @@ import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { daily } from "../test/daily.ts";
+import { legacyText } from "../test/faceData.ts";
 import {
   AUGMENT_ANIMATED_ID,
   AUGMENT_SIGNATURE_ID,
@@ -276,7 +277,7 @@ describe("R3017002 Radiant under part 6's looks", () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
-      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
       for (const version of PART_SIX.filter((each) => offeredOn(each, id))) {
         for (const level of [version, `${version}-animated`]) {
           writeCardLevel(id, level);
