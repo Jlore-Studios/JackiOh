@@ -16397,11 +16397,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-06T17:30:40Z",
+        "at": "2026-11-06T17:41:12Z",
         "difficulty": "medium",
         "provider": "claude-3",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3268, a medium change"
+        "tier": "medium",
+        "why": "None of rules 1-5 holds: a web-only change to one component, its jsdom test, a Cypress component spec, one README paragraph and a CSS comment (about 5 files), with no engine, AI, cross-crate contract or migration."
       },
       "failures": 0,
       "forced": false,
