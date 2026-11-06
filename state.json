@@ -16367,13 +16367,14 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-06T16:44:39Z",
-      "run_id": "42255434055",
+      "run_id": "pending:cc042811-1793988154",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 110,
-      "started_at": "2026-11-06T16:46:03Z",
+      "started_at": "2026-11-06T18:03:10Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16480,9 +16481,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T18:02:18Z",
+    "at": "2026-11-06T18:03:10Z",
     "url": "",
-    "what": "build #3314 on claude-3"
+    "what": "spot-check #3312 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T17:58:56Z",
@@ -32910,7 +32911,15 @@
         "n": 110,
         "pr": 3312,
         "queued_at": "2026-11-06T17:53:47Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:cc042811-1793988154",
         "sha": "8f9f0dcbb788e803e08340b995815e4273ae1dd4",
+        "started_at": "2026-11-06T18:03:10Z",
         "status": "queued",
         "title": "Patch: a banned account leaves the ranked leaderboard, the percentiles and Jlorious",
         "tries": 0
