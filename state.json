@@ -16166,11 +16166,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-06T18:12:23Z",
+        "at": "2026-11-06T19:16:11Z",
         "difficulty": "hard",
         "provider": "claude-6",
-        "tier": "medium",
-        "why": "Rule 1: the fuzz failure is fixed in crates/engine/src/testkit/invariants.rs, the engine's I2 monitor, and the rest spreads over the web CSS, a component spec, an e2e spec and a fixture; when in doubt, hard."
+        "tier": "strong",
+        "why": "Rule 1: the fuzz fix is in crates/engine/src/testkit/invariants.rs, the engine's invariant monitor; the item is already labelled hard and cannot go lower"
       },
       "failures": 1,
       "handoff": {
