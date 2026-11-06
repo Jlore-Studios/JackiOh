@@ -794,7 +794,6 @@ pub(super) fn replay_input(options: &CreateGameOptions, log: Vec<Action>) -> Rep
         last_boards: options.last_boards.clone(),
         glitch_boards: None,
         sandbox: options.sandbox,
-        custom_cards: None,
         deck_marks: options.deck_marks.clone(),
     }
 }

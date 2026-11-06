@@ -2,8 +2,6 @@
 //! creates the game from. The one place both the page's worker and the server's claim check read, so a
 //! claim folds from exactly the game the worker dealt (R1303000, R2560000).
 
-use indexmap::IndexMap;
-
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     AI_DIFFICULTY, AI_TUTORIAL, CreateGameOptions, DECK_SIZE, DeckMark, Handicap, LastBoardEntry, LeanPick,
@@ -191,12 +189,7 @@ pub fn deal(asked: &PracticeConfig) -> Result<Opening, String> {
     };
     // `create_game` panics on an illegal deck, and a panic in WebAssembly is a trap the page cannot
     // catch, so the engine's own check goes first (R184).
-    jackioh_engine::validate_setup(
-        &options,
-        jackioh_engine::registered_catalog(),
-        &IndexMap::new(),
-        SetupKind::New,
-    )
-    .map_err(|error| error.to_string())?;
+    jackioh_engine::validate_setup(&options, jackioh_engine::registered_catalog(), SetupKind::New)
+        .map_err(|error| error.to_string())?;
     Ok(Opening { options, config })
 }

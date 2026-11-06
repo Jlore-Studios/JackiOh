@@ -6,7 +6,6 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
@@ -102,7 +101,6 @@ pub fn open_replay(replay: &PracticeReplay, build: &str) -> ReplayOpen {
             jackioh_engine::validate_setup(
                 &options,
                 jackioh_engine::registered_catalog(),
-                &IndexMap::new(),
                 SetupKind::Recorded,
             )
         })
