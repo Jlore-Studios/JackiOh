@@ -3142,9 +3142,10 @@ button.modifier-badge[data-open="true"] {
      box's height, and the zone centres it). The stack's own rects do not move, as the switch's do
      not, so a DEF card's stack is the ATK stack cut shorter: FieldBadges.tsx re-measures when the
      card's position changes, and the marks that no longer fit fold into the "+n". The Activate
-     control is never dropped (it is the only way to use the ability), so where the band above the
-     turned card is shorter than the control (a phone as short as 664px) the control overlaps the
-     attack gem's top by the difference: the owner's call on #3268. */
+     control is never dropped (it is the only way to use the ability), and nor is the "+n" while the
+     unit has a mark to draw (#3315), so where the band above the turned card is shorter than the
+     control and the +N (a phone as short as 664px) they overlap the turned card's top-left, its
+     attack gem and the start of its name, by the difference: the owner's call on #3268. */
   .board .zone:has(> .card[data-position="DEF"]) > .field-badges {
     --def-scale: min(1, tan(atan2(100cqw, var(--field-card-h))), tan(atan2(100cqh, var(--field-card-w))));
     max-height: calc((100cqh - var(--field-card-w) * var(--def-scale)) / 2 - var(--badges-inset));

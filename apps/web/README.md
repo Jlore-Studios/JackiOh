@@ -359,10 +359,12 @@ measures. It may cover the card's art and its cost, and the cost gem is hidden w
 covers the name, the attack or the health, nor the zone's own switch (⟳, top-right). A DEF card is
 turned a quarter, which puts its name, attack and health in a strip down its left, under that corner, so
 over a DEF card the stack starts at the same corner and stops above the turned card's box: the same
-control, and only the marks that fit in the band above it (the rest fold into `+N`, and
-`FieldBadges.tsx` measures again when a card's position changes). The Activate control is never
-dropped, so where that band is shorter than the control (a phone as short as 664px) the control overlaps
-the turned card's attack gem by the difference. The control's tap band (up to
+control, the named marks that fit in the band above it and a `+N` for the rest (`FieldBadges.tsx`
+measures again when a card's position changes). The Activate control is never dropped, and nor is the
+`+N` while the unit has a mark to draw (#3315), so a DEF unit's keywords never vanish with no sign.
+Where the band above the turned card is shorter than they are (about 4px at 390x664, 18 to 28px at the
+other phones) they overlap the turned card's top-left, its attack gem and the start of its name, by the
+difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's oval and the backrow's outline keep a card's shape.
