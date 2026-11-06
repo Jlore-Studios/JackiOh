@@ -18273,13 +18273,11 @@
     "what": "plan #3017 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-06T03:48:09Z",
+    "at": "2026-11-06T04:05:01Z",
     "notes": [
-      "delivered revise #3259 on claude-4 (run 42151044890): approved",
-      "delivered build #3223 on claude-7 (run 42144461055): built",
-      "started review #3272 on claude-7 (run 42159100368)",
-      "started plan #3017 on claude-4 (run 42159183780)",
-      "nothing more to start: nothing is queued"
+      "delivered review #3250 on claude-1 (run 42157860894): reviewed",
+      "delivered review #3271 on claude-8 (run 42157698943): approved",
+      "#3245: auto-merge is off and it is out of the merge queue, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18985,7 +18983,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T03:48:09Z",
+  "loop_tick": "2026-11-06T04:05:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
