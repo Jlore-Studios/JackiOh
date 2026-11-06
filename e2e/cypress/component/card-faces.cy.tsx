@@ -471,15 +471,15 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
             if (gem !== undefined && overlap(box, gem) > 1) problems.push(`${label} covers the cost gem`);
           }
         }
-        // #2932: a phone's Activate controls and keyword marks hang off a card's corner, over the zone beside
-        // it (game/FieldBadges.tsx), which holds its own switch at that corner: no mark covers any switch's
-        // glyph, whichever zone it is in.
+        // #2932, #3257: a phone's Activate controls and keyword marks stand in their own zone's top-left
+        // corner (game/FieldBadges.tsx), the switch's zone being its own too, at the top-right: no mark covers
+        // any switch's glyph, whichever zone it is in.
         const glyphs = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .zone > .switch-button > .switch-glyph`)];
         for (const mark of doc.querySelectorAll<HTMLElement>(`${BOARD} .field .field-badges :is(.activate-control, .keyword, .cf-kw-more)`)) {
           const box = mark.getBoundingClientRect();
           if (box.width === 0 || box.height === 0) continue;
           for (const glyph of glyphs) {
-            if (overlap(box, glyph.getBoundingClientRect()) > 1) problems.push(`a hung ${mark.className} covers a switch glyph`);
+            if (overlap(box, glyph.getBoundingClientRect()) > 1) problems.push(`a ${mark.className} covers a switch glyph`);
           }
         }
         expect(problems, `badges over a name or a cost gem at ${where}`).to.deep.equal([]);

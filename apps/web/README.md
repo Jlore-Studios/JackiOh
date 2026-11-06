@@ -313,12 +313,16 @@ hidden visually, the crests and the names carrying it), and the control bar keep
 between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by height; the seats are one
 fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
 A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
-stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
-never turns it. The zone left of it holds its own switch (⟳) at that corner, so the stack starts below
-that switch's target (`--badges-top`, the target's own height) and what does not fit its zone's height
-wraps into a column to its left: a press on a neighbour's ⟳ is never this unit's Activate, and the stack
-never reaches the row below. The Activate control's tap band (up to 44px) reaches down from the control
-only, never up over that switch; the marks let a tap through.
+stack standing in the top-left inner corner of the card's own zone (#3257) as a sibling of the card, as
+the switch is, so DEF's rotation never turns it. It never leaves the zone, so no mark reads as a
+neighbour's and a press on a neighbour's ⟳ is never this unit's Activate, and it stays above the card's
+name plate (`max-height`): the marks that do not fit fold into the face's `+N`, which `FieldBadges.tsx`
+measures. It may cover the card's art and its cost, and the cost gem is hidden while it does; it never
+covers the name, the attack or the health in ATK (a DEF card is turned under the same stack, whose rects
+stay as they are), nor the zone's own switch (⟳, top-right). The Activate control's tap band (up to
+44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
+zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
+the unit's oval and the backrow's outline keep a card's shape.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root

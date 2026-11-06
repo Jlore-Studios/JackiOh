@@ -1,11 +1,13 @@
-// #2932: on a phone held upright a field card's Activate control and keyword marks hang off its
-// top-left corner (FieldBadges.tsx), as siblings of the card that DEF never rotates; everywhere else
-// they stay on the face. The phone is `stubPhonePortrait`: jsdom has no media queries.
+// #2932, #3257: on a phone held upright a field card's Activate control and keyword marks stand in the
+// top-left corner of its own zone (FieldBadges.tsx), as siblings of the card that DEF never rotates;
+// everywhere else they stay on the face. The marks that do not fit above the name plate fold into
+// the "+n". The phone is `stubPhonePortrait`: jsdom has no media queries and no layout, so the fold is
+// tested against a stubbed one (`stubLayout`); board-layout.cy.tsx measures the real one.
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActivationView, PlayerView } from "@jackioh/shared";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stubPhonePortrait } from "../test/phoneBar.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../test/fixtures.ts";
@@ -22,6 +24,7 @@ afterEach(() => {
   cleanup();
   restore?.();
   restore = null;
+  vi.restoreAllMocks();
 });
 
 /** `b1` a unit with an Activate ability and two keywords that draw a mark; `t1` one that has only Taunt (drawn as a frame). */
@@ -57,7 +60,7 @@ function renderGame(position: "ATK" | "DEF" = "ATK"): void {
 
 const el = (id: string): HTMLElement => screen.getByTestId(id);
 
-describe("#2932 a phone's field unit hangs its Activate control and keyword marks off its corner", () => {
+describe("#2932 a phone's field unit stands its Activate control and keyword marks in its zone's corner", () => {
   it("the zone holds a `.field-badges` stack beside the card, and the card's face holds neither", () => {
     restore = stubPhonePortrait(true);
     renderGame();
@@ -96,13 +99,13 @@ describe("#2932 a phone's field unit hangs its Activate control and keyword mark
     expect(badges?.closest('[data-position="DEF"]'), "no DEF card above it to turn it").toBeNull();
   });
 
-  it("a unit with nothing to hang (only Taunt, drawn as a frame) gets no stack", () => {
+  it("a unit with no mark to draw (only Taunt, drawn as a frame) gets no stack", () => {
     restore = stubPhonePortrait(true);
     renderGame();
     expect(el("card-t1").parentElement?.querySelector(".field-badges")).toBeNull();
   });
 
-  it("a face-up card in the backrow hangs its Activate control the same way", () => {
+  it("a face-up card in the backrow stands its Activate control the same way", () => {
     restore = stubPhonePortrait(true);
     renderGame();
     const card = el("card-fs1");
@@ -131,5 +134,59 @@ describe("#2932 a phone's field unit hangs its Activate control and keyword mark
       </CatalogContext.Provider>,
     );
     expect(screen.getByTestId("hand-card-h1").parentElement?.querySelector(".field-badges")).toBeNull();
+  });
+});
+
+/**
+ * jsdom has no layout: `maxHeight` is the stack's room above the name plate (board.css), and the control is 16px tall, a
+ * mark 12px, and the gap 2px, as on a phone. The stack's marks are laid out one under the other.
+ */
+function stubLayout(maxHeight: string): void {
+  const marks = (element: Element): Element[] => [...(element.closest(".field-badges")?.querySelectorAll(".activate-control, .keyword, .cf-kw-more") ?? [])];
+  const heightOf = (element: Element): number => (element.matches(".activate-control") ? 16 : element.matches(".keyword, .cf-kw-more") ? 12 : 0);
+  const computed = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element: Element, pseudo?: string | null) =>
+    element.classList.contains("field-badges") ? ({ maxHeight } as CSSStyleDeclaration) : computed(element, pseudo),
+  );
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+    return heightOf(this);
+  });
+  vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (this: HTMLElement) {
+    const before = marks(this).indexOf(this);
+    return marks(this)
+      .slice(0, Math.max(before, 0))
+      .reduce((top, mark) => top + heightOf(mark) + 2, 0);
+  });
+}
+
+describe("#3257 the marks that do not fit above the name plate fold into the +n", () => {
+  const keywordsOf = (): string[] => [...document.querySelectorAll(".field-badges .keyword-icon")].map((mark) => mark.getAttribute("data-keyword") ?? "");
+  const more = (): HTMLElement | null => document.querySelector<HTMLElement>(".field-badges .cf-kw-more");
+
+  it("every mark is drawn when the stack has the room", () => {
+    restore = stubPhonePortrait(true);
+    stubLayout("60px");
+    renderGame();
+    expect(keywordsOf()).toEqual(["Rush", "Can't Defend"]);
+    expect(more(), "nothing folded").toBeNull();
+  });
+
+  it("a stack with room for the control and one mark only draws the +n", () => {
+    restore = stubPhonePortrait(true);
+    stubLayout("30.6px");
+    renderGame();
+    expect(keywordsOf(), "no named mark: the +n alone took the row under the control").toEqual([]);
+    expect(more()?.textContent).toBe("+2");
+    expect(more()?.getAttribute("title")).toContain("Rush");
+    expect(document.querySelector(".field-badges .activate-control"), "the control stays").not.toBeNull();
+  });
+
+  it("a stack with no room for a second item keeps the Activate control and draws no mark and no +n", () => {
+    restore = stubPhonePortrait(true);
+    stubLayout("10px");
+    renderGame();
+    expect(keywordsOf()).toEqual([]);
+    expect(more()).toBeNull();
+    expect(document.querySelector(".field-badges .activate-control"), "the control stays").not.toBeNull();
   });
 });
