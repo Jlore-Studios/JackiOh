@@ -32631,6 +32631,12 @@
         "number": 3281,
         "title": "Patch: practice games pay at most a day's cap of XP, so a forged practice log cannot farm set-track rewards",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-06T14:47:24Z",
+        "number": 3282,
+        "title": "Patch: a reported chat message is kept until its report has had time to be read",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-06T14:46:51Z",
