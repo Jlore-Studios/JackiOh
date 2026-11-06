@@ -3024,24 +3024,6 @@ button.modifier-badge[data-open="true"] {
     --card-h: clamp(44px, calc((100cqh - 348px - var(--board-rail-phone-h)) / 5.24), 90px);
   }
 
-  /* #3223: a replay's rail carries the screen's title (BackLink's `title`). The top bar's phone rule
-     (routes/top-bar.css) gives that line a row of its own under Back, a row the rail's height budget
-     above and the top strip's one row do not hold, so the rail keeps the line beside Back, on its one
-     44px row: the title a step smaller and on one line, ellipsized rather than wrapped (it stays the
-     screen's `h1`, never hidden). */
-  .board-rail .screen-nav__line {
-    order: 0;
-    flex: 1 1 0;
-    flex-wrap: nowrap;
-  }
-
-  .board-rail .screen-nav .page-title {
-    overflow: hidden;
-    font-size: var(--type-xl);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .board .control-bar .control {
     padding-inline: 10px;
     white-space: nowrap;
