@@ -15140,17 +15140,25 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-8",
+        "built_by": "claude-3",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/README.md"
+          ],
+          "from": "2cd45f662302a251210780f4ae152327c7682cb9",
+          "main": "d98a369b1dcea12cb2598a2c87804d32b16235b6"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-8",
-            "run": "42173176384",
+            "provider": "claude-3",
+            "run": "42215316037",
             "tier": "strong"
           }
         ],
-        "sha": "2cd45f662302a251210780f4ae152327c7682cb9",
+        "sha": "1e31ad3fe255bc3243d43256f31111180483689a",
         "tiers": {
           "claude": "strong"
         }
