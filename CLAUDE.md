@@ -160,7 +160,9 @@ has the rest, the server's fixture reseed among it.
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
 `bot selftest`. A pull request lands through `main`'s merge queue (`infra/github.tf`), which runs them again on
 `main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`): one the queue takes
-out failed there, against the newer `main`, and its fix starts from merging `main`. So never merge `main` into
+out failed there, against the newer `main`, and its fix starts from merging `main`. A pull request's own run
+leaves e2e smoke, fuzz 200 and the `queue` Rust groups (`.github/ci/rust-test.toml`) to that build, so their
+checks pass on the pull request saying so, and it is proven only once the queue lands it. So never merge `main` into
 a pull request only to bring it up to date: one that merges cleanly needs no update, since the queue tests it on
 the newest `main`, and every push runs its CI again on the organization's shared runners. Merge `main` in when
 GitHub shows a conflict or the queue took it out, and turn auto-merge on once it is ready, so the queue takes it

@@ -34,9 +34,11 @@
 # (read, never run). Keep `LINES=` one line of names.
 #
 # ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
-# for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
-# job-level `if:` cannot see `matrix`, a first step that turns the entry's other steps off. Each
-# summary job accepts a skip only when the skipped piece's own line says `false`.
+# for a job of its own; for `rust-test`'s groups, a matrix that the `changes` job's `select` step
+# (.github/ci/matrix.py) builds of only the groups whose line is not exactly `false`, so a group
+# with nothing to test never waits for a runner; and for `db-suite`'s two suites, one job whose
+# step for each runs on its own line. Each summary job accepts a skip only when the skipped piece's
+# own line says `false`.
 #
 # `full=false` means every file the pull request changes sits on the SKIP list below, which holds
 # only paths that no CI job other than `bot selftest` ever reads (ci.yml's `changes` job scopes that

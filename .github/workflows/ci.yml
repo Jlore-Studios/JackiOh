@@ -1,5 +1,11 @@
 # CI for JackiOh after v0.3.0 (#306, docs/v0.3.0/README.md §7): the essential checks on every pull
 # request, each job under five minutes; everything slow or statistical runs once a day in super.yml.
+# A pull request's own run is the fast part: e2e smoke, fuzz 200, the `queue` Rust groups
+# (.github/ci/rust-test.toml: the AI's and the tools' game sweeps) and the jackioh-server build only
+# e2e smoke boots wait for the merge queue's build (`merge_group`, below), which runs them before
+# anything lands, and the push to main, which runs everything. Their required checks pass on the pull
+# request saying so. A failure in the queue takes the pull request out, and the bot that owns it
+# answers that as it answers red CI (bot/go/internal/events `OnQueueCI`).
 #
 # Branch protection and the bots' `required_checks` (.harness/config.json, .squishy/config.json)
 # wait on five names, all here: `rust`, `web`, `e2e smoke`, `db` and `bot selftest`.
@@ -12,9 +18,10 @@
 #
 #   rust       fmt and clippy, and, once the card scripts are Luau, luau-analyze --mode=strict; cargo
 #              test with the generated-types diff (V20), and the same diff for the scripts' typed
-#              module (#442 L10); the release builds of jackioh and jackioh-server, side by side,
-#              each made once for the run; the catalog, patches and spec checks and 200 fuzz seeds on
-#              that build of jackioh; on a pull
+#              module (#442 L10), each group only when its line is on (and a `queue` group not on a
+#              pull request's own run); the release builds of jackioh and, where e2e smoke runs,
+#              jackioh-server, side by side, each made once for the run; the catalog, patches and spec
+#              checks and, but on a pull request's own run, 200 fuzz seeds on that build of jackioh; on a pull
 #              request, the classifier (#1360, R1365000, R1370000): its kind and tier as labels, and
 #              its pending fragments held to what it does to the cards; on a pull request from a
 #              training lane's ai/* branch, the training gate (README §8); and, when infra/ changed,
@@ -25,10 +32,12 @@
 #              tests; and promote-production.test.ts in a job of its own, only when what it tests
 #              changed. None of these jobs runs Cypress, so none downloads its binary.
 #   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
-#              the release jackioh-server, in two shards that each boot their own server.
+#              the release jackioh-server, in two shards that each boot their own server; in the merge
+#              queue's build and on the push to main, not on a pull request's own run.
 #   db         sql, the store contract and the deploy rehearsal against a real Postgres, each
 #              only when the pull request touches what it tests (scripts/ci-scope.sh's `db_sql`,
-#              `db_store` and `db_deploy`); a skip passes.
+#              `db_store` and `db_deploy`); a skip passes. The two suites share one job, and so do the
+#              rehearsal's two boots: apart, each took a runner for a few seconds of work.
 #   bot selftest  the harness's suite (bot/go: gofmt, go vet, go test), its binary's start under both
 #              bots' configs, the Python suites of what stays Python (bot/machine, .github/hygiene)
 #              on Python 3.12 and 3.13, and actionlint over every workflow, only when the pull request
@@ -78,8 +87,8 @@
 # staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38). Its `e2e`
 # input set to `all` runs every e2e spec in super.yml's eight shards and the component specs in place
 # of the smoke list, as super.yml does, for a branch that wants that proof before super.yml can be
-# dispatched there (GitHub dispatches only a workflow the default branch has). Pushes and pull
-# requests always run the smoke list.
+# dispatched there (GitHub dispatches only a workflow the default branch has). Pushes and merge
+# groups always run the smoke list, and a pull request's own run none of it.
 #
 # `merge_group` is main's merge queue (infra/github.tf `main_merge_queue`): before a pull request
 # lands, the queue builds main with every pull request ahead of it and this one on top, on a
@@ -87,8 +96,11 @@
 # pass on that commit too, so two pull requests each green alone but red together (four of the five
 # red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
-# the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
-# and stops once one of the five has failed (`queue-cancel-*`, at the end).
+# the push to main still runs everything after it. A run here gets the smoke list, runs what a pull
+# request's own run leaves to it (e2e smoke, fuzz 200, the `queue` Rust groups), and stops once one
+# of the five has failed (`queue-cancel-*`, at the end). The queue builds two at a time
+# (infra/github.tf `max_entries_to_build`). A pull request that closes has its run cancelled
+# (ci-cancel.yml), as a newer push to it does.
 name: CI
 
 on:
@@ -166,7 +178,9 @@ jobs:
       e2e: ${{ steps.scope.outputs.e2e }}
       infra: ${{ steps.scope.outputs.infra }}
       bot: ${{ steps.scope.outputs.bot }}
-      rust_test: ${{ steps.matrix.outputs.rust_test }}
+      rust_test: ${{ steps.select.outputs.rust_test }}
+      rust_test_due: ${{ steps.select.outputs.rust_test_due }}
+      rust_binaries: ${{ steps.select.outputs.rust_binaries }}
       web_unit_shards: ${{ steps.matrix.outputs.web_unit_shards }}
       e2e_smoke_shards: ${{ steps.matrix.outputs.e2e_smoke_shards }}
     steps:
@@ -230,6 +244,25 @@ jobs:
             sh scripts/ci-scope.sh | tee -a "$GITHUB_OUTPUT"
             echo "bot=true" | tee -a "$GITHUB_OUTPUT"
           fi
+      # What this run starts (`matrix.py select`), from the matrix above and the lines the scope step
+      # wrote, so a job with nothing to do never takes a runner: a `rust-test` job only for a group
+      # whose line is not exactly `false`, and on a pull request's own run none of the `queue` groups
+      # (.github/ci/rust-test.toml), which the merge queue's build and the push to main run; and the
+      # release build of jackioh-server only where e2e smoke runs. A job that skipped its own steps
+      # still waited its turn for a runner, and its summary with it: in the day to 2026-11-06 04:30 UTC
+      # a scoped run started 13 to 21 such jobs, which waited up to 79 minutes to exit in seconds.
+      - id: select
+        name: what this run starts (.github/ci/matrix.py select)
+        env:
+          EVENT: ${{ github.event_name }}
+          RUST_TEST: ${{ steps.matrix.outputs.rust_test }}
+          SCOPE: ${{ toJSON(steps.scope.outputs) }}
+        # Through a file, not a pipe: a step's default shell has no pipefail, so a refusal piped into
+        # tee would pass with no outputs.
+        run: |
+          python3 .github/ci/matrix.py select "$EVENT" "$RUST_TEST" "$SCOPE" > "$RUNNER_TEMP/select.txt"
+          cat "$RUNNER_TEMP/select.txt"
+          cat "$RUNNER_TEMP/select.txt" >> "$GITHUB_OUTPUT"
 
   # ------------------------------------------------------------------------------------------------
   # rust
@@ -283,40 +316,29 @@ jobs:
   rust-test:
     name: rust (test ${{ matrix.group }})
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    # Only when the change starts one of the groups (`rust_test_due`): an empty matrix is an error.
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.rust_test_due == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        # The groups' jobs, from .github/ci/rust-test.toml and scripts/ci-shards.toml (the
-        # `changes` job's `matrix` step): each entry's group, scope, cache, test, doc, binaries,
-        # luau, shard and shards, the last two 1 for a group its count does not split.
+        # The groups' jobs this run starts, from .github/ci/rust-test.toml and scripts/ci-shards.toml
+        # (the `changes` job's `matrix` and `select` steps): each entry's group, scope, cache, test,
+        # doc, binaries, luau, queue, shard and shards, the last two 1 for a group its count does not
+        # split. A group whose scripts/ci-scope.sh line is exactly `false`, and on a pull request's
+        # own run a `queue` group, is not among them, so it never waits for a runner; anything else,
+        # an empty line (a doubt) among it, runs the group.
         include: ${{ fromJSON(needs.changes.outputs.rust_test) }}
     steps:
-      # Anything but an exact `false` runs the group, so an empty line (a doubt) never skips it.
-      - id: scope
-        name: whether anything this group tests changed (scripts/ci-scope.sh)
-        env:
-          LINE: rust_${{ matrix.scope }}
-          VALUE: ${{ needs.changes.outputs[format('rust_{0}', matrix.scope)] }}
-        run: |
-          if [ "$VALUE" = false ]; then
-            echo "$LINE=false: nothing this group's tests read changed, so it is skipped"
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: ${{ steps.scope.outputs.run == 'true' }}
-        uses: actions/checkout@v4
-      - if: ${{ steps.scope.outputs.run == 'true' }}
-        uses: ./.github/actions/setup
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
         with:
           node: "false"
           # A cache key may not hold a comma.
           cache-key: test-${{ matrix.cache }}
       - name: the crate's test binaries are the ones its groups run
-        if: ${{ steps.scope.outputs.run == 'true' && matrix.binaries }}
+        if: ${{ matrix.binaries }}
         env:
           BINARIES: ${{ matrix.binaries }}
         run: |
@@ -337,7 +359,6 @@ jobs:
       # rustdoc on spaces, which a doc test's name holds (`src/lib.rs - f (line 3)`), so none can be
       # named exactly, and `matrix.py shard` leaves them out.
       - name: cargo test
-        if: ${{ steps.scope.outputs.run == 'true' }}
         env:
           TEST: ${{ matrix.test }}
           DOC: ${{ matrix.doc }}
@@ -367,7 +388,6 @@ jobs:
             cargo test --doc $DOC
           fi
       - name: the web's generated types and constants are what the Rust exports (V20)
-        if: ${{ steps.scope.outputs.run == 'true' }}
         run: |
           changed=$(git status --porcelain -- apps/web/src/wire)
           if [ -n "$changed" ]; then
@@ -382,7 +402,7 @@ jobs:
       # Skipped until the module exists, as on main before v0.4.0, whose crates/luau has no `ts`
       # feature.
       - name: the card scripts' typed module is what the Rust generates (#442 L10)
-        if: ${{ steps.scope.outputs.run == 'true' && matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+        if: ${{ matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
         run: |
           cargo test -p jackioh-luau --features ts --test export_api
           changed=$(git status --porcelain -- crates/cards/luau)
@@ -409,7 +429,7 @@ jobs:
   # from e2e smoke. Without Cargo.toml's thin LTO: these binaries serve e2e and the checks, never a
   # deploy (wrangler builds the server's image from crates/server/Dockerfile, in
   # promote-production.yml and deploy-staging.yml), and the link-time pass over every dependency was
-  # most of a minute. Each `--config` stays one unquoted word: the build step splits BUILD on spaces.
+  # most of a minute. Each `--config` stays one unquoted word: the build step splits `build` on spaces.
   rust-build:
     name: rust (release build ${{ matrix.binary }})
     needs: changes
@@ -421,11 +441,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - binary: jackioh
-            build: -p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0 --config profile.release.package.jackioh-luau.opt-level=0
-          - binary: jackioh-server
-            build: -p jackioh-server --config profile.release.package.jackioh-server.opt-level=0
+        # `jackioh` always; `jackioh-server`, which only e2e smoke boots, where e2e smoke runs (the
+        # `changes` job's `select` step): not on a pull request's own run, nor when e2e's line is
+        # exactly `false`.
+        binary: ${{ fromJSON(needs.changes.outputs.rust_binaries) }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -434,10 +453,15 @@ jobs:
           cache-key: release-${{ matrix.binary }}
       - name: ${{ matrix.binary }}
         env:
-          BUILD: ${{ matrix.build }}
+          BINARY: ${{ matrix.binary }}
         run: |
-          # shellcheck disable=SC2086 # BUILD is several arguments on purpose.
-          cargo build --release $BUILD
+          case "$BINARY" in
+            jackioh) build="-p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0 --config profile.release.package.jackioh-luau.opt-level=0" ;;
+            jackioh-server) build="-p jackioh-server --config profile.release.package.jackioh-server.opt-level=0" ;;
+            *) echo "::error::no release build is named $BINARY"; exit 1 ;;
+          esac
+          # shellcheck disable=SC2086 # build is several arguments on purpose.
+          cargo build --release $build
       # A tarball keeps the executable bit an artifact would drop.
       - name: pack it
         env:
@@ -484,7 +508,10 @@ jobs:
         run: target/release/jackioh patches check
       - name: every ruling has its proof, every cited R-id its note (spec check)
         run: target/release/jackioh spec check
+      # In the merge queue's build and on the push to main, not on a pull request's own run: the queue
+      # plays them before anything lands, and a failure takes the pull request out of it.
       - name: fuzz, seeds 1-200
+        if: ${{ github.event_name != 'pull_request' }}
         run: target/release/jackioh fuzz --seeds 200
       # #1708: infra/'s Terraform (infra/README.md), when the pull request touches it, also after a
       # failure above. `init -backend=false` reads no state and needs no token; plan and apply need
@@ -780,6 +807,7 @@ jobs:
           CLIPPY: ${{ needs.changes.outputs.clippy }}
           LINT: ${{ needs.rust-lint.result }}
           TEST: ${{ needs.rust-test.result }}
+          TEST_DUE: ${{ needs.changes.outputs.rust_test_due }}
           BUILD: ${{ needs.rust-build.result }}
           CHECKS: ${{ needs.rust-checks.result }}
           CLASSIFY: ${{ needs.rust-classify.result }}
@@ -787,18 +815,23 @@ jobs:
           TRAINING: ${{ needs.training-gate.result }}
           AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
         run: |
-          echo "full=$FULL clippy=$CLIPPY lint=$LINT test=$TEST build=$BUILD checks=$CHECKS classify=$CLASSIFY training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
+          echo "full=$FULL clippy=$CLIPPY lint=$LINT test=$TEST (due: $TEST_DUE) build=$BUILD checks=$CHECKS classify=$CLASSIFY training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
           fi
-          # Each rust-test group skips its own steps on its own line, so the matrix is green either way.
           if [ "$CLIPPY" = false ]; then
             echo "no Rust or Luau source, manifest or lint setting changed: fmt and clippy skipped (scripts/ci-scope.sh)"
           else
             test "$LINT" = success
           fi
-          test "$TEST" = success
+          # The matrix holds only the groups this run starts (matrix.py select); with none, the job
+          # is skipped, and only an exact `false` says none was due.
+          if [ "$TEST_DUE" = false ]; then
+            echo "no rust-test group starts on this run: every group's line is false, or the merge queue runs it (matrix.py select)"
+          else
+            test "$TEST" = success
+          fi
           test "$BUILD" = success
           test "$CHECKS" = success
           if [ "$PULL" = true ]; then
@@ -1152,11 +1185,14 @@ jobs:
 
   # One smoke per user-facing flow, on Chrome, against this run's release jackioh-server and client
   # (.github/actions/e2e-shard says why each shard boots its own server). A dispatch with `e2e: all`
-  # runs every spec instead, in super.yml's eight shards (`e2e all (k/8)`).
+  # runs every spec instead, in super.yml's eight shards (`e2e all (k/8)`). In the merge queue's
+  # build and on the push to main, never on a pull request's own run: the queue runs it before
+  # anything lands, a failure there takes the pull request out, and its owner's bot answers that as
+  # it answers red CI (bot/go/internal/events `OnQueueCI`).
   e2e-smoke-shard:
     name: e2e ${{ inputs.e2e == 'all' && 'all' || 'smoke' }} (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: [changes, web-build, rust-build]
-    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.e2e == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.e2e == 'true' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.e2e == 'all' && 20 || 10 }}
     strategy:
@@ -1224,14 +1260,19 @@ jobs:
           SHARDS: ${{ needs.e2e-smoke-shard.result }}
           COMPONENT: ${{ needs.e2e-component.result }}
           ALL: ${{ inputs.e2e == 'all' }}
+          PULL: ${{ github.event_name == 'pull_request' }}
         run: |
-          echo "full=$FULL e2e=$E2E shards=$SHARDS component=$COMPONENT (every spec: $ALL)"
+          echo "full=$FULL e2e=$E2E shards=$SHARDS component=$COMPONENT (every spec: $ALL, pull request: $PULL)"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
           fi
           if [ "$E2E" = false ]; then
             echo "nothing the client, the server, the jackioh binary or a spec reads changed (scripts/ci-scope.sh); super.yml runs every spec daily"
+            exit 0
+          fi
+          if [ "$PULL" = true ]; then
+            echo "e2e smoke runs in the merge queue's build, before this pull request lands, and on the push to main"
             exit 0
           fi
           test "$SHARDS" = success
@@ -1257,52 +1298,29 @@ jobs:
   # Per pull request only when it touches what they test (scripts/ci-scope.sh's `db`); daily in
   # super.yml regardless. The rehearsal runs as jobs of its own, below.
   db-suite:
-    name: db (${{ matrix.suite }})
+    name: db (sql invariants, store contract)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db == 'true' }}
+    # One job for the two suites, each on its own line (`db_sql`, `db_store`) and run unless that line
+    # is exactly `false`: the sql invariants alone took 22 s of a 31 s job, and as a matrix each
+    # suite took a runner, and waited its turn for it, whether it ran or not.
+    if: ${{ needs.changes.outputs.full == 'true' && (needs.changes.outputs.db_sql != 'false' || needs.changes.outputs.db_store != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - suite: sql invariants
-            scope: sql
-            script: crates/server/tests/sql/run.sh
-            rust: false
-          - suite: store contract
-            scope: store
-            script: crates/server/tests/db/run.sh
-            rust: true
     steps:
-      # Each suite on its own line (`db_sql`, `db_store`), as rust-test's groups are; anything but an
-      # exact `false` runs it.
-      - id: scope
-        name: whether anything this suite tests changed (scripts/ci-scope.sh)
-        env:
-          LINE: db_${{ matrix.scope }}
-          VALUE: ${{ needs.changes.outputs[format('db_{0}', matrix.scope)] }}
-        run: |
-          if [ "$VALUE" = false ]; then
-            echo "$LINE=false: nothing this suite tests changed, so it is skipped; super.yml runs it daily"
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: ${{ steps.scope.outputs.run == 'true' }}
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-        if: ${{ steps.scope.outputs.run == 'true' && matrix.rust }}
+        if: ${{ needs.changes.outputs.db_store != 'false' }}
         with:
           node: "false"
       - name: pre-pull postgres
-        if: ${{ steps.scope.outputs.run == 'true' }}
         run: docker pull postgres:16
-      - name: ${{ matrix.suite }}
-        if: ${{ steps.scope.outputs.run == 'true' }}
-        env:
-          SCRIPT: ${{ matrix.script }}
-        run: sh "$SCRIPT"
+      - name: sql invariants
+        if: ${{ needs.changes.outputs.db_sql != 'false' }}
+        run: sh crates/server/tests/sql/run.sh
+      # Also after the sql invariants failed, as its own job did.
+      - name: store contract
+        if: ${{ !cancelled() && needs.changes.outputs.db_store != 'false' }}
+        run: sh crates/server/tests/db/run.sh
 
   # The deploy rehearsal, in jobs that each finish under five minutes (#653, #873, #1223, #1556,
   # #1709). Its image is built by buildx with its layer cache in GitHub's cache service, so an
@@ -1384,16 +1402,14 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # Both boots in one job, one after the other, each on a database of its own as before: each took
+  # about 15 s of a 28 s job, and as a matrix each took a runner and waited its turn for it.
   db-deploy-boot:
-    name: db (deploy rehearsal ${{ matrix.boot }})
+    name: db (deploy rehearsal)
     needs: [changes, db-deploy-image]
     if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        boot: [migrate, stale]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -1402,10 +1418,17 @@ jobs:
           path: ${{ runner.temp }}
       - name: pre-pull postgres
         run: docker pull postgres:16
-      - name: deploy rehearsal (${{ matrix.boot }})
+      - name: deploy rehearsal (migrate)
         env:
           REHEARSAL_LOAD_IMAGE: ${{ runner.temp }}/deploy-image.tar
-          REHEARSAL_BOOT: ${{ matrix.boot }}
+          REHEARSAL_BOOT: migrate
+        run: sh crates/server/tests/deploy/rehearse.sh
+      # Also after the migrate boots failed, as its own job did.
+      - name: deploy rehearsal (stale)
+        if: ${{ !cancelled() }}
+        env:
+          REHEARSAL_LOAD_IMAGE: ${{ runner.temp }}/deploy-image.tar
+          REHEARSAL_BOOT: stale
         run: sh crates/server/tests/deploy/rehearse.sh
 
   db:
@@ -1419,6 +1442,8 @@ jobs:
         env:
           FULL: ${{ needs.changes.outputs.full }}
           DB: ${{ needs.changes.outputs.db }}
+          DB_SQL: ${{ needs.changes.outputs.db_sql }}
+          DB_STORE: ${{ needs.changes.outputs.db_store }}
           DB_DEPLOY: ${{ needs.changes.outputs.db_deploy }}
           SUITES: ${{ needs.db-suite.result }}
           DEPS: ${{ needs.db-deploy-deps.result }}
@@ -1426,13 +1451,18 @@ jobs:
           IMAGE: ${{ needs.db-deploy-image.result }}
           DEPLOY: ${{ needs.db-deploy-boot.result }}
         run: |
-          echo "full=$FULL db=$DB db_deploy=$DB_DEPLOY suites=$SUITES deploy-deps=$DEPS deploy-crates=$CRATES deploy-image=$IMAGE deploy=$DEPLOY"
+          echo "full=$FULL db=$DB db_sql=$DB_SQL db_store=$DB_STORE db_deploy=$DB_DEPLOY suites=$SUITES deploy-deps=$DEPS deploy-crates=$CRATES deploy-image=$IMAGE deploy=$DEPLOY"
           if [ "$FULL" = false ] || [ "$DB" = false ]; then
             echo "nothing the db suites test changed (scripts/ci-scope.sh); super.yml runs them daily"
             exit 0
           fi
-          # db-suite's entries skip their own steps on db_sql and db_store, so it is green either way.
-          test "$SUITES" = success
+          # db-suite runs when either of its two lines is not exactly `false`, and skips the step of
+          # one that is.
+          if [ "$DB_SQL" = false ] && [ "$DB_STORE" = false ]; then
+            echo "nothing the sql invariants or the store contract test changed (scripts/ci-scope.sh); super.yml runs them daily"
+          else
+            test "$SUITES" = success
+          fi
           if [ "$DB_DEPLOY" = false ]; then
             echo "nothing the deploy rehearsal tests changed (scripts/ci-scope.sh); super.yml runs it daily"
             exit 0

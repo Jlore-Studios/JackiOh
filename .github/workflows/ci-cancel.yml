@@ -1,0 +1,33 @@
+# Cancels a pull request's CI when the pull request closes, merged or not. A closed pull request's run
+# kept every job it had queued, each waiting its turn for a runner that every other run waits for,
+# and then running for nobody: on 2026-11-06 the superseded card-patch promotion #3269 closed at
+# 04:01 with its CI still queuing jobs at 04:22, ahead of the promotion that replaced it.
+#
+# ci.yml's concurrency group is `ci-${{ github.ref }}`, which on a pull request is
+# `ci-refs/pull/<number>/merge`, and a concurrency group belongs to the repository, not to one
+# workflow. This run takes that same group with cancel-in-progress, so GitHub cancels the CI run in
+# it, queued or running, as a newer push to the pull request does. A merged pull request's run is
+# long over, so there is nothing to cancel. Its one job only says what happened. It checks out
+# nothing, runs no code of the pull request's and holds no token's permission.
+name: ci cancel
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+concurrency:
+  group: ci-refs/pull/${{ github.event.pull_request.number }}/merge
+  cancel-in-progress: true
+
+jobs:
+  cancel:
+    name: cancel the closed pull request's CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: say so
+        env:
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: echo "#$NUMBER closed, so its CI run, if one was queued or running, is cancelled (ci.yml's concurrency group)"

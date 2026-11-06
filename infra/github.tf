@@ -39,10 +39,14 @@ import {
 # was, so two pull requests each green alone landed red together (four of the five red runs on main
 # of 2026-10-29), and `strict` on instead would send every open pull request back to update and
 # re-run whenever one merged, several times an hour. The queue lands pull requests in the order they
-# became ready to merge. It builds `main` with every one ahead and the next on top, in parallel
+# became ready to merge. It builds `main` with every one ahead and the next on top, two at a time
 # (`max_entries_to_build`), runs ci.yml's `merge_group` there, waits for the same five checks the
 # protection above requires, and takes out any whose own build fails, rebuilding those behind it
-# without it. `ALLGREEN`: every commit it lands passed CI as it lands, which promote-production.yml
+# without it. Two, not five: every build behind a failed one is thrown away and built again, and
+# each holds a run's worth of the runners every pull request shares, which on 2026-11-05 kept jobs
+# waiting up to 79 minutes to start. And the queue's build is where e2e smoke, fuzz 200 and the
+# `queue` Rust groups first run (a pull request's own run leaves them out), so a failure there is
+# likelier. `ALLGREEN`: every commit it lands passed CI as it lands, which promote-production.yml
 # relies on when it picks a commit of `main`. The timeout is past CI's worst wait for runners
 # (90 minutes on 2026-10-29, nearly all of it queued): at the default 60 the queue would take a
 # green pull request out for the runners' slowness. Squash, as every bot and lane merges. The
@@ -64,7 +68,7 @@ resource "github_repository_ruleset" "main_merge_queue" {
     merge_queue {
       merge_method                      = "SQUASH"
       grouping_strategy                 = "ALLGREEN"
-      max_entries_to_build              = 5
+      max_entries_to_build              = 2
       min_entries_to_merge              = 1
       max_entries_to_merge              = 5
       min_entries_to_merge_wait_minutes = 5

@@ -3,7 +3,9 @@
 # doc tests, `scope` its scripts/ci-scope.sh line (`rust_<scope>`) and `cache` its Rust cache's key.
 # `binaries` lists every test binary of a crate split by binary, the crate first, checked against
 # Cargo so a new one cannot go unrun; the last group takes every crate no other group names, so a new
-# crate cannot either.
+# crate cannot either. `queue = true` keeps a group off a pull request's own run: its games take
+# minutes and rarely fail where the rest pass, so the merge queue's build runs it, before anything
+# lands, and so does the push to main (matrix.py `select`).
 #
 # Two things here may grow without an edit to this file, which only people change (the night bot may
 # not touch .github/):
@@ -136,7 +138,8 @@ test = "-p jackioh-server --test server -- api::practice::r"
 
 # The AI's integration tests in two binaries (#873): `ai`, and the modules that play the most games
 # at AI_GATE_BUDGET, in `ai_slow`, whose many-game sweeps run daily (`#[ignore]`, super.yml's `daily
-# tests`). One cache: the two compile the same crates.
+# tests`). One cache: the two compile the same crates. `ai slow` is a `queue` group: a pull request's
+# own run leaves it out, and the merge queue's build and the push to main run it (matrix.py `select`).
 [[group]]
 group = "ai"
 scope = "ai"
@@ -150,6 +153,7 @@ group = "ai slow"
 scope = "ai_slow"
 cache = "ai"
 test = "-p jackioh-ai --test ai_slow"
+queue = true
 
 # The Luau host's tests, with its `ts` feature on so that `export_api` writes the card scripts' typed
 # module, which the group's last step holds to what is committed. In `tools, wasm` that second
@@ -170,17 +174,21 @@ luau = true
 # test) whose path held `fuzz::`, `selfplay::` or `positions::` would run in no group: name none so.
 # No card script is Luau, so only `tools, wasm`'s few custom-card tests reach the Luau host, and each
 # group builds jackioh-luau at opt-level 0 (about 25 s less compiling; mlua stays at Cargo.toml's 2).
+# The two that play games, `tools fuzz` and `tools duos, selfplay`, are `queue` groups, as `ai slow`
+# is: the merge queue's build and the push to main run them, a pull request's own run does not.
 [[group]]
 group = "tools fuzz"
 scope = "tools_wasm"
 cache = "tools-wasm"
 test = "-p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- fuzz:: positions:: --skip duos_fuzz::"
+queue = true
 
 [[group]]
 group = "tools duos, selfplay"
 scope = "tools_wasm"
 cache = "tools-wasm"
 test = "-p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- duos_fuzz:: selfplay::"
+queue = true
 
 [[group]]
 group = "tools, wasm"

@@ -55,8 +55,8 @@
 # which: `migrate` runs the first two boots on one database (the reseed, then the nothing-to-migrate
 # check, which only holds on the migrated database), `stale` runs only the stale-CATALOG_VERSION boot
 # on a fresh database, and an empty REHEARSAL_BOOT (or `all`) runs all three in order on one database,
-# which is what the daily full rehearsal and local runs keep doing (CI's db-deploy-boot matrix runs
-# one REHEARSAL_BOOT value per job on the downloaded tarball).
+# which is what the daily full rehearsal and local runs keep doing (CI's db-deploy-boot job runs
+# `migrate`, then `stale`, each a run of this script on the downloaded tarball).
 # REHEARSAL_STAGE cannot be combined with REHEARSAL_BOOT, REHEARSAL_SAVE_IMAGE cannot be combined
 # with REHEARSAL_LOAD_IMAGE, and neither image flag applies to the deps, game or crates stages
 # (those builds tag no image).

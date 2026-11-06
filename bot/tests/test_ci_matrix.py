@@ -83,6 +83,8 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual({(job["shard"], job["shards"]) for job in jobs.values()}, {(1, 1)})
         self.assertEqual(jobs["tools, wasm"]["test"].split(" -- ")[1],
                          "--skip fuzz:: --skip selfplay:: --skip positions::")
+        self.assertEqual({name for name, job in jobs.items() if job["queue"]},
+                         {"ai slow", "tools fuzz", "tools duos, selfplay"})
 
     def test_a_new_rules_binary_gets_a_job_and_the_binaries_check_by_itself(self):
         self.repo.edit("crates/engine/Cargo.toml", '[[test]]\nname = "golden"',
@@ -141,6 +143,12 @@ class MatrixTests(unittest.TestCase):
                         repo.outputs()
                 finally:
                     repo.close()
+
+    def test_queue_is_true_or_false(self):
+        self.repo.edit(matrix.GROUPS, 'test = "-p jackioh-ai --test ai_slow"\nqueue = true',
+                       'test = "-p jackioh-ai --test ai_slow"\nqueue = "yes"')
+        with self.assertRaisesRegex(matrix.Bad, "ai slow: `queue` is true or false"):
+            self.repo.outputs()
 
     def test_a_pattern_that_matches_no_target_fails(self):
         self.repo.edit(matrix.GROUPS, 'tests = "rules*"', 'tests = "rulez*"')
@@ -206,6 +214,81 @@ class ShardTests(unittest.TestCase):
         self.assertIn("rust (test engine rules 3)", run.stderr)
 
 
+#: Every Rust line `true`, as a push to main's scope step writes them.
+EVERY_LINE = {name: "true" for name in (
+    "full", "clippy", "rust_engine_rules", "rust_engine", "rust_cards_lib", "rust_cards", "rust_server",
+    "rust_ai", "rust_ai_slow", "rust_luau", "rust_tools_wasm", "web", "e2e")}
+
+
+class SelectTests(unittest.TestCase):
+    """`select`: what a run starts, so a job with nothing to do never waits for a runner."""
+
+    def setUp(self):
+        self.rust_test = matrix.outputs()["rust_test"]
+
+    def started(self, event, **lines):
+        return [job["group"] for job in matrix.select(event, self.rust_test, {**EVERY_LINE, **lines})["rust_test"]]
+
+    def test_the_push_and_the_merge_queue_start_every_job_of_every_line_on(self):
+        for event in ("push", "merge_group", "workflow_dispatch"):
+            with self.subTest(event=event):
+                self.assertEqual(self.started(event), JOBS)
+
+    def test_a_pull_request_leaves_the_queue_groups_to_the_merge_queue(self):
+        queued = {"ai slow", "tools fuzz", "tools duos, selfplay"}
+        self.assertEqual(self.started("pull_request"), [name for name in JOBS if name not in queued])
+
+    def test_a_group_whose_line_is_false_never_starts(self):
+        self.assertEqual(self.started("merge_group", rust_server="false"),
+                         [name for name in JOBS if not name.startswith("server")])
+
+    def test_only_an_exact_false_skips_a_group(self):
+        for value in ("", "False", "no", "0"):
+            with self.subTest(value=value):
+                self.assertEqual(self.started("merge_group", rust_server=value), JOBS)
+        missing = {name: value for name, value in EVERY_LINE.items() if name != "rust_server"}
+        self.assertEqual([job["group"] for job in matrix.select("merge_group", self.rust_test, missing)["rust_test"]],
+                         JOBS)
+
+    def test_due_is_whether_any_job_starts(self):
+        off = {name: "false" for name in EVERY_LINE if name.startswith("rust_")}
+        self.assertFalse(matrix.select("merge_group", self.rust_test, {**EVERY_LINE, **off})["rust_test_due"])
+        self.assertTrue(matrix.select("merge_group", self.rust_test, {**EVERY_LINE, **off, "rust_ai": "true"})
+                        ["rust_test_due"])
+        # A pull request whose only Rust line is a queue group's starts none of its own.
+        only_slow = {**EVERY_LINE, **off, "rust_ai_slow": "true"}
+        self.assertFalse(matrix.select("pull_request", self.rust_test, only_slow)["rust_test_due"])
+        self.assertTrue(matrix.select("merge_group", self.rust_test, only_slow)["rust_test_due"])
+
+    def test_the_server_is_built_only_where_e2e_smoke_runs(self):
+        binaries = lambda event, **lines: matrix.select(event, self.rust_test, {**EVERY_LINE, **lines})["rust_binaries"]
+        self.assertEqual(binaries("push"), ["jackioh", "jackioh-server"])
+        self.assertEqual(binaries("merge_group"), ["jackioh", "jackioh-server"])
+        self.assertEqual(binaries("merge_group", e2e="false"), ["jackioh"])
+        self.assertEqual(binaries("pull_request"), ["jackioh"])
+        self.assertEqual(binaries("merge_group", e2e=""), ["jackioh", "jackioh-server"])
+
+    def test_the_command_prints_its_three_outputs(self):
+        import json
+        run = subprocess.run([sys.executable, str(SCRIPT), "select", "pull_request", json.dumps(self.rust_test),
+                              json.dumps({**EVERY_LINE, "rust_server": "false"})],
+                             text=True, capture_output=True, check=True)
+        out = dict(line.split("=", 1) for line in run.stdout.splitlines())
+        self.assertEqual(list(out), ["rust_test", "rust_test_due", "rust_binaries"])
+        self.assertEqual(out["rust_test_due"], "true")
+        self.assertEqual(out["rust_binaries"], '["jackioh"]')
+        self.assertNotIn("server", [job["scope"] for job in json.loads(out["rust_test"])])
+        self.assertIn("starts rust (test engine rules)", run.stderr)
+
+    def test_the_command_refuses_what_is_not_its_json(self):
+        for args in (["pull_request", "[", "{}"], ["pull_request", "[]", "[]"], ["pull_request", "{}", "{}"],
+                     ["pull_request", "[]"]):
+            with self.subTest(args=args):
+                run = subprocess.run([sys.executable, str(SCRIPT), "select", *args], text=True, capture_output=True)
+                self.assertNotEqual(run.returncode, 0)
+                self.assertEqual(run.stdout, "")
+
+
 class WorkflowTests(unittest.TestCase):
     def test_ci_yml_reads_every_output_and_names_no_group_itself(self):
         text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
@@ -214,6 +297,10 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn(f"needs.changes.outputs.{output}", text)
         self.assertNotIn("- group: ", text)
         self.assertIn("python3 .github/ci/matrix.py matrix", text)
+        self.assertIn('python3 .github/ci/matrix.py select "$EVENT" "$RUST_TEST" "$SCOPE"', text)
+        for output in ("rust_test", "rust_test_due", "rust_binaries"):
+            self.assertIn(f"${{{{ steps.select.outputs.{output} }}}}", text)
+            self.assertIn(f"needs.changes.outputs.{output}", text)
         self.assertIn('python3 .github/ci/matrix.py shard "$SHARD" "$SHARDS"', text)
 
 

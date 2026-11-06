@@ -156,6 +156,11 @@ tests run in seconds. So:
 | `db` | `test:sql`, `test:db`, `test:deploy`, only when `crates/server/migrations/**`, `crates/server/src/db/**`, `crates/server/Dockerfile` or `render.yaml` changed (a skip passes the check) | < 5 min |
 | `bot selftest` | unchanged | — |
 
+Since 2026-11-06 a pull request's own run leaves `fuzz --seeds 200`, `e2e smoke` and the AI's and
+the tools' game sweeps (`.github/ci/rust-test.toml`'s `queue` groups) to `main`'s merge queue, whose
+build runs them before anything lands; their checks pass on the pull request saying so (ci.yml's
+header).
+
 **Daily (`.github/workflows/super.yml`, cron 07:17 UTC, and on demand):** `fuzz --seeds 10000` and
 `--handicap`, `gate --full`, coverage with `cargo llvm-cov` over engine, cards and ai (fails under
 the floor in `.github/coverage-floor.txt`, 90% at the start, raised by hand as it climbs toward #306's
