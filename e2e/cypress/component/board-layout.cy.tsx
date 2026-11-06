@@ -899,7 +899,8 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
             if (stack === null || card === null || control === null || flip === null) return;
             expect(card.dataset.position, `the unit is in ${position}: ${at}`).to.eq(position);
             const marks = [...stack.querySelectorAll<HTMLElement>(MARKS)];
-            expect(marks.length, `the control and at least one mark, or the +n: ${at}`).to.be.at.least(2);
+            // A DEF card's stack is cut to the band above the turned card, which may hold the control alone.
+            expect(marks.length, `the control and, in ATK, at least one mark or the +n: ${at}`).to.be.at.least(position === "ATK" ? 2 : 1);
             expect(card.querySelectorAll(".activate-control, .keyword-icon").length, `no mark stays on the face: ${at}`).to.eq(0);
             const zoneBox = zone.getBoundingClientRect();
             const flipBox = flip.getBoundingClientRect();
@@ -944,31 +945,45 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
               `the Activate control takes a press on its own box: ${at}`,
             ).to.eq(control);
 
+            const name = card.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
+            const stats = [...card.querySelectorAll<HTMLElement>(".stat")].map((stat) => stat.getBoundingClientRect());
+            expect(name, `the card has its name: ${at}`).to.not.eq(undefined);
+            expect(stats.length, `the card has its stat badges: ${at}`).to.be.at.least(2);
+            // A DEF card is turned, so its name, attack and health stand in a strip down its left, under the stack's corner:
+            // the stack stops above the turned card's box (board.css), whose top is where the room above the plate ends in ATK.
+            const cardBox = card.getBoundingClientRect();
+            const limit = position === "ATK" ? (name?.top ?? 0) : cardBox.top;
+            // The Activate control is never dropped: on the shortest phone the band above a turned card is shorter than
+            // the control, which then overlaps the attack gem's top (the owner's call on #3268, option 1) and only there.
+            const controlFits = controlBox.bottom <= limit + SLACK_PX / 2;
+            expect(controlFits || (position === "DEF" && size.height === 664), `the control stops above the name plate or the turned card, but on the shortest phone's DEF card: ${at}`).to.eq(true);
+            marks.forEach((mark, index) => {
+              if (mark === control && !controlFits) return;
+              const box = boxes[index];
+              if (box === undefined) return;
+              if (name !== undefined) expect(overlaps(box, name), `a mark overlaps the name: ${at}`).to.eq(false);
+              for (const stat of stats) expect(overlaps(box, stat), `a mark overlaps a stat: ${at}`).to.eq(false);
+              expect(box.bottom, `a mark is above the name plate or the turned card: ${at}`).to.be.at.most(limit + SLACK_PX / 2);
+            });
             if (position === "ATK") {
-              // Over the art only: never the name or a stat, and above the name plate.
-              const name = card.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
-              const stats = [...card.querySelectorAll<HTMLElement>(".stat")].map((stat) => stat.getBoundingClientRect());
-              expect(name, `the card has its name: ${at}`).to.not.eq(undefined);
-              expect(stats.length, `the card has its stat badges: ${at}`).to.be.at.least(2);
-              for (const box of boxes) {
-                if (name !== undefined) expect(overlaps(box, name), `a mark overlaps the name: ${at}`).to.eq(false);
-                for (const stat of stats) expect(overlaps(box, stat), `a mark overlaps a stat: ${at}`).to.eq(false);
-              }
-              if (name !== undefined) {
-                expect(Math.max(...boxes.map((box) => box.bottom)), `the lowest mark is above the name: ${at}`).to.be.at.most(name.top + SLACK_PX / 2);
-              }
               (seen.atk ??= {})[lane] = boxes;
             } else {
-              // DEF rotates neither the control nor the marks, and moves neither.
+              // DEF rotates neither the control nor the marks, and moves neither: the stack starts where it did, and is cut
+              // shorter, so the marks that no longer fit are the "+n" (which may be as wide as it likes).
               const before = seen.atk?.[lane] ?? [];
-              expect(boxes.length, `the same marks in DEF: ${at}`).to.eq(before.length);
+              expect(boxes.length, `no more marks in DEF than in ATK: ${at}`).to.be.at.most(before.length);
+              const was = before[0];
+              expect(was, `the control was measured in ATK: ${at}`).to.not.eq(undefined);
+              const now = boxes[0];
+              if (was === undefined || now === undefined) return;
+              for (const side of ["left", "top", "right", "bottom"] as const) {
+                expect(now[side], `the control's ${side} is the same in DEF: ${at}`).to.be.closeTo(was[side], 0.5);
+              }
               boxes.forEach((box, index) => {
-                const was = before[index];
-                expect(was, `a mark was measured in ATK: ${at}`).to.not.eq(undefined);
-                if (was === undefined) return;
-                for (const side of ["left", "top", "right", "bottom"] as const) {
-                  expect(box[side], `a mark's ${side} is the same in DEF: ${at}`).to.be.closeTo(was[side], 0.5);
-                }
+                const earlier = before[index];
+                if (earlier === undefined) return;
+                expect(box.left, `a mark's left is the same in DEF: ${at}`).to.be.closeTo(earlier.left, 0.5);
+                expect(box.top, `a mark's top is the same in DEF: ${at}`).to.be.closeTo(earlier.top, 0.5);
               });
             }
           }

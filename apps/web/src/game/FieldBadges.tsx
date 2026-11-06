@@ -5,10 +5,11 @@
 // the card's art and its cost, whose gem board.css hides while a mark is there (#3257).
 //
 // The stack is a sibling of the card root, as the switch (`SwitchButton`, Card.tsx) is, so DEF's
-// rotation never turns or moves it: its rects are the same in ATK and DEF. It stops above the card's
-// name plate (board.css, `max-height`), so it never covers the name, the attack or the health, and
-// the marks that do not fit there fold into the face's "+n": the face's own cap (`keywordChips`)
-// first, then as many more as the measure below finds the zone cannot hold. It draws view data only
+// rotation never turns or moves it: it starts at the same corner in ATK and DEF. It stops above the
+// card's name plate (board.css, `max-height`), or, for a DEF card, above the turned card, so it never
+// covers the name, the attack or the health, and the marks that do not fit there fold into the face's
+// "+n": the face's own cap (`keywordChips`) first, then as many more as the measure below finds the
+// room cannot hold. The Activate control always stays. It draws view data only
 // (CLAUDE.md rule 7): the control is `ActivateControls`, which decides nothing, and the marks are the
 // face's own (`KeywordIcons`' markup, which cards.css styles by class). Card.tsx renders it only for a
 // field card on the phone layout (`usePhonePortrait`); every other card keeps both on its face.
@@ -60,8 +61,8 @@ export default function FieldBadges(props: FieldBadgesProps): ReactElement | nul
   const activations = (card.activations ?? []).length;
   if (activations === 0 && shown.length === 0 && folded.length === 0) return null;
   const chips = [...shown, ...folded];
-  // Keyed by what it draws, so a change of marks starts a fresh measure.
-  return <Stack key={`${activations > 0}:${chips.map(keywordKey).join("|")}`} {...props} chips={chips} drawn={shown.length} />;
+  // Keyed by what it draws and by the card's position (a DEF card's room is shorter, board.css), so a change of either starts a fresh measure.
+  return <Stack key={`${unit?.position}:${activations > 0}:${chips.map(keywordKey).join("|")}`} {...props} chips={chips} drawn={shown.length} />;
 }
 
 function Stack({

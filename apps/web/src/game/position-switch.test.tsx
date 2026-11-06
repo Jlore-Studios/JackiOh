@@ -157,6 +157,22 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(cost).toContain("visibility: hidden;");
   });
 
+  it("#3257 over a DEF card the stack stops above the turned card, so it covers no turned name, attack or health", () => {
+    const phone = phoneBlock();
+    const def = /\.board \.zone:has\(>\s*\.card\[data-position="DEF"\]\)\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(def, "the phone block caps the stack over a DEF card").toBeDefined();
+    if (def === undefined) return;
+    // The card's own `--def-scale` (the `.zone > .card` rule's), repeated: the stack is no child of the card.
+    const card = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
+    const scale = /--def-scale:\s*([^;]+);/.exec(card)?.[1];
+    expect(scale, "the phone's card has a `--def-scale`").toBeDefined();
+    expect(def).toContain(`--def-scale: ${scale};`);
+    // The turned card's box is as tall as the card is wide, scaled, and centred in the zone: the room is the band above it.
+    expect(def).toContain("max-height: calc((100cqh - var(--field-card-w) * var(--def-scale)) / 2 - var(--badges-inset));");
+    // Only the room changes: where the stack stands, and that it is never turned, stays the ATK rule's.
+    expect(def).not.toMatch(/top:|left:|right:|transform:|position:/);
+  });
+
   it("#3257 the badges' plate numbers are the face's", () => {
     // The stack is no child of the card, so it works the gem and the plate out from the card's size:
     // the same numbers as cards.css's, which this test holds it to.

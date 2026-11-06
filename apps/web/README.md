@@ -345,8 +345,13 @@ the switch is, so DEF's rotation never turns it. It never leaves the zone, so no
 neighbour's and a press on a neighbour's ⟳ is never this unit's Activate, and it stays above the card's
 name plate (`max-height`): the marks that do not fit fold into the face's `+N`, which `FieldBadges.tsx`
 measures. It may cover the card's art and its cost, and the cost gem is hidden while it does; it never
-covers the name, the attack or the health in ATK (a DEF card is turned under the same stack, whose rects
-stay as they are), nor the zone's own switch (⟳, top-right). The Activate control's tap band (up to
+covers the name, the attack or the health, nor the zone's own switch (⟳, top-right). A DEF card is
+turned a quarter, which puts its name, attack and health in a strip down its left, under that corner, so
+over a DEF card the stack starts at the same corner and stops above the turned card's box: the same
+control, and only the marks that fit in the band above it (the rest fold into `+N`, and
+`FieldBadges.tsx` measures again when a card's position changes). The Activate control is never
+dropped, so where that band is shorter than the control (a phone as short as 664px) the control overlaps
+the turned card's attack gem by the difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's oval and the backrow's outline keep a card's shape.
