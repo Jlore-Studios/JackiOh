@@ -204,6 +204,11 @@
   background: var(--bg-raised);
   color: var(--text);
   box-shadow: 0 10px 28px rgb(0 0 0 / 55%);
+  /* The one place a phone highlights (index.css): a message can be pressed, selected and copied. */
+  -webkit-tap-highlight-color: initial;
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .chat-panel__head {
@@ -331,52 +336,6 @@
   .screen-nav .friends-button {
     min-width: 44px;
     min-height: 44px;
-  }
-}
-
-/* BackLink's bar: the button leads the language button and the gear at the bar's far end, as the
-   Jlore pill does (economy/jlore-pill.css), and follows the screen's own line or the pill when
-   there is one. */
-.screen-nav .friends-button {
-  margin-left: auto;
-  margin-right: 8px;
-}
-
-.screen-nav__extra + .friends-button,
-.screen-nav .jlore-pill + .friends-button,
-.screen-nav .friends-button + .language-button {
-  margin-left: 0;
-}
-
-/* A phone: the screen's own line takes a row of its own, and the group goes right on Back's row. */
-@media (max-width: 560px) {
-  .screen-nav__extra + .friends-button {
-    margin-left: auto;
-  }
-}
-
-/* A phone, 320 to 560 px: a fifth control in the bar left no room for Back, the pill, the button and the
-   gear on one row, so the language button steps aside (the gear's Gameplay tab holds Language, #785),
-   the gaps close, and Back and the landing's link give up some of their side padding. */
-@media (max-width: 560px) {
-  .screen-nav:has(> .friends-button),
-  .landing .landing-corner:has(> .friends-button) {
-    gap: 6px;
-  }
-
-  .screen-nav:has(> .friends-button) .jlore-pill,
-  .screen-nav:has(> .friends-button) .friends-button {
-    margin-right: 0;
-  }
-
-  .screen-nav:has(> .friends-button) .language-button,
-  .landing .landing-corner:has(> .friends-button) .language-button {
-    display: none;
-  }
-
-  .screen-nav:has(> .friends-button) .top-bar-button--text,
-  .landing .landing-corner:has(> .friends-button) .top-bar-button--text {
-    padding: 0 10px;
   }
 }
 

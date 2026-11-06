@@ -8,8 +8,8 @@ import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
-import { offeredOn } from "../cards/versions.ts";
+import { CARD_SLOT_KINDS, cosmeticsOf, type CardPicks, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
+import { DEFAULT_VARIANT, FIRST_RANK, isNextLevel, ladderOf, levelOf, levelOfPick, levelsBelow, levelsOn, variantsOn, wornLevel } from "../cards/versions.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
@@ -60,6 +60,9 @@ export const collectionTestid = {
   strip: (kind: string) => `collection-strip-${kind}`,
   stripItem: (id: string) => `collection-strip-item-${id}`,
   stripDefault: (kind: string) => `collection-strip-default-${kind}`,
+  // R3015007: each variant's ladder (VariantLadders) and its levels' rungs.
+  ladder: (variant: string) => `collection-ladder-${variant}`,
+  rung: (id: string) => `collection-rung-${id}`,
   tiles: (kind: string) => `collection-tiles-${kind}`,
   tile: (id: string) => `collection-tile-${id}`,
   // R1953001: a held cosmetic token offered on a locked cosmetic (TokenOffer), and its refusal.
@@ -79,6 +82,20 @@ export const collectionTestid = {
   lookView: (view: string) => `collection-look-${view}`,
   lookRadiant: "collection-look-radiant",
   lookHover: "collection-look-hover",
+  // R3016001: the equip and buy screen (LooksScreen), its opener, its rungs' actions and its payment question.
+  looksOpen: "collection-looks-open",
+  looks: "collection-looks",
+  looksClose: "collection-looks-close",
+  looksRung: (id: string) => `collection-looks-rung-${id}`,
+  looksEquip: (id: string) => `collection-looks-equip-${id}`,
+  looksBuy: (id: string) => `collection-looks-buy-${id}`,
+  looksMissing: (id: string) => `collection-looks-missing-${id}`,
+  looksNeeds: (id: string) => `collection-looks-needs-${id}`,
+  looksError: (id: string) => `collection-looks-error-${id}`,
+  looksDialog: (id: string) => `collection-looks-dialog-${id}`,
+  looksPay: (id: string, way: string) => `collection-looks-pay-${id}-${way}`,
+  looksConfirm: (id: string) => `collection-looks-confirm-${id}`,
+  looksCancel: (id: string) => `collection-looks-cancel-${id}`,
   // R3013001: a card's proficiency in its card view (ProficiencyPanel), its level, its plays and its stamps.
   proficiency: "collection-proficiency",
   proficiencyLevel: "collection-proficiency-level",
@@ -157,16 +174,16 @@ export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
   }
 }
 
-/** R1655000: the kinds a card's strip offers, in the registry's order; R2725000: its version and its augments last. */
-export const STRIP_KINDS = [...CARD_SLOT_KINDS, "version", "augment"] as const;
+/** R1655000: the kinds a card's strip offers, in the registry's order. R3015007: its versions are its ladders (`cardLadders`). */
+export const STRIP_KINDS = CARD_SLOT_KINDS;
 export type StripKind = (typeof STRIP_KINDS)[number];
 
-/** R1655000, R2725000: the normal face, the first version, the default of that kind and a pick of its own, which no registry entry names. */
+/** R1655000, R2725000: the normal face, the Default variant's first level (R3015000) and a pick of its own, which no registry entry names. */
 export const NO_FULL_ART_ID = "no-full-art";
 
 export type StripItem = {
   kind: StripKind;
-  /** The registry's id; `NO_FULL_ART_ID` for the normal face. */
+  /** The registry's id. */
   id: string;
   /** In the reader's language. */
   name: string;
@@ -179,13 +196,11 @@ export type StripItem = {
 export type StripGroup = { kind: StripKind; items: StripItem[] };
 
 /**
- * R1655000: what a card may wear, by kind: the registry's foils, finishes and borders (the default
- * first); R2725000: the normal face then each version the card is offered, and the augments it is offered
- * (R2725001), each kind absent where it has none. A retired full art (R2655000, R2715000) is listed nowhere: the
- * versions and augments it implies stand for it (R2725002).
+ * R1655000: what a card may wear of its foils, finishes and borders: the registry's, the default first. R3015007: its
+ * versions are its ladders (`cardLadders`), and no retired full art or augment is listed.
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
-  const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
+  return CARD_SLOT_KINDS.map((kind) => ({
     kind,
     items: cosmeticsOf(kind).map((cosmetic) => ({
       kind,
@@ -195,21 +210,73 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
       owned: canEquip(defId, cosmetic.id),
     })),
   }));
-  const offered = (kind: "version" | "augment"): StripItem[] =>
-    COSMETICS.filter((cosmetic) => cosmetic.kind === kind && offeredOn(cosmetic.id, defId)).map((cosmetic) => ({
-      kind,
-      id: cosmetic.id,
-      name: t(cosmetic.name),
-      rarity: cosmetic.rarity,
-      owned: canEquip(defId, cosmetic.id),
-    }));
-  const versions = offered("version");
-  if (versions.length > 0) {
-    groups.push({ kind: "version", items: [{ kind: "version", id: NO_FULL_ART_ID, name: t("Normal"), rarity: "Common", owned: true }, ...versions] });
-  }
-  const augments = offered("augment");
-  if (augments.length > 0) groups.push({ kind: "augment", items: augments });
-  return groups;
+}
+
+/** R3015007: one level of a card's variant, as its ladder shows it. */
+export type Rung = {
+  /** The level's registry id; `NO_FULL_ART_ID` for the Default variant's first level, the normal face. */
+  id: string;
+  rank: number;
+  /** In the reader's language. */
+  name: string;
+  rarity: CosmeticRarity;
+  /** Whether the viewer may equip it on this card (`useCanEquip`); the normal face always. */
+  owned: boolean;
+  /** Not owned, and every level below it is: the one rung a token is offered on (R3015004). */
+  next: boolean;
+  /** A locked rung that is not next: the name of the highest level below it not owned, which it needs first. */
+  needs: string | null;
+};
+
+/** R3015007: one variant a card has, its levels lowest first. */
+export type Ladder = { variant: string; name: string; rungs: Rung[] };
+
+/** R3015007: a level's name in the reader's language; the normal face's "Normal". */
+function levelName(id: string): string {
+  if (id === NO_FULL_ART_ID) return t("Normal");
+  const name = COSMETICS.find((cosmetic) => cosmetic.id === id)?.name;
+  return name === undefined ? id : t(name);
+}
+
+/**
+ * R3015007: a card's variants as ladders, the Default first (its first level the normal face, always owned), then each
+ * variant whose first level the card is offered (R3015000); each level the card is offered a rung, owned as `canEquip`
+ * says, the next one marked (every level below it owned, R3015004), a locked one naming what it needs.
+ */
+export function cardLadders(defId: string, canEquip: (defId: string, cosmeticId: string) => boolean): Ladder[] {
+  const owns = (card: string, id: string): boolean => id === NO_FULL_ART_ID || canEquip(card, id);
+  return variantsOn(defId).map((variant) => {
+    const levels = levelsOn(defId, variant);
+    const rungs: Rung[] = levels.map((id) => {
+      const entry = COSMETICS.find((cosmetic) => cosmetic.id === id);
+      const owned = owns(defId, id);
+      const next = !owned && isNextLevel(id, defId, owns);
+      const missing = levelsBelow(id).filter((below) => !owns(defId, below));
+      const needs = owned || next ? null : (missing.at(-1) ?? null);
+      return {
+        id,
+        rank: levelOf(id)?.rank ?? FIRST_RANK,
+        name: levelName(id),
+        rarity: entry?.rarity ?? "Common",
+        owned,
+        next,
+        needs: needs === null ? null : levelName(needs),
+      };
+    });
+    if (variant !== DEFAULT_VARIANT) return { variant, name: levelName(ladderOf(variant)[0] ?? variant), rungs };
+    const normal: Rung = { id: NO_FULL_ART_ID, rank: FIRST_RANK, name: t("Normal"), rarity: "Common", owned: true, next: false, needs: null };
+    return { variant, name: t("Default"), rungs: [normal, ...rungs] };
+  });
+}
+
+/**
+ * R3015005, R3015007: the rung a card's pick wears: the level it names (an older shape mapped as the server maps it),
+ * else the highest one below it that `owns` takes; the normal face where that is none, and none with no pick at all
+ * (the Full-art cards setting decides). R3016001: the equip and buy screen marks the same one.
+ */
+export function equippedRung(defId: string, picks: CardPicks, owns: (defId: string, id: string) => boolean): string | null {
+  if (picks.fullArt === undefined && picks.augments === undefined) return null;
+  return wornLevel(levelOfPick(defId, picks.fullArt, picks.augments), (id) => owns(defId, id)) ?? NO_FULL_ART_ID;
 }
 
 export type AccountTile = { cosmetic: Cosmetic; owned: boolean };

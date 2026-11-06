@@ -838,8 +838,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -918,6 +918,15 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect(ALMANAC_CHIP_TAGS).toContain("Resource");
     expect(filterTagId("Faction")).toBe("db-filter-tag-faction");
     expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
+  });
+
+  it("R3038000 the Starship tag, the Dormant Starship's alone, gets a chip in the almanac's list only", () => {
+    // The Dormant Starship is no card a deck may hold: only a rule makes it (R1857001).
+    const shipped = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
+    expect(shipped.filter((d) => d.tags.includes("Starship")).map((d) => d.id)).toEqual(["stinkyscape-t-dormant-starship"]);
+    expect(FILTER_TAGS).not.toContain("Starship");
+    expect(DECK_CHIP_TAGS).not.toContain("Starship");
+    expect(ALMANAC_CHIP_TAGS).toContain("Starship");
   });
 
   it("R1381 a tag chip shows while a card that ships carries it", () => {

@@ -1,8 +1,8 @@
-// R2949000: a look with a picture of its own (pictures.ts): the Signature look draws its card's painter seeded
-// apart from the card's normal picture, base and Radiant, on every card Signature is offered on. The faces
-// wearing it are fullArtTiers.test.tsx's; the pixels are e2e's cypress/component/card-versions.cy.tsx.
-// R2940001: Alt art's picture, seeded apart as Signature's is, and the Sketch, the normal picture in pencil; the
-// faces wearing them are versionLooks.test.tsx's. R2942001: Pixel's and Comic's, the normal picture restyled; the
+// R3015002 (#3015): every level of a variant draws its first level's picture, so no look has a picture of its own
+// past Alt art's: a signed level draws its variant's own (R2949000's Signature picture is gone). The faces wearing
+// them are fullArtTiers.test.tsx's and variantLevels.test.tsx's; the pixels are e2e's
+// cypress/component/variant-ladders.cy.tsx. R2940001: Alt art's picture, seeded apart from the normal one, and the
+// Sketch, the normal picture in pencil; the faces wearing them are versionLooks.test.tsx's. R2942001: Pixel's and Comic's, the normal picture restyled; the
 // faces wearing them are versionLooks3.test.tsx's. R2943001: Set showcase's, the normal picture in its set's treatment,
 // and Out of frame's, the picture's backdrop and subject drawn apart; the faces wearing them are versionLooks4.test.tsx's.
 // R2944001: Immersive's, the picture's backdrop hazed as far off, and Prismatic's, the normal picture in chrome under a
@@ -15,9 +15,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
+import { COSMETIC_LEVELS, COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
 import { artMotionOf } from "../fullArt.ts";
-import { AUGMENT_SIGNATURE_ID } from "../versions.ts";
+import { VERSION_ALT_ART_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID, artPictureOf } from "../versions.ts";
 import { CardArt, hasArtParts, type CardArtProps } from "./CardArt.tsx";
 import {
   SHOWCASE_FAMILIES,
@@ -48,28 +48,29 @@ function stillPicture(id: string, radiant: boolean, picture: ArtPicture): { back
   return drawn;
 }
 
-describe("R2949000 a look's picture of its own", () => {
-  it("R2949000 artSeedOf seeds a card's own picture by its id alone", () => {
+describe("R3015002 no level's picture of its own", () => {
+  it("R3015002 artSeedOf seeds a card's normal picture by its id alone, and no level seeds one past Alt art's", () => {
     expect(artSeedOf("core-022", "normal")).toBe("core-022");
-    expect(artSeedOf("core-022", "signature")).not.toBe("core-022");
-    expect(artSeedOf("core-022", "signature")).not.toBe(artSeedOf("core-083", "signature"));
+    // Every level of every variant draws the normal picture, a restyle of it (seeded by the card's id) or Alt art's.
+    const seeds = new Set(Object.keys(COSMETIC_LEVELS).map((id) => artSeedOf("core-022", artPictureOf(id, "Core"))));
+    expect([...seeds].sort()).toEqual(["core-022", artSeedOf("core-022", artPictureOf(VERSION_ALT_ART_ID))].sort());
     // No catalog id is another card's picture's seed.
-    for (const id of Object.keys(CATALOG)) expect(CATALOG[artSeedOf(id, "signature")], id).toBeUndefined();
+    for (const id of Object.keys(CATALOG)) expect(CATALOG[artSeedOf(id, "alt")], id).toBeUndefined();
   });
 
-  it("R2949000 every card offered Signature draws a still picture of its own, base and Radiant", () => {
-    const offered = COSMETIC_OFFERS[AUGMENT_SIGNATURE_ID] ?? [];
+  it("R3015002 every card offered Full art's signed level draws its normal picture there, base and Radiant, as at Full art's first level", () => {
+    const offered = COSMETIC_OFFERS[VERSION_FULL_ART_SIGNED_ID] ?? [];
     expect(offered.length).toBeGreaterThan(0);
+    expect(artPictureOf(VERSION_FULL_ART_SIGNED_ID)).toBe("normal");
     for (const id of offered) {
       for (const radiant of [false, true]) {
         const where = `${id} ${radiant ? "Radiant" : "base"}`;
-        const normal = stillPicture(id, radiant, "normal");
-        const signature = stillPicture(id, radiant, "signature");
-        expect(normal.background, where).not.toBe("");
-        expect(signature.background, where).not.toBe("");
-        expect(signature.background, where).not.toBe(normal.background);
-        expect(normal.marked, where).toBeNull();
-        expect(signature.marked, where).toBe("signature");
+        const first = stillPicture(id, radiant, artPictureOf(VERSION_FULL_ART_ID));
+        const signed = stillPicture(id, radiant, artPictureOf(VERSION_FULL_ART_SIGNED_ID));
+        expect(first.background, where).not.toBe("");
+        expect(signed.background, where).toBe(first.background);
+        expect(first.marked, where).toBeNull();
+        expect(signed.marked, where).toBeNull();
       }
     }
   });
@@ -100,9 +101,9 @@ function inner(picture: string): string {
 }
 
 describe("R2940001 Alt art's picture and the Sketch", () => {
-  it("R2940001 artSeedOf seeds Alt art apart from the normal and Signature pictures, and the Sketch by the card's own id", () => {
+  it("R2940001 R3015002 artSeedOf seeds Alt art apart from the normal picture, and the Sketch by the card's own id", () => {
     expect(artSeedOf("core-022", "alt")).not.toBe("core-022");
-    expect(artSeedOf("core-022", "alt")).not.toBe(artSeedOf("core-022", "signature"));
+    expect(artSeedOf("core-022", "alt")).not.toBe(artSeedOf("core-083", "alt"));
     expect(artSeedOf("core-022", "sketch")).toBe("core-022");
     for (const id of Object.keys(CATALOG)) expect(CATALOG[artSeedOf(id, "alt")], id).toBeUndefined();
   });
@@ -120,9 +121,8 @@ describe("R2940001 Alt art's picture and the Sketch", () => {
         const normal = drawnArt(id, radiant, "normal");
         const alt = drawnArt(id, radiant, "alt");
         const sketch = drawnArt(id, radiant, "sketch");
-        const signature = drawnArt(id, radiant, "signature");
-        // Three pictures apart, and Alt art's none of the Signature look's.
-        expect(new Set([normal.picture, alt.picture, sketch.picture, signature.picture]).size, where).toBe(4);
+        // Three pictures apart (R3015002: and no Signature picture beside them).
+        expect(new Set([normal.picture, alt.picture, sketch.picture]).size, where).toBe(3);
         // Alt art keeps what the card's name, tags and type pick: its motif and its family.
         expect([alt.motif, alt.family], where).toEqual([normal.motif, normal.family]);
         expect([normal.marked, alt.marked, sketch.marked], where).toEqual([null, "alt", "sketch"]);
@@ -164,8 +164,8 @@ describe("R2940001 Alt art's picture and the Sketch", () => {
     const id = "core-008";
     const manifest = { [id]: { base: true } } as const;
     expect(drawnArt(id, false, "normal", { manifest }).art).toBe("real");
-    // R2949000: the Signature look keeps a delivered file, as it did.
-    expect(drawnArt(id, false, "signature", { manifest }).art).toBe("real");
+    // R3015002: a signed level draws its variant's picture, Full art's the normal one, so it keeps a delivered file.
+    expect(drawnArt(id, false, artPictureOf(VERSION_FULL_ART_SIGNED_ID), { manifest }).art).toBe("real");
     for (const picture of ["alt", "sketch"] as const) {
       const drawn = drawnArt(id, false, picture, { manifest });
       expect(drawn.art, picture).toBe("procedural");
@@ -200,7 +200,7 @@ describe("R2940001 Alt art's picture and the Sketch", () => {
 describe("R2942001 Pixel's and Comic's pictures", () => {
   it("R2942001 Pixel and Comic restyle the normal picture: seeded by the card's own id, each its own restyle", () => {
     for (const picture of ["pixel", "comic"] as const) expect(artSeedOf("core-022", picture), picture).toBe("core-022");
-    expect((["normal", "signature", "alt", "sketch", "pixel", "comic"] as const).map(restyleOf)).toEqual([null, null, null, "sketch", "pixel", "comic"]);
+    expect((["normal", "alt", "sketch", "pixel", "comic"] as const).map(restyleOf)).toEqual([null, null, "sketch", "pixel", "comic"]);
   });
 
   /** One card of each painter, as R2940001's tests: two procedural cards, a Stinkyscape one and a Training Grounds one. */
@@ -304,7 +304,7 @@ describe("R2943001 Set showcase's and Out of frame's pictures", () => {
     for (const set of SHIPPED_SETS) expect(showcaseFamilyOf(set), set).not.toBeNull();
     expect(new Set(SHIPPED_SETS.map((set) => showcaseFamilyOf(set))).size).toBe(FAMILIES.length);
     expect([showcaseFamilyOf("Classic+"), showcaseFamilyOf("Meditative+")]).toEqual([showcaseFamilyOf("Classic"), showcaseFamilyOf("Meditative")]);
-    expect([showcaseFamilyOf(null), showcaseFamilyOf("Boss"), showcaseFamilyOf("Custom")]).toEqual([null, null, null]);
+    expect([showcaseFamilyOf(null), showcaseFamilyOf("Boss"), showcaseFamilyOf("Boss-X")]).toEqual([null, null, null]);
     expect(new Set(Object.values(SHOWCASE_FAMILIES))).toEqual(new Set(FAMILIES));
     for (const family of FAMILIES) {
       const picture = `showcase-${family}` as const;

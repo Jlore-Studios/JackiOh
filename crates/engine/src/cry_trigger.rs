@@ -601,6 +601,8 @@ fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_
             controller: Some(run.controller),
             targets: Some(run.targets.clone()),
             modes: Some(run.modes.clone()),
+            // R3182000: its marker still names the card, which the view then hides as it hides the rest.
+            hook_card: Some(card.id.clone()),
             ..Default::default()
         },
     );

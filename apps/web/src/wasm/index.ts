@@ -47,6 +47,10 @@ import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
 import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
+import type { FaceAnswer } from "../wire/generated/FaceAnswer.ts";
+import type { FaceCall } from "../wire/generated/FaceCall.ts";
+import type { LogAnswer } from "../wire/generated/LogAnswer.ts";
+import type { LogCall } from "../wire/generated/LogCall.ts";
 
 // loading
 
@@ -272,8 +276,7 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
 /**
  * R3100000: what each attack `seat` may declare would do, as the board shows it, and whether the attackers
  * that may reach the enemy hero finish it (`engine::combat_forecast`). The tutorial's coach names its
- * attacks by it. It is the normal module's own, as the Duos bindings are: a lesson holds no custom card
- * (R915009), so the Luau module has no copy.
+ * attacks by it.
  */
 export function combatForecast(state: GameState, seat: PlayerId): CombatForecast {
   return call("combatForecast", () => parsed<CombatForecast>(normal.combat_forecast(stateJson(state), seat)));
@@ -639,4 +642,27 @@ export type ValidatorCall =
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
   return call(name, () => parsed<T>(normal.validator(name, json(input))));
+}
+
+// what a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/**
+ * One call of the face model (`crates/shared/src/face`): a `FaceCall` in, a `FaceAnswer` out, both the
+ * generated wire types. The catalog is the module's own and the locale is an argument, so the answer is
+ * final text as spans for the reader's language (`cards/model.ts` wraps the calls components make).
+ * It runs on the normal module whichever one the engine calls go through, since a face holds no custom card.
+ */
+export function face(request: FaceCall): FaceAnswer {
+  return call("face", () => parsed<FaceAnswer>(normal.face(json(request))));
+}
+
+// the game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/**
+ * One call of the game log (`crates/shared/src/log`): a `LogCall` in, a `LogAnswer` out, both the generated
+ * wire types. The catalog is the module's own and the locale is an argument, so each line is final text as
+ * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes).
+ */
+export function log(request: LogCall): LogAnswer {
+  return call("log", () => parsed<LogAnswer>(normal.log(json(request))));
 }

@@ -216,10 +216,6 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     if let Some(def) = state.and_then(|state| state.transient_defs.get(def_id)) {
         return Some(def);
     }
-    // R915000: a custom card's definition is the game's own, never the catalog's.
-    if crate::custom::is_custom_id(def_id) {
-        return state.and_then(|state| state.custom_defs.get(def_id));
-    }
     if let Some(shipped) = folding() {
         return shipped.find(def_id);
     }
@@ -514,6 +510,39 @@ pub struct CatalogQueryArgs {
     /// lent by its Embiggened version or by an aura) is not printed, so no pool reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keywords: Option<Vec<KeywordKind>>,
+    /// R3134001: only cards whose base face has a Start of turn effect (`start`), an End of turn effect
+    /// (`end`) or either (`either`) (`has_turn_hook`): Meditative #9 Joint Filing's "a random card with a
+    /// Start of turn or an End of turn effect". Read off the registered script, as `tribute` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_hook: Option<TurnHookFilter>,
+}
+
+/// R3134001: which turn hook `CatalogQueryArgs.turn_hook` asks a card for.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum TurnHookFilter {
+    /// A Start of turn effect.
+    Start,
+    /// An End of turn effect.
+    End,
+    /// A Start of turn effect or an End of turn effect, or both.
+    Either,
+}
+
+/// R3134001: whether this definition's base face has the turn hook `which` names — its script's
+/// `start_of_turn` or `end_of_turn`, read off the registered script without state like
+/// `has_tribute_cost`. A card with no registered script has neither.
+fn has_turn_hook(def: &CardDef, which: TurnHookFilter) -> bool {
+    crate::scripts::registered_entry(&def.id).is_some_and(|entry| {
+        let start = entry.base.start_of_turn.is_some();
+        let end = entry.base.end_of_turn.is_some();
+        match which {
+            TurnHookFilter::Start => start,
+            TurnHookFilter::End => end,
+            TurnHookFilter::Either => start || end,
+        }
+    })
 }
 
 /// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
@@ -554,6 +583,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             every_set: None,
             deals_damage: None,
             keywords: None,
+            turn_hook: None,
         }
     }
 }
@@ -717,6 +747,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     }
     if let Some(wanted) = args.deals_damage
         && (def.deals_damage == Some(true)) != wanted
+    {
+        return false;
+    }
+    // R3134001: `turnHook` reads the registered base-face script.
+    if let Some(which) = args.turn_hook
+        && !has_turn_hook(def, which)
     {
         return false;
     }
@@ -1123,12 +1159,8 @@ fn build_card_metrics() -> CardMetrics {
 }
 
 /// R1846000: a card's code lines, or `None` for a definition with no script of its own in the
-/// catalog: a fused or crafted card, a fixture the metrics do not list, or a custom card, whatever a
-/// table lists (R1846002: its Luau script is not the game's code).
+/// catalog: a fused or crafted card, or a fixture the metrics do not list.
 pub fn code_lines_of(def_id: &str) -> Option<usize> {
-    if crate::custom::is_custom_id(def_id) {
-        return None;
-    }
     let lines = card_metrics().code_lines;
     lines
         .binary_search_by(|(id, _)| (*id).cmp(def_id))
@@ -1136,21 +1168,19 @@ pub fn code_lines_of(def_id: &str) -> Option<usize> {
         .map(|at| lines[at].1)
 }
 
-/// R1846000: whether a definition is BUSTED, its script over `BUSTED_CODE_LINES` code lines; a
-/// custom card never is (R1846002).
+/// R1846000: whether a definition is BUSTED, its script over `BUSTED_CODE_LINES` code lines.
 pub fn is_busted(def_id: &str) -> bool {
-    !crate::custom::is_custom_id(def_id) && card_metrics().busted.binary_search(&def_id).is_ok()
+    card_metrics().busted.binary_search(&def_id).is_ok()
 }
 
 /// R1846000: whether a definition is complicated, its script over `COMPLICATED_CODE_LINES` code
-/// lines; a custom card never is (R1846002).
+/// lines.
 pub fn is_complicated(def_id: &str) -> bool {
-    !crate::custom::is_custom_id(def_id) && card_metrics().complicated.binary_search(&def_id).is_ok()
+    card_metrics().complicated.binary_search(&def_id).is_ok()
 }
 
 /// #3116, R846: whether a definition's script owes an extra turn (`CardMetrics::extra_turn_cards`), the
-/// build's list whatever a replay folds under. A custom card's Luau script is not the build's, so the
-/// list never holds one.
+/// build's list whatever a replay folds under.
 pub fn is_extra_turn_card(def_id: &str) -> bool {
     build_card_metrics()
         .extra_turn_cards

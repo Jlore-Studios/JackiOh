@@ -8,10 +8,10 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 
 | | Staging | Production |
 | --- | --- | --- |
-| Purpose | The team sees main as it is now | What players use |
+| Purpose | The team sees main as it was at most two hours ago | What players use |
 | Address | https://staging.jackioh.com, behind Cloudflare Access: only the team signs in | https://jackioh.com |
 | Worker | `jackioh-staging` (`wrangler.jsonc` `env.staging`) | `jackioh` (`wrangler.jsonc`'s top level) |
-| Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, once a day: the commit the daily super run on `main` passed, or sooner on `/promote` (`promote-production.yml`) |
+| Builds from | `staging`, each time it moves (`deploy-staging.yml`): every two hours, main's newest commit whose push-to-main CI run passed (`promote-staging.yml`) | `production`, once a day: the commit of `staging` the daily super run passed, or sooner on `/promote` (`promote-production.yml`) |
 | Game server | one `jackioh-staging-server` container | one `jackioh-server` container |
 | Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project) | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi` (section 8) |
 | Routing and headers | `apps/web/public/_redirects` and `_headers`, `wrangler.jsonc` | the same |
@@ -28,36 +28,56 @@ it again. A daily cron wakes it.
 Each deploy ships the web build and the server together, so a site's client and server are never
 from different commits, and production's server no longer runs a day ahead of its client.
 
-`main` stays the only branch anyone merges into. `production` is a pointer to "the commit of main
-that is live on jackioh.com". Nothing but `.github/workflows/promote-production.yml` moves it, by
-merging a pull request whose head is a green commit of main that the super run passed, on `main` or on
-the pull request, so its files always equal that commit's.
+`main` stays the only branch anyone merges into. Two branches follow it, one a site (#3275, the
+owners' call of 2026-11-05):
+
+| Branch | Site | Moves | Gate |
+| --- | --- | --- | --- |
+| `main` | none | every merge, through the merge queue | the five required checks |
+| `staging` | staging.jackioh.com | every two hours, by fast-forward to a snapshot of `main` (`promote-staging.yml`) | that commit's push-to-main CI run passed |
+| `production` | jackioh.com | once a day, to the commit of `staging` the daily super run tested (`promote-production.yml`) | the super run passed every job on that commit |
+
+`staging` is a pointer to "the commit of main that is live on staging.jackioh.com", and it only ever
+moves forward along main, so every commit on it is a commit of main. `production` is a pointer to
+"the commit of main that is live on jackioh.com". Nothing but `promote-staging.yml` moves `staging`,
+and nothing but `promote-production.yml` moves `production`, by merging a pull request whose head is
+a commit of `staging` that the super run passed, on `staging` or on the pull request, so its files
+always equal that commit's. main moves many times an hour; `staging` holds still between moves, so
+the daily super run tests one commit, and the night bot fixes one commit, instead of chasing main.
 
 ## 2. How a commit reaches each site
 
 1. A pull request merges into `main` through the merge queue (branch protection requires the five
    CI checks).
-2. CI runs again on the push to main. When it passes, `deploy-staging.yml` checks out that commit
-   (or main's newest green commit, if a newer one already passed, so staging never goes backwards),
-   builds the web with `apps/web/.env.staging`, checks the bundle, and runs `wrangler deploy --env
-   staging`, which deploys the Worker, the static files and the container together. The server's
+2. CI runs again on the push to main, unscoped. Every two hours `promote-staging.yml`
+   (`scripts/promote-staging.sh`) fast-forwards `staging` to main's newest commit whose push-to-main
+   CI run passed; it never moves it backwards. GitHub fires this repository's schedules late, so each
+   green push-to-main CI run wakes it as well, and it moves `staging` then once the last move is two
+   hours old (`STAGING_EVERY_MINUTES`). It pushes with `BOT_GITHUB_TOKEN`, whose push starts
+   `deploy-staging.yml`, which checks out that commit, builds the web with `apps/web/.env.staging`,
+   checks the bundle, and runs `wrangler deploy --env staging`, which deploys the Worker, the static files and the container together. The server's
    image is `scripts/server-image.sh`'s: named by what it is built from, so it is pushed to
    Cloudflare's registry once (from CI's `deploy-image`, or built on CI's layer cache) and a commit
    that changes none of it reuses it; the WASM modules likewise come from GitHub's cache when
    nothing under `crates/` changed. It then polls `https://staging.jackioh.com/api/catalog`
    (through Access, with a service token) until the server reports the commit in
    `x-deployed-commit`.
-3. Once a day the super run (`super.yml`, its `schedule`) runs on `main`: every fuzz seed, the full
-   AI gates, golden, the daily tests, coverage, every e2e spec, the db rehearsal and the notebooks.
-   When every job passed, its completion wakes `promote-production.yml`, which promotes the commit it
-   tested (the daily promotion, section 2.1): a pull request from `promote/<date>-<sha>` into
-   `production` listing the commits, opened with the Actions token so that super does not run on it a
-   second time, and merged at once with a merge commit. When a job failed, super's report opens "CI:
-   daily super run failed" for the night bot as `priority:high`, and production waits for the next
-   run on `main` that passes. A promotion or a deploy that fails opens "CI: production promotion
-   failed" for Squishy, also `priority:high`.
-4. Sooner, by hand: a `/promote` on the open issue labeled `production merge` takes the newest commit
-   of `main` whose push-to-main CI run succeeded (or the one named) and opens the same pull request,
+3. Once a day the super run (`super.yml`, its `schedule`) runs on `staging`: a schedule always runs on
+   the default branch, so its one job there starts the run on `staging`
+   (`gh workflow run super.yml --ref staging`), whose commit is then the one it tests. It runs every
+   fuzz seed, the full AI gates, golden, the daily tests, coverage, every e2e spec, the db rehearsal
+   and the notebooks. When every job passed, its completion wakes `promote-production.yml`, which
+   promotes the commit it tested (the daily promotion, section 2.1): a pull request from
+   `promote/<date>-<sha>` into `production` listing the commits, opened with the Actions token so that
+   super does not run on it a second time, and merged at once with a merge commit. When a job failed,
+   super's report opens "CI: daily super run failed" for the night bot as `priority:high`, which the
+   bot takes before everything else it has queued (`GateTitles`, `bot/go/internal/queue`), and
+   production waits for the next run on `staging` that passes. The fix lands on `main` and reaches
+   `staging` within two hours. A promotion or a deploy that fails opens "CI: production promotion
+   failed" for Squishy, also `priority:high`; a staging move that fails opens "CI: staging promotion
+   failed" for Squishy.
+4. Sooner, by hand: a `/promote` on the open issue labeled `production merge` takes `staging`'s commit
+   (or the commit of `staging` named) and opens the same pull request,
    with the bot's token, so the super run runs on it. When every job passed, `promote-production.yml`
    merges it. When one failed, it says so on the issue and the pull request waits, and super's report
    opens "CI: super run failed on a production candidate" for the night bot, as `priority:high` and
@@ -74,9 +94,10 @@ seed and log when its sockets return (SPEC §9.5), as after any restart.
 
 ### 2.1 The production issue: the daily promotion, promote, skip-super and cancel
 
-Production promotes itself once a day, from the daily super run on `main` (the owners' call of
-2026-11-03; it was by hand only from 2026-11-02, #2750): each run on `main` that passes every job is
-promoted once, and a red one promotes nothing until the night bot's fix lets the next one pass. One
+Production promotes itself once a day, from the daily super run on `staging` (the owners' call of
+2026-11-03, on `main` until #3275 moved it to `staging`; it was by hand only from 2026-11-02, #2750):
+each run on `staging` that passes every job is promoted once, and a red one promotes nothing until
+the night bot's fix, once `staging` has it, lets the next one pass. One
 issue labeled `production merge` is open at a time. Its title says where production stands
 ("Production: commits on main are not live yet", "the super run is testing 1a2b3c4 (#2901)", "the
 super run failed on 1a2b3c4 (#2901)", "everything on main is live"); the count of what waits is in
@@ -85,10 +106,13 @@ a week old (`ROTATE_DAYS`), a fresh one takes over with its state, and the old o
 the days it covered ("Production, 2026-10-21 to 2026-11-04 (continued in #3101)") and closed with a
 link to the new one, so the thread never grows long; the closed ones are the history. A command left
 on a closed one is still carried out, and answered on the open one. The first line of its body is
-a hidden state line; leave it alone. Under it the issue lists every pull request on `main` that is
-not on production yet, with its push-to-main CI (passed, failed, running) and where it stands for
-production (in the open promotion, the next `/promote`, waits for CI). Its state line also keeps
-the last super run on `main` it promoted from (`daily`), so a `/cancel` of a daily promotion stays
+a hidden state line; leave it alone. Under it the issue says which commit of `main` each site serves
+(production from its branch, staging from the newest of its GitHub deployments that succeeded) and
+what production does next, then lists every pull request on `main` that is not on production yet,
+with where it stands on staging (live, deploying, the next move of `staging`, or its checks running
+or failed) and on production (being tested in the open promotion, the next promotion once it is on
+`staging`, after staging, or its checks running or failed), and ends with how both sites move and the commands. Its state line also keeps
+the last super run on `staging` it promoted from (`daily`), so a `/cancel` of a daily promotion stays
 cancelled until the next day's run.
 
 Each catalog version is also a GitHub release (`.github/workflows/releases.yml`): a pre-release, "on
@@ -99,9 +123,9 @@ Anyone with write access comments on the issue:
 
 | Comment | Effect |
 | --- | --- |
-| `/promote` (or `/fast-forward`) | Opens the promotion pull request of `main`'s newest green commit into `production`. The super run tests it; it merges and deploys once every job passes. |
-| `/promote <sha>` | The same, for that commit of `main`, which must have passed CI. |
-| `/skip-super <reason>` | The emergency way: merges the open pull request, or `main`'s newest green commit, now, without the super run. The reason is required; the issue and the pull request record who, why and which commit. |
+| `/promote` (or `/fast-forward`) | Opens the promotion pull request of `staging`'s commit into `production`. The super run tests it; it merges and deploys once every job passes. |
+| `/promote <sha>` | The same, for that commit of `staging`. A newer commit of `main` must reach `staging` first (Actions -> promote staging -> Run workflow). |
+| `/skip-super <reason>` | The emergency way: merges the open pull request, or `staging`'s commit, now, without the super run. The reason is required; the issue and the pull request record who, why and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
 Each command is acknowledged with a 👍 (😕 when refused) and a reply saying what came of it. A newer
@@ -109,25 +133,32 @@ Each command is acknowledged with a 👍 (😕 when refused) and a reply saying 
 daily promotion of a commit an open `/promote` already carries leaves it to its own super run. After a
 red super run the pull request stays open: re-running the run's failed jobs (the run's page, Re-run
 failed jobs) merges it once they pass, and the next daily run that passes, or a `/promote` once the
-fix is on `main`, takes the newer commit instead. `/hold`, `/resume` and `/delay`, from the old daily
+fix is on `staging`, takes the newer commit instead. `/hold`, `/resume` and `/delay`, from the old daily
 countdown, are answered that there is nothing to hold: production follows the super run. To stop the
 daily promotion for a while, disable `promote-production.yml` (Actions -> promote production -> the
 menu -> Disable workflow), which stops `/promote` too.
 Actions -> promote production -> Run workflow does the same as `/promote` for its `sha`, or as
 `/skip-super` when its `skip_super_reason` is filled; its `redeploy` deploys production as it is.
-Staging takes no command: it deploys every green commit of main. `scripts/promote-production.sh`
-holds the rules and the label (`RELEASE_LABEL`).
+Staging takes no command: `promote-staging.yml` moves it every two hours, and Actions -> promote
+staging -> Run workflow moves it now (to its `sha`, or main's newest green commit).
+`scripts/promote-production.sh` holds the rules and the label (`RELEASE_LABEL`), and
+`scripts/promote-staging.sh` staging's.
 
 ### 2.2 The rules the promotion enforces
 
-- The candidate must be on `main` and have a successful push-to-main CI run, and a super run in
-  which every job passed, on `main` (the daily promotion) or on its promotion pull request, unless a
-  person merged it with `/skip-super` and a reason.
-- `production` only receives merges of green main commits: if someone committed to `production`,
+- `staging` only moves forward along `main`, to a commit whose push-to-main CI run passed: a
+  candidate it already has is a no-op, and a `staging` that holds anything `main` does not fails the
+  run. Its ruleset (`infra/github.tf`) refuses deletion and force pushes.
+- The production candidate must be on `staging` and have a successful push-to-main CI run, and a
+  super run in which every job passed, on `staging` (the daily promotion) or on its promotion pull
+  request, unless a person merged it with `/skip-super` and a reason.
+- `production` only receives merges of commits of `staging`: if someone committed to `production`,
   the run fails and changes nothing. It never force-pushes.
 - Promoting an older commit than `production` already has is a no-op, not a rollback.
-- It moves `production` with the night bot's `BOT_GITHUB_TOKEN` (which has the `workflow` scope:
-  GitHub refuses the built-in token a push that changes `.github/workflows`). The issue and its
+- It moves `production`, and `promote-staging.yml` moves `staging`, with the night bot's
+  `BOT_GITHUB_TOKEN` (which has the `workflow` scope: GitHub refuses the built-in token a push that
+  changes `.github/workflows`, and a push the built-in token makes starts no workflow, so
+  `deploy-staging.yml` would never hear of it). The issue and its
   comments stay on `GITHUB_TOKEN`, whose writes start no workflow. Nothing loops: a pull request's
   CI never starts the promotion, and on a push to `production` only `releases.yml` runs, which writes
   nothing but GitHub releases.
@@ -282,15 +313,16 @@ later, so Render would stop billing:
 
 ## 5. Day-to-day operation
 
-- **Normal day:** merge to main as usual. Staging updates within minutes of CI passing; production
-  takes the commit the daily super run on main passed, the same afternoon (section 2.1). A red daily
+- **Normal day:** merge to main as usual. Staging takes it within two hours of its CI passing;
+  production takes the commit of `staging` the daily super run passed, the same day (section 2.1). A red daily
   run goes to the night bot as `priority:high`, and production waits for the next one that passes; a
   promotion or deploy that fails goes to Squishy.
-- **Ship to production sooner:** `/promote` on the production issue. The super run tests the pull
+- **Ship to production sooner:** move `staging` (Actions -> promote staging -> Run workflow) if the
+  change is not on it yet, then `/promote` on the production issue. The super run tests the pull
   request (an hour or so) and it merges and deploys once every job passed. A red job goes to the night
   bot as `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer
   commit.
-- **Ship now (hotfix):** merge the fix, wait for its CI on main, then `/promote`. If the super run is
+- **Ship now (hotfix):** merge the fix, wait for its CI on main, run promote staging, then `/promote`. If the super run is
   red for a reason the fix does not touch and it cannot wait, `/skip-super <why>` merges it at once,
   and the issue records who and why.
 - **Catalog bump:** nothing special. Client and server ship together, on each site's own schedule.
@@ -303,8 +335,15 @@ later, so Render would stop billing:
   daily super run passes, disable `promote-production.yml` until it is (section 2.1).
 - **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
   workflow on deploy staging, or promote production with **redeploy**).
+- **Move staging by hand:** Actions -> promote staging -> Run workflow. With no `sha` it moves
+  `staging` to main's newest green commit now, whatever the two-hour pace; a `sha` given must be on
+  main and have a green push-to-main CI run. Its push deploys staging.
 - **Deploy staging by hand:** Actions -> deploy staging -> Run workflow. With no `sha` it deploys
-  main's newest green commit; a `sha` given must be on main and have a green push-to-main CI run.
+  `staging`'s commit again (after a secret changed, say); a `sha` given must be on `staging`.
+- **Staging stopped moving:** the issue "CI: staging promotion failed" names the run. "is not an
+  ancestor of" means someone pushed to `staging` by hand: an admin resets it to a green commit of
+  main with `git push --force origin <sha>:staging` (temporarily allowing force pushes in the
+  `staging` ruleset; `terraform -chdir=infra apply` puts the rule back).
 - **A dev account (SPEC §14.10):** the `DEV_PROFILE_IDS` secret of that site's Worker, each
   developer's profile id comma-separated (from `/account`: "Manage sign-in & account", then "Show
   account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.

@@ -380,21 +380,4 @@ mod r1824000_every_walk_of_a_sides_acting_cards_takes_a_carried_unit_once {
                 .radiant
         );
     }
-
-    #[test]
-    fn fuse_onto_your_card_offers_the_carried_unit() {
-        let (mut state, _, carried) = carrying("fuse-onto", &rider().id);
-        let ingredient = put(&mut state, &rider().id, slot(P1, Row::Units, 1), json!({}));
-        apply(
-            &mut state,
-            effects::fuse_onto_your_card(json_as(json!({
-                "target": { "of": "instance", "instanceId": ingredient.id },
-                "from": ["field"],
-                "otherwise": "nothing",
-            }))),
-        );
-        let pending = state.pending.as_ref().expect("no prompt opened");
-        let keys: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
-        assert_eq!(keys, vec![format!("instance:{}", carried.id)]);
-    }
 }

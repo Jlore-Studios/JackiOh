@@ -1,7 +1,10 @@
 //! SPEC §8.1 #3 Right-house defender — 1/1 → 2/2 Unit, Human, cost 1.
-//! Base: "Divine Shield, Reborn" — printed on both faces and applied by the layer system (§10.4),
-//! so the base script has nothing to do. Never re-grant a printed keyword from a script.
-//! Radiant: "Divine Shield, Reborn; Death: summon a base Right-house defender" (§8 Conventions).
+//! Base: "Taunt, Divine Shield, Reborn, Can't Defend" — printed on both faces and applied by the layer
+//! system (§10.4), so the base script has nothing to do. Never re-grant a printed keyword from a script.
+//! Can't Defend is issue #3136's (R2657000): it is never in Defense Position, so its Taunt only ever
+//! stands in Attack Position, as it always did, and House Party's board of them never defends.
+//! Radiant: "Taunt, Divine Shield, Reborn, Can't Defend; Death: summon a base Right-house defender"
+//! (§8 Conventions).
 //!
 //! Death fires on both deaths of a Reborn unit (§4.5's ruling, R8) and the reborn body keeps the
 //! radiant flag (R78), so the radiant form summons twice. It summons a new base face, with no Death
@@ -72,6 +75,21 @@ mod tests {
 
             assert_eq!(s.unit(PlayerId::P1, 1).map(|unit| unit.radiant), Some(true));
             assert!(keywords_of(s.state(), s.card("core-003")).contains(&Keyword::Taunt));
+        }
+
+        #[test]
+        fn r2657000_both_faces_have_can_t_defend_so_it_never_enters_defense_position() {
+            for radiant in [false, true] {
+                let mut s = scenario(json!({ "p1": { "field": [{ "def": "core-003", "radiant": radiant }] } }));
+                let defender = s.unit(PlayerId::P1, 1).expect("the defender");
+
+                let kinds = keywords_of(s.state(), &defender);
+                assert!(kinds.contains(&Keyword::CantDefend));
+                // The Taunt it always had stays beside it.
+                assert!(kinds.contains(&Keyword::Taunt));
+                s.expect_refused_with(|s| s.switch_position(&defender), "Defense Position");
+                assert_ne!(s.card(&defender).position, Some(Position::Def));
+            }
         }
 
         #[test]

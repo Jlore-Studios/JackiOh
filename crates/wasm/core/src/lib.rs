@@ -1,26 +1,23 @@
-//! `jackioh-wasm-core`: the bodies the three wrappers bind (#1505, #3093). JSON strings in and out,
+//! `jackioh-wasm-core`: the bodies the two wrappers bind (#1505, #3093). JSON strings in and out,
 //! nothing else crosses: the state is the `GameState` JSON object, which the client keeps behind its
 //! opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call. `crates/wasm` wraps each
-//! body for wasm-bindgen, `crates/wasm/luau` for C through emscripten, and `crates/wasm/c` for C on a
-//! plain `wasm32-unknown-unknown` link; the exports stay identical.
+//! body for wasm-bindgen and `crates/wasm/c` for C on a plain `wasm32-unknown-unknown` link; the exports
+//! stay identical.
 //!
 //! The state cache: the client hands the same state over and over, so the bodies keep the few states
 //! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text. A text that differs by
 //! one byte is parsed, so the answer never depends on the cache.
 //!
 //! Errors are `String`s, each module's own failure. The clock is the caller's (`ai_decide` takes
-//! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3), and so is the setup check
-//! (`CheckSetup`): the normal and C modules refuse a game with custom cards (R915009), the Luau module
-//! judges them (R915005, R915006).
+//! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3).
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use jackioh_engine::prelude::IndexMap;
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::{
-    self as engine, Action, CardDef, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
+    self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
     ReduceResult, ReplayCheckpoints, ReplayRecord, Rng, SetupKind,
 };
 use jackioh_run::{RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks};
@@ -147,28 +144,19 @@ fn reduce_result_json(result: ReduceResult) -> Result<String, String> {
     Ok(format!("{{\"state\":{state},\"events\":{events}{error}}}"))
 }
 
-// The setup check each module runs before the engine sees a setup
-
-/// Each module's own setup check, which `create_game`, `fold` and `replay_open` run before the engine
-/// sees the setup: the normal module refuses a game with custom cards (R915009), the Luau module judges
-/// them (R915005, R915006) and hands their definitions to `check_decks`. The kind is `create_game`'s
-/// `New` or a fold's `Recorded` (R1705003).
-pub type CheckSetup = fn(&CreateGameArgs, SetupKind) -> Result<(), String>;
+// The setup check `create_game`, `fold` and `replay_open` run before the engine sees a setup
 
 /// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
 /// and a panic in WebAssembly is a trap the page cannot catch. R180's handicaps come first, then each
 /// deck against its seat's size (R184): the engine's own `validate_setup`, whose messages cross verbatim,
-/// and a recorded game's decks are held to the size it was made under.
-pub fn check_decks(
-    args: &CreateGameArgs,
-    customs: &IndexMap<String, CardDef>,
-    kind: SetupKind,
-) -> Result<(), String> {
+/// and a recorded game's decks are held to the size it was made under. The kind is `create_game`'s `New`
+/// or a fold's `Recorded` (R1705003).
+fn check_decks(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
     let catalog: &CardDefs = match &args.catalog {
         Some(catalog) => catalog,
         None => engine::registered_catalog(),
     };
-    engine::validate_setup(args, catalog, customs, kind).map_err(|error| error.to_string())
+    engine::validate_setup(args, catalog, kind).map_err(|error| error.to_string())
 }
 
 // Boot and the catalog
@@ -304,9 +292,9 @@ pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, String> {
 // The engine (SURFACE §6.1)
 
 /// `GameState` from JSON arguments.
-pub fn create_game(args_json: &str, check_setup: CheckSetup) -> Result<String, String> {
+pub fn create_game(args_json: &str) -> Result<String, String> {
     let args: CreateGameArgs = parse("createGame", args_json)?;
-    check_setup(&args, SetupKind::New)?;
+    check_decks(&args, SetupKind::New)?;
     returned_state(engine::create_game(&args))
 }
 
@@ -348,10 +336,10 @@ pub fn hash_state(state_json: &str) -> Result<String, String> {
 }
 
 /// `{ state, errors: [{ nonce, error }] }`. Setup is checked first; refused actions are collected.
-pub fn fold(args_json: &str, check_setup: CheckSetup) -> Result<String, String> {
+pub fn fold(args_json: &str) -> Result<String, String> {
     // The fold's input is `createGame`'s plus `log`, so the same JSON reads as both.
     let setup: CreateGameArgs = parse("fold", args_json)?;
-    check_setup(&setup, SetupKind::Recorded)?;
+    check_decks(&setup, SetupKind::Recorded)?;
     let args: FoldArgs = parse("fold", args_json)?;
     to_json(&engine::fold(&args))
 }
@@ -359,12 +347,12 @@ pub fn fold(args_json: &str, check_setup: CheckSetup) -> Result<String, String> 
 /// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was played
 /// on (R767000): this build's own or one it carries. A game of any other version is refused as
 /// `earlier_patch` before its decks are read.
-pub fn replay_open(args_json: &str, record_json: &str, check_setup: CheckSetup) -> Result<String, String> {
+pub fn replay_open(args_json: &str, record_json: &str) -> Result<String, String> {
     let record: ReplayRecord = parse("replayOpen: the record", record_json)?;
     let build = jackioh_cards::catalog_version();
     if let Ok(shipped) = engine::catalog_for(&record.catalog_version, build) {
         let setup: CreateGameArgs = parse("replayOpen", args_json)?;
-        engine::with_shipped(shipped, || check_setup(&setup, SetupKind::Recorded))?;
+        engine::with_shipped(shipped, || check_decks(&setup, SetupKind::Recorded))?;
     }
     let args: FoldArgs = parse("replayOpen", args_json)?;
     to_json(&engine::replay_open(&args, &record, build))
@@ -566,7 +554,7 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
 /// block editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
 /// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (either absent), so the verdict is the
-/// one its answer gets: the mode's frame and the offer's blocks (R1563007).
+/// one its answer gets: the mode's frame and points (R3043000) and the offer's blocks (R1563007).
 pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, String> {
     let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
     if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
@@ -765,6 +753,31 @@ pub fn loadout(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::loadout::apply(&call))
 }
 
+// What a card face prints (#3106; `jackioh_shared::face`)
+
+/// One call of `jackioh_shared::face`, the card face model: the input is a `FaceCall`
+/// (`{ "call": "card", "source": …, "locale": "zh-CN" }`, `live`, `view`, `named`, `text` or `wordDiff`), the
+/// output a `FaceAnswer` (`{ "answer": "face", "face": … }`, `faces`, `rich`, `diff` or `noFace`). The
+/// catalog is the one `init` registered; the locale comes in as an argument, and the answer is final text as
+/// spans in the reader's words (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn face(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::face::FaceCall = parse("face: the call", call_json)?;
+    to_json(&jackioh_shared::face::apply(&call))
+}
+
+// The game log's lines (#3108; `jackioh_shared::log`)
+
+/// One call of `jackioh_shared::log`, the game log's lines: the input is a `LogCall`
+/// (`{ "call": "view", "view": …, "locale": "zh-CN" }`, or `gap`), the output a `LogAnswer`
+/// (`{ "answer": "lines", "lines": [ … ] }`, a line or `null` for each event of the view's window, or
+/// `{ "answer": "line", "line": … }`). The catalog is the one `init` registered; the locale comes in as an
+/// argument, and each line is final text as spans in the reader's words, naming only what the view lets its
+/// viewer read (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn log(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::log::LogCall = parse("log: the call", call_json)?;
+    to_json(&jackioh_shared::log::apply(&call))
+}
+
 // The match host's machine (#3101; SPEC §9.2, §9.3, §9.5)
 
 /// One call of `jackioh_shared::host`, the match host's decisions the server calls natively: the input is
@@ -824,6 +837,20 @@ pub fn bot_decide(call_json: &str, deadline_ms: f64, now_ms: fn() -> f64) -> Res
             call.request.home
         )),
     }
+}
+
+// The collection economy's decisions (SPEC §14.3 to §14.7; #3104)
+
+/// One call of `jackioh_shared::economy`, the economy's decisions the server calls natively: the input is an
+/// `EconomyCall` (`{ "call": "openCardPack", "records": …, "pack": "global", "seed": "…", "now": … }`), the
+/// output an `EconomyAnswer` (`{ "opened": … }`, `{ "cosmeticOpened": … }`, `{ "filled": … }`,
+/// `{ "reward": … }` or `{ "refused": … }`). The host reads the records from its store, passes the seed and
+/// the time in, and writes the answer's grants back (`crates/shared/README.md`, the host contract). A pool,
+/// a registry or a catalog version a call leaves out is the one compiled in. A rules refusal is the returned
+/// `refused`, never an error: only a call that does not parse is one. No decision is made here.
+pub fn economy(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::economy::boundary::EconomyCall = parse("economy: the call", call_json)?;
+    to_json(&jackioh_shared::economy::boundary::apply(&call))
 }
 
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
@@ -1249,6 +1276,109 @@ mod run_body_tests {
 }
 
 #[cfg(test)]
+mod face_body_tests {
+    use super::*;
+    use serde_json::Value;
+
+    /// The body is `jackioh_shared::face::apply` over JSON: a card in, its face out, in the locale it is asked in.
+    #[test]
+    fn face_body_answers_a_face_in_the_asked_locale() {
+        jackioh_cards::register_all();
+        let ask = |locale: &str| {
+            let call = format!(
+                r#"{{ "call": "card", "locale": "{locale}", "source": {{ "defId": "core-020", "radiant": false }} }}"#
+            );
+            serde_json::from_str::<Value>(&face(&call).unwrap()).unwrap()
+        };
+        let english = ask("en");
+        assert_eq!(english["answer"], "face");
+        assert_eq!(english["face"]["name"], "Pointmaster");
+        assert_eq!(english["face"]["text"]["full"], "Rush, First Strike");
+        assert_ne!(ask("zh-CN")["face"]["name"], "Pointmaster");
+    }
+
+    #[test]
+    fn face_body_answers_the_words_of_a_text_and_the_diff_of_two() {
+        jackioh_cards::register_all();
+        let text =
+            serde_json::from_str::<Value>(&face(r#"{ "call": "text", "text": "Cry: Armor 2" }"#).unwrap())
+                .unwrap();
+        assert_eq!(text["answer"], "rich");
+        assert_eq!(text["text"]["spans"][0]["kind"], "keyword");
+        let diff = serde_json::from_str::<Value>(
+            &face(r#"{ "call": "wordDiff", "before": "Deal 3 damage.", "after": "Deal 4 damage." }"#)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(diff["added"][0]["start"], 5);
+    }
+
+    #[test]
+    fn face_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{ "call": "nothing" }"#] {
+            let error = face(call).unwrap_err();
+            assert!(error.starts_with("face: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod log_body_tests {
+    use super::*;
+    use serde_json::Value;
+
+    /// The body is `jackioh_shared::log::apply` over JSON: a view's events in, a line for each out, in the
+    /// locale it is asked in.
+    #[test]
+    fn log_body_answers_a_line_for_each_event_in_the_asked_locale() {
+        jackioh_cards::register_all();
+        let view = r#"{ "viewer": "p1", "turn": 3, "active": "p1", "phase": "main",
+            "you": { "player": "p1", "hero": { "health": 30, "armor": 0, "powers": [] },
+                "modifiers": [], "mana": { "current": 4, "max": 4 }, "hand": [], "libraryCount": 12,
+                "graveyard": [], "exile": [], "resolving": [], "units": [null, null, null, null, null],
+                "backrow": [null, null, null, null, null],
+                "locks": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "reserved": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "fatigueCount": 0 },
+            "opponent": { "player": "p2", "hero": { "health": 30, "armor": 0, "powers": [] },
+                "modifiers": [], "mana": { "current": 4, "max": 4 }, "hand": { "count": 4 }, "libraryCount": 12,
+                "graveyard": [], "exile": [], "resolving": [], "units": [null, null, null, null, null],
+                "backrow": [null, null, null, null, null],
+                "locks": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "reserved": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "fatigueCount": 0 },
+            "pending": null, "result": null, "clockMs": null,
+            "events": [
+                { "type": "drawn", "player": "p1", "instanceId": "c1", "defId": "core-011" },
+                { "type": "cardResolved", "player": "p2", "instanceId": "c2", "defId": "core-011", "permanent": false, "costPaid": 1 },
+                { "type": "cardPlayed", "player": "p2", "instanceId": "c7", "defId": "core-032", "costPaid": 2 }
+            ] }"#;
+        let ask = |locale: &str| {
+            let call = format!(r#"{{ "call": "view", "locale": "{locale}", "view": {view} }}"#);
+            serde_json::from_str::<Value>(&log(&call).unwrap()).unwrap()
+        };
+        let english = ask("en");
+        assert_eq!(english["answer"], "lines");
+        assert_eq!(english["lines"][0]["text"]["full"], "You drew a card");
+        assert_eq!(english["lines"][1], Value::Null);
+        assert_eq!(english["lines"][2]["event"], "cardPlayed");
+        assert_eq!(english["lines"][2]["card"]["defId"], "core-032");
+        assert_ne!(ask("zh-CN")["lines"][0]["text"]["full"], "You drew a card");
+        let gap = serde_json::from_str::<Value>(&log(r#"{ "call": "gap" }"#).unwrap()).unwrap();
+        assert_eq!(gap["line"]["event"], "gap");
+        assert_eq!(gap["line"]["text"]["full"], "Some events may be missing here");
+    }
+
+    #[test]
+    fn log_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{ "call": "nothing" }"#] {
+            let error = log(call).unwrap_err();
+            assert!(error.starts_with("log: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
 mod series_body_tests {
     use super::*;
 
@@ -1334,6 +1464,30 @@ mod loadout_body_tests {
         assert_eq!(again["due"]["cards"], json!([]));
     }
 
+    /// R1834002: a seat's loadout as its match starts is the body too: the picks the host read in, the loadout out.
+    #[test]
+    fn loadout_body_freezes_a_seat_from_the_picks_a_host_read() {
+        let call = json!({
+            "call": "freezeSeat", "deckCards": ["core-001", "core-002"],
+            "picks": { "stamps": [{ "cardId": "core-001", "stamp": 2 }, { "cardId": "core-009", "stamp": 4 }] },
+        });
+        let frozen: Value = serde_json::from_str(&loadout(&call.to_string()).unwrap()).unwrap();
+        // Only a card the deck deals wears its stamp; a seat that owns nothing wears the defaults.
+        assert_eq!(
+            frozen["frozen"]["stamps"],
+            json!([{ "cardId": "core-001", "stamp": 2 }])
+        );
+        let defaults: Value =
+            serde_json::from_str(&loadout(r#"{"call":"defaultLoadout"}"#).unwrap()).unwrap();
+        assert_eq!(frozen["frozen"]["seat"], defaults["frozen"]["seat"]);
+        let rows = json!({ "call": "wornStamps", "rows": [
+            { "cardId": "core-001", "plays": 20, "level": 2, "stamp": 2 },
+            { "cardId": "core-002", "plays": 3, "level": 1, "stamp": 4 },
+        ] });
+        let worn: Value = serde_json::from_str(&loadout(&rows.to_string()).unwrap()).unwrap();
+        assert_eq!(worn["stamps"], json!([{ "cardId": "core-001", "stamp": 2 }]));
+    }
+
     #[test]
     fn loadout_body_refuses_a_call_that_does_not_parse() {
         for call in [
@@ -1388,6 +1542,49 @@ mod ranked_body_tests {
         for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"rateGame"}"#] {
             let error = ranked(call).unwrap_err();
             assert!(error.starts_with("ranked: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod economy_body_tests {
+    use super::*;
+
+    fn records(held: i64) -> Value {
+        json!({
+            "held": held, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+            "counters": {
+                "pity": { "epic": 0, "legendary": 0, "mythic": 0 },
+                "cardBar": 0, "cosmeticBar": 0, "cosmeticCycle": 0, "chaseShard": 0,
+            },
+        })
+    }
+
+    /// The body is `jackioh_shared::economy::boundary::apply` over JSON: the opening it answers holds the
+    /// grants a store writes, and a pack not held is a refusal the host reads, not an error.
+    #[test]
+    fn economy_body_answers_an_opening_and_a_refusal() {
+        let call =
+            json!({ "call": "openCardPack", "records": records(1), "pack": "global", "seed": "s", "now": 1 });
+        let opened: Value = serde_json::from_str(&economy(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(opened["opened"]["slots"].as_array().map(Vec::len), Some(5));
+        assert_eq!(opened["opened"]["grants"][0]["kind"], "inventory");
+        assert_eq!(opened["opened"]["grants"][0]["delta"], -1);
+        // The same call, the same opening.
+        assert_eq!(
+            economy(&call.to_string()).unwrap(),
+            economy(&call.to_string()).unwrap()
+        );
+        let call = json!({ "call": "openCosmeticPack", "records": records(0), "seed": "s", "now": 1 });
+        let refused: Value = serde_json::from_str(&economy(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(refused["refused"]["reason"], "no_pack_held");
+    }
+
+    #[test]
+    fn economy_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"fillBar"}"#] {
+            let error = economy(call).unwrap_err();
+            assert!(error.starts_with("economy: the call"), "{call:?}: {error}");
         }
     }
 }

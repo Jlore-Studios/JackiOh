@@ -1,4 +1,4 @@
-//! #82 KY's Trial (SPEC §8.4 row 82): Spell, KY, cost 1, Rare.
+//! #82 KY's Trial (SPEC §8.4 row 82): Spell, KY, cost 2 (1 until issue #3136), Rare.
 //!   Base:    "Discover one of 3 random sets, then one of 3 random numbers in it. Add the Radiant card
 //!             with that number to your hand."
 //!   Radiant: "… It costs ({setCost})."
@@ -192,6 +192,15 @@ mod tests {
         let chosen = card_numbered(set, &first).unwrap_or_default();
         s.answer(json!(format!("mode:{first}")));
         chosen
+    }
+
+    /// Issue #3136: it costs (2), from (1), on both faces.
+    #[test]
+    fn issue_3136_costs_2_refused_with_1_mana_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": TRIAL, "radiant": radiant }] } }));
+            crate::expect_costs(&mut s, TRIAL, 2, json!({}));
+        }
     }
 
     mod n82_ky_s_trial_base {

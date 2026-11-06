@@ -10,9 +10,13 @@ comes from this crate through that module.
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
 and Duos actors and the later practice and ladder-bot hosts (#3099, #3103) run on; the third, the loadout visibility rule
-(SPEC §10.8, R1834003, #3102); the fourth is the ranked ladder (#3105): Glicko-2, the visible ladder, the
+(SPEC §10.8, R1834003, #3102), with what a seat wears when its match starts (R1834002, #3103); the fourth is the ranked ladder (#3105): Glicko-2, the visible ladder, the
 seasons and one rated game decided as data; the fifth, the ladder bots (#3103): a bot is a seat kind of that
-machine, and the queue's and the pool's decisions around it are here too.
+machine, and the queue's and the pool's decisions around it are here too; the sixth is the collection economy
+(SPEC §14, #3104): the cosmetics registry, the card and cosmetic pack rolls, pity, the token bars, the set-track
+curve and rewards, what a finished game pays and how a quest moves, each
+`decide(records, inputs, seed, now_ms) -> outcome`; the seventh is what a card
+face prints (#3106), from `apps/web`; the eighth is the lines of the game log (#3108), from `apps/web`'s `Log.tsx`.
 
 ## Host contract
 
@@ -20,9 +24,7 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first, `loadout`
-   the next: a binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its
-   `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them, with no list to edit. A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -39,8 +41,12 @@ Every Part B issue follows it, and review holds each one to it.
 5. **Everything the host must do comes out as data:** rows to write, messages to send to a seat, timers
    to set. Never a trait object, a callback or a store handle across the boundary. The server's store
    code and a Roblox DataStore script then do the same job from the same output.
-6. **Data is compiled in** (`include_str!`, rule 4): quest pools, registries and translations. The
-   module carries it, and no host loads files.
+6. **Data is compiled in** (rule 4): quest pools, registries and translations. The module carries it, and
+   no host loads files. Small tables are read with `include_str!`; the face model's and the log's (the glossary,
+   the powers, the short forms, the Call to Chaos effects' names, the translations and the Chinese card
+   tables) are turned into immutable sorted tables by `build.rs` from `data/*.json` and
+   `crates/cards/chinese*.json`, so a call parses no JSON and the crate keeps no static of its own state or
+   cache.
 7. **Its numbers** are named constants in `src/config.rs` (rule 9) and join the `constants` export of
    `jackioh-wasm-core` under their own names, so no host restates them; that module's test holds its
    list to `config.rs`.
@@ -54,12 +60,11 @@ Every Part B issue follows it, and review holds each one to it.
 No clock, no I/O, no environment, no threads, no OS randomness, no hash-ordered collection, no mutable
 static. Two things hold it, as in the other pure crates:
 
-- `Cargo.toml` takes `serde`, `indexmap`, the engine and the AI (the host machine asks it who owes a
-  move) and, behind the off-by-default `ts` feature, `ts-rs` (`serde_json` and the cards only as
-  dev-dependencies: the machine's tests play on the real catalog). It may also take `serde_json`, the
-  cards and the run, never `jackioh-luau`, and none of them takes it.
-- `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
-  the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
+- `Cargo.toml` takes `serde`, `serde_json`, `indexmap`, the engine, the AI (the host machine asks it who
+  owes a move), the cards (the cosmetics registry judges an offer against the shipped catalog) and, behind
+  the off-by-default `ts` feature, `ts-rs`. It may also take the run, and none of them takes it.
+- `clippy.toml` is the other four pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
+  the five the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
 
 A transition never reads a clock: it takes `now`, and the host passes the time it read.
@@ -67,10 +72,12 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 ## `src/config.rs`
 
 `MS_PER_SECOND`, `SERIES_WINS_NEEDED` (R330), `SERIES_MAX_GAMES` (R334) and `SERIES_PICK_SECONDS`
-(R333), and the match host's: `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS`
-(R268), `DISCONNECT_GRACE_SECONDS`, `MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000),
-`BOT_WRITE_RETRY_MS` (R1452), `AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and
-the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672), and the ranked ladder's (#3105): the hidden
+(R333); the face model's `TEMPORARY_LAST_COUNT` (R637, R2179001) and Glitch's `GLITCH_SEED`, `GLITCH_SWAP_IN`,
+`GLITCH_MARK_IN` and `GLITCH_ODDS_SCALE` (issue #170); the match host's: `TURN_CLOCK_SECONDS`,
+`PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS` (R268), `DISCONNECT_GRACE_SECONDS`,
+`MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000), `BOT_WRITE_RETRY_MS` (R1452),
+`AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and the rematch stakes `STAKE_NORMAL`
+and `STAKE_DOUBLE` (R672); and the ranked ladder's (#3105): the hidden
 rating's (`RATING_START`, `RATING_DEVIATION_START`, `RATING_VOLATILITY_START`, `GLICKO_TAU`, `GLICKO_SCALE`,
 `GLICKO_CONVERGENCE`, `GLICKO_MAX_ITERATIONS`; R603), the visible ladder's (`RANK_TIER_PERCENTS` and the
 `RANK_*` pips, divisions and placements, `JLORIOUS_SIZE`; R605 to R608), the seasons' (`SEASON_RESET_STRENGTH`,
@@ -80,10 +87,15 @@ client's and stays in the server), and the ladder bots': their strengths and see
 ratings (`BOT_STRENGTHS`, `SKILL_ELO_TABLE`, R747000, R748000), think times and habits (`THINK_TIME_FITS`,
 `BOT_CONCEDE_FIT`, `BOT_REMATCH_FIT` and the other fits of R639000, R1442), emote personas (`AI_PERSONAS`,
 `AI_EMOTE`, R645), pool, schedule and grind (`BOT_POOL_*`, `BOT_GRIND_*`, R1454, R1555000), fallback and
-pick numbers (`BOT_FALLBACK_*`, `BOT_PICK_*`, R1453, R641000) and username shapes (`BOT_NAME_*`, R1454).
-The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name them as
-before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
-(`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file.
+pick numbers (`BOT_FALLBACK_*`, `BOT_PICK_*`, R1453, R641000), username shapes (`BOT_NAME_*`, R1454) and the cosmetics
+a bot wears (`BOT_COSMETIC_*`, the `CosmeticFit` rows and their prior, R1834005, R1834006; the window `cosmetics-fit`
+reads is only the server's and stays there), and
+the economy's (#3104): the drop tables (`CARD_TIER_WEIGHTS`, `COSMETIC_TIER_WEIGHTS`, `TIER_WEIGHT_TOTAL`, `PACK_SLOTS`, the floors, the global
+cosmetic roll), pity (`PITY_*_PACKS`), the token bars (`CARD_TOKEN_BAR_SIZE`, `COSMETIC_TOKEN_CYCLE` and the
+points per rarity), the cosmetic pack and Chase Shard bar, the set track's `SET_TRACK_XP_PER_LEVEL`, and what a game pays and a quest does (#3104, part 2): the Jlore and XP rates (`JLORE_*`, `XP_*`), the daily cap (`JLORE_GAMES_DAILY_CAP`, R1483000), the track levels (`SET_TRACK_LEVELS`, `SET_TRACK_UNLOCK_LEVEL`, `SET_TRACK_FIRST_LEVEL`) and the quest rhythm and pay (`QUEST_*`). The server re-exports the series', the match host's, the ranked ladder's, the bots' and the economy's
+from its own `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants` carries them all, which the browser and the C module
+(`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file, and `cosmetics-fit` prints the rows
+to paste over `BOT_COSMETIC_FITS`.
 
 ## `src/series.rs`: the Conquest series
 
@@ -139,6 +151,100 @@ answers are `row`, `refused`, `seats`, `picked`, `view` and `score`. A call that
 refused by the body as an error (thrown in the browser, status 1 in the C module), and a rules refusal
 is never one. `apply` is the one function behind it, and `tests/boundary.rs` holds it to the functions it
 names.
+
+## `src/face/`: what a card face prints
+
+The face model of `apps/web/src/cards/model.ts` and its neighbours (`inPlay.ts`, `cardState.ts`,
+`shortText.ts`, `radiantDiff.ts`, `rules.ts`'s tokenizer, `glossary.ts`), moved here with the translations of
+the face and glossary strings, so a client lays out what this returns and writes none of it. The decision
+the owner took on #2956 (2026-11-05): the model itself is Rust, not only its wording. Nothing in it is a rule
+(CLAUDE.md rule 7): it reads the catalog, the definitions a view carries and what `view_for` says of a card,
+never state, so a hidden card cannot be named by it.
+
+| Call | Takes | Answers |
+| --- | --- | --- |
+| `card` | a `FaceSource` (a `defId`, optionally its `def`, the face, and, in a game, `inPlay`), `locale`, `defs` | the `FaceModel` |
+| `live` | a `LiveCard` (a `CardView`, `UnitView` or face-up backrow card as the view lists it), its `def`, `facts`, `locale` | the face in play the view says it has (R243) |
+| `view` | a `PlayerView`, `locale` | every face the view shows, by instance id: one call for a whole view |
+| `named` | a `PlayerView`, a `NamedCard`, `locale` | the face of a card an event or a prompt names, or `noFace` for the sentinel |
+| `text` | words from the engine or a card, `locale` | the same words as spans, the glossary's terms in bold |
+| `wordDiff` | two texts | what the newer adds and what the older loses, by word, in UTF-16 offsets (R277, R388) |
+
+```json
+{ "call": "card", "locale": "zh-CN", "source": { "defId": "core-020", "radiant": true } }
+{ "answer": "face", "face": { "name": "…", "text": { "full": "…", "spans": [ { "kind": "mark", "children": [ … ] } ] }, … } }
+```
+
+- **Spans, not markup.** A face's text is `RichText { full, spans }`: `full` the plain words (what a client
+  measures and keys on), `spans` the same words as `Span`s: `text`, `keyword` (the term and its glossary
+  entry), `number` (a number the view moved off its printed value, with whether that is better or worse and a
+  title that says so), `card` (a name that points at another card), `mark` (words a Radiant face adds to the
+  base face's, R277) and `value` (what a card's formula comes to, R280). `card` and `mark` hold their
+  children already nested, a mark that crosses a name's edge cut there. No HTML, Markdown or CSS: the web maps
+  spans to elements and Roblox to RichText.
+- **Final words.** Everything a face prints is in the reader's language: the name and text (from the Chinese
+  card table for a Chinese card, R1301, or for any card when the reader reads Chinese, R711000), the type line,
+  tag chips, keyword words, state badges and their sentences, the tuning chips and tooltips, the glossary
+  entries, a Heroic Power's rolled power and a Quest's stage. The translations of those strings are
+  `data/zh-CN.json` (English sentence to words; a key with `{name}` tokens also matches a finished sentence,
+  as the engine's quest texts arrive); the web's UI strings stay in `apps/web/src/i18n/`.
+- **What the rules box prints** is decided here too: `text` (the whole), `short` (a card's short form, issues
+  #814 and #1017: `data/short-forms.json`), `summit` (the Summit's header and the next Ascent line), `questBox`
+  (a Quest's one stage, R2450000) and `clamp`. Whether the text fits its box is the client's layout.
+- **A Starship's name** is the hull's (R3045000): the engine joins a fused card's names ("Dormant Starship +
+  Miner v1"), and the face prints the name the Starship launched under, else the Dormant Starship's, in Chinese
+  on a Chinese face, whenever the view says the unit is a Starship or the definition holds the hull among its
+  ingredients (`fused.rs` walks them, a fusion of fusions to its leaves, from the definition or the id it
+  spells). The web's art code reads the same ids in `apps/web/src/cards/fused.ts`.
+- **Locale and catalog come in as arguments.** The catalog is the engine's registered one, with the
+  definitions a view carries (`PlayerView.defs`) consulted next.
+- **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
+  held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
+  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+
+## `src/log/`: the game log's lines
+
+What `apps/web/src/game/Log.tsx` decided before it moved here (#3108): turning the events a player's view gives
+into readable lines, so a client draws what this returns and writes no line. The rule it keeps (CLAUDE.md rule
+7, R97): a line is built from the event's payload and the public board the view carries, so a card the viewer
+may not read is never named. `drawn`, `addedToHand` and `shuffledIn` carry a `defId` for the animation layer
+and read "drew a card"; the sentinel `hidden` is "a card" or "a hidden card" and opens nothing; an id is never
+printed; `cardResolved`, `cardAnnounced`, `manaSpent`, `translated` and `hookResolving` have no line.
+
+| Call | Takes | Answers |
+| --- | --- | --- |
+| `view` | a `PlayerView`, `locale` | `lines`: one entry for each event of `view.events`, in order, a `LogLine` or `null` where the log leaves the event out |
+| `gap` | `locale` | `line`: what a history says where a window shares no event with the one before (R745) |
+
+```json
+{ "call": "view", "locale": "zh-CN", "view": { "...": "the PlayerView" } }
+{ "answer": "lines", "lines": [ { "event": "cardPlayed", "text": { "full": "对手打出了…，花费2", "spans": [ … ] }, "card": { "defId": "core-032", "radiant": false, "instanceId": "c7" } }, null ] }
+```
+
+- **A line** is `LogLine { event, text, card }`. `event` is the event's type (`gap` for the gap line), what a client
+  keys a line's look on; `text` is `RichText` as a face's text is, `full` the sentence and `spans` the same words
+  as `Span`s: `text`, and a `keyword` (with its glossary entry in the reader's words) where a line is about one
+  (`keywordGranted`); `card` is the `NamedCard` the line opens, if it names one the viewer may read: what a
+  client resolves to the card's face for the hover and the sheet (`FaceCall::Named`, or `live` for a card the
+  view lists). A line opens at most one card, the one its event is chiefly about (the target of a hit, the attacker of an
+  attack).
+- **The window's own names.** A unit that has left the board is still named from the public events of the same
+  window (`public_names`), and a spell's aim from the announce of the same play (`announced_aims`, paired by
+  the play's place in the window). A history that keeps a line after its event leaves the window is the
+  client's: it keeps the `LogLine`s it was handed, and the face of the definition without the instance (R745).
+- **Final words.** Every sentence is an English key `data/zh-CN.json` translates, beside the face model's;
+  a card is named in the reader's language (R711000) or in Chinese where the view flags it (R1301), a fusion
+  holding the Dormant Starship by the hull's name in either (R3045000: `face/fused.rs`, as its face is); a list is
+  joined as the reader's language joins one; the engine's own sentences a line quotes (a modifier's label, a
+  quest's words, a Call to Chaos effect) are translated by the same dictionary, which holds the matching keys
+  of the web's, since a finished sentence from the engine matches the key its values were filled into. The web's
+  UI strings stay in `apps/web/src/i18n/`, and `tests/log.rs` holds each sentence of this module to its
+  entry.
+- **Shared with the web.** `data/chaos-names.json` is the table of the Call to Chaos cards' effects that the
+  web's reel and banner (`fx/chaos.ts`) read too, so the log and the reel say an effect alike. The sentences
+  of a finished game's result, a coin's or die's words and a mark's name are written here for the log and
+  again in the web, where the result panel, the roll panel and the mark badges still write them (`Result.tsx`,
+  `fx/rolls.ts`, `cards/marks.ts`).
 
 ## `src/host/`: the match host
 
@@ -236,7 +342,7 @@ Notes for a host:
 
 The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
 `checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
-holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+holds it to the functions it names.
 
 The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
 `DecideRequest` a `decide` output made) in, the `BotChoice` to feed back as `decided` out. A host with a clock
@@ -276,24 +382,34 @@ on it (the claim is a number, and the host keeps the wake-up under it), and a fa
 back. The boundary's `HostCall` carries the Duos host (`newDuos`, `stepDuos`, `duosSeatView`) and the book
 (`againWindow`, `againClaim`, `againSeen`, `againRelease`, `againMade`).
 
-## `src/loadout.rs`: the loadout visibility rule
+## `src/loadout.rs`: the loadout rule
 
-What a seat's cosmetic loadout lets a receiver see of a player's deck, without a decklist leaking (SPEC §10.8;
-R1834003, R3013002). The server freezes a loadout when a match starts (`crates/server/src/loadout.rs`, which
-keeps the registry, the freezing and the store reads, R1834002) and decides with these functions which of a
-seat's cards' own picks and stamps a receiver is sent, and when.
+What a seat wears when its match starts, and what a seat's loadout lets a receiver see of a player's deck, without a
+decklist leaking (SPEC §10.8; R1834002, R1834003, R3013002). The server calls these functions natively and keeps the
+store (`crates/server/src/loadout.rs` reads a seat's picks off the ledger, the settings row and the proficiency rows, and
+builds the records below).
 
 | Function | Answers | Rulings |
 | --- | --- | --- |
+| `SeatPicks::freeze(&self, deck, deck_cards)` | the seat's `Loadout` as its match starts: `freeze_loadout` over the shipped registry, and the stamps its cards wear (`freeze_stamps`) | R1834002, R3013002 |
+| `freeze_loadout(registry, owned, account, deck, card_picks, deck_cards)` | each deck slot, card pick, full art and augment resolved to a registry id of its kind that the account owns where it is worn, the kind's default otherwise; a card listed only where it differs from the seat | R1834002, R1655000, R1953001, R2655000, R2715000, R2725000, R2949000 |
+| `freeze_stamps(stamps, deck_cards)`, `worn_stamps(rows)` | the stamps the cards of a deck wear, one per card; the stamps a proficiency row's level unlocked | R3013002, R3013001 |
+| `AccountPicks::of_settings(settings)` | the account's picks, from the text values of its `cosmetics` group and its Full-art switch (`AccountSettings`) | R633, R1834002 |
+| `Loadout::defaults()` | what a seat wears when nothing is frozen for it: every kind's default | R1834002 |
 | `dealt_cards(&state)` | every card the decks dealt, by instance id: its seat and the card it was dealt as; a card minted after the deal (R943) is left out | R1834003 |
 | `shown_defs(&view, &dealt)` | the `(seat, card)` pairs a view shows: each card in it dealt from that seat's deck and still shown as dealt, wherever it is now; a face-down card, the other hand, a library, the events and the prompts show none | R1834003 |
 | `cards_due(&shown, &loadouts, &mut sent)` | the `SeatCards` entries newly due a receiver (a card's picks, and its stamp), by seat, the pairs then marked in `sent`; a pair whose card wears nothing of its own is marked and sends nothing | R1834003, R3013002 |
 
 - **The types are what the store and the frames carry.** `Loadout`, `SeatLoadout`, `SeatCards`, `CardPicks`,
   `FullArtPick` and `CardStamp` are what `matches.loadouts` stores and the `loadouts` and `cardLoadouts` frames send,
-  so changing a field, a rename or a `skip_serializing_if` is a store and wire change. `CardStamp.stamp` keeps the
-  `i64` of its stored shape (README's integers). What needs the cosmetics registry (`defaults_of`, a kind's slot) stays
-  in the server, as extension traits of these types.
+  so changing a field, a rename or a `skip_serializing_if` is a store and wire change. `CardStamp.stamp` and
+  `CardProficiency`'s counts keep the `i64` of their stored shape (README's integers).
+- **Rows in, records out.** `SeatPicks` (the ledger's cosmetics, the account's picks, its cards' own picks and its
+  stamps), `AccountSettings` (the settings row's two groups, as plain text and a switch) and `CardProficiency` are the
+  records a host builds from its store; nothing here reads a row, a settings group or a bot's row. A ladder bot's seat
+  is a `SeatPicks` too, read off its own row (R1834005), so it freezes through the same function a person's does.
+- **The registry is the shipped one.** `SeatPicks::freeze` and `Loadout::defaults` read `cosmetics::registry()`;
+  `freeze_loadout` takes one, for a caller with another. There is no draw: a freeze is a function of its records.
 - **The caller owns the state.** The deal is read once when a match begins; a receiver's `sent` set lives with
   the receiver, and `cards_due` marks it. Over the boundary it is an argument and part of the answer.
 - **Only the deal counts.** A card counts for the deck that dealt it, not for the seat that owns it now, and only
@@ -308,13 +424,17 @@ seat's cards' own picks and stamps a receiver is sent, and when.
 { "call": "dealtCards", "state": { "...": "the game's state at its start" } }
 { "call": "shownDefs", "view": { "...": "a PlayerView" }, "dealt": { "<instance id>": ["p1", "core-001"] } }
 { "call": "cardsDue", "shown": [["p1", "core-001"]], "loadouts": [{ "...": "p1's Loadout" }, { "...": "p2's" }], "sent": [] }
+{ "call": "freezeSeat", "picks": { "owned": { "cards": [], "account": [] }, "stamps": [] }, "deck": { "table": "table-felt" }, "deckCards": ["core-001"] }
 { "dealt": { "<instance id>": ["p1", "core-001"] } }
 { "shown": [["p1", "core-001"]] }
 { "due": { "cards": [{ "seat": "p1", "cards": [], "stamps": [] }], "sent": [["p1", "core-001"]] } }
+{ "frozen": { "seat": { "...": "the six slots" }, "cards": [], "stamps": [] } }
 ```
 
-`apply` is the one function behind it. A call that does not parse is refused by the body as an error, and a
-rules answer is never one. `tests/loadout.rs` holds the calls to the functions they name.
+The other calls are `defaultLoadout` (answered `frozen`), `accountPicks` (`{ "settings": { "cosmetics": { "foil": "foil-prism" }, "fullArt": false } }`,
+answered `account`) and `wornStamps` (`{ "rows": [ … ] }`, answered `stamps`). `apply` is the one function behind it. A call
+that does not parse is refused by the body as an error, and a rules answer is never one. `tests/loadout.rs` holds the
+visibility calls to the functions they name, and `tests/loadout_freeze.rs` the freezing's.
 
 ## `src/ranked/`: the ranked ladder
 
@@ -389,8 +509,9 @@ the machine's (above); these are the modules the machine and the queue are made 
 | `fallback` | the empty-queue pairing: a ticket's fallback time, which bot it pairs with, two bots' kickoff | R1453, R641000, R1555000 |
 | `pool` | the pool's size, who retires, returns and grinds, a new bot, its decks and trio | R1454, R750000, R1555000 |
 | `names` | a new bot's username shapes and word lists; what a name may be is the host's (`draw_username`'s `accepts`) | R1454 |
+| `cosmetics` | the loadout it wears: which cosmetics people own widely and long enough for a bot to hold (`eligible`), its wardrobe from the pool's seed (`draw_wardrobe`) at the share of people of its account age that own each (`fit_for`), its account's picks, each deck's slots and its cards' own picks (`draw_account`, `draw_slots`, `draw_card_picks`), and what a refresh changes of all that (`redraw`) | R1834005, R2755000 |
 
-- **Records, not rows.** `BotRecord` (a bot), `TicketRecord` and `RatedGameRecord` are what the pairing and the pool
+- **Records, not rows.** `BotRecord` (a bot, its wardrobe among it), `TicketRecord` and `RatedGameRecord` are what the pairing and the pool
   read; the server implements them for its store rows, and `BotFacts`, `TicketFacts` and `GameFacts` are
   the same as plain JSON for a host with no row type of its own (a Roblox script, the boundary).
 - **Hidden is the one switch** (`BotSeat.hidden`). The fallback time (R1453: a ticket waits 15 to 40 s so that a
@@ -399,17 +520,146 @@ the machine's (above); these are the modules the machine and the queue are made 
 - **Every draw is a stream of the match's or the pool's seed**, apart from the match rng, so none reaches
   a state, the log or a replay hash; the think time, the idle roll and the rematch plan are drawn by the
   machine from the seed it was made with.
-- **Cosmetics are still the server's** (`crates/server/src/bots/cosmetics.rs`, R1834005): they read the
-  cosmetics registry and the economy's ledger types, which move into this crate with the economy (#3104).
+- **Cosmetics** (R1834005): `redraw(seed, &bot, fits, registry, &eligible, now) -> Option<BotDraw>` is what a pool
+  refresh asks of a bot, over a `BotRecord` and the `eligible` holdings (`eligible(registry, &owners, now)`, from the
+  host's count of who owns what, `CosmeticOwners`); the `BotDraw` it answers is the bot's `BotCosmetics` (its wardrobe,
+  account picks, cards' picks, the time drawn and the seed of its first draw: what `bots.cosmetics` stores) and, when a
+  deck was dealt without slots, the decks and trio with them. Every roll is a stream of the pool's seed
+  (`Rng::new("{seed}:cosmetics:…", 0)`), so one seed draws one wardrobe, and the time is an argument. The fits are
+  `BOT_COSMETIC_FITS` and the prior `BOT_COSMETIC_PRIOR` (`config.rs`), which the boundary reads as compiled in.
 
 ### The boundary
 
 `jackioh-wasm-core`'s `bots(call)` takes one `BotCall` and answers one `BotAnswer`. The calls are `poolTarget`,
 `planPool`, `planGrind`, `newBot`, `botTargetStrength`, `drawDecks`, `drawTrio`, `fallbackSeconds`, `fallbackDue`,
-`hourOf`, `chooseBot`, `chooseBotPair`, `botMatches`, `botMatchGapPassed`, `pickDueAt`, `pickIsDue`, `pickSlot`
-and `botPick`; `bots::boundary::apply` is the one function behind it, and `tests/bots_boundary.rs` holds it to
-the functions it names. The deals read the catalog the module registered, and a new bot's username is the
-host's to give.
+`hourOf`, `chooseBot`, `chooseBotPair`, `botMatches`, `botMatchGapPassed`, `pickDueAt`, `pickIsDue`, `pickSlot`,
+`botPick`, `eligibleCosmetics` (answered `holdings`) and `redrawCosmetics` (answered `dressed`); `bots::boundary::apply` is the one function behind it, and `tests/bots_boundary.rs` holds it to
+the functions it names. The deals read the catalog the module registered, a cosmetics call the shipped registry
+and fits, and a new bot's username is the host's to give.
+
+## `src/cosmetics.rs` and `cosmetics.json`: the registry
+
+Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
+`Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
+offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
+lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
+judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
+(`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
+`cosmetics` module re-exports all of it, and `crates/server/tests/export_cosmetics.rs` writes the registry into
+`apps/web/src/wire/generated/cosmetics.ts`.
+
+## `src/economy/`: the collection economy
+
+What a pack opening grants, how pity and the token bars move, and what a set-track level pays (SPEC §14.3 to
+§14.7), over plain records. The server's store code reads the records, calls the decision and writes the
+outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the same outcome to DataStores.
+
+| Decision | Records in | Outcome |
+| --- | --- | --- |
+| `open_card_pack(&PackRecords, &PackInputs, seed, now_ms)` | the packs of the kind held, the account's copies of each card, its cosmetics and its counters | the slots, the pity after, what both bars did, the `grants` in the order to write them and the `log` every row's `ref` carries (R1301003, R1339002); `EconomyRefusal` for no pack held or a pool of no card |
+| `open_cosmetic_pack(&PackRecords, &CosmeticPackInputs, seed, now_ms)` | the same | the slots, the Chase Shard bar before and after (R1306002), both bars, the `grants` and the `log` (R1306003) |
+| `bars::fill_bar(kind, &AccountCounters)` | a dev account's counters | the writes of a fill (R1310003), all `Cause::Dev` |
+| `track_rewards::reward_for_level(level)` | a level | what reaching it pays (R1302) |
+
+- **The inputs are what the roll draws from, not what the store holds:** the pool in catalog order
+  (`roll::pack_pool` over a `CardDefs`), the cosmetics registry and the catalog version, which the log keeps so
+  an opening replays however the live catalog or registry has moved (R1301003). A call across the boundary that
+  leaves them out gets the compiled-in ones.
+- **Every draw is the roll's, in the order its docs state (R1339002):** `Rng::new(seed, 0)`, the slot tiers first
+  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's and the pick's. A replayed
+  opening grants the same.
+- **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
+  (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one).
+  Each carries its `Cause` (`PackOpen`, `TokenBar`, `Dev`), which the store's ledger reason names. A store refuses
+  a grant its holding cannot take and writes nothing more.
+- **`roll`, `cosmetic_pack`, `tiers`, `math`** are the rolls themselves (tiered rolls, the dupe chain, pity and the
+  level curve), moved from `crates/server/src/economy/` with their tests; `bars` is the token bars (R1305000,
+  R1953000, R2728000).
+
+### The boundary
+
+`jackioh-wasm-core`'s `economy(call)` takes one `EconomyCall` as JSON and answers one `EconomyAnswer`:
+
+```json
+{ "call": "openCardPack", "records": { "held": 1, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+  "counters": { "pity": { "epic": 0, "legendary": 0, "mythic": 0 }, "cardBar": 0, "cosmeticBar": 0,
+  "cosmeticCycle": 0, "chaseShard": 0 } }, "pack": "global", "seed": "…", "now": 1700000000000 }
+{ "opened": { "pack": "global", "slots": [ … ], "pity": { … }, "bars": { … }, "grants": [ … ], "log": { … }, "at": 1700000000000 } }
+{ "refused": { "reason": "no_pack_held", "message": "no unopened pack of that kind" } }
+```
+
+The calls are `openCardPack`, `openCosmeticPack`, `fillBar` and `levelReward`; the answers are `opened`,
+`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it.
+
+The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
+pool as data) moves in its second part.
+
+## `src/cosmetics.rs` and `cosmetics.json`: the registry
+
+Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
+`Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
+offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
+lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). Each version is a level
+of a variant's ladder (`level`, `ladder`, `levels_below`, `is_next`), each ladder held by `level_problems`
+(R3015000, R3015001); a retired row owns the levels it maps to (`implied_by`, R3015006), and a card's pick is read
+as the level it names (`level_of_pick`, `worn_level`, R3015005). A cosmetic's offer is
+judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
+(`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
+`cosmetics` module re-exports all of it, and `crates/server/tests/export_cosmetics.rs` writes the registry into
+`apps/web/src/wire/generated/cosmetics.ts`.
+
+## `src/economy/`: the collection economy
+
+What a pack opening grants, how pity and the token bars move, and what a set-track level pays (SPEC §14.3 to
+§14.7), over plain records. The server's store code reads the records, calls the decision and writes the
+outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the same outcome to DataStores.
+
+| Decision | Records in | Outcome |
+| --- | --- | --- |
+| `open_card_pack(&PackRecords, &PackInputs, seed, now_ms)` | the packs of the kind held, the account's copies of each card, its cosmetics and its counters | the slots, the pity after, what both bars did, the `grants` in the order to write them and the `log` every row's `ref` carries (R1301003, R1339002); `EconomyRefusal` for no pack held or a pool of no card |
+| `open_cosmetic_pack(&PackRecords, &CosmeticPackInputs, seed, now_ms)` | the same | the slots, the Chase Shard bar before and after (R1306002), both bars, the `grants` and the `log` (R1306003) |
+| `bars::fill_bar(kind, &AccountCounters)` | a dev account's counters | the writes of a fill (R1310003), all `Cause::Dev` |
+| `track_rewards::reward_for_level(level)` | a level | what reaching it pays (R1302) |
+| `rewards::pay_game(&GameRecords, &GameSummary, seed)` | what the account was paid today (R1483000), its tracks and its quests | the game's Jlore held to the daily cap, its XP on every active track and the levels it reaches, the quests due as it ends, each quest's progress and what a completion pays: the `grants` in the order to write them and the `GameEconomy` a client animates (R1302006, R1304001); a bot's side pays nothing (R1454) |
+| `rewards::pay_xp(&[SetTrack], xp, cause, reference)`, `starting_rewards(&[SetTrack])`, `complete_quest(&QuestBook, &[SetTrack], id, cause, reference, at)` | tracks (and quests) | the grants of an XP payout (the unlock of one older track, R1302003), of a new account's first level (R1310000), of a dev completion of a held quest |
+| `quests::top_up_book(&QuestBook, seed, now)`, `replace_quest(&QuestBook, removed_today, id, seed, now)`, `give_quest(&QuestBook, seed, now)` | the account's quests, the day's replaces | the quests that fell due (R1304000), a held quest swapped for another (R2210000), a dev give; each arrival's draw is the engine's `Rng` over the host's seed and its `ref` logs `seed:<seed>:<cursor>` |
+
+- **The inputs are what the roll draws from, not what the store holds:** the pool in catalog order
+  (`roll::pack_pool` over a `CardDefs`), the cosmetics registry and the catalog version, which the log keeps so
+  an opening replays however the live catalog or registry has moved (R1301003). A call across the boundary that
+  leaves them out gets the compiled-in ones.
+- **Every draw is the roll's, in the order its docs state (R1339002):** `Rng::new(seed, 0)`, the slot tiers first
+  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's, the out-of-order draw's
+  where a level past the next is open (R3015003) and the pick's. A replayed
+  opening grants the same.
+- **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
+  (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one),
+  Jlore to the wallet, XP and levels to a set track, a quest's change (an arrival is dated when it fell due) and
+  the date the next quest falls due. Each carries its `Cause` (`PackOpen`, `TokenBar`, `Dev`, `Game`, `Quest`,
+  `Track`), which the store's ledger reason names, and a `reference` when its row's `ref` is not the outcome's. A
+  store refuses a grant its holding cannot take and writes nothing more.
+- **A payout reads the tracks it moves.** `pay_game` applies each grant to its own copy of the tracks as the store
+  will, so a quest's XP lands on the tracks the game's XP already moved, and the answer's `TrackGain`s are read off
+  the tracks before and after the whole payout. `quests.json` is the quest pool, compiled in like `cosmetics.json`.
+- **`roll`, `cosmetic_pack`, `tiers`, `math`** are the rolls themselves (tiered rolls, the dupe chain, pity and the
+  level curve), moved from `crates/server/src/economy/` with their tests; `bars` is the token bars (R1305000,
+  R1953000, R2728000).
+
+### The boundary
+
+`jackioh-wasm-core`'s `economy(call)` takes one `EconomyCall` as JSON and answers one `EconomyAnswer`:
+
+```json
+{ "call": "openCardPack", "records": { "held": 1, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+  "counters": { "pity": { "epic": 0, "legendary": 0, "mythic": 0 }, "cardBar": 0, "cosmeticBar": 0,
+  "cosmeticCycle": 0, "chaseShard": 0 } }, "pack": "global", "seed": "…", "now": 1700000000000 }
+{ "opened": { "pack": "global", "slots": [ … ], "pity": { … }, "bars": { … }, "grants": [ … ], "log": { … }, "at": 1700000000000 } }
+{ "refused": { "reason": "no_pack_held", "message": "no unopened pack of that kind" } }
+```
+
+The calls are `openCardPack`, `openCosmeticPack`, `fillBar`, `levelReward`, `payGame`, `payXp`,
+`startingRewards`, `topUpQuests`, `replaceQuest`, `giveQuest` and `completeQuest`; the answers are `opened`,
+`cosmeticOpened`, `filled`, `reward`, `paid`, `granted` (the writes, in order), `toppedUp` and `refused`. `boundary::apply` is the one function behind it.
 
 ## `src/deck.rs`
 
@@ -420,11 +670,15 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 ## Tests
 
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
-unchanged, and `tests/boundary.rs` the JSON boundary; `tests/loadout.rs` holds the loadout rule's, moved from
+unchanged, and `tests/boundary.rs` the JSON boundary; `tests/loadout.rs` holds the loadout visibility rule's, moved from
 `crates/server/src/loadout.rs`, its JSON calls among them, over a game dealt from the shipped cards (the
-`jackioh-cards` and `jackioh-ai` dev-dependencies). The ladder bots': `tests/bots_decide.rs` (the decision and
-the think time), `tests/bots_signals.rs`, `tests/bots_persona.rs`, `tests/bots_pick.rs` and
-`tests/bots_boundary.rs`, moved from the server's bot tests; the bot seat of the machine is in `tests/duel.rs`. The host machine's: `tests/clock.rs` (the clock's
+`jackioh-cards` and `jackioh-ai` dependencies), and `tests/loadout_freeze.rs` the freezing's, on a registry of its own; `tests/face.rs` the face model: a face as the web's
+tests held it, in both locales; `tests/log.rs` the game log: the web's `Log.test.tsx` cases, in both locales. The ladder bots': `tests/bots_decide.rs` (the decision and
+the think time), `tests/bots_signals.rs`, `tests/bots_persona.rs`, `tests/bots_pick.rs`, `tests/bots_cosmetics.rs` (the draw of a bot's wardrobe and loadout, R1834005) and
+`tests/bots_boundary.rs`, moved from the server's bot tests; the bot seat of the machine is in `tests/duel.rs`.
+The economy's rolls carry their tests in their modules
+(moved from `crates/server/src/economy/` and `crates/server/src/cosmetics.rs`), and `tests/economy.rs` holds the
+decisions over records and their boundary. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
 book) and `tests/host_boundary.rs`. The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests

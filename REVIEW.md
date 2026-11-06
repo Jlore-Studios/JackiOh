@@ -91,7 +91,7 @@ Record the exit code and summary of each. Any non-zero exit is a BLOCKER on its 
 
 | Check | Method | Acceptance condition |
 | --- | --- | --- |
-| B1.1 Reducer purity | The B1.1 commands below; read the `[dependencies]` of the six crates' `Cargo.toml` (`crates/luau` with the five) | The six `clippy.toml` are identical and ban the clock, file, environment, thread and process calls and `HashMap`, `HashSet`, `Mutex`, `RwLock`, `RefCell` (CLAUDE.md rule 4); the dependencies are `serde`, `serde_json`, `indexmap`, each other (no game crate takes `jackioh-luau`, #902, nor does `jackioh-shared`, which no other takes), `mlua` (`jackioh-luau`'s) and (a `ts` feature, the engine's, `jackioh-luau`'s, `jackioh-run`'s or `jackioh-shared`'s) `ts-rs` only; B0's clippy run is clean; every `allow` is in test or build code and says why. |
+| B1.1 Reducer purity | The B1.1 commands below; read the `[dependencies]` of the five crates' `Cargo.toml` | The five `clippy.toml` are identical and ban the clock, file, environment, thread and process calls and `HashMap`, `HashSet`, `Mutex`, `RwLock`, `RefCell` (CLAUDE.md rule 4); the dependencies are `serde`, `serde_json`, `indexmap`, each other (`jackioh-shared` is taken by none of the others) and (a `ts` feature, the engine's, `jackioh-run`'s or `jackioh-shared`'s) `ts-rs` only; B0's clippy run is clean; every `allow` is in test or build code and says why. |
 | B1.2 Seeded RNG | Read `crates/engine/src/rng.rs`; check `rng_cursor` lives in `GameState`, every random helper advances it, and `reduce` rebuilds the rng from `(state.seed, state.rng_cursor)`. | `cargo jackioh fuzz` folds every game to its live hash; `cargo jackioh golden check` folds the hotseat fixture to its hash. |
 | B1.3 Prompts are state | The B1.3 command below; read `crates/engine/src/work.rs` | No async code in the pure crates; what `state.work` holds is plain data (`Resume` records, no closures), so a paused state survives a JSON round trip (test from BUILD M3-T3 exists and passes). |
 | B1.4 Nonce dedupe | Test from BUILD M1-T3 exists and passes. | Replayed nonce returns the original result. |
@@ -101,10 +101,10 @@ Record the exit code and summary of each. Any non-zero exit is a BLOCKER on its 
 
 ```
 # B1.1
-diff crates/engine/clippy.toml crates/cards/clippy.toml && diff crates/engine/clippy.toml crates/ai/clippy.toml && diff crates/engine/clippy.toml crates/luau/clippy.toml && diff crates/engine/clippy.toml crates/run/clippy.toml && diff crates/engine/clippy.toml crates/shared/clippy.toml
-grep -rn "allow(clippy::disallowed" crates/engine crates/cards crates/ai crates/luau crates/run crates/shared
+diff crates/engine/clippy.toml crates/cards/clippy.toml && diff crates/engine/clippy.toml crates/ai/clippy.toml && diff crates/engine/clippy.toml crates/run/clippy.toml && diff crates/engine/clippy.toml crates/shared/clippy.toml
+grep -rn "allow(clippy::disallowed" crates/engine crates/cards crates/ai crates/run crates/shared
 # B1.3
-grep -rnwE "async|await" crates/engine/src crates/cards/src crates/ai/src crates/luau/src crates/run/src crates/shared/src
+grep -rnwE "async|await" crates/engine/src crates/cards/src crates/ai/src crates/run/src crates/shared/src
 # B1.7
 for f in crates/cards/src/scripts/*/*.rs; do awk '/#\[cfg\(test\)\]/{exit} /\.players\[|\.hand\.push|\.library\.(push|insert|remove)|\.graveyard\.push|&mut GameState/{print FILENAME": "FNR": "$0}' "$f"; done
 ```
@@ -166,7 +166,7 @@ Every spec BUILD M8 lists exists under `e2e/cypress/e2e/` with the listed assert
 
 - `cargo jackioh fuzz` green: it reports 1,000 seeds, 0 panics, 0 replay mismatches, 0 invariant violations, 0 games over the action bound; `cargo jackioh fuzz --handicap` the same.
 - `cargo jackioh golden check` green: the hotseat fixture folds to `HOTSEAT_HASH` (the 240 TypeScript traces were retired in #2578).
-- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `972f5b85`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
+- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `512357ea`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
 
 ---
 

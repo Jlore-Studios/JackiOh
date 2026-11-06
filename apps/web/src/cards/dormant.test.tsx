@@ -15,14 +15,26 @@ import { baseView, emptySide, unit } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { must } from "../test/stubServer.ts";
 import { DORMANT_DIM, DORMANT_GREY, DORMANT_PULSE_MS } from "./constants.ts";
-import {
-  DORMANT_GLYPH,
-  DORMANT_NEXT_TURN_WORDS,
-  DORMANT_WORDS,
-  STARSHIP_GLYPH,
-  dormantWords,
-  starshipWords,
-} from "./cardState.ts";
+import { faceModel } from "./model.ts";
+
+const DORMANT_GLYPH = "\u263E\uFE0E";
+const STARSHIP_GLYPH = "\u2604\uFE0E";
+const DORMANT_WORDS = "Dormant: it can't attack or be attacked and nothing reaches it, until an effect awakens it";
+const DORMANT_NEXT_TURN_WORDS = "Dormant: it awakens at the start of its controller's next turn; until then nothing reaches it";
+
+/** A Dormant card's badge words for a countdown, as the face model words them (jackioh-shared `face/state.rs`). */
+function dormantWords(turns: number | null): string {
+  const badge = faceModel({ defId: "core-001", radiant: false, inPlay: { dormant: { turns } } }).badges.find((one) => one.kind === "dormant");
+  return badge?.words ?? "";
+}
+
+/** A Starship's badge words for its pieces and whether it has launched. */
+function starshipWords(pieces: number, launched: boolean): string {
+  const badge = faceModel({ defId: "core-001", radiant: false, inPlay: { starship: { pieces, name: launched ? "Voyager" : null } } }).badges.find(
+    (one) => one.kind === "starship",
+  );
+  return badge?.words ?? "";
+}
 
 function readSheet(fromWeb: string): string {
   for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {

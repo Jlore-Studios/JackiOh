@@ -1,4 +1,4 @@
-// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the catalog
+// A card's words in Simplified Chinese (ME-CN, R1300–R1303) for the lists and filters that name cards, read from the two sidecars beside the catalog
 // (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases resolve to
 // crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no server is asked.
 // Presentation only (CLAUDE.md rule 7): no rule reads them.
@@ -18,19 +18,11 @@
 import chineseJson from "@jackioh/cards/chinese.json";
 import termsJson from "@jackioh/cards/chinese-terms.json";
 
-import {
-  fillParams,
-  type CardDef,
-  type CardType,
-  type Keyword,
-  type KeywordKind,
-  type Rarity,
-  type Tag,
-} from "@jackioh/shared";
+import type { CardDef, CardType, KeywordKind, Rarity, Tag } from "@jackioh/shared";
 
 import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
+import { DORMANT_STARSHIP_ID, holdsDormantStarship } from "./fused.ts";
 import { isGlitch } from "./glitch.ts";
-import type { GlossaryTermId } from "./glossary.ts";
 
 /** One card's entry: its name and both faces' texts, and its preview labels' templates (R280). */
 export type ChineseEntry = {
@@ -56,7 +48,7 @@ export type ChineseTerms = {
   readonly created: string;
   /** R1382: what the frame prints in place of the five tribal tags on a card with them all. */
   readonly allTribes: string;
-  readonly glossary: Readonly<Record<GlossaryTermId, ChineseGlossaryEntry>>;
+  readonly glossary: Readonly<Record<string, ChineseGlossaryEntry>>;
 };
 
 const { "//": _generated, ...entries } = chineseJson;
@@ -119,9 +111,18 @@ function ingredientEntries(def: CardDef): { entry: ChineseEntry; radiant: boolea
 }
 
 /**
+ * R3045000: the Dormant Starship's name in Chinese, for a fusion that holds its hull: a Starship keeps the hull's
+ * name whatever was fused into it, as the English face does (`faceModel`); undefined for any other definition.
+ */
+function hullNameOf(def: CardDef): string | undefined {
+  return holdsDormantStarship(def) ? entryOf(DORMANT_STARSHIP_ID)?.name : undefined;
+}
+
+/**
  * R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its ingredients'
  * joined as crates/engine/src/subsystems/fuse.rs joins the English (R469: one fused on its Radiant face puts
- * that face in the base text too). Any other with no entry, and Glitch (glitch.ts), comes back as given.
+ * that face in the base text too), but a fused Dormant Starship's name is the hull's (R3045000). Any other
+ * with no entry, and Glitch (glitch.ts), comes back as given.
  */
 export function chineseDef(def: CardDef): CardDef {
   if (isGlitch(def.id)) return def;
@@ -129,11 +130,12 @@ export function chineseDef(def: CardDef): CardDef {
   if (own !== undefined) {
     return { ...def, name: own.name, base: { ...def.base, text: own.base }, radiant: { ...def.radiant, text: own.radiant } };
   }
+  const hull = hullNameOf(def);
   const parts = ingredientEntries(def);
-  if (parts === null) return def;
+  if (parts === null) return hull === undefined ? def : { ...def, name: hull };
   return {
     ...def,
-    name: parts.map((part) => part.entry.name).join(FUSED_NAME),
+    name: hull ?? parts.map((part) => part.entry.name).join(FUSED_NAME),
     base: { ...def.base, text: parts.map((part) => (part.radiant ? part.entry.radiant : part.entry.base)).join(FUSED_LINE) },
     radiant: { ...def.radiant, text: parts.map((part) => part.entry.radiant).join(FUSED_LINE) },
   };
@@ -147,37 +149,8 @@ export function chineseName(defId: string, english: string, def?: CardDef): stri
   if (isGlitch(defId)) return english;
   const own = entryOf(defId);
   if (own !== undefined) return own.name;
-  if (def === undefined || ingredientEntries(def) === null) return english;
+  if (def === undefined || (ingredientEntries(def) === null && hullNameOf(def) === undefined)) return english;
   return chineseDef(def).name;
-}
-
-/** R1301: a keyword as a Chinese face prints it: its word, with its number stuck to it ("护甲7"). */
-export function chineseKeyword(keyword: Keyword): string {
-  const word = CHINESE_TERMS.keywords[keyword.kind];
-  return "n" in keyword ? `${word}${String(keyword.n)}` : word;
-}
-
-/**
- * R280, R1301: a preview label in Chinese: of the card's templates (its own or its ingredients'), filled as
- * its face is (`fillParams`), the one whose English fill is `label` gives its Chinese template, filled the
- * same way. A label no template fills comes back as it is.
- */
-export function chinesePreviewLabel(
-  def: CardDef,
-  radiant: boolean,
-  label: string,
-  values?: Readonly<Record<string, number>>,
-): string {
-  const face = radiant ? "radiant" : "base";
-  const fill = (template: string): string =>
-    fillParams({ params: def.params, base: { ...def.base, text: template }, radiant: { ...def.radiant, text: template } }, face, values);
-  const ids = [def.id, ...(def.ingredients ?? []).map((ingredient) => ingredient.defId)];
-  for (const id of ids) {
-    for (const [english, chinese] of Object.entries(entryOf(id)?.previews ?? {})) {
-      if (fill(english) === label) return fill(chinese);
-    }
-  }
-  return label;
 }
 
 /**

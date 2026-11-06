@@ -12,17 +12,19 @@ import type { CardDef, CardView, UnitView } from "@jackioh/shared";
 import { lookupFromDefs, type CardInfo } from "../game/catalog.ts";
 import { liveFace } from "../game/faces.ts";
 import { card, fusedDef, unit } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
-import { CHINESE, CHINESE_TERMS, chineseDef, chineseKeyword } from "./chinese.ts";
-import { GLOSSARY } from "./glossary.ts";
+import { CHINESE, CHINESE_TERMS, chineseDef, chineseName } from "./chinese.ts";
+import { DORMANT_STARSHIP_ID } from "./fused.ts";
 import { Glossary } from "./inspect/Glossary.tsx";
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
-import { markedText } from "./radiantDiff.ts";
 import { CardDefsProvider } from "./refContext.tsx";
-import { namesOf } from "./refs.ts";
-import { glossaryFor } from "./rules.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
+import { GLOSSARY, legacyText, markedText } from "../test/faceData.ts";
+
+/** The glossary entries a face names (jackioh-shared `face/glossary.rs`). */
+const glossaryOf = (face: FaceModel): FaceModel["glossary"] => face.glossary;
 
 // R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
 beforeEach(() => {
@@ -95,7 +97,7 @@ describe("R1301 a Chinese card in a match", () => {
     // The Radiant face's gold marks are read off the two Chinese faces (R1302).
     const radiant = inPlay(card({ defId: "core-002", cost: 3, radiant: true, chinese: true }));
     expect(radiant.text.full).toBe(zh("core-002").radiant);
-    expect(markedText(radiant.text.full, radiant.text.marks)).toEqual(["所有"]);
+    expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["所有"]);
   });
 
   it("R1301 the same card outside a match is English", () => {
@@ -122,11 +124,11 @@ describe("R1301 a Chinese card in a match", () => {
   });
 
   it("R1301 its glossary entries are Chinese", () => {
-    const english = glossaryFor(inPlay(card({ defId: "core-003", cost: 4, radiant: true })));
-    const chinese = glossaryFor(inPlay(card({ defId: "core-003", cost: 4, radiant: true, chinese: true })));
+    const english = glossaryOf(inPlay(card({ defId: "core-003", cost: 4, radiant: true })));
+    const chinese = glossaryOf(inPlay(card({ defId: "core-003", cost: 4, radiant: true, chinese: true })));
     // The terms are found in the English text.
     expect(chinese.map((entry) => entry.id)).toEqual(english.map((entry) => entry.id));
-    expect(chinese.map((entry) => entry.id)).toEqual(["Taunt", "Divine Shield", "Reborn", "Death"]);
+    expect(chinese.map((entry) => entry.id)).toEqual(["Taunt", "Divine Shield", "Reborn", "Can't Defend", "Death"]);
     for (const entry of chinese) {
       expect({ label: entry.label, rule: entry.rule }, entry.id).toEqual(CHINESE_TERMS.glossary[entry.id]);
     }
@@ -142,12 +144,12 @@ describe("R1301 a Chinese card in a match", () => {
     expect(text(root, ".card-name")).toBe(zh("meditative-078").name);
     expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual([CHINESE_TERMS.tags.CN]);
     expect(root.querySelector(".cf-set")).toHaveAttribute("data-set-mark", "meditative");
-    expect(glossaryFor(exile).find((entry) => entry.id === "Exile")).toMatchObject(CHINESE_TERMS.glossary.Exile);
+    expect(glossaryOf(exile).find((entry) => entry.id === "Exile")).toMatchObject(must(CHINESE_TERMS.glossary.Exile, "Exile"));
     // #79 Touched by KY sets the hand size; #76 Do or Die marks cards in a hand.
-    const size = glossaryFor(inPlay(card({ defId: "meditative-079", cost: 3, chinese: true })));
-    expect(size.find((entry) => entry.id === "Hand size")?.label).toBe(CHINESE_TERMS.glossary["Hand size"].label);
-    const mark = glossaryFor(inPlay(card({ defId: "meditative-076", cost: 1, chinese: true })));
-    expect(mark.find((entry) => entry.id === "Mark in a hand")?.label).toBe(CHINESE_TERMS.glossary["Mark in a hand"].label);
+    const size = glossaryOf(inPlay(card({ defId: "meditative-079", cost: 3, chinese: true })));
+    expect(size.find((entry) => entry.id === "Hand size")?.label).toBe(must(CHINESE_TERMS.glossary["Hand size"], "Hand size").label);
+    const mark = glossaryOf(inPlay(card({ defId: "meditative-076", cost: 1, chinese: true })));
+    expect(mark.find((entry) => entry.id === "Mark in a hand")?.label).toBe(must(CHINESE_TERMS.glossary["Mark in a hand"], "Mark in a hand").label);
   });
 
   it("R1301 its refs are marked by their Chinese names", () => {
@@ -160,8 +162,6 @@ describe("R1301 a Chinese card in a match", () => {
       ]);
       cleanup();
     }
-    // A full-width parenthesis is a parenthesis: Call to Chaos is named by its name before it too.
-    expect(namesOf(chineseDef(def("core-095")))).toEqual([zh("core-095").name, "混沌召唤"]);
   });
 
   it("R1301 a preview label shows in Chinese with its live number", () => {
@@ -199,8 +199,9 @@ describe("R1301 a Chinese card in a match", () => {
     expect(base.text.full).toBe(`${zh("core-011").base}\n${zh("core-089").base}`);
     const radiant = faceModel({ defId: fused.id, def: fused, radiant: true, chinese: true, inPlay: {} });
     expect(radiant.text.full).toBe(`${zh("core-011").radiant}\n${zh("core-089").radiant}`);
-    // R102, R1302: each Chinese Radiant line is marked against its own Chinese base line.
-    expect(markedText(radiant.text.full, radiant.text.marks)).toEqual(["冲锋", "圣盾", "两倍"]);
+    // R102, R1302: each Chinese Radiant line is marked against its own Chinese base line (the Corpse Eater's
+    // 易碎3 against 易碎1, issue #3139, among them).
+    expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["冲锋", "圣盾", "3", "两倍"]);
     // R469: an ingredient fused on its Radiant face puts that face into the base form too.
     const forced = { ...fused, ingredients: [{ defId: "core-011", radiant: true as const }, { defId: "core-089" }] };
     expect(chineseDef(forced).base.text).toBe(`${zh("core-011").radiant}\n${zh("core-089").base}`);
@@ -208,9 +209,32 @@ describe("R1301 a Chinese card in a match", () => {
     expect(base.englishText).toBe(fused.base.text);
   });
 
+  it("R3045000 a fused Dormant Starship is named for the hull in Chinese, a launched one for its drawn name", () => {
+    // The engine joins the names ("Dormant Starship + Miner v1"); the hull keeps its own, whatever was fused into it.
+    const hull = def(DORMANT_STARSHIP_ID);
+    const once = fusedDef([hull, def("stinkyscape-062")], 1);
+    const twice = fusedDef([once, def("stinkyscape-050")], 2);
+    expect(chineseDef(once).name).toBe(zh(DORMANT_STARSHIP_ID).name);
+    expect(chineseName(once.id, once.name, once)).toBe(zh(DORMANT_STARSHIP_ID).name);
+    // A fusion of fusions has no table entry for its inner id, so it stays English but for the name.
+    expect(chineseDef(twice)).toEqual({ ...twice, name: zh(DORMANT_STARSHIP_ID).name });
+    expect(chineseName(twice.id, twice.name, twice)).toBe(zh(DORMANT_STARSHIP_ID).name);
+    // The ingredients' Chinese words still join in its text, as they did.
+    expect(chineseDef(once).base.text).toBe(`${zh(DORMANT_STARSHIP_ID).base}\n${zh("stinkyscape-062").base}`);
+    for (const fused of [once, twice]) {
+      const dormant = faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: { starship: { pieces: 2, name: null } } });
+      expect(dormant.name).toBe(zh(DORMANT_STARSHIP_ID).name);
+      expect(dormant.englishName).toBe("Dormant Starship");
+      const launched = faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: { starship: { pieces: 2, name: "Ember of Departure" } } });
+      expect(launched.name).toBe("Ember of Departure");
+      expect(faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: {} }).name).toBe(zh(DORMANT_STARSHIP_ID).name);
+    }
+    // Any other fusion is joined from its ingredients' names, as before.
+    const equipped = fusedDef([def("stinkyscape-050"), def("core-020")]);
+    expect(chineseDef(equipped).name).toBe(`${zh("stinkyscape-050").name} + ${zh("core-020").name}`);
+  });
+
   it("R1301 keywords read in Chinese", () => {
-    expect(chineseKeyword({ kind: "Armor", n: 7 })).toBe("护甲7");
-    expect(chineseKeyword({ kind: "Taunt" })).toBe("嘲讽");
     // Core #2 Speciesist, which has gained Taunt and Armor 3.
     const view = unit("p1", { defId: "core-002", attack: 2, maxHealth: 2, health: 2, keywords: [{ kind: "Taunt" }, { kind: "Armor", n: 3 }], chinese: true });
     const face = inPlay(view);

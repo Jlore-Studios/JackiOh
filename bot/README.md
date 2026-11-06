@@ -164,6 +164,13 @@ more than one, the highest counts, and any other `priority:*` label counts as no
 the order is the usual one ([who takes what](#subscriptions)), and a forced item still goes before
 every tier. A priority label never makes work eligible or ineligible.
 
+**The production gate** goes before all three (#3275): the issue `super.yml`'s report opens when the
+super run production waits on is red, "CI: daily super run failed" (the daily run on the `staging`
+branch) or "CI: super run failed on a production candidate", found by its exact title
+(`GateTitles` in [`go/internal/queue`](go/internal/queue/candidates.go)), is built before any
+`priority:high` item, whatever its labels, since production moves only once that run passes. The
+queue and the status issue name its tier `production gate`.
+
 **`human`** takes work away from the bot altogether: people do it. That is a decision, an
 account or a secret, repository work the bot may not do (a change to `bot/`, `.harness/` or
 `.github/`), or work a person is already building. No model picks it up, whatever else it is
@@ -233,9 +240,13 @@ a path the bot may not change) is a hand-over, `"human_required": true`, which i
 
 - **The question** goes on `bot:blocked` with **`needs decision`** beside it. Its comment says it
   as a person would: the problem; the numbered options, each with its trade-off; "**My
-  suggestion:** option N, because …"; and how to answer: "Reply with a number, or tell me
-  something else in your own words, and I'll revise it that way. If nobody answers by <time>, I go
-  ahead with option N." Setting the label assigns `decision_assignees` (both people, in each bot's
+  suggestion:** option N, because …"; and "**How to answer:**", in the one form the bot reads as
+  the answer (#3300): a plain comment from the person's own account, holding the option's number or
+  their own words, with no `@jgoetzmann-bot` and no `/harness` (a comment that names the bot is
+  read as a command); that the bot says ✅ **Answered** once it takes it; and that `/harness revise
+  <your answer>` (`build` on an issue) works too, as an ordinary run. Then "If nobody answers by
+  <time>, I go ahead with option N." Squishy's names `@squishy-squooby` and `/squishy`. Setting the
+  label assigns `decision_assignees` (both people, in each bot's
   `config.json`), and the record keeps which of them it assigned, so a person who was assigned
   already stays when they come off. Being assigned does not make the item a person's, as `human`
   does. The record keeps what was asked (`decision`: when, the problem, the options and the
@@ -1011,11 +1022,11 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   such verdict rounds (`max_review_cycles`), then its kept work goes to its final audit; a hard
   item stays with Opus for up to 10, then the [strikes](#rating-strikes-and-the-step-up). Only
   rounds that end in a readable verdict count: usage pauses, infra failures, halts and stops keep
-  the work and pause the count, across runs too. Before a review in a one-run flow (Squishy's),
-  the run merges `main` again when it moved and merges cleanly, and runs the checks on the merged
-  head, so what is approved still merges; an own review run never merges a `main` that merges
-  cleanly (the merge queue tests the two together), and its final check merges one that conflicts
-  ([The own review run](#the-own-review-run), #2948).
+  the work and pause the count, across runs too. No run merges a `main` that merges cleanly
+  before its review, a one-run flow's (Squishy's) included: `main`'s merge queue tests the two
+  together, and the merge would only run the checks, and CI, again. An own review run's final
+  check merges one that conflicts ([The own review run](#the-own-review-run), #2948); a one-run
+  flow leaves it for the conflict path.
 - **Review runs.** They are the lane's final audit, for a head its own review run did not
   approve or could not start for in time (or one a person asked to have reviewed), and they go before every build and revision,
   whatever their priority, since they unblock merges, but for a subscription's own work, which goes
@@ -1200,7 +1211,10 @@ required job went red in its third, so the harness does not wait for it on a bot
 - **No jobs are skipped on the fix commit**: no path filter or `[skip ci]`; every required check
   runs in full on every head, and the merge queue runs them again.
 - **The merge queue's own CI** is left as it was: ci.yml's `queue-cancel-*` jobs stop a failed
-  build there, and `events.OnQueueCI` queues its fix at once.
+  build there, and `events.OnQueueCI` queues its fix at once. A build the queue rebuilt (a pull
+  request ahead of it left the queue) is cancelled by its newer build (ci.yml's `queue-supersede`),
+  since GitHub leaves it running; a build cancelled with no job failed says nothing about its pull
+  request, so `OnQueueCI` leaves it alone (`events.QueueBuildFailed`).
 
 Squishy runs the same code under its own labels (`squishy:revise`, `squishy:fixing-ci`) and branches
 (`squishy/…`), with no status loop of its own: its sweep, which the night bot's loop runs for it
@@ -1417,7 +1431,12 @@ independent measure of this self-review.
   pull request ahead, the queue's timeout) goes back in from the housekeeping pass, once for each
   commit `main` is at (`queue.RequeueCleared`), unless a person took it out. Every hold
   (`queue.HoldMerge`: a revision asked for, `/harness stop`) also takes it out of the queue, where
-  it has no auto-merge left to turn off.
+  it has no auto-merge left to turn off. So does a conflict with `main`: the housekeeping pass takes
+  a conflicted bot pull request out of the queue before it queues the revision that resolves it
+  (below), whose auto-merge queues it again at the back. A conflict with a pull request ahead of it
+  in the queue cannot be resolved until that one lands: the queue takes it out, it goes back in once
+  `main` moves, and once the one ahead has landed the conflict is with `main`, which that revision
+  resolves.
 - **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
   (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
   runs or before, the revision that resolves them needs no review run: its builder resolves the

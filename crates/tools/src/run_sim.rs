@@ -34,7 +34,7 @@ use jackioh_ai::{
 };
 use jackioh_engine::config::PERCENT;
 use jackioh_engine::{
-    CardDefs, CreateGameOptions, PerPlayer, PerPlayerOpt, PlayerId, Rng, SetupKind, fold, hash_state,
+    CreateGameOptions, PerPlayer, PerPlayerOpt, PlayerId, Rng, SetupKind, fold, hash_state,
     registered_catalog, validate_setup,
 };
 use jackioh_run::config::{RUN_ACT_FIGHTS, RUN_STARTER_CARDS, RUN_STARTER_SIZE};
@@ -154,13 +154,8 @@ fn play_fight(
         deck_marks: config.setup.deck_marks.clone(),
         ..CreateGameOptions::default()
     };
-    validate_setup(
-        &options,
-        registered_catalog(),
-        &CardDefs::default(),
-        SetupKind::New,
-    )
-    .map_err(|e| format!("the engine refuses the setup: {e}"))?;
+    validate_setup(&options, registered_catalog(), SetupKind::New)
+        .map_err(|e| format!("the engine refuses the setup: {e}"))?;
     let record = play_match(&config, &mut MatchHooks::default());
     if let Some(thrown) = record.thrown.first() {
         return Err(format!("{} threw: {}", thrown.seat.as_str(), thrown.message));

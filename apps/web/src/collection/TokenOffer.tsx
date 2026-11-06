@@ -26,7 +26,7 @@ export type HeldTokens = TokenBarsResponse["tokens"];
 /** The tokens that buy a cosmetic, the lowest first, so an offer spends the cheapest that covers it. */
 const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic", "Legendary"];
 
-function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
+export function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
   switch (tier) {
     case "Rare":
       return held.cosmeticRare;
@@ -46,9 +46,18 @@ export function offerTier(
   cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind">,
   held: HeldTokens | null,
 ): CosmeticTokenTier | null {
-  // R2725000: a retired full art is sold no more (the server's 400).
-  if (held === null || cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt") return null;
+  // R2725000: a retired full art is sold no more (the server's 400); R3015004: nor a retired augment.
+  if (held === null || cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt" || cosmetic.kind === "augment") return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
+}
+
+/** R3016001: every held token whose tier covers `cosmetic`, the cheapest first (`offerTier` is the first); none where it offers none. */
+export function coveringTiers(
+  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind">,
+  held: HeldTokens | null,
+): CosmeticTokenTier[] {
+  if (held === null || offerTier(cosmetic, held) === null) return [];
+  return OFFERED_TOKENS.filter((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0);
 }
 
 /**

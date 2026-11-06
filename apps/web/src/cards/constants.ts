@@ -30,7 +30,7 @@ export const FIT_FLOOR_PX = 9;
 /**
  * Issue #1017: the most text a face may print, measured in Chromium at the reading floor on a 170 px
  * face (the Almanac's and deck builder's tiles are 164 to 220 px) before the art would give way.
- * Every catalog face fits it but the short forms (shortText.ts). `faceLines` counts by words.
+ * Every catalog face fits it but the short forms (jackioh-shared's short-forms.json). `faceLines` counts by words.
  */
 export const FACE_TEXT_LIMIT = { charsPerLine: 28, lines: 6 } as const;
 

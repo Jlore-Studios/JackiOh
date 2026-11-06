@@ -87,6 +87,8 @@ export const packTestid = {
   flip: (index: number) => `pack-slot-${String(index)}-flip`,
   outcome: (index: number) => `pack-slot-${String(index)}-outcome`,
   equip: (index: number) => `pack-slot-${String(index)}-equip`,
+  /** R3015003: a slot's line saying an out-of-order pull granted the levels below its level too. */
+  below: (index: number) => `pack-slot-${String(index)}-below`,
 } as const;
 
 /** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros. */

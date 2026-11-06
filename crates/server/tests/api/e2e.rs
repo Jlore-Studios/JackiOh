@@ -29,7 +29,7 @@ use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
 use jackioh_server::db::store::{
     CollectionEntry, Db, InviteCode, MatchActionRow, ProfileCreateInput, Room, SavedDeck, Ticket, Tx,
 };
-use jackioh_server::economy::track_rewards::reward_for_level;
+use jackioh_shared::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{call, test_app};
 use crate::support::store::{from, hmac_sha256_hex, store, to_json, try_store, uuid};

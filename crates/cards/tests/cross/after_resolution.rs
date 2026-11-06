@@ -48,12 +48,13 @@ mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
     use super::*;
 
     #[test]
-    fn r30_s10_5_quickstrikers_granted_combo_hits_once_per_resolution_of_an_echoed_spell_s8_c38() {
+    fn r3044000_s10_5_quickstrikers_granted_combo_hits_once_per_resolution_of_an_echoed_spell_s8_c38() {
         let mut g = setup(json!({
             "p1": { "hand": [TWINSPELL, STOCKPILE, RENO], "backrow": [{ "def": QUICKSTRIKER, "lane": 2 }], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "library": LIBRARY },
         }));
         g.play(TWINSPELL, json!({ "zone": 1 }));
+        g.activate(TWINSPELL, json!({}));
         let before = g.hand("p1").len();
 
         g.play(STOCKPILE, json!({}));
@@ -69,13 +70,14 @@ mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
     }
 
     #[test]
-    fn r30_s10_5_fullsends_granted_combo_draw_1_draws_once_per_resolution_of_an_echoed_spell_s8_c78() {
+    fn r3044000_s10_5_fullsends_granted_combo_draw_1_draws_once_per_resolution_of_an_echoed_spell_s8_c78() {
         let mut g = setup(json!({
             "p1": { "hand": [{ "def": FULLSEND, "radiant": true }, TWINSPELL, STOCKPILE, RENO], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "library": LIBRARY },
         }));
         g.play(FULLSEND, json!({}));
         g.play(TWINSPELL, json!({ "zone": 1 }));
+        g.activate(TWINSPELL, json!({}));
         let before = g.hand("p1").len();
 
         g.play(STOCKPILE, json!({}));

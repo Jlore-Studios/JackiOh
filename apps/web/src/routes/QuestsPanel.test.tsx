@@ -280,7 +280,7 @@ describe("QuestsPanel", () => {
 describe("the quest pool's titles", () => {
   /** A title is the server's English, looked up where it is shown, so each has its words in zh-CN. */
   it("each have a zh-CN entry", () => {
-    const pool = JSON.parse(readFileSync(resolve(REPO, "crates/server/quests.json"), "utf8")) as {
+    const pool = JSON.parse(readFileSync(resolve(REPO, "crates/shared/quests.json"), "utf8")) as {
       quests: { title: string }[];
     };
     expect(pool.quests.length).toBeGreaterThan(0);

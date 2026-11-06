@@ -16,8 +16,8 @@ use serde_json::Value;
 use crate::rng::Rng;
 use crate::state::{CardInstance, CostRule, EventStay, GameState, PlayRecord};
 use crate::wire::{
-    CardType, GameEvent, GameEventType, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag,
-    TargetDecl, string_union,
+    ActivationSource, CardType, GameEvent, GameEventType, Keyword, ModeDecl, PlayerId, PreviewValue,
+    Selection, Tag, TargetDecl, string_union,
 };
 
 // The sink and the context
@@ -430,7 +430,8 @@ pub struct StaticFlags {
     /// R30: this card's own Echo, so its play resolves this many extra times.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub echo: Option<i32>,
-    /// R30, R209: the Echo this permanent's rider gives the next Spell, read off its face now (#79).
+    /// R30, R209: the Echo this permanent's rider gives the next Spell, read off its face now (#79
+    /// through v0.5.11r, whose replays keep it, R767000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub echo_grant: Option<i32>,
     /// #38: while on the field, its controller's cards gain "Combo X: deal X damage to the enemy hero"
@@ -504,6 +505,12 @@ pub struct StaticFlags {
     /// `conditionMet`. The card keeps its own name, cost, type and tags, and its own other flags (Echo).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copies_last_spell: Option<bool>,
+    /// R3048000, Classic #57 Echo: the definition whose base-face text a `copiesLastSpell` card has
+    /// while no Spell has been played yet (`state.lastSpell` is null), Echo's The Coin
+    /// (`COIN_DEF_ID`). It is what the play then records (R399). Absent, the copier has no text then.
+    /// Named by the card, so a copier without it (a fixture's) still has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_fallback: Option<String>,
     // Static flags by workstream: damage and combat (E5, E6, E8, E35)
     /// B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1011,6 +1018,10 @@ pub struct Script {
     /// B3.2, R384: the card's Activate abilities, used by the `activate` action while it acts on the
     /// field (`subsystems::activate`).
     pub activations: Vec<ActivationDecl>,
+    /// R3291000: on a fused script, the ingredient whose text prints each of `activations`, one per
+    /// ability in the same order (`fuse.rs` `script_record`), which `ActivationView.printed_on` reports.
+    /// Empty on a card's own script: every ability is its own text.
+    pub activation_sources: Vec<ActivationSource>,
     /// §10.6: the named predicates a declaration's `TargetFilter.check` points at, for a filter no data
     /// field can say (Classic #32's lane rule, #48's lines of code). A pure read, like `conditionMet`.
     pub target_checks: IndexMap<&'static str, TargetCheck>,
@@ -1090,6 +1101,12 @@ pub struct Script {
     /// queued (§10.5 step 4), so X stays fixed while it resolves. The larger of it and
     /// `staticFlags.echo` is the printed Echo, which tuning and Twinspell add to (`echo::printed_echo`).
     pub echo_x: Option<EchoXHook>,
+    /// R3048002 (Meditative #5 Death by 1000 cuts): every Echo repeat of this card takes the picks its
+    /// first resolution took, asking nothing (`play_steps::ask_repeat_targets`), where an Echo repeat
+    /// otherwise asks its targets afresh (§6.2 Echo, R81). A pick that has left the field, or that the
+    /// card no longer reaches, is dropped and its repeat fizzles on it (R76, R90). Modes are still asked.
+    /// A fusion has it when an ingredient does.
+    pub echo_keeps_targets: bool,
     /// B5 E26, R464: triggers this card answers while in its owner's library (Classic+ #37 Wardrum). It is
     /// hidden (§9.1), so its queue entries take no number (R177) and, within a side, follow the hand's and
     /// precede the graveyard's in creation order, never library order (`triggers::trigger_holders_of`).

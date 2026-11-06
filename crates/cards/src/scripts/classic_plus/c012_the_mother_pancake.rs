@@ -1,6 +1,7 @@
-//! C+ #12 The Mother Pancake (SPEC §8.7 row 12): (3) Unit, Pancake, Legendary, 8/8 → 16/16.
+//! C+ #12 The Mother Pancake (SPEC §8.7 row 12): (3) Unit, Pancake, Legendary, 5/5 → 10/10
+//! (8/8 → 16/16 until issue #3138).
 //!   Base:    "Taunt. End of turn: Add {tokens} random Pancake token(s) to your hand."
-//!   Radiant: the same at 16/16 with 2 tokens (the catalog's `tokens` param).
+//!   Radiant: the same at 10/10 with 2 tokens (the catalog's `tokens` param).
 //! The pool is the eight Pancake tokens, C+ #12.1–#12.8, which the text names (§5.1), on their base
 //! faces, repeats allowed (R60); a full hand burns what doesn't fit (§2.4).
 
@@ -73,6 +74,22 @@ mod tests {
             .map(|card| card.def_id)
             .collect();
         (s, added)
+    }
+
+    /// Issue #3138: a 5/5, Radiant 10/10, from 8/8 and 16/16, for the same (3), with Taunt and its tokens.
+    #[test]
+    fn issue_3138_it_enters_as_a_5_5_radiant_a_10_10_for_3_mana() {
+        for (radiant, attack, health) in [(false, 5, 5), (true, 10, 10)] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": MOTHER, "radiant": radiant }, FILLER], "library": [FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            crate::expect_costs(&mut s, MOTHER, 3, json!({}));
+            s.state_mut().players.p1.mana.current = 3;
+            s.play(MOTHER, json!({}));
+            s.expect_stats(MOTHER, json!({ "attack": attack, "health": health, "maxHealth": health }));
+            assert!(s.stats(MOTHER).keywords.contains(&Keyword::Taunt));
+        }
     }
 
     mod base {
@@ -168,11 +185,11 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// 16/16 Taunt, adding 2 Pancake tokens
+        /// 10/10 Taunt, adding 2 Pancake tokens
         #[test]
-        fn sixteen_16_taunt_adding_2_pancake_tokens() {
+        fn ten_10_taunt_adding_2_pancake_tokens() {
             let (mut s, added) = at_end_of_turn(true, None, None);
-            s.expect_stats(MOTHER, json!({ "attack": 16, "health": 16 }));
+            s.expect_stats(MOTHER, json!({ "attack": 10, "health": 10 }));
             assert_eq!(added.len(), 2);
             let tokens = pancake_tokens();
             for id in &added {

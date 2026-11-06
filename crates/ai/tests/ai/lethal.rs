@@ -6,8 +6,8 @@
 
 use indexmap::IndexSet;
 use jackioh_ai::{
-    AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus,
-    MatchHooks, Matchup, NextSwing, NodeCounter, Prices, action_key, candidate_actions, create_node_counter,
+    AI_BUDGET, AI_EVAL, AI_GATE, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus, MatchHooks,
+    Matchup, NextSwing, NodeCounter, Prices, action_key, candidate_actions, create_node_counter,
     damage_past_taunts, determinize, evaluate, face_threat, find_lethal, find_lethal_with_quick_nodes,
     game_config, line_status, play_match, ready_gap, redact, search_signature, simulate,
 };
@@ -18,16 +18,16 @@ use jackioh_engine::testkit::{
 };
 
 use super::support::{
-    AI, HUMAN, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
+    AI, HUMAN, TEST_BUDGET, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
 };
 
 /// p1 (the AI), 4 crystals, holds a Radiant Lava Golem and two cheap spells; p2 is at 10 behind two Taunts.
-/// The lethal: the Golem tributes both enemy Taunts and one of p1's two smaller units, then Pointmaster
-/// and the other hit the face for 10 or more. The Golem is Radiant because the base face paid with
+/// The lethal: the Golem tributes both enemy Taunts and one of p1's two smaller units, then the 4-mana 7/7
+/// (Pointmaster, a 7/1 until issue #3136, is a 6/1 now) and the other hit the face for 10 or more. The Golem is Radiant because the base face paid with
 /// opposing units is summoned for the opponent (R360), where its Taunt would wall the face again.
 fn wide() -> Value {
     json!({
-        "p1": { "hand": [{ "def": "core-055", "radiant": true }, "core-035", "core-031"], "mana": 4, "field": ["core-020", "core-008", "core-011"] },
+        "p1": { "hand": [{ "def": "core-055", "radiant": true }, "core-035", "core-031"], "mana": 4, "field": ["core-025", "core-008", "core-011"] },
         "p2": { "field": ["core-019", "core-055"], "health": 10 },
     })
 }
@@ -106,13 +106,13 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
     f64::from(state.players[opp].hero.health - damage_past_taunts(state, opp, &attacks))
 }
 
-/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside Pointmaster 7/1 and Mr. Vanilla 4/4; p2
+/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside a 4-mana 7/7 and Mr. Vanilla 4/4; p2
 /// stands behind Midrange Menace, a 9/9 Taunt, at 10 health. Silence on the Taunt and both attacks to the
 /// face win; Silence on an own unit reaches a position that differs only in which unit is Vanilla. Both
 /// sides hold a library, so ending the turn decks nobody out.
 fn silence_board() -> Value {
     json!({
-        "p1": { "hand": ["classicplus-009"], "field": ["core-020", "core-008"], "library": ["core-008", "core-011"] },
+        "p1": { "hand": ["classicplus-009"], "field": ["core-025", "core-008"], "library": ["core-008", "core-011"] },
         "p2": { "field": ["core-019"], "health": 10, "library": ["core-008", "core-011"] },
     })
 }
@@ -193,13 +193,9 @@ mod the_lethal_solvers_walks {
         // The third and fourth series and the second played match keep the coverage floor below honest.
         states.extend(random_policy_states("lethal-ready-gap-3", 3, 600));
         states.extend(random_policy_states("lethal-ready-gap-4", 3, 600));
+        // The two played matches only collect states, so they decide at TEST_BUDGET, not the gate's.
         for game_index in [1, 2] {
-            let mut config = game_config(
-                Matchup::AiVsGreedy,
-                game_index,
-                AI_GATE_BUDGET,
-                AI_GATE.seed_series,
-            );
+            let mut config = game_config(Matchup::AiVsGreedy, game_index, TEST_BUDGET, AI_GATE.seed_series);
             config.max_actions = Some(150);
             let mut played: Vec<GameState> = Vec::new();
             {
@@ -415,7 +411,7 @@ mod the_positions_the_search_merges {
             }))
         };
         let on_taunt = silencing(&mine(&state, HUMAN, "core-019"));
-        let on_own = silencing(&mine(&state, AI, "core-020"));
+        let on_own = silencing(&mine(&state, AI, "core-025"));
         assert_ne!(
             search_signature(&play_out(&state, std::slice::from_ref(&on_taunt)), AI),
             search_signature(&play_out(&state, &[on_own]), AI)
@@ -534,7 +530,7 @@ mod duos_life_r964000 {
             "seed": "lethal-duos",
             "active": AI,
             "turn": 9,
-            "p1": { "field": ["core-020", "core-008", "core-011"] },
+            "p1": { "field": ["core-025", "core-008", "core-011"] },
             "p2": { "health": 20 },
         }))
         .state()

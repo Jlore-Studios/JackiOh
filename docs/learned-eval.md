@@ -251,8 +251,8 @@ so inference must cost microseconds.
 | **C. A set network:** a small MLP per unit (its card's embedding, its stats, its keywords), pooled per side, then a head | per unit | about 10× B's | yes, and per-unit interactions |
 
 **Recommendation: B.** It is the smallest shape that can learn what the hand eval cannot see. C is
-the step up if B's per-card worth is too coarse. A card id the weights do not know (a new card, or
-a custom card, #915) gets no sparse feature and is valued by its dense stats alone, so a new card
+the step up if B's per-card worth is too coarse. A card id the weights do not know (a new card)
+gets no sparse feature and is valued by its dense stats alone, so a new card
 never breaks the AI. Since `FEATURES_VERSION` 3 (#3112, R3112000) it also has keys for what it is
 (its type, cost, tags, keywords, printed stats and Radiant face), so it shares what the network
 learned of cards like it.
@@ -372,6 +372,11 @@ small.
 - **1v1 games, every tier:** yes. The tiers change resources, never the evaluation (R180).
 - **Duos:** keep the hand eval until the network is trained on Duos duels; `effective_life` and the
   pool are inputs it has never seen (R964000).
+- **A decision that holds a Starship:** keep the hand eval for every line of it (R3038003). The network
+  was fitted on catalog v0.3.17, before the Starship, and reads the crystals the enemy holds after the
+  simulated reply (it plays no hidden card) as 6 to 7 points each, which a launch to pay for spends: the
+  line that kills a Starship Piece scored above the line that kills a vanilla, against the hand eval's
+  12 to 15 points the other way (R2566000). It lifts at the next retrain that has seen one.
 - **The tutorial:** it plays the AI every tier plays (R290), and its lesson tests have vetoed real
   gains before (#850, finding 5). The default is to ship to it too and let the R293 tests decide. If
   they fail, the fallback, the tutorial keeping the hand eval, changes R290 and is a person's call.

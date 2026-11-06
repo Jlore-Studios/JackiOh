@@ -847,6 +847,12 @@ pub static ROUTES: &[Route] = &[
         h!(crate::social::presence::heartbeat),
     ),
     (
+        "GET",
+        "/api/social",
+        AuthLevel::Active,
+        h!(crate::social::reads::get_social),
+    ),
+    (
         "POST",
         "/api/challenges",
         AuthLevel::Active,
@@ -990,7 +996,8 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     } else {
         // The pool connects lazily: a store that cannot be reached fails the first request that
         // needs it, loudly, rather than the boot. Its idle timeout closes a connection before
-        // Supavisor drops it.
+        // Supavisor drops it, except the few it keeps warm, which the `db.heartbeat` loop pings
+        // under that timeout (#3208).
         let pool = db::pg::create_postgres_store(&db::pg::PostgresStoreOptions {
             connection_string: env.database_url.to_string(),
             max: None,
@@ -1221,6 +1228,13 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
         ),
         // end Duos co-op (#946)
     ];
+    // #3208: the store's heartbeat keeps the pool's warm connections open while the server is quiet.
+    if let db::store::Db::Pg(pool) = &app.db {
+        running.push((
+            "db.heartbeat",
+            loops::spawn_supervised("db.heartbeat", pool.clone(), db::pg::heartbeat),
+        ));
+    }
     if app.env.ladder_bots {
         running.push((
             "bots.pool",

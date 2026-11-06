@@ -688,8 +688,11 @@ pub const FROZEN_FOREVER: i32 = i32::MAX;
 pub const MELEE_MAX_ATTACKS: i32 = 20;
 /// R1848006 (Stinkyscape #153 Stimmycheck): the printed chance, in percent, that Inflation hits a card.
 pub const INFLATION_CHANCE: i32 = 15;
-/// R1848006: how much a Stimmycheck's chance grows on the copy it makes ("+10% chance at Inflation").
-pub const INFLATION_CHANCE_STEP: i32 = 10;
+/// R1848006, R3142000: how much a Stimmycheck's chance grows on the copy it makes ("Its Inflation chance
+/// goes up by 5%"; 10 through v0.5.11r, `INFLATION_CHANCE_STEP_V0_5_11O`).
+pub const INFLATION_CHANCE_STEP: i32 = 5;
+/// R3142000, R767000: the step through v0.5.11r, which the Stimmycheck script kept for those replays reads.
+pub const INFLATION_CHANCE_STEP_V0_5_11O: i32 = 10;
 /// R1848006: the sides of an Inflation roll: a chance is in percent, so a roll is one of 100.
 pub const INFLATION_ROLL_SIDES: i32 = 100;
 /// R1848006: what Inflation adds to a card's price when it hits ("cost (1) more").
@@ -1052,18 +1055,20 @@ pub const CHAOS_PLUS_UPGRADES: i32 = 2;
 pub const CHAOS_PLUS_DEGRADES: i32 = 3;
 
 // Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R423): its table's numbers.
-/// §8.8 row 95 entry 1: "add 2 copies of it to your hand" (R1242).
-pub const CHAOS_MED_FUSE_COPIES: i32 = 2;
+/// §8.8 row 95 entry 1: "add 1 copy of it to your hand" (R1242; 2 copies through v0.5.11r, #3135, R3135001).
+pub const CHAOS_MED_FUSE_COPIES: i32 = 1;
 /// §8.8 row 95 entry 2: "Add 2 random CN cards to your hand" (3 through patch v0.3.7b, #1149).
 pub const CHAOS_MED_CN_CARDS: i32 = 2;
 /// §8.8 row 95 entry 3: "Add 2 random Prime cards to your hand" (R1421).
 pub const CHAOS_MED_PRIME_CARDS: i32 = 2;
-/// §8.8 row 95 entry 4: "Your hero gains 6 Armor" (8 through patch v0.3.7b, #1149).
-pub const CHAOS_MED_HERO_ARMOR: i32 = 6;
-/// §8.8 row 95 entry 4: "and you heal it 6" (8 through patch v0.3.7b, #1149).
-pub const CHAOS_MED_HEAL: i32 = 6;
-/// §8.8 row 95 entry 6: "Summon 3 random Acclaimed cards" (R1243).
-pub const CHAOS_MED_ACCLAIMED: i32 = 3;
+/// §8.8 row 95 entry 4: "Your hero gains 5 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
+/// R3135001).
+pub const CHAOS_MED_HERO_ARMOR: i32 = 5;
+/// §8.8 row 95 entry 4: "and you heal it 5" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
+/// R3135001).
+pub const CHAOS_MED_HEAL: i32 = 5;
+/// §8.8 row 95 entry 6: "Summon 2 random Acclaimed cards" (R1243; 3 through v0.5.11r, #3135, R3135001).
+pub const CHAOS_MED_ACCLAIMED: i32 = 2;
 /// §8.8 row 95 entry 7: "then Nerf each card bounced", once each (R1244).
 pub const CHAOS_MED_NERFS: i32 = 1;
 /// §8.8 row 95 entries 1, 2 and 3: the cards "cost (0)" (`costOverride`).
@@ -1085,46 +1090,53 @@ pub const CHAOS_STINKY_DEATH_WATCH_CAP: i32 = 3;
 /// turn, its terminator (REVIEW A3.6): each cast is a chain with R28's cap of its own, and a cast that
 /// kills an Acclaimed Unit starts another, so an Acclaimed death past this many that turn casts nothing.
 pub const CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN: i32 = 5;
-/// §8.10 row 151 entry 2: "summon 3 Drone Corvettes".
-pub const CHAOS_SCAPE_CORVETTES: i32 = 3;
+/// §8.10 row 151 entry 2: "summon 2 Drone Corvettes" (3 through v0.5.11r, #3135, R3135001).
+pub const CHAOS_SCAPE_CORVETTES: i32 = 2;
 /// §8.10 row 151 entry 4: "cast 2 different cards of" the four Systems (R1882006).
 pub const CHAOS_SCAPE_SYSTEMS: i32 = 2;
-/// §8.10 row 151 entry 5: "add 4 random Starship Pieces to your hand".
-pub const CHAOS_SCAPE_HAND_PIECES: i32 = 4;
-/// §8.10 row 151 entry 7: "fuse 4 random Starship Pieces into your Dormant Starship" (R1882008).
-pub const CHAOS_SCAPE_FUSED_PIECES: i32 = 4;
+/// §8.10 row 151 entry 5: "add 3 random Starship Pieces to your hand" (4 through v0.5.11r, #3135, R3135001).
+pub const CHAOS_SCAPE_HAND_PIECES: i32 = 3;
+/// §8.10 row 151 entry 7: "fuse 3 random Starship Pieces into your Dormant Starship" (R1882008; 4 through
+/// v0.5.11r, #3135, R3135001).
+pub const CHAOS_SCAPE_FUSED_PIECES: i32 = 3;
 /// §8.10 row 151 entry 8: "add 2 random Radiant Weapons to your hand".
 pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
 /// §8.10 row 151 entry 9, R1882009: the Marketplace's Call to Chaos "for 20 Credits", a price that never
 /// moves (R1853005).
 pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
 
-// Training Grounds #39 Call to Chaos (Training-Grounds Edition) (SPEC §8.11 row 39, issue #2200): its
-// table's numbers, as printed.
+// Training Grounds #39 Call to Chaos (Training-Grounds Edition) (SPEC §8.11 row 39, issue #2200, #3135): its
+// table's numbers, as printed. The through-v0.5.11r numbers are in each doc (R3135000).
 /// §8.11 row 39 entry 1: "Summon 3 Rush Tokens", base faces.
 pub const CHAOS_TG_RUSH_TOKENS: i32 = 3;
-/// §8.11 row 39 entry 2: "refresh 4 mana" (§6.3 Refresh, R364).
-pub const CHAOS_TG_REFRESH: i32 = 4;
+/// §8.11 row 39 entry 2: "refresh 3 mana" (§6.3 Refresh, R364; 4 through v0.5.11r).
+pub const CHAOS_TG_REFRESH: i32 = 3;
 /// §8.11 row 39 entry 3: "add 4 random Training Grounds cards to your hand" (R2200000).
 pub const CHAOS_TG_CARDS: i32 = 4;
-/// §8.11 row 39 entry 4: "gain 8 mana", which may pass max (§2.3).
-pub const CHAOS_TG_MANA: i32 = 8;
+/// §8.11 row 39 entries 3 and 6: the added cards "cost (1)" (`costOverride`; (0) through v0.5.11r), apart from
+/// the price of any Call to Chaos entry 9 adds, which costs what it prints (R3135000).
+pub const CHAOS_TG_CARD_COST: i32 = 1;
+/// §8.11 row 39 entry 3: "and gain 2 mana", after the cards are added (R3135000).
+pub const CHAOS_TG_CARDS_MANA: i32 = 2;
+/// §8.11 row 39 entry 4: "gain 6 mana", which may pass max (§2.3; 8 through v0.5.11r).
+pub const CHAOS_TG_MANA: i32 = 6;
 /// §8.11 row 39 entry 4: "and draw 2 cards".
 pub const CHAOS_TG_DRAW: i32 = 2;
-/// §8.11 row 39 entry 5: "summon 6 random Training Grounds permanents" (R2200000).
-pub const CHAOS_TG_PERMANENTS: i32 = 6;
+/// §8.11 row 39 entry 5: "summon 5 random Training Grounds permanents" (R2200000; 6 through v0.5.11r).
+pub const CHAOS_TG_PERMANENTS: i32 = 5;
 /// §8.11 row 39 entry 6: "add 2 random Radiant Training Grounds cards to your hand".
 pub const CHAOS_TG_RADIANT_CARDS: i32 = 2;
-/// §8.11 row 39 entry 7: "summon 5 Rush Tokens", base faces.
-pub const CHAOS_TG_ARMY_TOKENS: i32 = 5;
-/// §8.11 row 39 entries 3, 6 and 9: the cards "cost (0)" (`costOverride`).
-pub const CHAOS_TG_COST: i32 = 0;
-/// §8.11 row 39 entry 9, R2200002: "every second turn of yours": the entry adds on the caster's own
-/// turns whose count since the entry resolved is a multiple of this.
-pub const CHAOS_TG_EVERY: i32 = 2;
-/// §8.11 row 39 entry 9, R2200002: the most rest-of-game every-second-turn adds one player holds, its
+/// §8.11 row 39 entry 6: "and gain 1 mana", after the cards are added (R3135000).
+pub const CHAOS_TG_RADIANT_MANA: i32 = 1;
+/// §8.11 row 39 entry 7: "summon 3 Rush Tokens", base faces (5 through v0.5.11r).
+pub const CHAOS_TG_ARMY_TOKENS: i32 = 3;
+/// §8.11 row 39 entry 9, R2200002, R3135000: "at the start of every turn of yours": the entry adds on the
+/// caster's own turns whose count since the entry resolved is a multiple of this (every second turn, 2,
+/// through v0.5.11r).
+pub const CHAOS_TG_EVERY: i32 = 1;
+/// §8.11 row 39 entry 9, R2200002: the most rest-of-game start-of-turn adds one player holds, its
 /// terminator (REVIEW A3.6), bounded as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at
-/// the cap resolves into nothing, the "now" add included.
+/// the cap resolves into nothing.
 pub const CHAOS_TG_ALTERNATE_CAP: i32 = 3;
 
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
@@ -1420,24 +1432,41 @@ pub const MARKETPLACE_TABLE: &[MarketLot] = &[
     card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_AI_CARDS), 1),
 ];
-/// R2250002: the offers the Marketplace rolls a player at the start of each of their turns.
-pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 3;
+/// R2250002, R3047000: the offers the Marketplace rolls a player at the start of each of their turns.
+pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 4;
 /// R2250002: the copies of each rolled offer, its owner's to buy.
 pub const MARKETPLACE_OFFER_STOCK: i32 = 1;
-/// R1853002: the Credits a lot asks for each mana of its cost up to `MARKETPLACE_FULL_PRICE_MANA`.
+/// R1853002, R3047000: the Credits a lot asks for each mana of its cost up to
+/// `MARKETPLACE_FULL_PRICE_MANA`.
 pub const MARKETPLACE_CREDITS_PER_MANA: i32 = 10;
 /// R1853002: the cost up to which each mana is priced at `MARKETPLACE_CREDITS_PER_MANA`.
 pub const MARKETPLACE_FULL_PRICE_MANA: i32 = 4;
-/// R1853002: the Credits a lot asks for each mana of its cost past `MARKETPLACE_FULL_PRICE_MANA`.
-pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 5;
-/// R1853002: the price of a (0) card.
-pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 5;
+/// R1853002, R3047000: the Credits a lot asks for each mana of its cost past `MARKETPLACE_FULL_PRICE_MANA`.
+pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 15;
+/// R3047000: the Credits every priced card (a cost of (1) or more) asks before its mana: (1) is
+/// 5 + 10 = 15.
+pub const MARKETPLACE_PRICE_BASE: i32 = 5;
+/// R1853002, R3047000: the price of a (0) card.
+pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 8;
+/// R3047001: the cost a card bought at the Marketplace has, whatever it printed (a cost override,
+/// R65): it is paid for in Credits already.
+pub const MARKETPLACE_BOUGHT_COST: i32 = 0;
 /// R1853001: the chance a lot is rolled Radiant.
 pub const MARKETPLACE_RADIANT_CHANCE: f64 = 0.2;
 /// R1853002: a Radiant lot's price, as a multiple of its base face's.
 pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
 /// R1853002: a price moves each turn within a tenth of its base: the base divided by this, rounded down.
 pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
+/// R3047002: the chance a rolled offer is Buffed, rolled again for each Buff that lands.
+pub const MARKETPLACE_BUFF_CHANCE: f64 = 0.2;
+/// R3047002: the chance a rolled offer with no Buff is Nerfed, rolled again for each Nerf that lands.
+pub const MARKETPLACE_NERF_CHANCE: f64 = 0.1;
+/// R3047002: the most Buffs, and the most Nerfs, one offer takes: the repeat of a roll stops here.
+pub const MARKETPLACE_TUNE_MAX: i32 = 8;
+/// R3047002: a Buffed offer's price, in percent of what it was before the Buff, for each Buff.
+pub const MARKETPLACE_BUFF_PRICE_PERCENT: i32 = 120;
+/// R3047002: a Nerfed offer's price, in percent of what it was before the Nerf, for each Nerf.
+pub const MARKETPLACE_NERF_PRICE_PERCENT: i32 = 85;
 /// R1853005, R2250002: the copies a lot an effect added for the rest of the game holds, renewed at its
 /// owner's turn start.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
@@ -1627,9 +1656,21 @@ pub const CRAFT_NOUNS: &[&str] = &[
     "Closure", "Reducer", "Iterator", "Trait", "Crate", "Struct", "Macro", "Enum",
 ];
 
-/// The point budget for the chosen cost: `CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA × cost`.
+/// The point budget for the chosen cost: `CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA × cost`. Scratch
+/// Pad's (R1182002); Meditative #17's is this scaled (`true_craft_points_budget`, R3043000).
 pub fn craft_points_budget(cost: i32) -> i32 {
     CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA * cost
+}
+
+/// R3043000: Meditative #17 True Craft a Card's prompt (the one of no mode) has this percent of the
+/// crafter's budget ("about 20% fewer points", #3043); Scratch Pad's keeps it whole.
+pub const TRUE_CRAFT_POINTS_PERCENT: i32 = 80;
+
+/// R3043000: Meditative #17's point budget for the chosen cost: `craft_points_budget` times
+/// `TRUE_CRAFT_POINTS_PERCENT`, out of `PERCENT`, to the nearest whole point (a half up): 2, 6, 10,
+/// 14, 18 against 2, 7, 12, 17, 22.
+pub fn true_craft_points_budget(cost: i32) -> i32 {
+    (craft_points_budget(cost) * TRUE_CRAFT_POINTS_PERCENT + PERCENT / 2) / PERCENT
 }
 
 /// One row of the verb price table (`docs/meditative-set.md` M6 #17): `points + per_n × N`,
@@ -2008,8 +2049,8 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
 /// R1182000: a Potion's fixed cost (Meditative+ #16 Jazakus: "It costs (1).").
 pub const CRAFT_POTION_COST: i32 = 1;
 /// R1563008: a Potion's points. A Potion is a Spell with no stats since #1563, so it has fewer than
-/// the crafter's budget at its cost (`craft_points_budget(CRAFT_POTION_COST)`, 7), which a Unit
-/// Potion spent mostly on stats.
+/// the crafter's budget at its cost (`craft_points_budget(CRAFT_POTION_COST)`, 7, and Meditative
+/// #17's `true_craft_points_budget`, 6, R3043000), which a Unit Potion spent mostly on stats.
 pub const CRAFT_POTION_POINTS: i32 = 4;
 /// R1182001: a HUGE Potion's fixed cost (Meditative+ #16.1 Jazakus Prime: "It costs (3).").
 pub const CRAFT_HUGE_POTION_COST: i32 = 3;
@@ -2074,57 +2115,6 @@ pub const SANDBOX_ARMOR_MAX: i32 = 99;
 pub const SANDBOX_MANA_MAX: i32 = 10;
 /// R923002: the most cards one of the sandbox's draws takes.
 pub const SANDBOX_DRAW_MAX: i32 = 10;
-
-// ---------------------------------------------------------------------------------------------
-// Custom cards (#915, SPEC §12, R915000–R915009)
-// ---------------------------------------------------------------------------------------------
-
-/// R915000: what every custom card's id begins with. No catalog id does.
-pub const CUSTOM_ID_PREFIX: &str = "custom-";
-/// R915000: the longest custom id, the prefix included: room for the server's 32 hex digits and more.
-pub const CUSTOM_ID_MAX_LENGTH: usize = 64;
-/// R915001: the longest custom card name, in characters, as a deck's (`DECK_NAME_MAX_LENGTH`).
-pub const CUSTOM_NAME_MAX_LENGTH: usize = 40;
-/// R915001: the longest custom card text, in characters: two lines of a card face.
-pub const CUSTOM_TEXT_MAX_LENGTH: usize = 240;
-/// R915001: the most a custom card costs, as the catalog's dearest cards (mana past `MAX_MANA` is gained).
-pub const CUSTOM_COST_MAX: i32 = 10;
-/// R915001: the highest attack a custom Unit prints.
-pub const CUSTOM_ATTACK_MAX: i32 = 12;
-/// R915001: the highest health a custom Unit prints.
-pub const CUSTOM_HEALTH_MAX: i32 = 12;
-/// R915001: the highest attack or health a custom Unit's Radiant face prints, twice the base caps.
-pub const CUSTOM_RADIANT_STAT_MAX: i32 = 24;
-/// R915001: a custom Unit's Radiant stat the frame leaves unprinted is twice the base one (`custom::radiant_stat`).
-pub const CUSTOM_RADIANT_STAT_FACTOR: i32 = 2;
-/// R915001: the most keywords a custom Unit prints.
-pub const CUSTOM_KEYWORDS_MAX: usize = 4;
-/// R915001: the keywords a custom Unit may print, and the card kit may give: the game's own simple
-/// combat keywords, none of which takes a number.
-pub const CUSTOM_KEYWORDS: &[KeywordKind] = &[
-    KeywordKind::Taunt,
-    KeywordKind::Rush,
-    KeywordKind::Charge,
-    KeywordKind::FirstStrike,
-    KeywordKind::Poisonous,
-    KeywordKind::Lifesteal,
-    KeywordKind::Reborn,
-    KeywordKind::DivineShield,
-    KeywordKind::Trample,
-    KeywordKind::Windfury,
-    KeywordKind::Ranged,
-    KeywordKind::Flying,
-];
-/// R915001: the most numbers (`{key}`s) a custom card prints.
-pub const CUSTOM_PARAMS_MAX: usize = 6;
-/// R915001: the longest name of a custom card's number.
-pub const CUSTOM_PARAM_KEY_MAX_LENGTH: usize = 16;
-/// R915001: the highest value a custom card's number prints, on either face.
-pub const CUSTOM_PARAM_MAX: i32 = 20;
-/// R915001: the longest card-kit script, in bytes of UTF-8.
-pub const CUSTOM_SOURCE_MAX_BYTES: usize = 8_192;
-/// R915001: the longest builder's model a custom card keeps, in bytes of JSON.
-pub const CUSTOM_BUILDER_MAX_BYTES: usize = 16_384;
 
 // ---------------------------------------------------------------------------------------------
 // Duos co-op (#936, fullsend SPEC S1): two 1v1 duels side by side whose teams share a life pool and
@@ -2277,8 +2267,8 @@ pub const STARSHIP_FULL_ROW_LANE: i32 = 3;
 /// R2249000: the lanes a Dormant Starship is summoned into, the middle first: its owner's backrow zones
 /// in this order, standing there (R1081000), then their unit zones in the same order.
 pub const STARSHIP_LANE_ORDER: [i32; 5] = [3, 2, 4, 1, 5];
-/// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (3) to awaken").
-pub const STARSHIP_LAUNCH_COST: i32 = 3;
+/// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (4) to awaken").
+pub const STARSHIP_LAUNCH_COST: i32 = 4;
 /// R1852003: how many times a turn the launch may be activated (once; a launched Starship has no
 /// launch left to activate).
 pub const STARSHIP_LAUNCH_USES: i32 = 1;

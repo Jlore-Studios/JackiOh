@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
+import { BackLink } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
 import type { ReplayPlayerProps } from "./ReplayPlayer.tsx";
@@ -40,9 +41,7 @@ export default function OpenedReplay({ load, onLeave, ...player }: OpenedReplayP
   if (source !== null) return <ReplayPlayer source={source} onLeave={onLeave} {...player} />;
   return (
     <div className="app-shell">
-      <button type="button" className="link-button" data-testid={replayTestid.back} onClick={onLeave}>
-        {t("← Back")}
-      </button>
+      <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} />
       {failure === null ? (
         <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
       ) : (

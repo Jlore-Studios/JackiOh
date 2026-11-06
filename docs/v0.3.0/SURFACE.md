@@ -167,7 +167,6 @@ on this list during Waves 1–3.
 | unicode-properties | 0.1.4 | — | server (username checks, R1432–R1434) |
 | unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
 | unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
-| mlua | =0.12.2 | luau, serde (default-features = false) | luau (#442 L3; nothing depends on the crate yet) |
 | yaml_serde | 0.10.7 | — | tools (tests only: `export_card_text.rs` reads `crates/cards/card-text.yaml`, #2498; no pure crate takes it, CLAUDE.md rule 4) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
@@ -180,7 +179,6 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
-| `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
 | `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
@@ -191,7 +189,7 @@ on a crate that depends on you is legal for integration tests (`tests/`), which 
 
 ## 3. Purity (CLAUDE.md rule 4, in Rust)
 
-`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-luau`, `jackioh-run` and `jackioh-shared` are pure
+`jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-run` and `jackioh-shared` are pure
 (CLAUDE.md rule 4 has what each takes): no clock, no I/O, no environment, no
 threads, no OS randomness, no hash-ordered collections, **no mutable statics**. Two mechanisms
 enforce it, and nothing else is needed (the ESLint purity rules go):
@@ -768,7 +766,7 @@ keeps behind its opaque `EngineState` brand.
     // one flat object of every rules, AI and run number a client reads (#3093): AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK (practice, the tutorial harness, the lean toggle, R1370, and their tests),
     // RUN (run_constants's object) and each constant of engineConfig.ts (§5.1) under its own name (DECK_SIZE, …), so a host that is not the web restates none (CLAUDE.md rule 9)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
-#[wasm_bindgen] pub fn combat_forecast(state_json: &str, seat: &str) -> String;      // R3100000: CombatForecast { attacks: AttackForecast[], lethal } (query.rs's combat_forecast): what each attack `seat` may declare would do, as the board shows it, for the tutorial's coach; the normal and C modules bind it (the Luau module has no copy)
+#[wasm_bindgen] pub fn combat_forecast(state_json: &str, seat: &str) -> String;      // R3100000: CombatForecast { attacks: AttackForecast[], lethal } (query.rs's combat_forecast): what each attack `seat` may declare would do, as the board shows it, for the tutorial's coach; the browser and C modules bind it
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
@@ -784,17 +782,21 @@ keeps behind its opaque `EngineState` brand.
     // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the same for "Duos" | the rematch and Play again books' calls),
     // a HostAnswer out ({ answer: "stepped", host, outputs } | { answer: "steppedDuos", host, outputs } | { view } | { duosView } | { presence } | the books'); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
 #[wasm_bindgen] pub fn loadout(call_json: &str) -> String;
-    // #3102: jackioh-shared's loadout visibility rule (SPEC §10.8, R1834003, R3013002). A LoadoutCall in ({ call: "dealtCards", state } | { call: "shownDefs", view, dealt }
-    // | { call: "cardsDue", shown, loadouts, sent? }), a LoadoutAnswer out ({ dealt } | { shown } | { due: { cards, sent } }); the host holds the deal and each receiver's sent set
+    // #3102: jackioh-shared's loadout rule (SPEC §10.8, R1834002, R1834003, R3013002). A LoadoutCall in ({ call: "dealtCards", state } | { call: "shownDefs", view, dealt }
+    // | { call: "cardsDue", shown, loadouts, sent? } | { call: "freezeSeat", picks, deck?, deckCards } | "defaultLoadout" | { call: "accountPicks", settings? } | { call: "wornStamps", rows }),
+    // a LoadoutAnswer out ({ dealt } | { shown } | { due: { cards, sent } } | { frozen } | { account } | { stamps }); the host holds the deal and each receiver's sent set
 #[wasm_bindgen] pub fn ranked(call_json: &str) -> String;
     // #3105: jackioh-shared's ranked ladder (SPEC §9.12, R603–R612). A RankedCall in ({ call: "rateGame", game: { standings, sides, winnerSide?, reason, stake?, season, ladder, strict?, nowMs } } | planSeason | softReset | visibleRank | peakBadge | jloriousOrder),
     // a RankedAnswer out ({ game: { sides, ranks, peaks, jlorious, records } } | { season } | { reset } | { rank } | { badge } | { jlorious }); each record carries sortKey, the integer a leaderboard sorts by
 #[wasm_bindgen] pub fn bots(call_json: &str) -> String;
-    // #3103: jackioh-shared's ladder bots (SPEC §9.12, R1453, R1454, R641000, R1555000). A BotCall in ({ call: "chooseBot", ticket, bots, recent, busy, hour, catalogVersion } | { call: "planPool" | "planGrind" | "newBot" | "drawDecks" | "drawTrio" | "fallbackDue" | "pickIsDue" | "botPick" | … }),
-    // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | …); the host reads its store into plain records and writes what comes out
+    // #3103: jackioh-shared's ladder bots (SPEC §9.12, R1453, R1454, R641000, R1555000, R1834005). A BotCall in ({ call: "chooseBot", ticket, bots, recent, busy, hour, catalogVersion } | { call: "planPool" | "planGrind" | "newBot" | "drawDecks" | "drawTrio" | "fallbackDue" | "pickIsDue" | "botPick" | "eligibleCosmetics" | "redrawCosmetics" | … }),
+    // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | { holdings } | { draw } | …); the host reads its store into plain records and writes what comes out
 #[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
     // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
     // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
+#[wasm_bindgen] pub fn log(call_json: &str) -> String;
+    // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
+    // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)
 ```
 
 ### 10.2 Build
@@ -823,7 +825,7 @@ with the route it missed, a body that arrives still compressed),
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
-`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), …).
+`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), `log` (#3108: the game log's lines, the normal module's own too), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
 `practice.worker.ts` awaits it before handling a message.
@@ -863,11 +865,11 @@ Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-ca
 `jackioh-wasm-c` exports every binding of §10.1 (and `learned_parity` and the `duos_*` bindings the
 browser module also binds) as an `extern "C"` function over JSON strings, built as a plain
 `wasm32-unknown-unknown` `cdylib`: no wasm-bindgen glue, no JavaScript, no system interface, so its
-import section is empty and a host that is not JavaScript instantiates it with no imports. It is a third
-wrapper over `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau`
-(the same C names through emscripten, with the Luau VM; #2956 part 5 deletes it), and
+import section is empty and a host that is not JavaScript instantiates it with no imports. It is a second
+wrapper over `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen), and
 `crates/wasm/tests/export_parity.rs` holds its exports to the browser module's, so a binding added for
-the web reaches such a host by itself. A string crosses as a pointer and a length into the module's
+the web reaches such a host by itself. It is the module a Roblox port translates (#2898), so ci.yml's
+`web (wasm c module)` job builds it and fails on any import (#3097). A string crosses as a pointer and a length into the module's
 memory, which the module's `jackioh_alloc`, `jackioh_free`, `jackioh_result_ptr` and `jackioh_result_len`
 give a host to read and write; every binding returns a status (0 ok, 1 failed) and leaves its JSON text,
 or the failure's message, in the result buffer. The module reads no clock, so `ai_decide` and
@@ -1047,7 +1049,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   Mythic's or an Animated art's id, R2655000, R2715000), goes after the first view to a socket that shows a card that seat's deck
   dealt, once per socket (`jackioh_shared::loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
-  `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
+  `Registry::start` freezes (`jackioh_shared::loadout::SeatPicks::freeze`, #3102). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
   `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3013 (R3013002): a frozen loadout
   holds `stamps` (`[{ cardId, stamp }]`, each dealt card's proficiency stamp), and a `cardLoadouts`
@@ -1099,7 +1101,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 > **Historical (#2578).** The 240 games below, the oracle of the TypeScript → Rust port, are retired, and `golden bless` with them. The
 > format lives on: `golden record --seeds A..B [--force ids] --out <path>` writes §13.3's lines from the build it runs on, and
 > `golden check --file <path>` replays them with §13.2's hashes on any build; `golden check` alone folds the hotseat fixture to
-> `HOTSEAT_HASH` (now `972f5b85`).
+> `HOTSEAT_HASH` (now `512357ea`).
 
 The oracle the rewrite is held to, recorded from the TypeScript engine **before** any Rust runs
 (part 23), and replayed by the Rust engine.
@@ -1328,3 +1330,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
 - **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` (retired in #2578) rewrote those alone.
 - **§6.1 / §6.6, counts kept on a unit (#2321, R2321000):** `Script` gains `tallies: Option<TallyHook>`, a pure read of `ConditionContext` returning `Vec<UnitTally>` (`{ instance_id, value, goal }`), combined across a Fuse's ingredients in order as `preview` is; `UnitView` carries `tallies: Option<Vec<TallyView>>` (`{ defId, value, goal }`, `preview::tallies_on`), absent when no card counts the unit, so no golden hash moves for a game without one.
+- **§6.1 / §6.6, where an ability comes from (#3291, R3291000):** `Script` gains `activation_sources: Vec<ActivationSource>`, one per `activations` entry on a fused script (`fuse.rs` `script_record`, concatenated in ingredient order as `activations` is), empty on a card's own; `ActivationView` carries `printedOn: Option<ActivationSource>` (`{ defId, radiant? }`, `activate::activation_views_for`), absent on a card's own ability and the engine's. It dresses the view and plays no part in the game, so `testkit::golden::view_texts` leaves it out as it does `sourceDefId`, and a trace recorded on either side of it replays on the other.

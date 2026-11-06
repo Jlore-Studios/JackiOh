@@ -1,9 +1,10 @@
 // Player-facing text in today's words, one describe per ruling (R373: Deck and Tribute, never library
 // or sacrifice). R781000: the old word Magnetic is left
 // only where the past is shown as it was. The guards parse strings, templates and JSX, not comments or
-// lower-case machine words; `cards/glossary.ts` puts SPEC text through `inPlayerWords`.
+// lower-case machine words; the glossary's words are jackioh-shared's data (`crates/shared/data/glossary.json`),
+// which rules.test.ts holds to the same words.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,7 +20,7 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 
 const OLD_WORDS = /\b(librar(y|ies)|sacrific\w*)\b/i;
 
-const CONVERTED = new Set(["cards/glossary.ts"]);
+const CONVERTED = new Set<string>();
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -239,19 +240,31 @@ describe("R1320 players read Nerf and Buff", () => {
   });
 });
 
-/** R724001: the player notes `patches.json` carries, every title and line of each, and the technical log's lines (R1369000). */
+/**
+ * R724001: the player notes `patches.json` carries and every pending fragment's (`patches ship` copies a
+ * fragment's onto the patch it ships, R646, so its note is held here before it ships), every title and
+ * line of each, and the technical log's lines (R1369000).
+ */
 function playerNoteTexts(): { at: string; text: string }[] {
   const patches = JSON.parse(readFileSync(join(SRC, "../../../crates/cards/patches/patches.json"), "utf8")) as {
     version: string;
     player?: Record<string, string | string[]>;
   }[];
+  // A promotion deletes every fragment, and git keeps no empty directory.
+  const pendingDir = join(SRC, "../../../crates/cards/patches/pending");
+  const pending = (existsSync(pendingDir) ? readdirSync(pendingDir) : [])
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => {
+      const fragment = JSON.parse(readFileSync(join(pendingDir, name), "utf8")) as { player?: Record<string, string | string[]> };
+      return { version: `pending/${name}`, player: fragment.player };
+    });
   const technical = JSON.parse(readFileSync(join(SRC, "../../../crates/cards/patches/technical.json"), "utf8")) as {
     version: string;
     commit: string;
     player?: string;
   }[];
   return [
-    ...patches.flatMap(({ version, player }) =>
+    ...[...patches, ...pending].flatMap(({ version, player }) =>
       Object.entries(player ?? {}).flatMap(([key, value]) =>
         (typeof value === "string" ? [value] : value).map((text) => ({ at: `${version} ${key}`, text })),
       ),
@@ -261,7 +274,7 @@ function playerNoteTexts(): { at: string; text: string }[] {
 }
 
 describe("R724001 players read a patch's note in today's words", () => {
-  it("R724001 R1369000 no player note in patches.json or line of technical.json says library, sacrifice, an old cost form, Degrade or Upgrade", () => {
+  it("R724001 R1369000 no player note in patches.json or a pending fragment, and no line of technical.json, says library, sacrifice, an old cost form, Degrade or Upgrade", () => {
     const texts = playerNoteTexts();
     expect(texts.length).toBeGreaterThan(100);
     // Every word of a note is a player's, so the guards apply in any form, capitals or not.

@@ -1,84 +1,83 @@
 //! Which cosmetics of a seat's deck a receiver may be told, and when (SPEC §10.8, §14.2; R1834003,
-//! R3013002): the decision that keeps a decklist from leaking through the loadout frames.
+//! R3013002), and what a seat wears to begin with (R1834002): the decisions that freeze a loadout when a
+//! match starts and keep a decklist from leaking through the loadout frames.
 //!
-//! R1834002: when a match starts, each seat's loadout is frozen on its row ([`Loadout`]): the seat-level
-//! half, and the picks and stamp of each card of its deck that wears something of its own. The seat-level
-//! half travels whole, on join and on reconnect. R1834003: a card's own picks travel only once a card dealt
-//! from that seat's deck, still showing as dealt, is in the receiver's view ([`shown_defs`]), and once per
-//! receiver ([`cards_due`]): no decklist can be read from the frames (§10.8). R3013002: a card's proficiency
-//! stamp (§14.14) is frozen and travels the same way, beside its picks, so another seat, a watcher and a
-//! replay's viewer see it only once the card is shown.
+//! R1834002: when a match starts, each seat's loadout is frozen on its row ([`Loadout`], by [`freeze_loadout`]
+//! and [`SeatPicks::freeze`]): the deck's three slots and each card's picks, each resolved to a registry id the
+//! account owns at that moment and the kind's default otherwise. The seat-level half travels whole, on join and
+//! on reconnect. R1834003: a card's own picks travel only once a card dealt from that seat's deck, still showing
+//! as dealt, is in the receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]): no decklist can
+//! be read from the frames (§10.8). R3013002: a card's proficiency stamp (§14.14) is frozen ([`freeze_stamps`],
+//! [`worn_stamps`]) and travels the same way, beside its picks, so another seat, a watcher and a replay's viewer
+//! see it only once the card is shown.
 //!
 //! Which cards the decks dealt is [`dealt_cards`]: a card minted after the deal counts for no deck, so a
 //! copy of a card the receiver can see names nothing about the deck it was copied from.
 //!
 //! Cosmetic only: nothing here enters `PlayerView`, an action, the log, a replay hash or a game record, and
 //! the engine never reads it (CLAUDE.md rule 7). The server calls these functions natively (its
-//! `loadout.rs` keeps the store, the registry and the freezing); a client reaches them through
+//! `loadout.rs` keeps the store reads and writes: a seat's picks off the ledger, the settings row and the
+//! proficiency rows, which it turns into the plain records below); a client reaches them through
 //! [`LoadoutCall`] and [`LoadoutAnswer`], the one JSON in and out of `jackioh-wasm-core`'s `loadout` body
 //! (README.md, the host contract). The caller owns the `sent` set: it is an argument and part of the answer.
+//! Nothing here draws: a freeze is a function of the records it is given and the shipped registry.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use jackioh_engine::{BackrowView, GameState, HandView, PLAYER_IDS, PlayerId, PlayerView, SideView};
 use serde::{Deserialize, Serialize};
 
+use crate::cosmetics::{
+    Cosmetic, CosmeticKind, OwnedCosmetics, default_of, level_of_pick, offered, owns, registry, worn_level,
+};
 use crate::deck::DeckSlots;
+
+// The settings keys and the kinds a loadout wears
+
+/// The settings group the client keeps the account's picks in (R633, R1295000).
+pub const COSMETICS_GROUP: &str = "cosmetics";
+/// The settings group of the card display, and its Full-art cards switch (R1313000).
+pub const CARDS_GROUP: &str = "cards";
+pub const FULL_ART_SETTING: &str = "fullArt";
+/// R2725000: a card pick's key for the augments it layers on its version.
+pub const AUGMENTS_KEY: &str = "augments";
+
+/// The kinds a deck carries a pick of (R1297000), in the registry's order.
+pub const DECK_SLOT_KINDS: [CosmeticKind; 3] =
+    [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack];
+/// The kinds a card wears (R1295000), in the registry's order.
+pub const CARD_SLOT_KINDS: [CosmeticKind; 3] =
+    [CosmeticKind::Foil, CosmeticKind::Finish, CosmeticKind::Border];
+
+/// The key a kind's pick has in the `cosmetics` settings group: the kind's own camel-case name. A version is
+/// picked as a card's `fullArt` and an augment in its `augments` (R2725000).
+pub fn setting_key(kind: CosmeticKind) -> &'static str {
+    match kind {
+        CosmeticKind::Foil => "foil",
+        CosmeticKind::Finish => "finish",
+        CosmeticKind::Border => "border",
+        CosmeticKind::Table => "table",
+        CosmeticKind::Field => "field",
+        CosmeticKind::CardBack => "cardBack",
+        CosmeticKind::FullArt => "fullArt",
+        CosmeticKind::Portrait => "portrait",
+        CosmeticKind::Version => FULL_ART_SETTING,
+        CosmeticKind::Augment => AUGMENTS_KEY,
+    }
+}
 
 // The loadout
 
-/// R2655000: a card's own full-art pick: `false` (no full art), `true` (its Epic full art, as every
-/// pick before #2655 named it) or a full art's registry id, which travels as the id's text. An id
-/// is kept as written and judged where it is worn, as a foil's is (`cosmetics::full_art_picked`).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(untagged)]
-pub enum FullArtPick {
-    On(bool),
-    Id(String),
-}
-
-impl From<bool> for FullArtPick {
-    fn from(on: bool) -> FullArtPick {
-        FullArtPick::On(on)
-    }
-}
-
-impl FullArtPick {
-    /// Whether the pick prints a full art at all: `true` or any id.
-    pub fn prints(&self) -> bool {
-        !matches!(self, FullArtPick::On(false))
-    }
-
-    /// The id the pick names, if it names one rather than a switch.
-    pub fn id(&self) -> Option<&str> {
-        match self {
-            FullArtPick::Id(id) => Some(id),
-            FullArtPick::On(_) => None,
-        }
-    }
-
-    /// The pick a row of `public.card_cosmetic_picks` holds: its `full_art` switch, and the id
-    /// migration 0072 keeps beside a switch that is on.
-    pub fn of_row(full_art: Option<bool>, id: Option<String>) -> Option<FullArtPick> {
-        match (full_art, id) {
-            (Some(true), Some(id)) => Some(FullArtPick::Id(id)),
-            (Some(on), _) => Some(FullArtPick::On(on)),
-            (None, _) => None,
-        }
-    }
-}
+/// R2655000: a card's own full-art pick, the cosmetics registry's (`cosmetics::FullArtPick`, where its home
+/// is, beside `full_art_picked` that judges it): re-exported here, so `loadout::FullArtPick` still names it.
+pub use crate::cosmetics::FullArtPick;
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
 /// wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may
 /// name a version, and the augments layered on it (migration 0079, R2725000). A kind
 /// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
-/// id is kept as written, an unknown one too, and judged only where it is worn (the server's
-/// `loadout::freeze_loadout`, R1834002).
+/// id is kept as written, an unknown one too, and judged only where it is worn ([`freeze_loadout`],
+/// R1834002).
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -106,6 +105,26 @@ pub struct CardPicks {
 }
 
 impl CardPicks {
+    /// The pick of a kind a card wears of its own: a foil, a finish or a border; absent for any other kind.
+    pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
+        match kind {
+            CosmeticKind::Foil => self.foil.as_deref(),
+            CosmeticKind::Finish => self.finish.as_deref(),
+            CosmeticKind::Border => self.border.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// Sets the pick of a kind a card wears of its own; any other kind changes nothing.
+    pub fn set(&mut self, kind: CosmeticKind, id: Option<String>) {
+        match kind {
+            CosmeticKind::Foil => self.foil = id,
+            CosmeticKind::Finish => self.finish = id,
+            CosmeticKind::Border => self.border = id,
+            _ => {}
+        }
+    }
+
     /// Whether the card has no pick of its own at all, which the store keeps as no row.
     pub fn is_empty(&self) -> bool {
         self.foil.is_none()
@@ -161,6 +180,50 @@ impl SeatLoadout {
             card_back: Some(self.card_back.clone()),
         }
     }
+
+    /// What a seat wears when nothing is frozen for it: each kind's default in `registry`.
+    pub fn defaults_of(registry: &[Cosmetic]) -> SeatLoadout {
+        SeatLoadout {
+            table: default_of(registry, CosmeticKind::Table).to_string(),
+            field: default_of(registry, CosmeticKind::Field).to_string(),
+            card_back: default_of(registry, CosmeticKind::CardBack).to_string(),
+            foil: default_of(registry, CosmeticKind::Foil).to_string(),
+            finish: default_of(registry, CosmeticKind::Finish).to_string(),
+            border: default_of(registry, CosmeticKind::Border).to_string(),
+        }
+    }
+
+    /// The id of a kind's slot, empty for a kind a seat wears no slot of.
+    pub fn get(&self, kind: CosmeticKind) -> &str {
+        match kind {
+            CosmeticKind::Table => &self.table,
+            CosmeticKind::Field => &self.field,
+            CosmeticKind::CardBack => &self.card_back,
+            CosmeticKind::Foil => &self.foil,
+            CosmeticKind::Finish => &self.finish,
+            CosmeticKind::Border => &self.border,
+            CosmeticKind::FullArt
+            | CosmeticKind::Portrait
+            | CosmeticKind::Version
+            | CosmeticKind::Augment => "",
+        }
+    }
+
+    /// Puts `id` in the slot of `kind`; a kind a seat wears no slot of changes nothing.
+    fn set(&mut self, kind: CosmeticKind, id: String) {
+        match kind {
+            CosmeticKind::Table => self.table = id,
+            CosmeticKind::Field => self.field = id,
+            CosmeticKind::CardBack => self.card_back = id,
+            CosmeticKind::Foil => self.foil = id,
+            CosmeticKind::Finish => self.finish = id,
+            CosmeticKind::Border => self.border = id,
+            CosmeticKind::FullArt
+            | CosmeticKind::Portrait
+            | CosmeticKind::Version
+            | CosmeticKind::Augment => {}
+        }
+    }
 }
 
 /// R1834002: one seat's frozen loadout: its seat-level half, and the cards of its deck that wear
@@ -183,6 +246,16 @@ pub struct Loadout {
 }
 
 impl Loadout {
+    /// What a seat wears when nothing is frozen for it (a row from before #1834): every kind's default in the
+    /// shipped registry, no card of its own.
+    pub fn defaults() -> Loadout {
+        Loadout {
+            seat: SeatLoadout::defaults_of(registry()),
+            cards: Vec::new(),
+            stamps: Vec::new(),
+        }
+    }
+
     pub fn card(&self, card_id: &str) -> Option<&CardPicks> {
         self.cards.iter().find(|card| card.card_id == card_id)
     }
@@ -207,6 +280,248 @@ pub struct SeatCards {
     pub cards: Vec<CardPicks>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stamps: Vec<CardStamp>,
+}
+
+// The picks a loadout is frozen from
+
+/// The account's own picks as its settings hold them (R633): one text per kind in the `cosmetics` group, by
+/// its key there ([`setting_key`]), any of them absent, and the Full-art cards switch, on unless it is off.
+/// A ladder bot keeps its own the same way (R1834005).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountPicks {
+    #[serde(default)]
+    pub picks: BTreeMap<String, String>,
+    pub full_art: bool,
+}
+
+impl Default for AccountPicks {
+    fn default() -> AccountPicks {
+        AccountPicks {
+            picks: BTreeMap::new(),
+            full_art: true,
+        }
+    }
+}
+
+/// What a host reads of an account's settings for its picks, as a plain record: the text values of the
+/// `cosmetics` group by key ([`COSMETICS_GROUP`]; a value that is not text is left out) and the
+/// [`FULL_ART_SETTING`] switch of the `cards` group ([`CARDS_GROUP`]) when it holds a boolean. The server builds it
+/// from a `PlayerSettingsRow`; a host with no such row builds it from its own store.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountSettings {
+    #[serde(default)]
+    pub cosmetics: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub full_art: Option<bool>,
+}
+
+impl AccountPicks {
+    /// What `settings` hold of the account's picks: the text of each kind's key, any other value or key left
+    /// out; no settings hold none, and the switch is on unless they turn it off.
+    pub fn of_settings(settings: Option<&AccountSettings>) -> AccountPicks {
+        let Some(settings) = settings else {
+            return AccountPicks::default();
+        };
+        let mut picks = BTreeMap::new();
+        for kind in CARD_SLOT_KINDS.into_iter().chain(DECK_SLOT_KINDS) {
+            if let Some(id) = settings.cosmetics.get(setting_key(kind)) {
+                picks.insert(setting_key(kind).to_string(), id.clone());
+            }
+        }
+        AccountPicks {
+            picks,
+            full_art: settings.full_art != Some(false),
+        }
+    }
+
+    pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
+        self.picks.get(setting_key(kind)).map(String::as_str)
+    }
+}
+
+impl DeckSlots {
+    /// The pick of a kind: the playmat, the backdrop or the card back, absent for any other kind.
+    pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
+        match kind {
+            CosmeticKind::Table => self.table.as_deref(),
+            CosmeticKind::Field => self.field.as_deref(),
+            CosmeticKind::CardBack => self.card_back.as_deref(),
+            _ => None,
+        }
+    }
+}
+
+/// R3013000: one row of an account's card proficiency (migration 0081, §14.14): how often it played the card
+/// from hand in games that pay rewards, the level those plays reached, and the stamp the card wears, one its
+/// level unlocked (R3013001), `None` for none. An existing stored shape: its widths are not changed
+/// (README.md, the host contract's integers).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CardProficiency {
+    pub card_id: String,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub plays: i64,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub level: i64,
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub stamp: Option<i64>,
+}
+
+/// R1834002: what one seat's loadout is frozen from, read as its match starts. A ladder bot's are
+/// its wardrobe and the picks it drew (R1834005), read off its row, so a bot's seat freezes through
+/// the same function a person's does. R3013002: and the stamps the account's cards wear, which a bot
+/// has none of (R1454).
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SeatPicks {
+    pub owned: OwnedCosmetics,
+    pub account: AccountPicks,
+    pub cards: Vec<CardPicks>,
+    pub stamps: Vec<CardStamp>,
+}
+
+impl SeatPicks {
+    /// [`freeze_loadout`] against the shipped registry, for the deck `deck` slots and `deck_cards`,
+    /// with the stamps those cards wear ([`freeze_stamps`]).
+    pub fn freeze(&self, deck: Option<&DeckSlots>, deck_cards: &[String]) -> Loadout {
+        Loadout {
+            stamps: freeze_stamps(&self.stamps, deck_cards),
+            ..freeze_loadout(
+                registry(),
+                &self.owned,
+                &self.account,
+                deck,
+                &self.cards,
+                deck_cards,
+            )
+        }
+    }
+}
+
+/// R1834002: a seat's loadout as its match starts, from the account's ledger (`owned`), its settings'
+/// picks (`account`), the deck's slots (`deck`, none for an All Random seat), its cards' own picks
+/// (`card_picks`) and the cards of its deck (`deck_cards`). Every id that leaves is one of `registry`, of
+/// its slot's kind, owned where it is worn; anything else is the kind's default:
+///
+///  - a deck slot wears the deck's pick when there is one and it is owned (the deck's word is final);
+///    with no pick, the account's if owned;
+///  - a card slot wears its kind's default, never the account's foil, finish or border;
+///  - each card of the deck wears its own pick of a kind when owned on the card (R1655000, R1953001);
+///  - R3015005: it wears one level, frozen by its id with no augments: the level its own pick names, an older
+///    shape mapped as [`level_of_pick`] maps it (a retired full art's id, `true`, a version with augments),
+///    else Full art's first level on a full-art card while the Full-art cards setting is on; the highest of that
+///    level and the ones below it that the card is offered and owns ([`worn_level`]), and none when no level is.
+///    A card is listed only where it differs from the seat.
+pub fn freeze_loadout(
+    registry: &[Cosmetic],
+    owned: &OwnedCosmetics,
+    account: &AccountPicks,
+    deck: Option<&DeckSlots>,
+    card_picks: &[CardPicks],
+    deck_cards: &[String],
+) -> Loadout {
+    let entry_of = |kind: CosmeticKind, id: &str| {
+        registry
+            .iter()
+            .find(|cosmetic| cosmetic.kind == kind && cosmetic.id == id)
+    };
+    // `id` when it is of `kind` and owned where it is worn.
+    let owned_pick = |kind: CosmeticKind, id: Option<&str>, card: Option<&str>| -> Option<String> {
+        let cosmetic = entry_of(kind, id?)?;
+        owns(cosmetic, card, owned).then(|| cosmetic.id.clone())
+    };
+    let default = |kind: CosmeticKind| default_of(registry, kind).to_string();
+
+    let mut seat = SeatLoadout::defaults_of(registry);
+    for kind in DECK_SLOT_KINDS {
+        let worn = match deck.and_then(|deck| deck.get(kind)) {
+            Some(picked) => owned_pick(kind, Some(picked), None),
+            None => owned_pick(kind, account.get(kind), None),
+        };
+        seat.set(kind, worn.unwrap_or_else(|| default(kind)));
+    }
+
+    let distinct: BTreeSet<&str> = deck_cards.iter().map(String::as_str).collect();
+    let mut cards = Vec::new();
+    for card in distinct {
+        let own = card_picks.iter().find(|picks| picks.card_id == card);
+        let mut entry = CardPicks {
+            card_id: card.to_string(),
+            ..CardPicks::default()
+        };
+        for kind in CARD_SLOT_KINDS {
+            let worn = own
+                .and_then(|picks| owned_pick(kind, picks.get(kind), Some(card)))
+                .unwrap_or_else(|| default(kind));
+            if worn != seat.get(kind) {
+                entry.set(kind, Some(worn));
+            }
+        }
+        let pick = own
+            .and_then(|picks| picks.full_art.clone())
+            .unwrap_or(FullArtPick::On(account.full_art));
+        let augments = own.map_or(&[][..], |picks| picks.augments.as_slice());
+        let named = level_of_pick(registry, card, Some(&pick), augments);
+        if let Some(level) = worn_level(registry, named, |level| {
+            offered(level, Some(card)) && owns(level, Some(card), owned)
+        }) {
+            entry.full_art = Some(FullArtPick::Id(level.id.clone()));
+        }
+        if !entry.is_empty() {
+            cards.push(entry);
+        }
+    }
+    Loadout {
+        seat,
+        cards,
+        stamps: Vec::new(),
+    }
+}
+
+/// R3013002: the stamps of `stamps` that cards of the deck (`deck_cards`) wear, one per card, in card
+/// order: a card the deck did not deal is never listed, so no frozen stamp names a card outside it.
+pub fn freeze_stamps(stamps: &[CardStamp], deck_cards: &[String]) -> Vec<CardStamp> {
+    let distinct: BTreeSet<&str> = deck_cards.iter().map(String::as_str).collect();
+    distinct
+        .into_iter()
+        .filter_map(|card| stamps.iter().find(|stamp| stamp.card_id == card).cloned())
+        .collect()
+}
+
+/// R3013001: the stamps the account's proficiency rows wear, each one its level unlocked.
+pub fn worn_stamps(rows: &[CardProficiency]) -> Vec<CardStamp> {
+    rows.iter()
+        .filter_map(|row| {
+            let stamp = row.stamp.filter(|stamp| *stamp <= row.level)?;
+            Some(CardStamp {
+                card_id: row.card_id.clone(),
+                stamp,
+            })
+        })
+        .collect()
 }
 
 // The decision
@@ -358,6 +673,24 @@ pub enum LoadoutCall {
         #[serde(default)]
         sent: BTreeSet<(PlayerId, String)>,
     },
+    /// [`SeatPicks::freeze`]: a seat's loadout as its match starts, from what the host read of the seat
+    /// (its ledger, settings' picks, card picks and stamps), the slots of the deck it plays (none for an All
+    /// Random seat) and the cards of that deck. The shipped registry judges the picks.
+    FreezeSeat {
+        picks: Box<SeatPicks>,
+        #[serde(default)]
+        deck: Option<DeckSlots>,
+        deck_cards: Vec<String>,
+    },
+    /// [`Loadout::defaults`]: what a seat wears when nothing is frozen for it.
+    DefaultLoadout,
+    /// [`AccountPicks::of_settings`]: the account's picks, from what its settings hold of them.
+    AccountPicks {
+        #[serde(default)]
+        settings: Option<AccountSettings>,
+    },
+    /// [`worn_stamps`]: the stamps an account's proficiency rows wear.
+    WornStamps { rows: Vec<CardProficiency> },
 }
 
 /// What a [`LoadoutCall`] answers, as one JSON object with one key.
@@ -378,6 +711,12 @@ pub enum LoadoutAnswer {
     Shown(BTreeSet<(PlayerId, String)>),
     /// `cardsDue`: the entries to send, and the receiver's `sent` set to keep.
     Due(CardsDue),
+    /// `freezeSeat`, `defaultLoadout`: a seat's loadout.
+    Frozen(Box<Loadout>),
+    /// `accountPicks`: the account's picks.
+    Account(AccountPicks),
+    /// `wornStamps`: the stamps worn.
+    Stamps(Vec<CardStamp>),
 }
 
 /// `cardsDue`'s answer: [`cards_due`]'s result, and the `sent` set it left.
@@ -408,5 +747,15 @@ pub fn apply(call: &LoadoutCall) -> LoadoutAnswer {
             let cards = cards_due(shown, loadouts, &mut sent);
             LoadoutAnswer::Due(CardsDue { cards, sent })
         }
+        LoadoutCall::FreezeSeat {
+            picks,
+            deck,
+            deck_cards,
+        } => LoadoutAnswer::Frozen(Box::new(picks.freeze(deck.as_ref(), deck_cards))),
+        LoadoutCall::DefaultLoadout => LoadoutAnswer::Frozen(Box::new(Loadout::defaults())),
+        LoadoutCall::AccountPicks { settings } => {
+            LoadoutAnswer::Account(AccountPicks::of_settings(settings.as_ref()))
+        }
+        LoadoutCall::WornStamps { rows } => LoadoutAnswer::Stamps(worn_stamps(rows)),
     }
 }

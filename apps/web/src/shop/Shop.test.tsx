@@ -17,10 +17,10 @@ import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
-import { clearReadCache } from "../net/readCache.ts";
+import { keptPaths, type BoughtPackResponse, type OpenedCosmeticPackResponse } from "../net/api.ts";
+import { clearReadCache, expireRead } from "../net/readCache.ts";
 import { whileSpending } from "../net/spending.ts";
-import { packsInfo } from "../packs/fixtures.ts";
+import { openedPack, packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectEmptyState } from "../test/empty.ts";
@@ -39,12 +39,14 @@ import {
 import {
   REGISTRY,
   SHOP_FLY_MS,
+  buyableThere,
   chaseCandidates,
   cosmeticSlotOutcome,
   quantitiesOf,
   shopPacks,
   shopTestid as T,
   shortfallOf,
+  withBought,
   type RegistryCosmetic,
 } from "./shop.ts";
 
@@ -81,6 +83,19 @@ describe("#1309 the shop model", () => {
     const [foil, , bars] = openedCosmeticPack().slots;
     expect(cosmeticSlotOutcome(foil!, 0)).toBe("New cosmetic: Mr. Vanilla full art");
     expect(cosmeticSlotOutcome(bars!, 4)).toBe("Duplicate: +4 card token bar, +4 cosmetic token bar");
+  });
+
+  it("R3015004 a level is a chase only on a card where every level below it is owned", () => {
+    // The fixture account holds Gary's retired full art on core-004: Full art's first level there (R3015006).
+    const quantities = quantitiesOf(collectionOf());
+    const owned = ownedCosmeticsOf();
+    expect(buyableThere("version-full-art-animated", "core-004", owned), "the next level").toBe(true);
+    expect(buyableThere("version-full-art", "core-004", owned), "owned there").toBe(false);
+    expect(buyableThere("version-full-art-signed", "core-004", owned), "its animated level is not owned").toBe(false);
+    expect(buyableThere("version-full-art-animated", "core-008", owned), "core-008 holds no Full art").toBe(false);
+    const ids = chaseCandidates(owned, quantities).map((entry) => entry.id);
+    expect(ids).toContain("version-full-art-animated");
+    expect(ids, "no card the account owns holds Full art's animated level").not.toContain("version-full-art-signed");
   });
 
   it("a full shard bar buys Legendary or Mythic, a chase included, and nothing below", () => {
@@ -340,6 +355,9 @@ describe("#1309 the Jlore shop", () => {
     expect(server.to("GET", "/api/wallet")).toHaveLength(1);
 
     jlore = 88;
+    // R3206000: answers inside the window are used with no read; these are as old as a past visit's.
+    expireRead(TOKEN, keptPaths.wallet);
+    expireRead(TOKEN, keptPaths.packs);
     rerender(<Shop token={TOKEN} revision={1} />);
 
     await waitFor(() => {
@@ -602,6 +620,8 @@ describe("#1309 the cosmetic packs", () => {
     expect(pack).toHaveAttribute("data-size", "shelf");
     expect(pack.compareDocumentPosition(screen.getByTestId(T.open)) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     cosmeticServer({ packs: { status: 200, body: { ...cosmeticPacksInfo(), unopened: 0 } } });
     render(<CosmeticPacks token={TOKEN} />);
@@ -1247,9 +1267,10 @@ describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", 
     expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equipped");
     expect(screen.getByTestId(T.equip(0))).toBeDisabled();
 
-    // A full art goes on the card it was granted on, which is not the first slot's.
+    // A full art goes on the card it was granted on, which is not the first slot's: a retired one, from an opening
+    // before #3015, as the level it maps to (R3015005).
     fireEvent.click(screen.getByTestId(T.equip(1)));
-    expect(readCardPicks("core-008").fullArt).toBe(true);
+    expect(readCardPicks("core-008").fullArt).toBe("version-full-art");
     expect(readCardPicks("core-004").fullArt).toBeUndefined();
 
     expect(screen.queryByTestId(T.equip(2)), "bars offer none").toBeNull();
@@ -1272,6 +1293,28 @@ describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", 
     expect(screen.getByTestId(T.equipLink)).toBeInTheDocument();
   });
 
+  it("R3015003 an out-of-order pull says it granted every level below it, and equips its own level", async () => {
+    const skip: Slot = {
+      rarity: "Mythic",
+      grant: {
+        kind: "cosmetic",
+        cosmeticId: "version-full-art-signed",
+        cosmeticRarity: "Mythic",
+        cardId: "core-004",
+        cardGranted: false,
+        below: ["version-full-art", "version-full-art-animated"],
+      },
+    };
+    await opened([skip, cosmetic("version-animated", "core-008"), openedCosmeticPack().slots[2]!]);
+    expect(screen.getByTestId(T.below(0))).toHaveTextContent("and every level below it");
+    expect(screen.queryByTestId(T.below(1)), "an in-order pull, its next level alone").toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.equip(0)));
+    expect(readCardPicks("core-004").fullArt).toBe("version-full-art-signed");
+    fireEvent.click(screen.getByTestId(T.equip(1)));
+    expect(readCardPicks("core-008").fullArt).toBe("version-animated");
+  });
+
   it("R1955000 a cosmetic the store already holds shows Equipped from the reveal", async () => {
     writeCosmetics({ table: "table-wood" });
     await opened();
@@ -1279,5 +1322,135 @@ describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", 
     expect(screen.getByTestId(T.equip(1))).toBeDisabled();
     expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equip");
     expect(screen.getByTestId(T.equip(0))).toBeEnabled();
+  });
+});
+
+describe("R3211000 the panels fold the page's answers and read once what they leave out", () => {
+  it("R3211000 withBought sets the bought kind's count, keeps the others and the shelf's order, and drops an empty kind", () => {
+    const held = [
+      { pack: GLOBAL_PACK_NAME, count: 1 },
+      { pack: "Classic", count: 2 },
+    ];
+    expect(withBought(held, { pack: "Core", jlore: 9, unopened: 4 })).toEqual([
+      { pack: GLOBAL_PACK_NAME, count: 1 },
+      { pack: "Core", count: 4 },
+      { pack: "Classic", count: 2 },
+    ]);
+    expect(withBought(held, { pack: "Classic", jlore: 9, unopened: 0 })).toEqual([{ pack: GLOBAL_PACK_NAME, count: 1 }]);
+  });
+
+  it("R3211000 an opened pack's answer folds into the shelf's count with no read", async () => {
+    const server = shopServer();
+    const { rerender } = render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    expect(text(T.held("Core"))).toContain("Core pack: 2 unopened");
+
+    rerender(<Shop token={TOKEN} opened={openedPack()} />);
+    await waitFor(() => {
+      expect(text(T.held("Core"))).toContain("Core pack: 1 unopened");
+    });
+    expect(text(T.held(GLOBAL_PACK_NAME)), "another kind is untouched").toContain("Global pack: 1 unopened");
+
+    rerender(<Shop token={TOKEN} opened={{ ...openedPack(), unopened: 0 }} />);
+    await waitFor(() => {
+      expect(text(T.held("Core"))).toContain("Core pack: 0 unopened");
+    });
+    expect(text(T.wallet), "an opening spends no Jlore").toBe("37 Jlore");
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
+    expect(server.to("GET", "/api/wallet")).toHaveLength(1);
+  });
+
+  it("R3211000 a buy hands the page its answer", async () => {
+    const onChanged = vi.fn<(bought: BoughtPackResponse) => void>();
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
+    render(<Shop token={TOKEN} onChanged={onChanged} />);
+    await screen.findByTestId(T.wallet);
+
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(await screen.findByText("150 Jlore")).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(onChanged).toHaveBeenCalledWith({ pack: "Core", jlore: 150, unopened: 3 });
+  });
+
+  it("R3211000 a cosmetic opening reads the chase choice's inputs only when it leaves the bar full", async () => {
+    // Short of full: nothing on screen prices a chase, so neither the collection nor the cosmetics are read.
+    const short = cosmeticServer({
+      open: { status: 200, body: { ...openedCosmeticPack(), shardBefore: 5, shardBar: { points: 6, size: 20 } } },
+    });
+    const onChanged = vi.fn<(opened?: OpenedCosmeticPackResponse) => void>();
+    render(<CosmeticPacks token={TOKEN} onChanged={onChanged} />);
+    fireEvent.click(await screen.findByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+    expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("6 / 20");
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+    expect(short.to("GET", "/api/collection")).toHaveLength(1);
+    expect(short.to("GET", "/api/cosmetics")).toHaveLength(1);
+    expect(short.to("GET", "/api/cosmetic-packs")).toHaveLength(1);
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({ unopened: 1, shardBar: { points: 6, size: 20 } }));
+    cleanup();
+    clearReadCache();
+
+    // Full: the choice is shown, so the account's cards and cosmetics are read back, once each.
+    const full = cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+    fireEvent.click(await screen.findByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+    await waitFor(() => {
+      expect(full.to("GET", "/api/collection")).toHaveLength(2);
+      expect(full.to("GET", "/api/cosmetics")).toHaveLength(2);
+    });
+  });
+
+  it("R3211000 the page's settled count reads the packs again, and the choice's inputs only when the bar is full", async () => {
+    const answers: { packs?: Reply } = {};
+    const server = cosmeticServer(answers);
+    const { rerender } = render(<CosmeticPacks token={TOKEN} />);
+    expect(await screen.findByTestId(T.unopened)).toHaveTextContent("Cosmetic pack: 2 unopened");
+    const reads = (path: string): number => server.to("GET", path).length;
+    expect([reads("/api/cosmetic-packs"), reads("/api/collection"), reads("/api/cosmetics")]).toEqual([1, 1, 1]);
+
+    // A card pack's scene closed, and its opening paid a cosmetic pack: the bar is short, so only the packs are read.
+    answers.packs = { status: 200, body: { ...cosmeticPacksInfo(), unopened: 3 } };
+    expireRead(TOKEN, keptPaths.cosmeticPacks);
+    rerender(<CosmeticPacks token={TOKEN} settled={1} />);
+    await waitFor(() => {
+      expect(text(T.unopened)).toBe("Cosmetic pack: 3 unopened");
+    });
+    expect([reads("/api/cosmetic-packs"), reads("/api/collection"), reads("/api/cosmetics")]).toEqual([2, 1, 1]);
+
+    // Another one, which filled the bar: the choice is shown, so its inputs are read too (an opening has
+    // the kept answers of the account forgotten, R3206000, so these are as old as a past visit's).
+    answers.packs = { status: 200, body: cosmeticPacksFull() };
+    expireRead(TOKEN, keptPaths.cosmeticPacks);
+    expireRead(TOKEN, keptPaths.collection);
+    expireRead(TOKEN, keptPaths.cosmetics);
+    rerender(<CosmeticPacks token={TOKEN} settled={2} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.shardBar)).toHaveTextContent("20 / 20");
+    });
+    await waitFor(() => {
+      expect([reads("/api/collection"), reads("/api/cosmetics")]).toEqual([2, 2]);
+    });
+    expect(reads("/api/cosmetic-packs")).toBe(3);
+
+    // A settle read that fails says why and keeps the panel as it was.
+    answers.packs = refusal(503, "unavailable", "the cosmetic packs are not reachable");
+    expireRead(TOKEN, keptPaths.cosmeticPacks);
+    rerender(<CosmeticPacks token={TOKEN} settled={3} />);
+    expect(await screen.findByTestId(T.packsError)).toHaveTextContent("the cosmetic packs are not reachable");
+    expect(screen.getByTestId(T.shardBar)).toHaveTextContent("20 / 20");
+    expect(screen.queryByTestId(T.packsLoadError)).toBeNull();
+  });
+
+  it("R3211000 a page that never settled reads nothing beyond the mount's three", async () => {
+    const server = cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} settled={0} />);
+    await screen.findByTestId(T.unopened);
+    expect(server.calls.filter((call) => call.method === "GET")).toHaveLength(3);
   });
 });

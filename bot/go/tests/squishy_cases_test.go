@@ -839,7 +839,10 @@ func TestSquishyCases_ItsMergeGatesAndItsDecisions(t *testing.T) {
 		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
 	assertEqual(t, result.Get("status"), "blocked")
 	assertEqual(t, world.gh.LabelNames(12), setOf("squishy:blocked", "needs decision", "squishy:planned", "difficulty:medium"))
-	assertIn(t, "Reply with a number, or tell me something else in your own words", lastOf(t, world.gh.BotComments(12)))
+	asked := lastOf(t, world.gh.BotComments(12))
+	assertIn(t, "**How to answer:** reply here with a plain comment from your own account", asked)
+	assertIn(t, "Leave `@squishy-squooby` and `/squishy` out of it", asked)
+	assertIn(t, "`/squishy build <your answer>` works too", asked)
 	assigned := map[string]bool{}
 	for _, a := range pyjson.List(world.gh.Threads.Item(12).Get("assignees")) {
 		assigned[pyjson.Obj(a).Str("login")] = true

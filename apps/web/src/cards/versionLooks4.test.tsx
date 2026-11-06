@@ -2,10 +2,12 @@
 // and Radiant, apart from its normal face and every other version; each keeps every part of the normal face. Set
 // showcase wears its set's own look (`data-showcase`): its picture in its set's treatment and, on a base face, its
 // set's edge, bezel, ring and name banner; Out of frame draws its picture's backdrop in a smaller window and its subject
-// cut out over the frame, inside the card's rim and under the gem, crest, name, stats and rules box. R2943002:
-// Animated, a foil, a finish and a border layer on each, and Signature on none. R2725004 holds under each: a Radiant
-// face keeps every Radiant mark, a base face shows none. The pictures themselves are art/pictures.test.ts's; the pixels
-// are e2e's cypress/component/card-versions.cy.tsx.
+// cut out over the frame, inside the card's rim and under the gem, crest, name, stats and rules box. R2943002: a foil,
+// a finish and a border layer on each. R2725004 holds under each: a Radiant face keeps every Radiant mark, a base face
+// shows none. R3015000 (#3015): each is a ladder of two levels, its art then animated, never a full art nor signed;
+// R3015002: both draw its one picture, Out of frame's cut out at both; R3015005: an older pick of one with Animated
+// wears its animated level. The pictures themselves are art/pictures.test.ts's; the pixels are e2e's
+// cypress/component/card-versions.cy.tsx.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -21,7 +23,7 @@ import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { showcaseFamilyOf, type ShowcaseFamily } from "./art/pictures.ts";
 import { CardFace } from "./CardFace.tsx";
 import { OUT_OF_FRAME_SUBJECT_PCT, OUT_OF_FRAME_SUBJECT_SINK_PCT, OUT_OF_FRAME_WINDOW_SIDE_PCT, OUT_OF_FRAME_WINDOW_TOP_PCT } from "./constants.ts";
-import { resetCosmeticsForTests, writeCardPick, writeCardVersion } from "./cosmetics.ts";
+import { CARD_PICKS_SETTINGS_KEY, resetCosmeticsForTests, writeCardLevel, writeCardPick } from "./cosmetics.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
@@ -38,11 +40,10 @@ import {
   VERSION_SET_SHOWCASE_ID,
   VERSION_SKETCH_ID,
   artPictureOf,
-  augmentsOf,
   isFullBleed,
-  lookOf,
   offeredOn,
 } from "./versions.ts";
+import { legacyText } from "../test/faceData.ts";
 
 /** R2943000: #2943's two versions, in the registry's order. */
 const PART_FOUR = [VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID] as const;
@@ -66,6 +67,12 @@ const FILTER: Readonly<Record<ShowcaseFamily, string>> = {
   "training-grounds": "sc-wood",
 };
 const FAMILIES = Object.keys(FILTER) as ShowcaseFamily[];
+
+/** R3015005: `id`'s pick as a client stored it before #3015, a version and the augments layered on it, read afresh. */
+function storeOlderPick(id: string, fullArt: string, augments: readonly string[]): void {
+  localStorage.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify({ [id]: { fullArt, augments } }));
+  resetCosmeticsForTests();
+}
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const cardsCss = readFileSync(join(HERE, "cards.css"), "utf8");
@@ -169,7 +176,7 @@ describe("R2943001 every card offered a part 4 version draws it", () => {
       const set = CATALOG[id]?.set ?? null;
       for (const radiant of [false, true]) {
         const where = `${id} ${radiant ? "Radiant" : "base"}`;
-        writeCardVersion(id, false, []);
+        writeCardLevel(id, null);
         const normal = faceIn(id, radiant);
         expect(normal.getAttribute("data-showcase"), where).toBeNull();
         expect(cutoutOf(normal), where).toBeNull();
@@ -177,7 +184,7 @@ describe("R2943001 every card offered a part 4 version draws it", () => {
         cleanup();
         for (const version of VERSIONS.filter((each) => offeredOn(each, id))) {
           const at = `${where} ${version}`;
-          writeCardVersion(id, version, []);
+          writeCardLevel(id, version);
           const cf = faceIn(id, radiant);
           const art = cf.querySelector(".cf-art");
           expect(cf.getAttribute("data-version"), at).toBe(version);
@@ -237,7 +244,7 @@ describe("R2943001 the cut-out subject's place", () => {
   it("R2943001 the cutout stays inside the rim, under the gem, crest, name, stats and rules box", () => {
     const id = "classic-080";
     expect(offeredOn(VERSION_OUT_OF_FRAME_ID, id)).toBe(true);
-    writeCardVersion(id, VERSION_OUT_OF_FRAME_ID, []);
+    writeCardLevel(id, VERSION_OUT_OF_FRAME_ID);
     const cf = faceIn(id, false);
     const frame = cf.querySelector(".cf-art-frame");
     const cutout = cutoutOf(cf);
@@ -332,33 +339,33 @@ describe("R2943001 Set showcase's name banners", () => {
   });
 });
 
-describe("R2943002 the augments on part 4's versions", () => {
-  /** Two Units offered both part 4 versions and Animated (Galaxy, Stinkyscape's painter; BOOM! Big Max) and a Spell offered Set showcase and Animated (Transmogulate). */
+describe("R2943002 R3015000 the levels of part 4's variants", () => {
+  /**
+   * Two Units offered both levels of both part 4 variants (Galaxy, Stinkyscape's painter; BOOM! Big Max) and a Spell
+   * offered both of Set showcase (Transmogulate).
+   */
   const CARDS = ["stinkyscape-080", "classic-080", "core-083"] as const;
-  const AUGMENTS: readonly (readonly string[])[] = [[], [AUGMENT_ANIMATED_ID], [AUGMENT_SIGNATURE_ID], [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]];
 
-  it("R2943002 Animated, a foil, a finish and a border layer on Set showcase and Out of frame, and Signature on none", () => {
+  it("R2943002 R3015002 a foil, a finish and a border layer at both levels of Set showcase and Out of frame, the animated one moving its one picture, and none signs", () => {
     for (const id of CARDS) {
-      expect(offeredOn(AUGMENT_ANIMATED_ID, id), id).toBe(true);
       const versions = PART_FOUR.filter((version) => offeredOn(version, id));
       expect(versions, id).toEqual(id === "core-083" ? [VERSION_SET_SHOWCASE_ID] : [...PART_FOUR]);
       for (const version of versions) {
-        for (const augments of AUGMENTS) {
-          writeCardVersion(id, version, augments);
+        for (const level of [version, `${version}-animated`]) {
+          expect(offeredOn(level, id), `${level} on ${id}`).toBe(true);
+          writeCardLevel(id, level);
           writeCardPick(id, "border", "border-runes");
           writeCardPick(id, "finish", "finish-stained-glass");
           writeCardPick(id, "foil", "foil-galaxy");
           const cf = faceIn(id, false);
-          const where = `${id} ${version} ${augments.join("+")}`;
-          const animated = augments.includes(AUGMENT_ANIMATED_ID);
-          // R2949000: Signature fits neither; the store keeps none.
-          expect(augmentsOf(lookOf(version, augments)).includes(AUGMENT_SIGNATURE_ID), where).toBe(false);
+          const where = `${id} ${level}`;
+          const animated = level !== version;
           expect(cf.getAttribute("data-version"), where).toBe(version);
+          expect(cf.getAttribute("data-level"), where).toBe(level);
           expect(cf.getAttribute("data-full-art"), where).toBeNull();
-          expect(cf.getAttribute("data-augments"), where).toBe(animated ? AUGMENT_ANIMATED_ID : null);
           expect(cf.querySelector(".card-text"), where).not.toBeNull();
           expect(cf.querySelector(".card-name"), where).not.toBeNull();
-          // Animated moves the version's own picture, taking a slot: Out of frame's window and its cutout both.
+          // The animated level moves the variant's own picture, taking a slot: Out of frame's window and its cutout both.
           expect(cf.getAttribute("data-art-motion"), where).toBe(animated ? "animated" : null);
           if (animated) expect(pictureOf(cf), where).toContain("art-m-");
           const cutout = cutoutOf(cf);
@@ -372,6 +379,13 @@ describe("R2943002 the augments on part 4's versions", () => {
           expect(cf.getAttribute("data-cosmetic-foil"), where).toBe("foil-galaxy");
           cleanup();
         }
+        // R3015005: an older pick of the version with Animated, and Signature too, wears its animated level, unsigned.
+        storeOlderPick(id, version, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+        const older = faceIn(id, false);
+        expect(older.getAttribute("data-level"), `${id} ${version}`).toBe(`${version}-animated`);
+        expect(older.getAttribute("data-art-motion"), `${id} ${version}`).toBe("animated");
+        expect(older.querySelector(".cf-signature"), `${id} ${version}`).toBeNull();
+        cleanup();
       }
     }
   });
@@ -403,21 +417,21 @@ describe("R2943002 the augments on part 4's versions", () => {
 });
 
 describe("R2943001 Radiant under part 4's looks", () => {
-  /** Two Units offered both part 4 versions and Animated, and a Spell offered Set showcase and Animated. */
+  /** Two Units offered both levels of both part 4 variants, and a Spell offered both of Set showcase. */
   const CARDS = ["stinkyscape-080", "classic-080", "core-083"] as const;
 
-  it('R2943001 a Radiant face keeps data-radiant-face, data-art-variant="radiant", R277 marks and gold stats under every part 4 look; a base face has none', () => {
+  it('R2943001 R3015002 a Radiant face keeps data-radiant-face, data-art-variant="radiant", R277 marks and gold stats at every part 4 level; a base face has none', () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
-      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
       const family = showcaseFamilyOf(def.set);
       for (const version of PART_FOUR.filter((each) => offeredOn(each, id))) {
-        for (const augments of [[], [AUGMENT_ANIMATED_ID]]) {
-          writeCardVersion(id, version, augments);
+        for (const level of [version, `${version}-animated`]) {
+          writeCardLevel(id, level);
           for (const radiant of [false, true]) {
             const cf = faceIn(id, radiant);
-            const where = `${id} ${radiant ? "Radiant" : "base"} ${version} ${augments.join("+")}`;
+            const where = `${id} ${radiant ? "Radiant" : "base"} ${level}`;
             // The gold-foil frame, and the art's Radiant paint: washed back over a Set showcase but Core's, which keeps
             // its colours, and on the cutout's subject too.
             expect(cf.getAttribute("data-radiant-face"), where).toBe(radiant ? "true" : null);

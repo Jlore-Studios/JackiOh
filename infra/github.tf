@@ -1,5 +1,5 @@
 # GitHub: `main`'s branch protection with its five required checks, `main`'s merge queue, the
-# `production` ruleset, and the repository's Actions policy and workflow-token settings.
+# `production` and `staging` rulesets, and the repository's Actions policy and workflow-token settings.
 # Not the labels: bot/go/internal/config `Labels` owns them, and the sweep restores them. Not the
 # Actions secrets: state would hold them.
 #
@@ -94,6 +94,35 @@ resource "github_repository_ruleset" "production" {
     deletion         = true
     non_fast_forward = true
   }
+}
+
+# docs/deploy-cloudflare.md §2.2 (#3275): `staging`, which promote-staging.yml fast-forwards to a
+# green commit of main every two hours (with BOT_GITHUB_TOKEN) and deploy-staging.yml deploys on each
+# push. Restrict deletions and Block force pushes, as on `production`, so it only ever moves forward
+# along main, and nothing that would hold back that push. Made with the API on 2026-11-06, with the
+# branch itself (at 334d721581, the commit staging served), so the import adopts it.
+resource "github_repository_ruleset" "staging" {
+  name        = "staging"
+  repository  = "JackiOh"
+  target      = "branch"
+  enforcement = "active"
+
+  conditions {
+    ref_name {
+      include = ["refs/heads/staging"]
+      exclude = []
+    }
+  }
+
+  rules {
+    deletion         = true
+    non_fast_forward = true
+  }
+}
+
+import {
+  to = github_repository_ruleset.staging
+  id = "JackiOh:26673542"
 }
 
 # The repository's Actions policy and its workflow token's defaults, set by hand on 2026-11-04 and

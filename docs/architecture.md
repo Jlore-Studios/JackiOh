@@ -46,7 +46,7 @@ deployment decision that can be made later without touching the code.
 
 | Component | Where it runs | Stateful? | Owns |
 | --- | --- | --- | --- |
-| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server, and a practice game with custom cards and the card creator load a second module, `crates/wasm/luau`, with the card kit (SPEC §12.10, R915009) |
+| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server |
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
@@ -54,7 +54,7 @@ deployment decision that can be made later without touching the code.
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat: the pure host machine plays it as a seat, its pace, aim and emotes included, and the actor only runs the AI's search when asked, R1452, #3103), the turn clock (its deadlines decided by the pure host machine of `crates/shared`, #3101), the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock (decided by the pure host machine of `crates/shared`, #3101), the co-op action log, the team pings it relays, and the watchers of a person's seat (§5.4, R2881000) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
-| `crates/shared` | Linked into the HTTP routes, and into the WASM module the clients load | No (pure) | The logic the server and the client share (#2956): first, the Conquest series rules (SPEC §9.5, R330–R337), then the loadout visibility rule (SPEC §10.8, R1834003), then the ranked ladder (Glicko-2, tiers, seasons, SPEC §9.12, R603–R612) |
+| `crates/shared` | Linked into the HTTP routes, and into the WASM module the clients load | No (pure) | The logic the server and the client share (#2956): first, the Conquest series rules (SPEC §9.5, R330–R337), then the loadout visibility rule (SPEC §10.8, R1834003), then the ranked ladder (Glicko-2, tiers, seasons, SPEC §9.12, R603–R612), what a card face prints, in the reader's words (#3106), and the lines of the game log (#3108) |
 
 ---
 
@@ -65,7 +65,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Channel | Credential | What it carries |
 | --- | --- | --- |
 | Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
-| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own custom cards, own tickets, own results, own tutorial progress, the `cards` projection |
+| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
 | Browser → server WebSocket | the user's JWT, offered as the `jackioh.bearer.` subprotocol (R1379000) | intent: one `Action` at a time; receives `viewFor` and nothing else |
@@ -836,7 +836,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `cargo jackioh catalog check` counts on its second line (`<n> entries (<cards> cards + <tokens> tokens)`:
    every card and token of the seven shipped sets, spec §8) and `select app.catalog_version();` → your
    `CATALOG_VERSION`, the latest card patch's version (R388).
-   In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`
+   In the same transaction it writes the cosmetics registry compiled in, `crates/shared/cosmetics.json`
    (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its
    stamp it writes the starter cards (`STARTER_CARDS`, R1310000) into `app.settings`:
    `select jsonb_array_length(value) from app.settings where key = 'starter_cards';` → 39.

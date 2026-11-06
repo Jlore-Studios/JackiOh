@@ -2,7 +2,7 @@
 // border round the frame. R1953001: nothing sets the account-wide picks of those three
 // (`COSMETICS_SETTINGS_KEY`, the account's `cosmetics` group, R633) and no face wears them; the group keeps
 // its shape (R1655000). R1297000: the same store holds the deck slots, the playmat (`table`), the backdrop
-// (`field`) and the card back (`cardBack`). Ids are the registry's (`crates/server/cosmetics.json`, generated
+// (`field`) and the card back (`cardBack`). Ids are the registry's (`crates/shared/cosmetics.json`, generated
 // into `wire/generated/cosmetics.ts`); an unknown id (a newer client's) is kept, never overwritten, and drawn
 // as its kind's default. The picks never reach the engine, an action, `PlayerView` or the log; a face wears
 // them only where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). An opponent's
@@ -31,18 +31,11 @@ import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
 import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
-import { foilFor, type FaceModel } from "./model.ts";
+import { foilFor } from "./frame.ts";
+import type { FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
 import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
-import {
-  ANIMATED_ART_ID_PREFIX,
-  AUGMENT_ID_PREFIX,
-  AUGMENT_SIGNATURE_ID,
-  VERSION_ID_PREFIX,
-  isOfferedId,
-  offeredOn,
-  signatureFits,
-} from "./versions.ts";
+import { ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, FULL_ART_ID_PREFIX, VERSION_ID_PREFIX, isOfferedId, offeredOn } from "./versions.ts";
 
 export { ANIMATED_ART_ID_PREFIX };
 
@@ -66,7 +59,7 @@ export function cosmeticsOf(kind: CosmeticKind): readonly Cosmetic[] {
 
 function defaultOf(kind: CosmeticKind): CosmeticId {
   const found = COSMETICS.find((cosmetic) => cosmetic.kind === kind && cosmetic.default);
-  // The registry's check holds one default per kind (crates/server/src/cosmetics.rs).
+  // The registry's check holds one default per kind (crates/shared/src/cosmetics.rs).
   if (found === undefined) throw new Error(`the cosmetics registry has no default ${kind}`);
   return found.id;
 }
@@ -156,7 +149,8 @@ export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
  * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default (R1953001;
  * the Full-art cards setting, for `fullArt`); an unknown id reads as the default. R2655000: `fullArt` is
  * `false`, `true` (the Epic full art) or a full art's id, kept as written; R2725000: or a version's id, and
- * `augments` the augment ids layered on it, as written.
+ * `augments` the augment ids layered on it, as written. R3015005: a pick written since #3015 names one level
+ * (`writeCardLevel`) and no augments; an older one is read by versions.ts's `levelOfPick`.
  */
 export type CardPicks = {
   foil?: CosmeticId;
@@ -191,9 +185,6 @@ function isPickText(value: unknown): value is string {
   return typeof value === "string" && value !== "" && value.length <= COSMETIC_ID_MAX_LENGTH;
 }
 
-/** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
-const FULL_ART_ID_PREFIX = "full-art-";
-
 /**
  * R2655000: a card's full-art pick as stored: a boolean, or a full art's id (R2715000: an Animated art's among them;
  * R2725000: a version's), known or not.
@@ -205,7 +196,7 @@ function isFullArtPick(value: unknown): value is boolean | string {
   );
 }
 
-/** R2725000: a card's augments as stored: each an augment's id, known or not, once; none is no pick. */
+/** R2725000: a card's augments as stored (R3015005: an older pick's, read by `levelOfPick`): each an augment's id, known or not, once; none is no pick. */
 function augmentPicks(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const ids: string[] = [];
@@ -340,8 +331,7 @@ function currentCardPicks(): { written: Record<string, unknown>; state: CardPick
 
 /**
  * Changes `defId`'s stored picks by `change`, from what storage holds now. It rewrites only the
- * fields this client knows of `defId`'s entry, so a newer client's kinds are kept. R2949000: a change
- * that leaves Signature without the Full art version and Animated drops it, as the server does.
+ * fields this client knows of `defId`'s entry, so a newer client's kinds are kept.
  */
 function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void): void {
   const { written, state } = currentCardPicks();
@@ -349,11 +339,6 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
   const before = state.stored.get(defId) ?? {};
   const picks: StoredCardPicks = { ...before };
   change(picks);
-  if (picks.augments?.includes(AUGMENT_SIGNATURE_ID) === true && !signatureFits(picks.fullArt, picks.augments)) {
-    const kept = picks.augments.filter((id) => id !== AUGMENT_SIGNATURE_ID);
-    if (kept.length === 0) delete picks.augments;
-    else picks.augments = kept;
-  }
   const changed = CARD_PICK_FIELDS.filter((field) => !samePick(before[field], picks[field]));
   if (changed.length === 0) return;
   if (Object.keys(picks).length === 0) {
@@ -399,17 +384,14 @@ export function writeCardFullArt(defId: string, pick: boolean | string | null): 
 }
 
 /**
- * R2725000: sets `defId`'s version and augments in one write: `fullArt` as `writeCardFullArt` takes it, and
- * `augments` the augment ids layered on it (none clears them), so a pick made before #2725 becomes one of the
- * version and its augments on its first edit.
+ * R3015005: sets `defId`'s level in one write, `id` a level's or null for the normal face (`false`), and clears its
+ * older augments, as the server's `PUT /api/card-picks` takes a level: so a pick made before #3015 becomes the one
+ * level it names on its first edit.
  */
-export function writeCardVersion(defId: string, fullArt: boolean | string | null, augments: readonly string[]): void {
+export function writeCardLevel(defId: string, id: string | null): void {
   updateCardPicks(defId, (picks) => {
-    if (isFullArtPick(fullArt)) picks.fullArt = fullArt;
-    else delete picks.fullArt;
-    const ids = augmentPicks(augments);
-    if (ids === undefined) delete picks.augments;
-    else picks.augments = ids;
+    picks.fullArt = id !== null && isFullArtPick(id) ? id : false;
+    delete picks.augments;
   });
 }
 
@@ -463,9 +445,9 @@ export const TheirCopyContext = createContext<SeatLoadout | null>(null);
 
 /**
  * Whether `cosmeticId` is the viewer's on the card `defId`: a default or a starter always is (every
- * account owns them on every card, §14.2), and so is one the ledger lists on that card (R2725002: a retired
- * full art's row lists what it implies, `ownedCardCosmetics`). R2725001: a version or an augment only where it is
- * offered, even where every cosmetic counts as owned.
+ * account owns them on every card, §14.2), and so is one the ledger lists on that card (R2725002, R3015006: a retired
+ * row lists the levels it maps to, `ownedCardCosmetics`). R2725001: a level only where it is offered, even where
+ * every cosmetic counts as owned.
  */
 export function ownsCosmetic(owned: CardOwnership, defId: string, cosmeticId: string): boolean {
   if (isOfferedId(cosmeticId) && !offeredOn(cosmeticId, defId)) return false;
@@ -475,8 +457,11 @@ export function ownsCosmetic(owned: CardOwnership, defId: string, cosmeticId: st
   return found.default || found.starter || owned.get(defId)?.has(cosmeticId) === true;
 }
 
-/** Whether the viewer may equip `cosmeticId` on the card `defId`: true wherever every cosmetic counts as owned. */
-export function useCanEquip(): (defId: string, cosmeticId: CosmeticId) => boolean {
+/**
+ * Whether the viewer may equip `cosmeticId` on the card `defId`: true wherever every cosmetic counts as owned. Any text
+ * is asked (R3015007: a ladder's level ids among them), an id it does not know owned nowhere.
+ */
+export function useCanEquip(): (defId: string, cosmeticId: string) => boolean {
   const owned = useContext(OwnershipContext);
   return useCallback((defId, cosmeticId) => ownsCosmetic(owned, defId, cosmeticId), [owned]);
 }

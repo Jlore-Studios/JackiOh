@@ -56,7 +56,9 @@ import {
   cosmeticSlotOutcome,
   fittingCards,
   isPerCardKind,
+  nextThere,
   quantitiesOf,
+  shardFull,
   shopTestid,
   type RegistryCosmetic,
 } from "./shop.ts";
@@ -64,20 +66,23 @@ import { messageOf } from "../net/errors.ts";
 import "./shop.css";
 
 /**
- * The panel. `revision` is how many times the page has asked it to read again (another panel
- * changed the account); `onChanged` tells the page an opening or a chase changed it. `registry` is
- * the cosmetics the chase choice reads, the shipped one unless a test passes its own (no shipped
- * Legendary or Mythic is buyable yet).
+ * The panel. `revision` is how many times the page has asked it to read again; `settled` is how many
+ * times the page settled an opening: the packs are read again, and the chase choice's inputs only when the
+ * bar is full (R3211000). `onChanged` tells the page an opening or a chase changed the account, with an
+ * opening's answer, whose bars the page folds into the token picker. `registry` is the cosmetics the chase
+ * choice reads, the shipped one unless a test passes its own (no shipped Legendary or Mythic is buyable yet).
  */
 export default function CosmeticPacks({
   token,
   revision = 0,
+  settled = 0,
   onChanged,
   registry = REGISTRY,
 }: {
   token: string;
   revision?: number;
-  onChanged?: () => void;
+  settled?: number;
+  onChanged?: (opened?: OpenedCosmeticPackResponse) => void;
   registry?: readonly RegistryCosmetic[];
 }): ReactElement {
   // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
@@ -139,6 +144,38 @@ export default function CosmeticPacks({
     };
   }, [token, revision, attempt]);
 
+  // R3211000: only the chase choice reads these two (`ShardBar`), so they are read when the bar stands full.
+  const readChoice = (): void => {
+    Promise.all([getCollection(token), getOwnedCosmetics(token)]).then(
+      ([nextCollection, nextOwned]) => {
+        setCollection(nextCollection);
+        setOwned(nextOwned);
+      },
+      (cause: unknown) => {
+        setError(messageOf(cause));
+      },
+    );
+  };
+
+  // R3211000: the page settled an opening (a card pack's scene closed): the packs, read once.
+  useEffect(() => {
+    if (settled === 0) return undefined;
+    let canceled = false;
+    getCosmeticPacks(token).then(
+      (packs) => {
+        if (canceled) return;
+        setInfo(packs);
+        if (shardFull(packs.shardBar)) readChoice();
+      },
+      (cause: unknown) => {
+        if (!canceled) setError(messageOf(cause));
+      },
+    );
+    return () => {
+      canceled = true;
+    };
+  }, [token, settled]);
+
   const open = (): void => {
     if (busy !== null || info === null || spendOutNow()) return;
     setBusy("open");
@@ -148,17 +185,9 @@ export default function CosmeticPacks({
         setOpened(next);
         setShardFrom(next.shardBefore);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
-        onChanged?.();
-        // The collection and owned cosmetics moved too: read them back so the chase choice prices them now.
-        Promise.all([getCollection(token), getOwnedCosmetics(token)]).then(
-          ([nextCollection, nextOwned]) => {
-            setCollection(nextCollection);
-            setOwned(nextOwned);
-          },
-          (cause: unknown) => {
-            setError(messageOf(cause));
-          },
-        );
+        onChanged?.(next);
+        // The collection and owned cosmetics moved too, but only a full bar's choice prices them: read them then.
+        if (shardFull(next.shardBar)) readChoice();
       },
       (cause: unknown) => {
         setError(messageOf(cause));
@@ -260,6 +289,12 @@ export default function CosmeticPacks({
                     data-revealed="true"
                   >
                     <p className="pack-slot__outcome">{cosmeticSlotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}</p>
+                    {/* R3015003: an out-of-order pull granted the levels below it too. */}
+                    {slot.grant.kind === "cosmetic" && (slot.grant.below?.length ?? 0) > 0 ? (
+                      <p className="pack-slot__below" data-testid={shopTestid.below(index)}>
+                        {t("and every level below it")}
+                      </p>
+                    ) : null}
                     {look === null ? null : <CosmeticLook id={look.id} cardId={look.cardId} />}
                     {slot.grant.kind === "cosmetic" && slot.grant.cardId !== null ? (
                       <p className="pack-slot__card">
@@ -354,7 +389,7 @@ function ShardBar({
   onChase: (cosmetic: RegistryCosmetic, cardId: string | undefined) => void;
 }): ReactElement {
   const { points, size } = info.shardBar;
-  const full = points >= size;
+  const full = shardFull(info.shardBar);
   const filled = from !== undefined && from < size && full;
   const [reached, setReached] = useState(!filled);
   const reduced = useReducedMotion();
@@ -416,7 +451,8 @@ function ShardBar({
           {filled ? <RewardReveal items={reveal} testid={shopTestid.shardReveal} /> : <p>{t("The bar is full — pick a chase:")}</p>}
           {candidates.map((cosmetic) => {
             const fits = fittingCards(cosmetic, quantities);
-            const open = fits === null ? [] : fits.filter((cardId) => CATALOG[cardId] !== undefined);
+            // R3015004: a level only on the cards where it is the next one.
+            const open = fits === null ? [] : fits.filter((cardId) => CATALOG[cardId] !== undefined && nextThere(cosmetic.id, cardId, owned));
             const chosen =
               cardFor[cosmetic.id] !== undefined && open.includes(cardFor[cosmetic.id]!)
                 ? cardFor[cosmetic.id]!

@@ -13,8 +13,11 @@ import { poolCardId } from "../../game/deckbuilder/testids.ts";
 import { faceModel, type FaceModel } from "../model.ts";
 import { watermarkOf } from "../setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
-import { ASCENT_LABEL, SUMMIT_DEF_ID } from "../shortText.ts";
 import { CardDetail } from "./CardDetail.tsx";
+
+/** Meditative #8 Reach the Summit, and the label its Ascent level is previewed under (R280). */
+const SUMMIT_DEF_ID = "meditative-008";
+const ASCENT_LABEL = "Ascent level";
 import { HOVER_DELAY_MS } from "./constants.ts";
 import { HoverPreview } from "./HoverPreview.tsx";
 import { InspectSheet } from "./InspectSheet.tsx";
@@ -60,7 +63,7 @@ describe("R1017000 the extended description", () => {
   });
 
   it("R1017000 a face that prints its whole text has no extended description", () => {
-    render(<HoverPreview face={collection("core-052", true)} anchor={ANCHOR} />);
+    render(<HoverPreview face={collection("core-052")} anchor={ANCHOR} />);
     expect(screen.queryByTestId(INSPECT_EXTENDED)).toBeNull();
   });
 

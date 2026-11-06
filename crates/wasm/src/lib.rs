@@ -10,32 +10,17 @@
 //! `ReduceResult` (SURFACE §6.1). A panic is an engine invariant broken (SURFACE §4.4.9);
 //! `console_error_panic_hook` prints it on the console before the trap.
 //!
-//! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505), which the Luau
-//! module and the C module (`crates/wasm/c`, #3093) wrap too; this module keeps the wasm-bindgen
-//! wrappers, the panic hook, the clock and the custom-card refusal (R915009). The pure crates never read
-//! a clock (CLAUDE.md rule 4, SURFACE §3): `ai_decide` hands the body `js_sys::Date::now` against the
-//! deadline the page computed.
+//! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505), which the C
+//! module (`crates/wasm/c`, #3093) wraps too; this module keeps the wasm-bindgen wrappers, the panic
+//! hook and the clock. The pure crates never read a clock (CLAUDE.md rule 4, SURFACE §3): `ai_decide`
+//! hands the body `js_sys::Date::now` against the deadline the page computed.
 
-use jackioh_engine::prelude::IndexMap;
-use jackioh_engine::{CreateGameArgs, SetupKind};
 use jackioh_wasm_core as wasm_core;
 use wasm_bindgen::prelude::*;
 
 /// One body's answer as JavaScript sees it: the value, or an `Error` thrown with the body's message.
 fn js<T>(answer: Result<T, String>) -> Result<T, JsError> {
     answer.map_err(|message| JsError::new(&message))
-}
-
-/// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
-/// and a panic in WebAssembly is a trap the page cannot catch. R180's handicaps come first, so a bad deck
-/// size is named as the handicap's fault, then each deck against its seat's size (R184); the functions
-/// are the engine's own (`state.rs`), so the messages are the engine's verbatim.
-fn check_setup(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
-    // R915009: this module holds no Luau, so a game with custom cards runs in the Luau module.
-    if args.custom_cards.as_ref().is_some_and(|cards| !cards.is_empty()) {
-        return Err("a game with custom cards plays in the Luau module, not this one (R915009)".to_owned());
-    }
-    wasm_core::check_decks(args, &IndexMap::new(), kind)
 }
 
 // Boot and the catalog
@@ -161,7 +146,7 @@ pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, JsError> 
 /// `GameState` from JSON arguments.
 #[wasm_bindgen]
 pub fn create_game(args_json: &str) -> Result<String, JsError> {
-    js(wasm_core::create_game(args_json, check_setup))
+    js(wasm_core::create_game(args_json))
 }
 
 /// `ReduceResult`: `{ state, events, error? }`.
@@ -203,7 +188,7 @@ pub fn hash_state(state_json: &str) -> Result<String, JsError> {
 /// `{ state, errors: [{ nonce, error }] }`. Setup is checked first; refused actions are collected.
 #[wasm_bindgen]
 pub fn fold(args_json: &str) -> Result<String, JsError> {
-    js(wasm_core::fold(args_json, check_setup))
+    js(wasm_core::fold(args_json))
 }
 
 /// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was played
@@ -211,7 +196,7 @@ pub fn fold(args_json: &str) -> Result<String, JsError> {
 /// `earlier_patch` before its decks are read.
 #[wasm_bindgen]
 pub fn replay_open(args_json: &str, record_json: &str) -> Result<String, JsError> {
-    js(wasm_core::replay_open(args_json, record_json, check_setup))
+    js(wasm_core::replay_open(args_json, record_json))
 }
 
 /// R768: `ReplayPage`, `{ from, steps: [{ step, turn, view }], reduces }`.
@@ -419,6 +404,24 @@ pub fn loadout(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::loadout(call_json))
 }
 
+// What a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/// One call of the face model: a `FaceCall` as JSON in, a `FaceAnswer` as JSON out. The catalog is the one
+/// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn face(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::face(call_json))
+}
+
+// The game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
+/// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn log(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::log(call_json))
+}
+
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
 
 /// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host
@@ -454,51 +457,11 @@ pub fn bot_decide(call_json: &str, deadline_ms: f64) -> Result<String, JsError> 
     js(wasm_core::bot_decide(call_json, deadline_ms, js_sys::Date::now))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use jackioh_engine::{CardType, CustomCard, CustomFrame, PrintedRarity};
+// The collection economy's decisions (SPEC §14, #3104: `jackioh-shared`, which the server calls natively)
 
-    fn imp() -> CustomCard {
-        CustomCard {
-            id: "custom-ember-imp".to_owned(),
-            version: 1,
-            frame: CustomFrame {
-                name: "Ember Imp".to_owned(),
-                type_: CardType::Unit,
-                cost: 1,
-                rarity: PrintedRarity::Common,
-                attack: Some(1),
-                health: Some(2),
-                radiant_attack: None,
-                radiant_health: None,
-                keywords: Vec::new(),
-                text: String::new(),
-                params: Vec::new(),
-            },
-            source: String::new(),
-            builder: None,
-        }
-    }
-
-    #[test]
-    fn r915009_the_normal_module_refuses_a_game_with_custom_cards_and_names_the_module_that_runs_them() {
-        let with = CreateGameArgs {
-            custom_cards: Some(vec![imp()]),
-            ..CreateGameArgs::default()
-        };
-        let refusal = check_setup(&with, SetupKind::New).expect_err("a custom card is refused");
-        assert!(
-            refusal.contains("plays in the Luau module, not this one"),
-            "{refusal}"
-        );
-
-        // An empty list carries no custom card: the deck checks speak instead.
-        let empty = CreateGameArgs {
-            custom_cards: Some(Vec::new()),
-            ..CreateGameArgs::default()
-        };
-        let other = check_setup(&empty, SetupKind::New).expect_err("empty decks are refused");
-        assert!(!other.contains("Luau module"), "{other}");
-    }
+/// One call of the economy's decisions: an `EconomyCall` as JSON in, an `EconomyAnswer` as JSON out. The host
+/// reads the records from its store and writes the answer's grants back (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn economy(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::economy(call_json))
 }

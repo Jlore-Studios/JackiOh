@@ -6,7 +6,9 @@
 // and at the inspect, hand and small-hand sizes, as a band at most
 // FULL_ART_FINISH_OPACITY over the art's edge and under the cost gem, rarity gem, name banner,
 // crest, set mark and stats; the three animated finishes move in their motion slot and hold still
-// with Animated foil off and under Reduce motion; and a normal face and a board minion draw no band.
+// with Animated foil off and under Reduce motion; and a normal face draws no band, nor does a board minion or a
+// face-up backrow card while the Full-art cards setting is off. R3046000: with it on, a full-art board minion and a
+// full-art backrow card draw the band as a full face does (cypress/component/full-art-board.cy.tsx walks them too).
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, FACE_ASPECT, MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
@@ -144,7 +146,7 @@ function Single({ width }: { width: number }) {
   );
 }
 
-/** Two worn normal faces and a worn board minion. */
+/** Two worn normal faces, and a worn board minion beside a worn face-up backrow card, all of cards that print full art. */
 function NormalAndMinion() {
   const face = faceModel({ defId: "core-004", def: CATALOG["core-004"] as CardDef, radiant: false });
   const spell = faceModel({ defId: "classicplus-019", def: CATALOG["classicplus-019"] as CardDef, radiant: false });
@@ -160,6 +162,9 @@ function NormalAndMinion() {
         </div>
         <div data-which="minion" style={{ width: 81, height: 113, flex: "none" }}>
           <MinionFace face={face} unit={u} worn />
+        </div>
+        <div data-which="backrow" style={{ width: 71, height: 100, flex: "none" }}>
+          <CardFace face={spell} layout="compact" worn />
         </div>
       </div>
     </OwnCopy>
@@ -390,7 +395,7 @@ describe("R2720000 every finish on a full-art face", () => {
     });
   }
 
-  it("R2720000 a face that is not full art wears each finish with no band, and so does a board minion", () => {
+  it("R2720000 a face that is not full art wears each finish with no band, and so does a board minion or backrow card while the Full-art cards setting is off", () => {
     for (const finish of FINISHES) {
       cy.then(() => {
         writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
@@ -400,12 +405,41 @@ describe("R2720000 every finish on a full-art face", () => {
       });
       cy.mount(<NormalAndMinion />);
       cy.document().should((doc) => {
-        for (const which of ["unit", "spell", "minion"] as const) {
+        for (const which of ["unit", "spell", "minion", "backrow"] as const) {
           const cf = doc.querySelector<HTMLElement>(`[data-which="${which}"] > .cf`);
           if (cf === null) throw new Error(`no ${which} face`);
           expect(cf.getAttribute("data-finish"), `${which} wears ${finish}`).to.eq(finish);
           expect(cf.getAttribute("data-full-art"), `${which} is no full art`).to.eq(null);
           expect(getComputedStyle(scaleOf(cf), "::before").content, `${which} draws no band`).to.eq("none");
+        }
+      });
+    }
+  });
+
+  it("R2720000 R3046000 with the setting on, a full-art board minion and backrow card wear each finish as a band over the art, under their parts", () => {
+    for (const finish of FINISHES) {
+      cy.then(() => {
+        writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+        clearPicks();
+        writeCardPick("core-004", "finish", finish);
+        writeCardPick("classicplus-019", "finish", finish);
+      });
+      cy.mount(<NormalAndMinion />);
+      cy.document().should((doc) => {
+        for (const which of ["minion", "backrow"] as const) {
+          const cf = doc.querySelector<HTMLElement>(`[data-which="${which}"] > .cf`);
+          if (cf === null) throw new Error(`no ${which} face`);
+          const where = `${which} wearing ${finish}`;
+          expect(cf.getAttribute("data-finish"), where).to.eq(finish);
+          expect(cf.getAttribute("data-full-art"), `${where} is full art`).to.eq("true");
+          const band = getComputedStyle(scaleOf(cf), "::before");
+          expect(band.content, `${where}: the band draws`).to.not.eq("none");
+          expect(Number(band.opacity), `${where}: at most FULL_ART_FINISH_OPACITY`).to.be.at.most(FULL_ART_FINISH_OPACITY);
+          expect(band.zIndex, `${where}: over the art`).to.eq("1");
+          for (const selector of [".cost-gem", ".card-name", ".stats"]) {
+            const found = scaleOf(cf).querySelector<HTMLElement>(`:scope > ${selector}`);
+            if (found !== null) expect(Number(getComputedStyle(found).zIndex), `${where}: ${selector} sits over the band`).to.be.greaterThan(1);
+          }
         }
       });
     }

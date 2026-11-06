@@ -3,7 +3,10 @@
 //! `jackioh-wasm-core` read them from its `constants` export, so none restates one.
 
 use jackioh_engine::EmoteId;
+use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
+
+use crate::cosmetics::CosmeticRarity;
 
 /// Milliseconds in a second: rows and clocks are stamped in epoch milliseconds, and the series' pick
 /// clock is stated in seconds.
@@ -21,6 +24,19 @@ pub const SERIES_WINS_NEEDED: i32 = 3;
 pub const SERIES_MAX_GAMES: i32 = 7;
 /// SPEC §11 R333: how long both players have to pick their deck for the next game of a series.
 pub const SERIES_PICK_SECONDS: i64 = 60;
+
+/// #2437, R637, R2179001: the Temporary count at which a card in a hand is discarded at its owner's next end of
+/// turn. A plain Temporary is Temporary 1; the face model's Temporary badge counts above it (`face/state.rs`).
+pub const TEMPORARY_LAST_COUNT: i32 = 1;
+
+/// Glitch (issue #170, SPEC §7) prints corrupted words (`face/glitch.rs`): the fixed seed every host jumbles with,
+/// so every client prints the same jumble.
+pub const GLITCH_SEED: u32 = 170;
+/// Out of [`GLITCH_ODDS_SCALE`]: below this a Glitch character becomes a glyph.
+pub const GLITCH_SWAP_IN: u32 = 45;
+/// Out of [`GLITCH_ODDS_SCALE`]: below `GLITCH_SWAP_IN` plus this a Glitch character gains a combining mark.
+pub const GLITCH_MARK_IN: u32 = 35;
+pub const GLITCH_ODDS_SCALE: u32 = 100;
 
 // ---------------------------------------------------------------------------------------------
 // The match host's numbers (#3101): the clocks (SPEC §9.5, R79, R268, R744), the relays (R738) and
@@ -176,8 +192,8 @@ pub const MS_PER_DAY: i64 = 86_400_000;
 pub const MAX_FAIR_GAP: i64 = 400;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games". Its played delta needs this many on each side, played and
-/// drawn but not played, and displays "not enough data" until then.
+/// the row displays "not enough games" and has no tier (R3022000). `GET /api/stats/cards` sends no
+/// played or drawn delta, which waited for this many on each side (R3185000).
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
@@ -938,6 +954,106 @@ pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
 /// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
 pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
 
+// ---------------------------------------------------------------------------------------------
+// Ladder bots' cosmetics (SPEC §14.2, R1834005, R1834006; #1834). A bot wears a loadout drawn as a
+// person's from a wardrobe drawn from the pool's seed (`bots::cosmetics`), so its seat looks
+// like a person's (R1452) while it owns nothing (R1454). The fits are pasted by hand from
+// `jackioh-server cosmetics-fit` as `THINK_TIME_FITS` is from `timing-fit`; the priors are hand-set
+// until a fit replaces them (`jackioh-server cosmetics-fit` prints the rows to paste over `BOT_COSMETIC_FITS`
+// in this file). Cosmetic only: none of it reaches the engine, the log or the search.
+// ---------------------------------------------------------------------------------------------
+
+/// R1834006: the fewest people's seats an age bucket's row needs before it replaces the prior.
+pub const BOT_COSMETIC_FIT_MIN_SAMPLES: usize = 30;
+/// R1834005: the fewest people who must own a cosmetic (on that card, for a per-card one) before a
+/// bot may: a bot never owns a chase fewer people hold.
+pub const BOT_COSMETIC_MIN_OWNERS: i64 = 20;
+/// R1834005: the fewest days since a cosmetic was first granted to a person before a bot may own it.
+pub const BOT_COSMETIC_MIN_AGE_DAYS: i64 = 14;
+/// R1834005: how often a bot's cosmetics age, as an account's do: it may gain wardrobe items and
+/// change a slot, at most once in this many days.
+pub const BOT_COSMETIC_REDRAW_DAYS: i64 = 7;
+/// R1834005, R1834006: the account ages the fits are bucketed by, in days: one bucket up to each
+/// bound, inclusive, and one past the last.
+pub const BOT_COSMETIC_AGE_BUCKETS_DAYS: [i64; 3] = [7, 30, 90];
+/// R1834005: the prior's share of seats that wear a slot's default; the rest is split evenly
+/// among the kind's starters.
+pub const BOT_COSMETIC_PRIOR_DEFAULT_SHARE: f64 = 0.55;
+/// R1834005: the prior's share of seats that pick something of its own for some card of the deck.
+pub const BOT_COSMETIC_PRIOR_PER_CARD_SHARE: f64 = 0.2;
+/// R1834005: the prior's mean number of a deck's cards picked, for a seat that picks any.
+pub const BOT_COSMETIC_PRIOR_CARDS_PER_DECK: f64 = 3.0;
+/// R1834005: the prior's share of seats that print a full art they own on a card of their deck.
+pub const BOT_COSMETIC_PRIOR_FULL_ART_WEAR: f64 = 0.8;
+/// R1834005: the prior's share of bots that own an eligible cosmetic no fitted row lists.
+pub const BOT_COSMETIC_PRIOR_OWNERSHIP: f64 = 0.05;
+/// R1834005: the chance each slot of a bot changes when its cosmetics age.
+pub const BOT_COSMETIC_SLOT_CHANGE_SHARE: f64 = 0.1;
+
+/// R1834006: how many people own a cosmetic, as a share of an age bucket's people: an account
+/// cosmetic on the account (`card: None`), a per-card one (a full art among them) on `card`.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticOwnership {
+    pub cosmetic: &'static str,
+    pub card: Option<&'static str>,
+    pub share: f64,
+}
+
+/// R1834006: an earned foil, finish or border on the one card a person owns it on: of the seats
+/// whose person owns `cosmetic` on `card` and whose deck holds that card, the share whose card wears
+/// it.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticWear {
+    pub cosmetic: &'static str,
+    pub card: &'static str,
+    pub share: f64,
+}
+
+/// R1834005, R1834006: what people of one account age wear, over `samples` of their seats, for
+/// accounts up to `max_age_days` old (`None`: older than every bound of
+/// `BOT_COSMETIC_AGE_BUCKETS_DAYS`). `slots` is each cosmetic's share of the seats wearing it in its
+/// kind's slot (the six of a seat's loadout, defaults included; a kind it lists nothing of takes the
+/// prior's split). `per_card_share` is the share of seats with a pick of their own on some card,
+/// `cards_per_deck_mean` the mean number of cards such a seat picks, `card_picks` each default's and
+/// starter's (a foil, a finish or a border every card may wear) share of those cards' picks of one,
+/// `earned_wear` each earned one's wear on its card (`CosmeticWear`; both empty, a card's pick takes
+/// the prior's split), `full_art_wear` each full art's share of the seats that own it and play its
+/// card that print it, and `ownership` each non-starter's share of the bucket's people that own it.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticFit {
+    pub max_age_days: Option<i64>,
+    pub samples: usize,
+    pub slots: &'static [(&'static str, f64)],
+    pub per_card_share: f64,
+    pub cards_per_deck_mean: f64,
+    pub card_picks: &'static [(&'static str, f64)],
+    pub earned_wear: &'static [CosmeticWear],
+    pub full_art_wear: &'static [(&'static str, f64)],
+    pub ownership: &'static [CosmeticOwnership],
+}
+
+/// R1834006: the cosmetic fits, one per age bucket, pasted by hand from `jackioh-server
+/// cosmetics-fit` (CLAUDE.md rule 9). Empty until enough people's matches froze a loadout; a bucket
+/// with no row, or one under `BOT_COSMETIC_FIT_MIN_SAMPLES`, draws from `BOT_COSMETIC_PRIOR`.
+pub const BOT_COSMETIC_FITS: &[CosmeticFit] = &[];
+
+/// R1834005: the hand-set prior every bucket draws from until a fit replaces it: no shares of its
+/// own (each slot `BOT_COSMETIC_PRIOR_DEFAULT_SHARE` default, the rest split among the starters),
+/// no picks on cards of its own (a card's pick a kind at even odds, by the slots' split), no full
+/// art's wear of its own (`BOT_COSMETIC_PRIOR_FULL_ART_WEAR`) and no ownership of its own
+/// (`BOT_COSMETIC_PRIOR_OWNERSHIP`).
+pub const BOT_COSMETIC_PRIOR: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: 0,
+    slots: &[],
+    per_card_share: BOT_COSMETIC_PRIOR_PER_CARD_SHARE,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[],
+    full_art_wear: &[],
+    ownership: &[],
+};
+
 /// R645: the four personas a bot may be dealt (TS `PersonaName`). Never shown to the player.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -1501,3 +1617,338 @@ pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
 /// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
 /// the AI team's turn.
 pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+
+// ---------------------------------------------------------------------------------------------
+// The collection economy's rolls (SPEC §14, #1294, #3104): the drop tables, pity, the token bars, the
+// cosmetic packs and the set-track curve that `economy` decides with. `crates/server/src/config.rs`
+// re-exports every one, so `serverConfig.ts` (`tests/export_config.rs`) and the server's code name them
+// as before.
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §11 R633: the longest text value, in characters (a station or an intensity name).
+pub const PLAYER_SETTINGS_TEXT_MAX_LENGTH: usize = 40;
+/// SPEC §14.3: the name a request gives the global card pack; a set's pack goes by its set's name.
+pub const GLOBAL_PACK_NAME: &str = "global";
+/// The shape of `CARD_TIER_WEIGHTS` and `COSMETIC_TIER_WEIGHTS` (SPEC §14.3, R1339000): the integer
+/// weight out of `TIER_WEIGHT_TOTAL` of each tier above the lowest, so a tier's chance in one roll
+/// is its weight over the total. The lowest tier, Common, is the fallback: it takes whatever weight
+/// is left, computed and never stored, so raising one tier takes from it alone.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TierWeights {
+    pub rare: u32,
+    pub epic: u32,
+    pub legendary: u32,
+    pub mythic: u32,
+}
+
+impl TierWeights {
+    /// The set tiers' weights summed: what the fallback's weight is `TIER_WEIGHT_TOTAL` less.
+    pub const fn set_total(&self) -> u32 {
+        self.rare + self.epic + self.legendary + self.mythic
+    }
+}
+
+/// The shape of `TOKEN_BAR_POINTS_BY_CARD_RARITY` and `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY` (SPEC
+/// §14.5, R1953000, R1999000): the token bar points each opened slot adds for each rarity it can
+/// roll.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RarityPoints {
+    pub common: i64,
+    pub rare: i64,
+    pub epic: i64,
+    pub legendary: i64,
+    pub mythic: i64,
+}
+
+/// The shape of `PACK_UNOWNED_WEIGHTS` and `COSMETIC_PACK_CARD_WEIGHTS`: how a draw weighs the
+/// cards the account owns against the ones it does not (SPEC §14.3, §14.6). A card's weight is
+/// its side's number, so an unowned card is drawn `unowned / owned` times as often as an owned
+/// one of the same rarity in a card pack, and an owned one `owned / unowned` times as often as an
+/// unowned one in a cosmetic pack.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PackUnownedWeights {
+    pub owned: f64,
+    pub unowned: f64,
+}
+
+/// One step of `COSMETIC_TOKEN_CYCLE` (SPEC §14.5): a cosmetic token of that rarity, or a
+/// cosmetic pack. Serialized lower-camel for the client (`cosmeticPack`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum CosmeticTokenStep {
+    Rare,
+    Epic,
+    Legendary,
+    CosmeticPack,
+}
+
+impl CosmeticTokenStep {
+    /// SPEC §14.5, R2728000: the cosmetic token bar's points this step takes to pay.
+    pub const fn bar_size(self) -> i64 {
+        match self {
+            Self::Rare => COSMETIC_TOKEN_BAR_SIZE_RARE,
+            Self::Epic => COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            Self::Legendary => COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+            Self::CosmeticPack => COSMETIC_TOKEN_BAR_SIZE_PACK,
+        }
+    }
+}
+
+/// SPEC §14.3: the slots of a card pack (#1333's table: 5), the Rare-or-better slot one of them.
+pub const PACK_SLOTS: usize = 5;
+/// SPEC §14.3: how a slot's card draw leans toward the cards the account does not own. #1294's
+/// table gives no value; an unowned card weighs four times an owned one of the same rarity, so
+/// early packs complete a collection and late packs feed the token bars.
+pub const PACK_UNOWNED_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
+    owned: 1.0,
+    unowned: 4.0,
+};
+/// SPEC §14.3, R1339000: the fixed total every tier weight table is out of, so a tier's chance in
+/// one roll is its weight over this, and one roll is one integer draw below it.
+pub const TIER_WEIGHT_TOTAL: u32 = 1000;
+/// SPEC §14.3, R1339000: a card pack slot's card rarity (#1339's table): Rare 300, Epic 70,
+/// Legendary 20 and Mythic 10, so the fallback, Common, is 600. Per pack before pity, five slots
+/// hold an Epic in 1 − (1 − 70/1000)^5 = 30.4% of packs, a Legendary in 9.6% and a Mythic in 4.9%.
+pub const CARD_TIER_WEIGHTS: TierWeights = TierWeights {
+    rare: 300,
+    epic: 70,
+    legendary: 20,
+    mythic: 10,
+};
+/// SPEC §14.3, §14.6, R1339000: the cosmetic rarity of a duplicate's cosmetic and of a cosmetic
+/// pack slot (#1339's table): Rare 250, Epic 150, Legendary 45 and Mythic 5, so the fallback,
+/// Common, is 550.
+pub const COSMETIC_TIER_WEIGHTS: TierWeights = TierWeights {
+    rare: 250,
+    epic: 150,
+    legendary: 45,
+    mythic: 5,
+};
+// SPEC §14.3, R1339000: set weights past the total leave the fallback nothing to take.
+const _: () = assert!(CARD_TIER_WEIGHTS.set_total() <= TIER_WEIGHT_TOTAL);
+const _: () = assert!(COSMETIC_TIER_WEIGHTS.set_total() <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.3, R1339000: the card pack slot and the cosmetic pack slot floored at a tier, the
+/// first. #1339 says one slot; the first is this issue's pick.
+pub const PACK_FLOORED_SLOT: usize = 0;
+/// SPEC §14.3, R1339000: the floor of a card pack's floored slot: it rolls `CARD_TIER_WEIGHTS`, and
+/// a Common becomes Rare (Rare 900, Epic 70, Legendary 20, Mythic 10).
+pub const PACK_FLOOR_RARITY: PrintedRarity = PrintedRarity::Rare;
+/// SPEC §14.6, R1339000: the floor of a cosmetic pack's floored slot: it rolls
+/// `COSMETIC_TIER_WEIGHTS`, and a Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
+pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
+/// SPEC §14.3, R1661001, R1953000: a duplicate's global cosmetic roll (#1953: 2%, was #1661's 10%):
+/// with an account cosmetic left unowned, one draw below `TIER_WEIGHT_TOTAL`, and a draw below this
+/// drops an account cosmetic in place of the duplicate's per-card one.
+pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 20;
+// SPEC §14.3, R1661001: the hit is a share of the same total, so it cannot pass it.
+const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.3, §14.6, R3015003: an out-of-order pull. Where a duplicate's per-card cosmetic or a cosmetic pack
+/// slot finds a level past the next one open at its tier, it first draws one integer below `TIER_WEIGHT_TOTAL`;
+/// below this (4%) it grants such a level and every level under it in its variant, at or past it the next level
+/// as ever. A skip is open far less often than a next level, so this keeps it far rarer than an in-order pull.
+pub const LEVEL_SKIP_WEIGHT: u32 = 40;
+// R3015003: the skip is a share of the same total, so it cannot pass it.
+const _: () = assert!(LEVEL_SKIP_WEIGHT <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.3, R3015003: the most out-of-order pulls a seeded simulation of duplicates on one card may count, in
+/// percent of the in-order pulls it counts: an out-of-order pull is far rarer than an in-order one.
+pub const LEVEL_SKIP_MAX_PERCENT_OF_IN_ORDER: u32 = 10;
+/// SPEC §14.2, §14.3, R1661000, R1661001: the rarity every account cosmetic but its kind's default
+/// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
+/// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
+pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
+/// SPEC §14.2, R2725001, R3015000: the fewest cards each level of each variant is offered on, across the shipped
+/// sets (the registry's check holds every one to it), and each retired augment's offer.
+pub const VERSION_OFFER_MIN_CARDS: usize = 20;
+/// SPEC §14.2, R2725001, R3015000: the fewest cards of each shipped set each level of each variant is offered on,
+/// so every set has some.
+pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
+/// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
+/// seeded hash, modulo this, falls below the percent.
+pub const OFFER_SAMPLE_PERCENT_SCALE: u32 = 100;
+/// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
+/// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
+/// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter
+/// would reach its threshold in (R1339001).
+pub const PITY_EPIC_PACKS: usize = 10;
+/// SPEC §14.4: the longest an account waits for a Legendary: of any 20 card packs in a row, at
+/// least one holds one.
+pub const PITY_LEGENDARY_PACKS: usize = 20;
+/// SPEC §14.4: the longest an account waits for a Mythic: of any 30 card packs in a row, at
+/// least one holds one. The longest wait of all, as SPEC §14.4 requires.
+pub const PITY_MYTHIC_PACKS: usize = 30;
+/// SPEC §14.5, R1953000, R1999000: the points that fill the card token bar (#1953: 200). On any
+/// collection a card pack's slots add about 8.65 points under `CARD_TIER_WEIGHTS` (four slots at
+/// 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
+/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`). The cosmetic token bar takes a size of
+/// its own at each step of its cycle (`CosmeticTokenStep::bar_size`, R2728000).
+pub const CARD_TOKEN_BAR_SIZE: i64 = 200;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Rare cosmetic token
+/// (#2728: 50), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_RARE: i64 = 50;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay an Epic cosmetic token
+/// (#2728: 75), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_EPIC: i64 = 75;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Legendary cosmetic token
+/// (#2728: 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_LEGENDARY: i64 = 100;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a cosmetic pack (#2728:
+/// 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_PACK: i64 = 100;
+// SPEC §14.5, R2728000: a step of no points would pay for ever
+// (`economy::tokens::settle_cosmetic_bar`).
+const _: () = assert!(
+    COSMETIC_TOKEN_BAR_SIZE_RARE > 0
+        && COSMETIC_TOKEN_BAR_SIZE_EPIC > 0
+        && COSMETIC_TOKEN_BAR_SIZE_LEGENDARY > 0
+        && COSMETIC_TOKEN_BAR_SIZE_PACK > 0
+);
+/// SPEC §14.5, R1953000, R1999000: the points each opened slot of a card pack adds to each token
+/// bar, whatever it grants, by the card rarity its slot rolled, pity's force included (#1953: 1,
+/// 2, 3, 5 and 10).
+pub const TOKEN_BAR_POINTS_BY_CARD_RARITY: RarityPoints = RarityPoints {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    legendary: 5,
+    mythic: 10,
+};
+/// SPEC §14.5, §14.6, R1306001, R1953000, R1999000: the points each opened slot of a cosmetic pack
+/// adds to each token bar, whatever it grants, by the cosmetic rarity it rolled, not the one it
+/// fell to (#1953: 1, 2, 3, 5 and 10, as a card's).
+pub const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY: RarityPoints = RarityPoints {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    legendary: 5,
+    mythic: 10,
+};
+/// SPEC §14.5: the card packs the card token bar takes to fill, on average (#1333's table: ~30;
+/// #1953's points and size: 23, `CARD_TOKEN_BAR_SIZE` over the mean points of a pack, rounded,
+/// held by `economy/math.rs`).
+pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 23;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Rare step, on
+/// average (#2728: 6, `COSMETIC_TOKEN_BAR_SIZE_RARE` over the mean points of a pack, rounded, held
+/// by `economy/math.rs`).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE: usize = 6;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Epic step, on
+/// average (#2728: 9).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC: usize = 9;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Legendary step, on
+/// average (#2728: 12).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY: usize = 12;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its cosmetic pack step,
+/// on average (#2728: 12).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK: usize = 12;
+/// SPEC §14.5, R2728000: the steps the cosmetic token bar pays, in order, verbatim (#2728), each at
+/// its own size (`CosmeticTokenStep::bar_size`).
+pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
+    CosmeticTokenStep::Rare,
+    CosmeticTokenStep::Epic,
+    CosmeticTokenStep::Legendary,
+    CosmeticTokenStep::Rare,
+    CosmeticTokenStep::Epic,
+    CosmeticTokenStep::CosmeticPack,
+];
+/// SPEC §14.6: a cosmetic pack's slots (#1333's table: 5), each rolling `COSMETIC_TIER_WEIGHTS`,
+/// the floored one at `COSMETIC_PACK_FLOOR_RARITY` (R1339000).
+pub const COSMETIC_PACK_SLOTS: usize = 5;
+/// #1306 gives no value; four to one, `PACK_UNOWNED_WEIGHTS` turned around, toward the cards the
+/// account owns.
+pub const COSMETIC_PACK_CARD_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
+    owned: 4.0,
+    unowned: 1.0,
+};
+/// SPEC §14.6: the cosmetic packs that fill the Chase Shard bar (#1333's table: 10). A chase
+/// also drops when a duplicate's roll or a cosmetic pack slot lands on Legendary or Mythic
+/// (R1333000), so no constant holds a separate chase rate.
+pub const CHASE_SHARD_PACKS: i64 = 10;
+/// SPEC §14.7: the XP step of the level curve: going from level n to the next costs this times
+/// n, uncapped (#1333's table: 100), so level 10 is at 4,500 XP and level 100 at 495,000 XP.
+pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
+
+// ---------------------------------------------------------------------------------------------
+// What a finished game pays and how a quest moves (SPEC §14.7 to §14.9, #3104 part 2): the Jlore and XP
+// rates, the daily cap, the set tracks' levels and the quest rhythm that `economy::rewards` and
+// `economy::quests` decide with. `crates/server/src/config.rs` re-exports every one.
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §14.7: the levels of a set track (#1333's table: 100), whose whole curve costs 495,000 XP
+/// (`total_xp_for_level` in `crates/shared/src/economy/math.rs`), a set's lifetime of play.
+pub const SET_TRACK_LEVELS: u32 = 100;
+/// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
+pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
+/// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
+pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
+pub const JLORE_LADDER_WIN: i32 = 20;
+/// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves
+/// the wallet.
+pub const JLORE_LADDER_LOSS: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a win (#1333's table: 10), since the browser
+/// runs it and the server only checks the log.
+pub const JLORE_PRACTICE_WIN: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
+pub const JLORE_PRACTICE_LOSS: i32 = 5;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its winner, at the ladder's rate.
+pub const JLORE_UNRANKED_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its loser, at the ladder's rate.
+pub const JLORE_UNRANKED_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its winner, as its own
+/// result, at the ladder's rate.
+pub const JLORE_CONQUEST_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its loser, as its own result,
+/// at the ladder's rate.
+pub const JLORE_CONQUEST_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a winning team, at practice's
+/// rate, since the team plays the AI.
+pub const JLORE_COOP_WIN: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a team that did not win, at
+/// practice's rate.
+pub const JLORE_COOP_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000, R1502000: the most Jlore an account's games pay it in one UTC day, every
+/// mode's games together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
+/// what a loop of conceded practice games would earn.
+pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
+/// SPEC §14.8: the XP of a game per action the player took, a proxy for time played. #1333's
+/// table leaves it to measured action counts: over R1333001's games 20, 600 and 2,000 average
+/// 999.75 XP a ladder game, `XP_LADDER_TARGET_MEAN`'s 1,000.
+pub const XP_PER_ACTION: i32 = 20;
+/// SPEC §14.8: the XP more a win pays, the big bonus #1333's table asks for (R1333001).
+pub const XP_WIN_BONUS: i32 = 600;
+/// SPEC §14.8: the most XP a game pays, so a loop of empty actions cannot farm it: twice
+/// `XP_LADDER_TARGET_MEAN` (R1333001).
+pub const XP_GAME_CAP: i32 = 2000;
+/// SPEC §14.8: a practice game's share of the XP the same game earns on the ladder (#1333's
+/// table: 0.5).
+pub const XP_PRACTICE_SCALE: f64 = 0.5;
+/// SPEC §14.8, R1502000: a co-op game's share of the XP the same moves earn on the ladder, as
+/// practice's (the team plays the AI).
+pub const XP_COOP_SCALE: f64 = 0.5;
+/// SPEC §14.8: the XP a ladder game averages (#1333's table: 1,000), over R1333001's measured
+/// games.
+pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
+/// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
+/// (#1333's table: 5).
+pub const QUEST_INTERVAL_HOURS: i64 = 5;
+/// SPEC §14.9: how many quests an account holds at most (#1333's table: 3), so a player away for
+/// a day comes back to three waiting, never more.
+pub const QUEST_MAX_HELD: usize = 3;
+/// SPEC §14.9: the least Jlore a quest pays (#1333's table: 50 to 100), half a pack to a pack.
+pub const QUEST_JLORE_MIN: i32 = 50;
+/// SPEC §14.9: the most Jlore a quest pays, for the hardest goals (#1333's table: 100).
+pub const QUEST_JLORE_MAX: i32 = 100;
+/// SPEC §14.9: the XP of each Jlore a quest pays (#1333's table: 50), so a quest's XP weighs
+/// like a few games'.
+pub const QUEST_XP_PER_JLORE: i32 = 50;
+/// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
+/// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
+pub const QUEST_REPLACES_PER_DAY: i64 = 1;

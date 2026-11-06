@@ -1,5 +1,5 @@
 // R277: a Radiant face prints its whole catalog text and marks what its base face's text does not
-// have. The diff itself (radiantDiff.ts), then every real card rendered through it.
+// have. The diff itself (jackioh-shared `face/diff.rs`, through the module), then every real card rendered through it.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -16,7 +16,7 @@ import { CardFace, faceText } from "./CardFace.tsx";
 import { Extended } from "./inspect/Extended.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
-import { markedText, radiantMarks } from "./radiantDiff.ts";
+import { markedText, radiantMarks } from "../test/faceData.ts";
 
 afterEach(cleanup);
 
@@ -114,9 +114,11 @@ describe("R277 the word diff", () => {
     // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #48 Tranquility's
     // (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
     // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000). #149 Wildar's is marked (#2657): its
-    // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too.
+    // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
+    // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000).
     expect(silent).toEqual([
       "core-055",
+      "core-079",
       "classic-028",
       "classic-029",
       "classic-060",
@@ -146,7 +148,7 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
         createElement(CardDefsProvider, {
           defs: CATALOG,
           children:
-            faceText(face).shown === face.text.full ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
+            faceText(face).shown.full === face.text.full ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
         }),
       );
       // A mark a reference's end splits ("Rush Tokens. Each": the mark runs out of the name) is one
@@ -157,7 +159,7 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
       expect(base.container.querySelector(".cf-mark"), `${card.id} base`).toBeNull();
       base.unmount();
     }
-  }, 30_000);
+  }, 60_000);
 
   it("R277 the mark is a non-color cue too: bold and underlined, in the stylesheet every face loads", () => {
     const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8");

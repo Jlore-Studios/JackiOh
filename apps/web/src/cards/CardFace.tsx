@@ -37,37 +37,41 @@
 // motion, with Animated foil off and on a lazy face.
 //
 // R2725000: the face wears its look (fullArt.ts `useCardLook`): its version (`data-version`; the Full art version prints
-// the full-art layout) and the augments layered on it (`data-augments`), its `data-full-art-tier` the tier the look
-// printed as before #2725 (`tierOfLook`). R2725003: Animated moves the art on either face. R2949000: Signature is worn
-// only beside Full art and Animated (versions.ts `signatureFits`), never on the normal face, and shows the Signature
-// look: a picture of its own (CardArt's `picture`, `data-art-picture="signature"`), a motion of its own
-// (`SIGNATURE_MOTION`) and the signed name. R2725004: a Radiant face keeps every Radiant mark under every look.
+// the full-art layout), its `data-full-art-tier` the tier the look printed as before #2725 (`tierOfLook`). R2725003:
+// Animated moves the art on either face. R2725004: a Radiant face keeps every Radiant mark under every look.
+// R3015002: the look is one level (`data-level`): every level of a variant draws its first level's picture
+// (`artPictureOf`), a level adding only the full-art frame, its picture's own motion (`artMotionOf`) and a signature;
+// a signed level is its variant's full art, moving, with the signed name (FullArtSignature.tsx), and no picture or
+// motion of its own (R2949000's Signature look is Full art's signed level, R3015005).
 // R2940001: Alt full art prints the full-art layout as Full art does (versions.ts `isFullBleed`); Alt art and Alt full
 // art draw Alt art's picture and the Sketch the normal one in pencil (`artPictureOf`, CardArt's `picture`), and the
-// Sketch's base frame is a pencilled outline (cosmetics.css). R2940002: Animated, a foil, a finish and a border layer
-// on each, and Signature on none.
+// Sketch's base frame is a pencilled outline (cosmetics.css), its full art's too (R3015002). R2940002: Animated, a
+// foil, a finish and a border layer on each.
 // R2942001: Extended art lays the card's own picture across the whole face (CardArt's `shape` "full") and keeps every
 // part of the normal face over it, its frame and rules box translucent (cards.css); Pixel and Comic restyle the normal
 // picture (`artPictureOf`), Pixel setting the name in its pixel face (pixelName.ts, `data-pixel-name`, the words
-// kept unseen) and Comic in a burst (cards.css). R2942002: Animated, a foil, a finish and a border layer on each, and
-// Signature on none.
+// kept unseen) and Comic in a burst (cards.css). R2942002: Animated, a foil, a finish and a border layer on each.
 // R2943001: Set showcase draws the card in its set's own look (`data-showcase`, pictures.ts `showcaseFamilyOf`): the
 // picture in its set's treatment (`artPictureOf` by the face's set), and on a base face the set's edge, bezel and name
 // banner (cards.css). Out of frame draws the picture's backdrop in a smaller window and its subject cut out over the
 // frame (`.cf-art--cutout`, CardArt's `part`), inside the art frame, so under the cost gem, crest, name, stats and rules
 // box and inside the card's rim; a Starship in play and a Legacy card, whose pictures have no parts, keep the normal
-// window (CardArt `hasArtParts`). R2943002: Animated, a foil, a finish and a border layer on each, and Signature on none.
+// window (CardArt `hasArtParts`). R2943002: Animated, a foil, a finish and a border layer on each.
 // R2944001: Immersive draws its window's backdrop hazed as far off (`artPictureOf`'s "depth") and its subject on a near
 // layer over it (`.cf-immersive`, the window's shape, CardArt's `part`), inside the window; a Starship in play and a
 // Legacy card draw their one picture hazed. Prismatic draws its picture in chrome under a sheen, and on a base face a
 // rainbow edge, a chrome bezel and a chrome banner (cards.css). R2944002: Animated, a foil, a finish and a border layer
-// on each, and Signature on none. Immersive's near layer follows the pointer and the device's tilt and breathes
+// on each. Immersive's near layer follows the pointer and the device's tilt and breathes
 // (`data-immersive-motion`, immersive.ts `useImmersiveShift`) while it holds a motion slot, the one Animated's motion
 // shares on that face (`useArtMotion`), and holds still under reduced motion, with Animated foil off and on a lazy face.
 //
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
 // 2–5") under its text.
+//
+// R3046000: a compact face (a face-up backrow card) prints full art too: the art across the face, still, and its name in
+// a band below the art, with the cost gem, the rarity gem and set mark, the crest and the states over it and no type line
+// (`data-full-art` on a compact face, cards.css; fullArt.ts `boardLookOf`). A compact face that is not full art keeps its window.
 //
 // R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
 // (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
@@ -85,32 +89,28 @@
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
+import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { hasArtParts } from "./art/CardArt.tsx";
 import { showcaseFamilyOf } from "./art/pictures.ts";
-import { SIGNATURE_MOTION } from "./art/motion.ts";
 import { CardStates } from "./CardStates.tsx";
 import { useImmersiveShift } from "./immersive.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
 import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
 import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
-import { nameTier, textTier, useFitText } from "./fit.ts";
+import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
-import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
+import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
-import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
+import { foilFor, frameRarity } from "./frame.ts";
+import type { FaceModel, RichText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
-import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
-import { questFaceText } from "./questFace.ts";
-import { MINUS } from "./tuning.ts";
 import { pixelNameUri } from "./pixelName.ts";
 import {
   NORMAL_LOOK,
@@ -120,7 +120,6 @@ import {
   VERSION_PIXEL_ID,
   VERSION_SET_SHOWCASE_ID,
   artPictureOf,
-  augmentsOf,
   isFullBleed,
 } from "./versions.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
@@ -163,116 +162,65 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
 }
 
-/** A keyword in the face's words: "Armor 2", or on a Chinese face "护甲2" (R1301). */
-function keywordWords(face: FaceModel, keyword: Keyword): string {
-  return face.chinese === true ? chineseKeyword(keyword) : keywordKey(keyword);
-}
-
-/** A keyword kind in the face's words (a Degrade's removed one, R386), Chinese on a Chinese face. */
-function kindWords(face: FaceModel, kind: KeywordKind): string {
-  return face.chinese === true ? CHINESE_TERMS.keywords[kind] : kind;
-}
-
-/** The keywords a face in play has gained, as the rules box prints them. Empty when none. */
-export function gainedLine(face: FaceModel): string {
-  return face.gained.map((keyword) => keywordWords(face, keyword)).join(face.chinese === true ? CHINESE_COMMA : ", ");
-}
-
-/** R386: the keyword chips a tuned face prints, as words: "+Rush −Taunt". Empty when none. */
+/** The keyword chips a tuned face prints, as words: "+Rush −Taunt". Empty when none. */
 export function tuningLine(face: FaceModel): string {
-  const tuning = face.tuning;
-  if (tuning === undefined || tuning === null) return "";
-  return [
-    ...tuning.added.map((keyword) => `+${keywordWords(face, keyword)}`),
-    ...tuning.removed.map((kind) => `${MINUS}${kindWords(face, kind)}`),
-  ].join(" ");
-}
-
-/** R1177001: the word a token's type line prints. */
-export const TOKEN_WORD = "Token";
-
-/** R1177001: the type line in the face's words: the card type, after "Token" on a token (R1301: 衍生物 on a Chinese face). */
-export function typeLine(face: FaceModel): string {
-  if (face.chinese === true) {
-    const type = CHINESE_TERMS.types[face.type];
-    return face.token === true ? `${CHINESE_TERMS.tags.Token}${type}` : type;
-  }
-  return face.token === true ? `${TOKEN_WORD} ${face.type}` : face.type;
-}
-
-/** A frame tag in the face's words (R1301). */
-function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
-  if (tag === ALL_TRIBES) return face.chinese === true ? CHINESE_TERMS.allTribes : ALL_TRIBES;
-  return face.chinese === true ? CHINESE_TERMS.tags[tag] : tag;
+  return face.tuningChips.map((chip) => `${chip.sign}${chip.text}`).join(" ");
 }
 
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
 function printedText(face: FaceModel, text: string): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${text}${values}`, creditsLine(face), gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${text}${values}`, face.creditsLine, face.gainedLine.full, ...face.grants.map((grant) => grant.full), tuningLine(face)]
+    .filter((part) => part !== "")
+    .join(" ");
 }
 
 /** What a face's rules box prints (issues #814, #1017). */
 export type RulesBox = {
   /** The words the rules box prints: the whole text, or a short form ending in "…". */
-  shown: string;
-  /** The short form, when the face prints one (`data-short`). */
-  short: string | null;
+  shown: RichText;
+  /** The face prints a short form (`data-short`). */
+  short: boolean;
   /** The face prints less than its whole text: its rules box clamps, never shrinking the art. */
   less: boolean;
-  /**
-   * R2450000: a Quest card's `shown` with its own marks and tuned numbers, where they stand in it
-   * (questFace.ts). Absent wherever `shown` is the whole text or its start.
-   */
-  text?: FaceText;
 };
 
 /**
  * Prints less than the whole text, which the hover preview prints on the face's left: a Summit in play given
- * its level prints its header and the next Ascent line; a Quest card (R1837000) the stage it stands at
- * (questFace.ts, R2450000); a face printing its catalog text its short form (shortText.ts SHORT_FORMS); a
- * face in play past the hover preview's limit clamps. `fullArtOn` is the caller's `useFullArt(defId)`
- * (R1108000, R1313000); without it, the setting decides.
+ * its level prints its header and the next Ascent line; a Quest card (R1837000) the stage it stands at; a
+ * face printing its catalog text its short form; a face in play past the hover preview's limit clamps. The
+ * face model decided every one of those (`face.short`, `.summit`, `.questBox`, `.clamp`); the box's size is
+ * the layout's. `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the
+ * setting decides. `ascentLevel` is the Summit's level where the surface gives it.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
-  const full = face.text.full;
-  if (showsFullArt(face, fullArtOn)) return { shown: "", short: null, less: printedText(face, full) !== "" };
+  if (showsFullArt(face, fullArtOn)) return { shown: EMPTY_TEXT, short: false, less: printedText(face, face.text.full) !== "" };
   // R2450000: a staged Quest prints one stage, a short form of its own; In Too Deep in play also clamps.
-  const quest = questFaceText(face);
+  const quest = face.questBox;
   if (quest !== null) {
-    const less = quest.less || (face.inPlay && overLimit(printedText(face, quest.full), PREVIEW_TEXT_LIMIT));
-    return { shown: quest.full, short: quest.less ? quest.full : null, less, text: quest };
+    const less = quest.less || (face.inPlay && overLimit(printedText(face, quest.text.full), PREVIEW_TEXT_LIMIT));
+    return { shown: quest.text, short: quest.less, less };
   }
-  const summit = summitShortText(face.defId, full, ascentLevel);
-  // A face in play that prints other than its catalog text (a #98 Heroic Power's rolled power, a
-  // Vanilla unit's lost text, inPlay.ts) takes no short form; a Call to Chaos's "???" has no colon to cut at.
-  const form = full === "" || face.printed !== null ? null : shortFormOf(face.defId, face.radiant);
-  const short = summit ?? (form === null ? null : cutText(full, form));
-  const shown = short ?? full;
-  const less = short !== null || form === "clamp" || (face.inPlay && overLimit(printedText(face, shown), PREVIEW_TEXT_LIMIT));
-  return { shown, short, less };
+  const summit = ascentLevel === null || ascentLevel === undefined ? undefined : face.summit;
+  const short = summit ?? face.short;
+  const shown = short ?? face.text;
+  const less = short !== undefined || face.clamp || (face.inPlay && overLimit(printedText(face, shown.full), PREVIEW_TEXT_LIMIT));
+  return { shown, short: short !== undefined, less };
 }
+
+const EMPTY_TEXT: RichText = { full: "", spans: [] };
 
 /** R386: the keywords a Buff added ("+") and a Nerf removed (struck "−"), at the foot of the rules box. */
 function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
-  const tuning = face.tuning;
-  if (tuning === undefined || tuning === null || (tuning.added.length === 0 && tuning.removed.length === 0)) return null;
+  if (face.tuningChips.length === 0) return null;
   return (
     <span className="cf-text-tuning">
-      {tuning.added.map((keyword) => (
-        <span key={`+${keywordKey(keyword)}`} className="cf-kw-chip" data-tuned="added" title={t("Gained {keyword}", { keyword: keywordWords(face, keyword) })}>
+      {face.tuningChips.map((chip) => (
+        <span key={`${chip.sign}${chip.text}`} className="cf-kw-chip" data-tuned={chip.added ? "added" : "removed"} title={chip.title}>
           <span className="cf-kw-sign" aria-hidden="true">
-            +
+            {chip.sign}
           </span>
-          {keywordWords(face, keyword)}
-        </span>
-      ))}
-      {tuning.removed.map((kind) => (
-        <span key={`-${kind}`} className="cf-kw-chip" data-tuned="removed" title={t("Lost {keyword}", { keyword: kindWords(face, kind) })}>
-          <span className="cf-kw-sign" aria-hidden="true">
-            {MINUS}
-          </span>
-          {kindWords(face, kind)}
+          {chip.text}
         </span>
       ))}
     </span>
@@ -331,7 +279,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
-  // R2725000: the look its pick names, its version and augments (R2655000's tiers among them).
+  // R2725000, R3015005: the look its pick names, one level (R2655000's tiers among them).
   const cardLook = useCardLook(face.defId, worn);
   // R2715000: the Animated art prints the normal face; R2725000: only the Full art version prints full art, and
   // R2940001 Alt full art.
@@ -341,20 +289,19 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const faceRef = useRef<HTMLSpanElement>(null);
 
   const full = layout === "full";
-  // R1017001: a full-art card fills its full face with its art, and prints no words.
-  const fullArt = full && showsFullArt(face, fullArtOn);
+  // R1017001: a full-art card fills its full face with its art, and prints no words. R3046000: a compact face (a face-up
+  // backrow card) fills itself with its art too, still, and prints its name in a band below the art.
+  const fullArt = showsFullArt(face, fullArtOn);
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
-  // Issues #814, #1017: a short form is the full text's prefix, so its values (R280), marks and tuned
-  // numbers keep their offsets, and RulesText drops marks past the printed words. A Quest card's
-  // stage (R2450000) is no prefix, so it brings its marks and tuned numbers with it (`text`).
-  const { shown, short, less, text } = faceText(face, ascentLevel, fullArtOn);
-  const words = text ?? face.text;
+  // Issues #814, #1017: the face model gives the box's words whole, as a short form, or as a Quest's stage
+  // (R2450000), each with its own spans; the box's size is the layout's.
+  const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
   // #912: the hover preview shows the whole card, so the native tooltip only stands in for it
   // while hover previews are off, as Card.tsx's root title does (B19).
   const tooltip = settings.hoverPreviews || face.text.full === "" ? undefined : face.text.full;
-  const printed = printedText(face, shown);
+  const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
   useFitText(nameRef, bare ? "" : face.name);
@@ -373,15 +320,14 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const glitch = isGlitch(face.defId);
   // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
   const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
-  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none.
-  const look = full ? cardLook : NORMAL_LOOK;
-  const tier = tierOfLook(look);
-  const augments = augmentsOf(look);
-  // R2725003: Animated on full art lays the band over it and drifts it. R2949000: Signature shows the Signature look,
-  // its own picture and motion, on Full art alone, and signs the name there but in the viewer's own hand.
+  // R2715000, R2725000: any full layout keeps its look, the Default's animated level too; a compact face wears none but
+  // (R3046000) the version a full-art one prints, still, and no tier.
+  const look = full ? cardLook : (boardLookOf(face, cardLook) ?? NORMAL_LOOK);
+  const tier = full ? tierOfLook(look) : null;
+  // R2725003: an animated full art lays the band over it and drifts it. R3015002: a signed level signs the name
+  // across its full art, but in the viewer's own hand.
   const moving = fullArt && look.animated;
-  const signatureLook = fullArt && look.signed;
-  const signed = signatureLook && !bare;
+  const signed = fullArt && look.signed && !bare;
   // R2943001: a Starship in play's and a Legacy card's pictures have no parts.
   const starship = face.inPlay ? face.starship : null;
   // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
@@ -400,8 +346,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // parts (a Starship in play's and a Legacy card's have none).
   const showcase = look.version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(face.set) : null;
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
-  const picture = signatureLook ? "signature" : artPictureOf(look.version, face.set);
-  const motion = artMotion && artMoves ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null;
+  // R3015002: one picture per variant at every level, and its own motion at every animated one.
+  const picture = artPictureOf(look.version, face.set);
+  const motion = artMotion && artMoves ? artMotionOf(face.defId) : null;
 
   return (
     <span
@@ -423,8 +370,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-version={look.version ?? undefined}
+      data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
-      data-augments={augments.length > 0 ? augments.join(" ") : undefined}
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
       data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
@@ -531,14 +478,14 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         {stamp !== null && <ProficiencyStamp level={stamp} />}
 
-        {!fullArt && <span className="card-type">{glitch ? GLITCH_WORDS.type : typeLine(face)}</span>}
+        {!fullArt && <span className="card-type">{face.typeLine}</span>}
 
         {full && !fullArt && (
           <span
             className="card-text"
             ref={textRef}
             title={tooltip}
-            data-short={short !== null ? "true" : undefined}
+            data-short={short ? "true" : undefined}
             data-less={less ? "true" : undefined}
           >
             {watermark !== null && (
@@ -546,43 +493,36 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             )}
             {face.inPlay && face.starship != null ? (
               // R2249000: a Starship lists its pieces in place of its text.
-              <StarshipPieces list={face.starship.list} />
+              <StarshipPieces starship={face.starship} />
             ) : (
               <span className="cf-text-base">
-                <RulesText
-                  text={shown}
-                  marks={words.marks}
-                  refs={face.refs}
-                  values={face.values}
-                  {...(words.tuned === undefined ? {} : { tuned: words.tuned })}
-                  chinese={face.chinese === true}
-                />
+                <RulesText rich={shown} />
               </span>
             )}
             {face.credits != null && (
               <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>
-                {creditsLine(face)}
+                {face.creditsLine}
               </span>
             )}
             {face.gained.length > 0 && (
               <span className="cf-text-gained" data-gained={face.gained.map(keywordKey).join("|")}>
-                <RulesText text={gainedLine(face)} />
+                <RulesText rich={face.gainedLine} />
               </span>
             )}
             {face.grants.map((grant) => (
-              <span key={grant} className="cf-text-granted">
-                <RulesText text={grant} />
+              <span key={grant.full} className="cf-text-granted">
+                <RulesText rich={grant} />
               </span>
             ))}
             <TuningKeywords face={face} />
           </span>
         )}
 
-        {full && !fullArt && !glitch && frameTags(face.tags).length > 0 && (
+        {full && !fullArt && !glitch && face.tagChips.length > 0 && (
           <span className="cf-tags">
-            {frameTags(face.tags).map((tag) => (
-              <span key={tag} className="cf-tag" data-tag={tag}>
-                {tagWords(face, tag)}
+            {face.tagChips.map((chip) => (
+              <span key={chip.tag} className="cf-tag" data-tag={chip.tag}>
+                {chip.text}
               </span>
             ))}
           </span>

@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
@@ -41,10 +42,18 @@ import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
-import { getPacks, keptPaths, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import {
+  getPacks,
+  keptPaths,
+  openPack,
+  type BoughtPackResponse,
+  type OpenedPackResponse,
+  type PacksResponse,
+} from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import { useSetting } from "../settings/store.ts";
+import { withBought } from "../shop/shop.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
@@ -284,15 +293,26 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 {shown ? (
                   <>
                     <div className="pack-slot__face">
-                      {look === null ? (
-                        <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
-                      ) : (
-                        <CosmeticLook id={look} cardId={slot.cardId} />
-                      )}
+                      {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
+                      <WhenEngineReady>
+                        {() =>
+                          look === null ? (
+                            <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
+                          ) : (
+                            <CosmeticLook id={look} cardId={slot.cardId} />
+                          )
+                        }
+                      </WhenEngineReady>
                     </div>
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}
                     </p>
+                    {/* R3015003: an out-of-order pull granted the levels below it too. */}
+                    {cosmetic !== null && (cosmetic.below?.length ?? 0) > 0 ? (
+                      <p className="pack-slot__below" data-testid={packTestid.below(index)}>
+                        {t("and every level below it")}
+                      </p>
+                    ) : null}
                     {/* R1833000: a cosmetic's own rarity, never its card's (R1333000), a chase marked. */}
                     {cosmetic === null ? null : (
                       <p className="pack-slot__cosmetic-rarity">
@@ -374,17 +394,23 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
 type SceneState = { pack: string; left: number };
 
 /**
- * The panel. `revision` is how many times the page has asked it to read the packs again (another
- * panel bought one, #1309); `onChanged` tells the page an opening changed the account.
+ * The panel. `revision` is how many times the page has asked it to read the packs again; `bought` is the
+ * last pack the page bought, whose count the panel takes with no read (R3211000). `onChanged` hands the
+ * page each opening's answer, and `onClosed` tells it the scene closed after at least one opening, the
+ * one moment it reads what the answers did not carry.
  */
 export default function PackOpening({
   token,
   revision = 0,
+  bought,
   onChanged,
+  onClosed,
 }: {
   token: string;
   revision?: number;
-  onChanged?: () => void;
+  bought?: BoughtPackResponse | null;
+  onChanged?: (opened: OpenedPackResponse) => void;
+  onClosed?: () => void;
 }): ReactElement {
   // R2125000: a revisit starts on the packs the last visit kept and reads again behind them.
   const [info, setInfo] = useState<PacksResponse | null>(
@@ -400,6 +426,8 @@ export default function PackOpening({
   const [reading, setReading] = useState(true);
   // A swipe's pointerup is followed by a click, and both ask to open: the ref answers the second at once.
   const inFlight = useRef(false);
+  // Whether the scene has opened a pack since it began, so closing it tells the page once (R3211000).
+  const spent = useRef(false);
   const spendOut = useSpendOut();
 
   useEffect(() => {
@@ -432,6 +460,12 @@ export default function PackOpening({
     };
   }, [token, revision, attempt]);
 
+  // R3211000: a buy's answer holds the count it left; the panel shows it with no read.
+  useEffect(() => {
+    if (bought === undefined || bought === null) return;
+    setInfo((before) => (before === null ? before : { ...before, unopened: withBought(before.unopened, bought) }));
+  }, [bought]);
+
   const begin = (next: SceneState | null): void => {
     setScene(next);
     setOpened(null);
@@ -453,7 +487,8 @@ export default function PackOpening({
         (next) => {
           setOpened(next);
           setInfo((before) => (before === null ? before : withOpening(before, next)));
-          onChanged?.();
+          spent.current = true;
+          onChanged?.(next);
         },
         (cause: unknown) => {
           setOpenError(messageOf(cause));
@@ -473,8 +508,14 @@ export default function PackOpening({
     setRound((before) => before + 1);
   };
 
+  // Done, Close and Escape all end here; "Next pack" keeps the scene, so a batch settles once (R3211000).
   const close = (): void => {
-    if (!busy) begin(null);
+    if (busy) return;
+    begin(null);
+    if (spent.current) {
+      spent.current = false;
+      onClosed?.();
+    }
   };
 
   return (

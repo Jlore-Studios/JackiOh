@@ -2,10 +2,12 @@
 // Radiant, apart from its normal face and every other version; each keeps every part of the normal face. Immersive draws
 // its window's backdrop hazed as far off and its subject on a near layer over it, the window's own box and shape;
 // Prismatic draws its picture in chrome under a sheen and, on a base face, a rainbow edge, a chrome bezel and a chrome
-// banner. R2944002: Animated, a foil, a finish and a border layer on each, and Signature on none; Immersive's near layer
-// follows the pointer and the tilt and breathes while it holds a motion slot, and holds still under reduced motion, with
-// Animated foil off and on a lazy face. R2725004 holds under each: a Radiant face keeps every Radiant mark, a base face
-// shows none. The pictures themselves are art/pictures.test.ts's; the pixels are e2e's
+// banner. R2944002: a foil, a finish and a border layer on each; Immersive's near layer follows the pointer and the
+// tilt and breathes while it holds a motion slot, and holds still under reduced motion, with Animated foil off and on a
+// lazy face. R2725004 holds under each: a Radiant face keeps every Radiant mark, a base face shows none. R3015000
+// (#3015): each is a ladder of two levels, its art then animated, never a full art nor signed; R3015002: both draw its
+// one picture, the animated one moving it in the slot Immersive's depth holds; R3015005: an older pick of one with
+// Animated wears its animated level. The pictures themselves are art/pictures.test.ts's; the pixels are e2e's
 // cypress/component/card-versions.cy.tsx.
 
 import { readFileSync } from "node:fs";
@@ -29,11 +31,12 @@ import {
   IMMERSIVE_TILT_RANGE_DEG,
   IMMERSIVE_TILT_REST_DEG,
 } from "./constants.ts";
-import { resetCosmeticsForTests, writeCardPick, writeCardVersion } from "./cosmetics.ts";
+import { CARD_PICKS_SETTINGS_KEY, resetCosmeticsForTests, writeCardLevel, writeCardPick } from "./cosmetics.ts";
 import { IMMERSIVE_X_PROPERTY, IMMERSIVE_Y_PROPERTY, pointerShift, tiltShift } from "./immersive.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { legacyText } from "../test/faceData.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import {
   AUGMENT_ANIMATED_ID,
@@ -49,11 +52,15 @@ import {
   VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
   VERSION_SKETCH_ID,
-  augmentsOf,
   isFullBleed,
-  lookOf,
   offeredOn,
 } from "./versions.ts";
+
+/** R3015005: `id`'s pick as a client stored it before #3015, a version and the augments layered on it, read afresh. */
+function storeOlderPick(id: string, fullArt: string, augments: readonly string[]): void {
+  localStorage.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify({ [id]: { fullArt, augments } }));
+  resetCosmeticsForTests();
+}
 
 /** R2944000: #2944's two versions, in the registry's order. */
 const PART_FIVE = [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID] as const;
@@ -203,14 +210,14 @@ describe("R2944001 every card offered a part 5 version draws it", () => {
     for (const id of ids) {
       for (const radiant of [false, true]) {
         const where = `${id} ${radiant ? "Radiant" : "base"}`;
-        writeCardVersion(id, false, []);
+        writeCardLevel(id, null);
         const normal = faceIn(id, radiant);
         expect(normal.querySelector(".cf-immersive"), where).toBeNull();
         const faces = new Map<string, { markup: string; picture: string }>([["normal", { markup: normal.outerHTML, picture: pictureOf(normal) }]]);
         cleanup();
         for (const version of VERSIONS.filter((each) => offeredOn(each, id))) {
           const at = `${where} ${version}`;
-          writeCardVersion(id, version, []);
+          writeCardLevel(id, version);
           const cf = faceIn(id, radiant);
           const art = windowOf(cf);
           expect(cf.getAttribute("data-version"), at).toBe(version);
@@ -270,8 +277,9 @@ describe("R2944001 every card offered a part 5 version draws it", () => {
 });
 
 describe("R2944002 Immersive's depth", () => {
-  it("R2944002 Immersive's depth takes a motion slot and holds still with Animated foil off, under Reduce motion and on a lazy face", () => {
-    expect(offeredOn(VERSION_IMMERSIVE_ID, BOTH) && offeredOn(AUGMENT_ANIMATED_ID, BOTH)).toBe(true);
+  it("R2944002 R3015000 Immersive's depth takes a motion slot and holds still with Animated foil off, under Reduce motion and on a lazy face", () => {
+    const IMMERSIVE_ANIMATED = `${VERSION_IMMERSIVE_ID}-animated`;
+    expect(offeredOn(VERSION_IMMERSIVE_ID, BOTH) && offeredOn(IMMERSIVE_ANIMATED, BOTH)).toBe(true);
     const def = CATALOG[BOTH];
     if (def === undefined) throw new Error(`no ${BOTH}`);
     const face = faceModel({ defId: BOTH, def, radiant: false });
@@ -286,16 +294,16 @@ describe("R2944002 Immersive's depth", () => {
       return [...container.querySelectorAll<HTMLElement>(".cf")];
     };
     const split = [...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"];
-    // Past the slots the rest hold still, Immersive alone or with Animated, one slot a face: its depth and its art's
-    // own motion move together.
-    writeCardVersion(BOTH, VERSION_IMMERSIVE_ID, []);
+    // Past the slots the rest hold still, Immersive's first level or its animated one, one slot a face: its depth and its
+    // art's own motion move together.
+    writeCardLevel(BOTH, VERSION_IMMERSIVE_ID);
     let faces = grid();
     expect(faces.map((cf) => cf.getAttribute("data-immersive-motion"))).toEqual(split);
     expect(faces.map((cf) => cf.getAttribute("data-art-motion"))).toEqual(faces.map(() => null));
-    // Without Animated the art's own layers stay still: only the near layer moves, by cards.css.
+    // At its first level the art's own layers stay still: only the near layer moves, by cards.css.
     for (const cf of faces) expect(drawnBy(nearOf(cf)), "Immersive alone").not.toContain("art-m-");
     cleanup();
-    writeCardVersion(BOTH, VERSION_IMMERSIVE_ID, [AUGMENT_ANIMATED_ID]);
+    writeCardLevel(BOTH, IMMERSIVE_ANIMATED);
     faces = grid();
     expect(faces.map((cf) => cf.getAttribute("data-immersive-motion"))).toEqual(split);
     expect(faces.map((cf) => cf.getAttribute("data-art-motion"))).toEqual(split);
@@ -325,7 +333,7 @@ describe("R2944002 Immersive's depth", () => {
   });
 
   it("R2944002 the near layer follows the pointer and the tilt only while it moves", () => {
-    writeCardVersion(BOTH, VERSION_IMMERSIVE_ID, []);
+    writeCardLevel(BOTH, VERSION_IMMERSIVE_ID);
     const cf = faceIn(BOTH, false);
     expect(cf.getAttribute("data-immersive-motion")).toBe("animated");
     const shift = (): [string, string] => [cf.style.getPropertyValue(IMMERSIVE_X_PROPERTY), cf.style.getPropertyValue(IMMERSIVE_Y_PROPERTY)];
@@ -383,34 +391,31 @@ describe("R2944002 Immersive's depth", () => {
   });
 });
 
-describe("R2944002 the augments on part 5's versions", () => {
+describe("R2944002 R3015000 the levels of part 5's variants", () => {
   /** A Stinkyscape Mythic Unit (Tylannt), a procedural Mythic Unit (Ceaseless Void) and a procedural Mythic Spell (Zephrys). */
   const CARDS = ["stinkyscape-006", "core-100", "core-097"] as const;
-  const AUGMENTS: readonly (readonly string[])[] = [[], [AUGMENT_ANIMATED_ID], [AUGMENT_SIGNATURE_ID], [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]];
 
-  it("R2944002 Animated, a foil, a finish and a border layer on Immersive and Prismatic, and Signature on none", () => {
+  it("R2944002 R3015002 a foil, a finish and a border layer at both levels of Immersive and Prismatic, the animated one moving its one picture, and none signs", () => {
     for (const id of CARDS) {
-      expect(offeredOn(AUGMENT_ANIMATED_ID, id), id).toBe(true);
       const versions = PART_FIVE.filter((version) => offeredOn(version, id));
       expect(versions, id).toEqual([...PART_FIVE]);
       for (const version of versions) {
-        for (const augments of AUGMENTS) {
-          writeCardVersion(id, version, augments);
+        for (const level of [version, `${version}-animated`]) {
+          expect(offeredOn(level, id), `${level} on ${id}`).toBe(true);
+          writeCardLevel(id, level);
           writeCardPick(id, "border", "border-runes");
           writeCardPick(id, "finish", "finish-stained-glass");
           writeCardPick(id, "foil", "foil-galaxy");
           const cf = faceIn(id, false);
-          const where = `${id} ${version} ${augments.join("+")}`;
-          const animated = augments.includes(AUGMENT_ANIMATED_ID);
-          // R2949000: Signature fits neither; the store keeps none.
-          expect(augmentsOf(lookOf(version, augments)).includes(AUGMENT_SIGNATURE_ID), where).toBe(false);
+          const where = `${id} ${level}`;
+          const animated = level !== version;
           expect(cf.getAttribute("data-version"), where).toBe(version);
+          expect(cf.getAttribute("data-level"), where).toBe(level);
           expect(cf.getAttribute("data-full-art"), where).toBeNull();
-          expect(cf.getAttribute("data-augments"), where).toBe(animated ? AUGMENT_ANIMATED_ID : null);
           expect(cf.querySelector(".card-text"), where).not.toBeNull();
           expect(cf.querySelector(".card-name"), where).not.toBeNull();
-          // Animated moves the version's own picture, taking a slot: on Immersive the hazed backdrop and the near
-          // subject both, in the one slot its depth holds.
+          // The animated level moves the variant's own picture, taking a slot: on Immersive the hazed backdrop and the
+          // near subject both, in the one slot its depth holds.
           expect(cf.getAttribute("data-art-motion"), where).toBe(animated ? "animated" : null);
           if (animated) expect(pictureOf(cf), where).toContain("art-m-");
           const near = nearOf(cf);
@@ -425,6 +430,13 @@ describe("R2944002 the augments on part 5's versions", () => {
           expect(cf.getAttribute("data-cosmetic-foil"), where).toBe("foil-galaxy");
           cleanup();
         }
+        // R3015005: an older pick of the version with Animated, and Signature too, wears its animated level, unsigned.
+        storeOlderPick(id, version, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+        const older = faceIn(id, false);
+        expect(older.getAttribute("data-level"), `${id} ${version}`).toBe(`${version}-animated`);
+        expect(older.getAttribute("data-art-motion"), `${id} ${version}`).toBe("animated");
+        expect(older.querySelector(".cf-signature"), `${id} ${version}`).toBeNull();
+        cleanup();
       }
     }
   });
@@ -466,20 +478,20 @@ describe("R2944002 the augments on part 5's versions", () => {
 });
 
 describe("R2944001 Radiant under part 5's looks", () => {
-  /** Two Mythic Units and a Mythic Spell offered both part 5 versions and Animated. */
+  /** Two Mythic Units and a Mythic Spell offered both levels of both part 5 variants. */
   const CARDS = ["stinkyscape-006", "core-100", "core-097"] as const;
 
-  it('R2944001 a Radiant face keeps data-radiant-face, data-art-variant="radiant", R277 marks and gold stats under every part 5 look; a base face has none', () => {
+  it('R2944001 R3015002 a Radiant face keeps data-radiant-face, data-art-variant="radiant", R277 marks and gold stats at every part 5 level; a base face has none', () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
-      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
       for (const version of PART_FIVE.filter((each) => offeredOn(each, id))) {
-        for (const augments of [[], [AUGMENT_ANIMATED_ID]]) {
-          writeCardVersion(id, version, augments);
+        for (const level of [version, `${version}-animated`]) {
+          writeCardLevel(id, level);
           for (const radiant of [false, true]) {
             const cf = faceIn(id, radiant);
-            const where = `${id} ${radiant ? "Radiant" : "base"} ${version} ${augments.join("+")}`;
+            const where = `${id} ${radiant ? "Radiant" : "base"} ${level}`;
             // The gold-foil frame, and the art's Radiant paint: washed back over the haze and the chrome, and on the
             // near layer's subject, drawn as it is.
             expect(cf.getAttribute("data-radiant-face"), where).toBe(radiant ? "true" : null);

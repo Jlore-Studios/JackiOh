@@ -195,6 +195,9 @@ string_union! {
     /// tag no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources:
     /// Reknite, Korrelite, Gellium, Axnit, Narcor and Red Narcor, tokens all) and Faction (the five
     /// Faction cards, #95 and #159 to #162), which the server admits from migration 0070.
+    /// Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
+    /// Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
+    /// Ranged through the layers (R3038000), which the server admits from migration 0080.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -225,6 +228,7 @@ string_union! {
         Legacy = "Legacy",
         Resource = "Resource",
         Faction = "Faction",
+        Starship = "Starship",
         Token = "Token",
     }
 }
@@ -298,8 +302,6 @@ pub enum SetStage {
     /// A set made for single-player modes (R1846001): never shipped, never in the catalog order,
     /// reached only by a catalog query's `everySet`.
     SinglePlayer,
-    /// A custom card's (§12.1, R915000): never in the catalog and never shipped.
-    Custom,
 }
 
 /// #3114, R3114000: one row of the set table, every fact the code reads per set.
@@ -325,8 +327,7 @@ macro_rules! set_table {
             /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
             /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
-            /// reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
-            /// shipped, so no pool or random deck finds one.
+            /// reserved.
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -453,7 +454,6 @@ set_table![
     TrainingGrounds = "Training Grounds" { stage: Shipped, segment: "traininggrounds", abbreviation: Some("TG"), shadow_ban_share: Some((1, 2)) },
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
-    Custom = "Custom" { stage: Custom, segment: "custom", abbreviation: None, shadow_ban_share: None },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
@@ -681,8 +681,9 @@ pub enum Keyword {
     /// card that is not one, so an Equip does not pass it on (R1852001).
     #[serde(rename = "Starship Piece")]
     StarshipPiece,
-    /// R1852003: what a launched Starship takes as it launches. No rule of its own; the cards that
-    /// name "your Starship" read it.
+    /// R3038001: kept for the shipped catalog snapshots (`crates/cards/patches/*.json`), which
+    /// print it on the Drone Battleships, and the replays that fold under them (R767000). No current
+    /// card prints or gains it: a launched Starship takes the Starship tag (R3038000) instead.
     Starship,
     /// R2657000: a Unit that can't be in Defense Position, by its own switch or an effect's, the
     /// keyword that took over from "Can't be in Defense Position" (`StaticFlags::never_defense`).
@@ -1235,7 +1236,7 @@ pub struct CardDef {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub printed_rarity: Option<PrintedRarity>,
     /// R1437000: what kind of thing the card is, for its animations only: no rule, pool, query,
-    /// validator or AI reads it. A transient or custom definition carries none, so a state that
+    /// validator or AI reads it. A transient definition carries none, so a state that
     /// holds one serializes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -1931,7 +1932,7 @@ mod tests {
         );
     }
 
-    // R1437000: a def with no flavor (every transient and custom one) reads and writes as before.
+    // R1437000: a def with no flavor (every transient one) reads and writes as before.
     #[test]
     fn r1437000_a_def_with_no_flavor_reads_and_writes_without_the_key() {
         let def = def_with("Draw a card.", vec![]);
@@ -1996,7 +1997,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            SetName::ALL[..10],
+            SetName::ALL[..9],
             [
                 Core,
                 Classic,
@@ -2006,8 +2007,7 @@ mod tests {
                 Stinkyscape,
                 TrainingGrounds,
                 Boss,
-                BossX,
-                Custom
+                BossX
             ]
         );
         let shipped: Vec<SetName> = CATALOG_SETS
@@ -2022,7 +2022,6 @@ mod tests {
                 .all(|set| set_row(*set).stage != SetStage::Held || !set_ships(*set))
         );
         assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX]);
-        assert!(!CATALOG_SETS.contains(&Custom));
     }
 
     // R3114001: a set's shadow-ban ceiling is its share of its non-token cards, rounded down.

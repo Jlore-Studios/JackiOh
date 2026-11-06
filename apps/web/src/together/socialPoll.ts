@@ -1,14 +1,20 @@
 // What a signed-in tab reads of the social layer on every screen, read once for all of them (#1831):
-// the open challenges and the unread counts, each every `SOCIAL_POLL_MS`. The shell's toast and Play
+// the open challenges and the unread counts, both every `SOCIAL_POLL_MS`, in one `GET /api/social`
+// (R3210000). The shell's toast and Play
 // together poll (`useSocialPoll`); the Friends button's badge only reads what they published
 // (`useSocialReads`). Nothing here is a rule (CLAUDE.md rule 7): a list is the server's answer, and a
-// session it refuses outright is not asked again until the tab holds another one.
+// session it refuses outright is not asked again until the tab holds another one. R3205000: the poll
+// sends nothing while the tab is hidden and reads once when it shows again, unless a challenge of the
+// player's own is open or just sent: that room expires, and the follow that takes the challenger to
+// the board rides this poll (`ChallengeToast.tsx`, `follow.ts`).
 
 import { useEffect, useSyncExternalStore } from "react";
 
+import { pollWhileVisible } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
-import { getChallenges, getUnread, type Challenge } from "../net/social.ts";
+import { getSocial, type Challenge } from "../net/social.ts";
 import { SOCIAL_POLL_MS } from "./config.ts";
+import { followingChallenge } from "./follow.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
 import { isQueueMode } from "../net/api.ts";
 
@@ -41,7 +47,7 @@ let reads: SocialReads = EMPTY;
 const listeners = new Set<() => void>();
 /** Screens polling now: the interval runs while there is one. */
 let pollers = 0;
-let handle: number | null = null;
+let stopPolling: (() => void) | null = null;
 /** Counts the times polling started over, so an answer to a read made before is dropped. */
 let generation = 0;
 let refusedToken: string | null = null;
@@ -78,17 +84,17 @@ function tick(): void {
     return;
   }
   const started = generation;
-  getChallenges().then(
+  getSocial().then(
     (answer) => {
       if (started !== generation) return;
       refusedToken = null;
-      // Read as lists of challenges whatever answered: the toast sits over every screen, and a server
-      // from before #936 has no such route.
+      // Read as lists of challenges and counts whatever answered: the toast sits over every screen.
       publish({
         ...reads,
         incoming: Array.isArray(answer.incoming) ? answer.incoming.filter(isChallenge) : NO_CHALLENGES,
         outgoing: Array.isArray(answer.outgoing) ? answer.outgoing.filter(isChallenge) : NO_CHALLENGES,
         challengeReads: reads.challengeReads + 1,
+        unread: unreadCountsOf(answer),
         refused: false,
       });
     },
@@ -98,22 +104,16 @@ function tick(): void {
       publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true });
     },
   );
-  getUnread().then(
-    (answer) => {
-      if (started === generation && token !== refusedToken) publish({ ...reads, unread: unreadCountsOf(answer) });
-    },
-    () => undefined,
-  );
 }
 
 function start(): void {
   tick();
-  handle = window.setInterval(tick, SOCIAL_POLL_MS);
+  stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, () => reads.outgoing.length > 0 || followingChallenge());
 }
 
 function stop(): void {
-  if (handle !== null) window.clearInterval(handle);
-  handle = null;
+  stopPolling?.();
+  stopPolling = null;
   generation += 1;
   refusedToken = null;
   publish(EMPTY);

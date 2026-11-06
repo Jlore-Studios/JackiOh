@@ -75,7 +75,7 @@ fn refusal(run: impl FnOnce()) -> Option<String> {
 
 /// Why setup refuses `opts`, from `validate_setup` and from `create_game`'s panic, which must agree.
 fn refused(opts: &CreateGameOptions) -> String {
-    let checked = validate_setup(opts, registered_catalog(), &IndexMap::new(), SetupKind::New)
+    let checked = validate_setup(opts, registered_catalog(), SetupKind::New)
         .expect_err("validate_setup refuses the marks")
         .message;
     let panicked = refusal(|| {

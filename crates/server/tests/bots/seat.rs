@@ -4,8 +4,7 @@
 //! (CLAUDE.md rule 4).
 
 use jackioh_ai::{
-    DeterminizeOptions, GREEDY_EVAL, NextSwing, candidate_set, determinize, evaluate, one_ply_scores,
-    random_action, redact, skill_miss_action,
+    GREEDY_EVAL, NextSwing, candidate_set, evaluate, one_ply_scores, random_action, skill_miss_action,
 };
 use jackioh_engine::{Action, ActionBody, GameState, Rng, seat_to_act};
 use jackioh_server::actor::engine::{
@@ -81,18 +80,12 @@ fn miss_tally(game: usize) -> MissTally {
             .iter()
             .any(|body| matches!(body, ActionBody::Play { .. }));
         let candidates = candidate_set(state, seat);
-        let det = determinize(
-            &redact(state, seat),
-            seat,
-            &mut Rng::new(&format!("{position}:det"), 0),
-            DeterminizeOptions {
-                match_shown_cost: Some(false),
-            },
-        );
-        let standing = evaluate(&det, seat, NextSwing::Enemy, &GREEDY_EVAL);
+        // Both pickers are graded on the board as it is. A third deal of what the seat cannot see
+        // set Traps the board does not hold, and a lethal the miss read right scored as a mistake.
+        let standing = evaluate(state, seat, NextSwing::Enemy, &GREEDY_EVAL);
         let bad: Vec<&ActionBody> = candidates
             .iter()
-            .zip(one_ply_scores(&det, seat, &candidates))
+            .zip(one_ply_scores(state, seat, &candidates))
             .filter(|(body, score)| matches!(body, ActionBody::Attack { .. }) && *score < standing)
             .map(|(body, _)| body)
             .collect();

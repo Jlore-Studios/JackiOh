@@ -5,23 +5,25 @@
 // R2715001: given a full-art card's motion (motion.ts), the procedural picture moves its own layers
 // (`data-art-moving`); the face decides when (CardFace, `useArtMotion`). A delivered file, a
 // Starship's art and a Legacy card's (R2724000) never move.
-// R2949000: given a `picture` of its own (pictures.ts), the procedural, Stinkyscape and Training Grounds
-// painters draw the card's subject in a picture seeded apart from its normal one (`data-art-picture`); a
-// Starship's art and a Legacy card's keep their one picture.
-// R2940001: Alt art's picture ("alt") is seeded apart as Signature's is; the Sketch ("sketch") pencils whatever
-// picture the window draws, a Starship's and a Legacy card's too. A delivered file is the normal picture's (and the
-// Signature look's, R2949000), so Alt art and the Sketch draw the painter's.
+// R2940001: given Alt art's picture ("alt", pictures.ts), the procedural, Stinkyscape and Training Grounds painters
+// draw the card's subject in a picture seeded apart from its normal one (`data-art-picture`); a Starship's art and a
+// Legacy card's keep their one picture. The Sketch ("sketch") pencils whatever picture the window draws, a
+// Starship's and a Legacy card's too. A delivered file is the normal picture's, so Alt art and the Sketch draw the
+// painter's. R3015002: every level of a variant gives its first level's picture here (versions.ts `artPictureOf`).
 // R2942001: Pixel ("pixel") and Comic ("comic") restyle the window's picture as the Sketch does (pictures.ts
 // `restyleOf`), a Starship's and a Legacy card's too, and draw the painter's in place of a delivered file.
 // R2943001: a Set showcase restyle ("showcase-…") does the same. Given a `part` other than "whole" (Out of frame's),
 // the procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop or its subject alone
 // (`data-art-part`), and a delivered file, which has no parts, gives way to the painter.
+// R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
+// (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
 import { useDefResolver } from "../refContext.tsx";
+import { artSubjectOf } from "./fusedArt.ts";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
@@ -51,7 +53,7 @@ export type CardArtProps = {
   starship?: { pieces: number; launched: boolean } | null;
   /** R2715001: the card's moving art, which its procedural picture draws in place of the still one; null holds it still. */
   motion?: ArtMotion | null;
-  /** R2949000, R2940001, R2942001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
+  /** R2940001, R2942001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
   picture?: ArtPicture;
   /** R2943001: which part of the picture the window draws (pictures.ts `ArtPart`); "whole" by default. */
   part?: ArtPart;
@@ -71,12 +73,12 @@ function classes(shape: ArtShape, className: string | undefined): string {
 }
 
 export function CardArt({
-  defId,
+  defId: shownId,
   radiant,
-  tags,
+  tags: shownTags,
   type,
   shape,
-  name,
+  name: shownName,
   manifest = ART_MANIFEST,
   className,
   lazy = false,
@@ -97,6 +99,8 @@ export function CardArt({
     });
   }, [near]);
   const resolve = useDefResolver();
+  // R3045000: a Miner or a Weapon fused onto a card leaves that card's art; its id, name and tags stand for the fusion's.
+  const { defId, name, tags } = artSubjectOf({ defId: shownId, name: shownName, tags: shownTags }, resolve);
   const theme = themeFor(tags, type);
   // R2170000, R2202000 and R2724000: the Stinkyscape and Training Grounds sets draw their own
   // families, and a Training Grounds Legacy card its own yard picture with its Core card's subject,
@@ -113,7 +117,7 @@ export function CardArt({
   // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship and a Legacy card draw it whole.
   const split = hasArtParts(defId, starship) ? part : "whole";
   const real = starship === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
-  // R2949000: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture.
+  // R2940001: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture.
   const ownPicture = picture !== "normal" && restyle === null && starship === null && coreId === null;
   const seedId = ownPicture ? artSeedOf(defId, picture) : defId;
 

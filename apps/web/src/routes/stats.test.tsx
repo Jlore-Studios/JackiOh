@@ -13,7 +13,7 @@ import { readCardPicks } from "../cards/cosmetics.ts";
 import { writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
-import { rememberRead } from "../net/readCache.ts";
+import { clearReadCache, expireRead, rememberRead } from "../net/readCache.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
 import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
@@ -52,23 +52,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       set: "core",
       games: 50,
       winRate: 0.6,
-      drawnGames: 40,
-      drawnWinRate: 0.65,
-      playedGames: 30,
-      playedWinRate: 0.7,
-      drawnNotPlayedGames: 10,
-      drawnNotPlayedWinRate: 0.5,
-      playedDelta: 0.2,
-      notDrawnGames: 10,
-      notDrawnWinRate: 0.4,
-      drawnDelta: 0.25,
       adjustedWinRate: 0.534,
       playRate: 0.5,
       hasEnoughGames: true,
-      playedRadiantGames: 30,
-      playedRadiantWinRate: 0.7,
-      playedNormalGames: 20,
-      playedNormalWinRate: 0.4,
     },
     {
       id: "core-002",
@@ -78,23 +64,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       set: "core",
       games: 10,
       winRate: 0.9,
-      drawnGames: 8,
-      drawnWinRate: 0.9,
-      playedGames: 5,
-      playedWinRate: 1.0,
-      drawnNotPlayedGames: 3,
-      drawnNotPlayedWinRate: 0.733,
-      playedDelta: 0.267,
-      notDrawnGames: 2,
-      notDrawnWinRate: 1.0,
-      drawnDelta: -0.1,
       adjustedWinRate: 0.497,
       playRate: 0.1,
       hasEnoughGames: false, // Below sample threshold (20)
-      playedRadiantGames: 5,
-      playedRadiantWinRate: 1.0,
-      playedNormalGames: 5,
-      playedNormalWinRate: 1.0,
     },
     {
       id: "core-003",
@@ -104,23 +76,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       set: "core",
       games: 30,
       winRate: 0.5,
-      drawnGames: 25,
-      drawnWinRate: 0.45,
-      playedGames: 20,
-      playedWinRate: 0.4,
-      drawnNotPlayedGames: 5,
-      drawnNotPlayedWinRate: 0.5,
-      playedDelta: -0.1,
-      notDrawnGames: 5,
-      notDrawnWinRate: 0.6,
-      drawnDelta: -0.15,
       adjustedWinRate: 0.486,
       playRate: 0.3,
       hasEnoughGames: true,
-      playedRadiantGames: 20,
-      playedRadiantWinRate: 0.4,
-      playedNormalGames: 10,
-      playedNormalWinRate: 0.5,
     },
   ],
   summary: {
@@ -163,19 +121,8 @@ const MOCK_KEYWORD_CARDS = {
       set: "core",
       games: 50,
       winRate: 0.6,
-      drawnGames: 40,
-      drawnWinRate: 0.65,
-      playedGames: 30,
-      playedWinRate: 0.7,
-      drawnNotPlayedGames: 10,
-      drawnNotPlayedWinRate: 0.5,
-      playedDelta: 0.2,
       playRate: 0.5,
       hasEnoughGames: true,
-      playedRadiantGames: 30,
-      playedRadiantWinRate: 0.7,
-      playedNormalGames: 20,
-      playedNormalWinRate: 0.4,
     },
     {
       id: "core-019",
@@ -185,19 +132,8 @@ const MOCK_KEYWORD_CARDS = {
       set: "core",
       games: 40,
       winRate: 0.55,
-      drawnGames: 35,
-      drawnWinRate: 0.5,
-      playedGames: 25,
-      playedWinRate: 0.6,
-      drawnNotPlayedGames: 10,
-      drawnNotPlayedWinRate: 0.5,
-      playedDelta: 0.1,
       playRate: 0.4,
       hasEnoughGames: true,
-      playedRadiantGames: 25,
-      playedRadiantWinRate: 0.6,
-      playedNormalGames: 15,
-      playedNormalWinRate: 0.45,
     },
     {
       id: "core-032",
@@ -207,19 +143,8 @@ const MOCK_KEYWORD_CARDS = {
       set: "core",
       games: 30,
       winRate: 0.5,
-      drawnGames: 25,
-      drawnWinRate: 0.45,
-      playedGames: 20,
-      playedWinRate: 0.5,
-      drawnNotPlayedGames: 5,
-      drawnNotPlayedWinRate: 0.5,
-      playedDelta: 0.0,
       playRate: 0.3,
       hasEnoughGames: true,
-      playedRadiantGames: 10,
-      playedRadiantWinRate: 0.8,
-      playedNormalGames: 20,
-      playedNormalWinRate: 0.5,
     },
     {
       id: "core-055",
@@ -229,19 +154,8 @@ const MOCK_KEYWORD_CARDS = {
       set: "core",
       games: 25,
       winRate: 0.45,
-      drawnGames: 20,
-      drawnWinRate: 0.4,
-      playedGames: 15,
-      playedWinRate: 0.45,
-      drawnNotPlayedGames: 5,
-      drawnNotPlayedWinRate: 0.4,
-      playedDelta: 0.05,
       playRate: 0.2,
       hasEnoughGames: true,
-      playedRadiantGames: 0,
-      playedRadiantWinRate: null,
-      playedNormalGames: 25,
-      playedNormalWinRate: 0.45,
     },
   ],
 };
@@ -254,22 +168,8 @@ const MOCK_CARD_STATS_EMPTY = {
     ...card,
     games: 0,
     winRate: null,
-    drawnGames: 0,
-    drawnWinRate: null,
-    playedGames: 0,
-    playedWinRate: null,
-    drawnNotPlayedGames: 0,
-    drawnNotPlayedWinRate: null,
-    playedDelta: null,
-    notDrawnGames: 0,
-    notDrawnWinRate: null,
-    drawnDelta: null,
     playRate: 0,
     hasEnoughGames: false,
-    playedRadiantGames: 0,
-    playedRadiantWinRate: null,
-    playedNormalGames: 0,
-    playedNormalWinRate: null,
   })),
   summary: {
     ...MOCK_CARD_STATS_PROVISIONAL.summary,
@@ -885,6 +785,8 @@ describe("R377 public statistics match type", () => {
     expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
     expect(window.location.search).toContain("mode=constructed");
 
+    // R3206000: the table of All modes was read a moment ago, inside the window; this asks for it after it.
+    expireRead(null, cardStatsPath({ mode: "all" }));
     vi.mocked(fetch).mockClear();
     await user.selectOptions(select, "all");
     await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
@@ -1005,6 +907,8 @@ describe("R377 public statistics match type", () => {
       "Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about 5.0 points.",
     );
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     vi.stubGlobal(
       "fetch",
@@ -1063,6 +967,8 @@ describe("R377 public statistics match type", () => {
     expect(within(item("core-003")).getByTestId(statsTestid.tierFit)).toHaveTextContent("75%");
     expect(within(item("core-002")).queryByTestId(statsTestid.tierFit)).toBeNull();
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     // A card of the tier with no range shows none and sorts after those with one, either way.
     serve(
@@ -1441,7 +1347,7 @@ describe("the drill-down's card preview", () => {
     // In the phone's column the body centers its items, which shrank the details column to its
     // content and left the skeleton's rows (`width: 100%` of it) no room for their lines.
     const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    const phone = /@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    const phone = /@media\s*\(max-width:\s*600px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
     const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
     expect(body).toMatch(/flex-direction:\s*column/);
     expect(body).toMatch(/align-items:\s*center/);
@@ -1717,6 +1623,8 @@ describe("R1966000 the Sets tab", () => {
     expect(noGames).toBeInTheDocument();
     expectEmptyState(noGames);
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: NOW.cards.slice(2) }), { status: 200 }));
     render(<StatsRoute />);
@@ -2106,6 +2014,8 @@ describe("R2370000 the Tokens toggle", () => {
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
     rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
+    // R3206000: an answer inside the window needs no read behind it; this one is as old as a past visit's.
+    expireRead(null, cardStatsPath({ mode: "all" }));
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 
@@ -2125,6 +2035,8 @@ describe("R2125000 the Cards tab opens on its last table", () => {
 
   it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
     rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
+    // R3206000: an answer inside the window needs no read behind it; this one is as old as a past visit's.
+    expireRead(null, cardStatsPath({ mode: "all" }));
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
     await waitFor(() => expect(held).toHaveLength(1), SLOW);

@@ -75,6 +75,8 @@ pub struct CtDefs {
     pub bigger: CardDef,
     /// A plain Unit to target.
     pub dummy: CardDef,
+    /// R3048000: Echo's shape naming a Spell to have while none has been played yet (`ping`).
+    pub echo_fallback: CardDef,
 }
 
 impl CtDefs {
@@ -95,6 +97,7 @@ impl CtDefs {
             self.counter.clone(),
             self.bigger.clone(),
             self.dummy.clone(),
+            self.echo_fallback.clone(),
         ]
     }
 }
@@ -127,6 +130,7 @@ pub static CT: LazyLock<CtDefs> = LazyLock::new(|| CtDefs {
             "radiant": { "attack": 2, "health": 18, "keywords": [], "text": "dummy radiant" },
         }),
     ),
+    echo_fallback: def("echo-fallback", 5915, "Spell", json!({})),
 });
 
 fn echo_base() -> Script {
@@ -137,6 +141,18 @@ fn echo_base() -> Script {
         }),
         records_play_as: Some(read_hook(|a| copied_text_of(a.state, a.self_))),
         ..Script::default()
+    }
+}
+
+/// R3048000: a copier that has `ct-ping`'s text while no Spell has been played.
+fn echo_fallback() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            copies_last_spell: Some(true),
+            copy_fallback: Some(CT.ping.id.clone()),
+            ..StaticFlags::default()
+        }),
+        ..echo_base()
     }
 }
 
@@ -295,6 +311,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             }),
         ),
         (CT.dummy.id.clone(), both(Script::default())),
+        (CT.echo_fallback.id.clone(), both(echo_fallback())),
     ])
 });
 

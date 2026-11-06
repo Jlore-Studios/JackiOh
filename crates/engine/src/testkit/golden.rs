@@ -32,9 +32,11 @@ pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.
 /// A change to what the state RECORDS about the same game leaves the log as it is and moves the hash alone:
 /// R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and R457 (§6.2; B5 E4), R943's Created
 /// mark and R982's last element (R1420), and #1837's tags (R1837000). A change to the game itself re-records
-/// the log (R244, R275, R276, R360–R366; #2179's Core #81 Radiant Saintess, #2368's mulligan, R2368000);
-/// where Cypress cannot be fetched, run spec 01's policy against the engine, first on the base build.
-pub const HOTSEAT_HASH: &str = "972f5b85";
+/// the log (R244, R275, R276, R360–R366; #2179's Core #81 Radiant Saintess, #2368's mulligan, R2368000; #3136's
+/// Can't Defend on Core #3, which took away the switch to Defense that kept a turn from ending by itself, and
+/// Core #20's 6 attack, which left the last hit one short); where Cypress cannot be fetched, run spec 01's policy
+/// against the engine, first on the base build.
+pub const HOTSEAT_HASH: &str = "512357ea";
 
 /// A game's first divergence from its trace.
 pub struct Mismatch {
@@ -109,8 +111,9 @@ pub fn hashed_state_text(state: &GameState) -> String {
 
 /// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
 /// (R1956001), a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000), the `hookResolving`
-/// markers (R2783000), an event's `via` (R2783001) or the other seat's count of a card picker's options
-/// (`optionCount`, R2739000): each dresses the view and plays no part in the game, as `hash_state`
+/// markers (R2783000), an event's `via` (R2783001), the other seat's count of a card picker's options
+/// (`optionCount`, R2739000) or the card an ability is printed on (`printedOn`, R3291000): each dresses
+/// the view and plays no part in the game, as `hash_state`
 /// leaves its `generators` out, so a trace recorded before it was sent replays as it did, and one
 /// recorded on this build replays on the build before it.
 pub fn view_texts(state: &GameState) -> [String; 2] {
@@ -124,6 +127,7 @@ pub fn view_texts(state: &GameState) -> [String; 2] {
         strip_key(&mut value, "sourceRadiant");
         strip_key(&mut value, "via");
         strip_key(&mut value, "optionCount");
+        strip_key(&mut value, "printedOn");
         canonical(&value)
     })
 }

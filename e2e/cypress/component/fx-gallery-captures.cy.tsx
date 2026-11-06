@@ -7,6 +7,7 @@ import { CATALOG } from "@jackioh/cards";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
+import { FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { FX_DRAWN_MOTIFS, type DrawnMotif } from "../../../apps/web/src/fx/motifs/names.ts";
 import {
   galleryCardEvents,
@@ -14,6 +15,7 @@ import {
   galleryPlayOf,
   type GalleryCardPlay,
 } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import {
   baseView,
   card,
@@ -46,8 +48,11 @@ function cardForMotif(motif: DrawnMotif): { defId: string; play: GalleryCardPlay
   return found;
 }
 
-/** Mounts the board, then plays the scene over it, as fx-layer.cy.tsx does. */
-function mountShown(initial: PlayerView, shown: PlayerView): void {
+/**
+ * Mounts the board, then plays the scene over it, as fx-layer.cy.tsx does. `before` runs on the page's
+ * window once the effects layer is on and just before the scene plays: where a test starts watching.
+ */
+function mountShown(initial: PlayerView, shown: PlayerView, before?: (win: Cypress.AUTWindow) => void): void {
   const lookup = lookupFromDefs(CATALOG);
   const noop = (): void => undefined;
   const board = (view: PlayerView) => (
@@ -59,6 +64,7 @@ function mountShown(initial: PlayerView, shown: PlayerView): void {
   );
   cy.mount(board(initial)).then(({ rerender }) => {
     cy.get(LAYER).should("have.attr", "data-fx", "on");
+    if (before !== undefined) cy.window().then(before);
     cy.then(() => rerender(board(shown)));
   });
 }
@@ -100,6 +106,39 @@ function waitLit(): Cypress.Chainable<boolean> {
   );
 }
 
+/** Where `watchGhosts` keeps its count on the page's window. */
+const GHOSTS_SEEN = "__fxGhostsSeen";
+
+type GhostWatch = { count: number; watch: MutationObserver };
+
+/**
+ * Counts, in the page itself, every `.fx-ghost` added to the document from now on. A ghost lives for a
+ * moment even at 0.25x, and on a loaded runner the page stalls for longer than that between two of
+ * Cypress's polls, so a `get` of one can miss every ghost the director ever mounted; a mutation
+ * record keeps the node it saw added after the node is gone.
+ */
+function watchGhosts(win: Cypress.AUTWindow): void {
+  (Reflect.get(win, GHOSTS_SEEN) as GhostWatch | undefined)?.watch.disconnect();
+  const seen: GhostWatch = {
+    count: 0,
+    watch: new win.MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof win.Element)) continue;
+          seen.count += (node.matches(".fx-ghost") ? 1 : 0) + node.querySelectorAll(".fx-ghost").length;
+        }
+      }
+    }),
+  };
+  seen.watch.observe(win.document.body, { childList: true, subtree: true });
+  Reflect.set(win, GHOSTS_SEEN, seen);
+}
+
+/** How many ghosts `watchGhosts` has seen added. */
+function ghostsSeen(win: Cypress.AUTWindow): number {
+  return (Reflect.get(win, GHOSTS_SEEN) as GhostWatch | undefined)?.count ?? 0;
+}
+
 describe("R2803000 the gallery captures every motif mid-flight", () => {
   // Software rendering stretches commits and frames past the default command timeout;
   // restored after so later specs keep theirs.
@@ -109,23 +148,30 @@ describe("R2803000 the gallery captures every motif mid-flight", () => {
   after(() => {
     Cypress.config("defaultCommandTimeout", 4_000);
   });
+  // The effects speed `shift` sets is the settings store's; put back after every test, a failed one included.
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
   // R2803000: `shift` proves its own visual. Its entry plans 20 ghosts + 20 canvas bursts
   // (unit), the director fires all of them in the browser (20 ghosts mount), but the canvas
   // stays dark there: firing 40 cues in one tick forces a full-board reflow per cue in software
   // rendering, stalling the frame loop ~700 ms, so the short-lived bursts age out before a frame
   // paints them (measured with rAF + canvas-pixel + director-play/fire timelines in headless
   // Chromium; see the audit report §7). The ghosts are the motif's signature — every moved
-  // card's path walked in the DOM (board.ts) — so `shift` asserts them, at 0.25× effects speed
-  // so their window outlasts the command queue; the tier test proves every cue's timing.
+  // card's path walked in the DOM (board.ts) — so `shift` asserts them, at the slowest effects
+  // speed (FX_SPEED_MIN) so their window outlasts the command queue, and through `watchGhosts` so
+  // a runner that stalls the page past even that window still counts the ghosts it mounted; the
+  // tier test proves every cue's timing. The speed is set through the store (`setFxSettings`):
+  // `getFxSettings()` keeps its first read in memory, so a value written to storage after an
+  // earlier test had loaded it was never read. The ghosts kept their full-speed 200 ms, mounting
+  // all twenty outlasted it, and a frame removed them unseen.
   for (const motif of FX_DRAWN_MOTIFS) {
     if (motif === "shift") {
       it(`R2803000 shift renders mid-flight`, () => {
         cy.viewport(1280, 720);
-        cy.window({ timeout: 20_000 }).then((win) => {
-          win.localStorage.setItem(
-            "jackioh.fx.v1",
-            JSON.stringify({ speed: 0.25, intensity: "normal", motion: "system", bigMoments: "full" }),
-          );
+        cy.then(() => {
+          setFxSettings({ speed: FX_SPEED_MIN });
         });
         const { defId, play } = cardForMotif(motif);
         const view = fullBoardView();
@@ -135,12 +181,11 @@ describe("R2803000 the gallery captures every motif mid-flight", () => {
           you: { ...view.you, hand: [...hand, card({ instanceId: "fx-gallery-card-1", defId })] },
         };
         const events = galleryCardEvents(defId, play, view, 1);
-        mountShown(view, withEvents(galleryFieldView(defId, staged), events));
-        cy.get(`${FX_DOM} .fx-ghost`).should("have.length.greaterThan", 0);
-        cy.screenshot(`gallery-motif-shift-mid`, { capture: "viewport", overwrite: true });
-        cy.window().then((win) => {
-          win.localStorage.removeItem("jackioh.fx.v1");
+        mountShown(view, withEvents(galleryFieldView(defId, staged), events), watchGhosts);
+        cy.window().should((win) => {
+          expect(ghostsSeen(win), "the ghosts of the moved cards mount").to.be.greaterThan(0);
         });
+        cy.screenshot(`gallery-motif-shift-mid`, { capture: "viewport", overwrite: true });
       });
       continue;
     }

@@ -10,6 +10,7 @@ import { CHAT_POLL_MS } from "@jackioh/server-config";
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
 import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
@@ -52,8 +53,7 @@ function serve(messages: ChatMessage[], special?: (call: Call) => Reply | undefi
       messages.push(sent);
       return { status: 201, body: { message: sent } };
     }
-    if (call.method === "GET" && call.path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
-    if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: { incoming: [], outgoing: [] } };
+    if (call.method === "GET" && call.path === "/api/social") return { status: 200, body: { incoming: [], outgoing: [], unread: {} } };
     return undefined;
   });
 }
@@ -118,6 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetVisibility();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -356,6 +357,27 @@ describe("B58 polling while open", () => {
     const before = server.to("GET", `/api/chat/${ANN.profileId}`).length;
     await settle({ advance: CHAT_POLL_MS * 3 });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(before);
+  });
+
+  it("R3205000 a hidden tab's open chat reads nothing, reads once when the tab shows, and goes on at its pace", async () => {
+    vi.useFakeTimers();
+    const server = serve(conversation());
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+    const reads = (): number => server.to("GET", `/api/chat/${ANN.profileId}`).length;
+    const first = reads();
+    expect(first).toBeGreaterThan(0);
+
+    setVisibility("hidden");
+    await settle({ advance: 3 * CHAT_POLL_MS });
+    expect(reads()).toBe(first);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads()).toBe(first + 1);
+
+    await settle({ advance: CHAT_POLL_MS });
+    expect(reads()).toBe(first + 2);
   });
 });
 
@@ -669,7 +691,7 @@ describe("B58 chat from the Friends panel", () => {
       </>,
     );
     await settle({ advance: SOCIAL_POLL_MS + 1 });
-    expect(server.to("GET", "/api/chat/unread")).toHaveLength(2);
+    expect(server.to("GET", "/api/social")).toHaveLength(2);
     expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
     expect(screen.queryByTestId("chat-input")).toBeNull();
     expect(server.calls.some((call) => call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`)).toBe(false);

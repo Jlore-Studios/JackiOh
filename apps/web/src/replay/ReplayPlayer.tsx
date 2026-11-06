@@ -18,6 +18,7 @@ import { scaleForSpeed } from "../game/animations.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { BackLink } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import { ReplayToolbar, isTyping, replayTestid } from "./ReplayToolbar.tsx";
@@ -227,11 +228,7 @@ export default function ReplayPlayer({
     };
   }, [playing, busy, at, current, last, fx.speed, show]);
 
-  const back = (
-    <button type="button" className="link-button" data-testid={replayTestid.back} onClick={onLeave}>
-      {t("← Back")}
-    </button>
-  );
+  const back = <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} />;
 
   if (failure !== null) {
     return (

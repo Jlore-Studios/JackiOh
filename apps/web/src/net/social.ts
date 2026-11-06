@@ -7,7 +7,7 @@
 
 import { apiRequest, type RequestOptions, type SendOptions } from "./api.ts";
 import { withSession } from "./gate.ts";
-import { cachedRead, rememberRead, updateCachedRead } from "./readCache.ts";
+import { cachedRead, keepRead, updateCachedRead } from "./readCache.ts";
 import { readSession } from "./session.ts";
 
 /** Another player as the social routes name one: the id for requests and keys, the username to show (R1436). */
@@ -72,7 +72,7 @@ export function cachedFriends(): FriendsList | undefined {
 export function getFriends({ keep = true }: { keep?: boolean } = {}): Promise<FriendsList> {
   return withSession(async (token) => {
     const answer = await apiRequest<FriendsList>(FRIENDS_PATH, { token });
-    if (keep) rememberRead(token, FRIENDS_PATH, answer);
+    if (keep) keepRead(token, FRIENDS_PATH, answer);
     return answer;
   });
 }
@@ -132,9 +132,19 @@ export async function unblockPlayer(profileId: string): Promise<void> {
 
 // Presence (B47)
 
-/** Sent by `usePresenceHeartbeat` every `PRESENCE_HEARTBEAT_MS`. */
+/** Sent by `usePresenceHeartbeat` once `PRESENCE_HEARTBEAT_MS` passes with no signed-in request (R3210000). */
 export async function heartbeat(): Promise<void> {
   await social<null>("/api/presence", { method: "POST" });
+}
+
+// The social poll (R3210000)
+
+/** What `getChallenges` and `getUnread` answer, in one read. */
+export type SocialRead = { incoming: Challenge[]; outgoing: Challenge[]; unread: Record<string, number> };
+
+/** The social poll's one read: the caller's open, unexpired challenges, both ways, and its unread counts. */
+export function getSocial(): Promise<SocialRead> {
+  return social<SocialRead>("/api/social");
 }
 
 // Challenges (B48, B49)

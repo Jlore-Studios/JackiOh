@@ -16,7 +16,8 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them; a call outside a decision passes `Prices::NONE` (plain
+through the search to the scorers that read them, with the one fact about the root they ride with, whether it
+holds a Starship (`starship_root`, R3038003); a call outside a decision passes `Prices::NONE` (plain
 `evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -87,7 +88,9 @@ with none waiting, nothing changes. A Dormant card (R1839000) acts in no line an
 it wakes, but the evaluation counts it as the unit it wakes as, `slumber_turn_share` of it per turn left
 on its countdown, or `slumber_waiting_share` with none (R2380000). A Unit standing in the backrow
 (R1081000) counts once, as the Unit it is, never again as a backrow card (`standing_unit_priced_once`,
-R2490000; off in `GREEDY_EVAL`). A unit's Death counts by what it
+R2490000; off in `GREEDY_EVAL`). A Unit in The Gauntlet's lanes threatens no face while The Gauntlet
+acts, since it may attack no hero: `face_threat` asks `attack_restriction`, as the lethal solver does
+(`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
@@ -421,7 +424,11 @@ pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards; 
   reply with the network's logit mapped back onto the hand eval's points, `points = hand + (b +
   net(x))·U/a` (R1010000, R1010001), taken at `LEARNED_CORRECTION_SHARE`: `hand + share·(points −
   hand)` (R1012001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
-  eval (R1010002).
+  eval (R1010002). So does a decision whose root holds a Starship (`holds_starship`, R3038003: a Dormant
+  or launched Starship on either side, or a Starship Piece on either field or in the seat's own hand, read
+  off the redacted view once and carried in `Prices.starship_root`), every line of it alike: the network
+  was fitted before the set, and the hand eval holds what a Starship leaves behind (R2566000, R2380000,
+  R3064000).
 - `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
   version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`

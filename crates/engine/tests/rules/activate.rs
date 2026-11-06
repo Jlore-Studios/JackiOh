@@ -175,7 +175,7 @@ fn instance_ids<E: serde::Serialize>(events: &[E]) -> Vec<Value> {
         .collect()
 }
 
-fn fuse_onto(
+fn fuse_card_onto(
     state: &mut GameState,
     ingredients: Vec<CardInstance>,
     target: &CardInstance,
@@ -1468,7 +1468,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         );
         let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         assert_eq!(
-            fuse_onto(&mut state, vec![other], &card).map(|fused| fused.id),
+            fuse_card_onto(&mut state, vec![other], &card).map(|fused| fused.id),
             Some(card.id.clone())
         );
         // R77: the kept card is the last ingredient, and what its text remembered moved to that place.
@@ -1500,7 +1500,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
             json!("mine"),
         );
         let copy = in_hand(&mut state, &keeper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![copy], &card);
+        fuse_card_onto(&mut state, vec![copy], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["recall", "recall#2"]);
         assert_eq!(
             why_not(&state, P1, &card.id, Some("recall")).as_deref(),
@@ -1526,7 +1526,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         let mut state = playing("fused-zapper");
         let card = put(&mut state, &zapper.id, slot(P1, Row::Backrow, 1), json!({}));
         let first = in_hand(&mut state, &spark.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![first], &card);
+        fuse_card_onto(&mut state, vec![first], &card);
         let after = act(
             &state,
             activate(
@@ -1546,7 +1546,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
             .memory
             .insert(PICK_KEY.to_string(), json!("beta"));
         let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["again", "beta", "gamma"]);
         assert_eq!(
             notes(&act(&state, activate(P1, &card.id, json!({ "ability": "beta" })))),
@@ -1565,7 +1565,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
             json!("spell"),
         );
         let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         let copy = round_trip(&state);
         let live = act(&state, activate(P1, &card.id, json!({ "ability": "recall" })));
         let restored = act(&copy, activate(P1, &card.id, json!({ "ability": "recall" })));
@@ -1579,7 +1579,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         let mut state = playing("fused-asker");
         let card = put(&mut state, &asker.id, slot(P1, Row::Backrow, 1), json!({}));
         let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         let paused = act(&state, activate(P1, &card.id, json!({ "ability": "ask" })));
 
         assert_eq!(notes(&paused), vec!["ask"]);
@@ -1608,8 +1608,8 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         let low = in_hand(&mut state, &low_teller.id, P1, 1).remove(0);
         let outer = in_hand(&mut state, &spark.id, P1, 1).remove(0);
         // Low Teller + High Teller, then a Spark fused onto that: High Teller's text runs at place 1.1.
-        fuse_onto(&mut state, vec![low], &card);
-        fuse_onto(&mut state, vec![outer], &card);
+        fuse_card_onto(&mut state, vec![low], &card);
+        fuse_card_onto(&mut state, vec![outer], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["tell", "tell#2"]);
         let before = round_trip(&state);
 
@@ -1645,7 +1645,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
             json!("spell"),
         );
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card);
+        fuse_card_onto(&mut state, vec![other], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["zap", "recall"]);
 
         let state = act(&state, activate(P1, &card.id, json!({ "ability": "recall" })));
@@ -1689,7 +1689,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
             json!("spell"),
         );
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card_inst);
+        fuse_card_onto(&mut state, vec![other], &card_inst);
 
         let live_card = card(&state, &card_inst.id);
         let views =
@@ -1727,7 +1727,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
             json!("spell"),
         );
         let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
-        fuse_onto(&mut state, vec![other], &card_inst);
+        fuse_card_onto(&mut state, vec![other], &card_inst);
         assert_eq!(
             uses_record_after_refund(&state, card(&state, &card_inst.id), Some("recall")),
             None
@@ -1777,7 +1777,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         let mut fused_state = state.clone();
         let other = in_hand(&mut fused_state, &zapper.id, P1, 1).remove(0);
         let live_target = card(&fused_state, &card_inst.id).clone();
-        fuse_onto(&mut fused_state, vec![live_target, other], &card_inst);
+        fuse_card_onto(&mut fused_state, vec![live_target, other], &card_inst);
 
         assert_eq!(
             why_not(&fused_state, P1, &card_inst.id, Some("recall")),
@@ -1802,6 +1802,157 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         assert_eq!(
             why_not(&state_after_zap, P1, &card_inst.id, Some("zap")),
             Some("that ability has already been used this turn".to_string())
+        );
+    }
+}
+
+mod r3291000_each_ability_names_the_card_that_prints_it {
+    use super::*;
+
+    /// Each ability the controller's view lists, with the definition its `printed_on` names, if any.
+    fn sources(state: &GameState, id: &str) -> Vec<(String, Option<String>)> {
+        jackioh_engine::subsystems::activate::activation_views_for(state, P1, card(state, id))
+            .expect("the card lists its abilities")
+            .into_iter()
+            .map(|view| (view.ability, view.printed_on.map(|card| card.def_id)))
+            .collect()
+    }
+
+    fn named(pairs: &[(&str, &str)]) -> Vec<(String, Option<String>)> {
+        pairs
+            .iter()
+            .map(|(ability, def)| ((*ability).to_string(), Some((*def).to_string())))
+            .collect()
+    }
+
+    #[test]
+    fn r3291000_an_unfused_cards_abilities_name_no_source() {
+        let mut state = playing("r3291000-own");
+        let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
+        card_mut(&mut state, &card.id)
+            .memory
+            .insert(PICK_KEY.to_string(), json!("alpha"));
+        assert_eq!(
+            sources(&state, &card.id),
+            vec![("alpha".to_string(), None), ("gamma".to_string(), None)]
+        );
+    }
+
+    #[test]
+    fn r3291000_a_fused_cards_abilities_each_name_their_ingredient_two_copies_both_name_it() {
+        let mut state = playing("r3291000-fused");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_card_onto(&mut state, vec![other], &card);
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[("zap", &zapper.id), ("recall", &keeper.id)])
+        );
+
+        let mut state = playing("r3291000-copies");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let copy = in_hand(&mut state, &keeper.id, P1, 1).remove(0);
+        fuse_card_onto(&mut state, vec![copy], &card);
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[("recall", &keeper.id), ("recall#2", &keeper.id)])
+        );
+    }
+
+    #[test]
+    fn r3291000_a_fuse_of_a_fuse_names_the_card_inside() {
+        let mut state = playing("r3291000-nested");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_card_onto(&mut state, vec![other], &card);
+        let outer = in_hand(&mut state, &endless.id, P1, 1).remove(0);
+        fuse_card_onto(&mut state, vec![outer], &card);
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[
+                ("again", &endless.id),
+                ("zap", &zapper.id),
+                ("recall", &keeper.id)
+            ])
+        );
+    }
+
+    /// An ability `has` leaves out takes its source with it: the ones after it keep their own.
+    #[test]
+    fn r3291000_an_ability_the_card_lacks_leaves_the_others_sources_in_place() {
+        let mut state = playing("r3291000-has");
+        let card = put(&mut state, &zapper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let first = in_hand(&mut state, &chooser.id, P1, 1).remove(0);
+        fuse_card_onto(&mut state, vec![first], &card);
+        card_mut(&mut state, &card.id)
+            .memory
+            .insert(PICK_KEY.to_string(), json!("beta"));
+        assert_eq!(
+            sources(&state, &card.id),
+            named(&[("beta", &chooser.id), ("gamma", &chooser.id), ("zap", &zapper.id)])
+        );
+    }
+
+    /// It dresses the view alone, so the golden traces' view text leaves it out and a trace recorded on
+    /// either side of it replays on the other.
+    #[test]
+    fn r3291000_the_golden_view_text_leaves_it_out() {
+        let mut state = playing("r3291000-golden");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_card_onto(&mut state, vec![other], &card);
+        let view = json_of(jackioh_engine::view_for(&state, P1)).to_string();
+        assert!(view.contains("\"printedOn\""), "the view names it");
+        let [p1, p2] = jackioh_engine::testkit::golden::view_texts(&state);
+        assert!(!p1.contains("printedOn") && !p2.contains("printedOn"));
+    }
+
+    /// I6: the card it names is one the viewer reads through the fused card, whose definition keeps its
+    /// `ingredients` (R468), so it is no hidden definition, though a copy of it waits in the other hand.
+    #[test]
+    fn r3291000_the_card_it_names_is_no_secret_while_a_copy_waits_in_the_other_hand() {
+        let mut state = playing("r3291000-i6");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        // Straight from the library, so no card p1 reads but the fused one carries the zapper's definition.
+        set_library(&mut state, P1, &[zapper.id.as_str()]);
+        let other = state.players[P1].library.remove(0);
+        fuse_card_onto(&mut state, vec![other], &card);
+        in_hand(&mut state, &zapper.id, P2, 1);
+        let view = jackioh_engine::view_for(&state, P1);
+        assert!(
+            json_of(&view)
+                .to_string()
+                .contains(&format!("\"printedOn\":{{\"defId\":\"{}\"", zapper.id))
+        );
+        assert_eq!(
+            hidden_information_violations(&state, P1, &view, &legal_actions(&state, P1)),
+            Vec::<String>::new()
+        );
+    }
+
+    /// The Radiant face an ingredient went in on is named with it.
+    #[test]
+    fn r3291000_a_radiant_fusion_names_its_ingredients_radiant() {
+        let mut state = playing("r3291000-radiant");
+        let kept = put(
+            &mut state,
+            &keeper.id,
+            slot(P1, Row::Backrow, 1),
+            json!({ "radiant": true }),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        card_mut(&mut state, &other.id).radiant = true;
+        let other = card(&state, &other.id).clone();
+        fuse_card_onto(&mut state, vec![other], &kept);
+        let views =
+            jackioh_engine::subsystems::activate::activation_views_for(&state, P1, card(&state, &kept.id))
+                .expect("listed");
+        assert!(
+            views.iter().all(|view| view
+                .printed_on
+                .as_ref()
+                .is_some_and(|card| card.radiant == Some(true))),
+            "{views:?}"
         );
     }
 }

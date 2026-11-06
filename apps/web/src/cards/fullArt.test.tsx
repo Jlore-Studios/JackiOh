@@ -88,7 +88,7 @@ describe("R1017001 full-art faces", () => {
         if (def.type === "Unit") expect(cf.querySelector(".cf-stats"), where).not.toBeNull();
         // The face prints less than its text (Mr. Vanilla has none): the preview and the detail view carry it whole.
         const model = faceModel({ defId: def.id, def, radiant });
-        expect(faceText(model), where).toEqual({ shown: "", short: null, less: model.text.full !== "" });
+        expect(faceText(model), where).toEqual({ shown: { full: "", spans: [] }, short: false, less: model.text.full !== "" });
         cleanup();
       }
     }
@@ -118,10 +118,24 @@ describe("R1017001 full-art faces", () => {
     }
   });
 
-  it("R1017001 a compact face (a face-up backrow card) keeps its window", () => {
-    const def = HEROES[0];
-    if (def === undefined) throw new Error("no hero card");
-    expect(faceOf(def.id, false, "compact").hasAttribute("data-full-art")).toBe(false);
+  it("R1017001 R3046000 a compact face (a face-up backrow card) prints full art too, its name below the art", () => {
+    // R1017001 kept the window of a compact face and a board minion; R3046000 amends it (fullArtBoard.test.tsx).
+    for (const def of HEROES) {
+      const cf = faceOf(def.id, false, "compact");
+      expect(cf.getAttribute("data-full-art"), def.id).toBe("true");
+      expect(cf.querySelector(".cf-art-frame > .cf-art")?.classList.contains("cf-art--full"), def.id).toBe(true);
+      expect(cf.querySelector(".card-type"), def.id).toBeNull();
+      expect(cf.querySelector(".card-name")?.textContent, def.id).toBe(def.name);
+      cleanup();
+    }
+  });
+
+  it("R1017001 a compact face of a card that is not full art keeps its window", () => {
+    const def = DEFS.find((each) => !isFullArtCard(each.id) && each.type === "Trap");
+    if (def === undefined) throw new Error("no Trap");
+    const cf = faceOf(def.id, false, "compact");
+    expect(cf.hasAttribute("data-full-art")).toBe(false);
+    expect(cf.querySelector(".card-type")).not.toBeNull();
   });
 
   it("R1017001 with the Full-art cards setting off, a hero's card prints its text like any card", () => {
@@ -133,7 +147,7 @@ describe("R1017001 full-art faces", () => {
       expect(cf.querySelector(".cf-art--full"), def.id).toBeNull();
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();
       expect(showsFullArt(model), def.id).toBe(false);
-      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model).shown);
+      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model).shown.full);
       cleanup();
     }
   });
@@ -155,7 +169,7 @@ describe("R1108000 no full art on a tutorial lesson's board", () => {
       expect(cf.hasAttribute("data-full-art"), def.id).toBe(false);
       expect(cf.querySelector(".cf-art--full"), def.id).toBeNull();
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();
-      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model, undefined, false).shown);
+      if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model, undefined, false).shown.full);
       cleanup();
     }
   });

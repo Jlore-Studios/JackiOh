@@ -47,7 +47,12 @@ asset tests out).
 
 The Stinkyscape set's entries (`stinkyscape-…`) draw `stinkyscape.ts`'s procedural art instead of
 `procedural.ts`'s: a space backdrop under one subject per family, each weapon the weapon its name says
-(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins.
+(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins. Two
+cards have a look of their own (R3142002): a Human Unit whose name holds "drone" (the Drone Commander) is the
+`crew` family's `commander`, an officer with a drone hovering behind her, where its name alone sends a card to
+the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
+a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
+and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's.
 
 ## The Training Grounds set's own art
 
@@ -57,34 +62,50 @@ Felinors, runes, posters and Golem each what the card is (R2202000). Its Legacy 
 (`SNAPSHOT_ART`) draw their Core card's subject in the yard, each with a touch of its own
 (`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id.
 
+## A fused card's art (R3045000)
+
+A fusion joins its ingredients' names and unions their tags, which this art reads. So `<CardArt>` first resolves the card
+whose art it draws (`fusedArt.ts`): a fused definition holding a Miner (Stinkyscape #62 to #66) or a Weapon-tagged card
+draws the last ingredient that is neither, the host an Equip was fused onto, by that card's id, name and tags, so its
+delivered file, family, seed and theme are the host's. Any other card, and a fusion whose ingredients a digest id hides,
+draws as it is handed; a Starship in play draws its own (R2249000).
+
 ## The full-art cards' moving art
 
 A full-art card's procedural picture also has a moving version (R2715001, `motion.ts`): given the
 card's recipe (`FULL_ART_MOTION`), the painters tag each layer by its role (background, subject,
 over, light, props, motes), add particles that suit the card, and put per-card keyframes in the
 picture, transform and opacity only, behind `prefers-reduced-motion`. Without a recipe the picture is
-byte for byte the still one. The Animated art, the Legendary and the Mythic wear it (R2715000), a few
-faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
+byte for byte the still one. Every animated level and the signed one above it wear it (R3015002, as the
+Animated art, the Legendary and the Mythic did, R2715000), a few faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
 version, so delivering a full-art card's file means delivering its motion too, or the card stops
 moving.
 
-## Pictures (R2949000)
+## Pictures (R2940001)
 
-A look with a picture of its own, the Signature look today, draws the card's own painter re-seeded:
+A look with a picture of its own, Alt art's today, draws the card's own painter re-seeded:
 `pictures.ts`'s `artSeedOf` joins the card's id and the picture's name. The Stinkyscape and Training
 Grounds painters keep the card's subject and grow the rest from that seed (backdrop, drift, layout,
 particles); the procedural painter keeps what the card's name, tags and type pick (its theme,
 composition and motif) and grows its figure, backdrop and particles from it. Either way the picture is
 still a pure function of the card's id, name, tags and type. The cache keys the seed in the card id's place, so a look's picture is never
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
-golden hash stands. The Signature look moves by `SIGNATURE_MOTION`, which no Animated motion is. A later
-version with a picture of its own (#2940's Alt full art) adds its own name to `ArtPicture`, so it draws
-apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
+draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+
+## One picture per variant (R3015002)
+
+A variant is a ladder of levels (`versions.ts`, R3015000), and every level of it draws its first
+level's picture (`artPictureOf`): Full art's levels the normal picture, Alt art's the `"alt"` one, the
+Sketch's full art the `"sketch"`, each one-art variant's animated level its own restyle. A level adds
+only the full-art frame, its picture's own motion (`artMotionFor`, the one motion a card has) and a
+signature, so a signed level is its variant's full art, moving, with the signed name. #2949's Signature
+look, a picture and a motion of its own, is gone: no `"signature"` picture and no `SIGNATURE_MOTION`.
 
 ## The versions' pictures (R2940001)
 
-Alt art and Alt full art draw the picture `"alt"`, seeded apart by `artSeedOf` as the Signature
-look's is, so the two versions share one picture and neither is the normal one or Signature's. The
+Alt art and Alt full art draw the picture `"alt"`, seeded apart by `artSeedOf`, so the two versions
+share one picture and neither is the normal one. The
 Sketch (`"sketch"`) draws no picture of its own: `sketchSvg` lays the normal picture, whichever
 painter drew it (a Legacy card's and a Starship's too), under one SVG filter, its greys dodged into
 line work, hatched in slate ink where it is dark and grained, on slate paper; a Radiant face washes

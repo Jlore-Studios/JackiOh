@@ -10,17 +10,18 @@
 # (a higher count in scripts/ci-shards.toml, a new test binary, or a group of its own in
 # .github/ci/rust-test.toml, #3072), never folded back into one long job.
 #
-#   rust       fmt and clippy, and, once the card scripts are Luau, luau-analyze --mode=strict; cargo
-#              test with the generated-types diff (V20), and the same diff for the scripts' typed
-#              module (#442 L10); the release builds of jackioh and jackioh-server, side by side,
-#              each made once for the run; the catalog, patches and spec checks and 200 fuzz seeds on
-#              that build of jackioh; on a pull
+#   rust       fmt and clippy; cargo test with the generated-types diff (V20); the release builds of
+#              jackioh and jackioh-server, side by side, each made once for the run; the catalog,
+#              patches and spec checks and 200 fuzz seeds on that build of jackioh; on a pull
 #              request, the classifier (#1360, R1365000, R1370000): its kind and tier as labels, and
 #              its pending fragments held to what it does to the cards; on a pull request from a
 #              training lane's ai/* branch, the training gate (README §8); and, when infra/ changed,
 #              its Terraform's fmt and validate (#1708), in the checks job.
-#   web        the two WASM modules, side by side, and the e2e client on them, each built once for
-#              the run; typecheck and eslint, of the Worker in front of the server (apps/edge) too;
+#   web        the two WASM modules, side by side: the browser's, and the C module (crates/wasm/c),
+#              the one a Roblox port translates (#2898), built for wasm32-unknown-unknown with its
+#              import section checked empty and its size in the job summary; the e2e client on the
+#              browser's, built once for the run; typecheck and eslint, of the Worker in front of
+#              the server (apps/edge) too;
 #              the web's and the Worker's unit tests in quarters, without the audio, fx and asset
 #              tests; and promote-production.test.ts in a job of its own, only when what it tests
 #              changed. None of these jobs runs Cypress, so none downloads its binary.
@@ -36,8 +37,8 @@
 #              of its own, bot-selftest.yml, that ran on every pull request (#1455).
 #
 # The release builds, the WASM modules and the built client travel between jobs as artifacts
-# (`rust-release-jackioh` and `rust-release-jackioh-server`, `web-wasm` and `web-wasm-luau`,
-# `web-build`), so each is compiled once per run, not once per job that uses it.
+# (`rust-release-jackioh` and `rust-release-jackioh-server`, `web-wasm`, `web-build`), so each is
+# compiled once per run, not once per job that uses it.
 #
 # Not run per pull request (README §7): e2e on Electron (dropped), the AI gates, coverage, the
 # 10,000-seed fuzz runs and the Duos wave, `golden check` (cargo test replays the same traces),
@@ -88,7 +89,8 @@
 # red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
 # the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
-# and stops once one of the five has failed (`queue-cancel-*`, at the end).
+# stops once one of the five has failed (`queue-cancel-*`, at the end), and cancels its own pull
+# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`).
 name: CI
 
 on:
@@ -159,7 +161,6 @@ jobs:
       rust_server: ${{ steps.scope.outputs.rust_server }}
       rust_ai: ${{ steps.scope.outputs.rust_ai }}
       rust_ai_slow: ${{ steps.scope.outputs.rust_ai_slow }}
-      rust_luau: ${{ steps.scope.outputs.rust_luau }}
       rust_tools_wasm: ${{ steps.scope.outputs.rust_tools_wasm }}
       web: ${{ steps.scope.outputs.web }}
       web_promote: ${{ steps.scope.outputs.web_promote }}
@@ -247,7 +248,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-          luau: "true"
       - name: cargo fmt --check
         run: cargo fmt --check
       # Also after a formatting failure, so one run reports both. Clippy builds the whole workspace
@@ -255,18 +255,6 @@ jobs:
       - name: cargo clippy
         if: ${{ !cancelled() }}
         run: cargo clippy --workspace --all-targets -- -D warnings
-      # #442 L10: every card script, and the typed module they require, under strict types. Skipped
-      # until the scripts are Luau (crates/cards/luau/jackioh.luau exists; the setup installs
-      # luau-analyze only then). `require("@jackioh")` resolves through the alias in
-      # crates/cards/src/scripts/.luaurc, which luau-analyze reads for every file below it, relative
-      # to the .luaurc's own directory and with the `.luau` added itself: the alias names the module
-      # without its extension (`../../luau/jackioh`), or every script fails "Unknown require". Lint
-      # warnings (an unused `J` in a script with no hooks) print and pass; a type error fails.
-      - name: luau-analyze --mode=strict
-        if: ${{ !cancelled() && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
-        run: |
-          # shellcheck disable=SC2046 # one argument per script on purpose.
-          luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau
 
   # Every crate's tests: the engine's rules and golden replay, every card, the AI's units, the server
   # on the fake store, the tools. The groups are .github/ci/rust-test.toml's, whose header says how
@@ -291,7 +279,7 @@ jobs:
       matrix:
         # The groups' jobs, from .github/ci/rust-test.toml and scripts/ci-shards.toml (the
         # `changes` job's `matrix` step): each entry's group, scope, cache, test, doc, binaries,
-        # luau, shard and shards, the last two 1 for a group its count does not split.
+        # shard and shards, the last two 1 for a group its count does not split.
         include: ${{ fromJSON(needs.changes.outputs.rust_test) }}
     steps:
       # Anything but an exact `false` runs the group, so an empty line (a doubt) never skips it.
@@ -376,33 +364,16 @@ jobs:
             git --no-pager diff --stat -- apps/web/src/wire
             exit 1
           fi
-      # crates/luau's export_api test writes crates/cards/luau/jackioh.luau from the Rust types
-      # (ts-rs, under the crate's `ts` feature, which the `luau` group's own run turns on, so this
-      # runs it again without compiling anything), and what it wrote must be what is committed.
-      # Skipped until the module exists, as on main before v0.4.0, whose crates/luau has no `ts`
-      # feature.
-      - name: the card scripts' typed module is what the Rust generates (#442 L10)
-        if: ${{ steps.scope.outputs.run == 'true' && matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
-        run: |
-          cargo test -p jackioh-luau --features ts --test export_api
-          changed=$(git status --porcelain -- crates/cards/luau)
-          if [ -n "$changed" ]; then
-            echo "::error::crates/cards/luau/ differs from what the Rust generates. Regenerate it with \`cargo test -p jackioh-luau --features ts --test export_api\` and commit the result."
-            echo "$changed"
-            git --no-pager diff --exit-code -- crates/cards/luau
-            exit 1
-          fi
 
   # The release binaries, built once for the run, each in a job of its own and side by side
   # (#2540): `jackioh` (the CLI the checks and the classifier run, and e2e spec 01's and 13's replay
   # check) and `jackioh-server` (which e2e smoke boots). In one job they took it to 7m 53s with every
   # core busy: on four, the dependencies cached, the two compiled in 338 s, the server's library 219
   # of them. Apart, each compiles only what its binary links, with that binary's own crate at
-  # opt-level 0, as its `cargo test` groups build it (and jackioh-luau, which only a custom card
-  # reaches): `jackioh` in 159 s, `jackioh-server` in 152. The engine, the cards and the AI keep
-  # Cargo.toml's opt-level 3, so every game played on these binaries runs as fast as before: fuzz
-  # 200 took 37 s against 34, the classifier's 8 self-play games 100 s against 103, their logs byte
-  # for byte the same. The server alone builds the engine without `testkit`, as the deploy image
+  # opt-level 0, as its `cargo test` groups build it: `jackioh` in 159 s, `jackioh-server` in 152.
+  # The engine, the cards and the AI keep Cargo.toml's opt-level 3, so every game played on these
+  # binaries runs as fast as before: fuzz 200 took 37 s against 34, the classifier's 8 self-play games
+  # 100 s against 103, their logs byte for byte the same. The server alone builds the engine without `testkit`, as the deploy image
   # does; that feature adds only test seams, which nothing sets outside a test. Each binary keeps a
   # Rust cache of its own (`cache-key`), or the two would share one entry that the first to finish
   # writes. The checks run on `jackioh` in their own job, so a failed check never keeps the binaries
@@ -423,7 +394,7 @@ jobs:
       matrix:
         include:
           - binary: jackioh
-            build: -p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0 --config profile.release.package.jackioh-luau.opt-level=0
+            build: -p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0
           - binary: jackioh-server
             build: -p jackioh-server --config profile.release.package.jackioh-server.opt-level=0
     steps:
@@ -794,7 +765,7 @@ jobs:
           fi
           # Each rust-test group skips its own steps on its own line, so the matrix is green either way.
           if [ "$CLIPPY" = false ]; then
-            echo "no Rust or Luau source, manifest or lint setting changed: fmt and clippy skipped (scripts/ci-scope.sh)"
+            echo "no Rust source, manifest or lint setting changed: fmt and clippy skipped (scripts/ci-scope.sh)"
           else
             test "$LINT" = success
           fi
@@ -813,9 +784,8 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # The two WASM modules (scripts/build-wasm.sh, SURFACE §10.2), each in a job of its own and side
-  # by side: the normal module, and the Luau module (#919), which links through emscripten. One
-  # after the other in one job they took over seven minutes (#959). Neither needs the runner's
-  # Node; the Luau one's emsdk brings its own.
+  # by side: the browser module, and the C module. Neither installs Node; both use the runner's own
+  # (the browser one's brotli step, the C one's import check).
   wasm:
     name: web (wasm module)
     needs: changes
@@ -828,12 +798,9 @@ jobs:
         with:
           node: "false"
       - name: the WASM module
-        env:
-          JACKIOH_WASM_LUAU: "0"
         run: sh scripts/build-wasm.sh
-      # Without pkg/luau, which the next job packs: each module travels alone.
       - name: pack it
-        run: tar -czf "$RUNNER_TEMP/web-wasm.tgz" --exclude=apps/web/src/wasm/pkg/luau apps/web/src/wasm/pkg
+        run: tar -czf "$RUNNER_TEMP/web-wasm.tgz" apps/web/src/wasm/pkg
       - uses: actions/upload-artifact@v4
         with:
           name: web-wasm
@@ -841,42 +808,56 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  wasm-luau:
-    name: web (wasm luau module)
+  # The C module (crates/wasm/c, #3093, SURFACE §10.5), the engine's boundary for a host that is not
+  # JavaScript and the module a Roblox port translates (#2898): one plain `wasm32-unknown-unknown`
+  # link, so it must instantiate with an empty import object. `JACKIOH_WASM_C=1` builds it and
+  # `scripts/build-wasm.sh` reads the built module's import section with node, failing the job on
+  # any import (a wasm-bindgen glue, a JavaScript function, a system call). Its size goes to the job
+  # summary, for #2898's risk 3 (the translated module's weight). No artifact: nothing in the web
+  # loads it.
+  wasm-c:
+    name: web (wasm c module)
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           node: "false"
-          emsdk: "true"
-      - name: the Luau WASM module
+      - name: the C WASM module, and its import section
         env:
           JACKIOH_WASM_NORMAL: "0"
+          JACKIOH_WASM_C: "1"
         run: sh scripts/build-wasm.sh
-      - name: pack it
-        run: tar -czf "$RUNNER_TEMP/web-wasm-luau.tgz" apps/web/src/wasm/pkg/luau
-      - uses: actions/upload-artifact@v4
-        with:
-          name: web-wasm-luau
-          path: ${{ runner.temp }}/web-wasm-luau.tgz
-          if-no-files-found: error
-          retention-days: 1
+      - name: its size, in the job summary
+        run: |
+          module=target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm
+          raw=$(wc -c < "$module")
+          gzipped=$(gzip -9 -c "$module" | wc -c)
+          {
+            echo "### The C module (the one a Roblox port translates, #2898)"
+            echo
+            echo "| jackioh_wasm_c.wasm | bytes |"
+            echo "| --- | ---: |"
+            echo "| as built | $raw |"
+            echo "| gzip -9 | $gzipped |"
+            echo
+            echo "Its import section is empty (scripts/build-wasm.sh checked it)."
+          } >> "$GITHUB_STEP_SUMMARY"
 
-  # The e2e client on both modules, once for the run: `vite build --mode development`, as `pnpm
+  # The e2e client on the browser module, once for the run: `vite build --mode development`, as `pnpm
   # build:e2e` runs it (BUILD M5-T3's `window.__jackioh` needs the mode: a plain `build` strips it),
-  # but without the script's `prebuild:e2e`, which would compile both modules again here. Its
-  # artifact, `web-build`, holds the modules and the client: the unit tests and the typecheck read
-  # the modules, e2e smoke serves the client.
+  # but without the script's `prebuild:e2e`, which would compile the module again here. Its
+  # artifact, `web-build`, holds the module and the client: the unit tests and the typecheck read
+  # the module, e2e smoke serves the client.
   # This job and the three below it install the workspace, e2e/ included, and run no browser: the
   # Cypress binary that install would download (several hundred megabytes from Cypress's own
   # servers, which took this job to 8m 4s, the build itself 3 s, #2223) is for e2e smoke alone.
   web-build:
     name: web (client build)
-    needs: [changes, wasm, wasm-luau]
+    needs: [changes, wasm]
     if: ${{ needs.changes.outputs.full == 'true' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -891,14 +872,8 @@ jobs:
         with:
           name: web-wasm
           path: ${{ runner.temp }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: web-wasm-luau
-          path: ${{ runner.temp }}
-      - name: unpack the WASM modules
-        run: |
-          tar -xzf "$RUNNER_TEMP/web-wasm.tgz"
-          tar -xzf "$RUNNER_TEMP/web-wasm-luau.tgz"
+      - name: unpack the WASM module
+        run: tar -xzf "$RUNNER_TEMP/web-wasm.tgz"
       - name: the e2e client
         run: pnpm --dir apps/web exec vite build --mode development
       # R3074000: the dev dashboard's own client, its development bundle (the one that reads the e2e
@@ -989,12 +964,13 @@ jobs:
         run: >-
           pnpm exec vitest run --project web --project edge --project admin --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'
-          --exclude '**/src/net/promote-production.test.ts'
+          --exclude '**/src/net/promote-production.test.ts' --exclude '**/src/net/promote-staging.test.ts'
 
   # promote-production.test.ts, a minute and a half of git clones testing a script that seldom
   # changes (scripts/promote-production.sh), beside the shards rather than after one of them
   # (#2223), and only when scripts/ci-scope.sh's `web_promote` says what it runs or reads changed;
-  # super.yml's `web-extra` runs it daily whatever changed. src/test/setup.ts loads the WASM module
+  # super.yml's `web-extra` runs it daily whatever changed. promote-staging.test.ts, the same kind of
+  # test of scripts/promote-staging.sh (#3275), runs beside it. src/test/setup.ts loads the WASM module
   # for every test file, so it unpacks `web-build` as the shards do.
   web-promote:
     name: web (promote-production)
@@ -1016,11 +992,11 @@ jobs:
       - name: unpack the WASM modules
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: vitest
-        run: pnpm exec vitest run --project web src/net/promote-production.test.ts
+        run: pnpm exec vitest run --project web src/net/promote-production.test.ts src/net/promote-staging.test.ts
 
   web:
     name: web
-    needs: [changes, wasm, wasm-luau, web-build, web-check, web-unit, web-promote]
+    needs: [changes, wasm, wasm-c, web-build, web-check, web-unit, web-promote]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1031,14 +1007,14 @@ jobs:
           WEB: ${{ needs.changes.outputs.web }}
           E2E: ${{ needs.changes.outputs.e2e }}
           WASM: ${{ needs.wasm.result }}
-          WASM_LUAU: ${{ needs.wasm-luau.result }}
+          WASM_C: ${{ needs.wasm-c.result }}
           BUILD: ${{ needs.web-build.result }}
           CHECK: ${{ needs.web-check.result }}
           UNIT: ${{ needs.web-unit.result }}
           WEB_PROMOTE: ${{ needs.changes.outputs.web_promote }}
           PROMOTE: ${{ needs.web-promote.result }}
         run: |
-          echo "full=$FULL web=$WEB e2e=$E2E wasm=$WASM wasm-luau=$WASM_LUAU build=$BUILD check=$CHECK unit=$UNIT web_promote=$WEB_PROMOTE promote=$PROMOTE"
+          echo "full=$FULL web=$WEB e2e=$E2E wasm=$WASM wasm-c=$WASM_C build=$BUILD check=$CHECK unit=$UNIT web_promote=$WEB_PROMOTE promote=$PROMOTE"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
@@ -1049,7 +1025,7 @@ jobs:
             exit 0
           fi
           test "$WASM" = success
-          test "$WASM_LUAU" = success
+          test "$WASM_C" = success
           test "$BUILD" = success
           if [ "$WEB" = false ]; then
             echo "nothing the web's typecheck, lint or unit tests read changed (scripts/ci-scope.sh)"
@@ -1532,3 +1508,43 @@ jobs:
           REPO: ${{ github.repository }}
           RUN: ${{ github.run_id }}
         run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"
+
+  # A merge-queue build the queue has rebuilt is dead: when a pull request leaves the queue (it
+  # failed, conflicted, or was taken out), the queue builds every one behind it again on a new
+  # `gh-readonly-queue/main/pr-<n>-<sha>` branch, and GitHub leaves the old build running. Each old
+  # build holds the runners every live one waits for (on 2026-11-06, #3249's and #3216's old builds
+  # were still queued an hour after the queue had rebuilt both). So each build cancels the older ones
+  # of its own pull request at its start, beside `changes` and with no checkout, as the
+  # `queue-cancel-*` jobs do: a pull request has one entry in the queue, so only its newest build
+  # counts. A same-named branch's older build is already the concurrency group's to cancel. The bots
+  # leave a build cancelled with no job failed alone (bot/go/internal/events `QueueBuildFailed`), and
+  # no required check needs this job, so it can only free runners. Never fails the run.
+  queue-supersede:
+    name: cancel the pull request's older queue builds
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the older builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+          REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          branch=${REF#refs/heads/}
+          prefix="${branch%-*}-"
+          case "$prefix" in
+            gh-readonly-queue/*/pr-[0-9]*-) ;;
+            *) echo "not a queue branch: $branch"; exit 0 ;;
+          esac
+          gh run list -R "$REPO" --workflow ci.yml --event merge_group --limit 100 \
+            --json databaseId,headBranch,status \
+            --jq ".[] | select(.status != \"completed\" and .databaseId < $RUN and (.headBranch | startswith(\"$prefix\"))) | .databaseId" |
+            while read -r id; do
+              echo "run $id is an older queue build of this pull request; cancelling it"
+              gh run cancel "$id" -R "$REPO" || echo "run $id had ended"
+            done

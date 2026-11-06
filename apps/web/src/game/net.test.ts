@@ -1,7 +1,7 @@
 // `game/net.ts` protocol coverage through a fake WebSocket.
 // Injected socket, timer and clock seams keep it deterministic without a server.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
@@ -13,6 +13,7 @@ import {
   awaitsYou,
   createMatchClient,
   parseServerFrame,
+  pollWhileVisible,
   remainingMs,
   socketUrlFor,
   viewDerivedState,
@@ -20,7 +21,7 @@ import {
   type SocketLike,
   type Timers,
 } from "./net.ts";
-import { setVisibility } from "../test/setup.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 
 /** #1664: what a result's write paid the account. */
 const ECONOMY = {
@@ -1060,5 +1061,92 @@ describe("awaitsYou (#1792)", () => {
     expect(awaitsYou(baseView(), false)).toBe(false);
     expect(awaitsYou(baseView({ active: "p2" }), true)).toBe(true);
     expect(awaitsYou(baseView({ pending: pendingFor("discover", []) }), false)).toBe(true);
+  });
+});
+
+describe("R3205000 pollWhileVisible", () => {
+  const PERIOD = 1000;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetVisibility();
+  });
+
+  it("R3205000 reads every period while the page is visible", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD);
+    vi.advanceTimersByTime(3 * PERIOD);
+    expect(read).toHaveBeenCalledTimes(3);
+    stop();
+  });
+
+  it("R3205000 a hidden page's timer sends nothing, showing it reads once at once and the cadence resumes a full period later", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD);
+    setVisibility("hidden");
+    vi.advanceTimersByTime(5 * PERIOD);
+    expect(read).not.toHaveBeenCalled();
+
+    setVisibility("visible");
+    expect(read).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(PERIOD - 1);
+    expect(read).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
+    expect(read).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("R3205000 a page that starts hidden reads nothing until it shows", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    setVisibility("hidden");
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD);
+    vi.advanceTimersByTime(3 * PERIOD);
+    expect(read).not.toHaveBeenCalled();
+    setVisibility("visible");
+    expect(read).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("R3205000 the network coming back reads once, hidden or not", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD);
+    setVisibility("hidden");
+    window.dispatchEvent(new Event("online"));
+    expect(read).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(PERIOD - 1);
+    expect(read).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("R3205000 keepRunning keeps a hidden page polling", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const read = vi.fn();
+    let keep = true;
+    const stop = pollWhileVisible(read, PERIOD, () => keep);
+    setVisibility("hidden");
+    vi.advanceTimersByTime(2 * PERIOD);
+    expect(read).toHaveBeenCalledTimes(2);
+
+    keep = false;
+    vi.advanceTimersByTime(3 * PERIOD);
+    expect(read).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("R3205000 the returned stop ends the timer and the wakes", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD);
+    stop();
+    vi.advanceTimersByTime(3 * PERIOD);
+    setVisibility("hidden");
+    setVisibility("visible");
+    window.dispatchEvent(new Event("online"));
+    expect(read).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

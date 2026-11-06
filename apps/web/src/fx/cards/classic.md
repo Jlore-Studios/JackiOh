@@ -36,7 +36,7 @@ gallery plays every entry.
 | `classic-011` | Mind Melt | Spell | cast vanish | 1.08 | vanish | cast: the census agrees (vanish) |
 | `classic-012` | Book of Blood | Spell | cast bolt Dark/blood | 1.35 | lance | cast: it hits one Unit, a bolt; the census's lance counted its Lifesteal heal as a second target; blood sub-look |
 | `classic-013` | Boots on the Ground | Unit | none: its draw comes as it attacks, which takes no hook marker | — | none: vanilla | the census agrees: its draw comes in combat, which opens no hook window |
-| `classic-014` | Shadowstep | Trap | cast recall Dark/shadow | 1.16 | none: vanilla | cast: its firing bounces your dying Units to the hand, which recall (R2794000) reads; #2793's send flies a made card from the hero, not one back; shadow sub-look |
+| `classic-014` | Shadowstep | Trap | cast recall Dark/shadow | 1.08 | none: vanilla | cast: its firing bounces your dying Units to the hand, which recall (R2794000) reads; #2793's send flies a made card from the hero, not one back; shadow sub-look |
 | `classic-015` | Nose Hunter | Unit | activate vanish | 1.08 | vanish | activate: the census agrees (vanish) |
 | `classic-016` | Book of Flame | Spell | cast scorch Fire | 1.35 | bolt | kept: #2784's example; scorch burns where the bolt lands |
 | `classic-017` | Counterspell | Trap | cast negate | 1.16 | negate | cast: the census agrees (negate) |
@@ -84,7 +84,7 @@ gallery plays every entry.
 | `classic-059` | Plague Doctor | Unit | cry bolt | 1.08 | bolt | cry: the census agrees (bolt) |
 | `classic-060` | Pile On | Spell | cast conjure Physical/sport | 1.75 | none: no motif reads summoned | cast: no census family reads summoned, which conjure (#2786) reads; sport sub-look |
 | `classic-061` | Plague Bringer Goliath | Unit | cry tally | 1.36 | offering | cry: the census's offering read its Tribute, a cost; its Cry places counters, which tally (#2786) reads |
-| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.19 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
+| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.28 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
 | `classic-063` | Crop Dusting | Trap | cast tally | 1.08 | nova | cast: the census's nova read fatigue; it places counters, which tally (#2786) reads |
 | `classic-064` | Malzahar's Recycler | Field Spell | cast flight; trigger flight; aura arcane side | 1.19 | bolt | cast and trigger: fatigue; it draws, which flight (#2786) reads |
 | `classic-065` | Ace in the Hole | Trap | cast conjure | 1.16 | none: vanilla | cast: its Recruit summons, which conjure (#2786) reads |
