@@ -14957,17 +14957,18 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-06T12:42:30Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "42219928223",
+      "run_id": "pending:5a79c6e6-1793985634",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 105,
-      "started_at": "2026-11-06T12:44:01Z",
+      "started_at": "2026-11-06T17:21:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -16394,9 +16395,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T17:05:07Z",
+    "at": "2026-11-06T17:21:09Z",
     "url": "",
-    "what": "build #3212 on claude-4"
+    "what": "spot-check #3268 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T17:01:43Z",
@@ -32783,7 +32784,15 @@
         "n": 105,
         "pr": 3268,
         "queued_at": "2026-11-06T17:07:33Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:5a79c6e6-1793985634",
         "sha": "5afc00a43a9e5329cf1a829696420a6e7cdd52be",
+        "started_at": "2026-11-06T17:21:09Z",
         "status": "queued",
         "title": "Patch: phone board: empty zones keep a card shape, keyword and Activate badges inside their own zone's top-left",
         "tries": 0
