@@ -17281,9 +17281,11 @@
         "by": "`claude` (strong)",
         "sha": "a31c623002c5006bb7d6697eca88e3fc1170664c"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-05T21:44:42Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-05T23:04:27Z",
         "family": "claude",
@@ -17293,6 +17295,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null; git status --short; git diff 9045dbafbd5c5e3e8e1bcfea91a631b99d4b09e9...HEAD --stat; git log --oneline -3; grep -n \\\"roll_power_on_field\\\\|discover_power\\\"\u2026\n- Bash: {\"command\": \"cat scripts/build-wasm.sh; echo ---; env | grep -i -E \\\"cargo|rustflags\\\" | grep -v -i token\", \"description\": \"Inspect wasm build script and cargo env\"}\n- Bash: {\"command\": \"git -C /home/runner/work/JackiOh/JackiOh log --oneline -1 2>&1; git worktree list 2>&1 | head; ls /home/runner/work/_temp/work/\", \"description\": \"Check main checkout and other worktrees\"}\n- Bash: {\"command\": \"grep -n \\\"INFLATION_CHANCE_STEP\\\" crates/engine/src/config.rs | head; grep -n \\\"copy_fallback\\\" crates/engine/src/*.rs | head -3; grep -rn \\\"Starship\\\" crates/engine/src | head -2; ls ..\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- pass 2: the red `web tests` check is cargo building jackioh-cards (this tree's) against a stale jackioh-engine rlib\\n from the shared CARGO_TARGET_DIR (/h\u2026\n- Bash: {\"command\": \"git diff 9045dbafbd5c5e3e8e1bcfea91a631b99d4b09e9...HEAD\", \"description\": \"Show the branch diff\"}\n- said: The diff is as planned. I'm waiting for the rerun of the check to finish.\n- Bash: {\"command\": \"tail -c 1500 /tmp/webtests-3244.log\", \"description\": \"Peek at rerun progress\"}\n- Monitor: {\"command\": \"until grep -q '^exit=' /tmp/webtests-3244.log; do sleep 20; done; tail -n 30 /tmp/webtests-3244.log\", \"description\": \"Wait for web tests rerun\", \"timeout\": \"3600000\"}\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q '^exit=' /tmp/webtests-3244.log, tail -n 30 /tmp/webtests-3244.log\n- Bash: {\"command\": \"timeout 590 sh -c 'until grep -q \\\"^exit=\\\" /tmp/webtests-3244.log; do sleep 15; done'; tail -n 25 /tmp/webtests-3244.log\", \"description\": \"Wait for the web tests rerun to finish\", \"time\u2026\n- Bash: {\"command\": \"grep -c \\\"Compiling\\\" /tmp/webtests-3244.log; grep \\\"jackioh-engine\\\\|error\\\" /tmp/webtests-3244.log | head\", \"description\": \"Check whether the engine was rebuilt in the rerun\"}\n- Bash: {\"command\": \"cargo fmt --check && echo FMT_OK; cargo jackioh spec check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail -2\", \"description\": \"Run fm\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"## Log\\\",\\\"- Pass 2 (opus): the only finding was the red `web tests` check: a stale jackioh-engine rlib in the share\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: super run failed on a production candidate\"} --> ## Summary Super run 42084592622 failed on the production candidate `30b6568` (#3234) in two jobs, `notebooks` and `e2e component (chrome)`. This pull request fixes three component specs: the run's own failu\u2026"
       },
+      "interruptions": 0,
       "issue": 3244,
       "kind": "review",
       "live": "reviewing",
