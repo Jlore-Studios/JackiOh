@@ -1,0 +1,124 @@
+# Moves `staging` to a snapshot of main every two hours (#3275, the owners' call of 2026-11-05):
+# main's newest commit whose push-to-main CI run passed, never backwards, by fast-forward. Its push
+# starts deploy-staging.yml, which deploys staging to https://staging.jackioh.com; once a day super.yml
+# tests staging's commit, and promote-production.yml puts it on jackioh.com when every job passed.
+# scripts/promote-staging.sh is the logic (read its header) and apps/web/src/net/promote-staging.test.ts
+# holds it; docs/deploy-cloudflare.md, section 2, is the plan.
+#
+# Three ways in:
+#   schedule           every two hours (STAGING_EVERY_MINUTES apart at least).
+#   workflow_run (CI)  a green push to main, which moves staging only once its last move is
+#                      STAGING_EVERY_MINUTES old: GitHub fires this repository's schedules late, so
+#                      the cron alone could leave staging hours behind.
+#   workflow_dispatch  by hand (Actions -> promote staging -> Run workflow): the `sha` given, a commit
+#                      of main whose push-to-main CI passed, or main's newest such commit, now.
+#
+# It pushes with the bot's token (BOT_GITHUB_TOKEN): GitHub refuses the Actions token a push that
+# changes .github/workflows, and a push the Actions token makes starts no workflow, so staging would
+# move without deploying. A promotion that fails opens "CI: staging promotion failed" for Squishy
+# (`report`), as promote-production.yml's does; the next run that moves staging closes it.
+name: promote staging
+
+on:
+  schedule:
+    - cron: "5 */2 * * *"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit of main to move staging to (default: the newest one whose CI passed)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  promote:
+    name: promote staging
+    # A workflow_run fires for every completed CI run on main; only a green push gets past here.
+    if: >-
+      github.event_name != 'workflow_run'
+      || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # One at a time, and none cancelled: the next reads what the last one pushed.
+    concurrency:
+      group: promote-staging
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      moved: ${{ steps.promote.outputs.moved }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+      - name: move staging when it is due
+        id: promote
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          INPUT_SHA: ${{ inputs.sha }}
+          # Two hours: how long staging holds still between two moves, at least, unless asked.
+          STAGING_EVERY_MINUTES: "120"
+        run: bash scripts/promote-staging.sh
+
+  # A promotion that failed: staging (and so production, which takes staging's commit) waits on it,
+  # so it goes to Squishy as `priority:high`, as promote-production.yml's report does. A run that
+  # moved staging closes it. It never checks out or runs code.
+  report:
+    name: report
+    needs: promote
+    if: ${{ !cancelled() && (needs.promote.result == 'failure' || needs.promote.outputs.moved == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PROMOTE: ${{ needs.promote.result }}
+          TITLE: "CI: staging promotion failed"
+          # Who fixes it: Squishy (.squishy/config.json's bot_login) and its queue label.
+          SQUISHY_LOGIN: squishy-squooby
+          SQUISHY_QUEUE: "squishy:build"
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ "$PROMOTE" = success ]; then
+            if [ -n "$open" ]; then
+              gh issue close "$open" --repo "$REPO" --reason completed --comment "[This run]($RUN_URL) moved staging."
+              echo "closed #$open"
+            fi
+            exit 0
+          fi
+          body=$(printf '%s\n' \
+            "[promote-staging run]($RUN_URL) failed, so \`staging\` did not move to main's newest green commit (its annotation says why)." \
+            "" \
+            "Squishy: staging, and production after it, waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, the \`staging\` ruleset, GitHub's settings) is a person's: say exactly what they must do. The next run that moves staging closes this." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/promote-staging.yml\`._")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+            echo "commented on #$open"
+            [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ] || exit 0
+            number=$open
+          else
+            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
+            echo "opened $url"
+            number=${url##*/}
+          fi
+          gh issue edit "$number" --repo "$REPO" --add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE" \
+            --add-label "priority:high" \
+            && echo "handed #$number to @$SQUISHY_LOGIN, high priority" \
+            || echo "::warning::could not hand #$number to @$SQUISHY_LOGIN"

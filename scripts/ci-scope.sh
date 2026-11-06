@@ -126,9 +126,9 @@
 #    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
 #    the file.
-#  - web_promote runs for what promote-production.test.ts runs and reads: scripts/promote-production.sh,
-#    the two workflows it reads, promote-production.yml and super.yml (under .github/, so every job
-#    runs), and the test itself,
+#  - web_promote runs for what promote-production.test.ts and promote-staging.test.ts run and read:
+#    scripts/promote-production.sh and scripts/promote-staging.sh, the workflows they read (under
+#    .github/, so every job runs), and the tests themselves,
 #    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.
@@ -299,6 +299,7 @@ for file in $files; do
 
   case "$file" in
     scripts/promote-production.sh | apps/web/src/net/promote-production.test.ts) on web web_promote ;;
+    scripts/promote-staging.sh | apps/web/src/net/promote-staging.test.ts) on web web_promote ;;
     package.json | apps/web/package.json | pnpm-lock.yaml | pnpm-workspace.yaml | .nvmrc) on web web_promote ;;
     vitest.config.ts | apps/web/vitest.config.ts | apps/web/src/test/*) on web web_promote ;;
   esac
@@ -309,7 +310,7 @@ for file in $files; do
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
-    scripts/browse.sh | scripts/promote-production.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done
