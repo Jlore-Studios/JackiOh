@@ -15260,6 +15260,13 @@
     "3285": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T15:07:26Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "No line of the rule holds: nothing under crates/engine or crates/ai, no migration, about 33 files; the run-crate-to-wasm-to-web binding copies run_max_hp's existing four-layer pattern, which export_parity.rs enforces, so there is no cross-crate design left for the builder to decide."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
