@@ -237,7 +237,7 @@
   margin: 0;
 }
 
-@media (min-width: 620px) {
+@media (min-width: 601px) {
   .tavern.play-screen .lobby-modes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -274,7 +274,7 @@
 }
 
 /* Side by side, a tile stands up: the emblem on top, the words under it, the count at the foot. */
-@media (min-width: 620px) {
+@media (min-width: 601px) {
   .tavern.play-screen .play-mode-tile {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
@@ -858,7 +858,7 @@
    panels' step headings go to screen readers only, the three modes stand side by side, the four ways
    are one row and the room's explanation goes. A screen shorter than that scrolls `.play-layout`,
    the one scroller, never the setup panel inside it. */
-@media (max-width: 619px) {
+@media (max-width: 600px) {
   .tavern.play-screen.play-hub {
     padding-bottom: 10px;
   }
