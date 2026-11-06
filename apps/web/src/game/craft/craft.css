@@ -319,7 +319,7 @@
 }
 
 /* A narrow panel (a tablet held upright): the card above, the canvas and palette side by side. */
-@media (max-width: 900px) {
+@media (max-width: 899px) {
   .craft-editor[data-layout="panel"] .craft-columns {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }

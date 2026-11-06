@@ -7,7 +7,7 @@
 // (CLAUDE.md rule 7). A host without `matchMedia` reads false.
 //
 // #2932: `usePhonePortrait` is the same for the portrait block alone (`PHONE_PORTRAIT_QUERY`): on a
-// phone held upright a field card's Activate control and keyword marks hang off its corner
+// phone held upright a field card's Activate control and keyword marks stand in its zone's corner
 // (`FieldBadges.tsx`) and the match bar rides the top strip (`Game.tsx`). Neither hook caches its
 // `MediaQueryList`: a test swaps `window.matchMedia` between renders.
 

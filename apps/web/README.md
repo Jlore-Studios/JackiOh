@@ -55,6 +55,8 @@ The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` 
 
 The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` after the motion, names eleven lengths, `--space-1` (2px) to `--space-11` (40px): 2px apart to 12px, where the board's own lengths sit, then 16, 20, 24, 32 and 40px. A board stylesheet gives every `gap`, `padding` and `margin` (and the `--gap` they read) a step, `0`, `auto`, or a `calc()`, `clamp()` or `max()` holding one, and may keep an `em` or `%` term (it scales with its box), a viewport or container term and `env()`, never a px or rem length of its own. A length that is no step is composed of steps (`calc(var(--space-9) + var(--space-2))`), and a negative one is a step times -1. `src/spacing.test.ts` checks this and holds every other stylesheet to its count of px and rem lengths in `UNMIGRATED`; a sheet that loses some lowers its number.
 
+The breakpoints are one named set (#3227), `src/breakpoints.ts`'s `BREAKPOINT_PX`. Each is the widest (or tallest) window of the smaller layout: `(max-width: N)` holds up to N and the layout above starts at `(min-width: N+1)`. They are `phone` 600 px (a phone held upright), `narrow` 760 px (a small tablet upright), `medium` 899 px (a tablet upright), `tablet` 1024 px (the desktop starts at 1025) and, for height, `short` 500 px (a phone on its side). Touch is `(pointer: coarse)`. A sheet spells the number out (CSS reads no custom property in `@media`), and a script builds its query with `upTo()`, `over()` and `PHONE_SHEET_QUERY`. `src/breakpoints.test.ts` holds both, its `KEEP` listing each other value with its reason.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -342,12 +344,21 @@ hidden visually, the crests and the names carrying it), and the control bar keep
 between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by height; the seats are one
 fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
 A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
-stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
-never turns it. The zone left of it holds its own switch (⟳) at that corner, so the stack starts below
-that switch's target (`--badges-top`, the target's own height) and what does not fit its zone's height
-wraps into a column to its left: a press on a neighbour's ⟳ is never this unit's Activate, and the stack
-never reaches the row below. The Activate control's tap band (up to 44px) reaches down from the control
-only, never up over that switch; the marks let a tap through.
+stack standing in the top-left inner corner of the card's own zone (#3257) as a sibling of the card, as
+the switch is, so DEF's rotation never turns it. It never leaves the zone, so no mark reads as a
+neighbour's and a press on a neighbour's ⟳ is never this unit's Activate, and it stays above the card's
+name plate (`max-height`): the marks that do not fit fold into the face's `+N`, which `FieldBadges.tsx`
+measures. It may cover the card's art and its cost, and the cost gem is hidden while it does; it never
+covers the name, the attack or the health, nor the zone's own switch (⟳, top-right). A DEF card is
+turned a quarter, which puts its name, attack and health in a strip down its left, under that corner, so
+over a DEF card the stack starts at the same corner and stops above the turned card's box: the same
+control, and only the marks that fit in the band above it (the rest fold into `+N`, and
+`FieldBadges.tsx` measures again when a card's position changes). The Activate control is never
+dropped, so where that band is shorter than the control (a phone as short as 664px) the control overlaps
+the turned card's attack gem by the difference. The control's tap band (up to
+44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
+zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
+the unit's oval and the backrow's outline keep a card's shape.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
@@ -467,7 +478,8 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000);
+                        takes the gate's account and reads none of its own (R3207003)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
                         grid mounting only the rows of its 700 cards near the view, poolWindow.ts, #2334),
@@ -497,7 +509,10 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
                         its join form (R767); a queue the server no longer holds ends the wait with a
-                        rejoin message (R897000)
+                        rejoin message (R897000); it takes the gate's account (`me`) and sends no
+                        /api/auth/me read at mount for a fresh one that names no game, reads the queue readout on
+                        mount and then every QUEUE_POPULATION_POLL_SECONDS while it waits, its account
+                        read keeping SERIES_POLL_SECONDS for the ticket (R3207000, R3207003)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
@@ -509,8 +524,8 @@ net/spending.ts         R2378000: whether one of the tab's spends is out, from i
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
-                        banner offers (R1566000); an ended queue is forgotten after
-                        QUEUE_ENDED_AFTER_READS reads (R897000)
+                        banner offers (R1566000), read every LIVE_GAME_POLL_SECONDS (R3207001); an ended
+                        queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
                         on / and /practice); game-banner.css draws it as the tavern's notice

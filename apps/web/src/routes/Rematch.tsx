@@ -46,37 +46,79 @@ function waitingWords(stakes: RematchStakes): string {
 
 const OFFERING_LABEL = "Offering…";
 
-/** One status poller serves buttons and watcher so their navigation cannot drift apart. */
+type Listener = (answer: RematchStatusResponse) => void;
+
+/** One match's poll: whoever shows its status listens, and the last answer waits for a later joiner. */
+type Poller = { listeners: Set<Listener>; last: RematchStatusResponse | null; stop: () => void };
+
+/** R3207002: the tab's polls, one per match id, whatever number of components show that match's status. */
+const pollers = new Map<string, Poller>();
+
+function startPoller(token: string, matchId: string): Poller {
+  let stopped = false;
+  // A wake while a read is out would only repeat it.
+  let reading = false;
+  const poller: Poller = { listeners: new Set(), last: null, stop: () => undefined };
+  const read = (): void => {
+    if (reading) return;
+    reading = true;
+    rematchStatus(token, matchId)
+      .then(
+        (answer) => {
+          if (stopped) return;
+          poller.last = answer;
+          for (const listener of [...poller.listeners]) listener(answer);
+        },
+        () => undefined,
+      )
+      .finally(() => {
+        reading = false;
+      });
+  };
+  read();
+  // R3205000: a hidden tab reads nothing; a throttled tab's interval stalls, and showing the tab (or the
+  // network coming back) reads the status again at once.
+  const stopPolling = pollWhileVisible(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
+  poller.stop = () => {
+    stopped = true;
+    stopPolling();
+  };
+  return poller;
+}
+
+/**
+ * R3207002: listens to the match's poll, starting it when none runs in this tab. A listener that joins
+ * after an answer came hears it at once and sends no request; the last to leave stops the poll. It
+ * returns what leaves.
+ */
+function joinRematchStatus(token: string, matchId: string, listener: Listener): () => void {
+  let poller = pollers.get(matchId);
+  if (poller === undefined) {
+    poller = startPoller(token, matchId);
+    pollers.set(matchId, poller);
+  }
+  const joined = poller;
+  joined.listeners.add(listener);
+  if (joined.last !== null) listener(joined.last);
+  return () => {
+    joined.listeners.delete(listener);
+    if (joined.listeners.size > 0) return;
+    joined.stop();
+    if (pollers.get(matchId) === joined) pollers.delete(matchId);
+  };
+}
+
+/** One status poll per match serves buttons and watcher (R3207002), so their navigation cannot drift apart. */
 function useRematchStatus(token: string, matchId: string, onStatus: (answer: RematchStatusResponse) => void): void {
   const latest = useRef(onStatus);
   latest.current = onStatus;
-  useEffect(() => {
-    let canceled = false;
-    // A wake while a read is out would only repeat it; each effect run counts its own.
-    let reading = false;
-    const read = (): void => {
-      if (reading) return;
-      reading = true;
-      rematchStatus(token, matchId)
-        .then(
-          (answer) => {
-            if (!canceled) latest.current(answer);
-          },
-          () => undefined,
-        )
-        .finally(() => {
-          reading = false;
-        });
-    };
-    read();
-    // R3205000: a hidden tab reads nothing; a throttled tab's interval stalls, and showing the tab (or the
-    // network coming back) reads the status again at once.
-    const stopPolling = pollWhileVisible(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
-    return () => {
-      canceled = true;
-      stopPolling();
-    };
-  }, [token, matchId]);
+  useEffect(
+    () =>
+      joinRematchStatus(token, matchId, (answer) => {
+        latest.current(answer);
+      }),
+    [token, matchId],
+  );
 }
 
 /** Outlives the result panel so matching offers still navigate a player viewing the board. */

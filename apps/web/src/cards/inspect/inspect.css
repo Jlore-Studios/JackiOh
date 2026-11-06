@@ -613,7 +613,7 @@
   border-top: 1px solid var(--line, #2c3245);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .inspect-rules {
     display: flex;
   }
@@ -624,7 +624,7 @@
    it; here the faces stand on the left at the height the screen allows (290 px wide on a desktop,
    about 170 on a phone), and the meta line, the rules at reading size and the glossary read down
    the right, over the pinned actions row. */
-@media (min-width: 900px) and (max-height: 900px), (min-width: 640px) and (max-height: 560px) {
+@media (min-width: 900px) and (max-height: 900px), (min-width: 601px) and (max-height: 500px) {
   .inspect-detail {
     width: min(960px, calc(100vw - 16px));
   }
@@ -660,7 +660,7 @@
   }
 }
 
-@media (max-height: 560px) and (min-width: 640px) {
+@media (max-height: 500px) and (min-width: 601px) {
   /* The touch sheet the same way: stacked, the card shrank to 56% of the screen's height to leave
      Close a row of its own. Here the card takes the sheet's full height, and the glossary and
      Close stand beside it. */

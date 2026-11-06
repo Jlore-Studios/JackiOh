@@ -433,7 +433,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .tutorial-hud__badge,
   .tutorial-hud__step-long,
   .tutorial-hud__long {
@@ -968,7 +968,7 @@
 
 /* Five across needs a desktop's width; below it the lessons stack, each node on the path's line
    down the left. */
-@media (max-width: 900px) {
+@media (max-width: 899px) {
   .tutorial-path__lessons {
     --node: 30px;
     --path-gap: 10px;
@@ -1004,7 +1004,7 @@
 }
 
 /* A tablet's card is wide enough to keep its button beside the text rather than under it. */
-@media (min-width: 561px) and (max-width: 900px) {
+@media (min-width: 601px) and (max-width: 899px) {
   .tutorial-lesson__card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -1052,7 +1052,7 @@
 /* A phone: a locked lesson is one line, its title and its lock, so the practice setup is not
    three screens down. Its number and why it is locked stay for a screen reader (the button's
    label and description). */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .tutorial-lesson[data-status="locked"] .tutorial-lesson__card {
     flex-direction: row;
     align-items: center;
@@ -1084,7 +1084,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .tutorial-path {
     gap: 12px;
     padding: 14px 12px 14px;
@@ -1097,7 +1097,7 @@
 
 /* A landscape phone: the path keeps its row of five, tighter, so the practice setup is not pushed
    a whole screen down. */
-@media (max-height: 520px) and (min-width: 721px) {
+@media (max-height: 500px) and (min-width: 761px) {
   .tutorial-path {
     gap: 10px;
     padding: 10px 12px 12px;
@@ -1242,7 +1242,7 @@
   padding: 7px 18px;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .field-guide__entry {
     grid-template-columns: minmax(0, 1fr);
   }

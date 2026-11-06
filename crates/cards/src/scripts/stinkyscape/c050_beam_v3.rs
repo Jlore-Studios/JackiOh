@@ -211,6 +211,30 @@ mod tests {
         s.expect_health(P2, HERO_HEALTH);
     }
 
+    /// R3291000: an ability's id, and the card and face its `printed_on` names, if any.
+    type Sourced = (String, Option<(String, Option<bool>)>);
+
+    /// R3291000: each ability p1's view lists on `id`, with the card (and face) its `printed_on` names.
+    fn sources(s: &Scenario, id: &str) -> Vec<Sourced> {
+        jackioh_engine::subsystems::activate::activation_views_for(s.state(), P1, s.card(id))
+            .expect("the card lists its abilities")
+            .into_iter()
+            .map(|view| (view.ability, view.printed_on.map(|card| (card.def_id, card.radiant))))
+            .collect()
+    }
+
+    /// A Vanilla of p1's with this card Equipped (R1086), and what its abilities name.
+    fn equipped_sources() -> Vec<Sourced> {
+        let mut s = weapon_board(
+            "s050-r3291000-equip",
+            json!({ "hand": [ID], "field": [VANILLA] }),
+            json!({ "field": [VANILLA] }),
+        );
+        let host = s.unit_at(P1, 1).id;
+        s.play(ID, json!({ "zone": 1, "equip": true }));
+        sources(&s, &host)
+    }
+
     mod base {
         use super::*;
 
@@ -294,6 +318,26 @@ mod tests {
             assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
             s.activate(host.as_str(), at(&target));
             assert_eq!(hits(s.last_events()), vec![(target, DAMAGE)]);
+        }
+
+        /// R3291000: the Activate picker wears the art of the card that prints the ability, so a
+        /// launched Starship's beam names this card, the piece whose copy fused in.
+        #[test]
+        fn r3291000_a_launched_starship_names_beam_v3_on_its_beam() {
+            let (mut s, ship) = crate::built_starship(
+                "s050-r3291000-ship",
+                json!([{ "def": ID, "lane": 2 }]),
+                json!({}),
+                json!({ "field": [VANILLA] }),
+            );
+            crate::launch_starship(&mut s, &ship);
+            assert_eq!(sources(&s, &ship), vec![("beam".to_string(), Some((ID.to_string(), None)))]);
+        }
+
+        /// R3291000: so does a Unit it is Equipped to, whose own art its other abilities would wear.
+        #[test]
+        fn r3291000_an_equipped_host_names_beam_v3_on_its_beam() {
+            assert_eq!(equipped_sources(), vec![("beam".to_string(), Some((ID.to_string(), None)))]);
         }
 
         #[test]

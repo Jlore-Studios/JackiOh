@@ -274,7 +274,7 @@
 }
 
 /* A phone held sideways has no height for the portrait over the words: it stands beside them. */
-@media (max-height: 560px) and (min-width: 560px) {
+@media (orientation: landscape) and (max-height: 500px) {
   .hero-inspect {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
