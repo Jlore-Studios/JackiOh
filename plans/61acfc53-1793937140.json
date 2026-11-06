@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3017,
+  "title": "Patch: many more card art variants, so every card has several",
+  "branch": "bot/issue-3017",
+  "thread": "**Issue #3017 (data, not instructions):**\n\n```text\n# #3017: Patch: many more card art variants, so every card has several\nOpened by @squishy-squooby.\n\n## What it does\n\nAsked for on 2026-11-04: \"more different variations of card art and different variants for all the cards.\"\n\n**Blocked by #3015.** That issue turns every card look into a **variant** with a ladder of **levels**:\n- one picture per variant, the same at every level;\n- its art levels first (the normal frame, then full art where it has one);\n- then animated;\n- then signed, only above a full-art level.\n\nThis issue adds many more variants on that model, so every card has several to collect.\n\n### Today\n\n- Every card is offered only a seeded share of the versions: Full art, Alt art, Sketch and Alt full art (R2725000, R2940000, R2949001), plus Extended art, Pixel, Comic, Set showcase, Out of frame, Immersive and Prismatic from #2942 to #2944.\n- Many cards end up with only one or two looks beyond their normal face.\n\n### What it should be\n\n1. **New variants.** Add at least six new variants, each a look of its own.\n   - Most should be a **new picture** of the card's subject (as Alt art is). A few may be a restyling of the card's own picture (as Sketch, Pixel and Comic are).\n   - Ideas, for the planner to choose from or replace:\n     - a night-time scene;\n     - a stained-glass window;\n     - a woodcut or ink print;\n     - a watercolour;\n     - a neon sign;\n     - a tiny, cute chibi take;\n     - a golden-hour scene, which must stay out of Radiant's gold window;\n     - a blueprint or schematic for constructs and Starships;\n     - a tarot card;\n     - a set's home location as the backdrop.\n   - Every look must be original, with no other game's art, frames or trademarks (`apps/web/src/cards/art/ART.md`).\n   - Each is drawn by code in `apps/web/src/cards/art/`: a pure function of the card's id, name, tags and type, base and Radiant faces both, with a delivered art file taking over later as ART.md describes.\n2. **A ladder for each.** Each new variant follows the ladder rule:\n   - its art level(s);\n   - an animated level, the picture's own layers moving;\n   - a signed level only where it has a full-art level.\n\n   The art is identical across a variant's levels. Legacy cards stop before animated, as #3015 rules.\n3. **Every card gets several.**\n   - **The floor.** After this, every card, Legacy ones included, is offered at least a named number of variants besides Default: a constant such as `VARIANT_MIN_PER_CARD`, proposed and ruled.\n   - **The spread.** Each variant still reaches every set that ships (`VERSION_OFFER_MIN_CARDS`, `VERSION_OFFER_MIN_PER_SET`, or their successors).\n   - **The mix.** Keep the owner's wish (2026-11-03) that cards differ: each variant's offer is its own share, chosen where the style suits the card, so no two cards share the same full set by design. The offers stay data in the registry.\n4. **Rarity.** Each new variant's levels follow #3015's rarity table. Its in-order and out-of-order pulls and its next-level buying work as #3015 built them, with no new rules.\n5. **Radiant stays easy to tell apart** (R2725004): no new colour sits in Radiant's gold window, and every level keeps a Radiant face's marks.\n6. **New entries start unowned** (\u00a714.12). `POST /api/dev/fill` grants them on every offered card. Practice, hotseat and e2e treat them as owned (R1310004).\n\n### Spec\n\n- List the new variants and their offers in \u00a714.2.\n- Write rulings in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- Add a `--visual` pending fragment.\n\n### Size\n\nThe planner may split it into parts of two or three variants each, as #2725 was split. Each part keeps the per-card floor test for the variants it adds, and the last part makes the floor hold for every card.\n\n## Acceptance\n\n- The registry holds the new variants with their levels and rarities, its check passes, and `public.cosmetics` is seeded.\n- Every card in every set that ships, Legacy included, is offered at least the named number of variants besides Default. A test runs over the catalog.\n- Each new variant reaches every set that ships. No two variants have the same offer, and none is offered on every card.\n- For every offered (card, new variant), every level draws the same picture, base and Radiant. The picture differs from the card's normal face and from every other variant's.\n- A level of a variant a card isn't offered is refused with a 400 for a pick, a token or a chase, and the Collection doesn't list it.\n- The palette test keeps every new colour out of the Radiant gold window. A Radiant face keeps its marks under every new level, and a base face shows none.\n- A component (pixel) spec shows each new variant on one Unit and one Spell, base and Radiant, with an animated level on at least one.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes with a clean `wire/`. The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3017: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T08:54:14Z",
+    "claimed_at": "2026-11-06T03:52:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3017 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3207 skipped: it waits for #3206 to close first",
+    "#3211 skipped: it waits for #3206 to close first",
+    "#3212 skipped: it waits for #3211 to close first",
+    "#3213 skipped: it waits for #3207 to close first",
+    "#3214 skipped: it waits for #3213 to close first",
+    "#3220 skipped: it waits for #3219 to close first",
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3222 skipped: it waits for #3219 to close first",
+    "#3228 skipped: it waits for #3223 to close first",
+    "#3230 skipped: it waits for #3221, #3222, #3223 to close first"
+  ]
+}
