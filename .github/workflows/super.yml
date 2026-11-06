@@ -1,7 +1,7 @@
 # The daily super run (#306, docs/v0.3.0/README.md §7): everything too slow or too statistical to
-# hold every pull request to, once a day on main (07:17 UTC) and on demand on any branch (`gh workflow
-# run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull request; this keeps
-# the rest from rotting.
+# hold every pull request to, once a day on `staging` (07:17 UTC, #3275) and on demand on any branch
+# (`gh workflow run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull
+# request; this keeps the rest from rotting.
 #
 #   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, and the Duos
 #                   co-op wave's seeds 1-2,000 (`fuzz --duos`), in quarters (V7, V9, #936 B25)
@@ -12,7 +12,7 @@
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
 #   e2e             all 35 e2e specs on Chrome, in shards, and the component specs (V21)
-#   web             the audio, fx and asset unit tests and promote-production.test.ts, which the pull
+#   web             the audio, fx and asset unit tests and the two promotion tests, which the pull
 #                   requests leave out, and the tutorial lessons' whole sweeps (JACKIOH_DAILY=1)
 #   db              sql invariants, the store contract and the deploy rehearsal against a real Postgres
 #   notebooks       analysis/'s tests on its committed fixtures: the loader's card figures against the
@@ -22,20 +22,28 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
-# It is also production's gate (#2750). The daily promotion (since 2026-11-03): when the daily run on
-# main passes every job, promote-production.yml, woken by its completion, merges the commit it tested
-# into `production` and deploys it. Sooner: a `/promote` on the production issue opens a pull request
-# of a commit of main into `production`, this workflow runs on it (`pull_request` below), and
+# It is also production's gate (#2750). The daily run tests `staging`, not main (#3275, the owners'
+# call of 2026-11-05): promote-staging.yml moves `staging` to a green commit of main every two hours,
+# so the run tests one commit that holds still instead of a main that moves many times an hour. A
+# schedule always runs on the default branch, so the scheduled run's one job, `daily`, starts this
+# workflow on `staging` and every other job skips; that dispatched run's `head_sha` is the commit it
+# tested. The daily promotion: when the run on `staging` passes every job, promote-production.yml,
+# woken by its completion, merges the commit it tested into `production` and deploys it. Sooner: a
+# `/promote` on the production issue opens a pull request of staging's commit into `production`,
+# this workflow runs on it (`pull_request` below), and
 # promote-production.yml merges it only once every job here passed. A red run on such a pull request
 # opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
 # `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
 # failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
 #
-# A failed run on the default branch hands the issue to the night bot (.harness/config.json's
-# bot_login), as ci-duration.yml hands over its report: a new issue is assigned to it and queued with
-# bot:build and `priority:high` (production waits for the next run on main that passes), and an open
-# one nobody is assigned to is handed over the same way, so main's red run is worked on without anyone
-# asking. A dispatched run on any other branch tests that branch's change,
+# A failed run on `staging` (or on the default branch, whose commits reach `staging` within two
+# hours) hands the issue to the night bot (.harness/config.json's bot_login), as ci-duration.yml hands
+# over its report: a new issue is assigned to it and queued with bot:build and `priority:high`
+# (production waits for the next run on `staging` that passes), and an open one nobody is assigned to
+# is handed over the same way, so the red run is worked on without anyone asking. The bot takes this
+# issue, found by its title, before every other queued item, `priority:high` ones included
+# (bot/go/internal/queue `GateTitles`, #3275). Only a run on `staging`, on the default branch or on a
+# promotion pull request closes it. A dispatched run on any other branch tests that branch's change,
 # so it is reported but never handed over, and its report says the branch's author owns it.
 #
 # The release binaries and the built client travel between jobs as artifacts, built once per run:
@@ -44,11 +52,12 @@
 name: super
 
 on:
+  # The daily run, on `staging`: the `daily` job below starts it there.
   schedule:
     - cron: "17 7 * * *"
   workflow_dispatch:
-  # A promotion pull request (promote-production.yml): its head is a commit of main, so the run tests
-  # exactly what production would get.
+  # A promotion pull request (promote-production.yml): its head is a commit of staging, so the run
+  # tests exactly what production would get.
   pull_request:
     branches: [production]
 
@@ -73,8 +82,28 @@ jobs:
   # builds, once per run
   # ------------------------------------------------------------------------------------------------
 
+  # The scheduled run starts the daily run on `staging` (the header says why) and does nothing else:
+  # every job below skips on `schedule`, those that need one through it. The Actions token may start a
+  # workflow_dispatch.
+  daily:
+    name: start the daily run on staging
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: gh workflow run super.yml --ref staging
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh workflow run super.yml --ref staging
+          echo "### started the daily super run on \`staging\` ($(gh api "repos/$GH_REPO/commits/staging" --jq '.sha[0:12]'))" >> "$GITHUB_STEP_SUMMARY"
+
   rust-build:
     name: release build
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -96,6 +125,7 @@ jobs:
 
   wasm:
     name: wasm and client build
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -248,6 +278,7 @@ jobs:
   # `ignore` blocks are not tests at all. Most of the job is compiling the workspace.
   daily-tests:
     name: daily tests (cargo test -- --ignored)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -263,6 +294,7 @@ jobs:
 
   coverage:
     name: coverage (engine, cards, ai)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -337,8 +369,8 @@ jobs:
           if-no-files-found: warn
 
   # The unit tests ci.yml's `web (unit k/4)` leave out: the audio and fx layers, the asset tests and
-  # promote-production.test.ts (which ci.yml's `web (promote-production)` runs only when what it
-  # tests changed); and, with JACKIOH_DAILY=1 (apps/web/src/test/daily.ts), the whole of
+  # promote-production.test.ts and promote-staging.test.ts (which ci.yml's `web (promote-production)`
+  # runs only when what they test changed); and, with JACKIOH_DAILY=1 (apps/web/src/test/daily.ts), the whole of
   # each sweep a pull request plays only the first game of: the tutorial lessons'.
   web-extra:
     name: web (audio, fx, asset and daily tests)
@@ -361,7 +393,7 @@ jobs:
           JACKIOH_DAILY: "1"
         run: >-
           pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts
-          src/net/promote-production.test.ts src/tutorial/scripts/
+          src/net/promote-production.test.ts src/net/promote-staging.test.ts src/tutorial/scripts/
 
   # ------------------------------------------------------------------------------------------------
   # notebooks
@@ -372,6 +404,7 @@ jobs:
   # analysis/ is on scripts/ci-scope.sh's skip list, since nothing a per-pull-request job reads is in it.
   notebooks:
     name: notebooks
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -393,6 +426,7 @@ jobs:
   # ci.yml's db suites (its comment says what each measures), run whatever changed.
   db:
     name: db (${{ matrix.suite }})
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -426,13 +460,13 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # One issue, found by its exact title: opened (or commented on) when anything above did not pass,
-  # closed when everything did, and handed to the night bot when the red run is on the default
-  # branch. It never checks out or runs code; the job names it quotes reach the shell through the
+  # closed when everything did on `staging`, the default branch or a promotion, and handed to the
+  # night bot when the red run is on one of those. It never checks out or runs code; the job names it quotes reach the shell through the
   # API's JSON and env, never through `${{ }}` in the script.
   report:
     name: report
     needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, daily-tests, coverage, e2e, component, web-extra, notebooks, db]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -456,8 +490,10 @@ jobs:
           DAILY_TITLE: "CI: daily super run failed"
           # A promotion pull request's own issue; scripts/promote-production.sh names it (SUPER_TITLE).
           CANDIDATE_TITLE: "CI: super run failed on a production candidate"
-          # Who fixes main's red run: the night bot (.harness/config.json's bot_login).
+          # Who fixes the red run: the night bot (.harness/config.json's bot_login).
           BOT_LOGIN: jgoetzmann-bot
+          # The branch the daily run tests and production takes its commits from (#3275).
+          STAGING_BRANCH: staging
         run: |
           set -euo pipefail
           red=false
@@ -475,6 +511,13 @@ jobs:
             TITLE=$CANDIDATE_TITLE
           fi
           export TITLE
+          # The runs the daily issue belongs to: on `staging` (the daily run, production's gate) and on
+          # the default branch, whose commits reach `staging` within two hours. Any other branch's run
+          # tests that branch's change.
+          gate=false
+          if [ "$candidate" = false ] && { [ "$REF" = "$STAGING_BRANCH" ] || [ "$REF" = "$DEFAULT_BRANCH" ]; }; then
+            gate=true
+          fi
 
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
             --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
@@ -482,6 +525,10 @@ jobs:
           [ "$candidate" = false ] || where="[super run $RUN_ID]($RUN_URL) on #$PR, the promotion of \`${SHA:0:12}\` into production,"
 
           if [ "$red" = false ]; then
+            if [ "$candidate" = false ] && [ "$gate" = false ]; then
+              echo "every job passed on $REF; the daily issue is left to the runs on $STAGING_BRANCH"
+              exit 0
+            fi
             if [ -n "$open" ]; then
               gh issue close "$open" --repo "$REPO" --reason completed --comment "$where passed every job."
               echo "closed #$open"
@@ -503,14 +550,14 @@ jobs:
           fi
           echo "$failed"
 
-          # Main's red run is the night bot's to fix, and so is a promotion's, first; a branch's is its
-          # author's.
+          # Staging's red run, main's and a promotion's are the night bot's to fix, first; a branch's is
+          # its author's.
           if [ "$candidate" = true ]; then
-            owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`). #$PR promotes \`${SHA:0:12}\`, a commit of \`$DEFAULT_BRANCH\`, so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests the newer commit sooner."
-          elif [ "$REF" = "$DEFAULT_BRANCH" ]; then
-            owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours, and it comes first (\`priority:high\`): production promotes itself only from a run on \`$DEFAULT_BRANCH\` that passes every job, so it waits on this fix. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`, and you take it before every other queued item). #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\` (and so of \`$DEFAULT_BRANCH\`), so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner."
+          elif [ "$gate" = true ]; then
+            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix. The fix lands on \`$DEFAULT_BRANCH\` like any other, and promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
           else
-            owner="This run is on \`$REF\`, not \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
+            owner="This run is on \`$REF\`, not \`$STAGING_BRANCH\` or \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi
 
           body=$(printf '%s\n' \
@@ -528,8 +575,8 @@ jobs:
             "_Posted by \`.github/workflows/super.yml\`._")
 
           # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
-          # would, for a red run on the default branch or on a promotion pull request only, both as
-          # high priority since production waits on either, the promotion's as hard too
+          # would, for a red run on `staging`, the default branch or a promotion pull request only, all
+          # as high priority since production waits on them, the promotion's as hard too
           # (docs/issues-and-patches.md). A failure here leaves the report standing for a person.
           hand_over() {
             if [ "$candidate" = true ]; then
@@ -539,7 +586,7 @@ jobs:
                 || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
               return 0
             fi
-            if [ "$REF" != "$DEFAULT_BRANCH" ]; then
+            if [ "$gate" = false ]; then
               echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"
               return 0
             fi
