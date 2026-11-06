@@ -83,4 +83,17 @@ describe("R3223000 one PageTitle per menu", () => {
     expect(block(css, ":is(.app-shell, .screen-nav) .page-title")).toContain("font-size: var(--type-3xl);");
     expect(block(css, ":is(.app-shell, .screen-nav) .section-heading")).toContain("font-size: var(--type-2xl);");
   });
+
+  it("R3223000 a board's rail keeps the title beside Back on one row, so its phone height budget holds", () => {
+    // The replay player hands its BackLink, with a title, to the board's rail (--board-rail-phone-h: one 44px row).
+    // top-bar.css's phone rule would give the title a row under Back; the rail overrides it.
+    const css = code("game/board.css", CSS_COMMENT);
+    const line = block(css, ".board-rail .screen-nav__line");
+    expect(line).toContain("order: 0;");
+    expect(line).toContain("flex: 1 1 0;");
+    expect(line).toContain("flex-wrap: nowrap;");
+    const title = block(css, ".board-rail .screen-nav .page-title");
+    expect(title).toContain("white-space: nowrap;");
+    expect(title).toMatch(/font-size: var\(--type-[a-z0-9]+\);/);
+  });
 });
