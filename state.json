@@ -32643,6 +32643,12 @@
         "number": 3282,
         "title": "Patch: a reported chat message is kept until its report has had time to be read",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-06T14:50:42Z",
+        "number": 3284,
+        "title": "Patch: a choice from a hand says what the choice does, as an answer prompt already does",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-06T14:46:51Z",
