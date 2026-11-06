@@ -553,7 +553,11 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
                         R2730000), a grid card as the card, in hand and on the board with a Radiant
                         toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
-                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx);
+                        Equip or buy on either opens the card's equip and buy screen
+                        (collection/LooksScreen.tsx, R3016001): its ladders, Equip on an owned level, Buy on
+                        the next with a held token or the full Chase Shard bar after a question, and what a
+                        later level needs; a rung hovered there or in the card view shows that level.
                         Only there does a locked item a held token covers offer the token (of a
                         ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
