@@ -15058,9 +15058,7 @@
       "source": "",
       "started_at": "2026-11-06T11:40:56Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6683783985"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
