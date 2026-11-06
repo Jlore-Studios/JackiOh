@@ -16960,6 +16960,8 @@
       }
     },
     "3325": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-06T21:23:09Z",
@@ -16973,8 +16975,11 @@
         "trail": " $url (${i}s)\"; bre\u2026\n- Bash: {\"command\": \"tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-3320/40075d7c-c5b9-4427-bc94-c36ed70fc2f1/tasks/bhouu92f1.output; tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-33\u2026\n- said: Both are up. Running shard 6/8's eight specs on Chrome.\n- Bash: {\"command\": \"cd e2e && E2E=1 timeout 3000 pnpm exec cypress run --browser chrome --spec \\\"cypress/e2e/06-room-code.cy.ts,cypress/e2e/07-my-pawn-ai.cy.ts,cypress/e2e/10-invite-gate.cy.ts,cypress/e2e/1\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- run 1: building web build:e2e, then shard 6/8 + 18 + 46 with a temporary `target` symlink (REMOVE IT before stoppi\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -12\", \"description\": \"Read how classify finds its parent binary\"}\n- Bash: {\"command\": \"timeout 600 target/release/jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Classify the change against main with fragment claims\", \"timeout\": 700000}\n- Bash: {\"command\": \"timeout 600 target/release/jackioh classify --base origin/main --claims --json 2>&1 | head -c 1500\", \"description\": \"Show classify's JSON to see which files it read\", \"timeout\": 700000}\n- Bash: {\"command\": \"grep -n \\\"worktree\\\\|working tree\\\\|--head\\\\|fn changed_paths\\\\|\\\\\\\"diff\\\\\\\"\\\" crates/tools/src/classify.rs | head -15\", \"description\": \"Check whether classify reads the working tree\"}\n- Bash: {\"command\": \"sed -n 1125,1145p crates/tools/src/classify.rs\", \"description\": \"Read how classify picks head\"}\n- said: classify diffs commits, so with nothing committed it compared main to itself. I'll build a throwaway commit object (no branch or index change) to classify the actual diff.\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/classify-index; rm -f $GIT_INDEX_FILE; git read-tree HEAD && git add -u -- . && git diff --cached --name-only HEAD && tree=$(git write-tree) && c=$(git commit-\u2026\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/classify-index GIT_AUTHOR_NAME=scratch GIT_AUTHOR_EMAIL=scratch@localhost GIT_COMMITTER_NAME=scratch GIT_COMMITTER_EMAIL=scratch@localhost; rm -f $GIT_INDEX_FI\u2026\n- said: classify says `kind:app`, no cards, no problems, so no fragment is needed. Checking the shard's progress.\n- Bash: {\"command\": \"grep -aE \\\"Running:|passing|failing|^exit\\\" /tmp/e2e-shard6.log | tail -12\", \"description\": \"Check e2e shard progress\"}\n- Bash: {\"command\": \"until grep -aq \\\"^exit\\\" /tmp/e2e-shard6.log; do sleep 15; done; grep -aE \\\"\\u2714|\\u2716|^exit\\\" /tmp/e2e-shard6.log | tail -14\", \"description\": \"Wait for shard 6/8 to finish\", \"timeout\u2026\n- Bash: {\"command\": \"grep -aciE \\\"attempt [0-9]|retry\\\" /tmp/e2e-shard6.log\", \"description\": \"Count Cypress retries in the shard log\"}\n- TaskStop: {\"task_id\": \"baxnjqupo\"}\n- Bash: {\"command\": \"CATALOG_VERSION=$(target/release/jackioh catalog-version) E2E=1 target/release/jackioh-server\", \"description\": \"Restart the release server in E2E mode\", \"timeout\": 7200000, \"run_in_backg\u2026\n- Bash: {\"command\": \"until grep -q \\\"server.listening\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3320/40075d7c-c5b9-4427-bc94-c36ed70fc2f1/tasks/bw4dh5qhk.output; do sleep 1; done; echo up; python3\u2026\n- Bash: {\"command\": \"cd e2e && E2E=1 timeout 1800 pnpm exec cypress run --browser chrome --spec \\\"cypress/e2e/18-deck-workshop.cy.ts,cypress/e2e/46-menus-fit-one-screen.cy.ts\\\" > /tmp/e2e-18-46.log 2>&1; ech\u2026\n- said: Specs 18 and 46 pass (5/5, 54/54, no retries). Stopping the servers and removing the temporary `target` link.\n- TaskStop: {\"task_id\": \"bw4dh5qhk\"}\n- TaskStop: {\"task_id\": \"bhouu92f1\"}\n- Bash: {\"command\": \"[ -L target ] && rm target; ls -la target 2>&1 | head -1; git status --short\", \"description\": \"Remove the target symlink and check status\"}\n- tool error: This Bash command contains multiple operations. The following part requires approval: [ -L target ] && rm target; ls -la target 2>&1\n- Bash: {\"command\": \"rm target\", \"description\": \"Remove the temporary target symlink\"}\n- tool error: /home/runner/work/_temp/work/item-3320/target resolves through a symlink to /home/runner/work/JackiOh/JackiOh/target, which is outside the allowed working directories\n- Bash: {\"command\": \"git status --short; ls -d target 2>&1\", \"description\": \"Confirm the link is gone and only planned files changed\"}\n- said: The sandbox resolved the link's target and refused. `unlink` removes the link itself, not what it points to:\n- Bash: {\"command\": \"unlink target\", \"description\": \"Remove only the symlink itself\"}\n- Bash: {\"command\": \"git status --short; ls /home/runner/work/JackiOh/JackiOh/target/release/jackioh\", \"description\": \"Confirm the link is gone and the real target dir is intact\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"Now specs 18 + 46.\\\\n\\\",\\\"Now specs 18 + 46.\\\\n- run 1: specs 18 (5/5) and 46 (54/54) pass, no retries. Servers stop\u2026\n- Bash: {\"command\": \"set -o pipefail; timeout 3000 cargo test -p jackioh-engine --features testkit --test 'rules*' 2>&1 | grep -E \\\"^test result|FAILED|panicked|error\\\" | head -12\", \"description\": \"Run the e\u2026\n- said: All 3,857 engine rule tests pass. One quick run of the whole invariants module in the cards crate, then I'll write up.\n- Bash: {\"command\": \"set -o pipefail; timeout 1800 cargo test -p jackioh-cards --test cards cross::invariants 2>&1 | grep -E \\\"^test result|FAILED\\\" | head -5\", \"description\": \"Run every invariant test in th\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n- Build run 1 (opus, 2026-11-06): DONE. Every step 1-11 of the plan is in the worktree, \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: super run failed on a production candidate\"} --> Fixes all three red jobs of super run 42272350992 (#3317, promoting `2ec4467caa90`). I ran each failing job's own command locally on the fixed tree, and each one passes now. I built the plan's steps 1\u201311 as \u2026"
       },
       "issue": 3320,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-06T22:59:04Z",
         "from_run": "42296292792",
         "gates": [
           {
@@ -17066,7 +17071,11 @@
         "source": "build",
         "until": "2026-11-06T23:28:06Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-06T22:58:06Z",
+      "run_id": "pending:95f6153d-1794005925",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17085,6 +17094,9 @@
         "provider": "claude-3",
         "run": "42296292792"
       },
+      "started_at": "2026-11-06T22:59:04Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17098,9 +17110,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T22:35:52Z",
+    "at": "2026-11-06T22:59:04Z",
     "url": "",
-    "what": "plan #3214 on claude-8"
+    "what": "review #3325 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-06T22:49:54Z",
