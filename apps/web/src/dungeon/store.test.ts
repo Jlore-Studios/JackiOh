@@ -226,6 +226,7 @@ describe("B20 a finished run", () => {
     );
     const dungeon = mount();
     press(() => dungeon.current.start(setupOf({ seed: "QWERTY", curses: ["heavy-hands", "frail"] })));
+    expect(dungeon.current.timeMs).toBeNull();
 
     // The final boss falls: the run is won on the 12th row, and it extracted a card and a relic.
     const won: RunState = runState({
@@ -276,6 +277,8 @@ describe("B20 a finished run", () => {
     // The run is no longer kept, but stays on the screen until it is left.
     expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
     expect(dungeon.current.run?.phase).toEqual({ phase: "won" });
+    // The run-over screen reads its time from the record's.
+    expect(dungeon.current.timeMs).toBe(record.timeMs);
 
     // It pays once: a finished run takes no more actions, and leaving it records nothing more.
     wasmBindings.runReduce.mockClear();
@@ -283,6 +286,7 @@ describe("B20 a finished run", () => {
     expect(wasmBindings.runReduce).not.toHaveBeenCalled();
     press(() => dungeon.current.abandon());
     expect(dungeon.current.run).toBeNull();
+    expect(dungeon.current.timeMs).toBeNull();
     expect(dungeon.current.progress.embers).toBe(30);
     expect(readRunHistory()).toHaveLength(1);
 

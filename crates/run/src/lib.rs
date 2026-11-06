@@ -1183,6 +1183,8 @@ pub struct RunConstants {
     pub starter_artifact_points: i32,
     /// `RUN_TIER_POINTS`: an artifact's points by its tier.
     pub tier_points: Vec<(RunTier, i32)>,
+    /// `RUN_CAMPFIRE_REMOVE`: the cards a campfire removes.
+    pub campfire_remove: usize,
 }
 
 /// `RunConstants` from `config.rs`.
@@ -1193,6 +1195,52 @@ pub fn run_constants() -> RunConstants {
         starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
         starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
         tier_points: RUN_TIER_POINTS.to_vec(),
+        campfire_remove: RUN_CAMPFIRE_REMOVE,
+    }
+}
+
+/// What a shop's services cost this run, so the client states none of them (CLAUDE.md rule 9).
+/// Each price is the one `apply` spends: the Coin ones go through the same `discounted`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RunShopPrices {
+    /// `RUN_REMOVE_PRICE` in Coins, after the shop discount the relics held give.
+    pub remove_coins: i32,
+    /// `RUN_RADIANT_TICKETS`: what making a card Radiant costs in Tickets.
+    pub radiant_tickets: i32,
+    /// `RUN_BUFF_TICKETS`: what buffing a card costs in Tickets.
+    pub buff_tickets: i32,
+    /// The Tickets each held relic's next level costs, in `state.artifacts`' order
+    /// (`RUN_LEVEL_TICKETS` times its level); `None` for one at `RUN_ARTIFACT_LEVEL_MAX`.
+    pub level_tickets: Vec<Option<i32>>,
+    /// The Coins each item in the shop's stock costs, after the discount, in stock order; empty
+    /// outside a shop.
+    pub stock_coins: Vec<i32>,
+}
+
+/// `RunShopPrices` for the run as it stands: only reads `state` and `content`.
+pub fn run_shop_prices(state: &RunState, content: &RunContent) -> RunShopPrices {
+    RunShopPrices {
+        remove_coins: discounted(state, content, RUN_REMOVE_PRICE),
+        radiant_tickets: RUN_RADIANT_TICKETS,
+        buff_tickets: RUN_BUFF_TICKETS,
+        level_tickets: state
+            .artifacts
+            .iter()
+            .map(|a| (a.level < RUN_ARTIFACT_LEVEL_MAX).then_some(RUN_LEVEL_TICKETS * a.level))
+            .collect(),
+        stock_coins: match &state.phase {
+            RunPhase::Shop { stock } => stock
+                .iter()
+                .map(|item| discounted(state, content, item.price))
+                .collect(),
+            _ => Vec::new(),
+        },
     }
 }
 

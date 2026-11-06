@@ -626,6 +626,10 @@ fn run_exports_answer_what_the_core_bodies_answer() {
         expect(wasm_core::run_max_hp(&state, &content))
     );
     assert_eq!(
+        call!(run_shop_prices; state, content;),
+        expect(wasm_core::run_shop_prices(&state, &content))
+    );
+    assert_eq!(
         call!(run_level_cost; "1";),
         expect(wasm_core::run_level_cost("1"))
     );
