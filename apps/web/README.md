@@ -534,7 +534,8 @@ routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, bot
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
                         R338): choose a deck that has not won, lock it in, wait sealed; one clock
 routes/SeriesBanner.tsx the board's banner for a series game, each side's won decks as pips, and its
-                        "Continue" once the game is over
+                        "Continue" once the game is over; while the match socket is open it takes the
+                        socket's `series` frames and reads nothing after the result (R3213000)
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing, on Constructed or All
                         Random by its switch (`?ladder=random`, R2778000); rank/rank.ts says

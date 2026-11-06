@@ -548,6 +548,7 @@ impl MatchClock {
             | TimerKey::BotAim { .. }
             | TimerKey::BotEmote { .. }
             | TimerKey::BotLongTurn { .. }
+            | TimerKey::BotLeaves { .. }
             | TimerKey::DuosMulligan
             | TimerKey::DuosRound
             | TimerKey::DuosPrompt { .. }
