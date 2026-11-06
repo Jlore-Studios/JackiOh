@@ -16703,6 +16703,13 @@
     "3320": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42290542460",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-06T21:20:09Z",
+        "until": "2026-11-06T21:50:09Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-06T20:30:38Z",
