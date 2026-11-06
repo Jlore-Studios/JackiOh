@@ -16555,17 +16555,15 @@
     "what": "plan #3308 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-06T17:56:46Z",
+    "at": "2026-11-06T18:10:37Z",
     "notes": [
-      "#3212 is held for `claude-4` until 12:00 (5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered plan #3314 on claude-3 (run 42262466253): planned",
-      "delivered plan #3213 on claude-8 (run 42260970465): planned",
-      "started build #3212 on claude-4 (run 42266797146)",
-      "started build #3213 on claude-8 (run 42266936401)",
-      "started build #3314 on claude-3 (run 42267057460)",
-      "started review #3312 on claude-6 (run 42267180053)",
+      "delivered review #3312 on claude-6 (run 42267180053): reviewed",
+      "delivered plan #3308 on claude-6 (run 42264228771): planned",
+      "delivered revise #3299 on claude-4 (run 42258216681): built",
+      "started review #3299 on claude-4 (run 42268984618)",
+      "started plan #3308 on claude-6 (run 42269101121)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17271,7 +17269,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T17:56:46Z",
+  "loop_tick": "2026-11-06T18:10:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
