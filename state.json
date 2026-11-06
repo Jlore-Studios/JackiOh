@@ -17012,14 +17012,9 @@
     "what": "build #3320 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-06T21:18:06Z",
+    "at": "2026-11-06T21:29:59Z",
     "notes": [
-      "delivered review #3322 on claude-6 (run 42292971664): approved",
-      "delivered plan #3320 on claude-3 (run 42290542460): planned",
-      "delivered build #3228 on claude-7 (run 42286476823): built",
-      "started review #3323 on claude-7 (run 42296199966)",
-      "started build #3320 on claude-3 (run 42296292792)",
-      "nothing more to start: nothing is queued"
+      "#3322: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17725,7 +17720,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T21:18:06Z",
+  "loop_tick": "2026-11-06T21:29:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
