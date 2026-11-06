@@ -989,12 +989,13 @@ jobs:
         run: >-
           pnpm exec vitest run --project web --project edge --project admin --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'
-          --exclude '**/src/net/promote-production.test.ts'
+          --exclude '**/src/net/promote-production.test.ts' --exclude '**/src/net/promote-staging.test.ts'
 
   # promote-production.test.ts, a minute and a half of git clones testing a script that seldom
   # changes (scripts/promote-production.sh), beside the shards rather than after one of them
   # (#2223), and only when scripts/ci-scope.sh's `web_promote` says what it runs or reads changed;
-  # super.yml's `web-extra` runs it daily whatever changed. src/test/setup.ts loads the WASM module
+  # super.yml's `web-extra` runs it daily whatever changed. promote-staging.test.ts, the same kind of
+  # test of scripts/promote-staging.sh (#3275), runs beside it. src/test/setup.ts loads the WASM module
   # for every test file, so it unpacks `web-build` as the shards do.
   web-promote:
     name: web (promote-production)
@@ -1016,7 +1017,7 @@ jobs:
       - name: unpack the WASM modules
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: vitest
-        run: pnpm exec vitest run --project web src/net/promote-production.test.ts
+        run: pnpm exec vitest run --project web src/net/promote-production.test.ts src/net/promote-staging.test.ts
 
   web:
     name: web

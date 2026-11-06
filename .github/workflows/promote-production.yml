@@ -1,21 +1,23 @@
 # Moves production once a day by itself, and sooner on request, never past a red super run (#2750;
-# daily since 2026-11-03, the owners' call). The daily promotion: when super.yml's daily run on main
-# passes every job, the script merges the commit it tested into production (through a pull request
-# super does not run on again) and deploys it to jackioh.com, the site and its game server together.
-# A red run on main is the night bot's to fix (super.yml's `report`, `priority:high`), and production
-# waits for the next run that passes. Sooner: someone comments `/promote` on the open issue labeled
-# `production merge` (or runs this from the Actions tab); the script opens a pull request of a commit of
-# main into production, super runs on it, and it merges once every one of that run's jobs passed. A
-# promotion or a deploy that fails is Squishy's (`report` below). docs/deploy-cloudflare.md is the
-# plan; scripts/promote-production.sh is the logic (read its header first) and
-# apps/web/src/net/promote-production.test.ts holds it. Staging is deploy-staging.yml's, which
-# deploys every green commit of main by itself.
+# daily since 2026-11-03, the owners' call), taking its commits from the `staging` branch (#3275, the
+# owners' call of 2026-11-05). promote-staging.yml moves `staging` every two hours to main's newest
+# green commit. The daily promotion: when super.yml's daily run on `staging` passes every job, the
+# script merges the commit it tested into production (through a pull request super does not run on
+# again) and deploys it to jackioh.com, the site and its game server together. A red run on
+# `staging` is the night bot's to fix, before everything else it has queued (super.yml's `report`),
+# and production waits for the next run that passes. Sooner: someone comments `/promote` on the open
+# issue labeled `production merge` (or runs this from the Actions tab); the script opens a pull
+# request of staging's commit into production, super runs on it, and it merges once every one of that
+# run's jobs passed. A promotion or a deploy that fails is Squishy's (`report` below).
+# docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is the logic (read its header
+# first) and apps/web/src/net/promote-production.test.ts holds it. Staging's site is
+# deploy-staging.yml's, which deploys each move of `staging`.
 #
 # The `jackioh` Worker serves what the `production` branch holds, and nothing else. This workflow is
-# the only thing that moves it, and only by merging a pull request whose head is a commit of main
-# whose push-to-main CI run passed and whose super run passed every job, or, the emergency way, one a
-# person merged with a written reason (`/skip-super <reason>`, or the `skip_super_reason` input), which
-# the issue records. It never force-pushes: a `production` that carries anything main does not fails
+# the only thing that moves it, and only by merging a pull request whose head is a commit of staging
+# (and so of main) whose push-to-main CI run passed and whose super run passed every job, or, the
+# emergency way, one a person merged with a written reason (`/skip-super <reason>`, or the
+# `skip_super_reason` input), which the issue records. It never force-pushes: a `production` that carries anything main does not fails
 # the run, loudly, for a human to look at.
 #
 # Three ways in:
@@ -23,12 +25,12 @@
 #                      production issue (or on one a fresh issue took over from, which the script
 #                      opens weekly), from someone GitHub calls an owner, member or collaborator.
 #                      `/hold`, `/resume` and `/delay` are answered that there is nothing to hold.
-#   workflow_run       a super run on main that passed: the daily promotion. A finished super run on a
+#   workflow_run       a super run on staging that passed: the daily promotion. A finished super run on a
 #                      promotion pull request (`promote/*`): it merges when the run passed, and says so
 #                      on the issue when it did not. A green push-to-main CI run wakes it too, to bring
 #                      the issue's queue up to date (and to make up a dropped wake-up).
 #   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): `/promote` for the
-#                      `sha` given or main's newest green commit, or `/skip-super` when
+#                      `sha` given or staging's commit, or `/skip-super` when
 #                      `skip_super_reason` is filled; `redeploy` deploys production as it is.
 #
 # The promote branch, its pull request and the merge go out with the bot's token (BOT_GITHUB_TOKEN),
@@ -67,7 +69,7 @@
 # apps/edge/README.md), never this repository's.
 name: promote production
 
-# No `schedule` of its own: the daily promotion runs off super.yml's daily run on main, whose
+# No `schedule` of its own: the daily promotion runs off super.yml's daily run on staging, whose
 # completion wakes this (`workflow_run`).
 on:
   issue_comment:
@@ -75,11 +77,11 @@ on:
   workflow_run:
     workflows: [CI, super]
     types: [completed]
-    branches: [main, "promote/**"]
+    branches: [main, staging, "promote/**"]
   workflow_dispatch:
     inputs:
       sha:
-        description: "Commit of main to promote (default: the newest one whose CI passed)"
+        description: "Commit of staging to promote (default: staging's head)"
         required: false
         default: ""
       skip_super_reason:
@@ -110,7 +112,7 @@ jobs:
   promote:
     name: promote production
     # A workflow_run fires for every completed CI or super run, and an issue_comment for every comment
-    # in the repository; only a green push to main, a passing super run on main, a super run on a
+    # in the repository; only a green push to main, a passing super run on staging, a super run on a
     # promotion pull request, or a command on the production issue gets past here. The label is `RELEASE_LABEL` in
     # scripts/promote-production.sh, which the test holds equal. The concurrency group is the job's,
     # not the workflow's, so a comment that wakes nothing never takes the place of a run waiting its
@@ -124,7 +126,7 @@ jobs:
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'
             && startsWith(github.event.workflow_run.head_branch, 'promote/'))
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'
-            && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')))
+            && github.event.workflow_run.head_branch == 'staging' && github.event.workflow_run.conclusion == 'success')))
       || (github.event_name == 'issue_comment' && !github.event.issue.pull_request
         && contains(github.event.issue.labels.*.name, 'production merge')
         && github.event.comment.user.type != 'Bot'

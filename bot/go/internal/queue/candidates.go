@@ -24,8 +24,19 @@ var PriorityTiers = map[string]int{config.LabelPriorityHigh: 0, config.LabelPrio
 // NO_PRIORITY
 var NoPriority int = 2
 
+// GATE_TITLES: the issues super.yml's `report` opens when the super run production waits on fails
+// (#3275): the daily run on `staging`, and a promotion pull request's
+// (scripts/promote-production.sh's SUPER_TITLE). Production moves only once that run passes, so
+// the queue takes such an issue's build before every priority tier, `priority:high` included.
+var GateTitles = map[string]bool{"CI: daily super run failed": true,
+	"CI: super run failed on a production candidate": true}
+
+// GATE_PRIORITY: a GateTitles issue's pickup tier, ahead of `priority:high`'s.
+var GatePriority int = -1
+
 // PRIORITY_NAMES
-var PriorityNames = map[int]string{0: "high", 1: "medium", NoPriority: "none", 3: "low"}
+var PriorityNames = map[int]string{GatePriority: "production gate", 0: "high", 1: "medium",
+	NoPriority: "none", 3: "low"}
 
 // The thread's pickup tier, the lowest picked first: `priority:high` 0, `priority:medium`
 // 1, none 2, `priority:low` 3. The highest label wins; names match whatever their case, and any
@@ -57,7 +68,8 @@ type Candidate struct {
 	// before #2748). A final audit goes to it only when no other subscription of the tier is free
 	// (2026-11-02), and an after-merge spot-check never does (`plan.ReviewSeat`).
 	BuiltBy string // default: ""
-	// Its pickup tier (`priority_tier`), which comes before everything but `forced`.
+	// Its pickup tier (`priority_tier`, or GatePriority for a GateTitles build), which comes before
+	// everything but `forced`.
 	Priority int // default: NO_PRIORITY
 	// For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
 	Planned bool // default: False
@@ -660,6 +672,10 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				// A fullsend split goes first among the builds, as a `priority:high` item does
 				// (#2748, section 2): its parts wait on it. No label changes; a person's stays.
 				c.Priority = min(c.Priority, PriorityTiers[config.LabelPriorityHigh])
+			}
+			// The super run production waits on is red: its fix goes before everything (#3275).
+			if kind == "build" && GateTitles[c.Title] {
+				c.Priority = GatePriority
 			}
 			plan := PlanOf(record, thread, kind, mode)
 			c.Planned, c.PlanTier, c.PlannedBy = plan.Bool("planned"), plan.Str("plan_tier"), plan.Str("planned_by")
