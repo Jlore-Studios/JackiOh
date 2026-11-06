@@ -15966,15 +15966,8 @@
       "verdict_rounds": 0
     },
     "3209": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42140926224",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-06T01:43:08Z",
-        "until": "2026-11-06T02:13:08Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15986,10 +15979,9 @@
         "reason": "planned on opus",
         "trail": "s/server/tests | head; grep -rn \\\"pub(crate) fn \\\\|pub(crate) const \\\" crates/server/tests/api/es256_test_only.rs 2>/dev/null || grep -rln \\\"TEST_ON\u2026\n- Bash: {\"command\": \"cat crates/server/tests/api/es256_test_only.rs\", \"description\": \"Read ES256 test helper\"}\n- Bash: {\"command\": \"grep -rn \\\"UserReply::\\\\|session_token_for\\\\|with_sessions\\\\|session_id\\\" crates/server/tests --include=*.rs | grep -v \\\"^crates/server/tests/api/auth.rs\\\" | head -20; grep -rn \\\"auth::{\u2026\n- Bash: {\"command\": \"sed -n '/\\\\[workspace.lints/,/^$/p' Cargo.toml; grep -n -A15 \\\"^\\\\[workspace.lints.clippy\\\\]\\\" Cargo.toml | head -30; ls crates/server/clippy.toml 2>/dev/null && cat crates/server/clippy\u2026\n- Bash: {\"command\": \"grep -rn \\\"const _: () = assert\\\" crates/server/src crates/engine/src | head -5; grep -n \\\"^edition\\\" Cargo.toml crates/server/Cargo.toml; sed -n 1,30p crates/server/src/config.rs\", \"des\u2026\n- Bash: {\"command\": \"tail -c 300 spec/rulings/R0194.md | od -c | tail -5; grep -c \\\"\\\" spec/rulings/R0194.md; cat spec/rulings/R3205000.md 2>/dev/null | head -20; ls spec/rulings | grep \\\"^R3205\\\\|^R3218\\\"\",\u2026\n- Bash: {\"command\": \"grep -rn \\\"config.rs\\\\|include_str\\\" crates/server/tests/export_config.rs | head; grep -rn \\\"AUTH_SESSION_LIVE_CACHE_SECONDS\\\\|JWKS_COOLDOWN_MS\\\" crates/tools crates/server/src --include\u2026\n- Bash: {\"command\": \"grep -n \\\"^## 11\\\\|^### 11\\\\|R194\\\\|R159\\\\|confirmed\\\\|mfa_enrolled\\\" docs/v0.3.0/SURFACE.md | head -20\", \"description\": \"Check SURFACE \\u00a711 for auth cache contract\"}\n- Bash: {\"command\": \"sed -n 990,1040p docs/v0.3.0/SURFACE.md | grep -n -i \\\"auth\\\\|session\\\\|jwks\\\" | head\", \"description\": \"Scan SURFACE \\u00a711.3 for auth decisions\"}\n- Bash: {\"command\": \"mkdir -p /tmp/flightcheck-3209/src && cd /tmp/flightcheck-3209 && grep -n -A2 'name = \\\"indexmap\\\"$' /home/runner/work/_temp/work/item-3209/Cargo.lock | head -3 && cat > Cargo.toml <<'EO\u2026\n- Bash: {\"command\": \"cd /tmp/flightcheck-3209 && cp /home/runner/work/_temp/work/item-3209/Cargo.lock . && sed -i 's/indexmap = \\\"2\\\"/indexmap = \\\"=2.14.2\\\"/' Cargo.toml && CARGO_TARGET_DIR=/tmp/flightcheck-\u2026\n- Bash: {\"command\": \"cat .cargo/config.toml 2>/dev/null | head -30; ls ~/.cargo/registry/index/\", \"description\": \"Check cargo config and registry index\"}\n- Bash: {\"command\": \"cat rust-toolchain.toml; cd /tmp/flightcheck-3209 && TC=$(grep channel /home/runner/work/_temp/work/item-3209/rust-toolchain.toml | sed 's/.*\\\"\\\\(.*\\\\)\\\".*/\\\\1/'); echo $TC; CARGO_TARGET\u2026\n- Bash: {\"command\": \"cd /tmp/flightcheck-3209 && CARGO_TARGET_DIR=/tmp/flightcheck-3209/target timeout 300 cargo +1.97.0 run -q 2>&1 | tail -20\", \"description\": \"Build scratch crate allowing network fetch\", \u2026\n- Bash: {\"command\": \"cd /tmp/flightcheck-3209 && CARGO_TARGET_DIR=/tmp/flightcheck-3209/target timeout 300 cargo +1.97.0 clippy -q -- -D warnings 2>&1 | grep -v \\\"^\\\\s*$\\\" | head -30\", \"description\": \"Clippy\u2026\n- Bash: {\"command\": \"grep -n -i \\\"R194\\\\|live session\\\\|session check\\\\|/auth/v1/user\\\" docs/architecture.md crates/server/README.md | head\", \"description\": \"Check architecture doc for session check mentions\u2026\n- said: Prototype of the single-flight helper compiles, passes clippy, and behaves as intended (10 concurrent \u2192 1 call, cancelled runner hands off to a waiter, no leftover entries). Writing the plan now.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe Supabase provider in `crates/server/src/auth.rs` makes one provider call per key at a time. Concurrent \u2026\n- Bash: {\"command\": \"sed -n 260,270p crates/shared/tests/bots_pick.rs; wc -w .bot-plan.md\", \"description\": \"Check const-assert precedent in tests and plan length\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \" 4. `r3209000_the_outage_memo_never_outlives_the_live_window`: `assert!(OUTAGE_TTL_MS <= LIVE\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **A wedged or stale flight.** A flight entry that outlived its call would serve\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \" The doc comments say:\\n - The first caller makes the call and later callers await its answer\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \" The text says:\\n - [[R194]]'s session check is one provider call per session of one user at \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \" - Tracker #3202 asks for less compute and faster traffic, and a burst of requests made a bur\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \"The key set's keys are decoded once per fetch and kept in the JWKS cache, so R1144000's refet\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \"- In a real outage, a request whose user's confirmed email has lapsed from the cache still wa\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\", \"old_string\": \" - In `keys_for`, both `self.key_set.lock().await` become `.lock().unwrap_or_else(|poisoned| \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -o \\\"|\\\" .bot-plan.md | wc -l\", \"description\": \"Recount plan words and table pipes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3209/.bot-plan.md\"}\n- said: ## Goal The Supabase provider in `crates/server/src/auth.rs` makes one provider call per key at a time. Concurrent R194 session checks for one session of one user share one `GET /auth/v1/user` call and its answer, and concurrent admin lookups for one user id share one `GET /admin/users/{id}`. A ses\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-06T01:01:03Z",
       "owner_why": "it plans it; released from its hold: `claude-1` has no runner free where it runs",
@@ -16002,9 +15994,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-05T16:42:28Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42140926224",
+      "run_id": "pending:180e81a0-1793929478",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-06T01:01:03Z",
+      "started_at": "2026-11-06T01:45:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6673524130
@@ -17626,9 +17618,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T01:33:50Z",
+    "at": "2026-11-06T01:45:19Z",
     "url": "",
-    "what": "review #3249 on claude-1"
+    "what": "build #3209 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T01:25:13Z",
