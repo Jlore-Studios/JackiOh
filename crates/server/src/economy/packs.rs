@@ -23,6 +23,7 @@ use crate::config::{
     PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
 };
 use crate::cosmetics::Cosmetic;
+use crate::economy::cosmetic_packs::level_skip_chance;
 use crate::economy::grants::{Writing, counters_of, internal_refusal, write_grants};
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::store::{EconomyReason, InventoryEntry, InventoryGrant, JloreGrant, JloreReason};
@@ -237,14 +238,16 @@ pub async fn open_pack_once(
 fn refused(refusal: EconomyRefusal) -> ApiError {
     match refusal.reason {
         RefusalReason::NoPackHeld => ApiError::new(ApiErrorCode::Conflict, refusal.message),
-        RefusalReason::EmptyPool => ApiError::internal(refusal.message),
+        // The quest refusals are other decisions'; an opening never meets them.
+        _ => ApiError::internal(refusal.message),
     }
 }
 
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
 /// screen to show (§14.4), and the unopened packs it holds. The odds are one roll's on the tier
 /// tables, the fallback included (R1339000), and a duplicate's global roll (R1661001) is its
-/// `chance` and its `tiers`, the table floored at `GLOBAL_COSMETIC_FLOOR_RARITY`.
+/// `chance` and its `tiers`, the table floored at `GLOBAL_COSMETIC_FLOOR_RARITY`. R3015003: `levelSkip` is the
+/// chance a duplicate that finds a level past the next one open drops it with every level below it.
 pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -268,6 +271,7 @@ pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
                 "chance": f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL),
                 "tiers": cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY)),
             },
+            "levelSkip": level_skip_chance(),
         },
         "unopened": unopened_from(&inventory),
     })))

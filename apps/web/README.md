@@ -92,6 +92,11 @@ rule's) the line takes a row under Back and the end group. Only `routes/top-bar.
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
 
+The dungeon map's node icons are drawn SVGs (`dungeon/map/NodeIcon.tsx`): single color in `currentColor` on a
+24-unit grid, colored by `data-kind` in `dungeon/map/run.css` from the palette. No system emoji appears
+anywhere under `dungeon/`, held by `dungeon/noEmoji.test.ts`; add a node kind's glyph there, never a
+character.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
@@ -513,20 +518,22 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         defaults of every card, so a card with no pick
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
-                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
-                        as live previews (a full-art card's strip offers no full art, its Animated art
-                        (its normal face, its art moving, R2715000), its Epic, its animated Legendary and
-                        its signed Mythic, R2655000), which equip on that card
-                        alone, kept on the device
+                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of the foils, finishes
+                        and borders it may wear drawn as live previews and, R3015007, its variants as ladders
+                        of their levels (collection/VariantLadders.tsx, `cardLadders`: the Default first,
+                        each rung owned, next or locked and naming what it needs; a full-art card's retired
+                        tiers are listed nowhere, the levels they map to standing for them), which equip on
+                        that card alone, one level a card (`writeCardLevel`), kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        stored pick draws as the default (R1833000); holding a tile, a strip item, a rung or a
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
                         R2730000), a grid card as the card, in hand and on the board with a Radiant
                         toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
                         or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
-                        Only there does a locked item a held token covers offer the token
+                        Only there does a locked item a held token covers offer the token (of a
+                        ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
@@ -676,18 +683,20 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
                          of FriendRows.tsx, shared with /together) and a link to /together; the friends
                          list is read only while the panel is open, ChatPanel and ChallengeDialog open
                          from it without leaving the screen
-together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts) the toast,
+together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
+                         GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
                          hidden unless a challenge of the player's is open, R3205000)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden
-together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenges (socialPoll.ts) while signed in and
+together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
                          refused join offers Open in lobby, /play with the room code filled in (R767);
                          Decline declines
-together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
+together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
+                         no signed-in request (onSignedInRequest, R3210000)
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          offer its link, invite a friend by sending the link in chat, join by code or by
                          a co-op link that fills the join form and focuses Join (R2094000); both players

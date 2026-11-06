@@ -18,6 +18,7 @@ import {
   getChat,
   getFriends,
   getSharedReplays,
+  getSocial,
   getUnread,
   heartbeat,
   removeFriend,
@@ -230,6 +231,17 @@ describe("B47 presence", () => {
   it("B47 a refused heartbeat rejects with ApiRequestError", async () => {
     const error = await refused(() => heartbeat(), refusal(401, "unauthorized", "Sign in first."));
     expect(error.status).toBe(401);
+  });
+});
+
+describe("R3210000 the social poll's read", () => {
+  it("R3210000 getSocial reads GET /api/social and resolves with the challenges and the unread counts", async () => {
+    const answer = { incoming: [CHALLENGE], outgoing: [], unread: { [ANN.profileId]: 2 } };
+    const { call, result } = await sent(() => getSocial(), { status: 200, body: answer });
+    expect(call.method).toBe("GET");
+    expect(call.path).toBe("/api/social");
+    expect(call.headers.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(result).toEqual(answer);
   });
 });
 

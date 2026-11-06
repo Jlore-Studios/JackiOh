@@ -1,6 +1,9 @@
-//! Presence and status (SPEC S7, B47): `POST /api/presence` is the heartbeat a signed-in client sends every
-//! `PRESENCE_HEARTBEAT_MS`, and `standings` is what a friend's row says of where they are. A heartbeat
-//! from an account that owes agreement to the terms in force records nothing (R970002).
+//! Presence and status (SPEC S7, B47): every signed-in request of an active account that passes auth,
+//! the rate limit and the gate is a heartbeat, which the router's touch (`touch_on_request`) records at
+//! most once a `PRESENCE_TOUCH_EVERY_MS` (R3210000); `POST /api/presence` is the beat a client sends
+//! once `PRESENCE_HEARTBEAT_MS` passes with no other signed-in request, and `standings` is what a
+//! friend's row says of where they are. Nothing is recorded while the account owes agreement to the
+//! terms in force (R970002).
 //!
 //! A friend is `inMatch` while a live 1v1 match holds them (the in-match flag §9.5 sets and every ending
 //! clears, which `GET /api/auth/me` reads as `currentMatchId`), while they are between the games of a
@@ -18,17 +21,18 @@
 //! the caller's transaction, by a fixed number of set-based reads, so `GET /api/friends` costs no per-friend
 //! query.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
 use serde::Serialize;
+use serde_json::json;
 
 use crate::api::collection::caller_profile;
 use crate::api::consent::terms_owed;
-use crate::api::http::{ApiResult, Req, now_ms};
+use crate::api::http::{ApiResult, Req, log_warn, now_ms};
 use crate::app::App;
-use crate::config::{PRESENCE_TTL_MS, SPECTATORS_PER_MATCH};
-use crate::db::store::{Profile, StoreError, Tx};
+use crate::config::{PRESENCE_TOUCH_EVERY_MS, PRESENCE_TTL_MS, SPECTATORS_PER_MATCH};
+use crate::db::store::{Profile, ProfileStatus, StoreError, Tx};
 use crate::social::no_content;
 use crate::social::watch::watcher_count;
 
@@ -61,15 +65,79 @@ impl Standing {
     };
 }
 
-/// `POST /api/presence`: the caller is here now (B47), unless it owes agreement to the terms in
-/// force, when nothing is recorded until it agrees (R970002). 204 either way.
-pub async fn heartbeat(app: &Arc<App>, req: Req) -> ApiResult {
-    let me = caller_profile(&req)?.id;
-    let mut tx = app.db.begin(Some(&me)).await?;
-    if !terms_owed(&tx.consent_get(&me).await?) {
-        tx.presence_touch(&me, now_ms()).await?;
+/// R3210000: when the router's touch last wrote each account's presence row, in epoch ms, so a busy
+/// client costs one write a `PRESENCE_TOUCH_EVERY_MS`. One per `App`, in memory, as R897000's queue
+/// presence is: a restart or a second server only writes sooner.
+#[derive(Default)]
+pub struct PresenceTouches {
+    touched: Mutex<IndexMap<String, i64>>,
+}
+
+impl PresenceTouches {
+    /// Whether a touch of `profile_id` at `now` writes: none has in the last `PRESENCE_TOUCH_EVERY_MS`.
+    /// A claim marks it; the marks older than that period go, so the map holds only the accounts
+    /// heard from within one.
+    pub fn claim(&self, profile_id: &str, now: i64) -> bool {
+        let mut touched = self
+            .touched
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if touched
+            .get(profile_id)
+            .is_some_and(|at| now - *at < PRESENCE_TOUCH_EVERY_MS)
+        {
+            return false;
+        }
+        touched.retain(|_, at| now - *at < PRESENCE_TOUCH_EVERY_MS);
+        touched.insert(profile_id.to_string(), now);
+        true
     }
-    tx.commit().await?;
+
+    /// The next touch of `profile_id` writes: its write failed, or it has just agreed to the terms.
+    pub fn forget(&self, profile_id: &str) {
+        self.touched
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .shift_remove(profile_id);
+    }
+}
+
+/// R3210000: the router's touch, for a request that passed auth, the rate limit and the gate. An
+/// active account is here now (B47), written at most once a `PRESENCE_TOUCH_EVERY_MS`; a pending or
+/// banned one never is, on a route open to it or not. A write that fails is logged and refuses
+/// nothing, and the next request tries again.
+pub async fn touch_on_request(app: &App, profile: &Profile) {
+    if !matches!(profile.status, ProfileStatus::Active) {
+        return;
+    }
+    let now = now_ms();
+    if !app.social.presence.claim(&profile.id, now) {
+        return;
+    }
+    if let Err(error) = record_presence(app, &profile.id, now).await {
+        app.social.presence.forget(&profile.id);
+        log_warn(
+            "presence.touch_failed",
+            json!({ "profileId": profile.id, "message": error.to_string() }),
+        );
+    }
+}
+
+/// The caller is here at `now` (B47), unless it owes agreement to the terms in force, when nothing is
+/// recorded until it agrees (R970002).
+async fn record_presence(app: &App, me: &str, now: i64) -> Result<(), StoreError> {
+    let mut tx = app.db.begin(Some(me)).await?;
+    if !terms_owed(&tx.consent_get(me).await?) {
+        tx.presence_touch(me, now).await?;
+    }
+    tx.commit().await
+}
+
+/// `POST /api/presence`: the caller is here now (B47), which the router's touch (`touch_on_request`,
+/// R3210000) has recorded, unless the account owes agreement to the terms in force (R970002). 204
+/// either way.
+pub async fn heartbeat(_app: &Arc<App>, req: Req) -> ApiResult {
+    caller_profile(&req)?;
     Ok(no_content())
 }
 

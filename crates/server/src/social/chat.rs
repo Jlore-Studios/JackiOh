@@ -22,7 +22,7 @@ use crate::api::http::{
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
-use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError};
+use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError, Tx};
 use crate::social::friends::are_friends;
 use crate::social::{created, iso, no_content, not_found, param, refused};
 use crate::username::{is_blocked, is_mark};
@@ -174,20 +174,29 @@ pub async fn send(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn get_unread(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let mut tx = app.db.begin(Some(&me)).await?;
-    let counts = tx.chat_unread(&me).await?;
+    let unread = unread_counts(&mut tx, &me).await?;
+    tx.commit().await?;
+    Ok(ok(json!({ "unread": Value::Object(unread) })))
+}
+
+/// `GET /api/chat/unread`'s counts, also `GET /api/social`'s (R3210000): `me`'s unread messages by
+/// sender, read in `tx`, for each sender who is still a friend and has sent one.
+pub(crate) async fn unread_counts(
+    tx: &mut Tx<'_>,
+    me: &str,
+) -> Result<serde_json::Map<String, Value>, StoreError> {
+    let counts = tx.chat_unread(me).await?;
     let friends: Vec<String> = tx
-        .friends_of(&me)
+        .friends_of(me)
         .await?
         .iter()
-        .map(|row| row.other(&me).to_string())
+        .map(|row| row.other(me).to_string())
         .collect();
-    tx.commit().await?;
-    let unread: serde_json::Map<String, Value> = counts
+    Ok(counts
         .into_iter()
         .filter(|(sender, count)| *count > 0 && friends.contains(sender))
         .map(|(sender, count)| (sender, json!(count)))
-        .collect();
-    Ok(ok(json!({ "unread": Value::Object(unread) })))
+        .collect())
 }
 
 /// `POST /api/chat/messages/:id/report` `{reason}` (B53): 204. `reason` is a non-empty string of at

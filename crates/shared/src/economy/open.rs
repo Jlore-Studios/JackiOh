@@ -25,7 +25,7 @@ use crate::economy::ledger::{AccountCounters, CardCopies, Cause, Counter, Invent
 use crate::economy::math::PityCounters;
 use crate::economy::roll::{Holdings, OpeningLog, PackKind, PoolCard, Slot, SlotGrant, roll_opening};
 
-/// Why a decision refused to open a pack.
+/// Why a decision refused: to open a pack or to move a quest.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -38,6 +38,14 @@ pub enum RefusalReason {
     NoPackHeld,
     /// The pack's pool holds no card (a fault of the catalog, not of the player).
     EmptyPool,
+    /// The day's quest replaces are already used (R2210000).
+    QuestSpent,
+    /// The account does not hold that quest.
+    QuestNotHeld,
+    /// Every other entry of the quest pool is held, so there is none to swap in.
+    NoQuestLeft,
+    /// The account already holds the most quests it may.
+    QuestsFull,
 }
 
 /// A refusal is data (the host contract): the reason and the sentence a player or a log reads.
@@ -217,6 +225,7 @@ pub fn open_card_pack(
         key,
         delta: -1,
         cause: Cause::PackOpen,
+        reference: None,
     }];
     grants.extend(unlocked(
         &records.owned,
@@ -227,16 +236,22 @@ pub fn open_card_pack(
             .map(|slot| slot.card_id.clone()),
     ));
     for slot in &opening.slots {
-        if let SlotGrant::Cosmetic { cosmetic_id, .. } = &slot.grant {
+        if let SlotGrant::Cosmetic {
+            cosmetic_id, below, ..
+        } = &slot.grant
+        {
             // The global roll's account cosmetic is owned for the account, on no card (R1661001).
             let for_account = inputs
                 .registry
                 .iter()
                 .any(|cosmetic| cosmetic.id == *cosmetic_id && !cosmetic.kind.is_per_card());
-            grants.push(LedgerGrant::Cosmetic {
-                card_id: (!for_account).then(|| slot.card_id.clone()),
-                cosmetic_id: cosmetic_id.clone(),
-            });
+            // R3015003: an out-of-order pull's levels below it first, each a row of its own.
+            for cosmetic_id in below.iter().chain([cosmetic_id]) {
+                grants.push(LedgerGrant::Cosmetic {
+                    card_id: (!for_account).then(|| slot.card_id.clone()),
+                    cosmetic_id: cosmetic_id.clone(),
+                });
+            }
         }
     }
     let pity = records.counters.pity;
@@ -286,6 +301,7 @@ pub fn open_cosmetic_pack(
         key: String::new(),
         delta: -1,
         cause: Cause::PackOpen,
+        reference: None,
     }];
     grants.extend(unlocked(
         &records.owned,
@@ -300,13 +316,19 @@ pub fn open_cosmetic_pack(
     ));
     for slot in &opening.slots {
         if let CosmeticSlotGrant::Cosmetic {
-            cosmetic_id, card_id, ..
+            cosmetic_id,
+            card_id,
+            below,
+            ..
         } = &slot.grant
         {
-            grants.push(LedgerGrant::Cosmetic {
-                card_id: card_id.clone(),
-                cosmetic_id: cosmetic_id.clone(),
-            });
+            // R3015003: an out-of-order pull's levels below it first, each a row of its own.
+            for cosmetic_id in below.iter().chain([cosmetic_id]) {
+                grants.push(LedgerGrant::Cosmetic {
+                    card_id: card_id.clone(),
+                    cosmetic_id: cosmetic_id.clone(),
+                });
+            }
         }
     }
     // The Chase Shard bar (R1306002): one per opening, and a full bar holds.
