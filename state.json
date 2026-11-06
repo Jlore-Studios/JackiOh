@@ -16349,8 +16349,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-4",
-      "owner_since": "2026-11-05T23:19:11Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
+      "owner_since": "2026-11-06T03:30:22Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-05T19:35:10Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -17123,14 +17123,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3225,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
-      "queued_at": "2026-11-06T00:42:50Z",
+      "queued_at": "2026-11-06T03:30:22Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "42139225191",
@@ -17153,10 +17153,17 @@
         "provider": "claude-4",
         "run": "42128715530"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-06T00:46:07Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-4",
+        "since": "2026-11-06T03:30:22Z",
+        "until": "2026-11-06T04:00:22Z",
+        "why": "it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -17177,17 +17184,6 @@
         "tiers": {
           "claude": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3245
-        ],
-        "ends": "2026-11-06T03:11:52Z",
-        "from_run": "42139225191",
-        "head": "86ec601b794cc04457922fb5faab2f00d50177dc",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-06T01:11:52Z"
       }
     },
     "3254": {
