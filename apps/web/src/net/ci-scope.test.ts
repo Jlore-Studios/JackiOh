@@ -395,7 +395,8 @@ describe("scripts/ci-scope.sh", () => {
         "crates/engine/tests/fixtures/code-input-cases.json",
         "crates/ai/tests/fixtures/learned-parity.json",
         "crates/server/tests/fixtures/practice-claim.json",
-        "crates/server/quests.json",
+        // The shared crate's quest pool: the quests panel's test holds its titles to zh-CN (#3104).
+        "crates/shared/quests.json",
         "spec/05-card-types.md",
         "package.json",
         "wrangler.jsonc",

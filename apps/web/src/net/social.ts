@@ -132,9 +132,19 @@ export async function unblockPlayer(profileId: string): Promise<void> {
 
 // Presence (B47)
 
-/** Sent by `usePresenceHeartbeat` every `PRESENCE_HEARTBEAT_MS`. */
+/** Sent by `usePresenceHeartbeat` once `PRESENCE_HEARTBEAT_MS` passes with no signed-in request (R3210000). */
 export async function heartbeat(): Promise<void> {
   await social<null>("/api/presence", { method: "POST" });
+}
+
+// The social poll (R3210000)
+
+/** What `getChallenges` and `getUnread` answer, in one read. */
+export type SocialRead = { incoming: Challenge[]; outgoing: Challenge[]; unread: Record<string, number> };
+
+/** The social poll's one read: the caller's open, unexpired challenges, both ways, and its unread counts. */
+export function getSocial(): Promise<SocialRead> {
+  return social<SocialRead>("/api/social");
 }
 
 // Challenges (B48, B49)

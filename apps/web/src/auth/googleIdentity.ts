@@ -28,7 +28,18 @@ export type GisButtonConfiguration = {
   text: "continue_with";
   shape: "rectangular";
   logo_alignment: "left";
+  /** Pixels; GIS reads it as the button's width (its floor is 200, its ceiling 400). */
+  width: number;
 };
+
+/**
+ * Both sign-in buttons' width: GIS draws at it (`GIS_BUTTON.width`) and auth.css's `--auth-oauth-width`
+ * repeats it, so Google's and Roblox's buttons read as one matched pair (R3217000).
+ */
+export const OAUTH_BUTTON_WIDTH_PX = 200;
+
+/** Both sign-in buttons' height: GIS's `size: "large"` button is this tall, and auth.css's `--auth-oauth-height` repeats it (R3217000). */
+export const OAUTH_BUTTON_HEIGHT_PX = 40;
 
 /** Google's button in its light theme, as R666's own Google button was drawn (#1890). */
 export const GIS_BUTTON: GisButtonConfiguration = {
@@ -38,6 +49,7 @@ export const GIS_BUTTON: GisButtonConfiguration = {
   text: "continue_with",
   shape: "rectangular",
   logo_alignment: "left",
+  width: OAUTH_BUTTON_WIDTH_PX,
 };
 
 /** The part of `google.accounts.id` this client calls. */

@@ -42,6 +42,7 @@ import {
 import { expectLastTurnGif, spyOnDownloads, stepForwardAndBack } from "../../support/replays.ts";
 import type { Action, Lane, PlayerId } from "../../support/types.ts";
 import { keepWholeHand, reachHumanTurn, settledThroughAiTurn } from "../../support/practice.ts";
+import { expectReplayBackIsBarPill } from "../../support/topBar.ts";
 import { preferReducedMotion } from "../../support/tutorial.ts";
 
 /** The seed the replay, reload and save games below derive theirs from (`${SEED}:replay`, …). */
@@ -357,7 +358,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     expectNoServer();
   });
 
-  it("R768000 a conceded game opens its replay from the result dialog, steps forward and back, shares its last turn as a GIF, and leaves", () => {
+  it("R768000 R3218000 a conceded game opens its replay from the result dialog, steps forward and back, shares its last turn as a GIF, and leaves", () => {
     visitPractice(practiceUrl(`${SEED}:replay`, "easy", "p2"), { downloads: true });
     cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
@@ -366,6 +367,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
 
     cy.get(ts(PRACTICE_WATCH_REPLAY)).click();
+    // R3218000: the replay's Back is the top bar's pill, the one control of its bar.
+    expectReplayBackIsBarPill(REPLAY_BACK);
     stepForwardAndBack();
     cy.get(ts(REPLAY_BACK)).click();
     cy.get(ts(PRACTICE_RESULT)).should("be.visible");

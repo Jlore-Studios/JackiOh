@@ -114,6 +114,7 @@ fn r1305000_the_grants_come_in_the_order_the_store_writes_them() {
             key: String::new(),
             delta: -1,
             cause: Cause::PackOpen,
+            reference: None,
         }
     );
     // A fresh account's five slots are five new cards, one copy each at most, none a zero delta.
@@ -220,6 +221,7 @@ fn r1306002_a_cosmetic_pack_gains_one_shard_and_a_full_bar_holds() {
             key: String::new(),
             delta: -1,
             cause: Cause::PackOpen,
+            reference: None,
         }
     );
     // A full bar holds: nothing is written to it.
@@ -248,6 +250,7 @@ fn r1305000_a_full_card_bar_pays_a_token_inside_the_opening() {
         key: String::new(),
         delta: 1,
         cause: Cause::TokenBar,
+        reference: None,
     }));
     assert_eq!(
         opening.bars.card.after,
@@ -352,4 +355,85 @@ fn the_boundary_refuses_a_call_that_does_not_parse() {
     assert!(error.to_string().contains("no card pack is named"), "{error}");
     let answer: EconomyAnswer = apply(&EconomyCall::LevelReward { level: 1 });
     assert!(matches!(answer, EconomyAnswer::Reward(_)));
+}
+
+/// `payGame` is `pay_game` over JSON: a finished game's summary and the records the store read in, the
+/// game's pay and the writes out, in order; a bot's side pays nothing.
+#[test]
+fn the_boundary_pays_a_game_over_the_records() {
+    let summary = json!({
+        "mode": "ladder", "profileId": "profile-a", "player": "p1", "won": true, "actions": 10,
+        "matchId": "match-1", "at": NOW, "bot": false, "tally": {
+            "played": [], "trapsFired": 0, "attacks": 0, "positionSwitches": 0, "radiantUpgrades": 0 },
+        "proficiency": [],
+    });
+    let records = json!({
+        "paidToday": 0, "tracks": [], "quests": { "held": [], "nextDueAt": NOW + 1_000_000_000 },
+    });
+    let paid = call(json!({ "call": "payGame", "records": records, "summary": summary, "seed": SEED }));
+    let paid = &paid["paid"];
+    assert_eq!(paid["economy"]["jlore"], 20);
+    assert_eq!(paid["economy"]["xp"], 800);
+    assert_eq!(
+        paid["grants"][0],
+        json!({ "kind": "jlore", "delta": 20, "cause": "game", "reference": "match-1" })
+    );
+    assert_eq!(paid["grants"][1]["kind"], "track");
+    // The same call pays the same.
+    assert_eq!(
+        call(json!({ "call": "payGame", "records": records, "summary": summary, "seed": SEED }))["paid"],
+        *paid
+    );
+    let mut bot = summary.clone();
+    bot["bot"] = json!(true);
+    let unpaid = call(json!({ "call": "payGame", "records": records, "summary": bot, "seed": SEED }));
+    assert_eq!(unpaid["paid"]["grants"], json!([]));
+    assert_eq!(unpaid["paid"]["economy"]["jlore"], 0);
+}
+
+/// The quest calls: a top-up brings the quests due and moves the schedule, a replace removes and draws, a dev
+/// give draws one, a dev completion pays a held quest; the refusals are data.
+#[test]
+fn the_boundary_moves_the_quests() {
+    let topped = call(json!({
+        "call": "topUpQuests", "quests": { "held": [], "nextDueAt": null }, "seed": SEED, "now": NOW,
+    }));
+    assert_eq!(
+        topped["toppedUp"]["grants"].as_array().map(Vec::len),
+        Some(1),
+        "a first visit starts the clock"
+    );
+    assert_eq!(topped["toppedUp"]["grants"][0]["kind"], "questDue");
+    let quests = topped["toppedUp"]["book"].clone();
+    let interval: i64 = 5 * 60 * 60 * 1000;
+    let due = call(json!({
+        "call": "topUpQuests", "quests": quests, "seed": SEED, "now": NOW + interval,
+    }));
+    let book = due["toppedUp"]["book"].clone();
+    assert_eq!(book["held"].as_array().map(Vec::len), Some(1));
+    let held = book["held"][0]["questId"].clone();
+    let replaced = call(json!({
+        "call": "replaceQuest", "quests": book, "removedToday": 0, "questId": held, "seed": SEED, "now": NOW + interval,
+    }));
+    assert_eq!(replaced["granted"][0]["change"], "removed");
+    assert_eq!(replaced["granted"][1]["change"], "arrived");
+    let spent = call(json!({
+        "call": "replaceQuest", "quests": book, "removedToday": 1, "questId": held, "seed": SEED, "now": NOW,
+    }));
+    assert_eq!(spent["refused"]["reason"], "quest_spent");
+    let given = call(json!({ "call": "giveQuest", "quests": book, "seed": SEED, "now": NOW }));
+    assert_eq!(given["granted"][0]["cause"], "dev");
+    let completed = call(json!({
+        "call": "completeQuest", "quests": book, "tracks": [], "questId": held, "cause": "dev", "now": NOW,
+    }));
+    assert_eq!(completed["granted"][0]["change"], "completed");
+    let not_held = call(json!({
+        "call": "completeQuest", "quests": { "held": [], "nextDueAt": null }, "tracks": [], "questId": held,
+        "cause": "dev", "now": NOW,
+    }));
+    assert_eq!(not_held["refused"]["reason"], "quest_not_held");
+    let xp = call(json!({ "call": "payXp", "tracks": [], "xp": 0, "cause": "track", "reference": "m" }));
+    assert_eq!(xp["granted"], json!([]));
+    let starting = call(json!({ "call": "startingRewards", "tracks": [] }));
+    assert_eq!(starting["granted"][0]["kind"], "track");
 }

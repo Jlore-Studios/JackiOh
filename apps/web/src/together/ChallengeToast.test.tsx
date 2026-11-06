@@ -78,7 +78,10 @@ function serve(challenges: Challenges, special?: (call: Call) => Reply | undefin
     if (call.path === "/api/auth/me") {
       return { status: 200, body: meBody({ profile: { id: ME.profileId, status: "active" }, email: "me@example.test" }) };
     }
-    if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: challenges };
+    // R3210000: the social poll's one read, built per call since a decline changes the challenges.
+    if (call.method === "GET" && call.path === "/api/social") {
+      return { status: 200, body: { incoming: challenges.incoming, outgoing: challenges.outgoing, unread: {} } };
+    }
     if (call.method === "GET" && call.path === "/api/decks") return { status: 200, body: decksBody() };
     if (call.method === "POST" && /^\/api\/rooms\/[^/]+\/join$/.test(call.path)) {
       const code = call.path.split("/")[3] ?? "";
@@ -93,7 +96,6 @@ function serve(challenges: Challenges, special?: (call: Call) => Reply | undefin
     if (call.method === "GET" && call.path === "/api/friends") {
       return { status: 200, body: { friends: [], incoming: [], outgoing: [], blocked: [] } };
     }
-    if (call.method === "GET" && call.path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
     if (call.method === "GET" && call.path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     return undefined;
   });
@@ -349,10 +351,10 @@ describe("B57 the challenge toast", () => {
       const server = serve({ incoming: [], outgoing: [OUTGOING] });
       render(<ChallengeToast />);
       await waitFor(() => {
-        expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
+        expect(server.to("GET", "/api/social").length).toBeGreaterThan(0);
       }, SOON);
       await settle({ advance: SOCIAL_POLL_MS + 1 });
-      expect(server.to("GET", "/api/challenges")).toHaveLength(2);
+      expect(server.to("GET", "/api/social")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(BOB.username);
     },
@@ -366,7 +368,7 @@ describe("B57 the challenge toast", () => {
       const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
       await settle({ advance: SOCIAL_POLL_MS + 1 });
-      expect(server.to("GET", "/api/challenges")).toHaveLength(0);
+      expect(server.to("GET", "/api/social")).toHaveLength(0);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(ANN.username);
     },
@@ -379,14 +381,14 @@ describe("B57 the challenge toast", () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       signIn("tok-toast");
       const server = serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
-        call.path === "/api/challenges" ? { status: 500, body: { error: { code: "internal", message: "boom" } } } : undefined,
+        call.path === "/api/social" ? { status: 500, body: { error: { code: "internal", message: "boom" } } } : undefined,
       );
       render(<ChallengeToast />);
       await waitFor(() => {
-        expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
+        expect(server.to("GET", "/api/social").length).toBeGreaterThan(0);
       }, SOON);
       await settle({ advance: SOCIAL_POLL_MS + 1 });
-      expect(server.to("GET", "/api/challenges")).toHaveLength(2);
+      expect(server.to("GET", "/api/social")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
     },
     TEST_MS,
@@ -502,7 +504,7 @@ describe("R2031000 an All Random challenge's more cards from", () => {
       const server = serve(challenges);
       render(<ChallengeToast />);
       await waitFor(() => {
-        expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
+        expect(server.to("GET", "/api/social").length).toBeGreaterThan(0);
       }, SOON);
       expect(screen.queryByTestId(challengeToastTestid.lean)).toBeNull();
 

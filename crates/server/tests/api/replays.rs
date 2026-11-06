@@ -853,6 +853,10 @@ mod r768_the_list {
         for id in ["m-cost-0", "m-cost-1"] {
             seed_finished(&app, Finish::new(id, &played, now), &played).await;
         }
+        // R3210000: A's first signed-in request also refreshes A's presence, so the count is the
+        // page's own.
+        let (status, _) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(status, 200);
         let calls = Arc::new(Mutex::new(Vec::<String>::new()));
         let seen = calls.clone();
         fake_lock(&app).await.on_call = Some(Arc::new(move |called: &str| {

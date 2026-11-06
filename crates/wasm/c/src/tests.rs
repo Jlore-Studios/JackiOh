@@ -367,6 +367,21 @@ fn loadout_export_answers_what_the_core_body_answers() {
         serde_json::from_str::<Value>(&none).expect("JSON")["due"]["cards"],
         json!([])
     );
+    // What a seat wears when its match starts (R1834002): the picks the host read in, the loadout out. A seat
+    // that owns nothing wears the defaults, and the stamp its card earned goes with it (R3013002).
+    let freeze = json!({
+        "call": "freezeSeat", "deckCards": ["core-001"],
+        "picks": { "stamps": [{ "cardId": "core-001", "stamp": 2 }] },
+    })
+    .to_string();
+    let frozen = call!(loadout; freeze;);
+    assert_eq!(frozen, expect(wasm_core::loadout(&freeze)));
+    assert_eq!(frozen.status, STATUS_OK, "{}", frozen.text);
+    let frozen: Value = serde_json::from_str(&frozen.text).expect("JSON");
+    assert_eq!(
+        frozen["frozen"]["stamps"],
+        json!([{ "cardId": "core-001", "stamp": 2 }])
+    );
     // A call that does not parse is the one failure.
     let broken = call!(loadout; "{}";);
     assert_eq!(broken, expect(wasm_core::loadout("{}")));
@@ -451,6 +466,15 @@ fn bots_exports_answer_what_the_core_bodies_answer() {
         serde_json::from_str::<Value>(&answer.text).expect("JSON")["due"],
         true
     );
+    // R1834005: the cosmetics a bot may wear are data in, data out.
+    let eligible = r#"{ "call": "eligibleCosmetics", "now": 1700000000000, "owners": [] }"#;
+    let answer = call!(bots; eligible;);
+    assert_eq!(answer, expect(wasm_core::bots(eligible)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    assert_eq!(
+        serde_json::from_str::<Value>(&answer.text).expect("JSON")["holdings"],
+        json!([])
+    );
     // A call that does not parse is the one failure.
     let broken = call!(bots; "{}";);
     assert_eq!(broken, expect(wasm_core::bots("{}")));
@@ -499,6 +523,14 @@ fn economy_export_answers_what_the_core_body_answers() {
             .map(Vec::len),
         Some(5)
     );
+    // A quest top-up and a finished game's pay are data in, data out (#3104).
+    let top_up =
+        json!({ "call": "topUpQuests", "quests": { "held": [], "nextDueAt": null }, "seed": "s", "now": 1 })
+            .to_string();
+    let topped = call!(economy; top_up;);
+    assert_eq!(topped, expect(wasm_core::economy(&top_up)));
+    assert_eq!(topped.status, STATUS_OK, "{}", topped.text);
+    assert!(topped.text.contains("questDue"), "{}", topped.text);
     // A call that does not parse is the one failure.
     let broken = call!(economy; "{}";);
     assert_eq!(broken, expect(wasm_core::economy("{}")));

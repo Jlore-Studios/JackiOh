@@ -182,6 +182,10 @@ pub struct ResumeOptions {
     pub modes: Option<Vec<String>>,
     /// R174, §10.6: when `targets` were picked — an answer's picks, as its prompt offered them.
     pub chosen_from: Option<u32>,
+    /// R3182000: the card a hook that runs with no `self` belongs to, which only its `hookResolving`
+    /// marker names: a Unit's Cry triggered out of its graveyard (R467). `None` leaves the marker the
+    /// resume's own `instance_id`. Never stored, so no state carries it.
+    pub hook_card: Option<String>,
 }
 
 // The stored records
@@ -613,6 +617,7 @@ pub fn continue_answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, picks
             modes: None,
             // R174, §10.6: the picks as the prompt offered them, on the stays they stand on now.
             chosen_from: Some(chosen_from),
+            hook_card: None,
         },
     );
     drain_work(sink);
@@ -1058,7 +1063,10 @@ fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
             }
             None => {
                 if let Some(controller) = options.controller {
-                    crate::hook_marks::mark_cardless_hook(sink, &resume.def_id, controller, kind);
+                    // R3182000: named by the card it belongs to, where one exists, so the view hides it
+                    // with that card's other events (R97).
+                    let card = options.hook_card.as_deref().or(resume.instance_id.as_deref());
+                    crate::hook_marks::mark_cardless_hook(sink, card, &resume.def_id, controller, kind);
                 }
             }
         }
@@ -1190,6 +1198,7 @@ pub fn run_hook_resumable(
             targets: options.targets,
             modes: options.modes,
             chosen_from: None,
+            hook_card: None,
         },
     )
 }
@@ -1416,6 +1425,7 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
             targets: Some(targets),
             modes: None,
             chosen_from: Some(chosen_from),
+            hook_card: None,
         },
     );
 }
