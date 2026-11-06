@@ -18473,9 +18473,9 @@
     "what": "review #3277 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-06T04:57:41Z",
+    "at": "2026-11-06T05:06:39Z",
     "notes": [
-      "delivered build #3017 on claude-4 (run 42162485234): interrupted"
+      "#3017 is held for `claude-4` until Fri 00:40 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19181,7 +19181,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T04:57:41Z",
+  "loop_tick": "2026-11-06T05:06:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
