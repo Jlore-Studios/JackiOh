@@ -15811,16 +15811,12 @@
     "what": "build #3211 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-06T11:30:17Z",
+    "at": "2026-11-06T11:56:08Z",
     "notes": [
-      "delivered plan #3211 on claude-6 (run 42206683102): planned",
-      "delivered plan #3207 on claude-7 (run 42206556598): planned",
-      "delivered revise #3245 on claude-8 (run 42203587813): built",
-      "started review #3245 on claude-8 (run 42211927223)",
-      "started revise #3268 on claude-8 (run 42212048369)",
-      "started build #3207 on claude-7 (run 42212166771)",
-      "started build #3211 on claude-6 (run 42212286175)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #3277 on claude-1 (run 42206313999): approved",
+      "#3295: closed, so `bot:merging` is off",
+      "#3294: closed, so `bot:merging` is off",
+      "#3271: auto-merge is off and it is out of the merge queue, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16526,7 +16522,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T11:30:17Z",
+  "loop_tick": "2026-11-06T11:56:08Z",
   "machine_disk": {
     "issue": null,
     "reading": {
