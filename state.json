@@ -16078,6 +16078,13 @@
     "3305": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T13:35:38Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the fix is one test-support file in crates/server/tests/ (no engine rules, no AI, no cross-crate contract, no migration, about 1 file)."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
