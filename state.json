@@ -15516,6 +15516,13 @@
     "3290": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T15:25:15Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the rule holds: no engine, AI or migration, about 15 files; one optional field plumbed along R3074001's existing path (shared board -> two stores -> leaderboard loop)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
