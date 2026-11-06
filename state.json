@@ -18244,6 +18244,13 @@
     "3289": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T06:58:39Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Test-only change in four files (two tools test modules, two AI test files); no line of the rule holds: nothing in crates/engine/src or crates/ai/src changes, no migration, far under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
