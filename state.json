@@ -17566,19 +17566,27 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-3",
+        "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/net/api.ts"
+          ],
+          "from": "463ade4f1d6fc3be52ea5ea726771df46c396c6d",
+          "main": "e1ebb6fff89f8beff9a9e4c7363930cd22aa563f"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-3",
-            "run": "42133207281",
-            "tier": "medium"
+            "provider": "claude-4",
+            "run": "42151044890",
+            "tier": "strong"
           }
         ],
-        "sha": "463ade4f1d6fc3be52ea5ea726771df46c396c6d",
+        "sha": "718dcedda95758450c96da1fddfd94e73b5dd59c",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
