@@ -13689,8 +13689,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-06T17:21:55Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-06T20:40:10Z",
+      "owner_why": "its turn came (#3321, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-06T17:58:56Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -16641,12 +16641,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3213,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-06T19:17:24Z",
+      "queued_at": "2026-11-06T20:40:10Z",
       "run_id": "42278484920",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16667,9 +16667,17 @@
         "provider": "claude-8",
         "run": "42278484920"
       },
+      "source": "conflict",
       "started_at": "2026-11-06T19:18:34Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-06T20:40:10Z",
+        "until": "2026-11-06T21:10:10Z",
+        "why": "#3321, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -16689,17 +16697,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3321
-        ],
-        "ends": "2026-11-06T22:18:35Z",
-        "from_run": "42278484920",
-        "head": "125eec22e71140529007a94868bbcf964eae2b27",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-06T20:18:35Z"
       }
     },
     "3320": {
