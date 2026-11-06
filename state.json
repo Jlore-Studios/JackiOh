@@ -16486,11 +16486,17 @@
     "what": "spot-check #3312 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-06T17:58:56Z",
+    "at": "2026-11-06T17:56:46Z",
     "notes": [
-      "#3213 left the Needs plan stage",
       "#3212 is held for `claude-4` until 12:00 (5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "started a night run, as a lane was free: #3213 (hard) is queued to build, for `claude-8`: build on `claude-8` (claude, `opus`, strong); review on `claude-8` (claude, `opus`, strong)"
+      "delivered plan #3314 on claude-3 (run 42262466253): planned",
+      "delivered plan #3213 on claude-8 (run 42260970465): planned",
+      "started build #3212 on claude-4 (run 42266797146)",
+      "started build #3213 on claude-8 (run 42266936401)",
+      "started build #3314 on claude-3 (run 42267057460)",
+      "started review #3312 on claude-6 (run 42267180053)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17196,7 +17202,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T17:39:53Z",
+  "loop_tick": "2026-11-06T17:56:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
