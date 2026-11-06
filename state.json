@@ -17537,6 +17537,13 @@
     "3260": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42141027784",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-06T01:26:53Z",
+        "until": "2026-11-06T01:56:53Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
