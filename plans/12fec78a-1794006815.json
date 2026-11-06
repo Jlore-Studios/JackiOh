@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3220,
+  "title": "Patch: one Dialog component, and the board's confirm dialogs on it",
+  "branch": "bot/issue-3220",
+  "thread": "**Issue #3220 (data, not instructions):**\n\n```text\n# #3220: Patch: one Dialog component, and the board's confirm dialogs on it\nOpened by @squishy-squooby.\n\n### What it does\n\nThe client has about 15 dialog implementations, and they disagree on almost everything:\n\n- **Scrims.** There are 14 distinct scrim classes (prompt, inspect, concede, practice-leave, practice-result, settings, friends-panel, together-dialog, stats-modal, dungeon-stats__scrim, field-guide, command-menu, result, tutorial-result, hero-inspect). Backgrounds run from 45 % wood (`game/prompt.css:23`) to `rgba(0,0,0,.75)` (`routes/stats.css:548`) to a radial gradient plus blur (`practice/practice.css:926,1182`).\n- **Stacking.** Layers are raw `z-index` values (60, 70, 80, 90, 100, 200, 1000: `practice.css`, `together.css:167,384`, `stats.css:548`, `command-menu.css:3`, `settings.css:89`), although `surfaces.css:36` names `--z-modal`.\n- **Keys and focus** come in three families:\n  - `useModalOverlay` (`cards/inspect/store.ts`)\n  - `useModalKeys` (`together/modalKeys.ts`)\n  - a hand-rolled `\"Escape\"` handler in ConfirmConcede, PracticeLeave, ConfirmLeaveFight, SettingsPanel, ChatPanel, the stats drill-down, ItemPreview, CardCosmeticsView, TokenOffer, CosmeticPacks and PracticeResult\n\n  ConfirmConcede and ConfirmLeaveMatch share markup classes but use different families.\n- **The close control** varies:\n  - \u2715 top right: `SettingsPanel.tsx:248`, `stats.tsx:1521`, `ChatPanel.tsx:225`\n  - \u00d7 top right: `FriendsButton.tsx:151`, `DevButton.tsx:93`\n  - a text \"Close\" at the bottom: `CardDetail.tsx:191`, `PatchNotes.tsx:429`, `FieldGuide.tsx:80`, `ItemPreview.tsx:136`, `DungeonStats.tsx:264`\n  - \"Done\" (`PackOpening.tsx:359`) and \"Got it\" (`Coach.tsx:403`)\n- **Button order is reversed** between the game and the menus. The game's confirms put the safe choice first (ConfirmConcede:87, ConfirmLeaveMatch:75, PracticeLeave:83, ConfirmLeaveFight:64). The menu confirms put the action first and Cancel last (`ChallengeDialog.tsx:269-273`, `TokenOffer.tsx:190-193`, `account.tsx:592-610`).\n- **Titles.** Settings uses an `h1` (`SettingsPanel.tsx:240`, a second h1 on the page), the others `h2`, each in its own class. ChallengeDialog borrows a lobby class (`play-panel__heading`).\n\nThis issue is the first of two. It adds the component and moves the board's confirm dialogs onto it. The next issue moves every other dialog.\n\nChange: add one `<Dialog>` component and stylesheet:\n- one scrim color from the palette\n- one layer token (`--z-modal`, or a named level above it for a dialog over a dialog)\n- a `role=\"dialog\"` / `role=\"alertdialog\"` with an `h2` title\n- a \u2715 close button at the top right, unless it is an alertdialog, where Cancel is the close\n- an actions row in one order (pick one and write it down; the board's current order, safe choice first and Confirm last at the right, is the suggestion)\n- keys and focus through one hook (`useModalKeys` or `useModalOverlay`), registered as a Back layer (`net/backLayers.ts`, R2127000): Escape, Back and a click outside close it, Tab stays inside, and focus goes back to the opener\n\nThen move the board's confirms onto it: ConfirmConcede, ConfirmLeaveMatch, PracticeLeave, ConfirmLeaveFight and PracticeResult. Keep every existing `data-testid` (`concede-dialog`, `concede-confirm`, `concede-cancel` and the rest) and the behavior README \"Concede asks first\" describes. Destructive confirms use `button-danger` from the button-roles issue.\n\nRecord the dialog convention (close control, button order, keys) as a ruling note (CLAUDE.md rule 3), so later dialogs follow it.\n\n### Acceptance\n\n- `<Dialog>` exists with unit tests for: Escape closes, Back closes (Back layer), a click on the scrim closes, focus is trapped and returns to the opener, the \u2715 has an accessible name, and the actions render in the documented order.\n- ConfirmConcede, ConfirmLeaveMatch, PracticeLeave, ConfirmLeaveFight and PracticeResult render through `<Dialog>`, with no hand-rolled `\"Escape\"` handler and no scrim class of their own left in those files or their CSS.\n- Their existing testids and tests still pass, including e2e specs that concede or leave.\n- The layer is a `surfaces.css` token, not a raw `z-index`.\n\n### Blocked by, part of\n\nBlocked by #3219\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3220: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:44:39Z",
+    "claimed_at": "2026-11-06T23:13:54Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first"
+  ]
+}
