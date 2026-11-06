@@ -13717,6 +13717,13 @@
     "3214": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42305937872",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-06T23:10:26Z",
+        "until": "2026-11-06T23:40:26Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
