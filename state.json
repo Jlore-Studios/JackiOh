@@ -32999,7 +32999,8 @@
       "2026-11-06T16:09:14Z,claude-8,stream,call,42249251329,1,2026-11-06T21:00:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-06T15:50:34Z,42240523063,claude-7,sonnet+opus,build,3286,medium,built,,12.1,41,13374,1260596,0.4678,10,14,,,19,claude-7,fresh,,1"
+      "2026-11-06T15:50:34Z,42240523063,claude-7,sonnet+opus,build,3286,medium,built,,12.1,41,13374,1260596,0.4678,10,14,,,19,claude-7,fresh,,1",
+      "2026-11-06T16:09:15Z,42249251329,claude-8,opus+sonnet,review,3309,medium,reviewed,,0.5,8,3031,213569,0.2383,0,1,,,0.3,,none,,1"
     ]
   },
   "version": 1
