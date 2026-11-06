@@ -281,9 +281,9 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 		len(gone), len(shed))}, dropped...)
 }
 
-// Housekeeping requeues items a dead run left working; queues a revision for conflicted bot
-// PRs; puts back in the merge queue a cleared one it took out with no failed build
-// (`queue.requeue_cleared`).
+// Housekeeping requeues items a dead run left working; takes conflicted bot PRs out of the merge
+// queue and queues a revision that resolves the conflict; puts back in the merge queue a cleared one
+// it took out with no failed build (`queue.requeue_cleared`).
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 	labelRevise := config.LabelRevise
 	labelBlocked := config.LabelBlocked
@@ -383,11 +383,11 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 				continue
 			}
 			queue.SetStateLabel(ctx, number, names, labelRevise)
-			if pull.Truthy("auto_merge") && pull.Truthy("node_id") {
-				// The revision may come from another model; its approval decides afresh.
-				herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(pull.Get("node_id"))) })
-			}
-			queue.NotMerging(ctx, number, names)
+			// Out of `main`'s merge queue as well as auto-merge off (`queue.HoldMerge`): a queued pull
+			// request has no auto-merge left to turn off, and `main` conflicting with it may reach it
+			// before the queue does. The revision may come from another model; its approval decides
+			// afresh, and its auto-merge queues it again at the back.
+			queue.HoldMerge(ctx, pull)
 			// The lane owns its pull request until it merges (#2948): the subscription whose approval
 			// shipped this head resolves its conflict, ahead of its new work (`Pairs`), held for it a
 			// while or handed off as any owner's work (`Owning`), as a CI fix goes to it

@@ -135,7 +135,7 @@ func (x *Deliverer) decisionMd(decision *pyjson.Object) string {
 		lines = append(lines, "**My suggestion:** none of them: no option stays inside the issue's own "+
 			"limits, so this waits for your answer.", "")
 	}
-	answer := "Reply with a number, or tell me something else in your own words, and I'll revise it that way."
+	answer := x.howToAnswer(decision, len(options) > 0)
 	switch {
 	case chosen > 0 && decision.Truthy("ends"):
 		ends := clock.ParseISOValue(decision.Get("ends"))
@@ -150,6 +150,25 @@ func (x *Deliverer) decisionMd(decision *pyjson.Object) string {
 		answer += " With no suggestion, it waits for your answer: I never go ahead by myself."
 	}
 	return strings.Join(append(lines, answer), "\n")
+}
+
+// howToAnswer is how a person answers the question (#3300), in the form `plan.reply` reads: a plain
+// comment from their own account, since one that names the bot is a command (`commands.Parse`,
+// `NamesTheBot`) and a bot's is never read. A command still works, as an ordinary run.
+func (x *Deliverer) howToAnswer(decision *pyjson.Object, numbered bool) string {
+	verb, run := "revise", "revision"
+	if decision.Str("kind") == "build" {
+		verb, run = "build", "build"
+	}
+	what := "your answer in your own words"
+	if numbered {
+		what = "just the option's number (`1`) or your own words"
+	}
+	return fmt.Sprintf("**How to answer:** reply here with a plain comment from your own account, %s, and "+
+		"I'll %s it that way; I say ✅ **Answered** here once I take it. Leave `@%s` and `%s` out of it: I read a "+
+		"comment that names me as a command, not as your answer. `%s %s <your answer>` works too, but as an "+
+		"ordinary %s that any free lane takes, not as your answer to this question.", what, verb,
+		strings.TrimLeft(x.Cfg.BotLogin, "@"), config.Slash, config.Slash, verb, run)
 }
 
 // oneLine is `text` on one line, its whitespace collapsed.

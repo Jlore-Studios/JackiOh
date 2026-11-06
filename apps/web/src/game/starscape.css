@@ -9,7 +9,7 @@
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .starscape-node {

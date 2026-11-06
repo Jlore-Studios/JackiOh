@@ -541,7 +541,7 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
 fn has_answerer(hook: &str) -> bool {
     matches!(
         hook,
-        "play" | "plague:placement" | "fuse:onto" | "@triggerCry" | "@attackSummon"
+        "play" | "plague:placement" | "@triggerCry" | "@attackSummon"
     )
 }
 
@@ -557,8 +557,6 @@ fn answer_owned(
         "play" => Some(crate::play_steps::answer_play_prompt(sink, answer)),
         // `PLAGUE_PLACEMENT_HOOK`: B5 E19's placement pick.
         "plague:placement" => Some(crate::effects::plague::answer_placement(sink, answer)),
-        // `FUSE_ONTO_HOOK`: the permanent a Fuse goes onto.
-        "fuse:onto" => Some(crate::effects::fuse::answer_fuse_onto(sink, answer)),
         // `TRIGGER_CRY_HOOK`: a Cry a trigger fires.
         "@triggerCry" => Some(crate::cry_trigger::answer_cry_prompt(sink, answer)),
         _ => None,

@@ -782,7 +782,7 @@
 
 /* A phone held upright: the board close under Back. The keyboard takes the lower half of the
    screen as soon as a field is tapped, so the fields belong high, not a tall screen's drop below. */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .tavern.app-shell:not(.shell-panel) .panel--auth {
     margin-top: clamp(4px, calc(5vh - 12px), 32px);
   }
@@ -815,7 +815,7 @@
    down. The on-screen keyboard covers most of that height, so every pixel above the field counts.
    Sign-in and reset also move Back beside the board rather than above it; the code screen keeps its
    top bar, which also says who is signed in. */
-@media (orientation: landscape) and (max-height: 500px) and (min-width: 600px) {
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 601px) {
   .tavern.app-shell.auth-screen,
   .tavern.app-shell.invite-screen {
     padding-top: 8px;

@@ -2,9 +2,8 @@
 //! binds (`crates/wasm`, SURFACE §10.1) as an `extern "C"` function over JSON strings, built as a plain
 //! `wasm32-unknown-unknown` module with no host imports: no wasm-bindgen glue, no JavaScript and no
 //! system interface, so any host that runs WebAssembly (a Roblox port's translation among them, #2898)
-//! instantiates it with an empty import object. It is a third wrapper over `jackioh-wasm-core`'s bodies
-//! (#1505), beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau` (the same C names through
-//! emscripten, with the Luau VM, which part 5 of #2956 deletes); the bodies are not copied.
+//! instantiates it with an empty import object. It is a second wrapper over `jackioh-wasm-core`'s bodies
+//! (#1505), beside `crates/wasm` (wasm-bindgen); the bodies are not copied.
 //! `crates/wasm/tests/export_parity.rs` holds this module to every binding the browser module binds.
 //! `README.md` is the contract, written for a host that is not JavaScript.
 //!
@@ -27,8 +26,6 @@
 
 use std::cell::RefCell;
 
-use jackioh_engine::prelude::IndexMap;
-use jackioh_engine::{CreateGameArgs, SetupKind};
 use jackioh_wasm_core as wasm_core;
 
 // The memory interface: buffers in, one result buffer out
@@ -115,18 +112,6 @@ const NO_DEADLINE_MS: f64 = 0.0;
 /// The clock the bodies take, which no body reads under `NO_DEADLINE_MS`: this module has none.
 fn no_clock() -> f64 {
     NO_DEADLINE_MS
-}
-
-/// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
-/// and a panic in WebAssembly is a trap. R180's handicaps come first, so a bad deck size is named as the
-/// handicap's fault, then each deck against its seat's size (R184); the functions are the engine's own
-/// (`state.rs`), so the messages are the engine's verbatim.
-fn check_setup(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
-    // R915009: this module holds no Luau, so it plays no game with custom cards.
-    if args.custom_cards.as_ref().is_some_and(|cards| !cards.is_empty()) {
-        return Err("a game with custom cards is not played by this module (R915009)".to_owned());
-    }
-    wasm_core::check_decks(args, &IndexMap::new(), kind)
 }
 
 // Boot and the catalog
@@ -319,6 +304,22 @@ pub extern "C" fn run_max_hp(
     })
 }
 
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_shop_prices(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    content_json_ptr: *const u8,
+    content_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("runShopPrices: the state", state_json_ptr, state_json_len)?;
+        let content = arg("runShopPrices: the content", content_json_ptr, content_json_len)?;
+        wasm_core::run_shop_prices(state, content)
+    })
+}
+
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
 #[unsafe(no_mangle)]
 pub extern "C" fn run_level_cost(level_json_ptr: *const u8, level_json_len: usize) -> i32 {
@@ -357,7 +358,7 @@ pub extern "C" fn run_daily_seed(
 /// `GameState` from JSON arguments.
 #[unsafe(no_mangle)]
 pub extern "C" fn create_game(args_json_ptr: *const u8, args_json_len: usize) -> i32 {
-    boundary(|| wasm_core::create_game(arg("createGame", args_json_ptr, args_json_len)?, check_setup))
+    boundary(|| wasm_core::create_game(arg("createGame", args_json_ptr, args_json_len)?))
 }
 
 /// `ReduceResult`: `{ state, events, error? }`.
@@ -428,7 +429,7 @@ pub extern "C" fn hash_state(state_json_ptr: *const u8, state_json_len: usize) -
 pub extern "C" fn fold(args_json_ptr: *const u8, args_json_len: usize) -> i32 {
     boundary(|| {
         // The fold's input is `createGame`'s plus `log`, so the same JSON reads as both.
-        wasm_core::fold(arg("fold", args_json_ptr, args_json_len)?, check_setup)
+        wasm_core::fold(arg("fold", args_json_ptr, args_json_len)?)
     })
 }
 
@@ -445,7 +446,7 @@ pub extern "C" fn replay_open(
     boundary(|| {
         let record = arg("replayOpen: the record", record_json_ptr, record_json_len)?;
         let args = arg("replayOpen", args_json_ptr, args_json_len)?;
-        wasm_core::replay_open(args, record, check_setup)
+        wasm_core::replay_open(args, record)
     })
 }
 
@@ -790,6 +791,24 @@ pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 
 #[unsafe(no_mangle)]
 pub extern "C" fn loadout(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::loadout(arg("loadout: the call", call_json_ptr, call_json_len)?))
+}
+
+// What a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)
+
+/// One call of the face model: a `FaceCall` as JSON in, a `FaceAnswer` as JSON out. The catalog is the one
+/// `init` registered; the host passes the locale in (`crates/shared/README.md`, the host contract).
+#[unsafe(no_mangle)]
+pub extern "C" fn face(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::face(arg("face: the call", call_json_ptr, call_json_len)?))
+}
+
+// The game log's lines (#3108: `jackioh-shared`'s log, in the reader's words)
+
+/// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
+/// `init` registered; the host passes the locale in (`crates/shared/README.md`, the host contract).
+#[unsafe(no_mangle)]
+pub extern "C" fn log(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::log(arg("log: the call", call_json_ptr, call_json_len)?))
 }
 
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)

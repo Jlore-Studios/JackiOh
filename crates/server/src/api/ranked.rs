@@ -23,7 +23,7 @@ use crate::db::store::{
     Season, SeasonStanding, SeriesStatus, StoreError, Tx, ladder_of_mode,
 };
 use crate::economy::store::{CosmeticGrant, EconomyReason};
-use crate::ranked::board::standings_of;
+use crate::ranked::board::{listed, standings_of};
 use crate::ranked::game::{RateGameInput, RateSide, decide, position_in};
 use crate::ranked::glicko2::{Glicko, START_GLICKO};
 use crate::ranked::ladder::{
@@ -669,8 +669,9 @@ pub async fn leaderboard(app: &App, viewer_id: &str, ladder: Ladder) -> Result<L
     let mut groups: Vec<Vec<TierEntry>> = vec![Vec::new(); tier_count];
     let mut raisins = 0;
     for standing in &standings {
-        // R3074001: a strict server leaves a hand-set rating off the public ladder, placed or not.
-        if app.env.dev_strict && standing.hand_set {
+        // R3074001, R3290000: a banned account, and on a strict server a hand-set rating, is off the
+        // public ladder, placed or not.
+        if !listed(standing, app.env.dev_strict) {
             continue;
         }
         let Some(ladder) = standing.rank.ladder else {

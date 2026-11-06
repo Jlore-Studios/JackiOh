@@ -922,7 +922,7 @@ account, with the game's setup (the AI tier, the human's seat, the deck, the las
 and the catalog version), when it was issued and when it was claimed. It is server-only like
 `match_checkpoints` (RLS on, no policy, no grant), since a seed is what lets a claim pay, and it goes
 with its account (on delete cascade). A claim burns its seed in one transaction, then
-`economy::practice::verify` folds the log off the runtime, at most
+`economy::practice::verify` steps the practice session's machine (`jackioh_shared::host::practice`, #3099) over the log off the runtime, at most
 `PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
 transaction pays and keeps the board, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store fails it (R1688000). An issue counts the account's unclaimed seeds issued within `PRACTICE_SEED_TTL_SECONDS` under its economy lock and refuses past `PRACTICE_SEEDS_OPEN_MAX` (R1483000); `practice_seeds_profile_issued` leads that count and the prune, so it needs no migration. Measured in release before #2560 took the AI re-run out (2026-10-20): the recorded game, 46 actions
 of which 29 the AI's, verified in 680–700 ms, about 20–45 ms per AI move; the fold alone remains.
@@ -1158,9 +1158,10 @@ account and ladder, deleted by the reset; `rating_grants`, the append-only ratin
 marked `dev`; and `news_posts`, the posts with no reward, each id `post-` and a slug, which a take-down
 marks and keeps, and which outlive their author. The standings reads join `hand_set_ratings` to mark a
 row `hand_set` (`SeasonStanding`), which `api::ranked::counts` leaves out of the public ladder, the
-percentiles and Jlorious while `DEV_STRICT` is on. Their store methods are `admin::store`'s
-(`Tx::admin_*`). `tests/sql/46_dev_dashboard.sql` checks the tables, their privileges, triggers, checks,
-foreign keys, the cascade and set-null and the re-apply.
+percentiles and Jlorious while `DEV_STRICT` is on. They also mark a row `banned` from `profiles.status`,
+which `counts` and `listed` leave out on every server until the ban is lifted (R3290000). The dashboard's
+store methods are `admin::store`'s (`Tx::admin_*`). `tests/sql/46_dev_dashboard.sql` checks the tables, their
+privileges, triggers, checks, foreign keys, the cascade and set-null and the re-apply.
 
 Migration 0081 keeps card proficiency (R3013000, R3013001): `public.card_proficiency`, one row per account
 and card, its key `(profile_id, card_id)`, the card a slug with no foreign key (the catalog is data), `plays`

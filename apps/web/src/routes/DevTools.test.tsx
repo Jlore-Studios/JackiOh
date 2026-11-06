@@ -6,7 +6,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { QuestView } from "../net/api.ts";
+import { keptPaths, type QuestView } from "../net/api.ts";
+import { cachedRead, keepRead } from "../net/readCache.ts";
 import DevTools, { devToolsTestid } from "./DevTools.tsx";
 
 const TOKEN = "token-1";
@@ -191,6 +192,29 @@ describe("R1300000 the Dev tools panel", () => {
     expect(sent(fetchMock, 0)).toEqual({ path: "/api/dev/cosmetics", method: "POST", body: {} });
     const [, init] = devCalls(fetchMock)[0] ?? [];
     expect((init?.headers as Record<string, string>).authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("R3206000 a dev tool's success empties what is kept, and the held quests are read again", async () => {
+    const fetchMock = answer(200, { cards: 1, cosmetics: 1 }, QUESTS);
+    vi.stubGlobal("fetch", fetchMock);
+    const questReads = (): number => fetchMock.mock.calls.filter(([url, init]) => listsQuests(url, init)).length;
+    keepRead(TOKEN, keptPaths.wallet, { jlore: 5 });
+    render(<DevTools token={TOKEN} />);
+    await waitFor(() => {
+      expect(cachedRead(TOKEN, keptPaths.quests), "the mount's read landed and was kept").toBeDefined();
+    });
+    expect(questReads()).toBe(1);
+
+    await userEvent.click(screen.getByTestId(devToolsTestid.fill));
+    await waitFor(() => {
+      expect(screen.getByTestId(devToolsTestid.status)).toHaveTextContent("Done.");
+    });
+
+    // The quests it just read were fresh, yet the tool changed them: the effect that follows asks the server.
+    await waitFor(() => {
+      expect(questReads()).toBe(2);
+    });
+    expect(cachedRead(TOKEN, keptPaths.wallet), "the wallet kept before the tool is gone").toBeUndefined();
   });
 
   it("R1300000 holds every button while a request is out", async () => {

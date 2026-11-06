@@ -319,6 +319,14 @@ pub const AUTH_SESSION_LIVE_CACHE_SECONDS: i64 = 30;
 pub const EMAIL_CONFIRMED_CACHE_TTL_MS: i64 = 30_000;
 /// A request to the auth provider that has not answered in this long is a network failure.
 pub const AUTH_PROVIDER_TIMEOUT_SECONDS: i64 = 30;
+/// R3209000: how long the API remembers that the provider did not answer about one session (R194's
+/// check), so an outage costs that session one wait per window, not one per request. Never longer
+/// than `AUTH_SESSION_LIVE_CACHE_SECONDS` (`auth.rs` asserts it). Server-only.
+pub const AUTH_SESSION_OUTAGE_CACHE_SECONDS: i64 = 15;
+/// R3209000: how long R194's in-request session check (and tier 3's lookup by token, which shares
+/// the call) waits before the provider counts as unreachable. The sign-in grant keeps
+/// `AUTH_PROVIDER_TIMEOUT_SECONDS`. Server-only.
+pub const AUTH_SESSION_CHECK_TIMEOUT_SECONDS: i64 = 5;
 // ---------------------------------------------------------------------------------------------
 // The sign-in key set (SPEC §9.2, R1144000). The server verifies Supabase's asymmetric tokens
 // against the project's published JWKS, fetched on first use. A fetched set is kept this long
@@ -581,9 +589,15 @@ pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
 /// R640002: the expected wait is rounded up to the next multiple of this many seconds.
 pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
 /// SPEC §11 R1996000: how long the server keeps the queue readout it counted, in seconds, so the
-/// `SERIES_POLL_SECONDS` polls of every waiting client inside it share one count. Short beside the
+/// polls of every waiting client inside it share one count. Short beside the
 /// `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so a kept answer is never visibly late.
 pub const QUEUE_READOUT_CACHE_TTL_SECONDS: i64 = 5;
+/// SPEC §11 R3207000: how often the lobby's wait re-reads the queue readout, in seconds, after the
+/// read it makes when it opens. Beyond `QUEUE_READOUT_CACHE_TTL_SECONDS`, so every read counts anew,
+/// and well inside the `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so the readout is never visibly
+/// late. The wait's `GET /api/auth/me` read keeps `SERIES_POLL_SECONDS`: it keeps the ticket alive
+/// (R897000), and the readout does not.
+pub const QUEUE_POPULATION_POLL_SECONDS: i64 = 30;
 
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
@@ -853,7 +867,7 @@ pub const CATALOG_NUMBER_SET_STRIDE: i32 = 1000;
 
 /// SPEC §11 R255, R339, R1410, R3114000: a set's offset in a version 2 deck or trio code, its place in
 /// the catalog order (`CATALOG_SETS`, the set table's order) times `CATALOG_NUMBER_SET_STRIDE`, or
-/// `None` for a set the catalog does not order (Boss, Boss-X, Custom). Meditative's offset was the
+/// `None` for a set the catalog does not order (Boss, Boss-X). Meditative's offset was the
 /// next thousand in catalog order (R1420), and so was Meditative+'s after it (v0.3.15, issue #1187,
 /// R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
 /// Stinkyscape's (issue #2204); a set's row is appended to the table and never moved, so none moves
@@ -918,6 +932,11 @@ pub const SERIES_START_GIVE_UP_SECONDS: i64 = 120;
 pub const SERIES_WRITE_ATTEMPTS: usize = 3;
 /// How often the series screen and the match screen's series banner re-read the series.
 pub const SERIES_POLL_SECONDS: i64 = 2;
+/// SPEC §11 R3207001: how often the live-game banner (the landing page's and the practice page's) re-reads
+/// the account for the game it names, in seconds. A game outlasts it by minutes, and a missed tick only
+/// shows the banner a few seconds late; the queue follow keeps `SERIES_POLL_SECONDS` for the ticket's
+/// sake (R897000).
+pub const LIVE_GAME_POLL_SECONDS: i64 = 10;
 /// How long the lobby shows "Match found! Taking you to your game…" before navigating to the
 /// paired game, so the pairing reads as an arrival instead of a silent vanish. A `setStatus`
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render

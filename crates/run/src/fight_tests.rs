@@ -344,8 +344,7 @@ fn b10_a_finished_game_reports_the_winner_health_damage_healing_draws_and_turns(
 
 #[test]
 fn b10_an_unfinished_game_and_a_setup_the_engine_refuses_are_refused() {
-    // B10: only a finished game reports, and a setup `createGame` refuses is an error, not a panic: a
-    // deck that names a custom card among them, since a run gives the game none.
+    // B10: only a finished game reports, and a setup `createGame` refuses is an error, not a panic.
     let mut unfinished = scripted_game();
     unfinished.log.pop();
     assert!(run_fight_report(&unfinished, PlayerId::P1).is_err());
@@ -354,11 +353,6 @@ fn b10_an_unfinished_game_and_a_setup_the_engine_refuses_are_refused() {
     refused.decks.0.pop();
     let error = run_fight_report(&refused, PlayerId::P1).unwrap_err();
     assert!(error.contains("deck"), "{error}");
-
-    let mut custom = scripted_game();
-    custom.decks.0[0] = "custom-anything".to_string();
-    let error = run_fight_report(&custom, PlayerId::P1).unwrap_err();
-    assert!(error.contains("custom card"), "{error}");
 }
 
 #[test]
@@ -384,6 +378,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
             starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
             starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
             tier_points: RUN_TIER_POINTS.to_vec(),
+            campfire_remove: RUN_CAMPFIRE_REMOVE,
         }
     );
     let json = serde_json::to_value(&constants).unwrap();
@@ -393,6 +388,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
         "starterArtifactsMax",
         "starterArtifactPoints",
         "tierPoints",
+        "campfireRemove",
     ] {
         assert!(json.get(key).is_some(), "{key}");
     }
@@ -418,13 +414,7 @@ pub(crate) fn fight_options(setup: &RunFightSetup) -> CreateGameOptions {
 /// The engine's verdict on a fight's setup, as `createGame` would take it.
 pub(crate) fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
     let options = fight_options(setup);
-    validate_setup(
-        &options,
-        registered_catalog(),
-        &Default::default(),
-        SetupKind::New,
-    )
-    .map_err(|e| e.to_string())
+    validate_setup(&options, registered_catalog(), SetupKind::New).map_err(|e| e.to_string())
 }
 
 #[test]

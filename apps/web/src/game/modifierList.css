@@ -8,7 +8,7 @@
 .modifier-list .modifier-list__chip {
   min-width: 44px;
   min-height: 32px;
-  padding: 4px 10px;
+  padding: var(--space-2) var(--space-5);
   border: 1px solid color-mix(in srgb, var(--radiant) 55%, var(--line));
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--radiant) 12%, var(--bg-sunken));
@@ -25,10 +25,10 @@
   z-index: var(--z-drag);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-5);
   width: min(320px, calc(100vw - 24px));
   max-height: 60vh;
-  padding: 12px 14px;
+  padding: var(--space-6) var(--space-6);
   overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--radiant) 45%, var(--line));
   border-radius: var(--radius-md);
@@ -41,7 +41,7 @@
 .modifier-list__side {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .modifier-list__who {
@@ -53,7 +53,7 @@
 }
 
 .modifier-list__item {
-  padding: 4px 8px;
+  padding: var(--space-2) var(--space-4);
   border-left: 2px solid var(--radiant);
   background: var(--bg-sunken);
   line-height: 1.3;

@@ -12,7 +12,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
-import { cachedRead } from "../net/readCache.ts";
+import { READ_CACHE_FRESH_MS, cachedRead, expireRead } from "../net/readCache.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { SKELETON_DELAY_MS } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -356,7 +356,9 @@ describe("R1435 the username prompt at the gate", () => {
     expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
     cleanup();
 
-    // The server now owes the prompt, and the player moves on (the match a queue just paired).
+    // The server now owes the prompt, and the player moves on (the match a queue just paired). R3206000:
+    // after the window; inside it the next screen opens on the kept answer and sends no read.
+    expireRead("e2e-token", "/api/auth/me");
     serveAs("active", OWED);
     render(<Gated>{({ me }) => <p>{me.username?.promptOwed === true ? "the next screen" : "a stale read"}</p>}</Gated>);
     expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
@@ -554,6 +556,8 @@ describe("R2630000 a screen opens on the page's last read of the account", () =>
     expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
     cleanup();
 
+    // R3206000: inside the window the read behind it is not sent; this is the answer an old page left.
+    expireRead("e2e-token", "/api/auth/me");
     const before = meReads();
     render(<Gated>{() => <p>the next screen</p>}</Gated>);
     // No "Checking your account…" in between: the screen is there in the first render.
@@ -614,5 +618,111 @@ describe("R2630000 a screen opens on the page's last read of the account", () =>
     expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
     observer.disconnect();
     expect(keptWhenShown).toMatchObject({ profile: { status: "active" } });
+  });
+});
+
+describe("R3206000 a screen inside the window sends no /api/auth/me read", () => {
+  const T0 = 1_800_000_000_000;
+
+  function meReads(): number {
+    return vi.mocked(globalThis.fetch).mock.calls.filter(([input]) => String(input).endsWith("/api/auth/me")).length;
+  }
+
+  /** A screen the gate opens, the requests it makes given time to be sent, and the page left again. */
+  async function visit(label: string, options: { allowPending?: boolean } = {}): Promise<void> {
+    render(<Gated allowPending={options.allowPending}>{() => <p>{label}</p>}</Gated>);
+    expect(await screen.findByText(label, undefined, SLOW)).toBeInTheDocument();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0);
+    signIn();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R3206000 the next screen inside the window sends no /api/auth/me read", async () => {
+    serveAs("active");
+    await visit("the first screen");
+    cleanup();
+    expect(meReads()).toBe(1);
+
+    vi.setSystemTime(T0 + READ_CACHE_FRESH_MS - 1);
+    render(<Gated>{() => <p>the next screen</p>}</Gated>);
+    expect(screen.getByText("the next screen"), "open at once, as R2630000 has it").toBeInTheDocument();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByText("the next screen")).toBeInTheDocument();
+    expect(meReads(), "nothing behind it").toBe(1);
+  });
+
+  it("R3206000 a screen after the window reads again", async () => {
+    serveAs("active");
+    await visit("the first screen");
+    cleanup();
+
+    vi.setSystemTime(T0 + READ_CACHE_FRESH_MS);
+    render(<Gated>{() => <p>the next screen</p>}</Gated>);
+    expect(screen.getByText("the next screen"), "still open at once on the old answer").toBeInTheDocument();
+    await waitFor(() => {
+      expect(meReads()).toBe(2);
+    }, SLOW);
+  });
+
+  it("R3206000 a screen that opened on the kept answer does not extend the window", async () => {
+    serveAs("active");
+    await visit("the first screen");
+    cleanup();
+
+    const thirtySeconds = 30_000;
+    vi.setSystemTime(T0 + thirtySeconds);
+    await visit("the second screen");
+    cleanup();
+    expect(meReads(), "inside the window").toBe(1);
+
+    vi.setSystemTime(T0 + READ_CACHE_FRESH_MS + thirtySeconds / 2);
+    render(<Gated>{() => <p>the third screen</p>}</Gated>);
+    await waitFor(() => {
+      expect(meReads(), "the second screen did not make the answer younger").toBe(2);
+    }, SLOW);
+  });
+
+  it("R3206000 a pending account, and one owing the username prompt, reads on every screen", async () => {
+    serveAs("pending");
+    await visit("the code screen", { allowPending: true });
+    cleanup();
+    render(<Gated allowPending>{() => <p>the code screen again</p>}</Gated>);
+    expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
+    expect(await screen.findByText("the code screen again", undefined, SLOW)).toBeInTheDocument();
+    expect(meReads()).toBe(2);
+    cleanup();
+
+    serveAs("active", { name: "Player#7", nextChangeAt: null, promptOwed: true });
+    render(<Gated>{() => <p>a screen behind the prompt</p>}</Gated>);
+    expect(await screen.findByTestId("username-prompt", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+    render(<Gated>{() => <p>another screen behind the prompt</p>}</Gated>);
+    expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(meReads(), "each screen asked").toBe(2);
+    }, SLOW);
+  });
+
+  it("R3206000 an account change announced inside the window makes the next screen read", async () => {
+    serveAs("active");
+    await visit("the first screen");
+    announceAccountChange();
+    cleanup();
+
+    render(<Gated>{() => <p>the next screen</p>}</Gated>);
+    expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
+    expect(meReads()).toBe(2);
   });
 });

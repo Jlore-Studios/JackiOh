@@ -958,3 +958,22 @@ func TestWorkflows_AFailedQueueBuildIsCancelledOnlyAfterItsCheckReported(t *test
 		assertIn(t, `gh run cancel "$RUN"`, cancel)
 	}
 }
+
+// A queue build cancels its own pull request's older builds, which the queue rebuilt and GitHub
+// leaves running, and nothing else: only on `merge_group`, only runs older than itself on its pull
+// request's `gh-readonly-queue/<base>/pr-<n>-` branches, with no checkout. No required check waits
+// on it and it never fails the run, so it can only free runners; the bots leave a build cancelled
+// with no job failed alone (`events.QueueBuildFailed`).
+func TestWorkflows_AQueueBuildCancelsOnlyItsOwnPullRequestsOlderBuilds(t *testing.T) {
+	text := workflowsRead(t, "ci.yml")
+	job := workflowsJob(t, text, "queue-supersede")
+	assertIn(t, "if: ${{ github.event_name == 'merge_group' }}", job)
+	assertIn(t, "continue-on-error: true", job)
+	assertIn(t, "actions: write", job)
+	assertNotIn(t, "actions/checkout", job)
+	assertNotIn(t, "needs:", job)
+	assertIn(t, `prefix="${branch%-*}-"`, job)
+	assertIn(t, `gh-readonly-queue/*/pr-[0-9]*-) ;;`, job)
+	assertIn(t, `.databaseId < $RUN and (.headBranch | startswith(\"$prefix\"))`, job)
+	assertNotRegex(t, text, `(?m)^\s+needs:.*queue-supersede`) // no job waits on it
+}

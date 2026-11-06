@@ -13,6 +13,7 @@ import type { Challenge, Friend, FriendRequest, PlayerRef } from "../net/social.
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { baseView } from "../test/fixtures.ts";
 import { stubPhoneBar } from "../test/phoneBar.ts";
+import { keepRead } from "../net/readCache.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { pressBack } from "../test/history.ts";
@@ -730,3 +731,62 @@ describe("#1831 challenging from the panel", () => {
     TEST_MS,
   );
 });
+
+describe("R3207003 the panel opens on the account the page kept", () => {
+  /** The path `net/gate.ts` keeps the gate's answer under. */
+  const ME_PATH = "/api/auth/me";
+
+  it(
+    "R3207003 the panel opens on the account the page kept and sends no /api/auth/me",
+    async () => {
+      signIn("tok-kept");
+      keepRead("tok-kept", ME_PATH, meBody(world().me));
+      const server = serve(world());
+      shell();
+      const panel = await openPanel();
+
+      await within(panel).findByText(wholeText("Me#1"), undefined, SLOW);
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      expect(server.to("GET", ME_PATH)).toHaveLength(0);
+      expect(within(panel).getAllByTestId(togetherTestid.challenge)[0]).toBeEnabled();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3207003 a kept account that names a match is read again, for the match may have ended",
+    async () => {
+      signIn("tok-kept");
+      const kept = world();
+      kept.me = { ...kept.me, username: { name: "Kept#9", nextChangeAt: null, promptOwed: false }, currentMatchId: "m-1" };
+      keepRead("tok-kept", ME_PATH, meBody(kept.me));
+      // The server says the match is over.
+      const server = serve(world());
+      shell();
+      const panel = await openPanel();
+
+      await within(panel).findByText(wholeText("Me#1"), undefined, SLOW);
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      expect(server.to("GET", ME_PATH)).toHaveLength(1);
+      expect(within(panel).queryByText(wholeText("Kept#9"))).toBeNull();
+      expect(within(panel).getAllByTestId(togetherTestid.challenge)[0]).toBeEnabled();
+      expect(within(panel).getAllByTestId(togetherTestid.challenge)[0]).not.toHaveAttribute("title");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3207003 a panel opened with nothing kept reads the account itself",
+    async () => {
+      signIn("tok-fresh");
+      const server = serve(world());
+      shell();
+      const panel = await openPanel();
+
+      await within(panel).findByText(wholeText("Me#1"), undefined, SLOW);
+      expect(server.to("GET", ME_PATH)).toHaveLength(1);
+    },
+    TEST_MS,
+  );
+});
+

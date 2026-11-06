@@ -23,7 +23,8 @@ import {
 import { flightsMs } from "../economy/bars.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
+import { keptPaths, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { expireRead } from "../net/readCache.ts";
 import { whileSpending } from "../net/spending.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { expectEmptyState } from "../test/empty.ts";
@@ -844,6 +845,8 @@ describe("#1308 the card packs panel", () => {
 
     // Another panel bought a pack: the page asks this one to read again.
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
+    // R3206000: the kept packs are inside the window and the opening folded into them; this read is the one after it.
+    expireRead(TOKEN, keptPaths.packs);
     rerender(<PackOpening token={TOKEN} revision={1} onChanged={onChanged} />);
     await waitFor(() => {
       expect(server.to("GET", "/api/packs")).toHaveLength(2);
@@ -1223,5 +1226,75 @@ describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
     render(<PackScene {...props({ opened: openedPack() })} />);
     expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equip");
     for (const index of [0, 1, 3, 4]) expect(screen.queryByTestId(T.equip(index))).toBeNull();
+  });
+});
+
+describe("R3211000 the panel folds the page's answers and tells it once when the scene closes", () => {
+  it("R3211000 a bought pack's answer folds into the held packs with no read", async () => {
+    const server = packsServer();
+    const { rerender } = render(<PackOpening token={TOKEN} />);
+    await screen.findByTestId(T.held);
+    expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
+
+    // The page hands over what a Buy answered: the count of its kind, every other untouched.
+    rerender(<PackOpening token={TOKEN} bought={{ pack: "Core", jlore: 12, unopened: 5 }} />);
+    await waitFor(() => {
+      expect(text(T.heldRow("Core"))).toContain("Core pack: 5 unopened");
+    });
+    expect(text(T.heldRow(GLOBAL_PACK_NAME))).toContain("Global pack: 1 unopened");
+
+    // A kind the account held none of is listed once its first pack is bought.
+    rerender(<PackOpening token={TOKEN} bought={{ pack: "Classic", jlore: 2, unopened: 1 }} />);
+    await waitFor(() => {
+      expect(text(T.heldRow("Classic"))).toContain("Classic pack: 1 unopened");
+    });
+    expect(text(T.heldRow("Core"))).toContain("Core pack: 5 unopened");
+    expect(server.to("GET", "/api/packs"), "a bought answer needs no read").toHaveLength(1);
+  });
+
+  it("R3211000 the scene tells the page once when it closes after an opening, and never for a refused one", async () => {
+    const onChanged = vi.fn<(opened: OpenedPackResponse) => void>();
+    const onClosed = vi.fn<() => void>();
+    const server = packsServer({
+      open: (call): Reply =>
+        call === 1
+          ? refusal(409, "conflict", NO_PACK)
+          : { status: 200, body: { ...openedPack(), unopened: call === 2 ? 1 : 0 } satisfies OpenedPackResponse },
+    });
+    render(<PackOpening token={TOKEN} onChanged={onChanged} onClosed={onClosed} />);
+    await screen.findByTestId(T.held);
+
+    // A refused open spent nothing, so closing its scene has nothing to settle.
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.pack));
+    expect(await screen.findByTestId(T.error)).toHaveTextContent(NO_PACK);
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(onClosed).not.toHaveBeenCalled();
+
+    // A batch of two: each answer goes to the page as it comes, and the close once, after the last.
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 1 }));
+    fireEvent.click(screen.getByTestId(T.next));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await waitFor(() => {
+      expect(onChanged).toHaveBeenCalledTimes(2);
+    });
+    await screen.findByTestId(T.outcome(0));
+    expect(onClosed, "the scene is still open between the packs of a batch").not.toHaveBeenCalled();
+    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 0 }));
+
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(3);
+
+    // The next scene starts again from nothing: closing one with no opening does not tell the page.
+    fireEvent.click(screen.getByTestId(T.open(GLOBAL_PACK_NAME)));
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    expect(server.to("GET", "/api/packs"), "nothing here read the packs again").toHaveLength(1);
   });
 });

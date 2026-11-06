@@ -300,6 +300,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
         enemy: <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />,
       }}
       resultActions={resultActions}
+      // R2972000: a lost fight ends the run for good (§15.6), so the Concede dialog says so.
+      concedeBody={t("Your opponent wins, and the whole run ends here for good.")}
     />
   );
 

@@ -13,7 +13,7 @@ import { readCardPicks } from "../cards/cosmetics.ts";
 import { writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
-import { rememberRead } from "../net/readCache.ts";
+import { clearReadCache, expireRead, rememberRead } from "../net/readCache.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
 import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
@@ -785,6 +785,8 @@ describe("R377 public statistics match type", () => {
     expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
     expect(window.location.search).toContain("mode=constructed");
 
+    // R3206000: the table of All modes was read a moment ago, inside the window; this asks for it after it.
+    expireRead(null, cardStatsPath({ mode: "all" }));
     vi.mocked(fetch).mockClear();
     await user.selectOptions(select, "all");
     await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
@@ -905,6 +907,8 @@ describe("R377 public statistics match type", () => {
       "Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about 5.0 points.",
     );
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     vi.stubGlobal(
       "fetch",
@@ -963,6 +967,8 @@ describe("R377 public statistics match type", () => {
     expect(within(item("core-003")).getByTestId(statsTestid.tierFit)).toHaveTextContent("75%");
     expect(within(item("core-002")).queryByTestId(statsTestid.tierFit)).toBeNull();
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     // A card of the tier with no range shows none and sorts after those with one, either way.
     serve(
@@ -1341,7 +1347,7 @@ describe("the drill-down's card preview", () => {
     // In the phone's column the body centers its items, which shrank the details column to its
     // content and left the skeleton's rows (`width: 100%` of it) no room for their lines.
     const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    const phone = /@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    const phone = /@media\s*\(max-width:\s*600px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
     const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
     expect(body).toMatch(/flex-direction:\s*column/);
     expect(body).toMatch(/align-items:\s*center/);
@@ -1617,6 +1623,8 @@ describe("R1966000 the Sets tab", () => {
     expect(noGames).toBeInTheDocument();
     expectEmptyState(noGames);
     cleanup();
+    // R3206000: another server, another visit: nothing the first one kept is fresh for it.
+    clearReadCache();
 
     serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: NOW.cards.slice(2) }), { status: 200 }));
     render(<StatsRoute />);
@@ -2006,6 +2014,8 @@ describe("R2370000 the Tokens toggle", () => {
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
     rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
+    // R3206000: an answer inside the window needs no read behind it; this one is as old as a past visit's.
+    expireRead(null, cardStatsPath({ mode: "all" }));
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 
@@ -2025,6 +2035,8 @@ describe("R2125000 the Cards tab opens on its last table", () => {
 
   it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
     rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
+    // R3206000: an answer inside the window needs no read behind it; this one is as old as a past visit's.
+    expireRead(null, cardStatsPath({ mode: "all" }));
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
     await waitFor(() => expect(held).toHaveLength(1), SLOW);

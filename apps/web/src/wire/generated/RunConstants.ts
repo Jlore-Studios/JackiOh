@@ -25,4 +25,8 @@ starterArtifactPoints: number,
 /**
  * `RUN_TIER_POINTS`: an artifact's points by its tier.
  */
-tierPoints: Array<[RunTier, number]>, };
+tierPoints: Array<[RunTier, number]>, 
+/**
+ * `RUN_CAMPFIRE_REMOVE`: the cards a campfire removes.
+ */
+campfireRemove: number, };

@@ -2,7 +2,7 @@
 // order glossaryFor gives them, each with its label and SPEC's rule text. Nothing when empty.
 
 import type { ReactElement } from "react";
-import type { GlossaryEntry } from "../glossary.ts";
+import type { GlossaryEntry } from "../../wire/generated/GlossaryEntry.ts";
 import { INSPECT_GLOSSARY } from "./testids.ts";
 
 /** Entries of every list in order, each term once. */

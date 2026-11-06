@@ -30,7 +30,7 @@
   z-index: var(--z-modal);
   display: grid;
   place-items: center;
-  padding: 12px;
+  padding: var(--space-6);
   background: color-mix(in srgb, var(--pal-wood-950) 45%, transparent);
 }
 
@@ -44,18 +44,18 @@
   width: auto;
   max-width: min(360px, 100%);
   align-items: center;
-  padding: 14px 22px;
+  padding: var(--space-6) var(--space-8);
   text-align: center;
 }
 
 .prompt {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-5);
   width: min(560px, 100%);
   max-height: min(80vh, 640px);
   overflow-y: auto;
-  padding: 14px;
+  padding: var(--space-6);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-md);
   background: var(--bg-raised);
@@ -100,17 +100,17 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  padding: 2px 0 4px;
+  gap: var(--space-5);
+  padding: var(--space-1) 0 var(--space-2);
 }
 
 .prompt-card {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
   width: calc(var(--card-w) * 1.2);
   min-height: var(--card-h);
-  padding: 6px;
+  padding: var(--space-3);
   text-align: left;
   border-color: var(--pal-slate-700);
   border-radius: var(--radius-sm);
@@ -145,7 +145,7 @@
   left: 50%;
   top: 38%;
   transform: translate(-50%, -50%);
-  padding: 1px 10px;
+  padding: 0 var(--space-5);
   border-radius: var(--radius-pill);
   font-size: var(--type-xs);
   font-weight: 750;
@@ -240,7 +240,7 @@
 .prompt-set-mark {
   width: 2rem;
   height: 2rem;
-  margin: 0 auto 0.25rem;
+  margin: 0 auto var(--space-2);
   display: block;
 }
 
@@ -317,7 +317,7 @@
 .prompt-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -342,9 +342,9 @@
 
 .prompt-modes > .prompt-mode {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
   min-height: 44px;
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-6);
   text-align: left;
 }
 
@@ -394,7 +394,7 @@
 .prompt-zones {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .prompt-zone-row {
@@ -414,9 +414,9 @@
   flex: 1;
   display: grid;
   place-items: center;
-  gap: 2px;
+  gap: var(--space-1);
   min-height: 56px;
-  padding: 8px;
+  padding: var(--space-4);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   background: var(--bg-sunken);
@@ -433,7 +433,7 @@
 
 .prompt-x-input {
   width: 6ch;
-  padding: 4px 6px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   background: var(--bg-sunken);
@@ -446,7 +446,7 @@
 
 .prompt-stepper-value {
   min-width: 3ch;
-  padding: 4px 8px;
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--bg-sunken);
@@ -458,15 +458,15 @@
 .prompt-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 /* #492: what a card option picks, under its face: "Normal" / "Embiggened" with what it pays, or
    "X = 2". The embiggened price wears the Radiant gold of a card's bigger form. */
 .prompt-card-caption {
   display: grid;
-  gap: 1px;
-  padding: 2px 2px 0;
+  gap: 0;
+  padding: var(--space-1) var(--space-1) 0;
   text-align: center;
 }
 
@@ -492,12 +492,12 @@
 .prompt .prompt-numbers {
   display: grid;
   grid-template-columns: repeat(var(--pad-columns), minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .prompt .prompt-numbers > button {
   min-height: 52px;
-  padding: 4px;
+  padding: var(--space-2);
   border-radius: var(--radius-md);
   font-size: var(--type-3xl);
   font-weight: 800;
@@ -507,7 +507,7 @@
 /* `answer` (C+ #42): the problem is the title, on a sheet of exam paper with its line breaks kept
    (plain text with Unicode maths), and the answers are big lettered buttons. */
 .prompt-answer > .prompt-title {
-  padding: 12px 14px;
+  padding: var(--space-6) var(--space-6);
   border: 1px solid var(--pal-brass-500);
   border-radius: var(--radius-sm);
   background: var(--pal-parchment);
@@ -522,15 +522,15 @@
 
 .prompt-answers {
   display: grid;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .prompt .prompt-answers > button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-6);
   min-height: 56px;
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-md);
   font-size: var(--type-xl);
   text-align: left;
@@ -570,7 +570,7 @@
 .prompt .prompt-answers > .prompt-answer-stop {
   justify-content: center;
   min-height: 44px;
-  margin-top: 4px;
+  margin-top: var(--space-2);
   border-style: dashed;
   text-align: center;
 }
@@ -596,17 +596,17 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-5);
 }
 
 .prompt .prompt-rewards > button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
   width: 150px;
   min-height: 150px;
-  padding: 12px 10px;
+  padding: var(--space-6) var(--space-5);
   border: 2px solid var(--pal-brass-500);
   border-radius: var(--radius-md);
   background: var(--pal-wood-800);
@@ -618,7 +618,7 @@
 .prompt .prompt-rewards > button::before {
   content: "Reward";
   position: static;
-  padding: 1px 10px;
+  padding: 0 var(--space-5);
   border-radius: var(--radius-pill);
   background: var(--pal-wood-600);
   color: var(--pal-parchment);
@@ -640,7 +640,7 @@
   text-align: center;
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .prompt .prompt-rewards > button {
     width: calc(50% - 5px);
     min-height: 120px;
@@ -658,7 +658,7 @@
 .prompt-actions {
   display: flex;
   gap: var(--gap);
-  margin-top: 2px;
+  margin-top: var(--space-1);
 }
 
 /* The modal scrolls (`overflow-y` above), so a long menu would push Confirm below the fold where no
@@ -667,7 +667,7 @@
 .prompt-actions {
   position: sticky;
   bottom: 0;
-  padding-top: 6px;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--line-bright);
   background: var(--bg-raised);
 }
@@ -691,13 +691,13 @@
     width: fit-content;
     min-width: min(420px, 100%);
     max-width: min(760px, 100%);
-    padding: 18px 20px;
+    padding: var(--space-7) var(--space-8);
   }
 
   .prompt > .prompt-cards .prompt-card {
     width: 124px;
     min-height: 168px;
-    padding: 8px;
+    padding: var(--space-4);
     font-size: var(--type-md);
   }
 
@@ -715,10 +715,10 @@
   }
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .prompt {
     width: 100%;
-    padding: 10px;
+    padding: var(--space-5);
   }
 
   /* #2646: four choice cards stand two by two on a phone, with no sideways scroll, each short enough
@@ -749,8 +749,8 @@
     width: 100%;
     max-width: 100%;
     max-height: 85vh;
-    padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
-      max(12px, env(safe-area-inset-left));
+    padding: var(--space-6) max(var(--space-6), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom))
+      max(var(--space-6), env(safe-area-inset-left));
     border-bottom: 0;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
@@ -824,7 +824,7 @@
       > [data-prompt-kind="cell"]
     ) {
     place-items: center end;
-    padding: 16px;
+    padding: var(--space-7);
   }
 
   /* E18's board-facing pickers are wider than a zone list: the pad's six keys and the cell grid's
@@ -866,7 +866,7 @@
     place-items: end center;
     /* Docked above the turn plate and the control bar (about 120 px at the foot of a tablet), not
        over End turn: the picker covers the hand the play came from instead. */
-    padding-bottom: calc(env(safe-area-inset-bottom) + 132px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-11) * 3 + var(--space-6));
   }
 }
 
@@ -874,8 +874,8 @@
   .prompt[data-prompt-kind="zone"],
   .prompt[data-prompt-kind="target"],
   .prompt[data-prompt-kind="tribute"] {
-    gap: 6px;
-    padding-top: 10px;
+    gap: var(--space-3);
+    padding-top: var(--space-5);
   }
 
   /* All five lanes in one row: the sheet stays short enough to leave the field in view. */
@@ -884,7 +884,7 @@
   }
 
   .prompt[data-prompt-kind="zone"] .prompt-zones button {
-    padding: 4px 2px;
+    padding: var(--space-2) var(--space-1);
     font-size: var(--type-xs);
     line-height: 1.15;
   }
@@ -906,9 +906,9 @@
       "title actions"
       "hint actions";
     align-items: center;
-    gap: 0 8px;
-    padding-top: 6px;
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    gap: 0 var(--space-4);
+    padding-top: var(--space-3);
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
   }
 
   /* With no options in the bar, a new player did not know to tap the board: a small line under the
@@ -978,7 +978,7 @@
     > .prompt-actions
     button {
     flex: 0 0 auto;
-    padding-inline: 12px;
+    padding-inline: var(--space-6);
   }
 }
 
@@ -1003,8 +1003,8 @@
     /* No wider than the board's right-hand column, so lane 5 stays uncovered. */
     width: min(186px, 40vw);
     max-height: 100%;
-    gap: 6px;
-    padding: 10px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) 10px;
+    gap: var(--space-3);
+    padding: var(--space-5) max(var(--space-5), env(safe-area-inset-right)) max(var(--space-5), env(safe-area-inset-bottom)) var(--space-5);
     border-bottom: 1px solid var(--line-bright);
     border-right: 0;
     border-radius: var(--radius-lg) 0 0 var(--radius-lg);
@@ -1015,12 +1015,12 @@
   }
 
   .prompt[data-prompt-kind="zone"] .prompt-zones button {
-    padding: 4px;
+    padding: var(--space-2);
     font-size: var(--type-xs);
   }
 
   .prompt[data-prompt-kind] .prompt-actions button {
-    padding-inline: 6px;
+    padding-inline: var(--space-3);
   }
 
   /* A card picker's sheet is the phone's whole width, and its two buttons sharing that width were
@@ -1056,9 +1056,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "title actions";
   align-items: center;
-  gap: 0 8px;
-  padding-top: 6px;
-  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  gap: 0 var(--space-4);
+  padding-top: var(--space-3);
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
 }
 
 .prompt[data-collapsed] > .prompt-title {
@@ -1079,7 +1079,7 @@
 
 .prompt[data-collapsed] > .prompt-actions button {
   flex: 0 0 auto;
-  padding-inline: 12px;
+  padding-inline: var(--space-6);
 }
 
 /* R514: while a cell prompt is open (C+ #62), the zones it offers glow green as a zone pick's do
@@ -1199,7 +1199,7 @@
 .prompt[data-prompt-layout="cards"][data-bare] > .prompt-actions button {
   flex: 0 0 auto;
   min-width: 0;
-  padding-inline: 16px;
+  padding-inline: var(--space-7);
   border-radius: var(--radius-pill);
   font-size: var(--type-sm);
 }
@@ -1214,7 +1214,7 @@
 /* Stop stays a dashed pill of its own, centered under the answers. */
 .prompt[data-prompt-layout="cards"][data-bare] > .prompt-answer-stop {
   align-self: center;
-  padding-inline: 18px;
+  padding-inline: var(--space-7);
   border-style: dashed;
   border-radius: var(--radius-pill);
 }
@@ -1228,7 +1228,7 @@
 /* Toward Hearthstone's Discover scale where the screen has room. */
 @media (min-width: 1025px) and (min-height: 701px) {
   .prompt[data-prompt-layout="cards"][data-bare] > .prompt-cards {
-    gap: 16px;
+    gap: var(--space-7);
   }
   .prompt[data-prompt-layout="cards"][data-bare] > .prompt-cards .prompt-card:not(.prompt-card--code) {
     width: 164px;
@@ -1282,18 +1282,18 @@
    (as the phone's target bar does). A replay's top placement is more specific and wins. */
 .prompt-scrim:has(> .prompt[data-lane-pick]) {
   place-items: end center;
-  padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  padding: var(--space-6) max(var(--space-6), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom)) max(var(--space-6), env(safe-area-inset-left));
   background: transparent;
 }
 
 .prompt[data-prompt-kind][data-lane-pick] {
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5);
   width: fit-content;
   max-width: 100%;
   max-height: none;
-  padding: 4px 6px 4px 16px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-7);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-pill);
   background: var(--bg-raised);
@@ -1317,7 +1317,7 @@
 .prompt[data-prompt-kind][data-lane-pick] > .prompt-actions button {
   flex: 0 0 auto;
   min-width: 0;
-  padding-inline: 16px;
+  padding-inline: var(--space-7);
   border-radius: var(--radius-pill);
   font-size: var(--type-sm);
 }

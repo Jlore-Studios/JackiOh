@@ -1,0 +1,18 @@
+/* The client's one spacing scale (#3225): every board stylesheet's gap, padding and margin names a step
+   here, or is 0, auto, an em or % term, an env() or a viewport or container term (src/spacing.test.ts).
+   A step is a length in px, smallest first, numbered from 1: 2px apart to 12px, where the board's own
+   lengths sit, then 4px and 8px apart. A new step goes in order and raises the list in that test. */
+
+:root {
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 16px;
+  --space-8: 20px;
+  --space-9: 24px;
+  --space-10: 32px;
+  --space-11: 40px;
+}
