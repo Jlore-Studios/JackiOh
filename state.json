@@ -18410,6 +18410,14 @@
         "c:6678796752"
       ],
       "waiting_comment": 6679397224
+    },
+    "3294": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-06T07:16:25Z",
+      "issue": 3287,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
