@@ -127,7 +127,7 @@ pub async fn open_cosmetic_pack_once(
     let at = crate::app::now_ms();
     let opening = decide(&records, &inputs, seed, at).map_err(|refusal| match refusal.reason {
         RefusalReason::NoPackHeld => no_pack_held(),
-        RefusalReason::EmptyPool => ApiError::internal(refusal.message),
+        _ => ApiError::internal(refusal.message),
     })?;
     let reference = Some(serde_json::to_string(&opening.log)?);
 

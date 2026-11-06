@@ -57,7 +57,9 @@ impl Counter {
 
 /// Why a grant was written, which the store's ledger reason names: the opening itself (`PackOpen`: the pack
 /// spent, the cards and cosmetics it granted, the counters it moved and the points a bar that did not pay
-/// kept), a token bar paying out (`TokenBar`, §14.5) or a dev account's own fill (`Dev`, §14.10).
+/// kept), a token bar paying out (`TokenBar`, §14.5), a dev account's own fill (`Dev`, §14.10), a finished
+/// game's pay (`Game`, §14.8), a quest arriving, leaving or paying (`Quest`, §14.9) and a set track's XP and
+/// the levels it reached (`Track`, §14.7).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -69,6 +71,9 @@ pub enum Cause {
     PackOpen,
     TokenBar,
     Dev,
+    Game,
+    Quest,
+    Track,
 }
 
 /// What an account's counters hold as an opening begins (§14.4–§14.6), the store's read of its account-wide
@@ -129,6 +134,10 @@ pub enum LedgerGrant {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         delta: i64,
         cause: Cause,
+        /// The row's `ref` when it is not the outcome's own (a level reward names its payout's match or quest).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
     },
     /// Cards the opening unlocked, to the collection: the quantities and their ledger's deltas.
     Cards { cards: Vec<CardCopies> },
@@ -145,6 +154,51 @@ pub enum LedgerGrant {
         delta: i64,
         cause: Cause,
     },
+    /// `delta` Jlore to the wallet (§14.1), `cause` the game, quest or track level that paid it (or a dev tool).
+    /// A pay is never a zero delta.
+    Jlore {
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        delta: i64,
+        cause: Cause,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
+    },
+    /// XP, levels reached and level rewards claimed added to one set track (§14.7), each signed; the
+    /// store's track row after it is [`SetTrack`] moved by them (a track not yet written starts at its first
+    /// level with no XP and nothing claimed).
+    Track {
+        set_id: String,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        xp: i64,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        levels: i64,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        rewards: i64,
+        cause: Cause,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
+    },
+    /// A held quest's change (§14.9): it arrives, progresses by `progress`, completes or is replaced. `at` is
+    /// when the change is dated: an arrival is dated when it fell due (R1304000).
+    Quest {
+        quest_id: String,
+        change: QuestChange,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        progress: i64,
+        cause: Cause,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        at: i64,
+    },
+    /// When the next quest falls due (`null`: none does). A schedule, not a holding: no ledger row.
+    QuestDue {
+        #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+        next_due_at: Option<i64>,
+    },
 }
 
 impl LedgerGrant {
@@ -156,4 +210,70 @@ impl LedgerGrant {
             cause,
         })
     }
+}
+
+/// What befell a held quest (§14.9; `quest_grants.change`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "snake_case")]
+pub enum QuestChange {
+    Arrived,
+    Progressed,
+    Completed,
+    Removed,
+}
+
+/// One row of `public.set_tracks` (§14.7).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SetTrack {
+    pub set_id: String,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub xp: i64,
+    /// From `SET_TRACK_FIRST_LEVEL`.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub level: i64,
+    /// How many levels have paid their rewards: from 0 to `level`.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub rewards_claimed: i64,
+}
+
+/// One row of `public.held_quests` (§14.9).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HeldQuest {
+    pub quest_id: String,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub progress: i64,
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
+    pub arrived_at: i64,
+}
+
+/// An account's quests: the held ones, oldest first (by when they arrived, then id), and when the next is due
+/// (`None`: none is).
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestBook {
+    pub held: Vec<HeldQuest>,
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub next_due_at: Option<i64>,
 }
