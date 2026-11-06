@@ -16394,6 +16394,13 @@
     "3314": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42262466253",
+        "model": "sonnet",
+        "provider": "claude-3",
+        "since": "2026-11-06T17:58:13Z",
+        "until": "2026-11-06T18:28:13Z"
+      },
       "difficulty_by": {
         "at": "2026-11-06T17:58:00Z",
         "difficulty": "medium",
