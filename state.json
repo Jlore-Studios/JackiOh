@@ -13654,10 +13654,12 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3321,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-11-05T16:45:39Z",
       "requested_by": "squishy-squooby",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "42266797146",
       "runs_on": "ubuntu-latest",
       "session": {
