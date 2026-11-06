@@ -14908,9 +14908,7 @@
     },
     "3268": {
       "action": "revise",
-      "asks": [
-        "c:6683783985"
-      ],
+      "asks": [],
       "cleared": {
         "approver": {
           "family": "claude",
@@ -14940,14 +14938,14 @@
       "interruptions": 0,
       "issue": 3257,
       "kind": "revise",
-      "live": "resolving",
+      "live": "revising",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-8",
       "question": "At 390\u00d7664, for a DEF unit that has an Activate ability, which requirement gives way?",
       "queued_at": "2026-11-06T11:31:27Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42169999177",
+      "run_id": "pending:c710dc00-1793965212",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -14968,9 +14966,11 @@
         "run": "42169999177"
       },
       "source": "request",
-      "started_at": "2026-11-06T05:42:24Z",
+      "started_at": "2026-11-06T11:40:56Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6683783985"
+      ],
       "votes": {
         "approvals": [
           "claude"
@@ -15800,9 +15800,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T11:39:57Z",
+    "at": "2026-11-06T11:40:56Z",
     "url": "",
-    "what": "review #3245 on claude-8"
+    "what": "revise #3268 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-06T11:20:43Z",
