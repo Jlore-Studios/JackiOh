@@ -1,26 +1,23 @@
-//! `jackioh-wasm-core`: the bodies the three wrappers bind (#1505, #3093). JSON strings in and out,
+//! `jackioh-wasm-core`: the bodies the two wrappers bind (#1505, #3093). JSON strings in and out,
 //! nothing else crosses: the state is the `GameState` JSON object, which the client keeps behind its
 //! opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call. `crates/wasm` wraps each
-//! body for wasm-bindgen, `crates/wasm/luau` for C through emscripten, and `crates/wasm/c` for C on a
-//! plain `wasm32-unknown-unknown` link; the exports stay identical.
+//! body for wasm-bindgen and `crates/wasm/c` for C on a plain `wasm32-unknown-unknown` link; the exports
+//! stay identical.
 //!
 //! The state cache: the client hands the same state over and over, so the bodies keep the few states
 //! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text. A text that differs by
 //! one byte is parsed, so the answer never depends on the cache.
 //!
 //! Errors are `String`s, each module's own failure. The clock is the caller's (`ai_decide` takes
-//! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3), and so is the setup check
-//! (`CheckSetup`): the normal and C modules refuse a game with custom cards (R915009), the Luau module
-//! judges them (R915005, R915006).
+//! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3).
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use jackioh_engine::prelude::IndexMap;
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::{
-    self as engine, Action, CardDef, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
+    self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
     ReduceResult, ReplayCheckpoints, ReplayRecord, Rng, SetupKind,
 };
 use jackioh_run::{RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks};
@@ -147,28 +144,19 @@ fn reduce_result_json(result: ReduceResult) -> Result<String, String> {
     Ok(format!("{{\"state\":{state},\"events\":{events}{error}}}"))
 }
 
-// The setup check each module runs before the engine sees a setup
-
-/// Each module's own setup check, which `create_game`, `fold` and `replay_open` run before the engine
-/// sees the setup: the normal module refuses a game with custom cards (R915009), the Luau module judges
-/// them (R915005, R915006) and hands their definitions to `check_decks`. The kind is `create_game`'s
-/// `New` or a fold's `Recorded` (R1705003).
-pub type CheckSetup = fn(&CreateGameArgs, SetupKind) -> Result<(), String>;
+// The setup check `create_game`, `fold` and `replay_open` run before the engine sees a setup
 
 /// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
 /// and a panic in WebAssembly is a trap the page cannot catch. R180's handicaps come first, then each
 /// deck against its seat's size (R184): the engine's own `validate_setup`, whose messages cross verbatim,
-/// and a recorded game's decks are held to the size it was made under.
-pub fn check_decks(
-    args: &CreateGameArgs,
-    customs: &IndexMap<String, CardDef>,
-    kind: SetupKind,
-) -> Result<(), String> {
+/// and a recorded game's decks are held to the size it was made under. The kind is `create_game`'s `New`
+/// or a fold's `Recorded` (R1705003).
+fn check_decks(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
     let catalog: &CardDefs = match &args.catalog {
         Some(catalog) => catalog,
         None => engine::registered_catalog(),
     };
-    engine::validate_setup(args, catalog, customs, kind).map_err(|error| error.to_string())
+    engine::validate_setup(args, catalog, kind).map_err(|error| error.to_string())
 }
 
 // Boot and the catalog
@@ -304,9 +292,9 @@ pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, String> {
 // The engine (SURFACE §6.1)
 
 /// `GameState` from JSON arguments.
-pub fn create_game(args_json: &str, check_setup: CheckSetup) -> Result<String, String> {
+pub fn create_game(args_json: &str) -> Result<String, String> {
     let args: CreateGameArgs = parse("createGame", args_json)?;
-    check_setup(&args, SetupKind::New)?;
+    check_decks(&args, SetupKind::New)?;
     returned_state(engine::create_game(&args))
 }
 
@@ -348,10 +336,10 @@ pub fn hash_state(state_json: &str) -> Result<String, String> {
 }
 
 /// `{ state, errors: [{ nonce, error }] }`. Setup is checked first; refused actions are collected.
-pub fn fold(args_json: &str, check_setup: CheckSetup) -> Result<String, String> {
+pub fn fold(args_json: &str) -> Result<String, String> {
     // The fold's input is `createGame`'s plus `log`, so the same JSON reads as both.
     let setup: CreateGameArgs = parse("fold", args_json)?;
-    check_setup(&setup, SetupKind::Recorded)?;
+    check_decks(&setup, SetupKind::Recorded)?;
     let args: FoldArgs = parse("fold", args_json)?;
     to_json(&engine::fold(&args))
 }
@@ -359,12 +347,12 @@ pub fn fold(args_json: &str, check_setup: CheckSetup) -> Result<String, String> 
 /// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was played
 /// on (R767000): this build's own or one it carries. A game of any other version is refused as
 /// `earlier_patch` before its decks are read.
-pub fn replay_open(args_json: &str, record_json: &str, check_setup: CheckSetup) -> Result<String, String> {
+pub fn replay_open(args_json: &str, record_json: &str) -> Result<String, String> {
     let record: ReplayRecord = parse("replayOpen: the record", record_json)?;
     let build = jackioh_cards::catalog_version();
     if let Ok(shipped) = engine::catalog_for(&record.catalog_version, build) {
         let setup: CreateGameArgs = parse("replayOpen", args_json)?;
-        engine::with_shipped(shipped, || check_setup(&setup, SetupKind::Recorded))?;
+        engine::with_shipped(shipped, || check_decks(&setup, SetupKind::Recorded))?;
     }
     let args: FoldArgs = parse("replayOpen", args_json)?;
     to_json(&engine::replay_open(&args, &record, build))

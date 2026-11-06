@@ -70,9 +70,8 @@ reads: `SetName`, the catalog order, the sets that ship, the deck codes' set off
   and in the deck codes (R1410).
 - Add its census entry (`crates/cards/src/census.rs`) after the last one, and its scripts folder, `src/scripts/<segment with _
   between its words>/`, with its first card.
-- Run the workspace tests, which regenerate `apps/web/src/wire/generated/SetName.ts` (and `engineConfig.ts` when the set ships),
-  and `cargo test -p jackioh-luau --features ts --test export_api`, which regenerates `crates/cards/luau/jackioh.luau`; commit
-  both.
+- Run the workspace tests, which regenerate `apps/web/src/wire/generated/SetName.ts` (and `engineConfig.ts` when the set ships);
+  commit the diff.
 - The release that ships it changes its row's `Held` to `Shipped`, nothing else of the table.
 
 Its cards still need their own files, row by row above: the catalog entries, the fixture rows, the FX table

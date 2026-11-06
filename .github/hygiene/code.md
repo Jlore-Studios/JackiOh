@@ -9,7 +9,7 @@ have the weekly hygiene run's own issues: leave them to those.
 Find every function, type, constant, export and dependency that nothing references. The methods that
 worked in #900:
 - **Rust:** rename each low-hit `pub` item in a scratch copy, then run `cargo check --workspace
-  --all-targets` with every feature on (`testkit`, `ts`, `luau/ts`, `wasm/preview`), and put back each
+  --all-targets` with every feature on (`testkit`, `ts`, `wasm/preview`), and put back each
   rename the compiler names. Blank the `#[allow(dead_code)]`s and check again. An item only its own
   tests use is dead with them.
 - **TypeScript:** grep each `export` of `apps/web/src` and `e2e` with
@@ -22,7 +22,6 @@ Those that look dead but are not (#900):
 - the server constants `tests/export_config.rs` writes into `serverConfig.ts`;
 - the engine's "decide" switches, which `rulings_config.rs` and CLAUDE.md rule 9 pin;
 - `PUBLIC_ENV_VARS`, read as text by `env-production.test.ts`;
-- `cards → jackioh-luau`, which the generated registry calls;
 - the generated wire types: the fix for an unused one is in Rust (its `ts(export)` or its
   `export_config.rs` row), never a TypeScript delete;
 - test seams a test drives live machinery through, such as the `*ForTests` hooks.
