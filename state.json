@@ -17779,7 +17779,9 @@
     },
     "3268": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6683783985"
+      ],
       "cleared": {
         "approver": {
           "family": "claude",
@@ -17840,7 +17842,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "question": "At 390\u00d7664, for a DEF unit that has an Activate ability, which requirement gives way?",
-      "queued_at": "2026-11-06T05:39:40Z",
+      "queued_at": "2026-11-06T11:31:27Z",
+      "requested_by": "jgoetzmann",
       "run_id": "42169999177",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17861,7 +17864,7 @@
         "provider": "claude-8",
         "run": "42169999177"
       },
-      "source": "conflict",
+      "source": "request",
       "started_at": "2026-11-06T05:42:24Z",
       "stop_requested": false,
       "taken_asks": [],
