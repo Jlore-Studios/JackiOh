@@ -9,7 +9,10 @@
 // card's name plate (board.css, `max-height`), or, for a DEF card, above the turned card, so it never
 // covers the name, the attack or the health, and the marks that do not fit there fold into the face's
 // "+n": the face's own cap (`keywordChips`) first, then as many more as the measure below finds the
-// room cannot hold. The Activate control always stays. It draws view data only
+// room cannot hold. The Activate control and, while the unit has a mark to draw, the "+n" always stay:
+// where the room is shorter than they are (a DEF card on any phone), they hang over the turned card's
+// top-left by the difference, which extends #3268's call on the control to the "+n", so a unit's marks
+// never vanish with no sign. A named mark is drawn only where it fits. It draws view data only
 // (CLAUDE.md rule 7): the control is `ActivateControls`, which decides nothing, and the marks are the
 // face's own (`KeywordIcons`' markup, which cards.css styles by class). Card.tsx renders it only for a
 // field card on the phone layout (`usePhonePortrait`); every other card keeps both on its face.
@@ -83,11 +86,13 @@ function Stack({
   drawn: number;
 }): ReactElement {
   const stack = useRef<HTMLSpanElement>(null);
-  // `room` counts the named marks drawn, from the face's own cap down; below 0 not even the "+n" is. A new object forces a measure.
+  // `room` counts the named marks drawn, from the face's own cap down to 0, where the "+n" alone stands for every mark. The "+n" is
+  // never dropped while the unit has a mark to draw, as the control is not, so the measure stops at 0 even if it still overflows.
+  // A new object forces a measure.
   const [fit, setFit] = useState({ room: drawn });
   useLayoutEffect(() => {
     const element = stack.current;
-    if (element !== null && fit.room >= 0 && overflows(element)) setFit({ room: fit.room - 1 });
+    if (element !== null && fit.room > 0 && overflows(element)) setFit({ room: fit.room - 1 });
   }, [fit]);
   // A zone that changes size measures again, from the face's cap.
   useLayoutEffect(() => {
@@ -106,14 +111,13 @@ function Stack({
   // R1301: a unit's keywords are named in the face's words (`words` follows `unit.keywords`' order).
   const keywords = unit?.keywords ?? [];
   const wordsOf = (keyword: Keyword): string => words[keywords.indexOf(keyword)] ?? keywordKey(keyword);
-  const cut = Math.max(fit.room, 0);
-  const rest = chips.slice(cut);
+  const rest = chips.slice(fit.room);
   return (
     <span className="field-badges" ref={stack}>
       <ActivateControls card={card} highlight={highlight} animating={animating} onClick={onClick} />
-      {unit != null && fit.room >= 0 && chips.length > 0 && (
+      {unit != null && chips.length > 0 && (
         <span className="keywords">
-          {chips.slice(0, cut).map((keyword, index) => (
+          {chips.slice(0, fit.room).map((keyword, index) => (
             <span
               key={`${keywordKey(keyword)}-${index}`}
               className="keyword keyword-icon"
