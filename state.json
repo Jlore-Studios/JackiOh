@@ -14309,7 +14309,7 @@
       "started_at": "2026-11-06T11:39:57Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 4,
       "votes": {
         "approvals": [],
         "builder": "claude",
