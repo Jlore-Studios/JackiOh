@@ -1,10 +1,12 @@
 // #317 part 12, what was left of #160: the state file pruned, fix passes at their own effort,
-// and `main` merged again before a review when it moved and merges cleanly.
+// and (since `main`'s merge queue, #2948) `main` no longer merged again before a review when it
+// moved and merges cleanly.
 //
 // bot/tests/test_leftovers.py, ported (#467).
 package tests
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -66,7 +68,10 @@ func TestLeftovers_AFixPassRunsAtTheFixEffort(t *testing.T) {
 
 // ---------------------------------------------------------------------------- CatchUpTests
 
-func TestLeftovers_MainThatMovedDuringTheBuildIsMergedBeforeTheReview(t *testing.T) {
+// A `main` that moved during a one-run flow's build and merges cleanly is not merged before the
+// review: `main`'s merge queue tests the two together, so the merge would only run the checks,
+// and CI, again (#2948).
+func TestLeftovers_AMainThatMovedDuringTheBuildAndMergesCleanlyIsLeftToTheMergeQueue(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	moved := map[string]string{}
@@ -76,15 +81,16 @@ func TestLeftovers_MainThatMovedDuringTheBuildIsMergedBeforeTheReview(t *testing
 	}
 	seen := map[string]string{}
 	reviewing := func(request *runner.RunRequest) *runner.RunResult {
-		seen["readme"] = readText(t, filepath.Join(request.Cwd, "README.md"))
+		data, _ := os.ReadFile(filepath.Join(request.Cwd, "README.md"))
+		seen["readme"] = string(data)
 		return workReviewer(workApprove)(request)
 	}
 	_, result := h.night(workFake(map[string]any{"build": building, "review": reviewing}))
 	assertEqual(t, result.Get("status"), "approved")
-	assertEqual(t, dig(t, result, "cycles", 0, "caught_up"), moved["main"])
-	assertEqual(t, seen["readme"], "news\n")
+	assertFalse(t, pyjson.Obj(dig(t, result, "cycles", 0)).Has("caught_up"))
+	assertTrue(t, seen["readme"] != "news\n", seen["readme"])
 	head := h.originSHA("bot/issue-12")
-	assertEqual(t, fakes.Git(h.origin, "merge-base", "--is-ancestor", moved["main"], head), "")
+	assertTrue(t, fakes.Git(h.origin, "merge-base", moved["main"], head) != moved["main"])
 }
 
 func TestLeftovers_AMainThatWouldConflictIsLeftForTheConflictPath(t *testing.T) {

@@ -10,7 +10,7 @@ build = "build.rs"
 
 [dependencies]
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
-# the cards, the AI and the run, never jackioh-luau, and none of them takes it.
+# the cards, the AI and the run, and none of them takes it.
 jackioh-engine = { workspace = true }
 # The host machine asks the AI who owes a move (`ai_to_act`) and reads a panic's text (`panic_message`).
 jackioh-ai = { workspace = true }

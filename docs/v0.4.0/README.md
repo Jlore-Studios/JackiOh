@@ -1,5 +1,7 @@
 # v0.4.0: the card scripts in Luau
 
+> **History.** The Luau card host this folder describes was removed in [#2956](https://github.com/Jlore-Studios/JackiOh/issues/2956): `crates/luau`, `crates/wasm/luau`, the engine's custom-card host and the CI jobs that built them are gone (#3097). The folder stays as the record, since §8's measurement of Luau's speed (`fuzz` 1.53 times slower) is what #2898's risk 1 cites.
+
 This folder names a codebase project, not a catalog version: codebase projects take no version
 number since #1360, and the folder keeps its name because code comments cite it.
 

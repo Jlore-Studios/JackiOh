@@ -474,25 +474,6 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 p("outcome", predicted_word(names, *outcome)),
             ],
         ),
-        // A hook that failed and did nothing; the engine's words say why.
-        GameEvent::ScriptFailed {
-            instance_id,
-            def_id,
-            message,
-            ..
-        } => s(
-            "{card}'s script failed: {message}",
-            vec![
-                p(
-                    "card",
-                    match instance_id {
-                        None => names.named(def_id),
-                        Some(instance_id) => names.named_card(instance_id, def_id),
-                    },
-                ),
-                p("message", message.as_str()),
-            ],
-        ),
         GameEvent::HealthLost { player, amount } => s(
             "{seat} lost {amount} health",
             vec![p("seat", seat(*player)), p("amount", *amount)],

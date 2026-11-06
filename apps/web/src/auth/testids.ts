@@ -85,6 +85,8 @@ export const loginTestid = {
   mfaCancel: "login-mfa-cancel",
   // R666: one button per configured OAuth provider (`data-provider` names it).
   oauth: "login-oauth",
+  // R3217000: the one row Google's and Roblox's buttons sit in.
+  oauthRow: "login-oauth-row",
   oauthError: "login-oauth-error",
   // R3147000: beside the Roblox button, how a player who has an account already brings Roblox to it.
   robloxHint: "login-roblox-hint",

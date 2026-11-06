@@ -462,7 +462,7 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
             "Training Grounds": 6000,
         })
     );
-    for set in [SetName::Boss, SetName::BossX, SetName::Custom] {
+    for set in [SetName::Boss, SetName::BossX] {
         assert_eq!(c::catalog_number_set_offset(set), None, "{set:?}");
     }
 }

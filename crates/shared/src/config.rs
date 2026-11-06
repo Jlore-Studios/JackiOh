@@ -192,8 +192,8 @@ pub const MS_PER_DAY: i64 = 86_400_000;
 pub const MAX_FAIR_GAP: i64 = 400;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games". Its played delta needs this many on each side, played and
-/// drawn but not played, and displays "not enough data" until then.
+/// the row displays "not enough games" and has no tier (R3022000). `GET /api/stats/cards` sends no
+/// played or drawn delta, which waited for this many on each side (R3185000).
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
@@ -953,6 +953,106 @@ pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
 /// R1452: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
 /// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
 pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
+
+// ---------------------------------------------------------------------------------------------
+// Ladder bots' cosmetics (SPEC §14.2, R1834005, R1834006; #1834). A bot wears a loadout drawn as a
+// person's from a wardrobe drawn from the pool's seed (`bots::cosmetics`), so its seat looks
+// like a person's (R1452) while it owns nothing (R1454). The fits are pasted by hand from
+// `jackioh-server cosmetics-fit` as `THINK_TIME_FITS` is from `timing-fit`; the priors are hand-set
+// until a fit replaces them (`jackioh-server cosmetics-fit` prints the rows to paste over `BOT_COSMETIC_FITS`
+// in this file). Cosmetic only: none of it reaches the engine, the log or the search.
+// ---------------------------------------------------------------------------------------------
+
+/// R1834006: the fewest people's seats an age bucket's row needs before it replaces the prior.
+pub const BOT_COSMETIC_FIT_MIN_SAMPLES: usize = 30;
+/// R1834005: the fewest people who must own a cosmetic (on that card, for a per-card one) before a
+/// bot may: a bot never owns a chase fewer people hold.
+pub const BOT_COSMETIC_MIN_OWNERS: i64 = 20;
+/// R1834005: the fewest days since a cosmetic was first granted to a person before a bot may own it.
+pub const BOT_COSMETIC_MIN_AGE_DAYS: i64 = 14;
+/// R1834005: how often a bot's cosmetics age, as an account's do: it may gain wardrobe items and
+/// change a slot, at most once in this many days.
+pub const BOT_COSMETIC_REDRAW_DAYS: i64 = 7;
+/// R1834005, R1834006: the account ages the fits are bucketed by, in days: one bucket up to each
+/// bound, inclusive, and one past the last.
+pub const BOT_COSMETIC_AGE_BUCKETS_DAYS: [i64; 3] = [7, 30, 90];
+/// R1834005: the prior's share of seats that wear a slot's default; the rest is split evenly
+/// among the kind's starters.
+pub const BOT_COSMETIC_PRIOR_DEFAULT_SHARE: f64 = 0.55;
+/// R1834005: the prior's share of seats that pick something of its own for some card of the deck.
+pub const BOT_COSMETIC_PRIOR_PER_CARD_SHARE: f64 = 0.2;
+/// R1834005: the prior's mean number of a deck's cards picked, for a seat that picks any.
+pub const BOT_COSMETIC_PRIOR_CARDS_PER_DECK: f64 = 3.0;
+/// R1834005: the prior's share of seats that print a full art they own on a card of their deck.
+pub const BOT_COSMETIC_PRIOR_FULL_ART_WEAR: f64 = 0.8;
+/// R1834005: the prior's share of bots that own an eligible cosmetic no fitted row lists.
+pub const BOT_COSMETIC_PRIOR_OWNERSHIP: f64 = 0.05;
+/// R1834005: the chance each slot of a bot changes when its cosmetics age.
+pub const BOT_COSMETIC_SLOT_CHANGE_SHARE: f64 = 0.1;
+
+/// R1834006: how many people own a cosmetic, as a share of an age bucket's people: an account
+/// cosmetic on the account (`card: None`), a per-card one (a full art among them) on `card`.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticOwnership {
+    pub cosmetic: &'static str,
+    pub card: Option<&'static str>,
+    pub share: f64,
+}
+
+/// R1834006: an earned foil, finish or border on the one card a person owns it on: of the seats
+/// whose person owns `cosmetic` on `card` and whose deck holds that card, the share whose card wears
+/// it.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticWear {
+    pub cosmetic: &'static str,
+    pub card: &'static str,
+    pub share: f64,
+}
+
+/// R1834005, R1834006: what people of one account age wear, over `samples` of their seats, for
+/// accounts up to `max_age_days` old (`None`: older than every bound of
+/// `BOT_COSMETIC_AGE_BUCKETS_DAYS`). `slots` is each cosmetic's share of the seats wearing it in its
+/// kind's slot (the six of a seat's loadout, defaults included; a kind it lists nothing of takes the
+/// prior's split). `per_card_share` is the share of seats with a pick of their own on some card,
+/// `cards_per_deck_mean` the mean number of cards such a seat picks, `card_picks` each default's and
+/// starter's (a foil, a finish or a border every card may wear) share of those cards' picks of one,
+/// `earned_wear` each earned one's wear on its card (`CosmeticWear`; both empty, a card's pick takes
+/// the prior's split), `full_art_wear` each full art's share of the seats that own it and play its
+/// card that print it, and `ownership` each non-starter's share of the bucket's people that own it.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticFit {
+    pub max_age_days: Option<i64>,
+    pub samples: usize,
+    pub slots: &'static [(&'static str, f64)],
+    pub per_card_share: f64,
+    pub cards_per_deck_mean: f64,
+    pub card_picks: &'static [(&'static str, f64)],
+    pub earned_wear: &'static [CosmeticWear],
+    pub full_art_wear: &'static [(&'static str, f64)],
+    pub ownership: &'static [CosmeticOwnership],
+}
+
+/// R1834006: the cosmetic fits, one per age bucket, pasted by hand from `jackioh-server
+/// cosmetics-fit` (CLAUDE.md rule 9). Empty until enough people's matches froze a loadout; a bucket
+/// with no row, or one under `BOT_COSMETIC_FIT_MIN_SAMPLES`, draws from `BOT_COSMETIC_PRIOR`.
+pub const BOT_COSMETIC_FITS: &[CosmeticFit] = &[];
+
+/// R1834005: the hand-set prior every bucket draws from until a fit replaces it: no shares of its
+/// own (each slot `BOT_COSMETIC_PRIOR_DEFAULT_SHARE` default, the rest split among the starters),
+/// no picks on cards of its own (a card's pick a kind at even odds, by the slots' split), no full
+/// art's wear of its own (`BOT_COSMETIC_PRIOR_FULL_ART_WEAR`) and no ownership of its own
+/// (`BOT_COSMETIC_PRIOR_OWNERSHIP`).
+pub const BOT_COSMETIC_PRIOR: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: 0,
+    slots: &[],
+    per_card_share: BOT_COSMETIC_PRIOR_PER_CARD_SHARE,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[],
+    full_art_wear: &[],
+    ownership: &[],
+};
 
 /// R645: the four personas a bot may be dealt (TS `PersonaName`). Never shown to the player.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -1763,3 +1863,82 @@ pub const CHASE_SHARD_PACKS: i64 = 10;
 /// SPEC §14.7: the XP step of the level curve: going from level n to the next costs this times
 /// n, uncapped (#1333's table: 100), so level 10 is at 4,500 XP and level 100 at 495,000 XP.
 pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
+
+// ---------------------------------------------------------------------------------------------
+// What a finished game pays and how a quest moves (SPEC §14.7 to §14.9, #3104 part 2): the Jlore and XP
+// rates, the daily cap, the set tracks' levels and the quest rhythm that `economy::rewards` and
+// `economy::quests` decide with. `crates/server/src/config.rs` re-exports every one.
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §14.7: the levels of a set track (#1333's table: 100), whose whole curve costs 495,000 XP
+/// (`total_xp_for_level` in `crates/shared/src/economy/math.rs`), a set's lifetime of play.
+pub const SET_TRACK_LEVELS: u32 = 100;
+/// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
+pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
+/// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
+pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
+pub const JLORE_LADDER_WIN: i32 = 20;
+/// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves
+/// the wallet.
+pub const JLORE_LADDER_LOSS: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a win (#1333's table: 10), since the browser
+/// runs it and the server only checks the log.
+pub const JLORE_PRACTICE_WIN: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
+pub const JLORE_PRACTICE_LOSS: i32 = 5;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its winner, at the ladder's rate.
+pub const JLORE_UNRANKED_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its loser, at the ladder's rate.
+pub const JLORE_UNRANKED_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its winner, as its own
+/// result, at the ladder's rate.
+pub const JLORE_CONQUEST_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its loser, as its own result,
+/// at the ladder's rate.
+pub const JLORE_CONQUEST_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a winning team, at practice's
+/// rate, since the team plays the AI.
+pub const JLORE_COOP_WIN: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a team that did not win, at
+/// practice's rate.
+pub const JLORE_COOP_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000, R1502000: the most Jlore an account's games pay it in one UTC day, every
+/// mode's games together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
+/// what a loop of conceded practice games would earn.
+pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
+/// SPEC §14.8: the XP of a game per action the player took, a proxy for time played. #1333's
+/// table leaves it to measured action counts: over R1333001's games 20, 600 and 2,000 average
+/// 999.75 XP a ladder game, `XP_LADDER_TARGET_MEAN`'s 1,000.
+pub const XP_PER_ACTION: i32 = 20;
+/// SPEC §14.8: the XP more a win pays, the big bonus #1333's table asks for (R1333001).
+pub const XP_WIN_BONUS: i32 = 600;
+/// SPEC §14.8: the most XP a game pays, so a loop of empty actions cannot farm it: twice
+/// `XP_LADDER_TARGET_MEAN` (R1333001).
+pub const XP_GAME_CAP: i32 = 2000;
+/// SPEC §14.8: a practice game's share of the XP the same game earns on the ladder (#1333's
+/// table: 0.5).
+pub const XP_PRACTICE_SCALE: f64 = 0.5;
+/// SPEC §14.8, R1502000: a co-op game's share of the XP the same moves earn on the ladder, as
+/// practice's (the team plays the AI).
+pub const XP_COOP_SCALE: f64 = 0.5;
+/// SPEC §14.8: the XP a ladder game averages (#1333's table: 1,000), over R1333001's measured
+/// games.
+pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
+/// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
+/// (#1333's table: 5).
+pub const QUEST_INTERVAL_HOURS: i64 = 5;
+/// SPEC §14.9: how many quests an account holds at most (#1333's table: 3), so a player away for
+/// a day comes back to three waiting, never more.
+pub const QUEST_MAX_HELD: usize = 3;
+/// SPEC §14.9: the least Jlore a quest pays (#1333's table: 50 to 100), half a pack to a pack.
+pub const QUEST_JLORE_MIN: i32 = 50;
+/// SPEC §14.9: the most Jlore a quest pays, for the hardest goals (#1333's table: 100).
+pub const QUEST_JLORE_MAX: i32 = 100;
+/// SPEC §14.9: the XP of each Jlore a quest pays (#1333's table: 50), so a quest's XP weighs
+/// like a few games'.
+pub const QUEST_XP_PER_JLORE: i32 = 50;
+/// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
+/// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
+pub const QUEST_REPLACES_PER_DAY: i64 = 1;

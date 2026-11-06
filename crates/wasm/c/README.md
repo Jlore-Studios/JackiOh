@@ -2,16 +2,15 @@
 
 The engine's C boundary (#3093, `docs/v0.3.0/SURFACE.md` §10.5): the cards, the rules engine, the AI,
 the validator and the dungeon run as one WebAssembly module whose exports are plain `extern "C"`
-functions over JSON strings. It is built for `wasm32-unknown-unknown` with no emscripten, no Luau VM, no
+functions over JSON strings. It is built for `wasm32-unknown-unknown` with no emscripten, no
 wasm-bindgen glue, no JavaScript and no system interface, so its **import section is empty**: any host
 that runs WebAssembly instantiates it with no imports. It is what a port that is not JavaScript runs
 (#2898's Roblox port translates it), so everything the browser and the server share reaches such a host
 through this module, with nothing restated by hand: the numbers a client reads come from `constants()`
 (CLAUDE.md rule 9), the rules from the engine.
 
-It is a third wrapper over `jackioh-wasm-core`'s bodies (#1505), beside `crates/wasm` (wasm-bindgen,
-the web) and `crates/wasm/luau` (the same C names through emscripten, with the Luau VM, which part 5 of
-#2956 deletes). The bodies are not copied, so an answer is the browser's answer for the same JSON, and
+It is a second wrapper over `jackioh-wasm-core`'s bodies (#1505), beside `crates/wasm` (wasm-bindgen,
+the web). The bodies are not copied, so an answer is the browser's answer for the same JSON, and
 `crates/wasm/tests/export_parity.rs` holds this module to every binding the browser module binds: one
 added for the web reaches here by itself. `crates/wasm/README.md` has each binding's JSON, which is the
 same here, and `docs/v0.3.0/SURFACE.md` §10 the seams around it.
@@ -19,10 +18,12 @@ same here, and `docs/v0.3.0/SURFACE.md` §10 the seams around it.
 ```
 cargo test -p jackioh-wasm-c                                              # each export against its core body
 cargo build -p jackioh-wasm-c --release --target wasm32-unknown-unknown   # target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm
-JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh   # the same, and checks the imports with node
+JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh   # the same, and checks the imports with node
 ```
 
-The module is tens of megabytes: the catalog, every card script and the AI's tables are in it.
+The module is tens of megabytes: the catalog, every card script and the AI's tables are in it. CI's
+`web (wasm c module)` job (a piece of the required `web` check) builds it on every change it can
+reach, fails on any import, and records its size in the job summary (#3097; #2898's risk 3).
 
 ## Instantiating
 
@@ -96,7 +97,7 @@ with no quotes; every other string argument is JSON, the run bindings' small one
 ## Errors and traps
 
 A status of `1` is a call refused: bad JSON, a setup the engine will not take (a deck or handicap
-`create_game` refuses), a game with custom cards (this module plays none: `R915009`), a set to preview
+`create_game` refuses), a set to preview
 in a module built without the `preview` feature. The module is as it was and the next call is fine.
 
 A game rule is **not** a status of `1`. `reduce` refuses an illegal action in its result's `error`
@@ -133,13 +134,13 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
 | `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; `stepDuos` the co-op host's twin; the rematch and Play again books' calls answer their next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
-| `loadout(call)` | string | #3102: one call of `jackioh-shared`'s loadout visibility rule, a `LoadoutCall` in and a `LoadoutAnswer` out (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`); the host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract) |
+| `loadout(call)` | string | #3102, #3103: one call of `jackioh-shared`'s loadout rule, a `LoadoutCall` in and a `LoadoutAnswer` out (`{ "dealt": … }`, `{ "shown": … }`, `{ "due": { "cards": …, "sent": … } }`, `{ "frozen": … }` for `freezeSeat` and `defaultLoadout`, `{ "account": … }` or `{ "stamps": … }`); the host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract) |
 | `ranked(call)` | string | #3105: one call of `jackioh-shared`'s ranked ladder, a `RankedCall` in and a `RankedAnswer` out (`{ "game": … }`, `{ "season": … }`, `{ "reset": … }`, `{ "rank": … }`, `{ "badge": … }` or `{ "jlorious": … }`); the host holds the ladder's records and passes the time and the season's dates in (`crates/shared/README.md`, the host contract) |
-| `bots(call)` | string | #3103: one call of `jackioh-shared`'s decisions around a ladder bot, a `BotCall` in and a `BotAnswer` out (the pool's size and who grinds, a new bot, its decks and trio, the empty-queue pairing, a Conquest series pick), over plain records the host read from its store (`crates/shared/README.md`, the host contract) |
+| `bots(call)` | string | #3103: one call of `jackioh-shared`'s decisions around a ladder bot, a `BotCall` in and a `BotAnswer` out (the pool's size and who grinds, a new bot, its decks and trio, the empty-queue pairing, a Conquest series pick, the cosmetics it wears), over plain records the host read from its store (`crates/shared/README.md`, the host contract) |
 | `bot_decide(call, deadline_ms)` | string, then `deadline_ms: f64` | #3103: the move a ladder bot owes, a `DecideCall` (the `DuelHost` and the `DecideRequest` a `decide` output made) in and the `BotChoice` to feed the machine back as `decided` out. As `ai_decide`'s, `deadline_ms` is accepted and has no effect (the module has no clock): the search ends at the strength's budget |
 | `face(call)` | string | #3106: one call of `jackioh-shared`'s card face model, a `FaceCall` in and a `FaceAnswer` out (a face, every face of a view, a text as spans, a word diff); the catalog is the one `init` registered and the locale an argument, so the answer is final text as spans in the reader's words and the host lays it out (`crates/shared/README.md`) |
 | `log(call)` | string | #3108: one call of `jackioh-shared`'s game log, a `LogCall` in and a `LogAnswer` out (a line, or `null`, for each event of a view's window; the line that says events may be missing); the catalog is the one `init` registered and the locale an argument, so each line is final text as spans in the reader's words, and a line about a hidden card never names it (`crates/shared/README.md`) |
-| `economy(call)` | string | #3104: one call of `jackioh-shared`'s collection economy, an `EconomyCall` in and an `EconomyAnswer` out (`openCardPack` and `openCosmeticPack` take the records the store read, the seed and the time, and answer the slots, the `grants` to write in order and the `log` every row's `ref` carries; `fillBar` and `levelReward` are reads); the host reads the records from its store and writes the grants back (`crates/shared/README.md`, the host contract) |
+| `economy(call)` | string | #3104: one call of `jackioh-shared`'s collection economy, an `EconomyCall` in and an `EconomyAnswer` out (`openCardPack` and `openCosmeticPack` take the records the store read, the seed and the time, and answer the slots, the `grants` to write in order and the `log` every row's `ref` carries; `payGame`, `payXp`, `startingRewards` and the quest calls answer the grants to write, in order; `fillBar` and `levelReward` are reads); the host reads the records from its store and writes the grants back (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
@@ -152,9 +153,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `run_seed(source)`, `run_daily_seed(date, n)` | strings | a seed, the daily run's seed |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | strings | #936's co-op wrapper; built without the `duos` feature each is status `1` with the reason |
 
-There is no custom-card binding and no Luau (`check_custom_card` stays with the Luau module, until
-part 5 of #2956 deletes both); a game whose setup carries custom cards is refused (`R915009`). The
-module's own Cargo features are the browser module's: `preview` (`preview_sets` can preview a set that
+The module's own Cargo features are the browser module's: `preview` (`preview_sets` can preview a set that
 does not ship yet) and `duos`, both off in the build `scripts/build-wasm.sh` makes.
 
 **State.** `GameState` JSON is opaque to a client. Keep it as text, hand it back to every call, and ask

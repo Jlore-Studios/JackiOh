@@ -276,8 +276,7 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
 /**
  * R3100000: what each attack `seat` may declare would do, as the board shows it, and whether the attackers
  * that may reach the enemy hero finish it (`engine::combat_forecast`). The tutorial's coach names its
- * attacks by it. It is the normal module's own, as the Duos bindings are: a lesson holds no custom card
- * (R915009), so the Luau module has no copy.
+ * attacks by it.
  */
 export function combatForecast(state: GameState, seat: PlayerId): CombatForecast {
   return call("combatForecast", () => parsed<CombatForecast>(normal.combat_forecast(stateJson(state), seat)));
@@ -662,8 +661,7 @@ export function face(request: FaceCall): FaceAnswer {
 /**
  * One call of the game log (`crates/shared/src/log`): a `LogCall` in, a `LogAnswer` out, both the generated
  * wire types. The catalog is the module's own and the locale is an argument, so each line is final text as
- * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes). It runs on the normal
- * module whichever one the engine calls go through, since a line names no custom card.
+ * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes).
  */
 export function log(request: LogCall): LogAnswer {
   return call("log", () => parsed<LogAnswer>(normal.log(json(request))));
