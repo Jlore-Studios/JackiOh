@@ -18189,11 +18189,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-06T06:40:06Z",
+        "at": "2026-11-06T07:14:35Z",
         "difficulty": "hard",
         "provider": "claude-6",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's evaluation in `crates/ai/src/` (`face_threat_with`), which feeds the threat terms, `wall_switches` and the learned features, so it changes the AI's decisions."
+        "tier": "strong",
+        "why": "Rule line 2 (the AI): it changes the AI's evaluation in crates/ai/src/evaluate.rs, which feeds its search, wall_switches and the learned features"
       },
       "failures": 0,
       "forced": false,
