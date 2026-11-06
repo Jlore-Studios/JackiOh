@@ -186,7 +186,7 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
 }
 
 export function DuosReplayBack({ onLeave }: { onLeave: () => void }): ReactElement {
-  return <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} />;
+  return <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} title={t("Replays")} />;
 }
 
 export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLeave: () => void }): ReactElement {

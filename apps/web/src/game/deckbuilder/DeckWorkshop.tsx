@@ -756,7 +756,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   return (
     <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
       <header className="db-header">
-        <BackLink to={paths.collection} title={<h1 className="db-title">{t("Decks")}</h1>}>
+        <BackLink to={paths.collection} title={t("Decks")}>
           {openDeck === null ? null : (
             <div className="ws-history">
               <button

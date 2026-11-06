@@ -280,7 +280,7 @@ h3,
   gap: var(--space-5);
 }
 
-.brand h1 {
+.brand__word {
   color: var(--text);
 }
 

@@ -60,6 +60,7 @@ import PlayRoute, {
   roomLinkStatus,
 } from "./play.tsx";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -337,6 +338,16 @@ describe("R1578000 the Play hub", () => {
     [playTestid.together, paths.together],
     [playTestid.replays, paths.replays],
   ];
+
+  it("R3223000 the hub has one visible h1, the PageTitle, signed in and signed out", async () => {
+    await renderLobby();
+    expectOnePageTitle("Play");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+
+    cleanup();
+    render(<PlayRoute token={null} />);
+    expectOnePageTitle("Play");
+  });
 
   it("R1578000 the hub puts online first with every mode reachable", async () => {
     await renderLobby();

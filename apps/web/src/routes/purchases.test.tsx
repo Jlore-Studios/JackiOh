@@ -14,6 +14,7 @@ import { packsInfo } from "../packs/fixtures.ts";
 import { cosmeticPacksInfo } from "../shop/fixtures.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import PurchasesRoute, { purchasesTestid } from "./purchases.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 
@@ -160,6 +161,16 @@ describe("R1665000 /purchases signed in", () => {
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
     expect(server.to("GET", "/api/cosmetic-packs")).toHaveLength(1);
     for (const call of oddsReads(server)) expect(call.headers.authorization, call.path).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    servePurchases();
+    signIn(TOKEN);
+    render(<PurchasesRoute />);
+
+    await screen.findByTestId(purchasesTestid.odds, undefined, SLOW);
+    expectOnePageTitle("Purchases");
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
   });
 
   it("R1665000 a rarity with no chance shows a dash, and every figure is the server's", async () => {

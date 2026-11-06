@@ -60,6 +60,7 @@ import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
@@ -691,10 +692,7 @@ function WaysNav(): ReactElement {
 function PlayHero(): ReactElement {
   return (
     <header className="play-hero">
-      <div className="brand">
-        <h1>JackiOh</h1>
-      </div>
-      <p className="play-hero__title">{t("Play")}</p>
+      <Wordmark />
     </header>
   );
 }
@@ -743,7 +741,7 @@ function SignedOutPlay(): ReactElement {
   useLocale();
   return (
     <div className="app-shell tavern lobby play-screen play-hub" data-testid={playTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Play")} />
       <PlayHero />
       <div className="play-layout">
         <section
@@ -1044,7 +1042,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
       data-testid={playTestid.screen}
       data-waiting={locked ? "true" : "false"}
     >
-      <BackLink />
+      <BackLink title={t("Play")} />
       <PlayHero />
 
       {status !== null ? (

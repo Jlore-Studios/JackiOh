@@ -103,6 +103,13 @@ rule's) the line takes a row under Back and the end group. Only `routes/top-bar.
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
 
+A menu names itself with one `PageTitle` (#3223, R3223000): its only `h1`, in `--font-display` at `--type-3xl`
+(`routes/PageTitle.tsx`, `routes/page-title.css`). A menu passes its name as BackLink's `title`, so it sits in the bar's
+title slot, and never draws an `h1` of its own (`routes/page-title.test.ts` counts them); the two prompts that
+replace a menu and have no bar (the username's and the consent's) draw a `PageTitle` in their panel. The brand is
+`Wordmark` (`routes/Wordmark.tsx`), not a heading. A section inside a screen is an `h2` of class `section-heading`
+from the same sheet. No other sheet sets a font-size on an `h1`.
+
 The dungeon map's node icons are drawn SVGs (`dungeon/map/NodeIcon.tsx`): single color in `currentColor` on a
 24-unit grid, colored by `data-kind` in `dungeon/map/run.css` from the palette. No system emoji appears
 anywhere under `dungeon/`, held by `dungeon/noEmoji.test.ts`; add a node kind's glyph there, never a

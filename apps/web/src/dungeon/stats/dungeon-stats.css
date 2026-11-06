@@ -13,11 +13,6 @@
   padding: 16px;
 }
 
-.dungeon-stats__title {
-  margin: 0;
-  font-size: var(--type-2xl);
-}
-
 .dungeon-stats__filters {
   display: flex;
   flex-wrap: wrap;

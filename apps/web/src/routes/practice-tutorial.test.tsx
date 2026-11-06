@@ -22,6 +22,7 @@ import type { LessonScript } from "../tutorial/coach.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "../tutorial/lessons.ts";
 import { __resetTutorialProgressForTests, markLessonComplete, readTutorialProgress } from "../tutorial/progress.ts";
 import { tutorialTestid } from "../tutorial/testids.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import PracticeRoute from "./practice.tsx";
 
 const ANONYMOUS: Account = { kind: "anonymous" };
@@ -217,6 +218,18 @@ describe("the lesson path on /practice", () => {
     expect(before(title, path)).toBe(true);
     expect(before(path, header)).toBe(true);
     expect(before(path, setup)).toBe(true);
+  });
+
+  it("R3223000 the lobby has one visible h1, the PageTitle, and its two section headings are h2 of one class", async () => {
+    renderRoute(routeHost());
+    await settle({ ticks: 10 });
+    expectOnePageTitle("Practice");
+    const learn = screen.getByRole("heading", { name: "Learn to play" });
+    const practice = screen.getByRole("heading", { name: "Practice against the AI" });
+    for (const heading of [learn, practice]) {
+      expect(heading.tagName).toBe("H2");
+      expect(heading).toHaveClass("section-heading");
+    }
   });
 
   it("Start sends a practice start that names the lesson, on the lesson's own seed and seat", async () => {
