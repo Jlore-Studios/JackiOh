@@ -501,7 +501,7 @@ describe("E21 the pile badge's stylesheets", () => {
 
   it("E21 the badge reads as the badge, not an app-shell button: board.css outranks index.css's padding", () => {
     const rule = block(sheet("src/game/board.css"), ".board button.buried-badge");
-    expect(rule).toMatch(/padding:\s*0 3px/);
+    expect(rule).toMatch(/padding:\s*0 var\(--space-1\)/);
     expect(rule).toMatch(/border:\s*0/);
   });
 
