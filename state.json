@@ -15851,10 +15851,10 @@
       "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "cc6ba3bf687f0d0631dbbd5f78baa7654b438561",
-      "ci_fixes": 1,
+      "ci_fixes": 2,
       "ci_on_head": false,
       "ci_run_id": 42237602265,
-      "ci_sha": "c5dea7bb43580bdac9ebead09af276162397a84c",
+      "ci_sha": "cc6ba3bf687f0d0631dbbd5f78baa7654b438561",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -15874,14 +15874,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3017,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
-      "queued_at": "2026-11-06T18:13:54Z",
+      "queued_at": "2026-11-06T18:32:58Z",
       "requested_by": "jgoetzmann-bot",
       "requeued": {
         "c5dea7bb43580bdac9ebead09af276162397a84c": "053ba7eee01ca4fa6cdb83207efedf97dcc7b3bf"
@@ -15907,7 +15907,7 @@
         "provider": "claude-4",
         "run": "42258216681"
       },
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-06T18:15:03Z",
       "stop_requested": false,
       "taken_asks": [],
