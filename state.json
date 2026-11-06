@@ -16172,6 +16172,13 @@
     "3308": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-06T18:12:23Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Rule 1: the fuzz failure is fixed in crates/engine/src/testkit/invariants.rs, the engine's I2 monitor, and the rest spreads over the web CSS, a component spec, an e2e spec and a fixture; when in doubt, hard."
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-06T17:32:55Z",
