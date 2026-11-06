@@ -5,15 +5,16 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ActionBody, Aim, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
-import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { POST_GAME_FRAME_VERSION, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import type { CardCosmetics } from "../cards/cosmetics.ts";
 import { createLoadoutsHolder, parseCardLoadouts, parseSeatPicks, type CardLoadouts, type SeatLoadouts } from "../cards/loadouts.ts";
 import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { isEmoteHand } from "../emotes/hand.ts";
-import { matchSocketUrl } from "../net/api.ts";
+import { matchSocketUrl, type RematchStakes, type RematchStatusResponse, type SeriesView } from "../net/api.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
 import { isSpectatorHand, spectatorEmoteOf } from "../sideline/wire.ts";
+import type { PostGameFrame } from "../wire/generated/PostGameFrame.ts";
 import { isRecord } from "../wire/json.ts";
 import { messageOf } from "../net/errors.ts";
 
@@ -334,6 +335,8 @@ const isString = (value: unknown): value is string => typeof value === "string";
 const isNumberOrNull = (value: unknown): value is number | null =>
   value === null || typeof value === "number";
 
+const isStakesOrNull = (value: unknown): value is RematchStakes | null => value === null || value === 1 || value === 2;
+
 /** Deliberately shallow (§9.3): validation here would duplicate the engine's action union. */
 function parseLegal(value: unknown): readonly ActionBody[] | null {
   if (!Array.isArray(value)) return null;
@@ -388,7 +391,11 @@ export type ServerFrame =
   /** R2990001: a watch socket's own emote hand, sent to that watcher alone. */
   | { type: "spectatorHand"; emotes: readonly EmojiEmoteId[] }
   /** R2990000: a watcher's emote, relayed live to both seats and to the match's other watchers. */
-  | { type: "spectatorEmote"; watcher: string; emote: EmojiEmoteId };
+  | { type: "spectatorEmote"; watcher: string; emote: EmojiEmoteId }
+  /** R3213000: this seat's rematch status, as its `GET /api/matches/:id/rematch` answers it. */
+  | (Extract<PostGameFrame, { type: "rematch" }> & Pick<RematchStatusResponse, "youOffered" | "opponentOffer">)
+  /** R3213000: this seat's view of the game's series, as its `GET /api/matches/:id/series` answers it. */
+  | (Omit<Extract<PostGameFrame, { type: "series" }>, "series"> & { series: SeriesView });
 
 /** Parse one text frame; unknown frames must not take the board down. */
 export function parseServerFrame(text: string): ServerFrame | null {
@@ -495,6 +502,21 @@ export function parseServerFrame(text: string): ServerFrame | null {
       const relayed = spectatorEmoteOf(parsed);
       return relayed === null ? null : { type: "spectatorEmote", ...relayed };
     }
+    // R3213000: a post-game frame of another version, or with a field this client does not know, is no
+    // frame, so the screen polls as it would without one.
+    case "rematch": {
+      const { v, youOffered, opponentOffer, opponentHere, matchId, mode } = parsed;
+      if (v !== POST_GAME_FRAME_VERSION || !isStakesOrNull(youOffered) || !isStakesOrNull(opponentOffer)) return null;
+      if (typeof opponentHere !== "boolean" || !(matchId === null || isString(matchId))) return null;
+      if (mode !== "bo1" && mode !== "random") return null;
+      return { type: "rematch", v, youOffered, opponentOffer, opponentHere, matchId, mode };
+    }
+    case "series": {
+      const { v, series } = parsed;
+      if (v !== POST_GAME_FRAME_VERSION || !isRecord(series) || !isString(series.id)) return null;
+      // The server shapes the view; the client checks its id alone, as `SeriesBanner.tsx`'s read does.
+      return { type: "series", v, series: series as unknown as SeriesView };
+    }
     default:
       return null;
   }
@@ -575,6 +597,16 @@ export type MatchSnapshot = {
    * null until the first `loadouts` frame.
    */
   loadouts: SeatLoadouts | null;
+  /**
+   * R3213000: this seat's rematch status, the open socket's last `rematch` frame; null before one
+   * arrives and once the socket drops.
+   */
+  rematch: RematchStatusResponse | null;
+  /**
+   * R3213000: this seat's view of the game's series, the open socket's last `series` frame; null before
+   * one arrives and once the socket drops.
+   */
+  series: SeriesView | null;
 };
 
 export type MatchClient = {
@@ -636,6 +668,8 @@ const INITIAL: MatchSnapshot = {
   choiceHover: null,
   watchers: 0,
   loadouts: null,
+  rematch: null,
+  series: null,
 };
 
 /**
@@ -758,6 +792,14 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "spectatorHand":
         // R2990001: a watch socket's alone (together/WatchRoute.tsx reads it); a seat is dealt none.
         return;
+      case "rematch": {
+        const { youOffered, opponentOffer, opponentHere, matchId, mode } = frame;
+        patch({ rematch: { youOffered, opponentOffer, opponentHere, matchId, mode } });
+        return;
+      }
+      case "series":
+        patch({ series: frame.series });
+        return;
     }
   }
 
@@ -811,8 +853,11 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       if (socket !== created) return;
       socket = null;
       wakeProbe.cancel();
-      // R738, R2739001: clear an aim and a hovered option from before the drop.
-      if (snapshot.aim !== null || snapshot.choiceHover !== null) patch({ aim: null, choiceHover: null });
+      // R738, R2739001: clear an aim and a hovered option from before the drop. R3213000: and the
+      // post-game frames, which only an open socket keeps up to date.
+      if (snapshot.aim !== null || snapshot.choiceHover !== null || snapshot.rematch !== null || snapshot.series !== null) {
+        patch({ aim: null, choiceHover: null, rematch: null, series: null });
+      }
       if (stopped) {
         patch({ connection: "closed" });
         return;
@@ -850,6 +895,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         connection: "reconnecting",
         ...(snapshot.aim === null ? {} : { aim: null }),
         ...(snapshot.choiceHover === null ? {} : { choiceHover: null }),
+        ...(snapshot.rematch === null ? {} : { rematch: null }),
+        ...(snapshot.series === null ? {} : { series: null }),
       });
       open();
     });
@@ -922,7 +969,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       const live = socket;
       socket = null;
       if (live !== null) letGo(live, "leaving the match");
-      patch({ connection: "closed" });
+      patch({ connection: "closed", rematch: null, series: null });
     },
     url: () => socketUrlFor(base, options.matchId),
     setToken: (next) => {

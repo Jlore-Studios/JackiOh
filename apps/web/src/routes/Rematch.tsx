@@ -30,6 +30,8 @@ export type RematchButtonsProps = {
   matchId: string;
   connection: ConnectionState;
   ranked: boolean;
+  /** R3213000: the match socket's last `rematch` frame (`MatchSnapshot.rematch`); while it is held, nothing is read. */
+  pushed?: RematchStatusResponse | null;
 };
 
 const MS_PER_SECOND = 1000;
@@ -108,34 +110,55 @@ function joinRematchStatus(token: string, matchId: string, listener: Listener): 
   };
 }
 
-/** One status poll per match serves buttons and watcher (R3207002), so their navigation cannot drift apart. */
-function useRematchStatus(token: string, matchId: string, onStatus: (answer: RematchStatusResponse) => void): void {
+/**
+ * One status poll per match serves buttons and watcher (R3207002), so their navigation cannot drift apart.
+ * R3213000: while the match socket holds a pushed status, that is the answer and nothing is read; once it
+ * goes back to null (the socket dropped) the poll starts again, one read at once.
+ */
+function useRematchStatus(
+  token: string,
+  matchId: string,
+  pushed: RematchStatusResponse | null,
+  onStatus: (answer: RematchStatusResponse) => void,
+): void {
   const latest = useRef(onStatus);
   latest.current = onStatus;
-  useEffect(
-    () =>
-      joinRematchStatus(token, matchId, (answer) => {
-        latest.current(answer);
-      }),
-    [token, matchId],
-  );
+  const live = pushed !== null;
+  useEffect(() => {
+    if (live) return;
+    return joinRematchStatus(token, matchId, (answer) => {
+      latest.current(answer);
+    });
+  }, [token, matchId, live]);
+  useEffect(() => {
+    if (pushed !== null) latest.current(pushed);
+  }, [pushed]);
 }
 
 /** Outlives the result panel so matching offers still navigate a player viewing the board. */
-export function RematchWatcher({ token, matchId }: { token: string; matchId: string }): ReactElement | null {
-  useRematchStatus(token, matchId, (answer) => {
+export function RematchWatcher({
+  token,
+  matchId,
+  pushed = null,
+}: {
+  token: string;
+  matchId: string;
+  /** R3213000: as `RematchButtonsProps.pushed`. */
+  pushed?: RematchStatusResponse | null;
+}): ReactElement | null {
+  useRematchStatus(token, matchId, pushed, (answer) => {
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
   return null;
 }
 
-export default function RematchButtons({ token, matchId, connection, ranked }: RematchButtonsProps): ReactElement | null {
+export default function RematchButtons({ token, matchId, connection, ranked, pushed = null }: RematchButtonsProps): ReactElement | null {
   const [status, setStatus] = useState<RematchStatusResponse | null>(null);
   const [offering, setOffering] = useState<RematchStakes | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lean, setLean] = useState(readPlayLean);
 
-  useRematchStatus(token, matchId, (answer) => {
+  useRematchStatus(token, matchId, pushed, (answer) => {
     setStatus(answer);
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
@@ -153,7 +176,8 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
         ? rematchOffer(token, matchId, stakes, lean)
         : rematchOffer(token, matchId, stakes));
       if (answer.matchId !== null) navigate(paths.match(answer.matchId));
-      else {
+      // R3213000: a socket that pushes the status pushes the one this offer made.
+      else if (pushed === null) {
         const refresh = await rematchStatus(token, matchId).catch(() => null);
         if (refresh !== null) {
           setStatus(refresh);

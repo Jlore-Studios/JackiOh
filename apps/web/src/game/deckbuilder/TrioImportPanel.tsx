@@ -228,7 +228,7 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
       <div className="ws-actions">
         <button
           type="button"
-          className="ws-action ws-action--primary"
+          className="ws-action button-primary"
           data-testid={TRIO_IMPORT_SUBMIT}
           disabled={blocked}
           aria-busy={busy ? "true" : undefined}
@@ -237,7 +237,7 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
         >
           {busy ? t("Importing…") : t("Import as new trio")}
         </button>
-        <button type="button" className="ws-action" data-testid={TRIO_IMPORT_CANCEL} onClick={onCancel}>
+        <button type="button" className="ws-action button-secondary" data-testid={TRIO_IMPORT_CANCEL} onClick={onCancel}>
           {t("Cancel")}
         </button>
       </div>

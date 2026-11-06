@@ -63,17 +63,6 @@
   font-weight: 700;
 }
 
-.draw-offer__actions > .draw-offer__accept:not(:disabled) {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-}
-
-.draw-offer__actions > .draw-offer__accept:not(:disabled):hover {
-  background: var(--primary-face-hover);
-}
-
 /* What became of the offer says its piece and fades, like the refusal toast: once the animation
    table's own `drawAnswered` pulse (animations.css) has played on it, never over it. Reduced motion
    zeroes every delay, which would fade it at once, so there it simply stays for the rest of the turn. */
@@ -199,27 +188,7 @@
   font-weight: 700;
 }
 
-/* Keep playing is the default and looks it; Concede wears the opponent's red, the color of a loss. */
-.concede-dialog__actions > .concede-dialog__stay {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-}
-
-.concede-dialog__actions > .concede-dialog__stay:hover {
-  background: var(--primary-face-hover);
-}
-
-.concede-dialog__actions > .concede-dialog__concede {
-  border-color: color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
-  background: color-mix(in srgb, var(--opponent) 22%, var(--bg-raised));
-  color: var(--text);
-}
-
-.concede-dialog__actions > .concede-dialog__concede:hover {
-  background: color-mix(in srgb, var(--opponent) 34%, var(--bg-raised));
-}
+/* Keep playing is the primary, Concede the danger (buttons.css). */
 
 .concede-dialog__actions > button:focus-visible {
   outline: 2px solid var(--selected);

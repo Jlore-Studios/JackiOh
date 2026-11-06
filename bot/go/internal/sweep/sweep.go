@@ -65,6 +65,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cigate"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/commands"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -133,6 +134,7 @@ func Sweep(ctx *hctx.Context) []string {
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
 		{"issue_types", issueTypes}, {"difficulty_labels", difficultyLabels},
 		{"merging", Merging}, {"tracking", tracking},
+		{"runner_gate", runnerGate},
 	}
 	for _, p := range parts {
 		var got []string
@@ -158,6 +160,17 @@ func Sweep(ctx *hctx.Context) []string {
 
 	ctx.Store.Update(record, "sweep")
 	return notes
+}
+
+// runnerGate is a tick of the runner gate (`cigate.Tick`): every sweep runs one, the status loop's
+// and bot-commands' scheduled one alike, so CI waiting in `ci-runners` keeps starting at the
+// sweep's pace even while the status loop, which ticks the gate every `--gate-every` seconds, is
+// down.
+func runnerGate(ctx *hctx.Context, since time.Time) []string {
+	if note := cigate.Tick(ctx); note != "" {
+		return []string{"runner gate: " + note}
+	}
+	return nil
 }
 
 // Labels is _labels: create every label in `config.LABELS` the repository lacks and delete every

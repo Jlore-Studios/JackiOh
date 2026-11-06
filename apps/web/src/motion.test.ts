@@ -22,7 +22,10 @@ const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//
 
 /** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
-  (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
+  (sheet) =>
+    sheet === "index.css" ||
+    sheet === "buttons.css" ||
+    (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
 /** The vocabulary's sizes: a new duration or curve raises its number in the same change. */

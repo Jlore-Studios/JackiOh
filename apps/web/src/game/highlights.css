@@ -44,24 +44,7 @@
     0 0 10px 2px color-mix(in srgb, var(--glow-ready) 55%, transparent);
 }
 
-/* End turn once nothing else is left to do (B15): the button itself turns green, as Hearthstone's
-   does, and rings green like every other ready element. board.css paints it amber with
-   `.board .control.control-end-turn:not(:disabled)`, which outranks the generic rule above, so this
-   one names the same button more specifically. The ring is still the first box-shadow layer. */
-.board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]) {
-  border-color: var(--pal-green-200);
-  background: var(--primary-face-ready);
-  color: var(--pal-brass-950);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 30%, transparent);
-  box-shadow:
-    0 0 0 2px var(--glow-ready),
-    0 0 14px 3px color-mix(in srgb, var(--glow-ready) 55%, transparent),
-    var(--primary-shadow-ready);
-}
-
-.board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]):hover {
-  background: var(--primary-face-ready-hover);
-}
+/* End turn once nothing else is left to do (B15) turns green as well as ringing: buttons.css. */
 
 /* An empty slot is mostly background, so a ready zone also takes a faint tint, and its slot mark
    (board.css's `.zone::before`) turns green: it reads as a drop spot on a phone where the ring

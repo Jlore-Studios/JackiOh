@@ -1373,7 +1373,7 @@ export default function LoginRoute(): ReactElement {
                     />
                     <button
                       type="button"
-                      className="affix-button"
+                      className="affix-button button-secondary"
                       data-testid={loginTestid.togglePassword}
                       // Announced, not just drawn: the icon alone tells a screen reader nothing.
                       aria-label={showPassword ? t("Hide password") : t("Show password")}
@@ -1425,6 +1425,7 @@ export default function LoginRoute(): ReactElement {
 
               <button
                 type="submit"
+                className="button-primary"
                 data-testid={loginTestid.submit}
                 disabled={busy || (forgot && resetWait > 0) || (emailCode && !codeAsked && codeWait > 0)}
               >

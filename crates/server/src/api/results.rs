@@ -174,6 +174,8 @@ async fn write_result(
                 }
                 if let Some(series) = &written.series {
                     crate::seats::free_series(app, series);
+                    // R3213000: the game's result moved the series on: its games' seats are told.
+                    crate::api::series::tell_series(app, series);
                 }
                 return Ok((written, finished));
             }

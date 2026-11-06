@@ -398,6 +398,9 @@ pub enum DuelOutput {
         stakes: RematchStakes,
         reply: bool,
     },
+    /// R3213000: who is here (R672) changed with no socket arriving or leaving: a bot's linger ended. The
+    /// host tells each seat its rematch status again.
+    PresenceChanged,
     /// Let the match go: forget it and stop.
     LetGo { reason: LetGo },
     /// A line for the host's log.

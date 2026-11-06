@@ -66,7 +66,10 @@ const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 
 /** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
-  (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
+  (sheet) =>
+    sheet === "index.css" ||
+    sheet === "buttons.css" ||
+    (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
 /** Every other sheet's own sizes and faces: one that loses some lowers its number, and none gains one. */

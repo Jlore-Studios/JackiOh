@@ -630,25 +630,15 @@
   letter-spacing: 0.12em;
 }
 
-/* Join is secondary to Find a match: the wood button, not the gold. */
+/* Join is secondary to Find a match: a `button-secondary` (buttons.css), not the gold. */
 .tavern.app-shell.play-screen .play-join button[type="submit"] {
   flex: 0 0 auto;
   min-height: 46px;
   padding: 8px 20px;
-  border: 1px solid var(--tavern-brass);
   border-radius: 10px;
-  background: linear-gradient(180deg, var(--tavern-wood-light), var(--tavern-wood) 55%, var(--tavern-wood-deep));
-  color: var(--tavern-parchment);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.3), 0 3px 0 #1f1008;
-}
-
-.tavern.app-shell.play-screen .play-join button[type="submit"]:hover:not(:disabled) {
-  border-color: var(--tavern-gold);
-  color: var(--tavern-gold-pale);
 }
 
 .tavern.app-shell.play-screen .play-join button[type="submit"]:disabled {

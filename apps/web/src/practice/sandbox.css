@@ -80,11 +80,18 @@
 .sandbox-panel__close {
   min-height: 32px;
   padding: 4px 8px;
-  border: 1px solid var(--line, #4a4335);
   border-radius: 6px;
+  font: inherit;
+}
+
+/* The fields' and the close's own skin; a `.sandbox-panel__button` is a `button-secondary` (buttons.css). */
+.sandbox-panel__input,
+.sandbox-panel__select,
+.sandbox-panel__number,
+.sandbox-panel__close {
+  border: 1px solid var(--line, #4a4335);
   background: var(--bg-sunken, #1a1612);
   color: inherit;
-  font: inherit;
 }
 
 .sandbox-panel__input,

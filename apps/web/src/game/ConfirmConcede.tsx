@@ -90,7 +90,7 @@ export default function ConfirmConcede({ onConfirm, onCancel, body }: ConfirmCon
           <button
             ref={stay}
             type="button"
-            className="concede-dialog__stay"
+            className="concede-dialog__stay button-primary"
             data-testid={testid.concedeCancel}
             onClick={onCancel}
           >
@@ -99,7 +99,7 @@ export default function ConfirmConcede({ onConfirm, onCancel, body }: ConfirmCon
           <button
             ref={concede}
             type="button"
-            className="concede-dialog__concede"
+            className="concede-dialog__concede button-danger"
             data-testid={testid.concedeConfirm}
             onClick={onConfirm}
           >

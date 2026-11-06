@@ -258,21 +258,14 @@
   color: var(--text-dim);
 }
 
+/* A `button-secondary` (buttons.css); this is its size, and its pressed state is the chips' own. */
 .deckbuilder.app-shell .db-chip {
   min-height: 28px;
   padding: 3px 10px;
   border-radius: 999px;
-  border-color: var(--line-bright);
-  background: var(--bg-sunken);
-  color: var(--text-dim);
   font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-.deckbuilder.app-shell .db-chip:hover {
-  color: var(--text);
-  border-color: var(--text-dim);
 }
 
 .deckbuilder.app-shell .db-chip[aria-pressed="true"] {

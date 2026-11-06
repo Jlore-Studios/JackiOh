@@ -78,6 +78,8 @@ type Patches struct {
 	RerunFailedJobs        func(runID any)
 	CancelRun              func(runID any)
 	RerunRun               func(runID any)
+	PendingDeployments     func(runID any) []*pyjson.Object
+	ApproveDeployments     func(runID any, environmentIDs []any, comment string)
 	ListJobs               func(runID any, cached bool) []*pyjson.Object
 	JobLog                 func(jobID any, tailChars int) string
 	ListArtifacts          func(runID any) []*pyjson.Object
@@ -593,6 +595,21 @@ func (c *FakeGitHub) RerunRun(runID any) {
 		return
 	}
 	c.Own().RerunRun(runID)
+}
+
+func (c *FakeGitHub) PendingDeployments(runID any) []*pyjson.Object {
+	if c.Patch.PendingDeployments != nil {
+		return c.Patch.PendingDeployments(runID)
+	}
+	return c.Own().PendingDeployments(runID)
+}
+
+func (c *FakeGitHub) ApproveDeployments(runID any, environmentIDs []any, comment string) {
+	if c.Patch.ApproveDeployments != nil {
+		c.Patch.ApproveDeployments(runID, environmentIDs, comment)
+		return
+	}
+	c.Own().ApproveDeployments(runID, environmentIDs, comment)
 }
 
 func (c *FakeGitHub) ListJobs(runID any, cached bool) []*pyjson.Object {
