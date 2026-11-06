@@ -896,6 +896,8 @@ describe("R2388000 a ranked match's result shows the rank it moved each seat to"
     });
     const reads = stubReads([{ ...before, ranked: false }]);
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    // R3206000: the read the match opens with lands before the result does; one still out would be the one shared.
+    await advance(0);
     attach({ view: finished });
     await advance(MATCH_RANKS_RETRY_MS * MATCH_RANKS_READ_ATTEMPTS);
 
@@ -910,6 +912,8 @@ describe("R2388000 a ranked match's result shows the rank it moved each seat to"
     });
     const reads = stubReads([before]);
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    // R3206000: the read the match opens with lands before the result does; one still out would be the one shared.
+    await advance(0);
     attach({ view: finished });
     await advance(MATCH_RANKS_RETRY_MS * (MATCH_RANKS_READ_ATTEMPTS + 2));
 

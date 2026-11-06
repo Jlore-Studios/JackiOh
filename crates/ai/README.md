@@ -88,7 +88,9 @@ with none waiting, nothing changes. A Dormant card (R1839000) acts in no line an
 it wakes, but the evaluation counts it as the unit it wakes as, `slumber_turn_share` of it per turn left
 on its countdown, or `slumber_waiting_share` with none (R2380000). A Unit standing in the backrow
 (R1081000) counts once, as the Unit it is, never again as a backrow card (`standing_unit_priced_once`,
-R2490000; off in `GREEDY_EVAL`). A unit's Death counts by what it
+R2490000; off in `GREEDY_EVAL`). A Unit in The Gauntlet's lanes threatens no face while The Gauntlet
+acts, since it may attack no hero: `face_threat` asks `attack_restriction`, as the lethal solver does
+(`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,

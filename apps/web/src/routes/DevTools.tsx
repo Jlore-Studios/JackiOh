@@ -27,6 +27,7 @@ import {
   type QuestView,
 } from "../net/api.ts";
 import { attempt, messageOf } from "../net/errors.ts";
+import { clearReadCache } from "../net/readCache.ts";
 
 export const devToolsTestid = {
   panel: "dev-tools",
@@ -118,6 +119,9 @@ export default function DevTools({ token }: { token: string }): ReactElement {
     setStatus({ kind: "working" });
     attempt(request).then(
       () => {
+        // R3206000: a tool changes cards, cosmetics, tracks, quests and Jlore, which no answer carries
+        // into what is kept, so nothing kept stays fresh: the quests read below must reach the server.
+        clearReadCache();
         setStatus({ kind: "done" });
       },
       (cause: unknown) => {

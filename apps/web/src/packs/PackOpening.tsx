@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
@@ -284,11 +285,16 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 {shown ? (
                   <>
                     <div className="pack-slot__face">
-                      {look === null ? (
-                        <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
-                      ) : (
-                        <CosmeticLook id={look} cardId={slot.cardId} />
-                      )}
+                      {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
+                      <WhenEngineReady>
+                        {() =>
+                          look === null ? (
+                            <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
+                          ) : (
+                            <CosmeticLook id={look} cardId={slot.cardId} />
+                          )
+                        }
+                      </WhenEngineReady>
                     </div>
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}

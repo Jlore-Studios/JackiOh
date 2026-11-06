@@ -761,7 +761,7 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
 }
 
 /// Fuses `ingredients` onto `target`; the sink's cursor is not written back.
-fn fuse_onto(
+fn fuse_card_onto(
     state: &mut GameState,
     ingredients: Vec<CardInstance>,
     target: &CardInstance,
@@ -795,7 +795,7 @@ mod r102_e33_quests_a_fused_quest_card_carries_its_tree {
         );
         let food = put(&mut state, &blank().id, slot(P1, Row::Backrow, 2), json!({}));
 
-        let fused = fuse_onto(&mut state, vec![food], &card).expect("a fusion");
+        let fused = fuse_card_onto(&mut state, vec![food], &card).expect("a fusion");
         assert_eq!(
             (fused.id.clone(), fused.def_id == tree().id),
             (card.id.clone(), false)
@@ -844,7 +844,7 @@ mod r102_e33_quests_a_fused_quest_card_carries_its_tree {
         let card = put(&mut state, &tree().id, slot(P1, Row::Backrow, 1), json!({}));
         let kept = put(&mut state, &blank().id, slot(P1, Row::Backrow, 2), json!({}));
 
-        let fused = fuse_onto(&mut state, vec![card], &kept).expect("a fusion");
+        let fused = fuse_card_onto(&mut state, vec![card], &kept).expect("a fusion");
         assert_eq!(
             quest_book_of(&state, &fused).map(|book| book.first),
             Some(TREE.first.clone())

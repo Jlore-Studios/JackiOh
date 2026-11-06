@@ -7,7 +7,7 @@
 
 import { apiRequest, type RequestOptions, type SendOptions } from "./api.ts";
 import { withSession } from "./gate.ts";
-import { cachedRead, rememberRead, updateCachedRead } from "./readCache.ts";
+import { cachedRead, keepRead, updateCachedRead } from "./readCache.ts";
 import { readSession } from "./session.ts";
 
 /** Another player as the social routes name one: the id for requests and keys, the username to show (R1436). */
@@ -72,7 +72,7 @@ export function cachedFriends(): FriendsList | undefined {
 export function getFriends({ keep = true }: { keep?: boolean } = {}): Promise<FriendsList> {
   return withSession(async (token) => {
     const answer = await apiRequest<FriendsList>(FRIENDS_PATH, { token });
-    if (keep) rememberRead(token, FRIENDS_PATH, answer);
+    if (keep) keepRead(token, FRIENDS_PATH, answer);
     return answer;
   });
 }

@@ -24,14 +24,14 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-6);
   white-space: nowrap;
 }
 
 .clock-line {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-2);
 }
 
 /* Tools and tests read these; a player reads the two side lines (see Clock.tsx). */
@@ -78,7 +78,7 @@
 
 .clock-line[data-urgency="final"],
 .clock-line[data-urgency="last10"] {
-  padding: 2px 10px 2px 4px;
+  padding: var(--space-1) var(--space-5) var(--space-1) var(--space-2);
   border: 1px solid var(--clock-urgent);
   border-radius: var(--radius-pill);
   background: var(--clock-urgent-deep);
@@ -273,7 +273,7 @@
   position: absolute;
   width: 12px;
   height: 12px;
-  margin: -4px 0 0 -4px;
+  margin: calc(var(--space-2) * -1) 0 0 calc(var(--space-2) * -1);
   border-radius: var(--radius-round);
   background: var(--clock-ember-hot);
   box-shadow: 0 0 12px 4px color-mix(in srgb, var(--pal-orange-400) 70%, transparent);
@@ -312,7 +312,7 @@
 .clock-fuse[data-urgency="last10"] .clock-fuse-spark {
   width: 18px;
   height: 18px;
-  margin: -7px 0 0 -7px;
+  margin: calc(var(--space-3) * -1) 0 0 calc(var(--space-3) * -1);
   box-shadow: 0 0 18px 7px color-mix(in srgb, var(--pal-red-500) 70%, transparent);
   animation-duration: 90ms;
 }
@@ -391,7 +391,7 @@
    urgent pill keeps its words. */
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .clock {
-    gap: 8px;
+    gap: var(--space-4);
   }
 
   .clock-line[data-urgency="none"] .clock-side-label {

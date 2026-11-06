@@ -1557,7 +1557,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r23_blocks_vanilla_transform_and_fuse_onto_on_an_immutable_card_while_radiant_still_works() {
+    fn r23_blocks_vanilla_transform_and_fusing_onto_an_immutable_card_while_radiant_still_works() {
         let mut state = game("r23");
         let warded = put(&mut state, IMMUTABLE, slot(P1, UNITS, 1), json!({}));
         let ingredient = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));

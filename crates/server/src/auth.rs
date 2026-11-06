@@ -15,23 +15,26 @@
 //!  - Deleting a user does not invalidate issued tokens: the admin lookup turns "no such user" into a
 //!    failed verification, and `profiles.status` (§9.4) stays the authority on what an account may do.
 //!  - Nor does ending a SESSION (R194): a token naming its session (`session_id`) is checked against
-//!    `GET /auth/v1/user` (`check_session`).
+//!    `GET /auth/v1/user` (`check_session`). Requests that arrive together share one check per session
+//!    of one user, and a silence is remembered for `AUTH_SESSION_OUTAGE_CACHE_SECONDS` (R3209000).
 //!  - TWO-STEP SIGN-IN (R665): an account with a verified TOTP factor is honored only with an `aal2`
 //!    token. Whether it has a factor comes from the provider's user, never the token, and the last
 //!    answer is remembered per user so an outage cannot lower the bar (`mfa_enrolled`).
 
+use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use indexmap::{IndexMap, IndexSet};
-use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet, PublicKeyUse};
+use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm, PublicKeyUse};
 use jsonwebtoken::{Algorithm, AlgorithmFamily, DecodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::{
-    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
-    JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS, MS_PER_SECOND,
+    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_CHECK_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS,
+    AUTH_SESSION_OUTAGE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS, JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS,
+    JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS, MS_PER_SECOND,
 };
 
 /// Who a verified bearer token belongs to.
@@ -435,16 +438,52 @@ enum SessionCheck {
     Unavailable,
 }
 
+/// (user id, session id): one user's answers never serve another's (R3209000).
+type SessionKey = (String, String);
+
+/// What the provider last said of one session (R194), kept while `holds`. An ended session is never
+/// kept: the next check asks again.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum SessionMemo {
+    /// The epoch ms at which the provider said the session is live.
+    Live(i64),
+    /// The epoch ms at which the provider did not answer (R3209000).
+    Unavailable(i64),
+}
+
+impl SessionMemo {
+    /// Still to be believed at `now`: a live answer for `AUTH_SESSION_LIVE_CACHE_SECONDS`, a silence
+    /// for `AUTH_SESSION_OUTAGE_CACHE_SECONDS`.
+    fn holds(self, now: i64) -> bool {
+        match self {
+            SessionMemo::Live(at) => now - at < AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND,
+            SessionMemo::Unavailable(at) => now - at < AUTH_SESSION_OUTAGE_CACHE_SECONDS * MS_PER_SECOND,
+        }
+    }
+}
+
+// R3209000: the outage memo never outlives the live window.
+const _: () = assert!(AUTH_SESSION_OUTAGE_CACHE_SECONDS <= AUTH_SESSION_LIVE_CACHE_SECONDS);
+
 #[derive(Clone, Debug)]
 struct Confirmed {
     at: i64,
     email: Option<String>,
 }
 
-/// The key set as last fetched (or as a test handed it in, which is never refetched).
+/// One published key, decoded once when its set lands (R3209000), with what `candidates` matches a
+/// token's header against.
+#[derive(Clone, Debug)]
+struct PublishedKey {
+    kid: Option<String>,
+    algorithm: Option<KeyAlgorithm>,
+    key: DecodingKey,
+}
+
+/// The key set as last fetched (or as a test handed it in, which is never refetched), decoded.
 #[derive(Debug, Default)]
 struct KeyCache {
-    keys: Option<JwkSet>,
+    keys: Option<Vec<PublishedKey>>,
     fetched_at: i64,
     fixed: bool,
     /// When the last refetch failed: retried at most once per `JWKS_COOLDOWN_MS` (R1144000).
@@ -499,6 +538,72 @@ impl std::fmt::Display for JwksFetchError {
     }
 }
 
+/// R3209000: the provider calls in flight, one per key. The first caller for a key makes the call and
+/// the callers that arrive while it is out await its answer. A caller dropped mid-call (a client that
+/// hangs up) hands the call to one still waiting, since `OnceCell::get_or_init` is cancel-safe. A key's
+/// entry leaves once its call lands or its last caller is gone, so a flight remembers nothing: what
+/// outlives the call is the caller's own memo.
+struct Flights<K, T> {
+    inflight: Mutex<IndexMap<K, Arc<tokio::sync::OnceCell<T>>>>,
+}
+
+impl<K: Hash + Eq + Clone, T: Clone> Flights<K, T> {
+    fn new() -> Flights<K, T> {
+        Flights {
+            inflight: Mutex::new(IndexMap::new()),
+        }
+    }
+
+    /// `call`'s answer for `key`, or the answer of the call for `key` already in flight.
+    async fn run<F, Fut>(&self, key: K, call: F) -> T
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = T>,
+    {
+        let cell = {
+            let mut inflight = self
+                .inflight
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            Arc::clone(
+                inflight
+                    .entry(key.clone())
+                    .or_insert_with(|| Arc::new(tokio::sync::OnceCell::new())),
+            )
+        };
+        let _leave = LeaveFlight {
+            flights: self,
+            key,
+            cell: &cell,
+        };
+        cell.get_or_init(call).await.clone()
+    }
+}
+
+/// Takes a flight off the board when one of its callers leaves, landed or dropped: at once if the call
+/// landed, or if this was its last caller (`strong_count == 2` is the board's handle and this one's).
+struct LeaveFlight<'a, K: Hash + Eq, T> {
+    flights: &'a Flights<K, T>,
+    key: K,
+    cell: &'a Arc<tokio::sync::OnceCell<T>>,
+}
+
+impl<K: Hash + Eq, T> Drop for LeaveFlight<'_, K, T> {
+    fn drop(&mut self) {
+        let mut inflight = self
+            .flights
+            .inflight
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let ours = inflight
+            .get(&self.key)
+            .is_some_and(|held| Arc::ptr_eq(held, self.cell));
+        if ours && (self.cell.initialized() || Arc::strong_count(self.cell) == 2) {
+            inflight.shift_remove(&self.key);
+        }
+    }
+}
+
 /// The caches are behavior (R194, R665, R159), not optimizations.
 pub struct SupabaseAuth {
     auth_base: String,
@@ -506,8 +611,9 @@ pub struct SupabaseAuth {
     secret_key: String,
     http: reqwest::Client,
     clients: SupabaseAuthClients,
-    /// The JWKS. Fetched on first use so constructing the provider does no I/O.
-    key_set: tokio::sync::Mutex<KeyCache>,
+    /// The JWKS, decoded. Fetched on first use so constructing the provider does no I/O. Never held
+    /// across an await: a fetch runs outside it (`keys_for`).
+    key_set: Mutex<KeyCache>,
     /// The key-set fetch in flight while others wait (R1144000); cleared by its `FetchGuard`, so at most
     /// one runs.
     inflight: Mutex<Option<Arc<tokio::sync::Notify>>>,
@@ -520,8 +626,13 @@ pub struct SupabaseAuth {
     /// answer without one removes the entry), so an `aal1` token for such an account is refused even while
     /// the provider cannot be reached or `confirmed` serves the answer.
     mfa_enrolled: Mutex<IndexSet<String>>,
-    /// session id -> when the provider last said that session is live (R194). Positives only.
-    live_sessions: Mutex<IndexMap<String, i64>>,
+    /// (user id, session id) -> what the provider last said of that session (R194, R3209000): live, or
+    /// no answer. Never "ended", so an ended session is asked about again.
+    sessions: Mutex<IndexMap<SessionKey, SessionMemo>>,
+    /// R3209000: the session checks in flight, one per session of one user.
+    session_flights: Flights<SessionKey, SessionCheck>,
+    /// R3209000: the admin lookups in flight, one per user id.
+    admin_flights: Flights<String, AdminLookup>,
     now: ProviderClock,
 }
 
@@ -554,7 +665,7 @@ impl SupabaseAuth {
         );
         let key_cache = match input.key_set {
             Some(keys) => KeyCache {
-                keys: Some(keys),
+                keys: Some(Self::decode_set(&keys)),
                 fetched_at: 0,
                 fixed: true,
                 last_failed_at: None,
@@ -567,12 +678,14 @@ impl SupabaseAuth {
             secret_key: input.secret_key,
             http,
             clients,
-            key_set: tokio::sync::Mutex::new(key_cache),
+            key_set: Mutex::new(key_cache),
             inflight: Mutex::new(None),
             hs_key: input.jwt_secret.map(String::into_bytes),
             confirmed: Mutex::new(IndexMap::new()),
             mfa_enrolled: Mutex::new(IndexSet::new()),
-            live_sessions: Mutex::new(IndexMap::new()),
+            sessions: Mutex::new(IndexMap::new()),
+            session_flights: Flights::new(),
+            admin_flights: Flights::new(),
             now: input.now.unwrap_or_else(|| Arc::new(crate::app::now_ms)),
         }
     }
@@ -662,32 +775,46 @@ impl SupabaseAuth {
         response.json::<JwkSet>().await.map_err(|_| JwksFetchError::Body)
     }
 
-    fn candidates(keys: &JwkSet, header: &Header) -> Vec<DecodingKey> {
+    /// R3209000: a fetched set's signing keys, decoded once as it lands. What does not depend on a
+    /// token's header is settled here: a key published for encryption, one that does not decode and a
+    /// shared secret (an `oct` key) are dropped.
+    fn decode_set(keys: &JwkSet) -> Vec<PublishedKey> {
         keys.keys
             .iter()
-            .filter(|jwk| match &header.kid {
-                Some(kid) => jwk.common.key_id.as_deref() == Some(kid.as_str()),
-                None => true,
-            })
-            .filter(|jwk| match jwk.common.key_algorithm {
-                Some(algorithm) => Algorithm::try_from(algorithm).ok() == Some(header.alg),
-                None => true,
-            })
             .filter(|jwk| {
                 !matches!(
                     jwk.common.public_key_use,
                     Some(PublicKeyUse::Encryption | PublicKeyUse::Other(_))
                 )
             })
-            .filter(|jwk| {
-                matches!(
-                    (&jwk.algorithm, header.alg.family()),
-                    (AlgorithmParameters::RSA(_), AlgorithmFamily::Rsa)
-                        | (AlgorithmParameters::EllipticCurve(_), AlgorithmFamily::Ec)
-                        | (AlgorithmParameters::OctetKeyPair(_), AlgorithmFamily::Ed)
-                )
+            .filter_map(|jwk| {
+                let key = DecodingKey::from_jwk(jwk).ok()?;
+                if key.family() == AlgorithmFamily::Hmac {
+                    return None;
+                }
+                Some(PublishedKey {
+                    kid: jwk.common.key_id.clone(),
+                    algorithm: jwk.common.key_algorithm,
+                    key,
+                })
             })
-            .filter_map(|jwk| DecodingKey::from_jwk(jwk).ok())
+            .collect()
+    }
+
+    /// The decoded keys that could have signed a token with `header`: its `kid` when it names one, its
+    /// algorithm when the key states one, and its algorithm's family.
+    fn candidates(keys: &[PublishedKey], header: &Header) -> Vec<DecodingKey> {
+        keys.iter()
+            .filter(|published| match &header.kid {
+                Some(kid) => published.kid.as_deref() == Some(kid.as_str()),
+                None => true,
+            })
+            .filter(|published| match published.algorithm {
+                Some(algorithm) => Algorithm::try_from(algorithm).ok() == Some(header.alg),
+                None => true,
+            })
+            .filter(|published| published.key.family() == header.alg.family())
+            .map(|published| published.key.clone())
             .collect()
     }
 
@@ -699,7 +826,10 @@ impl SupabaseAuth {
         loop {
             let now = (self.now)();
             let next = {
-                let cache = self.key_set.lock().await;
+                let cache = self
+                    .key_set
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 if cache.fixed {
                     return cache
                         .keys
@@ -734,8 +864,13 @@ impl SupabaseAuth {
                 // The fetch landed, failed or was dropped: decide again from the cache.
                 Next::Wait(wait) => wait.await,
                 Next::Fetch(guard) => {
-                    let outcome = self.fetch_key_set().await;
-                    let mut cache = self.key_set.lock().await;
+                    // Decoded before the lock is taken: a request waiting on the cache never waits
+                    // on the decoding too.
+                    let outcome = self.fetch_key_set().await.map(|keys| Self::decode_set(&keys));
+                    let mut cache = self
+                        .key_set
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
                     let landed = (self.now)();
                     match outcome {
                         Ok(keys) => {
@@ -825,9 +960,10 @@ impl SupabaseAuth {
             .header("authorization", format!("Bearer {token}"))
             .header("accept", "application/json")
             // The session check (R194) sits in front of API requests: a provider that hangs must cost
-            // them a bounded wait, after which the answer is "unavailable" and the identity stands.
+            // them a bounded wait, `AUTH_SESSION_CHECK_TIMEOUT_SECONDS` and not the sign-in grant's
+            // longer one, after which the answer is "unavailable" and the identity stands (R3209000).
             .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
+                AUTH_SESSION_CHECK_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
             ))
             .send()
             .await
@@ -884,58 +1020,73 @@ impl SupabaseAuth {
         let Some(admin) = self.clients.admin.as_ref() else {
             return AdminLookup::Unavailable;
         };
-        let lookup = admin.get_user_by_id(user_id).await;
-        if let AdminLookup::Ok(user) = &lookup {
-            self.learn_mfa(user);
-            if is_email_confirmed(user) {
-                self.remember_confirmed(user_id, (self.now)(), user.email.clone());
-            }
-        }
-        lookup
+        // R3209000: misses that arrive together for one user share one lookup and its answer.
+        self.admin_flights
+            .run(user_id.to_string(), || async move {
+                let lookup = admin.get_user_by_id(user_id).await;
+                if let AdminLookup::Ok(user) = &lookup {
+                    self.learn_mfa(user);
+                    if is_email_confirmed(user) {
+                        self.remember_confirmed(user_id, (self.now)(), user.email.clone());
+                    }
+                }
+                lookup
+            })
+            .await
     }
 
     /// R194: is the session this token names still live at the provider? Asked of `GET /auth/v1/user`
-    /// with the token itself, which the provider refuses once the session (or user) is gone. Only a live
-    /// answer is remembered, so an ended session is refused within `AUTH_SESSION_LIVE_CACHE_SECONDS`.
+    /// with the token itself, which the provider refuses once the session (or user) is gone. A live
+    /// answer is kept for `AUTH_SESSION_LIVE_CACHE_SECONDS` and a silence for
+    /// `AUTH_SESSION_OUTAGE_CACHE_SECONDS`, per session of one user; an ended answer is never kept, so
+    /// an ended session is refused within the live window. Checks that arrive together share one call
+    /// (R3209000).
     async fn check_session(&self, session_id: &str, sub: &str, token: &str) -> SessionCheck {
-        let live_session_ttl_ms = AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND;
-        let seen = {
-            let live = self
-                .live_sessions
+        let key = (sub.to_string(), session_id.to_string());
+        let memo = {
+            let sessions = self
+                .sessions
                 .lock()
                 .unwrap_or_else(|poisoned| poisoned.into_inner());
-            live.get(session_id).copied()
+            sessions.get(&key).copied()
         };
-        if let Some(at) = seen
-            && (self.now)() - at < live_session_ttl_ms
+        if let Some(memo) = memo
+            && memo.holds((self.now)())
         {
-            return SessionCheck::Remembered;
+            return match memo {
+                SessionMemo::Live(_) => SessionCheck::Remembered,
+                SessionMemo::Unavailable(_) => SessionCheck::Unavailable,
+            };
         }
+        self.session_flights
+            .run(key.clone(), || self.ask_session(&key, sub, token))
+            .await
+    }
 
-        let user = match self.fetch_user_by_token(token).await {
-            AdminLookup::Unavailable => return SessionCheck::Unavailable,
+    /// One flight's call to the provider for `check_session`. It runs once per flight, and writes the
+    /// memo before the flight lands, so a caller that comes after reads the memo instead of calling.
+    async fn ask_session(&self, key: &SessionKey, sub: &str, token: &str) -> SessionCheck {
+        let answer = self.fetch_user_by_token(token).await;
+        let checked_at = (self.now)();
+        let user = match answer {
+            AdminLookup::Unavailable => {
+                self.remember_session(key, SessionMemo::Unavailable(checked_at), checked_at);
+                return SessionCheck::Unavailable;
+            }
             // `/user` answers for the token's own user; any other id is the provider misbehaving, and a
             // token is never honored on someone else's answer.
             AdminLookup::Ok(user) if user.id == sub => user,
             AdminLookup::Ok(_) | AdminLookup::Missing => {
-                let mut live = self
-                    .live_sessions
+                let mut sessions = self
+                    .sessions
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
-                live.shift_remove(session_id);
+                sessions.shift_remove(key);
                 return SessionCheck::Ended;
             }
         };
 
-        let checked_at = (self.now)();
-        {
-            let mut live = self
-                .live_sessions
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-            live.retain(|_, seen| checked_at - *seen < live_session_ttl_ms);
-            live.insert(session_id.to_string(), checked_at);
-        }
+        self.remember_session(key, SessionMemo::Live(checked_at), checked_at);
         self.learn_mfa(&user);
         // The same answer is R159's authoritative user: a confirmed email is remembered as the admin
         // lookup's would be.
@@ -943,6 +1094,16 @@ impl SupabaseAuth {
             self.remember_confirmed(sub, checked_at, user.email.clone());
         }
         SessionCheck::Live(user)
+    }
+
+    /// Keeps `memo` for `key`, dropping every memo that no longer holds at `now`.
+    fn remember_session(&self, key: &SessionKey, memo: SessionMemo, now: i64) {
+        let mut sessions = self
+            .sessions
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        sessions.retain(|_, held| held.holds(now));
+        sessions.insert(key.clone(), memo);
     }
 
     /// The user a bearer token names, or `None` for anything not currently valid.

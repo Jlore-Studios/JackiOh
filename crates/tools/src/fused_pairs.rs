@@ -250,7 +250,7 @@ impl PairFailure {
 
 /// R77: `text` fused onto the card `body_id` on the field, which keeps its instance, and its
 /// `fused_into` runs. The fused card's id, or `None` when the fusion is refused.
-fn fuse_onto(state: &mut GameState, body_id: &str, text: &str) -> Option<String> {
+fn fuse_card_onto(state: &mut GameState, body_id: &str, text: &str) -> Option<String> {
     let body = find_instance(state, body_id)?.clone();
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -399,7 +399,7 @@ fn play_pair_with(body: &str, text: &str, prepare: fn(&mut GameState)) -> Result
         }));
         prepare(s.state_mut());
         let body_id = s.unit_at(PlayerId::P1, 1).id;
-        let fused_id = fuse_onto(s.state_mut(), &body_id, text)
+        let fused_id = fuse_card_onto(s.state_mut(), &body_id, text)
             .ok_or(("fuse", "subsystems.fuse refused the pair".to_string()))?;
 
         // The monitor starts with nothing entered, so the cards the setup placed are entered here, the
