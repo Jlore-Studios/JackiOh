@@ -18,17 +18,14 @@ import type { DeckSyncApi } from "../game/deckbuilder/sync.ts";
 import { DECKBUILDER_ERROR, DECKBUILDER_LOADING, DECKBUILDER_RETRY } from "../game/deckbuilder/testids.ts";
 import {
   ApiUnreachableError,
-  deleteDeck,
-  deleteTrio,
   getCollection,
   getDeckVersions,
   getDecks,
   getOwnedCosmetics,
   importTrio,
   keptPaths,
-  putDeck,
-  putTrio,
   restoreDeckVersion,
+  syncDecks,
   type CollectionResponse,
   type DecksResponse,
   type OwnedCosmeticsResponse,
@@ -122,10 +119,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
       return session.token;
     };
     return {
-      putDeck: async (id, input) => putDeck(await current(), id, input),
-      deleteDeck: async (id, options) => deleteDeck(await current(), id, options),
-      putTrio: async (id, input) => putTrio(await current(), id, input),
-      deleteTrio: async (id, options) => deleteTrio(await current(), id, options),
+      syncDecks: async (input, options) => syncDecks(await current(), input, options),
       importTrio: async (input) => importTrio(await current(), input),
       getDeckVersions: async (id) => getDeckVersions(await current(), id),
       restoreDeckVersion: async (id, versionId, catalogVersion) => restoreDeckVersion(await current(), id, versionId, catalogVersion),

@@ -838,6 +838,10 @@ pub const MAX_SAVED_TRIOS: usize = 5;
 /// "Midrange Humans (anti-aggro)", short enough for a tab, a list row and a sentence in a message.
 /// Mirrored in `app.settings` (0007).
 pub const DECK_NAME_MAX_LENGTH: usize = 40;
+/// SPEC §9.4, R3212001: the most items one `POST /api/decks/sync` carries, its saves and its
+/// deletions together: every deck and trio a profile can hold saved and deleted in one request, so
+/// one autosave pass always fits. A longer list is 400, running none of it.
+pub const DECK_SYNC_ITEMS_MAX: usize = 2 * (MAX_SAVED_DECKS + MAX_SAVED_TRIOS);
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about fifty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
@@ -1298,6 +1302,11 @@ pub use jackioh_shared::config::{
 };
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
 pub const PACK_PRICE_JLORE: i32 = 100;
+/// SPEC §14.3, R3212000: the most packs one Open all (`POST /api/packs/open-all`) opens. Each pack
+/// writes about seven ledger rows, each carrying its opening's log (tens of KB) as its `ref`, and
+/// the batch binds them all in one statement per ledger, so twenty keeps a statement to a few MB;
+/// a player holding more presses again.
+pub const PACKS_OPEN_ALL_MAX: usize = 20;
 /// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
 /// reach each of its proficiency levels, lowest first (#3013: the first comes in a game or two, the
 /// last after 200 plays, a season's commitment to one card). Level n unlocks stamp n (R3013001).

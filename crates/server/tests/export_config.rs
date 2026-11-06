@@ -95,6 +95,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("DECK_CODE_MAX_INPUT_LENGTH", json!(c::DECK_CODE_MAX_INPUT_LENGTH)),
         ("DECK_CODE_VERSION", json!(c::DECK_CODE_VERSION)),
         ("DECK_NAME_MAX_LENGTH", json!(c::DECK_NAME_MAX_LENGTH)),
+        ("DECK_SYNC_ITEMS_MAX", json!(c::DECK_SYNC_ITEMS_MAX)),
         ("DISCONNECT_GRACE_MS", json!(c::DISCONNECT_GRACE_MS)),
         ("DISCONNECT_GRACE_SECONDS", json!(c::DISCONNECT_GRACE_SECONDS)),
         ("GATE_SLOW_NOTICE_SECONDS", json!(c::GATE_SLOW_NOTICE_SECONDS)),
@@ -216,6 +217,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
         // Economy constants (SPEC §14, #946, #1294, #1298, CLAUDE.md rule 9, R1313000).
         ("PACK_PRICE_JLORE", json!(c::PACK_PRICE_JLORE)),
+        ("PACKS_OPEN_ALL_MAX", json!(c::PACKS_OPEN_ALL_MAX)),
         ("PACK_SLOTS", json!(c::PACK_SLOTS)),
         (
             "PACK_UNOWNED_WEIGHTS",
@@ -398,8 +400,9 @@ fn every_name_is_listed_once() {
         // COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000). #2875: NEWS_TTL_DAYS and five news rewards.
         // #3074: the dev dashboard's seven (R3074000, R3074001, R3074003).
         // #3013: PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000).
+        // #3212: PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -421,7 +424,8 @@ fn every_name_is_listed_once() {
          SPECTATOR_EMOTE_* numbers (R2990001, R2990002), and #3074's DEV_JLORE_PER_REQUEST_MAX, \
          DEV_XP_PER_REQUEST_MAX, DEV_RATING_MIN, DEV_RATING_MAX, NEWS_POST_TITLE_MAX_CHARS, \
          NEWS_POST_SUMMARY_MAX_CHARS and NEWS_SUMMARY_MAX_SENTENCES (R3074000, R3074001, R3074003), \
-         and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000)"
+         and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000), and #3212's \
+         PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001)"
     );
 }
 

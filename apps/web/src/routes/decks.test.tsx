@@ -23,7 +23,7 @@ import {
   getMe,
   getOwnedCosmetics,
   keptPaths,
-  putDeck,
+  syncDecks,
   type DecksResponse,
 } from "../net/api.ts";
 import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
@@ -41,10 +41,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getDecks: vi.fn(),
     getCollection: vi.fn(),
     getOwnedCosmetics: vi.fn(),
-    putDeck: vi.fn(),
-    deleteDeck: vi.fn(),
-    putTrio: vi.fn(),
-    deleteTrio: vi.fn(),
+    syncDecks: vi.fn(),
   };
 });
 
@@ -90,8 +87,15 @@ beforeEach(() => {
       catalog.version,
     ),
   );
-  vi.mocked(putDeck).mockImplementation(async (_token, id, input) => ({
-    deck: { id, ...input, cards: [...input.cards], portrait: input.portrait ?? null, createdAt: 0, updatedAt: 0 },
+  // R3212001: every item lands, each answered as its own route would.
+  vi.mocked(syncDecks).mockImplementation(async (_token, input) => ({
+    decks: input.decks.map((deck) => ({
+      id: deck.id,
+      deck: { ...deck, cards: [...deck.cards], portrait: deck.portrait ?? null, createdAt: 0, updatedAt: 0 },
+    })),
+    trios: input.trios.map((trio) => ({ id: trio.id, trio: { ...trio, createdAt: 0, updatedAt: 0 } })),
+    deletedTrios: input.deletedTrios.map((id) => ({ id, deleted: true })),
+    deletedDecks: input.deletedDecks.map((id) => ({ id, deleted: true })),
   }));
 });
 
@@ -339,20 +343,22 @@ describe("the portrait picker's offer (R1827000)", () => {
 });
 
 describe("saving", () => {
-  it("R256 a new deck is PUT under a client-minted id with the token, the name and the catalog version", async () => {
+  it("R256 a new deck is saved under a client-minted id with the token, the name and the catalog version", async () => {
     await mount();
     fireEvent.click(screen.getByTestId("deck-new"));
     await waitFor(
       () => {
-        expect(putDeck).toHaveBeenCalled();
+        expect(syncDecks).toHaveBeenCalled();
       },
       { timeout: DECK_AUTOSAVE_DEBOUNCE_MS * 4 },
     );
-    const [token, id, input] = vi.mocked(putDeck).mock.calls[0] ?? [];
+    const [token, input] = vi.mocked(syncDecks).mock.calls[0] ?? [];
     expect(token).toBe(TOKEN);
-    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    const deck = input?.decks[0];
+    expect(input?.decks).toHaveLength(1);
+    expect(deck?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     // D5: a fresh deck has no portrait; the column reads `vanilla` (R641).
-    expect(input).toEqual({ name: "Deck 1", cards: [], catalogVersion: catalog.version, portrait: null });
+    expect(deck).toEqual({ id: deck?.id, name: "Deck 1", cards: [], catalogVersion: catalog.version, portrait: null });
     await waitFor(() => {
       expect(screen.getByTestId("sync-status")).toHaveAttribute("data-state", "saved");
     });
@@ -402,12 +408,14 @@ describe("when another account signs in under an open workshop", () => {
       await vi.advanceTimersByTimeAsync(DECK_AUTOSAVE_DEBOUNCE_MS + 1);
     });
 
-    const sentAsOther = vi.mocked(putDeck).mock.calls.filter(([token]) => token === OTHER_TOKEN);
+    const sentAsOther = vi.mocked(syncDecks).mock.calls.filter(([token]) => token === OTHER_TOKEN).flatMap(([, input]) => input.decks);
     expect(sentAsOther, "the first profile's new deck must not be created in the second's account").toEqual([]);
     // It may save before the switch; otherwise the first profile's mirror keeps it (R256).
     const kept = window.localStorage.getItem(mirrorKey(PROFILE)) ?? "";
     expect(kept).toContain("Deck 1");
-    const savedAsFirst = vi.mocked(putDeck).mock.calls.some(([token, , input]) => token === TOKEN && input.name === "Deck 1");
+    const savedAsFirst = vi
+      .mocked(syncDecks)
+      .mock.calls.some(([token, input]) => token === TOKEN && input.decks.some((deck) => deck.name === "Deck 1"));
     if (!savedAsFirst) expect(kept).toContain('"dirty":true');
   }, SWITCH_TEST_TIMEOUT_MS);
 });
