@@ -1684,15 +1684,9 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 		if x.final.note != "" {
 			context = x.withEarlier(context, findings, x.final.note) // review the final check's merge only
 		}
-		// Run 2 never merges a `main` that merges cleanly (#2948): the merge queue tests the two
-		// together, and a merge would only start CI again. Its final check merges a conflicting one.
-		if !handed && x.catchUp() {
-			// `main` moved and merged cleanly: the checks and the review judge the merged head.
-			results = x.checks()
-			entry.Set("gates", gateDicts(results))
-			entry.Set("caught_up", x.BaseSHA)
-			guard = Guard(x)
-		}
+		// No run merges a `main` that merges cleanly before its review (#2948): `main`'s merge queue
+		// tests the two together, and a merge would only run the checks, and CI, again. Run 2's
+		// final check merges a conflicting one; a one-run flow's is left for the conflict path.
 		var redCI []*verdicts.Finding
 		ciFailures := ""
 		if handed {
@@ -1813,44 +1807,6 @@ func (x *Worker) clearMarkers(cycle int, entry *pyjson.Object, report *verdicts.
 			"Conflict markers are still in "+strings.Join(markers, ", ")+".", "git grep")
 	}
 	return finding, report
-}
-
-// Before a review: merge `main` again when it moved since the run merged it and merges
-// cleanly (#160, #317 part 12), so what is approved still merges; `main` moves about every
-// half hour and a long run's approval was often stale before it was delivered. A merge
-// that would conflict is left for the conflict path, and a conflict revision of a cleared
-// change is left alone (deliver redoes its merge to check the carry). True when merged.
-func (x *Worker) catchUp() bool {
-	if x.CarryBuild != "" || x.Wt == nil {
-		return false
-	}
-	fetchRef(x.Repo, x.Cfg.DefaultBranch, false)
-	now := x.Repo.Rev(x.BaseRef)
-	if now == "" || now == x.BaseSHA {
-		return false
-	}
-	if code, _ := run(x.Wt, false, "merge-base", "--is-ancestor", now, "HEAD"); code == 0 {
-		return false
-	}
-	if code, _ := run(x.Wt, false, "merge-tree", "--write-tree", "--no-messages", "HEAD", now); code != 0 {
-		return false
-	}
-	var conflicts []string
-	if err := herr.Try(func() { conflicts = x.Wt.Merge(now, x.Who) }); err != nil {
-		// A merge that fails leaves the branch as it was.
-		run(x.Wt, false, "merge", "--abort")
-		return false
-	}
-	if len(conflicts) > 0 {
-		run(x.Wt, false, "merge", "--abort")
-		return false
-	}
-	x.BaseSHA = now
-	x.BaseWt = nil // the checks red on `main` are `main`'s new self's now
-	x.BaseGateCache = pyjson.New()
-	x.Step("merge", "`main` moved during the run; merged again before the review",
-		pyjson.New("outcome", "clean, at `"+first12(now)+"`"))
-	return true
 }
 
 // OnlyForbidden is a build whose whole change was in paths the bot may not change (`bot/`,

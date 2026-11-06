@@ -93,7 +93,7 @@ Each one's first cell reads its inputs from the environment and defaults to the 
 | `JACKIOH_REPO` | 03 | a repository root, for `crates/ai/generation.json` and `training/history/` | `fixtures/repo` |
 | `JACKIOH_SOURCE` | 01, 02 | `live`, `dev` or `all`: the games the figures read (R378: live unless asked) | `live` |
 | `JACKIOH_PATCH` | 01, 02 | the patch to read | the newest patch among the games read |
-| `JACKIOH_MIN_SAMPLE` | 01, 02 | the games a card needs to be ranked | `CARD_STATS_MIN_SAMPLE`, read off `crates/server/src/config.rs` |
+| `JACKIOH_MIN_SAMPLE` | 01, 02 | the games a card needs to be ranked | `CARD_STATS_MIN_SAMPLE`, read off `crates/shared/src/config.rs` (the server's, since #3171) |
 
 Set them where Jupyter starts, so the kernel inherits them. A relative path is read from the repository root, wherever the notebook is opened (run the commands below from there). A card with fewer games than the minimum is shown,
 marked `*`, and never ranked, as on the statistics page (R654); the fixtures are 80 games, so little of what they

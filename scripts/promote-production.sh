@@ -17,11 +17,15 @@
 # holds this in place, against a throwaway repository and a stand-in for `gh`.
 #
 # Staging is not this script's: deploy-staging.yml deploys every commit of main whose push-to-main CI
-# passed, by itself, and nothing here holds or hurries it.
+# passed, by itself, and nothing here holds or hurries it. The issue only shows where it stands, from
+# the newest of its GitHub deployments that succeeded (the deploy job's `environment: staging`).
 #
 # The production issue. One issue labeled RELEASE_LABEL is open at a time. Its title says where
 # production stands (everything live, commits waiting, or a candidate under test or red); its body
-# lists what main has that is not live yet (the queue) and the commands. Its first line is a hidden
+# says which commit of main each site serves, what production does next, and lists what main has
+# that production does not (the queue), each with where it stands on staging and on production, then
+# how both move and the commands (#3156's follow-up: the owner found the CI column's `cancelled`
+# rows and the missing staging confusing). Its first line is a hidden
 # state line: the last comment read (`last`), the last red super run it reported (`reported`) and
 # the last passing super run on main it promoted from (`daily`). Once it is ROTATE_DAYS old, a fresh
 # issue takes its place with the same state line, and the old one is retitled with the days it
@@ -69,7 +73,9 @@
 #
 # It talks to GitHub through `gh` and to git through the checkout's own credentials: the workflow
 # checks out main with its whole history. Two tokens. What moves production (the push of the promote
-# branch, its pull request, closing it, the merge, the branch's deletion) goes out as PROMOTE_TOKEN,
+# branch, its pull request, closing it, the `/skip-super` note on it, the merge, the branch's
+# deletion) goes out as PROMOTE_TOKEN, which can also comment on the bot's pull request after
+# lock-conversations.yml locks it (the Actions token cannot comment on a locked thread),
 # and the checkout pushes with the same one: whenever main changed a file under .github/workflows
 # since production, GitHub refuses that ref update from the Actions token ("refusing to allow a GitHub
 # App to create or update workflow ... without `workflows` permission"), and no `permissions:` entry
@@ -105,6 +111,10 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 # The branch whose passing super runs production follows (the daily promotion).
 : "${MAIN_BRANCH:=main}"
 : "${LISTED_COMMITS:=100}"
+# The GitHub environment deploy-staging.yml's job deploys to, and how many of its newest deployments
+# are looked through for the newest that succeeded.
+: "${STAGING_ENVIRONMENT:=staging}"
+: "${STAGING_DEPLOYS:=10}"
 # How many days one production issue lasts before a fresh one takes over (the header says why).
 : "${ROTATE_DAYS:=7}"
 # The clock, in seconds since the epoch: when the open issue is old enough to hand over.
@@ -325,7 +335,9 @@ skip_super() {
     esac
     num=$PR_NUMBER head=$BRANCH
   fi
-  try gh pr comment "$num" --body "@$who merges this without the super run, the emergency way (\`/skip-super\`): $reason"
+  # As the bot: lock-conversations.yml locks the pull request the bot opened for `/promote`, and the
+  # Actions token cannot comment on a locked thread, so its comment failed the run before the merge.
+  try promoter pr comment "$num" --body "@$who merges this without the super run, the emergency way (\`/skip-super\`): $reason"
   merge_pr "$num" "$head" "$CAND"
 }
 
@@ -425,52 +437,86 @@ row_label() {
   echo "${s//|/\\|}"
 }
 
-# Commit $1's push-to-main CI, from RUNS (a "sha status conclusion" line a run).
-ci_cell() {
+# The commit of main staging serves: the newest of its deployments that succeeded, or nothing when
+# they cannot be read or name no commit this clone has.
+staging_sha() {
+  local id sha
+  while read -r id sha; do
+    [ -n "$id" ] || continue
+    if [ "$(gh api "repos/$REPO/deployments/$id/statuses?per_page=1" --jq '.[0].state' 2>/dev/null || true)" = success ]; then
+      git rev-parse -q --verify "$sha^{commit}" >/dev/null && echo "$sha"
+      return 0
+    fi
+  done < <(gh api "repos/$REPO/deployments?environment=$STAGING_ENVIRONMENT&per_page=$STAGING_DEPLOYS" \
+    --jq '.[] | "\(.id) \(.sha)"' 2>/dev/null || true)
+}
+
+# Where commit $1 stands when no commit whose CI passed holds it yet: its own push-to-main CI, from
+# RUNS (a "sha status conclusion" line a run). A cancelled run is one a newer push replaced.
+checks_cell() {
   local st
   st=$(grep -m1 "^$1 " <<<"$RUNS" | cut -d' ' -f2,3 || true)
   case $st in
-    "completed success") echo "✅ passed" ;;
-    "completed failure" | "completed timed_out" | "completed startup_failure") echo "❌ failed" ;;
-    completed*) echo "${st#completed }" ;;
-    "") echo "—" ;;
-    *) echo "⏳ running" ;;
+    "completed failure" | "completed timed_out" | "completed startup_failure") echo "❌ checks failed" ;;
+    completed* | "") echo "⏳ waits for checks" ;;
+    *) echo "⏳ checks running" ;;
   esac
 }
 
-# QUEUE, the body's queue, and WAITING, its length: what main has that production does not, newest
-# first, and where each commit stands.
+# `main`'s commit a site's tip holds: production's is a merge whose second parent is main's.
+main_of() { git rev-parse --short "$(git rev-parse -q --verify "$1^2" || echo "$1")"; }
+
+# SITES, the body's two sites and the commit of main each serves; QUEUE, what main has that production
+# does not, newest first, and where each commit stands on staging and on production; WAITING, its
+# length.
 refresh_queue() {
-  local prod green c n=0 more=0 rows='' cell
+  local prod green stage c n=0 more=0 rows='' checks scell pcell behind
   prod=$(git rev-parse -q --verify origin/production || true)
   green=$(newest_green || true)
+  stage=$(staging_sha || true)
   RUNS=$(gh run list --workflow ci.yml --branch main --event push --limit 200 --json headSha,status,conclusion \
     --jq '.[] | "\(.headSha) \(.status) \(.conclusion)"' 2>/dev/null || true)
   while read -r c; do
     if [ -n "$prod" ] && git merge-base --is-ancestor "$c" "$prod"; then break; fi
     if [ "$n" -ge "$LISTED_COMMITS" ]; then more=1; break; fi
     n=$((n + 1))
-    if [ "$STATUS" != idle ] && git merge-base --is-ancestor "$c" "$CAND"; then cell="in #$PR_NUMBER"
-    elif [ -n "$green" ] && git merge-base --is-ancestor "$c" "$green"; then cell="next /promote"
-    else cell="waits for CI"; fi
-    rows+="| $(row_label "$c") | $(ci_cell "$c") | $cell |"$'\n'
+    checks=''
+    if [ -z "$green" ] || ! git merge-base --is-ancestor "$c" "$green"; then checks=$(checks_cell "$c"); fi
+    if [ -n "$stage" ] && git merge-base --is-ancestor "$c" "$stage"; then scell="✅ live"
+    elif [ -n "$checks" ]; then scell=$checks
+    elif [ -n "$stage" ]; then scell="🚚 next deploy"
+    else scell="—"; fi
+    if [ "$STATUS" = testing ] && git merge-base --is-ancestor "$c" "$CAND"; then pcell="🧪 being tested in #$PR_NUMBER"
+    elif [ "$STATUS" = failed ] && git merge-base --is-ancestor "$c" "$CAND"; then pcell="❌ test run failed in #$PR_NUMBER"
+    elif [ -n "$checks" ]; then pcell=$checks
+    else pcell="🚚 next promotion"; fi
+    rows+="| $(row_label "$c") | $scell | $pcell |"$'\n'
   done < <(git rev-list --first-parent origin/main)
   WAITING=$n
 
-  QUEUE=$'\n### Queue\n\n'
+  SITES=$'\n### Where things are\n\n| Site | Serves `main` up to | Not there yet |\n| --- | --- | --- |\n'
   if [ -n "$prod" ]; then
-    QUEUE+="Production serves \`main\` as of \`$(git rev-parse --short "$(git rev-parse -q --verify "$prod^2" || echo "$prod")")\`."
+    SITES+="| **Production**, jackioh.com | \`$(main_of "$prod")\` | "
+    if [ "$n" = 0 ]; then SITES+="nothing"; else SITES+="$n commit(s)"; [ "$more" = 0 ] || SITES+=" or more"; fi
+    SITES+=$' |\n'
   else
-    QUEUE+="Production serves nothing yet."
+    SITES+=$'| **Production**, jackioh.com | nothing yet | |\n'
   fi
-  if [ "$n" = 0 ]; then
-    QUEUE+=$' Everything on `main` is live.\n'
-    return 0
+  if [ -n "$stage" ]; then
+    behind=$(git rev-list --count --first-parent "$stage..origin/main")
+    SITES+="| **Staging**, staging.jackioh.com | \`$(git rev-parse --short "$stage")\` | "
+    if [ "$behind" = 0 ]; then SITES+="nothing"; else SITES+="$behind commit(s)"; fi
+    SITES+=$' |\n'
+  else
+    SITES+=$'| **Staging**, staging.jackioh.com | could not be read | |\n'
   fi
-  QUEUE+=" Not live yet, newest first: $n"
-  [ "$more" = 0 ] || QUEUE+=" (and older)"
-  QUEUE+=$'. `/promote` takes `main` up to its newest commit whose CI passed.\n\n'
-  QUEUE+=$'| Pull request | CI | Production |\n| --- | --- | --- |\n'
+
+  QUEUE=''
+  [ "$n" != 0 ] || return 0
+  QUEUE=$'\n### Not on production yet\n\nNewest first'
+  [ "$more" = 0 ] || QUEUE+=" (and older ones)"
+  QUEUE+=$'. ✅ live there · 🚚 its checks passed, so the next deploy or promotion takes it · 🧪 in the open promotion, under test · ⏳ ❌ its checks on `main` are running or failed (the next commit whose checks pass takes it along).\n\n'
+  QUEUE+=$'| Pull request | Staging | Production |\n| --- | --- | --- |\n'
   QUEUE+=$rows
 }
 
@@ -499,22 +545,31 @@ title_for() {
 
 body_for() {
   printf '<!-- promote-production last=%s reported=%s daily=%s -->\n' "$last" "$reported" "$daily"
+  printf '%s' "$SITES"
   case $STATUS in
     testing)
-      printf '**Production:** #%s promotes `main` up to `%s`, and the super run is testing it%s. It merges and deploys once every job passes.\n' \
+      printf '\n**Next for production:** #%s moves it up to `%s` once the full test run (super) passes on it%s. It then merges and deploys by itself.\n' \
         "$PR_NUMBER" "${CAND:0:12}" "${SUPER_URL:+ ([run]($SUPER_URL))}"
       ;;
     failed)
-      printf '**Production:** the super run failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass, and the next daily super run on `main` that passes, or a `/promote` after the fix, takes the newer commit instead.\n' \
+      printf '\n**Next for production:** the full test run (super) failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass; the next daily run on `main` that passes, or a `/promote` after the fix, takes a newer commit instead.\n' \
         "${CAND:0:12}" "$SUPER_URL" "$PR_NUMBER" "$SUPER_TITLE" "$PR_NUMBER"
       ;;
     *)
-      printf '**Production** promotes itself once a day: when the daily super run on `main` passes every job, the commit it tested merges into `production` and deploys. A red run is the night bot'"'"'s to fix, and production waits for the next one that passes. `/promote` here goes sooner: the super run tests a pull request of `main`'"'"'s newest green commit, and it merges and deploys once every job passes.\n'
+      if [ "$WAITING" = 0 ]; then
+        printf '\n**Next for production:** nothing to do: everything on `main` is live.\n'
+      else
+        printf '\n**Next for production:** the next daily full test run (super) on `main` that passes every job puts the commit it tested live. Comment `/promote` to test and promote the newest commit whose checks passed now.\n'
+      fi
       ;;
   esac
-  printf '\n**Staging** deploys every commit of `main` whose CI passed, by itself (`deploy-staging.yml`): nothing here holds it.\n'
   printf '%s' "$QUEUE"
   cat <<'TEXT'
+
+### How the sites move
+
+- **Staging** deploys by itself shortly after each commit to `main` whose checks (`ci.yml`) pass. It never waits for the full test run.
+- **Production** moves once a day by itself: when the full test run (`super.yml`) on `main` passes every job, the commit it tested goes live. `/promote` goes sooner, once the same test run passes on that commit.
 
 ### Commands
 
@@ -522,9 +577,9 @@ Comment here. Only people with write access are heard; a command gets a 👍, or
 
 | Comment | Effect |
 | --- | --- |
-| `/promote` | Sooner than the daily promotion: opens a pull request of `main`'s newest commit whose CI passed into `production`. The super run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
+| `/promote` | Sooner than the daily promotion: opens a pull request of `main`'s newest commit whose checks passed into `production`. The full test run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
 | `/promote <sha>` | The same, for that commit of `main`. |
-| `/skip-super <reason>` | The emergency way: merges the open pull request, or `main`'s newest green commit, now, without the super run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
+| `/skip-super <reason>` | The emergency way: merges the open pull request, or `main`'s newest commit whose checks passed, now, without the full test run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
 A newer `/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled. A promotion or a deploy that fails opens "CI: production promotion failed" for Squishy (`promote-production.yml`'s `report`).
@@ -721,7 +776,7 @@ case $EVENT in
   *) fail "promote-production.sh does not handle the $EVENT event: production follows a passing super run, by itself or on /promote." ;;
 esac
 
-QUEUE='' STATUS=idle WAITING=0 WHY='' RESULT='' PR_NUMBER='' BRANCH='' CAND='' SUPER_URL='' COUNT=0 CATALOG='' created=''
+SITES='' QUEUE='' STATUS=idle WAITING=0 WHY='' RESULT='' PR_NUMBER='' BRANCH='' CAND='' SUPER_URL='' COUNT=0 CATALOG='' created=''
 find_issue
 case $EVENT in
   issue_comment) apply_commands ;;

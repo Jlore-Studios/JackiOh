@@ -8,12 +8,15 @@ import { fileURLToPath } from "node:url";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
+
 import { GameResult } from "../game/Result.tsx";
 import { navigate, paths } from "../net/navigate.ts";
 import { rematchOffer, rematchStatus, type RematchOfferResponse, type RematchStatusResponse } from "../net/api.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
 import RematchButtons, { RematchWatcher, rematchTestid } from "./Rematch.tsx";
-import { setVisibility } from "../test/setup.ts";
+import { settle } from "../test/settle.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -371,5 +374,34 @@ describe("RematchWatcher", () => {
       expect(vi.mocked(rematchStatus)).toHaveBeenCalled();
     });
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+  });
+});
+
+describe("R3205000 the rematch status in a hidden tab", () => {
+  const PERIOD = SERIES_POLL_SECONDS * 1000;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetVisibility();
+  });
+
+  it("R3205000 reads nothing while the tab is hidden, once when it shows, and goes on at its pace", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+    await settle({ advance: 0 });
+    const reads = (): number => vi.mocked(rematchStatus).mock.calls.length;
+    const first = reads();
+    expect(first).toBeGreaterThan(0);
+
+    setVisibility("hidden");
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(first);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads()).toBe(first + 1);
+
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(first + 2);
   });
 });

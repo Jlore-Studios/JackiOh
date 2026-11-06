@@ -90,10 +90,13 @@ export default function AlmanacRoute(): ReactElement {
     <CardDefsProvider defs={ALMANAC_CATALOG.cards}>
       <div className="app-shell app-shell--wide tavern deckbuilder almanac" data-testid={almanacTestid.screen}>
         <header className="db-header">
-          <BackLink />
-          <h1 className="db-title" id="almanac-title">
-            {t("Almanac")}
-          </h1>
+          <BackLink
+            title={
+              <h1 className="db-title" id="almanac-title">
+                {t("Almanac")}
+              </h1>
+            }
+          />
         </header>
         <main className="almanac-main" aria-labelledby="almanac-title">
           <CardBrowser
