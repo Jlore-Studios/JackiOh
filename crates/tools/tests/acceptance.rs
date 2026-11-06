@@ -1,10 +1,9 @@
 //! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own tests held,
 //! read off the repository itself, and the later ones beside them:
 //!
-//!  - V2: the pure crates (engine, cards, ai, luau, run, shared) link nothing but serde, serde_json, indexmap
-//!    and each other (the AI and the shared crate not `jackioh-luau`, and none of them `jackioh-shared`),
-//!    `jackioh-luau` alone `mlua` (#442 L3, L4), ts-rs only behind the optional `ts` features (CLAUDE.md
-//!    rule 4); the six `clippy.toml`s are identical and every entry fires on `tests/fixtures/purity.rs`;
+//!  - V2: the pure crates (engine, cards, ai, run, shared) link nothing but serde, serde_json, indexmap
+//!    and each other (none of them `jackioh-shared`), ts-rs only behind the optional `ts` features (CLAUDE.md
+//!    rule 4); the five `clippy.toml`s are identical and every entry fires on `tests/fixtures/purity.rs`;
 //!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose (part 28's grep) but the
 //!    two structural readers named below; V28: no source under `packages/`, `apps/server/` or `ladder/`
 //!    (part 37);
@@ -82,11 +81,10 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
         "jackioh-engine",
         "jackioh-cards",
         "jackioh-ai",
-        "jackioh-luau",
         "jackioh-run",
         // Not `jackioh-shared`: it takes the others, and none of them takes it (CLAUDE.md rule 4).
     ];
-    for crate_dir in ["engine", "cards", "ai", "luau", "run", "shared"] {
+    for crate_dir in ["engine", "cards", "ai", "run", "shared"] {
         let path = repo().join("crates").join(crate_dir).join("Cargo.toml");
         let manifest =
             fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
@@ -97,7 +95,7 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
             path.display()
         );
         for (name, entry) in &dependencies {
-            if matches!(crate_dir, "engine" | "luau" | "run" | "shared") && name == "ts-rs" {
+            if matches!(crate_dir, "engine" | "run" | "shared") && name == "ts-rs" {
                 assert!(
                     entry.contains("optional = true"),
                     "{}: ts-rs must stay optional, behind the `ts` feature",
@@ -105,12 +103,8 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
                 );
                 continue;
             }
-            if crate_dir == "luau" && name == "mlua" {
-                continue;
-            }
             assert!(
-                ALLOWED.contains(&name.as_str())
-                    && !(matches!(crate_dir, "ai" | "shared") && name == "jackioh-luau"),
+                ALLOWED.contains(&name.as_str()),
                 "{}: `{name}` is not one of the pure crates' dependencies (CLAUDE.md rule 4)",
                 path.display()
             );
@@ -153,7 +147,7 @@ fn diverging(files: &[(&str, String)]) -> Vec<String> {
 
 #[test]
 fn v2_the_pure_crates_share_one_clippy_toml() {
-    let files: Vec<(&str, String)> = ["engine", "cards", "ai", "luau", "run", "shared"]
+    let files: Vec<(&str, String)> = ["engine", "cards", "ai", "run", "shared"]
         .into_iter()
         .map(|crate_dir| {
             let path = repo().join("crates").join(crate_dir).join("clippy.toml");
@@ -165,19 +159,14 @@ fn v2_the_pure_crates_share_one_clippy_toml() {
     let diverging = diverging(&files);
     assert!(
         diverging.is_empty(),
-        "these differ from crates/engine/clippy.toml; make one edit to all six pure crates' files (CLAUDE.md rule 4): {diverging:?}"
+        "these differ from crates/engine/clippy.toml; make one edit to all five pure crates' files (CLAUDE.md rule 4): {diverging:?}"
     );
 }
 
 #[test]
 fn v2_the_parity_check_names_each_diverging_file() {
     let lint = "disallowed-types = []\n".to_string();
-    let mut files = vec![
-        ("engine", lint.clone()),
-        ("cards", lint.clone()),
-        ("ai", lint.clone()),
-        ("luau", lint),
-    ];
+    let mut files = vec![("engine", lint.clone()), ("cards", lint.clone()), ("ai", lint)];
     assert!(diverging(&files).is_empty());
     files[2].1.push(' ');
     assert_eq!(diverging(&files), ["ai"]);
@@ -353,7 +342,6 @@ const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_server", &["jackioh-server"]),
     ("rust_ai", &["jackioh-ai"]),
     ("rust_ai_slow", &["jackioh-ai"]),
-    ("rust_luau", &["jackioh-luau"]),
     ("rust_tools_wasm", &[]),
 ];
 
@@ -956,12 +944,7 @@ struct SharedHelpers {
 
 /// The test trees that read the engine testkit, where none of `unit_at`, `must` and a one-instance
 /// pick builder may be copied.
-const KIT_READERS: &[&str] = &[
-    "crates/engine/tests",
-    "crates/cards",
-    "crates/luau/tests",
-    "crates/ai/tests",
-];
+const KIT_READERS: &[&str] = &["crates/engine/tests", "crates/cards", "crates/ai/tests"];
 
 /// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
 /// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
@@ -1867,7 +1850,7 @@ fn preview_no_test_previews_only_sets_that_ship() {
 
 #[test]
 fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
-    let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Custom]);\nlet _e = preview_every_set();\n";
+    let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Boss]);\nlet _e = preview_every_set();\n";
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }
 
@@ -1918,15 +1901,12 @@ fn dungeon_the_table_scan_reads_each_rows_first_cell() {
 /// CLAUDE.md rule 4's list of statics, as (file from the repository's root, name): the only `thread_local!`
 /// statics, `static mut`s and statics holding a `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` the pure crates
 /// may declare. The catalog's and the script registry's `OnceLock`s and `LazyLock`s hold none of those and
-/// need no entry. The entries are `jackioh-luau`'s thread-local VM (#442 L8) and the engine's three
-/// thread-locals, each set for one call and put back after it: the shipped catalog a replay folds under
-/// (R767000), the custom-script host (R915002) and whether the step in flight holds its game's random pools
-/// (R2201001). Change rule 4 and this list in one pull request (#3063).
+/// need no entry. The entries are the engine's two thread-locals, each set for one call and put back after
+/// it: the shipped catalog a replay folds under (R767000) and whether the step in flight holds its game's
+/// random pools (R2201001). Change rule 4 and this list in one pull request (#3063).
 const RULE_4_STATICS: &[(&str, &str)] = &[
     ("crates/engine/src/catalog.rs", "FOLDING"),
     ("crates/engine/src/catalog.rs", "POOL_HOLD"),
-    ("crates/engine/src/custom.rs", "HOST"),
-    ("crates/luau/src/vm.rs", "VM"),
 ];
 
 /// The types that make a static's type interior-mutable, besides any `Atomic*`.
@@ -2037,14 +2017,14 @@ fn interior_statics(code: &str) -> Vec<(usize, String)> {
         .collect()
 }
 
-/// What is wrong with the statics under `root`'s `crates/{engine,cards,ai,luau,run,shared}/src`, against `allowed`:
+/// What is wrong with the statics under `root`'s `crates/{engine,cards,ai,run,shared}/src`, against `allowed`:
 /// each one it does not list as `<file>:<line>: `<name>``, and each entry that names a static no longer
 /// declared. `src/testkit/` and the out-of-line test modules (`tests.rs`, `*_tests.rs`, which
 /// `crates/run/src/lib.rs` declares under `#[cfg(test)]`) are not read.
 fn static_problems(root: &Path, allowed: &[(&str, &str)]) -> Vec<String> {
     let mut found: Vec<(String, String)> = Vec::new();
     let mut problems = Vec::new();
-    for crate_dir in ["engine", "cards", "ai", "luau", "run", "shared"] {
+    for crate_dir in ["engine", "cards", "ai", "run", "shared"] {
         let src = root.join("crates").join(crate_dir).join("src");
         let mut files = Vec::new();
         rust_sources(&src, &mut files);
@@ -2177,7 +2157,7 @@ fn statics_the_check_refuses_an_unlisted_static_in_each_pure_crate() {
     };
     let local = "thread_local! {\n    static PLANTED: Cell<u32> = const { Cell::new(0) };\n}\n";
     let mut expected = Vec::new();
-    for crate_dir in ["engine", "cards", "ai", "luau", "run", "shared"] {
+    for crate_dir in ["engine", "cards", "ai", "run", "shared"] {
         let src = format!("crates/{crate_dir}/src");
         write(
             &format!("{src}/counter.rs"),

@@ -263,9 +263,7 @@ fn area(path: &str) -> Area {
         "apps/web/",
         "crates/wasm/",
         "crates/server/",
-        "crates/luau/",
         "crates/cards/patches/",
-        "crates/cards/luau/",
     ];
     if app.iter().any(|prefix| path.starts_with(prefix)) {
         return Area::App;
