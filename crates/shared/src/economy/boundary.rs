@@ -8,10 +8,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::cosmetics::{Cosmetic, registry, shipped_defs};
 use crate::economy::bars::{BarFill, BarKind, fill_bar};
-use crate::economy::ledger::AccountCounters;
+use crate::economy::ledger::{AccountCounters, Cause, LedgerGrant, QuestBook, SetTrack};
 use crate::economy::open::{
     CosmeticPackInputs, CosmeticPackOpening, EconomyRefusal, PackInputs, PackOpening, PackRecords,
-    open_card_pack, open_cosmetic_pack,
+    RefusalReason, open_card_pack, open_cosmetic_pack,
+};
+use crate::economy::quests::{QuestRefusal, QuestTopUp, give_quest, replace_quest, top_up_book};
+use crate::economy::rewards::{
+    GamePayout, GameRecords, GameSummary, complete_quest, pay_game, pay_xp, starting_rewards,
 };
 use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::track_rewards::{LevelReward, reward_for_level};
@@ -67,6 +71,59 @@ pub enum EconomyCall {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         level: i64,
     },
+    /// [`pay_game`]: a finished game's pay over the records the store read; `seed` draws the quests that fall
+    /// due as it ends. The game's own time is `summary.at`.
+    PayGame {
+        records: GameRecords,
+        summary: GameSummary,
+        seed: String,
+    },
+    /// [`pay_xp`]: an XP payout onto every active track, each row naming `reference`.
+    PayXp {
+        tracks: Vec<SetTrack>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        xp: i64,
+        cause: Cause,
+        reference: String,
+    },
+    /// [`starting_rewards`]: a new account's first-level reward.
+    StartingRewards { tracks: Vec<SetTrack> },
+    /// [`top_up_book`]: the quests that fell due.
+    TopUpQuests {
+        quests: QuestBook,
+        seed: String,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`replace_quest`]: a held quest swapped for another; `removedToday` counts the day's replaces.
+    ReplaceQuest {
+        quests: QuestBook,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        removed_today: i64,
+        quest_id: String,
+        seed: String,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`give_quest`]: a dev tool's quest at once.
+    GiveQuest {
+        quests: QuestBook,
+        seed: String,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// [`complete_quest`]: a dev tool's completion of a held quest.
+    CompleteQuest {
+        quests: QuestBook,
+        tracks: Vec<SetTrack>,
+        quest_id: String,
+        cause: Cause,
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
 }
 
 /// What an [`EconomyCall`] answers, as one JSON object with one key: an opening to write, a refusal to tell the
@@ -87,6 +144,12 @@ pub enum EconomyAnswer {
     Filled(BarFill),
     /// `levelReward`.
     Reward(LevelReward),
+    /// `payGame`: the game's pay and the writes.
+    Paid(Box<GamePayout>),
+    /// `payXp`, `startingRewards`, `replaceQuest`, `giveQuest` and `completeQuest`: the writes, in order.
+    Granted(Vec<LedgerGrant>),
+    /// `topUpQuests`: the quests after, and the writes that make it so.
+    ToppedUp(QuestTopUp),
     /// A decision that did not apply: nothing to write.
     Refused(EconomyRefusal),
 }
@@ -137,10 +200,63 @@ pub fn apply(call: &EconomyCall) -> EconomyAnswer {
         }
         EconomyCall::FillBar { bar, counters } => EconomyAnswer::Filled(fill_bar(*bar, counters)),
         EconomyCall::LevelReward { level } => EconomyAnswer::Reward(reward_for_level(*level)),
+        EconomyCall::PayGame {
+            records,
+            summary,
+            seed,
+        } => EconomyAnswer::Paid(Box::new(pay_game(records, summary, seed))),
+        EconomyCall::PayXp {
+            tracks,
+            xp,
+            cause,
+            reference,
+        } => EconomyAnswer::Granted(pay_xp(tracks, *xp, *cause, reference)),
+        EconomyCall::StartingRewards { tracks } => EconomyAnswer::Granted(starting_rewards(tracks)),
+        EconomyCall::TopUpQuests { quests, seed, now } => {
+            EconomyAnswer::ToppedUp(top_up_book(quests, seed, *now))
+        }
+        EconomyCall::ReplaceQuest {
+            quests,
+            removed_today,
+            quest_id,
+            seed,
+            now,
+        } => match replace_quest(quests, *removed_today, quest_id, seed, *now) {
+            Ok(grants) => EconomyAnswer::Granted(grants),
+            Err(refusal) => EconomyAnswer::Refused(quest_refusal(refusal)),
+        },
+        EconomyCall::GiveQuest { quests, seed, now } => match give_quest(quests, seed, *now) {
+            Ok(grant) => EconomyAnswer::Granted(vec![grant]),
+            Err(refusal) => EconomyAnswer::Refused(quest_refusal(refusal)),
+        },
+        EconomyCall::CompleteQuest {
+            quests,
+            tracks,
+            quest_id,
+            cause,
+            reference,
+            now,
+        } => match complete_quest(quests, tracks, quest_id, *cause, reference.as_deref(), *now) {
+            Some(grants) => EconomyAnswer::Granted(grants),
+            None => EconomyAnswer::Refused(quest_refusal(QuestRefusal::NotHeld)),
+        },
     }
 }
 
 /// The catalog version compiled in: the one an opening logs when its call names none.
 fn compiled_catalog() -> String {
     jackioh_cards::catalog_version().to_string()
+}
+
+/// A quest refusal as the refusal a host reads.
+fn quest_refusal(refusal: QuestRefusal) -> EconomyRefusal {
+    EconomyRefusal {
+        reason: match refusal {
+            QuestRefusal::Spent => RefusalReason::QuestSpent,
+            QuestRefusal::NotHeld => RefusalReason::QuestNotHeld,
+            QuestRefusal::NoneLeft => RefusalReason::NoQuestLeft,
+            QuestRefusal::Full => RefusalReason::QuestsFull,
+        },
+        message: refusal.message().to_string(),
+    }
 }

@@ -2,11 +2,14 @@
 import type { BarFill } from "./BarFill";
 import type { CosmeticPackOpening } from "./CosmeticPackOpening";
 import type { EconomyRefusal } from "./EconomyRefusal";
+import type { GamePayout } from "./GamePayout";
+import type { LedgerGrant } from "./LedgerGrant";
 import type { LevelReward } from "./LevelReward";
 import type { PackOpening } from "./PackOpening";
+import type { QuestTopUp } from "./QuestTopUp";
 
 /**
  * What an [`EconomyCall`] answers, as one JSON object with one key: an opening to write, a refusal to tell the
  * player, or a read.
  */
-export type EconomyAnswer = { "opened": PackOpening } | { "cosmeticOpened": CosmeticPackOpening } | { "filled": BarFill } | { "reward": LevelReward } | { "refused": EconomyRefusal };
+export type EconomyAnswer = { "opened": PackOpening } | { "cosmeticOpened": CosmeticPackOpening } | { "filled": BarFill } | { "reward": LevelReward } | { "paid": GamePayout } | { "granted": Array<LedgerGrant> } | { "toppedUp": QuestTopUp } | { "refused": EconomyRefusal };
