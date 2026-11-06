@@ -32789,7 +32789,10 @@
           "provider": "claude-8"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-06T17:30:38Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3315,
         "head": "fe836ddb4c2f80e719f6093029fb4430d0608b07",
         "issue": 3257,
         "merged_at": "2026-11-06T17:07:33Z",
@@ -32802,12 +32805,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:5a79c6e6-1793985634",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42260849923",
         "sha": "5afc00a43a9e5329cf1a829696420a6e7cdd52be",
         "started_at": "2026-11-06T17:21:09Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: phone board: empty zones keep a card shape, keyword and Activate badges inside their own zone's top-left",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 108
