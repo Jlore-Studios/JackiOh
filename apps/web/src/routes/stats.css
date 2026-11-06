@@ -129,6 +129,7 @@
 }
 
 .stats-search-input {
+  min-height: var(--hit-min);
   padding: 8px 14px;
   border-radius: 8px;
   border: 1px solid var(--line-bright, #454d66);
@@ -146,6 +147,7 @@
 }
 
 .stats-select {
+  min-height: var(--hit-min);
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid var(--line-bright, #454d66);
@@ -154,24 +156,12 @@
   font-size: 13px;
 }
 
-.stats-col-toggles {
+/* R3324003: how the cards show, sort, view, ranges and columns, in one wrapping row of labelled groups. */
+.stats-options {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  font-size: 12.5px;
-  color: var(--text-dim, #9aa1b8);
-}
-
-.stats-col-toggles-label {
-  font-weight: 600;
-}
-
-.stats-col-toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: var(--cursor-glove-point, pointer);
+  gap: var(--space-6) var(--space-8);
 }
 
 .stats-sort,
@@ -188,20 +178,16 @@
   font-size: 12.5px;
 }
 
-.app-shell.stats-page .stats-sort-dir,
-.app-shell.stats-page .stats-view-btn {
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--line-bright, #454d66);
-  background: rgba(18, 22, 34, 0.8);
-  color: var(--text, #fff);
-  font-size: 13px;
-  cursor: var(--cursor-glove-point, pointer);
-}
-
-.app-shell.stats-page .stats-view-btn[aria-pressed="true"],
-.app-shell.stats-page .stats-view-btn.stats-view-btn--active {
-  border-color: var(--tavern-gold, #f5a623);
+/* R3324003: the page's buttons are the tavern's wood one (tavern.css); a pressed one (a patch tab, Table or Grid,
+   Show 95% ranges, a column) and the view tab shown are pushed in, in gold. As weighty as the wood button rule,
+   and later, so they win, as the drill-down's Show Radiant does. */
+.tavern.app-shell.stats-page button.stats-view-btn[aria-pressed="true"]:not(:disabled),
+.tavern.app-shell.stats-page button.stats-tab[aria-selected="true"]:not(:disabled) {
+  border-color: var(--tavern-gold);
+  background: var(--tavern-wood-deep);
+  color: var(--tavern-gold-pale);
+  box-shadow: none;
+  transform: translateY(2px);
 }
 
 .stats-grid {
@@ -784,29 +770,63 @@
   margin-top: 16px;
 }
 
-/* R1973002: the patch bar: the patch before, the picker and the patch after. */
+/* R1973002, R3324000: the patch bar: the patch before, a tab for each offered patch, and the patch after. The
+   tabs are the page's pressed buttons (.stats-view-btn), each its patch's name over its games, and scroll
+   sideways on a narrow screen rather than wrap. */
 .stats-patch-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
-.stats-patch-bar .stats-select {
-  flex: 1 1 180px;
-  max-width: 320px;
+.stats-patch-tabs {
+  display: flex;
+  flex: 0 1 auto;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-1) 0;
+  overflow-x: auto;
+  list-style: none;
 }
 
-/* R2122000 on a phone or under a finger: a select or a field draws no ::before, so the filters,
-   the search and the column checkboxes' labels are --hit-min tall themselves; a sortable header's
-   band stops at the first row, its neighbour 0 px below. */
+.app-shell.stats-page .stats-patch-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.stats-patch-tab-name {
+  font-weight: 700;
+}
+
+.stats-patch-tab-games {
+  font-size: var(--type-xs);
+  color: var(--text-dim);
+}
+
+.app-shell.stats-page .stats-patch-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* R3324001: the current patch, beside the page's title. */
+.stats-current-patch {
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* R2122000 on a phone or under a finger: a sortable header's band stops at the first row, its neighbour
+   0 px below. A select or a field draws no ::before, so the filters and the search are --hit-min tall
+   themselves everywhere, as tall as the page's buttons (R3324003). */
 @media (pointer: coarse), (max-width: 600px) {
-  .stats-select,
-  .stats-search-input,
-  .stats-col-toggle {
-    min-height: var(--hit-min);
-  }
-
   .stats-th--sortable::before {
     bottom: 0;
   }

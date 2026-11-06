@@ -1,8 +1,10 @@
-// The Created cards of /stats (SPEC §9.11, R2089000), below the Cards tab's table: the cards made during a
-// game (tokens, generated and Discovered cards, copies, transforms' results, The Coin). A row counts the seats
-// that made a copy: Used, split by a copy Radiant at its first use, and Not used, the baseline. The figures and
-// R654's floor ("—" below it) are the server's (CLAUDE.md rule 7); the rows keep the server's order until a
-// header sorts them (R3184002). It scrolls, never fixed (R1646000).
+// The Created cards of /stats (SPEC §9.11, R2089000), below the Cards tab's table, in two sections that share no
+// row (R3324002): the catalog's tokens, and every other card made during a game (generated and Discovered cards,
+// copies, transforms' results, The Coin). A row counts the seats that made a copy: Win rate pools them, used or
+// not (R2370000), Used splits by a copy Radiant at its first use, and Not used is the baseline. The figures and
+// R654's floor ("—" below it) are the server's, and Win rate is read off them, nothing counted anew (CLAUDE.md
+// rule 7). The rows open on Win rate, best first, and every header sorts them (R3184002). It scrolls, never fixed
+// (R1646000).
 
 import { useId, useState, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
@@ -20,17 +22,34 @@ export function rateText(games: number, rate: number | null, minSample: number):
   return shown === null ? "—" : `${Math.round(shown * PERCENT)}%`;
 }
 
-/** R3184002: the Created table's columns, every one sortable. */
-export type CreatedColumn = "name" | "games" | "used" | "notUsed" | "usedRadiant" | "usedNormal" | "delta";
+/**
+ * R2370000: a Created card's win rate: the wins of the seats that made one, used or not, over their games (each
+ * side's rate times its games, rounded, as the Sets tab pools its cards'); null with none.
+ */
+export function createdWinRate(card: PublicCreatedStat): number | null {
+  if (card.games === 0) return null;
+  const wins =
+    Math.round((card.createdPlayedWinRate ?? 0) * card.createdPlayedGames) +
+    Math.round((card.createdNotPlayedWinRate ?? 0) * card.createdNotPlayedGames);
+  return wins / card.games;
+}
+
+/** R3184002: the Created tables' columns, every one sortable. */
+export type CreatedColumn = "name" | "games" | "winRate" | "used" | "notUsed" | "usedRadiant" | "usedNormal" | "delta";
 
 /** R3184002: a header's sort: the column and its direction. */
 export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
+
+/** R3324002: the sort a table opens on, its Win rate best first, as the deck table opens on its own headline rate. */
+export const CREATED_DEFAULT_SORT: CreatedSort = { col: "winRate", dir: "desc" };
 
 /** R3184002: a column's figure as the row shows it: its games, or its rate or delta, null for "—". */
 function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, minSample: number): number | null {
   switch (col) {
     case "games":
       return card.games;
+    case "winRate":
+      return faceRate(card.games, createdWinRate(card), minSample);
     case "used":
       return faceRate(card.createdPlayedGames, card.createdPlayedWinRate, minSample);
     case "notUsed":
@@ -46,16 +65,15 @@ function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, mi
 
 /**
  * R3184002: the rows in a header's order: a row with no figure (below the floor, or none) after those with one,
- * either way, and rows that tie in the server's order. No sort keeps the server's order.
+ * either way, and rows that tie in the server's order.
  */
 export function sortCreated(
   created: readonly PublicCreatedStat[],
-  sort: CreatedSort | null,
+  sort: CreatedSort,
   minSample: number,
   nameOf: (id: string, name: string) => string,
   language?: string,
 ): PublicCreatedStat[] {
-  if (sort === null) return [...created];
   const flip = sort.dir === "desc" ? -1 : 1;
   const { col } = sort;
   return [...created].sort((a, b) => {
@@ -76,10 +94,10 @@ function SortHeader({
 }: {
   col: CreatedColumn;
   label: string;
-  sort: CreatedSort | null;
+  sort: CreatedSort;
   onSort: (col: CreatedColumn) => void;
 }): ReactElement {
-  const dir = sort?.col === col ? sort.dir : null;
+  const dir = sort.col === col ? sort.dir : null;
   return (
     <th
       scope="col"
@@ -99,11 +117,16 @@ function SortHeader({
   );
 }
 
+/** R3324002: which of the two sections a panel is: the tokens, or every other Created card. */
+export type CreatedKind = "tokens" | "other";
+
 export function CreatedPanel({
+  kind,
   created,
   minSample,
   nameOf,
 }: {
+  kind: CreatedKind;
   created: readonly PublicCreatedStat[];
   minSample: number;
   /** A card's name as the page shows it. */
@@ -111,33 +134,40 @@ export function CreatedPanel({
 }): ReactElement | null {
   const locale = useLocale();
   const titleId = useId();
-  const [sort, setSort] = useState<CreatedSort | null>(null);
+  const [sort, setSort] = useState<CreatedSort>(CREATED_DEFAULT_SORT);
   if (created.length === 0) return null;
 
   const onSort = (col: CreatedColumn): void =>
     setSort((now) =>
-      now?.col === col
+      now.col === col
         ? { col, dir: now.dir === "asc" ? "desc" : "asc" }
         : { col, dir: col === "name" ? "asc" : "desc" },
     );
   const rows = sortCreated(created, sort, minSample, nameOf, locale === "en" ? undefined : locale);
   const header = { sort, onSort };
+  const tokens = kind === "tokens";
 
   return (
-    <section className="stats-created-panel" data-testid={statsTestid.createdPanel}>
-      <h2 id={titleId} className="stats-games-title">{t("Created cards")}</h2>
+    <section className="stats-created-panel" data-testid={tokens ? statsTestid.tokensPanel : statsTestid.createdPanel}>
+      <h2 id={titleId} className="stats-games-title">
+        {tokens ? t("Tokens") : t("Other created cards")}
+      </h2>
       <p className="stats-sample-hint stats-games-note">
+        {tokens
+          ? t("Tokens made during the game.")
+          : t("Every other card made during the game: generated and Discovered cards, copies and The Coin.")}{" "}
         {t(
-          "Cards made during the game: tokens, generated cards, copies and The Coin. Used is the win rate of the seats that made a Created copy of the card and used one, Not used of those that made copies and used none; each needs {minSample} games.",
+          "Win rate is of the seats that made one, used or not; Used of those that used one, Not used of those that made one and used none. Each needs {minSample} games.",
           { minSample },
         )}
       </p>
       <TableScroll labeledBy={titleId}>
-        <table className="stats-table" data-testid={statsTestid.createdTable}>
+        <table className="stats-table" data-testid={tokens ? statsTestid.tokensTable : statsTestid.createdTable}>
           <thead>
             <tr>
-              <SortHeader col="name" label={t("Card")} {...header} />
+              <SortHeader col="name" label={tokens ? t("Token") : t("Card")} {...header} />
               <SortHeader col="games" label={t("Games")} {...header} />
+              <SortHeader col="winRate" label={t("Win rate")} {...header} />
               <SortHeader col="used" label={t("Used")} {...header} />
               <SortHeader col="notUsed" label={t("Not used")} {...header} />
               <SortHeader col="usedRadiant" label={t("Used Radiant")} {...header} />
@@ -152,6 +182,7 @@ export function CreatedPanel({
                   {nameOf(card.id, card.name)}
                 </th>
                 <td className="stats-td">{formatNumber(card.games)}</td>
+                <td className="stats-td">{rateText(card.games, createdWinRate(card), minSample)}</td>
                 <td className="stats-td">
                   {rateText(card.createdPlayedGames, card.createdPlayedWinRate, minSample)}
                 </td>
