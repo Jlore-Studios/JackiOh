@@ -34116,7 +34116,9 @@
           "provider": "claude-6"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-06T04:06:26Z",
         "every": 5,
+        "findings": 0,
         "head": "324330509ec5e7ba3103648c867c95de31d7bc66",
         "issue": 3229,
         "merged_at": "2026-11-06T03:33:28Z",
@@ -34129,12 +34131,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:9feffca2-1793936324",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42157860894",
         "sha": "105211cd4221f4c5bace65dbb850b5b0a79ef301",
         "started_at": "2026-11-06T03:39:21Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: draw the dungeon map's node icons as SVG instead of system emoji",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 91
