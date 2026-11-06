@@ -18,7 +18,7 @@ use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OfferClause,
     VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID,
     VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID,
-    VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID, shipped,
+    VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID, VERSION_TAROT_ID, shipped,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
@@ -1855,6 +1855,47 @@ async fn r2944000_the_chase_buys_part_five_versions_only_where_offered() {
         assert!(!owns_cosmetic(&app, Some(&bare), cosmetic).await, "{cosmetic}");
         assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0, "{cosmetic}");
     }
+}
+
+#[tokio::test]
+async fn r3017000_the_chase_buys_a_part_six_legendary_level_only_where_offered() {
+    let (app, token) = setup().await;
+    // Scratch Pad, a Mythic Spell, is offered Tarot card; Speciesist, a Common Unit, Woodcut, its partner, instead
+    // (R3017001). Tarot card's first level is owned on both, on Speciesist by a write nothing offered would make, so
+    // only the offer stands between the bar and its Legendary animated level there.
+    let card = "meditativeplus-026".to_string();
+    let bare = "core-002".to_string();
+    let animated = "version-tarot-animated";
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, &[card.clone(), bare.clone()]).await;
+    give(&app, Some(&card), VERSION_TAROT_ID).await;
+    give(&app, Some(&bare), VERSION_TAROT_ID).await;
+    let chase = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // On the card it is not offered: a 400. Nothing is written, and the bar stays full.
+    let before = everything(&app).await;
+    let (status, answer) = chase(json!({ "cosmeticId": animated, "cardId": bare })).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that cosmetic is not offered on that card")),
+        "{answer}"
+    );
+    assert_eq!(everything(&app).await, before);
+    assert!(!owns_cosmetic(&app, Some(&bare), animated).await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    // On the card it is offered, the full bar buys it and empties; no account was granted it before (R3017000).
+    assert!(!owns_cosmetic(&app, Some(&card), animated).await);
+    let (status, answer) = chase(json!({ "cosmeticId": animated, "cardId": card })).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owns_cosmetic(&app, Some(&card), animated).await);
+    assert!(!owns_cosmetic(&app, Some(&bare), animated).await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
 }
 
 #[tokio::test]

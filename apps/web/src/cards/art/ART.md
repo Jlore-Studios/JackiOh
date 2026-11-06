@@ -176,3 +176,28 @@ corner, `PRISMATIC_SHEEN`: its no-gold spectrum there and back, so no two neighb
 Radiant face washes its painted picture back over both (`dp-wash`, `pr-wash`). The cache keys each
 apart (`|depth`, `|prismatic`). The constants were set by eye on the component spec's screenshot
 (`card-versions-part-5`).
+
+## Part 6's pictures (R3017002)
+
+Part 6's six looks are all filters over a painter's picture, as part 5's are, but four of them are
+**repaints** (`ArtRepaint`, `isRepaint`): the painter draws a new picture of the card's subject, seeded
+by the card's id and the picture's name (`core-022#night`, `artSeedOf`) as Alt art's is, and the filter
+lies over that. Night (`nightSvg`, `nt-night`) dulls, dims and blues the picture toward a night sky and
+draws a moon in its glow and stars at fixed spots high in the window, inside every shape's crop.
+Watercolor (`watercolorSvg`, `wc-paint`) runs the picture's edges by noise, softens them, lays them on
+paper and thins them toward it, grained. Stained-glass window (`stainedGlassSvg`, `sg-glass`) pushes the
+picture's colour and cuts it to Pixel's 27 colours, lights it from behind and leads it along every edge
+between its panes and along a noise contour that parts the broad ones. Tarot card (`tarotSvg`,
+`tr-tarot`) mutes the picture under a blue and pale duotone inside an arched violet border on two
+pillars, a sun and a crescent in its spandrels and stars on it, and no words. The other two
+**restyle** the card's own picture, seeded by its id alone, as Pixel does: Woodcut (`woodcutSvg`,
+`wd-print`) greys it and cuts it to three tones of ink and paper, gouging its middle tone with long
+strokes, and Neon sign (`neonSvg`, `ne-neon`) runs a tube along every step of its smoothed grey, violet
+in the dark and cyan in the light, glowing on a dark wall that shows the picture faintly.
+
+A Legacy card and a Starship in play keep their one picture under each, as under the Sketch, and a
+delivered file, the normal picture's, gives way to the painter for all six. A Radiant face washes its
+painted picture back over each (`nt-wash`, `wc-wash`, `sg-wash`, `tr-wash`, `wd-wash`, `ne-wash`), and
+the cache keys each apart (`|night`, `|watercolor`, `|stained-glass`, `|tarot`, `|woodcut`, `|neon`),
+a repaint's under its own seed too. Every colour is palette.css's, none in Radiant's gold window. The
+constants were set by eye on the component spec's screenshot (`card-versions-part-6`).

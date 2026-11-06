@@ -58,6 +58,13 @@
 //! of one still owning the levels it maps to ([`implied_by`], R3015006). R3015003: owning a level means owning
 //! every level below it ([`levels_below`], [`is_next`]). R3015005: a card's pick names one level
 //! ([`level_of_pick`]), every older shape mapped to the level it drew.
+//!
+//! R3017000: #3017 appends six two-level variants, each an art level and its animated one: Night
+//! ([`VERSION_NIGHT_ID`]), Watercolor ([`VERSION_WATERCOLOR_ID`]) and Woodcut ([`VERSION_WOODCUT_ID`]), Rare, and
+//! Neon sign ([`VERSION_NEON_ID`]), Stained-glass window ([`VERSION_STAINED_GLASS_ID`]) and Tarot card
+//! ([`VERSION_TAROT_ID`]), Epic. R3017001: they make three pairs, each splitting every card between its two by one
+//! seed, a sample's `from` ([`OfferSample`]) taking the cards the other's percent leaves, so every card, Legacy ones
+//! included, is offered at least `VARIANT_MIN_PER_CARD` variants besides the Default.
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -441,8 +448,9 @@ impl OfferClause {
 }
 
 /// R2949001: a seeded share of the cards a clause's other fields take: a card is in it when the FNV-1a hash of
-/// `<seed>/<card id>`, modulo `OFFER_SAMPLE_PERCENT_SCALE`, falls below `percent`. The registry's check holds
-/// `percent` to some and not all, and `seed` to a slug.
+/// `<seed>/<card id>`, modulo `OFFER_SAMPLE_PERCENT_SCALE`, falls below `percent`. R3017001: and at or above
+/// `from`, 0 when absent, so two samples of one seed, one below a cut and one from it, split their cards between
+/// them. The registry's check holds the share to some and not all, `percent` to the scale, and `seed` to a slug.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",
@@ -452,13 +460,22 @@ impl OfferClause {
 #[serde(deny_unknown_fields)]
 pub struct OfferSample {
     pub seed: String,
+    /// R3017001: the lowest hash the sample takes; 0, and left out of the registry's text, unless set.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub from: u32,
     pub percent: u32,
+}
+
+/// Whether `n` is 0: a sample's `from` left out of its text.
+fn is_zero(n: &u32) -> bool {
+    *n == 0
 }
 
 impl OfferSample {
     /// Whether the sample takes the card `card`.
     pub fn takes(&self, card: &str) -> bool {
-        fnv1a32_utf16_u32(&format!("{}/{card}", self.seed)) % OFFER_SAMPLE_PERCENT_SCALE < self.percent
+        let at = fnv1a32_utf16_u32(&format!("{}/{card}", self.seed)) % OFFER_SAMPLE_PERCENT_SCALE;
+        self.from <= at && at < self.percent
     }
 }
 
@@ -745,11 +762,18 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
                 ));
             }
         }
-        // R2949001: a sample takes some of its clause's cards and not all, by a slug's seed.
+        // R2949001: a sample takes some of its clause's cards and not all, by a slug's seed. R3017001: its share runs
+        // from `from` to below `percent`, which stays within the scale.
         for sample in cosmetic.offer.iter().filter_map(|clause| clause.sample.as_ref()) {
-            if sample.percent == 0 || sample.percent >= OFFER_SAMPLE_PERCENT_SCALE {
+            let share = sample.percent.saturating_sub(sample.from);
+            if share == 0 || share >= OFFER_SAMPLE_PERCENT_SCALE {
                 out.push(format!(
-                    "the offer of {id:?} samples {} in {OFFER_SAMPLE_PERCENT_SCALE} of its cards, which must be some and not all",
+                    "the offer of {id:?} samples {share} in {OFFER_SAMPLE_PERCENT_SCALE} of its cards, which must be some and not all"
+                ));
+            }
+            if sample.percent > OFFER_SAMPLE_PERCENT_SCALE {
+                out.push(format!(
+                    "the offer of {id:?} samples below {}, past {OFFER_SAMPLE_PERCENT_SCALE}",
                     sample.percent
                 ));
             }
@@ -1178,6 +1202,29 @@ pub const VERSION_IMMERSIVE_ID: &str = "version-immersive";
 /// R2944000: the Prismatic version, Mythic: mirror chrome, rainbow-edged and iridescent, never gold.
 pub const VERSION_PRISMATIC_ID: &str = "version-prismatic";
 
+/// R3017000: the Night variant's first level, Rare: a new picture of the card's subject under a night sky, a moon
+/// and stars. It pairs with Neon sign: every card is offered one of the two (R3017001).
+pub const VERSION_NIGHT_ID: &str = "version-night";
+
+/// R3017000: the Neon sign variant's first level, Epic: the card's own picture as glowing tubes on a dark wall.
+pub const VERSION_NEON_ID: &str = "version-neon";
+
+/// R3017000: the Watercolor variant's first level, Rare: a new picture of the card's subject in washes on paper.
+/// It pairs with Stained-glass window (R3017001).
+pub const VERSION_WATERCOLOR_ID: &str = "version-watercolor";
+
+/// R3017000: the Stained-glass window variant's first level, Epic: a new picture of the card's subject in leaded
+/// panes of flat colour.
+pub const VERSION_STAINED_GLASS_ID: &str = "version-stained-glass";
+
+/// R3017000: the Woodcut variant's first level, Rare: the card's own picture cut as a three-tone print. It pairs
+/// with Tarot card (R3017001).
+pub const VERSION_WOODCUT_ID: &str = "version-woodcut";
+
+/// R3017000: the Tarot card variant's first level, Epic: a new picture of the card's subject as a fortune card's,
+/// under an arch with a sun, a crescent and stars.
+pub const VERSION_TAROT_ID: &str = "version-tarot";
+
 /// R2755000: the card back a rated game grants each person it leaves Jlorious, and nothing else
 /// grants (`Cosmetic::jlorious`).
 pub const JLORIOUS_CARD_BACK: &str = "card-back-jlorious";
@@ -1422,16 +1469,31 @@ mod tests {
         ),
     ];
 
-    /// R3015000: the fifteen levels #3015 appends after #2944's two, last in the registry.
+    /// R3015000: the fifteen levels #3015 appends after #2944's two, last in the registry but for #3017's twelve.
     const R3015000_NEW: usize = 15;
+
+    /// R3017000: the twelve levels #3017 appends after #3015's fifteen, last in the registry.
+    const R3017000_NEW: usize = 12;
+
+    /// The shipped registry before #3017's twelve levels (R3017000).
+    fn before_r3017000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[..cosmetics.len() - R3017000_NEW]
+    }
+
+    /// The twelve #3017 appends, last in the registry (R3017000).
+    fn r3017000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[cosmetics.len() - R3017000_NEW..]
+    }
 
     /// The shipped registry before #3015's fifteen levels (R3015000), which every slice below is taken from.
     fn before_r3015000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3017000(cosmetics);
         &cosmetics[..cosmetics.len() - R3015000_NEW]
     }
 
-    /// The fifteen #3015 appends, last in the registry (R3015000).
+    /// The fifteen #3015 appends, last in the registry but for #3017's twelve (R3015000).
     fn r3015000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3017000(cosmetics);
         &cosmetics[cosmetics.len() - R3015000_NEW..]
     }
 
@@ -1894,9 +1956,10 @@ mod tests {
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
         }
         // Nothing before them is a version or an augment, or has an offer; only #2940's three, #2942's three,
-        // #2943's two, #2944's two and #3015's fifteen (R3015000) come after them.
+        // #2943's two, #2944's two, #3015's fifteen (R3015000) and #3017's twelve (R3017000) come after them.
         assert!(
             cosmetics[..cosmetics.len()
+                - R3017000_NEW
                 - R3015000_NEW
                 - R2944000_NEW.len()
                 - R2943000_NEW.len()
@@ -2025,11 +2088,13 @@ mod tests {
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_offered())
             .collect();
-        // R2940000, R2942000, R2943000, R2944000, R3015000: #2725's three, #2940's three, #2942's three, #2943's
-        // two, #2944's two and #3015's fifteen levels, each reaching the floor as its variant's first does.
+        // R2940000, R2942000, R2943000, R2944000, R3015000, R3017000: #2725's three, #2940's three, #2942's three,
+        // #2943's two, #2944's two, #3015's fifteen and #3017's twelve levels, each reaching the floor as its
+        // variant's first does.
         assert_eq!(
             offered_kinds.len(),
-            R3015000_NEW
+            R3017000_NEW
+                + R3015000_NEW
                 + R2725000_NEW.len()
                 + R2940000_NEW.len()
                 + R2942000_NEW.len()
@@ -2366,6 +2431,7 @@ mod tests {
         let defs = shipped_defs();
         let sample = |seed: &str, percent: u32| OfferSample {
             seed: seed.to_owned(),
+            from: 0,
             percent,
         };
         let taken = |sample: &OfferSample| -> BTreeSet<&str> {
@@ -3397,12 +3463,24 @@ mod tests {
         // then #2655's 42 full arts, a Legendary and a Mythic on each of 21 cards (R2655000), then #2725's
         // Full art version and Signature augment (R2725000), then #2940's Alt full art version (R2940000), then
         // #2943's Set showcase and Out of frame versions (R2943000), then #2944's Immersive and Prismatic versions
-        // (R2944000), then #3015's thirteen Legendary and Mythic levels (R3015000, R3015001).
+        // (R2944000), then #3015's thirteen Legendary and Mythic levels (R3015000, R3015001), then #3017's three
+        // Legendary animated levels (R3017000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let chases: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.chase).collect();
-        assert_eq!(chases.len(), 17 + 42 + 7 + 13);
+        assert_eq!(chases.len(), 17 + 42 + 7 + 13 + 3);
         assert_eq!(
-            chases[17 + 42 + 7..]
+            chases[17 + 42 + 7 + 13..]
+                .iter()
+                .map(|cosmetic| cosmetic.id.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "version-neon-animated",
+                "version-stained-glass-animated",
+                "version-tarot-animated",
+            ]
+        );
+        assert_eq!(
+            chases[17 + 42 + 7..17 + 42 + 7 + 13]
                 .iter()
                 .map(|cosmetic| cosmetic.id.as_str())
                 .collect::<Vec<_>>(),
@@ -3530,7 +3608,7 @@ mod tests {
         // A duplicate drops #1833's 18 per-card ones, then #2725's version and augments (R2725000), which
         // retire every full art: those six, #2655's 57 and #2715's 21; then #2940's three versions (R2940000),
         // #2942's three (R2942000), #2943's two (R2943000), #2944's two (R2944000) and #3015's fifteen levels
-        // (R3015000), which retire the two augments.
+        // (R3015000), which retire the two augments, then #3017's twelve (R3017000).
         let mut dropped: Vec<Cosmetic> = cosmetics[earlier.len()..earlier.len() + R1833000_NEW.len()]
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_per_card())
@@ -3548,6 +3626,7 @@ mod tests {
         dropped.extend(r2943000_new(&cosmetics).iter().cloned());
         dropped.extend(r2944000_new(&cosmetics).iter().cloned());
         dropped.extend(r3015000_new(&cosmetics).iter().cloned());
+        dropped.extend(r3017000_new(&cosmetics).iter().cloned());
         assert_eq!(
             dropped.len(),
             18 + R2725000_NEW.len() - 2
@@ -3556,6 +3635,7 @@ mod tests {
                 + R2943000_NEW.len()
                 + R2944000_NEW.len()
                 + R3015000_NEW
+                + R3017000_NEW
         );
         assert_eq!(pack_cosmetics(&cosmetics), dropped);
         let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
@@ -3715,10 +3795,11 @@ mod tests {
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
         // #1833's 72, #2655's 57 after them (R2655000), #2755's one (R2755000), #2715's 21 (R2715000),
         // #2725's three (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000),
-        // #2944's two (R2944000) and #3015's fifteen last (R3015000).
+        // #2944's two (R2944000), #3015's fifteen (R3015000) and #3017's twelve last (R3017000).
         assert_eq!(
             cosmetics.len(),
-            72 + R3015000_NEW
+            72 + R3017000_NEW
+                + R3015000_NEW
                 + R2655000_NEW
                 + R2755000_NEW
                 + R2715000_NEW
@@ -3957,8 +4038,9 @@ mod tests {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         // Appended after #2655's full arts, with only #2715's Animated arts (R2715000), #2725's three
         // (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000), #2944's two
-        // (R2944000) and #3015's fifteen (R3015000) after it.
+        // (R2944000), #3015's fifteen (R3015000) and #3017's twelve (R3017000) after it.
         let back = &cosmetics[cosmetics.len()
+            - R3017000_NEW
             - R3015000_NEW
             - R2944000_NEW.len()
             - R2943000_NEW.len()
@@ -4133,6 +4215,60 @@ mod tests {
         "version-prismatic-animated",
     ];
 
+    /// R3017000: the six two-level ladders #3017 appends, in the registry's order: each an art level, then its
+    /// animated one a tier rarer.
+    const R3017000_LADDERS: [(&str, &[TableLevel]); 6] = [
+        (
+            "night",
+            &[
+                (VERSION_NIGHT_ID, Art, Rare),
+                ("version-night-animated", Animated, Epic),
+            ],
+        ),
+        (
+            "neon",
+            &[
+                (VERSION_NEON_ID, Art, Epic),
+                ("version-neon-animated", Animated, Legendary),
+            ],
+        ),
+        (
+            "watercolor",
+            &[
+                (VERSION_WATERCOLOR_ID, Art, Rare),
+                ("version-watercolor-animated", Animated, Epic),
+            ],
+        ),
+        (
+            "stained-glass",
+            &[
+                (VERSION_STAINED_GLASS_ID, Art, Epic),
+                ("version-stained-glass-animated", Animated, Legendary),
+            ],
+        ),
+        (
+            "woodcut",
+            &[
+                (VERSION_WOODCUT_ID, Art, Rare),
+                ("version-woodcut-animated", Animated, Epic),
+            ],
+        ),
+        (
+            "tarot",
+            &[
+                (VERSION_TAROT_ID, Art, Epic),
+                ("version-tarot-animated", Animated, Legendary),
+            ],
+        ),
+    ];
+
+    /// R3017001: #3017's three pairs, each splitting every card between its two variants' first levels.
+    const R3017001_PAIRS: [(&str, &str); 3] = [
+        (VERSION_NIGHT_ID, VERSION_NEON_ID),
+        (VERSION_WATERCOLOR_ID, VERSION_STAINED_GLASS_ID),
+        (VERSION_WOODCUT_ID, VERSION_TAROT_ID),
+    ];
+
     #[test]
     fn r3015000_every_variant_is_a_ladder_of_levels() {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
@@ -4150,10 +4286,10 @@ mod tests {
                 .iter()
                 .all(|cosmetic| !cosmetic.default && !cosmetic.starter)
         );
-        // Every version is a level of one of the eleven ladders, ranked gaplessly from its first, which is 2 for
-        // the Default variant, and nothing else has a level.
+        // Every version is a level of one of the eleven ladders, or #3017's six (R3017000), ranked gaplessly from its
+        // first, which is 2 for the Default variant, and nothing else has a level.
         let mut listed = 0;
-        for (variant, levels) in R3015000_LADDERS {
+        for (variant, levels) in R3015000_LADDERS.into_iter().chain(R3017000_LADDERS) {
             let first: u8 = if variant == DEFAULT_VARIANT { 2 } else { 1 };
             assert_eq!(
                 ladder(&cosmetics, variant)
@@ -4209,7 +4345,7 @@ mod tests {
                 "{card}"
             );
             let legacy = def.tags.contains(&Tag::Legacy);
-            for (variant, _) in R3015000_LADDERS {
+            for (variant, _) in R3015000_LADDERS.into_iter().chain(R3017000_LADDERS) {
                 let levels = ladder(&cosmetics, variant);
                 let first = levels
                     .first()
@@ -4508,5 +4644,310 @@ mod tests {
                 .map(|cosmetic| cosmetic.rarity),
             Some(Epic)
         );
+    }
+
+    #[test]
+    fn r3017000_part_six_appends_six_two_level_variants() {
+        use crate::cosmetics::CardCosmetic;
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
+        let new = r3017000_new(&cosmetics);
+        // Appended last, in the table's order: each variant's art level, then its animated one.
+        assert_eq!(
+            new.iter()
+                .map(|cosmetic| (
+                    cosmetic.id.as_str(),
+                    cosmetic.level.as_ref().map(|level| level.adds),
+                    cosmetic.rarity
+                ))
+                .collect::<Vec<_>>(),
+            R3017000_LADDERS
+                .iter()
+                .flat_map(|(_, levels)| levels
+                    .iter()
+                    .map(|(id, adds, rarity)| (*id, Some(*adds), *rarity)))
+                .collect::<Vec<_>>()
+        );
+        for cosmetic in new {
+            // Earned, per card, offered, naming no card; a chase exactly at Legendary (R1333000).
+            assert!(
+                !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious,
+                "{}",
+                cosmetic.id
+            );
+            assert_eq!(cosmetic.kind, CosmeticKind::Version, "{}", cosmetic.id);
+            assert!(
+                cosmetic.card.is_none() && !cosmetic.offer.is_empty(),
+                "{}",
+                cosmetic.id
+            );
+            assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
+            // No retired entry owns one: owning an older look never owns a part 6 one (R3015006).
+            assert!(implying(&cosmetic.id).next().is_none(), "{}", cosmetic.id);
+        }
+        // Each ladder is an art level and its animated one, offered alike, named for its variant.
+        for (variant, levels) in R3017000_LADDERS {
+            let shipped = ladder(&cosmetics, variant);
+            assert_eq!(shipped.len(), 2, "{variant}");
+            assert_eq!(shipped[0].id, format!("{VERSION_ID_PREFIX}{variant}"));
+            assert_eq!(shipped[1].id, format!("{VERSION_ID_PREFIX}{variant}-animated"));
+            assert_eq!(shipped[1].name, format!("{}, animated", shipped[0].name));
+            assert_eq!(shipped[0].offer, shipped[1].offer, "{variant}");
+            assert_eq!(
+                shipped
+                    .iter()
+                    .map(|level| (level.id.as_str(), level.rarity))
+                    .collect::<Vec<_>>(),
+                levels
+                    .iter()
+                    .map(|(id, _, rarity)| (*id, *rarity))
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        // check_pick refuses each level where it is not offered, owned or not, and takes it where it is offered and
+        // owned: night, stained-glass and tarot on one card, neon, watercolor and woodcut on the other.
+        const ONE: &str = "meditativeplus-026";
+        const OTHER: &str = "core-002";
+        let owned = OwnedCosmetics {
+            cards: new
+                .iter()
+                .flat_map(|cosmetic| [ONE, OTHER].map(|card| (card, cosmetic.id.as_str())))
+                .map(|(card, id)| CardCosmetic {
+                    card_id: card.to_owned(),
+                    cosmetic_id: id.to_owned(),
+                })
+                .collect(),
+            account: Vec::new(),
+        };
+        for cosmetic in new {
+            let id = cosmetic.id.as_str();
+            let variant = cosmetic.level.as_ref().map_or("", |level| level.variant.as_str());
+            let (on, off) = if ["night", "stained-glass", "tarot"].contains(&variant) {
+                (ONE, OTHER)
+            } else {
+                (OTHER, ONE)
+            };
+            assert_eq!(
+                check_pick(&cosmetics, &owned, CosmeticKind::Version, id, Some(off)),
+                Err(PickRefusal::NotOffered),
+                "{id} on {off}"
+            );
+            assert_eq!(
+                check_pick(&cosmetics, &owned, CosmeticKind::Version, id, Some(on)),
+                Ok(()),
+                "{id} on {on}"
+            );
+            // R3015005: a card's pick names the level, and it is worn only where it is offered.
+            let worn = |card: &str| {
+                worn_level(
+                    &cosmetics,
+                    level_of_pick(&cosmetics, card, Some(&FullArtPick::Id(id.to_owned())), &[]),
+                    |level| offered(level, Some(card)),
+                )
+                .map(|level| level.id.as_str())
+            };
+            assert_eq!(worn(on), Some(id));
+            assert_eq!(worn(off), None);
+        }
+    }
+
+    #[test]
+    fn r3017001_a_sample_from_a_start_takes_the_cards_from_it_below_its_percent() {
+        let defs = shipped_defs();
+        let sample = |from: u32, percent: u32| OfferSample {
+            seed: "version-night-neon".to_owned(),
+            from,
+            percent,
+        };
+        let taken = |sample: &OfferSample| -> BTreeSet<&str> {
+            defs.keys()
+                .map(String::as_str)
+                .filter(|card| sample.takes(card))
+                .collect()
+        };
+        // A card is taken when its hash falls at or above `from` and below `percent`.
+        let upper = sample(60, OFFER_SAMPLE_PERCENT_SCALE);
+        let middle = sample(20, 60);
+        for card in defs.keys() {
+            let at = fnv1a32_utf16_u32(&format!("version-night-neon/{card}")) % OFFER_SAMPLE_PERCENT_SCALE;
+            assert_eq!(upper.takes(card), at >= 60, "{card}");
+            assert_eq!(middle.takes(card), (20..60).contains(&at), "{card}");
+        }
+        // From 60 to the scale takes exactly what below 60 leaves, and from 0 is the sample without one.
+        let lower = sample(0, 60);
+        let all: BTreeSet<&str> = defs.keys().map(String::as_str).collect();
+        assert!(taken(&lower).is_disjoint(&taken(&upper)));
+        assert_eq!(
+            taken(&lower)
+                .union(&taken(&upper))
+                .copied()
+                .collect::<BTreeSet<_>>(),
+            all
+        );
+        assert!(!taken(&upper).is_empty() && !taken(&lower).is_empty());
+        // A `from` of 0 is left out of the text, and read as 0 where it is absent.
+        assert_eq!(
+            serde_json::to_string(&lower).ok().as_deref(),
+            Some(r#"{"seed":"version-night-neon","percent":60}"#)
+        );
+        assert_eq!(
+            serde_json::to_string(&upper).ok().as_deref(),
+            Some(r#"{"seed":"version-night-neon","from":60,"percent":100}"#)
+        );
+        assert_eq!(
+            serde_json::from_str::<OfferSample>(r#"{"seed":"version-night-neon","percent":60}"#).ok(),
+            Some(lower.clone())
+        );
+
+        // The check refuses a share of none or all of the scale, and a percent past it.
+        let checked = |sample: OfferSample| {
+            let mut cosmetics = defaults();
+            cosmetics.push(Cosmetic {
+                starter: false,
+                offer: vec![OfferClause {
+                    sample: Some(sample),
+                    ..OfferClause::default()
+                }],
+                ..entry("version-a", CosmeticKind::Version, false)
+            });
+            problems(&cosmetics)
+                .into_iter()
+                .filter(|problem| !problem.ends_with("\" has no level"))
+                .collect::<Vec<_>>()
+        };
+        assert!(checked(upper.clone()).is_empty());
+        assert!(checked(middle.clone()).is_empty());
+        for (from, percent) in [(60, 60), (70, 60)] {
+            assert_eq!(
+                checked(sample(from, percent)),
+                vec![format!(
+                    "the offer of \"version-a\" samples 0 in {OFFER_SAMPLE_PERCENT_SCALE} of its cards, which must be some and not all"
+                )],
+                "{from} to {percent}"
+            );
+        }
+        assert_eq!(
+            checked(sample(10, OFFER_SAMPLE_PERCENT_SCALE + 10)),
+            vec![
+                format!(
+                    "the offer of \"version-a\" samples {OFFER_SAMPLE_PERCENT_SCALE} in {OFFER_SAMPLE_PERCENT_SCALE} of its cards, which must be some and not all"
+                ),
+                format!(
+                    "the offer of \"version-a\" samples below {}, past {OFFER_SAMPLE_PERCENT_SCALE}",
+                    OFFER_SAMPLE_PERCENT_SCALE + 10
+                ),
+            ]
+        );
+        assert_eq!(
+            checked(sample(50, OFFER_SAMPLE_PERCENT_SCALE + 10)),
+            vec![format!(
+                "the offer of \"version-a\" samples below {}, past {OFFER_SAMPLE_PERCENT_SCALE}",
+                OFFER_SAMPLE_PERCENT_SCALE + 10
+            )]
+        );
+    }
+
+    #[test]
+    fn r3017001_each_pair_splits_every_card_between_its_two() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let by_id = |id: &str| {
+            cosmetics
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} ships"))
+        };
+        let defs = shipped_defs();
+        let mut legacy = 0;
+        for (card, def) in defs.iter().filter(|(_, def)| !def.is_token()) {
+            legacy += usize::from(def.tags.contains(&Tag::Legacy));
+            for (a, b) in R3017001_PAIRS {
+                assert!(
+                    offered(by_id(a), Some(card)) != offered(by_id(b), Some(card)),
+                    "{card}: {a} and {b}"
+                );
+            }
+        }
+        // Legacy cards are among them, offered the pairs' art levels and none of their animated ones.
+        assert!(legacy > 0);
+        for (variant, _) in R3017000_LADDERS {
+            let animated = format!("{VERSION_ID_PREFIX}{variant}-animated");
+            assert!(
+                !offered(by_id(&animated), Some(LEGACY_DUPLICATING_FELINORS)),
+                "{animated}"
+            );
+        }
+        // Each pair shares one seed, each clause of the first ending where the second's begins.
+        for (a, b) in R3017001_PAIRS {
+            let (a, b) = (by_id(a), by_id(b));
+            assert_eq!(a.offer.len(), b.offer.len());
+            for (first, second) in a.offer.iter().zip(&b.offer) {
+                assert_eq!(first.types, second.types);
+                let (Some(low), Some(high)) = (&first.sample, &second.sample) else {
+                    panic!("{} and {} sample", a.id, b.id);
+                };
+                assert_eq!(low.seed, high.seed);
+                assert_eq!((low.from, low.percent), (0, high.from));
+                assert_eq!(high.percent, OFFER_SAMPLE_PERCENT_SCALE);
+            }
+        }
+    }
+
+    #[test]
+    fn r3017001_every_card_is_offered_at_least_variant_min_per_card_variants() {
+        use crate::config::{VARIANT_MIN_PER_CARD, VERSION_OFFER_MIN_CARDS, VERSION_OFFER_MIN_PER_SET};
+        use jackioh_engine::SHIPPED_SETS;
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let defs = shipped_defs();
+        // Each variant but the Default by its first level, the one its other levels are offered as.
+        let firsts: Vec<&Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| {
+                cosmetic
+                    .level
+                    .as_ref()
+                    .is_some_and(|level| level.variant != DEFAULT_VARIANT && level.rank == 1)
+            })
+            .collect();
+        assert_eq!(firsts.len(), R3015000_LADDERS.len() - 1 + R3017000_LADDERS.len());
+        let on = |cosmetic: &Cosmetic| -> BTreeSet<&str> {
+            defs.keys()
+                .map(String::as_str)
+                .filter(|card| offered(cosmetic, Some(card)))
+                .collect()
+        };
+        let non_tokens: BTreeSet<&str> = defs
+            .iter()
+            .filter(|(_, def)| !def.is_token())
+            .map(|(id, _)| id.as_str())
+            .collect();
+        // The floor, on every card, Legacy ones among them.
+        let mut legacy = 0;
+        for card in &non_tokens {
+            let variants = firsts.iter().filter(|first| offered(first, Some(card))).count();
+            assert!(variants >= VARIANT_MIN_PER_CARD, "{card}: {variants}");
+            legacy += usize::from(defs[*card].tags.contains(&Tag::Legacy));
+        }
+        assert!(legacy > 0 && non_tokens.contains(LEGACY_DUPLICATING_FELINORS));
+        // The mix: no two variants on the same cards, and none on every card.
+        for (at, a) in firsts.iter().enumerate() {
+            assert!(on(a).len() < non_tokens.len(), "{}", a.id);
+            for b in &firsts[at + 1..] {
+                assert_ne!(on(a), on(b), "{} and {}", a.id, b.id);
+            }
+        }
+        // The spread: each part 6 level reaches its floor in all and in every set that ships.
+        for cosmetic in r3017000_new(&cosmetics) {
+            let cards = on(cosmetic);
+            assert!(cards.len() >= VERSION_OFFER_MIN_CARDS, "{}", cosmetic.id);
+            for set in SHIPPED_SETS {
+                let in_set = cards.iter().filter(|card| defs[**card].set == set).count();
+                assert!(
+                    in_set >= VERSION_OFFER_MIN_PER_SET,
+                    "{} in {set}: {in_set}",
+                    cosmetic.id
+                );
+            }
+        }
     }
 }

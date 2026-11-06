@@ -18,8 +18,8 @@ use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
     VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ANIMATED_ID, VERSION_COMIC_ID,
     VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
-    VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID,
-    VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
+    VERSION_IMMERSIVE_ID, VERSION_NIGHT_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID,
+    VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID, VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -1595,6 +1595,65 @@ async fn r2944000_no_token_buys_a_mythic_version_and_none_where_not_offered() {
     // Nothing written or spent: both Legendary tokens are still held.
     assert_eq!(everything(&app).await, before);
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 2);
+}
+
+#[tokio::test]
+async fn r3017000_a_token_buys_a_part_six_level_only_where_offered() {
+    let (app, token) = setup().await;
+    // Scratch Pad, a Mythic Spell, is offered Night, Stained-glass window and Tarot card; Speciesist, a Common Unit,
+    // their partners alone (R3017001).
+    let card = "meditativeplus-026".to_string();
+    let bare = "core-002".to_string();
+    own(&app, &[card.clone(), bare.clone()]).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let night_animated = "version-night-animated";
+    // Each on the card it is not offered, with a token of its tier: a 400, and nothing written or spent.
+    let before = everything(&app).await;
+    for (cosmetic, tier) in [
+        (VERSION_NIGHT_ID, "Rare"),
+        (night_animated, "Epic"),
+        (VERSION_STAINED_GLASS_ID, "Epic"),
+        (VERSION_TAROT_ID, "Epic"),
+    ] {
+        let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    // On the card it is offered, a Rare token buys Night, and an Epic token then its animated level (R3015004).
+    for (cosmetic, tier) in [(VERSION_NIGHT_ID, "Rare"), (night_animated, "Epic")] {
+        let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 200, "{cosmetic}: {answer}");
+        assert!(
+            ledger(&app)
+                .await
+                .cosmetics
+                .iter()
+                .any(|row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == cosmetic),
+            "{cosmetic}"
+        );
+    }
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 0);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 0);
+    assert!(
+        !ledger(&app)
+            .await
+            .cosmetics
+            .iter()
+            .any(|row| row.card_id.as_deref() == Some(bare.as_str()))
+    );
 }
 
 #[tokio::test]

@@ -240,7 +240,7 @@ async fn r2715000_an_existing_account_owns_none_of_the_21() {
 }
 
 #[tokio::test]
-async fn r2725000_r2940000_r2942000_r2943000_r2944000_an_existing_account_owns_none_of_the_versions_and_augments()
+async fn r2725000_r2940000_r2942000_r2943000_r2944000_r3017000_an_existing_account_owns_none_of_the_versions_and_augments()
  {
     let app = test_app().await;
     let profile = profile_id_of(&app, USER).await;
@@ -250,7 +250,8 @@ async fn r2725000_r2940000_r2942000_r2943000_r2944000_an_existing_account_owns_n
     // #2725's three: the Full art version and the Animated and Signature augments, none a default or a
     // starter (R2725000); then #2940's three versions, Alt art, Sketch and Alt full art (R2940000),
     // #2942's three, Extended art, Pixel and Comic (R2942000), #2943's two, Set showcase and Out of frame
-    // (R2943000), #2944's two, Immersive and Prismatic (R2944000), and #3015's fifteen levels (R3015000).
+    // (R2943000), #2944's two, Immersive and Prismatic (R2944000), #3015's fifteen levels (R3015000) and #3017's
+    // twelve, six variants' art and animated levels (R3017000).
     let new: Vec<String> = shipped()
         .expect("the shipped registry")
         .into_iter()
@@ -289,10 +290,22 @@ async fn r2725000_r2940000_r2942000_r2943000_r2944000_an_existing_account_owns_n
             "version-out-of-frame-animated",
             "version-immersive-animated",
             "version-prismatic-animated",
+            "version-night",
+            "version-night-animated",
+            "version-neon",
+            "version-neon-animated",
+            "version-watercolor",
+            "version-watercolor-animated",
+            "version-stained-glass",
+            "version-stained-glass-animated",
+            "version-woodcut",
+            "version-woodcut-animated",
+            "version-tarot",
+            "version-tarot-animated",
         ]
     );
 
-    // Nothing in the server grants them: the account reads what it was given, and none of the twenty-eight, even
+    // Nothing in the server grants them: the account reads what it was given, and none of the forty, even
     // those its retired full arts count as owning (R2725002, R3015006), which is read where they are worn; only
     // migration 0083 wrote them as rows, once, for the accounts the database held then.
     let (status, body) = get(&app, Some(TOKEN)).await;
