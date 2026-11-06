@@ -16015,12 +16015,13 @@
     "what": "revise #3272 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-06T12:23:55Z",
+    "at": "2026-11-06T12:40:21Z",
     "notes": [
-      "delivered build #3211 on claude-6 (run 42212286175): built",
-      "started review #3303 on claude-6 (run 42217764880)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#3272: its turn came (it waited 120 minutes for #3245, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "delivered revise #3268 on claude-8 (run 42212048369): built",
+      "started review #3268 on claude-8 (run 42219928223)",
+      "started revise #3272 on claude-7 (run 42220056547)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16726,7 +16727,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T12:23:55Z",
+  "loop_tick": "2026-11-06T12:40:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
