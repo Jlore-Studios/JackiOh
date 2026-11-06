@@ -17630,6 +17630,8 @@
       }
     },
     "3263": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T01:13:15Z",
@@ -17643,8 +17645,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; echo ----; cat scripts/ci-shards.toml\", \"description\": \"Read bot notes and shard config\"}\n- Bash: {\"command\": \"sed -n 50,200p .bot-notes.md; echo ----; cat .bot-journal.md 2>/dev/null | head -40; git status --short\", \"description\": \"Read rest of notes and journal\"}\n- Bash: {\"command\": \"sed -n 55,140p bot/tests/test_ci_matrix.py; grep -n \\\"MAX_SHARDS\\\" .github/ci/matrix.py | head\", \"description\": \"Inspect the bot's matrix tests\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3258/scripts/ci-shards.toml\", \"old_string\": \"# `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tes\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State\\n\\n- Run 2 (build, sonnet): edited `scripts/ci-shards.toml` (`[web] unit = 8` + comment). Next: verify with matrix.py and bot unittest, then repo\u2026\n- Bash: {\"command\": \"python3 .github/ci/matrix.py matrix | grep -E '^(e2e_smoke_shards|web_unit_shards)'; cd bot && python3 -m unittest tests.test_ci_matrix 2>&1 | grep -E \\\"^(FAIL|ERROR|Ran|OK|FAILED)\\\"; cd\u2026\n- Bash: {\"command\": \"ls node_modules >/dev/null 2>&1 && timeout 300 pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts 2>&1 | tail -15; grep -rn \\\"ci-shards\\\" --include=* -l . 2>/dev/null | grep -v\u2026\n- Bash: {\"command\": \"timeout 300 pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts 2>&1 | grep -iE \\\"error|cannot|failed to\\\" | head -5; ls apps/web/src/wasm/pkg 2>&1 | head -3\", \"description\": \"S\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- matrix.py prints web_unit_shards=[1..8], rust_test/e2e_smoke_shards unchanged. bot unittest: 3 tests fail (4 subtests), exactly the plan's three. ci-scope\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 7 minutes\"} --> ## What changed `scripts/ci-shards.toml`: `[web] unit` goes from 4 to 8, with a one-line comment saying why. That is the only change. 8 is the most a count may be (`MAX_SHARDS` in `.github/ci/matrix.py`). Vitest deals the sam\u2026"
       },
       "issue": 3258,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-06T02:22:09Z",
         "from_run": "42142351044",
         "gates": [
           {
@@ -17736,7 +17741,11 @@
         "source": "build",
         "until": "2026-11-06T02:50:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-06T02:20:41Z",
+      "run_id": "pending:89930052-1793931685",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17755,6 +17764,9 @@
         "provider": "claude-4",
         "run": "42142351044"
       },
+      "started_at": "2026-11-06T02:22:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17768,9 +17780,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T01:57:50Z",
+    "at": "2026-11-06T02:22:09Z",
     "url": "",
-    "what": "revise #3068 on claude-3"
+    "what": "review #3263 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-06T02:09:55Z",
