@@ -161,6 +161,15 @@ function freshAccount(session: Session): MeResponse | undefined {
   return me !== undefined && opensAtOnce(me) ? me : undefined;
 }
 
+/**
+ * R3207003: the answer this tab last kept for its session, of any age (each `useAccount` keeps the one it
+ * settles on); undefined before the first read, after sign-out or after `announceAccountChange()`.
+ */
+export function keptAccount(): MeResponse | undefined {
+  const session = readSession();
+  return session === null ? undefined : cachedRead<MeResponse>(session.accessToken, ME_PATH);
+}
+
 function readyAccount(session: Session, me: MeResponse): Account {
   return {
     kind: "ready",
