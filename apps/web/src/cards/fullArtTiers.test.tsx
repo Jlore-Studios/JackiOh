@@ -61,6 +61,7 @@ import {
   isFullBleed,
   lookOfLevel,
 } from "./versions.ts";
+import { legacyText } from "../test/faceData.ts";
 
 /** R2655001: the fifteen cards #2655 adds to the six hero portraits' cards. */
 const NEW_CARDS = [
@@ -914,7 +915,7 @@ describe("R2725000 R3015000 a card's level on its face", () => {
     for (const id of CARDS) {
       const def = CATALOG[id];
       if (def === undefined) throw new Error(`no ${id}`);
-      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      const marked = legacyText(faceModel({ defId: id, def, radiant: true }).text).marks.length > 0;
       for (const level of LEVELS) {
         writeCardLevel(id, level);
         for (const radiant of [false, true]) {
