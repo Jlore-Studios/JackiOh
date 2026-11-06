@@ -13730,7 +13730,7 @@
       "started_at": "2026-11-06T03:36:43Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 9,
+      "verdict_rounds": 11,
       "votes": {
         "approvals": [],
         "builder": "claude",
