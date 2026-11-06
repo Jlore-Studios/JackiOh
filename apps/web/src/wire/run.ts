@@ -29,6 +29,7 @@ export type { RunPoolCard } from "./generated/RunPoolCard.ts";
 export type { RunSetup } from "./generated/RunSetup.ts";
 export type { RunShopGood } from "./generated/RunShopGood.ts";
 export type { RunShopItem } from "./generated/RunShopItem.ts";
+export type { RunShopPrices } from "./generated/RunShopPrices.ts";
 export type { RunState } from "./generated/RunState.ts";
 export type { RunStats } from "./generated/RunStats.ts";
 export type { RunTier } from "./generated/RunTier.ts";

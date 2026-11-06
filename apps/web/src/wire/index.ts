@@ -26,6 +26,7 @@ import type { GameEventType } from "./generated/GameEventType.ts";
 
 export type { Action } from "./generated/Action.ts";
 export type { ActionBody } from "./generated/ActionBody.ts";
+export type { ActivationSource } from "./generated/ActivationSource.ts";
 export type { ActivationView } from "./generated/ActivationView.ts";
 export type { AttackForecast } from "./generated/AttackForecast.ts";
 export type { CardCost } from "./generated/CardCost.ts";

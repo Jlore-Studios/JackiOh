@@ -31,6 +31,7 @@ import type {
   RunFightSetup,
   RunFile,
   RunSetup,
+  RunShopPrices,
   RunState,
   RunUnlocks,
 } from "@jackioh/run";
@@ -403,6 +404,15 @@ export function runEmbers(score: number): number {
 /** The run's max HP, before no fight and after every artifact and blessing. */
 export function runMaxHp(state: RunState, content: RunContent): number {
   return call("runMaxHp", () => parsed<number>(normal.run_max_hp(json(state), json(content))));
+}
+
+/**
+ * What a shop's services cost this run, as the run spends them: the remove price after the shop
+ * discount, the Radiant and buff Tickets, each held relic's next level (null at its top) and each
+ * stock item's Coins after the discount.
+ */
+export function runShopPrices(state: RunState, content: RunContent): RunShopPrices {
+  return call("runShopPrices", () => parsed<RunShopPrices>(normal.run_shop_prices(json(state), json(content))));
 }
 
 /** The Embers that raise the starting deck from `level` to the next, or null at the ladder's top. */

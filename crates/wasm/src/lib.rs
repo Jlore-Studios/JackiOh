@@ -117,6 +117,13 @@ pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, JsErro
     js(wasm_core::run_max_hp(state_json, content_json))
 }
 
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[wasm_bindgen]
+pub fn run_shop_prices(state_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_shop_prices(state_json, content_json))
+}
+
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
 #[wasm_bindgen]
 pub fn run_level_cost(level_json: &str) -> Result<String, JsError> {

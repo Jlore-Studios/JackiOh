@@ -1,6 +1,7 @@
 // Tutorial numbers and keys obey CLAUDE.md rule 9; the opponent handicap remains engine-owned
 // (`AI_TUTORIAL` in crates/engine/src/config.rs, R290).
 
+import { PHONE_SHEET_QUERY } from "../breakpoints.ts";
 import { PRACTICE_SHOWCASE_HOLD_MAX_MS } from "../practice/config.ts";
 
 /** Retire stale non-final steps so a passed moment cannot strand the lesson. */
@@ -26,7 +27,7 @@ export const COACH_VIEWPORT_MARGIN_PX = 8;
 export const COACH_TRACK_INTERVAL_MS = 250;
 
 /** Dock on phone layouts so the bubble cannot cover board cards (docs/polish/7-mobile-ux.md S7). */
-export const COACH_DOCK_QUERY = "(max-width: 600px), (orientation: landscape) and (max-height: 500px)";
+export const COACH_DOCK_QUERY = PHONE_SHEET_QUERY;
 
 /** Preserve room for a floating bubble's title and actions. */
 export const COACH_BUBBLE_MIN_HEIGHT_PX = 96;
