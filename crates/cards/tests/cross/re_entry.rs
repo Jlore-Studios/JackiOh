@@ -447,7 +447,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
     }
 }
 
-mod r77_r175_a_fuse_onto_a_token_summoned_x_x {
+mod r77_r175_fusing_onto_a_token_summoned_x_x {
     use super::*;
 
     #[test]
