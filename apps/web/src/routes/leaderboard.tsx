@@ -146,7 +146,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                   : t("You are {rank} — play rated games to climb", { rank: rankCaption(board.you) })}
               </p>
 
-              <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
+              <h2 className="section-heading leaderboard-heading">{t("Jlorious")}</h2>
               {board.jlorious.length === 0 ? (
                 <p>{t("No Jlorious players yet this season.")}</p>
               ) : (
@@ -162,9 +162,9 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
               {board.tiers.map((tier) => (
                 <section key={tier.tier} data-testid={leaderboardTestid.tier} data-tier={tier.tier}>
-                  <h3 className="leaderboard-heading">
+                  <h2 className="section-heading leaderboard-heading">
                     <RankCrest tier={tier.tier} size="small" /> {tierName(tier.tier)} ({tier.count})
-                  </h3>
+                  </h2>
                   {tier.players.length === 0 ? (
                     <p>{t("Nobody here yet.")}</p>
                   ) : (

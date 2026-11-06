@@ -144,6 +144,7 @@ describe("the account screen", () => {
 
     expect(await screen.findByTestId("account-email")).toHaveTextContent("player1@example.com");
     expectOnePageTitle("Your account");
+    expect(screen.getAllByRole("heading", { level: 2 }).length, "section headings are h2, under the h1").toBeGreaterThan(0);
   });
 
   it("shows which account you are signed in as, and its record", async () => {

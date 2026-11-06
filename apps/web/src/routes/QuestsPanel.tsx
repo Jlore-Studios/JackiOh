@@ -96,7 +96,7 @@ export function QuestsList({
   };
   return (
     <div className="account-quests" data-testid={questsTestid.panel}>
-      <h3 className="account-heading">{t("Quests")}</h3>
+      <h2 className="account-heading">{t("Quests")}</h2>
       {quests.quests.length === 0 ? (
         <EmptyState text={t("No quests yet.")} />
       ) : (
@@ -258,7 +258,7 @@ export function QuestsView({
   if (error !== null) {
     return (
       <div className="account-quests" data-testid={questsTestid.panel}>
-        <h3 className="account-heading">{t("Quests")}</h3>
+        <h2 className="account-heading">{t("Quests")}</h2>
         <p className="notice" role="alert" data-testid={questsTestid.error}>
           {t(error)}
         </p>
@@ -274,7 +274,7 @@ export function QuestsView({
     // Not the panel's testid: that stands for quests read, or a read that failed.
     return (
       <div className="account-quests">
-        <h3 className="account-heading">{t("Quests")}</h3>
+        <h2 className="account-heading">{t("Quests")}</h2>
         <Skeleton variant="rows" label={t("Loading your quests…")} testId={questsTestid.loading} />
       </div>
     );

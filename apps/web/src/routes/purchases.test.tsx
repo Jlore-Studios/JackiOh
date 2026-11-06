@@ -161,6 +161,7 @@ describe("R1665000 /purchases signed in", () => {
 
     await screen.findByTestId(purchasesTestid.odds, undefined, SLOW);
     expectOnePageTitle("Purchases");
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
   });
 
   it("R1665000 a rarity with no chance shows a dash, and every figure is the server's", async () => {

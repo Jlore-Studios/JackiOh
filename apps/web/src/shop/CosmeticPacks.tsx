@@ -189,7 +189,7 @@ export default function CosmeticPacks({
 
   return (
     <div className="form-card cosmetic-packs-panel" data-testid={shopTestid.packsPanel}>
-      <h3 className="shop-heading">{t("Cosmetic packs")}</h3>
+      <h2 className="shop-heading">{t("Cosmetic packs")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.packsLoadError}>

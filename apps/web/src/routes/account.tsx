@@ -337,17 +337,17 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             <>
               <AccountIdentity email={profile.email} status={profile.status} />
 
-              <h3 className="account-heading">{t("Rank")}</h3>
+              <h2 className="account-heading">{t("Rank")}</h2>
               {rank !== null ? (
                 <>
-                  <h4 className="account-heading">{t("Constructed")}</h4>
+                  <h3 className="account-heading">{t("Constructed")}</h3>
                   <LadderRank
                     rank={rank}
                     testids={{ rank: accountTestid.rank, seasonRecord: accountTestid.seasonRecord, badges: accountTestid.badges }}
                   />
                   {randomRank !== null ? (
                     <>
-                      <h4 className="account-heading">{t("All Random")}</h4>
+                      <h3 className="account-heading">{t("All Random")}</h3>
                       <LadderRank
                         rank={randomRank}
                         testids={{
@@ -371,7 +371,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 </>
               ) : null}
 
-              <h3 className="account-heading">{t("Record")}</h3>
+              <h2 className="account-heading">{t("Record")}</h2>
               <div className="stat-row">
                 <div className="stat">
                   <span className="stat-value" data-testid={accountTestid.winRate}>

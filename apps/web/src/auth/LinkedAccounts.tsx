@@ -99,7 +99,7 @@ function LinkedPanel({ token, providers }: { token: string; providers: OAuthProv
 
   return (
     <div className="account-two-step" data-testid={linkedTestid.section}>
-      <h3 className="account-heading">{t("Other ways to sign in")}</h3>
+      <h2 className="account-heading">{t("Other ways to sign in")}</h2>
       {moving !== null && phase.kind === "ready" && !phase.identities.some((entry) => entry.provider === moving) ? (
         <p className="notice" data-testid={linkedTestid.moving} role="status">
           {t("Link {provider} below to finish: from then on it signs in to this account.", {

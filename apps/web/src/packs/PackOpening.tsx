@@ -479,7 +479,7 @@ export default function PackOpening({
 
   return (
     <div className="form-card packs-panel" data-testid={packTestid.panel}>
-      <h3 className="shop-heading">{t("Card packs")}</h3>
+      <h2 className="shop-heading">{t("Card packs")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={packTestid.loadError}>

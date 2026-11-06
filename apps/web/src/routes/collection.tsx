@@ -136,7 +136,7 @@ function Section<T>({
 }): ReactElement {
   return (
     <section className="collection-section">
-      <h3 className="account-heading">{title}</h3>
+      <h2 className="account-heading">{title}</h2>
       {read.kind === "loading" ? (
         <Skeleton variant="rows" label={loading} testId={collectionTestid.loading(part)} />
       ) : read.kind === "error" ? (
@@ -250,7 +250,7 @@ function CosmeticsSection({ token }: { token: string }): ReactElement {
     <>
       <div className="collection-body" data-testid={collectionTestid.body}>
         <section className="collection-section">
-          <h3 className="account-heading">{t("Equipped")}</h3>
+          <h2 className="account-heading">{t("Equipped")}</h2>
           <p>
             {t(
               "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",

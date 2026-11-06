@@ -21,5 +21,12 @@ export function expectOnePageTitle(name: string, root: ParentNode = document.bod
   expect(title).toHaveClass("page-title");
   expect(title.textContent).toBe(name);
   expect(title.closest(UNSEEN), "the title is drawn, not hidden").toBeNull();
+  // Below the title no heading skips a level: a section is an h2, and an h3 sits inside an h2.
+  let level = 1;
+  for (const heading of Array.from(root.querySelectorAll("h1, h2, h3, h4, h5, h6"))) {
+    const next = Number(heading.tagName.slice(1));
+    expect(next, `${heading.tagName} "${heading.textContent}" skips a heading level after h${level}`).toBeLessThanOrEqual(level + 1);
+    level = next;
+  }
   return title;
 }

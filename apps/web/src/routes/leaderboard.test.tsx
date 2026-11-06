@@ -96,6 +96,7 @@ describe("the leaderboard screen", () => {
 
     expect(await screen.findByTestId("leaderboard-jlorious")).toHaveTextContent("Max");
     expectOnePageTitle("Leaderboard");
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
   });
 
   it("lists Jlorious by position, the tiers with their counts, and the Raisins", async () => {
