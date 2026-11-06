@@ -17142,6 +17142,13 @@
     "3329": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42311617385",
+        "model": "sonnet",
+        "provider": "claude-6",
+        "since": "2026-11-06T23:40:31Z",
+        "until": "2026-11-07T00:10:31Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
