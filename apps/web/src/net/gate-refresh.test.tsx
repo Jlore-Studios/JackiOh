@@ -258,9 +258,10 @@ describe("R194 B32 renewal", () => {
     await waitFor(() => {
       expect(refreshCalls.length).toBeGreaterThan(0);
     }, SLOW);
-    // Both screens have asked `/api/auth/me` and heard 401 before the provider answers.
+    // Both screens have asked `/api/auth/me` and heard 401 before the provider answers. R3206000: the
+    // two reads are one request, which both hear.
     await waitFor(() => {
-      expect(vi.mocked(fetch).mock.calls.filter(([input]) => String(input).endsWith("/api/auth/me"))).toHaveLength(2);
+      expect(vi.mocked(fetch).mock.calls.filter(([input]) => String(input).endsWith("/api/auth/me"))).toHaveLength(1);
     }, SLOW);
     await flush();
     for (const release of releases) release();
