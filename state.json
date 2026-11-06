@@ -17691,6 +17691,8 @@
       }
     },
     "3264": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-06T01:45:19Z",
@@ -17704,8 +17706,11 @@
         "trail": "server crate to see its ow\u2026\n- said: The server crate compiles clean under clippy. Now the tests.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/auth.rs'\\ns=open(p).read()\\nreps=[\\n('''use jackioh_server::config::{\\n AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAI\u2026\n- Bash: {\"command\": \"sed -n '255,266p' crates/shared/tests/bots_pick.rs; grep -n '^mod \\\\|^use \\\\|^pub mod' crates/server/tests/api/mod.rs | head -20\", \"description\": \"Check const-assert pattern and api test\u2026\n- said: Now the new test module at the end of the file.\n- Bash: {\"command\": \"cat >> crates/server/tests/api/auth.rs <<'EOF'\\n\\n// R3209000: requests that arrive together share one provider check\\n\\n/// R3209000 \\u2014 requests that arrive together share one provi\u2026\n- Bash: {\"command\": \"cp crates/server/src/auth.rs /tmp/auth.rs.good\\nrun() { timeout 900 cargo test -q -p jackioh-server --test server r3209000 2>&1 | grep -E '^test .*FAILED|test result' | sed 's/^test api:\u2026\n- Bash: {\"command\": \"run() { timeout 900 cargo test -q -p jackioh-server --test server r3209000 2>&1 | grep -E '^ api::auth|test result' | sed 's/api::auth::r3209000_requests_that_arrive_together_share_one_p\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E 'R3[0-9]{6}' | tail -3; cat spec/rulings/R3182000.md 2>/dev/null | head -20; echo ----; cat spec/pending/3182.md 2>/dev/null | head -5; echo ----; sed -n '1,80p\u2026\n- Bash: {\"command\": \"ls spec/; grep -n 'R194\\\\|R1144000\\\\|session' spec/09*.md | head -20\", \"description\": \"Check \\u00a79 for text about the session check\"}\n- said: \u00a79 only points at R194, so no section text changes. Writing the ruling, the R194 amendment and the pending paragraph.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3209/spec/rulings/R3209000.md\", \"content\": \"---\\nid: R3209000\\ntitle: Requests that arrive together share one provider check, and a silence about a se\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R0194.md'\\ns=open(p).read()\\na=\\\"a token that names its session is checked with the provider, and only a live answer is remembered, for `AUTH_SESSION_L\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3209/spec/pending/3209.md\", \"content\": \"**[[R3209000]] Requests that arrive together share one provider session check, and a silence about a session i\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"next: run the auth tests.\\\\n\\\",\\\"next: run the auth tests.\\\\n- auth tests 50/50 green; mutation checks (no flight, o\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | grep '^Diff in' | sed 's/:[0-9]*:$//' | sort -u; rustfmt --edition 2024 crates/server/src/auth.rs crates/server/tests/api/auth.rs 2>&1 | head; cargo fmt --check \u2026\n- said: Formatting is clean and only my files changed. Now `spec check`, which builds the release tools.\n- Bash: {\"command\": \"timeout 1500 cargo jackioh spec check 2>&1 | tail -15\", \"description\": \"Run the spec check for the new ruling\", \"timeout\": 1600000}\n- said: `spec check` passes. Now the server crate's full test suite.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"next: spec check, fmt, full server tests, workspace clippy.\\\\n\\\",\\\"next: spec check, fmt, full server tests, workspa\u2026\n- said: All 1572 server tests pass. Next, workspace clippy (what the harness runs) and the `classify --claims` check CI runs on a pull request.\n- Bash: {\"command\": \"git status --short; timeout 1800 cargo clippy --workspace --all-targets -- -D warnings 2>&1 | grep -E '^(warning|error)|Finished' | head -20\", \"description\": \"Check wire dir unchanged an\u2026\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; timeout 1500 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run classify w\u2026\n- Bash: {\"command\": \"./../../JackiOh/JackiOh/target/release/jackioh classify --base origin/main --claims >/dev/null 2>&1; echo \\\"exit=$?\\\"; /home/runner/work/JackiOh/JackiOh/target/release/jackioh catalog ch\u2026\n- Bash: {\"command\": \"/home/runner/work/JackiOh/JackiOh/target/release/jackioh classify --base origin/main --claims; echo \\\"exit=$?\\\"\", \"description\": \"Re-run classify with the absolute binary path for its ex\u2026\n- said: Every check passes. Let me read my whole diff once before writing it up.\n- Bash: {\"command\": \"git diff crates/server/src/ | head -520\", \"description\": \"Review the source diff\"}\n- said: The source diff reads as planned. Checking whether the server's README or SURFACE describe the session check's timeout or memo, since those are contracts.\n- Bash: {\"command\": \"grep -rn 'AUTH_PROVIDER_TIMEOUT\\\\|session check\\\\|live_sessions\\\\|check_session\\\\|R194' crates/server/README.md docs/v0.3.0/SURFACE.md docs/architecture.md 2>/dev/null | head -20\", \"desc\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/auth.rs'\\ns=open(p).read()\\na=''' // `/auth/v1/user` never answers, and the request still comes back, on the provider's own\\n // timeout. Th\u2026\n- said: The comment edit can't change behavior, but I'll run the new and R194 tests several times over to shake out timing flakiness in the two time-sensitive tests.\n- Bash: {\"command\": \"for i in 1 2 3 4 5 6; do timeout 600 cargo test -q -p jackioh-server --test server -- r3209000 r194_ r1144000 2>&1 | grep -E 'test result|^ api'; done\", \"description\": \"Repeat the new, R\u2026\n- said: Six repeat runs are all green. Updating the notes' State for whoever comes next.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nstate='''## State\\n\\n- Build pass 1 (opus, 2026-11-06): DONE. Every plan step is\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 2 of 2): requests that arrive together share one provider session check\"} --> ## What changed A burst of requests no longer turns into a burst of calls to Supabase Auth (tracker #3202). Everything is in `crates/server/src/auth.rs`: - **Shared calls\u2026"
       },
       "issue": 3209,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-06T02:57:20Z",
         "from_run": "42145921025",
         "gates": [
           {
@@ -17797,7 +17802,11 @@
         "source": "build",
         "until": "2026-11-06T03:24:53Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-06T02:54:53Z",
+      "run_id": "pending:4967a6e1-1793933797",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17816,6 +17825,9 @@
         "provider": "claude-6",
         "run": "42145921025"
       },
+      "started_at": "2026-11-06T02:57:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17965,9 +17977,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-06T02:33:06Z",
+    "at": "2026-11-06T02:57:20Z",
     "url": "",
-    "what": "revise #3259 on claude-4"
+    "what": "review #3264 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-06T02:45:07Z",
