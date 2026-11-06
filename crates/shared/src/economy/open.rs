@@ -25,7 +25,7 @@ use crate::economy::ledger::{AccountCounters, CardCopies, Cause, Counter, Invent
 use crate::economy::math::PityCounters;
 use crate::economy::roll::{Holdings, OpeningLog, PackKind, PoolCard, Slot, SlotGrant, roll_opening};
 
-/// Why a decision refused to open a pack.
+/// Why a decision refused: to open a pack or to move a quest.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -38,6 +38,14 @@ pub enum RefusalReason {
     NoPackHeld,
     /// The pack's pool holds no card (a fault of the catalog, not of the player).
     EmptyPool,
+    /// The day's quest replaces are already used (R2210000).
+    QuestSpent,
+    /// The account does not hold that quest.
+    QuestNotHeld,
+    /// Every other entry of the quest pool is held, so there is none to swap in.
+    NoQuestLeft,
+    /// The account already holds the most quests it may.
+    QuestsFull,
 }
 
 /// A refusal is data (the host contract): the reason and the sentence a player or a log reads.
@@ -217,6 +225,7 @@ pub fn open_card_pack(
         key,
         delta: -1,
         cause: Cause::PackOpen,
+        reference: None,
     }];
     grants.extend(unlocked(
         &records.owned,
@@ -286,6 +295,7 @@ pub fn open_cosmetic_pack(
         key: String::new(),
         delta: -1,
         cause: Cause::PackOpen,
+        reference: None,
     }];
     grants.extend(unlocked(
         &records.owned,

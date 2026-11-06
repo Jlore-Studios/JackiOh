@@ -21,11 +21,13 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::app::{App, now_ms};
 use crate::config::QUEST_MAX_HELD;
 use crate::db::store::Tx;
+use crate::economy::grants::{Writing, internal_refusal, write_grants};
 use crate::economy::quests::{
-    ReplaceOutcome, arrival, complete_quest, fresh_seed, quest_def, quest_xp, replace_quest, replaces_left,
-    top_up_quests,
+    ReplaceOutcome, complete_quest, fresh_seed, give_quest, quest_def, quest_xp, replace_quest,
+    replaces_left, top_up_quests,
 };
 use crate::economy::store::{EconomyReason, HeldQuest, QuestBook};
+use jackioh_shared::economy::ledger::LedgerGrant;
 
 /// A held quest as the client reads it; `None` for an id the pool no longer has.
 fn quest_view(held: &HeldQuest) -> Option<Value> {
@@ -124,20 +126,27 @@ pub async fn dev_give_quest(app: &Arc<App>, req: Req) -> ApiResult {
     let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let book = quests_at(app, &mut tx, &profile.id, now).await?;
-    let full = || {
-        ApiError::new(
-            ApiErrorCode::Conflict,
-            "This account already holds the most quests it may.",
-        )
-    };
-    if book.held.len() >= QUEST_MAX_HELD {
-        return Err(full());
-    }
     let held: Vec<String> = book.held.iter().map(|quest| quest.quest_id.clone()).collect();
-    let (_, grant) = arrival(&profile.id, &held, fresh_seed(), EconomyReason::Dev, now).ok_or_else(full)?;
-    tx.economy_quests_change(&grant).await?;
+    let grant = give_quest(&book, &fresh_seed(), now)
+        .map_err(|refusal| ApiError::new(ApiErrorCode::Conflict, refusal.message()))?;
+    let LedgerGrant::Quest { quest_id, .. } = &grant else {
+        return Err(ApiError::internal("a dev give drew no quest"));
+    };
+    let quest_id = quest_id.clone();
+    write_grants(
+        &mut tx,
+        &Writing {
+            profile_id: &profile.id,
+            reference: &None,
+            dev: true,
+            at: now,
+        },
+        &[grant],
+        internal_refusal,
+    )
+    .await?;
     let quest = quest_view(&HeldQuest {
-        quest_id: grant.quest_id,
+        quest_id,
         progress: 0,
         arrived_at: now,
     });
