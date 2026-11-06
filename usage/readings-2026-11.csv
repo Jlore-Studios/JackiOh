@@ -5039,3 +5039,4 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-06T13:58:43Z,claude-7,stream,call,42221739150,19,2026-11-06T14:20:00Z,,,allowed,100,,
 2026-11-06T13:45:29Z,claude-4,ping,before,42227313148,7,2026-11-06T18:00:00Z,,,allowed,70,,
 2026-11-06T14:03:23Z,claude-4,stream,call,42227313148,7,2026-11-06T18:00:00Z,,,allowed,70,,
+2026-11-06T14:36:53Z,claude-4,ping,before,42235144288,8,2026-11-06T18:00:00Z,,,allowed,70,,
