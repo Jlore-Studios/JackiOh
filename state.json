@@ -34675,40 +34675,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-06T06:51:07Z,claude-1,ping,before,42176859562,92,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:51:40Z,claude-1,stream,call,42176859562,93,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:52:10Z,claude-1,stream,call,42176859562,94,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:52:55Z,claude-1,stream,call,42176859562,95,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:53:40Z,claude-1,stream,call,42176859562,96,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:54:35Z,claude-1,stream,call,42176859562,97,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:47:15Z,claude-4,ping,before,42176367784,53,2026-11-06T07:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:50:08Z,claude-1,ping,before,42176760143,90,2026-11-06T07:40:00Z,,,allowed,100,,",
-      "2026-11-06T06:50:25Z,claude-1,stream,call,42176760143,90,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:50:40Z,claude-1,stream,call,42176760143,91,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:51:10Z,claude-1,stream,call,42176760143,92,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:52:40Z,claude-1,stream,call,42176760143,95,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:53:40Z,claude-1,stream,call,42176760143,96,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:54:25Z,claude-1,stream,call,42176760143,97,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:55:25Z,claude-1,stream,call,42176760143,98,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:56:56Z,claude-1,stream,call,42176760143,99,2026-11-06T07:40:00Z,,,allowed_warning,100,,",
-      "2026-11-06T06:58:29Z,claude-1,refusal,call,42176760143,100,2026-11-06T07:40:00Z,,,rejected,100,,2026-11-06T07:40:00Z",
-      "2026-11-06T06:50:10Z,claude-6,ping,before,42176568506,4,2026-11-06T10:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:50:28Z,claude-6,stream,call,42176568506,5,2026-11-06T10:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:51:28Z,claude-6,stream,call,42176568506,6,2026-11-06T10:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:55:43Z,claude-6,stream,call,42176568506,7,2026-11-06T10:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:56:28Z,claude-6,stream,call,42176568506,8,2026-11-06T10:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:57:43Z,claude-6,stream,call,42176568506,9,2026-11-06T10:40:00Z,,,allowed,50,,",
-      "2026-11-06T06:59:13Z,claude-6,stream,call,42176568506,10,2026-11-06T10:40:00Z,,,allowed,50,,"
-    ],
-    "runs": [
-      "2026-11-06T06:54:36Z,42176859562,claude-1,opus,plan,3289,medium,planned,,3.4,43,28521,1656927,0.8075,92,97,,,13.8,,fresh,,1",
-      "2026-11-06T06:47:15Z,42176367784,claude-4,opus,build,3017,hard,interrupted,5-hour cap,0,0,0,0,,53,53,,,2750.2,claude-4,none,,0",
-      "2026-11-06T06:45:36Z,42176267303,claude-3,opus,revise,3068,hard,not_approved,,0,0,0,0,,,,,,0.6,claude-3,none,,0",
-      "2026-11-06T06:58:30Z,42176760143,claude-1,opus,plan,3283,medium,interrupted,refusal,8.3,97,66399,8114083,2.3347,90,100,,,13.2,,fresh,,1",
-      "2026-11-06T07:00:11Z,42176568506,claude-6,opus,plan,3287,hard,planned,,10,101,46554,5183549,3.0072,4,10,,,28.5,claude-6,fresh,,1"
-    ]
-  },
   "version": 1
 }
