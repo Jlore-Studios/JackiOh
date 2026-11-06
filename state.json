@@ -16655,13 +16655,10 @@
     "what": "revise #3316 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-06T18:48:47Z",
+    "at": "2026-11-06T19:00:37Z",
     "notes": [
-      "delivered build #3314 on claude-3 (run 42267057460): built",
-      "delivered revise #3272 on claude-1 (run 42264345369): approved",
-      "started review #3318 on claude-3 (run 42274641562)",
-      "started revise #3316 on claude-3 (run 42274760425)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #3316 on claude-3 (run 42274760425): built",
+      "delivered review #3318 on claude-3 (run 42274641562): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17367,7 +17364,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-06T18:48:47Z",
+  "loop_tick": "2026-11-06T19:00:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
