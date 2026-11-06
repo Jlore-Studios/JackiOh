@@ -14,7 +14,16 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
 import { impliedBy, isNextLevel, isOfferedId, offeredOn } from "../cards/versions.ts";
-import type { CollectionResponse, CosmeticSlot, CosmeticTokenStep, OwnedCosmeticsResponse } from "../net/api.ts";
+import type {
+  BoughtPackResponse,
+  CollectionResponse,
+  CosmeticSlot,
+  CosmeticTokenStep,
+  OpeningBarsAnswer,
+  OwnedCosmeticsResponse,
+  PacksResponse,
+  TokenBarsResponse,
+} from "../net/api.ts";
 
 /** One registry entry, structurally: what the filters read. */
 export type RegistryCosmetic = {
@@ -109,6 +118,33 @@ export const SHOP_FLY_MS = 600;
 
 export function shopPacks(): string[] {
   return [GLOBAL_PACK_NAME, ...SHIPPED_SETS];
+}
+
+/** The counts after a bought pack: the answer's count for its kind, every other kind untouched. */
+export function withBought(unopened: PacksResponse["unopened"], bought: BoughtPackResponse): PacksResponse["unopened"] {
+  const counts = new Map(unopened.map((entry) => [entry.pack, entry.count]));
+  counts.set(bought.pack, bought.unopened);
+  return shopPacks()
+    .filter((pack) => (counts.get(pack) ?? 0) > 0)
+    .map((pack) => ({ pack, count: counts.get(pack) ?? 0 }));
+}
+
+/**
+ * The token panel after an opening (R3211000): both bars at the points and sizes the answer settled them
+ * to. The held counts and the next step stay as read: the answer does not carry them, and the server
+ * decides them (CLAUDE.md rule 7), so the page reads them once when the scene closes.
+ */
+export function withOpeningBars(bars: TokenBarsResponse, opening: OpeningBarsAnswer): TokenBarsResponse {
+  return {
+    ...bars,
+    cardBar: { points: opening.card.after, size: opening.card.size },
+    cosmeticBar: { points: opening.cosmetic.after, size: opening.cosmetic.size },
+  };
+}
+
+/** Whether a bar the server sent stands full (the Chase Shard's, which the server's answer settles). */
+export function shardFull(bar: { points: number; size: number }): boolean {
+  return bar.points >= bar.size;
 }
 
 export function shortfallOf(price: number, jlore: number): number {

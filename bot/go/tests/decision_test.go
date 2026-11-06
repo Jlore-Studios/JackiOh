@@ -114,8 +114,13 @@ func TestDecision_TheQuestionExplainsTheProblemAndSaysHowToAnswer(t *testing.T) 
 		"1. (A) No earning: already on the branch *Trade-off:* Players earn nothing for a win yet.\n"+
 		"2. (B) Earn 10 Jlore a win *Trade-off:* It changes the economy the issue left alone.\n")
 	suggestion := strIndex(t, said, "**My suggestion:** option 1, because it stays inside what the issue asks.")
-	answer := strIndex(t, said, "Reply with a number, or tell me something else in your own words, and I'll "+
-		"revise it that way. If nobody answers by Wed 30 Sep 22:00 CDT, I go ahead with option 1.")
+	// How to answer (#3300): the form `plan.reply` reads, from a person's own account, and the command's form.
+	answer := strIndex(t, said, "**How to answer:** reply here with a plain comment from your own account, "+
+		"just the option's number (`1`) or your own words, and I'll build it that way; I say ✅ **Answered** here "+
+		"once I take it. Leave `@jgoetzmann-bot` and `/harness` out of it: I read a comment that names me as a "+
+		"command, not as your answer. `/harness build <your answer>` works too, but as an ordinary build that any "+
+		"free lane takes, not as your answer to this question. If nobody answers by Wed 30 Sep 22:00 CDT, I go "+
+		"ahead with option 1.")
 	assertTrue(t, problem < options && options < suggestion && suggestion < answer, problem, options, suggestion, answer)
 	provider := planned.Str("provider")
 	assertIn(t, fmt.Sprintf("(After 24 hours, `decision_wait_hours`, `%s` takes it up again on `", provider), said)
@@ -495,7 +500,9 @@ func TestDecision_ARevisionsQuestionIsAnsweredAsARevision(t *testing.T) {
 	assertEqual(t, decisionAssignees(h, 40), setOf("jgoetzmann", "MaxGoetzmann"))
 	said := lastOf(t, h.gh.BotComments(40))
 	assertIn(t, "I need a decision before I can revise this.", said)
-	assertIn(t, "Reply with a number, or tell me something else in your own words", said)
+	assertIn(t, "**How to answer:** reply here with a plain comment from your own account, just the option's "+
+		"number (`1`) or your own words, and I'll revise it that way;", said)
+	assertIn(t, "`/harness revise <your answer>` works too, but as an ordinary revision that any free lane takes", said)
 	decisionReply(h, 40, "(B), please.")
 	plan.SyncDecisions(h.ctx)
 	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelRevise))

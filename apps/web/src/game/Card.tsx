@@ -196,8 +196,8 @@ export type CardProps = {
   switchTarget?: boolean;
   /**
    * #2932: a face-up card standing in a field zone (a unit in the units row, a unit or a card in the
-   * backrow). On the phone portrait layout its Activate control and keyword marks hang off its top-left
-   * corner (`FieldBadges.tsx`); anywhere else, and in a hand or an inspect view, they sit on the face.
+   * backrow). On the phone portrait layout its Activate control and keyword marks stand in its zone's
+   * top-left corner (`FieldBadges.tsx`); anywhere else, and in a hand or an inspect view, they sit on the face.
    */
   onField?: boolean;
   draggable?: boolean;
@@ -556,7 +556,7 @@ export default function Card(props: CardProps): ReactElement {
 
       {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
           view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none.
-          #2932: on a phone's field they hang off the card's corner instead (FieldBadges, below). */}
+          #2932: on a phone's field they stand in the zone's corner instead (FieldBadges, below). */}
       {offFace ? null : <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />}
 
       <PopLayer pops={props.pops} />

@@ -1355,7 +1355,7 @@ describe("the drill-down's card preview", () => {
     // In the phone's column the body centers its items, which shrank the details column to its
     // content and left the skeleton's rows (`width: 100%` of it) no room for their lines.
     const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    const phone = /@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    const phone = /@media\s*\(max-width:\s*600px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
     const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
     expect(body).toMatch(/flex-direction:\s*column/);
     expect(body).toMatch(/align-items:\s*center/);

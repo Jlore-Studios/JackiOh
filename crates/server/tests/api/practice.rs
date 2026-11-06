@@ -237,7 +237,13 @@ fn ai_move(
 /// A practice game played out from `setup` on `seed` as the worker plays it: the AI moves whenever
 /// it owes one, through `ai_move`, and the human otherwise, each under its own nonces
 /// from the seat it plays then (R677). The log, the human's result and the final state.
-fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, ClaimedResult, GameState) {
+/// `abandoned` is asked before each action: a game it gives up on is `None`.
+fn play_unless(
+    seed: &str,
+    setup: &PracticeSetup,
+    human: Human,
+    abandoned: &dyn Fn() -> bool,
+) -> Option<(Vec<Action>, ClaimedResult, GameState)> {
     let pinned = pinned();
     let mut state = practice::opening(pinned, seed, setup).expect("the setup begins a game");
     let (human_home, ai_home) = (setup.human_seat, setup.human_seat.opponent());
@@ -246,6 +252,9 @@ fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, Claime
     let (mut humans, mut ais) = (0, 0);
     let mut log = Vec::new();
     while state.result.is_none() {
+        if abandoned() {
+            return None;
+        }
         assert!(
             log.len() < MOVE_CAP,
             "the game on {seed} ends within {MOVE_CAP} actions"
@@ -281,13 +290,21 @@ fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, Claime
         winner if winner == jackioh_engine::Winner::from(human_now) => ClaimedResult::Win,
         _ => ClaimedResult::Loss,
     };
-    (log, claimed, state)
+    Some((log, claimed, state))
+}
+
+/// `play_unless` for a game nobody gives up on.
+fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, ClaimedResult, GameState) {
+    play_unless(seed, setup, human, &|| false).expect("a game nobody abandons ends")
 }
 
 /// A won game: its seed, setup, log and final state.
 type Won = (String, PracticeSetup, Vec<Action>, GameState);
 
-/// First won Easy game played across cores in parallel to avoid test timeouts (#2223).
+/// First won Easy game: the lowest seed whose game the human wins, played across cores in
+/// parallel to avoid test timeouts (#2223). A game stops as soon as a lower seed of its batch has
+/// won, since it can no longer be the first: a batch used to wait for its slowest game (about
+/// 150 s) after the first seed had won in 3 s (#3305).
 fn honest_win() -> &'static Won {
     static WON: OnceLock<Won> = OnceLock::new();
     WON.get_or_init(|| {
@@ -295,10 +312,23 @@ fn honest_win() -> &'static Won {
         let seeds: Vec<String> = (0..WIN_SEEDS).map(|n| format!("practice-win-{n}")).collect();
         let cores = std::thread::available_parallelism().map_or(1, |cores| cores.get());
         for batch in seeds.chunks(cores) {
+            // The place in this batch of the lowest seed that has won so far.
+            let lowest_win = AtomicUsize::new(usize::MAX);
             let played: Vec<_> = std::thread::scope(|scope| {
                 let games: Vec<_> = batch
                     .iter()
-                    .map(|seed| scope.spawn(|| play(seed, &setup, Human::Ai)))
+                    .enumerate()
+                    .map(|(place, seed)| {
+                        let (setup, lowest_win) = (&setup, &lowest_win);
+                        scope.spawn(move || {
+                            let beaten = || lowest_win.load(Ordering::Relaxed) < place;
+                            let game = play_unless(seed, setup, Human::Ai, &beaten);
+                            if matches!(game, Some((_, ClaimedResult::Win, _))) {
+                                lowest_win.fetch_min(place, Ordering::Relaxed);
+                            }
+                            game
+                        })
+                    })
                     .collect();
                 games
                     .into_iter()
@@ -308,11 +338,11 @@ fn honest_win() -> &'static Won {
                     })
                     .collect()
             });
-            let won = batch
-                .iter()
-                .zip(played)
-                .find(|(_, (_, result, _))| *result == ClaimedResult::Win);
-            if let Some((seed, (log, _, state))) = won {
+            let won = batch.iter().zip(played).find_map(|(seed, game)| match game {
+                Some((log, ClaimedResult::Win, state)) => Some((seed, log, state)),
+                _ => None,
+            });
+            if let Some((seed, log, state)) = won {
                 return (seed.clone(), setup, log, state);
             }
         }
@@ -424,6 +454,23 @@ async fn an_honest_win_pays_practice_rates() {
         first_paid(JLORE_PRACTICE_WIN, xp, false)
     );
     assert_paid(&app, seed, JLORE_PRACTICE_WIN, xp).await;
+}
+
+#[test]
+fn a_game_the_search_gives_up_on_stops_before_its_next_action() {
+    jackioh_cards::register_all();
+    let setup = setup(Difficulty::Easy, Vec::new());
+    let asked = std::cell::Cell::new(0);
+    let abandoned = || {
+        asked.set(asked.get() + 1);
+        asked.get() > 3
+    };
+    assert!(play_unless("practice-abandoned", &setup, Human::Ai, &abandoned).is_none());
+    assert_eq!(
+        asked.get(),
+        4,
+        "asked before each action, and not again once it said yes"
+    );
 }
 
 #[tokio::test]

@@ -13,6 +13,7 @@
 // ONE GATE PER SCREEN: each route's gate is keyed by its path, or React would reuse one instance, and
 // the account it read, across in-app moves. It opens at once on the page's last answer only for an
 // active account that owes nothing, and reads behind it (R2630000).
+// The gate's answer is handed to `/invite`, `/decks` and `/play`, which read the account no second time (R3207003).
 //
 // ONE SOCKET PER SESSION (R194): the match screen is keyed by the token's provider session, so the
 // gate's renewal keeps its socket (the new token waits for the next reconnect).
@@ -627,9 +628,9 @@ export function App(): ReactElement {
     if (path === paths.decks) {
       return (
         <Gated key={path} engine>
-          {() => (
+          {(account) => (
             <EngineGate>
-              <DecksRoute />
+              <DecksRoute account={account} />
             </EngineGate>
           )}
         </Gated>
@@ -644,7 +645,7 @@ export function App(): ReactElement {
         <Gated key={path} engine>
           {(account) => (
             <EngineGate>
-              <PlayRoute token={account.token} />
+              <PlayRoute token={account.token} me={account.me} />
             </EngineGate>
           )}
         </Gated>

@@ -36,6 +36,7 @@ function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
     progress: { unlocks: unlocks(), embers: 0 },
     run: null,
     startedAt: null,
+    timeMs: null,
     start: vi.fn(() => null),
     act: vi.fn(() => null),
     abandon: vi.fn(),

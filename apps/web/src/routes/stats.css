@@ -710,7 +710,7 @@
 }
 
 /* Mobile responsive */
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .stats-drilldown-body {
     flex-direction: column;
     align-items: center;

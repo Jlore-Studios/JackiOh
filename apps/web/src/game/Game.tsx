@@ -189,6 +189,11 @@ export type GameProps = {
    * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
    */
   setPieceOf?: SetPieceClaimer;
+  /**
+   * R2972000: what the "Concede this game?" dialog says in place of its usual body, already translated.
+   * A dungeon fight passes one saying the whole run ends with it; every other route keeps the usual.
+   */
+  concedeBody?: string;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -250,6 +255,7 @@ export default function Game({
   showOfferDraw = true,
   silent = false,
   setPieceOf,
+  concedeBody,
 }: GameProps): ReactElement {
   useLocale();
   // R2118000: no command menu over a board.
@@ -893,7 +899,7 @@ export default function Game({
         </WearerProvider>
       ) : null}
 
-      {concedeOpen ? <ConfirmConcede onConfirm={confirmConcede} onCancel={cancelConcede} /> : null}
+      {concedeOpen ? <ConfirmConcede body={concedeBody} onConfirm={confirmConcede} onCancel={cancelConcede} /> : null}
     </div>
   );
 }

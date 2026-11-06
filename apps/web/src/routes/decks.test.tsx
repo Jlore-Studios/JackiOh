@@ -146,6 +146,26 @@ describe("the gate (§9.4)", () => {
     expect(window.location.pathname).toBe("/decks");
   });
 
+  it("R3207003 a screen handed the gate's account reads no /api/auth/me and loads the workshop", async () => {
+    render(<DecksRoute account={{ token: TOKEN, me: meBody("active", false) }} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+
+    expect(getMe).not.toHaveBeenCalled();
+    expect(getDecks).toHaveBeenCalledWith(TOKEN);
+    expect(window.location.pathname).toBe("/decks");
+  });
+
+  it("R3207003 a handed account that still needs a code goes to the code screen and loads nothing", async () => {
+    render(<DecksRoute account={{ token: TOKEN, me: meBody("pending", true) }} />);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/invite");
+    });
+    expect(getMe).not.toHaveBeenCalled();
+    expect(getDecks).not.toHaveBeenCalled();
+  });
+
   it("does not send a banned account to the code screen", async () => {
     // A banned account cannot redeem a code.
     vi.mocked(getMe).mockResolvedValue(meBody("banned", false));

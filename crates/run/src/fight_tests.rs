@@ -378,6 +378,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
             starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
             starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
             tier_points: RUN_TIER_POINTS.to_vec(),
+            campfire_remove: RUN_CAMPFIRE_REMOVE,
         }
     );
     let json = serde_json::to_value(&constants).unwrap();
@@ -387,6 +388,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
         "starterArtifactsMax",
         "starterArtifactPoints",
         "tierPoints",
+        "campfireRemove",
     ] {
         assert!(json.get(key).is_some(), "{key}");
     }

@@ -19,8 +19,9 @@
 //! roll, pity, the token bars, the set-track curve and its reward table (SPEC §14.3 to §14.7), each
 //! `decide(records, inputs, seed, now_ms) -> outcome`, the grants and the new records as data.
 //!
-//! Last, [`face`] is what a card face prints, worked out from the catalog and a view in the reader's words
-//! (#3106).
+//! Then [`face`] is what a card face prints, worked out from the catalog and a view in the reader's words
+//! (#3106), and last [`log`] is the game log's lines, from the events a view gives, in the same words and
+//! spans (#3108).
 
 pub mod bots;
 pub mod config;
@@ -30,6 +31,7 @@ pub mod economy;
 pub mod face;
 pub mod host;
 pub mod loadout;
+pub mod log;
 pub mod ranked;
 pub mod series;
 

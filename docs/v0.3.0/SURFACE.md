@@ -794,6 +794,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
     // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
     // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
+#[wasm_bindgen] pub fn log(call_json: &str) -> String;
+    // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
+    // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)
 ```
 
 ### 10.2 Build
@@ -822,7 +825,7 @@ with the route it missed, a body that arrives still compressed),
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
-`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), …).
+`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), `log` (#3108: the game log's lines, the normal module's own too), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
 `practice.worker.ts` awaits it before handling a message.
@@ -1327,3 +1330,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
 - **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` (retired in #2578) rewrote those alone.
 - **§6.1 / §6.6, counts kept on a unit (#2321, R2321000):** `Script` gains `tallies: Option<TallyHook>`, a pure read of `ConditionContext` returning `Vec<UnitTally>` (`{ instance_id, value, goal }`), combined across a Fuse's ingredients in order as `preview` is; `UnitView` carries `tallies: Option<Vec<TallyView>>` (`{ defId, value, goal }`, `preview::tallies_on`), absent when no card counts the unit, so no golden hash moves for a game without one.
+- **§6.1 / §6.6, where an ability comes from (#3291, R3291000):** `Script` gains `activation_sources: Vec<ActivationSource>`, one per `activations` entry on a fused script (`fuse.rs` `script_record`, concatenated in ingredient order as `activations` is), empty on a card's own; `ActivationView` carries `printedOn: Option<ActivationSource>` (`{ defId, radiant? }`, `activate::activation_views_for`), absent on a card's own ability and the engine's. It dresses the view and plays no part in the game, so `testkit::golden::view_texts` leaves it out as it does `sourceDefId`, and a trace recorded on either side of it replays on the other.

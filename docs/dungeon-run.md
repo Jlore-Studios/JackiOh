@@ -280,8 +280,16 @@ pub fn run_level_cost(level: usize) -> Option<i64>; // the Embers from `level` t
 pub struct RunConstants {           // the numbers the screens show, so the client states none (rule 9)
     pub slot_ladder: Vec<[usize; 6]>, pub starter_size: usize, pub starter_artifacts_max: usize,
     pub starter_artifact_points: i32, pub tier_points: Vec<(RunTier, i32)>,
+    pub campfire_remove: usize,     // the cards a campfire removes
 }
 pub fn run_constants() -> RunConstants;
+pub struct RunShopPrices {          // what a shop's services cost, the ones `apply` spends
+    pub remove_coins: i32,          // after the shop discount
+    pub radiant_tickets: i32, pub buff_tickets: i32,
+    pub level_tickets: Vec<Option<i32>>, // per relic held; None at RUN_ARTIFACT_LEVEL_MAX
+    pub stock_coins: Vec<i32>,      // per stock item, after the discount; empty outside a shop
+}
+pub fn run_shop_prices(state: &RunState, content: &RunContent) -> RunShopPrices;
 // config.rs: RUN_STARTER_CARDS: [&str; 20], RUN_LEVEL_EMBERS
 ```
 
@@ -302,6 +310,7 @@ export function runEmbers(score: number): number;
 export function runMaxHp(state: RunState, content: RunContent): number;
 export function runLevelCost(level: number): number | null;
 export function runConstants(): RunConstants;
+export function runShopPrices(state: RunState, content: RunContent): RunShopPrices;
 export function runSeed(source: string): string;
 export function runDailySeed(date: string, n: number): string;
 ```
@@ -321,6 +330,7 @@ export type Dungeon = {
   progress: DungeonProgress;
   run: RunState | null;
   startedAt: number | null;               // Date.now() when the run started, for the timer
+  timeMs: number | null;                  // the finished run's time, as its record holds it; null on the way
   start(setup: RunSetup): string | null;  // the refusal, or null
   act(action: RunAction): string | null;  // the refusal, or null
   abandon(): void;
