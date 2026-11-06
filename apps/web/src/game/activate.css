@@ -10,7 +10,7 @@
   left: 2px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   translate: 0 -50%;
 }
 
@@ -30,10 +30,10 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 1px;
+  gap: 0;
   min-width: 22px;
   height: 20px;
-  padding: 0 4px 0 2px;
+  padding: 0 var(--space-2) 0 var(--space-1);
   border: 1px solid var(--pal-gold-300);
   border-radius: var(--radius-pill);
   background: var(--pal-brass-800);
@@ -139,7 +139,7 @@
   .board .activate-control {
     min-width: 18px;
     height: 16px;
-    padding: 0 3px 0 1px;
+    padding: 0 var(--space-1) 0 0;
     font-size: var(--type-3xs);
   }
 

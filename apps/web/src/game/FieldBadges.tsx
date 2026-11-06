@@ -18,8 +18,7 @@ import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 
 import { keywordKey, type CardView, type Keyword, type UnitView } from "@jackioh/shared";
 
-import { CHINESE_COMMA, chineseKeyword } from "../cards/chinese.ts";
-import { KEYWORD_MARK } from "../cards/glossary.ts";
+import { KEYWORD_MARK } from "../cards/index.ts";
 import { keywordChips } from "../cards/MinionFace.tsx";
 import ActivateControls from "./ActivateControl.tsx";
 import type { AnimatingMap, ClickTarget, Highlight } from "./contract.ts";
@@ -47,8 +46,10 @@ export type FieldBadgesProps = {
   /** The card as the view lists it: the `UnitView` of a unit, else the face-up `BackrowView`; its `activations` are the control's. */
   card: CardView;
   unit: UnitView | null | undefined;
-  /** R1301: a Chinese unit's keywords are named in the table's words. */
-  chinese: boolean;
+  /** The unit's keywords in the face's words, in order (`FaceModel.keywordWords`; R1301: a Chinese unit's are the table's). */
+  words: readonly string[];
+  /** What joins a list of them (`FaceModel.keywordJoin`). */
+  join: string;
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
@@ -68,7 +69,8 @@ export default function FieldBadges(props: FieldBadgesProps): ReactElement | nul
 function Stack({
   card,
   unit,
-  chinese,
+  words,
+  join,
   highlight,
   animating,
   onClick,
@@ -101,8 +103,9 @@ function Stack({
     observer.observe(zone);
     return () => observer.disconnect();
   }, [drawn]);
-  // R1301: a Chinese unit's keywords are named in the table's words.
-  const words = chinese ? chineseKeyword : keywordKey;
+  // R1301: a unit's keywords are named in the face's words (`words` follows `unit.keywords`' order).
+  const keywords = unit?.keywords ?? [];
+  const wordsOf = (keyword: Keyword): string => words[keywords.indexOf(keyword)] ?? keywordKey(keyword);
   const cut = Math.max(fit.room, 0);
   const rest = chips.slice(cut);
   return (
@@ -116,14 +119,14 @@ function Stack({
               className="keyword keyword-icon"
               data-keyword={keyword.kind}
               data-n={"n" in keyword ? keyword.n : undefined}
-              title={words(keyword)}
+              title={wordsOf(keyword)}
             >
               {KEYWORD_MARK[keyword.kind]}
               {"n" in keyword ? ` ${keyword.n}` : ""}
             </span>
           ))}
           {rest.length > 0 && (
-            <span className="cf-kw-more" title={rest.map(words).join(chinese ? CHINESE_COMMA : ", ")}>
+            <span className="cf-kw-more" title={rest.map(wordsOf).join(join)}>
               +{rest.length}
             </span>
           )}

@@ -29,7 +29,6 @@ import {
   REVEAL_AT_NOTE,
   TermTips,
   UNREVEALED_NOTE,
-  ascentLevelOf,
   faceDownLabel,
   faceModel,
   isInspectKey,
@@ -475,7 +474,7 @@ export default function Card(props: CardProps): ReactElement {
           <CardFace
             face={face}
             layout={form === "compact" ? "compact" : "full"}
-            ascentLevel={ascentLevelOf(face.values)}
+            ascentLevel={face.ascent}
             worn={worn}
             ownHand={worn && props.inOwnHand === true}
           />
@@ -576,7 +575,8 @@ export default function Card(props: CardProps): ReactElement {
         <FieldBadges
           card={unit ?? card}
           unit={unit}
-          chinese={face.chinese === true}
+          words={face.keywordWords}
+          join={face.keywordJoin}
           highlight={props.highlight}
           animating={props.animating}
           onClick={props.onClick}

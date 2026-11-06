@@ -16,8 +16,8 @@ use std::borrow::Borrow;
 use std::cell::Cell;
 
 use jackioh_ai::{
-    AI_BUDGET, AiOptions, AiTurnResult, DeterminizeOptions, SearchBudget, action_key, determinize,
-    play_ai_turn,
+    AI_BUDGET, AI_GATE_BUDGET, AiOptions, AiTurnResult, DeterminizeOptions, SearchBudget, action_key,
+    determinize, play_ai_turn,
 };
 use jackioh_engine::testkit::{
     Action, ActionBody, ActionType, CardInstance, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, GameState,
@@ -56,6 +56,16 @@ pub fn register_cards() {
 pub const AI: PlayerId = PlayerId::P1;
 /// The human's seat in every scenario-built test.
 pub const HUMAN: PlayerId = PlayerId::P2;
+/// The budget a test decides at when it plays whole games only to collect their states, not to
+/// judge how well the AI plays: `AI_GATE_BUDGET`'s search at about a quarter of its nodes and one
+/// determinization. The numbers of `crates/tools/src/arena.rs`'s `TEST_BUDGET`, which this crate
+/// cannot reach (the tools crate builds on it).
+pub const TEST_BUDGET: SearchBudget = SearchBudget {
+    nodes: 150,
+    lethal_nodes: 40,
+    determinizations: 1,
+    ..AI_GATE_BUDGET
+};
 
 // Card lookups
 

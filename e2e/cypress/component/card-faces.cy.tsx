@@ -46,7 +46,7 @@ const FIT_BOXES: readonly FitBox[] = [
 ];
 
 /**
- * R1017000: only a face that prints less than its whole text (a short form, or its text clamped, shortText.ts)
+ * R1017000: only a face that prints less than its whole text (a short form, or its text clamped, the face model's `short` and `clamp`)
  * may clamp, at 170 px. #98 Heroic Power's face prints the header over its thirteen powers: no clamp (#1017).
  */
 function clampAllowedFor(def: CardDef, box: FitBox, radiant: boolean): boolean {
