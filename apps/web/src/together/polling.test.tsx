@@ -53,8 +53,7 @@ function serve(challenges: () => Challenges = () => ({ incoming: [], outgoing: [
     if (method === "GET" && path === "/api/friends") {
       return { status: 200, body: { friends: [ANN], incoming: [], outgoing: [], blocked: [] } };
     }
-    if (method === "GET" && path === "/api/challenges") return { status: 200, body: challenges() };
-    if (method === "GET" && path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
+    if (method === "GET" && path === "/api/social") return { status: 200, body: { ...challenges(), unread: {} } };
     if (method === "GET" && path === "/api/replays/shared") return { status: 200, body: { shared: [] } };
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     if (method === "GET" && path === "/api/decks") {
@@ -66,12 +65,11 @@ function serve(challenges: () => Challenges = () => ({ incoming: [], outgoing: [
   });
 }
 
-/** How many times each social read was made so far. */
-function reads(server: StubServer): { friends: number; challenges: number; unread: number } {
+/** How many times each social read was made so far: the friends list, and the social poll's one read (R3210000). */
+function reads(server: StubServer): { friends: number; social: number } {
   return {
     friends: server.to("GET", "/api/friends").length,
-    challenges: server.to("GET", "/api/challenges").length,
-    unread: server.to("GET", "/api/chat/unread").length,
+    social: server.to("GET", "/api/social").length,
   };
 }
 
@@ -103,14 +101,12 @@ describe("#936 the social reads' cadences", () => {
     await settle({ advance: 0 });
     const first = reads(server);
     expect(first.friends).toBe(1);
-    expect(first.challenges).toBeGreaterThan(0);
-    expect(first.unread).toBeGreaterThan(0);
+    expect(first.social).toBeGreaterThan(0);
 
     await settle({ advance: SOCIAL_POLL_MS });
     const second = reads(server);
     expect(second.friends, "not again within a social poll").toBe(first.friends);
-    expect(second.challenges).toBeGreaterThan(first.challenges);
-    expect(second.unread).toBeGreaterThan(first.unread);
+    expect(second.social).toBeGreaterThan(first.social);
 
     await settle({ advance: FRIENDS_POLL_MS - SOCIAL_POLL_MS });
     expect(reads(server).friends).toBe(first.friends + 1);
@@ -126,12 +122,12 @@ describe("#936 the social reads' cadences", () => {
     );
     await settle({ advance: 0 });
     const closed = reads(server);
-    expect(closed.unread).toBe(1);
+    expect(closed.social).toBe(1);
     expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
 
     await settle({ advance: FRIENDS_POLL_MS * 2 });
     expect(reads(server).friends, "a board being played asks for no friends list").toBe(0);
-    expect(reads(server).unread).toBe(closed.unread + Math.floor((FRIENDS_POLL_MS * 2) / SOCIAL_POLL_MS));
+    expect(reads(server).social).toBe(closed.social + Math.floor((FRIENDS_POLL_MS * 2) / SOCIAL_POLL_MS));
 
     fireEvent.click(screen.getByTestId(friendsTestid.button));
     await settle({ advance: 0 });
@@ -147,7 +143,7 @@ describe("#936 the social reads' cadences", () => {
     expect(reads(server).friends, "closed again, the list is not read").toBe(2);
   });
 
-  it("#1831 the toast and Play together share one challenges and one unread read per SOCIAL_POLL_MS", async () => {
+  it("#1831 the toast and Play together share one social read per SOCIAL_POLL_MS", async () => {
     const server = serve();
     render(
       <>
@@ -156,23 +152,42 @@ describe("#936 the social reads' cadences", () => {
       </>,
     );
     await settle({ advance: 0 });
-    expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
+    expect(reads(server)).toMatchObject({ social: 1 });
 
     await settle({ advance: SOCIAL_POLL_MS });
-    expect(reads(server)).toMatchObject({ challenges: 2, unread: 2 });
+    expect(reads(server)).toMatchObject({ social: 2 });
+  });
+
+  it("R3210000 the social poll sends one request a tick and neither of the two reads it replaced", async () => {
+    const server = serve();
+    render(
+      <>
+        <ChallengeToast />
+        <TogetherRoute />
+      </>,
+    );
+    await settle({ advance: 0 });
+    expect(reads(server).social).toBe(1);
+    expect(server.to("GET", "/api/challenges")).toHaveLength(0);
+    expect(server.to("GET", "/api/chat/unread")).toHaveLength(0);
+
+    await settle({ advance: SOCIAL_POLL_MS });
+    expect(reads(server).social).toBe(2);
+    expect(server.to("GET", "/api/challenges")).toHaveLength(0);
+    expect(server.to("GET", "/api/chat/unread")).toHaveLength(0);
   });
 
   it("the challenge toast reads the challenges every SOCIAL_POLL_MS, not at the chat's pace", async () => {
     const server = serve();
     render(<ChallengeToast />);
     await settle({ advance: 0 });
-    const first = reads(server).challenges;
+    const first = reads(server).social;
     expect(first).toBe(1);
 
     await settle({ advance: CHAT_POLL_MS });
-    expect(reads(server).challenges).toBe(first);
+    expect(reads(server).social).toBe(first);
     await settle({ advance: SOCIAL_POLL_MS - CHAT_POLL_MS });
-    expect(reads(server).challenges).toBe(first + 1);
+    expect(reads(server).social).toBe(first + 1);
     expect(reads(server).friends, "the toast never reads the friends list").toBe(0);
   });
 });
@@ -210,18 +225,18 @@ describe("R3205000 a hidden tab's social reads", () => {
     const server = serve();
     render(<ChallengeToast />);
     await settle({ advance: 0 });
-    expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
+    expect(reads(server)).toMatchObject({ social: 1 });
 
     setVisibility("hidden");
     await settle({ advance: 3 * SOCIAL_POLL_MS });
-    expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
+    expect(reads(server)).toMatchObject({ social: 1 });
 
     setVisibility("visible");
     await settle({ advance: 0 });
-    expect(reads(server)).toMatchObject({ challenges: 2, unread: 2 });
+    expect(reads(server)).toMatchObject({ social: 2 });
 
     await settle({ advance: SOCIAL_POLL_MS });
-    expect(reads(server)).toMatchObject({ challenges: 3, unread: 3 });
+    expect(reads(server)).toMatchObject({ social: 3 });
   });
 
   it("R3205000 Play together's friends list pauses while the tab is hidden and reads once when it shows", async () => {
@@ -272,17 +287,17 @@ describe("R3205000 a hidden tab's social reads", () => {
     const server = serve(() => open);
     render(<ChallengeToast />);
     await settle({ advance: 0 });
-    const first = reads(server).challenges;
+    const first = reads(server).social;
 
     setVisibility("hidden");
     await settle({ advance: 2 * SOCIAL_POLL_MS });
-    expect(reads(server).challenges, "the room expires and the follow rides this poll").toBe(first + 2);
+    expect(reads(server).social, "the room expires and the follow rides this poll").toBe(first + 2);
 
     open = { incoming: [], outgoing: [] };
     await settle({ advance: SOCIAL_POLL_MS });
-    expect(reads(server).challenges).toBe(first + 3);
+    expect(reads(server).social).toBe(first + 3);
 
     await settle({ advance: 3 * SOCIAL_POLL_MS });
-    expect(reads(server).challenges, "no challenge left open: the poll paused").toBe(first + 3);
+    expect(reads(server).social, "no challenge left open: the poll paused").toBe(first + 3);
   });
 });

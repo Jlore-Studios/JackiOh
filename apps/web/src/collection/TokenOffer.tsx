@@ -46,8 +46,8 @@ export function offerTier(
   cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind">,
   held: HeldTokens | null,
 ): CosmeticTokenTier | null {
-  // R2725000: a retired full art is sold no more (the server's 400).
-  if (held === null || cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt") return null;
+  // R2725000: a retired full art is sold no more (the server's 400); R3015004: nor a retired augment.
+  if (held === null || cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt" || cosmetic.kind === "augment") return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
 }
 

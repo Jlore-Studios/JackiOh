@@ -188,7 +188,6 @@ export const GAME_EVENT_TYPES = [
   "secretChosen",
   "secretRevealed",
   "predicted",
-  "scriptFailed",
   // #831's patch (C+ #62 KY's Papaya, R831003).
   "curveDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).

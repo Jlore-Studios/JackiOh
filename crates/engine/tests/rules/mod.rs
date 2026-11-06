@@ -63,7 +63,6 @@ pub mod craft;
 pub mod craft_modes;
 pub mod crater;
 pub mod credit_line;
-pub mod custom;
 pub mod damage;
 pub mod damage_odds;
 pub mod damage_pipeline;

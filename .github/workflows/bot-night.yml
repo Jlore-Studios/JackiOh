@@ -369,11 +369,11 @@ jobs:
 
       # On GitHub's runners only (#1263): every worktree of the job builds into the checkout's
       # target/, which starts from bot-cache.yml's entry, and scripts/build-wasm.sh keeps
-      # wasm-bindgen and the emsdk in the checkout's .cache/, which starts from CI's emsdk entry.
-      # Both are restored and never saved: only bot-cache.yml, on main, writes the Rust entry, so
-      # nothing a model ran here reaches a later job through the cache. No debug info, as on the
-      # machine and in CI's test profile, which keeps the entry small. These lines are the same as
-      # bot-cache.yml's step of this name, since the entry's key hashes them.
+      # wasm-bindgen in the checkout's .cache/. The Rust entry is restored and never saved: only
+      # bot-cache.yml, on main, writes it, so nothing a model ran here reaches a later job through
+      # the cache. No debug info, as on the machine and in CI's test profile, which keeps the entry
+      # small. These lines are the same as bot-cache.yml's step of this name, since the entry's key
+      # hashes them.
       - name: The night bot's build directories
         if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         run: |
@@ -400,16 +400,6 @@ jobs:
           shared-key: night-bot-checks
           cache-directories: .cache/bin
           save-if: false
-
-      - name: The emsdk scripts/build-wasm.sh pins
-        id: emsdk
-        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
-        run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
-      - uses: actions/cache/restore@v4
-        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-') && steps.emsdk.outputs.version != ''
-        with:
-          path: .cache/emsdk
-          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
 
       # Mergiraf, the merge driver a conflict's merge uses (#2948, bot/go/internal/resolve/
       # mergiraf.go), as bot-cache.yml builds it from main: restored, never saved, as the Rust cache

@@ -23,9 +23,7 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first, `loadout`
-   the next: a binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its
-   `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them, with no list to edit. A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -59,10 +57,9 @@ static. Two things hold it, as in the other pure crates:
 
 - `Cargo.toml` takes `serde`, `serde_json`, `indexmap`, the engine, the AI (the host machine asks it who
   owes a move), the cards (the cosmetics registry judges an offer against the shipped catalog) and, behind
-  the off-by-default `ts` feature, `ts-rs`. It may also take the run, never `jackioh-luau`, and none of
-  them takes it.
-- `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
-  the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
+  the off-by-default `ts` feature, `ts-rs`. It may also take the run, and none of them takes it.
+- `clippy.toml` is the other four pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
+  the five the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
 
 A transition never reads a clock: it takes `now`, and the host passes the time it read.
@@ -244,7 +241,7 @@ Notes for a host:
 
 The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
 `checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
-holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+holds it to the functions it names.
 
 The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
 `DecideRequest` a `decide` output made) in, the `BotChoice` to feed back as `decided` out. A host with a clock
@@ -491,8 +488,7 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
 ```
 
 The calls are `openCardPack`, `openCosmeticPack`, `fillBar` and `levelReward`; the answers are `opened`,
-`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it. Not in the
-Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it.
 
 The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
 pool as data) moves in its second part.
@@ -502,7 +498,10 @@ pool as data) moves in its second part.
 Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
 `Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
 offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
-lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
+lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). Each version is a level
+of a variant's ladder (`level`, `ladder`, `levels_below`, `is_next`), each ladder held by `level_problems`
+(R3015000, R3015001); a retired row owns the levels it maps to (`implied_by`, R3015006), and a card's pick is read
+as the level it names (`level_of_pick`, `worn_level`, R3015005). A cosmetic's offer is
 judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
 (`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
 `cosmetics` module re-exports all of it, and `crates/server/tests/export_cosmetics.rs` writes the registry into
@@ -529,7 +528,8 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
   an opening replays however the live catalog or registry has moved (R1301003). A call across the boundary that
   leaves them out gets the compiled-in ones.
 - **Every draw is the roll's, in the order its docs state (R1339002):** `Rng::new(seed, 0)`, the slot tiers first
-  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's and the pick's. A replayed
+  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's, the out-of-order draw's
+  where a level past the next is open (R3015003) and the pick's. A replayed
   opening grants the same.
 - **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
   (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one),
@@ -558,8 +558,7 @@ outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the
 
 The calls are `openCardPack`, `openCosmeticPack`, `fillBar`, `levelReward`, `payGame`, `payXp`,
 `startingRewards`, `topUpQuests`, `replaceQuest`, `giveQuest` and `completeQuest`; the answers are `opened`,
-`cosmeticOpened`, `filled`, `reward`, `paid`, `granted` (the writes, in order), `toppedUp` and `refused`. `boundary::apply` is the one function behind it. Not in the
-Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+`cosmeticOpened`, `filled`, `reward`, `paid`, `granted` (the writes, in order), `toppedUp` and `refused`. `boundary::apply` is the one function behind it.
 
 ## `src/deck.rs`
 

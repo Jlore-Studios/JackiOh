@@ -3,7 +3,8 @@
 // Mythic, R2728000); a redemption shows the cosmetic owned once the screen's ownership reads again,
 // and a refusal shows the server's words. R2730000 (#2730): a held card token is offered in an
 // unowned card's preview, and the card reads owned in the preview and the grid. R2480000 (#2480): the
-// offer asks first.
+// offer asks first. R3015004 (#3015): a variant's level is offered a token only where it is the next one, every level
+// below it owned (collection.test.tsx's R3015007 tests the ladder's offers); a retired augment is sold no more.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +18,7 @@ import type { CollectionResponse, TokenBarsResponse } from "../net/api.ts";
 import { collectionOf, tokenBars } from "../shop/fixtures.ts";
 import { settle } from "../test/settle.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
-import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID } from "../cards/versions.ts";
+import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID } from "../cards/versions.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
 import { collectionTestid as T } from "./collection.ts";
@@ -93,6 +94,12 @@ function cardViewOf(read: (token: string) => Promise<OwnedByCard>): void {
 /** The preview of the view's strip `itemId`, opened with the inspect key. */
 function previewOf(itemId: string): HTMLElement {
   fireEvent.keyDown(screen.getByTestId(T.stripItem(itemId)), { key: "i" });
+  return screen.getByTestId(T.preview);
+}
+
+/** R3015007: the preview of the view's ladder rung `id`, opened with the inspect key. */
+function rungPreviewOf(id: string): HTMLElement {
+  fireEvent.keyDown(screen.getByTestId(T.rung(id)), { key: "i" });
   return screen.getByTestId(T.preview);
 }
 
@@ -191,42 +198,47 @@ describe("R1953001 a held cosmetic token, offered in the preview", () => {
     }
   });
 
-  it("R2655000 R2725000 a retired full art offers no token, and the Full art version a Legendary one alone", async () => {
+  it("R2655000 R2725000 R3015004 a retired full art offers no token, and Full art's first level a Legendary one alone", async () => {
     const all = held({ cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9 });
-    // R2725000: the 84 retired full arts are sold no more, whatever the token.
+    // R2725000: the 84 retired full arts are sold no more, whatever the token; R3015004: nor the retired augments.
     const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
     expect(fullArts).toHaveLength(21 * 4);
     for (const fullArt of fullArts) expect(offerTier(fullArt, all), fullArt.id).toBeNull();
-    // The Full art version is a Legendary chase: no Rare or Epic token buys it, a Legendary one does.
+    for (const augment of [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) expect(offerTier(entry(augment), all), augment).toBeNull();
+    // Full art's first level is a Legendary chase: no Rare or Epic token buys it, a Legendary one does.
     expect(offerTier(entry(VERSION_FULL_ART_ID), held({ cosmeticRare: 9, cosmeticEpic: 9 }))).toBeNull();
     expect(offerTier(entry(VERSION_FULL_ART_ID), all)).toBe("Legendary");
 
     tokenServer({ cosmeticLegendary: 2 }, refusal(500, "internal", "unused"));
     cardViewOf(() => Promise.resolve(new Map()));
-    expect(await within(previewOf(VERSION_FULL_ART_ID)).findByTestId(T.tokenOffer(VERSION_FULL_ART_ID))).toHaveTextContent(
+    expect(await within(rungPreviewOf(VERSION_FULL_ART_ID)).findByTestId(T.tokenOffer(VERSION_FULL_ART_ID))).toHaveTextContent(
       "Unlock with a Legendary token (2 held)",
     );
     closePreview();
-    // Signature is a Mythic, which no token buys.
-    expect(screen.getByTestId(T.stripItem(AUGMENT_SIGNATURE_ID))).toHaveAttribute("data-owned", "false");
-    expect(within(previewOf(AUGMENT_SIGNATURE_ID)).queryByTestId(T.tokenOffer(AUGMENT_SIGNATURE_ID))).toBeNull();
+    // Full art's signed level is a Mythic, which no token buys, and past the next level besides.
+    expect(screen.getByTestId(T.rung(VERSION_FULL_ART_SIGNED_ID))).toHaveAttribute("data-owned", "false");
+    expect(within(rungPreviewOf(VERSION_FULL_ART_SIGNED_ID)).queryByTestId(T.tokenOffer(VERSION_FULL_ART_SIGNED_ID))).toBeNull();
     closePreview();
-    for (const retired of ["full-art-big-d-fender", "animated-big-d-fender"]) expect(screen.queryByTestId(T.stripItem(retired)), retired).toBeNull();
+    for (const retired of ["full-art-big-d-fender", "animated-big-d-fender", AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) {
+      expect(screen.queryByTestId(T.stripItem(retired)), retired).toBeNull();
+      expect(screen.queryByTestId(T.rung(retired)), retired).toBeNull();
+    }
   });
 
-  it("R2715000 R2725000 a locked Animated augment offers an Epic token", async () => {
-    // The Animated augment is an Epic, no chase: an Epic token buys it, a Rare one does not.
-    const animated = entry(AUGMENT_ANIMATED_ID);
+  it("R2715000 R3015004 the Default's locked animated level offers an Epic token, as the Animated augment did", async () => {
+    // The Default's animated level is an Epic, no chase: an Epic token buys it, a Rare one does not.
+    const animated = entry(VERSION_ANIMATED_ID);
     expect(animated.chase).toBe(false);
     expect(offerTier(animated, held({ cosmeticRare: 9, cosmeticEpic: 9 }))).toBe("Epic");
     expect(offerTier(animated, held({ cosmeticRare: 9 }))).toBeNull();
 
     tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
     cardViewOf(() => Promise.resolve(new Map()));
-    expect(await within(previewOf(AUGMENT_ANIMATED_ID)).findByTestId(T.tokenOffer(AUGMENT_ANIMATED_ID))).toHaveTextContent(
+    expect(await within(rungPreviewOf(VERSION_ANIMATED_ID)).findByTestId(T.tokenOffer(VERSION_ANIMATED_ID))).toHaveTextContent(
       "Unlock with an Epic token (1 held)",
     );
-    expect(screen.getByTestId(T.stripItem(AUGMENT_ANIMATED_ID))).toHaveAttribute("data-owned", "false");
+    expect(screen.getByTestId(T.rung(VERSION_ANIMATED_ID))).toHaveAttribute("data-owned", "false");
+    expect(screen.getByTestId(T.rung(VERSION_ANIMATED_ID))).toHaveAttribute("data-next", "true");
   });
 
   it("R1953001 a refusal shows the server's words and changes nothing", async () => {

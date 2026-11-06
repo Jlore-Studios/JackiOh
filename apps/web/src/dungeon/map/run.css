@@ -141,9 +141,51 @@
   box-shadow: var(--shadow-2);
 }
 
+/* The icon is an SVG in currentColor (NodeIcon.tsx), colored by node kind (#3229). */
 .dungeon-run-map__icon {
-  font-size: var(--type-2xl);
-  line-height: 1;
+  display: inline-flex;
+  line-height: 0;
+  color: var(--node-color, var(--text));
+}
+
+.dungeon-run-map__node[data-kind="fight"] {
+  --node-color: var(--pal-red-400);
+}
+
+.dungeon-run-map__node[data-kind="elite"] {
+  --node-color: var(--pal-orange-400);
+}
+
+.dungeon-run-map__node[data-kind="ghost"] {
+  --node-color: var(--pal-slate-100);
+}
+
+.dungeon-run-map__node[data-kind="miniBoss"] {
+  --node-color: var(--pal-ember-500);
+}
+
+.dungeon-run-map__node[data-kind="boss"] {
+  --node-color: var(--pal-gold-300);
+}
+
+.dungeon-run-map__node[data-kind="shop"] {
+  --node-color: var(--pal-green-400);
+}
+
+.dungeon-run-map__node[data-kind="campfire"] {
+  --node-color: var(--pal-yellow-400);
+}
+
+.dungeon-run-map__node[data-kind="event"] {
+  --node-color: var(--pal-purple-400);
+}
+
+.dungeon-run-map__node[data-kind="chest"] {
+  --node-color: var(--pal-brass-500);
+}
+
+.dungeon-run-map__node[data-kind="shrine"] {
+  --node-color: var(--pal-cyan-400);
 }
 
 .dungeon-run-map__label {

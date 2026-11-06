@@ -406,6 +406,55 @@
   color: var(--tavern-text-dim);
 }
 
+/* R3015007: a variant's ladder (VariantLadders.tsx), its levels lowest first, each rung joined to the one below it
+   by a short rule across the gap. An owned rung reads as any owned item; the next one, every level below it owned,
+   is ringed in a dashed teal with its picture half lit; a locked one past it stays dimmed and names what it needs.
+   No gold marks a level (R2725004): the teal is the tavern's, and the equipped ring is the strip's own. A locked
+   rung still opens its preview on a click, so it keeps the pointer. */
+.tavern.app-shell .collection-ladder__rungs > li {
+  position: relative;
+  display: flex;
+}
+
+.tavern.app-shell .collection-ladder__rungs > li + li::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: 8px;
+  height: 2px;
+  background: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .collection-ladder__rungs > li:has(> [data-owned="true"]) + li:has(> [data-owned="true"])::before {
+  background: var(--tavern-parchment);
+}
+
+.tavern.app-shell .collection-ladder__rungs > li:has(> [data-owned="true"]) + li:has(> [data-next="true"])::before {
+  background: var(--tavern-teal);
+}
+
+.tavern.app-shell button.collection-strip__item.collection-rung:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-owned="false"] {
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.tavern.app-shell button.collection-strip__item.collection-rung:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-next="true"] {
+  border-style: dashed;
+  border-color: var(--tavern-teal);
+}
+
+.tavern.app-shell .collection-rung[data-next="true"] .collection-strip__picture {
+  filter: grayscale(0.5) brightness(0.75);
+}
+
+.tavern.app-shell .collection-rung[data-next="true"] .collection-strip__name {
+  opacity: 0.85;
+}
+
+.tavern.app-shell .collection-strip__lock.collection-rung__next {
+  color: var(--tavern-teal);
+}
+
 /* The item shown on the large card fades in over the card's own face. */
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .tavern.app-shell .collection-cardview__preview {

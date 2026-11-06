@@ -88,17 +88,6 @@ jobs:
           cache-directories: .cache/bin
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # CI's emsdk entry, which the setup action keys on the pin.
-      - name: The emsdk scripts/build-wasm.sh pins
-        id: emsdk
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        if: steps.cache.outputs.cache-hit != 'true' && steps.emsdk.outputs.version != ''
-        with:
-          path: .cache/emsdk
-          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
-
       # What the gates compile, with nothing run: `cargo jackioh` is `run --release -p jackioh-tools`
       # (.cargo/config.toml); clippy's dependencies are the same with or without `-D warnings`.
       - name: The release jackioh, for cargo jackioh

@@ -1046,14 +1046,6 @@ pub enum GameEvent {
         guess: SecretChoice,
         outcome: PredictOutcome,
     },
-    /// R915004: a custom card's hook failed and did nothing (SPEC §12.5): the card's controller, the
-    /// card when it is in play, its definition and what went wrong, for the board to show.
-    ScriptFailed {
-        player: PlayerId,
-        instance_id: Option<String>,
-        def_id: String,
-        message: String,
-    },
     /// R831003: C+ #62 KY's Papaya drew its curve for `player`: the zones it passes through, one per
     /// lane at most, in lane order, before the cards there are destroyed (exiled through v0.4.0f,
     /// R1704000). Public: board positions only.
@@ -1370,7 +1362,6 @@ string_union! {
         SecretChosen = "secretChosen",
         SecretRevealed = "secretRevealed",
         Predicted = "predicted",
-        ScriptFailed = "scriptFailed",
         CurveDrawn = "curveDrawn",
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
@@ -1636,7 +1627,6 @@ impl GameEvent {
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
-            GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
@@ -1735,8 +1725,8 @@ mod tests {
         assert_eq!(over.event_type().as_str(), "gameOver");
         // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
-        // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
-        // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
+        // `deradianted` (R1102) and `manaSpent` (R1109); and #831's patch one more, `curveDrawn`
+        // (R831003); and Meditative+ #18 one,
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
         // (R1838001); its Credits' `marketCreditsChanged` (R1840005), the Resource tray's three
         // events gone with it (R2250000); the
@@ -1745,7 +1735,7 @@ mod tests {
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 94);
+        assert_eq!(GAME_EVENT_TYPES.len(), 93);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

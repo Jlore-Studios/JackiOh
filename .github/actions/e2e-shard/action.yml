@@ -4,8 +4,8 @@
 #
 # Nothing is compiled here. The calling workflow builds once per run, in the order the client
 # needs: `scripts/build-wasm.sh` before `pnpm build:e2e` (super.yml in its `wasm` job; ci.yml builds
-# the two modules in its `wasm` and `wasm-luau` jobs and the client on them in its `web-build` job),
-# into the artifact `web-build` (apps/web/dist and the WASM modules), and the release binaries in
+# the module in its `wasm` job and the client on it in its `web-build` job),
+# into the artifact `web-build` (apps/web/dist and the WASM module), and the release binaries in
 # its `rust-build` job (ci.yml's artifacts `rust-release-jackioh-server` and `rust-release-jackioh`,
 # one leg each; super.yml's one `rust-release`): target/release/jackioh-server, and
 # target/release/jackioh, whose `replay` spec 01's and 13's hash checks run. The caller checks out
