@@ -17463,6 +17463,14 @@
       "queued_at": "2026-11-06T00:12:32Z",
       "requested_by": "squishy-squooby",
       "stop_requested": false
+    },
+    "3262": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-05T23:18:16Z",
+      "issue": 3254,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
