@@ -15255,6 +15255,9 @@
       "verdict_rounds": 1,
       "waiting_comment": 6679452654
     },
+    "3286": {
+      "suggestion": true
+    },
     "3287": {
       "action": "build",
       "asks": [],
