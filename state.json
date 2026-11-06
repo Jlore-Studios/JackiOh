@@ -17619,6 +17619,14 @@
           "claude": "strong"
         }
       }
+    },
+    "3263": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-06T01:13:15Z",
+      "issue": 3258,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
