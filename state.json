@@ -28142,9 +28142,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-06T14:20:00Z",
-          "utilization": 0.08
+          "utilization": 0.15
         },
-        "observed_at": "2026-11-06T11:33:11Z",
+        "observed_at": "2026-11-06T12:54:23Z",
         "status": "allowed"
       }
     },
@@ -32568,7 +32568,8 @@
       "2026-11-06T11:47:15Z,claude-8,stream,call,42212048369,8,2026-11-06T15:50:00Z,,,allowed,85,,",
       "2026-11-06T11:49:30Z,claude-8,stream,call,42212048369,10,2026-11-06T15:50:00Z,,,allowed,85,,",
       "2026-11-06T11:49:45Z,claude-8,stream,call,42212048369,11,2026-11-06T15:50:00Z,,,allowed,85,,",
-      "2026-11-06T11:57:15Z,claude-8,stream,call,42212048369,12,2026-11-06T15:50:00Z,,,allowed,85,,"
+      "2026-11-06T11:57:15Z,claude-8,stream,call,42212048369,12,2026-11-06T15:50:00Z,,,allowed,85,,",
+      "2026-11-06T12:49:46Z,claude-7,ping,before,42220056547,15,2026-11-06T14:20:00Z,,,allowed,70,,"
     ],
     "runs": [
       "2026-11-06T12:36:45Z,42212048369,claude-8,sonnet+opus,revise,3268,medium,built,,14.4,86,22781,3862662,1.005,2,12,,,9.5,claude-8,fresh,,1"
