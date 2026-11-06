@@ -28,5 +28,6 @@
   font-family: ui-monospace, monospace;
   letter-spacing: 0.08em;
   overflow-wrap: anywhere;
+  -webkit-user-select: all;
   user-select: all;
 }

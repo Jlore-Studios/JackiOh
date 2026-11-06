@@ -1,10 +1,8 @@
 // B3.1 rule 6, R383, R64: what a held zone's icon says it is held for. #2015: a zone the player
-// cannot pick draws no tap highlight.
+// cannot pick is a disabled group that fires nothing (the page's tap highlight is highlight.test.ts's,
+// #3260).
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -121,14 +119,5 @@ describe("#2015 a zone the player cannot pick draws no tap feedback", () => {
     fireEvent.click(zone);
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(onClick).toHaveBeenCalledWith({ on: "zone", side: "you", row: "units", lane: 1 });
-  });
-
-  it("#2015 board.css drops the tap highlight on a zone that is not legal, and only there", () => {
-    // The zone keeps its onClick (#757), so React gives its div an onclick and a phone greys it on
-    // a tap; the rule keys on the `data-legal="false"` the zone always writes.
-    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "board.css"), "utf8");
-    expect(css).toMatch(/\.zone:not\(\[data-legal="true"\]\)\s*\{[^}]*-webkit-tap-highlight-color:\s*transparent/);
-    expect(css).toMatch(/\.zone:not\(\[data-legal="true"\]\) > \*\s*\{[^}]*-webkit-tap-highlight-color:\s*initial/);
-    expect(css).not.toMatch(/\.zone\[data-legal="true"\][^{]*\{[^}]*tap-highlight/);
   });
 });

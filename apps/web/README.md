@@ -74,6 +74,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
 
+A phone highlights nothing but the chat (#3260). `index.css` sets `-webkit-tap-highlight-color: transparent`
+on `html` at every pointer, since only touch browsers draw a tap flash, and under `(pointer: coarse)` sets
+`user-select: none` and `-webkit-touch-callout: none` there, so a narrow desktop window still selects text.
+Fields (`input`, `textarea`, `contenteditable`) take `user-select: text` back, since iOS will not type into
+or put a caret in one that cannot be selected. `.chat-panel` (`together/together.css`) restores all three,
+so a message can be pressed, selected and copied. The two-step sign-in's key keeps its `user-select: all`,
+since it has no copy button. No stylesheet sets the tap highlight back to `initial` outside `.chat-panel`
+(inherited, it would bring the flash back on every child); `src/highlight.test.ts` checks it.
+
 The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
 Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
 worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
