@@ -304,6 +304,22 @@ pub extern "C" fn run_max_hp(
     })
 }
 
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_shop_prices(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    content_json_ptr: *const u8,
+    content_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("runShopPrices: the state", state_json_ptr, state_json_len)?;
+        let content = arg("runShopPrices: the content", content_json_ptr, content_json_len)?;
+        wasm_core::run_shop_prices(state, content)
+    })
+}
+
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
 #[unsafe(no_mangle)]
 pub extern "C" fn run_level_cost(level_json_ptr: *const u8, level_json_len: usize) -> i32 {

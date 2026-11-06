@@ -1,6 +1,7 @@
 // B27–B31 (DR14 part F, #2707): the dungeon run's screens between fights, rendering `RunScreen`
 // with a fake `Dungeon`. Only part C's three run reads are mocked (`runMaxHp`, `runScore`,
-// `runEmbers`); the faces draw the compiled-in catalog, so the cards are real ones, and the fake
+// `runEmbers`); the faces draw the compiled-in catalog, so the cards are real ones, the shop's prices
+// and the campfire's count come from the real module (`runShopPrices`, `runConstants`), and the fake
 // store's `act` records every `RunAction` the screens send and answers the configured refusal.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -19,6 +20,7 @@ import type {
 
 import { navTestid } from "../../routes/nav.tsx";
 import { at } from "../../test/stubServer.ts";
+import { runConstants, runShopPrices } from "../../wasm/index.ts";
 import { fightTestid } from "../fight/testids.ts";
 import type { Dungeon } from "../store.ts";
 import { RUN_STAT_LABELS } from "./RunOverScreen.tsx";
@@ -65,6 +67,17 @@ const CONTENT: RunContent = {
       text: "A pack may be kept empty, for Coins.",
       tier: "bronze",
       effect: { type: "skip", coins: 5 },
+      starter: false,
+      unobtainable: false,
+      god: null,
+    },
+    {
+      id: "test-relic-haggle",
+      name: "Haggle Relic",
+      kind: "economic",
+      text: "Shop Coin prices fall by 20%.",
+      tier: "bronze",
+      effect: { type: "shopDiscount", percent: 20 },
       starter: false,
       unobtainable: false,
       god: null,
@@ -169,6 +182,7 @@ function runWith(phase: RunPhase, extra: Partial<RunState> = {}): RunState {
 function fakeDungeon(
   run: RunState,
   refusal: string | null = null,
+  timeMs: number | null = null,
 ): { dungeon: Dungeon; act: Mock<(action: RunAction) => string | null>; abandon: Mock<() => void> } {
   const act = vi.fn((_action: RunAction): string | null => refusal);
   const abandon = vi.fn((): void => {});
@@ -177,6 +191,7 @@ function fakeDungeon(
     progress: { unlocks: { level: 1, cards: [], artifacts: [], owned: null }, embers: 0 },
     run,
     startedAt: 1_000,
+    timeMs,
     start: vi.fn(() => null),
     act,
     abandon,
@@ -197,10 +212,10 @@ afterEach(() => {
 });
 
 /** B30: HP, Coins, Tickets, the deck, the relic held and the score, on every screen. */
-function expectHud(): void {
+function expectHud(coins = "11", tickets = "3"): void {
   expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("7 / 20");
-  expect(screen.getByTestId(dungeonMapTestid.coins)).toHaveTextContent("11");
-  expect(screen.getByTestId(dungeonMapTestid.tickets)).toHaveTextContent("3");
+  expect(screen.getByTestId(dungeonMapTestid.coins)).toHaveTextContent(coins);
+  expect(screen.getByTestId(dungeonMapTestid.tickets)).toHaveTextContent(tickets);
   expect(screen.getByTestId(dungeonMapTestid.deckSize)).toHaveTextContent("3");
   const chip = screen.getByTestId(dungeonMapTestid.hudArtifact(0));
   expect(chip).toHaveTextContent("Might Relic");
@@ -440,14 +455,18 @@ describe("B29 extraction is a card or a relic, and the boss's own is refused", (
 describe("B30 the tiles send their actions under the always-on HUD", () => {
   // B30
   it("B30 the shop buys, upgrades and leaves, naming prices and the refusal", () => {
+    // A purse that pays for every service: a service the run cannot pay is disabled (below).
     const { dungeon, act } = fakeDungeon(
-      runWith({
-        phase: "shop",
-        stock: [
-          { good: { type: "card", id: "core-004" }, price: 50, sold: false },
-          { good: { type: "artifact", id: "test-relic-skip" }, price: 120, sold: true },
-        ],
-      }),
+      runWith(
+        {
+          phase: "shop",
+          stock: [
+            { good: { type: "card", id: "core-004" }, price: 50, sold: false },
+            { good: { type: "artifact", id: "test-relic-skip" }, price: 120, sold: true },
+          ],
+        },
+        { coins: 900, tickets: 90 },
+      ),
       "11 Coins needed, 5 held",
     );
     render(<RunScreen dungeon={dungeon} />);
@@ -468,7 +487,80 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
     expect(act).toHaveBeenCalledWith({ type: "levelArtifact", index: 0 });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.shopLeave));
     expect(act).toHaveBeenCalledWith({ type: "leave" });
-    expectHud();
+    expectHud("900", "90");
+  });
+
+  /** A shop of one card for 50 Coins, the purse as given and `artifacts` held. */
+  function shopRun(extra: Partial<RunState> = {}): RunState {
+    return runWith(
+      { phase: "shop", stock: [{ good: { type: "card", id: "core-004" }, price: 50, sold: false }] },
+      extra,
+    );
+  }
+
+  // B30
+  it("B30 the shop's services name their price, relic discount included", () => {
+    const rich = { coins: 900, tickets: 90 };
+    const plain = shopRun(rich);
+    const haggled = shopRun({
+      ...rich,
+      artifacts: [
+        { id: "test-relic-might", level: 2 },
+        { id: "test-relic-haggle", level: 1 },
+      ],
+    });
+    const plainPrices = runShopPrices(plain, CONTENT);
+    const haggledPrices = runShopPrices(haggled, CONTENT);
+    expect(haggledPrices.removeCoins).toBeLessThan(plainPrices.removeCoins);
+    expect(haggledPrices.stockCoins[0]).toBeLessThan(50);
+    expect(plainPrices.stockCoins).toEqual([50]);
+
+    for (const [run, prices] of [
+      [plain, plainPrices],
+      [haggled, haggledPrices],
+    ] as const) {
+      render(<RunScreen dungeon={fakeDungeon(run).dungeon} />);
+      const heading = (name: string): HTMLElement => screen.getByRole("heading", { name });
+      expect(heading(`Remove a card for ${String(prices.removeCoins)} Coins`)).toBeInTheDocument();
+      expect(heading(`Make a card Radiant for ${String(prices.radiantTickets)} Tickets`)).toBeInTheDocument();
+      expect(heading(`Buff a card for ${String(prices.buffTickets)} Tickets`)).toBeInTheDocument();
+      expect(screen.getByTestId(dungeonMapTestid.shopLevel(0))).toHaveTextContent(
+        `Level up for ${String(prices.levelTickets[0])} Tickets`,
+      );
+      // The stock shows what Buy spends, not the item's price before the discount.
+      expect(screen.getByTestId(dungeonMapTestid.shopStock(0))).toHaveTextContent(
+        `${String(prices.stockCoins[0])} Coins`,
+      );
+      cleanup();
+    }
+  });
+
+  // B30
+  it("B30 a service the run cannot pay is disabled", () => {
+    const services = [
+      dungeonMapTestid.shopRemove(0),
+      dungeonMapTestid.shopRadiant(0),
+      dungeonMapTestid.shopBuff(0),
+      dungeonMapTestid.shopLevel(0),
+    ];
+    // Nothing in the purse: every service is out of reach, but Buy stays, and the run says why.
+    const { dungeon } = fakeDungeon(shopRun({ coins: 0, tickets: 0 }));
+    render(<RunScreen dungeon={dungeon} />);
+    for (const id of services) expect(screen.getByTestId(id)).toBeDisabled();
+    expect(screen.getByTestId(dungeonMapTestid.shopBuy(0))).toBeEnabled();
+    cleanup();
+
+    render(<RunScreen dungeon={fakeDungeon(shopRun({ coins: 900, tickets: 90 })).dungeon} />);
+    for (const id of services) expect(screen.getByTestId(id)).toBeEnabled();
+  });
+
+  // B30
+  it("B30 a relic at its top level shows no price and no Level up button", () => {
+    const run = shopRun({ coins: 900, tickets: 90, artifacts: [{ id: "test-relic-might", level: 99 }] });
+    expect(runShopPrices(run, CONTENT).levelTickets).toEqual([null]);
+    render(<RunScreen dungeon={fakeDungeon(run).dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.shopLevelMax(0))).toHaveTextContent("Highest level");
+    expect(screen.queryByTestId(dungeonMapTestid.shopLevel(0))).not.toBeInTheDocument();
   });
 
   // B30
@@ -486,6 +578,53 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireRemove));
     expect(act).toHaveBeenCalledWith({ type: "removeCards", indices: [0, 2] });
     expectHud();
+  });
+
+  // R2972000
+  it("R2972000 B30 the campfire waits for exactly campfireRemove cards", () => {
+    const { campfireRemove } = runConstants();
+    // One card more than a campfire removes, so the pick has somewhere to overflow to.
+    const ids = ["core-001", "core-002", "core-003", "core-004"];
+    const deck = Array.from({ length: campfireRemove + 1 }, (_, place) => ({
+      id: ids[place % ids.length] ?? "core-001",
+      radiant: false,
+      buffs: 0,
+    }));
+    const { dungeon, act } = fakeDungeon(runWith({ phase: "campfire" }, { deck }));
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByRole("heading", { name: `Remove ${String(campfireRemove)} cards` })).toBeInTheDocument();
+
+    const remove = screen.getByTestId(dungeonMapTestid.campfireRemove);
+    const card = (place: number): HTMLElement => screen.getByTestId(dungeonMapTestid.campfireRemoveCard(place));
+    expect(remove).toBeDisabled();
+    for (let place = 0; place < campfireRemove; place += 1) {
+      expect(remove).toBeDisabled();
+      fireEvent.click(card(place));
+    }
+    expect(remove).toBeEnabled();
+
+    // A further pick is ignored: that card is out of reach and stays unpicked.
+    const extra = card(campfireRemove);
+    expect(extra).toBeDisabled();
+    fireEvent.click(extra);
+    expect(extra).toHaveAttribute("aria-pressed", "false");
+    expect(remove).toBeEnabled();
+
+    // Putting one back disables the button again, and the card put back is the one to pick.
+    fireEvent.click(card(0));
+    expect(remove).toBeDisabled();
+    expect(extra).toBeEnabled();
+    fireEvent.click(card(0));
+    expect(remove).toBeEnabled();
+
+    // The run reads the indices as a set: they go in the order they were picked, card 0 last now.
+    fireEvent.click(remove);
+    expect(act).toHaveBeenCalledTimes(1);
+    const sent = act.mock.calls[0]?.[0];
+    expect(sent).toEqual({ type: "removeCards", indices: expect.any(Array) });
+    expect(sent?.type === "removeCards" ? [...sent.indices].sort((a, b) => a - b) : null).toEqual(
+      Array.from({ length: campfireRemove }, (_, place) => place),
+    );
   });
 
   // B30
@@ -549,6 +688,25 @@ describe("B31 the run-over screen settles the run", () => {
     const link = screen.getByTestId(dungeonMapTestid.statsLink);
     expect(link).toHaveAttribute("href", "/dungeon/stats");
     expectHud();
+  });
+
+  // B31
+  it("B31 the run's end shows its time and turns beside the score", () => {
+    const dead = runWith({ phase: "dead" }, { stats: statsWith({ turns: 17 }) });
+    render(<RunScreen dungeon={fakeDungeon(dead, null, 65_000).dungeon} />);
+    const score = screen.getByTestId(dungeonMapTestid.endScore);
+    const time = screen.getByTestId(dungeonMapTestid.endTime);
+    const turns = screen.getByTestId(dungeonMapTestid.endTurns);
+    expect(time).toHaveTextContent("Time: 1:05");
+    expect(turns).toHaveTextContent("Turns: 17");
+    expect(time.parentElement).toBe(score.parentElement);
+    expect(turns.parentElement).toBe(score.parentElement);
+    cleanup();
+
+    // A run whose time is not known shows no time, and still its turns.
+    render(<RunScreen dungeon={fakeDungeon(dead).dungeon} />);
+    expect(screen.queryByTestId(dungeonMapTestid.endTime)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.endTurns)).toHaveTextContent("Turns: 17");
   });
 
   // B31

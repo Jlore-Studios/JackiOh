@@ -551,6 +551,84 @@ fn a_shop_refuses_what_the_run_cannot_pay() {
 }
 
 #[test]
+fn the_shop_prices_are_what_each_service_spends_with_a_discount_held_and_none_for_a_top_level_relic() {
+    let content = content();
+    let mut state = start(&content);
+    state.artifacts = vec![
+        RunArtifact {
+            id: "temp-coupon".into(),
+            level: 2,
+        },
+        RunArtifact {
+            id: "temp-greedy".into(),
+            level: 1,
+        },
+        RunArtifact {
+            id: "temp-big-heart".into(),
+            level: RUN_ARTIFACT_LEVEL_MAX,
+        },
+    ];
+    state.coins = 1_000;
+    state.tickets = 1_000;
+    state.phase = RunPhase::Shop {
+        stock: roll_shop(&state, &content, &mut Rng::new("shop", 0)),
+    };
+    let prices = run_shop_prices(&state, &content);
+    assert!(
+        prices.remove_coins < RUN_REMOVE_PRICE,
+        "the held coupon discounts"
+    );
+
+    // What an action takes from the purse, as (Coins, Tickets).
+    let spent = |action: RunAction| {
+        let after = act(&state, &content, action);
+        (state.coins - after.coins, state.tickets - after.tickets)
+    };
+    assert_eq!(
+        spent(RunAction::RemoveCard { index: 0 }),
+        (prices.remove_coins, 0)
+    );
+    assert_eq!(
+        spent(RunAction::MakeRadiant { index: 0 }),
+        (0, prices.radiant_tickets)
+    );
+    assert_eq!(spent(RunAction::Buff { index: 0 }), (0, prices.buff_tickets));
+
+    assert_eq!(
+        prices.level_tickets,
+        vec![Some(RUN_LEVEL_TICKETS * 2), Some(RUN_LEVEL_TICKETS), None]
+    );
+    for (index, price) in prices.level_tickets.iter().enumerate() {
+        match price {
+            Some(price) => assert_eq!(spent(RunAction::LevelArtifact { index }), (0, *price)),
+            None => assert!(run_reduce(&state, &content, &RunAction::LevelArtifact { index }).is_err()),
+        }
+    }
+
+    let RunPhase::Shop { stock } = &state.phase else {
+        panic!("a shop is open")
+    };
+    assert_eq!(prices.stock_coins.len(), stock.len());
+    for (index, coins) in prices.stock_coins.iter().enumerate() {
+        let after = act(&state, &content, RunAction::Buy { index });
+        assert_eq!(state.coins - after.coins, *coins, "stock item {index}");
+    }
+    assert!(
+        prices
+            .stock_coins
+            .iter()
+            .zip(stock)
+            .any(|(coins, item)| *coins < item.price),
+        "the discount reaches the stock"
+    );
+
+    let plain = start(&content);
+    let outside = run_shop_prices(&plain, &content);
+    assert!(outside.stock_coins.is_empty(), "no stock outside a shop");
+    assert_eq!(outside.remove_coins, RUN_REMOVE_PRICE, "no discount relic held");
+}
+
+#[test]
 fn bosses_and_curses_multiply_the_score() {
     let content = content();
     let mut state = start(&content);

@@ -20,6 +20,7 @@ import {
 } from "../../practice/config.ts";
 import type { PracticeHost } from "../../practice/host.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "../../practice/protocol.ts";
+import { CONCEDE_BODY } from "../../game/ConfirmConcede.tsx";
 import { baseView, emptySide } from "../../test/fixtures.ts";
 import { stubPhoneBar } from "../../test/phoneBar.ts";
 import { settle } from "../../test/settle.ts";
@@ -345,6 +346,19 @@ describe("R2972000 leaving a fight in progress asks first", () => {
     expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
     expect(host.starts()).toHaveLength(1);
     at("/");
+  });
+
+  it("R2972000 a fight's Concede says the run ends", async () => {
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    // Asking sends nothing; the question says what a lost fight costs, not the usual game-only body.
+    fireEvent.click(screen.getByTestId("concede"));
+    const dialog = screen.getByTestId("concede-dialog");
+    expect(dialog).toHaveAccessibleDescription("Your opponent wins, and the whole run ends here for good.");
+    expect(dialog).not.toHaveTextContent(CONCEDE_BODY);
+    expect(host.reports()).toBe(0);
   });
 
   it("R2972000 once the fight has its result nothing is held", async () => {

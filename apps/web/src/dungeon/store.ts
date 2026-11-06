@@ -72,6 +72,8 @@ export type Dungeon = {
   run: RunState | null;
   /** `Date.now()` when the run started, for the timer. */
   startedAt: number | null;
+  /** The finished run's time in ms, as its record holds it (B20); null while the run is on its way. */
+  timeMs: number | null;
   /** The refusal, or null. */
   start(setup: RunSetup): string | null;
   /** The refusal, or null. */
@@ -90,7 +92,12 @@ type DailyCount = { date: string; started: number };
 type KeptRun = { file: RunFile; startedAt: number; daily: boolean };
 
 /** The run the page plays: the kept one folded, with the content it folded on. */
-type Live = KeptRun & { run: RunState; content: RunContent };
+type Live = KeptRun & {
+  run: RunState;
+  content: RunContent;
+  /** The settled run's time, as its record holds it; null while the run is on its way. */
+  timeMs: number | null;
+};
 
 type Core = {
   progress: DungeonProgress;
@@ -221,7 +228,7 @@ function foldKept(kept: KeptRun): Live | null {
   try {
     const content = contentOf();
     const folded = runFold(kept.file, content);
-    return "error" in folded ? null : { ...kept, run: folded.state, content };
+    return "error" in folded ? null : { ...kept, run: folded.state, content, timeMs: null };
   } catch {
     return null;
   }
@@ -362,7 +369,7 @@ function settle(from: Core, live: Live, now: number): Core {
       embers: from.progress.embers + embers,
     },
     history: [...from.history, record],
-    live,
+    live: { ...live, timeMs: record.timeMs },
   };
 }
 
@@ -385,6 +392,7 @@ function startRun(setup: RunSetup): string | null {
       daily,
       run: created.state,
       content,
+      timeMs: null,
     };
     const next: Core = {
       ...from,
@@ -481,6 +489,7 @@ export function useDungeon(): Dungeon {
       progress,
       run: live === null ? null : live.run,
       startedAt: live === null ? null : live.startedAt,
+      timeMs: live === null ? null : live.timeMs,
       start: startRun,
       act: actOn,
       abandon: abandonRun,
