@@ -97,7 +97,7 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,
   "routes/lobby.css": 14,
-  "routes/stats.css": 6,
+  "routes/stats.css": 4,
   "settings/settings.css": 14,
   "shop/shop.css": 1,
   "skeleton/skeleton.css": 2,
