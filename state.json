@@ -17381,7 +17381,7 @@
       "taken_asks": []
     },
     "3338": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -17394,13 +17394,12 @@
         "reason": "planned on opus",
         "trail": "rdVisuals.ts | head -10\", \"description\": \"Find extra-turn cards and callo\u2026\n- Bash: {\"command\": \"sed -n 1,62p crates/cards/src/scripts/stinkyscape/c004_olivian_expanse.rs | grep -v \\\"^\\\\s*$\\\" | head -50\", \"description\": \"Read Olivian Expanse script\"}\n- Bash: {\"command\": \"grep -n \\\"planEntries(\\\\|wipeOf\\\" apps/web/src/game/animations.ts | head; sed -n 1525,1560p apps/web/src/game/animations.ts\", \"description\": \"Find queue options and planEntries call\"}\n- Bash: {\"command\": \"grep -n \\\"export type StinkyKind\\\\|export type StinkyFamily\\\\|export type StinkySubject\\\\|kind ===\\\\|case \\\\\\\"\\\" apps/web/src/cards/art/stinkyscape.ts | head -60\", \"description\": \"Read s\u2026\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/fx/constants.test.ts; grep -n \\\"Object.keys\\\\|every export\\\\|import \\\\* as\\\" apps/web/src/fx/constants.test.ts | head\", \"description\": \"Check constants test exh\u2026\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\" apps/web/src/fx/constants.test.ts | head -40; grep -n \\\"FX_STARSHIP\\\\|FX_TERMINUS\\\" apps/web/src/fx/constants.test.ts | head\", \"description\": \"List constants \u2026\n- Bash: {\"command\": \"grep -n \\\"KEYWORD_CALLOUT_ICONS\\\" -A 25 apps/web/src/cards/keywordVisuals.ts | grep -o '^[0-9]*- [A-Za-z]*' | head -30; grep -n \\\"export function calloutCue\\\\|export function callout\\\" a\u2026\n- Bash: {\"command\": \"sed -n 440,500p apps/web/src/cards/keywordVisuals.ts | grep -oE '^\\\\s+[A-Z][A-Za-z]+:' | tr -d ' :' | tr '\\\\n' ' '; echo; sed -n 1,40p apps/web/src/fx/motifs/callout.ts\", \"description\": \u2026\n- Bash: {\"command\": \"grep -n \\\"Echo\\\" apps/web/src/cards/keywordVisuals.ts | head; grep -n \\\"export const KEYWORD_CALLOUT_ICONS\\\" -B2 -A3 apps/web/src/cards/keywordVisuals.ts\", \"description\": \"Check Echo key\u2026\n- Bash: {\"command\": \"grep -n \\\"resolving\\\\|hand:\\\\|handPile\\\\|export const testid\\\" apps/web/src/game/contract.ts | head -10; grep -n \\\"export const animTestid\\\" -A 12 apps/web/src/game/animations.ts | head \u2026\n- Bash: {\"command\": \"grep -rn \\\"cost: {\\\\|cost:\\\" apps/web/src/cards/model.ts apps/web/src/cards/*.ts 2>/dev/null | grep -v test | head -8; grep -rn \\\"FaceModel =\\\" apps/web/src --include=*.ts | head -3\", \"d\u2026\n- Bash: {\"command\": \"grep -n \\\"cost\\\\|defId\\\\|zone\\\\|inHand\\\" apps/web/src/wire/generated/FaceModel.ts | head; cat apps/web/src/wire/generated/FaceCost*.ts 2>/dev/null | head -30\", \"description\": \"Read FaceM\u2026\n- Bash: {\"command\": \"grep -rn \\\"CatalogContext\\\\|useCatalog\\\" apps/web/src/cards/*.tsx apps/web/src/game/Card.tsx 2>/dev/null | head -5; grep -n \\\"export const CatalogContext\\\\|export function useCatalog\\\\|e\u2026\n- Bash: {\"command\": \"grep -n \\\"ownHand\\\" apps/web/src/game/Card.tsx | head -5; grep -n \\\"CatalogContext\\\\|catalog\\\" apps/web/src/game/Card.tsx | head -5; grep -n \\\"export function cardById\\\\|export function \u2026\n- Bash: {\"command\": \"grep -n \\\"set piece\\\\|setPiece\\\" apps/web/README.md | head; grep -n \\\"twenty-one\\\\|component specs\\\" e2e/README.md | head -3; ls e2e/cypress/component | wc -l\", \"description\": \"Check web\u2026\n- Bash: {\"command\": \"ls e2e/cypress/component/*.cy.tsx | wc -l; ls e2e/cypress/component/ | head -50\", \"description\": \"Count component spec files\"}\n- Bash: {\"command\": \"grep -n \\\"wipe\\\\|sweep\\\\|setPieceBed\\\\|condens\\\" apps/web/src/audio/director.ts | head -20\", \"description\": \"Check audio condensing for wipes\"}\n- Bash: {\"command\": \"sed -n 228,262p apps/web/src/audio/director.ts\", \"description\": \"Read audio director condensing\"}\n- Bash: {\"command\": \"grep -n \\\"FX_STARSHIP_STILL_MS\\\\|FX_TERMINUS_TRAUMA\\\\|FX_PHONE_FRAME_BUDGET_MS\\\" apps/web/src/fx/constants.ts; grep -n \\\"case \\\\\\\"roll\\\\\\\"\\\" -A 6 apps/web/src/fx/dom.ts; grep -n \\\"export\u2026\n- Bash: {\"command\": \"sed -n 106,163p apps/web/src/fx/rolls.ts; grep -n \\\"export type FxRollItem\\\" -A 10 apps/web/src/fx/types.ts\", \"description\": \"Read rollCues and FxRollItem\"}\n- Bash: {\"command\": \"grep -rln \\\"stinkyscape-004\\\\|core-100\\\\|stinkyscape-154\\\\|vortex\\\\|terminusRift\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head -30\", \"description\": \"Find tests referenci\u2026\n- Bash: {\"command\": \"grep -n \\\"stinkyscape-004\\\\|vortex\\\\|core-100\\\" apps/web/src/game/wipe.real.test.ts apps/web/src/game/WipeBoard.test.tsx apps/web/src/game/animations.wipe.test.ts apps/web/src/fx/setPiec\u2026\n- Bash: {\"command\": \"sed -n 60,110p apps/web/src/game/wipe.real.test.ts; sed -n 100,125p apps/web/src/fx/setPieces.test.ts; sed -n 145,160p apps/web/src/cards/art/CardArt.test.tsx\", \"description\": \"Read wipe\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"organ\\\\\\\"\\\\|GM.organ\\\\|const SFX: \\\\|export const SFX\\\\b\\\\|entrance: {\\\" apps/web/src/audio/sfx.ts | head; grep -rn \\\"hero-\\\\${\\\\|testid.hero\\\\b\\\" apps/web/src/game/contrac\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3338/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe nine Terminus cards (Olivian Expanse `stinkyscape-004`, its six tokens `stinkyscape-004-1`\\u2026`-6`, C\u2026\n- Bash: {\"command\": \"grep -n \\\"export function locateInstance\\\" -A 25 apps/web/src/game/animations.ts | head -32\", \"description\": \"Read locateInstance\"}\n- Bash: {\"command\": \"sed -n 185,200p apps/web/src/game/runs.ts\", \"description\": \"Read pileOf signature\"}\n- Bash: {\"command\": \"grep -n \\\"FX_MOTIF_CENTER_LANE\\\\|FX_CENTER =\\\" apps/web/src/fx/constants.ts; grep -n \\\"export function timesOf\\\" -A 6 apps/web/src/fx/motifs/build.ts; grep -n \\\"export function planMotif\u2026\n- Bash: {\"command\": \"sed -n 40,60p apps/web/src/fx/motifs/index.ts; grep -n \\\"export type MotifSpec\\\" -A 8 apps/web/src/fx/motifs/build.ts\", \"description\": \"Read planMotif and MotifSpec\"}\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3338/.bot-plan.md <<'EOF'\\n\\n## Status\\nDesign settled (signature runs claimed via entry.signature; wipe keys keep planSetPiece; terminus/ planne\u2026\n- said: ## Goal The nine Terminus cards each get a picture of their own and a set piece of their own: Olivian Expanse `stinkyscape-004`, its six tokens `stinkyscape-004-1`\u2026`-6`, Ceaseless Void `core-100` and Dice of Doom `stinkyscape-154`. - **Pictures:** base and Radiant for each card. They differ from ea\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "",
-      "owner_since": "2026-11-07T00:50:28Z",
-      "owner_why": "released from its hold: `claude-8` has no runner free where it runs",
+      "live": "building",
+      "owner": "claude-8",
+      "owner_since": "2026-11-07T01:23:34Z",
+      "owner_why": "it took it up; released from its hold: `claude-8` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-07T00:40:02Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -17410,9 +17409,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-06T23:47:49Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42315785360",
+      "run_id": "pending:5f4c7fd7-1794014578",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T00:02:53Z",
+      "started_at": "2026-11-07T01:23:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6699809636
@@ -17984,9 +17983,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T01:22:42Z",
+    "at": "2026-11-07T01:23:34Z",
     "url": "",
-    "what": "revise #3353 on claude-6"
+    "what": "build #3338 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T00:57:37Z",
