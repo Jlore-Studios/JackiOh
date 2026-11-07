@@ -770,7 +770,8 @@ sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.t
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open and the social socket is
+                         down, and read on its friend's chat push while it is live (R3214000); a message holding
                          this site's room link draws a Join button that navigates in-app (R2094000);
                          a send shows at once, sends go one at a time, a failed one offers Retry and
                          Discard (R2120000)
@@ -787,7 +788,15 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
                          GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
-                         hidden unless a challenge of the player's is open, R3205000)
+                         hidden unless a challenge of the player's is open, R3205000); it holds the tab's
+                         social socket and sends no read while it is live, and hands its chat and
+                         friends pushes to onChatPush and onFriendsPush (R3214000)
+together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
+                         (R1379000), the server's social read and chat and friends nudges pushed over it,
+                         the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
+                         token and a refusal final for its token (R1115000), a socket replaced once the
+                         session holds another token, its frames never shown; off under vitest
+                         unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden

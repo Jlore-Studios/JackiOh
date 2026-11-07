@@ -7,6 +7,7 @@
 //! - `challenges`: a challenge to a friend (B48, B49).
 //! - `chat`: messages between friends and retention purge (B53).
 //! - `reads`: `GET /api/social`, the social poll's one read (R3210000).
+//! - `live`: `/ws/social`, over which a tab is told what changed instead of polling (R3214000).
 //!
 //! Every route is `AuthLevel::Active` and acts for its caller, named by the token. A player is
 //! named by profile id everywhere and shown by username (`PlayerRef`, R1436); no log line carries a
@@ -15,6 +16,7 @@
 pub mod challenges;
 pub mod chat;
 pub mod friends;
+pub mod live;
 pub mod presence;
 pub mod reads;
 pub mod shares;
@@ -51,6 +53,8 @@ pub struct Social {
     pub challenges: RateLimiter,
     /// R3210000: the router's presence touches.
     pub presence: presence::PresenceTouches,
+    /// R3214000: each account's open `/ws/social` sockets.
+    pub live: live::LiveSockets,
 }
 
 impl Default for Social {
@@ -60,6 +64,7 @@ impl Default for Social {
             chat: create_rate_limiter(CHAT_MESSAGES_PER_MINUTE, MS_PER_MINUTE),
             challenges: create_rate_limiter(CHALLENGES_PER_HOUR, MS_PER_HOUR),
             presence: presence::PresenceTouches::default(),
+            live: live::LiveSockets::default(),
         }
     }
 }

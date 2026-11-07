@@ -7,6 +7,9 @@
 //! - `POST /api/chat/messages/:id/report` `{reason}`: its recipient reports a message, 204.
 //! - The purge (`purge`) deletes messages older than `CHAT_RETENTION_DAYS`.
 //!
+//! R3214000: a send nudges both accounts' `/ws/social` sockets (`chat`, no body) and pushes the
+//! friend's unread counts; a read that marked a message pushes the reader's.
+//!
 //! No log line carries a message's body or a reason.
 
 use std::sync::Arc;
@@ -24,6 +27,7 @@ use crate::app::App;
 use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
 use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError, Tx};
 use crate::social::friends::are_friends;
+use crate::social::live::{nudge_chat, push_social};
 use crate::social::{created, iso, no_content, not_found, param, refused};
 use crate::username::{is_blocked, is_mark};
 
@@ -108,6 +112,10 @@ pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
         }
     }
     tx.commit().await?;
+    if !unread.is_empty() {
+        // R3214000: the reader's other tabs are shown the count gone; the sender is told nothing.
+        push_social(app, &[&me]).await;
+    }
     let full = i64::try_from(page.len()).is_ok_and(|held| held >= CHAT_PAGE);
     let next_cursor = page
         .first()
@@ -167,6 +175,9 @@ pub async fn send(app: &Arc<App>, req: Req) -> ApiResult {
     };
     tx.chat_insert(&row).await?;
     tx.commit().await?;
+    // R3214000: both are told the conversation moved, and the friend shown its unread count.
+    nudge_chat(app, &me, &friend_id);
+    push_social(app, &[&friend_id]).await;
     Ok(created(json!({ "message": to_json(&ChatMessage::of(&row))? })))
 }
 
