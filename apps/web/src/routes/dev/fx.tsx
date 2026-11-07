@@ -9,19 +9,26 @@
 // person to review each one; R3332001 a signature whose entrance reads the board plays over its own
 // (`galleryBoardOf`: Felinor Fiender's over three Felinors). Dev only: chunks.tsx loads it behind
 // DEV_ONLY, so a production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
+// R3346000: it plays every play impact, each type at each cost tier, with the board shake a heavy or
+// massive one brings, and a trap's set click and snap, side by side for review by ear.
 
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { flushSync } from "react-dom";
 
 import type { PlayerView } from "@jackioh/shared";
 
+import { playImpactCue } from "../../audio/cues.ts";
+import { PLAY_IMPACT_OPPONENT_GAIN } from "../../audio/constants.ts";
+import { getAudioEngine } from "../../audio/engine.ts";
+import type { PlayTier, PlayType } from "../../game/damageFeel.ts";
+import { PLAY_TIERS_ASCENDING } from "../../game/damageFeel.ts";
 import { boardShakeSink, resolveAnchor } from "../../fx/anchors.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, isSignature } from "../../fx/cards/tables.ts";
 import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
-import { planFx } from "../../fx/cues.ts";
+import { planFx, playTrauma } from "../../fx/cues.ts";
 import { createFxMemory } from "../../fx/memory.ts";
 import {
   SYSTEM_MOMENTS,
@@ -60,7 +67,18 @@ export const fxGalleryTestid = {
   playSignature: "fx-gallery-play-signature",
   moment: "fx-gallery-moment",
   playMoment: "fx-gallery-play-moment",
+  impact: "fx-gallery-impact",
+  impactOpponent: "fx-gallery-impact-opponent",
+  trapSet: "fx-gallery-trap-set",
+  trapSnap: "fx-gallery-trap-snap",
 } as const;
+
+/** R3346000: the play types the gallery plays an impact for, each with how the panel labels it. */
+const IMPACT_TYPES: readonly { type: PlayType; label: string }[] = [
+  { type: "unit", label: "Unit" },
+  { type: "spell", label: "Spell" },
+  { type: "field", label: "Field Spell" },
+];
 
 function isSystemMomentName(name: string): name is SystemMoment {
   return (SYSTEM_MOMENTS as readonly string[]).includes(name);
@@ -135,6 +153,8 @@ export default function FxGallery(): ReactElement {
   const [defId, setDefId] = useState<string>(cards[0]?.defId ?? "");
   const [signature, setSignature] = useState<string>(signatures[0]?.cards[0]?.defId ?? "");
   const [moment, setMoment] = useState<SystemMoment>(SYSTEM_MOMENTS[0] ?? "questProgressed");
+  // R3346000: whether the impacts play as the other seat's, a step quieter.
+  const [asOpponent, setAsOpponent] = useState(false);
   // Each card play is a new view whose events the board has not seen, so its effects layer plays them.
   const [shown, setShown] = useState<PlayerView>(base);
   const plays = useRef(0);
@@ -191,6 +211,18 @@ export default function FxGallery(): ReactElement {
     const memory = createFxMemory();
     memory.remember(entry.events);
     director.current?.play(planFx(entry, base, { intensity, card: () => undefined, memory }));
+  };
+
+  // R3346000: one impact as the board plays it (sfx.ts's recipe through the engine), and, for a heavy or
+  // massive tier, the shake `planFx` gives it, under the same intensity.
+  const playImpact = (tier: PlayTier, type: PlayType): void => {
+    const cue = playImpactCue(tier, type, !asOpponent);
+    getAudioEngine().playSfx(cue.id, cue.params, 0);
+    const trauma = Math.min(1, playTrauma(tier) * intensity);
+    if (trauma > 0) director.current?.play([{ kind: "shake", trauma, delayMs: 0 }]);
+  };
+  const playTrap = (id: "trapSet" | "trapSnap"): void => {
+    getAudioEngine().playSfx(id, id === "trapSnap" && asOpponent ? { gain: PLAY_IMPACT_OPPONENT_GAIN } : undefined, 0);
   };
 
   return (
@@ -305,6 +337,32 @@ export default function FxGallery(): ReactElement {
           <button type="button" data-testid={fxGalleryTestid.playMoment} onClick={playMoment}>
             Play moment
           </button>
+          <fieldset style={{ display: "grid", gap: 4 }}>
+            <legend>Plays that land with weight</legend>
+            <label style={ROW}>
+              <input type="checkbox" data-testid={fxGalleryTestid.impactOpponent} checked={asOpponent} onChange={(event) => setAsOpponent(event.target.checked)} />
+              As the opponent
+            </label>
+            {IMPACT_TYPES.map(({ type, label }) => (
+              <div key={type} style={ROW}>
+                {label}
+                {PLAY_TIERS_ASCENDING.map((tier) => (
+                  <button key={tier} type="button" data-testid={fxGalleryTestid.impact} data-type={type} data-tier={tier} onClick={() => playImpact(tier, type)}>
+                    {tier}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div style={ROW}>
+              Trap
+              <button type="button" data-testid={fxGalleryTestid.trapSet} onClick={() => playTrap("trapSet")}>
+                Set click
+              </button>
+              <button type="button" data-testid={fxGalleryTestid.trapSnap} onClick={() => playTrap("trapSnap")}>
+                Snap
+              </button>
+            </div>
+          </fieldset>
         </form>
       </div>
     </CatalogContext.Provider>

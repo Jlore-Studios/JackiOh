@@ -15,6 +15,7 @@ import { __resetSettingsForTests } from "../settings/store.ts";
 import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, fullBoardView } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
+import { RIFFLE_LEAVES } from "./config.ts";
 import Hand, { HAND_EMPTY_TEXT, handEmptyTestid } from "./Hand.tsx";
 import { revealTestid } from "./reveal.ts";
 
@@ -203,5 +204,54 @@ describe("R1143 and R1141 the hand pile shows its size and its marks", () => {
     expect(hand.querySelectorAll(".card-back")).toHaveLength(2);
     expect(screen.getByTestId("hand-you")).not.toHaveAttribute("data-marked");
     expect(screen.queryByTestId("hand-marked-you")).toBeNull();
+  });
+});
+
+describe("#3347 the hand springs", () => {
+  it("#3347 a slot's translate has its own, slower transition than its transform", () => {
+    const slot = boardRules().find((rule) => rule.selectors.includes(".hand-slot") && rule.body.includes("transition:"));
+    expect(slot?.body).toContain("transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard)");
+    expect(slot?.body).toContain("translate calc(var(--motion-base) * var(--anim-scale)) var(--ease-standard)");
+  });
+
+  it("#3347 at full card motion the translate settles on --ease-overshoot, the transform on --ease-standard", () => {
+    const full = boardRules().find((rule) => rule.selectors.includes('.game[data-card-motion="full"] .hand-slot'));
+    expect(full?.body).toBe("transition-timing-function: var(--ease-standard), var(--ease-overshoot);");
+  });
+
+  it("#3347 hovering a card parts its neighbours, at full card motion with hover previews on", () => {
+    const rules = boardRules();
+    const prefix = '.game[data-card-motion="full"] .hand-you[data-hover-preview="on"]';
+    const after = rules.find((rule) => rule.selectors.includes(`${prefix} .hand-slot:hover ~ .hand-slot`));
+    const before = rules.find((rule) => rule.selectors.includes(`${prefix} .hand-slot:has(~ .hand-slot:hover)`));
+    expect(after?.body).toBe("translate: var(--hand-spread) 0;");
+    expect(before?.body).toBe("translate: calc(var(--hand-spread) * -1) 0;");
+    expect(rules.find((rule) => rule.selectors.includes(".hand-you .hand-cards") && rule.body.includes("--hand-spread:"))?.body).toContain(
+      "--hand-spread: calc(var(--hand-card-w) * 0.18)",
+    );
+  });
+
+  it("#3347 the deal flies each slot from its deck while the board is dealing, and nothing else does", () => {
+    const rules = boardRules();
+    const deal = rules.find((rule) => rule.selectors.includes('.game[data-dealing="true"] .hand-slot'));
+    expect(deal?.body).toBe("animation: hand-deal var(--deal-ms) var(--ease-out) var(--deal-at, 0ms) both;");
+    const css = readFileSync(join(HERE, "board.css"), "utf8").replace(/\s+/g, " ");
+    expect(css).toContain("@keyframes hand-deal { from { translate: var(--deal-dx, 0) var(--deal-dy, 0);");
+  });
+
+  it("#3347 the Deck pile carries the riffle's leaves, and only the Deck pile", () => {
+    renderBoard(baseView());
+    for (const side of ["you", "opponent"] as const) {
+      expect(screen.getByTestId(`library-${side}`).querySelectorAll(".pile-riffle > .pile-riffle-leaf")).toHaveLength(RIFFLE_LEAVES);
+      expect(screen.getByTestId(`graveyard-${side}`).querySelector(".pile-riffle")).toBeNull();
+    }
+  });
+
+  it("#3347 the leaves show only on a deck the game marks, at full card motion", () => {
+    const rules = boardRules();
+    const shown = rules.find((rule) => rule.selectors.includes('.game[data-card-motion="full"][data-riffle~="you"] [data-testid="library-you"] > .pile-riffle'));
+    expect(shown?.body).toBe("display: block;");
+    expect(shown?.selectors).toContain('.game[data-card-motion="full"][data-riffle~="opponent"] [data-testid="library-opponent"] > .pile-riffle');
+    expect(rules.find((rule) => rule.selectors.includes(".pile-riffle"))?.body).toContain("display: none;");
   });
 });

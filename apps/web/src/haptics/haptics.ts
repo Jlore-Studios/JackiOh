@@ -2,32 +2,46 @@
 // Public events only, so they neither enforce rules nor reveal information (CLAUDE.md rule 7).
 // R3348000, R3348001: a touch press on a tile or a corner prop buzzes too (`buzz`, `tapHaptic`), on its
 // own gap, so a tile never swallows the game's own drop.
+// R3346000: a heavy or massive play buzzes by the mana it cost, whichever seat plays it.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
+import { HIDDEN_DEF_ID } from "../audio/constants.ts";
 import { reducedMotionNow } from "../game/animations.ts";
+import { playTier } from "../game/damageFeel.ts";
 import { readHapticsSettings } from "./settings.ts";
 
-export type HapticMoment = "drop" | "hit" | "turn" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare";
+export type HapticMoment =
+  | "drop" | "hit" | "turn" | "pickup" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare" | "playHeavy" | "playMassive";
 
 export const HAPTIC_PATTERNS: { readonly [K in HapticMoment]: readonly number[] } = {
   drop: [12],
   hit: [24],
   turn: [16, 70, 16],
+  /** #3347: lifting a card from the hand, lighter than the drop that ends the drag. */
+  pickup: [8],
   // A press on a tile (a legal one answers harder) and on a corner prop (a bigger payoff, a rare one).
   tile: [6],
   tileLegal: [12],
   corner: [8],
   cornerBig: [14, 40, 14],
   cornerRare: [10, 30, 10, 30, 24],
+  // R3346000: a play that cost 6 to 8 thumps twice, one that cost 9 or more rolls on.
+  playHeavy: [20, 30, 20],
+  playMassive: [30, 40, 30, 40, 60],
 };
 
 export const HAPTIC_MIN_GAP_MS = 120;
 
 export function hapticFor(event: GameEvent, view: PlayerView): HapticMoment | null {
   switch (event.type) {
-    case "cardPlayed":
+    case "cardPlayed": {
+      // R3346000: only a play the viewer can read (R203) and that is no set (`formerId`) is weighed by its cost.
+      const tier = event.defId === HIDDEN_DEF_ID || event.formerId !== undefined ? "light" : playTier(event.costPaid);
+      if (tier === "massive") return "playMassive";
+      if (tier === "heavy") return "playHeavy";
       return event.player === view.viewer ? "drop" : null;
+    }
     case "damage":
       return event.amount > 0 ? "hit" : null;
     case "turnStarted":
@@ -45,6 +59,8 @@ export type HapticsOptions = {
 
 export type Haptics = {
   onEvent(event: GameEvent, view: PlayerView): void;
+  /** #3347: a buzz for a moment the player's own input makes (a pick-up), through the same gates as an event's. */
+  moment(moment: HapticMoment): void;
   /** R3348000: a press's own buzz, behind the same switch, reduced motion and vibrate guards as `onEvent`, on its own gap. */
   buzz(moment: HapticMoment): void;
 };
@@ -63,6 +79,18 @@ export function createHaptics(options: HapticsOptions = {}): Haptics {
   const now = options.now ?? (() => performance.now());
   const reduced = options.reducedMotion ?? (() => reducedMotionNow());
   let last: number | null = null;
+  function play(moment: HapticMoment): void {
+    try {
+      if (vibrate === null) return;
+      if (!readHapticsSettings().vibration || reduced()) return;
+      const t = now();
+      if (last !== null && t - last < HAPTIC_MIN_GAP_MS) return;
+      last = t;
+      vibrate([...HAPTIC_PATTERNS[moment]]);
+    } catch {
+      // Haptics must not interrupt the game.
+    }
+  }
   let lastTap: number | null = null;
   return {
     buzz(moment) {
@@ -79,29 +107,44 @@ export function createHaptics(options: HapticsOptions = {}): Haptics {
     },
     onEvent(event, view) {
       try {
-        if (vibrate === null) return;
         const moment = hapticFor(event, view);
-        if (moment === null) return;
-        if (!readHapticsSettings().vibration || reduced()) return;
-        const t = now();
-        if (last !== null && t - last < HAPTIC_MIN_GAP_MS) return;
-        last = t;
-        vibrate([...HAPTIC_PATTERNS[moment]]);
+        if (moment !== null) play(moment);
       } catch {
         // Haptics must not interrupt the game.
       }
     },
+    moment: play,
   };
 }
 
 let shared: Haptics | null = null;
 
-/** R3348000: a touch press's buzz, from the one player the arena shares. */
-export function tapHaptic(moment: HapticMoment): void {
-  shared ??= createHaptics();
-  shared.buzz(moment);
+/**
+ * #3347: the one `Haptics` of the page, so the game's events and the drag's pick-up share a gap clock
+ * (`HAPTIC_MIN_GAP_MS`) and never buzz over each other. R3348000: a touch press's `buzz` comes from it too,
+ * on its own gap (`lastTap`).
+ */
+export function sharedHaptics(): Haptics {
+  // The vibrate hook looks `navigator.vibrate` up at each buzz, as a device may gain it after this is made.
+  shared ??= createHaptics({
+    vibrate: (pattern) => {
+      const nav = typeof navigator === "undefined" ? undefined : navigator;
+      return typeof nav?.vibrate === "function" ? nav.vibrate(pattern) : false;
+    },
+  });
+  return shared;
 }
 
-export function resetTapHapticsForTests(): void {
+export function resetSharedHapticsForTests(): void {
   shared = null;
+}
+
+/** R3348000: a touch press's buzz, from the one player the page shares. */
+export function tapHaptic(moment: HapticMoment): void {
+  sharedHaptics().buzz(moment);
+}
+
+/** R3348000: a test's reset of the player `tapHaptic` buzzes through, which is the page's one. */
+export function resetTapHapticsForTests(): void {
+  resetSharedHapticsForTests();
 }

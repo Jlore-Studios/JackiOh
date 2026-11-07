@@ -15,22 +15,27 @@ export const statsTestid = {
   gamesPanel: "stats-games-panel",
   gamesFew: "stats-games-few",
   gamesRetry: "stats-games-retry",
-  /** R1973002: the patch bar. */
+  /** R1973002: the patch bar; R3324000: its patch tabs (a Segmented's options) and a collecting patch's message. */
   patchBar: "stats-patch-bar",
-  patchSelect: "stats-patch-select",
+  patchTab: "stats-patch-tab",
   patchPrevious: "stats-patch-previous",
   patchNext: "stats-patch-next",
+  patchCollecting: "stats-patch-collecting",
+  patchCollectingBack: "stats-patch-collecting-back",
+  /** R3324001: the header's current patch. */
+  currentPatch: "stats-current-patch",
   summaryTotalGames: "stats-summary-total-games",
   searchInput: "stats-search-input",
   cardsTable: "stats-cards-table",
   cardsGrid: "stats-cards-grid",
-  /** R2089000: the Created cards' section. */
+  /** R2089000, R3324002: the Created cards that are no token, and the Tokens, two sections that share no row. */
   createdPanel: "stats-created-panel",
   createdTable: "stats-created-table",
-  /** R2370000: the Cards tab's Show tokens toggle and its Tokens section. */
-  tokensToggle: "stats-tokens-toggle",
   tokensPanel: "stats-tokens-panel",
   tokensTable: "stats-tokens-table",
+  /** R3324003: the Columns toggles. */
+  columnGames: "stats-column-games",
+  columnPlayRate: "stats-column-play-rate",
   viewTable: "stats-view-table",
   viewGrid: "stats-view-grid",
   sortSelect: "stats-sort-select",

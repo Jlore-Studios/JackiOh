@@ -1,7 +1,7 @@
 // R3221000 (#3221): the menus' dialogs and sheets draw through the one Dialog (game/Dialog.tsx, R3220000).
 // No source compares a key with "Escape" outside the shared hooks and the exceptions named here, no scrim
 // outside dialog.css paints itself or takes a raw layer, the ✕ is DialogClose's alone and no × is a close,
-// and every inline confirm puts its safe choice first.
+// every inline confirm puts its safe choice first, and no button is labelled a text Close.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -134,6 +134,33 @@ function glyphs(file: string, glyph: string): number {
   return count;
 }
 
+const CLOSE_WORD = "Close";
+
+/** The word alone as a label: `t("Close")` or `Close`, standing alone in an element. */
+function isCloseLabel(node: ts.JsxChild): boolean {
+  if (ts.isJsxText(node)) return node.text.trim() === CLOSE_WORD;
+  if (!ts.isJsxExpression(node)) return false;
+  const call = node.expression;
+  if (call === undefined || !ts.isCallExpression(call)) return false;
+  const [first] = call.arguments;
+  const translated = ts.isIdentifier(call.expression) && call.expression.text === "t";
+  return translated && first !== undefined && ts.isStringLiteralLike(first) && first.text === CLOSE_WORD;
+}
+
+/** An element whose one child, whitespace aside, is the word Close: a text Close in place of the ✕. */
+function textCloses(file: string): number {
+  // A source that never writes the word holds no such label, and is not parsed.
+  if (!read(file).includes(CLOSE_WORD)) return 0;
+  let count = 0;
+  walk(parse(file), (node) => {
+    if (!ts.isJsxElement(node)) return;
+    const children = node.children.filter((child) => !(ts.isJsxText(child) && child.text.trim() === ""));
+    const [only] = children;
+    if (children.length === 1 && only !== undefined && isCloseLabel(only)) count += 1;
+  });
+  return count;
+}
+
 function countsOf(count: (file: string) => number): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const file of SOURCES) {
@@ -209,6 +236,10 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     expect(countsOf((file) => glyphs(file, "×"))).toEqual({ "game/craft/CraftEditor.tsx": 2, "game/deckbuilder/DeckEditor.tsx": 1 });
   });
 
+  it("R3221000 no dialog closes by a text Close: its close is the ✕", () => {
+    expect(countsOf(textCloses)).toEqual({});
+  });
+
   it("R3221000 the shells' button sizes pass the ✕ over", () => {
     // Each outweighs `.dialog__close` (0,1,0) and would resize the ✕ of every dialog drawn in its shell.
     const SIZES: readonly (readonly [string, string])[] = [
@@ -230,8 +261,18 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
         file,
       ).toEqual([]);
     }
-    // R3221000's exceptions with their own bodies: the inspect overlay's card and the pack scene take the ✕.
-    for (const file of ["cards/inspect/CardDetail.tsx", "packs/PackOpening.tsx"]) expect(read(file), file).toContain("<DialogClose");
+    // R3221000's exceptions with their own bodies: the inspect overlay's card and its sheets, hero inspect and
+    // the pack scene take the ✕.
+    for (const file of [
+      "cards/inspect/CardDetail.tsx",
+      "cards/inspect/InspectSheet.tsx",
+      "cards/inspect/CardList.tsx",
+      "cards/inspect/FaceDown.tsx",
+      "cards/wheel/StackSheet.tsx",
+      "emotes/HeroInspect.tsx",
+      "packs/PackOpening.tsx",
+    ])
+      expect(read(file), file).toContain("<DialogClose");
   });
 
   it("R3221000 every inline confirm puts the safe choice first", () => {

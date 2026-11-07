@@ -1,0 +1,17 @@
+{
+  "title": "Patch: the card, pile, stack and hero sheets close by the same ✕ as every dialog",
+  "sources": "#3377",
+  "notes": "Follow-up to #3367's after-merge spot-check: the inspect overlay's other modal sheets (a card's touch sheet, a pile's list, a face-down card, the Stack's wheel and hero inspect) take DialogClose, the ✕ every dialog closes by, in place of their text Close, and R3221000 drops their exception. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "The same close on every sheet",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A card's sheet, a pile's list, a face-down card, the stack and a hero's view close by the same ✕ at the top right as every other dialog."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

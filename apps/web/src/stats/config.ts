@@ -85,8 +85,11 @@ export const ADJUSTED_RANGE_DIGITS = 1;
 /** R2895000: decimal places of a percent at each end of a card's Win rate range, a whole point, as Win rate reads. */
 export const WIN_RATE_RANGE_DIGITS = 0;
 
-/** R1973002: the games, live and AI, a patch needs before the patch picker offers it. */
+/**
+ * R1973002: the games, live and AI, a patch needs before its tab is offered; R3324000: the newest patch, whose
+ * tab is always offered, is collecting its data until it has them.
+ */
 export const STATS_PATCH_MIN_GAMES = 1000;
 
-/** R1973002: how many of the newest patches with enough games the picker offers. */
+/** R1973002: how many of the newest patches with enough games have a tab (R3324000). */
 export const STATS_PATCHES_OFFERED = 5;

@@ -242,6 +242,7 @@ async fn live_match_in(app: Arc<App>, mode: Option<&str>, catalog_version: Optio
                 ),
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await
