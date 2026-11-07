@@ -17088,15 +17088,8 @@
       "taken_asks": []
     },
     "3400": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42393498773",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-07T17:31:32Z",
-        "until": "2026-11-07T18:01:32Z"
-      },
       "handoff": {
         "at": "2026-11-07T17:28:05Z",
         "family": "claude",
@@ -17106,24 +17099,23 @@
         "reason": "planned on opus",
         "trail": "Read sub-look list\"}\n- Bash: {\"command\": \"cd ../.. && git show --stat dd0f416026 | grep json; git show --stat 6aea0f59f4 | grep \\\"patches\\\\|\\\\.json\\\" | head; grep -n \\\"fragment\\\" docs/issues-and-patches.md | head -20\", \"descript\u2026\n- Bash: {\"command\": \"sed -n 115,175p docs/issues-and-patches.md; git show dd0f416026 --stat | grep -o \\\"patches/pending[^ ]*\\\\|[a-z/]*pending[a-z/]*\\\" | head; git show dd0f416026 --name-only | grep json\", \"d\u2026\n- Bash: {\"command\": \"git show dd0f416026:crates/cards/patches/pending/the-drone-battleship-as-one-great-ship-in-three-decks.json 2>/dev/null || git log --all --oneline -1 -- crates/cards/patches/pending/the-\u2026\n- Bash: {\"command\": \"grep -n \\\"visual\\\" crates/tools/README.md | head -10\", \"description\": \"Check patches tool visual flag\"}\n- Bash: {\"command\": \"grep -rn \\\"FROZEN_MARK\\\\b\\\" apps/web/src --include=*.ts | grep -v test | grep \\\"export\\\" ; grep -n \\\"export function tintOf\\\" apps/web/src/fx/setPieces.ts; grep -n \\\"CAST_ENTRY_MS =\\\" ap\u2026\n- Bash: {\"command\": \"grep -n \\\"FROZEN_MARK\\\" apps/web/src/fx/motifs/gallery.ts | head -3; grep -n \\\"^import.*FROZEN\\\" -r apps/web/src/fx | head\", \"description\": \"See where the gallery imports FROZEN_MARK\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3400/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery Legendary and Mythic of Meditative+ (#1 Bob's Plan, #24 Bob, Wisconsin's Strongest Soldier, #26 Scrat\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the draft plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3400/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe eight Legendaries and Mythics of Meditative+ (#1, #24, #26) and Training Grounds (#37, #38, #39, #39.1,\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the compressed plan\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport re\\nt=open('.bot-plan.md').read()\\nt2=re.sub(r'\\\\`\\\\`\\\\`.*?\\\\`\\\\`\\\\`','',t,flags=re.S)\\nprint('no code blocks',len(t2.split()))\\nt3=re.sub(r'\\\\`[^\\\\`]*\\\\`','X',t\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3400/.bot-plan.md'\\nt=open(p).read()\\nreps=[\\n(\\\"The eight Legendaries and Mythics of Meditative+ (#1, #24, #26) and Training G\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3400/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe eight Legendaries and Mythics of Meditative+ (#1, #24, #26) and Training Grounds (#37, #38, #39, #39.1,\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; python3 -I -c \\\"\\nimport re\\nt=open('.bot-plan.md').read()\\nt2=re.sub(r'\\\\`\\\\`\\\\`.*?\\\\`\\\\`\\\\`','',t,flags=re.S)\\nprint('no code blocks',len(t2.spl\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"ship\\\\\\\"\\\\|'ship'\\\\|ship\\\" apps/web/src/fx/director.ts apps/web/src/fx/canvasFx.ts apps/web/src/fx/FxLayer.tsx | head\", \"description\": \"Find other places dispatching DOM cu\u2026\n- Bash: {\"command\": \"grep -n \\\"mountDom(\\\" apps/web/src/fx/director.ts | head; grep -n \\\"default:\\\" -B3 -A6 apps/web/src/fx/director.ts | sed -n 1,40p | grep -n \\\"mountDom\\\\|isCanvas\\\\|kind\\\" \", \"description\u2026\n- Bash: {\"command\": \"sed -n 470,505p apps/web/src/fx/director.ts\", \"description\": \"Read director cue routing\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/motion.test.ts 2>/dev/null | head -30; grep -n \\\"fx.css\\\" apps/web/src/motion.test.ts apps/web/src/surfaces.test.ts 2>/dev/null | head\", \"description\": \"Check m\u2026\n- Bash: {\"command\": \"sed -n 30,130p apps/web/src/motion.test.ts | grep -v \\\"^ \\\\\\\"\\\" | head -60; sed -n 1,40p apps/web/src/surfaces.test.ts | head -40\", \"description\": \"Read motion and surfaces counting rule\u2026\n- Bash: {\"command\": \"git log --oneline -6 -- apps/web/src/motion.test.ts apps/web/src/surfaces.test.ts; git show 6aea0f59f4 --stat | grep -i \\\"motion.test\\\\|surfaces.test\\\"; git show dd0f416026 --stat | grep\u2026\n- Bash: {\"command\": \"git log -L '/\\\"fx\\\\/fx.css\\\"/,+0:apps/web/src/motion.test.ts' --oneline 2>/dev/null | grep -E \\\"^[0-9a-f]{10}|fx/fx.css\\\" | head -10; git log -L '/\\\"fx\\\\/fx.css\\\"/,+0:apps/web/src/surfac\u2026\n- Bash: {\"command\": \"git log --format=%h -S'\\\"fx/fx.css\\\": 61' -- apps/web/src/motion.test.ts | head -3; git log --format=%h -S'\\\"fx/fx.css\\\": 106' -- apps/web/src/surfaces.test.ts | head -3; git log -1 --fo\u2026\n- Bash: {\"command\": \"git log -1 --format='%h %ad %s' cbfc498bd8; sed -n 135,180p apps/web/src/motion.test.ts; sed -n 236,250p apps/web/src/motion.test.ts\", \"description\": \"Read how motion counts are computed\u2026\n- Bash: {\"command\": \"grep -n \\\"function \\\\|GRADIENT\\\\|gradient\\\" apps/web/src/surfaces.test.ts | head -30; grep -n \\\"no other stylesheet gains\\\" -A16 apps/web/src/surfaces.test.ts | head -30\", \"description\":\u2026\n- Bash: {\"command\": \"sed -n 140,200p apps/web/src/surfaces.test.ts\", \"description\": \"Read offShadow and offSurface\"}\n- Bash: {\"command\": \"grep -n 'data-shape=\\\"chalk\\\"\\\\|data-shape=\\\"doom\\\"\\\\|data-look=\\\"doom\\\"' apps/web/src/fx/fx.css | head -5; grep -c \\\"mask-image\\\" apps/web/src/fx/fx.css; grep -n \\\"radius-round\\\" apps/w\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3400/.bot-plan.md\", \"old_string\": \" - Keyframes animate only transform, opacity and pixel-preserving filters (B55).\", \"new_strin\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3400/.bot-plan.md\", \"old_string\": \"- **Stylesheet counts:** B55, `surfaces.test.ts` and `motion.test.ts` count stylesheet featur\u2026\n- Bash: {\"command\": \"sed -i 's#^pnpm --dir apps/web exec vitest run src/fx src/game/TakeoverStill.test.tsx src/routes/dev/fx.test.tsx src/audio$#pnpm --dir apps/web exec vitest run src/fx src/game/TakeoverSt\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3400/.bot-plan.md\"}\n- said: ## Goal The eight Legendaries and Mythics of Meditative+ (#1, #24, #26) and Training Grounds (#37, #38, #39, #39.1, #40) get `signature: true` entries with recipes of their own, and come off `SIGNATURE_PENDING`: - **Units:** an entrance, the beat their text plays, and an aura on their own tile. - *\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-07T16:52:44Z",
       "owner_why": "it plans it",
       "pending_at": "2026-11-07T17:08:02Z",
       "pending_by": "jgoetzmann",
-      "pending_request": true,
+      "pending_request": false,
       "planned_at": "2026-11-07T17:31:25Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "run_id": "42393498773",
+      "run_id": "pending:8a55eebf-1794072846",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T16:52:44Z",
+      "started_at": "2026-11-07T17:34:52Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17292,9 +17284,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T17:33:52Z",
+    "at": "2026-11-07T17:34:52Z",
     "url": "",
-    "what": "revise #3386 on agy"
+    "what": "build #3400 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T17:14:18Z",
