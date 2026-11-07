@@ -761,7 +761,7 @@
   /* The title is in the top bar now (R3223000), a row above the board, so the create-account form, the tallest,
      spends its rows tighter to keep its button on the first screen (spec: landing-and-code-field). */
   .tavern.app-shell .panel--split .form-card {
-    gap: 4px;
+    gap: var(--space-2);
   }
 
   .tavern.app-shell .panel--split .form-card label {
