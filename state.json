@@ -34912,7 +34912,7 @@
         "every": 5,
         "head": "a4d0724238db14c2af29c6f820c600ae885b1670",
         "issue": 3329,
-        "last_why": "interrupted: `claude-1` stops before it starts: 5-hour usage is 101%, at or over its 40% cap outside its hours; it resets at 2026-11-07T03:40:00Z",
+        "last_why": "interrupted: `claude-4` stops before it starts: 5-hour usage is 55%, at or over its 50% cap outside its hours; it resets at 2026-11-07T04:10:00Z",
         "merged_at": "2026-11-07T01:34:46Z",
         "n": 120,
         "pr": 3356,
@@ -34923,7 +34923,7 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:df449fb2-1794021083",
+        "run_id": "",
         "sha": "c62f023280ece602550c328276e4995720c53a6f",
         "started_at": "2026-11-07T03:11:59Z",
         "status": "queued",
