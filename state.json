@@ -17400,7 +17400,7 @@
       "queued_at": "2026-11-06T23:44:33Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42363429761",
+      "run_id": "pending:ba6e49ec-1794050564",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -17419,7 +17419,7 @@
         "provider": "claude-1",
         "run": "42363429761"
       },
-      "started_at": "2026-11-07T10:18:57Z",
+      "started_at": "2026-11-07T11:23:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -19365,9 +19365,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T11:22:27Z",
+    "at": "2026-11-07T11:23:16Z",
     "url": "",
-    "what": "revise #3366 on claude-8"
+    "what": "build #3335 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T10:56:28Z",
