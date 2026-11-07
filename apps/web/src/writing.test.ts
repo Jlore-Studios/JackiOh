@@ -12,6 +12,20 @@ import zhCN from "./i18n/zh-CN.json";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
+// Bound once: vitest reads each `ts.isX` through the import's wrapper, up to nine times a node over nearly a million
+// nodes, which cost more than the parse itself (1.4 s of the walk against 0.1 s bound).
+const {
+  forEachChild,
+  isExportDeclaration,
+  isImportDeclaration,
+  isJsxText,
+  isNoSubstitutionTemplateLiteral,
+  isStringLiteral,
+  isTemplateHead,
+  isTemplateMiddle,
+  isTemplateTail,
+} = ts;
+
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
@@ -22,22 +36,29 @@ function sources(dir: string): string[] {
 
 function wordsIn(path: string): { at: string; text: string }[] {
   const text = readFileSync(path, "utf8");
-  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  // No parent links and no JSDoc parse: the walk reads neither, and the parse is most of what the test costs now.
+  const file = ts.createSourceFile(
+    path,
+    text,
+    { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone },
+    false,
+    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
   const out: { at: string; text: string }[] = [];
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
+    if (isImportDeclaration(node) || isExportDeclaration(node)) return;
     if (
-      ts.isStringLiteral(node) ||
-      ts.isNoSubstitutionTemplateLiteral(node) ||
-      ts.isTemplateHead(node) ||
-      ts.isTemplateMiddle(node) ||
-      ts.isTemplateTail(node) ||
-      ts.isJsxText(node)
+      isStringLiteral(node) ||
+      isNoSubstitutionTemplateLiteral(node) ||
+      isTemplateHead(node) ||
+      isTemplateMiddle(node) ||
+      isTemplateTail(node) ||
+      isJsxText(node)
     ) {
       const line = file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
       out.push({ at: `${relative(SRC, path)}:${String(line)}`, text: node.text });
     }
-    ts.forEachChild(node, visit);
+    forEachChild(node, visit);
   };
   visit(file);
   return out;
