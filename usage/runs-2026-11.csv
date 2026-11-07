@@ -1072,3 +1072,12 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-07T16:48:27Z,42391992153,claude-4,sonnet,review,3386,medium,approved,,11.6,29,13709,1607747,0.7178,20,21,,,1.3,,none,,1
 2026-11-07T16:47:33Z,42388896146,agy,gemini-3.8-flash-high,revise,3371,medium,approved,,48.9,638714,44035,0,,22,29,79,82,29.9,agy,none,,2
 2026-11-07T17:07:36Z,42393571542,claude-3,opus,plan,3402,hard,interrupted,refusal,5.2,0,0,0,7.1441,85,100,,,9.6,,fresh,,1
+2026-11-07T17:30:10Z,42394673043,claude-4,opus,plan,3405,hard,interrupted,5-hour cap,6.8,0,0,0,,55,70,,,2.2,,fresh,,1
+2026-11-07T17:28:05Z,42393498773,claude-8,opus,plan,3400,hard,planned,,25.5,272,158586,34354701,29.8168,1,62,,,9,,fresh,,1
+2026-11-07T17:21:26Z,42393344926,claude-4,opus,plan,3389,hard,planned,,20.8,159,136472,15891780,15.1977,21,54,,,7,,fresh,,1
+2026-11-07T17:40:58Z,42397166769,claude-4,opus,plan,3405,hard,interrupted,5-hour cap,0,0,0,0,,70,70,,,32,claude-4,none,,0
+2026-11-07T17:40:20Z,42397097147,claude-4,opus,build,3389,hard,interrupted,5-hour cap,0,0,0,0,,70,70,,,51.9,claude-4,none,,0
+2026-11-07T17:37:59Z,42395555354,claude-2,opus,plan,3395,hard,interrupted,5-hour cap,12.8,0,0,0,,0,90,15,22,11.4,,fresh,,1
+2026-11-07T17:42:09Z,42394593120,claude-7,opus,plan,3407,hard,planned,,22.8,185,139923,22226570,13.3938,2,29,,,18.4,,fresh,,1
+2026-11-07T17:32:49Z,42393424578,claude-6,opus,plan,3399,hard,planned,,31.8,4,10796,335246,11.6252,29,53,,,8.5,,fresh,,1
+2026-11-07T17:42:37Z,42382536043,claude-6,opus,review,3375,hard,approved,,60.2,127,35079,5601282,11.216,71,56,,,130.9,claude-6,fresh,,5
