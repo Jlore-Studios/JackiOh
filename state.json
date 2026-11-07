@@ -18349,7 +18349,7 @@
       "started_at": "2026-11-07T08:58:43Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 4,
       "votes": {
         "approvals": [],
         "builder": "claude",
