@@ -33834,7 +33834,10 @@
           "provider": "claude-7"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-07T13:40:44Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3377,
         "head": "8a9e119f09ed52261e5ef9cba3fb4ebcf591bb66",
         "issue": 3221,
         "merged_at": "2026-11-07T13:01:10Z",
@@ -33847,12 +33850,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:b992cdc2-1794057501",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42376382383",
         "sha": "765489f9534d437ca5867d2e3a82e527e23ee6d8",
         "started_at": "2026-11-07T13:18:49Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: move the menus' remaining dialogs and sheets onto the shared Dialog",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 130
