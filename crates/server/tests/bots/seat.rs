@@ -22,7 +22,7 @@ fn random_turn_starts(seed: &str) -> Vec<GameState> {
         Pinned::default(),
         &create_game(
             Pinned::default(),
-            &create_game_args(seed, &decks, None, None, None),
+            &create_game_args(seed, &decks, None, None, None, None),
         ),
     )
     .state;

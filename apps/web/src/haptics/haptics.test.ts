@@ -153,6 +153,37 @@ describe("#3347 the pick-up buzz", () => {
       resetSharedHapticsForTests();
     }
   });
+
+  it("R3342000 touch() buzzes HAPTIC_PATTERNS.touch, and stays quiet with the switch off, under reduced motion, within the gap, and with no vibrate", () => {
+    let t = 1000;
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    let reduced = false;
+    const haptics = createHaptics({ vibrate, now: () => t, reducedMotion: () => reduced });
+
+    haptics.touch();
+    expect(vibrate.mock.calls).toEqual([[[...HAPTIC_PATTERNS.touch]]]);
+
+    haptics.touch();
+    expect(vibrate).toHaveBeenCalledTimes(1);
+
+    t += HAPTIC_MIN_GAP_MS;
+    haptics.touch();
+    expect(vibrate).toHaveBeenCalledTimes(2);
+
+    t += HAPTIC_MIN_GAP_MS;
+    writeHapticsSettings({ vibration: false });
+    haptics.touch();
+    expect(vibrate).toHaveBeenCalledTimes(2);
+
+    writeHapticsSettings({ vibration: true });
+    reduced = true;
+    haptics.touch();
+    expect(vibrate).toHaveBeenCalledTimes(2);
+
+    expect(() => {
+      createHaptics({ vibrate: null }).touch();
+    }).not.toThrow();
+  });
 });
 
 describe("R669 the vibration switch", () => {

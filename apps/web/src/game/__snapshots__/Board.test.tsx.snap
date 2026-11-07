@@ -3654,6 +3654,64 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         role="group"
       >
         <div
+          aria-hidden="true"
+          class="tile-aura"
+          data-testid="tile-aura-opponent-units-5"
+          data-tile-look="void"
+          data-tile-motion="on"
+          data-tile-pattern="circuitry"
+          data-tile-state="standing"
+          data-tile-tier="Mythic"
+          style="--tile-core: #dfdfff; --tile-body: #ffffff; --tile-glow: #b45cf6; --tile-glow-px: 12px; --tile-edge: 0.6; --tile-pattern-opacity: 0.35; --tile-flip: 1; --tile-phase: -5000ms; --tile-pulse-ms: 6000ms; --tile-ripple-ms: 700ms; --tile-flicker-ms: 450ms; --tile-out-ms: 350ms;"
+        >
+          <svg
+            aria-hidden="true"
+            class="tile-aura-pattern"
+            viewBox="0 0 100 100"
+          >
+            <path
+              d="M 10 20 H 40 V 50 H 60"
+            />
+            <path
+              d="M 90 20 H 70 V 40"
+            />
+            <path
+              d="M 20 80 H 50 V 60 H 80"
+            />
+            <path
+              d="M 80 60 V 85 H 90"
+            />
+            <path
+              d="M 45 45 H 55 V 55 H 45 Z"
+            />
+          </svg>
+          <span
+            class="tile-aura-mote"
+            data-mote-shape="dot"
+            style="--mx: 79%; --my: 2%; --mdx: -13px; --mdy: -22px; --msize: 4.3px; --mdelay: 1406ms; --mdur: 2271ms;"
+          />
+          <span
+            class="tile-aura-mote"
+            data-mote-shape="dot"
+            style="--mx: 81%; --my: 18%; --mdx: 12px; --mdy: 13px; --msize: 5.6px; --mdelay: 1644ms; --mdur: 2731ms;"
+          />
+          <span
+            class="tile-aura-mote"
+            data-mote-shape="dot"
+            style="--mx: 5%; --my: 12%; --mdx: 7px; --mdy: -15px; --msize: 5.1px; --mdelay: 2794ms; --mdur: 3018ms;"
+          />
+          <span
+            class="tile-aura-mote"
+            data-mote-shape="dot"
+            style="--mx: 26%; --my: 97%; --mdx: 20px; --mdy: 3px; --msize: 3.7px; --mdelay: 911ms; --mdur: 2411ms;"
+          />
+          <span
+            class="tile-aura-mote"
+            data-mote-shape="dot"
+            style="--mx: 92%; --my: 87%; --mdx: 9px; --mdy: 12px; --msize: 5.1px; --mdelay: 1018ms; --mdur: 2325ms;"
+          />
+        </div>
+        <div
           aria-disabled="true"
           aria-keyshortcuts="I"
           class="card card-unit cf-host cf-host--minion"

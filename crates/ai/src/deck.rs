@@ -16,8 +16,7 @@ use std::ops::{Index, IndexMut};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::MAX_MANA;
 use jackioh_engine::{
-    CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, query, query_cost,
-    registered_win_rates,
+    CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, WinRateTable, query, query_cost,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -137,6 +136,11 @@ pub struct AiDeckOptions {
     /// clamped. `None` and `Some(0.0)` deal exactly the deck the seed always dealt; it takes no rng draw.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strength: Option<f64>,
+    /// R3049002: the win-rate table `strength` leans on, the server's snapshot of its cached card
+    /// stats as the bot pool refreshes. `None` leans on nothing, so the deal is the seed's at any
+    /// strength.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_rates: Option<WinRateTable>,
     /// R976000: multiply each card's weight by `shaped_weight`, the unban lane's dealt-quality table
     /// (`shadow_ban.rs`). Off by default, whatever `banned` holds, and no caller sets it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -576,15 +580,16 @@ fn narrow_leaning<'a>(
     remaining.to_vec()
 }
 
-/// #750: what a card's weight is multiplied by at `strength` (`AI_WIN_RATE`): 1.0 at strength 0 and for
-/// a card with no row or a row under `min_games` games; else `1 + strength × max_boost × (rate − 0.5) ×
-/// 2`, held between `floor` and `1 + max_boost`. Looked up by the pool's id, so a row for a card the
-/// catalog no longer holds is never read. No rng draw, so a seed's deck moves only by the weights.
-fn win_rate_weight(id: &str, strength: f64) -> f64 {
+/// #750: what a card's weight is multiplied by at `strength` (`AI_WIN_RATE`): 1.0 at strength 0, with
+/// no table (R3049002) and for a card with no row or a row under `min_games` games; else `1 + strength
+/// × max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`. Looked up by the pool's
+/// id, so a row for a card the catalog no longer holds is never read. No rng draw, so a seed's deck
+/// moves only by the weights.
+fn win_rate_weight(table: Option<&WinRateTable>, id: &str, strength: f64) -> f64 {
     if strength <= 0.0 {
         return 1.0;
     }
-    let Some(row) = registered_win_rates().cards.iter().find(|row| row.id == id) else {
+    let Some(row) = table.and_then(|table| table.cards.iter().find(|row| row.id == id)) else {
         return 1.0;
     };
     if row.games < AI_WIN_RATE.min_games {
@@ -783,7 +788,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
                 if shape {
                     weight *= shaped_weight(&def.id);
                 }
-                weight *= win_rate_weight(&def.id, strength);
+                weight *= win_rate_weight(options.win_rates.as_ref(), &def.id, strength);
                 weight
             })
             .collect();

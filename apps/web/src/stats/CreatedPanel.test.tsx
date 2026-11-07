@@ -1,4 +1,5 @@
-// Tests for the Created cards panel of /stats (SPEC §9.11, R2089000) and its sorting (R3184002).
+// Tests for the Created cards panels of /stats (SPEC §9.11, R2089000), the Tokens and the Other created cards
+// (R3324002), and their sorting (R3184002).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -31,10 +32,29 @@ afterEach(cleanup);
 
 describe("CreatedPanel", () => {
   it("scrolls its table in a region the keyboard can reach, as a phone needs (axe scrollable-region-focusable)", () => {
-    render(<CreatedPanel created={[COIN]} minSample={20} nameOf={(_id, name) => name} />);
-    const region = screen.getByRole("region", { name: "Created cards" });
+    render(<CreatedPanel kind="other" created={[COIN]} minSample={20} nameOf={(_id, name) => name} />);
+    const region = screen.getByRole("region", { name: "Other created cards" });
     expect(region.tabIndex).toBe(0);
     expect(region.querySelector("table")).not.toBeNull();
+  });
+
+  it("R3324002 the Tokens panel is the same table under its own title and test ids", () => {
+    render(<CreatedPanel kind="tokens" created={[COIN]} minSample={20} nameOf={(_id, name) => name} />);
+    const panel = screen.getByTestId(statsTestid.tokensPanel);
+    expect(within(panel).getByRole("heading", { name: "Tokens" })).toBeInTheDocument();
+    const table = within(panel).getByTestId(statsTestid.tokensTable);
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Token",
+      "Games",
+      "Win rate ↓",
+      "Used",
+      "Not used",
+      "Used Radiant",
+      "Used normal",
+      "Used vs not used",
+    ]);
+    expect(screen.getByRole("region", { name: "Tokens" })).toContainElement(table);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
   });
 });
 
@@ -93,7 +113,7 @@ describe("R3184002 the Created cards table sorts by every column", () => {
   ];
 
   function renderTable(): { headers: () => HTMLElement[]; order: () => (string | null)[] } {
-    render(<CreatedPanel created={ROWS} minSample={20} nameOf={(_id, name) => name} />);
+    render(<CreatedPanel kind="other" created={ROWS} minSample={20} nameOf={(_id, name) => name} />);
     const table = screen.getByTestId(statsTestid.createdTable);
     return {
       headers: () => within(table).getAllByRole("columnheader"),
@@ -101,10 +121,13 @@ describe("R3184002 the Created cards table sorts by every column", () => {
     };
   }
 
-  it("R3184002 keeps the server's order until a header is pressed, every header unsorted", () => {
+  it("R3324002 opens on Win rate, best first, a row below the floor last, every other header unsorted", () => {
     const { headers, order } = renderTable();
-    expect(order()).toEqual(["rush", "sprite", "coin", "ember"]);
-    for (const header of headers()) {
+    // Win rate, the seats' wins over their games: Spark Sprite 28 of 45, Rush 31 of 55, The Coin 21 of 45; Ember's 12 are below the floor.
+    expect(order()).toEqual(["sprite", "rush", "coin", "ember"]);
+    expect(headers()[2]).toHaveAttribute("aria-sort", "descending");
+    expect(headers()[2]).toHaveTextContent("Win rate ↓");
+    for (const header of headers().filter((_, at) => at !== 2)) {
       expect(header).toHaveAttribute("aria-sort", "none");
       expect(header.textContent).not.toMatch(/[↑↓]/);
     }
@@ -112,15 +135,17 @@ describe("R3184002 the Created cards table sorts by every column", () => {
 
   it("R3184002 a figure's first press sorts descending and the next ascending, a row with none last either way", () => {
     const { headers, order } = renderTable();
-    // Columns: Card, Games, Used, Not used, Used Radiant, Used normal, Used vs not used.
+    // Columns: Card, Games, Win rate, Used, Not used, Used Radiant, Used normal, Used vs not used. Win rate, sorted
+    // as the table opens, goes last, so its first press here sorts it descending as any other's does.
     const cases: [number, string, (string | null)[], (string | null)[]][] = [
       // Games: Spark Sprite and The Coin tie, and keep the server's order both ways.
       [1, "Games", ["rush", "sprite", "coin", "ember"], ["ember", "sprite", "coin", "rush"]],
-      [2, "Used", ["sprite", "rush", "coin", "ember"], ["coin", "rush", "sprite", "ember"]],
-      [3, "Not used", ["rush", "sprite", "coin", "ember"], ["sprite", "rush", "coin", "ember"]],
-      [4, "Used Radiant", ["sprite", "rush", "coin", "ember"], ["sprite", "rush", "coin", "ember"]],
-      [5, "Used normal", ["rush", "coin", "sprite", "ember"], ["coin", "rush", "sprite", "ember"]],
-      [6, "Used vs not used", ["sprite", "rush", "coin", "ember"], ["rush", "sprite", "coin", "ember"]],
+      [3, "Used", ["sprite", "rush", "coin", "ember"], ["coin", "rush", "sprite", "ember"]],
+      [4, "Not used", ["rush", "sprite", "coin", "ember"], ["sprite", "rush", "coin", "ember"]],
+      [5, "Used Radiant", ["sprite", "rush", "coin", "ember"], ["sprite", "rush", "coin", "ember"]],
+      [6, "Used normal", ["rush", "coin", "sprite", "ember"], ["coin", "rush", "sprite", "ember"]],
+      [7, "Used vs not used", ["sprite", "rush", "coin", "ember"], ["rush", "sprite", "coin", "ember"]],
+      [2, "Win rate", ["sprite", "rush", "coin", "ember"], ["coin", "rush", "sprite", "ember"]],
     ];
     for (const [at, label, descending, ascending] of cases) {
       fireEvent.click(headers()[at]!);

@@ -303,5 +303,8 @@ describe("R388 the real history's changes", () => {
         expectRecorded(record, diffCard(before[record.id], after[record.id]), `${patch.version} ${record.id}`);
       }
     }
-  }, 30_000);
+    // It loads every shipped snapshot, so it slows with each `patches ship`: 27 s of the 30 s it once had on
+    // main's CI on 2026-11-07, and over it on a busy runner. The same as the walk over every snapshot in
+    // placeholders.test.tsx.
+  }, 180_000);
 });
