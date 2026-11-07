@@ -17381,10 +17381,10 @@
       "kind": "review",
       "live": "reviewing",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "agy",
       "queued_at": "2026-11-07T18:25:01Z",
-      "run_id": "42400023906",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:f4151aa0-1794075979",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17403,7 +17403,7 @@
         "provider": "claude-8",
         "run": "42388823369"
       },
-      "started_at": "2026-11-07T18:11:23Z",
+      "started_at": "2026-11-07T18:26:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17419,9 +17419,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T18:26:06Z",
+    "at": "2026-11-07T18:26:55Z",
     "url": "",
-    "what": "plan #3390 on claude-3"
+    "what": "review #3409 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T18:06:43Z",
