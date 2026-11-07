@@ -562,6 +562,10 @@ describe("R3344000 the glare is by area for each foil", () => {
     // The art's glare is dodge, the frame's overlay.
     expect(/\.cf-glare--art\s*\{[^}]*mix-blend-mode: color-dodge/.test(css)).toBe(true);
     expect(/\.cf-glare--frame\s*\{[^}]*mix-blend-mode: overlay/.test(css)).toBe(true);
+    // A face at rest carries no layer that blends: a blend mode alone, even at opacity 0, prints the face's text with
+    // another antialiasing (card-versions.cy.tsx's gem pixels), so the glare is drawn only while the face tilts.
+    expect(/\.cf-glare\s*\{[^}]*display: none/.test(css)).toBe(true);
+    expect(/\[data-tilt="on"\] \.cf-glare\s*\{[^}]*display: block/.test(css)).toBe(true);
     // Each blends inside a group of its own area's: the art frame and the scale.
     expect(/\.cf\[data-depth\] \.cf-art-frame,\s*\.cf\[data-depth\] \.cf-scale\s*\{[^}]*isolation: isolate/.test(css)).toBe(true);
     // Radiant's shimmer and every worn foil are the other sheets', and no foil rule is here.

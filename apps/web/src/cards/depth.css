@@ -55,11 +55,13 @@
 
 /* The glare's layers: one over the art window, blended in the way of an art (`color-dodge`), and one under the face's
    words, over its panel, blended as a frame's sheen is (`overlay`). Each draws in an isolated group, so it blends with
-   its own area and nothing else. Unseen until the face tilts. */
+   its own area and nothing else. Drawn only while the face tilts (the motion gate below): a blend mode makes the group
+   under it a render surface even at opacity 0 or hidden, which prints the face's text with another antialiasing, so a
+   face at rest carries no layer that blends at all. */
 .cf-glare {
   position: absolute;
   inset: 0;
-  display: block;
+  display: none;
   opacity: 0;
   pointer-events: none;
 }
@@ -132,11 +134,8 @@
     transition-timing-function: var(--ease-out);
   }
 
-  :root:not([data-reduce-motion="true"]) .cf[data-depth] .cf-glare {
-    transition: opacity var(--motion-fast) var(--ease-out);
-  }
-
   :root:not([data-reduce-motion="true"]) .cf[data-depth][data-tilt="on"] .cf-glare {
+    display: block;
     opacity: 1;
   }
 }
