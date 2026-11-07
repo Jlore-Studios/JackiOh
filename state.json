@@ -16639,7 +16639,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-07T14:59:48Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:1cee86e3-1794063922",
+      "run_id": "42384716906",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
