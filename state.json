@@ -17918,7 +17918,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-07T00:59:16Z",
-      "run_id": "pending:df449fb2-1794021083",
+      "run_id": "42332882170",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
