@@ -19124,6 +19124,8 @@
       }
     },
     "3371": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T10:37:18Z",
@@ -19137,8 +19139,11 @@
         "trail": "- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/apps/web/src/fx/aura/TileAura.test.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/apps/web/src/fx/aura/TileAura.test.tsx\"}\n- said: \n- read_file: {\"EndLine\": 195, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/apps/web/src/fx/aura/TileAura.test.tsx\", \"StartLine\": 175}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/apps/web/src/fx/aura/TileAura.test.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && pnpm --dir apps/web exec vitest run src/fx/aura/TileAura.test.tsx\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/apps/web/src/fx/aura/TileAura.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && pnpm --dir apps/web exec vitest run src/fx/aura/TileAura.test.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && pnpm --dir apps/web exec vitest run src/fx/aura/tile.test.ts\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && pnpm exec eslint apps/web e2e\n- said: Running `eslint` to verify all lint checks now pass.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"df73ad92-5d45-47d5-b106-ae0925d2f14e/task-590\"}\n- said: Waiting for `eslint` to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && git status -s\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 265, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/.bot-notes.md\", \"StartLine\": 101}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && E2E_COMPONENT_PORT=5283 pnpm --dir e2e test:component --spec cypress/component/tile-aura.cy.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && pnpm --dir apps/web exec vitest run src/fx src/audio/sfx.test.ts src/audio/engine.test.ts src/haptics src/game/Zone.test.tsx src/game/B\u2026\n- said: Running full test suite for touched modules across audio, fx, haptics, game components, and style guards.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"df73ad92-5d45-47d5-b106-ae0925d2f14e/task-606\"}\n- said: Waiting for task-606 to finish.\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3342/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3342 && git status -s\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: tiles that belong to their card: every Legendary and Mythic on the board marks its tile with an aura in its own colours that answers a touch\"} --> ## Summary Implemented standing tile auras for every face-up Legendary and Mythic permanent on the board (\u2026"
       },
       "issue": 3342,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T11:19:44Z",
         "from_run": "42364732741",
         "gates": [
           {
@@ -19197,8 +19202,15 @@
         "source": "build",
         "until": "2026-11-07T11:44:08Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-07T11:14:08Z",
+      "run_id": "pending:f004bbe7-1794050345",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-07T11:19:44Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -19360,9 +19372,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T11:18:46Z",
+    "at": "2026-11-07T11:19:44Z",
     "url": "",
-    "what": "review #3372 on claude-1"
+    "what": "review #3371 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T10:56:28Z",
