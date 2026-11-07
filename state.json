@@ -16007,30 +16007,25 @@
     "3369": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-07T07:51:01Z",
+      "feedback_since": "2026-11-07T10:48:14Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3343,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "`CosmeticHoldings::holds` checks the default look against the live shipped `registry()`, not against the logged `droppable` entries the roll was given, so a cosmetic-pack opening logged before #3343 no longer replays to the same slots.",
-          "evidence": "`holds(card_id, id)` now ends with `|| registry().iter().any(|cosmetic| cosmetic.id == id && is_default_look(cosmetic, card_id))`. It is called from `open_places` (lines 193-194) and from `slot_grant`'s `below` filter (line 280), and both already hold the `&Cosmetic` from `droppable`. `CosmeticOpeningLog` (lines 122-142) promises that `roll_cosmetic_pack` over the logged `cosmetics` 'replays it however the live catalog or registry has moved since'. R3343000 also claims 'an opening's log keeps the registry it was rolled against'. A log from before #3343 holds `version-full-art` with no `defaultOn`. `offered` reads that logged entry and still places it on core-100. `holds` reads the live entry, which now has `defaultOn: [Mythic]`, so it reports the level as held. The pool and the `below` list both change, and so do the slots. `roll.rs` `duplicate_grant` gets this right, because it calls `is_default_look(cosmetic, card_id)` on the droppable entry, so the two rolls now disagree. No test catches it: `assert_replays` only replays logs written by the same build. Fix: pass the `&Cosmetic` from `droppable` to `holds`, or call `is_default_look(level, card)` at the three call sites, and drop the live `registry()` lookup. That also removes a full scan of the registry on every `holds` call in the pool loops. Add a test that replays a log whose `cosmetics` lack `defaultOn`.",
-          "severity": "blocking",
-          "where": "crates/shared/src/economy/cosmetic_pack.rs:61"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-11-07T10:46:02Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "42365488956",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16051,10 +16046,11 @@
         "provider": "claude-3",
         "run": "42352979758"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-07T10:48:14Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
