@@ -33,6 +33,10 @@ export const ENTRANCE_TRAUMA = {
   titanBloom: FX_LEGENDARY_TRAUMA,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
   felinorAssembly: FX_LEGENDARY_TRAUMA,
+  // R3407000: Stinkyscape part two's (fx/cards/stinkyscape/), each within SIGNATURE_PERMANENT_MAX_TRAUMA.
+  melchiorBoot: 0.3,
+  balthasarLamp: 0.2,
+  casperMirror: 0.25,
 } as const;
 
 /** Where Big Max's fuse sparks, as a fraction of the entry, before the slam at FX_SLAM_AT. */
@@ -54,6 +58,12 @@ export type EntrancePlan = {
   intensity: number;
   view?: PlayerView;
   landing?: Extract<GameEvent, { type: "summoned" }>;
+  /**
+   * R3407000: how long the entry holds before its motion (a Mythic's takeover, a slam's anticipation;
+   * `leadMs`), so an entrance that lands with its card (at FX_SLAM_AT of what follows) times its beats
+   * after it; absent, none.
+   */
+  wait?: number;
 };
 
 export type Entrance = (p: EntrancePlan) => FxCue[];

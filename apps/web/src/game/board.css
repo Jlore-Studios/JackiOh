@@ -2017,6 +2017,16 @@ button.modifier-badge[data-open="true"] {
   background: color-mix(in srgb, var(--pal-black) 45%, transparent);
 }
 
+/* R3407000: a Mythic's own picture filling the screen behind the rays, as its takeover draws it, still. */
+.takeover-still-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+
 .takeover-still-rays {
   position: absolute;
   width: 140vmin;

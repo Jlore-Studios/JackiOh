@@ -41,6 +41,12 @@ export const FX_SLAM_MAX_TRAUMA = 0.5;
 export const FX_LEGENDARY_TRAUMA = 0.7;
 /** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
 export const FX_TAKEOVER_TAIL_MS = 700;
+/**
+ * R3407000: a Mythic Spell's signature takeover lands as its hold ends (it lands on no zone) and it and its
+ * rays fade this long after its entry, so it ends within its ceiling (SIGNATURE_MYTHIC_MAX_MS ×
+ * SIGNATURE_SPELL_SHARE, its hold included).
+ */
+export const FX_TAKEOVER_SPELL_TAIL_MS = 500;
 /** R2722001: the takeover's shake as its card lands (R2803000: eased for the phone frame budget; the result still thumps hardest). */
 export const FX_TAKEOVER_TRAUMA = 0.6;
 export const FX_TRAP_TRAUMA = 0.4;
@@ -253,6 +259,31 @@ export const AURA_SIGNATURE_MAX_INTENSITY = 0.8;
 export const FX_FELINOR_STREAK_AT = 0.1;
 export const FX_FELINOR_STREAK_STEP = 0.08;
 export const FX_FELINOR_STREAKS_MAX = 5;
+// R3407000: Stinkyscape part two's signatures (fx/cards/stinkyscape/, #3407), keyed by recipe or entrance:
+// each beat's moments as fractions of its entry's D (an entrance's of its motion after its hold), and the
+// recipes' shakes. An entrance's own shake is ENTRANCE_TRAUMA's (fx/cards/recipe.ts).
+export const FX_STINKY_SIGNATURES = {
+  // magi.ts: MELCHIOR, BALTHASAR and CASPER.
+  melchiorBoot: { columnAt: 0.1, scanAt: 0.2, figuresAt: 0.25, figureStep: 0.06 },
+  melchiorTally: { tickAt: 0.05, tickStep: 0.03, ballotAt: 0.4, grantAt: 0.15 },
+  balthasarLamp: { warmAt: 0.1, lineAt: 0.3 },
+  balthasarCradle: { ballotAt: 0.2, lineAt: 0.25, sendAt: 0.15, sendFor: 0.7 },
+  casperMirror: { flickerAt: 0.1, flickerStep: 0.2, glintAt: 0.3 },
+  casperKiss: { ballotAt: 0.2, kissAt: 0.1, kissLand: 0.35, wonAt: 0.15 },
+  // freshJack.ts
+  // ikwzki.ts
+  // shockwave447.ts
+  // jobApplication.ts
+  // scornboi.ts
+  // megabase.ts
+  // in33dh3.ts
+  // alteranReach.ts
+  // wildar.ts
+  // chaosCalls.ts
+  // sanctum.ts
+  // stimmycheck.ts
+  // narcor.ts
+} as const;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
 // AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
 // all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS

@@ -20,6 +20,7 @@ import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
 import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
+import { balthasarCradleFixture, casperKissFixture, melchiorTallyFixture } from "../cards/stinkyscape/magi.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
 import type { FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -373,9 +374,11 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Celestial Caller summons a Sun in lane 2 and a Moon in lane 4, Dino-size sets the viewer's first unit
  * to 10/10 and Goetzmann Game Design adds its card. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
- * into the deck and draws one, and King Wagtoggle swaps the decks.
+ * into the deck and draws one, and King Wagtoggle swaps the decks. R3407000: Stinkyscape part two's
+ * signatures take their modules' own (fx/cards/stinkyscape/), each told the card it plays (`defId`), so a
+ * hook's marker names it.
  */
-export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
+export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
   bloodDrain: (view, instanceId, player) => [...motifFixture("radiance", view, instanceId, player), { type: "healthLost", player, amount: 3 }],
   crushingWalls: (view, instanceId, player) => motifFixture("wipe", view, instanceId, player),
@@ -485,6 +488,10 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
+  // R3407000: Stinkyscape part two's signatures, each on its module's own fixture (fx/cards/stinkyscape/).
+  melchiorTally: melchiorTallyFixture,
+  balthasarCradle: balthasarCradleFixture,
+  casperKiss: casperKissFixture,
 };
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
@@ -635,7 +642,7 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
         return play.motif === "snap" ? [fired] : [fired, ...motifFixture(play.motif, view, instanceId, player)];
       }
       case "recipe":
-        return RECIPE_FIXTURES[play.key](view, instanceId, player);
+        return RECIPE_FIXTURES[play.key](view, instanceId, player, defId);
       case "setPiece":
         return SET_PIECE_FIXTURES[play.key](view, instanceId, player, defId);
       case "hook":

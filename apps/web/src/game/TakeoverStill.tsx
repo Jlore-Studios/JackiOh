@@ -5,12 +5,15 @@
 // the queue, practice's AI and `cy.settled()` never wait for it (R200). The music still plays (R1350).
 // R2803000: the still echoes the reworked takeover at rest: the dark it lands in, a motionless rays
 // disc behind the card and the landing ring around it. Nothing here animates, so it stays still.
+// R3407000: a Mythic whose takeover draws its own picture (`takeoverArtOf`) shows that picture filling the
+// screen behind the rays, still, as its takeover's still form.
 
 import { useContext, useEffect, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import { CardFace } from "../cards/index.ts";
+import { takeoverArtOf } from "../fx/takeover.ts";
 import { CatalogContext } from "./catalog.ts";
 import { namedFace } from "./faces.ts";
 
@@ -34,8 +37,10 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   }, [defId, instanceId, onDone]);
   const face = namedFace(lookup, view, { defId, instanceId, radiant: false });
   if (face === null) return null;
+  const art = takeoverArtOf(defId);
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} aria-hidden="true">
+      {art === undefined ? null : <img className="takeover-still-art" src={art} alt="" aria-hidden="true" draggable={false} decoding="async" />}
       <span className="takeover-still-rays" aria-hidden="true" />
       <span className="takeover-still-card">
         <CardFace face={face} layout="full" />

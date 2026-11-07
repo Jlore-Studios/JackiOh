@@ -78,7 +78,7 @@ const modifier = (player: PlayerId, modifierId: string, added = true): GameEvent
 const trapFired = (controller: PlayerId, row: Row, lane: number): GameEvent => ({ type: "trapFired", instanceId: "t9", defId: "core-084", controller, row, lane });
 
 function spec(key: string, scope: AuraScope, side: Side = "you", lane: number | null = 1, look: AuraLook = "storm"): AuraSpec {
-  return { key, defId: "core-014", instanceId: key, side, lane, scope, look, colors: FLAVOR_LOOKS.Tech.colors };
+  return { key, defId: "core-014", instanceId: key, side, lane, row: "backrow", scope, look, colors: FLAVOR_LOOKS.Tech.colors };
 }
 
 function tracked(key: string, scope: AuraScope, seen: number, phase: AuraPhase = "standing", side: Side = "you", lane: number | null = 1): TrackedAura {

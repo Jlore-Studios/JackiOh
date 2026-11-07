@@ -2207,6 +2207,185 @@
   }
 }
 
+/* R3407000: a look of its own draws its card's picture filling the screen over the dark, under the sweep
+   (dom.ts, `art`): it fades in by the landing at `--fx-land` and out by --fx-ms, opacity only (R200), and
+   is only ever the picture of a card the seat's own event names (R202). */
+.fx-takeover-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  animation:
+    fx-takeover-art-in var(--fx-land) ease-in both,
+    fx-takeover-art-out calc(var(--fx-ms) - var(--fx-land)) ease-out var(--fx-land) forwards;
+}
+
+@keyframes fx-takeover-art-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes fx-takeover-art-out {
+  0% {
+    opacity: 0.62;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* R3407000: Stinkyscape's six Mythics of part two sweep in their own ways, transform and opacity only:
+   xxFreshJack's gate glitches in stutter-steps, iKwzki's spire folds down into her zone, Shockwave447's
+   diagrams scrawl in fast from the side, Alteran Reach's camera dives in from far away, Edge of the
+   Universe curls in like torn paper and Red Narcor's crystal streaks down from above. */
+.fx-takeover[data-look="freshJack"] .fx-takeover-sweep {
+  animation-name: fx-takeover-glitch;
+  animation-timing-function: steps(6, end);
+}
+
+.fx-takeover[data-look="ikwzki"] .fx-takeover-sweep {
+  animation-name: fx-takeover-fold;
+}
+
+.fx-takeover[data-look="shockwave"] .fx-takeover-sweep {
+  animation-name: fx-takeover-scrawl;
+}
+
+.fx-takeover[data-look="alteran"] .fx-takeover-sweep {
+  animation-name: fx-takeover-dive;
+}
+
+.fx-takeover[data-look="edge"] .fx-takeover-sweep {
+  animation-name: fx-takeover-curl;
+}
+
+.fx-takeover[data-look="redNarcor"] .fx-takeover-sweep {
+  animation-name: fx-takeover-streak;
+}
+
+@keyframes fx-takeover-glitch {
+  0% {
+    transform: translate(-30vw, 4vh) scale(1.8) skewX(-12deg);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(12vw, -3vh) scale(1.5) skewX(10deg);
+    opacity: 0.9;
+  }
+  40% {
+    transform: translate(-8vw, 2vh) scale(1.3) skewX(-6deg);
+    opacity: 0.6;
+  }
+  60% {
+    transform: translate(5vw, -1vh) scale(1.1) skewX(4deg);
+    opacity: 0.9;
+  }
+  85% {
+    transform: translate(0, 0) scale(0.9) skewX(0deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(0, 0) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-fold {
+  0% {
+    transform: translateY(-40vh) scale(2.2) rotateX(70deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  80% {
+    transform: translateY(0) scale(0.9) rotateX(0deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(0) scale(0.4) rotateX(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-scrawl {
+  0% {
+    transform: translateX(80vw) rotate(10deg) scale(1.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateX(-6vw) rotate(-4deg) scale(0.95);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-dive {
+  0% {
+    transform: scale(0.05) rotate(-40deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  85% {
+    transform: scale(1.6) rotate(0deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-curl {
+  0% {
+    transform: translate(-40vw, -30vh) rotate(-35deg) scale(1.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  70% {
+    transform: translate(4vw, 3vh) rotate(6deg) scale(0.95);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-streak {
+  0% {
+    transform: translateY(-80vh) scale(0.4, 2.4);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    transform: translateY(0) scale(0.9, 1.1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+}
+
 .fx-takeover-rays {
   position: absolute;
   left: var(--fx-x);

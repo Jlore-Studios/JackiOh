@@ -325,6 +325,16 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
+        // R3407000: a look of its own may draw its card's picture filling the screen, over the dark and under the sweep.
+        if (part === "dark" && cue.art !== undefined) {
+          const art = doc.createElement("img");
+          art.className = "fx-takeover-art";
+          art.alt = "";
+          art.draggable = false;
+          art.decoding = "async";
+          art.src = cue.art;
+          el.appendChild(art);
+        }
       }
       break;
     }

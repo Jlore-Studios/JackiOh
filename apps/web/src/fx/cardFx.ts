@@ -7,12 +7,14 @@
 // `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). R3332000: the
 // entrance a card lands with is its entry's `entrance`, whatever the entry's kind (`entranceKeyOf`): a
 // set piece's (R2800000, setPieces.ts) and a Field Spell's landing face up in the backrow among them.
+// R3407000: an entrance and the readable play's recipe both draw on the `summoned` they both claim (a MAGI's
+// own entrance inside Imitated Instrumentality's boots).
 // R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
-import { HIDDEN_ID, animTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { HIDDEN_ID, animTestid, leadMs, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
@@ -76,16 +78,18 @@ function planEntrance(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string
   if (key === undefined) return null;
   const tgt = targetFor(landing, p.view);
   if (tgt === null) return null;
-  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing }), row: "replace" };
+  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing, wait: leadMs(p.entry) }), row: "replace" };
 }
 
 export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
   const entrance = planEntrance(event, p, table);
-  if (entrance !== null) return entrance;
   const play = p.env.memory.resolving();
-  if (play === undefined || play.defId === HIDDEN_ID) return null;
-  const key = bespokeOf(play.defId, table);
-  return key === undefined ? null : CARD_RECIPES[key](event, p, play);
+  const key = play === undefined || play.defId === HIDDEN_ID ? undefined : bespokeOf(play.defId, table);
+  const recipe = play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
+  if (entrance === null) return recipe;
+  if (recipe === null) return entrance;
+  // R3407000: the MAGI's entrances under magiBoot draw both.
+  return { cues: [...entrance.cues, ...recipe.cues], row: "replace" };
 }
 
 /** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */

@@ -48,9 +48,9 @@
   "stinkyscape-016": { cast: { motif: "conjure" }, trigger: { motif: "bless", palette: "Physical/blade" }, aura: { look: "holy", scope: "zone" } }, // Rod of Ages
   "stinkyscape-017": { trigger: { motif: "conjure", palette: "Physical/steel" } }, // Imprisoned Ship Smith
   "stinkyscape-018": { bespoke: "magiBoot" }, // Imitated Instrumentality
-  "stinkyscape-018-1": { activate: { motif: "bless", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // MELCHIOR
-  "stinkyscape-018-2": { activate: { motif: "send", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // BALTHASAR
-  "stinkyscape-018-3": { activate: { motif: "hex", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // CASPER
+  "stinkyscape-018-1": { bespoke: "melchiorTally", entrance: "melchiorBoot", aura: { look: "scanline", palette: "Tech/hologram", scope: "zone" }, signature: true }, // MELCHIOR
+  "stinkyscape-018-2": { bespoke: "balthasarCradle", entrance: "balthasarLamp", aura: { look: "heartbeat", palette: "Clout", scope: "zone" }, signature: true }, // BALTHASAR
+  "stinkyscape-018-3": { bespoke: "casperKiss", entrance: "casperMirror", aura: { look: "glint", palette: "Dark", scope: "zone" }, signature: true }, // CASPER
   "stinkyscape-019": { trigger: { motif: "barrage", palette: "Tech/starfield" } }, // Imprisoned Cosmality
   "stinkyscape-020": "none: its Cry copies a card's text, which moves nothing on the board", // Tnack Trav
   "stinkyscape-021": { cast: { motif: "send" } }, // Moonberry

@@ -4,7 +4,7 @@
 // Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
 // Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798). R3338000: Olivian
-// Expanse's rift is its set piece now (fx/terminus/).
+// Expanse's rift is its set piece now (fx/terminus/). R3407000: Stinkyscape part two's signatures' recipes.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -24,6 +24,7 @@ import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
+import { balthasarCradle, casperKiss, melchiorTally } from "./stinkyscape/magi.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
@@ -51,6 +52,10 @@ export const CARD_RECIPES = {
   duoBond,
   flashFreeze,
   stratosSwarm,
+  // R3407000: Stinkyscape part two's signatures.
+  melchiorTally,
+  balthasarCradle,
+  casperKiss,
   celestialCall,
   dinoStomp,
   gameDesign,
