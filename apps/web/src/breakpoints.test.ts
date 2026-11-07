@@ -61,6 +61,8 @@ const KEEP: Record<string, string[]> = {
   "auth/tavern.css": ["(max-width: 400px)"],
   // 900: up to 900 px tall (1280x900 too) the info column stands beside the faces (B29). 480: a phone upright, never on its side (568+).
   "cards/inspect/inspect.css": ["(max-height: 900px)", "(max-width: 480px)"],
+  // 840: a phone 390x844 and taller has height to spare in its lanes, so the field keeps a strip above and below for the corner props (R3348001); 390x664 and 360x640 have none.
+  "game/arena/arena.css": ["(min-height: 840px)"],
   // The control bar tightens where it ran off 360 and 375 px phones (B29); 390 keeps its gaps.
   "game/board.css": ["(max-width: 380px)"],
   // The filters fold under about 860 px tall, where three chip rows left one row of cards.
