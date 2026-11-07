@@ -17410,8 +17410,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "agy",
-      "owner_since": "2026-11-07T05:31:12Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-07T07:50:00Z; it can start again only in 2h 18m, more than the 120 minutes an item waits for its owner",
+      "owner_since": "2026-11-07T09:40:21Z",
+      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-07T00:39:07Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -18565,18 +18565,26 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3336,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-07T06:03:51Z",
+      "queued_at": "2026-11-07T09:40:21Z",
       "run_id": "42345394952",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "source": "conflict",
       "started_at": "2026-11-07T06:04:41Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-07T09:40:21Z",
+        "until": "2026-11-07T10:10:21Z",
+        "why": "it conflicts with `main` now"
+      },
       "votes": {
         "approvals": [
           "gemini"
@@ -18596,17 +18604,6 @@
         "tiers": {
           "gemini": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3365
-        ],
-        "ends": "2026-11-07T11:39:42Z",
-        "from_run": "42345394952",
-        "head": "a5c16c44127c68f97829e45faed9e45aaaa44240",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-07T09:39:42Z"
       }
     },
     "3363": {
