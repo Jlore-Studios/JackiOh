@@ -18098,10 +18098,14 @@
         "approvals": [],
         "builder": "gemini",
         "built_by": "agy",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "ecaf147c788a8e76bcddefd6c15296a9db5ff1d2",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       },
       "waiting_comment": 6702531167
     },
