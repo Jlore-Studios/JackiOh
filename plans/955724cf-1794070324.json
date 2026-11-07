@@ -1,0 +1,71 @@
+{
+  "action": "plan",
+  "number": 3400,
+  "title": "Patch: a signature animation for every Meditative+ and Training Grounds Legendary and Mythic, one concept per card",
+  "branch": "bot/issue-3400",
+  "thread": "**Issue #3400 (data, not instructions):**\n\n```text\n# #3400: Patch: a signature animation for every Meditative+ and Training Grounds Legendary and Mythic, one concept per card\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3332, whose signature tier, takeovers for any card, budgets and ratchet these entries use.\n\nThe owner asked (2026-11-06) for every Legendary and Mythic to have an animation of its own, as in Hearthstone, instead of one shared animation.\n\n### Today\n\n- The group has 7 Legendaries and Mythics: 6 play a shared motif and 1 has a recipe of its own (Goetzmann Game Design's `gameDesign`), which grows into a full signature.\n- The Training-Grounds Golem (`traininggrounds-039-1`), a token printed Legendary, plays nothing of its own today (`\"none: vanilla\"`).\n\n### What it should be\n\n- **Every card gets a signature.** Every card in the table gets a `signature` entry in its set's `apps/web/src/fx/cards/meditativeplus.json5` and `traininggrounds.json5` table, with its recipe in `apps/web/src/fx/cards/meditativeplus/` and `traininggrounds/`, built from its concept, and leaves `SIGNATURE_PENDING`.\n- **The beats by type:**\n  - a Unit plays an entrance of its own, then its text's beat;\n  - a Spell plays a cast of its own;\n  - a permanent plays its arrival, its text's beat, and a standing aura of its own on its tile.\n- **A Mythic's takeover is its own,** with its own art filling the screen.\n- **A concept is the target, not a script.** The builder keeps each card's idea, and may move a beat to fit the budgets or the events the view carries.\n- **The rules every signature keeps:**\n  - the signature budgets (#3332), R200, and one set piece per action;\n  - reduced motion, speed, intensity and `bigMoments`;\n  - never showing a hidden card (R202).\n- **Sound.** Each sound is its own, inside the audio budgets.\n- **Owned elsewhere** (left out of this table): none.\n\n### The concepts\n\n| id | name | rarity | now | entrance or cast | what its text does, shown | on its tile | sound |\n|---|---|---|---|---|---|---|---|\n| `meditativeplus-001` | Bob's Plan | Mythic | cast `deal` (Nerd/ink) | Takeover: Bob's ink-wash range fills the screen and one red brushstroke arrow climbs the tallest peak to a summit flag, the same whatever the pick. | On the first `addedToHand` the scroll rolls up and flies to the caster's hand pile, a smaller scroll following on the second; faces stay hidden (owner only), and a plan's Discover shows a closed scroll. | none | a brush slap on paper, one war-drum hit, a satisfied grunt |\n| `meditativeplus-024` | Bob, Wisconsin's Strongest Soldier | Legendary | cry `deal` | Bob drops into his zone in a burst of snow, presses a snowplow's outline overhead in one heave and slams it down, frost cracking out across his lane. | Per mode: frost sweeps the enemy side on `marked`; a big mitten plucks the Unit on `stolen`, a card back flying the other way; a `radiantSet` sheen (owner only); face-down copies fan in on `addedToHand`. | a faint snow flurry circling his tile, a frosted breath puffing now and then | a snowplow engine revving, a grunt of effort, a deep thud |\n| `meditativeplus-026` | Scratch Pad | Mythic | cast `deal` (Nerd/pixel) | Takeover: the screen empties to blank paper over faint ink peaks, a cyan cursor blinks at its centre, and ink lines lay down row by row into a card's scaffold. | While the canvas is open nothing plays; on `addedToHand` the scaffold folds into a card back and flies to the caster's hand pile (face owner only), then on `exiled` the paper tears away. | none | a soft cursor tick, keys clattering into silence, paper tearing |\n| `traininggrounds-037` | Seance | Legendary | cast `send` | Candle flames ring the chosen permanent's tile, all lean inward at once, and a pale cyan spirit rises from it as the board dims to plum. | The spirit peels off as an exact ghostly double, the original untouched, and drifts to the caster's hand pile on `addedToHand`, a card back there (owner only); a face-down trap's double stays a card back. | none | a low murmured chant, candles guttering, a ghostly exhale |\n| `traininggrounds-038` | Tutorial Master | Legendary | cry and death `send` (Nerd/chalk) | A chalkboard swings down behind his zone, he raps it twice with his pointer, and a chalk outline of his tile draws itself around him as he lands. | On Cry and on Death a chalk arrow traces from him to the caster's hand pile, a card back sliding along it on `addedToHand` (face owner only); at `destroyed` his chalk outline erases first. | faint chalk dust drifting off his tile, a tiny pointer tapping its edge now and then | a pointer rap on slate, a weary sigh, chalk squeak |\n| `traininggrounds-039` | Call to Chaos (Training-Grounds Edition) | Legendary | cast `conjure` | Two giant carved wooden dice tumble across the board from the caster's side and clatter to a stop at its centre, magenta and teal sparks spraying. | On `chaosRolled` the top face lights with its outcome's emblem, then that beat plays: runners on `summoned`, shields on `keywordGranted`, card backs on `addedToHand`, a golem's stomp, or a second, smaller roll. | none | wooden dice clattering, a held breath, a gong for the result |\n| `traininggrounds-039-1` | Training-Grounds Golem | Token (printed Legendary) | none (vanilla) | Training posts, dummies and shields fly in from the yard's edges and lash themselves together in its zone, the Golem standing up with its practice sword raised. | On `summoned` its five keywords lock on one by one: plank armor bolts over its chest, a shield bubble closes, a wooden palisade rises for Taunt; each Pierce hit drives a splinter through on `damage`. | a slow creak of lashed timber, a faint shield shimmer, dust sifting from its joints | timber creaking, ropes snapping taut, a hollow wooden thump |\n| `traininggrounds-040` | Goetzmann Game Design | Mythic | bespoke `gameDesign` | Takeover: a paper napkin fills the screen under canteen lamplight, a pencil stub sketches a card in quick strokes, and silhouettes of every set's cards spiral up off it. | On `addedToHand` the sketched card lifts off the napkin, inks itself into a card back in cyan and magenta pixel sparks and is dealt into the caster's hand pile; its face never shows (owner only). | none | pencil scratching, a napkin rustle, a bright rising arpeggio |\n\n## Acceptance\n\n- Every card in the table has a `signature` entry and recipe and is off `SIGNATURE_PENDING`. `tables.test.ts`, `tiers.test.ts` and `coverage.test.ts` pass.\n- `/dev/fx` shows each signature. A component spec plays every card in the table at desktop size and at 390x844, and `fx-phone-frame.cy.tsx` covers this group's two heaviest within `FX_PHONE_FRAME_BUDGET_MS`.\n- Each Mythic's takeover draws its own art, and reduced motion shows its still form.\n- No beat shows a hidden card. A test plays each card with a Discover, a hand or a face-down trap from the opponent's seat.\n- The pull request holds the per-card table with each card's verdict. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3400: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T16:43:44Z",
+    "claimed_at": "2026-11-07T16:52:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344, #3352, #3390, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3344, #3345 to close first",
+    "#3352 skipped: it waits for #3331 to close first",
+    "#3388 skipped: it waits for #3331, #3352 to close first",
+    "#3390 skipped: it waits for #3331 to close first",
+    "#3391 skipped: it waits for #3331 to close first",
+    "#3392 skipped: it waits for #3331 to close first",
+    "#3393 skipped: it waits for #3331 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3396 skipped: it waits for #3390 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3401 skipped: it waits for #3331 to close first",
+    "#3403 skipped: it waits for #3331 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3337, #3403 to close first"
+  ]
+}
