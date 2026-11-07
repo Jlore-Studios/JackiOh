@@ -22829,10 +22829,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-07T13:50:00Z",
-          "utilization": 0.92
+          "utilization": 1.01
         },
-        "observed_at": "2026-11-07T11:16:35Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-07T11:31:44Z",
+        "rejected_resets_at": "2026-11-07T13:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
@@ -37067,7 +37068,8 @@
       "2026-11-07T10:12:39Z,claude-1,stream,call,42357772242,64,2026-11-07T13:50:00Z,,,allowed,100,,",
       "2026-11-07T10:23:39Z,claude-1,stream,call,42357772242,67,2026-11-07T13:50:00Z,,,allowed,100,,",
       "2026-11-07T10:33:40Z,claude-1,stream,call,42357772242,86,2026-11-07T13:50:00Z,,,allowed,100,,",
-      "2026-11-07T10:43:25Z,claude-1,stream,call,42357772242,92,2026-11-07T13:50:00Z,,,allowed_warning,100,,"
+      "2026-11-07T10:43:25Z,claude-1,stream,call,42357772242,92,2026-11-07T13:50:00Z,,,allowed_warning,100,,",
+      "2026-11-07T11:28:57Z,claude-1,ping,before,42367975517,101,2026-11-07T13:50:00Z,,,rejected,100,,"
     ],
     "runs": [
       "2026-11-07T11:02:14Z,42366316721,claude-4,sonnet,review,3365,medium,interrupted,5-hour cap,0,0,0,0,,70,70,,,2.5,claude-4,none,,0",
