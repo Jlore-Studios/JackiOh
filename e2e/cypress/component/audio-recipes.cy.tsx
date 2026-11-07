@@ -39,6 +39,8 @@ const EXPECTED_IDS = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
   "organ",
+  // R3342000: the tile aura bell.
+  "auraTouch",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -127,6 +129,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   tapAstral: 240,
   // R3338000: the Terminus set pieces' organ.
   organ: 2000,
+  // R3342000: the tile aura bell.
+  auraTouch: 200,
 };
 
 /** B14 parameter sets used here too. */

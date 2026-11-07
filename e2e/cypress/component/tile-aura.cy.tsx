@@ -45,8 +45,12 @@ describe("R3342000 tile auras over the board", () => {
 
     cy.get(".tile-aura").should("have.length", 4).each(($aura) => {
       const zone = $aura.parent()[0];
+      const aura = $aura[0];
+      expect(zone, "zone exists").to.not.equal(undefined);
+      expect(aura, "aura exists").to.not.equal(undefined);
+      if (!zone || !aura) return;
       const zoneRect = zone.getBoundingClientRect();
-      const auraRect = $aura[0].getBoundingClientRect();
+      const auraRect = aura.getBoundingClientRect();
       expect(auraRect.left).to.be.closeTo(zoneRect.left, 2);
       expect(auraRect.top).to.be.closeTo(zoneRect.top, 2);
       expect(auraRect.width).to.be.closeTo(zoneRect.width, 2);
@@ -69,8 +73,12 @@ describe("R3342000 tile auras over the board", () => {
 
     cy.get(".tile-aura").should("have.length", 4).each(($aura) => {
       const zone = $aura.parent()[0];
+      const aura = $aura[0];
+      expect(zone, "zone exists").to.not.equal(undefined);
+      expect(aura, "aura exists").to.not.equal(undefined);
+      if (!zone || !aura) return;
       const zoneRect = zone.getBoundingClientRect();
-      const auraRect = $aura[0].getBoundingClientRect();
+      const auraRect = aura.getBoundingClientRect();
       expect(auraRect.left).to.be.closeTo(zoneRect.left, 2);
       expect(auraRect.top).to.be.closeTo(zoneRect.top, 2);
       expect(auraRect.width).to.be.closeTo(zoneRect.width, 2);
