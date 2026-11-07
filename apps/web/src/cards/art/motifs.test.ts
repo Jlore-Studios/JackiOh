@@ -11,6 +11,7 @@ import { hashId } from "./hash.ts";
 import { MOTIF_GLYPHS } from "./motifGlyphs.ts";
 import { MOTIF_WORDS, MOTIFS, THEME_OWN_MOTIFS, motifFor, nameWords, type MotifId } from "./motifs.ts";
 import { artSpec, MOTIF_EMBLEM_SCALE, varietySalt, type ArtSpec } from "./procedural.ts";
+import { sceneRecipeOf } from "./scene.ts";
 import { artDataUri } from "./svg.ts";
 import {
   EMBLEM_POOLS,
@@ -394,7 +395,10 @@ describe("R503 one distinct picture per catalog entry", () => {
   });
 });
 
-describe("R503 Core keeps the pictures v0.1 gave it", () => {
+describe("R503 R3331002 Core's v0.1 pictures, a record", () => {
+  // R3331002: the owner's decision of 2026-11-06 redraws every card's picture richer, Core's included,
+  // so this fixture is a record of v0.1's pictures, not a pin: a Core card with no scene recipe still
+  // draws its v0.1 picture byte for byte, and one its set's pass gives a recipe draws its scene.
   type Recorded = readonly [ArtThemeId, string, number, number];
   const recorded = CORE_V01 as unknown as Readonly<Record<string, Recorded>>;
   /**
@@ -431,15 +435,25 @@ describe("R503 Core keeps the pictures v0.1 gave it", () => {
     }
   });
 
-  it("R503 a Core card whose name calls up no motif draws exactly the picture it drew in v0.1, on both faces", () => {
+  it("R503 R3331002 a Core card with no scene recipe and no motif draws exactly v0.1's picture, on both faces", () => {
     let unchanged = 0;
     for (const [id, [, , base, radiant]] of kept) {
       const card = def(id);
-      if (faceSpec(card, false).motif !== null) continue;
+      if (faceSpec(card, false).motif !== null || sceneRecipeOf(id) !== null) continue;
       expect(hashId(artDataUri(faceSpec(card, false))), id).toBe(base);
       expect(hashId(artDataUri(faceSpec(card, true))), id).toBe(radiant);
       unchanged += 1;
     }
     expect(unchanged).toBeGreaterThan(0);
+  });
+
+  it("R3331002 a Core card with a scene recipe draws a picture v0.1 did not, on both faces", () => {
+    const scenes = Object.keys(recorded).filter((id) => sceneRecipeOf(id) !== null).sort();
+    expect(scenes).toEqual(["core-002", "core-098", "core-100"]);
+    for (const id of scenes) {
+      const [, , base, radiant] = recorded[id] ?? [];
+      expect(hashId(artDataUri(faceSpec(def(id), false))), id).not.toBe(base);
+      expect(hashId(artDataUri(faceSpec(def(id), true))), id).not.toBe(radiant);
+    }
   });
 });

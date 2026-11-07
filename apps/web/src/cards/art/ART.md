@@ -52,7 +52,8 @@ cards have a look of their own (R3142002): a Human Unit whose name holds "drone"
 `crew` family's `commander`, an officer with a drone hovering behind her, where its name alone sends a card to
 the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
 a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
-and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's.
+and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's. A card with a scene
+recipe draws its scene instead (R3331000, below): Arg Arg Defender is the first.
 
 ## The Training Grounds set's own art
 
@@ -201,3 +202,141 @@ painted picture back over each (`nt-wash`, `wc-wash`, `sg-wash`, `tr-wash`, `wd-
 the cache keys each apart (`|night`, `|watercolor`, `|stained-glass`, `|tarot`, `|woodcut`, `|neon`),
 a repaint's under its own seed too. Every colour is palette.css's, none in Radiant's gold window. The
 constants were set by eye on the component spec's screenshot (`card-versions-part-6`).
+
+## The art bible (R3331000)
+
+What each set family's pictures look like, so every picture pass under #3330 paints its set as one world. A
+family's **home** is the place its pictures happen in (Set showcase's treatments start from the same five:
+R2943001); its **palette** is named in palette.css's names, the only colours a scene kit paints with
+(`SCENE_PALETTE`), none of them in Radiant's gold window (no `--pal-gold-400`, `--pal-gold-300`,
+`--pal-gold-200`, `--pal-yellow-400` or `--pal-parchment` on a base face, R2725004); its **line** is the outline
+its inked shapes take (`SCENE_LINES`); its **camera** is where the viewer stands. A glow is a stack of
+translucent shapes, never a gradient, and a Radiant face repaints the same shapes toward its layers' golds.
+
+Every family climbs the same ladder of rarity, held by the detail floor below:
+
+- **Common:** one clear subject and a simple setting.
+- **Rare:** a setting with props.
+- **Epic:** a scene with a foreground, a middle and a background.
+- **Legendary:** a composed scene with lighting and a moment of action.
+- **Mythic:** a set piece of its own: many parts, depth, effects, and a silhouette nobody else has.
+
+### Core
+
+- **Home:** the glass orb: a clear, bright world as if seen through glass, its fields, heights and shrines
+  in clean flat shapes.
+- **Palette:** the blues and skies (`--pal-blue-800`, `--pal-blue-900`, `--pal-sky-300`, `--pal-sky-400`),
+  `--pal-cyan-400` for power, the greens of its fields (`--pal-green-700`, `--pal-green-900`), and
+  `--pal-slate-100` for glints and clouds; a dusk runs to `--pal-orange-400` at the horizon.
+- **Light:** from the upper left, with a soft glow behind the subject.
+- **Line:** none: shapes meet edge to edge, flat fills stacked in translucent layers.
+- **Camera:** eye level, the subject standing in the middle half.
+- **By rarity:** a Common is one figure in a field (Speciesist, on guard at dusk); a Rare stands among
+  props, a fence, a cart, a banner; an Epic sets hills behind and grass before it; a Legendary lights its
+  moment with rays and a halo; a Mythic is a set piece no other card shares (Heroic Power's shrine on the
+  heights, Ceaseless Void's Terminus raising the void).
+
+### Classic and Classic+
+
+- **Home:** temple stone: an old world of carved stone, graveyards, farms and ruins under a low sun or a
+  moon.
+- **Palette:** `--pal-stone-500` and the slates (`--pal-slate-700`, `--pal-slate-800`, `--pal-slate-900`),
+  the earth's woods (`--pal-wood-600`, `--pal-wood-700`, `--pal-wood-800`), `--pal-green-700` for growth,
+  `--pal-red-600` for banners and blood, `--pal-green-400` for plague.
+- **Light:** low, from the left, or a moon; long shadows.
+- **Line:** `--pal-slate-900` ink, half a unit wide, on every inked shape.
+- **Camera:** low, looking up at the subject.
+- **By rarity:** a Common is one figure or thing on a plain ground; a Rare adds its props, a tombstone, a
+  pitchfork; an Epic is a scene in depth (Corpse Plantation's moonlit graveyard farm, its rows of
+  grave-mounds running to the horizon, hands and sprouts pushing up from the furrows, a bone scarecrow over
+  it, plague mist in the rows and a lantern on a fence post); a Legendary lights a moment of it; a Mythic is
+  a set piece of the old world, a temple, a siege, a harvest of the dead.
+
+### Meditative and Meditative+
+
+- **Home:** ink wash: mountains in mist, gardens, scrolls and still water.
+- **Palette:** `--pal-slate-900` ink on `--pal-slate-100` paper, `--pal-jade-400` washes, and one
+  `--pal-red-600` seal.
+- **Light:** diffuse, with no cast shadow.
+- **Line:** a brush: `--pal-slate-900`, nine tenths of a unit wide.
+- **Camera:** high and distant, a small subject in a large space.
+- **By rarity:** a Common is one figure or stone in the mist; a Rare adds a pine, a lantern, a bridge; an
+  Epic layers peaks, a garden and a near branch; a Legendary catches a moment, a wave or a falling leaf, in a
+  shaft of light; a Mythic is a whole scroll of its own.
+
+### Stinkyscape
+
+- **Home:** deep space: fleets, stations, asteroids and nebulae.
+- **Palette:** `--pal-black` and `--pal-slate-900` for space, the violets (`--pal-violet-500`,
+  `--pal-violet-700`, `--pal-purple-400`) for nebulae, `--pal-cyan-400` for lights and shields, and
+  `--pal-slate-400` for hulls and armour.
+- **Light:** a star's rim light from the right, and the glow of engines and screens.
+- **Line:** fine `--pal-black`, four tenths of a unit wide.
+- **Camera:** tilted three-quarter, as if floating.
+- **By rarity:** a Common is one crew member or craft among the stars (Arg Arg Defender, shield raised); a
+  Rare adds its cargo and its asteroid; an Epic layers a planet, a station and debris before it; a
+  Legendary fires its weapons or launches; a Mythic is a fleet action of its own.
+
+### Training Grounds
+
+- **Home:** carved wood: the training yard, its palisade, its dummies and targets.
+- **Palette:** the woods (`--pal-wood-600` to `--pal-wood-950`), the brasses (`--pal-brass-500`,
+  `--pal-brass-600`), `--pal-green-700` for the grass beyond the wall and `--pal-sky-300` for the sky.
+- **Light:** the sun, from the upper right.
+- **Line:** `--pal-wood-950`, seven tenths of a unit wide.
+- **Camera:** eye level, across the yard.
+- **By rarity:** a Common is one recruit or dummy on the sand; a Rare adds the rack, the target, the totem;
+  an Epic sets the palisade behind and the gear before it; a Legendary catches a strike landing; a Mythic is
+  the whole yard at the moment of a bout.
+
+## Scene recipes and kits (R3331000)
+
+A **scene recipe** (`sceneRecipes.ts`, `SCENE_RECIPES`) is data per card: its family, its sky (two palette
+names, top to bottom), the light behind it, where its emblem stands, an optional figure, and seven layers
+back to front, `sky`, `far`, `mid`, `subject`, `near`, `light` and `particles` (`SCENE_LAYERS`), each a list
+of placements. A placement names a part of the kit, where it stands, its scale and facing, how many copies
+(`count`, each but the first offset by up to `spread`, every copy's scale jittered by `SCENE_SCALE_JITTER`)
+and a palette name that repaints the part's main shapes. `composeScene` draws every part from one stream,
+seeded by the card's id (or by a picture's own seed, `core-002#alt`, so Alt art and the repaints grow the same
+parts apart), and never reads the face: the Radiant face draws the same shapes, each mixed toward its layer's
+gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
+parts. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
+`motes`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
+picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
+Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sceneArtSvg`), and a Legacy
+card keeps its Core card's old subject.
+
+The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
+each kind: terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills, asteroids),
+architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones), plants, creatures, objects
+and tools, and weather and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a
+void, lightning, nebulae, planets, a rim light). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces
+the painter's one silhouette: three poses, five heads, eight hairs and headgears, nine outfits by tag and
+five held items, put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a
+Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human. The two kits
+hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
+thin band.
+
+Five proof cards draw from recipes today and set the bar each set's pass meets: Corpse Plantation (Classic
+#74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
+(Stinkyscape #15). Every other card draws its picture byte for byte as before, and the golden fixtures stand
+for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
+with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
+off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
+hand size and at board size.
+
+## The detail floor (R3331001)
+
+`artRichness.test.ts` measures every catalog entry's base picture as its face draws it (`richness.ts`): the
+elements it draws after its `<defs>` (`artElements`), and for a scene the layers and the kit parts it uses.
+Each rarity has a floor (`ART_DETAIL_MIN_<RARITY>`): Common 30 elements, Rare 40, Epic 60, Legendary 90 and
+Mythic 140, Legendary and Mythic in every layer; a token is held to Common's. The Glitch is not measured: its
+window draws no picture. The floor starts as a ratchet: `fixtures/art-detail-short.json`
+(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, at most
+`ART_DETAIL_SHORT_MAX`, and the test fails on a card under its floor the list does not name and on a listed
+card that clears its floor, so a set's pass takes its cards off as it lifts them, the list only shrinks, and
+the last pass empties it. A ceiling keeps phones fast: no picture's data URI, base or Radiant, is longer than
+`ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache (`ART_CACHE_MAX`) and the lazy drawing of faces scrolled
+past (`near.ts`) are unchanged.

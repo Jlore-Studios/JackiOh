@@ -12,12 +12,14 @@ import STINKYSCAPE_V050 from "./fixtures/stinkyscape-art-v0.5.0.json";
 import { CardArt } from "./CardArt.tsx";
 import { hashId } from "./hash.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
+import { sceneRecipeOf } from "./scene.ts";
 import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
 
 afterEach(cleanup);
 
 const SET: readonly CardDef[] = Object.values(CATALOG).filter((card) => isStinkyscapeArt(card.id));
+const SVG_PREFIX = "data:image/svg+xml,";
 const OTHERS: readonly CardDef[] = Object.values(CATALOG).filter((card) => !isStinkyscapeArt(card.id));
 
 function byName(name: string): CardDef {
@@ -238,24 +240,44 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
   });
 });
 
-describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it with", () => {
+describe("R503 R3331002: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it with, until it has a scene", () => {
   // The hash of `stinkyscapeSvg`'s output on each face, recorded as the set shipped (v0.5.0, #1884),
   // as `core-art-v0.1.json` records Core's: a change to the set's art fails here, entry by entry.
   // #2521 recorded S #176 Preemptive Strike and S #177 Cloaking Module as they ship, and S #137 again:
   // renamed Starfleet Commander, a Human, it draws from its new name. #3142 recorded S #45 Drone Commander
   // (a Human officer, no longer a hive ship) and S #150.1 Stinkyscape Golem (no longer a fighter hull)
-  // again (R3142002, R2529000).
+  // again (R3142002, R2529000). R3331002: a record, which pins the picture each face shows while its card has
+  // no scene recipe; a card a picture pass gives one draws its scene instead.
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
+  /** The picture the face shows, as its painter printed it. */
+  const shown = (card: CardDef, radiant: boolean): string =>
+    decodeURIComponent(stinkyscapeArtUri(card.id, card.name, card.tags, card.type, radiant).slice(SVG_PREFIX.length));
 
   it("R503 the fixture covers every Stinkyscape entry", () => {
     expect(Object.keys(recorded).sort()).toEqual(SET.map((card) => card.id).sort());
   });
 
-  it("R503 every Stinkyscape entry draws exactly the picture it shipped with, on both faces", () => {
+  it("R503 R3331002 every Stinkyscape entry with no scene recipe draws exactly the picture it shipped with, on both faces", () => {
+    let unchanged = 0;
     for (const card of SET) {
+      if (sceneRecipeOf(card.id) !== null) continue;
       const [base, radiant] = recorded[card.id] ?? [];
+      expect(hashId(shown(card, false)), card.id).toBe(base);
+      expect(hashId(shown(card, true)), card.id).toBe(radiant);
+      unchanged += 1;
+    }
+    expect(unchanged).toBe(SET.length - 1);
+  });
+
+  it("R3331002 a Stinkyscape card with a scene recipe draws a picture v0.5.0 did not, on both faces", () => {
+    const scenes = SET.filter((card) => sceneRecipeOf(card.id) !== null);
+    expect(scenes.map((card) => card.id)).toEqual(["stinkyscape-015"]);
+    for (const card of scenes) {
+      const [base, radiant] = recorded[card.id] ?? [];
+      expect(hashId(shown(card, false)), card.id).not.toBe(base);
+      expect(hashId(shown(card, true)), card.id).not.toBe(radiant);
+      // Its painter's own picture is still the one recorded, which a scene passes over.
       expect(hashId(svgOf(card, false)), card.id).toBe(base);
-      expect(hashId(svgOf(card, true)), card.id).toBe(radiant);
     }
   });
 });
