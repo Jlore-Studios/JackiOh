@@ -329,38 +329,30 @@ export default function Game({
   // #3347: how much of the card-motion flourishes the settings allow (game/cardMotion.ts): board.css reads it as `data-card-motion`.
   const [fx] = useFxSettings();
   const motion = cardMotionLevel(reducedMotion || fx.motion === "reduce", fx.intensity);
-  // #3347: the opening deal, while it runs (game/opening.ts); its timers sound the riffle and each card dealt.
+  // #3347: the opening deal, while it runs (game/opening.ts). Its effect below sounds the riffle and each card
+  // dealt on timers that end with it, and takes the deal's aim off the hands once it is over.
   const [opening, setOpening] = useState<OpeningPlan | null>(null);
-  const openingTimers = useRef<number[]>([]);
-  const endOpening = useCallback((): void => {
-    for (const timer of openingTimers.current) window.clearTimeout(timer);
-    openingTimers.current = [];
-    setOpening(null);
-    if (root.current !== null) clearDeal(root.current);
-  }, []);
-  const startOpening = useCallback(
-    (plan: OpeningPlan): void => {
-      const play = (id: "riffle" | "deal"): void => {
-        try {
-          getAudioEngine().playSfx(id);
-        } catch {
-          // Sound is never a rule: no engine (jsdom) or a refused sound drops the cue.
-        }
-      };
-      setOpening(plan);
-      play("riffle");
-      for (const deal of plan.deals) openingTimers.current.push(window.setTimeout(() => play("deal"), deal.atMs));
-      openingTimers.current.push(window.setTimeout(endOpening, plan.totalMs));
-    },
-    [endOpening],
-  );
-  useEffect(
-    () => () => {
-      for (const timer of openingTimers.current) window.clearTimeout(timer);
-      openingTimers.current = [];
-    },
-    [],
-  );
+  const openingRuns = useRef(false);
+  const endOpening = useCallback((): void => setOpening(null), []);
+  useEffect(() => {
+    openingRuns.current = opening !== null;
+    if (opening === null) return undefined;
+    const play = (id: "riffle" | "deal"): void => {
+      try {
+        getAudioEngine().playSfx(id);
+      } catch {
+        // Sound is never a rule: no engine (jsdom) or a refused sound drops the cue.
+      }
+    };
+    play("riffle");
+    const timers = opening.deals.map((deal) => window.setTimeout(() => play("deal"), deal.atMs));
+    timers.push(window.setTimeout(endOpening, opening.totalMs));
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+      openingRuns.current = false;
+      if (root.current !== null) clearDeal(root.current);
+    };
+  }, [opening, endOpening]);
   const hitStopTimer = useRef<number | null>(null);
   const triggerHitStopMs = useCallback((durationMs: number): void => {
     if (durationMs <= 0) return;
@@ -548,7 +540,7 @@ export default function Game({
     const onClick = (event: MouseEvent): void => {
       // #3347: a tap ends the opening deal at once, and goes on to whatever it was on (the mulligan's Keep
       // among them): a deal is no hold, and swallowing the tap would cost the player one press.
-      if (openingTimers.current.length > 0) endOpening();
+      if (openingRuns.current) endOpening();
       if (!runner.skip()) return;
       event.stopPropagation();
       event.preventDefault();
@@ -596,7 +588,7 @@ export default function Game({
     // #3347: the first view of a game in the mulligan phase is its opening deal, which has no event to animate.
     if (previous === null && !silent && !replay) {
       const plan = planOpening(view, getFxSettings().speed);
-      if (plan !== null && motion !== "still") startOpening(plan);
+      if (plan !== null && motion !== "still") setOpening(plan);
     }
 
     if (previous !== null && previous.viewer !== view.viewer) runner.drain();
@@ -625,7 +617,7 @@ export default function Game({
       setStill(null);
     }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion, startOpening]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;

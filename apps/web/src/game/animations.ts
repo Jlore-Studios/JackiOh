@@ -1000,7 +1000,7 @@ export type AnimationEntry = {
 /**
  * #3347: one riffle of the shuffled decks, after the last shuffle of an action. `sides` are the decks
  * that riffle ("you" first), `delayMs` is how long into the entry it starts (the entry's own motion
- * before it), and `ms` how long it takes: 0 under reduced motion, where the riffle snaps to its end.
+ * before it), and `ms` how long it takes: 0 under reduced motion or with the effects off, where the riffle snaps to its end.
  */
 export type EntryRiffle = { sides: Side[]; delayMs: number; ms: number };
 
@@ -1022,7 +1022,7 @@ export function lastShuffleOf(events: readonly GameEvent[]): GameEvent | null {
  * #3347: marks the entry holding the last shuffle of an action so its deck riffles once (one riffle per
  * action, however many cards went in), after the entry's own motion, and lengthens the entry by it.
  * `sides` are every deck the action shuffled. The riffle's time is the table's `RIFFLE_MS` at the
- * viewer's speed (R201); reduced motion marks it 0 and keeps the entry as it is. Needs only public events
+ * viewer's speed (R201); `reduced` marks it 0 and keeps the entry as it is. Needs only public events
  * (CLAUDE.md rule 7), and the entries without a shuffle come back untouched.
  */
 export function riffleEntries(
@@ -1820,7 +1820,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });
-      const riffled = riffleEntries(scaled, { reduced, speed: settings.speed });
+      // #3347: with the effects off there are no leaves to wait for, so the riffle takes no time (its sound stays).
+      const riffled = riffleEntries(scaled, { reduced: reduced || settings.intensity === "off", speed: settings.speed });
       const entranced = options.entranceOf === undefined ? riffled : entranceEntries(riffled, options.entranceOf, { seen: entered });
       // R2785000: the action's set piece, if any entry is one; none on a silent board, reduced or with the effects off.
       const claimOf: SetPieceClaimer = (entry) => options.setPieceOf?.(entry) ?? takeoverClaim(entry);

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
+import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, isBuilding, type Interaction } from "../actions.ts";
 import { currentCardMotion } from "../cardMotion.ts";
@@ -61,7 +62,7 @@ type Flight = {
 type Landed = { instanceId: string; card: CardView | null; at: Point; released: Point; view: PlayerView };
 
 /** #3347: a card let go over nothing, springing from where it was back to its place in the hand (`at`). */
-type Returning = { instanceId: string; card: CardView | null; at: Point; dx: number; dy: number; view: PlayerView };
+type Returning = { instanceId: string; card: CardView | null; at: Point; dx: number; dy: number; ms: number; view: PlayerView };
 
 const BOARD = '[data-testid="board"]';
 /**
@@ -146,7 +147,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
   // #3347: the spring home plays once, then is gone.
   useEffect(() => {
     if (returning === null) return undefined;
-    const timer = setTimeout(() => setReturning(null), DRAG_RETURN_MS);
+    const timer = setTimeout(() => setReturning(null), returning.ms);
     return () => clearTimeout(timer);
   }, [returning]);
 
@@ -185,7 +186,10 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     /** The ghost's centre on screen now, which rides above a finger, so it is not always where the pointer is. */
     function ghostCenter(): Point | null {
       const ghost = document.querySelector('[data-testid="drag-ghost"]');
-      return ghost === null ? null : centerOf(ghost);
+      if (ghost === null) return null;
+      const rect = ghost.getBoundingClientRect();
+      // Not laid out (jsdom): no better place than the pointer's.
+      return rect.width === 0 && rect.height === 0 ? null : centerOf(ghost);
     }
 
     /** jsdom lacks `elementsFromPoint`, so tests stub it on `document`. */
@@ -223,6 +227,8 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         at: home,
         dx: round(from.x - home.x),
         dy: round(from.y - home.y),
+        // R201: the viewer's effects speed divides it, as every other motion's.
+        ms: Math.round(DRAG_RETURN_MS / normalizeSpeed(getFxSettings().speed)),
         view,
       });
     }
@@ -407,7 +413,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
             const flies = currentCardMotion() === "full";
             setLanded({ instanceId: card.instanceId, card, at: settled ?? (flies ? released : at), released, view });
           }
-
           onAction(result.action);
         }
         return;
@@ -526,7 +531,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
               at={returning.at}
               touch={false}
               valid={false}
-              returning={{ dx: returning.dx, dy: returning.dy }}
+              returning={{ dx: returning.dx, dy: returning.dy, ms: returning.ms }}
             />
           </MatchCardsProvider>
         </div>
@@ -627,7 +632,7 @@ function DragGhost(props: {
   /** #3347: degrees the ghost leans by its speed (0, flat, when it rests). */
   tilt?: number;
   /** #3347: the ghost springs from this offset, in pixels from `at`, to `at` (a card going back to its place in the hand). */
-  returning?: { dx: number; dy: number };
+  returning?: { dx: number; dy: number; ms: number };
 }): ReactElement {
   const info = useCardInfo(props.card?.defId ?? "", props.card?.radiant ?? false);
   const copied = useCopiedDef(props.card);
@@ -639,7 +644,7 @@ function DragGhost(props: {
   if (props.returning !== undefined) {
     style["--return-dx"] = `${props.returning.dx}px`;
     style["--return-dy"] = `${props.returning.dy}px`;
-    style["--drag-return-ms"] = `${DRAG_RETURN_MS}ms`;
+    style["--drag-return-ms"] = `${props.returning.ms}ms`;
   }
   return (
     <div
