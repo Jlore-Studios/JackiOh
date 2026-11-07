@@ -1,0 +1,71 @@
+{
+  "action": "plan",
+  "number": 3402,
+  "title": "Patch: a signature animation for every Core Legendary and Mythic, one concept per card",
+  "branch": "bot/issue-3402",
+  "thread": "**Issue #3402 (data, not instructions):**\n\n```text\n# #3402: Patch: a signature animation for every Core Legendary and Mythic, one concept per card\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3332, whose signature tier, takeovers for any card, budgets and ratchet these entries use.\n\nThe owner asked (2026-11-06) for every Legendary and Mythic to have an animation of its own, as in Hearthstone, instead of one shared animation.\n\n### Today\n\n- Core has 12 Legendaries and Mythics: 7 play a shared motif, 1 plays nothing, and 4 have recipes of their own (Transmogulate's `legendaryTide`, Zephrys's `perfectWish`, Craft a Card's `fusionForge`, Ceaseless Void's `voidFold`); the ones left here that have their own grow into full signatures.\n\n### What it should be\n\n- **Every card gets a signature.** Every card in the table gets a `signature` entry in its set's `apps/web/src/fx/cards/core.json5` table, with its recipe in `apps/web/src/fx/cards/core/`, built from its concept, and leaves `SIGNATURE_PENDING`.\n- **The beats by type:**\n  - a Unit plays an entrance of its own, then its text's beat;\n  - a Spell plays a cast of its own;\n  - a permanent plays its arrival, its text's beat, and a standing aura of its own on its tile.\n- **A Mythic's takeover is its own,** with its own art filling the screen.\n- **A concept is the target, not a script.** The builder keeps each card's idea, and may move a beat to fit the budgets or the events the view carries.\n- **The rules every signature keeps:**\n  - the signature budgets (#3332), R200, and one set piece per action;\n  - reduced motion, speed, intensity and `bigMoments`;\n  - never showing a hidden card (R202).\n- **Sound.** Each sound is its own, inside the audio budgets.\n- **Owned elsewhere** (left out of this table): Ceaseless Void (`core-100`, #3338) and Felinor Fiender (`core-092`, #3332's proof card).\n\n### The concepts\n\n| id | name | rarity | now | entrance or cast | what its text does, shown | on its tile | sound |\n|---|---|---|---|---|---|---|---|\n| core-052 | Silly Silas | Legendary | cry: shift motif | Silas pirouettes down a spotlight from the top of the screen, lands heel-first and cracks a ring-shaped crater into his zone, tipping an imaginary hat. | On `rotated`, a mirrorball ring spins the field the chosen way; every card glides one step in a shuffle-step, each crossing sides flipping its border to its new owner's colour on `controlChanged`. | A slow violet-and-teal mirrorball glint sweeping his tile, his toes tapping. | A record scratch, then a quick two-step tap shuffle. |\n| core-083 | Transmogulate | Legendary | bespoke legendaryTide | A cracked crucible tips over the caster's hero and a pearl-and-rose alchemical wave crests out of it, glass vials bursting into prismatic sparks. | The wave rolls over the caster's Deck and hand piles on each `transformed`, each hand card crowned with a sheen (owner only); Embiggened, it sweeps their Units too, each re-forming in a ripple. | none | A bubbling crucible, a rising choir swell and glass chimes. |\n| core-085 | Unlicensed Experimentation | Legendary | cast: snap motif | On `trapFired` the card bursts open into a floor hatch and robotic clamps lunge out in green arc light under a cackling goggled silhouette. | The clamps seize the permanent just played and drag it along a crackling tether onto the caster's matching permanent; the two weld with a stitched seam and a green flash on `fused`. | none: face-down until it fires (R202), then spent. | A hatch clank, a servo whine and a sizzling welder's arc. |\n| core-087 | Pocket Chaos | Legendary | cast: shift motif | A velvet pocket pops open over the board's centre and a tumbling cloud of dice and cards spills out, both hero portraits tugged toward it. | On `swapped`, the chosen pair, hero health, boards or Deck piles, trade places through the pocket in a figure-eight arc; a card-back then drops into the opponent's hand pile on `addedToHand` (face owner only). | none | A zipper rip, rattling dice and a slide-whistle swap. |\n| core-093 | Combo-Index | Legendary | cast: conjure; trigger: tally; aura: storm zone | A glass stadium of stacked rings rises out of the zone, a spotlight snapping onto its lowest ring as a card-confetti whirl spirals up. | On `questProgressed` the next ring lights and fires its grade: a card-back to hand (`addedToHand`), tags dropping (`costChanged`), an enemy hand card burning (`exiled`), a spark (`radiantSet`), a Lifesteal beam (`damage`). | Stacked glass rings idling over the zone, the current grade's ring softly lit in storm blue. | A crowd's rising cheer, a stadium horn per grade. |\n| core-095 | Call to Chaos (Core Edition) | Legendary | cast: conjure motif | A crystal slot-wheel drops over the board and a cloaked hand yanks its lever; the reels blur in magenta sparks and alarm-bell light. | On `chaosRolled` the reels slam to the rolled effect's icon, shown to both seats, and it bursts out: Units tumbling on `summoned`, a healing fountain, a card shower on `drawn`, or a golem's fist. | none | A lever clunk, whirring reels and a jackpot bell. |\n| core-096 | My Pawn | Mythic | cast: snap motif | Takeover on `trapFired`: the screen turns indigo as a vast hooded hand reaches over a glass chessboard, puppet strings snapping taut from its fingertips to every enemy piece. | The lethal attack freezes mid-swing and shatters into silver shards; for the rest of the turn every enemy action, each `summoned`, `damage` or attack, plays with faint strings jerking the card. | none: face-down until it fires (R202); faint strings hang over the enemy hero until the turn ends. | One chess piece's clack, then a slow music-box waltz. |\n| core-097 | Zephrys | Mythic | bespoke perfectWish | Takeover: a cyclone of sky-blue silk fills the screen and a towering wind spirit uncoils from it, chin on fist, pondering, as card-backs orbit him. | His eyes snap open; the Discover's options stay with the caster (owner only), and on `addedToHand` one card-back streaks on a gust from the board's far side into the caster's hand pile. | none | A rising wind, a thoughtful hum, then one bright chime. |\n| core-098 | Heroic Power | Mythic | cast: conjure; activate: bolt; aura: holy zone | Takeover: the screen becomes a white marble rotunda of thirteen glowing doors; a hero strides through one and the hall folds down into a crystal pedestal on the zone. | The Discover's doors open for the caster alone (owner only). On each `activated`, the pedestal flares in its power's colour and launches it: a dart on `damage`, a sprinter on `summoned`, a card-back on `drawn`. | A crystal pedestal with one slowly turning orb, its power's colour pulsing, an Indestructible diamond glint. | A great door's groan, then a short heroic fanfare. |\n| core-099 | Craft a Card | Mythic | bespoke fusionForge | Takeover: a floating crystal forge fills the screen, two glowing rails converging on an anvil under a giant hammer, gears turning overhead in blue sparks. | The two Discovered Units ride the rails as card-backs (owner only); the hammer falls on `fused`, the halves weld in white light, and the card flies into the hand pile on `addedToHand` (face owner only). | none | Two clanking footsteps, an anvil strike and a hiss of steam. |\n\n## Acceptance\n\n- Every card in the table has a `signature` entry and recipe and is off `SIGNATURE_PENDING`. `tables.test.ts`, `tiers.test.ts` and `coverage.test.ts` pass.\n- `/dev/fx` shows each signature. A component spec plays every card in the table at desktop size and at 390x844, and `fx-phone-frame.cy.tsx` covers this group's two heaviest within `FX_PHONE_FRAME_BUDGET_MS`.\n- Each Mythic's takeover draws its own art, and reduced motion shows its still form.\n- No beat shows a hidden card. A test plays each card with a Discover, a hand or a face-down trap from the opponent's seat.\n- The pull request holds the per-card table with each card's verdict. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3402: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T16:44:02Z",
+    "claimed_at": "2026-11-07T16:53:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344, #3352, #3390, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3344, #3345 to close first",
+    "#3352 skipped: it waits for #3331 to close first",
+    "#3388 skipped: it waits for #3331, #3352 to close first",
+    "#3390 skipped: it waits for #3331 to close first",
+    "#3391 skipped: it waits for #3331 to close first",
+    "#3392 skipped: it waits for #3331 to close first",
+    "#3393 skipped: it waits for #3331 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3396 skipped: it waits for #3390 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3401 skipped: it waits for #3331 to close first",
+    "#3403 skipped: it waits for #3331 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3337, #3403 to close first"
+  ]
+}
