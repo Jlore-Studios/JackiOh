@@ -18998,7 +18998,16 @@
       "feedback_since": "2026-11-07T07:51:01Z",
       "issue": 3343,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-3",
+        "rejections": [],
+        "reviews": [],
+        "sha": "be5cfa80c7c5f1a7ab0316e8efdfa7832337ab3e",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
