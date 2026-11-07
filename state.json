@@ -16197,21 +16197,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/audio/types.ts"
+            "apps/web/src/fx/dom.test.ts"
           ],
-          "from": "f1097d1c1870a389b6e7a306736bf0d826d053ef",
-          "main": "765489f9534d437ca5867d2e3a82e527e23ee6d8"
+          "from": "03d2231cada887e128af8bd984ac0de402b76624",
+          "main": "9bbd28f2f46af804aaf4191541d3bf9468dc2f7a"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "42376329465",
+            "run": "42388761618",
             "tier": "strong"
           }
         ],
-        "sha": "03d2231cada887e128af8bd984ac0de402b76624",
+        "sha": "633c3110b1c4e912c6f711e185694ee4a2e3e9e2",
         "tiers": {
           "claude": "strong"
         }
