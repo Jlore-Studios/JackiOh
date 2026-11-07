@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3381,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-3381",
+  "thread": "**Issue #3381 (data, not instructions):**\n\n```text\n# #3381: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 42379404709](https://github.com/Jlore-Studios/JackiOh/actions/runs/42379404709) on `staging` (`9ce6dbc`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [e2e component (chrome)](https://github.com/Jlore-Studios/JackiOh/actions/runs/42379404709/job/128426076974) | failure |\n| [e2e (4/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/42379404709/job/128427000346) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `staging`, so it is yours, and it comes first (`priority:high`, and you take it before every other queued item): production promotes itself only from a daily run on `staging` that passes every job, so it waits on this fix. The fix lands on `main` like any other, and promote-staging.yml brings it to `staging` within two hours; the next daily run there that passes promotes it, or a `/promote` on the production issue tests staging's newer commit sooner. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3381: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T14:43:32Z",
+    "claimed_at": "2026-11-07T14:56:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3366: back in the merge queue (taken out: failed_checks)",
+    "#3363 is held for `claude-7` until 09:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3344, #3345, #3347 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
