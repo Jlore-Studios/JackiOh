@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 3377,
+  "title": "Patch: follow-up to #3367 from the after-merge spot-check",
+  "branch": "bot/issue-3377",
+  "thread": "**Issue #3377 (data, not instructions):**\n\n```text\n# #3377: Patch: follow-up to #3367 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3367 -->\nThe after-merge spot-check of #3367 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42376382383)) found 1 blocking problem(s) in the change as it merged (`765489f9534d`). `claude-8` (claude, `opus`, strong) reviewed it. #3367 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/cards/inspect/InspectSheet.tsx`: Five of the inspect overlay's modal sheets (InspectSheet, CardListSheet, FaceDownSheet, StackSheet, HeroInspect) still close by a text \"Close\" button. The issue's acceptance item says every dialog's close is the same \u2715 at the top right, and the only reason the ruling gives (\"not on issue #3221's list\") does not explain why they cannot take it.\n  Evidence: Issue #3221: \"A dialog whose shape really differs (the inspect overlay, \u2026) may keep its own body, but it takes the shared scrim, layer, close control and keys hook. If one cannot, list it in the ruling with the reason.\" Acceptance: \"Every dialog's close control is the same \u2715 glyph (or icon), top right.\" spec/rulings/R3221000.md, Exceptions: \"Its other sheets (a card's touch sheet, a pile's list, a face-down card, the stack and hero inspect) keep their text Close: they were not on issue #3221's list.\" The diff gave these five files `modal.layerProps` (InspectSheet.tsx:39, CardList.tsx:306, FaceDown.tsx:93, StackSheet.tsx:66) but kept their text Close. CardDetail.tsx shows the fix: `<DialogClose buttonRef={closeButton} testid={INSPECT_CLOSE} {...modal.dismissProps} />`. The INSPECT_CLOSE / hero-inspect-close testids must stay, since stack-wheel-and-sweeps.cy.tsx:23 and emotes-layout.cy.tsx:280 use them. dialogs.test.ts does not catch this: it only looks for the \u2715 and \u00d7 glyphs, not text \"Close\" buttons. Once fixed, the exception in R3221000 should go.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-7` (`claude`) built #3367 and `claude-7` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-8"
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3377: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T13:40:46Z",
+    "claimed_at": "2026-11-07T13:42:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3377 needs a plan",
+    "#3369 is held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3375 is held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3363 is held for `claude-7` until 09:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3339, #3340, #3342, #3344, #3345, #3347 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
