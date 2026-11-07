@@ -23,6 +23,7 @@ import HandHints from "./HandHints.tsx";
 import type { HandHint } from "./handHints.ts";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 import { useLanding } from "./drag/landing.ts";
+import { useHandSpring } from "./handSpring.ts";
 import { revealTestid } from "./reveal.ts";
 import { useSetting } from "../settings/index.ts";
 import { t } from "../i18n/i18n.ts";
@@ -102,6 +103,11 @@ export default function Hand(props: HandProps): ReactElement {
   const landing = useLanding();
 
   const rootRef = useRef<HTMLDivElement>(null);
+  // #3347: the fan springs where it reflows. A card's key is its instance id; a back has only its place.
+  useHandSpring(
+    rootRef,
+    Array.isArray(hand) && !revealed ? hand.map((card) => card.instanceId) : Array.from({ length: count }, (_unused, index) => `back-${index}`),
+  );
   /** The instance id tapped up, or null. Only ever set on the viewer's own hand. */
   const [tapped, setTapped] = useState<string | null>(null);
   const tappedInHand = tapped !== null && Array.isArray(hand) && hand.some((card) => card.instanceId === tapped);

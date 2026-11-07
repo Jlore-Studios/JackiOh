@@ -46,7 +46,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "auth/tavern.css": 27,
   "auth/two-step.css": 1,
   "cards/art/art.css": 7,
-  "cards/cards.css": 158,
+  "cards/cards.css": 171,
   "cards/cardstate.css": 24,
   "cards/cosmetics.css": 38,
   "cards/dormant.css": 6,

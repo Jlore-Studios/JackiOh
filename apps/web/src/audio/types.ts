@@ -24,6 +24,8 @@ export type SfxId =
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
   | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // #3347: cards that move like cards (game/drag/cues.ts, game/Game.tsx's opening, audio/director.ts's riffle).
+  | "pickUp" | "dragOver" | "drop" | "returnToHand" | "deal" | "riffle"
   // R3336000: the Drone Battleship's horn, dome flare, bay door, reactor pulse and deck shear.
   | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
