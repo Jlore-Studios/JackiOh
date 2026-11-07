@@ -16667,6 +16667,23 @@
         }
       }
     },
+    "3381": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-07T14:56:00Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "agy",
+      "run_id": "pending:b7cc194d-1794063324",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-07T14:56:00Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "3382": {
       "action": "review",
       "asks": [],
@@ -16818,9 +16835,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T14:55:10Z",
+    "at": "2026-11-07T14:56:00Z",
     "url": "",
-    "what": "build #3340 on claude-4"
+    "what": "plan #3381 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T14:34:02Z",
