@@ -18221,7 +18221,7 @@
       }
     },
     "3360": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -18249,7 +18249,7 @@
       "interruptions": 0,
       "issue": 3333,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
@@ -18257,7 +18257,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42340381915",
+      "run_id": "pending:68994309-1794027975",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18278,7 +18278,7 @@
         "run": "42332953132"
       },
       "source": "ci",
-      "started_at": "2026-11-07T04:53:24Z",
+      "started_at": "2026-11-07T05:06:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18305,9 +18305,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T05:06:04Z",
+    "at": "2026-11-07T05:06:37Z",
     "url": "",
-    "what": "review #3358 on agy"
+    "what": "revise #3360 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-07T04:56:41Z",
