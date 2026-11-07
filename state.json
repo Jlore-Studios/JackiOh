@@ -17224,15 +17224,8 @@
       "stop_requested": false
     },
     "3407": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42394593120",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-07T17:47:14Z",
-        "until": "2026-11-07T18:17:14Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17244,16 +17237,15 @@
         "reason": "planned on opus",
         "trail": "x/cards/stinkyscape-1.test.ts; sed -n 60,110p apps/web/src/fx/cards/stinkyscape/stinkyscape.test\u2026\n- Bash: {\"command\": \"sed -n 20,58p apps/web/src/fx/cards/stinkyscape/stinkyscape.test.ts; sed -n 140,226p apps/web/src/fx/cards/stinkyscape/stinkyscape.test.ts\", \"description\": \"Read the rest of the Stinkysc\u2026\n- Bash: {\"command\": \"sed -n 62,84p apps/web/src/fx/cards/stinkyscape-1.test.ts; sed -n 112,140p apps/web/src/fx/cards/stinkyscape-1.test.ts\", \"description\": \"Read stinkyscape-1's draws helper\"}\n- Bash: {\"command\": \"grep -n \\\"it(\\\\\\\"\\\" apps/web/src/fx/cardFx.test.ts | head -30\", \"description\": \"List cardFx tests\"}\n- Bash: {\"command\": \"grep -n \\\"export class FakeNode\\\" -A 12 apps/web/src/audio/test/fakeAudio.ts | head -20; grep -n \\\"^ horn\\\\|^ organ\\\\|^const horn\\\\|^function horn\\\\|horn:\\\" apps/web/src/audio/sfx.ts | h\u2026\n- Bash: {\"command\": \"grep -rln \\\"takeover-still-rays\\\" apps/web/src --include=*.css; grep -rn \\\"isStinkyscapeArt\\\" apps/web/src/cards/art/*.ts | head -3; grep -n \\\"\\\\\\\"fx-takeover\\\\|takeover\\\" apps/web/src/f\u2026\n- Bash: {\"command\": \"grep -rn \\\"TakeoverLook\\\\b\\\" apps/web/src e2e --include=*.ts --include=*.tsx | grep -v \\\"^apps/web/src/fx/types.ts\\\" | head; grep -rn \\\"AuraLook\\\\b\\\" apps/web/src --include=*.ts --includ\u2026\n- Bash: {\"command\": \"grep -n \\\"spec check\\\" -A 12 crates/tools/README.md | head -40\", \"description\": \"Read what spec check enforces\"}\n- Bash: {\"command\": \"sed -n 1,6p spec/rulings/R3338000.md | cut -c1-400; sed -n 1,6p spec/rulings/R2798000.md 2>/dev/null | cut -c1-400; ls spec/rulings | grep R2798\", \"description\": \"Look at cards fields of\u2026\n- Bash: {\"command\": \"grep -l \\\"Narcor\\\\|t-narcor\\\" spec/rulings/*.md | head -3 | xargs -I{} sed -n 4p {} | cut -c1-300; grep -h \\\"^cards:.*S #18\\\\.\\\\|^cards:.*S #147\\\\|^cards:.*S #112\\\" spec/rulings/*.md | h\u2026\n- Bash: {\"command\": \"grep -n \\\"export type SoundCue\\\" -A 25 apps/web/src/audio/types.ts | head -40; grep -n \\\"^function sfx\\\\|^export function sfx\\\\|const sfx = \\\" -A 4 apps/web/src/audio/cues.ts | head\", \"d\u2026\n- Bash: {\"command\": \"grep -n \\\"^ summoned:\\\\|^ cardPlayed:\\\\|^ marketCreditsChanged:\\\\|^ voteCast:\\\\|^ addedToHand:\\\\|^ keywordGranted:\\\\|^ marked:\\\\|^ manaChanged:\\\\|^ hookResolving:\\\\|^ activated:\\\\|^ exil\u2026\n- Bash: {\"command\": \"grep -n \\\"export const FX_MAX_PARTICLE_LIFE_MS\\\\|export const FX_MAX_TAIL_MS\\\\|export const FX_RING_MS\\\\|export const FX_SET_PASS_FLOOR\\\" apps/web/src/fx/constants.ts; grep -n \\\"chaosRol\u2026\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3; cd apps/web && timeout 300 pnpm exec vitest run src/fx/cards/tiers.test.ts 2>&1 | tail -15\", \"description\": \"Try running the tiers test\", \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407 && sed -n 295,301p apps/web/src/game/animations.ts; sed -n 657,663p apps/web/src/game/animations.ts; grep -n \\\"addedToHand\\\\|^ card: \\\\|^ draw: \u2026\n- Bash: {\"command\": \"grep -n \\\"handGlint\\\" -A 8 apps/web/src/fx/cues.ts | head -24; grep -n \\\"export function chaosCues\\\" -A 14 apps/web/src/fx/chaos.ts | head -20\", \"description\": \"Read the handGlint and ch\u2026\n- Bash: {\"command\": \"grep -n \\\"faceDown\\\\|unrevealed\\\" apps/web/src/wire/generated/UnitView.ts apps/web/src/wire/generated/BackrowView.ts 2>/dev/null | head; ls apps/web/src/wire/generated | grep -i \\\"unitvi\u2026\n- Bash: {\"command\": \"tr ',' '\\\\n' < apps/web/src/wire/generated/UnitView.ts | grep -o \\\"^ *[a-zA-Z]*?*:\\\" | head -60 | tr '\\\\n' ' '\", \"description\": \"List UnitView fields\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"content\": \"# Draft plan #3407 (planner notes; final plan follows in the final message)\\n\\nKey findings (keep):\\n- #3332 = #3359 o\u2026\n- Bash: {\"command\": \"grep -n \\\"export const KEYWORD_CALLOUT_ICONS\\\\|export const FX_CALLOUT_MS\\\\|export const FX_WARP_FROM\\\\|board:\\\" apps/web/src/cards/keywordVisuals.ts apps/web/src/fx/constants.ts apps/we\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"content\": \"**Goal.** All 23 cards in the issue's table get `signature: true` in their table (the three MAGI in `stinkyscape-1.jso\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the draft plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"content\": \"**Goal.** Give each of the issue's 23 cards a signature and take it off `SIGNATURE_PENDING`. The three MAGI live in `s\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Bash: {\"command\": \"tr -s ' \\\\t\\\\n' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'\", \"description\": \"Count tokens holding letters or digits\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"old_string\": \"- **Budgets:** a burst outlives its start by 900 ms. A Legendary Spell has 1.2 s and a Mythic\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"old_string\": \" Entrances follow each concept: rays, sheens, rings, bursts at `FOOT`, shots from `tid(testid\u2026\n- Bash: {\"command\": \"tr -s ' \\\\t\\\\n' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'; wc -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"old_string\": \"| `audio/signatureSounds.ts` (+ `.test.ts`, new), `audio/cues.ts`, `audio/constants.ts` | | s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3407/.bot-plan.md\", \"old_string\": \" - `README.md`: one line beside the R3332000 gallery sentence.\", \"new_string\": \" - `apps/web/\u2026\n- said: **Goal.** Give each of the issue's 23 cards a signature and take it off `SIGNATURE_PENDING`. The three MAGI live in `stinkyscape-1.json5` and the rest in `stinkyscape-2.json5`. - **Units and Field Spells:** an entrance of their own, a text beat (a card recipe) and a standing aura of their own on th\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-07T17:05:49Z",
       "owner_why": "it plans it",
       "pending_at": "2026-11-07T17:22:38Z",
       "pending_by": "jgoetzmann",
-      "pending_request": true,
+      "pending_request": false,
       "planned_at": "2026-11-07T17:47:06Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
@@ -17262,18 +17254,18 @@
       "provider": "claude-7",
       "queued_at": "2026-11-07T17:05:40Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42394593120",
+      "run_id": "pending:cc3cde3b-1794073903",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T17:05:49Z",
+      "started_at": "2026-11-07T17:52:20Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T17:51:30Z",
+    "at": "2026-11-07T17:52:20Z",
     "url": "",
-    "what": "build #3399 on claude-6"
+    "what": "build #3407 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-07T17:29:12Z",
