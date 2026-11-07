@@ -17,6 +17,7 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
 import { Wordmark } from "./Wordmark.tsx";
 import { messageOf } from "../net/errors.ts";
+import { Segmented } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
 import "./leaderboard.css";
@@ -97,19 +98,17 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
       <BackLink title={t("Leaderboard")} />
       <section className="panel panel--auth one-screen__frame">
         <Wordmark />
-        <div className="row" role="group" aria-label={t("Ladder")} data-testid={leaderboardTestid.ladder}>
-          {LADDERS.map((entry) => (
-            <button
-              key={entry.ladder}
-              type="button"
-              className={entry.ladder === ladder ? "button-primary" : undefined}
-              aria-pressed={entry.ladder === ladder}
-              onClick={() => pick(entry.ladder)}
-            >
-              {t(entry.label)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label={t("Ladder")}
+          testId={leaderboardTestid.ladder}
+          className="row"
+          value={ladder}
+          onChange={pick}
+          options={LADDERS.map((entry) => ({
+            value: entry.ladder,
+            label: t(entry.label),
+          }))}
+        />
         <div className="one-screen__body one-screen__stack" tabIndex={0}>
           {error !== null ? (
             <>
