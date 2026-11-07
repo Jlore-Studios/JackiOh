@@ -17763,6 +17763,8 @@
     "3419": {
       "action": "review",
       "asks": [],
+      "audit_tier": "medium",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T21:19:12Z",
@@ -17776,16 +17778,25 @@
         "trail": "- said: \n- read_file: {\"EndLine\": 25, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 140, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\", \"StartLine\": 125}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm exec eslint apps/web/src/cards/fullscreen.ts apps/web/src/cards/FullScreenArt.tsx apps/web/src/cards/fullscreen.test.tsx apps/web/\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm exec eslint e2e/cypress/component/card-fullscreen.cy.tsx e2e/cypress/component/fx-phone-frame.cy.tsx\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/e2e/cypress/component/card-fullscreen.cy.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/e2e/cypress/component/card-fullscreen.cy.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm exec eslint e2e/cypress/component/card-fullscreen.cy.tsx e2e/cypress/component/fx-phone-frame.cy.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm --dir apps/web test src/fx/takeover.test.ts src/game/TakeoverStill.test.tsx src/cards/fullscreen.test.tsx src/motion.test.ts src/f\u2026\n- said: \n- run_command: sleep 6\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm --dir apps/web typecheck\n- said: \n- run_command: sleep 10\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d9256389-bdea-4d5d-82eb-3df8695b5342/task-826\"}\n- said: \n- run_command: sleep 5\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && ls -la .bot-notes.md\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Mythic takes the whole screen: its own full art fills the window as it is played, the camera flies through its layers, and a press-and-hold opens it full screen anywhere\"} --> ## Summary This patch implements full-art takeovers and an immersive full-s\u2026"
       },
       "issue": 3345,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The board-card guard 'never while the animation queue is draining' reads isHeld() once during render and does not subscribe to it, so it is stale and the guard does not hold.",
+          "evidence": "Card.tsx:302-305 computes `canFullScreen = ... && !isHeld()` in the render body. tilt.ts:133 `isHeld()` is `holds > 0`, and `holds` changes only in a `useEffect` inside `useTiltHold` (tilt.ts ~line 150). Game.tsx:312 calls `useTiltHold(inFlight !== null)`. Children render before that parent effect runs. The Card render that sees `inFlight` become non-null therefore still sees `holds === 0` and enables the hold. The Card render after the drain still sees `holds === 1` and disables it until some unrelated re-render. Card never subscribes (tilt.ts:294 shows `useSyncExternalStore(subscribeHold, isHeld, ...)` is how the tilt hook does it, but `subscribeHold` is not exported). The `onLongPress` options are also baked in at render, not checked at fire time. The only test (fullscreen.test.tsx:206) checks that `isHeld()` flips, not that a board Card refuses or allows the hold. No test covers the board path, the own-unit-only rule, or the draining rule. Fix: read the hold through a subscribed value (export a `useIsHeld` built on `useSyncExternalStore(subscribeHold, isHeld)`), or check `isHeld()` inside the long-press callback. Add a Card-level test for a board unit while held and while idle, and for an opponent unit.",
+          "severity": "blocking",
+          "where": "apps/web/src/game/Card.tsx:302"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-07T22:10:53Z",
+      "queued_at": "2026-11-07T22:20:49Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "42419490474",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-07T22:12:04Z",
       "stop_requested": false,
       "taken_asks": [],
