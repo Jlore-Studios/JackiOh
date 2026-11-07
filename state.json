@@ -34960,6 +34960,9 @@
     "readings": [
       "2026-11-06T23:44:02Z,claude-6,ping,before,42313608176,3,2026-11-07T04:10:00Z,,,allowed,50,,",
       "2026-11-07T00:12:22Z,claude-6,stream,call,42313608176,4,2026-11-07T04:10:00Z,,,allowed,50,,"
+    ],
+    "runs": [
+      "2026-11-07T00:54:17Z,42313608176,claude-6,sonnet+opus,build,3329,medium,built,,28.2,6,2022,162513,0.3516,3,4,,,19.1,claude-6,fresh,,1"
     ]
   },
   "version": 1
