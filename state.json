@@ -19258,6 +19258,10 @@
         {
           "at": "2026-11-07T20:53:18Z",
           "minutes": 49.3
+        },
+        {
+          "at": "2026-11-07T21:17:36Z",
+          "minutes": 18.1
         }
       ],
       "tokens_spent": [
@@ -19554,17 +19558,24 @@
           "cost": 0.0,
           "input": 1362018,
           "output": 80238
+        },
+        {
+          "at": "2026-11-07T21:17:36Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 493899,
+          "output": 88393
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-08T00:59:56Z",
-          "utilization": 0.24
+          "utilization": 0.3
         },
-        "observed_at": "2026-11-07T20:53:18Z",
+        "observed_at": "2026-11-07T21:17:36Z",
         "seven_day": {
           "resets_at": "2026-11-13T23:59:56Z",
-          "utilization": 0.92
+          "utilization": 0.94
         },
         "status": "allowed"
       }
@@ -35768,7 +35779,10 @@
       "2026-11-07T21:10:24Z,claude-8,stream,call,42414418136,92,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
       "2026-11-07T21:12:54Z,claude-8,stream,call,42414418136,95,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
       "2026-11-07T21:13:09Z,claude-8,stream,call,42414418136,97,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:14:24Z,claude-8,stream,call,42414418136,98,2026-11-07T22:00:00Z,,,allowed_warning,100,,"
+      "2026-11-07T21:14:24Z,claude-8,stream,call,42414418136,98,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
+      "2026-11-07T20:57:18Z,agy,usage-command,before,42413487201,24,2026-11-08T00:59:56Z,91,2026-11-13T23:59:56Z,allowed,100,100,",
+      "2026-11-07T21:07:23Z,agy,usage-command,call,42413487201,27,2026-11-08T00:59:56Z,92,2026-11-13T23:59:56Z,allowed,100,100,",
+      "2026-11-07T21:15:31Z,agy,usage-command,after,42413487201,30,2026-11-08T00:59:56Z,94,2026-11-13T23:59:56Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-07T20:41:23Z,42411269226,claude-4,sonnet,review,3386,medium,approved,,9.8,15,10398,780888,0.5587,3,5,,,1.2,claude-4,none,,1",
