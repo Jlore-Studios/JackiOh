@@ -17510,7 +17510,8 @@
       },
       "started_at": "2026-11-07T00:49:33Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6700272122
     },
     "3344": {
       "failures": 0,
