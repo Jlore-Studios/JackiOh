@@ -37,6 +37,12 @@ export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
 /** R2722001: a Legendary's or a Mythic's entrance lands this hard (0.5 until R2722001 made it bigger). */
 export const FX_LEGENDARY_TRAUMA = 0.7;
+/**
+ * R3346000: the board shake under a heavy play (cost 6 to 8) and a massive one (9 or more), by the mana it
+ * cost (game/damageFeel.ts PLAY_IMPACT_TIERS). A light or medium play does not shake the board.
+ */
+export const FX_PLAY_HEAVY_TRAUMA = 0.35;
+export const FX_PLAY_MASSIVE_TRAUMA = 0.7;
 /** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
 export const FX_TAKEOVER_TAIL_MS = 700;
 /** R2722001: the takeover's shake as its card lands (R2803000: eased for the phone frame budget; the result still thumps hardest). */
