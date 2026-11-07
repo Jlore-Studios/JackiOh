@@ -1249,9 +1249,9 @@ sh crates/server/tests/deploy/rehearse.sh             # the container's boot reh
 
 Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
 `tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
-`tests/db/run.sh` builds and links only that, the engine and the cards at opt-level 0 through its
+`tests/db/run.sh` builds and links only that, the engine, the cards and the AI at opt-level 0 through its
 `PROFILE_FLAGS`, which each of its `cargo` calls repeats (CI's `db (store contract)` job stays under five
-minutes, #3162). A
+minutes, #3162, #3410). A
 `store::` test lives in `server_store` only, and every other area in `server` only. CI's four
 `rust (test server …)` groups split the suite by test name (.github/ci/rust-test.toml says how), so only
 the lib and `server` hold tests whose path has `api::`, and only `server` ones with `api::practice::`.
