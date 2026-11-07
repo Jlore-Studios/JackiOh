@@ -16949,13 +16949,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-8",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "42387526971",
+            "tier": "strong"
+          }
+        ],
         "sha": "6ce41369af67a2dd8bf142786b0c718599277572",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
