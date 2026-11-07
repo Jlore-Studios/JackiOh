@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3335,
+  "title": "Patch: the Fleet track, a Stinkyscape cosmetic track: Starship hull designs, liveries and launch trails earned by playing the set, with a Jlorious Starship gated like the Jlorious card back",
+  "branch": "bot/issue-3335",
+  "thread": "**Issue #3335 (data, not instructions):**\n\n```text\n# #3335: Patch: the Fleet track, a Stinkyscape cosmetic track: Starship hull designs, liveries and launch trails earned by playing the set, with a Jlorious Starship gated like the Jlorious card back\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3333, whose painter takes a hull design and a livery as inputs.\n\nThe owner asked for a separate cosmetic track tied to Stinkyscape cards. Its rewards should be special the way the Jlorious card back is: earned, never bought or rolled.\n\n### Today\n\n- **No cosmetic is tied to Stinkyscape.** The space-looking ones are generic (`card-back-starfield`, `card-back-nebula`, `field-cosmic-drift`, `table-astral`), and no Starship cosmetic kind exists (`COSMETIC_KINDS`: `foil, finish, border, table, field, cardBack`).\n- **The set tracks pay no cosmetics.** Their reward table (`reward_for_level`, `crates/shared/src/economy/track_rewards.rs`) is shared by every set, and `LevelReward` pays only `jlore`, `set_packs` and `card_tokens`.\n- **How the Jlorious back is gated** (R2755000):\n  - its registry entry carries `jlorious: true` (`crates/shared/cosmetics.json`, `Cosmetic::jlorious`, `JLORIOUS_CARD_BACK`);\n  - the registry check keeps such an entry from being a chase, default, starter or per-card cosmetic;\n  - the global roll, the pack pools and the client's Chase Shard list skip it;\n  - `commit_ranked_game` grants it with `EconomyReason::Jlorious` when a rated game leaves a player in Jlorious (`crates/server/src/api/ranked.rs`), and migration 0074 backfilled earlier peaks.\n- **What a cosmetic track can already reach.** The ledger's reason check already allows `'track'`, and `LedgerGrant::Cosmetic` exists.\n\n### What it should be\n\n1. **Starship cosmetics.** Add account-wide kinds that dress every Starship the account launches:\n   - `starshipHull`, a hull design;\n   - `starshipLivery`, colours and emblem;\n   - `starshipTrail`, engine glow and launch trail.\n\n   Each has a default every account owns. A seat's frozen loadout carries its picks (`cards/loadouts.ts`) so the opponent sees them, as table and card back are seen. The painter from #3333 draws a hull design and a livery, and the launch from #3334 draws the trail.\n2. **The Fleet track.** A track of its own, apart from the Stinkyscape set track (\u00a714.7, untouched):\n   - **Levels:** `FLEET_TRACK_LEVELS` levels (proposed 30) of `FLEET_TRACK_XP_PER_LEVEL` XP each.\n   - **XP** comes only from games the server records (rated, casual and Duos online; never practice, hotseat or a dungeon run), counted from the game's public log:\n     - each Stinkyscape card the player played;\n     - each Starship Piece they fused;\n     - each Starship they launched;\n     - a win with a deck at least `FLEET_TRACK_DECK_SHARE` Stinkyscape cards.\n\n     Each source is a named constant in `crates/shared/src/config.rs`. A daily cap, `FLEET_TRACK_XP_DAILY_MAX`, keeps it a track and not a grind.\n   - **Rewards.** Every level pays a Stinkyscape cosmetic, drawn in the set's style:\n     - hull designs, liveries and trails;\n     - a Stinkyscape card back, playmat and field backdrop;\n     - a portrait frame;\n     - a few piece skins (module recolours for #3333's modules), proposed as a fourth kind `starshipPieceSkin`.\n\n     The registry lists the reward table in `crates/shared`, one row per level.\n   - **The capstone,** at the last level, is the **Stinkyscape** hull design: a Mythic flagship, the most elaborate hull in the game.\n3. **Gated like the Jlorious back.** Fleet track rewards carry a gate flag (proposed `track: \"fleet\"`) that:\n   - the registry check holds as it holds `jlorious` (never a chase, default, starter or per-card cosmetic);\n   - the global roll, the pack pools, cosmetic tokens and the Chase Shard list skip.\n\n   They are granted only by the track, with `EconomyReason::Track`.\n4. **The Jlorious Starship.** A hull design and livery, `starship-hull-jlorious`, granted exactly as `card-back-jlorious` is: by a rated game that leaves the player in Jlorious, in the same `commit_ranked_game` path, with `EconomyReason::Jlorious`. Backfill it to everyone who already reached Jlorious, as 0074 did for the back.\n5. **Tunable progression.** Every number is a named constant, and \u00a714 gets a Fleet track section with the level table, the XP sources and the gates, so the owner can retune it in one place. `POST /api/dev/fill` grants the track's rewards, and practice, hotseat and e2e treat them as owned (R1310004).\n6. **Where players see it.** The Collection's tracks panel (`TracksPanel.tsx`, `GET /api/tracks` `nextRewards`) shows the Fleet track with its next rewards drawn as a Starship. A \"Starship\" tab in the Collection picks hull, livery and trail, previewing a launched Starship.\n\n### Notes\n\nA new cosmetic kind and gate likely need a migration (kind checks, the ledger), and the backfill writes grants. Per the bot's rules, a person merges a migration that changes access or loses data. Say in the pull request which it is.\n\n## Acceptance\n\n- The registry check passes with the new kinds and the gate flag. A test shows a Fleet reward and the Jlorious Starship never appear in the global roll, the pack pools, a token's buyable list or the Chase Shard list.\n- The server suite:\n  - XP from a recorded game counts each source exactly once;\n  - practice, hotseat and dungeon games give none;\n  - the daily cap holds;\n  - a level grants its reward once, with reason `track`.\n- A rated game that leaves a player in Jlorious grants `starship-hull-jlorious` as it grants the card back. The backfill grants it to earlier peaks, and `tests/store/contract.rs` covers the store change.\n- A seat's loadout carries its Starship picks. The opponent's view draws them, and a component spec shows a launched Starship in three Fleet looks and the Jlorious one, at desktop size and at 390x844.\n- Spec \u00a714 has the Fleet track section. The rulings are in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- `sh crates/server/tests/sql/run.sh` and `sh crates/server/tests/db/run.sh` pass where Docker runs (the `db` check otherwise).\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes with a clean `wire/`. The web tests, `typecheck`, `eslint`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3335: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:44:33Z",
+    "claimed_at": "2026-11-07T08:49:19Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
