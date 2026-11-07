@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3331,
+  "title": "Patch: an art bible and scene kits: each set's look written down, pictures composed as scenes, and more detail the rarer the card",
+  "branch": "bot/issue-3331",
+  "thread": "**Issue #3331 (data, not instructions):**\n\n```text\n# #3331: Patch: an art bible and scene kits: each set's look written down, pictures composed as scenes, and more detail the rarer the card\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3017 (it is changing `pictures.ts`, `CardArt.tsx` and `versions.ts`, which this touches too).\n\nThis is the foundation every per-set picture pass under #3330 builds on. It gives the painters what they lack today:\n- a written look per set;\n- a way to compose a picture as a scene of several parts;\n- a measure that makes a rarer card more detailed.\n\nIt redraws no card's picture by itself beyond a few proofs. The per-set passes do that, each from its own per-card brief table.\n\n### Today (measured on `main` at `f330f5b`)\n\n- **The procedural painter.** It draws Core, Classic, Classic+, Meditative and Meditative+ (`procedural.ts` `artSpec`). Each picture is:\n  - one theme sky (`themeFor`);\n  - one composition by type (`figure`, `burst`, `landscape`, `sigil`);\n  - one generic subject: a silhouette for Units, ridges for landscapes;\n  - at most one motif from `MOTIF_WORDS`, drawn as an emblem plus a scatter of small glyphs.\n\n  Its median is 17 to 18 SVG elements at every rarity, and 125 of its 396 non-token cards have no motif.\n- **Stinkyscape and Training Grounds.** Their painters (`stinkyscape.ts`, `traininggrounds.ts`) draw a subject per family, at 47 to 69 elements, still flat across rarity.\n- **No measure exists.** Nothing caps or floors a picture's detail, and no document says what a set's pictures look like.\n- **Core's pictures are pinned to v0.1** (R503, `motifs.test.ts` \"Core keeps the pictures v0.1 gave it\").\n\n### What it should be\n\n1. **An art bible.** Add a section to `apps/web/src/cards/art/ART.md` for each set family:\n   - Core;\n   - Classic, with Classic+;\n   - Meditative, with Meditative+;\n   - Stinkyscape;\n   - Training Grounds.\n\n   Each section gives that family's home and setting (Set showcase's families are a start: Core's glass orb, Classic's temple stone, Meditative's ink wash, Stinkyscape's deep space, Training Grounds' carved wood). It also gives the palette as palette.css names, the light direction, the line and edge treatment, and the camera. Last, it says what each rarity adds:\n   - **Common:** one clear subject and a simple setting.\n   - **Rare:** a setting with props.\n   - **Epic:** a scene with a foreground, a middle and a background.\n   - **Legendary:** a composed scene with lighting and a moment of action.\n   - **Mythic:** a set piece of its own: many parts, depth, effects, and a silhouette nobody else has.\n2. **Scene kits.** Add a scene recipe the painters draw from, data per card:\n   - layers: sky, far, mid, subject, near props, light rig, particles;\n   - each layer picked from a kit of parts with seeded variation.\n\n   Build the procedural painter's first kit, with at least 60 parts across:\n   - terrain: fields, furrows, cliffs, floors, rooms, streets;\n   - architecture;\n   - plants and growth;\n   - creatures;\n   - objects and tools;\n   - weather and light.\n\n   Build a **figure kit** to replace the one silhouette: heads, hair and headgear, outfits by tag, a held item, and two or more poses. Then a Unit reads as who it is: a Felinor, a CN or KY character, Jlockeed's people, a Pancake, a Fruit.\n\n   A card with no scene recipe keeps today's picture byte for byte until its set's pass gives it one. Every golden hash stands for those cards.\n3. **The detail floor.** Add a test, `artRichness.test.ts`, that measures every card's base picture:\n   - drawn elements;\n   - distinct layers in use;\n   - distinct kit parts.\n\n   Hold each rarity to a named floor (`ART_DETAIL_MIN_<RARITY>`, proposed and ruled). Proposed: Common 30, Rare 40, Epic 60, Legendary 90, Mythic 140 drawn elements, with Legendary and Mythic using every layer.\n\n   It starts as a **ratchet**: `ART_DETAIL_SHORT` lists today's shortfalls by card id, and a card leaves the list when its set's pass lifts it. The list may only shrink, and the last set's pass empties it.\n\n   A ceiling keeps phones fast: `ART_DETAIL_MAX_BYTES` per picture, with the art cache (`ART_CACHE_MAX`) and lazy drawing (`near.ts`) unchanged.\n4. **R503's pin lifted.** The owner decided on 2026-11-06 that every card's picture is redrawn richer, Core's included. Rule here how R503 now reads:\n   - pictures still all differ;\n   - Core's v0.1 fixture becomes a record of the old pictures, not a pin.\n5. **Proof on five cards.** Redraw these from scene recipes, to show the kits work and to set the bar each set pass meets:\n   - Corpse Plantation (`classic-074`): a moonlit graveyard farm. Tilled rows of grave-mounds run to the horizon, pale hands and sprouts push up from the furrows, a scarecrow made of bones stands over it, green plague mist pools in the rows, and a lantern glows on a fence post.\n   - Speciesist (`core-002`, Common).\n   - Heroic Power (`core-098`, Mythic).\n   - Ceaseless Void (`core-100`, Mythic).\n   - One Stinkyscape Common.\n\n## Acceptance\n\n- `ART.md` has an art bible section for each set family, naming palette.css colours only.\n- The scene recipe and kit types exist, and the procedural kit holds 60 or more parts, the figure kit included. Every number is a named constant (CLAUDE.md rule 9).\n- The five proof cards draw from scene recipes, base and Radiant. They clear their rarity's floor and differ from their old pictures.\n- Every other card's picture is byte for byte unchanged (the golden fixtures).\n- `artRichness.test.ts` runs over every catalog entry, tokens included. It fails a card under its floor that is not in `ART_DETAIL_SHORT`, and fails when the list names a card that clears its floor.\n- Every picture stays under `ART_DETAIL_MAX_BYTES`.\n- These still hold:\n  - R503's every-picture-differs test;\n  - the no-text and no-external-ref checks (`art.test.ts`);\n  - the base and Radiant geometry rule;\n  - the palette test that keeps new colours out of Radiant's gold window (R2725004).\n- The rulings are in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and there is a `--visual` fragment.\n- A component (pixel) spec screenshots the five proof cards at hand size and at board size.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes with a clean `wire/`. The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` all pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3331: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:42:46Z",
+    "claimed_at": "2026-11-07T00:48:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3353 is held for `claude-8` until 19:00 (5-hour usage is 81%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#3338 is held for `claude-8` until 19:00 (5-hour usage is 81%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
