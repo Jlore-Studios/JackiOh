@@ -23,7 +23,7 @@ import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
-import { starshipModuleIconSvg, starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
+import { starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -196,6 +196,11 @@ function partKey(part: ArtPart): string {
   return part === "whole" ? "" : `|${part}`;
 }
 
+/** R3336000: what a Battleship layer's memo key ends with: nothing for a printed card, so it keeps its key. */
+function shipKey(ship: ShipArt | null): string {
+  return ship === null ? "" : `|ship${ship.buried}.${ship.heat ?? 0}.${ship.brittle ?? ""}.${ship.bays ?? ""}`;
+}
+
 /** R2940001: the Starships' one seed for a Sketch's strokes: their picture is drawn from no card's id. */
 const STARSHIP_SKETCH_SEED = "starship";
 
@@ -275,12 +280,13 @@ export function stinkyscapeArtUri(
   seedId = defId,
   restyle: ArtRestyle | null = null,
   part: ArtPart = "whole",
+  ship: ShipArt | null = null,
 ): string {
-  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}`;
+  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}${shipKey(ship)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;

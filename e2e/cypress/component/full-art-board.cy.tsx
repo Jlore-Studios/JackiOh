@@ -194,11 +194,25 @@ describe("R3046000 a full-art Unit on the board", () => {
         expect(cost.left, "the cost gem keeps the top left").to.be.lessThan(panel.left + panel.width / 2);
         expect(cost.bottom, "the cost gem is clear of the name").to.be.at.most(name.top);
 
-        // The control: a Unit that prints no full art keeps its oval window inside the face.
+        // The control: a Unit that prints no full art draws its art up to the frame (#3341), not an oval in a box: the
+        // picture fills the panel's width and starts at its top, square, and ends half a gem above its foot, so the gems
+        // straddle its edge and the name's plate lies on it.
         const plain = cfIn(doc, `${PLAIN_UNIT}-${String(size.width)}`);
         expect(plain.hasAttribute("data-full-art"), "the plain Unit is not full art").to.eq(false);
-        expect(rectOf(plain, ".cf-portrait").width, "the oval leaves the panel's sides").to.be.lessThan(rectOf(plain, ".cf-scale").width * 0.9);
-        expect(getComputedStyle(part(plain, ".cf-portrait > .cf-art")).borderTopLeftRadius, "the oval").to.not.eq("0px");
+        const plainArt = rectOf(plain, ".cf-portrait");
+        const plainPanel = rectOf(plain, ".cf-scale");
+        const plainName = rectOf(plain, ".card-name");
+        expect(plainArt.width, "the picture fills the panel's sides").to.be.closeTo(plainPanel.width, EDGE_TOLERANCE_PX);
+        expect(plainArt.top, "the picture starts at the panel's top").to.be.closeTo(plainPanel.top, EDGE_TOLERANCE_PX);
+        expect(getComputedStyle(part(plain, ".cf-portrait > .cf-art")).borderTopLeftRadius, "square").to.eq("0px");
+        expect(plain.querySelector(".cf-portrait > .cf-art")?.classList.contains("cf-art--frame"), "the frame shape").to.eq(true);
+        expect(plainName.top, "the plate lies on the picture").to.be.at.least(plainArt.top);
+        expect(plainName.bottom, "the plate ends on the picture").to.be.at.most(plainArt.bottom + EDGE_TOLERANCE_PX);
+        for (const selector of [".stat-attack", ".stat-health"]) {
+          const gem = rectOf(plain, selector);
+          expect(gem.top, `${selector} straddles the picture's foot: it begins over it`).to.be.lessThan(plainArt.bottom);
+          expect(gem.bottom, `${selector} straddles the picture's foot: it ends under it`).to.be.at.least(plainArt.bottom - EDGE_TOLERANCE_PX);
+        }
       });
     });
   }
@@ -394,9 +408,9 @@ describe("R3046000 the real board", () => {
           expect(frame.bottom, `the backrow art ends where its name's band begins at ${viewport.label}`).to.be.closeTo(name.top, EDGE_TOLERANCE_PX);
           expect(name.bottom, "the band lies at the foot").to.be.closeTo(rectOf(backrow, ".cf-scale").bottom, EDGE_TOLERANCE_PX);
         }
-        // The cards that print none keep their windows.
-        const plain = doc.querySelectorAll(`${BOARD} .field .card[data-face="minion"] > .cf:not([data-full-art]) .cf-art--oval`);
-        expect(plain.length, "plain Units keep their ovals").to.be.at.least(1);
+        // The cards that print none draw their art up to the frame (#3341).
+        const plain = doc.querySelectorAll(`${BOARD} .field .card[data-face="minion"] > .cf:not([data-full-art]) .cf-art--frame`);
+        expect(plain.length, "plain Units draw their art up to the frame").to.be.at.least(1);
       });
     });
   }

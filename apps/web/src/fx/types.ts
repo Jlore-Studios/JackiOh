@@ -200,6 +200,21 @@ export type FxLaunchCue = {
   durationMs: number;
   still?: true;
 };
+/**
+ * R3336000: a Drone Battleship's layer over it, `at`: its armor plates glowing down as the Shield took a hit
+ * ("plates", `count` of them, the first `lit` bright), or a bay of the Propagation layer opening ("bay": two
+ * doors sliding apart, `count` lights staying on while drones remain). It names no card (R202).
+ */
+export type FxShipCue = {
+  kind: "ship";
+  move: "plates" | "bay";
+  at: FxAnchor;
+  tint: FxTint;
+  count: number;
+  lit: number;
+  delayMs: number;
+  durationMs: number;
+};
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -265,7 +280,8 @@ export type FxDomCue =
   | FxZoneCue
   | FxTakeoverCue
   | FxSetPieceCue
-  | FxLaunchCue;
+  | FxLaunchCue
+  | FxShipCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 
