@@ -104,6 +104,7 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "card-full-art"],
       ["visuals", "card-set-watermarks"],
       ["visuals", "card-opponent-cosmetics"],
+      ["visuals", "card-board-names"],
       ["visuals", "card-device-tilt"],
       ["audio", "audio"],
       ["gameplay", "language"],
@@ -111,6 +112,18 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
     for (const slot of SETTINGS_SLOTS) {
       expect(typeof slot.reset, slot.id).toBe("function");
     }
+  });
+
+  it("R3339000 BoardNamesSelect changes boardNames and resets with slot reset", () => {
+    render(<SettingsPanel onClose={noop} />);
+    const selectEl = select("setting-boardNames");
+    expect(selectEl.value).toBe("artFirst");
+    fireEvent.change(selectEl, { target: { value: "always" } });
+    expect(readCardSettings().boardNames).toBe("always");
+
+    const slot = SETTINGS_SLOTS.find((s) => s.id === "card-board-names");
+    slot?.reset?.();
+    expect(readCardSettings().boardNames).toBe("artFirst");
   });
 
   it("R1579000 the settings offer no cosmetic selection on any tab", () => {

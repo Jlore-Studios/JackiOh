@@ -14,6 +14,7 @@ import {
   FLUSH_MAX_SFX,
   HIDDEN_DEF_ID,
   PAIR_OFFSET_MS,
+  RIFFLE_SOUND_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
@@ -951,5 +952,66 @@ describe("R655 a card's effect is sent on its hook's moment, through the directo
     for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
 
     expect(sink.sent.filter((cue) => cue.kind !== "sfx")).toEqual([]);
+  });
+});
+
+// #3347: a deck riffles once per action, however many cards went in
+describe("#3347 one riffle sounds per action", () => {
+  const shuffled = (n: number, player: PlayerId = "p1"): GameEvent => ({
+    type: "shuffledIn",
+    player,
+    instanceId: `s${String(n)}`,
+    defId: "core-070",
+    position: n,
+  });
+  const riffles = (sink: Recorder) => sfxSent(sink).filter((cue) => cue.id === "riffle");
+
+  it("#3347 three shuffledIn in one action sound exactly one riffle, after the shuffle's own motion", () => {
+    const { sink, director } = rig();
+    const view = begin(director, [shuffled(1), shuffled(2), shuffled(3)]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toHaveLength(1);
+    expect(riffles(sink)[0]?.delayMs).toBe(RIFFLE_SOUND_DELAY_MS);
+  });
+
+  it("#3347 a Trade's traded, shuffledIn and drawn sound one riffle", () => {
+    const { sink, director } = rig();
+    const view = begin(director, [
+      { type: "traded", player: "p1" },
+      shuffled(1),
+      { type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" },
+    ]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toHaveLength(1);
+  });
+
+  it("#3347 two actions sound a riffle each", () => {
+    const { sink, director } = rig();
+    const first = begin(director, [shuffled(1), shuffled(2)]);
+    for (const entry of entriesOf(first, first.events)) director.onEntryStart(entry);
+    const third = shuffled(3);
+    const second = withEvents(first, [...first.events, third]);
+    director.onView(second);
+    for (const entry of entriesOf(second, [third])) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toHaveLength(2);
+  });
+
+  it("#3347 a burst the runner never starts (reduced motion) still sounds its one riffle, from the flush", () => {
+    const { sink, director } = rig();
+    begin(director, [shuffled(1), shuffled(2), shuffled(3)]);
+    director.onIdle();
+
+    expect(riffles(sink)).toHaveLength(1);
+  });
+
+  it("#3347 an action that shuffles nothing sounds no riffle", () => {
+    const { sink, director } = rig();
+    const view = begin(director, [damage(3), healed(2)]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toEqual([]);
   });
 });

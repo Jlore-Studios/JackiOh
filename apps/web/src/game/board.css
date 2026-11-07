@@ -542,6 +542,93 @@ button.modifier-badge[data-open="true"] {
   font-weight: 700;
 }
 
+/* #3347: a deck riffles when it is shuffled (Board.tsx draws the leaves in the Deck pile only): its top
+   cards split into two halves and interleave once. Game marks `data-riffle` with the decks that riffle,
+   and --riffle-ms and --riffle-delay with when. Only at full card motion; the rest see no leaves. */
+.pile:has(> .pile-riffle) {
+  position: relative;
+}
+
+.pile-riffle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-raised);
+  display: none;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.game[data-card-motion="full"][data-riffle~="you"] [data-testid="library-you"] > .pile-riffle,
+.game[data-card-motion="full"][data-riffle~="opponent"] [data-testid="library-opponent"] > .pile-riffle {
+  display: block;
+}
+
+.pile-riffle-leaf {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--card-w) * 0.4);
+  height: calc(var(--card-h) * 0.4);
+  margin-top: calc(var(--card-h) * -0.2);
+  margin-left: calc(var(--card-w) * -0.2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--bg-raised);
+  opacity: 0;
+  animation: riffle-left var(--riffle-ms, 0ms) var(--ease-in-out)
+    calc(var(--riffle-delay, 0ms) + var(--riffle-ms, 0ms) * var(--k) * 0.04) both;
+}
+
+.pile-riffle-leaf:nth-child(even) {
+  animation-name: riffle-right;
+}
+
+@keyframes riffle-left {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+    transform: translate(-14px, -3px) rotate(-8deg);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-1px, 0) rotate(-1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes riffle-right {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+    transform: translate(14px, -3px) rotate(8deg);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(1px, 0) rotate(1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
 /* --------------------------------------------------------------------------------- hands --- */
 
 .hand {
@@ -601,6 +688,8 @@ button.modifier-badge[data-open="true"] {
 
 .hand-you .hand-cards {
   --slot-w: var(--hand-card-w);
+  /* #3347: how far a hovered card pushes its neighbours aside. */
+  --hand-spread: calc(var(--hand-card-w) * 0.18);
 }
 
 /* Backs are sized off the card height, so they stay upright cards when a wide lane makes the field
@@ -625,7 +714,38 @@ button.modifier-badge[data-open="true"] {
   flex: 0 0 var(--slot-w);
   width: var(--slot-w);
   transform-origin: 50% 100%;
-  transition: transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
+  /* #3347: a card leaving or arriving moves its neighbours with `translate` (handSpring.ts sets it from
+     where the slot was, and lets go), which springs on its own, slower time; the tilt and lift stay `transform`'s. */
+  transition:
+    transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    translate calc(var(--motion-base) * var(--anim-scale)) var(--ease-standard);
+}
+
+/* #3347: at full card motion the fan's `translate` settles with a slight overshoot, as a hand of cards would. */
+.game[data-card-motion="full"] .hand-slot {
+  transition-timing-function: var(--ease-standard), var(--ease-overshoot);
+}
+
+/* #3347: the opening hand is dealt a card at a time from its deck: each slot flies in from the deck's
+   place (aimDeal sets --deal-dx, --deal-dy, --deal-at) while Game holds `data-dealing`. The fill keeps a
+   card out of sight until its turn. */
+@keyframes hand-deal {
+  from {
+    translate: var(--deal-dx, 0) var(--deal-dy, 0);
+    rotate: -12deg;
+    scale: 0.6;
+    opacity: 0;
+  }
+  to {
+    translate: 0 0;
+    rotate: 0deg;
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+.game[data-dealing="true"] .hand-slot {
+  animation: hand-deal var(--deal-ms) var(--ease-out) var(--deal-at, 0ms) both;
 }
 
 .hand-slot + .hand-slot {
@@ -2704,6 +2824,15 @@ button.modifier-badge[data-open="true"] {
   .hand-you[data-hover-preview="on"] .hand-slot:hover {
     z-index: var(--z-hover);
     transform: translateY(calc(var(--hand-card-h) * var(--hand-lift-rise) * -1)) scale(var(--hand-lift-scale));
+  }
+
+  /* #3347: the cards either side of the one hovered part to make room for it. */
+  .game[data-card-motion="full"] .hand-you[data-hover-preview="on"] .hand-slot:hover ~ .hand-slot {
+    translate: var(--hand-spread) 0;
+  }
+
+  .game[data-card-motion="full"] .hand-you[data-hover-preview="on"] .hand-slot:has(~ .hand-slot:hover) {
+    translate: calc(var(--hand-spread) * -1) 0;
   }
 }
 

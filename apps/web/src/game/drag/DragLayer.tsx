@@ -9,16 +9,20 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
+import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, isBuilding, type Interaction } from "../actions.ts";
+import { currentCardMotion } from "../cardMotion.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { byTestid, testid, type ClickTarget } from "../contract.ts";
 import { liveFace } from "../faces.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
+import { dragCue } from "./cues.ts";
 import { setLanding } from "./landing.ts";
 import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DragPlan, type DropSpot } from "./model.ts";
 import OptionDrag from "./OptionDrag.tsx";
 import { lockedZoneAt, pickDropSpot, targetFromElement } from "./targets.ts";
+import { DRAG_RETURN_MS, DRAG_TILT_SETTLE_MS, createTiltTracker, type TiltTracker } from "./tilt.ts";
 import "./drag.css";
 
 export type DragLayerProps = {
@@ -50,9 +54,15 @@ type Flight = {
   touch: boolean;
   spot: DropSpot;
   reticle: Box | null;
+  /** #3347: how far the ghost leans, in degrees: by how fast the pointer moves, flat once it rests. */
+  tilt: number;
 };
 
-type Landed = { instanceId: string; card: CardView | null; at: Point; view: PlayerView };
+/** `released` is where the dragged card was when the pointer let go: the stand-in's flight starts there (#3347). */
+type Landed = { instanceId: string; card: CardView | null; at: Point; released: Point; view: PlayerView };
+
+/** #3347: a card let go over nothing, springing from where it was back to its place in the hand (`at`). */
+type Returning = { instanceId: string; card: CardView | null; at: Point; dx: number; dy: number; ms: number; view: PlayerView };
 
 const BOARD = '[data-testid="board"]';
 /**
@@ -132,6 +142,14 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
 
   const [drawn, setDrawn] = useState<Flight | null>(null);
   const [landed, setLanded] = useState<Landed | null>(null);
+  const [returning, setReturning] = useState<Returning | null>(null);
+
+  // #3347: the spring home plays once, then is gone.
+  useEffect(() => {
+    if (returning === null) return undefined;
+    const timer = setTimeout(() => setReturning(null), returning.ms);
+    return () => clearTimeout(timer);
+  }, [returning]);
 
   // A landed card leaves on a newer view or timeout, never after this layer.
   useEffect(() => {
@@ -146,7 +164,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
 
   // Keep the card out of the fan in the landing frame.
   useLayoutEffect(() => {
-    setLanding(landed === null ? null : landed.instanceId);
+    setLanding(landed === null ? null : landed.instanceId, landed?.released);
   }, [landed]);
 
   useEffect(() => () => setLanding(null), []);
@@ -156,6 +174,23 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     let press: Press | null = null;
     let flight: Flight | null = null;
     let swallowClick = false;
+    let tracker: TiltTracker | null = null;
+    let tiltTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function clearTiltTimer(): void {
+      if (tiltTimer === null) return;
+      clearTimeout(tiltTimer);
+      tiltTimer = null;
+    }
+
+    /** The ghost's centre on screen now, which rides above a finger, so it is not always where the pointer is. */
+    function ghostCenter(): Point | null {
+      const ghost = document.querySelector('[data-testid="drag-ghost"]');
+      if (ghost === null) return null;
+      const rect = ghost.getBoundingClientRect();
+      // Not laid out (jsdom): no better place than the pointer's.
+      return rect.width === 0 && rect.height === 0 ? null : centerOf(ghost);
+    }
 
     /** jsdom lacks `elementsFromPoint`, so tests stub it on `document`. */
     function hits(x: number, y: number): readonly Element[] {
@@ -173,10 +208,39 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       return pickDropSpot(hits(x, y), plan.dropTestids);
     }
 
-    function stopDragging(): void {
+    /**
+     * #3347: a hand card let go over nothing springs back to its place in the fan. The sound plays at
+     * any motion level; the spring only at "full" (reduced motion snaps it home, fx intensity off drops the flourish).
+     */
+    function sendHome(ending: Flight, from: Point): void {
+      const { plan } = ending;
+      if (plan.kind !== "play" || plan.source.on !== "hand") return;
+      dragCue("returnToHand");
+      if (currentCardMotion() !== "full") return;
+      const slot = byTestid(plan.sourceTestid);
+      const home = slot === null ? null : centerOf(slot);
+      if (home === null) return;
+      const { view } = latest.current;
+      setReturning({
+        instanceId: plan.source.instanceId,
+        card: handCard(view, plan.source.instanceId),
+        at: home,
+        dx: round(from.x - home.x),
+        dy: round(from.y - home.y),
+        // R201: the viewer's effects speed divides it, as every other motion's.
+        ms: Math.round(DRAG_RETURN_MS / normalizeSpeed(getFxSettings().speed)),
+        view,
+      });
+    }
+
+    /** `consumed`: the release played, built on or refused the card; else it goes back where it came from. */
+    function stopDragging(consumed: boolean): void {
       const ending = flight;
+      const left = ending === null ? null : (ghostCenter() ?? ending.pointer);
       flight = null;
       press = null;
+      tracker = null;
+      clearTiltTimer();
       root.removeAttribute("data-dragging");
       if (ending !== null) {
         try {
@@ -186,6 +250,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         }
       }
       swallowClick = true;
+      if (ending !== null && left !== null && !consumed) sendHome(ending, left);
       setDrawn(null);
     }
 
@@ -199,7 +264,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         return;
       }
       const missed = flight.plan.missed ?? IDLE;
-      stopDragging();
+      stopDragging(missed !== IDLE);
       latest.current.onInteraction(missed);
     }
 
@@ -244,14 +309,27 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         }
         const pointer = { x: event.clientX, y: event.clientY };
         const spot = spotAt(flight.plan, pointer.x, pointer.y);
+        // #3347: only a card ghost leans, and only at "full": the tilt rides the pointer's speed.
+        const tilt = flight.plan.kind === "play" && currentCardMotion() === "full" ? (tracker?.move(pointer.x) ?? 0) : 0;
         flight = {
           ...flight,
           pointer,
           from: centerOf(flight.element) ?? flight.from,
           spot,
           reticle: reticleFor(spot),
+          tilt,
         };
         setDrawn(flight);
+        clearTiltTimer();
+        if (tilt !== 0) {
+          // A pointer that stops sends no more moves, so a timer sets the ghost flat again.
+          tiltTimer = setTimeout(() => {
+            tiltTimer = null;
+            if (flight === null) return;
+            flight = { ...flight, tilt: 0 };
+            setDrawn(flight);
+          }, DRAG_TILT_SETTLE_MS);
+        }
         return;
       }
 
@@ -268,6 +346,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
 
       onInteraction(plan.lifted);
       onLift?.(plan);
+      if (plan.kind === "play") dragCue("pickUp");
       root.setAttribute("data-dragging", plan.kind);
       try {
         element.setPointerCapture(event.pointerId);
@@ -286,7 +365,11 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         touch: event.pointerType === "touch",
         spot,
         reticle: reticleFor(spot),
+        tilt: 0,
       };
+      tracker = createTiltTracker(() => performance.now());
+      tracker.move(pointer.x);
+      setReturning(null);
       setDrawn(flight);
     }
 
@@ -300,7 +383,10 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         const { plan } = flight;
         const reticle = reticleFor(spot);
         const at = reticle === null ? { x: event.clientX, y: event.clientY } : { x: reticle.x, y: reticle.y };
-        stopDragging();
+        const released = ghostCenter() ?? { x: event.clientX, y: event.clientY };
+        // Played, or built on (a target still to pick), or refused: a card let go over nothing goes home.
+        const placed = result.action !== undefined || (result.interaction !== IDLE && result.interaction !== plan.missed);
+        stopDragging(result.action !== undefined || result.interaction !== IDLE);
         onInteraction(result.interaction);
         if (refused !== null) {
           const rect = refused.zone.getBoundingClientRect();
@@ -313,6 +399,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
             size: round(Math.min(rect.width, rect.height)),
           });
         }
+        if (placed && plan.kind === "play") dragCue("drop");
         if (result.action !== undefined) {
           const card = plan.kind === "play" && plan.source.on === "hand" ? handCard(view, plan.source.instanceId) : null;
           if (card !== null) {
@@ -320,7 +407,11 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
             const zone = plan.missed?.stage === "playing" ? plan.missed.picked.zone : undefined;
             const zoneBox = zone === undefined ? null : byTestid(testid.zone("you", zone.row, zone.lane));
             const settled = zoneBox === null ? null : centerOf(zoneBox);
-            setLanded({ instanceId: card.instanceId, card, at: settled ?? at, view });
+            // #3347: where the effects layer flies a stand-in from, so the card the player let go of is
+            // the one that flies on; the ghost keeps that place meanwhile (and goes to the tile only
+            // when no flight will carry it: reduced motion, effects off).
+            const flies = currentCardMotion() === "full";
+            setLanded({ instanceId: card.instanceId, card, at: settled ?? (flies ? released : at), released, view });
           }
           onAction(result.action);
         }
@@ -410,12 +501,42 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       }
       flight = null;
       press = null;
+      tracker = null;
+      clearTiltTimer();
       root.removeAttribute("data-dragging");
     };
   }, []);
 
+  // #3347: the tile under a card ghost lifts to meet it, and one soft tick sounds as each is entered.
+  const hovered =
+    drawn !== null && drawn.plan.kind === "play" && !drawn.plan.arrow && drawn.spot.at === "target" ? drawn.spot.testid : null;
+  useEffect(() => {
+    if (hovered === null) return undefined;
+    const tile = byTestid(hovered);
+    tile?.setAttribute("data-drag-over", "true");
+    dragCue("dragOver");
+    return () => tile?.removeAttribute("data-drag-over");
+  }, [hovered]);
+
   if (drawn === null) {
-    if (landed === null) return null;
+    if (landed === null) {
+      if (returning === null) return null;
+      return (
+        <div className="drag-layer drag-returning" data-testid="drag-returning" aria-hidden="true" style={{ pointerEvents: "none" }}>
+          <MatchCardsProvider view={returning.view}>
+            <DragGhost
+              testId="drag-returning-card"
+              card={returning.card}
+              instanceId={returning.instanceId}
+              at={returning.at}
+              touch={false}
+              valid={false}
+              returning={{ dx: returning.dx, dy: returning.dy, ms: returning.ms }}
+            />
+          </MatchCardsProvider>
+        </div>
+      );
+    }
     return (
       <div className="drag-layer drag-landing" data-testid="drag-landing" aria-hidden="true" style={{ pointerEvents: "none" }}>
         <MatchCardsProvider view={props.view}>
@@ -463,6 +584,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
             at={drawn.pointer}
             touch={drawn.touch}
             valid={valid}
+            tilt={drawn.tilt}
           />
         </MatchCardsProvider>
       )}
@@ -507,17 +629,28 @@ function DragGhost(props: {
   valid: boolean;
   landing?: boolean;
   testId?: string;
+  /** #3347: degrees the ghost leans by its speed (0, flat, when it rests). */
+  tilt?: number;
+  /** #3347: the ghost springs from this offset, in pixels from `at`, to `at` (a card going back to its place in the hand). */
+  returning?: { dx: number; dy: number; ms: number };
 }): ReactElement {
   const info = useCardInfo(props.card?.defId ?? "", props.card?.radiant ?? false);
   const copied = useCopiedDef(props.card);
   const face = props.card === null ? null : liveFace(info, props.card, copied === undefined ? {} : { copied });
   const text = face === null ? info.text : face.text.full;
   const stats = face === null ? (info.attack === undefined || info.health === undefined ? null : { attack: info.attack, health: info.health }) : face.stats;
-  const style: CSSProperties = { left: props.at.x, top: props.at.y };
+  const style: CSSProperties & Record<`--${string}`, string> = { left: props.at.x, top: props.at.y };
+  if (props.tilt !== undefined) style["--drag-tilt"] = `${round(props.tilt)}deg`;
+  if (props.returning !== undefined) {
+    style["--return-dx"] = `${props.returning.dx}px`;
+    style["--return-dy"] = `${props.returning.dy}px`;
+    style["--drag-return-ms"] = `${props.returning.ms}ms`;
+  }
   return (
     <div
       className="drag-ghost"
       data-testid={props.testId ?? "drag-ghost"}
+      data-returning={props.returning === undefined ? undefined : "true"}
       data-instance-id={props.instanceId}
       data-pointer={props.touch ? "touch" : "mouse"}
       data-valid={props.valid ? "true" : "false"}

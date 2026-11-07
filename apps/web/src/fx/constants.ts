@@ -16,6 +16,8 @@ export const FX_MIND_CONTROL_FLIGHT_FRACTION = 0.7;
 export const FX_FUSE_FLIGHT_FRACTION = 0.5;
 export const FX_SLAM_AT = 0.6;
 export const FX_HOLD_MAX_MS = 6000;           // a stage effect's safety cap; it normally ends when the board shows the next view (R200)
+export const FX_HOLD_TURN_DEG = 12;           // #3347: a stand-in flying in from the side starts turned this far toward its direction, and straightens as it lands
+export const FX_HOLD_TURN_PX = 240;           // #3347: the sideways distance from its zone at which a stand-in is turned the whole FX_HOLD_TURN_DEG
 export const FX_CONCEAL_AT = 0.9;             // an "after" conceal is set at 0.9 D, while the card's own motion still runs
 export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's center (< 1: they overlap)
 export const FX_LUNGE_MIN_PX = 26;            // = animations.css --lunge-distance (BUILD: at least 20 px)

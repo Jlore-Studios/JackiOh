@@ -273,6 +273,32 @@ export function DeviceTiltSwitch(): ReactElement {
   );
 }
 
+const BOARD_NAMES_OPTIONS = [
+  { value: "artFirst", label: "Art first" },
+  { value: "always", label: "Always" },
+  { value: "never", label: "Never" },
+] as const;
+
+/** R3339000: whether cards in play drop their name band to prioritize art, always show names, or never. */
+export function BoardNamesSelect(): ReactElement {
+  const settings = useCardSettings();
+  const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === "boardNames");
+  return (
+    <SelectRow
+      label={t(field?.label ?? "Names on the board")}
+      hint={t(field?.description ?? "Full-art and Legendary/Mythic cards hide their name and words in play; hover or press to read. Always shows every name; Never hides all names.")}
+      testId="setting-boardNames"
+      value={settings.boardNames}
+      options={BOARD_NAMES_OPTIONS}
+      onChange={(value) => {
+        if (value === "artFirst" || value === "always" || value === "never") {
+          writeCardSettings({ boardNames: value });
+        }
+      }}
+    />
+  );
+}
+
 /** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */
 export function VibrationSwitch(): ReactElement {
   const settings = useHapticsSettings();

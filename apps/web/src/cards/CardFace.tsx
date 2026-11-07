@@ -124,7 +124,7 @@ import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, boardLookOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, boardNameOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
@@ -169,6 +169,12 @@ export type CardFaceProps = {
   worn?: boolean;
   /** R2723000: a card in the viewer's own hand on a board they play (Card.tsx): a full-art face there draws its art alone. */
   ownHand?: boolean;
+  /**
+   * R3339000: a compact face that is a card in play on the board (Card.tsx's backrow, the Collection's board view): its name
+   * and type line follow "Names on the board" and an art-first card drops them. Any other compact face (a picker's tile,
+   * a notice, a cosmetic's sample) prints its name as it always has.
+   */
+  onBoard?: boolean;
   /**
    * R3338002: how far the cost gem has drained, 0 to 1 (gemDrain.ts `gemDrainOf`), which Card.tsx gives only a card
    * in its owner's own hand whose gem drains; absent or null, the gem is drawn whole.
@@ -322,10 +328,8 @@ export function CardFace({
   lazyArt = false,
   ascentLevel,
   worn = false,
-  ownHand = false,
-  gemDrain = null,
-  tilt = "off",
-}: CardFaceProps): ReactElement {
+  ownHand = false, onBoard = false, gemDrain = null,
+  tilt = "off", }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -345,6 +349,9 @@ export function CardFace({
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
+  // R3339000: a card in play in the backrow draws its name as "Names on the board" says; an art-first one drops it and its type line.
+  const { artFirst, staticName: showStaticName } =
+    !full && onBoard ? boardNameOf(face, cardLook, settings.boardNames) : { artFirst: false, staticName: true };
   // Issues #814, #1017: the face model gives the box's words whole, as a short form, or as a Quest's stage
   // (R2450000), each with its own spans; the box's size is the layout's.
   const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
@@ -354,7 +361,7 @@ export function CardFace({
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare ? "" : face.name);
+  useFitText(nameRef, bare ? "" : showStaticName ? face.name : `hover ${face.name}`);
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
@@ -401,7 +408,7 @@ export function CardFace({
   const { flat, fxOff } = useDepthMotion();
   const wantsDepth = hasDepth({ rarity, fullArt, version: look.version, glitch, planed: hasArtPlanes(face.defId, starship, picture, face.radiant) });
   const depth = wantsDepth && !flat;
-  const shape: ArtShape = fullArt || extended ? "full" : ART_SHAPE[face.type];
+  const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
   const breaks = depth && breaksFrame(rarity, ownHand, tilt);
   useCardTilt(faceRef, depth ? tilt : "off", !flat);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
@@ -437,6 +444,7 @@ export function CardFace({
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      data-art-first={artFirst ? "true" : undefined}
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-version={look.version ?? undefined}
@@ -559,13 +567,18 @@ export function CardFace({
 
         {bare ? (
           <span className="cf-hand-name">{face.name}</span>
-        ) : (
+        ) : showStaticName ? (
           <span
             className="card-name"
             ref={nameRef}
             data-pixel-name={pixelName !== null ? "true" : undefined}
             style={pixelName !== null ? ({ "--cf-pixel-name": `url("${pixelName}")` } as CSSProperties) : undefined}
           >
+            {face.name}
+          </span>
+        ) : (
+          // R3339000: transparent until hover or focus, and in the accessibility tree all the while: the name is read as it was.
+          <span className="card-name card-name-hover" ref={nameRef}>
             {face.name}
           </span>
         )}
@@ -584,7 +597,7 @@ export function CardFace({
 
         {stamp !== null && <ProficiencyStamp level={stamp} />}
 
-        {!fullArt && <span className="card-type">{face.typeLine}</span>}
+        {!fullArt && !artFirst && <span className="card-type">{face.typeLine}</span>}
 
         {full && !fullArt && (
           <span

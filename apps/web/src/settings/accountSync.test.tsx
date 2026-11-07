@@ -278,7 +278,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cards"]);
-    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, boardNames: "artFirst" });
     expect(sent["cards"]?.values).not.toHaveProperty("setWatermarks");
     expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks", "rarityFoil", "deviceTilt"]);
   });
@@ -304,7 +304,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cards"]);
-    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, boardNames: "artFirst" });
     expect(sent["cards"]?.values).not.toHaveProperty("rarityFoil");
     expect(readCardSettings().rarityFoil).toBe(true);
   });

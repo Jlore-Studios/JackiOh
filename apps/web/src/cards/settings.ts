@@ -13,6 +13,11 @@
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
 
+export type BoardNamesOption = "artFirst" | "always" | "never";
+
+export const BOARD_NAMES_DEFAULT: BoardNamesOption = "artFirst";
+export const BOARD_NAMES_VALUES: readonly BoardNamesOption[] = ["artFirst", "always", "never"] as const;
+
 export type CardSettings = {
   hoverPreviews: boolean;
   animatedFoil: boolean;
@@ -21,6 +26,7 @@ export type CardSettings = {
   setWatermarks: boolean;
   rarityFoil: boolean;
   deviceTilt: boolean;
+  boardNames: BoardNamesOption;
 };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
@@ -33,6 +39,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   setWatermarks: true,
   rarityFoil: false,
   deviceTilt: false,
+  boardNames: "artFirst",
 });
 
 type CardSettingsField = {
@@ -80,6 +87,12 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     description: "Your opponents' cards and side wear what they equipped. Off shows them plain.",
   },
   {
+    key: "boardNames",
+    section: "visuals",
+    label: "Names on the board",
+    description: "Full-art and Legendary/Mythic cards hide their name and words in play; hover or press to read. Always shows every name; Never hides all names.",
+  },
+  {
     key: "deviceTilt",
     section: "visuals",
     label: "Tilt with my phone",
@@ -97,6 +110,7 @@ const SETTING_KEYS: readonly (keyof CardSettings)[] = [
   "opponentCosmetics",
   "setWatermarks",
   "rarityFoil",
+  "boardNames",
   "deviceTilt",
 ];
 
@@ -130,7 +144,10 @@ function parse(raw: string): CardSettings {
   const settings: CardSettings = { ...CARD_SETTINGS_DEFAULTS };
   for (const key of SETTING_KEYS) {
     const value = record[key];
-    if (typeof value === "boolean") settings[key] = value;
+    if (typeof value === "boolean") (settings as Record<string, unknown>)[key] = value;
+  }
+  if (record.boardNames === "artFirst" || record.boardNames === "always" || record.boardNames === "never") {
+    settings.boardNames = record.boardNames;
   }
   return settings;
 }
@@ -149,7 +166,10 @@ export function writeCardSettings(patch: Partial<CardSettings>): CardSettings {
   const next: CardSettings = { ...readCardSettings() };
   for (const key of SETTING_KEYS) {
     const value = patch[key];
-    if (typeof value === "boolean") next[key] = value;
+    if (typeof value === "boolean") (next as Record<string, unknown>)[key] = value;
+  }
+  if (patch.boardNames === "artFirst" || patch.boardNames === "always" || patch.boardNames === "never") {
+    next.boardNames = patch.boardNames;
   }
   fallback = setStored(CARD_SETTINGS_KEY, JSON.stringify(next)) ? null : { value: next, raw: readRaw() };
   for (const listener of [...listeners]) listener();

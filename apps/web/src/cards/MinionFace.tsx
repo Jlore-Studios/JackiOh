@@ -37,7 +37,7 @@ import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
-import { boardLookOf, useCardLook } from "./fullArt.ts";
+import { boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
@@ -113,6 +113,8 @@ export function KeywordIcons({
         <span
           key={`${keywordKey(keyword)}-${index}`}
           className="keyword keyword-icon"
+          role="img"
+          aria-label={wordsOf(keyword)}
           data-keyword={keyword.kind}
           data-n={"n" in keyword ? keyword.n : undefined}
           data-chip={shown.includes(keyword) ? undefined : "hidden"}
@@ -123,7 +125,12 @@ export function KeywordIcons({
         </span>
       ))}
       {folded.length > 0 && (
-        <span className="cf-kw-more" title={folded.map(wordsOf).join(join)}>
+        <span
+          className="cf-kw-more"
+          role="img"
+          aria-label={folded.map(wordsOf).join(join)}
+          title={folded.map(wordsOf).join(join)}
+        >
           +{folded.length}
         </span>
       )}
@@ -143,12 +150,14 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const stamp = useCardStamp(face, worn);
   const plan = keywordFxPlan(unit);
-  // R3046000: the look a full-art unit wears, still (null: the art up to the frame).
+  // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
   const look = boardLookOf(face, cardLook);
+  const { artFirst, staticName } = boardNameOf(face, cardLook, settings.boardNames);
   const dormant = dormantAttr(face.dormant);
   const nameRef = useRef<HTMLSpanElement>(null);
-  useFitText(nameRef, face.name);
+  // The hover plate is fitted as the static plate is: the name it shows is whole, or ends in an ellipsis at the floor.
+  useFitText(nameRef, staticName ? face.name : `hover ${face.name}`);
 
   const attackTone = face.stats?.attackTone ?? "base";
   const healthTone = face.stats?.healthTone ?? "base";
@@ -162,6 +171,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-foil={foilFor(face, settings.animatedFoil, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-full-art={look === null ? undefined : "true"}
+      data-art-first={artFirst ? "true" : undefined}
       data-version={look?.version ?? undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
@@ -178,10 +188,10 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             radiant={face.radiant}
             tags={face.tags}
             type={face.type}
-            shape={look === null ? "frame" : "full"}
+            shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
             ship={shipArtOf(face.defId, unit)}
-            picture={look === null ? "normal" : artPictureOf(look.version, face.set)}
+            picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
           />
         </span>
 
@@ -203,9 +213,17 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
           </span>
         )}
 
-        <span className="card-name" ref={nameRef}>
-          {face.name}
-        </span>
+        {/* R3339000: the name is a plate that stays (smaller and translucent over an oval window's foot), or the hover plate:
+            transparent until hover or focus, in the accessibility tree all the while, so the name is read as it was. */}
+        {staticName ? (
+          <span className={look === null ? "card-name card-name-compact-translucent" : "card-name"} ref={nameRef}>
+            {face.name}
+          </span>
+        ) : (
+          <span className="card-name card-name-hover" ref={nameRef}>
+            {face.name}
+          </span>
+        )}
 
         {unit.vanilla === true && (
           <span className="cf-vanilla" title={t("Vanilla: its text is gone")}>
