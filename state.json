@@ -18302,6 +18302,8 @@
       }
     },
     "3361": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T03:58:37Z",
@@ -18315,8 +18317,11 @@
         "trail": "ch split test now runs in under half a second. Next: the fx and audio tests the harness skips, which I have to run myself.\n- Bash: {\"command\": \"echo \\\"- run 4: TerminusBoard 'short and off' timed out under load (8s): split into it.each per card/setting (36 tests, each <0.5s). Harness web run otherwise green (356 files). Running \u2026\n- Bash: {\"command\": \"git diff origin/main -- apps/web e2e | grep -E '^\\\\+.*(\\\\.skip|\\\\.only|it\\\\.todo|eslint-disable|@ts-ignore|@ts-expect-error|testTimeout)' | head; grep -E '\\u2193|skipped' /tmp/vitest-fx.\u2026\n- said: The fx and audio suites pass (82 files, 1704 tests). Now the Cypress component specs, run one at a time this time.\n- Bash: {\"command\": \"(cd /home/runner/work/_temp/work/item-3338 && E2E_COMPONENT_PORT=5281 timeout 2400 pnpm --dir e2e test:component --spec cypress/component/fx-terminus.cy.tsx > /tmp/cy-terminus.log 2>&1; \u2026\n- Monitor: {\"description\": \"Cypress fx-terminus spec results\", \"timeout_ms\": 600000, \"command\": \"tail -n +1 -f /tmp/cy-terminus.log 2>/dev/null | grep -E --line-buffered '\\u2713|\\u2716|[0-9]+\\\\) |passing|failin\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: tail -n +1 -f /tmp/cy-terminus.log\n- Bash: {\"command\": \"git diff origin/main -- spec/10-engine-guide.md spec/rulings/R2800000.md spec/rulings/R2797000.md | grep '^[+-]' | cut -c1-900\", \"description\": \"Read the spec amendments\"}\n- Bash: {\"command\": \"git diff origin/main --word-diff -- spec/10-engine-guide.md spec/rulings/R2797000.md | grep -oE '\\\\{\\\\+[^}]*\\\\+\\\\}|\\\\[-[^]]*-\\\\]' | head\", \"description\": \"Show the word-level spec change\u2026\n- Bash: {\"command\": \"grep -E '\\u2713|\\u2716|passing|failing|^exit|[0-9]+\\\\) ' /tmp/cy-terminus.log | tail -15; free -g | sed -n 2p\", \"description\": \"Check the Cypress run progress and memory\"}\n- Bash: {\"command\": \"tail -c 1500 /tmp/cy-terminus.log\", \"description\": \"Read the end of the Cypress log\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\nPlan: the issue's `## Plan` (steps 1\\u201322). Everything is built (runs 3\\u20134).\\nDon\u2026\n- said: Everything is built and the unit, type, lint, spec, patches and classify checks pass. Cypress is still starting up for the Terminus component spec, so I'm waiting on it.\n- Bash: {\"command\": \"until grep -qE '^exit|failing|passing' /tmp/cy-terminus.log; do sleep 10; done; grep -E '\\u2713|\\u2716|passing|failing|^exit|[0-9]+\\\\) ' /tmp/cy-terminus.log | tail -30\", \"description\": \u2026\n- said: All 22 Terminus component cases pass. Let me check one screenshot from the phone viewport so I'm not trusting the assertions alone, then run the phone-frame spec.\n- Bash: {\"command\": \"echo \\\"- run 4: fx-terminus.cy.tsx 22/22 passing. Running fx-phone-frame.cy.tsx.\\\" >> .bot-notes.md; ls e2e/cypress/screenshots/fx-terminus.cy.tsx/ | head -30; git status --short e2e/ | \u2026\n- Bash: {\"command\": \"(cd /home/runner/work/_temp/work/item-3338 && E2E_COMPONENT_PORT=5281 timeout 2400 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx > /tmp/cy-phone.log 2>&1; \u2026\n- Bash: {\"command\": \"grep -n 'screenshotsFolder\\\\|screenshots' e2e/cypress.config.* 2>/dev/null | head; find / -path /proc -prune -o -name 'terminus-diceOfDoom-390x844-mid*.png' -print 2>/dev/null | head -3\"\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"b9vyief6o\"}\n- Bash: {\"command\": \"grep -E '\\u2713|\\u2716|passing|failing|^exit|[0-9]+\\\\) |budget|p95|frame' /tmp/cy-phone.log | tail -25\", \"description\": \"Read the phone frame spec result\"}\n- said: The phone-frame spec passes, both new cases included (7/7). I'll look at one phone screenshot.\n- Bash: {\"command\": \"ls e2e/artifacts/component/screenshots/ 2>/dev/null | head; ls e2e/artifacts/component/screenshots/fx-terminus.cy.tsx 2>/dev/null | head -30; git status --short --ignored e2e/artifacts 2\u2026\n- Bash: {\"command\": \"(cd /home/runner/work/_temp/work/item-3338 && E2E_KEEP_ASSETS=1 E2E_ARTIFACTS=/tmp/cyart E2E_COMPONENT_PORT=5281 timeout 1500 pnpm --dir e2e test:component --spec cypress/component/fx-te\u2026\n- Bash: {\"command\": \"git status --short | head -20; cargo fmt --check 2>&1 | head -3; echo \\\"fmt exit $?\\\"\", \"description\": \"Show working tree status and check rustfmt\"}\n- Bash: {\"command\": \"timeout 600 pnpm exec eslint apps/web/src/game/TerminusBoard.test.tsx apps/web/src/fx/terminus/terminus.test.ts; echo \\\"exit $?\\\"; timeout 600 $CARGO_TARGET_DIR/release/jackioh spec chec\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/cy-terminus2.log; do sleep 10; done; grep -E 'passing|failing|^exit' /tmp/cy-terminus2.log; find /tmp/cyart -name '*.png' | head -30\", \"description\": \"Wait for\u2026\n- Read: {\"file_path\": \"/tmp/cyart/component/screenshots/fx-terminus.cy.tsx/terminus-diceOfDoom-390x844-mid.png\"}\n- Read: {\"file_path\": \"/tmp/cyart/component/screenshots/fx-terminus.cy.tsx/terminus-finalDestination-1280x720-mid.png\"}\n- Bash: {\"command\": \"grep -n 'data-look=\\\"doom\\\"' -A6 apps/web/src/fx/fx.css | head -60\", \"description\": \"Read the doom die's CSS\"}\n- Bash: {\"command\": \"git show origin/main:apps/web/src/fx/fx.css | grep -cE '#[0-9a-fA-F]{3,6}\\\\b'; grep -cE '#[0-9a-fA-F]{3,6}\\\\b' apps/web/src/fx/fx.css; grep -rln 'fx.css' apps/web/src --include=*.test.* \u2026\n- Bash: {\"command\": \"git diff origin/main -- apps/web/src/game/board.css | grep -n 'sink' ; grep -rn 'set-piece-sink' apps/web/src e2e | head\", \"description\": \"Confirm the removed set-piece-sink keyframes ar\u2026\n- Bash: {\"command\": \"echo \\\"- run 4: fx-phone-frame.cy.tsx 7/7 passing (both new cases); fx-terminus rerun 22/22 with screenshots in /tmp/cyart (looked at Dice 390x844 and Final Destination 1280x720). Writin\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Terminus cards end the world: a set piece and a picture of its own for each Terminus card, Olivian Expanse and Ceaseless Void, and Dice of Doom's d100 rolled on screen\"} --> ## What changed Each of the nine Terminus cards now has its own set piece and i\u2026"
       },
       "issue": 3338,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T05:17:38Z",
         "from_run": "42336364435",
         "gates": [
           {
@@ -18408,7 +18413,11 @@
         "source": "build",
         "until": "2026-11-07T05:46:47Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-07T05:16:47Z",
+      "run_id": "pending:8fb7a78e-1794028639",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18427,6 +18436,9 @@
         "provider": "claude-6",
         "run": "42336364435"
       },
+      "started_at": "2026-11-07T05:17:38Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18440,9 +18452,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T05:08:46Z",
+    "at": "2026-11-07T05:17:38Z",
     "url": "",
-    "what": "plan #3348 on claude-2"
+    "what": "review #3361 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-07T05:04:27Z",
