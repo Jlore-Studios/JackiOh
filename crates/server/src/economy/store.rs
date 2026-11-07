@@ -321,7 +321,7 @@ pub struct TrackGrant {
     pub at: i64,
 }
 
-/// R3335001: one row of `public.fleet_track_grants` (migration 0085): the XP and levels the account's Fleet track
+/// R3335001: one row of `public.fleet_track_grants` (migration 0086): the XP and levels the account's Fleet track
 /// gained (§14.15), each signed, at least one not zero; its reason `game` or `dev`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -335,7 +335,7 @@ pub struct FleetGrant {
     pub at: i64,
 }
 
-/// R3335001: one row of `public.fleet_tracks` (migration 0085): the account's Fleet XP and the level it reached.
+/// R3335001: one row of `public.fleet_tracks` (migration 0086): the account's Fleet XP and the level it reached.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FleetRow {
@@ -383,7 +383,7 @@ pub struct EconomyLedger {
     pub tracks: Vec<TrackGrant>,
     pub quests: Vec<QuestGrant>,
     pub cosmetics: Vec<CosmeticGrant>,
-    /// R3335001: the Fleet track's rows (migration 0085).
+    /// R3335001: the Fleet track's rows (migration 0086).
     #[serde(default)]
     pub fleet: Vec<FleetGrant>,
 }
@@ -418,7 +418,7 @@ pub struct EconomyTables {
     pub news_claims: Vec<NewsClaim>,
     /// R3013000: migration 0081's card proficiency, one per profile and card.
     pub card_proficiency: Vec<(String, CardProficiency)>,
-    /// R3335001: migration 0085's Fleet tracks, one per profile, and their ledger.
+    /// R3335001: migration 0086's Fleet tracks, one per profile, and their ledger.
     pub fleet_tracks: Vec<(String, FleetRow)>,
     pub fleet_grants: Vec<FleetGrant>,
 }
@@ -1776,7 +1776,7 @@ mod pg {
         Ok(Some(track_of(&row)?))
     }
 
-    /// Migration 0085's two tables: the track row, then the day's `game` rows' XP. A deleted seat reads back as the
+    /// Migration 0086's two tables: the track row, then the day's `game` rows' XP. A deleted seat reads back as the
     /// empty id, which has no rows.
     pub async fn fleet_get(
         t: &mut PgTx<'_>,

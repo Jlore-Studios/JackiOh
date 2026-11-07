@@ -521,6 +521,8 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         glitch_boards: input.glitch_boards.clone(),
         // R2702000: the marks too, or the fold deals other cards.
         deck_marks: input.deck_marks.clone(),
+        // R3049000: and the win-rate snapshot, or CN Tech and NA Tech pick other cards.
+        win_rates: input.win_rates.clone(),
         ..Default::default()
     });
     let mut reader = SummaryReader::new(&start);

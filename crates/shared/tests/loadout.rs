@@ -47,6 +47,7 @@ fn begun() -> (GameState, (Vec<String>, Vec<String>)) {
         glitch_boards: None,
         sandbox: None,
         deck_marks: None,
+        win_rates: None,
     });
     (begin_game(&state).state, decks)
 }

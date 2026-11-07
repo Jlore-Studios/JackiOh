@@ -719,6 +719,7 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
         last_boards,
         glitch_boards,
         registry::dealt_for(mode),
+        match_row.win_rates.clone(),
     );
     // #1035: off the runtime, as a rebuild folds, under the catalog the match started on
     // (R388, R767000).

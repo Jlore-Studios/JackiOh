@@ -353,8 +353,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0084_variant_levels.sql"),
     ),
     (
-        "0085_fleet_track.sql",
-        include_str!("../../migrations/0085_fleet_track.sql"),
+        "0085_match_win_rates.sql",
+        include_str!("../../migrations/0085_match_win_rates.sql"),
+    ),
+    (
+        "0086_fleet_track.sql",
+        include_str!("../../migrations/0086_fleet_track.sql"),
     ),
 ];
 

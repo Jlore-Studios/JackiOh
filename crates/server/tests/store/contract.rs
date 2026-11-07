@@ -3023,6 +3023,47 @@ mod last_boards {
     );
 }
 
+mod win_rate_snapshot {
+    use super::*;
+
+    async fn r3049000_a_match_row_keeps_its_win_rate_snapshot(harness: &StoreHarness) {
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let snapshot = json!({
+            "patch": "v-r3049000",
+            "source": "live",
+            "cards": [
+                { "id": "core-001", "wins": 25, "games": 32 },
+                { "id": "core-008", "wins": 300, "games": 450 },
+            ],
+        });
+        let row: MatchRow = from(spread(
+            j(&match_row(&id(), &p1.id, &p2.id, harness, harness.now())),
+            json!({ "winRates": snapshot }),
+        ));
+        q!(harness, t => t.matches_create(&row));
+        assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row.clone()));
+        let live = q!(harness, t => t.matches_live());
+        let found = must(
+            live.iter().find(|candidate| candidate.id == row.id),
+            "the live match",
+        );
+        assert_eq!(j(found)["winRates"], snapshot);
+        // A match handed none, as every match from before migration 0085, keeps none.
+        let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
+        q!(harness, t => t.matches_create(&plain));
+        assert!(absent(
+            &j(&must(
+                q!(harness, t => t.matches_get(&plain.id)),
+                "the plain match"
+            )),
+            "winRates"
+        ));
+    }
+
+    both_stores!(r3049000_a_match_row_keeps_its_win_rate_snapshot);
+}
+
 mod player_stats {
     use super::*;
 
@@ -10995,7 +11036,7 @@ mod economy {
 
     /// R3335001: a Fleet track starts at level 0 with no XP; a grant moves its row and writes its ledger row; the
     /// day's XP is the account's own `game` rows in the window, not a dev grant's nor another day's; a grant of
-    /// nothing or of a reason migration 0085 refuses is refused, and one that would leave no track (XP below zero,
+    /// nothing or of a reason migration 0086 refuses is refused, and one that would leave no track (XP below zero,
     /// a level below 0 or past `FLEET_TRACK_LEVELS`) answers false, writing nothing; a deleted account takes its
     /// rows with it.
     async fn r3335001_a_fleet_grant_moves_the_row_and_sums_by_day(harness: &StoreHarness) {
@@ -11067,7 +11108,7 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_ledger_get(&owner.id)).fleet.len(), 4);
     }
 
-    /// R3335003: the Jlorious Starship is a registry row both stores take (migration 0085), owned once on the
+    /// R3335003: the Jlorious Starship is a registry row both stores take (migration 0086), owned once on the
     /// account, a second grant of it writing nothing, with its ledger row of the reason `jlorious`.
     async fn r3335003_the_jlorious_starship_is_owned_once(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;

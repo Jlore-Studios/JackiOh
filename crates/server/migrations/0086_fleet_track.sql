@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0085: The Fleet track and the Starship cosmetics, the Jlorious
+-- Migration 0086: The Fleet track and the Starship cosmetics, the Jlorious
 -- Starship among them (SPEC §14.2, §14.11, §14.15; R3335000, R3335001,
 -- R3335002, R3335003, R2755000; issue #3335)
 -- ============================================================================
@@ -32,7 +32,7 @@
 --      ladder bot is never Jlorious, R640000) with a season row whose
 --      peak_jlorious is set (R607), in public.account_cosmetics with its
 --      public.cosmetic_grants row: no card, +1, reason 'jlorious' and ref
---      'jlorious:0085'. One who owns it already is passed over and gets no
+--      'jlorious:0086'. One who owns it already is passed over and gets no
 --      ledger row, so each ledger still sums to what is held (§14.11).
 --
 -- ACCESS: the two new tables are readable by their own account alone (RLS
@@ -43,7 +43,7 @@
 -- Apply order: ... -> 0022 (season_ranks.peak_jlorious) -> ... -> 0045
 -- (public.cosmetics, account_cosmetics, cosmetic_grants, set_tracks) -> ... ->
 -- 0050 (cosmetic_grants' reasons) -> ... -> 0074 (the Jlorious card back) ->
--- ... -> 0084 -> 0085 (this file). Safe to re-apply: every statement is
+-- ... -> 0084 -> 0085 -> 0086 (this file). Safe to re-apply: every statement is
 -- insert-on-conflict-do-nothing, create-if-not-exists or a policy, trigger or
 -- constraint dropped and created again, and a second grant finds every holder.
 -- ============================================================================
@@ -171,5 +171,5 @@ with granted as (
   returning profile_id, cosmetic_id
 )
 insert into public.cosmetic_grants (profile_id, card_id, cosmetic_id, delta, reason, ref)
-select g.profile_id, null, g.cosmetic_id, 1, 'jlorious', 'jlorious:0085'
+select g.profile_id, null, g.cosmetic_id, 1, 'jlorious', 'jlorious:0086'
   from granted g;

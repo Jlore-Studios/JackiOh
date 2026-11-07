@@ -1,7 +1,7 @@
--- The Fleet track and the Starship cosmetics, the Jlorious Starship among them (migration 0085, SPEC §14.2,
--- §14.11, §14.15; R3335001, R3335003, R2755000, R607, R640000; issue #3335). Runs after 49_variant_levels.sql;
+-- The Fleet track and the Starship cosmetics, the Jlorious Starship among them (migration 0086, SPEC §14.2,
+-- §14.11, §14.15; R3335001, R3335003, R2755000, R607, R640000; issue #3335). Runs after 50_match_win_rates.sql;
 -- profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated them). The first blocks check the
--- Fleet track's two tables; the last applies the file again (/tmp/0085_fleet_track.sql, which run.sh copied
+-- Fleet track's two tables; the last applies the file again (/tmp/0086_fleet_track.sql, which run.sh copied
 -- there) over people of its own: one who has held Jlorious, one who never has, one who owns the Starship
 -- already, and a ladder bot whose row says it held Jlorious, which no bot does.
 \set ON_ERROR_STOP on
@@ -11,7 +11,7 @@
 -- and every block that writes runs inside a transaction that is rolled back. Nothing here selects into the log:
 -- the do blocks raise or say OK.
 
-\echo '### R3335001: 0085 wrote the 35 registry rows and the Fleet track''s two tables, each read by its own account alone ###'
+\echo '### R3335001: 0086 wrote the 35 registry rows and the Fleet track''s two tables, each read by its own account alone ###'
 do $$
 declare
   v_text text;
@@ -28,7 +28,7 @@ begin
   if (select count(*) from public.cosmetics
        where kind in ('starshipHull', 'starshipLivery', 'starshipTrail', 'starshipPieceSkin')
           or id in ('card-back-stinkyscape', 'table-stinkyscape', 'field-stinkyscape')) <> 35 then
-    raise exception 'FAIL (R3335001): public.cosmetics does not hold the 35 rows 0085 writes';
+    raise exception 'FAIL (R3335001): public.cosmetics does not hold the 35 rows 0086 writes';
   end if;
   if (select count(*) from public.cosmetics
        where kind in ('starshipHull', 'starshipLivery', 'starshipTrail', 'starshipPieceSkin') and is_default) <> 4
@@ -128,7 +128,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R3335003: 0085 over the people of a database: each person who held Jlorious owns the Jlorious Starship, never a bot ###'
+\echo '### R3335003: 0086 over the people of a database: each person who held Jlorious owns the Jlorious Starship, never a bot ###'
 begin;
 insert into auth.users (id, email, email_confirmed_at)
 values ('e3335003-0000-4000-8000-000000000001', 'r3335003-held@example.test', now()),
@@ -153,7 +153,7 @@ begin
   if exists (select 1 from public.account_cosmetics
               where profile_id in ('e3335003-0000-4000-8000-000000000001', 'e3335003-0000-4000-8000-000000000002',
                                    'e3335003-0000-4000-8000-000000000004')) then
-    raise exception 'FAIL (R3335003): a person or the bot owns an account cosmetic before 0085 runs again';
+    raise exception 'FAIL (R3335003): a person or the bot owns an account cosmetic before 0086 runs again';
   end if;
   if (select count(*) from public.profiles
        where id in ('e3335003-0000-4000-8000-000000000001', 'e3335003-0000-4000-8000-000000000002',
@@ -166,8 +166,8 @@ end $$;
 -- The grant, as it runs on a database these people are signed up to, twice: the second finds every holder and
 -- writes nothing.
 set local client_min_messages = warning;
-\i /tmp/0085_fleet_track.sql
-\i /tmp/0085_fleet_track.sql
+\i /tmp/0086_fleet_track.sql
+\i /tmp/0086_fleet_track.sql
 set local client_min_messages = notice;
 
 do $$
@@ -183,9 +183,9 @@ begin
   select string_agg(format('%s %s %s', profile_id, cosmetic_id, reason || coalesce(' ' || ref, '')), ', '
                     order by profile_id)
     into v_text from public.cosmetic_grants where profile_id in (held, never, owns, bot);
-  if v_text is distinct from format('%1$s starship-hull-jlorious jlorious jlorious:0085, '
+  if v_text is distinct from format('%1$s starship-hull-jlorious jlorious jlorious:0086, '
                                     '%2$s starship-hull-jlorious jlorious match:earlier', held, owns) then
-    raise exception 'FAIL (R3335003): the cosmetic ledgers after 0085 are [%]', coalesce(v_text, '(empty)');
+    raise exception 'FAIL (R3335003): the cosmetic ledgers after 0086 are [%]', coalesce(v_text, '(empty)');
   end if;
   if not exists (select 1 from public.account_cosmetics where profile_id = held and cosmetic_id = 'starship-hull-jlorious') then
     raise exception 'FAIL (R3335003): the person who held Jlorious does not own the Jlorious Starship';
@@ -193,9 +193,9 @@ begin
 
   -- Never Jlorious, and a ladder bot, which is never Jlorious whatever its row says (R640000): nothing.
   if exists (select 1 from public.account_cosmetics where profile_id in (never, bot)) then
-    raise exception 'FAIL (R3335003): 0085 gave the Jlorious Starship to someone who never held Jlorious, or to the bot';
+    raise exception 'FAIL (R3335003): 0086 gave the Jlorious Starship to someone who never held Jlorious, or to the bot';
   end if;
 
-  raise notice 'OK (R3335003): 0085 gives the Jlorious Starship once to each person who held Jlorious, and to no one else';
+  raise notice 'OK (R3335003): 0086 gives the Jlorious Starship once to each person who held Jlorious, and to no one else';
 end $$;
 rollback;

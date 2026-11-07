@@ -152,6 +152,8 @@ pub fn reset_match(sink: &mut EngineSink<'_>) {
         sandbox: old.sandbox,
         // R2702000: the reset deals the marked cards again.
         deck_marks: opening.deck_marks.clone(),
+        // R3049000: and its picks read the snapshot the game was handed.
+        win_rates: old.win_rates.clone(),
         ..CreateGameOptions::default()
     };
     let mut fresh = create_game_for_reset(&options, old.next_id, resets);

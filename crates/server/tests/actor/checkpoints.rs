@@ -175,7 +175,15 @@ async fn seen(actor: &MatchActor) -> Seen {
 fn folded(row: &MatchRow, actions: &[Action]) -> EngineState {
     fold(
         Pinned::default(),
-        &fold_args(&row.seed, &row.decks, actions.to_vec(), None, None, None),
+        &fold_args(
+            &row.seed,
+            &row.decks,
+            actions.to_vec(),
+            None,
+            None,
+            None,
+            row.win_rates.clone(),
+        ),
     )
     .state
 }
