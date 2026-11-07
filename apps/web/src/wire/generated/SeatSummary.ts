@@ -70,4 +70,13 @@ createdUnused?: Array<string>,
  * R2089000: the Created cards this seat played from its hand, whoever made them, every play, as
  * `played` keeps the dealt ones; the quests count them with `played` (§14.9). Absent when none.
  */
-createdPlayed?: Array<CreatedUse>, };
+createdPlayed?: Array<CreatedUse>, 
+/**
+ * R3335001: the Starship Pieces that fused into this seat's Starships (§6.1), each fusion once. Absent when
+ * there were none, and from every record written before the count.
+ */
+starshipPiecesFused?: number, 
+/**
+ * R3335001: the Starships this seat launched (§6.3). Absent when there were none.
+ */
+starshipsLaunched?: number, };

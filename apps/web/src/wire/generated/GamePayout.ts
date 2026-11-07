@@ -7,7 +7,7 @@ import type { LedgerGrant } from "./LedgerGrant";
  */
 export type GamePayout = { economy: GameEconomy, 
 /**
- * The writes, in order: the game's Jlore, its XP on every active track and the levels it reached, the
- * quests that arrived, then each quest's progress and completion with what a completion pays.
+ * The writes, in order: the game's Jlore, its XP on every active track and the levels it reached, its Fleet
+ * XP and the levels' rewards (R3335001), the quests that arrived, then each quest's progress and completion with what a completion pays.
  */
 grants: Array<LedgerGrant>, };

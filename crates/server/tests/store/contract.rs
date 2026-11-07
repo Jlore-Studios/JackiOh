@@ -9311,12 +9311,13 @@ mod duos {
 
 mod economy {
     use super::*;
-    use jackioh_server::config::{PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL};
+    use jackioh_server::config::{FLEET_TRACK_LEVELS, PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL};
+    use jackioh_server::cosmetics::JLORIOUS_STARSHIP;
     use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
-        CardProficiency, CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow,
-        InventoryGrant, JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed,
-        PracticeSettled, QuestGrant, TrackGrant,
+        CardProficiency, CosmeticGrant, CounterGrant, EconomyLedger, EconomyReason, FleetGrant, FleetTrack,
+        GameJloreTotals, IdempotencyRow, InventoryGrant, JloreGrant, PracticeClaim, PracticeClaimCount,
+        PracticeOutcome, PracticeSeed, PracticeSettled, QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -10977,6 +10978,107 @@ mod economy {
         );
     }
 
+    fn fleet(profile_id: &str, change: [i64; 2], reason: &str, at: i64) -> FleetGrant {
+        let [xp, levels] = change;
+        from(json!({
+            "profileId": profile_id, "xp": xp, "levels": levels, "reason": reason, "reference": "m-3335",
+            "dev": reason == "dev", "at": at,
+        }))
+    }
+
+    /// R3335001: a Fleet track starts at level 0 with no XP; a grant moves its row and writes its ledger row; the
+    /// day's XP is the account's own `game` rows in the window, not a dev grant's nor another day's; a grant of
+    /// nothing or of a reason migration 0085 refuses is refused, and one that would leave no track (XP below zero,
+    /// a level below 0 or past `FLEET_TRACK_LEVELS`) answers false, writing nothing; a deleted account takes its
+    /// rows with it.
+    async fn r3335001_a_fleet_grant_moves_the_row_and_sums_by_day(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let (from_ms, until_ms) = (now - 1000, now + 1000);
+        let track = |xp: i64, level: i64, xp_today: i64| FleetTrack { xp, level, xp_today };
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
+            FleetTrack::default()
+        );
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [100, 0], "game", now))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [50, 0], "dev", now))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [30, 0], "game", now - 5000))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [0, 1], "game", now))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&other.id, [70, 0], "game", now))));
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
+            track(180, 1, 100)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&other.id, from_ms, until_ms)),
+            track(70, 0, 70)
+        );
+        let top = i64::from(FLEET_TRACK_LEVELS);
+        for change in [[-181, 0], [0, -2], [0, top]] {
+            assert!(
+                !q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, change, "game", now))),
+                "{}: {change:?}",
+                harness.name
+            );
+        }
+        assert!(call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [0, 0], "game", now))).is_err());
+        assert!(call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [10, 0], "track", now))).is_err());
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
+            track(180, 1, 100)
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        let rows: Vec<(i64, i64, EconomyReason, bool)> = ledger
+            .fleet
+            .iter()
+            .map(|row| (row.xp, row.levels, row.reason, row.dev))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                (100, 0, EconomyReason::Game, false),
+                (50, 0, EconomyReason::Dev, true),
+                (30, 0, EconomyReason::Game, false),
+                (0, 1, EconomyReason::Game, false),
+            ]
+        );
+        assert!(ledger.fleet.iter().all(|row| row.reference.as_deref() == Some("m-3335")));
+
+        assert!(q!(harness, t => t.profiles_remove(&other.id)));
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&other.id, from_ms, until_ms)),
+            FleetTrack::default()
+        );
+        assert_eq!(q!(harness, t => t.economy_ledger_get(&owner.id)).fleet.len(), 4);
+    }
+
+    /// R3335003: the Jlorious Starship is a registry row both stores take (migration 0085), owned once on the
+    /// account, a second grant of it writing nothing, with its ledger row of the reason `jlorious`.
+    async fn r3335003_the_jlorious_starship_is_owned_once(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let grant: CosmeticGrant = from(json!({
+            "profileId": profile.id, "cardId": null, "cosmeticId": JLORIOUS_STARSHIP, "delta": 1,
+            "reason": "jlorious", "reference": "j-1", "dev": false, "at": now,
+        }));
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant)));
+        assert!(!q!(harness, t => t.economy_cosmetics_grant(&grant)));
+        assert_eq!(
+            q!(harness, t => t.economy_cosmetics_get(&profile.id)).account,
+            vec![JLORIOUS_STARSHIP.to_string()]
+        );
+        let rows: Vec<(String, EconomyReason, Option<String>)> = q!(harness, t => t.economy_ledger_get(&profile.id))
+            .cosmetics
+            .into_iter()
+            .map(|row| (row.cosmetic_id, row.reason, row.reference))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![(JLORIOUS_STARSHIP.to_string(), EconomyReason::Jlorious, Some("j-1".to_string()))]
+        );
+    }
+
     /// R3013001: a stamp is kept on a card's row only at or below the row's level, and cleared with
     /// `None`: one above it, or for a card with no row, answers false and writes nothing; one outside
     /// `1..=PROFICIENCY_LEVELS` is refused; a put of plays and level keeps the stamp, and one that
@@ -11053,6 +11155,8 @@ mod economy {
         practice_claims_count_once_per_bucket_and_utc_day,
         r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
         r3013001_a_stamp_is_kept_only_at_or_below_its_level,
+        r3335001_a_fleet_grant_moves_the_row_and_sums_by_day,
+        r3335003_the_jlorious_starship_is_owned_once,
     );
 }
 

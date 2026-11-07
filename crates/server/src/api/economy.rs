@@ -9,10 +9,12 @@ use jackioh_engine::wire::{SHIPPED_SETS, newest_shipped_set};
 use serde_json::json;
 
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiResult, Req, json};
+use crate::api::http::{ApiResult, Req, json, now_ms};
 use crate::app::App;
 use crate::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use crate::economy::rewards::TrackPoint;
+use jackioh_shared::economy::fleet::fleet_view;
+use jackioh_shared::economy::rewards::utc_day_bounds;
 use jackioh_shared::economy::track_rewards::reward_for_level;
 
 /// `GET /api/wallet` (`AuthLevel::Active`): the caller's Jlore balance.
@@ -28,10 +30,14 @@ pub async fn get_wallet(app: &Arc<App>, req: Req) -> ApiResult {
 /// older set at its first level with `unlocked: false`. `levelXp` is what the current level spans,
 /// so a client sizes the XP bar without knowing the curve. On the last level, `SET_TRACK_LEVELS`,
 /// `xpToNext`, `levelXp` and `nextRewards` are `null` (R1302005). The figures are a [`TrackPoint`].
+/// [[R3335001]]: and `fleet`, the Fleet track (§14.15) as `fleet_view` spells it, its `xpToday` the XP the
+/// games of this UTC day paid it and its `nextRewards` the ids of the next levels' cosmetics.
 pub async fn get_tracks(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let tracks = tx.economy_tracks_get(&profile.id).await?;
+    let (from, until) = utc_day_bounds(now_ms());
+    let fleet = tx.economy_fleet_get(&profile.id, from, until).await?;
     tx.commit().await?;
     let newest = newest_shipped_set();
     let entries: Vec<serde_json::Value> = SHIPPED_SETS
@@ -56,5 +62,5 @@ pub async fn get_tracks(app: &Arc<App>, req: Req) -> ApiResult {
             })
         })
         .collect();
-    Ok(json(200, json!({ "tracks": entries })))
+    Ok(json(200, json!({ "tracks": entries, "fleet": fleet_view(&fleet) })))
 }

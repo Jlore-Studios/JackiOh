@@ -3,6 +3,8 @@
 /**
  * R1834002: what a seat wears on its side and on every card that has no pick of its own, each a
  * registry id of its kind: the `loadouts` frame's half for one seat. Its foil, finish and border
- * are their kinds' defaults (R1953001), kept so the frame keeps its shape.
+ * are their kinds' defaults (R1953001), kept so the frame keeps its shape. R3335000: and what dresses the
+ * Starships it launches, the account's four Starship picks; a loadout frozen before #3335 has none, and reads
+ * each kind's default.
  */
-export type SeatLoadout = { table: string, field: string, cardBack: string, foil: string, finish: string, border: string, };
+export type SeatLoadout = { table: string, field: string, cardBack: string, foil: string, finish: string, border: string, starshipHull: string, starshipLivery: string, starshipTrail: string, starshipPieceSkin: string, };

@@ -19,6 +19,7 @@ pub mod cosmetic_packs;
 pub mod cosmetics;
 pub mod decks;
 pub mod dev;
+pub mod fleet;
 pub mod duos_again;
 pub mod duos_rooms;
 pub mod e2e;

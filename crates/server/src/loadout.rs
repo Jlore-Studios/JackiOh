@@ -15,8 +15,8 @@
 pub use jackioh_shared::deck::DeckSlots;
 pub use jackioh_shared::loadout::{
     AUGMENTS_KEY, AccountPicks, AccountSettings, CARD_SLOT_KINDS, CARDS_GROUP, COSMETICS_GROUP, CardStamp,
-    DECK_SLOT_KINDS, FULL_ART_SETTING, Loadout, SeatCards, SeatLoadout, SeatPicks, cards_due, freeze_loadout,
-    freeze_stamps, setting_key, shown_defs, worn_stamps,
+    DECK_SLOT_KINDS, FULL_ART_SETTING, Loadout, STARSHIP_SLOT_KINDS, SeatCards, SeatLoadout, SeatPicks, cards_due,
+    freeze_loadout, freeze_stamps, setting_key, shown_defs, worn_stamps,
 };
 
 use crate::db::store::{BotRow, PlayerSettingValue, PlayerSettingsRow, SavedDeck, StoreResult, Tx};

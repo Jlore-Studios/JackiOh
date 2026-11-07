@@ -6,6 +6,8 @@
  * (`CardBack`) (R1297000); a card's full-art face (`FullArt`), picked only by the card's own pick
  * (R1313000, R2655000); the deck's hero portrait (`Portrait`), an account cosmetic (R641, R1827000); a card's
  * version (`Version`), the one look it wears, and an augment (`Augment`) layered on whichever version it wears,
- * each per card and picked by the card's own pick alone (R2725000).
+ * each per card and picked by the card's own pick alone (R2725000). R3335000: four account kinds dress every
+ * Starship the account launches: its hull design (`StarshipHull`), its colours and emblem (`StarshipLivery`), its
+ * engine glow and launch trail (`StarshipTrail`) and its modules' recolour (`StarshipPieceSkin`).
  */
-export type CosmeticKind = "foil" | "finish" | "border" | "table" | "field" | "cardBack" | "fullArt" | "portrait" | "version" | "augment";
+export type CosmeticKind = "foil" | "finish" | "border" | "table" | "field" | "cardBack" | "fullArt" | "portrait" | "version" | "augment" | "starshipHull" | "starshipLivery" | "starshipTrail" | "starshipPieceSkin";
