@@ -968,6 +968,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           <span
             class="cf cf--minion"
+            data-art-first="true"
             data-card-type="Unit"
             data-foil="none"
             data-full-art="true"
@@ -998,7 +999,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-hover"
               >
                 Mr. Vanilla
               </span>
@@ -1031,9 +1032,11 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 class="keywords"
               >
                 <span
+                  aria-label="Divine Shield"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Divine Shield"
+                  role="img"
                   title="Divine Shield"
                 >
                   DS
@@ -1101,6 +1104,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           <span
             class="cf cf--minion"
+            data-art-first="true"
             data-card-type="Unit"
             data-foil="none"
             data-full-art="true"
@@ -1142,7 +1146,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-hover"
               >
                 Gary the Gambler
               </span>
@@ -1175,9 +1179,11 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 class="keywords"
               >
                 <span
+                  aria-label="Taunt"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Taunt"
+                  role="img"
                   title="Taunt"
                 >
                   TA
@@ -1455,6 +1461,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           <span
             class="cf cf--minion"
+            data-art-first="true"
             data-card-type="Unit"
             data-foil="none"
             data-full-art="true"
@@ -1486,7 +1493,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-hover"
               >
                 Jlockeed Shredder-10
               </span>
@@ -1571,6 +1578,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           <span
             class="cf cf--minion"
+            data-art-first="true"
             data-card-type="Unit"
             data-flying="true"
             data-foil="animated"
@@ -1994,7 +2002,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-hover"
               >
                 Tempo Timmy
               </span>
@@ -2036,301 +2044,375 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 class="keywords"
               >
                 <span
+                  aria-label="Taunt"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Taunt"
+                  role="img"
                   title="Taunt"
                 >
                   TA
                 </span>
                 <span
+                  aria-label="Rush"
                   class="keyword keyword-icon"
                   data-keyword="Rush"
+                  role="img"
                   title="Rush"
                 >
                   RU
                 </span>
                 <span
+                  aria-label="Charge"
                   class="keyword keyword-icon"
                   data-keyword="Charge"
+                  role="img"
                   title="Charge"
                 >
                   CH
                 </span>
                 <span
+                  aria-label="First Strike"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="First Strike"
+                  role="img"
                   title="First Strike"
                 >
                   FS
                 </span>
                 <span
+                  aria-label="Poisonous"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Poisonous"
+                  role="img"
                   title="Poisonous"
                 >
                   PO
                 </span>
                 <span
+                  aria-label="Lifesteal"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Lifesteal"
+                  role="img"
                   title="Lifesteal"
                 >
                   LS
                 </span>
                 <span
+                  aria-label="Reborn"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Reborn"
+                  role="img"
                   title="Reborn"
                 >
                   RB
                 </span>
                 <span
+                  aria-label="Divine Shield"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Divine Shield"
+                  role="img"
                   title="Divine Shield"
                 >
                   DS
                 </span>
                 <span
+                  aria-label="Trample"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Trample"
+                  role="img"
                   title="Trample"
                 >
                   TR
                 </span>
                 <span
+                  aria-label="Cleave"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Cleave"
+                  role="img"
                   title="Cleave"
                 >
                   CL
                 </span>
                 <span
+                  aria-label="Pierce"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Pierce"
+                  role="img"
                   title="Pierce"
                 >
                   PI
                 </span>
                 <span
+                  aria-label="Indestructible"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Indestructible"
+                  role="img"
                   title="Indestructible"
                 >
                   ND
                 </span>
                 <span
+                  aria-label="Immutable"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Immutable"
+                  role="img"
                   title="Immutable"
                 >
                   IM
                 </span>
                 <span
+                  aria-label="Stack"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Stack"
+                  role="img"
                   title="Stack"
                 >
                   ST
                 </span>
                 <span
+                  aria-label="Can't attack"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Can't attack"
+                  role="img"
                   title="Can't attack"
                 >
                   NA
                 </span>
                 <span
+                  aria-label="Armor 2"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Armor"
                   data-n="2"
+                  role="img"
                   title="Armor 2"
                 >
                   AR
                    2
                 </span>
                 <span
+                  aria-label="Lucky 3"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Lucky"
                   data-n="3"
+                  role="img"
                   title="Lucky 3"
                 >
                   LK
                    3
                 </span>
                 <span
+                  aria-label="Animated"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Animated"
+                  role="img"
                   title="Animated"
                 >
                   AN
                 </span>
                 <span
+                  aria-label="Animated on your turn"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Animated on your turn"
+                  role="img"
                   title="Animated on your turn"
                 >
                   AT
                 </span>
                 <span
+                  aria-label="Brittle 2"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Brittle"
                   data-n="2"
+                  role="img"
                   title="Brittle 2"
                 >
                   BR
                    2
                 </span>
                 <span
+                  aria-label="Spell Damage 1"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Spell Damage"
                   data-n="1"
+                  role="img"
                   title="Spell Damage 1"
                 >
                   SD
                    1
                 </span>
                 <span
+                  aria-label="Immune to Spells"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Immune to Spells"
+                  role="img"
                   title="Immune to Spells"
                 >
                   IS
                 </span>
                 <span
+                  aria-label="Windfury"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Windfury"
+                  role="img"
                   title="Windfury"
                 >
                   WF
                 </span>
                 <span
+                  aria-label="Temporary"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Temporary"
+                  role="img"
                   title="Temporary"
                 >
                   TE
                 </span>
                 <span
+                  aria-label="Deft"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Deft"
+                  role="img"
                   title="Deft"
                 >
                   DE
                 </span>
                 <span
+                  aria-label="Untributable"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Untributable"
+                  role="img"
                   title="Untributable"
                 >
                   UT
                 </span>
                 <span
+                  aria-label="Equip"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Equip"
+                  role="img"
                   title="Equip"
                 >
                   EQ
                 </span>
                 <span
+                  aria-label="Ranged"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Ranged"
+                  role="img"
                   title="Ranged"
                 >
                   RG
                 </span>
                 <span
+                  aria-label="Flying"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Flying"
+                  role="img"
                   title="Flying"
                 >
                   FL
                 </span>
                 <span
+                  aria-label="Cloaked"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Cloaked"
+                  role="img"
                   title="Cloaked"
                 >
                   CK
                 </span>
                 <span
+                  aria-label="Crater"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Crater"
+                  role="img"
                   title="Crater"
                 >
                   CR
                 </span>
                 <span
+                  aria-label="Flashback"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Flashback"
+                  role="img"
                   title="Flashback"
                 >
                   FB
                 </span>
                 <span
+                  aria-label="Tradable"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Tradable"
+                  role="img"
                   title="Tradable"
                 >
                   TD
                 </span>
                 <span
+                  aria-label="Starship Piece"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Starship Piece"
+                  role="img"
                   title="Starship Piece"
                 >
                   SP
                 </span>
                 <span
+                  aria-label="Starship"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Starship"
+                  role="img"
                   title="Starship"
                 >
                   SS
                 </span>
                 <span
+                  aria-label="Can't Defend"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Can't Defend"
+                  role="img"
                   title="Can't Defend"
                 >
                   CD
                 </span>
                 <span
+                  aria-label="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend"
                   class="cf-kw-more"
+                  role="img"
                   title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend"
                 >
                   +
@@ -2661,7 +2743,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-compact-translucent"
               >
                 Carnivorous Cube
               </span>
@@ -2782,7 +2864,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-compact-translucent"
               >
                 Flood
               </span>
@@ -3085,7 +3167,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-compact-translucent"
               >
                 Echoes of the Forgotten
               </span>
@@ -3204,7 +3286,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 3
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-compact-translucent"
               >
                 Collateral Damage
               </span>
@@ -3237,9 +3319,11 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 class="keywords"
               >
                 <span
+                  aria-label="Stack"
                   class="keyword keyword-icon"
                   data-chip="hidden"
                   data-keyword="Stack"
+                  role="img"
                   title="Stack"
                 >
                   ST
@@ -3466,6 +3550,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           <span
             class="cf cf--minion"
+            data-art-first="true"
             data-card-type="Unit"
             data-foil="none"
             data-layout="minion"
@@ -3479,7 +3564,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--frame"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-motif="wisps"
                   data-art-theme="unit"
@@ -3562,7 +3647,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 0
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-hover"
               >
                 Ceaseless Void
               </span>
@@ -3595,8 +3680,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 class="keywords"
               >
                 <span
+                  aria-label="Trample"
                   class="keyword keyword-icon"
                   data-keyword="Trample"
+                  role="img"
                   title="Trample"
                 >
                   TR
@@ -3687,7 +3774,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 0
               </span>
               <span
-                class="card-name"
+                class="card-name card-name-compact-translucent"
               >
                 KY's Private Tutor
               </span>

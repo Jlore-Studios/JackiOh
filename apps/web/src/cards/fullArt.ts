@@ -31,8 +31,9 @@ import {
   type OwnedByCard,
 } from "./cosmetics.ts";
 import fullArtTokens from "./fullArtTokens.json";
+import { frameRarity } from "./frame.ts";
 import type { FaceModel } from "./model.ts";
-import { readCardSettings, useCardSettings } from "./settings.ts";
+import { CARD_SETTINGS_DEFAULTS, readCardSettings, useCardSettings, type BoardNamesOption } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
 import { getStored } from "../net/storage.ts";
 import {
@@ -40,6 +41,7 @@ import {
   VERSION_ANIMATED_ID,
   VERSION_FULL_ART_ID,
   isFullBleed,
+  levelOf,
   levelOfPick,
   lookOfLevel,
   offeredOn,
@@ -297,6 +299,75 @@ export function tierOfLook(look: CardLook): FullArtTier | null {
 export function boardLookOf(face: FaceModel, look: CardLook): CardLook | null {
   if (!showsFullArt(face, isFullBleed(look.version))) return null;
   return { level: look.version, version: look.version, animated: false, signed: false };
+}
+
+/**
+ * R3339000: whether `versionId` is a full-art-shaped level:
+ * Full art, Alt full art (rank >= 2), Sketch full art (rank >= 2), Extended art,
+ * Out of frame, Immersive, Prismatic, Set showcase, or any animated or signed level of them.
+ */
+export function isFullArtShapedVersion(versionId: string | null | undefined): boolean {
+  if (versionId === null || versionId === undefined) return false;
+  const level = levelOf(versionId);
+  if (level === null) return false;
+  const { variant, rank } = level;
+  if (
+    variant === "full-art" ||
+    variant === "extended-art" ||
+    variant === "out-of-frame" ||
+    variant === "immersive" ||
+    variant === "prismatic" ||
+    variant === "set-showcase"
+  ) {
+    return true;
+  }
+  if ((variant === "alt-art" || variant === "sketch") && rank >= 2) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * R3339000: whether a card in play on the board is art-first:
+ * - it wears a full-art-shaped level (`look`, the look its full face would wear); or
+ * - it is Legendary or Mythic, in any look.
+ */
+export function isArtFirstBoardFace(face: Pick<FaceModel, "rarity" | "printedRarity">, look: CardLook): boolean {
+  const rarity = frameRarity(face);
+  if (rarity === "Legendary" || rarity === "Mythic") return true;
+  return isFullArtShapedVersion(look.version);
+}
+
+/**
+ * R3339000: whether a board card displays its name plate statically:
+ * - "always": all cards show their static name plate.
+ * - "never": no cards show their static name plate (shown on hover or focus).
+ * - "artFirst" (default): art-first cards hide their static name plate (shown on hover or focus);
+ *   normal Common to Epic cards keep their name plate.
+ */
+export function showsStaticBoardName(
+  artFirst: boolean,
+  setting: BoardNamesOption = CARD_SETTINGS_DEFAULTS.boardNames,
+): boolean {
+  if (setting === "always") return true;
+  if (setting === "never") return false;
+  return !artFirst;
+}
+
+/**
+ * R3339000: how a card in play on the board draws its name: `staticName`, a name plate that is always there, or else a
+ * hover plate; and `artFirst`, whether it is drawn art first (edge to edge, no static name, no type line). A card is
+ * drawn art first only where its name is hidden: under "Always" an art-first card keeps R3046000's band (a Unit its
+ * oval, if its look is no full art), the name beside the art it was promised with.
+ */
+export function boardNameOf(
+  face: Pick<FaceModel, "rarity" | "printedRarity">,
+  look: CardLook,
+  setting: BoardNamesOption,
+): { artFirst: boolean; staticName: boolean } {
+  const classified = isArtFirstBoardFace(face, look);
+  const staticName = showsStaticBoardName(classified, setting);
+  return { artFirst: classified && !staticName, staticName };
 }
 
 /**
