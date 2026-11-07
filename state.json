@@ -15944,6 +15944,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 140,
       "started_at": "2026-11-07T20:55:30Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35391,9 +35392,33 @@
         "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "e5998096be07a66b7209e3c0c85d72e9daf69d70",
+        "issue": 3343,
+        "merged_at": "2026-11-07T23:10:00Z",
+        "n": 140,
+        "pr": 3369,
+        "queued_at": "2026-11-07T23:10:00Z",
+        "sha": "310f4412060f6d35c981d165267417e220a20e99",
+        "status": "queued",
+        "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
+        "tries": 0
       }
     ],
-    "count": 139
+    "count": 140
   },
   "statistics": {
     "at": "2026-11-07T22:42:19Z"
