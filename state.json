@@ -17482,9 +17482,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-2",
-      "owner_since": "2026-11-07T05:38:43Z",
-      "owner_why": "its final audit of `ecaf147c788a` asked for changes, and the auditor fixes its own findings",
+      "owner": "claude-8",
+      "owner_since": "2026-11-07T06:05:13Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-07T02:38:52Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -18104,7 +18104,7 @@
       "waiting_comment": 6700265883
     },
     "3358": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
@@ -18142,17 +18142,17 @@
           "where": "apps/web/src/cards/CardFace.tsx:382"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-8",
       "queued_at": "2026-11-07T05:38:40Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42342987398",
+      "run_id": "pending:aa84f922-1794031492",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-07T05:30:07Z",
+      "started_at": "2026-11-07T06:05:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18559,9 +18559,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T06:04:41Z",
+    "at": "2026-11-07T06:05:13Z",
     "url": "",
-    "what": "review #3362 on agy"
+    "what": "revise #3358 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T05:52:51Z",
