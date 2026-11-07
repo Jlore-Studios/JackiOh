@@ -17280,10 +17280,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-07T17:05:49Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-07T18:23:17Z",
+        "interrupt": "usage",
+        "provider": "claude-7"
+      },
       "pending_at": "2026-11-07T17:22:38Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
@@ -17295,11 +17301,13 @@
       "provider": "claude-7",
       "queued_at": "2026-11-07T17:05:40Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "strong",
       "run_id": "42398438230",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T17:52:20Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3409": {
       "action": "review",
