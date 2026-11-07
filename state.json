@@ -15934,19 +15934,19 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-07T18:12:33Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42426308550",
+      "run_id": "pending:acc3b4f5-1794095669",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
       "spot_check": true,
       "spot_check_n": 140,
-      "started_at": "2026-11-07T23:40:23Z",
+      "started_at": "2026-11-07T23:55:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 4,
@@ -18056,9 +18056,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T23:54:14Z",
+    "at": "2026-11-07T23:55:04Z",
     "url": "",
-    "what": "review #3419 on claude-8"
+    "what": "spot-check #3369 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T23:37:01Z",
@@ -35737,12 +35737,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-2",
+          "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:acc3b4f5-1794095669",
         "sha": "310f4412060f6d35c981d165267417e220a20e99",
-        "started_at": "2026-11-07T23:40:23Z",
+        "started_at": "2026-11-07T23:55:04Z",
         "status": "queued",
         "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
         "tries": 0
