@@ -35,7 +35,7 @@ import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
-import { boardLookOf, isArtFirstBoardFace, showsStaticBoardName, useCardLook } from "./fullArt.ts";
+import { boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
@@ -151,11 +151,10 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   // R3046000, R3339000: the look a full-art unit wears, still (null: the oval window).
   const cardLook = useCardLook(face.defId, worn);
   const look = boardLookOf(face, cardLook);
-  const artFirst = isArtFirstBoardFace(face, cardLook);
-  const showStaticName = showsStaticBoardName(artFirst, settings.boardNames);
+  const { artFirst, staticName } = boardNameOf(face, cardLook, settings.boardNames);
   const dormant = dormantAttr(face.dormant);
   const nameRef = useRef<HTMLSpanElement>(null);
-  useFitText(nameRef, showStaticName ? face.name : "");
+  useFitText(nameRef, staticName ? face.name : "");
 
   const attackTone = face.stats?.attackTone ?? "base";
   const healthTone = face.stats?.healthTone ?? "base";
@@ -176,7 +175,6 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-vanilla={unit.vanilla === true ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
       data-dormant={dormant}
-      aria-label={face.name}
       {...cosmetics}
     >
       <span className="cf-scale">
@@ -189,7 +187,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             type={face.type}
             shape={artFirst || look !== null ? "full" : "oval"}
             starship={face.starship}
-            picture={look === null ? artPictureOf(cardLook.version, face.set) : artPictureOf(look.version, face.set)}
+            picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
           />
         </span>
 
@@ -211,14 +209,14 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
           </span>
         )}
 
-        {showStaticName ? (
-          <span className={artFirst ? "card-name card-name-compact-translucent" : "card-name card-name-compact-translucent"} ref={nameRef}>
+        {/* R3339000: the name is a plate that stays (smaller and translucent over an oval window's foot), or the hover plate:
+            transparent until hover or focus, in the accessibility tree all the while, so the name is read as it was. */}
+        {staticName ? (
+          <span className={look === null ? "card-name card-name-compact-translucent" : "card-name"} ref={nameRef}>
             {face.name}
           </span>
         ) : (
-          <span className="card-name card-name-hover" aria-hidden="true">
-            {face.name}
-          </span>
+          <span className="card-name card-name-hover">{face.name}</span>
         )}
 
         {unit.vanilla === true && (

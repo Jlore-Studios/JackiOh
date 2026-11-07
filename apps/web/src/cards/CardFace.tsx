@@ -103,7 +103,7 @@ import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, boardLookOf, isArtFirstBoardFace, showsFullArt, showsStaticBoardName, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, boardNameOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
@@ -146,6 +146,12 @@ export type CardFaceProps = {
   worn?: boolean;
   /** R2723000: a card in the viewer's own hand on a board they play (Card.tsx): a full-art face there draws its art alone. */
   ownHand?: boolean;
+  /**
+   * R3339000: a compact face that is a card in play on the board (Card.tsx's backrow, the Collection's board view): its name
+   * and type line follow "Names on the board" and an art-first card drops them. Any other compact face (a picker's tile,
+   * a notice, a cosmetic's sample) prints its name as it always has.
+   */
+  onBoard?: boolean;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -275,7 +281,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false, ownHand = false }: CardFaceProps): ReactElement {
+export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false, ownHand = false, onBoard = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -295,9 +301,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
-  // R3339000: an art-first backrow card in play drops its static name and type line.
-  const artFirst = !full && isArtFirstBoardFace(face, cardLook);
-  const showStaticName = full ? true : showsStaticBoardName(artFirst, settings.boardNames);
+  // R3339000: a card in play in the backrow draws its name as "Names on the board" says; an art-first one drops it and its type line.
+  const { artFirst, staticName: showStaticName } =
+    !full && onBoard ? boardNameOf(face, cardLook, settings.boardNames) : { artFirst: false, staticName: true };
   // Issues #814, #1017: the face model gives the box's words whole, as a short form, or as a Quest's stage
   // (R2450000), each with its own spans; the box's size is the layout's.
   const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
@@ -379,7 +385,6 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
       data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
-      aria-label={face.name}
       {...cosmetics}
       style={scales}
     >
@@ -468,9 +473,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             {face.name}
           </span>
         ) : (
-          <span className="card-name card-name-hover" aria-hidden="true">
-            {face.name}
-          </span>
+          // R3339000: transparent until hover or focus, and in the accessibility tree all the while: the name is read as it was.
+          <span className="card-name card-name-hover">{face.name}</span>
         )}
 
         {signed && <FullArtSignature name={face.englishName ?? face.name} defId={face.defId} />}

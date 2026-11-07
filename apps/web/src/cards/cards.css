@@ -1750,7 +1750,9 @@
   gap: 1cqw;
 }
 
-/* R3339000: an art-first compact face (backrow card) has edge-to-edge art and no permanent name band. */
+/* R3339000: an art-first compact face (a backrow card drawn with its name hidden, CardFace's `data-art-first`) has
+   edge-to-edge art and no name band: its name is the hover plate below. Under "Always" the face is not drawn art first,
+   so R3046000's band above is the face's. */
 .cf[data-layout="compact"][data-art-first="true"] {
   --cf-band: 0cqh;
 }
@@ -1959,8 +1961,9 @@
   bottom: 0;
 }
 
-/* R3339000: Normal Common-to-Epic Units keep a smaller translucent name plate so the art window grows. */
-.cf[data-layout="minion"]:not([data-art-first="true"]) .cf-portrait {
+/* R3339000: Normal Common-to-Epic Units (the oval window: no full art, not art first) keep a smaller translucent name
+   plate so the art window grows: the oval runs down under the plate's upper part. */
+.cf[data-layout="minion"]:not([data-full-art="true"]):not([data-art-first="true"]) .cf-portrait {
   bottom: calc(var(--mf-stat) + var(--mf-plate) * 0.15);
 }
 
@@ -1974,38 +1977,55 @@
     inset 0 0.3cqh 0 rgb(255 255 255 / 0.15);
 }
 
-/* R3339000: Hovering or focusing an art-first face reveals its name plate within --motion-fast. */
-.cf .card-name-hover {
+/* R3339000: the hover plate, the name of a board face that draws none (an art-first face, or any face under "Never"). It
+   is always in the DOM and the accessibility tree, so the name is read as before, and transparent until the card is
+   hovered or holds focus, when it fades in within --motion-fast, a slim plate over the bottom of the art (a Unit's tucked
+   above its gems, as its name plate is). It takes no pointer. The selectors outrank every `.card-name` rule above, the
+   compact face's band and the small face's rules among them, so the plate has its own height and place on each; the
+   rule that shows it outranks the one that hides it. */
+.cf[data-layout][data-card-type] .card-name.card-name-hover {
   position: absolute;
   z-index: 5;
+  top: auto;
   right: 0;
   bottom: 0;
   left: 0;
-  height: var(--mf-plate, 11cqh);
-  line-height: var(--mf-plate, 11cqh);
+  display: block;
+  height: max(11cqh, 10px);
   padding: 0 4cqw;
+  border-radius: 0;
   background: rgb(0 0 0 / 0.75);
   backdrop-filter: blur(4px);
+  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+  clip-path: none;
   color: #f0f3fa;
-  font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
+  font-size: max(7.5px, 7.4cqh);
   font-weight: 700;
+  letter-spacing: 0;
+  line-height: max(11cqh, 10px);
   text-align: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease-standard);
-  border-radius: 0;
-  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
 }
 
-.cf:hover .card-name-hover,
-.cf:focus-within .card-name-hover,
-.card:hover .card-name-hover,
-.card:focus-within .card-name-hover {
+.cf[data-layout="minion"][data-card-type] .card-name.card-name-hover {
+  bottom: calc(var(--mf-stat) - 0.5cqh);
+  left: 3cqw;
+  right: 3cqw;
+  height: var(--mf-plate);
+  border-radius: 1.2cqh;
+  line-height: var(--mf-plate);
+}
+
+.cf[data-layout][data-card-type]:hover .card-name.card-name-hover,
+.cf[data-layout][data-card-type]:focus-within .card-name.card-name-hover,
+.card:hover .cf[data-layout][data-card-type] .card-name.card-name-hover,
+.card:focus-within .cf[data-layout][data-card-type] .card-name.card-name-hover {
   opacity: 1;
-  pointer-events: auto;
 }
 
 /* R243's Vanilla marker: a plain paper stamp at the portrait's top right, clear of the cost gem and

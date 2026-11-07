@@ -30,7 +30,6 @@ import {
   type Cosmetic,
   type OwnedByCard,
 } from "./cosmetics.ts";
-import type { Rarity } from "@jackioh/shared";
 import fullArtTokens from "./fullArtTokens.json";
 import { frameRarity } from "./frame.ts";
 import type { FaceModel } from "./model.ts";
@@ -330,24 +329,13 @@ export function isFullArtShapedVersion(versionId: string | null | undefined): bo
 
 /**
  * R3339000: whether a card in play on the board is art-first:
- * - it wears a full-art-shaped level; or
+ * - it wears a full-art-shaped level (`look`, the look its full face would wear); or
  * - it is Legendary or Mythic, in any look.
  */
-export function isArtFirstBoardFace(
-  faceOrLook: Pick<FaceModel, "rarity" | "printedRarity"> | CardLook | null | undefined,
-  lookOrRarity?: CardLook | Rarity | null,
-): boolean {
-  if (faceOrLook && typeof faceOrLook === "object" && ("rarity" in faceOrLook || "printedRarity" in faceOrLook)) {
-    const face = faceOrLook as Pick<FaceModel, "rarity" | "printedRarity">;
-    const look = lookOrRarity as CardLook | null | undefined;
-    const rarity = frameRarity(face);
-    if (rarity === "Legendary" || rarity === "Mythic") return true;
-    return isFullArtShapedVersion(look?.version);
-  }
-  const look = faceOrLook as CardLook | null | undefined;
-  const rarity = lookOrRarity as Rarity | null | undefined;
+export function isArtFirstBoardFace(face: Pick<FaceModel, "rarity" | "printedRarity">, look: CardLook): boolean {
+  const rarity = frameRarity(face);
   if (rarity === "Legendary" || rarity === "Mythic") return true;
-  return isFullArtShapedVersion(look?.version);
+  return isFullArtShapedVersion(look.version);
 }
 
 /**
@@ -364,6 +352,22 @@ export function showsStaticBoardName(
   if (setting === "always") return true;
   if (setting === "never") return false;
   return !artFirst;
+}
+
+/**
+ * R3339000: how a card in play on the board draws its name: `staticName`, a name plate that is always there, or else a
+ * hover plate; and `artFirst`, whether it is drawn art first (edge to edge, no static name, no type line). A card is
+ * drawn art first only where its name is hidden: under "Always" an art-first card keeps R3046000's band (a Unit its
+ * oval, if its look is no full art), the name beside the art it was promised with.
+ */
+export function boardNameOf(
+  face: Pick<FaceModel, "rarity" | "printedRarity">,
+  look: CardLook,
+  setting: BoardNamesOption,
+): { artFirst: boolean; staticName: boolean } {
+  const classified = isArtFirstBoardFace(face, look);
+  const staticName = showsStaticBoardName(classified, setting);
+  return { artFirst: classified && !staticName, staticName };
 }
 
 /**
