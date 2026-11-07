@@ -15764,7 +15764,8 @@
         "tiers": {
           "claude": "strong"
         }
-      }
+      },
+      "waiting_comment": 6707669953
     },
     "3365": {
       "action": "review",
