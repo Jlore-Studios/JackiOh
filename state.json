@@ -16129,7 +16129,7 @@
       "stop_requested": false
     },
     "3371": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "4ccbb17c7cc76fddd74847011ae01538aae1b262",
       "ci_fixes": 1,
@@ -16153,25 +16153,18 @@
       "interruptions": 0,
       "issue": 3342,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-07T15:28:00Z",
-      "run_id": "42367714856",
+      "run_id": "pending:8c2b5bac-1794067026",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-07T11:19:44Z",
+      "started_at": "2026-11-07T15:57:51Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-07T15:28:00Z",
-        "until": "2026-11-07T15:58:00Z",
-        "why": "#3366, which it waited behind, closed"
-      },
       "votes": {
         "approvals": [
           "gemini"
@@ -16961,9 +16954,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T15:56:52Z",
+    "at": "2026-11-07T15:57:51Z",
     "url": "",
-    "what": "build #3381 on claude-8"
+    "what": "revise #3371 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T15:47:44Z",
