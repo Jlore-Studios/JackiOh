@@ -17103,15 +17103,8 @@
       "verdict_rounds": 1
     },
     "3331": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42331717478",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-07T03:08:49Z",
-        "until": "2026-11-07T03:38:49Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17123,10 +17116,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git log --oneline -1 && git status --porcelain && wc -w .bot-plan.md\", \"description\": \"Check branch state and draft length\"}\n- Bash: {\"command\": \"git diff --stat 552a13d860 HEAD -- apps/web/src/cards/art apps/web/src/replay/gif apps/web/src/patches spec/rulings/R0503.md spec/rulings/R2724000.md crates/cards/patches/pending e2e/cyp\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3331/.bot-plan.md\", \"content\": \"## Goal\\n\\nBuild the foundation of #3330, with five cards redrawn as proof:\\n- **Art bible:** `ART.md` gets one sectio\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; git status --porcelain\", \"description\": \"Count draft words, confirm clean tree\"}\n- Bash: {\"command\": \"wc -c .bot-plan.md; awk '/^## /{if(s)print s\\\": \\\"w; s=$0; w=0} {w+=NF} END{print s\\\": \\\"w}' .bot-plan.md\", \"description\": \"Words per section\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3331/.bot-plan.md'\\ns=open(p).read()\\nstart=s.index('## Steps'); end=s.index('## Tests')\\nnew='''## Steps\\n\\n1. **`s\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport re\\ns=open('/home/runner/work/_temp/work/item-3331/.bot-plan.md').read()\\ntoks=s.split()\\nprint(len(toks), len([t for t in toks if re.search(r'[A-Za-z0-9]',t)]))\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3331/.bot-plan.md\", \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3331/.bot-plan.md\", \"offset\": 40}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3331/.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"All `art/` paths are under `apps/web/src/cards/art/`.\\\\n\\\\n\\\",\\\"\\\")\\ns=s.re\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3331/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- [ ] The component spec runs, and its screenshots have been checked by eye, wi\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3331/.bot-plan.md\", \"limit\": 50}\n- Bash: {\"command\": \"cat /home/runner/work/_temp/work/item-3331/.bot-plan.md\", \"description\": \"Print the final plan\"}\n- said: ## Goal This builds the foundation of #3330: - **Art bible:** `ART.md` gets one section per set family. - **Scene kits:** the scene-recipe and kit types, and a procedural kit of 60 or more parts, the figure kit included. - **Five proof cards** draw from scene recipes, base and Radiant: `classic-074\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-07T00:48:41Z",
       "owner_why": "it plans it",
@@ -17139,9 +17131,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-06T23:42:46Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42331717478",
+      "run_id": "pending:c07958a2-1794020978",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T02:57:29Z",
+      "started_at": "2026-11-07T03:10:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6700267582
@@ -18115,9 +18107,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T02:59:04Z",
+    "at": "2026-11-07T03:10:18Z",
     "url": "",
-    "what": "plan #3341 on claude-3"
+    "what": "build #3331 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-07T02:51:31Z",
