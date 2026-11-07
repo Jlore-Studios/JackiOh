@@ -9,12 +9,28 @@ export const LONG_PRESS_MS = 450;
 export const LONG_PRESS_SLOP_PX = 10;
 /** After a long-press fires, the next click on the trigger is swallowed for at most this long. */
 export const CLICK_SUPPRESS_MS = 600;
-/** The hover preview's card height. inspect.css caps it at 80vh. */
-export const PREVIEW_HEIGHT_PX = 380;
+/**
+ * The hover preview's card height, at the least. inspect.css caps it at 80vh. #3341: 500, up from 380, the most that
+ * still fits above a hand card on a 1280x720 screen after the card lifts (placement.ts tries "above" first for a hand),
+ * where a taller one would cover its neighbours from beside them; a taller screen draws it taller still
+ * (PREVIEW_HEIGHT_SHARE, `previewHeight` in placement.ts).
+ */
+export const PREVIEW_HEIGHT_PX = 500;
+/**
+ * #3341: the share of the viewport's height the preview card takes when that is more than PREVIEW_HEIGHT_PX: a board
+ * face grows with its screen, and at this share a desktop's preview art stays over twice as wide as a unit's whole face
+ * on it (previewSize.test.ts).
+ */
+export const PREVIEW_HEIGHT_SHARE = 0.56;
 /** Space between the anchor card and the preview. */
 export const PREVIEW_GAP_PX = 12;
 /** The preview always stays this far inside the viewport. */
 export const PREVIEW_MARGIN_PX = 8;
+
+/** #3341: the phone sheet's card height, at most (`.inspect-face--sheet` in inspect.css, which mirrors it). */
+export const PREVIEW_SHEET_HEIGHT_PX = 480;
+/** #3341: the share of the viewport's height the phone sheet's card may use. Mirrors inspect.css's `60dvh`. */
+export const PREVIEW_SHEET_SHARE = 0.6;
 
 /** The share of the viewport height the preview card may use. Mirrors inspect.css's `80vh`. */
 export const PREVIEW_MAX_VIEWPORT_SHARE = 0.8;

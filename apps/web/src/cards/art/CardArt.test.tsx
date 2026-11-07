@@ -14,7 +14,7 @@ import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 
 afterEach(cleanup);
 
-const SHAPES: readonly ArtShape[] = ["portrait", "window", "arch", "notched", "oval", "strip"];
+const SHAPES: readonly ArtShape[] = ["portrait", "window", "arch", "notched", "oval", "strip", "frame"];
 
 function def(id: string): CardDef {
   const found = CATALOG[id];

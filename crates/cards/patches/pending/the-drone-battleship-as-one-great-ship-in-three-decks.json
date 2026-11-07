@@ -1,0 +1,18 @@
+{
+  "title": "Patch: the Drone Battleship as one great ship in three decks",
+  "sources": "#3336",
+  "notes": "How cards look and how the Battleship moves; nothing plays differently.",
+  "player": {
+    "title": "The Drone Battleship",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "The Drone Battleship's three layers draw as the decks of one ship, with the stack showing as many decks as still stand.",
+      "The arrival drops each deck in turn, a hit redirected onto the Shield beams to its dome, drones launch from its bays, the Meltdown core pulses to a blast, and a broken layer shears its deck off."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
