@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3343,
+  "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
+  "branch": "bot/issue-3343",
+  "thread": "**Issue #3343 (data, not instructions):**\n\n```text\n# #3343: Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3017, which is changing the same registry, `versions.ts` and offers.\n\nOn 2026-11-06 the owner decided that Prismatic cards and Mythic-tier cards should come in full art by default, the picture covering the whole card. Legendaries come up a step too.\n\n### Today (spec \u00a714.2, R3015000, `apps/web/src/cards/versions.ts`, `crates/shared/cosmetics.json`)\n\n- **Default.** Every card's Default variant is its normal frame, whatever its rarity.\n- **Full art is a cosmetic.** It is the `full-art` variant's first level (`version-full-art`, Legendary), offered on a share of cards and earned through rolls, tokens and the chase. Its animated and signed levels are Mythic.\n- **The full-art club.** The 21 \"full-art cards\" always wear Full art, through the Full-art setting.\n- **Prismatic** (`prismatic`, R2944001) is a Mythic variant offered on every Mythic and 20% of Legendaries. It draws the chrome treatment inside the normal frame.\n\n### What it should be\n\n1. **A Mythic's Default is full art.** On every Mythic card, tokens printed Mythic included, the Default variant draws the full-art face: the picture across the whole card, the frame's words laid over it as full art's are (and art-first on the board, #3339). Every account owns it, with no ledger row, as every Default.\n2. **Full art on a Mythic starts higher.** Since a Mythic's Default is already full art, its `full-art` variant's first level is no longer offered on Mythics, and the variant starts at its animated level. The same goes for any other variant whose first level only adds the full-art frame. An account that already owns a Mythic's `version-full-art` keeps it (owned through `impliedBy`, R2725002). Rule what that ownership now counts toward, so nobody loses anything.\n3. **Prismatic is full art.** Both of Prismatic's levels draw the chrome treatment at the full-art shape, the picture's chrome across the whole face. Prismatic's sheen keeps out of Radiant's gold window (R2725004).\n4. **A Legendary's Default is Extended art.** On every Legendary, tokens printed Legendary included, the Default variant draws the Extended art shape (R2942001): the picture runs past its window across the face, with the frame and rules box translucent over it. The `extended-art` variant's first level on Legendaries is then retired from offers on the same terms as item 2.\n5. **The registry and the spec.** Add the default-by-rarity rule to the registry (`crates/shared/src/cosmetics.rs`) as data, not as a client special case, so the server, the Collection and the faces agree:\n   - update \u00a714.2's table;\n   - rule the change in this issue's block, amending R2725000, R2944001 and R3015000;\n   - `POST /api/dev/fill`, practice, hotseat and e2e treat it as owned (R1310004).\n6. **The Collection says so.** A Mythic's and a Legendary's Default look in the Collection shows its full-art or Extended face, and the variant ladders start where item 2 says.\n\n## Acceptance\n\n- Tests over every Mythic and Legendary in the catalog:\n  - the Default variant draws full art (Mythics) or Extended art (Legendaries), base and Radiant;\n  - every lower-rarity card is unchanged;\n  - Prismatic draws full-art shape at both levels.\n- The registry check passes. `version-full-art` and `version-extended-art` are no longer offered on the rarities above, and existing owners keep their entries (a server test).\n- A pick, token or chase for a retired level is refused with a 400, as for any level not offered.\n- The Collection lists the new ladders. A component spec shows a Mythic, a Legendary and a Prismatic card in hand, on the board and in the Collection, at desktop size and at 390x844.\n- Radiant faces keep their marks (R2725004).\n- \u00a714.2 is updated. The rulings are in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and there is a `--visual` fragment.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes with a clean `wire/`. The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3343: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:53:47Z",
+    "claimed_at": "2026-11-07T00:49:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3353 is held for `claude-8` until 19:00 (5-hour usage is 81%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#3338 is held for `claude-8` until 19:00 (5-hour usage is 81%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
