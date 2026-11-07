@@ -146,7 +146,8 @@ else the ✕), `panelRef`, a `title` with markup of its own, and answers that ar
 (`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
 Friends, Chat). `DialogClose` is the ✕ alone, for an overlay that keeps its own body: the inspect
-overlay's `CardDetail` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
+overlay's `CardDetail` and its sheets (`InspectSheet`, `CardListSheet`, `FaceDownSheet`, the Stack's
+`StackSheet`), `HeroInspect` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
 Tab only while theirs is the top layer (`useBackLayer` returns whether it is, and opens its layer in a
 layout effect, so an Escape read as soon as the overlay is drawn finds it on top), so a dialog opened over
 another closes first. The inspect overlay, portalled after every dialog, draws at `--z-dialog` while it
@@ -155,8 +156,8 @@ game over a card's detail), carries `data-under` and comes down to `--z-toast`, 
 dialog seen is the one that takes the keys. `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
 Tab skips a hidden panel and a control at `tabindex="-1"`. `src/dialogs.test.ts` holds the sources to
 it: no `"Escape"` comparison outside the shared hooks and its named exceptions, no scrim outside
-`dialog.css` that paints itself or takes a raw layer, one ✕ glyph, and the inline confirms' safe choice
-first.
+`dialog.css` that paints itself or takes a raw layer, one ✕ glyph, no button labelled a text Close, and
+the inline confirms' safe choice first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,

@@ -183,8 +183,8 @@ export function useModalOverlay(
     const previous = document.activeElement;
     restoreRef.current = previous instanceof HTMLElement && previous !== document.body ? previous : null;
     openedAtRef.current = Date.now();
-    // preventScroll: Close sits at the foot of a dialog that scrolls on a short screen, and
-    // focusing it would open the detail scrolled past both faces.
+    // preventScroll: a dialog that scrolls on a short screen opens at its top, whichever of its
+    // controls takes the focus (R3221000 moved every Close to the ✕ at the top right).
     focusRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!isTop()) return;
