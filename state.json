@@ -17742,7 +17742,7 @@
       }
     },
     "3419": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
@@ -17762,17 +17762,17 @@
           "where": "apps/web/src/game/Card.tsx:302"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-07T22:20:49Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42419490474",
+      "run_id": "pending:a0a4dd63-1794090161",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-07T22:12:04Z",
+      "started_at": "2026-11-07T22:23:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17792,9 +17792,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T22:12:04Z",
+    "at": "2026-11-07T22:23:16Z",
     "url": "",
-    "what": "review #3419 on claude-8"
+    "what": "revise #3419 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T22:07:51Z",
