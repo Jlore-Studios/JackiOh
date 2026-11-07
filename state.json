@@ -14962,15 +14962,8 @@
       "waiting_comment": 6703041515
     },
     "3345": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42413487201",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-07T21:17:55Z",
-        "until": "2026-11-07T21:47:55Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14982,10 +14975,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && cat spec/pending/3344.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && cat spec/rulings/R3344000.md\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"790baa4a-fa77-4027-bf58-5916b9f6ebe8/task-238\"}\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && wc -w -c .bot-plan.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && python3 -c ' with open(\".bot-plan.md\") as f: text = f.read() import re words = len(re.findall(r\"\\S+\", text)) chars = len(text) print(f\"\u2026\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/.bot-plan.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && python3 -c ' with open(\".bot-plan.md\") as f: text = f.read() import re words = len(re.findall(r\"\\S+\", text)) chars = len(text) print(f\"\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && git status\n- said: ## Goal Make every Mythic card's in-game takeover set piece fill the window edge-to-edge in its own depth planes (#3344), with the camera dollying through the layers over `TAKEOVER_HOLD_MS` while the card's name signs across the bottom in its set's signature hand (R2715002) and its intro sting play\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-07T20:57:00Z",
       "owner_why": "it plans it",
@@ -14998,9 +14990,9 @@
       "provider": "agy",
       "queued_at": "2026-11-06T23:56:22Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42413487201",
+      "run_id": "pending:7790a0ca-1794086316",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-07T20:57:00Z",
+      "started_at": "2026-11-07T21:19:12Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17744,9 +17736,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T21:08:24Z",
+    "at": "2026-11-07T21:19:12Z",
     "url": "",
-    "what": "revise #3386 on claude-8"
+    "what": "build #3345 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T21:04:04Z",
