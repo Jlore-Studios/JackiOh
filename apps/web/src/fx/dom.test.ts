@@ -7,8 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANOMALY_CODES } from "../cards/anomalies.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
-import { mountDomEffect, type DomEffect } from "./dom.ts";
-import type { FxBox, FxDomCue } from "./types.ts";
+import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
+import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
+import type { FxBox, FxDomCue, FxHoldCue } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
 const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // center (730, 70)
@@ -568,5 +569,40 @@ describe("a stand-in swells inward from an edge (integration QA: lane 1 on a pho
     const right = land.x + origin.x * land.width + (1 - origin.x) * land.width * scale;
     expect(origin.x).toBeGreaterThan(0.5);
     expect(right).toBeLessThanOrEqual(view.width);
+  });
+});
+
+/* #3347: a hold's stand-in leans the way it travels, and straightens as it lands. */
+describe("#3347 mountHold turns the stand-in toward its zone", () => {
+  const LAND: FxBox = { x: 500, y: 300, width: 60, height: 82 }; // center (530, 341)
+  const cue: FxHoldCue = {
+    kind: "hold",
+    from: null,
+    to: { kind: "testid", testid: "zone-you-units-3" },
+    delayMs: 0,
+    landMs: 240,
+    durationMs: 6000,
+  };
+  const rot = (from: FxBox | null): number => {
+    const hold = mountHold(root, cue, { source: null, from, land: LAND, font: null });
+    return Number.parseFloat(hold.el.style.getPropertyValue("--fx-rot"));
+  };
+  const startedAt = (x: number): FxBox => ({ x: x - 30, y: 600, width: 60, height: 82 });
+
+  it("#3347 the sign follows the start side: from the left it starts turned clockwise, from the right counterclockwise, from straight below not at all", () => {
+    expect(rot(startedAt(530 - FX_HOLD_TURN_PX / 2))).toBeGreaterThan(0);
+    expect(rot(startedAt(530 + FX_HOLD_TURN_PX / 2))).toBeLessThan(0);
+    expect(rot(startedAt(530))).toBe(0);
+  });
+
+  it("#3347 the turn is proportional up to FX_HOLD_TURN_PX and capped at FX_HOLD_TURN_DEG beyond it", () => {
+    expect(rot(startedAt(530 - FX_HOLD_TURN_PX / 2))).toBeCloseTo(FX_HOLD_TURN_DEG / 2, 1);
+    expect(rot(startedAt(530 - FX_HOLD_TURN_PX))).toBeCloseTo(FX_HOLD_TURN_DEG, 1);
+    expect(rot(startedAt(530 - 10 * FX_HOLD_TURN_PX))).toBeCloseTo(FX_HOLD_TURN_DEG, 1);
+    expect(rot(startedAt(530 + 10 * FX_HOLD_TURN_PX))).toBeCloseTo(-FX_HOLD_TURN_DEG, 1);
+  });
+
+  it("#3347 a stand-in with nothing to start from (a light that drops in) is not turned", () => {
+    expect(rot(null)).toBe(0);
   });
 });

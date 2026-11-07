@@ -694,9 +694,12 @@ const shuffle: Recipe = (event, p) => {
     ];
   }
   if (event.type !== "shuffledIn") return [];
-  const library = animTestid.library(sideOf(p.view, event.player));
+  const side = sideOf(p.view, event.player);
+  const library = animTestid.library(side);
+  // #3347: a mulligan's returned cards fly into the deck from their hand (a back, whichever seat watches).
+  const from = p.view.phase === "mulligan" ? anchor(animTestid.hand(side)) : viewportCenter();
   return [
-    ghost(p.D, viewportCenter(), anchor(library)),
+    ghost(p.D, from, anchor(library)),
     burst(p.env.intensity, "arcane", anchor(library), "point", p.D, "shuffleArcane"),
   ];
 };

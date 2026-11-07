@@ -4,7 +4,7 @@
 // R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
-import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
+import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -616,11 +616,15 @@ export function mountHold(
     el.style.setProperty("--fx-dy", px(start.y - landCenter.y));
     el.style.setProperty("--fx-s", (parts.from.height / Math.max(1, parts.land.height)).toFixed(3));
     el.style.setProperty("--fx-o0", "1");
+    // #3347: it leans the way it travels (toward its zone) as it leaves, and straightens in flight.
+    const lean = Math.max(-1, Math.min(1, (start.x - landCenter.x) / FX_HOLD_TURN_PX)) * -FX_HOLD_TURN_DEG;
+    el.style.setProperty("--fx-rot", `${lean.toFixed(2)}deg`);
   } else {
     el.style.setProperty("--fx-dx", px(0));
     el.style.setProperty("--fx-dy", px(DROP_PX));
     el.style.setProperty("--fx-s", String(DROP_SCALE));
     el.style.setProperty("--fx-o0", "0");
+    el.style.setProperty("--fx-rot", "0deg");
   }
 
   if (parts.source !== null) {
