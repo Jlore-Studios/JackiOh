@@ -18128,12 +18128,12 @@
     "3358": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "medium",
+      "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-07T02:42:15Z",
+      "feedback_since": "2026-11-07T07:05:55Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-07T06:20:57Z",
@@ -18151,6 +18151,7 @@
       "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-07T05:38:40Z",
       "review_floor": "",
       "review_notes": "",
@@ -18175,7 +18176,7 @@
         "provider": "claude-8",
         "run": "42345438065"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-07T07:05:55Z",
       "stop_requested": false,
       "taken_asks": [],
