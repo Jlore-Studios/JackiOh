@@ -15907,6 +15907,7 @@
       "run_id": "42357056974",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 130,
       "started_at": "2026-11-07T08:48:44Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -33770,9 +33771,33 @@
         "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8a9e119f09ed52261e5ef9cba3fb4ebcf591bb66",
+        "issue": 3221,
+        "merged_at": "2026-11-07T13:01:10Z",
+        "n": 130,
+        "pr": 3367,
+        "queued_at": "2026-11-07T13:01:10Z",
+        "sha": "765489f9534d437ca5867d2e3a82e527e23ee6d8",
+        "status": "queued",
+        "title": "Patch: move the menus' remaining dialogs and sheets onto the shared Dialog",
+        "tries": 0
       }
     ],
-    "count": 129
+    "count": 130
   },
   "statistics": {
     "at": "2026-11-07T12:58:00Z"
