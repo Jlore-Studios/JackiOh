@@ -569,10 +569,12 @@ the card wherever the board draws it. A phone (narrower than `FX_MOBILE_WIDTH`) 
   bursts in clouds, launchers lob what they carry (a token, fruit, jade, a book; the Missile Pod
   arrows). A ship with no weapons rams prow first, its lunge turned `FX_STARSHIP_RAM_TURN_DEG`
   toward its target (`stage.ts`). Each kind it fires sounds once, as its first gun fires; a ram sounds
-  at the contact; the swing's own sound is dropped.
+  at the contact; the swing's own sound is dropped for them, so under Reduce Motion, which plays no
+  broadside, it swings with the swing's sound.
 - **The wreck.** A Starship's `destroyed`, outside a wipe (R3334003, `STARSHIP_WRECK`): its newest
   modules blow off one by one, the hull breaks in two as its card is hidden, debris drifts across its
-  backrow and a scorch settles on its tile. It groans as its hull breaks, in the death sting's place.
+  backrow and a scorch settles on its tile. It groans as its hull breaks, in the death sting's place;
+  under Reduce Motion or inside a wipe, where no groan plays, the sting stays.
 
 | Card | Entry | Ties to the ship |
 |---|---|---|

@@ -6,7 +6,9 @@
 // its hull breaks, never inside a wipe, whose set piece swallows it. The launch's are its bed's
 // (setPieceBeds.ts). It reads only the view the board shows through the entry, so a Starship R97 hides
 // (the sentinel, a fuse run with no anchor) sounds nothing (R202), and an entry of no duration (Reduce
-// Motion) sounds nothing either. cues.ts drops the rows' sounds these stand in for.
+// Motion) sounds nothing either. cues.ts drops a row's sound only for an event these were sent in place
+// of, so an attack or a death voiced with no Starship sound of its own (Reduce Motion, a flush, a wipe)
+// keeps its swing or its sting.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -32,6 +34,16 @@ export const BROADSIDE_SOUNDS: { readonly [F in BroadsideFire]: SfxId } = {
   launcher: "starshipLauncher",
 };
 
+/**
+ * What the Starship sounds for an entry: its `cues`, and the events whose row's own sound they stand in
+ * for (`standsFor`: a broadside's `attackDeclared`, a wreck's `destroyed`), which cues.ts then leaves
+ * out (`CueContext.starshipSounded`). An event the Starship sounds nothing for keeps its row's sound,
+ * so one voiced with no entry started (Reduce Motion, a flush) swings and dies as any Unit does.
+ */
+export type StarshipSounds = { cues: readonly SoundCue[]; standsFor: readonly GameEvent[] };
+
+const SILENT: StarshipSounds = { cues: [], standsFor: [] };
+
 /** R3334000: a clank and weld as each piece docks, `amount` the pieces the ship holds once it has. */
 function dockCues(fuse: StarshipFuse, D: number): SoundCue[] {
   if (fuse.anchor === null) return [];
@@ -56,23 +68,31 @@ function broadsideCues(event: Extract<GameEvent, { type: "attackDeclared" }>, vi
 }
 
 /** R3334003: the groan as a destroyed Starship's hull breaks, once for the entry; none inside a wipe. */
-function wreckCues(entry: AnimationEntry, view: PlayerView, D: number): SoundCue[] {
-  if (entry.wipe !== undefined) return [];
-  const wrecked = entry.events.some((event) => event.type === "destroyed" && starshipUnitOf(view, event.instanceId) !== null);
-  return wrecked ? [{ kind: "sfx", id: "starshipWreck", delayMs: Math.round(STARSHIP_WRECK.breakAt * D) }] : [];
+function wreckSounds(entry: AnimationEntry, view: PlayerView, D: number): StarshipSounds {
+  if (entry.wipe !== undefined) return SILENT;
+  const wrecked = entry.events.filter((event) => event.type === "destroyed" && starshipUnitOf(view, event.instanceId) !== null);
+  return wrecked.length === 0 ? SILENT : { cues: [{ kind: "sfx", id: "starshipWreck", delayMs: Math.round(STARSHIP_WRECK.breakAt * D) }], standsFor: wrecked };
 }
 
 /**
  * R3334000–R3334003: the Starship's own sounds for `entry`, as `view` (the board through it) shows the
- * ship, each at its beat of the entry; none for any other entry, a launch (its bed's), a Starship the
- * seat cannot place or an entry of no duration.
+ * ship, each at its beat of the entry, and the events they stand in for; none for any other entry, a
+ * launch (its bed's), a Starship the seat cannot place or an entry of no duration.
  */
-export function starshipBed(entry: AnimationEntry, view: PlayerView): SoundCue[] {
+export function starshipSounds(entry: AnimationEntry, view: PlayerView): StarshipSounds {
   const D = entry.durationMs;
-  if (!(D > 0)) return [];
-  if (entry.fuse !== undefined) return dockCues(entry.fuse, D);
-  if (entry.launch !== undefined) return [];
+  if (!(D > 0)) return SILENT;
+  if (entry.fuse !== undefined) return { cues: dockCues(entry.fuse, D), standsFor: [] };
+  if (entry.launch !== undefined) return SILENT;
   const first = entry.events[0];
-  if (first?.type === "attackDeclared") return broadsideCues(first, view, D);
-  return wreckCues(entry, view, D);
+  if (first?.type === "attackDeclared") {
+    const cues = broadsideCues(first, view, D);
+    return cues.length === 0 ? SILENT : { cues, standsFor: [first] };
+  }
+  return wreckSounds(entry, view, D);
+}
+
+/** The cues alone of `starshipSounds`. */
+export function starshipBed(entry: AnimationEntry, view: PlayerView): readonly SoundCue[] {
+  return starshipSounds(entry, view).cues;
 }

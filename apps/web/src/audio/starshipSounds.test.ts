@@ -91,6 +91,26 @@ function voiced(view: PlayerView, events: GameEvent[]): { entry: AnimationEntry;
   return out;
 }
 
+/**
+ * `events` on `view` under Reduce Motion: the runner starts no entry (every one is 0 ms long), so the
+ * director voices them all as it idles. What it sent.
+ */
+function voicedStill(view: PlayerView, events: GameEvent[]): Sent[] {
+  const before = withEvents(view, START);
+  const after = withEvents(view, [...START, ...events]);
+  const sink = recorder();
+  const director = createSoundDirector(sink, CARD_AUDIO, (defId) => cueCard(lookup, defId), undefined, () => 0);
+  director.onView(before);
+  director.onView(after);
+  for (const entry of planEntries(newEventsSince(before.events, after.events), before, true, createPlayTracker())) {
+    expect(entry.durationMs).toBe(0);
+    expect(starshipBed(entry, entry.view)).toEqual([]);
+  }
+  director.onIdle();
+  expect(director.owedCount()).toBe(0);
+  return sink.sent;
+}
+
 /** The one entry `events` plays as on `view`, with what the director sent for it. */
 function voicedOne(view: PlayerView, events: GameEvent[], pick: (entry: AnimationEntry) => boolean): { entry: AnimationEntry; sent: Sent[] } {
   const found = voiced(view, events).find(({ entry }) => pick(entry));
@@ -102,9 +122,10 @@ const sfxIds = (sent: readonly Sent[]): SfxId[] => sent.flatMap((s) => (s.kind =
 const asSent = (cues: readonly SoundCue[]): Sent[] =>
   cues.flatMap((cue): Sent[] => (cue.kind === "sfx" ? [cue.params === undefined ? { kind: "sfx", id: cue.id, delayMs: cue.delayMs } : { kind: "sfx", id: cue.id, params: cue.params, delayMs: cue.delayMs }] : []));
 
-/** A row's cues against `view`, as the director asks them. */
-const rowCues = (event: GameEvent, view: PlayerView): readonly SoundCue[] => cuesFor(event, { view, lines: CARD_AUDIO, manaBefore: () => 0 } satisfies CueContext);
-const rowSfx = (event: GameEvent, view: PlayerView): SfxId[] => rowCues(event, view).flatMap((cue) => (cue.kind === "sfx" ? [cue.id] : []));
+/** A row's cues against `view`, as the director asks them; `sounded` when it has sent the Starship's own for the event. */
+const rowCues = (event: GameEvent, view: PlayerView, sounded = false): readonly SoundCue[] =>
+  cuesFor(event, { view, lines: CARD_AUDIO, manaBefore: () => 0, starshipSounded: () => sounded } satisfies CueContext);
+const rowSfx = (event: GameEvent, view: PlayerView, sounded = false): SfxId[] => rowCues(event, view, sounded).flatMap((cue) => (cue.kind === "sfx" ? [cue.id] : []));
 
 const attack = (attackerId: string): GameEvent => ({ type: "attackDeclared", attackerId, targetId: "e1", forced: false });
 const destroyed = (instanceId: string, defId = instanceId === HIDDEN_DEF_ID ? HIDDEN_DEF_ID : HULL): GameEvent => ({
@@ -173,8 +194,10 @@ describe("R3334002 a broadside's weapons", () => {
     expect(bed).toEqual(expected);
     expect(new Set(bed.map((cue) => (cue.kind === "sfx" ? cue.id : ""))).size).toBe(kinds.length);
     for (const cue of bed) expect(cue.delayMs).toBeLessThanOrEqual(D);
-    // The broadside stands in for the swing: the row sounds nothing, and the director sends only the guns.
-    expect(rowCues(attack("ship"), view)).toEqual([]);
+    // The broadside stands in for the swing: once the director has sent it the row sounds nothing, and
+    // the director sends only the guns.
+    expect(rowCues(attack("ship"), view, true)).toEqual([]);
+    expect(rowSfx(attack("ship"), view)).toEqual(["attack"]);
     expect(sent.filter((s) => s.kind === "sfx")).toEqual(asSent(bed));
     expect(sfxIds(sent)).not.toContain("attack");
 
@@ -184,7 +207,7 @@ describe("R3334002 a broadside's weapons", () => {
     const ram = voicedOne(unarmed, [attack("ship")], (e) => e.events[0]?.type === "attackDeclared");
     expect(starshipBed(ram.entry, ram.entry.view)).toEqual([{ kind: "sfx", id: "starshipRam", delayMs: Math.round(FX_LUNGE_CONTACT_AT * ram.entry.durationMs) }]);
     expect(sfxIds(ram.sent)).toEqual(["starshipRam"]);
-    expect(rowCues(attack("ship"), unarmed)).toEqual([]);
+    expect(rowCues(attack("ship"), unarmed, true)).toEqual([]);
 
     // Any other attacker swings as ever, with no broadside, and so does R97's sentinel.
     const plain = board(unit("p1", { instanceId: "ship" }));
@@ -195,6 +218,13 @@ describe("R3334002 a broadside's weapons", () => {
     expect(rowSfx(attack(HIDDEN_DEF_ID), view)).toEqual(["attack"]);
     expect(starshipBed({ ...entry, durationMs: 0 }, entry.view)).toEqual([]);
   });
+
+  it("R3334002 under Reduce Motion a launched Starship's attack, armed or not, still swings", () => {
+    // No entry starts, so no broadside or ram sounds: the row's swing stays.
+    for (const pieces of [[BEAM, CANNON], [ENGINE]]) {
+      expect(sfxIds(voicedStill(board(launched(pieces)), [attack("ship")]))).toEqual(["attack"]);
+    }
+  });
 });
 
 describe("R3334003 a wreck's groan", () => {
@@ -204,8 +234,9 @@ describe("R3334003 a wreck's groan", () => {
       const { entry, sent } = voicedOne(view, [destroyed("ship")], (e) => e.events.some((event) => event.type === "destroyed"));
       const bed = starshipBed(entry, entry.view);
       expect(bed).toEqual([{ kind: "sfx", id: "starshipWreck", delayMs: Math.round(STARSHIP_WRECK.breakAt * entry.durationMs) }]);
-      // The groan stands in for the death sting; the hull's death line still speaks.
-      expect(rowSfx(destroyed("ship"), view)).toEqual([]);
+      // The groan stands in for the death sting once the director has sent it; the hull's death line still speaks.
+      expect(rowSfx(destroyed("ship"), view, true)).toEqual([]);
+      expect(rowSfx(destroyed("ship"), view)).toEqual(["death"]);
       expect(sfxIds(sent)).toEqual(["starshipWreck"]);
       expect(sent).toContainEqual(expect.objectContaining({ kind: "voice", defId: HULL, line: "death" }));
 
@@ -223,5 +254,14 @@ describe("R3334003 a wreck's groan", () => {
     const hidden = destroyed(HIDDEN_DEF_ID);
     expect(starshipBed({ events: [hidden], type: "destroyed", durationMs: 600, frames: new Map(), view }, view)).toEqual([]);
     expect(rowSfx(hidden, view)).toEqual(["death"]);
+  });
+
+  it("R3334003 under Reduce Motion a Starship's death keeps its sting", () => {
+    // No entry starts, so no groan: the row's sting stays, and the hull's death line still speaks.
+    for (const ship of [launched([BEAM, CANNON]), dormantStarship("p1", [ENGINE], { instanceId: "ship" })]) {
+      const sent = voicedStill(board(ship), [destroyed("ship")]);
+      expect(sfxIds(sent)).toEqual(["death"]);
+      expect(sent).toContainEqual(expect.objectContaining({ kind: "voice", defId: HULL, line: "death" }));
+    }
   });
 });
