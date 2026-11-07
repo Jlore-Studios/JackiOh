@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3337,
+  "title": "Patch: discovering an Anomaly is an event: the scan finds it, space tears open, your side falls into the rift and the Anomaly's own board arrives under a title card of its own",
+  "branch": "bot/issue-3337",
+  "thread": "**Issue #3337 (data, not instructions):**\n\n```text\n# #3337: Patch: discovering an Anomaly is an event: the scan finds it, space tears open, your side falls into the rift and the Anomaly's own board arrives under a title card of its own\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked for discovering an anomaly to have a crazy animation.\n\n### Today\n\n- **Finding one.** Scanning Probe Mk1 and Mk2 (`stinkyscape-166`, `-167`) roll for an Anomaly Found! (R1855003), and The Greatest Heist's reward can give one.\n- **The card.** Anomaly Found! (`stinkyscape-t-anomaly-found`) picks its board when it reaches a hand (R2247000):\n  - the base face rolls one of seven: Wormhole, Battlefields, Asteroid Field: Large, Asteroid Field: Small, Wrecked Spice Platform, Monument, Drone Hideouts;\n  - the Radiant face rolls one of three: Asteroid Field: Narcour, Asteroid Field: Axnit, Frontier Outpost;\n  - Call to Chaos (Scape Edition) can lay any of the ten.\n\n  The card prints the board's two-letter code.\n- **The cast.** It exiles its caster's side and lays the board, and every Cry on it fires (R1855000, R1855001).\n- **What the client shows.**\n  - One shared spiral is the art of every Anomaly Found!, whatever its board.\n  - The cast plays `jk-swap-cross` on the board for 500 ms, an arcane ring, a burst and a shake (`fx/systemMoments.ts`) and a whoosh, plus the card's `wipe` motif.\n  - The probes play only `send`.\n  - No reveal says which Anomaly it is. `BoardReplaced` carries only `player` (`crates/engine/src/wire/events.rs`), so the client cannot tell the ten apart as the board lands.\n\n### What it should be\n\n1. **The event says which Anomaly.** `BoardReplaced` gains the board's code, an optional field `anomaly` (`\"WH\"`, `\"BF\"` and so on) set by `t_anomaly_found.rs` and Call to Chaos (Scape Edition), and absent for any other `replace_board`. The laid board is public, so this reveals nothing hidden. Keep old logs folding unchanged with `skip_serializing_if`. Regenerate `wire/` and the golden trace if it moves, and rule it.\n2. **Each Anomaly's own picture.** An Anomaly Found! in your hand draws the board its code names, from ten pictures in the set's deep-space style:\n   - Wormhole: rings folding into a tunnel of light;\n   - Battlefields: wreck-strewn space with the Battleship's silhouette;\n   - the four Asteroid Fields, each with its own rock: large, small, Narcour's red crystal and Axnit's veined ore;\n   - Wrecked Spice Platform: a broken refinery venting spice;\n   - Monument: a colossal relic in the void;\n   - Drone Hideouts: a rock honeycombed with drone eyes;\n   - Frontier Outpost: a lit station at the edge of the map.\n\n   A Radiant face draws its rich board. The code stays printed for a player who reads it.\n3. **The scan finds it.** When a Scanning Probe's scan adds an Anomaly Found!:\n   - for its owner, a radar sweep crosses the board from the probe, pings, and the card flies from the ping into the hand, a strong flash for a Radiant one;\n   - for the opponent, the sweep only, with no ping and no card (R202).\n\n   A scan that finds nothing sweeps and fades.\n4. **Space tears open, and the side falls in.** Casting it plays as one set piece within its hold cap:\n   - a rift tears down the middle of the caster's side;\n   - every card on it is pulled in, as its `exiled` events say;\n   - the rift flares white;\n   - the Anomaly's **title card** stamps across the screen (its name, in the set's display face over its picture);\n   - the new board's cards fall out of the rift onto their zones as their `summoned` events say, the asteroids tumbling into place and the drones powering on;\n   - every Cry that fires plays its own row after that.\n\n   `bigMoments` short shows only the title card and the landing, off the title card alone, and reduced motion a still title card.\n5. **A standing backdrop.** While an Anomaly's board stands (until the caster's side is replaced again or the game ends), the caster's half of the field wears a faint backdrop of it: the wormhole's rings, asteroid drift, the outpost's lights. It is quiet and below the cards, counts as an aura (`fx/aura`), and is off under reduced motion.\n6. **Sound.** Each Anomaly has a short sting of its own: a hum for the Wormhole, rumbling rock for the Asteroid Fields, and so on. They are made in code as `audio/sfx.ts`'s are, or cut from the Stinkyscape music.\n7. **Table entries.** The probes and Anomaly Found! get signature entries per #3332 when it lands, and bespoke recipes until then.\n\n## Acceptance\n\n- `BoardReplaced.anomaly` is set for all ten boards and absent elsewhere. It has an engine test per board, `wire/` is regenerated, the golden check passes, and old logs fold unchanged.\n- All ten Anomaly pictures differ from each other and from today's spiral, base and Radiant. A test reads each code to its picture.\n- A component spec plays each of these at desktop size and at 390x844:\n  - the scan's three outcomes (found, found Radiant, nothing) for the owner, and for the opponent;\n  - the cast for three different Anomalies;\n  - each `bigMoments` form;\n  - the standing backdrop.\n- `fx-phone-frame.cy.tsx` covers the cast within `FX_PHONE_FRAME_BUDGET_MS`.\n- A test shows the opponent's view of a found Anomaly carries no ping or card (R202).\n- The rulings are in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and there is a `--visual` fragment.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes with a clean `wire/`. `cargo jackioh golden check`, `cargo jackioh fuzz --seeds 200`, the web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3337: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:47:23Z",
+    "claimed_at": "2026-11-07T00:01:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3348 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first",
+    "#3331 skipped: it waits for #3017 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3343 skipped: it waits for #3017 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first"
+  ]
+}
