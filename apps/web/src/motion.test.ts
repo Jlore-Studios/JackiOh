@@ -64,7 +64,7 @@ const KEEP: Record<string, string[]> = {
 
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
 const ANIM_SCALED: Record<string, number> = {
-  "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 12, "game/drag/blocked.css": 1, "game/facedown.css": 2,
+  "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 13, "game/drag/blocked.css": 1, "game/facedown.css": 2,
   "game/dialog.css": 1, "game/highlights.css": 2, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
 };
 
@@ -94,13 +94,13 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "game/table.css": 27,
   "packs/pack-object.css": 12,
   "packs/packs.css": 4,
-  "practice/practice.css": 45,
+  "practice/practice.css": 42,
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,
   "routes/lobby.css": 14,
   "routes/stats.css": 4,
-  "settings/settings.css": 14,
+  "settings/settings.css": 12,
   "shop/shop.css": 1,
   "skeleton/skeleton.css": 2,
   "tutorial/tutorial.css": 20,

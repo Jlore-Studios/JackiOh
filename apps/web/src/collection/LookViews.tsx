@@ -115,7 +115,7 @@ export default function LookViews({
       form === "minion" ? (
         <MinionFace face={face} unit={boardUnitOf(def, radiant)} worn={worn} />
       ) : (
-        <CardFace face={face} layout={form === "backrow" ? "compact" : "full"} worn={worn} />
+        <CardFace face={face} layout={form === "backrow" ? "compact" : "full"} worn={worn} onBoard={form === "backrow"} />
       ),
   };
   return (

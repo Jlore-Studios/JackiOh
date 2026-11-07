@@ -161,6 +161,12 @@ describe("QuestsList's Replace", () => {
     expect(screen.getByRole("alertdialog", { name: "Replace this quest?" })).toHaveTextContent(
       "You lose its progress and get a different quest.",
     );
+    // R3221000: the safe choice comes first, the act last.
+    const answers = screen.getByRole("alertdialog").querySelectorAll("button");
+    expect([...answers].map((answer) => answer.getAttribute("data-testid"))).toEqual([
+      questsTestid.replaceCancel,
+      questsTestid.replaceConfirm,
+    ]);
     fireEvent.click(screen.getByTestId(questsTestid.replaceCancel));
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(replaceQuest).not.toHaveBeenCalled();

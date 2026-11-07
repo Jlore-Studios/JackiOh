@@ -1,10 +1,15 @@
 // The end of a lesson (tutorial/TutorialResult.tsx): a win, a loss, and a concede that says so (R2434002).
+// R3221000: it draws through Dialog.tsx, a layer of its own, where its ✕, Escape, Back and a click outside
+// the panel mean View the board.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TURN_CAP_PLAYER_TURNS } from "@jackioh/engine/config";
 
+import { dialogTestid } from "../game/Dialog.tsx";
+import { pressBack } from "../test/history.ts";
+import { at } from "../test/stubServer.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
 import { __resetTutorialProgressForTests, lessonStatus, readTutorialProgress } from "./progress.ts";
 import { tutorialTestid } from "./testids.ts";
@@ -181,5 +186,45 @@ describe("the end of a lesson", () => {
     fireEvent.click(screen.getByTestId(tutorialTestid.viewBoard));
     fireEvent.keyDown(window, { key: "Escape" });
     expect(on.onViewBoard).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("R3221000 a lesson's result is a dialog", () => {
+  it("R3221000 it draws through Dialog, and its ✕ and a click outside the panel view the board", () => {
+    const on = handlers();
+    render(
+      <TutorialResult result={{ winner: "p2", reason: "hero-death" }} viewer="p1" lesson={lesson(1)} next={lesson(2)} unlockedNow {...on} />,
+    );
+    const dialog = screen.getByTestId(tutorialTestid.result);
+    expect(dialog).toHaveClass("dialog", "practice-result", "tutorial-result");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAttribute("data-lesson", lesson(1).id);
+    expect(dialog).toHaveAccessibleDescription("Your hero has fallen this time.");
+    expect(screen.getByTestId(tutorialTestid.retry)).toHaveClass("button-primary");
+    expect(screen.getByTestId(tutorialTestid.back)).toHaveClass("button-secondary");
+
+    const close = screen.getByTestId(dialogTestid.close);
+    expect(close).toHaveAccessibleName("Close");
+    fireEvent.click(close);
+    const scrim = dialog.parentElement;
+    if (scrim === null) throw new Error("no scrim");
+    fireEvent.click(scrim);
+    fireEvent.click(dialog);
+    expect(on.onViewBoard).toHaveBeenCalledTimes(2);
+    expect(on.onRetry).not.toHaveBeenCalled();
+    expect(on.onBack).not.toHaveBeenCalled();
+  });
+
+  it("R3221000 Back views the board and keeps the address (amends R2127000)", async () => {
+    at("/decks");
+    window.history.pushState(null, "", "/practice");
+    const on = handlers();
+    render(
+      <TutorialResult result={{ winner: "p1", reason: "hero-death" }} viewer="p1" lesson={lesson(1)} next={lesson(2)} unlockedNow {...on} />,
+    );
+    await pressBack();
+    expect(on.onViewBoard).toHaveBeenCalledTimes(1);
+    expect(on.onBack).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/practice");
   });
 });

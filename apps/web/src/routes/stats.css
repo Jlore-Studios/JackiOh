@@ -476,57 +476,24 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Modal drill-down */
-.stats-modal-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.stats-drilldown-modal {
-  position: relative;
+/* Modal drill-down: a Dialog (Dialog.tsx, R3221000), its scrim, border, shadow and ✕ the dialog's; the
+   title runs over the body, clear of the ✕, and the body scrolls under it. */
+.dialog.stats-drilldown-modal {
+  align-items: stretch;
+  gap: 0;
   background: #11141e;
-  border: 1px solid var(--line-bright, #454d66);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   max-width: 760px;
   width: 100%;
   max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  padding: 0;
   overflow: hidden;
+  text-align: start;
 }
 
-.stats-drilldown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
+.dialog.stats-drilldown-modal .dialog__title {
+  padding: var(--space-7) calc(var(--space-11) + var(--space-6)) var(--space-7) var(--space-8);
   border-bottom: 1px solid var(--line, #2c3245);
-}
-
-.stats-drilldown-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.stats-drilldown-close {
-  background: none;
-  border: none;
-  color: var(--text-dim, #9aa1b8);
-  font-size: 18px;
-  cursor: var(--cursor-glove-point, pointer);
-  padding: 4px 8px;
-}
-
-.stats-drilldown-close:hover {
-  color: #fff;
 }
 
 /* The row keeps its items at their own height: stretched to the details column, the preview gave

@@ -293,6 +293,8 @@ The browser's Back, and Android's back gesture, close the topmost open sheet or 
 
 A dialog is one component ([[R3220000]]): a `dialog` closes by its ✕ at its top right and an `alertdialog` by its Cancel, and its title is an `h2`. Its answers run from the safe choice, first and holding the focus, to the act, last at the right, with a `danger` answer always last. Escape, Back and a click outside close it, Tab stays inside it, and the focus goes back to its opener unless the caller has moved it. Presentation only (CLAUDE.md rule 7).
 
+The menus' dialogs draw through it too ([[R3221000]]), and a panel that slides in is its sheet: centred on a wide screen, at the foot of an upright phone and down the right edge of a phone on its side. Escape and Tab go to the top layer alone, so a dialog opened over another closes first, one per Escape as one per Back.
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.
