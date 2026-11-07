@@ -14695,9 +14695,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-07T17:29:53Z",
-      "owner_why": "its turn came (it waited 120 minutes for #3372, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "",
+      "owner_since": "2026-11-07T17:37:23Z",
+      "owner_why": "released from its hold: `claude-3` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-07T09:16:58Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -16641,13 +16641,6 @@
       "failures": 0,
       "feedback_since": "2026-11-07T12:51:03Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-07T19:34:36Z",
-        "owner": "claude-3",
-        "since": "2026-11-07T17:34:36Z",
-        "until": "2026-11-07T17:50:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 3335,
       "kind": "revise",
@@ -16680,13 +16673,6 @@
       "started_at": "2026-11-07T14:54:24Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-07T17:29:53Z",
-        "until": "2026-11-07T17:59:53Z",
-        "why": "it waited 120 minutes for #3372, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
