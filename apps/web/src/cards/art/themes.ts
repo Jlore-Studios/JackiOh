@@ -13,7 +13,8 @@ export type ArtThemeId =
 
 export type MoteShape = "dot" | "drop" | "pixel";
 
-export type Composition = "figure" | "burst" | "landscape" | "sigil";
+/** R3338001: "void" is no type's; Ceaseless Void draws it as a composition of its own (`CARD_COMPOSITIONS`). */
+export type Composition = "figure" | "burst" | "landscape" | "sigil" | "void";
 
 export type ThemePalette = {
   sky: readonly [string, string];
@@ -63,6 +64,17 @@ export function themeFor(tags: readonly Tag[], type: CardType): ArtThemeId {
 
 export function compositionFor(type: CardType): Composition {
   return TYPE_COMPOSITIONS[type];
+}
+
+/**
+ * R3338001: the cards that draw a composition of their own in place of their type's: Ceaseless Void, a void
+ * given form, is a hole in the shape of a giant (procedural.ts `voidGiant`), not a Unit's figure.
+ */
+export const CARD_COMPOSITIONS: Readonly<Record<string, Composition>> = { "core-100": "void" };
+
+/** R3338001: the composition a card's procedural picture draws: its own (`CARD_COMPOSITIONS`), else its type's. */
+export function compositionOf(defId: string, type: CardType): Composition {
+  return Object.hasOwn(CARD_COMPOSITIONS, defId) ? (CARD_COMPOSITIONS[defId] ?? compositionFor(type)) : compositionFor(type);
 }
 
 export const THEME_PALETTES: Readonly<Record<ArtThemeId, ThemePalette>> = {

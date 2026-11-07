@@ -20,7 +20,7 @@ import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryCardEvents, galleryFieldView, galleryPlayOf, type GalleryCardPlay } from "../motifs/gallery.ts";
 import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
-import { hasSetPiece } from "../setPieces.ts";
+import { hasSetPiece, signatureRunOf } from "../setPieces.ts";
 import type { FxPlanEnv } from "../types.ts";
 import rawTable from "./stinkyscape-1.md?raw";
 import { FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
@@ -74,11 +74,12 @@ function envOf(): FxPlanEnv {
 function draws(defId: string, play: GalleryCardPlay, events: readonly GameEvent[], view: PlayerView): boolean {
   const env = envOf();
   let drawn = false;
-  for (const planned of planEntries(events, withEvents(view, [...events]), false, undefined, hasSetPiece)) {
+  for (const planned of planEntries(events, withEvents(view, [...events]), false, undefined, hasSetPiece, signatureRunOf)) {
     env.memory.remember(planned.events);
     if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
     if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
-    if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+    // R3338000: a Terminus card's set piece is its signature's, a board clear's its wipe's.
+    if (play.kind === "setPiece" && (planned.wipe?.by === defId || planned.signature?.by === defId)) drawn = true;
   }
   return drawn;
 }

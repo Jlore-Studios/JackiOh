@@ -23,7 +23,9 @@ export type SfxId =
   | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
-  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral";
+  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
+  | "organ";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -38,7 +40,8 @@ export type SfxParams = {
   /**
    * damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP].
    * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
-   * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
+   * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1). organ
+   * (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1).
    */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */

@@ -1676,9 +1676,9 @@ button.modifier-badge[data-open="true"] {
    (`data-set-piece-sides`): each lane bends by `--set-piece-bend`, -2 at the left to 2 at the right,
    the two sides turning opposite ways into one spiral, until 90% of the hold, and then snaps flat.
    Every card the wipe takes is drawn in along it, spun and swallowed at the vortex's centre (the
-   effects layer's `pull` sets `--fx-pull-x/y` and `data-fx-pulled`); under the fold it sinks into the
-   black where it stands. The effects layer conceals it at the swallow. None of it plays under Reduce
-   motion, which holds nothing. Transform and opacity only. */
+   effects layer's `pull` sets `--fx-pull-x/y` and `data-fx-pulled`); under the fold it is drawn into
+   the Void's chest in its turn (R3338000). The effects layer conceals it at the swallow. None of it
+   plays under Reduce motion, which holds nothing. Transform and opacity only. */
 .game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="1"] {
   --set-piece-bend: -2;
 }
@@ -1721,9 +1721,98 @@ button.modifier-badge[data-open="true"] {
   animation-delay: 0ms;
 }
 
+/* R3338000: the fold draws each card into the Void's chest in its turn (`--fx-pull-delay`, over its
+   `--fx-pull-ms`), as its removals say; Farewell's lamp lifts each into its light and fades it. */
 .game:not([data-reduced-motion="true"])[data-set-piece-shape="fold"] .board .card[data-fx-pulled] {
-  animation: set-piece-sink var(--set-piece-hold, 0ms) var(--ease-in-out) both;
-  animation-delay: 0ms;
+  animation: set-piece-chest var(--fx-pull-ms, var(--set-piece-hold, 0ms)) var(--ease-in) both;
+  animation-delay: var(--fx-pull-delay, 0ms);
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="lamp"] .board .card[data-fx-pulled] {
+  animation: set-piece-lift var(--fx-pull-ms, var(--set-piece-hold, 0ms)) var(--ease-in-out) both;
+  animation-delay: var(--fx-pull-delay, 0ms);
+}
+
+@keyframes set-piece-chest {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fx-pull-x, 0px), var(--fx-pull-y, 0px)) scale(0.15);
+    opacity: 0;
+  }
+}
+
+@keyframes set-piece-lift {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  60% {
+    transform: translate(calc(var(--fx-pull-x, 0px) * 0.3), calc(var(--fx-pull-y, 0px) * 0.3)) scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(calc(var(--fx-pull-x, 0px) * 0.6), calc(var(--fx-pull-y, 0px) * 0.6)) scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* R3338000: Event Horizon bends the board toward its centre (the vortex's lanes, no turn), and The Big
+   Crunch collapses the field into its point; each snaps back as its hold ends. */
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="bend"] .field .zone[data-lane="1"] {
+  --set-piece-bend: -2;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="bend"] .field .zone[data-lane="2"] {
+  --set-piece-bend: -1;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="bend"] .field .zone[data-lane="4"] {
+  --set-piece-bend: 1;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="bend"] .field .zone[data-lane="5"] {
+  --set-piece-bend: 2;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="bend"] .field .zone {
+  animation: set-piece-bend var(--set-piece-hold, 0ms) var(--ease-in-out) both;
+}
+
+@keyframes set-piece-bend {
+  0% {
+    transform: none;
+  }
+  90% {
+    transform: translateX(calc(var(--set-piece-bend, 0) * -12%)) scale(0.82, 0.94);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="crunch"] .field {
+  animation: set-piece-crunch var(--set-piece-hold, 0ms) var(--ease-in) both;
+}
+
+@keyframes set-piece-crunch {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  85% {
+    transform: scale(0.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
 }
 
 @keyframes set-piece-swallow {
@@ -1736,17 +1825,6 @@ button.modifier-badge[data-open="true"] {
   }
   100% {
     transform: translate(var(--fx-pull-x, 0px), var(--fx-pull-y, 0px)) rotate(540deg) scale(0);
-    opacity: 0;
-  }
-}
-
-@keyframes set-piece-sink {
-  0% {
-    transform: none;
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.6) rotate(-12deg);
     opacity: 0;
   }
 }

@@ -134,6 +134,8 @@ export type FxRollCue = {
   items: readonly FxRollItem[];
   delayMs: number;
   durationMs: number;
+  /** R3338000: Dice of Doom's d100, a big die tumbling across the board into the panel's place. */
+  look?: "doom";
 };
 /** A small glyph a DOM cue draws (an emblem of `cards/art/emblems.ts`): SVG path data in a 24×24 box. */
 export type FxIcon = { d: string; rule: "nonzero" | "evenodd" };
@@ -161,7 +163,12 @@ export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint
  * black, the light coming back at `at`). `holdMs` is when the cards are swallowed, `spin` which way the
  * spiral turns, and `side` the one side it darkens (null: both). It names no card (R202).
  */
-export type SetPieceShape = "vortex" | "fold";
+export type SetPieceShape = "vortex" | "fold" | "rift" | "lamp" | "chalk" | "bend" | "freeze" | "abyss" | "crunch" | "doom";
+/**
+ * R3338000: the Terminus cards' shapes join them, each its card's own (fx/terminus/): `beats` are the
+ * moments inside the cue its parts mark one by one (ms from its start: a star lighting, a lane chaining
+ * shut), and `still` is the one frame Reduce Motion shows, holding nothing.
+ */
 export type FxSetPieceCue = {
   kind: "setPiece";
   shape: SetPieceShape;
@@ -172,6 +179,8 @@ export type FxSetPieceCue = {
   holdMs: number;
   delayMs: number;
   durationMs: number;
+  beats?: readonly number[];
+  still?: true;
 };
 /**
  * R2801000: a Starship's launch over it, `at`: a 3-2-1 countdown, each count popping in at its
@@ -206,7 +215,11 @@ export type FxZoneCue = {
  * piece swallows it; a `conceal` hides it at the swallow. The stage undoes it at `durationMs`, or when
  * the board shows its next view.
  */
-export type FxPullCue = { kind: "pull"; testid: string; to: FxAnchor; delayMs: number; durationMs: number };
+/**
+ * R3338000: `staggerMs`, how long into the hold this card waits before it is drawn in (one after another),
+ * and `travelMs`, how long it takes to get there.
+ */
+export type FxPullCue = { kind: "pull"; testid: string; to: FxAnchor; delayMs: number; durationMs: number; staggerMs?: number; travelMs?: number };
 
 /** B46–B48 stage cues come from `stage.ts`, not the S7 recipe table. `hold` waits for board catch-up (BUILD M5-T4); `durationMs` is a safety cap (R200). */
 export type FxHoldCue = {
@@ -336,6 +349,13 @@ export type FxMemory = {
   recent(): readonly GameEvent[];
   /** R2789000: the targets `attackerId` declared attacks on since the last `turnStarted`, oldest first. */
   attacksThisTurn(attackerId: string): readonly string[];
+  /**
+   * R3338000: the Terminus card whose turn the last `remember` opened (Event Horizon's extra turn, Last
+   * Word's last one), when its events started a turn that card owed; else undefined.
+   */
+  opening(): { defId: string; player: PlayerId } | undefined;
+  /** R3338000: the outermost play of `defId` still resolving (The Big Crunch's, around its casts), or undefined. */
+  openPlay(defId: string): FxPlay | undefined;
   clear(): void;
 };
 

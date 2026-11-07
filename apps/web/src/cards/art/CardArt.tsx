@@ -21,6 +21,8 @@
 // the painter's in place of a delivered file.
 // R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
 // (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
+// R3338001: a procedural picture draws the card's own composition where it has one (themes.ts `compositionOf`:
+// Ceaseless Void's giant-shaped hole), else its type's.
 // R3333000: a Starship's art is drawn from the pieces its view lists, oldest first, and its launch, in the hull design
 // of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`).
 
@@ -40,7 +42,7 @@ import { starshipArtOf } from "./starshipHulls.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
 import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
-import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
+import { compositionOf, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
 
@@ -169,7 +171,7 @@ export function CardArt({
           ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
           : coreId !== null
             ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-            : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, restyle, split);
+            : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, motion, restyle, split);
   const family =
     starship !== null
       ? "starship"
