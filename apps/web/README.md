@@ -107,6 +107,22 @@ each role inside and outside `.tavern`, finds no other sheet restating a role's 
 it replaced, and holds the button skins that remain no role's (the top bar's, card-like tiles, pressed
 toggles) to each sheet's count in `UNROLED`.
 
+The dialogs are one component (#3220, R3220000): `Dialog` in `src/game/Dialog.tsx`, drawn by
+`src/game/dialog.css`. A caller gives it its `role` (`dialog` or `alertdialog`), its `h2` `title`, an
+optional `description` (the panel's accessible description), `onClose`, its `actions` (each a label, a
+role among `primary`, `secondary` and `danger`, an `onClick` and a testid), its `testid`, and optionally a
+`className` that restyles the panel only, `data-*` attributes, a `header` above the title, `children`
+under the line and a `footer` under the row. An `alertdialog` takes a `cancel` too, the safe choice, which
+is its close and draws no ✕; a `dialog` draws a ✕ named "Close" at its top right (`dialog-close`). The row
+runs in one order: the safe choice first, holding the focus, then the actions as given with a `danger` one
+moved last, at the right; three answers put the first on a row of its own, and at 360 px and under the
+row stacks in the same order. Its scrim is one color at `--z-dialog` (`surfaces.css`), and its keys are
+`useModalKeys`'s (`together/modalKeys.ts`), whose third argument, the control to focus, also gives the
+focus back to the opener on close unless the caller has moved it: Escape, Back (a layer) and a click on
+the scrim close it, and Tab stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
+`ConfirmLeaveFight` and `PracticeResult` draw through it; `PracticeResult` keeps its look through
+`practice-result`, and its ✕, Escape, Back and a click outside view the board.
+
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
 language, the gear, so Back is the leftmost control and the gear the rightmost. On a phone (600 px, the touch
@@ -210,7 +226,7 @@ A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` 
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms and the practice result, through it), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -264,7 +280,7 @@ present for exactly that window.
   route for exactly the window) shows it on both sides, the seat that is ready included, as
   `data-kind="mulligan"` over `MULLIGAN_CLOCK_MS`, with no turn clock.
 
-**Concede asks first** (`ConfirmConcede.tsx`, mounted by `Game.tsx`, so every mode has it). The
+**Concede asks first** (`ConfirmConcede.tsx`, drawn through `Dialog.tsx` and mounted by `Game.tsx`, so every mode has it). The
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
