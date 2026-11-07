@@ -16282,10 +16282,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-1",
+        "built_by": "claude-2",
         "rejections": [],
         "reviews": [],
-        "sha": "60400aceee292a51a63eda82e651948fa2b94c7d",
+        "sha": "f1097d1c1870a389b6e7a306736bf0d826d053ef",
         "tiers": {}
       }
     },
