@@ -5,6 +5,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ANOMALY_CODES } from "../cards/anomalies.ts";
+import { anomalyMarkup } from "../cards/art/svg.ts";
 import { mountDomEffect, type DomEffect } from "./dom.ts";
 import type { FxBox, FxDomCue } from "./types.ts";
 
@@ -256,17 +258,42 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(mountDomEffect(root, rift, {})).toBeNull();
   });
 
-  it("R3337003 anomalyTitle mounts its picture and its name, never as a text node; still when asked", () => {
-    const title: FxDomCue = { kind: "anomalyTitle", at: anchor, text: "Wormhole", picture: "data:image/svg+xml,%3Csvg%3E", tint: TINT, delayMs: 0, durationMs: 1800 };
+  it("R3337003 anomalyTitle draws its picture in place and its name, never as a text node or an image; still when asked", () => {
+    const markup = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#123456"/></svg>';
+    const title: FxDomCue = { kind: "anomalyTitle", at: anchor, text: "Wormhole", picture: markup, tint: TINT, delayMs: 0, durationMs: 1800 };
     const el = expectMounted(mountDomEffect(root, title, { at: AT }), title);
     expect([...el.children].map((child) => child.className)).toEqual(["fx-anomalyTitle-picture", "fx-anomalyTitle-name"]);
-    expect(cssVar(el.querySelector<HTMLElement>(".fx-anomalyTitle-picture") as HTMLElement, "--fx-picture")).toBe('url("data:image/svg+xml,%3Csvg%3E")');
+    const picture = el.querySelector<HTMLElement>(".fx-anomalyTitle-picture") as HTMLElement;
+    // B27: drawn as the layer's own elements, no image and no url().
+    const svg = picture.firstElementChild;
+    expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(svg?.querySelector("rect")?.getAttribute("fill")).toBe("#123456");
+    expect(picture.getAttribute("style") ?? "").toBe("");
+    expect(el.querySelector("img")).toBeNull();
     expect(el.querySelector(".fx-anomalyTitle-name")?.getAttribute("data-text")).toBe("Wormhole");
     expect(el.hasAttribute("data-still")).toBe(false);
     expect(textNodeCount(el)).toBe(0);
     el.remove();
     const still = expectMounted(mountDomEffect(root, { ...title, still: true }, { at: AT }), { ...title, still: true });
     expect(still.getAttribute("data-still")).toBe("true");
+    still.remove();
+    const broken = expectMounted(mountDomEffect(root, { ...title, picture: "<svg" }, { at: AT }), { ...title, picture: "<svg" });
+    expect(broken.querySelector(".fx-anomalyTitle-picture")?.childElementCount).toBe(0);
+    broken.remove();
+    // Every board's own picture draws whole, with no text node, its ids scoped to it.
+    for (const code of ANOMALY_CODES) {
+      for (const radiant of [false, true]) {
+        const drawn: FxDomCue = { ...title, picture: anomalyMarkup(code, radiant) };
+        const board = expectMounted(mountDomEffect(root, drawn, { at: AT }), drawn);
+        const svg = board.querySelector(".fx-anomalyTitle-picture > svg");
+        expect(svg, code).not.toBeNull();
+        expect(textNodeCount(board), code).toBe(0);
+        const ids = [...board.querySelectorAll("[id]")].map((node) => node.id);
+        expect(ids.length, code).toBeGreaterThan(0);
+        for (const id of ids) expect(id.startsWith(`anomaly-${code}-${radiant ? "radiant" : "base"}-`), `${code} ${id}`).toBe(true);
+        board.remove();
+      }
+    }
   });
 
   it("R3337002 radar mounts one wedge from the caster's hand; a ghost out of a rift may spin", () => {

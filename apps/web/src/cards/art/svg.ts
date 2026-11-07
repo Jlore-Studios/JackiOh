@@ -21,7 +21,8 @@ import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMark
 import type { MotifId } from "./motifs.ts";
 import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
-import { ANOMALY_SEED_PREFIX, anomalySvg, starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
+import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
+import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -217,13 +218,27 @@ export function proceduralArtUri(
   return uri;
 }
 
-/** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
-export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean, restyle: ArtRestyle | null = null): string {
-  const key = `starship|${pieces}|${launched}|${radiant}${restyleKey(restyle)}`;
+/**
+ * R2249000, R3333000: a Starship's art as a data URI, cached on what it draws from (`starshipArtKey`): its pieces by
+ * id and face oldest first, its launch, its design, its livery and its face.
+ */
+export function starshipArtUri(ship: StarshipArt, restyle: ArtRestyle | null = null): string {
+  const key = `${starshipArtKey(ship)}${restyleKey(restyle)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(restyled(starshipSvg(pieces, launched, radiant), restyle, radiant, STARSHIP_SKETCH_SEED))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(starshipSvg(ship), restyle, ship.radiant, STARSHIP_SKETCH_SEED))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3333002: a piece's module icon (stinkyscape.ts `starshipModuleIconSvg`) as a data URI, cached by the piece and its face. */
+export function starshipModuleIconUri(defId: string, radiant: boolean): string {
+  const key = `starship-module|${defId}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleIconSvg(defId, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
@@ -240,6 +255,24 @@ export function anomalyArtUri(code: AnomalyCode, radiant: boolean, restyle: ArtR
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(anomalySvg(code, radiant), restyle, radiant, `${ANOMALY_SEED_PREFIX}${code}`))}`;
   proceduralCache.set(key, uri);
   return uri;
+}
+
+/** R3337003: where an inlined picture names an id: its `id` attributes and the `url(#…)` paints that point at them. */
+const INLINE_ID = /(?<=\s)id="|url\(#/g;
+
+/**
+ * R3337003: the same picture as SVG markup the effects layer draws in place (the title card's, fx/dom.ts), no image
+ * (B27); its ids are scoped to its board and face so they meet no other drawing's in the page. Cached apart.
+ */
+export function anomalyMarkup(code: AnomalyCode, radiant: boolean): string {
+  const key = `anomaly-markup|${code}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const scope = `${ANOMALY_SEED_PREFIX}${code}-${radiant ? "radiant" : "base"}-`;
+  const markup = anomalySvg(code, radiant).replace(INLINE_ID, (head) => `${head}${scope}`);
+  proceduralCache.set(key, markup);
+  return markup;
 }
 
 /**

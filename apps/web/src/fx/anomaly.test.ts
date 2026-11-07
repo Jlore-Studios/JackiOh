@@ -9,7 +9,7 @@ import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared"
 import { describe, expect, it } from "vitest";
 
 import { ANOMALIES, ANOMALY_CODES, type AnomalyCode } from "../cards/anomalies.ts";
-import { anomalyArtUri } from "../cards/art/svg.ts";
+import { anomalyMarkup } from "../cards/art/svg.ts";
 import {
   ANOMALY_LAND_MS,
   ANOMALY_RIFT_HOLD_MS,
@@ -153,7 +153,7 @@ describe("R3337003 an Anomaly's set piece", () => {
       const { entry, view } = riftEntry(code, ANOMALY_RIFT_HOLD_MS);
       const cues = planAnomaly(entry, view, env())?.cues ?? [];
       const title = cues.find((cue) => cue.kind === "anomalyTitle");
-      expect(title, code).toMatchObject({ at: { kind: "viewport", at: FX_CENTER }, text: ANOMALIES[code].name, picture: anomalyArtUri(code, ANOMALIES[code].rich) });
+      expect(title, code).toMatchObject({ at: { kind: "viewport", at: FX_CENTER }, text: ANOMALIES[code].name, picture: anomalyMarkup(code, ANOMALIES[code].rich) });
       const named = JSON.stringify(cues.filter((cue) => cue.kind !== "anomalyTitle"));
       expect(named, code).not.toMatch(/stinkyscape-|core-/);
     }

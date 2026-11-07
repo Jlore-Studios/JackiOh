@@ -7,14 +7,15 @@
 // rule 7): no definition reaches the page (R202).
 //
 // R3337003: an Anomaly's backdrop is a side aura that also carries its board's code (`data-anomaly`) and
-// picture (`--aura-picture`), both public (R202); reduced motion plans none.
+// its faint picture, the card art's own (cards/art `CardArt`, never an image of this layer's, B27), both
+// public (R202); reduced motion plans none.
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
-import type { PlayerId, PlayerView } from "@jackioh/shared";
+import type { PlayerId, PlayerView, Tag } from "@jackioh/shared";
 
-import { ANOMALIES, type AnomalyCode } from "../../cards/anomalies.ts";
-import { anomalyArtUri } from "../../cards/art/svg.ts";
+import { ANOMALIES, ANOMALY_FOUND_ID, type AnomalyCode } from "../../cards/anomalies.ts";
+import { CardArt } from "../../cards/art/CardArt.tsx";
 import { newEventsSince, reducedMotionNow } from "../../game/animations.ts";
 import { byTestid } from "../../game/contract.ts";
 import { useSetting } from "../../settings/store.ts";
@@ -70,6 +71,8 @@ export type AuraLayerProps = {
 
 export const AURA_LAYER_TESTID = "aura-layer";
 export const AURA_CANVAS_TESTID = "aura-canvas";
+/** R3337003: an Anomaly's backdrop draws its board, which no tag details. */
+const NO_TAGS: readonly Tag[] = [];
 
 /** The union of the zones' boxes, or null while one of them is not on the page or it is empty. */
 export function measureZones(testids: readonly string[]): FxBox | null {
@@ -267,7 +270,6 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
         const [, body, glow] = aura.spec.colors;
         const { anomaly } = aura.spec;
         const style = {
-          ...(anomaly === undefined ? {} : { "--aura-picture": `url("${anomalyArtUri(anomaly, ANOMALIES[anomaly].rich)}")` }),
           left: box.x,
           top: box.y,
           width: box.width,
@@ -290,7 +292,11 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
             data-aura-phase={aura.phase}
             data-anomaly={anomaly}
             style={style}
-          />
+          >
+            {anomaly === undefined ? null : (
+              <CardArt className="aura-picture" defId={ANOMALY_FOUND_ID} anomaly={anomaly} radiant={ANOMALIES[anomaly].rich} tags={NO_TAGS} type="Spell" shape="full" />
+            )}
+          </div>
         );
       })}
     </div>

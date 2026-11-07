@@ -10,8 +10,9 @@
  * never carries `data-animating` and adds no scrollable width. Under reduced motion, the media query or
  * the settings panel's `data-reduce-motion`, nothing moves and the tint and the edge stand still.
  *
- * R3337003: an Anomaly's backdrop (`.aura[data-anomaly]`) fills its tint with the board's faint picture
- * (`--aura-picture`), under the motes; reduced motion shows none (the layer plans none then, too).
+ * R3337003: an Anomaly's backdrop (`.aura[data-anomaly]`) wears the board's faint picture in place of its
+ * tint, the card art's own (`.aura-picture`, a `.cf-art--full` of cards/art), under the motes; reduced
+ * motion shows none (the layer plans none then, too).
  */
 
 .aura-layer {
@@ -53,10 +54,16 @@
   opacity: var(--aura-tint);
 }
 
-/* A standing aura makes no stacking context of its own, so the layer's lays the picture under the motes' canvas. */
 .aura[data-anomaly]::before {
+  content: none;
+}
+
+/* A standing aura makes no stacking context of its own, so the layer's lays the picture under the motes' canvas. */
+.aura[data-anomaly] > .aura-picture {
+  position: absolute;
+  inset: 0;
   z-index: var(--z-below);
-  background: var(--aura-picture) center / cover no-repeat;
+  border-radius: inherit;
   opacity: 0.14;
   mix-blend-mode: screen;
   pointer-events: none;

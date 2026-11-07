@@ -2633,7 +2633,9 @@
    centred on that side's middle unit zone and reaching over its backrow. From `--fx-tear` a jagged slit
    tears open, every card it takes is drawn into it (board.css, the stage's `pull`), and at `--fx-flare`
    it flares white; it stays open while the new board's cards fall out of it, and closes with the entry.
-   The slit's outline is a fixed clip-path; only its scale and opacity move. It names no card (R202). */
+   The slit's outline is a fixed clip-path its three layers share (its rim, its glow, its dark throat),
+   and only its scale and opacity move. Its layers, flare and title name their radius, layer and shadow
+   from surfaces.css and draw no gradient (#2109). It names no card (R202). */
 
 .fx-rift {
   left: var(--fx-x);
@@ -2641,7 +2643,7 @@
   width: calc(var(--fx-w, 82px) * 1.6);
   height: calc(var(--fx-h, 110px) * 2.4);
   translate: -50% -50%;
-  z-index: 3;
+  z-index: var(--z-overlay);
   animation: fx-rift-in var(--fx-ms) linear both;
 }
 
@@ -2665,17 +2667,27 @@
   position: absolute;
   inset: 0 25%;
   clip-path: polygon(50% 0%, 62% 12%, 54% 24%, 70% 38%, 58% 52%, 72% 66%, 56% 80%, 64% 92%, 50% 100%, 38% 90%, 46% 76%, 28% 62%, 42% 48%, 30% 34%, 46% 22%, 36% 10%);
-  background: radial-gradient(
-    ellipse 50% 50% at 50% 50%,
-    var(--fx-ink) 0%,
-    var(--fx-ink) 32%,
-    var(--fx-tint-core) 56%,
-    var(--fx-tint-glow) 78%,
-    var(--fx-tint-rim) 100%
-  );
+  background: var(--fx-tint-rim);
   opacity: 0;
   transform-origin: 50% 50%;
-  animation: fx-rift-tear calc(var(--fx-flare) - var(--fx-tear)) cubic-bezier(0.5, 0, 0.2, 1) var(--fx-tear) forwards;
+  animation: fx-rift-tear calc(var(--fx-flare) - var(--fx-tear)) var(--ease-standard) var(--fx-tear) forwards;
+}
+
+.fx-rift-tear::before,
+.fx-rift-tear::after {
+  content: "";
+  position: absolute;
+  clip-path: inherit;
+}
+
+.fx-rift-tear::before {
+  inset: 4% 16%;
+  background: var(--fx-tint-glow);
+}
+
+.fx-rift-tear::after {
+  inset: 10% 32%;
+  background: var(--fx-ink);
 }
 
 @keyframes fx-rift-tear {
@@ -2697,13 +2709,16 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 260%;
+  width: 90%;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, #fff 18%, color-mix(in srgb, var(--fx-tint-glow) 60%, transparent) 44%, transparent 70%);
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
+  box-shadow:
+    0 0 24px 16px color-mix(in srgb, var(--pal-white) 85%, transparent),
+    0 0 72px 56px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
   opacity: 0;
-  animation: fx-rift-flare 460ms ease-out var(--fx-flare) both;
+  animation: fx-rift-flare var(--motion-slow) var(--ease-out) var(--fx-flare) both;
 }
 
 @keyframes fx-rift-flare {
@@ -2723,8 +2738,8 @@
 
 /* ----------------------------------------------- anomalyTitle: the Anomaly's title card --- */
 
-/* R3337003: the Anomaly's title card, stamped across the middle of the screen: its picture (cards/art,
-   `--fx-picture`) framed in its palette, its name in the display face across its foot (`data-text`, no
+/* R3337003: the Anomaly's title card, stamped across the middle of the screen: its picture (cards/art's
+   SVG, drawn in place) framed in its palette, its name in the display face across its foot (`data-text`, no
    text node). It stamps in from 1.6 times its size and holds through `--fx-ms`. Under reduced motion it
    is `data-still`: the same card, nothing moving. The name is the board's own, which is public (R202). */
 
@@ -2734,16 +2749,15 @@
   width: min(86vw, 560px);
   aspect-ratio: 16 / 9;
   translate: -50% -50%;
-  z-index: 5;
+  z-index: var(--z-popover);
   border: 2px solid var(--fx-tint-rim);
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--fx-ink);
   overflow: hidden;
-  box-shadow:
-    0 0 0 2px var(--fx-ink),
-    0 0 32px 6px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  box-shadow: 0 0 32px 6px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
   animation:
     fx-anomaly-title-in var(--fx-ms) linear both,
-    fx-anomaly-title-stamp 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    fx-anomaly-title-stamp var(--motion-fast) var(--ease-overshoot) both;
 }
 
 @keyframes fx-anomaly-title-in {
@@ -2775,7 +2789,13 @@
 .fx-anomalyTitle-picture {
   position: absolute;
   inset: 0;
-  background: var(--fx-picture) center / cover no-repeat;
+}
+
+/* The painter's own SVG, drawn in place (no image, B27); its `slice` covers the card as a cover background would. */
+.fx-anomalyTitle-picture > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .fx-anomalyTitle-name {
@@ -2785,7 +2805,7 @@
   bottom: 0;
   padding: 0.6em 0.8em 0.5em;
   text-align: center;
-  background: linear-gradient(to top, color-mix(in srgb, var(--fx-ink) 85%, transparent), transparent);
+  background: color-mix(in srgb, var(--fx-ink) 72%, transparent);
 }
 
 .fx-anomalyTitle-name::before {
@@ -2807,7 +2827,9 @@
 /* ---------------------------------------------------- radar: a Scanning Probe's sweep --- */
 
 /* R3337002: a Scanning Probe's scan (fx/cards/stinkyscape/probeScan.ts): from its caster's hand a radar
-   wedge sweeps 120° across the board and fades. The canvas draws a find's ping. It names no card (R202). */
+   wedge sweeps 120° across the board and fades: a faint trail, a brighter half nearer its edge and its
+   bright edge, three sectors of one circle cut by clip-path rather than a gradient (#2109). The canvas
+   draws a find's ping. It names no card (R202). */
 
 .fx-radar {
   left: var(--fx-x);
@@ -2815,8 +2837,8 @@
   width: min(170vmin, 1600px);
   aspect-ratio: 1;
   translate: -50% -50%;
-  z-index: 2;
-  border-radius: 50%;
+  z-index: var(--z-raised);
+  border-radius: var(--radius-round);
   overflow: hidden;
   animation: fx-radar-in var(--fx-ms) linear both;
 }
@@ -2840,19 +2862,31 @@
   }
 }
 
+/* The sectors run clockwise from the top: the trail 0° to 40°, its brighter half 20° to 40°, the edge 39.5°
+   to 40°, each a triangle from the centre out past the circle's rim (80% of the box), which `.fx-radar` rounds. */
 .fx-radar-wedge {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    color-mix(in srgb, var(--fx-tint-glow) 10%, transparent) 20deg,
-    color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 38deg,
-    var(--fx-tint-core) 40deg,
-    transparent 41deg
-  );
-  animation: fx-radar-sweep var(--fx-ms) cubic-bezier(0.3, 0, 0.4, 1) both;
+  clip-path: polygon(50% 50%, 50% -30%, 101.42% -11.28%);
+  background: color-mix(in srgb, var(--fx-tint-glow) 14%, transparent);
+  animation: fx-radar-sweep var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-radar-wedge::before,
+.fx-radar-wedge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.fx-radar-wedge::before {
+  clip-path: polygon(50% 50%, 77.36% -25.18%, 101.42% -11.28%);
+  background: color-mix(in srgb, var(--fx-tint-glow) 34%, transparent);
+}
+
+.fx-radar-wedge::after {
+  clip-path: polygon(50% 50%, 100.89% -11.73%, 101.42% -11.28%);
+  background: var(--fx-tint-core);
 }
 
 @keyframes fx-radar-sweep {
@@ -2864,11 +2898,10 @@
   }
 }
 
-/* R3337003: a ghost out of an Anomaly's rift tumbles as it flies (an asteroid); `rotate` composes with the flight's transform. */
+/* R3337003: a ghost out of an Anomaly's rift tumbles as it flies (an asteroid); `rotate` composes with the flight's
+   transform, and the spin takes the flight's own duration, curve and fill (`.fx-ghost`'s), which repeat for it. */
 .fx-ghost[data-spin="true"] {
-  animation:
-    fx-ghost-fly var(--fx-ms) cubic-bezier(0.45, 0.05, 0.35, 1) both,
-    fx-ghost-spin var(--fx-ms) linear both;
+  animation-name: fx-ghost-fly, fx-ghost-spin;
 }
 
 @keyframes fx-ghost-spin {

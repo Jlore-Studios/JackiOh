@@ -14,7 +14,7 @@
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { ANOMALIES, type AnomalyCode } from "../cards/anomalies.ts";
-import { anomalyArtUri } from "../cards/art/svg.ts";
+import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
 import { ANOMALY_RIFT_HOLD_MS, ANOMALY_SET_PIECE, SET_PIECE_SHORT_HOLD_MS, type AnimationEntry, type SetPieceClaim } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
@@ -95,14 +95,14 @@ function centreOf(rift: AnomalyRift): FxAnchor {
   return tid(testid.zone(rift.side, "units", FX_MOTIF_CENTER_LANE));
 }
 
-/** The title card of `code`, across the middle of the screen: its name over its picture. */
+/** The title card of `code`, across the middle of the screen: its name over its picture, drawn in place (B27). */
 function titleCue(code: AnomalyCode, tint: FxTint, delayMs: number, durationMs: number): FxAnomalyTitleCue {
   const anomaly = ANOMALIES[code];
   return {
     kind: "anomalyTitle",
     at: { kind: "viewport", at: FX_CENTER },
     text: anomaly.name,
-    picture: anomalyArtUri(code, anomaly.rich),
+    picture: anomalyMarkup(code, anomaly.rich),
     tint,
     delayMs,
     durationMs,

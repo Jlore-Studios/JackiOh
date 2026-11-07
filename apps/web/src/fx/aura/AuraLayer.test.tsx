@@ -391,13 +391,16 @@ describe("R3337003 an Anomaly's backdrop", () => {
     expect(backdrop).toHaveAttribute("data-aura-look", "void");
     expect(backdrop).toHaveAttribute("data-aura-scope", "side");
     expect(backdrop).toHaveAttribute("data-aura-phase", "begin");
-    expect(backdrop?.style.getPropertyValue("--aura-picture")).toBe(`url("${anomalyArtUri("WH", false)}")`);
+    // Its picture is the card art's own, the board's (B27: the layer itself draws no image).
+    const picture = backdrop?.querySelector(".aura-picture");
+    expect(picture).toHaveAttribute("data-art-anomaly", "WH");
+    expect((picture as HTMLElement | null)?.style.backgroundImage).toContain(anomalyArtUri("WH", false));
     // A Field Spell's aura carries neither.
     const weapons = field("p2", "core-014");
     const both = board([], [weapons], "p1", { events: [wormhole] });
     m.show(both, both);
     expect(m.aura(fieldKey(weapons))).not.toHaveAttribute("data-anomaly");
-    expect(m.aura(fieldKey(weapons))?.style.getPropertyValue("--aura-picture")).toBe("");
+    expect(m.aura(fieldKey(weapons))?.querySelector(".aura-picture")).toBeNull();
     // Replaced again with no Anomaly, it ends.
     const cleared = board([], [], "p1", { events: [wormhole, { type: "boardReplaced", player: "p1" }] });
     m.show(cleared, cleared);

@@ -62,6 +62,7 @@ export const SANDBOX_DRAW_MAX = 10;
 export const SANDBOX_HERO_HEALTH_MAX = 99;
 export const SANDBOX_MANA_MAX = 10;
 export const SHIPPED_SETS: readonly [SetName, ...SetName[]] = ["Core","Classic","Classic+","Meditative","Meditative+","Stinkyscape","Training Grounds"];
+export const STARSHIP_NAMES: readonly (readonly [string, Tag | null])[] = [["The Ninth Life","Felinor"],["Frontier's Promise","Human"],["The Celestial Archive","KY"],["The Lantern Ferry","CN"],["The Jlockeed Skylark","Jlockeed"],["Ember of Departure",null],["The Silent Choir",null]];
 export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;
 export const TUTORIAL_BARRED_RARITIES: readonly Rarity[] = ["Legendary","Mythic"];

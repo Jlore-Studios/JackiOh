@@ -10,6 +10,7 @@ import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
 import { CARD_AUDIO, lineFor } from "../../../apps/web/src/audio/voiceData.ts";
+import { ANOMALY_CODES } from "../../../apps/web/src/cards/anomalies.ts";
 
 type SfxId = (typeof SFX_IDS)[number];
 type SfxParams = Parameters<SfxRecipe>[3];
@@ -38,6 +39,7 @@ const EXPECTED_IDS = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  "anomaly",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -124,6 +126,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // R3337003: an Anomaly's sting, one voice per board.
+  anomaly: 1200,
 };
 
 /** B14 parameter sets used here too. */
@@ -214,6 +218,8 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
       { id: "chaosRoll", params: { amount: 3 } },
       { id: "brand", params: { release: true } },
       { id: "clockTick", params: { amount: 10 } },
+      // R3337003: each Anomaly's own sting.
+      ...ANOMALY_CODES.map((anomaly): { id: SfxId; params: SfxParams } => ({ id: "anomaly", params: { anomaly } })),
     ];
     const renders = Promise.all(cases.map(async ({ id, params }) => ({ id, params, samples: await render(id, params) })));
     cy.wrap(renders, { timeout: RENDER_TIMEOUT_MS, log: false }).then((results) => {

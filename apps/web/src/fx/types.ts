@@ -208,8 +208,8 @@ export type FxRiftCue = {
 };
 /**
  * R3337003: an Anomaly's title card stamped across the screen at `at`: its name (`text`, the board's own,
- * which is public) over its picture (`picture`, a `data:` URI of `cards/art`). `still` draws it without
- * motion, for reduced motion.
+ * which is public) over its picture (`picture`, the SVG markup of `cards/art` `anomalyMarkup`, which the
+ * layer draws in place, no image: B27). `still` draws it without motion, for reduced motion.
  */
 export type FxAnomalyTitleCue = {
   kind: "anomalyTitle";

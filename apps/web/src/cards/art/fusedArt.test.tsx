@@ -17,6 +17,7 @@ import { CardDefsProvider } from "../refContext.tsx";
 import { CardArt, type CardArtProps } from "./CardArt.tsx";
 import { artSubjectOf, MINER_IDS } from "./fusedArt.ts";
 import { type ArtManifest } from "./manifest.ts";
+import { starshipArtOf } from "./starshipHulls.ts";
 import { starshipArtUri } from "./svg.ts";
 
 afterEach(cleanup);
@@ -237,13 +238,18 @@ describe("R3045000: a Starship keeps its own art", () => {
 
   it("R3045000 a Starship in play wears the Starship's art, however it was fused", () => {
     const fused = fusedDef([hull, def(BEAM_V3)]);
-    const starship = { pieces: 2, launched: false };
+    const list = [
+      { defId: DORMANT_STARSHIP_ID, radiant: false },
+      { defId: BEAM_V3, radiant: false },
+    ];
+    const starship = { launched: false, list };
     const own = lookOf(drawn(hull, null, { starship }));
     cleanup();
     const art = drawn(fused, defsWith(fused), { starship });
     expect(art.getAttribute("data-art-family")).toBe("starship");
     expect(lookOf(art)).toEqual(own);
-    expect(art.style.backgroundImage).toContain(starshipArtUri(2, false, false));
+    // R3333000: drawn from its pieces, in the shipyard while Dormant, whatever name the fusion gave it.
+    expect(art.style.backgroundImage).toContain(starshipArtUri(starshipArtOf(list, false, undefined, false)));
   });
 
   it("R3045000 a fused hull outside play draws the hull, the card the pieces were fused onto", () => {

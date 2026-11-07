@@ -385,7 +385,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       tintVars(el, cue.tint);
       const picture = doc.createElement("div");
       picture.className = "fx-anomalyTitle-picture";
-      picture.style.setProperty("--fx-picture", `url("${cue.picture}")`);
+      const drawn = drawnSvg(doc, cue.picture);
+      if (drawn !== null) picture.appendChild(drawn);
       const name = doc.createElement("div");
       name.className = "fx-anomalyTitle-name";
       name.setAttribute("data-text", t(cue.text));
@@ -439,6 +440,20 @@ function strippable(name: string): boolean {
     name.startsWith("aria-") ||
     name.startsWith("on")
   );
+}
+
+/**
+ * R3337003: SVG markup the art painter drew (cards/art `anomalyMarkup`) as elements of `doc`, drawn in place as the
+ * layer's own icons are, never loaded as an image (B27); markup that is no well-formed SVG draws nothing.
+ */
+function drawnSvg(doc: Document, markup: string): Element | null {
+  const Parser = doc.defaultView?.DOMParser;
+  if (Parser === undefined) return null;
+  const drawn = new Parser().parseFromString(markup, "image/svg+xml").documentElement;
+  if (drawn.namespaceURI !== SVG_NS || drawn.localName !== "svg" || drawn.getElementsByTagName("parsererror").length > 0) return null;
+  const svg = doc.importNode(drawn, true);
+  svg.setAttribute("aria-hidden", "true");
+  return svg;
 }
 
 export function standInCopy(source: Element): HTMLElement {
