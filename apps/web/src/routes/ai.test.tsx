@@ -57,7 +57,7 @@ describe("R2631000 how JackiOh uses AI", () => {
 
     const data = screen.getByRole("region", { name: "What AI does with your data" });
     expect(data).toHaveTextContent("We don’t send anything you write, or your account’s details, to an AI service.");
-    expect(within(data).getByRole("link", { name: "Privacy policy" })).toHaveAttribute("href", paths.privacy);
+    expect(within(data).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);
   });
 
   it("R2631000 is public, linked from the site footer, titled and in the sitemap", async () => {
