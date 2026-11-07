@@ -14590,9 +14590,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-07T19:33:35Z",
-      "owner_why": "its approval shipped `2595148f805d`, and the last approver owns the merge, so it resolves the conflict",
+      "owner": "claude-7",
+      "owner_since": "2026-11-07T20:56:16Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-07T23:00:00Z; it can start again only in 2h 03m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-07T09:16:58Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -16555,11 +16555,11 @@
         "provider": "claude-3"
       },
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-07T19:33:35Z",
       "round_tier": "strong",
-      "run_id": "42406908455",
+      "run_id": "pending:130049d6-1794084945",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16580,7 +16580,7 @@
         "run": "42398511076"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T19:34:48Z",
+      "started_at": "2026-11-07T20:56:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -17644,9 +17644,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T20:55:30Z",
+    "at": "2026-11-07T20:56:16Z",
     "url": "",
-    "what": "revise #3369 on claude-7"
+    "what": "revise #3382 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-07T20:36:10Z",
