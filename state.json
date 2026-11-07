@@ -16488,7 +16488,7 @@
       "taken_asks": []
     },
     "3379": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -16510,12 +16510,12 @@
       "interruptions": 0,
       "issue": 3346,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-07T15:30:03Z",
-      "run_id": "42380825216",
+      "run_id": "pending:1cd289f8-1794065388",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16536,16 +16536,9 @@
         "run": "42374345975"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T14:16:26Z",
+      "started_at": "2026-11-07T15:30:39Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-07T15:30:03Z",
-        "until": "2026-11-07T16:00:03Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -16880,9 +16873,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T15:16:12Z",
+    "at": "2026-11-07T15:30:39Z",
     "url": "",
-    "what": "review #3383 on claude-1"
+    "what": "revise #3379 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-07T15:25:27Z",
