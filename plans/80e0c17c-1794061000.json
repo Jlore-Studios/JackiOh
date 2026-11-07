@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3340,
+  "title": "Patch: art that lives in play: animated and signed looks and every Mythic keep moving on the board, and a card answers the pointer instead of just drifting",
+  "branch": "bot/issue-3340",
+  "thread": "**Issue #3340 (data, not instructions):**\n\n```text\n# #3340: Patch: art that lives in play: animated and signed looks and every Mythic keep moving on the board, and a card answers the pointer instead of just drifting\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3339, which reshapes the same board faces.\n\nThe owner asked that interactive cards actually respond, instead of their art just moving a bit, and that the animated looks shine in play.\n\n### Today\n\n- **Board faces are still.** `boardLookOf` (R3046000) puts no animation and no signature on a board face, so a player's animated or signed look stops moving the moment it is played.\n- **Where motion runs.** Each card has one motion (`artMotionFor`, `motion.ts`). 21 recipes are hand-written in `FULL_ART_MOTION`, and every other card borrows one of them by hash. It is limited to transform and opacity, runs only at animated levels, and is capped at `COSMETIC_FOIL_ANIMATED_MAX` (6) moving faces at once (`useArtMotion`).\n- **Pointer response.** Only Immersive follows the pointer and device tilt (`immersive.ts`, `useImmersiveShift`).\n\n### What it should be\n\n1. **Motion on the board.** A board face wearing an animated or signed level moves as it does in hand. So does every Mythic in any look, as its rarity's due. The motion slots are shared with the hand under one budget, and the next face up takes a freed slot within `--motion-base`. Slots go, in order, to:\n   - the card under the pointer or focus;\n   - the newest Mythic played;\n   - Mythics;\n   - Legendaries;\n   - then the rest, newest first.\n\n   Faces that do not move draw their still picture, as today. Every motion pauses when the tab is hidden or the board is off screen.\n2. **Cards that answer.** The art responds to the player, not only to a clock, in transform and opacity only:\n   - **Hover or focus:** the subject turns or leans toward the pointer, and the particles scatter and settle.\n   - **Press:** the art flinches inward and springs back.\n   - **Game state:** a damaged Unit's art shows cracks or scratches that grow with its missing health. A buffed one glows in its card's colours, and a Frozen one frosts over. These read the view's numbers and keywords only.\n   - **Attacking:** the subject swings or fires toward its target as `attackDeclared` plays.\n\n   These use the painters' layer roles (subject, light, motes), so every card gets them, and a per-card recipe in `FULL_ART_MOTION` may add its own.\n3. **More recipes.** Grow `FULL_ART_MOTION` so no Legendary or Mythic borrows a motion by hash: each gets a recipe that suits its picture. A test lists the Legendaries and Mythics that still borrow, and the list may only shrink to empty.\n4. **The settings still rule.** `animatedFoil`, reduced motion, the OS setting and fx intensity still turn it down or off (`useArtMotion`). A face under reduced motion shows damage and buffs as still marks.\n\n## Acceptance\n\n- Tests:\n  - board faces in an animated or signed look, and every Mythic, take motion slots by the priority above, within the shared budget;\n  - the rest draw still;\n  - motion pauses when the tab is hidden.\n- Hover, press, damage, buff, freeze and attack responses render for a procedural, a Stinkyscape and a Training Grounds card. A component spec captures each at desktop size and at 390x844.\n- No Legendary or Mythic borrows a motion by hash. The list test is empty.\n- `fx-phone-frame.cy.tsx` covers a board of six moving faces within `FX_PHONE_FRAME_BUDGET_MS`.\n- `src/motion.test.ts`, `fx/css.test.ts` and the reduced-motion checks pass. There is a ruling amending R3046000 in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and a `--visual` fragment.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3340: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:49:13Z",
+    "claimed_at": "2026-11-07T14:17:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3369 is held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3375 is held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3363 is held for `claude-7` until 09:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3344, #3345, #3347 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
