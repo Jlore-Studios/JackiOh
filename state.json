@@ -13906,15 +13906,8 @@
       "verdict_rounds": 1
     },
     "3221": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42335487859",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-07T04:13:56Z",
-        "until": "2026-11-07T04:43:56Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13926,10 +13919,9 @@
         "reason": "planned on opus",
         "trail": "nents, their stylesheets, the tests that cover them and the locale catalogue. All paths are absolute. `SRC` stands for `/home/runner/work/_temp/work/item-3221/apps/web/src`. ## Shared facts (from `SRC/game/Dialog.tsx`, `SRC/game/dialog.css`, `SRC/together/modalKeys.ts`) - **Fixe\u2026\n- Grep: {\"pattern\": \"DB_DETAIL_ADD\\\\s*=\", \"path\": \"/home/runner/work/_temp/work/item-3221/apps/web/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"sed -n 120,260p cards/inspect/store.ts\", \"description\": \"Read useModalOverlay\"}\n- Grep: {\"pattern\": \"CLICK_SUPPRESS_MS\", \"path\": \"/home/runner/work/_temp/work/item-3221/apps/web/src/cards/inspect/constants.ts\", \"output_mode\": \"content\", \"-B\": 2}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3221/apps/web/src/game/Dialog.test.tsx\", \"offset\": 80}\n- Grep: {\"pattern\": \"INSPECT_(CLOSE|SCRIM)|Escape|toHaveFocus\", \"path\": \"/home/runner/work/_temp/work/item-3221/apps/web/src\", \"output_mode\": \"content\", \"glob\": \"{game/deckbuilder/browse,routes/landing,route\u2026\n- said: I read every file listed. One finding affects the whole plan: **5 of the 6 don't fit `Dialog` as it is today.** `DialogAction` has no `disabled`, `Dialog` takes no `id`, puts no class or testid on its scrim, has no way to suspend its keys, and always focuses the first action (or \u2715 when there are no\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3221/apps/web/src/game && sed -n 140,162p cardBar.ts; sed -n 340,352p drag/DragLayer.tsx; grep -n \\\"addEventListener(\\\\\\\"keydown\\\\\\\"\\\" cardBar.ts dra\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3221/.bot-plan.md <<'EOF'\\n\\n## Agent A findings (settings, friends, chat, challenge, token offer, account) \\u2014 condensed\\n- Dialog.test.tsx:2\u2026\n- said: I found six things the plan needs to handle. Details per component follow. ## What the plan must handle 1. **Ratchet tests that compare counts exactly.** These tests store a count per stylesheet and fail on any change, up or down. Deleting the old scrim and panel CSS changes those counts, so the bu\u2026\n- Bash: {\"command\": \"grep -rn 'z-inspect-modal' --include=*.css --include=*.tsx --include=*.ts . | grep -v test; grep -rnE '^\\\\.(sr-only|visually-hidden)|\\\\.visually-hidden \\\\{|\\\\.sr-only \\\\{' --include=*.cs\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3221/.bot-plan.md <<'EOF'\\n\\n## Agent B/C findings \\u2014 condensed\\n- stats drill-down: inline in StatsRoute (stats.tsx:1457-1642); scrim .stats\u2026\n- Bash: {\"command\": \"grep -rn 'role=\\\"alertdialog\\\"' --include=*.tsx . | grep -v test; sed -n 505,535p emotes/ui.test.tsx; sed -n 105,130p surfaces.test.ts | sed -n 1,30p\", \"description\": \"List alertdialogs,\u2026\n- Bash: {\"command\": \"sed -n 248,262p surfaces.test.ts; grep -n 'zIndexOf\\\\|const LAYERS\\\\|ABOVE\\\\|toBeGreaterThan' emotes/ui.test.tsx | head; grep -rn 'inspect-modal\\\\|inspect-hover' surfaces.test.ts palette\u2026\n- Bash: {\"command\": \"sed -n 95,125p together/FriendRows.tsx; sed -n 426,450p routes/series.tsx; sed -n 129,150p routes/QuestsPanel.tsx; sed -n 128,150p dungeon/start/StartScreen.tsx\", \"description\": \"Check o\u2026\n- Bash: {\"command\": \"grep -rnE '^\\\\.tavern\\\\.app-shell\\\\s*\\\\{|^\\\\.tavern\\\\s*\\\\{|^\\\\.app-shell\\\\s*\\\\{' --include=*.css . ; grep -rn 'shopTestid\\\\s*=' --include=*.ts --include=*.tsx . | head -2; grep -n '\\\"Del\u2026\n- Bash: {\"command\": \"sed -n 20,70p auth/tavern.css; sed -n 130,145p index.css; sed -n 205,220p index.css\", \"description\": \"Read tavern and app-shell base styles\"}\n- Bash: {\"command\": \"sed -n 1,20p routes/DevButton.tsx; sed -n 120,140p routes/DevButton.tsx; sed -n 60,80p routes/dev-panel.css\", \"description\": \"Read DevButton portal reason and CSS\"}\n- Bash: {\"command\": \"sed -n 120,172p collection/LooksScreen.tsx; sed -n 326,440p collection/LooksScreen.tsx | grep -v '^\\\\s*$' | head -80\", \"description\": \"Read LooksScreen question and root\"}\n- Bash: {\"command\": \"grep -n 'ONE_OFFS' -A12 buttons.test.ts | head -30; grep -n 'it(' highlight.test.ts | head; sed -n 1,30p routes/page-title.test.ts | grep -n 'SettingsPanel\\\\|H1\\\\|h1' \", \"description\": \"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3221/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery dialog #3221 lists, plus the Looks screen that opens over the item preview, renders through `<Dialog>\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Bash: {\"command\": \"wc -c /home/runner/work/_temp/work/item-3221/.bot-plan.md; head -5 /home/runner/work/_temp/work/item-3221/.bot-plan.md\", \"description\": \"Check draft file state\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3221 && cp .bot-plan.md /tmp/plan-findings-3221.md && grep -n 'layers\\\\b' apps/web/src/net/backLayers.ts | head -5 && grep -n 'useRef\\\\|focus()' apps\u2026\n- Bash: {\"command\": \"cat > .bot-plan.md <<'EOF'\\n## Goal\\n\\nEvery dialog #3221 lists, plus the Looks screen that opens over the item preview, renders through `<Dialog>`. Settings, Friends and Chat use a new \u2026\n- Bash: {\"command\": \"python3 - <<'PY'\\nimport re\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\nplan,rest=s.split('\\\\n---\\\\n# Planner findings (draft only)',1)\\nrep=[\\n(\\\"Each of step 7's 17 sources c\u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<stdin>\", line 10, in <module> AssertionError: Each of step 7's 17 sources contains `<D\n- Bash: {\"command\": \"grep -n \\\"17 sources\\\" .bot-plan.md\", \"description\": \"Locate the scrim check line\"}\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\na=\\\" - Each of step 7's 17 sources contains `<Dialog` and no `/[\\\\\\\\w-]+(?:-|__)scrim\\\\\\\\b/`.\\\"\\nb=\\\" - Each of ste\u2026\n- said: I've written the plan. The draft is in `.bot-plan.md`, which also holds the survey notes for any later planner. The plan is about 3,000 words, over the 2,500-word budget but well under the 30,000-character cut-off; I kept every step and test rather than trim further. ## Goal Every dialog #3221 list\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-07T03:46:08Z",
       "owner_why": "it plans it",
@@ -13942,9 +13934,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-05T17:47:21Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42335487859",
+      "run_id": "pending:8a32f32f-1794024880",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T03:46:08Z",
+      "started_at": "2026-11-07T04:15:17Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18181,9 +18173,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T03:59:26Z",
+    "at": "2026-11-07T04:15:17Z",
     "url": "",
-    "what": "plan #3347 on claude-3"
+    "what": "build #3221 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T03:53:49Z",
