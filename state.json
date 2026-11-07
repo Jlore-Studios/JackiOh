@@ -35486,7 +35486,8 @@
     ],
     "runs": [
       "2026-11-07T04:04:32Z,42336418114,claude-3,opus,plan,3347,medium,interrupted,refusal,1.8,57,13224,3210316,1.0256,97,100,,,239.4,,fresh,,1",
-      "2026-11-07T04:09:02Z,42335487859,claude-1,opus,plan,3221,hard,planned,,20.6,164,135344,10630496,17.661,1,46,,,2038.8,,fresh,,1"
+      "2026-11-07T04:09:02Z,42335487859,claude-1,opus,plan,3221,hard,planned,,20.6,164,135344,10630496,17.661,1,46,,,2038.8,,fresh,,1",
+      "2026-11-07T04:17:17Z,42334373081,claude-3,sonnet+opus,build,3336,medium,interrupted,refusal,43.7,0,0,0,8.5683,56,100,,,226.3,claude-3,resumed,,1"
     ]
   },
   "version": 1
