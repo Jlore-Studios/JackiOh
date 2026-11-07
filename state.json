@@ -17447,6 +17447,13 @@
     "3410": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42402329917",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-07T19:05:39Z",
+        "until": "2026-11-07T19:35:39Z"
+      },
       "difficulty_by": {
         "at": "2026-11-07T19:05:27Z",
         "difficulty": "medium",
