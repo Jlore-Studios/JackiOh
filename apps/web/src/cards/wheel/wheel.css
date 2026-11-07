@@ -114,6 +114,9 @@ button.card-wheel-card {
   align-items: baseline;
   gap: 10px;
   margin: 0 0 8px;
+  /* R3221000: clear of the ✕ at the sheet's top right (DialogClose) and as tall as it. */
+  min-height: var(--space-11);
+  padding-right: calc(var(--space-11) + var(--space-4));
 }
 
 .stack-sheet-title {

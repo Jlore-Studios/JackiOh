@@ -16,6 +16,7 @@ import { readerName } from "../cards/chinese.ts";
 import { flavourFor } from "../cards/flavour.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import "../cards/inspect/inspect.css";
+import { DialogClose } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
 import { PORTRAIT_DEFS } from "./portraits.ts";
@@ -109,15 +110,8 @@ export function HeroInspect({
         ) : (
           <MuteMenu inline muted={muted} onMute={onMute} onClose={modal.close} />
         )}
-        <button
-          ref={closeRef}
-          type="button"
-          className="inspect-close"
-          data-testid={HERO_INSPECT_CLOSE}
-          {...modal.dismissProps}
-        >
-          {t("Close")}
-        </button>
+        {/* R3221000: the one ✕ every dialog closes by, at the top right. */}
+        <DialogClose buttonRef={closeRef} testid={HERO_INSPECT_CLOSE} {...modal.dismissProps} />
       </div>
     </div>,
     document.body,

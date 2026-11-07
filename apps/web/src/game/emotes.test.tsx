@@ -644,6 +644,21 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
+  it("R3221000 the hero's view closes by the shared ✕ at its top right, named Close", () => {
+    renderVG();
+    inspectHero("you");
+    const close = screen.getByTestId("hero-inspect-close");
+    expect(close).toHaveClass("dialog__close");
+    expect(close).toHaveAccessibleName("Close");
+    expect(close).toHaveTextContent("✕");
+    expect(close).toHaveFocus();
+    // Last in the view, so Tab ends on it.
+    expect(screen.getByTestId("hero-inspect").lastElementChild).toBe(close);
+
+    fireEvent.click(close);
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+  });
+
   it("R1330 targeting wins: a legal hero's click is the attack, on either side, and no view opens", () => {
     for (const [hero, targetId] of [
       ["hero-you", "hero-p1"],
