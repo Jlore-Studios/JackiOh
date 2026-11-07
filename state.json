@@ -16771,15 +16771,17 @@
       "audit_tier": "",
       "cleared": {
         "approver": {
-          "family": "claude",
-          "model": "sonnet",
-          "provider": "claude-4",
+          "family": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "provider": "agy",
           "tier": "medium"
         },
-        "at": "2026-11-07T17:03:29Z",
-        "built_by": "claude-4",
+        "at": "2026-11-07T18:09:08Z",
+        "built_by": "agy",
         "by": "`claude` (medium)",
-        "sha": "e8ae136fc66f4792375ca266b048923cc7f8c2c4"
+        "carried_from": "e8ae136fc66f4792375ca266b048923cc7f8c2c4",
+        "resolved_by": "`gemini` (medium)",
+        "sha": "2a7cc864d5d70c13ba1704ca604e0e3a3690028c"
       },
       "died": 0,
       "difficulty": "medium",
@@ -16791,7 +16793,7 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-4",
+      "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "question": "",
