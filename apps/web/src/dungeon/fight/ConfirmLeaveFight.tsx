@@ -3,14 +3,13 @@
 // has the focus, and Escape, Back (R2127000) or a click outside the panel means stay. Leaving
 // makes the move the leave guard held (R1754000). It decides nothing (CLAUDE.md rule 7).
 // Modeled on practice's question (PracticeLeave.tsx), minus the Save and leave a dungeon fight
-// never has (R2972000).
+// never has (R2972000), and drawn, as it is, through `Dialog.tsx` (R3220000).
 
-import { useEffect, useId, useRef, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
+import { Dialog } from "../../game/Dialog.tsx";
 import { t } from "../../i18n/i18n.ts";
-import { useBackLayer } from "../../net/backLayers.ts";
 import { fightTestid } from "./testids.ts";
-import "../../practice/practice.css";
 
 export type ConfirmLeaveFightProps = {
   /** "Keep playing", Escape, Back or a click outside the panel. */
@@ -20,60 +19,15 @@ export type ConfirmLeaveFightProps = {
 };
 
 export default function ConfirmLeaveFight({ onStay, onLeave }: ConfirmLeaveFightProps): ReactElement {
-  const titleId = useId();
-  const bodyId = useId();
-  const stay = useRef<HTMLButtonElement>(null);
-  useBackLayer(onStay);
-
-  useEffect(() => {
-    stay.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") onStay();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onStay]);
-
   return (
-    <div
-      className="practice-leave-scrim"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onStay();
-      }}
-    >
-      <section
-        className="practice-leave"
-        data-testid={fightTestid.leaveDialog}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={bodyId}
-      >
-        <h2 className="practice-leave__title" id={titleId}>
-          {t("Leave this fight?")}
-        </h2>
-        <p className="practice-leave__body" id={bodyId}>
-          {t("It ends here and the fight starts over from its first turn.")}
-        </p>
-        <div className="practice-leave__actions">
-          <button ref={stay} type="button" className="practice-play button-primary" data-testid={fightTestid.leaveStay} onClick={onStay}>
-            {t("Keep playing")}
-          </button>
-          <button
-            type="button"
-            className="practice-result__secondary button-danger"
-            data-testid={fightTestid.leaveConfirm}
-            onClick={onLeave}
-          >
-            {t("Leave fight")}
-          </button>
-        </div>
-      </section>
-    </div>
+    <Dialog
+      role="alertdialog"
+      testid={fightTestid.leaveDialog}
+      title={t("Leave this fight?")}
+      description={t("It ends here and the fight starts over from its first turn.")}
+      onClose={onStay}
+      cancel={{ label: t("Keep playing"), kind: "primary", testid: fightTestid.leaveStay }}
+      actions={[{ label: t("Leave fight"), kind: "danger", onClick: onLeave, testid: fightTestid.leaveConfirm }]}
+    />
   );
 }

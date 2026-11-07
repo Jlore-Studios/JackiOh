@@ -78,7 +78,7 @@ gallery plays every entry.
 | `classic-053` | Plague Crawler | Unit | cry tally; trigger flight | 1.08 | none: no motif reads promptAnswered | cry: it places counters, which tally (#2786) reads; trigger: it draws, which flight reads |
 | `classic-054` | Rewind | Spell | cast transmute | 1.08 | none: vanilla | cast: the repeated Cry plays as its own card's, which transmute draws (R2803000: mirror folded into transmute) |
 | `classic-055` | Book of Wildfire | Spell | cast bolt Fire | 1.35 | bolt | cast: the census agrees (bolt); Fire sets it apart from Book of Flame's scorch |
-| `classic-056` | Spell Tyrant | Unit | bespoke tyrantSigil | 1.85 | none: no motif reads promptAnswered | kept: its `tyrantSigil` entrance (R670); its Cry's events are the casts' own |
+| `classic-056` | Spell Tyrant | Unit | entrance tyrantSigil | 1.85 | none: no motif reads promptAnswered | kept: its `tyrantSigil` entrance (R670); its Cry's events are the casts' own |
 | `classic-057` | Echo | Spell | cast bolt | 1.35 | bolt | cast: the census agrees (bolt) |
 | `classic-058` | Common Resources | Field Spell | cast flight; trigger flight; aura bloom side | 1.16 | none: vanilla | cast and trigger: its start-of-turn draw, which flight (#2786) reads; its play shows nothing, so its cast takes its hook's motif |
 | `classic-059` | Plague Doctor | Unit | cry bolt | 1.08 | bolt | cry: the census agrees (bolt) |
@@ -102,7 +102,7 @@ gallery plays every entry.
 | `classic-077` | Anti-Magic Monkey | Unit | none: vanilla | — | bolt | the census's bolt is one stray damage; its Aura taxes Spells, with no moment to draw |
 | `classic-078` | Mutate Spell | Field Spell | cast vanish; activate vanish; aura arcane zone | 1.19 | vanish | cast and activate: the census agrees (vanish) |
 | `classic-079` | Risky Die | Spell | cast vanish | 1.08 | vanish | cast: the census agrees (vanish) |
-| `classic-080` | BOOM! Big Max | Unit | bespoke bigBoom | 1.85 | offering | kept: its `bigBoom` entrance (R670); it has no hooks, and the census's offering read its Tributes |
+| `classic-080` | BOOM! Big Max | Unit | entrance bigBoom | 1.85 | offering | kept: its `bigBoom` entrance (R670); it has no hooks, and the census's offering read its Tributes |
 | `classic-081` | The Power to Thrive | Field Spell | cast flight; activate flight; aura bloom side | 1.28 | bolt | cast and activate: fatigue; its Activate draws or heals, and flight (#2786) reads the draw |
 | `classic-082` | Sheeople | Unit | death flight Beast/wool | 1.08 | bolt | death: fatigue; its Death draws, which flight (#2786) reads; wool sub-look |
 | `classic-083` | Flame Lance | Spell | cast lance | 1.24 | lance | cast: the census agrees (lance) |

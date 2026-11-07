@@ -174,7 +174,8 @@ describe("#2793 Core's bespoke flourishes", () => {
   it("R502 core-083, core-097 and core-099 key their recipes", () => {
     const view = fullBoardView();
     for (const [defId, key] of FLOURISHES) {
-      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "bespoke", key });
+      // R3332000: Zephrys's entry also names its takeover look.
+      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "bespoke", key, ...(defId === "core-097" ? { takeover: "genie" } : {}) });
       expect(run(defId, RECIPE_FIXTURES[key](view, "ex", "p1"), 400).flat(), defId).toEqual(fixtureCues(defId, key).flat());
     }
   });
