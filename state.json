@@ -18593,16 +18593,36 @@
         ],
         "builder": "gemini",
         "built_by": "agy",
+        "carried": {
+          "by": "`gemini` (medium)",
+          "conflicts": [
+            "apps/web/src/audio/sfx.test.ts",
+            "apps/web/src/audio/sfx.ts",
+            "apps/web/src/audio/types.ts",
+            "apps/web/src/cards/art/ART.md",
+            "apps/web/src/cards/art/stinkyscape.test.tsx",
+            "apps/web/src/fx/cards/stinkyscape/stinkyscape.test.ts",
+            "apps/web/src/fx/constants.test.ts",
+            "apps/web/src/fx/constants.ts",
+            "apps/web/src/fx/cues.ts",
+            "apps/web/src/fx/fx.css",
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "e2e/cypress/component/audio-recipes.cy.tsx",
+            "spec/10-engine-guide.md"
+          ],
+          "from": "a5c16c44127c68f97829e45faed9e45aaaa44240",
+          "main": "6aea0f59f47c69618e7f0079127748bca02428e9"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "gemini",
             "provider": "agy",
-            "run": "42345394952",
+            "run": "42360742977",
             "tier": "medium"
           }
         ],
-        "sha": "a5c16c44127c68f97829e45faed9e45aaaa44240",
+        "sha": "4e87145f604268278e225a79b8462b8a941bbc3a",
         "tiers": {
           "gemini": "medium"
         }
