@@ -46,7 +46,7 @@ import {
 import { SCENE_KIT } from "./sceneKit.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
-import { compositionFor, themeFor } from "./themes.ts";
+import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
 
 const SVG_PREFIX = "data:image/svg+xml,";
@@ -74,11 +74,27 @@ function svgOf(uri: string): string {
   return decodeURIComponent(uri.slice(SVG_PREFIX.length));
 }
 
-/** A card's spec as the procedural painter draws it, its recipe read from its id. */
+/** A card's spec as the procedural painter draws it, in its own composition (R3338001), its recipe read from its id. */
 function specOf(card: CardDef, radiant: boolean, scene?: SceneRecipe | null): ArtSpec {
   const theme = themeFor(card.tags, card.type);
   const motif = card.id.startsWith("stinkyscape-") ? null : motifFor(card.name, theme);
-  return scene === undefined ? artSpec(card.id, theme, compositionFor(card.type), radiant, motif) : artSpec(card.id, theme, compositionFor(card.type), radiant, motif, scene);
+  const composition = compositionOf(card.id, card.type);
+  return scene === undefined ? artSpec(card.id, theme, composition, radiant, motif) : artSpec(card.id, theme, composition, radiant, motif, scene);
+}
+
+/** The subject ridges a recipe keeps from the painter's own picture (`ownSubject`), on that face, or none. */
+function ownSubjectOf(card: CardDef, radiant: boolean): ArtSpec["ridges"] {
+  if (recipe(card.id).ownSubject !== true) return [];
+  const old = specOf(card, radiant, null);
+  return old.ridges.slice(old.subjectRidges[0], old.subjectRidges[1]);
+}
+
+/** Every path a recipe card's face draws, back to front: the scene's, its own subject after the subject layer. */
+function sceneDs(card: CardDef, radiant: boolean): string[] {
+  const shapes = composeScene(recipe(card.id), card.id);
+  const end = shapes.filter((shape) => SCENE_LAYERS.indexOf(shape.layer) <= SCENE_LAYERS.indexOf("subject")).length;
+  const ds = shapes.map((shape) => shape.d);
+  return [...ds.slice(0, end), ...ownSubjectOf(card, radiant).map((ridge) => ridge.d), ...ds.slice(end)];
 }
 
 /** A part's stream for one seed, so each part is drawn at many points of its range. */
@@ -219,8 +235,13 @@ describe("R3331000 the five proof cards", () => {
       const shapes = composeScene(recipe(id), id);
       const base = specOf(card, false);
       const radiant = specOf(card, true);
-      expect(base.ridges.map((ridge) => ridge.d), id).toEqual(shapes.map((shape) => shape.d));
+      expect(base.ridges.map((ridge) => ridge.d), id).toEqual(sceneDs(card, false));
       expect(radiant.ridges.map((ridge) => ridge.d), id).toEqual(base.ridges.map((ridge) => ridge.d));
+      // A kept subject is the painter's own, painted as the painter paints that face.
+      for (const face of [base, radiant]) {
+        const own = ownSubjectOf(card, face === radiant);
+        for (const ridge of own) expect(face.ridges, id).toContainEqual(ridge);
+      }
       base.ridges.forEach((ridge, k) => expect(radiant.ridges[k]?.fill, `${id} #${k}`).not.toBe(ridge.fill));
       expect(radiant.sky, id).not.toEqual(base.sky);
       expect(base.rays, id).toHaveLength(0);
@@ -231,7 +252,28 @@ describe("R3331000 the five proof cards", () => {
       for (const face of [false, true]) {
         const svg = svgOf(proceduralCardArtUri(card, face));
         for (const shape of shapes) expect(svg.includes(`d="${shape.d}"`), `${id} ${face ? "radiant" : "base"}`).toBe(true);
+        for (const ridge of ownSubjectOf(card, face)) expect(svg.includes(`d="${ridge.d}"`), `${id} ${face ? "radiant" : "base"} own`).toBe(true);
       }
+    }
+  });
+
+  it("R3331000 Ceaseless Void's scene keeps its own composition's giant as its subject, its emblem on the giant's chest", () => {
+    // R3338001 drew Ceaseless Void as a hole in the shape of a giant (`CARD_COMPOSITIONS`); its scene stands it
+    // in front of the void's swirl in place of a figure. It is the only recipe that keeps its painter's subject.
+    expect(PROOFS.filter((id) => recipe(id).ownSubject === true)).toEqual(["core-100"]);
+    const card = def("core-100");
+    const scene = recipe(card.id);
+    expect(scene.figure).toBeUndefined();
+    expect(scene.emblem).toBeUndefined();
+    for (const radiant of [false, true]) {
+      const spec = specOf(card, radiant);
+      const old = specOf(card, radiant, null);
+      expect(spec.composition).toBe("void");
+      expect(ownSubjectOf(card, radiant).length).toBeGreaterThan(0);
+      expect(spec.emblem).toEqual(old.emblem);
+      const [from, to] = spec.subjectRidges;
+      expect(spec.ridges.slice(to - ownSubjectOf(card, radiant).length, to)).toEqual(ownSubjectOf(card, radiant));
+      expect(spec.ridges.slice(from, to).every((ridge) => ridge.role === "subject")).toBe(true);
     }
   });
 
@@ -307,7 +349,7 @@ describe("R3331000 the five proof cards", () => {
         svgOf(
           id.startsWith("stinkyscape-")
             ? stinkyscapeArtUri(id, card.name, card.tags, card.type, false, null, id, null, which)
-            : proceduralArtUri(id, theme, compositionFor(card.type), false, motifFor(card.name, theme), null, null, which),
+            : proceduralArtUri(id, theme, compositionOf(card.id, card.type), false, motifFor(card.name, theme), null, null, which),
         );
       const subject = part("subject");
       const backdrop = part("backdrop");
@@ -315,9 +357,14 @@ describe("R3331000 the five proof cards", () => {
         expect(subject.includes(`d="${shape.d}"`), `${id} ${shape.part}`).toBe(shape.layer === "subject");
         expect(backdrop.includes(`d="${shape.d}"`), `${id} ${shape.part}`).toBe(shape.layer !== "subject");
       }
+      const own = ownSubjectOf(card, false).map((ridge) => ridge.d);
+      for (const d of own) {
+        expect(subject, `${id} own`).toContain(`d="${d}"`);
+        expect(backdrop, `${id} own`).not.toContain(`d="${d}"`);
+      }
       const spec = specOf(card, false);
       const [from, to] = spec.subjectRidges;
-      expect(spec.ridges.slice(from, to).map((ridge) => ridge.d), id).toEqual(shapes.filter((shape) => shape.layer === "subject").map((shape) => shape.d));
+      expect(spec.ridges.slice(from, to).map((ridge) => ridge.d), id).toEqual([...shapes.filter((shape) => shape.layer === "subject").map((shape) => shape.d), ...own]);
       // The emblem rides with the subject, the sky with the backdrop.
       const emblem = `translate(${fmt(spec.emblem.x)} ${fmt(spec.emblem.y)})`;
       expect(subject, id).toContain(emblem);

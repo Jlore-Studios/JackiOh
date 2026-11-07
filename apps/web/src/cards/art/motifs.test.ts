@@ -20,6 +20,7 @@ import {
   THEME_MOTES,
   THEME_PALETTES,
   compositionFor,
+  compositionOf,
   themeFor,
   type ArtThemeId,
 } from "./themes.ts";
@@ -41,11 +42,11 @@ function def(id: string): CardDef {
   return found;
 }
 
-/** One face's picture as CardFace draws it, from the face's own type (B2.7). */
+/** One face's picture as CardFace draws it, from the face's own type (B2.7) and the card's own composition (R3338001). */
 function faceSpec(card: CardDef, radiant: boolean): ArtSpec {
   const type: CardType = (radiant ? card.radiant.type : card.base.type) ?? card.type;
   const theme = themeFor(card.tags, type);
-  return artSpec(card.id, theme, compositionFor(type), radiant, motifFor(card.name, theme));
+  return artSpec(card.id, theme, compositionOf(card.id, type), radiant, motifFor(card.name, theme));
 }
 
 function svgOf(spec: ArtSpec): string {
@@ -399,6 +400,9 @@ describe("R503 R3331002 Core's v0.1 pictures, a record", () => {
   // R3331002: the owner's decision of 2026-11-06 redraws every card's picture richer, Core's included,
   // so this fixture is a record of v0.1's pictures, not a pin: a Core card with no scene recipe still
   // draws its v0.1 picture byte for byte, and one its set's pass gives a recipe draws its scene.
+  // #3338 recorded #100 Ceaseless Void again: it draws a composition of its own, a hole in the shape of a
+  // giant (`CARD_COMPOSITIONS`), so its layout is a pose of that and its hashes the picture it draws now
+  // (R3338001).
   type Recorded = readonly [ArtThemeId, string, number, number];
   const recorded = CORE_V01 as unknown as Readonly<Record<string, Recorded>>;
   /**

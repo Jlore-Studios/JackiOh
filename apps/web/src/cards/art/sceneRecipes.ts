@@ -128,13 +128,16 @@ const HEROIC_POWER: SceneRecipe = {
   },
 };
 
-/** Ceaseless Void (Core #100, Mythic): the Terminus raising the void among the ruins of a world. */
+/**
+ * Ceaseless Void (Core #100, Mythic): the void given form among the ruins of a world. Its subject is its own
+ * composition's, a hole in the shape of a giant with stars falling into it (R3338001, procedural.ts
+ * `voidGiant`), its emblem on the giant's chest, in front of a swirl of the void.
+ */
 const CEASELESS_VOID: SceneRecipe = {
   family: "core",
   sky: ["black", "violet-700"],
   light: { x: 50, y: 46, r: 42, paint: "violet-500", opacity: 0.6 },
-  emblem: { x: 50, y: 62, size: 7, rotate: 0 },
-  figure: { x: 50, y: 98, scale: 1.15, pose: "pose-raise", look: figureLookFor(["Terminus"]) },
+  ownSubject: true,
   layers: {
     sky: [
       { part: "stars", x: 50, y: 22, scale: 2.2, count: 2, spread: [10, 6] },

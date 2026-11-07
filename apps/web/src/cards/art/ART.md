@@ -55,6 +55,16 @@ a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, foun
 and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's. A card with a scene
 recipe draws its scene instead (R3331000, below): Arg Arg Defender is the first.
 
+The Terminus cards draw pictures of their own (R3338001), found by id (`TERMINUS_KINDS`; Dice of Doom prints no
+Terminus tag): Olivian Expanse an endless violet expanse with the Terminus cards as distant falling stars, Farewell
+an empty table under a single lamp, KY's Last Exam one desk in an exam hall under a problem chalked across the sky,
+Event Horizon a light caught at a black hole's edge, Last Word a hand catching a falling crown, 1v1 Final
+Destination one lane of light over an abyss with a hero at each end, The Big Crunch the universe collapsing to a
+point and Dice of Doom a hundred-sided die on black velvet, 67 glowing faintly on one face. None draws the shared
+black hole's disk (`TERMINUS_DISK_BACK`), which a Terminus card the table does not list still draws. Core #100
+Ceaseless Void, a procedural card, draws a composition of its own (`CARD_COMPOSITIONS`, `compositionOf`): a hole in
+the shape of a giant, stars falling into its outline.
+
 ## The Training Grounds set's own art
 
 The Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds.ts`'s procedural art
@@ -257,7 +267,7 @@ Every family climbs the same ladder of rarity, held by the detail floor below:
 - **By rarity:** a Common is one figure in a field (Speciesist, on guard at dusk); a Rare stands among
   props, a fence, a cart, a banner; an Epic sets hills behind and grass before it; a Legendary lights its
   moment with rays and a halo; a Mythic is a set piece no other card shares (Heroic Power's shrine on the
-  heights, Ceaseless Void's Terminus raising the void).
+  heights, Ceaseless Void's giant-shaped hole before the void among a world's ruins).
 
 ### Classic and Classic+
 
@@ -343,8 +353,9 @@ thin band.
 
 Five proof cards draw from recipes today and set the bar each set's pass meets: Corpse Plantation (Classic
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
-(Stinkyscape #15). Every other card draws its picture byte for byte as before, and the golden fixtures stand
-for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+(Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
+composition draws (R3338001), in place of a figure. Every other card draws its picture byte for byte as
+before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at

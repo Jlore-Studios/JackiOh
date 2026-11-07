@@ -156,9 +156,14 @@ export type SceneRecipe = {
   readonly sky: readonly [PaletteName, PaletteName];
   /** The glow behind every layer. */
   readonly light: { readonly x: number; readonly y: number; readonly r: number; readonly paint: PaletteName; readonly opacity: number };
-  /** Where the card's emblem stands in the scene. */
-  readonly emblem: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
+  /** Where the card's emblem stands in the scene; with none, where the painter's composition put it. */
+  readonly emblem?: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
   readonly figure?: FigureRecipe;
+  /**
+   * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
+   * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
+   */
+  readonly ownSubject?: boolean;
   readonly layers: Partial<Record<SceneLayer, readonly ScenePlacement[]>>;
 };
 
@@ -230,7 +235,7 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         }
       }
     }
-    // The figure stands in front of the subject layer's own parts (Ceaseless Void's void behind it).
+    // The figure stands in front of the subject layer's own parts.
     if (layer === "subject" && recipe.figure !== undefined) {
       for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
     }
@@ -247,19 +252,27 @@ export function sceneUse(shapes: readonly SceneShape[]): { layers: number; parts
  * `spec` with its picture replaced by the recipe's scene: its ridges are the scene's shapes, its sky,
  * glow and emblem's place the recipe's, and the painter's accent, motes and motif glyphs gone. Its
  * theme, layout, backdrop, sky scheme, emblem glyph, motif and rays stay, so R503's variety and the
- * Radiant rays read as before. A Radiant face mixes each shape toward its layer's gold.
+ * Radiant rays read as before. A Radiant face mixes each shape toward its layer's gold. A recipe with
+ * `ownSubject` keeps the spec's subject ridges, painted as the painter paints them on that face, in front
+ * of its subject layer's parts.
  */
 export function withScene(spec: ArtSpec, recipe: SceneRecipe, seedId: string, radiant: boolean): ArtSpec {
   const shapes = composeScene(recipe, seedId);
   const line = SCENE_LINES[recipe.family];
   const paint = (name: PaletteName, layer: SceneLayer): string =>
     radiant ? mixHex(SCENE_PALETTE[name], SCENE_RADIANT_GOLD[layer], SCENE_RADIANT_MIX) : SCENE_PALETTE[name];
-  const ridges: ArtSpec["ridges"][number][] = shapes.map((shape) => {
+  const drawn: ArtSpec["ridges"][number][] = shapes.map((shape) => {
     const ridge = { d: shape.d, fill: paint(shape.paint, shape.layer), opacity: round2(shape.opacity), role: SCENE_LAYER_ROLES[shape.layer] };
     return shape.inked === true && line !== null ? { ...ridge, stroke: SCENE_PALETTE[line.paint], strokeWidth: line.width } : ridge;
   });
-  const subjectFrom = shapes.findIndex((shape) => shape.layer === "subject");
-  const subjectTo = subjectFrom < 0 ? 0 : subjectFrom + shapes.filter((shape) => shape.layer === "subject").length;
+  const own = recipe.ownSubject === true ? spec.ridges.slice(spec.subjectRidges[0], spec.subjectRidges[1]) : [];
+  // The subject layer ends where the near layer's shapes begin; the painter's own subject stands there.
+  const subjectAt = SCENE_LAYERS.indexOf("subject");
+  const subjectEnd = shapes.filter((shape) => SCENE_LAYERS.indexOf(shape.layer) <= subjectAt).length;
+  const ridges = [...drawn.slice(0, subjectEnd), ...own, ...drawn.slice(subjectEnd)];
+  const firstSubject = shapes.findIndex((shape) => shape.layer === "subject");
+  const subjectFrom = firstSubject < 0 ? subjectEnd : firstSubject;
+  const subjectTo = subjectEnd + own.length;
   const [skyTop, skyBottom] = recipe.sky;
   const { light, emblem } = recipe;
   return {
@@ -277,10 +290,10 @@ export function withScene(spec: ArtSpec, recipe: SceneRecipe, seedId: string, ra
       opacity: round2(radiant ? Math.min(1, light.opacity + SCENE_RADIANT_GLOW_BOOST) : light.opacity),
     },
     ridges,
-    emblem: { ...spec.emblem, x: emblem.x, y: emblem.y, size: emblem.size, rotate: emblem.rotate },
+    emblem: emblem === undefined ? spec.emblem : { ...spec.emblem, x: emblem.x, y: emblem.y, size: emblem.size, rotate: emblem.rotate },
     accent: null,
     motes: [],
     motifGlyphs: [],
-    subjectRidges: subjectFrom < 0 ? [0, 0] : [subjectFrom, subjectTo],
+    subjectRidges: subjectFrom === subjectTo ? [0, 0] : [subjectFrom, subjectTo],
   };
 }
