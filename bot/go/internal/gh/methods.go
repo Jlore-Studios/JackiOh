@@ -432,6 +432,29 @@ func (x *GitHub) Dequeue(nodeID string) {
 	)
 }
 
+// QueueOrder is the pull requests in `branch`'s merge queue, by number, the first first (REST has
+// no merge queue). The queue evacuation reads it (`events.EvacQueue`).
+func (x *GitHub) QueueOrder(branch string) []int {
+	owner, name, _ := strings.Cut(x.Repo, "/")
+	data := x.Graphql(
+		"query($owner: String!, $name: String!, $branch: String!) { repository(owner: $owner, name: $name)"+
+			" { mergeQueue(branch: $branch) { entries(first: 100) { nodes { position"+
+			" pullRequest { number } } } } } }",
+		pyjson.New("owner", owner, "name", name, "branch", branch),
+	)
+	entries := pyjson.Objs(data.Obj("repository").Obj("mergeQueue").Obj("entries").Get("nodes"))
+	sort.SliceStable(entries, func(i, j int) bool {
+		return py.MustInt(py.Or(entries[i].Get("position"), 0)) < py.MustInt(py.Or(entries[j].Get("position"), 0))
+	})
+	out := []int{}
+	for _, entry := range entries {
+		if number := entry.Obj("pullRequest").Get("number"); number != nil {
+			out = append(out, py.MustInt(number))
+		}
+	}
+	return out
+}
+
 // PinIssue pins an issue to the top of the issue list (at most three are pinned).
 func (x *GitHub) PinIssue(nodeID string) {
 	x.Graphql(

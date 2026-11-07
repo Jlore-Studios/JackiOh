@@ -52,6 +52,12 @@
 # runners have room, merge-queue builds first, each run the oldest first, and any that has waited
 # too long whatever is queued. Each sweep ticks it too, bot-commands' scheduled one among them, so
 # while this loop is down CI still starts, at the sweep's pace.
+# Before each tick of the gate, and in each sweep, the loop also looks at the merge queue's builds
+# (`events.EvacQueue`, bot/README.md "Evacuating the merge queue"): a pull request whose current
+# queue build failed a required job of its own (every build ahead of it passed that job) is taken
+# out of the queue at once with the bot's token, and only once GitHub says it is out is the rest of
+# that build cancelled and its CI fix queued, so the pull requests behind it never wait for the
+# build's slowest job.
 # It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
 # next schedule; disable the workflow to stop it for good.
 name: bot-status
