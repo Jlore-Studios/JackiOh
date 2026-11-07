@@ -12195,6 +12195,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T05:07:09Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 5
     },
