@@ -17496,7 +17496,7 @@
       "planned_model": "gemini-3.8-flash-high",
       "planned_tier": "medium",
       "provider": "agy",
-      "run_id": "pending:c9b8af2f-1794078415",
+      "run_id": "42404672039",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-07T19:07:32Z",
       "stop_requested": false,
