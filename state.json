@@ -17253,15 +17253,8 @@
       "taken_asks": []
     },
     "3337": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42315689396",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-07T00:41:13Z",
-        "until": "2026-11-07T01:11:13Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17273,10 +17266,9 @@
         "reason": "planned on opus",
         "trail": "ead audio types SfxId and SfxParams\"}\n- Bash: {\"command\": \"grep -n \\\"stinkyscape-15[01]\\\\|stinkyscape-007\\\\\\\"\\\" apps/web/src/fx/cards/stinkyscape-*.json5; grep -n \\\"reads:\\\" apps/web/src/fx/motifs/*.ts | head -30\", \"description\": \"Check c150/c15\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\ncards=c['cards'] if isinstance(c,dict) and 'cards' in c else c\\nids=['stinkyscape-t-drone-interceptor','sti\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/fx/cards/stinkyscape-2.test.ts; sed -n 1,12p apps/web/src/fx/cards/stinkyscape-2.md; grep -n \\\"stinkyscape-036\\\\|stinkyscape-158\\\\|stinkyscape-146\\\" apps/web/sr\u2026\n- Bash: {\"command\": \"sed -n 395,450p apps/web/src/fx/motifs/gallery.ts; grep -n \\\"RECIPE_FIXTURES\\\" -r apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"gallery.ts\\\" | head\", \"description\": \"Read RECIP\u2026\n- Bash: {\"command\": \"grep -n \\\"RECIPE_FIXTURES\\\\b.*=\\\\|export const RECIPE_FIXTURES\\\\|satisfies\\\\|Record<CardRecipeKey\\\" apps/web/src/fx/motifs/gallery.ts | head; sed -n 1,90p apps/web/src/fx/cards/stinkysca\u2026\n- Bash: {\"command\": \"grep -n \\\"^export\\\" apps/web/src/fx/settings.ts | head; grep -rn \\\"bigMoments\\\" e2e/cypress/component/*.tsx | head -5; grep -n \\\"cardPlayed: {\\\" -A6 apps/web/src/game/animations.ts | hea\u2026\n- Bash: {\"command\": \"sed -n 236,284p apps/web/src/fx/aura/AuraLayer.tsx; sed -n 1,40p apps/web/src/fx/aura/aura.css\", \"description\": \"Read AuraLayer render and aura.css\"}\n- Bash: {\"command\": \"sed -n 1,20p apps/web/src/net/env-production.test.ts | grep -n \\\"import\\\\|ROOT\\\"; grep -n \\\"pub const BASE_BOARDS\\\\|pub const RICH_BOARDS\\\" crates/cards/src/scripts/stinkyscape/t_anomaly\u2026\n- Bash: {\"command\": \"sed -n 300,380p crates/cards/src/scripts/stinkyscape/c151_call_to_chaos_scape_edition.rs\", \"description\": \"Read c151 anomaly tests\"}\n- Bash: {\"command\": \"grep -l \\\"e2e/cypress/component\\\" spec/rulings/*.md | head -3; grep -rn \\\"proven_in\\\\|e2e\\\" crates/tools/src/spec.rs | grep -i \\\"e2e\\\\|cy.ts\\\\|it(\\\" | head -10\", \"description\": \"Check wh\u2026\n- Bash: {\"command\": \"git rev-parse origin/main 2>&1 | head -2; sed -n 1,30p scripts/worktree.sh | grep -v \\\"^$\\\" | head -20\", \"description\": \"Check origin/main and worktree script usage\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/fx/constants.test.ts | grep -v \\\"^import\\\" | head -20; grep -n \\\"FX_STARSHIP_STILL_MS\\\\|FX_STARSHIP_TAIL_MS\\\" apps/web/src/fx/constants.ts apps/web/src/fx/const\u2026\n- Bash: {\"command\": \"sed -n 280,330p apps/web/src/fx/constants.test.ts; sed -n 395,430p apps/web/src/fx/constants.test.ts\", \"description\": \"See how constants test pins later constants\"}\n- Bash: {\"command\": \"grep -n \\\"FLAVOR_SUB_LOOKS\\\" -A30 apps/web/src/fx/flavors.ts | grep -oE '\\\"[A-Za-z]+/[a-z]+\\\"' | sort -u | tr '\\\\n' ' '; grep -n \\\"^export const FLAVOR_LOOKS\\\" -A3 apps/web/src/fx/flavor\u2026\n- Bash: {\"command\": \"grep -n \\\"SUB_LOOK\\\\|sub-look\\\\|\\\\\\\"[A-Z][a-z]*/[a-z]*\\\\\\\"\\\" apps/web/src/fx/flavors.ts | head -20\", \"description\": \"Find sub-look names in flavors.ts\"}\n- Bash: {\"command\": \"sed -n 111,148p apps/web/src/fx/flavors.ts | grep -oE \\\"^\\\\s+[A-Za-z]+:|^\\\\s+[a-z]+: \\\\{\\\" | tr -d ' {' | tr '\\\\n' ' '\", \"description\": \"List flavor sub-look keys\"}\n- Bash: {\"command\": \"grep -n -i \\\"starship\\\\|set piece\\\" apps/web/README.md | head -8; grep -n \\\"anomal\\\" -i crates/shared/README.md crates/engine/README.md | head\", \"description\": \"Check READMEs mentioning \u2026\n- Bash: {\"command\": \"sed -n 123,130p crates/engine/README.md; sed -n 455,470p apps/web/README.md\", \"description\": \"Read README contract lines\"}\n- Bash: {\"command\": \"ls apps/web/src/cards/CardFace.tsx; grep -n \\\"starship={starship}\\\\|starship=\\\" apps/web/src/cards/CardFace.tsx | head -4; grep -n \\\"FX_MOTIF_CENTER_LANE =\\\" apps/web/src/fx/constants.ts\u2026\n- Bash: {\"command\": \"grep -n \\\"^function sfx\\\\|^export function sfx\\\\|const sfx =\\\" apps/web/src/audio/cues.ts; sed -n 645,652p apps/web/src/audio/cues.ts\", \"description\": \"Check sfx cue helper signature\"}\n- Bash: {\"command\": \"sed -n 34,50p crates/shared/tests/face.rs; grep -n \\\"label\\\" crates/shared/tests/face.rs | head -3\", \"description\": \"Read shared face test helpers\"}\n- Bash: {\"command\": \"grep -o \\\"Locale::[A-Za-z]*\\\" crates/shared/tests/face.rs | sort | uniq -c | head; grep -n \\\"pub radiant\\\\|radiant:\\\" apps/web/src/wire/generated/CardView.ts | head -2\", \"description\": \"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3337/.bot-plan.md\", \"content\": \"## Goal\\n\\n`boardReplaced` gains an optional `anomaly` code that every Anomaly lay sets (Anomaly Found!, Call to Chaos\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"fn face_in\\\\|fn hashId\\\\|export function hashId\\\" crates/shared/src/face/model.rs apps/web/src/cards/art/*.ts | head -3; grep -n \\\"^function asteroid\\\\|^fun\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3337/.bot-plan.md\", \"content\": \"## Goal\\n\\n`boardReplaced` gains an optional `anomaly` code that every Anomaly lay sets. Old logs are unchanged, and t\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3337/.bot-plan.md\", \"old_string\": \"- [ ] `anomaly` set for all ten boards and #151, absent elsewhere; old-log test; `wire/` clea\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: - [ ] `anomaly` set for all ten boards and #151, absent elsewhere; old-log test; `wire/` clean. - [ ] Ten pictures differ; code\u2192picture te\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3337/.bot-plan.md\", \"offset\": 320, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3337/.bot-plan.md\", \"offset\": 255, \"limit\": 35}\n- said: ## Goal `boardReplaced` gains an optional `anomaly` code that every Anomaly lay sets. Old logs are unchanged, and the change is ruled. On that code the web builds: - ten pictures, drawn by an owner's Anomaly Found! from its label; - the probe scan, which the opponent sees as a sweep only; - the cas\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-07T00:01:58Z",
       "owner_why": "it plans it",
@@ -17289,9 +17281,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-06T23:47:23Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42315689396",
+      "run_id": "pending:4858821d-1794013313",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T00:01:58Z",
+      "started_at": "2026-11-07T01:02:34Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17796,9 +17788,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T01:01:36Z",
+    "at": "2026-11-07T01:02:34Z",
     "url": "",
-    "what": "build #3333 on claude-8"
+    "what": "build #3337 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-07T00:36:52Z",
