@@ -379,6 +379,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
       data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
+      aria-label={face.name}
       {...cosmetics}
       style={scales}
     >

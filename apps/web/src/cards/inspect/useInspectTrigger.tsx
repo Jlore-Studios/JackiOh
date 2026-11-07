@@ -70,7 +70,7 @@ export type InspectBindings = {
 
 type Timer = ReturnType<typeof setTimeout>;
 
-type Press = { x: number; y: number; pointerId: number; pointerType: string };
+type Press = { x: number; y: number; pointerId: number };
 
 /** R3339000: whether the active device uses a coarse pointer (phone, touchscreen). */
 export function isCoarsePointer(): boolean {
@@ -199,7 +199,7 @@ export function useInspectTrigger(
         if (startsOnTermTip(event.target)) return;
         const element = event.currentTarget;
         const pressKey = current.key;
-        press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType };
+        press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
         pressState.current = "pending";
         t.press = setTimeout(() => {
           t.press = null;
@@ -210,27 +210,18 @@ export function useInspectTrigger(
             return;
           }
           const onLongPress = now.options.onLongPress;
-          const coarse = isCoarsePointer() || press.current?.pointerType === "touch";
+          // R2617000, R3339000: a hold is the hover; with previews off it opens the sheet.
+          const previewHold = onLongPress === undefined && hoverAllowed();
           pressState.current = "fired";
           armSuppressor();
-          // R3339000: a long press on a coarse pointer (phone) opens the inspect sheet.
-          if (coarse) {
-            press.current = null;
-            if (onLongPress !== undefined) onLongPress();
-            else openInspect({ key: pressKey, mode: "sheet", anchor: rectOf(element) });
-            return;
-          }
-          // R2617000: on a desktop hold, a hold is the hover preview; with previews off it opens the sheet.
-          const previewHold = onLongPress === undefined && hoverAllowed();
-          if (previewHold) {
+          if (onLongPress !== undefined) onLongPress();
+          else if (previewHold) {
             // `press` keeps the start point, so a drift past the slop still ends the look.
             holdPreview.current = pressKey;
             openInspect({ key: pressKey, mode: "hover", anchor: rectOf(element) });
-            return;
+          } else {
+            openInspect({ key: pressKey, mode: "sheet", anchor: rectOf(element) });
           }
-          press.current = null;
-          if (onLongPress !== undefined) onLongPress();
-          else openInspect({ key: pressKey, mode: "sheet", anchor: rectOf(element) });
         }, LONG_PRESS_MS);
       },
 

@@ -5,9 +5,9 @@
 // below the art (Vitest stubs CSS, so they are read as text). The pixels are e2e's
 // cypress/component/full-art-board.cy.tsx.
 
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -40,7 +40,9 @@ import {
   VERSION_FULL_ART_SIGNED_ID,
   lookOfLevel,
 } from "./versions.ts";
-import { isCoarsePointer } from "./inspect/useInspectTrigger.tsx";
+import { isCoarsePointer, useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
+import { closeInspect } from "./inspect/store.ts";
+import { LONG_PRESS_MS } from "./inspect/constants.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 
 const DEFS = Object.values(CATALOG);
@@ -598,7 +600,116 @@ describe("R3339000 art-first cards in play", () => {
     expect(cards).toContain(".cf:focus-within .card-name-hover");
   });
 
-  it("R3339000 useInspectTrigger handles coarse pointer inspect routing", () => {
-    expect(typeof isCoarsePointer).toBe("function");
+  it("R3339000 CardFace and MinionFace retain accessible card name via aria-label on art-first faces", () => {
+    // 1. MinionFace (Legendary art-first)
+    const legendaryDef = DEFS.find((d) => d.rarity === "Legendary" && d.type === "Unit")!;
+    const lcf = minionOf(legendaryDef.id);
+    expect(lcf.getAttribute("data-art-first")).toBe("true");
+    expect(lcf.getAttribute("aria-label")).toBe(legendaryDef.name);
+    cleanup();
+
+    // 2. CardFace (backrow compact art-first)
+    const backrowDef = DEFS.find((d) => (d.rarity === "Legendary" || d.rarity === "Mythic") && d.type === "Spell")!;
+    const face = faceModel({
+      defId: backrowDef.id,
+      def: backrowDef,
+      radiant: false,
+    });
+    const { container } = render(<CardFace face={face} layout="compact" worn />);
+    const cf = container.querySelector<HTMLElement>(".cf")!;
+    expect(cf.getAttribute("data-art-first")).toBe("true");
+    expect(cf.querySelector(".card-name:not(.card-name-hover)")).toBeNull();
+    expect(cf.querySelector(".card-name-hover")).not.toBeNull();
+    expect(cf.getAttribute("aria-label")).toBe(backrowDef.name);
+    cleanup();
+  });
+
+  it("R3339000 a long press on a coarse pointer opens inspect", () => {
+    vi.useFakeTimers();
+    const originalMatchMedia = window.matchMedia;
+    try {
+      // 1. Fine pointer (desktop): mouse hold does not trigger inspect
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }));
+      expect(isCoarsePointer()).toBe(false);
+
+      function TestTrigger({ id }: { id: string }) {
+        const subject = {
+          key: id,
+          face: faceModel({ defId: "core-043", radiant: false }),
+        };
+        const inspect = useInspectTrigger(subject);
+        return (
+          <div>
+            <div data-testid={id} {...inspect.handlers}>
+              {subject.face.name}
+            </div>
+            {inspect.overlay}
+            <output data-testid={`${id}-open`}>{inspect.open ?? "none"}</output>
+          </div>
+        );
+      }
+
+      render(<TestTrigger id="coarse-test" />);
+      const trigger = screen.getByTestId("coarse-test");
+
+      // On desktop fine pointer, mouse hold does not open inspect
+      fireEvent.pointerDown(trigger, { clientX: 10, clientY: 10, pointerId: 1, pointerType: "mouse", button: 0 });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      expect(screen.getByTestId("coarse-test-open")).toHaveTextContent("none");
+      fireEvent.pointerUp(trigger, { pointerId: 1, pointerType: "mouse" });
+
+      // 2. Coarse pointer (phone): coarse pointer match triggers hold and opens inspect
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("coarse"),
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }));
+      expect(isCoarsePointer()).toBe(true);
+
+      fireEvent.pointerDown(trigger, { clientX: 10, clientY: 10, pointerId: 2, pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      expect(screen.getByTestId("coarse-test-open")).toHaveTextContent("hover");
+
+      // Lifting closes the hold preview
+      fireEvent.pointerUp(trigger, { pointerId: 2, pointerType: "touch" });
+      expect(screen.getByTestId("coarse-test-open")).toHaveTextContent("none");
+
+      // 3. Coarse pointer with hover previews off opens inspect sheet
+      writeCardSettings({ hoverPreviews: false });
+      fireEvent.pointerDown(trigger, { clientX: 10, clientY: 10, pointerId: 3, pointerType: "touch" });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      expect(screen.getByTestId("coarse-test-open")).toHaveTextContent("sheet");
+      fireEvent.pointerUp(trigger, { pointerId: 3, pointerType: "touch" });
+    } finally {
+      window.matchMedia = originalMatchMedia;
+      act(() => {
+        closeInspect();
+      });
+      cleanup();
+      vi.clearAllTimers();
+      vi.useRealTimers();
+      writeCardSettings(CARD_SETTINGS_DEFAULTS);
+      vi.restoreAllMocks();
+    }
   });
 });
