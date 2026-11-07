@@ -644,19 +644,20 @@ describe("R3346000 the play impact and the trap snap", () => {
     ]).toEqual([]);
   });
 
-  it("R3346000 each type grows with the tier: a longer sound, and no fewer voices", () => {
+  it("R3346000 each type grows with the tier: a longer sound, and from medium up no fewer voices, a boom or sub at the top", () => {
     for (const type of TYPES) {
       const tiers = PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type));
       const lengths = tiers.map(returnedSeconds);
       for (let i = 1; i < lengths.length; i += 1) {
         expect(lengths[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} outlasts the tier below`).toBeGreaterThan(lengths[i - 1] ?? Infinity);
       }
+      // A Spell's light flick has its bell (two voices), which its medium play drops for a longer charge.
       const voices = tiers.map((run) => run.made.filter((n) => n.started).length);
-      for (let i = 1; i < voices.length; i += 1) {
+      for (let i = 2; i < voices.length; i += 1) {
         expect(voices[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} has no fewer voices`).toBeGreaterThanOrEqual(voices[i - 1] ?? Infinity);
       }
-      // A heavy play's boom is a voice the light one has not got (a Spell's light flick has its bell instead).
-      expect(voices[2], `${type}: a heavy play adds a voice or keeps its count`).toBeGreaterThanOrEqual(voices[0] ?? Infinity);
+      // A heavy Unit's or Spell's boom and a massive Field Spell's sub are voices the medium play has not got.
+      expect(voices[3], `${type}: a massive play has more voices than a medium one`).toBeGreaterThan(voices[1] ?? Infinity);
     }
   });
 
@@ -670,7 +671,7 @@ describe("R3346000 the play impact and the trap snap", () => {
     }
   });
 
-  it("R3346000 no tier past light is quieter than the one below it, and a missing tier or type is a light Unit", () => {
+  it("R3346000 a missing tier or type is a light Unit", () => {
     const plain = runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {});
     const light = impactRun("light", "unit");
     expect(plain.made.map((n) => n.kind)).toEqual(light.made.map((n) => n.kind));
@@ -684,7 +685,7 @@ describe("R3346000 the play impact and the trap snap", () => {
     expect(returnedSeconds(trimmed)).toBe(returnedSeconds(plain));
   });
 
-  it("R3346000 the impact outlasts none of its cue: every tier fits the 500 ms row", () => {
+  it("R3346000 every tier of every type fits the 500 ms row", () => {
     for (const run of runs) expect(returnedSeconds(run), run.label).toBeLessThanOrEqual(SFX.playImpact.durationMs / 1000);
   });
 });

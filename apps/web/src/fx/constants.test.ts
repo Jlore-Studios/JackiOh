@@ -44,6 +44,9 @@ const S2 = {
   FX_SLAM_TRAUMA_PER_STAT: 0.06,
   FX_SLAM_MAX_TRAUMA: 0.5,
   FX_LEGENDARY_TRAUMA: 0.7,
+  // R3346000: the board's shake under a heavy and a massive play.
+  FX_PLAY_HEAVY_TRAUMA: 0.35,
+  FX_PLAY_MASSIVE_TRAUMA: 0.7,
   FX_TAKEOVER_TAIL_MS: 700,
   FX_TAKEOVER_TRAUMA: 0.6,
   FX_TRAP_TRAUMA: 0.4,
@@ -486,6 +489,8 @@ describe("S2 the effects constants", () => {
     for (const trauma of [
       constants.FX_SLAM_MAX_TRAUMA,
       constants.FX_LEGENDARY_TRAUMA,
+      constants.FX_PLAY_HEAVY_TRAUMA,
+      constants.FX_PLAY_MASSIVE_TRAUMA,
       constants.FX_TRAP_TRAUMA,
       constants.FX_RESULT_TRAUMA,
       constants.FX_TAKEOVER_TRAUMA,

@@ -318,6 +318,9 @@ than the screen does ([[R203]]).
   a hidden card as it reveals and never as it is set ([[R2722002]]). A Legendary's or a Mythic's
   sting is its own intro (below), so the shared entrance sting plays only for one with no intro of its
   own ([[R3332002]]). [[R203]] bounds what may vary. A card's hooks may also play effects of their own ([[R655]]).
+  Every Unit, Spell and Field Spell the viewer can read also lands with an impact under its whoosh, sized by
+  the mana it cost and coloured by its type, and a firing Trap snaps, the other seat's a step quieter
+  ([[R3346000]]).
 - **Armor and the niche moments** (patch v0.3.X). A hit Armor took half or more of clanks dully under
   its impact and one it took whole rings bright, each with the effects layer's shield ([[R1363]]); a
   hit that does far more than the health left crunches ([[R1364]]); a Brittle crumble, an unlock, a
@@ -327,7 +330,8 @@ than the screen does ([[R203]]).
 - **The mix** ([[R669]]). An effect about a Unit on the field is panned to its lane. Every voice line
   dips the effects for its span, and the effects and voice lines share one light reverb.
 - **Haptics** ([[R669]]). On a phone that can vibrate, a short tick for the viewer's own card landing, a
-  hit and the viewer's turn start, behind a Vibration switch and never under Reduce Motion.
+  hit and the viewer's turn start, behind a Vibration switch and never under Reduce Motion. A heavy or
+  massive play (by its cost) buzzes harder, whichever seat plays it, and shakes the board ([[R3346000]]).
 - **Voice lines.** Every Unit, tokens included, has a play line and a death line, and since #103 an
   attack line of four words at most, spoken as its controller picks it up to attack ([[R1448]]). Every
   Spell, Field Spell, Trap and Field Trap has a cast line. [[R204]] fixes the moment each is spoken. The

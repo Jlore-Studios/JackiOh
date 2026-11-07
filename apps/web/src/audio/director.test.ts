@@ -953,3 +953,36 @@ describe("R655 a card's effect is sent on its hook's moment, through the directo
     expect(sink.sent.filter((cue) => cue.kind !== "sfx")).toEqual([]);
   });
 });
+
+describe("R3346000 a collapsed play and summon: the cost impact and the stats thud", () => {
+  /** The viewer's own Unit `c1` on the board, with `attack`/`health`, the catalog naming every card a Unit. */
+  function pair(costPaid: number, attack: number, health: number): Recorder {
+    const sink = recorder();
+    const director = createSoundDirector(sink, LINES, () => ({ type: "Unit", tags: [] }));
+    const landed = unit("p1", { instanceId: "c1", attack, health, maxHealth: health });
+    const board = firstView({ you: emptySide("p1", { units: [null, null, landed, null, null] }) });
+    const view = begin(director, [{ ...played("core-004", "c1"), costPaid } as GameEvent, summoned("core-004", "c1")], board);
+    const entries = entriesOf(view, view.events);
+    expect(entries, "planEntries collapses the pair into one entry").toHaveLength(1);
+    director.onEntryStart(must(entries[0], "the pair"));
+    return sink;
+  }
+  const cueOf = (sink: Recorder, id: SfxId) => sfxSent(sink).find((s) => s.id === id);
+
+  it("R3346000 a 1-mana 20/20 gets a light impact and a massive thud, the thud PAIR_OFFSET_MS after the impact", () => {
+    const sink = pair(1, 20, 20);
+    expect(cueOf(sink, "playImpact")).toMatchObject({ params: { playTier: "light", playType: "unit" }, delayMs: 0 });
+    expect(cueOf(sink, "summon")).toMatchObject({ params: { slamTier: "massive" }, delayMs: PAIR_OFFSET_MS });
+    expect(cueOf(sink, "impact")).toMatchObject({ params: { impactTier: "giga" }, delayMs: PAIR_OFFSET_MS });
+    const impact = cueOf(sink, "playImpact");
+    const thud = cueOf(sink, "summon");
+    expect((thud?.delayMs ?? 0) - (impact?.delayMs ?? 0)).toBe(PAIR_OFFSET_MS);
+  });
+
+  it("R3346000 a 10-mana 1/1 gets a massive impact and a tiny thud with no slam impact under it", () => {
+    const sink = pair(10, 1, 1);
+    expect(cueOf(sink, "playImpact")).toMatchObject({ params: { playTier: "massive", playType: "unit" }, delayMs: 0 });
+    expect(cueOf(sink, "summon")).toMatchObject({ params: { slamTier: "tiny" }, delayMs: PAIR_OFFSET_MS });
+    expect(cueOf(sink, "impact")).toBeUndefined();
+  });
+});
