@@ -1,9 +1,11 @@
 // #1954: one press on the empty field is one tap — one mark set and one sound — and each
 // playmat taps in its family's look and sound.
 // #2332: an occupied zone's own element taps too; only its card and the board's controls keep a press.
+// R3348000: every tile answers a press with a ripple in its half's playmat family and that family's
+// sound, and a legal tile answers harder, without changing what the press does in the game.
 
 import { useRef, type ReactElement } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RAPID_SFX } from "../audio/constants.ts";
@@ -12,9 +14,14 @@ import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.t
 import type { SfxId } from "../audio/types.ts";
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
+import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
+import { HAPTIC_PATTERNS, resetTapHapticsForTests } from "../haptics/haptics.ts";
+import { resetHapticsSettingsForTests, writeHapticsSettings } from "../haptics/settings.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, fullBoardView } from "../test/fixtures.ts";
+import { TILE_FEEL } from "./arena/config.ts";
 import Board from "./Board.tsx";
-import { testid } from "./contract.ts";
+import { testid, type ClickTarget } from "./contract.ts";
 import SandSurface, {
   TAP_FAMILY,
   TAP_FEEL,
@@ -71,6 +78,13 @@ afterEach(() => {
   cleanup();
   setAudioEngineForTests(null);
   vi.restoreAllMocks();
+  vi.useRealTimers();
+  localStorage.clear();
+  resetFxSettingsForTests();
+  __resetSettingsForTests();
+  resetHapticsSettingsForTests();
+  resetTapHapticsForTests();
+  Reflect.deleteProperty(navigator, "vibrate");
 });
 
 function Field({ table, theirTable }: { table?: string; theirTable?: string }): ReactElement {
@@ -294,7 +308,7 @@ describe("SandSurface taps", () => {
     expect(playedIds()).toEqual([TAP_SFX[TAP_FAMILY["table-marble"]]]);
   });
 
-  it("#2332 a press inside an occupied zone's card does not tap", () => {
+  it("#2332 a press inside an occupied zone's card leaves no mark on the mat, and R3348000 the tile answers it", () => {
     const field = boardField();
     const zone = screen.getByTestId(testid.zone("you", "units", 1));
     const sprite = zone.querySelector<HTMLElement>(".card")?.querySelector<HTMLElement>("*");
@@ -302,10 +316,11 @@ describe("SandSurface taps", () => {
 
     press(sprite);
     expect(markCount(field)).toBe(0);
-    expect(audio.playSfx).not.toHaveBeenCalled();
+    expect(field.querySelectorAll(".tile-answer[data-occupied='true']")).toHaveLength(1);
+    expect(playedIds()).toEqual([TAP_SFX[TAP_FAMILY["table-marble"]]]);
   });
 
-  it("#2332 a press on a legal zone does not tap: the press plays into it", () => {
+  it("#2332 a press on a legal zone leaves no mark on the mat: the press plays into it, and R3348000 the tile answers", () => {
     const legal = testid.zone("you", "units", 1);
     const mounted = render(<Board view={baseView()} highlight={{ legal: new Set([legal]), selected: new Set() }} />);
     const field = mounted.container.querySelector<HTMLElement>(".field");
@@ -316,6 +331,168 @@ describe("SandSurface taps", () => {
 
     press(zone);
     expect(markCount(field)).toBe(0);
-    expect(audio.playSfx).not.toHaveBeenCalled();
+    expect(field.querySelectorAll(".tile-answer")).toHaveLength(1);
+  });
+});
+
+/** A board of empty tiles on `table`, a few of them legal, with the field's bounds stubbed. */
+function tileBoard(options: {
+  table?: string;
+  loadouts?: SeatLoadouts;
+  legal?: readonly string[];
+  onClick?: (target: ClickTarget) => void;
+}): HTMLElement {
+  const mounted = render(
+    <Board
+      view={baseView()}
+      wearCosmetics
+      deckCosmetics={{ table: options.table ?? "table-marble", field: null, cardBack: null }}
+      {...(options.loadouts === undefined ? {} : { loadouts: options.loadouts })}
+      highlight={{ legal: new Set(options.legal ?? []), selected: new Set() }}
+      {...(options.onClick === undefined ? {} : { onClick: options.onClick })}
+    />,
+  );
+  const field = mounted.container.querySelector<HTMLElement>(".field");
+  if (field === null) throw new Error("fixture must draw a field");
+  stubBounds(field);
+  return field;
+}
+
+const YOURS = testid.zone("you", "units", 2);
+const THEIRS = testid.zone("opponent", "units", 2);
+
+describe("R3348000 every tile answers a press", () => {
+  it("R3348000 an illegal tile gets a ripple in its half's family and one sound, from the mat's own tap", () => {
+    for (const id of Object.keys(FAMILY_OF)) {
+      const field = tileBoard({ table: id });
+      const family = FAMILY_OF[id] ?? "sand";
+      audio.playSfx.mockClear();
+
+      press(screen.getByTestId(YOURS));
+      const answers = field.querySelectorAll(`.tile-answer[data-family="${family}"]`);
+      expect(answers, `${id} ripples in ${family}`).toHaveLength(1);
+      expect(answers[0]?.getAttribute("data-strength")).toBe("base");
+      expect(playedIds(), `${id} sounds once, in ${family}`).toEqual([SFX_OF[family]]);
+      cleanup();
+    }
+  });
+
+  it("R3348000 a legal tile answers harder: sand-build 4 and a strong ripple, with one sound", () => {
+    const field = tileBoard({ legal: [YOURS] });
+    const zone = screen.getByTestId(YOURS);
+    expect(zone.getAttribute("role")).toBe("button");
+
+    press(zone);
+    expect(field.querySelectorAll(".tile-answer[data-strength='strong']")).toHaveLength(1);
+    expect(audio.playSfx).toHaveBeenCalledTimes(1);
+    expect(audio.playSfx.mock.calls[0]?.[0]).toBe("tapStone");
+    expect(audio.playSfx.mock.calls[0]?.[1]?.sandBuild).toBe(TILE_FEEL.legalBuild);
+    expect(TILE_FEEL.legalBuild).toBeGreaterThan(TILE_FEEL.baseBuild);
+  });
+
+  it("R3348000 an occupied tile ripples round its card, and a press on its card answers too", () => {
+    const field = boardField();
+    press(screen.getByTestId(testid.zone("you", "units", 1)));
+    const answer = field.querySelector(".tile-answer");
+    expect(answer?.getAttribute("data-occupied")).toBe("true");
+    expect(answer?.getAttribute("data-family")).toBe("stone");
+  });
+
+  it("R3348000 each half answers in its own playmat, the opponent's tile in theirs", () => {
+    const loadouts: SeatLoadouts = {
+      p1: { seat: { ...DEFAULT_CARD_COSMETICS }, cards: {} },
+      p2: { seat: { ...DEFAULT_CARD_COSMETICS, table: "table-astral" }, cards: {} },
+    };
+    const field = tileBoard({ table: "table-marble", loadouts, legal: [THEIRS, YOURS] });
+
+    press(screen.getByTestId(THEIRS));
+    press(screen.getByTestId(YOURS), 30, 70, 2);
+    const families = [...field.querySelectorAll(".tile-answer")].map((answer) => answer.getAttribute("data-family"));
+    expect(families).toEqual(["astral", "stone"]);
+    expect(playedIds()).toEqual(["tapAstral", "tapStone"]);
+  });
+
+  it("R3348000 a legal tile still plays when pressed, and an illegal one does nothing in the game", () => {
+    const onClick = vi.fn<(target: ClickTarget) => void>();
+    tileBoard({ legal: [YOURS], onClick });
+    const legal = screen.getByTestId(YOURS);
+    const illegal = screen.getByTestId(testid.zone("you", "units", 3));
+
+    press(legal);
+    fireEvent.click(legal);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onClick).toHaveBeenCalledWith({ on: "zone", side: "you", row: "units", lane: 2 });
+
+    onClick.mockClear();
+    press(illegal, 30, 70, 2);
+    fireEvent.click(illegal);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("R3348000 a press is never stopped or default-prevented, so the game keeps it", () => {
+    tileBoard({ legal: [YOURS] });
+    const press = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 30, clientY: 70 });
+    const stop = vi.spyOn(press, "stopPropagation");
+    screen.getByTestId(YOURS).dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(false);
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it("R3348000 an answer clears after TILE_FEEL.rippleMs, and no more than TILE_FEEL.maximum show at once", () => {
+    vi.useFakeTimers();
+    const field = tileBoard({});
+    const zone = screen.getByTestId(YOURS);
+
+    press(zone);
+    expect(field.querySelectorAll(".tile-answer")).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(TILE_FEEL.rippleMs - 1);
+    });
+    expect(field.querySelectorAll(".tile-answer")).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(field.querySelectorAll(".tile-answer")).toHaveLength(0);
+
+    for (let tap = 0; tap < TILE_FEEL.maximum + 5; tap += 1) press(zone, 30, 70, tap + 1);
+    expect(field.querySelectorAll(".tile-answer")).toHaveLength(TILE_FEEL.maximum);
+  });
+
+  it("R3348000 reduced motion, or effects off, draw the answer still and keep the sound", () => {
+    const field = tileBoard({});
+    press(screen.getByTestId(YOURS));
+    expect(field.querySelector(".tile-answer")?.getAttribute("data-play")).toBe("move");
+
+    writeSettings({ reduceMotion: true });
+    press(screen.getByTestId(YOURS), 30, 70, 2);
+    expect([...field.querySelectorAll(".tile-answer")].at(-1)?.getAttribute("data-play")).toBe("still");
+
+    __resetSettingsForTests();
+    setFxSettings({ intensity: "off" });
+    press(screen.getByTestId(YOURS), 30, 70, 3);
+    expect([...field.querySelectorAll(".tile-answer")].at(-1)?.getAttribute("data-play")).toBe("still");
+    expect(audio.playSfx).toHaveBeenCalledTimes(3);
+  });
+
+  it("R3348000 a touch press buzzes, a mouse press does not, and the Vibration switch silences it", () => {
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    Object.defineProperty(navigator, "vibrate", { configurable: true, value: vibrate });
+    let t = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => (t += 1000));
+    tileBoard({ legal: [YOURS] });
+
+    fireEvent.pointerDown(screen.getByTestId(testid.zone("you", "units", 3)), { clientX: 30, clientY: 70, pointerId: 1, pointerType: "mouse" });
+    expect(vibrate).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(screen.getByTestId(testid.zone("you", "units", 3)), { clientX: 30, clientY: 70, pointerId: 2, pointerType: "touch" });
+    expect(vibrate).toHaveBeenLastCalledWith([...HAPTIC_PATTERNS.tile]);
+
+    fireEvent.pointerDown(screen.getByTestId(YOURS), { clientX: 30, clientY: 70, pointerId: 3, pointerType: "touch" });
+    expect(vibrate).toHaveBeenLastCalledWith([...HAPTIC_PATTERNS.tileLegal]);
+
+    vibrate.mockClear();
+    writeHapticsSettings({ vibration: false });
+    fireEvent.pointerDown(screen.getByTestId(YOURS), { clientX: 30, clientY: 70, pointerId: 4, pointerType: "touch" });
+    expect(vibrate).not.toHaveBeenCalled();
   });
 });
