@@ -1,7 +1,7 @@
 // R631 (SPEC §10.11 "Music"): the game's music director follows the viewer's own view, switches station
 // at the moment R204 gives a readable card's cast line, and opens a match on its sting. R822000: no card
 // plays a theme. R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it;
-// R2722002: a hidden card's at its reveal.
+// R2722002: a hidden card's at its reveal. R3332002: where the intro will not play, its opening stings.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,7 +34,9 @@ type Rig = {
   intros: string[];
   stops: number;
   introPreloads: string[][];
-  /** Every intro and request, in the order the director made them. */
+  /** R3332002: the stings asked for (an intro cut to its opening), in order. */
+  stings: string[];
+  /** Every intro, sting and request, in the order the director made them. */
   order: string[];
   settings: AudioSettings;
   setSettings(patch: Partial<AudioSettings>): void;
@@ -56,6 +58,7 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
     intros: [],
     stops: 0,
     introPreloads: [],
+    stings: [],
     order: [],
     settings: { ...DEFAULT_AUDIO_SETTINGS, ...options.settings },
     setSettings(patch) {
@@ -76,6 +79,10 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
       playIntro: (id) => {
         r.intros.push(id);
         r.order.push(`intro ${id}`);
+      },
+      playSting: (id) => {
+        r.stings.push(id);
+        r.order.push(`sting ${id}`);
       },
       stopIntro: () => {
         r.stops += 1;
@@ -535,5 +542,71 @@ describe("R1351 what cuts an intro short", () => {
     r.director.onEvent(hitOn("p1"), view);
     expect(r.stops).toBe(before);
     expect(r.last().track).toBe("tavern-1");
+  });
+});
+
+describe("R3332002 a Legendary's or a Mythic's sting is its own intro", () => {
+  const firing = (defId: string, instanceId: string): GameEvent => ({ type: "trapFired", instanceId, defId, controller: "p1", row: "backrow", lane: 2 });
+  /** A Legendary Unit played (its own summoned after), a Mythic Spell from the other seat, a token printed Legendary, a Mythic Trap's firing. */
+  const grandPlays = (r: Rig, view: PlayerView): void => {
+    r.director.onEvent(played(SILLY_SILAS), view);
+    r.director.onEvent(summonedOf(SILLY_SILAS, `i-${SILLY_SILAS}`), view);
+    r.director.onEvent(played(ZEPHYRS, "p2"), view);
+    r.director.onEvent(summonedOf(TOP_LOSER, "t1"), view);
+    r.director.onEvent(firing(MY_PAWN, "t2"), view);
+  };
+  const GRAND_INTROS = ["intro-core-052", "intro-core-097", "intro-classicplus-019-1", "intro-core-096"];
+
+  it("R3332002 with dynamic music off or the music at zero, a Legendary's and a Mythic's play stings from its own intro", () => {
+    for (const settings of [{ dynamicMusic: false }, { music: 0 }, { dynamicMusic: false, music: 0 }]) {
+      const where = JSON.stringify(settings);
+      const r = rig({ settings });
+      const view = midGame();
+      r.director.onView(view);
+      grandPlays(r, view);
+      expect(r.stings, where).toEqual(GRAND_INTROS);
+      expect(r.intros, where).toEqual([]);
+    }
+    // The station switch stays dynamic music's: at zero it still moves, after the sting; off, it does not.
+    const quiet = rig({ settings: { music: 0 } });
+    quiet.director.onView(midGame());
+    quiet.order.length = 0;
+    quiet.director.onEvent(played(WARDRUM), midGame());
+    expect(quiet.order).toEqual(["sting intro-classicplus-037", "request epic-1"]);
+    const off = rig({ settings: { dynamicMusic: false } });
+    off.director.onView(midGame());
+    off.order.length = 0;
+    off.director.onEvent(played(WARDRUM), midGame());
+    expect(off.order).toEqual(["sting intro-classicplus-037"]);
+  });
+
+  it("R3332002 with dynamic music on and the music above zero, the intro plays whole and no sting is asked for", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    grandPlays(r, view);
+    expect(r.intros).toEqual(GRAND_INTROS);
+    expect(r.stings).toEqual([]);
+  });
+
+  it("R3332002 R202 a card behind the sentinel, a Trap's set, a firing again and a card below Legendary sting nothing", () => {
+    const r = rig({ settings: { dynamicMusic: false } });
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent({ type: "cardPlayed", player: "p2", instanceId: "hidden", defId: "hidden", costPaid: 3 }, view);
+    r.director.onEvent(summonedOf("hidden", "hidden"), view);
+    r.director.onEvent(firing("hidden", "hidden"), view);
+    r.director.onEvent(played(MY_PAWN), view);
+    r.director.onEvent({ type: "trapFired", instanceId: "t5", defId: "classicplus-074", controller: "p1", row: "backrow", lane: 3, again: true }, view);
+    r.director.onEvent(played(K_POP), view);
+    expect(r.stings).toEqual([]);
+  });
+
+  it("R3332002 fetches the hand's intros ahead with dynamic music off too: a sting is cut from them", () => {
+    const r = rig({ settings: { dynamicMusic: false } });
+    const view = midGame({ you: emptySide("p1", { hand: [card({ defId: ZEPHYRS }), card({ defId: K_POP }), card({ defId: SILLY_SILAS })] }) });
+    r.director.onView(view);
+    r.director.settle();
+    expect(r.introPreloads).toEqual([["intro-core-097", "intro-core-052"]]);
   });
 });

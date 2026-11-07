@@ -1,6 +1,7 @@
 // R502, R670, R2784000: what a bespoke recipe (a `{ bespoke }` entry of a set's effects table) is built
 // from. A card recipe claims events of its own play's resolution (cardFx.ts); an entrance replaces a
 // marquee Unit's rarity entrance (entrances.ts). Each card's recipe is its own file beside its set's table.
+// R3332000: an entrance is an entry's `entrance`, beside any entry of a Unit or a Field Spell, or alone.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -31,6 +32,7 @@ export const ENTRANCE_TRAUMA = {
   bigBoom: 0.75,
   titanBloom: FX_LEGENDARY_TRAUMA,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
+  felinorAssembly: FX_LEGENDARY_TRAUMA,
 } as const;
 
 /** Where Big Max's fuse sparks, as a fraction of the entry, before the slam at FX_SLAM_AT. */
@@ -41,7 +43,17 @@ export const FOOT: FxPoint = { x: 0.5, y: 1 };
 
 export type EntranceKey = keyof typeof ENTRANCE_TRAUMA;
 
-/** What an entrance plans against: the entry's duration, the zone's testid and the intensity. */
-export type EntrancePlan = { D: number; tgt: string; intensity: number };
+/**
+ * What an entrance plans against: the entry's duration, the zone's testid and the intensity. R3332001:
+ * the board's view and the readable `summoned` it lands with, for one that reads the board (Felinor
+ * Fiender's); the planner passes both, and a recipe that reads neither ignores them.
+ */
+export type EntrancePlan = {
+  D: number;
+  tgt: string;
+  intensity: number;
+  view?: PlayerView;
+  landing?: Extract<GameEvent, { type: "summoned" }>;
+};
 
 export type Entrance = (p: EntrancePlan) => FxCue[];

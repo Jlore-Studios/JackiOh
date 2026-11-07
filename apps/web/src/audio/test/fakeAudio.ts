@@ -826,6 +826,7 @@ export function fakeAudioEngine(overrides: Partial<FakeAudioEngine> = {}): FakeA
     speaking: vi.fn<AudioEngine["speaking"]>(() => false),
     subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
     musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
+    sfxOutput: vi.fn<AudioEngine["sfxOutput"]>(() => null),
     subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
     dispose: vi.fn<AudioEngine["dispose"]>(),
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),

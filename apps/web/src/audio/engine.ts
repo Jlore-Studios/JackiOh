@@ -1072,6 +1072,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       };
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
+    sfxOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.sfx }),
     crowdOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, crowd: buses.crowd }),
     subscribeState: (listener) => {
       stateListeners.add(listener);

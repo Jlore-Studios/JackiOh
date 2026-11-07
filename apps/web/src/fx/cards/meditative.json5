@@ -6,6 +6,8 @@
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -69,7 +71,7 @@
   "meditative-046": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Conjure Intellect
   "meditative-047": { trigger: { motif: "deal" } }, // 饕餮
   "meditative-048": { cast: { motif: "seal" } }, // Tranquility
-  "meditative-049": { cry: { motif: "conjure", palette: "Tech/glitch" }, death: { motif: "deal", palette: "Tech/hologram" } }, // YileGPT
+  "meditative-049": { cry: { motif: "conjure", palette: "Tech/glitch" }, death: { motif: "deal", palette: "Tech/hologram" }, takeover: "ai" }, // YileGPT
   "meditative-049-1": { cry: { motif: "curse", palette: "Tech/hologram" } }, // YileGPT Prime
   "meditative-049-2": { trigger: { motif: "bolt", palette: "Tech/glitch" } }, // Yile's Virus
   "meditative-049-3": "none: unseen (no census game summoned it)", // AI Girlfriend

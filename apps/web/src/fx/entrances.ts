@@ -1,9 +1,11 @@
 // R670: the bespoke entrances of a handful of marquee Legendary and Mythic Units (#100 Ceaseless Void
 // "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom", #56 Spell Tyrant "tyrantSigil"),
-// in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table is
-// `{ bespoke: "<key>" }` (R2784000, fx/cards/tables.ts); each recipe is its card's own file in fx/cards/<set>/.
-// It keys off the `summoned` event's own `defId`, which a hidden summon never has (R202), and decorates the
-// entry the runner already timed, so it paces nothing (R200, R201).
+// in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table names it
+// as its `entrance` (R2784000, R3332000, fx/cards/tables.ts); each recipe is its card's own file in
+// fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's. R3332000: a
+// Field Spell's own entrance plays as it lands face up in the backrow. It keys off the `summoned` event's
+// own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
+// so it paces nothing (R200, R201).
 //
 // #1445: the per-flavor entrances `summon` appends for every other face-up Unit, additive over the motion
 // underneath, their delays 0 or the landing beat and their tails existing tail constants.
@@ -15,6 +17,7 @@ import { bigBoom } from "./cards/classic/bigMax.ts";
 import { titanBloom } from "./cards/classic/natureTitan.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
+import { felinorAssembly } from "./cards/core/felinorFiender.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
@@ -24,7 +27,7 @@ import type { FxCue } from "./types.ts";
 export { ENTRANCE_FUSE_AT, ENTRANCE_TRAUMA, type EntranceKey, type EntrancePlan } from "./cards/recipe.ts";
 export { isEntranceKey } from "./cards/bespoke.ts";
 
-export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil };
+export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil, felinorAssembly };
 
 /* #1445: one summon entrance per flavor */
 
@@ -193,8 +196,13 @@ export function flavorEntranceCues(opts: {
   return FLAVOR_ENTRANCES[flavor]({ D: opts.D, tgt: opts.tgt, intensity: opts.intensity, landAt: opts.landAt, instanceId: opts.instanceId });
 }
 
-/** The `summoned` an entrance may claim: into a unit zone, with a definition the viewer can read. */
-export function entranceEvent(event: GameEvent, hiddenId: string): Extract<GameEvent, { type: "summoned" }> | null {
-  if (event.type !== "summoned" || event.row !== "units" || event.defId === hiddenId) return null;
-  return event;
+/**
+ * The `summoned` an entrance may claim, with a definition the viewer can read: into a unit zone, or
+ * R3332000 for a Field Spell (`type`, its catalog type) into a backrow zone face up, never as it is set
+ * face down (its fresh id's `formerId`, R227, R2722002).
+ */
+export function entranceEvent(event: GameEvent, hiddenId: string, type: string | undefined): Extract<GameEvent, { type: "summoned" }> | null {
+  if (event.type !== "summoned" || event.defId === hiddenId) return null;
+  if (type === "Field Spell") return event.row === "backrow" && event.formerId === undefined ? event : null;
+  return event.row === "units" ? event : null;
 }

@@ -6,6 +6,8 @@
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -105,17 +107,17 @@
   "core-090": { cast: { motif: "send" } }, // Super-Virus Injection
   "core-090-1": { cast: { motif: "bolt" } }, // Super-Virus
   "core-091": { trigger: { motif: "mana" } }, // Fed Fauci
-  "core-092": "none: no hook; its Legendary entrance plays", // Felinor Fiender
+  "core-092": { signature: true, entrance: "felinorAssembly" }, // Felinor Fiender
   "core-093": { cast: { motif: "conjure" }, trigger: { motif: "tally" }, aura: { look: "storm", scope: "zone" } }, // Combo-Index
   "core-093-1": { cast: { motif: "bolt" } }, // Combo-Fodder
   "core-094": { cast: { motif: "vanish", palette: "Hustle/cash" } }, // Genn's Greed
   "core-095": { cast: { motif: "conjure" } }, // Call to Chaos (Core Edition)
   "core-095-1": "none: vanilla", // Chaos Golem
-  "core-096": { cast: { motif: "snap" } }, // My Pawn
-  "core-097": { bespoke: "perfectWish" }, // Zephrys
+  "core-096": { cast: { motif: "snap" }, takeover: "pawn" }, // My Pawn
+  "core-097": { bespoke: "perfectWish", takeover: "genie" }, // Zephrys
   "core-098": { cast: { motif: "conjure" }, activate: { motif: "bolt" }, aura: { look: "holy", scope: "zone" } }, // Heroic Power
   "core-099": { bespoke: "fusionForge" }, // Craft a Card
-  "core-100": { setPiece: "voidFold" }, // Ceaseless Void
+  "core-100": { setPiece: "voidFold", entrance: "voidCollapse", takeover: "void" }, // Ceaseless Void
   "core-t-rush": "none: vanilla", // Rush Token
   "core-t-sheep": "none: vanilla", // Sheep Token
   "core-t-felinor": "none: vanilla", // Felinor Token

@@ -232,6 +232,25 @@ export const FX_MOTIF_MIN_CARDS = 3;
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R3332000: the signature tier's loudness budgets, inside R200's FX_MAX_TAIL_MS, one set piece per action
+// and SET_PIECE_HOLD_CAP_MS (R2785000). A Legendary's signature ends within SIGNATURE_LEGENDARY_MAX_MS of
+// its play's start, a Mythic's, its takeover's hold included, within SIGNATURE_MYTHIC_MAX_MS. A Spell's, seen
+// only briefly, ends within SIGNATURE_SPELL_SHARE of its rarity's and shakes the loudest
+// (SIGNATURE_SPELL_MAX_TRAUMA); a permanent's (a Unit, a Field Spell, a Trap) at most
+// SIGNATURE_PERMANENT_MAX_TRAUMA. A signature aura's look stays within AURA_SIGNATURE_MAX_INTENSITY in its
+// mote alpha, its tint and its edge glow, the quietest once in play.
+export const SIGNATURE_LEGENDARY_MAX_MS = 1_600;
+export const SIGNATURE_MYTHIC_MAX_MS = 2_600;
+export const SIGNATURE_SPELL_SHARE = 0.75;
+export const SIGNATURE_SPELL_MAX_TRAUMA = 1;
+export const SIGNATURE_PERMANENT_MAX_TRAUMA = 0.8;
+export const AURA_SIGNATURE_MAX_INTENSITY = 0.8;
+// R3332001: Felinor Fiender's assembly (fx/cards/core/felinorFiender.ts). The first Felinor's streak of
+// cat light leaves at FX_FELINOR_STREAK_AT of D, each next one FX_FELINOR_STREAK_STEP later, all landing
+// at FX_SLAM_AT; at most FX_FELINOR_STREAKS_MAX streak, one per unit zone of a side.
+export const FX_FELINOR_STREAK_AT = 0.1;
+export const FX_FELINOR_STREAK_STEP = 0.08;
+export const FX_FELINOR_STREAKS_MAX = 5;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
 // AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
 // all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS

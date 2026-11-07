@@ -1,6 +1,7 @@
 // R631 (SPEC §10.11 "Music"): the music player, on the real engine over the strict fake Web Audio
 // context: bar-line changes, a sting's handoff, the opponent's turn mix, resume, a stopped context and
 // the engine's ducks. R1350, R1351: a card's intro on top of the music, the duck under it, what cuts it.
+// R3332002: a card's sting, its intro's opening on the effects bus.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -18,6 +19,9 @@ import {
   MUSIC_OPEN_LOWPASS_HZ,
   MUSIC_OPPONENT_GAIN,
   MUSIC_OPPONENT_LOWPASS_HZ,
+  MUSIC_STING_FADE_S,
+  MUSIC_STING_GAIN,
+  MUSIC_STING_S,
 } from "./constants.ts";
 import { createAudioEngine } from "./engine.ts";
 import { createMusicPlayer, type FocusPort, type MusicPlayer } from "./music.ts";
@@ -707,6 +711,150 @@ describe("R1351 what cuts an intro short", () => {
     r.fetch.release("/audio/music/intro-a.m4a");
     await settle();
     expect(introGains(r)).toHaveLength(0);
+  });
+});
+
+describe("R3332002 a card's sting is its intro's opening", () => {
+  function busOf(r: Rig, out: { input: AudioNode } | null): FakeNode {
+    if (out === null) throw new Error("no bus");
+    return r.audio.nodeOf(out.input);
+  }
+
+  /** Started sting sources, oldest first, each with its gain: on the effects bus, never on the music bus. */
+  function stings(r: Rig): { source: FakeNode; gain: FakeNode }[] {
+    const sfx = busOf(r, r.engine.sfxOutput());
+    const music = busOf(r, r.engine.musicOutput());
+    return r.audio
+      .startedSources()
+      .filter((n) => n.kind === "bufferSource" && r.audio.reaches(n, sfx) && !r.audio.reaches(n, music))
+      .map((source) => {
+        const gain = source.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain");
+        if (gain === undefined) throw new Error("a sting with no gain");
+        return { source, gain };
+      });
+  }
+
+  const stung = (r: Rig): string[] => r.player.log().filter((e) => e.kind === "sting").map((e) => e.track);
+
+  async function playing(): Promise<Rig> {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.audio.advance(2.5);
+    return r;
+  }
+
+  it("R3332002 a sting plays its intro's opening on the effects bus and fades out by MUSIC_STING_S", async () => {
+    const r = await playing();
+    r.player.playSting("intro-a");
+    await settle();
+    const at = 2.5 + MUSIC_LEAD_S;
+    const [sting] = stings(r);
+    if (sting === undefined) throw new Error("no sting");
+    // The intro's own file from its start, through its own gain into the effects bus.
+    expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
+    expect(sting.source.startTime).toBeCloseTo(at, 9);
+    expect(sting.source.startOffset ?? 0).toBe(0);
+    expect(sting.source.loop).toBe(false);
+    // Held at MUSIC_STING_GAIN, faded over the last MUSIC_STING_FADE_S, stopped just after MUSIC_STING_S.
+    const gain = sting.gain.param("gain");
+    expect(gain.value).toBe(MUSIC_STING_GAIN);
+    const hold = gain.events.find((e) => e.method === "setValueAtTime");
+    expect(hold?.value).toBe(MUSIC_STING_GAIN);
+    expect(hold?.time).toBeCloseTo(at + MUSIC_STING_S - MUSIC_STING_FADE_S, 9);
+    const [end] = rampsTo(sting.gain, 0);
+    expect(end).toBeCloseTo(at + MUSIC_STING_S, 9);
+    expect(sting.source.stopTime).toBeGreaterThan(at + MUSIC_STING_S);
+    expect(sting.source.stopTime).toBeLessThan(at + MUSIC_STING_S + MUSIC_STING_FADE_S);
+    // It is an effect, not an intro: the track plays on unducked, and no intro is playing.
+    const [bed] = r.audio.inputsOf(filterOf(r.audio));
+    expect(bed?.param("gain").targets()).toEqual([]);
+    expect(voices(r.audio)).toHaveLength(1);
+    expect(voices(r.audio)[0]?.source.stopTime).toBeNull();
+    expect(r.player.intro()).toBeNull();
+    expect(r.player.log().filter((e) => e.kind === "sting")).toEqual([{ kind: "sting", track: "intro-a", at }]);
+    expect(r.audio.violations).toEqual([]);
+  });
+
+  it("R3332002 a sting follows the effects, not the music: refused muted, with the effects at zero, for no clip, or on a stopped context", async () => {
+    writeAudioSettings({ muted: true });
+    const r = await playing();
+    r.player.playSting("intro-a");
+    writeAudioSettings({ muted: false, sfx: 0 });
+    r.player.playSting("intro-a");
+    await settle();
+    expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
+    writeAudioSettings({ sfx: 0.8 });
+    // A loop and an id the manifest does not hold are no clip.
+    r.player.playSting("tavern-1");
+    r.player.playSting("intro-zzz");
+    // Nothing waits for a resume: a sting asked for on a stopped context is dropped.
+    r.audio.state = "interrupted";
+    r.player.playSting("intro-a");
+    r.engine.unlock();
+    await settle();
+    expect(stings(r)).toEqual([]);
+    expect(stung(r)).toEqual([]);
+    // The music at zero leaves it playing: that is when it plays instead of the intro.
+    writeAudioSettings({ music: 0 });
+    r.player.playSting("intro-a");
+    await settle();
+    expect(stings(r)).toHaveLength(1);
+    expect(stung(r)).toEqual(["intro-a"]);
+    expect(r.audio.violations).toEqual([]);
+  });
+
+  it("R3332002 a newer sting cuts the last, its own card again restarts nothing, and stopIntro leaves it be", async () => {
+    const r = await playing();
+    r.player.playSting("intro-a");
+    await settle();
+    r.audio.advance(0.5);
+    r.player.playSting("intro-b");
+    await settle();
+    const at = 3 + MUSIC_LEAD_S;
+    const [first, second] = stings(r);
+    if (first === undefined || second === undefined) throw new Error("two stings");
+    expect(second.source.startTime).toBeCloseTo(at, 9);
+    expect(rampsTo(first.gain, 0).at(-1)).toBeCloseTo(at + MUSIC_INTRO_CUT_FADE_S, 9);
+    expect(first.source.stopTime).toBeLessThan(2.5 + MUSIC_LEAD_S + MUSIC_STING_S);
+    expect(r.audio.violations).toEqual([]);
+    // The same card's sting while it sounds (copies of one card arriving together) changes nothing.
+    r.player.playSting("intro-b");
+    await settle();
+    expect(stings(r)).toHaveLength(2);
+    // R1351's cuts are an intro's: the director's stopIntro (every push with dynamic music off) leaves it.
+    r.player.stopIntro();
+    expect(rampsTo(second.gain, 0)).toHaveLength(1);
+    expect(stung(r)).toEqual(["intro-a", "intro-b"]);
+  });
+
+  it("R3332002 a sting whose file is not ready MUSIC_INTRO_LATE_S after its moment is dropped, and dispose stops one playing", async () => {
+    const r = await playing();
+    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.player.playSting("intro-a");
+    await settle();
+    r.audio.advance(MUSIC_INTRO_LATE_S + 0.1);
+    r.fetch.release("/audio/music/intro-a.m4a");
+    await settle();
+    expect(stings(r)).toEqual([]);
+    r.player.playSting("intro-b");
+    await settle();
+    const [sting] = stings(r);
+    r.player.dispose();
+    expect(sting?.source.stopTime).toBe(0);
+    expect(sting?.gain.disconnects).toBeGreaterThan(0);
+  });
+
+  it("R3332002 the intros fetched ahead are fetched with the music at zero too, for the sting cut from them", async () => {
+    writeAudioSettings({ music: 0 });
+    const r = await rig();
+    r.player.preloadIntros(["intro-a"]);
+    await settle();
+    expect(r.fetch.urls()).toEqual(["/audio/music/intro-a.m4a"]);
+    r.player.playSting("intro-a");
+    await settle();
+    expect(stings(r)).toHaveLength(1);
+    expect(r.fetch.urls()).toEqual(["/audio/music/intro-a.m4a"]);
   });
 });
 
