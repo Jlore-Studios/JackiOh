@@ -16510,11 +16510,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-07T13:40:46Z",
+        "at": "2026-11-07T14:00:50Z",
         "difficulty": "hard",
         "provider": "claude-8",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3367, a hard change"
+        "why": "The bot already rated it hard and a planner may not lower it; on the rule alone it is medium (web presentation only, about 16 files, no engine, AI, cross-crate design or migration)."
       },
       "failures": 0,
       "forced": false,
