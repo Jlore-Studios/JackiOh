@@ -13908,6 +13908,13 @@
     "3221": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42335487859",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-07T04:13:56Z",
+        "until": "2026-11-07T04:43:56Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
