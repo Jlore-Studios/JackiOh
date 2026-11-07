@@ -15940,11 +15940,6 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-6",
-      "paused": {
-        "at": "2026-11-07T20:38:12Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
