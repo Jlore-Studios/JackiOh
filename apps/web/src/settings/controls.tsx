@@ -160,6 +160,13 @@ export function FxControls(): ReactElement {
   );
 }
 
+/** iOS Safari's ask for the device's orientation, which only a tap may call; null where the platform asks nothing. */
+function deviceOrientationPermission(): (() => Promise<string>) | null {
+  if (typeof DeviceOrientationEvent === "undefined") return null;
+  const ask = (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission;
+  return typeof ask === "function" ? (ask as () => Promise<string>).bind(DeviceOrientationEvent) : null;
+}
+
 /** A card presentation switch in Task 6's words (cards/settings.ts), so the panel and the module agree. */
 function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" | "setWatermarks" | "rarityFoil" }): ReactElement {
   const settings = useCardSettings();
@@ -213,6 +220,57 @@ export function SetWatermarksSwitch(): ReactElement {
 /** R1834004: the other seats' cards and side wearing what they equipped, or drawn plain. */
 export function OpponentCosmeticsSwitch(): ReactElement {
   return <CardSettingSwitch setting="opponentCosmetics" />;
+}
+
+/**
+ * R3344001: the card views tilting with the phone's orientation. Where the platform asks leave for it (iOS Safari's
+ * `DeviceOrientationEvent.requestPermission`, which only a tap may call) the switch asks inside its tap and holds on only
+ * if the player grants it; elsewhere it turns on at once. Turning it off asks nothing.
+ */
+export function DeviceTiltSwitch(): ReactElement {
+  const settings = useCardSettings();
+  const hintId = useId();
+  const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === "deviceTilt");
+  const turn = (on: boolean): void => {
+    writeCardSettings({ deviceTilt: on });
+  };
+  return (
+    <div className="settings-row">
+      <label className="settings-control">
+        <span className="settings-label">{t(field?.label ?? "deviceTilt")}</span>
+        <input
+          type="checkbox"
+          role="switch"
+          className="settings-switch"
+          data-testid="setting-deviceTilt"
+          checked={settings.deviceTilt}
+          aria-describedby={hintId}
+          onChange={(event) => {
+            if (!event.currentTarget.checked) {
+              turn(false);
+              return;
+            }
+            const ask = deviceOrientationPermission();
+            if (ask === null) {
+              turn(true);
+              return;
+            }
+            void ask().then(
+              (answer) => {
+                turn(answer === "granted");
+              },
+              () => {
+                turn(false);
+              },
+            );
+          }}
+        />
+      </label>
+      <p className="settings-hint" id={hintId}>
+        {field === undefined ? null : t(field.description)}
+      </p>
+    </div>
+  );
 }
 
 /** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */

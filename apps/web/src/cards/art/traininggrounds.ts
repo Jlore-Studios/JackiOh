@@ -14,7 +14,7 @@ import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
-import type { ArtPart } from "./pictures.ts";
+import { partDraws, partHolds, type ArtPart } from "./pictures.ts";
 import { artSpec, type ArtSpec, type SkyScheme } from "./procedural.ts";
 import { compositionFor, mixHex, RADIANT_PALETTE, themeFor, turnHue } from "./themes.ts";
 
@@ -949,15 +949,17 @@ export function trainingGroundsSvg(
   const yard = backdrop(behind, p, FAMILY_PAINTS[subject.family].sky === NIGHT_SKY, defs);
   const drawn = subjectMarkup(ahead, p, subject, name);
   // R2943001: a part other than "whole" draws the backdrop with no subject (its shadow kept), or the subject on nothing.
-  const behindSubject = part !== "subject";
-  const figure = part !== "backdrop";
+  // R3344000: a depth plane draws its own: the yard, rays and shadow far, the subject near, the particles nearest, the vignette far.
+  const behindSubject = partHolds(part, "far");
+  const figure = partDraws(part, "subject");
   return (
     SVG_OPEN +
     `<defs>${defs.join("")}</defs>` +
     motionStyle(motion, CENTER_ORIGIN) +
     (behindSubject ? moving("back", yard, motion) + (radiant ? rays(seed) : "") + ellipse(SUBJECT_X, SUBJECT_Y + 40, 30, 4.5, "#000000", { opacity: 0.2 }) : "") +
     (figure ? moving("subject", group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn), motion) : "") +
-    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
+    (partHolds(part, "nearest") ? particleMarkup(motion, seedId) : "") +
+    (behindSubject ? rect(0, 0, BOX, BOX, "url(#v)") : "") +
     "</svg>"
   );
 }

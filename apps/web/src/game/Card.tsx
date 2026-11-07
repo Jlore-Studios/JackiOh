@@ -484,6 +484,7 @@ export default function Card(props: CardProps): ReactElement {
             worn={worn}
             ownHand={worn && props.inOwnHand === true}
             gemDrain={gemDrain}
+            tilt="host"
           />
         </TermTips>
       )}

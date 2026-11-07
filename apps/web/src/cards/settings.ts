@@ -7,6 +7,8 @@
 // R2721000: `rarityFoil`, off by default, gives a Mythic face its rarity foil (model.ts foilFor).
 // R2718000, R2721000: `setWatermarks` (setMark.ts) and `rarityFoil` stay on the device
 // (`DEVICE_CARD_SETTINGS`), never the account.
+// R3344001: `deviceTilt`, off by default, lets a card in the card views tilt with the phone's orientation (tilt.ts); the
+// switch asks the phone's leave once where it asks (settings/controls.tsx), and it stays on the device too.
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
@@ -18,6 +20,7 @@ export type CardSettings = {
   opponentCosmetics: boolean;
   setWatermarks: boolean;
   rarityFoil: boolean;
+  deviceTilt: boolean;
 };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
@@ -29,6 +32,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   opponentCosmetics: true,
   setWatermarks: true,
   rarityFoil: false,
+  deviceTilt: false,
 });
 
 type CardSettingsField = {
@@ -75,12 +79,26 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     label: "Show opponents' cosmetics",
     description: "Your opponents' cards and side wear what they equipped. Off shows them plain.",
   },
+  {
+    key: "deviceTilt",
+    section: "visuals",
+    label: "Tilt with my phone",
+    description: "Cards tilt as you tilt your phone, in the card view. Your phone asks once to allow it. Off: drag the card instead.",
+  },
 ];
 
 /** R2718000, R2721000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
-export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks", "rarityFoil"];
+export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks", "rarityFoil", "deviceTilt"];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "setWatermarks", "rarityFoil"];
+const SETTING_KEYS: readonly (keyof CardSettings)[] = [
+  "hoverPreviews",
+  "animatedFoil",
+  "fullArt",
+  "opponentCosmetics",
+  "setWatermarks",
+  "rarityFoil",
+  "deviceTilt",
+];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`
