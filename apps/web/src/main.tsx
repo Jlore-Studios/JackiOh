@@ -56,6 +56,7 @@ import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { useCardPicksAccountSync } from "./cards/cardPicksSync.ts";
 import { useProficiencyAccountSync } from "./cards/proficiencySync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
+import { FullScreenArtHost } from "./cards/index.ts";
 import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
@@ -858,6 +859,7 @@ export function App(): ReactElement {
       {signedIn ? <ChallengeToast /> : null}
       {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}
       <CommandMenu key={`command-menu:${path}`} path={path} />
+      <FullScreenArtHost />
     </>
   );
 }

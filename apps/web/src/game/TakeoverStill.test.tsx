@@ -81,4 +81,26 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(screen.queryByTestId("takeover-still")).toBeNull();
     expect(screen.getByTestId("game")).not.toHaveAttribute("data-takeover");
   });
+
+  it("R3345000 under reduced motion an opponent's public Mythic play shows TakeoverStill with the card's own picture", () => {
+    writeSettings({ reduceMotion: true });
+    const oppCast: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "i-opp-zephrys", defId: ZEPHRYS, costPaid: 3 };
+    const before = withEvents(baseView(), START);
+    const { rerender } = render(
+      <CatalogContext.Provider value={lookup}>
+        <Game view={before} legal={[]} onAction={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    rerender(
+      <CatalogContext.Provider value={lookup}>
+        <Game view={withEvents(baseView(), [...START, oppCast])} legal={[]} onAction={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    const still = screen.getByTestId("takeover-still");
+    expect(still).toHaveAttribute("data-takeover-def", ZEPHRYS);
+    act(() => {
+      vi.advanceTimersByTime(TAKEOVER_STILL_MS);
+    });
+    expect(screen.queryByTestId("takeover-still")).toBeNull();
+  });
 });

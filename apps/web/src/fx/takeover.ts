@@ -105,8 +105,22 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   }
   // R2800000: a Mythic whose own wipe is the action's set piece yields its takeover to it.
   if (!mythic || entrance.yielded === true) return cues;
-  const look = takeoverLookOf(entrance.defId, table);
-  const takeover: FxTakeoverCue = { kind: "takeover", look, tint: TAKEOVER_TINTS[look], at, landMs, delayMs: 0, durationMs: D + FX_TAKEOVER_TAIL_MS };
+  const defId = entrance.defId;
+  const name = (CATALOG[defId] ?? entry.view.defs?.[defId])?.name ?? defId;
+  const radiant = entry.events.some((e) => "radiant" in e && (e as { radiant?: boolean }).radiant === true);
+  const look = takeoverLookOf(defId, table);
+  const takeover: FxTakeoverCue = {
+    kind: "takeover",
+    defId,
+    name,
+    radiant,
+    look,
+    tint: TAKEOVER_TINTS[look],
+    at,
+    landMs,
+    delayMs: 0,
+    durationMs: D + FX_TAKEOVER_TAIL_MS,
+  };
   cues.push(
     takeover,
     ringCue(D, "prismatic", CENTER, landMs),

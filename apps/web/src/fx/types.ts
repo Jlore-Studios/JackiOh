@@ -156,7 +156,18 @@ export type FxFogCue = {
  * the effects' tail (R200).
  */
 export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
-export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
+export type FxTakeoverCue = {
+  kind: "takeover";
+  defId: string;
+  name: string;
+  radiant: boolean;
+  look: TakeoverLook;
+  tint: FxTint;
+  at: FxAnchor;
+  landMs: number;
+  delayMs: number;
+  durationMs: number;
+};
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
  * twisting into a spiral that swallows what the wipe takes) or a `fold` (its edges folding inward into

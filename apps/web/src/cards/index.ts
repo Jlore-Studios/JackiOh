@@ -64,5 +64,20 @@ export {
 } from "./inspect/index.ts";
 export type { CardListEntry, InspectOverlayState, InspectRenderSubject, InspectSubject } from "./inspect/index.ts";
 
+// R3344001: Tilt and queue hold state
+export { isHeld, useTiltHold } from "./tilt.ts";
+
 // Slice C: card settings, which task 7's panel mounts at integration.
 export { CARD_SETTINGS_DEFAULTS, useCardSettings, writeCardSettings } from "./settings.ts";
+
+// R3345000: Full-screen art view and trigger
+export {
+  canOpenFullScreen,
+  closeFullScreenArt,
+  openFullScreenArt,
+  useFullScreenArt,
+  useFullScreenTrigger,
+  type FullScreenState,
+  type FullScreenTriggerOptions,
+} from "./fullscreen.ts";
+export { FullScreenArt, FullScreenArtHost, type FullScreenArtProps } from "./FullScreenArt.tsx";

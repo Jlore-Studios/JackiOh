@@ -8,6 +8,7 @@ export type { ArtSpec } from "./procedural.ts";
 export { artSpec } from "./procedural.ts";
 export { hashId, seededRandom } from "./hash.ts";
 export { artDataUri } from "./svg.ts";
+export { artPlaneUri, ART_PLANES, type ArtPlane } from "./pictures.ts";
 export type { ArtManifest } from "./manifest.ts";
 export { ART_MANIFEST, artUrl } from "./manifest.ts";
 export type { ArtShape, CardArtProps } from "./CardArt.tsx";

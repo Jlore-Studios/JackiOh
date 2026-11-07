@@ -27,7 +27,7 @@ import {
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { CardFace, TermTips, faceModel, faceText, useInspectTrigger } from "../../cards/index.ts";
+import { CardFace, TermTips, canOpenFullScreen, faceModel, faceText, openFullScreenArt, useInspectTrigger } from "../../cards/index.ts";
 import { OwnershipContext, type CardOwnership } from "../../cards/cosmetics.ts";
 import { FullArtOwned, OwnCopy, useFullArt, useOwnCopy } from "../../cards/fullArt.ts";
 import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
@@ -201,11 +201,22 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
   const fullArtOn = useFullArt(cardId);
   // R1956000: the viewer's own copy wears their picks; a card the collection says is unowned is not one.
   const worn = useOwnCopy() && deck?.owned !== false;
+  const isFs = canOpenFullScreen(face);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
       hover: faceText(face, undefined, fullArtOn).less,
-      onLongPress: () => {
+      holdAnyPointer: isFs ? true : undefined,
+      onLongPress: (pointerId) => {
+        if (isFs) {
+          openFullScreenArt({
+            defId: cardId,
+            radiant: face.radiant,
+            name: face.name,
+            heldPointerId: pointerId,
+          });
+          return;
+        }
         onInspect(cardId);
       },
       onContextMenu: () => {

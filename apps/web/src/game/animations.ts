@@ -1158,7 +1158,7 @@ export const STARSHIP_LAUNCH_HOLD_MS = 2_400;
 export type EntrySetPiece = { key: string; holdMs: number };
 
 /** R2785000: what claims an entry as a set piece: its key and the beat it asks for at speed 1. */
-export type SetPieceClaim = { key: string; holdMs: number };
+export type SetPieceClaim = { key: string; holdMs: number; shortHoldMs?: number };
 
 /** R2785000: the set piece an entry is, or null. It reads only the entry, whose events are the seat's own (R202). */
 export type SetPieceClaimer = (entry: AnimationEntry) => SetPieceClaim | null;
@@ -1184,26 +1184,28 @@ export type EntryEntrance = {
 };
 
 /** R2722001: the public catalog's type and rarity (a token's printed one) of a readable card, or null. */
-export type EntranceResolver = (defId: string) => { type: CardType; rarity: string | undefined } | null;
+export type EntranceResolver = (defId: string) => { type: CardType; rarity: string | undefined; printedRarity?: string | undefined } | null;
 
 /** The wait inside an entry before its motion starts: a slam's anticipation and a set piece's hold (R2785000). */
 export function leadMs(entry: Pick<AnimationEntry, "slam" | "setPiece">): number {
   return (entry.slam?.anticipationMs ?? 0) + (entry.setPiece?.holdMs ?? 0);
 }
 
-/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece (R3338000: unless it yielded). */
+/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece (R3338000: unless it yielded). R3345000: short hold is 500ms. */
 export function takeoverClaim(entry: AnimationEntry): SetPieceClaim | null {
-  return entry.entrance?.tier === "mythic" && entry.entrance.yielded !== true ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS } : null;
+  return entry.entrance?.tier === "mythic" && entry.entrance.yielded !== true && entry.entrance.defId !== HIDDEN_ID
+    ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS, shortHoldMs: TAKEOVER_HOLD_MS / 2 }
+    : null;
 }
 
 /**
  * R2785000: how long a set piece that asks `askedMs` at speed 1 holds the game. Big moments' "off" holds
- * nothing and "short" at most `SET_PIECE_SHORT_HOLD_MS`; the effects speed scales it (R201), never below
+ * nothing and "short" at most `SET_PIECE_SHORT_HOLD_MS` (or `shortHoldMs` if specified, R3345000); the effects speed scales it (R201), never below
  * `MIN_ENTRY_MS` and never past `SET_PIECE_HOLD_CAP_MS`.
  */
-export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed: number): number {
+export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed: number, shortHoldMs?: number): number {
   if (askedMs <= 0 || bigMoments === "off") return 0;
-  const beat = bigMoments === "short" ? Math.min(askedMs, SET_PIECE_SHORT_HOLD_MS) : askedMs;
+  const beat = bigMoments === "short" ? Math.min(askedMs, shortHoldMs ?? SET_PIECE_SHORT_HOLD_MS) : askedMs;
   return Math.max(MIN_ENTRY_MS, Math.min(SET_PIECE_HOLD_CAP_MS, scaleForSpeed(beat, speed)));
 }
 
@@ -1234,7 +1236,7 @@ export function setPieceEntries(
     const entry = entrance?.tier === "mythic" && own.has(entrance.instanceId) ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
     if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
     const claim = claimOf(entry);
-    const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
+    const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed, claim.shortHoldMs);
     if (claim === null || holdMs <= 0) return entry;
     held += 1;
     return { ...entry, setPiece: { key: claim.key, holdMs }, durationMs: entry.durationMs + holdMs };
@@ -1282,7 +1284,8 @@ export function entranceEntries(
       // A face-up play is always a fresh entrance, as its intro is (R1350): a card bounced and played
       // again keeps its id but enters again. Its own `summoned`, a reveal or a firing enter once.
       if (card === null || (event.type !== "cardPlayed" && opts.seen.has(card.instanceId))) continue;
-      const rarity = resolve(card.defId)?.rarity;
+      const info = resolve(card.defId);
+      const rarity = info?.printedRarity ?? info?.rarity;
       if (rarity !== "Legendary" && rarity !== "Mythic") continue;
       opts.seen.add(card.instanceId);
       const tier = rarity === "Mythic" ? "mythic" : "legendary";

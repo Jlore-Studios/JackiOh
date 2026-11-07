@@ -221,6 +221,24 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       ]);
       cy.get(GAME).should("have.attr", "data-takeover", "mythic");
       cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
+      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+  });
+
+  it("R3345000 a Mythic takeover with its own art holds the phone frame budget mid-flight", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = fullBoardView();
+    holdsBudget("Mythic takeover own art", () => {
+      mountScene(view, view, [
+        { type: "cardPlayed", player: view.viewer, instanceId: "fx-void", defId: "core-100", costPaid: 10 },
+        { type: "summoned", player: view.viewer, instanceId: "fx-void", defId: "core-100", row: "units", lane: 2 },
+      ]);
+      cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");
+      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-signature`).should("exist");
       cy.get(CANVAS).should("exist");
       return sampleFrames();
     });

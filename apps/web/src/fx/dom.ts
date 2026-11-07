@@ -4,6 +4,9 @@
 // R3336000 ships and R2800000 set pieces.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
+import { ART_PLANES, artPlaneUri } from "../cards/art/pictures.ts";
+import { signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
+import { SIGNATURE_FACES, signatureFaceOf } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
@@ -313,18 +316,63 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       break;
     }
     case "takeover": {
-      // R2722001: the board's darkening, a card-shaped silhouette (never a face, R202) sweeping into
-      // `at`, and the rays and the shockwave from there once the card lands at `--fx-land`.
+      // R2722001, R3345000: the board's darkening, the card's full art in 4 depth planes,
+      // dolly camera, set signature hand signing across the bottom, and rays/shockwave.
       const at = boxes.at ?? null;
       if (at === null) return null;
       placeAtCenter(el, at);
       el.setAttribute("data-look", cue.look);
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
+
+      const stage = doc.createElement("div");
+      stage.className = "fx-takeover-stage";
+
+      const planes = doc.createElement("div");
+      planes.className = "fx-takeover-planes";
+      for (const plane of ART_PLANES) {
+        const p = doc.createElement("div");
+        p.className = "fx-takeover-plane";
+        p.setAttribute("data-plane", plane);
+        p.style.backgroundImage = `url("${artPlaneUri(cue.defId, plane, cue.radiant)}")`;
+        planes.appendChild(p);
+      }
+      stage.appendChild(planes);
+
+      const signatureFace = signatureFaceOf(cue.defId);
+      const signature = doc.createElement("div");
+      signature.className = "fx-takeover-signature";
+      signature.setAttribute("data-signature-face", signatureFace);
+
+      const sigSvg = doc.createElementNS(SVG_NS, "svg");
+      sigSvg.setAttribute("viewBox", "0 0 200 48");
+      sigSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      sigSvg.setAttribute("focusable", "false");
+
+      const text = doc.createElementNS(SVG_NS, "text");
+      text.setAttribute("class", "cf-signature-text");
+      text.setAttribute("x", "100");
+      text.setAttribute("y", "34");
+      text.setAttribute("text-anchor", "middle");
+      const { charEm } = SIGNATURE_FACES[signatureFace];
+      const size = signatureSize(cue.name, charEm);
+      const length = signatureLength(cue.name, size, charEm);
+      text.setAttribute("font-size", String(size));
+      text.setAttribute("textLength", String(length));
+      text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+      text.textContent = cue.name;
+      sigSvg.appendChild(text);
+
+      signature.appendChild(sigSvg);
+      stage.appendChild(signature);
+
       for (const part of TAKEOVER_PARTS) {
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
+        if (part === "dark") {
+          el.appendChild(stage);
+        }
       }
       break;
     }

@@ -130,7 +130,7 @@ function subscribeHold(listener: () => void): () => void {
   };
 }
 
-function isHeld(): boolean {
+export function isHeld(): boolean {
   return holds > 0;
 }
 

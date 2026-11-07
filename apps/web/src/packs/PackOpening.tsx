@@ -27,7 +27,8 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
-import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import { CardBack, CardFace, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
@@ -81,6 +82,30 @@ import "./packs.css";
 
 /** The scene shakes nothing: the pack is not the board. */
 const NO_SHAKE: FxShakeSink = { apply: () => undefined, clear: () => undefined };
+
+function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number]; look: string | null }): ReactElement {
+  const def = CATALOG[slot.cardId];
+  const fs = useFullScreenTrigger({
+    defId: slot.cardId,
+    rarity: slot.rarity,
+    printedRarity: def?.printedRarity,
+    name: def ? readerName(def) : slot.cardId,
+  });
+  return (
+    <div className="pack-slot__face" {...fs.handlers}>
+      {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
+      <WhenEngineReady>
+        {() =>
+          look === null ? (
+            <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
+          ) : (
+            <CosmeticLook id={look} cardId={slot.cardId} />
+          )
+        }
+      </WhenEngineReady>
+    </div>
+  );
+}
 
 export type PackSceneProps = {
   /** The kind of pack being opened: a shipped set's name, or `global`. */
@@ -297,18 +322,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
               >
                 {shown ? (
                   <>
-                    <div className="pack-slot__face">
-                      {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
-                      <WhenEngineReady>
-                        {() =>
-                          look === null ? (
-                            <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
-                          ) : (
-                            <CosmeticLook id={look} cardId={slot.cardId} />
-                          )
-                        }
-                      </WhenEngineReady>
-                    </div>
+                    <PackSlotFace slot={slot} look={look} />
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}
                     </p>

@@ -30,9 +30,12 @@ import {
   REVEAL_AT_NOTE,
   TermTips,
   UNREVEALED_NOTE,
+  canOpenFullScreen,
   faceDownLabel,
   faceModel,
+  isHeld,
   isInspectKey,
+  openFullScreenArt,
   useCardSettings,
   useInspectTrigger,
   type FaceModel,
@@ -295,11 +298,28 @@ export default function Card(props: CardProps): ReactElement {
               ),
           }
         : null;
+  // R3345000: Mythic / full-art view trigger. On the board, only own cards and not while queue drains.
+  const canFullScreen =
+    card !== null &&
+    canOpenFullScreen(face) &&
+    (props.inOwnHand === true || (unit !== undefined && unit !== null && worn && !isHeld()));
+
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(subject, {
     prefer: form === "full" ? "above" : "beside",
     showLoc: false,
     keyHint: SHORTCUTS.inspect,
+    holdAnyPointer: canFullScreen ? true : undefined,
+    onLongPress: canFullScreen
+      ? (pointerId) => {
+          openFullScreenArt({
+            defId: card.defId,
+            radiant: card.radiant,
+            name: face.name,
+            heldPointerId: pointerId,
+          });
+        }
+      : undefined,
   });
 
   const legal = isLegal(props.highlight, testId);

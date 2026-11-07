@@ -912,6 +912,33 @@
   }
 }
 
+/* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own colours, not Radiant's gold. */
+.card-hand .cf[data-rarity="Mythic"] {
+  animation: cf-mythic-hand-shimmer var(--motion-slow) var(--ease-in-out) infinite alternate;
+}
+
+@keyframes cf-mythic-hand-shimmer {
+  0% {
+    box-shadow: 0 0 4px 1px rgb(255 106 213 / 0.35);
+  }
+  33% {
+    box-shadow: 0 0 6px 2px rgb(148 208 255 / 0.35);
+  }
+  66% {
+    box-shadow: 0 0 4px 1px rgb(125 255 198 / 0.35);
+  }
+  100% {
+    box-shadow: 0 0 6px 2px rgb(255 230 109 / 0.35);
+  }
+}
+
+:root[data-reduce-motion="true"] .card-hand .cf[data-rarity="Mythic"],
+@media (prefers-reduced-motion: reduce) {
+  .card-hand .cf[data-rarity="Mythic"] {
+    animation: none;
+  }
+}
+
 /* The long layout (fit.ts sets `data-long` on a face whose rules would otherwise print under
    FIT_FLOOR_PX): the art window gives up half its height, the name ribbon and the rarity gem move
    up after it, and the rules box takes the room, half as tall again. The text starts from full
