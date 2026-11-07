@@ -5,16 +5,16 @@
 // or a click outside the panel means the same. It decides nothing (CLAUDE.md rule 7): Leave makes
 // the move the route's leave guard held (R1754000).
 //
-// An `alertdialog`, modal, labelled by its question and described by its line of consequence. Its
-// keys are `useModalKeys`'s (R2126000: a board route takes no key handler of its own).
+// An `alertdialog` drawn through `Dialog.tsx` (R3220000), modal, labelled by its question and described
+// by its line of consequence. Its keys are the Dialog's (R2126000: a board route takes no key handler of
+// its own).
 
-import { useEffect, useId, useRef, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 import { DISCONNECT_GRACE_SECONDS } from "@jackioh/server-config";
 
+import { Dialog } from "./Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useModalKeys } from "../together/modalKeys.ts";
-import "./notices.css";
 
 export type ConfirmLeaveMatchProps = {
   /** "Stay", Escape, Back or a click outside the panel. */
@@ -33,64 +33,20 @@ export const leaveMatchTestid = {
 
 export default function ConfirmLeaveMatch({ onStay, onLeave, body }: ConfirmLeaveMatchProps): ReactElement {
   useLocale();
-  const titleId = useId();
-  const bodyId = useId();
-  const root = useRef<HTMLElement>(null);
-  const stay = useRef<HTMLButtonElement>(null);
-  useModalKeys(root, onStay);
-
-  // The safe choice has the focus from the start, so a stray Enter or Space keeps the player in the match.
-  useEffect(() => {
-    stay.current?.focus({ preventScroll: true });
-  }, []);
-
   return (
-    <div
-      className="concede-scrim"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onStay();
-      }}
-    >
-      <section
-        ref={root}
-        className="concede-dialog"
-        data-testid={leaveMatchTestid.dialog}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={bodyId}
-        // A click on the panel's text keeps the focus in the dialog.
-        tabIndex={-1}
-      >
-        <h2 className="concede-dialog__title" id={titleId}>
-          {t("Leave the match?")}
-        </h2>
-        <p className="concede-dialog__body" id={bodyId}>
-          {body ??
-            t("It goes on without you. Come back within {seconds} seconds or it counts as a loss.", {
-              seconds: DISCONNECT_GRACE_SECONDS,
-            })}
-        </p>
-        <div className="concede-dialog__actions">
-          <button
-            ref={stay}
-            type="button"
-            className="concede-dialog__stay button-primary"
-            data-testid={leaveMatchTestid.stay}
-            onClick={onStay}
-          >
-            {t("Stay")}
-          </button>
-          <button
-            type="button"
-            className="concede-dialog__concede button-danger"
-            data-testid={leaveMatchTestid.leave}
-            onClick={onLeave}
-          >
-            {t("Leave")}
-          </button>
-        </div>
-      </section>
-    </div>
+    <Dialog
+      role="alertdialog"
+      testid={leaveMatchTestid.dialog}
+      title={t("Leave the match?")}
+      description={
+        body ??
+        t("It goes on without you. Come back within {seconds} seconds or it counts as a loss.", {
+          seconds: DISCONNECT_GRACE_SECONDS,
+        })
+      }
+      onClose={onStay}
+      cancel={{ label: t("Stay"), kind: "primary", testid: leaveMatchTestid.stay }}
+      actions={[{ label: t("Leave"), kind: "danger", onClick: onLeave, testid: leaveMatchTestid.leave }]}
+    />
   );
 }

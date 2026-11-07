@@ -81,7 +81,7 @@ const UNMIGRATED: Record<string, number> = {
   "packs/pack-object.css": 44,
   "packs/packs.css": 3,
   "patches/patches.css": 42,
-  "practice/practice.css": 39,
+  "practice/practice.css": 35,
   "practice/sandbox.css": 12,
   "routes/account.css": 3,
   "routes/game-banner.css": 8,

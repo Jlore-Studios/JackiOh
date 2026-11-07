@@ -67,8 +67,8 @@ const KEEP: Record<string, string[]> = {
   "game/deckbuilder/deckbuilder.css": ["(max-height: 860px)"],
   // Rail, pool and sidebar side by side need 1101 px (DeckWorkshop.tsx's WORKSHOP_SPLIT_MIN_WIDTH_PX).
   "game/deckbuilder/workshop.css": ["(min-width: 1101px)", "(max-width: 1100px)"],
-  // The concede answers stack on the narrowest phones only.
-  "game/notices.css": ["(max-width: 360px)"],
+  // A dialog's answers stack on the narrowest phones only (R3220000).
+  "game/dialog.css": ["(max-width: 360px)"],
   // 480: 21vh cards two by two suit a phone upright; at 600 a 568x320 phone draws them 67 px wide. 701: 224 px Discover cards.
   "game/prompt.css": ["(max-width: 480px)", "(max-width: 480px)", "(min-height: 701px)"],
   // 820: Start sat on a laptop's fold up to 820 px tall. 420: buttons stack up to 412 px; 430 keeps a row.

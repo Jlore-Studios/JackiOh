@@ -205,7 +205,7 @@ export function TutorialResult({
   }
 
   return (
-    <div className="practice-result-scrim tutorial-result-scrim" data-outcome={outcome}>
+    <div className="tutorial-result-scrim" data-outcome={outcome}>
       <section
         className="practice-result tutorial-result"
         data-testid={tutorialTestid.result}

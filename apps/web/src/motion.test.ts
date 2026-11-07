@@ -63,7 +63,7 @@ const KEEP: Record<string, string[]> = {
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
 const ANIM_SCALED: Record<string, number> = {
   "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 12, "game/drag/blocked.css": 1, "game/facedown.css": 2,
-  "game/highlights.css": 2, "game/notices.css": 1, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
+  "game/dialog.css": 1, "game/highlights.css": 2, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
 };
 
 /** Every other sheet's own durations (`ownTimes`) plus its transitions and animations that name no curve (`offCurve`), loops, art and the table's marks among them: one that moves onto motion.css lowers its number, and none gains one. */
@@ -92,7 +92,7 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "game/table.css": 27,
   "packs/pack-object.css": 12,
   "packs/packs.css": 4,
-  "practice/practice.css": 49,
+  "practice/practice.css": 45,
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,

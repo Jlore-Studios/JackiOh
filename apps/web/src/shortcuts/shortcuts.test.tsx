@@ -202,7 +202,6 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/ActivateControl.tsx": 1,
   "game/Board.tsx": 1,
   "game/Card.tsx": 1,
-  "game/ConfirmConcede.tsx": 1,
   // R2785000 (amends R2126000): Space skips a set piece, and the keyup of the Space that skipped is swallowed.
   "game/Game.tsx": 2,
   "game/Hero.tsx": 2,
@@ -216,8 +215,6 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/drag/DragLayer.tsx": 1,
   "game/drag/OptionDrag.tsx": 1,
   "game/showcase/CardShowcase.tsx": 1,
-  "practice/PracticeLeave.tsx": 1,
-  "practice/PracticeResult.tsx": 1,
   "replay/ReplayPlayer.tsx": 1,
   "tutorial/TutorialResult.tsx": 1,
 };

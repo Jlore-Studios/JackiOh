@@ -291,6 +291,8 @@ A move from one menu screen to another, a link's, a redirect's or the browser's 
 
 The browser's Back, and Android's back gesture, close the topmost open sheet or dialog first, one per Back, and leave the address and the screen as they were; closing one never meets the leave guard ([[R2127000]]). They never close a prompt, a play being built or the mulligan. Presentation only.
 
+A dialog is one component ([[R3220000]]): a `dialog` closes by its ✕ at its top right and an `alertdialog` by its Cancel, and its title is an `h2`. Its answers run from the safe choice, first and holding the focus, to the act, last at the right, with a `danger` answer always last. Escape, Back and a click outside close it, Tab stays inside it, and the focus goes back to its opener unless the caller has moved it. Presentation only (CLAUDE.md rule 7).
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.
