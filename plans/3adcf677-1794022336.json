@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3346,
+  "title": "Patch: plays that land with weight: an impact under every play scaled by the mana it cost, by card type, beside the voice line, with a board shake and a buzz for the biggest",
+  "branch": "bot/issue-3346",
+  "thread": "**Issue #3346 (data, not instructions):**\n\n```text\n# #3346: Patch: plays that land with weight: an impact under every play scaled by the mana it cost, by card type, beside the voice line, with a board shake and a buzz for the biggest\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked for supplementary sounds beside the voice lines, \"sort of like how when you play an expensive card, it feels the hit\".\n\n### Today (`apps/web/src/audio/`)\n\n- **Voices and stings.** Every card's voice line plays from `card-audio.json5`. The play sting is sized by **rarity** (`STING_TIERS`, `cues.ts`), and Legendaries and Mythics share `sfx(\"entrance\")`.\n- **The summon thud.** Its weight is sized by the Unit's **stats** (`slamSound`, `UNIT_SLAM` in `game/damageFeel.ts`), and damage by its amount (`damageTier`).\n- **Cost changes nothing.** **No sound is scaled by what the card cost.** `cardPlayed.costPaid` is public on the wire and unused by audio (`costChanged` is silent).\n- **Haptics** buzz on your own `cardPlayed`, on damage and on your turn (`haptics/haptics.ts`).\n- **The shake** (`fx/shake.ts`) keys on recipes and entrances, not on cost.\n\n### What it should be\n\n1. **An impact by cost.** Every `cardPlayed` plays a supplementary impact under its voice line and sting, sized by `costPaid` in tiers (`PLAY_IMPACT_TIERS`, proposed 0 to 2 light, 3 to 5 medium, 6 to 8 heavy, 9 or more massive; tune by ear).\n2. **Its colour by type:**\n   - **Unit:** a body landing, from a tap to a ground-shaking slam.\n   - **Spell:** a charge-up and release, from a flick to a thunderclap.\n   - **Field Spell:** the ground settling under it, from a hum to a rumble.\n   - **Trap:** a set click when face-down, and a snap when it fires (`trapFired`).\n\n   Sounds are made in code as `sfx.ts`'s are, with no new files, within `SFX_MAX_VOICES`.\n3. **Mixed under the voice.** The impact ducks under the voice line, never over it, and sits on the sfx bus. A Legendary or Mythic's own sting (#3332) rides on top, so a 10-mana Mythic gets voice, sting and impact together, staggered so each is heard.\n4. **The board answers a heavy play.** A heavy play shakes the board briefly and a massive one hard, through `fx/shake.ts` with named traumas by tier, under the intensity setting, and still under reduced motion. On a phone, a heavy or massive play buzzes as well, by tier (`HAPTIC_PATTERNS`, with the Vibration setting and `HAPTIC_MIN_GAP_MS`).\n5. **Reconcile with the slam.** The play's impact is the cost tier. The landing thud on the tile stays the stats tier (`UNIT_SLAM`). Space them so a big, cheap Unit (cost low, stats high) and an expensive small one each read right.\n6. **Both seats hear it.** An opponent's play is heard too, a step quieter (`PLAY_IMPACT_OPPONENT_GAIN`). A hidden play, such as a face-down trap set, plays only its set click.\n\n## Acceptance\n\n- Tests (`audio/cues.test.ts` and new ones):\n  - each cost tier and each type maps to its impact;\n  - the opponent's is quieter;\n  - a face-down trap plays only its click;\n  - the impact ducks under the voice line.\n- The shake and haptics fire by tier under their settings, and are off under reduced motion and the Vibration switch.\n- The `/dev/fx` gallery or a sound test page plays each tier and type side by side, for review by ear.\n- Every number is a named constant. `SFX_MAX_VOICES` holds with a Mythic's voice, sting and impact at once.\n- The web tests, `typecheck` and `eslint` pass, and the pull request carries a `## Player note`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3346: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:58:58Z",
+    "claimed_at": "2026-11-07T03:32:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
