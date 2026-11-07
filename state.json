@@ -35775,23 +35775,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-07T21:09:23Z,claude-8,ping,before,42414350264,85,2026-11-07T22:00:00Z,,,allowed,100,,",
-      "2026-11-07T21:10:12Z,claude-8,stream,call,42414350264,91,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:10:27Z,claude-8,stream,call,42414350264,92,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:10:42Z,claude-8,stream,call,42414350264,93,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:11:27Z,claude-8,stream,call,42414350264,94,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:12:13Z,claude-8,stream,call,42414350264,95,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:12:58Z,claude-8,stream,call,42414350264,96,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:13:28Z,claude-8,stream,call,42414350264,97,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:14:13Z,claude-8,stream,call,42414350264,98,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:14:58Z,claude-8,stream,call,42414350264,99,2026-11-07T22:00:00Z,,,allowed_warning,100,,",
-      "2026-11-07T21:17:06Z,claude-8,refusal,call,42414350264,101,2026-11-07T22:00:00Z,,,rejected,100,,2026-11-07T22:00:00Z"
-    ],
-    "runs": [
-      "2026-11-07T21:17:06Z,42414350264,claude-8,opus,build,3400,hard,interrupted,refusal,7.4,77,41397,17861069,20.0294,85,101,,,263.8,claude-8,resumed,,1"
-    ]
-  },
   "version": 1
 }
