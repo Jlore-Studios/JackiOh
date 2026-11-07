@@ -15367,14 +15367,14 @@
       "cleared": {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
+          "model": "opus",
           "provider": "claude-8",
-          "tier": "medium"
+          "tier": "strong"
         },
-        "at": "2026-11-07T10:58:55Z",
+        "at": "2026-11-07T12:49:01Z",
         "built_by": "claude-8",
-        "by": "`claude` (medium)",
-        "sha": "497a19f86cf11306f016b91f6dca01d286521cd1"
+        "by": "`claude` (strong)",
+        "sha": "30f88ec39596fd885530a9c9cb55bc0bf3980bc8"
       },
       "cross_rounds": 1,
       "died": 0,
