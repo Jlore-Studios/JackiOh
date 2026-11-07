@@ -88,7 +88,7 @@ export function setShips(set: SetName): boolean {
  * R1371: the newest set that ships, the last entry of `SHIPPED_SETS`: Training Grounds since its
  * release (issue #2204), Stinkyscape from its own (issue #1884, R1857000), Meditative+ from v0.3.15 (R1178000), Meditative before it. The engine's `newest_shipped_set`, mirrored, so "More cards
  * from the newest set" names the set it leans on (R1372, R1373) without ever writing one down.
- * Which set a deck leans on is still the dealer's to resolve: the server's for All Random, the
+ * Which set a deck leans on is still the dealer's to resolve: the server's for All random, the
  * practice worker's for its random deck.
  */
 export function newestShippedSet(): SetName {

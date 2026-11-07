@@ -30,7 +30,7 @@ type TutorialResultProps = {
   next: TutorialLesson | undefined;
   /** The next lesson was still locked when this one started, so this win is what opened it. */
   unlockedNow: boolean;
-  /** The Field Guide entries this lesson lists that its game did not show found (R2205000). */
+  /** The Field guide entries this lesson lists that its game did not show found (R2205000). */
   missed?: readonly string[];
   onNext(): void;
   onRetry(): void;

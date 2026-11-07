@@ -333,7 +333,7 @@ describe("R1578000 the Play hub", () => {
 
   const WAYS: readonly (readonly [string, string])[] = [
     [playTestid.practice, paths.practice],
-    // B13: the Play hub links the Dungeon Run.
+    // B13: the Play hub links the Dungeon run.
     [playTestid.dungeon, paths.dungeon],
     [playTestid.together, paths.together],
     [playTestid.replays, paths.replays],
@@ -442,7 +442,7 @@ describe("R661 the lobby's rank", () => {
 
     pickMode("random");
     await waitFor(() => expect(screen.getByTestId(playTestid.rank)).toHaveAttribute("data-ladder", "random"));
-    expect(screen.getByTestId(playTestid.rank)).toHaveTextContent("All Random · Golden Grape II");
+    expect(screen.getByTestId(playTestid.rank)).toHaveTextContent("All random · Golden Grape II");
     expect(vi.mocked(getOwnRank)).toHaveBeenLastCalledWith(TOKEN, "random");
     expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", `${paths.leaderboard}?ladder=random`);
 
@@ -485,7 +485,7 @@ describe("R661 the lobby's rank", () => {
 // modes and choices (R257)
 
 describe("the lobby's modes", () => {
-  it("R257 the mode picker offers Best of 1, Conquest and All Random, each with its own choice", async () => {
+  it("R257 the mode picker offers Best of 1, Conquest and All random, each with its own choice", async () => {
     await renderLobby();
 
     for (const mode of ["bo1", "bo3", "random"] as const) {
@@ -548,7 +548,7 @@ describe("the lobby's modes", () => {
     await waitFor(() => {
       expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
     });
-    await screen.findByText(/In the All Random queue/);
+    await screen.findByText(/In the All random queue/);
   });
 
   it("remembers the last mode, deck and trio on this device", async () => {
@@ -616,7 +616,7 @@ describe("the lobby's modes", () => {
     expect(link).toHaveTextContent("Build one in Decks");
     expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
 
-    // All Random needs no deck at all.
+    // All random needs no deck at all.
     pickMode("random");
     expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
   });
@@ -655,7 +655,7 @@ describe("the lobby's modes", () => {
     expect(screen.queryByTestId(playTestid.recentGames)).toBeNull();
   });
 
-  it("R433 All Random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
+  it("R433 All random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
     await renderLobby();
     pickMode("random");
     const setup = screen.getByRole("region", { name: "How do you want to play?" });
@@ -773,7 +773,7 @@ describe("the lobby's answers", () => {
     expect(error).toHaveTextContent("Finish your co-op match first.");
     const link = within(error).getByTestId(playTestid.duosLink);
     expect(link).toHaveAttribute("href", "/duos/duos-4");
-    expect(link).toHaveTextContent("Go to your co-op game →");
+    expect(link).toHaveTextContent("Go to your co-op game");
     expect(within(error).queryByTestId(playTestid.seriesLink)).toBeNull();
     fireEvent.click(link);
     expect(vi.mocked(navigate)).toHaveBeenCalledWith("/duos/duos-4");
@@ -858,7 +858,7 @@ describe("the lobby's answers", () => {
     expect(vi.mocked(createRoom)).toHaveBeenCalledWith(TOKEN, { mode: "random" });
     const roomMode = screen.getByTestId(playTestid.roomMode);
     expect(roomMode).toHaveAttribute("data-mode", "random");
-    expect(roomMode).toHaveTextContent("All Random");
+    expect(roomMode).toHaveTextContent("All random");
   });
 });
 
@@ -959,9 +959,9 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
   });
 });
 
-// R1372, R924000: All Random's "More cards from"
-describe("R1372 R924000 All Random's more cards from", () => {
-  it("R1372 R924000 the picker is All Random's alone, names the newest set and starts at none", async () => {
+// R1372, R924000: All random's "More cards from"
+describe("R1372 R924000 All random's more cards from", () => {
+  it("R1372 R924000 the picker is All random's alone, names the newest set and starts at none", async () => {
     await renderLobby();
     expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
     pickMode("random");
@@ -973,7 +973,7 @@ describe("R1372 R924000 All Random's more cards from", () => {
     expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
   });
 
-  /** The lobby in All Random, whichever mode this device remembered, once the picker is on screen. */
+  /** The lobby in All random, whichever mode this device remembered, once the picker is on screen. */
   async function renderRandomLobby(): Promise<HTMLSelectElement> {
     render(<PlayRoute token={TOKEN} />);
     await waitFor(() => {
@@ -1289,7 +1289,7 @@ describe("R767 a room shared as a link", () => {
     expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
   });
 
-  it("R767 a Conquest link focuses the trio and an All Random one focuses Join", async () => {
+  it("R767 a Conquest link focuses the trio and an All random one focuses Join", async () => {
     openLink("?room=abc234&mode=bo3");
     const trioSelect = await screen.findByTestId(playTestid.trioSelect);
     expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
@@ -1303,7 +1303,7 @@ describe("R767 a room shared as a link", () => {
     openLink("?room=wxyz23&mode=random");
     expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("WXYZ23");
     expect(screen.getByTestId(playModeTestid("random"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("No deck needed for All Random: press Join.");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("No deck needed for All random: press Join.");
     await waitFor(() => {
       expect(screen.getByTestId(playTestid.joinSubmit)).toHaveFocus();
     });

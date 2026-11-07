@@ -159,7 +159,7 @@ describe("issue #57 board-mounted match chrome", () => {
       />,
     );
 
-    expect(screen.getByText("Back to lobby").closest(".board")).not.toBeNull();
+    expect(screen.getByText("Back to the lobby").closest(".board")).not.toBeNull();
     expect(screen.getByText("Read-only replay").closest(".board")).not.toBeNull();
     expect(screen.getByTestId("action-error").closest(".board")).not.toBeNull();
     expect(document.querySelector(".game > .game-error")).toBeNull();

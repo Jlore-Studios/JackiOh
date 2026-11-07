@@ -93,7 +93,7 @@ export default function AiRoute(): ReactElement {
             We don&rsquo;t send anything you write, or your account&rsquo;s details, to an AI service. Records of
             online games are used as the{" "}
             <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
-              Privacy Policy
+              Privacy policy
             </a>{" "}
             says: for the card statistics, to time the ranked AI opponents&rsquo; moves and habits like a
             person&rsquo;s, and to choose the decks they bring from decks players have taken into ranked.

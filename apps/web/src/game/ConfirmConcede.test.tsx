@@ -37,7 +37,7 @@ describe("ConfirmConcede on its own", () => {
     expect(dialog).toHaveAccessibleDescription(CONCEDE_BODY);
     expect(CONCEDE_TITLE).toBe("Concede this game?");
     expect(screen.getByTestId("concede-confirm")).toHaveTextContent("Concede");
-    expect(screen.getByTestId("concede-cancel")).toHaveTextContent("Keep playing");
+    expect(screen.getByTestId("concede-cancel")).toHaveTextContent("Stay");
     // #3219: the act that cannot be taken back is the danger role, the safe choice the primary.
     expect(screen.getByTestId("concede-confirm")).toHaveClass("button-danger");
     expect(screen.getByTestId("concede-cancel")).toHaveClass("button-primary");

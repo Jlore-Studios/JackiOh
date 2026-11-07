@@ -54,6 +54,7 @@ import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
@@ -200,7 +201,7 @@ function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection 
 
 /**
  * R2777004: the match types the page reads. Every mode together comes first and is what the page opens on, then
- * Constructed (Best of 1 and Conquest together, R2777001), All Random, and each constructed mode alone.
+ * Constructed (Best of 1 and Conquest together, R2777001), All random, and each constructed mode alone.
  */
 const MODES = ["all", "constructed", "random", "bo1", "bo3"] as const;
 type StatsMode = (typeof MODES)[number];
@@ -208,7 +209,7 @@ const DEFAULT_MODE: StatsMode = "all";
 const MODE_LABELS: Record<StatsMode, string> = {
   all: "All modes",
   constructed: "Constructed",
-  random: "All Random",
+  random: "All random",
   bo1: "Best of 1",
   bo3: "Conquest",
 };
@@ -620,7 +621,8 @@ export default function StatsRoute(): ReactElement {
               disabled={previousWindow === null}
               onClick={() => previousWindow && choosePatch(previousWindow)}
             >
-              {previousWindow ? t("← Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("← Previous patch")}
+              <ArrowIcon direction="back" />
+              {previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
             </button>
             <select
               className="stats-select"
@@ -646,7 +648,8 @@ export default function StatsRoute(): ReactElement {
               disabled={nextWindow === null}
               onClick={() => nextWindow && choosePatch(nextWindow)}
             >
-              {nextWindow ? t("Next patch ({patch}) →", { patch: patchName(nextWindow) }) : t("Next patch →")}
+              {nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
+              <ArrowIcon direction="forward" />
             </button>
           </nav>
         )}

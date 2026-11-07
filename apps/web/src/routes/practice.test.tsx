@@ -1735,7 +1735,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     const lessonLeave = await screen.findByTestId(T.leave);
     expect(lessonLeave).toHaveAttribute("data-can-save", "false");
     expect(screen.queryByTestId(T.leaveSave)).toBeNull();
-    expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave game");
+    expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave");
     expect(screen.getByTestId(T.leaveConfirm)).toHaveClass("button-danger");
   });
 
@@ -2399,7 +2399,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(toast.closest(".board-notices")).not.toBeNull();
     expect(toast.closest(".control-bar")).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByTestId(practiceTestid.unearned)).toBeNull();
     // The game carries on: the board is still there and End turn still acts.
     expect(screen.getByTestId("game")).toBeInTheDocument();
