@@ -18108,23 +18108,18 @@
     "what": "plan #3342 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-07T02:51:31Z",
+    "at": "2026-11-07T03:06:34Z",
     "notes": [
-      "#3357: `claude-3` can start again, so its hold is lifted",
-      "#3331: `claude-3` can start again, so its hold is lifted",
       "#3332 is held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "#3336: `claude-3` can start again, so its hold is lifted",
-      "#3343: `claude-3` can start again, so its hold is lifted",
-      "delivered build #3337 on claude-1 (run 42330673129): interrupted",
-      "delivered review #3356 on claude-1 (run 42330608725): interrupted",
-      "delivered build #3338 on claude-8 (run 42327552207): interrupted",
-      "delivered build #3333 on claude-8 (run 42327483712): interrupted",
-      "started review #3357 on claude-3 (run 42331661216)",
-      "started plan #3331 on claude-3 (run 42331717478)",
-      "started plan #3343 on claude-3 (run 42331774492)",
-      "started plan #3341 on claude-3 (run 42331830468)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T06:00:00Z; it can start a build or a plan again in 2h 00m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-07T07:00:00Z; it can start a build or a plan again in 3h 00m; `claude-1` 5-hour usage is 101%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-07T03:40:00Z; it can start a build or a plan again in 40m; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T04:10:00Z; it can start a build or a plan again in 10m; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 44h 00m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 2h 00m; waiting for their owners: #3332 held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)); #3337 held for `claude-1` until 21:40 (5-hour usage is 101%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
-      "pruned 1 plan file(s) older than 7 days"
+      "#3337 is held for `claude-1` until 21:40 (5-hour usage is 101%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "delivered plan #3343 on claude-3 (run 42331774492): planned",
+      "delivered plan #3331 on claude-3 (run 42331717478): planned",
+      "started build #3331 on claude-3 (run 42332746363)",
+      "started build #3332 on claude-4 (run 42332816524)",
+      "started review #3356 on claude-4 (run 42332882170)",
+      "started build #3333 on claude-6 (run 42332953132)",
+      "started plan #3342 on claude-3 (run 42333024146)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T06:00:00Z; it can start a build or a plan again in 1h 45m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-07T07:00:00Z; it can start a build or a plan again in 2h 45m; `claude-1` 5-hour usage is 101%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-07T03:40:00Z; it can start a build or a plan again in 25m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 43h 45m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 1h 45m"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18830,7 +18825,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T02:51:31Z",
+  "loop_tick": "2026-11-07T03:06:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
