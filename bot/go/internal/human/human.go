@@ -75,6 +75,23 @@ const headLines = 5
 var nobody = map[string]bool{"no": true, "none": true, "n/a": true, "na": true, "nothing": true,
 	"false": true, "not needed": true, "not required": true, "-": true}
 
+// aside is where the planner's first words on the line stop and an aside begins: "none. One
+// plan, one pull request" (#3352) says nobody is needed as plainly as "none" alone, so the
+// line's words are read up to the first of these as well as whole.
+var aside = regexp.MustCompile(`[.;(]| [-–—] `)
+
+// saysNobody is whether the line's words, or its words up to an aside, are one of `nobody`.
+func saysNobody(words string) bool {
+	plain := strings.ToLower(strings.Trim(words, " .*_"))
+	if nobody[plain] {
+		return true
+	}
+	if at := aside.FindStringIndex(plain); at != nil {
+		return nobody[strings.TrimSpace(plain[:at[0]])]
+	}
+	return false
+}
+
 // PlanNeeds is what a person must do before the bot can build any of `plan`, or "" when the bot
 // can.
 //
@@ -96,7 +113,7 @@ func PlanNeeds(plan string, forbidden []string) string {
 	if found != nil {
 		words = strings.Join(strings.Fields(found[1]), " ")
 	}
-	if found != nil && !nobody[strings.ToLower(strings.Trim(words, " .*_"))] {
+	if found != nil && !saysNobody(words) {
 		if words == "" {
 			return "Its planner says only a person can do it."
 		}
