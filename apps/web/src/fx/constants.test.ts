@@ -4,6 +4,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
 
 const S2 = {
@@ -481,5 +483,30 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe("R3332000 the signature budgets", () => {
+  it("R3332000 the signature budgets sit inside the caps", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA } = constants;
+    // A Mythic's is the louder, its takeover's hold inside it, and both within the longest a set piece holds (R2785000).
+    expect(SIGNATURE_LEGENDARY_MAX_MS).toBeLessThan(SIGNATURE_MYTHIC_MAX_MS);
+    expect(SIGNATURE_MYTHIC_MAX_MS).toBeLessThanOrEqual(SET_PIECE_HOLD_CAP_MS);
+    expect(SIGNATURE_MYTHIC_MAX_MS - TAKEOVER_HOLD_MS).toBeGreaterThanOrEqual(SIGNATURE_LEGENDARY_MAX_MS);
+    // A Spell's is the shortest and shakes the loudest; every shake is at most trauma 1 (B9).
+    expect(SIGNATURE_SPELL_SHARE).toBeGreaterThan(0);
+    expect(SIGNATURE_SPELL_SHARE).toBeLessThan(1);
+    expect(SIGNATURE_PERMANENT_MAX_TRAUMA).toBeLessThan(SIGNATURE_SPELL_MAX_TRAUMA);
+    expect(SIGNATURE_SPELL_MAX_TRAUMA).toBeLessThanOrEqual(1);
+    // Every aura look already sits within a signature's aura cap, so a signature may wear any of them.
+    for (const [name, look] of Object.entries(AURA_LOOKS)) {
+      for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(constants.AURA_SIGNATURE_MAX_INTENSITY);
+    }
+  });
+
+  it("R3332001 Felinor Fiender's streaks all leave before its slam", () => {
+    const last = constants.FX_FELINOR_STREAK_AT + (constants.FX_FELINOR_STREAKS_MAX - 1) * constants.FX_FELINOR_STREAK_STEP;
+    expect(constants.FX_FELINOR_STREAK_AT).toBeGreaterThan(0);
+    expect(last).toBeLessThan(constants.FX_SLAM_AT);
   });
 });

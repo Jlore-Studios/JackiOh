@@ -461,7 +461,9 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000) other than `none` (`galleryPlayOf`): a cast,
 a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/motifs/gallery.ts`), a set piece or an aura
 plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
-card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It calls no engine.
+card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It also lists every card
+whose entry is its signature by set (R3332000), each played over the board its entrance reads (Felinor Fiender's over
+three Felinors, R3332001). It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -1056,6 +1058,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `music-assets.test.ts` calls.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
+  A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
+  first `MUSIC_STING_S` play on the effects bus instead, and the shared `entrance` sting plays only for one with no intro.
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral

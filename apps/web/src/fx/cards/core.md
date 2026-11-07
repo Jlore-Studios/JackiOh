@@ -113,7 +113,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-090` | Super-Virus Injection | Spell | cast send | 1.19 | none: no motif reads shuffledIn | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-090-1` | Super-Virus | Spell | cast bolt | 0.97 | bolt | cast: the census agrees (bolt) |
 | `core-091` | Fed Fauci | Unit | trigger mana | 1.28 | none: vanilla | trigger: the census leaves out the events on the card itself; its start-of-turn mana (manaChanged), its one trigger's payoff, mana reads |
-| `core-092` | Felinor Fiender | Unit | signature; entrance felinorAssembly | 0.00 | none: vanilla | signature (R3332001): it assembles from every Felinor it counts |
+| `core-092` | Felinor Fiender | Unit | signature; entrance felinorAssembly | 1.62 | none: vanilla | signature (R3332001): it assembles from every Felinor it counts |
 | `core-093` | Combo-Index | Field Spell | cast conjure; trigger tally; aura storm zone | 1.74 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census leaves out the events on the card itself, its counterChanged and questProgressed, which tally reads |
 | `core-093-1` | Combo-Fodder | Spell | cast bolt | 0.90 | lance | cast: the census's lance counted its Lifesteal heal as a second target; it deals damage to one, a bolt |
 | `core-094` | Genn's Greed | Spell | cast vanish Hustle/cash | 1.65 | vanish | cast: the census agrees (vanish) |
