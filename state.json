@@ -17813,21 +17813,20 @@
     "what": "plan #3418 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-11-07T22:07:51Z",
+    "at": "2026-11-07T22:19:19Z",
     "notes": [
-      "#3418 needs a plan",
-      "#3400: `claude-8` can start again, so its hold is lifted",
       "#3402 is held for `claude-3` until 17:00 (it refused a call)",
       "#3390 is held for `claude-3` until 17:00 (it refused a call)",
       "#3391 is held for `claude-3` until 17:00 (it refused a call)",
       "#3392 is held for `claude-3` until 17:00 (it refused a call)",
       "#3393 is held for `claude-3` until 17:00 (it refused a call)",
       "#3405 is held for `claude-3` until 17:00 (it refused a call)",
-      "delivered build #3345 on agy (run 42415293157): built",
-      "started build #3400 on claude-8 (run 42419419170)",
-      "started review #3419 on claude-8 (run 42419490474)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-07T23:00:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 52%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-07T23:50:00Z; it can start a build or a plan again in 1h 37m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 24h 47m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T23:59:56Z; it takes reviews only; it can start a build or a plan again in 145h 47m; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T22:20:00Z; it can start a build or a plan again in 7m; waiting for their owners: #3390 held for `claude-3` until 17:00 (it refused a call); #3391 held for `claude-3` until 17:00 (it refused a call); #3392 held for `claude-3` until 17:00 (it refused a call); #3393 held for `claude-3` until 17:00 (it refused a call); #3402 held for `claude-3` until 17:00 (it refused a call); #3405 held for `claude-3` until 17:00 (it refused a call)",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered review #3419 on claude-8 (run 42419490474): reviewed",
+      "delivered revise #3382 on claude-7 (run 42413432782): approved",
+      "started revise #3419 on claude-8 (run 42420384464)",
+      "started plan #3395 on claude-2 (run 42420443670)",
+      "started plan #3418 on claude-2 (run 42420507196)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-07T23:00:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 52%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-07T23:50:00Z; it can start a build or a plan again in 1h 24m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 24h 34m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T23:59:56Z; it takes reviews only; it can start a build or a plan again in 145h 34m; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` is busy; waiting for their owners: #3390 held for `claude-3` until 17:00 (it refused a call); #3391 held for `claude-3` until 17:00 (it refused a call); #3392 held for `claude-3` until 17:00 (it refused a call); #3393 held for `claude-3` until 17:00 (it refused a call); #3402 held for `claude-3` until 17:00 (it refused a call); #3405 held for `claude-3` until 17:00 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18533,7 +18532,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T22:07:51Z",
+  "loop_tick": "2026-11-07T22:19:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
