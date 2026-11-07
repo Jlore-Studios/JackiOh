@@ -16274,16 +16274,29 @@
         ],
         "builder": "claude",
         "built_by": "claude-6",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/audio/sfx.test.ts",
+            "apps/web/src/audio/sfx.ts",
+            "apps/web/src/audio/types.ts",
+            "apps/web/src/cards/art/stinkyscape.test.tsx",
+            "e2e/cypress/component/audio-recipes.cy.tsx",
+            "e2e/cypress/component/fx-phone-frame.cy.tsx"
+          ],
+          "from": "9f120276ffc982663421ce3fd86c5e9c63cad12e",
+          "main": "3f127f68c1667bd5632b9b87944c955c407301f4"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "42382536043",
+            "run": "42412098692",
             "tier": "strong"
           }
         ],
-        "sha": "9f120276ffc982663421ce3fd86c5e9c63cad12e",
+        "sha": "a2fbc9f0eb05f1bea2e2ca86034e235482ec1ab1",
         "tiers": {
           "claude": "strong"
         }
