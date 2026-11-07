@@ -18123,6 +18123,7 @@
           }
         ],
         "head": "34b8aeff4ccaa3aa6eeae6c78ba65e8fede5b065",
+        "interruptions": 0,
         "kind": "build",
         "model": "gemini-3.8-flash-high",
         "provider": "agy",
