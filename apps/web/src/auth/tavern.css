@@ -693,9 +693,9 @@
 @media (orientation: landscape) and (max-height: 500px) and (min-width: 601px) {
   .tavern.app-shell.auth-screen,
   .tavern.app-shell.invite-screen {
-    padding-top: 8px;
+    padding-top: 4px;
     padding-bottom: 20px;
-    gap: 8px;
+    gap: 4px;
   }
 
   .tavern.app-shell.auth-screen {
@@ -733,7 +733,7 @@
     max-width: 640px;
     width: 100%;
     margin: 0 auto;
-    padding: 18px 24px 20px;
+    padding: 10px 24px 20px;
   }
 
   .tavern.app-shell .panel--split > .auth-board__head,
@@ -758,8 +758,14 @@
     font-size: 36px;
   }
 
+  /* The title is in the top bar now (R3223000), a row above the board, so the create-account form, the tallest,
+     spends its rows tighter to keep its button on the first screen (spec: landing-and-code-field). */
+  .tavern.app-shell .panel--split .form-card {
+    gap: 4px;
+  }
+
   .tavern.app-shell .panel--split .form-card label {
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   .tavern.app-shell .panel--split .form-card input:not(.code-field__input) {
@@ -767,7 +773,7 @@
   }
 
   .tavern.app-shell .panel--split .form-card button[type="submit"] {
-    margin-top: 10px;
+    margin-top: 6px;
     min-height: 46px;
   }
 
