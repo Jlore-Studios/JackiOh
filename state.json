@@ -17765,9 +17765,11 @@
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T21:19:12Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-07T22:03:18Z",
         "family": "gemini",
@@ -17777,6 +17779,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- said: \n- read_file: {\"EndLine\": 25, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 140, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\", \"StartLine\": 125}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/apps/web/src/cards/fullscreen.test.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm exec eslint apps/web/src/cards/fullscreen.ts apps/web/src/cards/FullScreenArt.tsx apps/web/src/cards/fullscreen.test.tsx apps/web/\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm exec eslint e2e/cypress/component/card-fullscreen.cy.tsx e2e/cypress/component/fx-phone-frame.cy.tsx\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/e2e/cypress/component/card-fullscreen.cy.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/e2e/cypress/component/card-fullscreen.cy.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm exec eslint e2e/cypress/component/card-fullscreen.cy.tsx e2e/cypress/component/fx-phone-frame.cy.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm --dir apps/web test src/fx/takeover.test.ts src/game/TakeoverStill.test.tsx src/cards/fullscreen.test.tsx src/motion.test.ts src/f\u2026\n- said: \n- run_command: sleep 6\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && pnpm --dir apps/web typecheck\n- said: \n- run_command: sleep 10\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d9256389-bdea-4d5d-82eb-3df8695b5342/task-826\"}\n- said: \n- run_command: sleep 5\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3345 && ls -la .bot-notes.md\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3345/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Mythic takes the whole screen: its own full art fills the window as it is played, the camera flies through its layers, and a press-and-hold opens it full screen anywhere\"} --> ## Summary This patch implements full-art takeovers and an immersive full-s\u2026"
       },
+      "interruptions": 0,
       "issue": 3345,
       "kind": "revise",
       "last_findings": [
