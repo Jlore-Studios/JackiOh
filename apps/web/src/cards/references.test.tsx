@@ -19,6 +19,7 @@ import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CardDefsProvider, RefsInteractive } from "./refContext.tsx";
+import { defaultLookOf, isFullBleed } from "./versions.ts";
 import { findRefs } from "../test/faceData.ts";
 
 function def(id: string): CardDef {
@@ -61,11 +62,12 @@ describe("R279 the names a text links", () => {
         const text = fillParams(card, radiant ? "radiant" : "base");
         const expected = findRefs(text, (card.refs ?? []).map(def)).map((match) => match.id);
         // A face that prints less than its whole text names them all in its extended description (#1017).
+        // R3343001: a Mythic's Default prints full art while the Full-art cards setting is on, so a Mythic's names
+        // are read there as a full-art card's are.
         const model = face(card.id, radiant);
+        const whole = faceText(model).shown.full === model.text.full && !isFullBleed(defaultLookOf(card.id));
         const { container, unmount } = render(
-          <CardDefsProvider defs={CATALOG}>
-            {faceText(model).shown.full === model.text.full ? <CardFace face={model} layout="full" /> : <Extended face={model} />}
-          </CardDefsProvider>,
+          <CardDefsProvider defs={CATALOG}>{whole ? <CardFace face={model} layout="full" /> : <Extended face={model} />}</CardDefsProvider>,
         );
         const shown = [...container.querySelectorAll(".cf-ref")].map((ref) => ref.getAttribute("data-ref"));
         expect(shown, `${card.id} radiant=${String(radiant)}`).toEqual(expected);

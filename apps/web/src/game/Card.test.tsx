@@ -23,6 +23,7 @@ import {
 import { GLOSSARY } from "../test/faceData.ts";
 import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
 import { isFullArtCard } from "../cards/fullArt.ts";
+import { defaultLookOf, isFullBleed } from "../cards/versions.ts";
 import { KEYWORD_VISUALS } from "../cards/keywordVisuals.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
@@ -91,6 +92,14 @@ function faceUpRoots(container: Element): HTMLElement[] {
 
 function allUnits(view: PlayerView): UnitView[] {
   return [...view.you.units, ...view.opponent.units].filter((u): u is UnitView => u !== null);
+}
+
+/**
+ * R3046000: whether a Unit on the board prints full art with the Full-art cards setting on: a full-art card, or
+ * (R3343001) a Mythic, whose Default prints full art while the setting is on.
+ */
+function printsFullArt(defId: string): boolean {
+  return isFullArtCard(defId) || isFullBleed(defaultLookOf(defId));
 }
 
 function highlightOf(legal: string[], selected: string[] = []): Highlight {
@@ -575,8 +584,9 @@ describe("B18: Card picks its form from its props", () => {
       expect(root.getAttribute("data-face"), u.defId).toBe("minion");
       const cf = inside(root, ".cf");
       expect(cf.getAttribute("data-layout"), u.defId).toBe("minion");
-      // R3046000: a full-art card (the fixture's core-004, -008, -011 and -013) prints its art across the face.
-      const fullArt = isFullArtCard(u.defId);
+      // R3046000: a full-art card (the fixture's core-004, -008, -011 and -013) prints its art across the face;
+      // R3343001: so does a Mythic (the fixture's core-100), its Default full art while the setting is on.
+      const fullArt = printsFullArt(u.defId);
       expect(cf.getAttribute("data-full-art"), u.defId).toBe(fullArt ? "true" : null);
       inside(cf, `.cf-portrait > .cf-art.cf-art--${fullArt ? "full" : "oval"}`);
       expect(cf.querySelector(`.cf-art--${fullArt ? "oval" : "full"}`), u.defId).toBeNull();
@@ -587,8 +597,9 @@ describe("B18: Card picks its form from its props", () => {
   it("R3046000 the board's full-art Units print the art across the face with the name after it, and the others keep the oval", () => {
     const view = fullBoardView();
     renderBoard(view);
-    const full = allUnits(view).filter((u) => isFullArtCard(u.defId));
-    // The fixture board has Gary, Tempo Timmy, Mr. Vanilla and Jlockeed Shredder-10 among its units.
+    const full = allUnits(view).filter((u) => printsFullArt(u.defId));
+    // The fixture board has Gary, Tempo Timmy, Mr. Vanilla and Jlockeed Shredder-10 among its units (R3343001: and a
+    // Mythic, core-100, whose Default prints full art while the Full-art cards setting is on).
     expect(full.map((u) => u.defId)).toEqual(expect.arrayContaining(["core-004", "core-008", "core-011", "core-013"]));
     expect(full.length).toBeLessThan(allUnits(view).length);
     for (const u of allUnits(view)) {
@@ -597,7 +608,7 @@ describe("B18: Card picks its form from its props", () => {
       const name = inside(cf, ".card-name");
       expect(art.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING, u.defId).not.toBe(0);
       expect(name.textContent, u.defId).toBe(nameOf(u.defId));
-      expect(art.classList.contains("cf-art--full"), u.defId).toBe(isFullArtCard(u.defId));
+      expect(art.classList.contains("cf-art--full"), u.defId).toBe(printsFullArt(u.defId));
       // Its stats, cost and chips stay on the face, full art or not.
       expect(inside(cf, ".stat-attack").getAttribute("data-attack"), u.defId).toBe(String(u.attack));
       inside(cf, ".cost-gem");

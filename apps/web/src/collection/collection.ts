@@ -9,7 +9,19 @@ import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } 
 
 import { readerName } from "../cards/chinese.ts";
 import { CARD_SLOT_KINDS, cosmeticsOf, type CardPicks, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
-import { DEFAULT_VARIANT, FIRST_RANK, isNextLevel, ladderOf, levelOf, levelOfPick, levelsBelow, levelsOn, variantsOn, wornLevel } from "../cards/versions.ts";
+import {
+  DEFAULT_VARIANT,
+  FIRST_RANK,
+  defaultLookOf,
+  isNextLevel,
+  ladderOf,
+  levelOf,
+  levelOfPick,
+  levelsBelow,
+  levelsOn,
+  variantsOn,
+  wornLevel,
+} from "../cards/versions.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
@@ -241,10 +253,14 @@ function levelName(id: string): string {
 /**
  * R3015007: a card's variants as ladders, the Default first (its first level the normal face, always owned), then each
  * variant whose first level the card is offered (R3015000); each level the card is offered a rung, owned as `canEquip`
- * says, the next one marked (every level below it owned, R3015004), a locked one naming what it needs.
+ * says, the next one marked (every level below it owned, R3015004), a locked one naming what it needs. R3343002: the
+ * Default's first rung is named by the card's default look where it has one (R3343001, a Mythic's "Full art"), and a
+ * variant whose first level that look is, offered nowhere there, is listed from the level above it, owned by everyone
+ * (R3343000), so its first offered rung is next with nothing owned.
  */
 export function cardLadders(defId: string, canEquip: (defId: string, cosmeticId: string) => boolean): Ladder[] {
-  const owns = (card: string, id: string): boolean => id === NO_FULL_ART_ID || canEquip(card, id);
+  const shown = defaultLookOf(defId);
+  const owns = (card: string, id: string): boolean => id === NO_FULL_ART_ID || id === shown || canEquip(card, id);
   return variantsOn(defId).map((variant) => {
     const levels = levelsOn(defId, variant);
     const rungs: Rung[] = levels.map((id) => {
@@ -264,7 +280,7 @@ export function cardLadders(defId: string, canEquip: (defId: string, cosmeticId:
       };
     });
     if (variant !== DEFAULT_VARIANT) return { variant, name: levelName(ladderOf(variant)[0] ?? variant), rungs };
-    const normal: Rung = { id: NO_FULL_ART_ID, rank: FIRST_RANK, name: t("Normal"), rarity: "Common", owned: true, next: false, needs: null };
+    const normal: Rung = { id: NO_FULL_ART_ID, rank: FIRST_RANK, name: levelName(shown ?? NO_FULL_ART_ID), rarity: "Common", owned: true, next: false, needs: null };
     return { variant, name: t("Default"), rungs: [normal, ...rungs] };
   });
 }

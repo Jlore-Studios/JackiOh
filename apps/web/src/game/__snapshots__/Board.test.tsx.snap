@@ -3258,8 +3258,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
             data-rarity="Mythic"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -3269,7 +3271,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-motif="wisps"
                   data-art-theme="unit"

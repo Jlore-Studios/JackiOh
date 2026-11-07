@@ -7,6 +7,11 @@
 // Radiant's gold marks in it), the stats, the state rail and, on the minion, the keyword marks, the zzz, the Vanilla
 // stamp and, in its normal look, the portrait's oval. A full-art minion's art lies under every part (R3046000), as a
 // full face's does.
+// R3343001: a Default level draws the card's default look. A Legendary's is Extended art, its picture and frame spread
+// across the face under every part as a full art's are, whatever the setting; a Mythic's is Full art while the Full-art
+// cards setting is on, its normal face, words and window, while it is off. So the check runs under both settings, the
+// Mythics' normal faces (Dice of Doom's and the longest text's) measured with it off, and a Unit below Legendary keeps
+// a normal face's window with its stats.
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) of a card whose account copy wears the top stamp
 // (the most ornate, with its ribbon tails), shown in a look by `FullArtShown` as card-versions.cy.tsx shows one.
@@ -19,18 +24,24 @@ import { resetCosmeticsForTests } from "../../../apps/web/src/cards/cosmetics.ts
 import { FullArtShown, OwnCopy } from "../../../apps/web/src/cards/fullArt.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import { replaceOwnProficiency, resetProficiencyForTests } from "../../../apps/web/src/cards/stamps.ts";
-import { VERSION_FULL_ART_ID } from "../../../apps/web/src/cards/versions.ts";
+import { VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ID } from "../../../apps/web/src/cards/versions.ts";
 import { __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import { unit } from "../../../apps/web/src/test/fixtures.ts";
 
 type CardDef = (typeof CATALOG)[string];
 
-/** A Unit and a Spell offered the Full art version (card-versions.cy.tsx's), and the longest text there is. */
+/**
+ * Two Units and a Spell, each shown in its normal look and in the Full art version (R3343001: the Mythic's is its
+ * Default, Full art while the Full-art cards setting is on), and the longest text there is.
+ */
 const CARDS = [
-  { id: "classicplus-012", why: "a Unit (The Mother Pancake: stats in the bottom corners, a Legendary crest)" },
+  { id: "classicplus-012", why: "a Unit (The Mother Pancake: stats in the bottom corners, a Legendary crest; R3343001: its normal face Extended art)" },
   { id: "stinkyscape-154", why: "a Spell (Dice of Doom: no stats, a Mythic crest)" },
+  { id: "core-004", why: "a Unit below Legendary (Gary the Gambler: stats in the bottom corners, its normal face's window)" },
 ] as const;
 const LONGEST = { id: "meditative-008", why: "a Spell (Reach the Summit: eleven Ascent lines, its rules box full)" } as const;
+/** R3343001: the Mythics whose normal look is Full art while the Full-art cards setting is on. */
+const MYTHIC_NORMAL_FACES: readonly string[] = ["stinkyscape-154", LONGEST.id];
 /** The board minion's card: Gary the Gambler, a Unit with a crest. */
 const MINION = "core-004";
 
@@ -47,7 +58,7 @@ const MINION_SIZES = [
 
 /** What a face's parts are: none may cover the stamp, nor it them. */
 const PARTS = [".cost-gem", ".cf-gem", ".cf-set", ".cf-crest", ".cf-element", ".card-name", ".card-type", ".card-text", ".cf-tags", ".cf-atk", ".cf-hp", ".cf-states"] as const;
-/** The normal face's art window too, which a full-art face spreads under everything. */
+/** The normal face's art window too, which a full-art face, and Extended art (R2942001, R3343001), spreads under everything. */
 const NORMAL_PARTS = [...PARTS, ".cf-art-frame"] as const;
 /** The board minion's. */
 const MINION_PARTS = [".cost-gem", ".cf-crest", ".card-name", ".stat-attack", ".stat-health", ".keywords", ".cf-sick", ".cf-vanilla", ".cf-states"] as const;
@@ -166,41 +177,53 @@ describe("R3013002 a card's proficiency stamp on real faces", () => {
     resetProficiencyForTests();
   });
 
-  it("R3013002 a stamp keeps clear of every part", () => {
-    cy.mount(<Faces />);
-    cy.document().should((doc) => {
-      const all = faces(doc);
-      expect(all.length).to.eq(WIDTHS.length * CARDS.length * 2 * 2 + WIDTHS.length * 2 + CARDS.length * 2 + MINION_SIZES.length * 2 * 2 * 2);
-      for (const [where, cf] of all) {
-        const face = cf.getBoundingClientRect();
-        const minion = cf.getAttribute("data-layout") === "minion";
-        const full = cf.getAttribute("data-full-art") === "true";
-        const radiant = where.includes("radiant");
-        expect(cf.getAttribute("data-radiant-face"), `${where}: the Radiant frame`).to.eq(radiant ? "true" : null);
-        const stamps = boxes(cf, ".cf-stamp");
-        expect(stamps.length, `${where}: one stamp`).to.eq(1);
-        const stamp = stamps[0] as DOMRect;
-        // It draws, inside the face.
-        expect(stamp.width, `${where}: the stamp has a size`).to.be.greaterThan(4);
-        expect(Math.abs(stamp.width - stamp.height), `${where}: the stamp is square`).to.be.lessThan(1);
-        expect(stamp.left, `${where}: inside`).to.be.at.least(face.left - SLACK_PX);
-        expect(stamp.right, `${where}: inside`).to.be.at.most(face.right + SLACK_PX);
-        expect(stamp.top, `${where}: inside`).to.be.at.least(face.top - SLACK_PX);
-        expect(stamp.bottom, `${where}: inside`).to.be.at.most(face.bottom + SLACK_PX);
-        const parts = minion ? MINION_PARTS : full ? PARTS : NORMAL_PARTS;
-        for (const selector of parts) {
-          for (const part of boxes(cf, selector)) {
-            expect(overlaps(stamp, part), `${where}: the stamp covers ${selector}`).to.eq(false);
+  for (const { fullArt, label } of [
+    { fullArt: true, label: "" },
+    { fullArt: false, label: ", Full-art cards off" },
+  ] as const) {
+    it(`R3013002 a stamp keeps clear of every part${label}`, () => {
+      writeCardSettings({ fullArt });
+      cy.mount(<Faces />);
+      cy.document().should((doc) => {
+        const all = faces(doc);
+        expect(all.length).to.eq(WIDTHS.length * CARDS.length * 2 * 2 + WIDTHS.length * 2 + CARDS.length * 2 + MINION_SIZES.length * 2 * 2 * 2);
+        // Control, R3343001: a Mythic's normal look is Full art with the setting on, its normal face with it off.
+        for (const [where, cf] of all.filter(([name]) => MYTHIC_NORMAL_FACES.some((id) => name.includes(`-${id}-normal-`)))) {
+          expect(cf.getAttribute("data-full-art"), `${where}: the Mythic's Default`).to.eq(fullArt ? "true" : null);
+        }
+        for (const [where, cf] of all) {
+          const face = cf.getBoundingClientRect();
+          const minion = cf.getAttribute("data-layout") === "minion";
+          const full = cf.getAttribute("data-full-art") === "true";
+          // R2942001, R3343001: Extended art (a Legendary's Default) spreads its art frame across the face, under every part.
+          const spread = full || cf.getAttribute("data-version") === VERSION_EXTENDED_ART_ID;
+          const radiant = where.includes("radiant");
+          expect(cf.getAttribute("data-radiant-face"), `${where}: the Radiant frame`).to.eq(radiant ? "true" : null);
+          const stamps = boxes(cf, ".cf-stamp");
+          expect(stamps.length, `${where}: one stamp`).to.eq(1);
+          const stamp = stamps[0] as DOMRect;
+          // It draws, inside the face.
+          expect(stamp.width, `${where}: the stamp has a size`).to.be.greaterThan(4);
+          expect(Math.abs(stamp.width - stamp.height), `${where}: the stamp is square`).to.be.lessThan(1);
+          expect(stamp.left, `${where}: inside`).to.be.at.least(face.left - SLACK_PX);
+          expect(stamp.right, `${where}: inside`).to.be.at.most(face.right + SLACK_PX);
+          expect(stamp.top, `${where}: inside`).to.be.at.least(face.top - SLACK_PX);
+          expect(stamp.bottom, `${where}: inside`).to.be.at.most(face.bottom + SLACK_PX);
+          const parts = minion ? MINION_PARTS : spread ? PARTS : NORMAL_PARTS;
+          for (const selector of parts) {
+            for (const part of boxes(cf, selector)) {
+              expect(overlaps(stamp, part), `${where}: the stamp covers ${selector}`).to.eq(false);
+            }
+          }
+          if (minion) {
+            expect(full, `${where}: the look it is shown in`).to.eq(where.includes("-full-"));
+            // R3046000: a full-art Unit's art fills its face under every part, as a full face's does; the normal look keeps its oval.
+            if (!full) {
+              for (const portrait of boxes(cf, ".cf-portrait")) expect(entersOval(stamp, portrait), `${where}: the stamp covers the portrait`).to.eq(false);
+            }
           }
         }
-        if (minion) {
-          expect(full, `${where}: the look it is shown in`).to.eq(where.includes("-full-"));
-          // R3046000: a full-art Unit's art fills its face under every part, as a full face's does; the normal look keeps its oval.
-          if (!full) {
-            for (const portrait of boxes(cf, ".cf-portrait")) expect(entersOval(stamp, portrait), `${where}: the stamp covers the portrait`).to.eq(false);
-          }
-        }
-      }
+      });
     });
-  });
+  }
 });

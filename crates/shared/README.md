@@ -606,7 +606,7 @@ and fits, and a new bot's username is the host's to give.
 
 Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
 `Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
-offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
+offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`; a card's default look, `is_default_look` and `default_look`, every account's there and offered nowhere there, R3343000) and the
 lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
 judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
 (`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
@@ -663,7 +663,7 @@ pool as data) moves in its second part.
 
 Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
 `Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
-offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
+offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`; a card's default look, `is_default_look` and `default_look`, every account's there and offered nowhere there, R3343000) and the
 lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
 judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
 (`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
