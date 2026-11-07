@@ -17093,7 +17093,7 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "round_tier": "strong",
-      "run_id": "42397023151",
+      "run_id": "pending:e0cb330e-1794075096",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -17112,7 +17112,7 @@
         "provider": "claude-8",
         "run": "42397023151"
       },
-      "started_at": "2026-11-07T17:34:52Z",
+      "started_at": "2026-11-07T18:12:14Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -17444,9 +17444,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T18:11:23Z",
+    "at": "2026-11-07T18:12:14Z",
     "url": "",
-    "what": "review #3409 on claude-8"
+    "what": "build #3400 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T17:44:07Z",
