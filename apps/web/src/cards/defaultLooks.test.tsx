@@ -4,9 +4,9 @@
 // still wears Full art by the setting, and the Glitch its blank face. The Default levels name no level of their own
 // (`data-level`), and the Full-art cards setting off keeps a Mythic's normal face. Prismatic is a full art at both its
 // levels. R2725004 holds under each: a Radiant face keeps its Radiant marks, a base face shows none. On the board a
-// Mythic Unit prints full art and a Legendary keeps its window (R3046000). Each pull request draws every Mythic and
-// Legendary and a sample of the rest, two of each rarity of each set; the daily run draws every other card. The pixels
-// are e2e's cypress/component/default-looks.cy.tsx.
+// Mythic Unit prints full art (R3046000) and a Legendary, art first as every one in play is (R3339000), none. Each
+// pull request draws every Mythic and Legendary and a sample of the rest, two of each rarity of each set; the daily
+// run draws every other card. The pixels are e2e's cypress/component/default-looks.cy.tsx.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -264,7 +264,9 @@ describe("R3343001 on the board", () => {
     return cf;
   }
 
-  it("R3343001 a Mythic Unit prints full art, a Legendary Unit keeps its window", () => {
+  // R3339000: every Legendary and Mythic in play is drawn art first, its art edge to edge with no oval, whatever its look;
+  // a Legendary's Default, Extended art, is no full art there, so it names no version.
+  it("R3343001 a Mythic Unit prints full art, a Legendary Unit is art first and no full art", () => {
     const mythic = MYTHICS.find((id) => CATALOG[id]?.type === "Unit" && CATALOG[id]?.rarity !== "Token");
     const legendary = LEGENDARIES.find((id) => CATALOG[id]?.type === "Unit" && CATALOG[id]?.rarity !== "Token" && !isFullArtCard(id));
     if (mythic === undefined || legendary === undefined) throw new Error("no Mythic or Legendary Unit");
@@ -277,7 +279,8 @@ describe("R3343001 on the board", () => {
       const windowed = minionOf(legendary, radiant);
       expect(windowed.getAttribute("data-full-art"), legendary).toBeNull();
       expect(windowed.getAttribute("data-version"), legendary).toBeNull();
-      expect(windowed.querySelector(".cf-art--oval"), legendary).not.toBeNull();
+      expect(windowed.getAttribute("data-art-first"), legendary).toBe("true");
+      expect(windowed.querySelector(".cf-art--oval"), legendary).toBeNull();
       cleanup();
     }
   });

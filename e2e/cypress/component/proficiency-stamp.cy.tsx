@@ -68,8 +68,6 @@ const BUSY: Partial<UnitView> = { keywords: [{ kind: "Taunt" }, { kind: "Poisono
 
 /** How far a part may run into the stamp's box before it counts as covering it: sub-pixel rounding. */
 const SLACK_PX = 0.5;
-/** The unit circle an ellipse scales to: a point nearer its centre than this lies inside it. */
-const UNIT_RADIUS = 1;
 
 function heightFor(width: number): number {
   return Math.round(width / FACE_ASPECT);
@@ -77,17 +75,6 @@ function heightFor(width: number): number {
 
 function overlaps(a: DOMRect, b: DOMRect): boolean {
   return a.left < b.right - SLACK_PX && b.left < a.right - SLACK_PX && a.top < b.bottom - SLACK_PX && b.top < a.bottom - SLACK_PX;
-}
-
-/** Whether the box `box` reaches into the ellipse inscribed in `oval`: the box's point nearest the centre, scaled to a unit circle. */
-function entersOval(box: DOMRect, oval: DOMRect): boolean {
-  const cx = (oval.left + oval.right) / 2;
-  const cy = (oval.top + oval.bottom) / 2;
-  const rx = oval.width / 2;
-  const ry = oval.height / 2;
-  const nx = (Math.min(Math.max(cx, box.left), box.right) - cx) / rx;
-  const ny = (Math.min(Math.max(cy, box.top), box.bottom) - cy) / ry;
-  return nx * nx + ny * ny < UNIT_RADIUS;
 }
 
 /** The boxes of `cf`'s parts matching `selector` that draw. */
@@ -217,9 +204,14 @@ describe("R3013002 a card's proficiency stamp on real faces", () => {
           }
           if (minion) {
             expect(full, `${where}: the look it is shown in`).to.eq(where.includes("-full-"));
-            // R3046000: a full-art Unit's art fills its face under every part, as a full face's does; the normal look keeps its oval.
+            // R3046000: a full-art Unit's art fills its face under every part, as a full face's does; #3341: so does the
+            // normal look's, up to the frame, so the stamp stands over the picture's edge in both, clear of every part.
             if (!full) {
-              for (const portrait of boxes(cf, ".cf-portrait")) expect(entersOval(stamp, portrait), `${where}: the stamp covers the portrait`).to.eq(false);
+              const panel = (cf.querySelector(".cf-scale") as HTMLElement).getBoundingClientRect();
+              for (const portrait of boxes(cf, ".cf-portrait")) {
+                expect(portrait.width, `${where}: the picture fills the panel`).to.be.closeTo(panel.width, SLACK_PX);
+                expect(portrait.top, `${where}: the picture starts at the panel's top`).to.be.closeTo(panel.top, SLACK_PX);
+              }
             }
           }
         }

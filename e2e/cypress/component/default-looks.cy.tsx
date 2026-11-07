@@ -5,8 +5,8 @@
 // a Legendary Unit worn at Prismatic's first level, a full art:
 //  - in the viewer's own hand: the Mythic bare, its art across the face (R2723000), the Legendary's picture past its
 //    window with its name and words, Prismatic across the face; every part drawn inside its face;
-//  - on the board: the Mythic and Prismatic full art, their name in a band below the art, the Legendary keeping its
-//    window (R3046000);
+//  - on the board: the Mythic and Prismatic full art, their name in a band below the art (R3046000), the Legendary no
+//    full art but art first, as every Legendary in play is, its art edge to edge with no oval (R3339000);
 //  - in the Collection: the large face wearing the default look, the Default's first rung named and pictured by it, and
 //    the ladder above it starting at its next level, next with nothing owned (R3343002).
 // A screenshot of each is kept.
@@ -175,7 +175,7 @@ describe("R3343001 R3343002 the default looks in hand, on the board and in the C
       cy.get('[data-testid="hand-you"]').screenshot(`R3343001-default-looks-hand-${viewport.label}`, { overwrite: true });
     });
 
-    it(`R3343001 on the board at ${viewport.label}: the Mythic and Prismatic full art, the Legendary keeping its window`, () => {
+    it(`R3343001 on the board at ${viewport.label}: the Mythic and Prismatic full art, the Legendary art first and no full art`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.mount(<Table view={boardView()} />);
       cy.get(`${BOARD} .field .card[data-face="minion"]`, { timeout: SETTLE_TIMEOUT_MS }).should("have.length", 3);
@@ -194,10 +194,11 @@ describe("R3343001 R3343002 the default looks in hand, on the board and in the C
           expect(name.top, `${id}: the name's band below the art`).to.be.at.least(art.top);
           expectPartsInside(cf, [".cf-portrait", ".card-name", ".cost-gem"], id);
         }
-        const windowed = minion(LEGENDARY);
-        expect(windowed.hasAttribute("data-full-art"), LEGENDARY).to.eq(false);
-        expect(windowed.querySelector(".cf-art--oval"), `${LEGENDARY} keeps its window`).to.not.eq(null);
-        expectPartsInside(windowed, [".cf-portrait", ".card-name", ".cost-gem"], LEGENDARY);
+        const artFirst = minion(LEGENDARY);
+        expect(artFirst.hasAttribute("data-full-art"), LEGENDARY).to.eq(false);
+        expect(artFirst.getAttribute("data-art-first"), `${LEGENDARY} is art first (R3339000)`).to.eq("true");
+        expect(artFirst.querySelector(".cf-art--oval"), `${LEGENDARY}'s art has no oval`).to.eq(null);
+        expectPartsInside(artFirst, [".cf-portrait", ".card-name", ".cost-gem"], LEGENDARY);
       });
       cy.get(BOARD).screenshot(`R3343001-default-looks-board-${viewport.label}`, { overwrite: true });
     });

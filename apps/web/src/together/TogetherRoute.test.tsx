@@ -871,17 +871,18 @@ describe("the challenge dialog's focus (#1569)", () => {
     return challenge;
   }
 
-  it("opening it takes the focus to its checked mode, then to Send once the decks are read (#1831), and Escape closes it from anywhere and gives the focus back to the Challenge button", async () => {
+  it("R3221000 opening it takes the focus to Cancel, which keeps it once the decks are read, and Escape closes it from anywhere and gives the focus back to the Challenge button", async () => {
     await renderPage();
     const challenge = openChallenge();
-    // Before the decks are read there is nothing to send: the focus starts on the checked mode.
-    expect(screen.getByTestId(TESTID.challengeModeBo1)).toHaveFocus();
+    // Cancel, the safe choice, holds the focus from the start; Send waits for the decks.
+    expect(screen.getByTestId(TESTID.challengeClose)).toHaveFocus();
     const form = await screen.findByTestId(TESTID.challengeForm);
-    expect(form).toHaveAttribute("role", "dialog");
+    expect(form).toHaveAttribute("role", "alertdialog");
     expect(form).toHaveAttribute("aria-modal", "true");
     await waitFor(() => {
-      expect(screen.getByTestId(TESTID.challengeSend)).toHaveFocus();
+      expect(screen.getByTestId(TESTID.challengeSend)).toBeEnabled();
     }, SLOW);
+    expect(screen.getByTestId(TESTID.challengeClose)).toHaveFocus();
 
     (document.activeElement as HTMLElement | null)?.blur();
     press("Escape");
@@ -898,18 +899,20 @@ describe("the challenge dialog's focus (#1569)", () => {
     const send = screen.getByTestId(TESTID.challengeSend);
     const cancel = screen.getByTestId(TESTID.challengeClose);
 
-    // It opens on Send (#1831), so the walk starts there: Cancel, then round to the mode and the deck.
+    // R3221000: it opens on Cancel, before Send at the end, so the walk starts there: Send, then round to the
+    // mode and the deck.
     await waitFor(() => {
-      expect(send).toHaveFocus();
+      expect(send).toBeEnabled();
     }, SLOW);
-    press("Tab");
     expect(cancel).toHaveFocus();
+    press("Tab");
+    expect(send).toHaveFocus();
     press("Tab");
     expect(mode).toHaveFocus();
     press("Tab");
     expect(deck).toHaveFocus();
     press("Tab");
-    expect(send).toHaveFocus();
+    expect(cancel).toHaveFocus();
     press("Tab", { shiftKey: true });
     expect(deck).toHaveFocus();
     press("Tab", { shiftKey: true });
@@ -921,7 +924,7 @@ describe("the challenge dialog's focus (#1569)", () => {
     expect(mode).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
-    expect(cancel).toHaveFocus();
+    expect(send).toHaveFocus();
   });
 
   it("closes on a click on the scrim, never on one inside it, and on Cancel, each time giving the focus back to the Challenge button", async () => {
@@ -932,7 +935,7 @@ describe("the challenge dialog's focus (#1569)", () => {
     fireEvent.click(form);
     expect(screen.getByTestId(TESTID.challengeForm)).toBeInTheDocument();
 
-    fireEvent.click(must(document.querySelector<HTMLElement>(".together-dialog-scrim"), "the scrim"));
+    fireEvent.click(must(document.querySelector<HTMLElement>(".dialog-scrim"), "the scrim"));
     expect(screen.queryByTestId(TESTID.challengeForm)).toBeNull();
     expect(challenge).toHaveFocus();
 

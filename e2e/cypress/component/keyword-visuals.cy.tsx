@@ -26,11 +26,14 @@ const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 /** Overhang a box may have past the card; the card clips it. */
 const EDGE_SLACK_PX = 1;
 
-/** A card that prints no full art, so the treatments are drawn round the oval portrait as R438 laid them out. */
+/** A card that prints no full art, so the treatments are drawn over its picture (#3341: up to the frame; R438 laid them out round an oval). */
 const DEF_ID = "core-002";
 
 /** Gary the Gambler, a full-art card: R3046000 draws a Unit's art across its face, which the same treatments must clear. */
 const FULL_ART_DEF_ID = "core-004";
+
+/** #3341: the treatments that stand behind a unit's picture, which the picture now covers: they are not drawn. */
+const UNDER_THE_PICTURE: readonly KeywordKind[] = ["Taunt", "Stack"];
 
 /** R2577000: the kinds a unit on the field draws; the rest have no treatment there. */
 const FIELD_KINDS = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].onField);
@@ -130,6 +133,12 @@ describe("R438 keyword visuals on the board minion", () => {
           const where = `${kind} at ${size.label}`;
           if (cell === null || fx === null) {
             problems.push(`${where}: no treatment`);
+            continue;
+          }
+          // #3341: a unit's picture runs up to the frame, and covers what stood behind the oval: the Taunt shield and the
+          // Stack's card edges stay in the face, undrawn (Taunt's steel ring is the portrait's own, cards.css).
+          if (UNDER_THE_PICTURE.includes(kind)) {
+            if (getComputedStyle(fx).display !== "none") problems.push(`${where}: drawn behind the picture`);
             continue;
           }
           const box = fx.getBoundingClientRect();

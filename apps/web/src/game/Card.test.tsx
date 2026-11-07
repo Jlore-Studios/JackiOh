@@ -576,7 +576,7 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
 /* B18 */
 
 describe("B18: Card picks its form from its props", () => {
-  it("B18 a unit is the minion form, with an oval CardArt in .cf-portrait, or R3046000 the full-art card's art across the face", () => {
+  it("B18 a unit is the minion form, with a frame CardArt in .cf-portrait (#3341), or R3046000 the full-art card's art across the face", () => {
     const view = fullBoardView();
     renderBoard(view);
     for (const u of allUnits(view)) {
@@ -588,13 +588,16 @@ describe("B18: Card picks its form from its props", () => {
       // R3343001: so does a Mythic (the fixture's core-100), its Default full art while the setting is on.
       const fullArt = printsFullArt(u.defId);
       expect(cf.getAttribute("data-full-art"), u.defId).toBe(fullArt ? "true" : null);
-      inside(cf, `.cf-portrait > .cf-art.cf-art--${fullArt ? "full" : "oval"}`);
-      expect(cf.querySelector(`.cf-art--${fullArt ? "oval" : "full"}`), u.defId).toBeNull();
+      // R3339000: a Legendary or Mythic Unit is art first in any look: its art runs edge to edge, full-art card or not.
+      const artFirst = cf.getAttribute("data-art-first") === "true";
+      const edgeToEdge = fullArt || artFirst;
+      inside(cf, `.cf-portrait > .cf-art.cf-art--${edgeToEdge ? "full" : "frame"}`);
+      expect(cf.querySelector(`.cf-art--${edgeToEdge ? "frame" : "full"}`), u.defId).toBeNull();
       expect(cf.querySelector(".card-text"), u.defId).toBeNull();
     }
   });
 
-  it("R3046000 the board's full-art Units print the art across the face with the name after it, and the others keep the oval", () => {
+  it("R3046000 the board's full-art Units print the art across the face with the name after it, and the others draw it up to the frame", () => {
     const view = fullBoardView();
     renderBoard(view);
     const full = allUnits(view).filter((u) => printsFullArt(u.defId));
@@ -608,7 +611,8 @@ describe("B18: Card picks its form from its props", () => {
       const name = inside(cf, ".card-name");
       expect(art.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING, u.defId).not.toBe(0);
       expect(name.textContent, u.defId).toBe(nameOf(u.defId));
-      expect(art.classList.contains("cf-art--full"), u.defId).toBe(printsFullArt(u.defId));
+      // R3339000: edge to edge for a full-art card and for an art-first one (Legendary or Mythic), up to the frame for the rest.
+      expect(art.classList.contains("cf-art--full"), u.defId).toBe(printsFullArt(u.defId) || cf.getAttribute("data-art-first") === "true");
       // Its stats, cost and chips stay on the face, full art or not.
       expect(inside(cf, ".stat-attack").getAttribute("data-attack"), u.defId).toBe(String(u.attack));
       inside(cf, ".cost-gem");

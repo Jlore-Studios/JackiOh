@@ -322,8 +322,9 @@ h3,
 
 /* --- controls ------------------------------------------------------------------------------ */
 
-.app-shell button,
-.form-card button {
+/* A dialog's ✕ keeps its own round size (game/dialog.css, R3221000); `:where()` leaves the weight as it was. */
+.app-shell button:where(:not(.dialog__close)),
+.form-card button:where(:not(.dialog__close)) {
   border-radius: var(--radius-sm);
   padding: var(--space-4) var(--space-7);
   font-weight: 550;

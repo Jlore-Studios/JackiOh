@@ -29,6 +29,18 @@ enforces rules and never sees hidden information.** In practice:
   The other seat's is its backs (`game/OpponentChoice.tsx`, R2739000) when the view's `pending` carries `optionCount`: that many of the opponent's card backs, laid out as the bare picker over the waiting notice's lighter dim and in the middle of the screen at every width (a phone docks the chooser's picker to its bottom edge), with no words or control and "Your opponent is choosing…" as the dialog's name; without it, the notice. Online, the back the opponent's pointer or focus is on is outlined in their color, still (R2739001): an engine card picker but the mulligan sends its option's index as it changes and null as it leaves, folds or closes (`game/choiceHover.ts`, `net.ts`'s `choiceHover` frame), which the server relays to the opponent alone and drops when the count is not shown; a play's own picker, a replay's, hotseat and practice send none.
   A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
 
+The arena (`src/game/arena/`, R3348000, R3348001): a living playmat that is only ever the viewer's own, and that
+no rule reads. `SandSurface.tsx` answers a press on any tile with a press-in and a ripple in its half's playmat
+family and that family's sound, harder on a legal tile and with a haptic on touch, and never stops the press. Each
+of the ten playmats keeps two corner props (`CornerProps.tsx`, drawn by `PropArt.tsx`): a tap sounds and moves
+one, `CORNER_ESCALATE_TAPS` taps in a row give its payoff, each tap rolls `CORNER_RARE_CHANCE` from the client's
+own random source (`arenaRandom`, never the game's RNG) and four mats hide a tap sequence. The layer takes a mat id
+and nothing else: it imports nothing from `net/`, `wire/` or `replay/`, sends and logs nothing, and answers quietly
+while the animation queue drains. A prop that would cover a tile, a hand, a seat, the controls or the log, or leave
+the screen, is not drawn (`fit.ts`); a phone 840 high or more gives the field a strip of mat above and below its
+lanes for them (`arena.css`), a shorter one has none to give. Every number is in `arena/config.ts`, and `arena.css` states the same times
+(`arena/arenaCss.test.ts`).
+
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
 variable over weight, Latin subset, self-hosted in `public/fonts` with their licenses. Each is
@@ -119,9 +131,32 @@ moved last, at the right; three answers put the first on a row of its own, and a
 row stacks in the same order. Its scrim is one color at `--z-dialog` (`surfaces.css`), and its keys are
 `useModalKeys`'s (`together/modalKeys.ts`), whose third argument, the control to focus, also gives the
 focus back to the opener on close unless the caller has moved it: Escape, Back (a layer) and a click on
-the scrim close it, and Tab stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
+the scrim close it (not one whose press began in the panel, a selection dragged out, R3221000), and Tab
+stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
 `ConfirmLeaveFight` and `PracticeResult` draw through it; `PracticeResult` keeps its look through
 `practice-result`, and its ✕, Escape, Back and a click outside view the board.
+
+Since #3221 (R3221000) the menus' dialogs draw through it too: `SettingsPanel`, the friends panel
+(`FriendsButton`), `ChatPanel`, `ChallengeDialog`, `TokenOffer`'s and the shop's chase question, the
+account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, `FieldGuide`,
+`PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`, `DevButton`'s panel,
+`CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own `closeTestid` and
+`closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
+else the ✕), `panelRef`, a `title` with markup of its own, and answers that are `disabled` or `busy`
+(`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
+wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
+Friends, Chat). `DialogClose` is the ✕ alone, for an overlay that keeps its own body: the inspect
+overlay's `CardDetail` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
+Tab only while theirs is the top layer (`useBackLayer` returns whether it is, and opens its layer in a
+layout effect, so an Escape read as soon as the overlay is drawn finds it on top), so a dialog opened over
+another closes first. The inspect overlay, portalled after every dialog, draws at `--z-dialog` while it
+is the top layer (`useTopBackLayer`, as state) and, under a layer opened after it (a result that ends the
+game over a card's detail), carries `data-under` and comes down to `--z-toast`, under every dialog, so the
+dialog seen is the one that takes the keys. `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
+Tab skips a hidden panel and a control at `tabindex="-1"`. `src/dialogs.test.ts` holds the sources to
+it: no `"Escape"` comparison outside the shared hooks and its named exceptions, no scrim outside
+`dialog.css` that paints itself or takes a raw layer, one ✕ glyph, and the inline confirms' safe choice
+first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
@@ -226,7 +261,7 @@ A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` 
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms and the practice result, through it), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms, the practice result and, since #3221 (R3221000), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown and the menus' other dialogs, through it) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -411,7 +446,7 @@ other phones) they overlap the turned card's top-left, its attack gem and the st
 difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
-the unit's oval and the backrow's outline keep a card's shape.
+the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root

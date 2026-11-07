@@ -886,22 +886,8 @@
 
 /* ---- the result dialog -------------------------------------------------------------------- */
 
-/* A lesson's result's scrim (TutorialResult.tsx), until it moves onto Dialog.tsx as the practice result
-   has (R3220000). Centered by the dialog's auto margins rather than by `place-items`, so a dialog
-   taller than a landscape phone scrolls from its top instead of being clipped above the fold. The
-   `.dialog` twins below give the practice result, drawn through Dialog.tsx, the same look. */
-.tutorial-result-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  overflow-y: auto;
-  background: radial-gradient(circle at 50% 45%, rgb(7 9 14 / 55%), rgb(7 9 14 / 90%));
-  backdrop-filter: blur(3px);
-  animation: practice-fade-in calc(260ms * var(--anim-scale, 1)) ease-out calc(300ms * var(--anim-scale, 1)) both;
-}
-
+/* The practice result (R3220000) and a lesson's (TutorialResult.tsx, R3221000) draw through Dialog.tsx,
+   whose scrim is dialog.css's: the `.dialog` twins below give its panel this look. */
 .practice-result,
 .dialog.practice-result {
   --glow: var(--radiant);
@@ -1126,15 +1112,6 @@
   min-height: 44px;
 }
 
-@keyframes practice-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes practice-result-in {
   from {
     opacity: 0;
@@ -1154,7 +1131,6 @@
   .practice-thinking__core,
   .practice-hud[data-thinking="true"]::after,
   .practice-shuffle span,
-  .tutorial-result-scrim,
   .practice-result,
   .dialog.practice-result,
   .practice-result__rays {

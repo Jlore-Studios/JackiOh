@@ -79,7 +79,10 @@ export function AddFriend({ onAdded }: { onAdded: () => void }): ReactElement {
   );
 }
 
-/** Block's inline question, a friend row's and an incoming request's (B56, #2684): not a modal, it asks once before it blocks. */
+/**
+ * Block's inline question, a friend row's and an incoming request's (B56, #2684): not a modal, it asks once
+ * before it blocks. R3221000: the safe Keep comes first and the act last, as in every dialog.
+ */
 function BlockQuestion({
   question,
   name,
@@ -99,11 +102,11 @@ function BlockQuestion({
       <span className="together-row__question" id={questionId}>
         <Named text={question} name={name} />
       </span>
-      <button type="button" data-testid={togetherTestid.confirm} disabled={busy} onClick={onBlock}>
-        {t("Block")}
-      </button>
       <button type="button" className="link-button" data-testid={togetherTestid.keep} onClick={onKeep}>
         {t("Keep")}
+      </button>
+      <button type="button" data-testid={togetherTestid.confirm} disabled={busy} onClick={onBlock}>
+        {t("Block")}
       </button>
     </span>
   );

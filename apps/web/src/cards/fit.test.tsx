@@ -6,8 +6,8 @@ import { cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { FIT_FLOOR_PX, FIT_MIN } from "./constants.ts";
-import { flushFits, LONG_ATTRIBUTE, LONGEST_ATTRIBUTE, scheduleFit, SKIPPABLE_ATTRIBUTE, useFitText } from "./fit.ts";
+import { FIT_FLOOR_PX, FIT_MIN, HAND_TEXT_BOX_MIN_CQH } from "./constants.ts";
+import { flushFits, LONG_ATTRIBUTE, LONGEST_ATTRIBUTE, NEED_PROPERTY, scheduleFit, SKIPPABLE_ATTRIBUTE, useFitText } from "./fit.ts";
 
 type Model = {
   /** The font at full size (4.4cqh on a real face), in px. */
@@ -23,6 +23,8 @@ type Model = {
 };
 
 const WIDTH = 150;
+/** The face's container height in px, the `cqh` of cards.css (#3341). */
+const FACE_HEIGHT = 200;
 const PADDING = 4;
 const LINE_HEIGHT = 1.18;
 
@@ -80,7 +82,13 @@ function modelLayout(model: Model): void {
     return text(this) ? WIDTH : 0;
   });
   vi.spyOn(proto, "clientHeight", "get").mockImplementation(function (this: HTMLElement) {
+    if (this.classList.contains("cf")) return FACE_HEIGHT;
     return text(this) ? boxOf(this, model) : 0;
+  });
+  // #3341: the box let go of its height reads as tall as its text needs.
+  vi.spyOn(proto, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+    const font = fontOf(this, model);
+    return text(this) ? model.need * font * font + 2 * PADDING : 0;
   });
   vi.spyOn(proto, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
     if (!text(this)) return 0;
@@ -483,5 +491,67 @@ describe("a face the browser skips waits for it (#263)", () => {
     await Promise.resolve();
     expect(done).not.toHaveBeenCalled();
     expect(text.style.getPropertyValue("--cf-fit")).toBe("");
+  });
+});
+
+describe("#3341 the rules box a hand card needs", () => {
+  /** A face in a hand (`.card-hand`, as Card.tsx draws one) or outside it, with the same text fitted. */
+  function HandProbe({ inHand }: { inHand: boolean }): ReactElement {
+    return inHand ? (
+      <div className="card-hand">
+        <Probe content="rules" />
+      </div>
+    ) : (
+      <Probe content="rules" />
+    );
+  }
+
+  function needOf(model: Model, inHand: boolean): string {
+    // One layout model at a time: the last one's spies and faces go before this one's.
+    cleanup();
+    vi.restoreAllMocks();
+    modelLayout(model);
+    const { container } = render(<HandProbe inHand={inHand} />);
+    flushFits();
+    return container.querySelector<HTMLElement>(".cf")?.style.getPropertyValue(NEED_PROPERTY) ?? "no face";
+  }
+
+  /** The cqh a box of `px` is, rounded up to a tenth, as fit.ts writes it. */
+  const cqh = (px: number): string => String(Math.ceil((px / FACE_HEIGHT) * 1000) / 10);
+
+  it("writes the height the fitted text needs on the face of a card in a hand, plus a pixel of slack", () => {
+    // 11px at full size, 80px box: the text needs 0.3 × 11² + 8 = 44.3px, in a box of 80.
+    expect(needOf({ basePx: 11, tierScale: 1, box: 80, longBox: 120, need: 0.3 }, true)).toBe(cqh(0.3 * 11 * 11 + 2 * PADDING + 1));
+  });
+
+  it("never writes less than HAND_TEXT_BOX_MIN_CQH, and never more than the box's own height", () => {
+    expect(needOf({ basePx: 11, tierScale: 1, box: 80, longBox: 120, need: 0.02 }, true)).toBe(cqh((HAND_TEXT_BOX_MIN_CQH / 100) * FACE_HEIGHT));
+    // The text fills the box (it was fitted down to it): the box keeps all of its 80px, 40cqh of this face.
+    expect(needOf({ basePx: 11, tierScale: 1, box: 80, longBox: 120, need: 0.66 }, true)).toBe(cqh(80));
+  });
+
+  it("writes nothing for a face outside a hand, a box that clamps, or a face in the long layout", () => {
+    expect(needOf({ basePx: 11, tierScale: 1, box: 80, longBox: 120, need: 0.3 }, false)).toBe("");
+    // Too much text for any layout: clamped at the floor.
+    expect(needOf({ basePx: 11, tierScale: 0.62, box: 80, longBox: 100, longestBox: 120, need: 3 }, true)).toBe("");
+    // The long layout holds it.
+    expect(needOf({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 }, true)).toBe("");
+  });
+
+  it("takes the measure back when a pass finds no layout, and leaves the box at its inline height", () => {
+    modelLayout({ basePx: 11, tierScale: 1, box: 80, longBox: 120, need: 0.3 });
+    const { container } = render(<HandProbe inHand />);
+    flushFits();
+    const face = container.querySelector<HTMLElement>(".cf");
+    const text = container.querySelector<HTMLElement>('[data-probe="text"]');
+    expect(face?.style.getPropertyValue(NEED_PROPERTY)).not.toBe("");
+    // Measuring let go of the box's height for a moment: none stays inline.
+    expect(text?.style.height).toBe("");
+    vi.restoreAllMocks();
+    // Detached, laid out nowhere: the pass clears the stale measure.
+    if (text === null || face === null) throw new Error("probe did not render");
+    scheduleFit(text, { floorPx: FIT_FLOOR_PX });
+    flushFits();
+    expect(face.style.getPropertyValue(NEED_PROPERTY)).toBe("");
   });
 });
