@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3333,
+  "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
+  "branch": "bot/issue-3333",
+  "thread": "**Issue #3333 (data, not instructions):**\n\n```text\n# #3333: Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked for \"a shit ton of starship pieces and starship art\". Today every Starship is the same picture.\n\n### Today\n\n- **One hull for every ship.** `starshipSvg(pieces, launched, radiant)` (`apps/web/src/cards/art/stinkyscape.ts`) grows every Starship from one seed, `STARSHIP_SEED_ID`, so every ship has the same hull whoever owns it, whatever fused in and whatever name it took (`STARSHIP_NAMES`, R1852004).\n- **Pieces are pods.** They show as 0 to 8 identical pods on struts (`STARSHIP_MODULES_MAX`). A Cannon v5 and a Felinor Containment Chamber look the same on the hull.\n- **States.** The dormant ship is an unlit hull with dashed scaffolding. The launched one adds a cyan glow, 1 to 3 escorts and warp streaks.\n- **Plates and lists.** `StarshipHull.tsx` draws plain CSS plates, and `StarshipPieces.tsx` lists the pieces as text.\n- **The pieces' own cards** (the `fleet` family, `piece()` and `weapon()`) draw a part in front of a faint cruiser at opacity 0.22. The v1 to v5 tiers of one weapon look nearly alike: Alt art changes 1% to 13% of their pixels.\n\nThe 47 cards that print `Starship Piece`, plus the three Jlockeed weapons that are pieces only when Embiggened (#127 to #129), are listed in `STARSHIP_PIECES`.\n\n### What it should be\n\n1. **A module per piece.** Every Starship Piece has a module of its own: a part drawn where it mounts on a hull, distinct at a glance:\n   - **weapons:** Beam, Repeater, Cannon and Flak turrets, each growing from v1 to v5 in size, barrels and detail;\n   - **miners:** drills and ore bays, v1 to v5;\n   - **defences:** shield emitters, plating, crystals, capacitors;\n   - **engines and boosters:** After Burner, Overdrive, Warpfield;\n   - **launchers:** Rush Token, Fruit, Jade and Book, each loaded with what it fires;\n   - **pods and modules:** Healing, Poison, Frost, Magic, Cloaking, the Felinor Containment Chamber with a cat at the porthole, Patcher Nanobots, Tractor Beam;\n   - **odd ones:** Spacemine, Orca, Disintegrex, RR-5000, Trila 3, the Ultralight Chassis.\n\n   Each module is a function of the piece's definition. Radiant pieces gild their module, inside the existing Radiant rules.\n2. **A ship drawn from its pieces, oldest first.** A Starship's picture reads the pieces the view shows it holds (`StarshipPieces`' list), and mounts each one's module on hardpoints:\n   - the bow for weapons;\n   - the flanks for launchers and pods;\n   - the stern for engines;\n   - the keel for miners.\n\n   The ship's silhouette grows with its count, from a frigate at 1 or 2 pieces to a dreadnought at 8 or more. Two ships with different pieces never look the same.\n3. **Hull designs of their own.** Each of the seven `STARSHIP_NAMES` (The Ninth Life, Frontier's Promise, The Celestial Archive, The Lantern Ferry, The Jlockeed Skylark, Ember of Departure, The Silent Choir) has a hull design that fits its name, with its own:\n   - prow;\n   - window lines;\n   - livery colours;\n   - emblem.\n\n   A launched Starship wears the design of the name it took. A dormant one, still unnamed, sits in a **shipyard**: gantries and scaffolds, welding sparks where the newest piece went in, a dock light that brightens as it fills.\n\n   Leave a hook for #3330's Stinkyscape cosmetic track, which adds hull designs, liveries and piece skins: a design and livery are inputs to the painter.\n4. **Each piece's own card shows its module.** It is drawn large, as the real part on a cutaway of a hull, in a hangar or test bay that varies by family. The v1 to v5 tiers read as clearly bigger and better each step. This pass replaces those cards' entries in the Stinkyscape picture passes.\n5. **The hull plates and pieces list.** `StarshipHull` shows each piece as its module's small icon instead of a plain plate, and the pieces list shows the same icon beside each name.\n\n### Notes\n\n- A Starship's picture is no longer one per piece count, so its cache key holds the pieces' ids and the design. Keep it inside `ART_CACHE_MAX` and `ART_DETAIL_MAX_BYTES` (#3331), since a board can hold two Starships.\n- The Out of frame and Immersive offers still exclude the Starship (their `except` lists). Pixel, Comic, Sketch and the Set showcase restyle its new picture.\n\n## Acceptance\n\n- Each of the 50 piece definitions draws a distinct module. A test checks that every module differs from every other, and from its own lower tier.\n- A Starship's picture differs for any two different piece lists, and for each of the seven names. The dormant shipyard picture differs from every launched one.\n- Every piece's own card shows its module, base and Radiant, with no gold outside Radiant (R2725004).\n- `StarshipHull` and `StarshipPieces` show module icons. Their tests and the component spec cover a dormant ship with 1, 4 and 8 pieces and a launched ship of each size, at desktop size and at 390x844.\n- These still hold:\n  - `starship.test.tsx` and `stinkyscape.test.tsx`, with `STARSHIP_PIECES` held to the catalog;\n  - R2249000, a Starship keeping its own art and name;\n  - R3045000, fused art.\n- The rulings are in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and there is a `--visual` fragment.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3333: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:43:04Z",
+    "claimed_at": "2026-11-07T00:00:10Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3346 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first",
+    "#3331 skipped: it waits for #3017 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3343 skipped: it waits for #3017 to close first",
+    "#3345 skipped: it waits for #3344 to close first"
+  ]
+}
