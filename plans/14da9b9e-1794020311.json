@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3341,
+  "title": "Patch: bigger, more vivid cards: larger faces on the board, in hand and in inspect, an art window up to the frame, on desktop and phone",
+  "branch": "bot/issue-3341",
+  "thread": "**Issue #3341 (data, not instructions):**\n\n```text\n# #3341: Patch: bigger, more vivid cards: larger faces on the board, in hand and in inspect, an art window up to the frame, on desktop and phone\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked for cards that are larger and more vivid in play, \"since the card art is the most important part about this all\".\n\n### Today (`game/board.css`, `cards/constants.ts`)\n\n- **Board cards.** `--card-h: clamp(60px, (100cqh - 330px) / 5.88, 112px)`, with `--card-w` 0.74 of it, square on a desktop (1025 px and up).\n- **Hand cards.** 1.3 times the board card, 1.48 on a desktop.\n- **Phones.**\n  - Upright: 44 to 90 px, width 0.72, hand 1.24.\n  - On its side: 40 to 62 px.\n- **The hover preview** is `PREVIEW_HEIGHT_PX` 380.\n- **The art window.** A Unit's board face crops its art to an oval inside the frame, and a hand face gives its rules box a large share of the height.\n\n### What it should be\n\n1. **Use the room the board has.** Raise the board card's cap and its scaling term so cards fill more of the table on every width, without breaking the one-screen rule (R1581000) or `--hit-min`. Do the same on a phone, measured at 390x844 and 360x780. Let the board reflow tighter gaps before it shrinks a card: the spacing scale's steps, `spacing.css`.\n2. **A bigger hand, and a lift.** The hand grows, and the hovered or picked-up card lifts larger (`HAND_LIFT_SCALE`) and clears the cards beside it. On a phone the picked card grows above the thumb.\n3. **The art window to the frame.** On a normal board face the art fills the face up to its frame, with the name plate and numbers laid over its edges (#3339), instead of an oval in a box. On a hand face the art window grows and the rules box shrinks to fit its text (`fit.ts` measures it).\n4. **A bigger inspect.** The hover preview and inspect grow (`PREVIEW_HEIGHT_PX` and the phone sheet), so the art can be studied. On a desktop the preview's art is shown at least 2x the board face.\n5. **Vivid.** The art keeps its colours at board size: no washed-out frame tint over it. A lift in saturation and contrast for small faces (`ART_SMALL_FACE_LIFT`) is allowed, but never in Radiant's gold window (R2725004).\n\nEvery new number is a named constant or a token. The breakpoints stay `src/breakpoints.ts`'s.\n\n## Acceptance\n\n- At 1280x720, 1920x1080, 390x844, 360x780 and a phone on its side, a component spec and e2e `46` (one screen) and `47` (tap areas) pass with a full board (5 Units and 5 backrow cards a side) and a 10-card hand.\n- A test holds the new sizes to their constants, so board and hand cards are measurably larger than today at each of those sizes.\n- `src/spacing.test.ts`, `src/breakpoints.test.ts`, `src/palette.test.ts` and `src/surfaces.test.ts` pass.\n- There is a `--visual` fragment and a `## Player note`.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3341: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:50:21Z",
+    "claimed_at": "2026-11-07T02:59:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3332 is held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3337 is held for `claude-1` until 21:40 (5-hour usage is 101%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
