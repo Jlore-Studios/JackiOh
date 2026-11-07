@@ -17498,8 +17498,11 @@
       "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "7bf3e87dc9820fce7e313a957324fd2d27a47b3c",
-      "ci_fixes": 2,
+      "ci_fixes": 1,
       "ci_on_head": true,
+      "ci_reruns": {
+        "7bf3e87dc9820fce7e313a957324fd2d27a47b3c": 1
+      },
       "ci_run_id": 42409540485,
       "ci_sha": "7bf3e87dc9820fce7e313a957324fd2d27a47b3c",
       "cleared": {
