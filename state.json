@@ -21898,12 +21898,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-07T02:50:00Z",
+      "refused_until": "2026-11-07T07:50:00Z",
       "spent": [
-        {
-          "at": "2026-10-30T08:00:33Z",
-          "minutes": 23.9
-        },
         {
           "at": "2026-10-30T09:12:42Z",
           "minutes": 2.2
@@ -22699,16 +22695,13 @@
         {
           "at": "2026-11-07T03:56:17Z",
           "minutes": 12.5
+        },
+        {
+          "at": "2026-11-07T04:13:01Z",
+          "minutes": 1.8
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-29T20:00:51Z",
-          "cache": 10377544,
-          "cost": 5.1579,
-          "input": 158,
-          "output": 79763
-        },
         {
           "at": "2026-10-29T20:58:05Z",
           "cache": 3239049,
@@ -24101,15 +24094,23 @@
           "cost": 3.1044,
           "input": 102,
           "output": 105374
+        },
+        {
+          "at": "2026-11-07T04:13:01Z",
+          "cache": 3210316,
+          "cost": 1.0256,
+          "input": 57,
+          "output": 13224
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-07T07:50:00Z",
-          "utilization": 0.85
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-07T03:56:17Z",
-        "status": "allowed"
+        "observed_at": "2026-11-07T04:13:01Z",
+        "rejected_resets_at": "2026-11-07T07:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -35401,6 +35402,14 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-07T04:02:57Z,claude-3,stream,call,42336418114,97,2026-11-07T07:50:00Z,,,allowed_warning,,,",
+      "2026-11-07T04:03:12Z,claude-3,stream,call,42336418114,98,2026-11-07T07:50:00Z,,,allowed_warning,,,",
+      "2026-11-07T04:03:27Z,claude-3,stream,call,42336418114,99,2026-11-07T07:50:00Z,,,allowed_warning,,,",
+      "2026-11-07T04:04:31Z,claude-3,refusal,call,42336418114,100,2026-11-07T07:50:00Z,,,rejected,,,2026-11-07T07:50:00Z"
+    ]
   },
   "version": 1
 }
