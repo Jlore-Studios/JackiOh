@@ -942,3 +942,10 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-07T00:26:45Z,42315595308,claude-4,opus,plan,3332,hard,planned,,23.4,169,153937,18485741,10.9929,3,26,,,18,,fresh,,1
 2026-11-07T00:23:56Z,42315489650,claude-7,opus,plan,3333,hard,planned,,21.7,190,141348,18905570,9.0667,8,55,,,17.1,,fresh,,1
 2026-11-07T00:27:00Z,42315396620,agy,gemini-3.8-flash-high,build,3222,medium,built,,26.9,880382,95465,0,,0,14,0,5,1811.8,agy,none,,1
+2026-11-07T00:54:17Z,42313608176,claude-6,sonnet+opus,build,3329,medium,built,,28.2,6,2022,162513,0.3516,3,4,,,19.1,claude-6,fresh,,1
+2026-11-07T01:03:46Z,42321633843,claude-6,sonnet,review,3356,medium,approved,,0.7,10,2712,219955,0.2296,4,4,,,1.4,,none,,1
+2026-11-07T01:05:55Z,42320579439,claude-3,opus,plan,3343,hard,interrupted,refusal,13.8,141,82060,17460582,13.7204,44,100,,,55.8,,fresh,,1
+2026-11-07T01:06:14Z,42320493492,claude-3,opus,plan,3331,hard,interrupted,refusal,14.5,106,87934,9638613,7.9634,41,101,,,65.9,,fresh,,1
+2026-11-07T01:08:54Z,42320404515,claude-3,sonnet+opus,build,3336,medium,interrupted,refusal,16.8,0,0,0,4.6079,44,101,,,62.9,claude-3,fresh,,1
+2026-11-07T01:01:08Z,42320315753,claude-4,opus,build,3332,hard,interrupted,5-hour cap,12,0,0,0,,27,50,,,63.9,claude-4,fresh,,1
+2026-11-07T01:11:21Z,42315322246,claude-3,opus,build,3220,hard,built,,31.4,185,66159,15649197,6.1333,20,41,,,1813.9,claude-3,fresh,,1
