@@ -2042,7 +2042,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  color: var(--fx-white);
+  color: var(--fx-white, #fff);
   font: 900 clamp(13px, 1.1em, 20px) / 1 ui-sans-serif, system-ui, sans-serif;
   white-space: nowrap;
   text-shadow:
