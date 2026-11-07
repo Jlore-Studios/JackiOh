@@ -15696,6 +15696,7 @@
         "by": "`claude` (medium)",
         "sha": "8229afbe90a0bf4443c50e2dfe12edebb4a18cc5"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
