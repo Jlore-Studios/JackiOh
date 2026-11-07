@@ -16556,7 +16556,7 @@
       "pr": 3409,
       "provider": "claude-8",
       "question": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "42388823369",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T15:56:52Z",
