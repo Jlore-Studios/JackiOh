@@ -17225,7 +17225,8 @@
       },
       "started_at": "2026-11-07T17:36:36Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6710911227
     },
     "3406": {
       "failures": 0,
