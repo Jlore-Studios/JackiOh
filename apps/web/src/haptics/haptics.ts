@@ -8,12 +8,13 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { reducedMotionNow } from "../game/animations.ts";
 import { readHapticsSettings } from "./settings.ts";
 
-export type HapticMoment = "drop" | "hit" | "turn" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare";
+export type HapticMoment = "drop" | "hit" | "turn" | "touch" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare";
 
 export const HAPTIC_PATTERNS: { readonly [K in HapticMoment]: readonly number[] } = {
   drop: [12],
   hit: [24],
   turn: [16, 70, 16],
+  touch: [8],
   // A press on a tile (a legal one answers harder) and on a corner prop (a bigger payoff, a rare one).
   tile: [6],
   tileLegal: [12],
@@ -45,6 +46,7 @@ export type HapticsOptions = {
 
 export type Haptics = {
   onEvent(event: GameEvent, view: PlayerView): void;
+  touch(): void;
   /** R3348000: a press's own buzz, behind the same switch, reduced motion and vibrate guards as `onEvent`, on its own gap. */
   buzz(moment: HapticMoment): void;
 };
@@ -91,10 +93,27 @@ export function createHaptics(options: HapticsOptions = {}): Haptics {
         // Haptics must not interrupt the game.
       }
     },
+    touch() {
+      try {
+        if (vibrate === null) return;
+        if (!readHapticsSettings().vibration || reduced()) return;
+        const t = now();
+        if (last !== null && t - last < HAPTIC_MIN_GAP_MS) return;
+        last = t;
+        vibrate([...HAPTIC_PATTERNS.touch]);
+      } catch {
+        // Haptics must not interrupt the game.
+      }
+    },
   };
 }
 
 let shared: Haptics | null = null;
+
+export function touchHaptic(): void {
+  shared ??= createHaptics();
+  shared.touch();
+}
 
 /** R3348000: a touch press's buzz, from the one player the arena shares. */
 export function tapHaptic(moment: HapticMoment): void {

@@ -27,7 +27,9 @@ export type SfxId =
   // R3336000: the Drone Battleship's horn, dome flare, bay door, reactor pulse and deck shear.
   | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
-  | "organ";
+  | "organ"
+  // R3342000: the tile aura touch bell.
+  | "auraTouch";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -73,6 +75,8 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /** auraTouch: the aura's hue, 0-360. */
+  hue?: number;
   /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
   quiet?: boolean;
 };
