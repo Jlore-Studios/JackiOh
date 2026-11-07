@@ -16209,7 +16209,7 @@
       }
     },
     "3375": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -16231,12 +16231,12 @@
       "interruptions": 0,
       "issue": 3334,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-07T17:49:55Z",
-      "run_id": "42382536043",
+      "run_id": "pending:e6dc4edc-1794073780",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16257,16 +16257,9 @@
         "run": "42382536043"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T14:38:16Z",
+      "started_at": "2026-11-07T17:50:40Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-07T17:49:55Z",
-        "until": "2026-11-07T18:19:55Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17286,9 +17279,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T17:36:36Z",
+    "at": "2026-11-07T17:50:40Z",
     "url": "",
-    "what": "plan #3405 on claude-4"
+    "what": "revise #3375 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-07T17:29:12Z",
