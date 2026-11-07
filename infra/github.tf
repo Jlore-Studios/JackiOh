@@ -1,5 +1,6 @@
 # GitHub: `main`'s branch protection with its five required checks, `main`'s merge queue, the
-# `production` and `staging` rulesets, and the repository's Actions policy and workflow-token settings.
+# `production` and `staging` rulesets, the runner gate's environment and variable, and the
+# repository's Actions policy and workflow-token settings.
 # Not the labels: bot/go/internal/config `Labels` owns them, and the sweep restores them. Not the
 # Actions secrets: state would hold them.
 #
@@ -160,4 +161,34 @@ resource "github_workflow_repository_permissions" "jackioh" {
 import {
   to = github_workflow_repository_permissions.jackioh
   id = "JackiOh"
+}
+
+# The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): GitHub's free plan
+# runs 20 hosted jobs at once for the organization, so a pull request's CI and a merge-queue build
+# wait in this environment, holding no runner, until the night bot's account, its one required
+# reviewer, approves them, which the status loop does once there is room (merge-queue builds first,
+# each run the oldest first). ci.yml's `changes` job names it through the variable below; with the
+# variable gone, nothing waits. `main`'s CI and a promotion's never name it.
+#
+# The bot approves runs it started itself, so self-review stays allowed. An admin may bypass the
+# rule, approving a waiting run by hand, and deleting `ci_gate_environment` turns the gate off for
+# every run that starts after: the way out if the status loop and the sweep both stop. The
+# repository had neither, so the first apply creates them: no import blocks. Apply only once the
+# status loop runs a `main` with cigate (its log says "runner gate:" when runs wait).
+resource "github_repository_environment" "ci_runners" {
+  repository          = "JackiOh"
+  environment         = "ci-runners"
+  can_admins_bypass   = true
+  prevent_self_review = false
+
+  reviewers {
+    # jgoetzmann-bot, the night bot's account (`gh api users/jgoetzmann-bot --jq .id`).
+    users = [324324626]
+  }
+}
+
+resource "github_actions_variable" "ci_gate_environment" {
+  repository    = "JackiOh"
+  variable_name = "CI_GATE_ENVIRONMENT"
+  value         = github_repository_environment.ci_runners.environment
 }

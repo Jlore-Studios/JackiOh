@@ -38,6 +38,9 @@ describe("ConfirmConcede on its own", () => {
     expect(CONCEDE_TITLE).toBe("Concede this game?");
     expect(screen.getByTestId("concede-confirm")).toHaveTextContent("Concede");
     expect(screen.getByTestId("concede-cancel")).toHaveTextContent("Keep playing");
+    // #3219: the act that cannot be taken back is the danger role, the safe choice the primary.
+    expect(screen.getByTestId("concede-confirm")).toHaveClass("button-danger");
+    expect(screen.getByTestId("concede-cancel")).toHaveClass("button-primary");
   });
 
   it("says its caller's body in place of the usual one", () => {
@@ -94,7 +97,7 @@ describe("ConfirmConcede on its own", () => {
     fireEvent.click(screen.getByTestId("concede-cancel"));
     press("Escape");
     fireEvent.keyDown(window, { key: "Escape" });
-    const scrim = container.querySelector(".concede-scrim");
+    const scrim = container.querySelector(".dialog-scrim");
     if (scrim === null) throw new Error("no scrim");
     fireEvent.click(scrim);
     // A click inside the panel is not a click outside it.

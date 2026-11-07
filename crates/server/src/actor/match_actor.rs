@@ -27,11 +27,14 @@ use jackioh_engine::{
 };
 use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::host::bot::BotSeat;
+use jackioh_shared::host::post_game::{PostGameFrame, RematchMode};
 use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 use jackioh_shared::host::{
     ActionAnswer, ActionBy, DecideRequest, DuelEvent, DuelHost, DuelOutput, DuelSetup, GreetingPart,
     HostNote, LetGo, RecordRequest, SeatMessage,
 };
+use jackioh_shared::series::{SeriesRow, project_series};
+use serde::Serialize;
 
 use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
 use crate::actor::clock::{Timer, after};
@@ -46,15 +49,16 @@ use crate::actor::protocol::{
 };
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
-use crate::api::rematch::{RematchStakes, offer_for_bot};
+use crate::api::rematch::{RematchStakes, offer_for_bot, rematch_seen};
 use crate::app::now_ms;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
     MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
-    MATCH_VOIDED_CLOSE_CODE,
+    MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION,
 };
 use crate::db::store::{
-    BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
+    BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, QueueMode,
+    StoreError,
 };
 use crate::economy::rewards::GameEconomy;
 use crate::loadout::{Loadout, cards_due, shown_defs};
@@ -102,6 +106,9 @@ pub struct MatchActorInput {
     /// R641000: the match is a game of a Conquest series, which offers no rematch (R672), so a bot
     /// draws no rematch plan when it ends: the series' next pick phase is what comes next.
     pub series_game: bool,
+    /// R3213000: the mode the match was made in (`registry`'s `matches_mode_of`), which names the mode
+    /// a rematch of it plays in its seats' rematch frames.
+    pub mode: Option<QueueMode>,
     /// R388, R767000: the catalog the match is played under (`registry`'s `pinned_for`).
     pub pinned: Pinned,
     /// R1834003: every card the decks dealt, by instance id (`engine::dealt_cards` of the opening),
@@ -254,6 +261,7 @@ fn timer_name(key: TimerKey) -> &'static str {
         TimerKey::BotAim { .. } => "bot-aim",
         TimerKey::BotEmote { .. } => "bot-emote",
         TimerKey::BotLongTurn { .. } => "bot-long-turn",
+        TimerKey::BotLeaves { .. } => "bot-leaves",
         _ => "duos",
     }
 }
@@ -308,6 +316,8 @@ struct Core {
     spectate: Spectate,
     /// R1834003: card picks sent to each socket; every hello and attach empties it.
     card_picks_sent: PerPlayer<BTreeSet<(PlayerId, String)>>,
+    /// R3213000: the newest series `version` the seats were sent, so an older read never follows it.
+    series_told: Option<i64>,
 }
 
 struct Shared {
@@ -332,6 +342,11 @@ struct Shared {
     bots: PerPlayer<Option<BotRow>>,
     /// R388, R767000: the catalog the match is played under.
     pinned: Pinned,
+    /// R641000, R3213000: the match is a game of a Conquest series, whose seats are sent its series'
+    /// view, not a rematch status.
+    series_game: bool,
+    /// R1372, R3213000: the mode a rematch of the match plays, read as the rematch status reads it.
+    rematch_mode: RematchMode,
     core: Mutex<Core>,
 }
 
@@ -430,6 +445,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         bots,
         bot_moved_turn,
         series_game,
+        mode,
         pinned,
         dealt_cards,
     } = input;
@@ -504,6 +520,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         tiers: None,
         spectate: Spectate::new(),
         card_picks_sent: PerPlayer::new(BTreeSet::new(), BTreeSet::new()),
+        series_told: None,
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -520,6 +537,13 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         on_voided,
         bots,
         pinned,
+        series_game,
+        // R1372: as `api::rematch::rematch_mode` reads it, a match nothing named a mode for is a Best of 1.
+        rematch_mode: if mode == Some(QueueMode::Random) {
+            RematchMode::Random
+        } else {
+            RematchMode::Bo1
+        },
         core: Mutex::new(core),
     });
     let actor = MatchActor { shared };
@@ -746,7 +770,16 @@ impl MatchActor {
                     self.send_to_home(core, home, &loadouts_message(&self.shared.loadouts));
                 }
                 // R642: portraits ride again on a reconnect, as on join, with the account's hand (R1342).
-                GreetingPart::After => self.send_to_home(core, home, &self.portraits_for(home)),
+                // R3213000: then the seat's rematch status, or its series' view, so the page knows from
+                // its greeting on that this socket tells it of either.
+                GreetingPart::After => {
+                    self.send_to_home(core, home, &self.portraits_for(home));
+                    if self.shared.series_game {
+                        self.read_series_for(home);
+                    } else {
+                        self.push_rematch(core, &[home]);
+                    }
+                }
                 // Social (#939): B51's count, which a socket that was away missed.
                 GreetingPart::Watchers => self.push_watchers_to(core, home),
             },
@@ -791,6 +824,8 @@ impl MatchActor {
             DuelOutput::OfferRematch { home, stakes, reply } => {
                 self.spawn_rematch_offer(home, stakes, reply);
             }
+            // R3213000: a bot's linger ended, so the person opposite is told it is gone.
+            DuelOutput::PresenceChanged => self.push_rematch(core, &PLAYERS),
             DuelOutput::Note { note } => self.log_note(note),
             other => return Some(other),
         }
@@ -925,7 +960,7 @@ impl MatchActor {
     }
 
     /// Sends to the account that began the match in `home`, whatever seat it plays.
-    fn send_to_home(&self, core: &Core, home: PlayerId, message: &ServerMessage) {
+    fn send_to_home(&self, core: &Core, home: PlayerId, message: &impl Serialize) {
         let Some(socket) = &core.sockets[home] else { return };
         if !socket.is_open() {
             return;
@@ -1173,6 +1208,87 @@ impl MatchActor {
         let mut core = self.lock();
         let outputs = self.step_in(&mut core, DuelEvent::RematchOffered { from, stakes });
         self.exec_now(&mut core, outputs);
+    }
+
+    // The post-game frames (R3213000)
+
+    /// R3213000: tells each of `homes` with an open socket its rematch status: what its own
+    /// `GET /api/matches/:id/rematch` answers, built from the book and the presence alone, so no lean ever
+    /// rides it (CLAUDE.md rule 7). Sent under the core lock, so the last frame a seat gets reads the book
+    /// as it last changed. The locks are taken registry, then core, then book, never the other way.
+    fn push_rematch(&self, core: &Core, homes: &[PlayerId]) {
+        if self.shared.series_game || core.host.is_voided() || core.host.is_stopped() {
+            return;
+        }
+        let seen = rematch_seen(&self.shared.deps, self.match_id_str(), now_ms());
+        let here = self.presence_in(core);
+        for &home in homes {
+            let frame = PostGameFrame::Rematch {
+                v: POST_GAME_FRAME_VERSION,
+                you_offered: seen[home].you_offered,
+                opponent_offer: seen[home].opponent_offer,
+                opponent_here: here[home.opponent()],
+                match_id: seen[home].match_id.clone(),
+                mode: self.shared.rematch_mode,
+            };
+            self.send_to_home(core, home, &frame);
+        }
+    }
+
+    /// R3213000: the rematch book changed for this match: each seat is told its status again.
+    pub fn tell_rematch(&self) {
+        let core = self.lock();
+        self.push_rematch(&core, &PLAYERS);
+    }
+
+    /// R3213000, R336: tells each of `homes` with an open socket its own view of `series`
+    /// (`project_series`, what its `GET /api/matches/:id/series` answers). A row older than one already
+    /// sent is dropped, so a slow read never takes a seat back.
+    pub fn push_series(&self, series: &SeriesRow, homes: &[PlayerId]) {
+        let mut core = self.lock();
+        if core.host.is_voided()
+            || core.host.is_stopped()
+            || core.series_told.is_some_and(|told| series.version < told)
+        {
+            return;
+        }
+        core.series_told = Some(series.version);
+        let now = now_ms();
+        for &home in homes {
+            let seat = if home == PlayerId::P1 {
+                &self.shared.seats.0
+            } else {
+                &self.shared.seats.1
+            };
+            if let Some(view) = project_series(series, &seat.profile_id, now) {
+                let frame = PostGameFrame::Series {
+                    v: POST_GAME_FRAME_VERSION,
+                    series: view,
+                };
+                self.send_to_home(&core, home, &frame);
+            }
+        }
+    }
+
+    /// R3213000: reads the series this game is of, off the queue, and tells the seat at `home` its view
+    /// (its greeting's series frame).
+    fn read_series_for(&self, home: PlayerId) {
+        let actor = Arc::downgrade(&self.shared);
+        let deps = Arc::clone(&self.shared.deps);
+        let match_id = self.shared.match_row.id.clone();
+        tokio::spawn(async move {
+            match one_tx!(deps.db, |t| t.series_with_game(&match_id).await?) {
+                Ok(Some(series)) => {
+                    if let Some(shared) = actor.upgrade() {
+                        MatchActor { shared }.push_series(&series, &[home]);
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    tracing::warn!(event = "match.series.read_failed", matchId = %match_id, home = %home, message = %error);
+                }
+            }
+        });
     }
 
     /// R1437: retries `record_result` with exponential backoff; idempotent, as a write that finds the
@@ -1445,6 +1561,8 @@ impl MatchActor {
             // with its socket.
             let outputs = self.step_in(&mut core, DuelEvent::Left { home });
             self.exec_now(&mut core, outputs);
+            // R3213000: the seat still here is told the other is gone.
+            self.push_rematch(&core, &[home.opponent()]);
             if core.host.is_stopped() || core.host.is_finished() {
                 return;
             }
@@ -1503,6 +1621,8 @@ impl MatchActor {
                 // R744: the account has now been here, so no grace starts for it as another attaches.
                 let outputs = self.step_in(&mut core, DuelEvent::Connected { home });
                 self.exec_now(&mut core, outputs);
+                // R3213000: the seat already here is told the other arrived.
+                self.push_rematch(&core, &[home.opponent()]);
                 // R835001: every attach — the first included — moves the seat to a new socket
                 // generation, so a Hello from this socket is never absorbed by an older one's
                 // queued Hello.
@@ -1685,7 +1805,11 @@ impl MatchActor {
     /// present during play; R639000: post-game they linger until rematch plans or pending replies
     /// finish, after which they report as absent.
     pub fn presence(&self) -> PerPlayer<bool> {
-        let core = self.lock();
+        self.presence_in(&self.lock())
+    }
+
+    /// `presence`, under a lock already held.
+    fn presence_in(&self, core: &Core) -> PerPlayer<bool> {
         // A socket the machine has not heard of closing is closed all the same: the actor's is the
         // truth about its socket, the machine's the truth about a bot.
         let machine = core.host.presence(now_ms());

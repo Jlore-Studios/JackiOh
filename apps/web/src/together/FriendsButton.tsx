@@ -3,9 +3,10 @@
 // friends are one press away. Its badge reads what the shell's one poll published (`socialPoll.ts`),
 // so the button adds no request of its own.
 //
-// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`. Chat and
-// Challenge close it and open their own modal over the screen, which is left as it was. A modal like
-// the client's others (`ChallengeDialog.tsx`): the focus stays inside and returns to this button.
+// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`, and again
+// when the tab's social socket says it changed (R3214000). Chat and Challenge close it and open their
+// own modal over the screen, which is left as it was. R3221000: it is the one Dialog's, a sheet: the
+// focus stays inside and returns to this button.
 //
 // CLAUDE.md rule 7: nothing here is a rule. Which friend can be challenged or watched is the server's
 // status; Challenge is off while the player is in a game only to say what the server would, and the
@@ -17,6 +18,7 @@ import { createPortal } from "react-dom";
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { EmptyState } from "../empty/EmptyState.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getMe, type MeResponse } from "../net/api.ts";
 import { keptAccount, withSession } from "../net/gate.ts";
@@ -37,9 +39,8 @@ import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
-import { tabStops, useModalKeys } from "./modalKeys.ts";
 import { usePolled } from "./session.ts";
-import { friendsBadgeCount, noteFriends, reloadSocial, useSocialReads } from "./socialPoll.ts";
+import { friendsBadgeCount, noteFriends, onFriendsPush, reloadSocial, useSocialReads } from "./socialPoll.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 
@@ -87,26 +88,19 @@ function FriendsPanel({
   onChallenge: (friend: PlayerRef) => void;
 }): ReactElement {
   useLocale();
-  const titleId = useId();
-  const panel = useRef<HTMLDivElement>(null);
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
   const [me] = usePolled(readAccount, null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useModalKeys(panel, onClose);
-
-  // Keyboard and screen-reader users start inside the panel.
-  useEffect(() => {
-    const element = panel.current;
-    if (element !== null) tabStops(element)[0]?.focus({ preventScroll: true });
-  }, []);
-
   // The badge counts the requests this read held.
   useEffect(() => {
     if (friends.kind === "ready") noteFriends(friends.value);
   }, [friends]);
+
+  // R3214000: the server said the friends list changed (a request, a friend made or lost, a block).
+  useEffect(() => onFriendsPush(reloadFriends), [reloadFriends]);
 
   /** One of the panel's own changes, then the list read again. */
   const act = (work: () => Promise<unknown>): void => {
@@ -146,110 +140,105 @@ function FriendsPanel({
   const all = Array.isArray(list?.friends) ? list.friends : [];
   const requests = Array.isArray(list?.incoming) ? list.incoming : [];
 
+  // Keyboard and screen-reader users start inside the panel, on its ✕ (Dialog's).
   return (
-    <div
-      className="friends-panel-scrim"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Dialog
+      role="dialog"
+      sheet
+      id={id}
+      title={t("Friends")}
+      onClose={onClose}
+      actions={[]}
+      testid={friendsTestid.panel}
+      closeTestid={friendsTestid.close}
+      className="friends-panel"
     >
-      <div ref={panel} id={id} className="friends-panel" data-testid={friendsTestid.panel} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <div className="friends-panel__head">
-          <h2 className="friends-panel__title" id={titleId}>
-            {t("Friends")}
-          </h2>
-          <button type="button" className="link-button" data-testid={friendsTestid.close} aria-label={t("Close")} onClick={onClose}>
-            ×
+      {name === undefined ? null : (
+        <div className="friends-panel__me">
+          <span className="friends-panel__label">{t("Username")}</span>
+          <Username name={name} />
+          <button type="button" data-testid={friendsTestid.copy} onClick={copy}>
+            {copied ? t("Copied") : t("Copy")}
           </button>
         </div>
+      )}
 
-        {name === undefined ? null : (
-          <div className="friends-panel__me">
-            <span className="friends-panel__label">{t("Username")}</span>
-            <Username name={name} />
-            <button type="button" data-testid={friendsTestid.copy} onClick={copy}>
-              {copied ? t("Copied") : t("Copy")}
-            </button>
-          </div>
-        )}
+      <AddFriend onAdded={reloadFriends} />
 
-        <AddFriend onAdded={reloadFriends} />
+      {error === null ? null : (
+        <p className="notice" data-testid={friendsTestid.error} role="alert">
+          {t(error)}
+        </p>
+      )}
 
-        {error === null ? null : (
-          <p className="notice" data-testid={friendsTestid.error} role="alert">
-            {t(error)}
-          </p>
-        )}
+      {requests.length === 0 ? null : (
+        <ul className="together-list">
+          {requests.map((request) => (
+            <RequestRow
+              key={request.requestId}
+              request={request}
+              direction="incoming"
+              busy={busy}
+              onAccept={() => {
+                act(() => acceptFriendRequest(request.requestId));
+              }}
+              onDecline={() => {
+                act(() => declineFriendRequest(request.requestId));
+              }}
+            />
+          ))}
+        </ul>
+      )}
 
-        {requests.length === 0 ? null : (
-          <ul className="together-list">
-            {requests.map((request) => (
-              <RequestRow
-                key={request.requestId}
-                request={request}
-                direction="incoming"
-                busy={busy}
-                onAccept={() => {
-                  act(() => acceptFriendRequest(request.requestId));
-                }}
-                onDecline={() => {
-                  act(() => declineFriendRequest(request.requestId));
-                }}
-              />
-            ))}
-          </ul>
-        )}
+      {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
+      {friends.kind === "failed" ? (
+        <AccountError
+          message={friends.message}
+          retryAfterMs={friends.retryAfterMs}
+          onRetry={reloadFriends}
+          testId={friendsTestid.listError}
+          retryTestId={friendsTestid.listRetry}
+        />
+      ) : null}
+      {list !== null && all.length === 0 ? (
+        <EmptyState
+          text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
+          testId={togetherTestid.noFriends}
+        />
+      ) : null}
+      {all.length > 0 ? (
+        <ul className="together-list">
+          {onlineFirst(all).map((friend) => (
+            <FriendRow
+              key={friend.profileId}
+              friend={friend}
+              unread={unread[friend.profileId] ?? 0}
+              busy={busy}
+              challengeRefusal={challengeRefusal}
+              onChallenge={() => {
+                onChallenge({ profileId: friend.profileId, username: friend.username });
+              }}
+              onChat={() => {
+                onChat({ profileId: friend.profileId, username: friend.username });
+              }}
+              onWatch={onClose}
+            />
+          ))}
+        </ul>
+      ) : null}
 
-        {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
-        {friends.kind === "failed" ? (
-          <AccountError
-            message={friends.message}
-            retryAfterMs={friends.retryAfterMs}
-            onRetry={reloadFriends}
-            testId={friendsTestid.listError}
-            retryTestId={friendsTestid.listRetry}
-          />
-        ) : null}
-        {list !== null && all.length === 0 ? (
-          <EmptyState
-            text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
-            testId={togetherTestid.noFriends}
-          />
-        ) : null}
-        {all.length > 0 ? (
-          <ul className="together-list">
-            {onlineFirst(all).map((friend) => (
-              <FriendRow
-                key={friend.profileId}
-                friend={friend}
-                unread={unread[friend.profileId] ?? 0}
-                busy={busy}
-                challengeRefusal={challengeRefusal}
-                onChallenge={() => {
-                  onChallenge({ profileId: friend.profileId, username: friend.username });
-                }}
-                onChat={() => {
-                  onChat({ profileId: friend.profileId, username: friend.username });
-                }}
-                onWatch={onClose}
-              />
-            ))}
-          </ul>
-        ) : null}
-
-        <a
-          href={paths.together}
-          className="friends-panel__all"
-          data-testid={friendsTestid.all}
-          onClick={(event) => {
-            onClose();
-            followInApp(paths.together)(event);
-          }}
-        >
-          {t("All of Play together")}
-        </a>
-      </div>
-    </div>
+      <a
+        href={paths.together}
+        className="friends-panel__all"
+        data-testid={friendsTestid.all}
+        onClick={(event) => {
+          onClose();
+          followInApp(paths.together)(event);
+        }}
+      >
+        {t("All of Play together")}
+      </a>
+    </Dialog>
   );
 }
 

@@ -431,9 +431,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                         ? t("Forfeit the series? Your opponent wins it, and your rating moves as for a loss.")
                         : t("Forfeit the series? Your opponent wins it.")}
                     </p>
-                    <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
-                      {t("Forfeit")}
-                    </button>
+                    {/* R3221000: the safe choice first, the act last. */}
                     <button
                       type="button"
                       className="link-button"
@@ -443,6 +441,9 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                       }}
                     >
                       {t("Keep playing")}
+                    </button>
+                    <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
+                      {t("Forfeit")}
                     </button>
                   </div>
                 ) : (

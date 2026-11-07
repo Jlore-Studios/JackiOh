@@ -682,7 +682,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
           <button
             type="button"
             data-testid="prompt-submit"
-            className="prompt-submit"
+            className="prompt-submit button-primary"
             aria-disabled={!craftable}
             onClick={send}
           >

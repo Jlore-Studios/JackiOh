@@ -229,10 +229,13 @@ describe("RematchButtons in the result panel (#477)", () => {
   it("the stylesheets lay the block into the panel's row and make Rematch the panel's primary", () => {
     const animations = gameCss("animations.css");
     const reveal = gameCss("reveal.css");
+    // #3219: the place's skin is the primary role's, in buttons.css; animations.css lays the row out.
+    const buttons = gameCss(join("..", "buttons.css"));
 
-    expect(animations).toContain(
+    expect(buttons).toContain(
       ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child { border-color: var(--primary-edge",
     );
+    expect(animations).not.toContain("--primary-face");
     expect(animations).toMatch(
       /\.result-overlay__actions > \.rematch button, \.result-overlay__reopen \{ min-height: 44px; padding: var\(--space-4\) var\(--space-7\); border-radius: var\(--radius-md\); font-weight: 700; \}/,
     );
@@ -495,5 +498,83 @@ describe("R3207002 one rematch poll per match id", () => {
     expect(vi.mocked(rematchStatus)).toHaveBeenCalledWith(TOKEN, "match-2");
     await settle({ advance: PERIOD });
     expect(reads()).toBe(4);
+  });
+});
+
+describe("R3213000 the rematch status the match socket pushes", () => {
+  const PERIOD = SERIES_POLL_SECONDS * 1000;
+  const reads = (): number => vi.mocked(rematchStatus).mock.calls.length;
+
+  /** The buttons and the watcher as match.tsx mounts them, both given the socket's last frame. */
+  function Both({ pushed }: { pushed: RematchStatusResponse | null }) {
+    return (
+      <>
+        <RematchButtons token={TOKEN} matchId={MATCH_ID} connection="open" ranked pushed={pushed} />
+        <RematchWatcher token={TOKEN} matchId={MATCH_ID} pushed={pushed} />
+      </>
+    );
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetVisibility();
+  });
+
+  it("R3213000 with a pushed status nothing is read over three periods, each frame is drawn, and a pushed match id navigates", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const { rerender } = render(<Both pushed={statusOf()} />);
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(0);
+    expect(screen.getByTestId(rematchTestid.offer)).toBeInTheDocument();
+
+    rerender(<Both pushed={statusOf({ opponentOffer: 2 })} />);
+    await settle({ advance: PERIOD });
+    expect(screen.getByTestId(rematchTestid.incoming)).toHaveTextContent(/double-or-nothing/i);
+
+    rerender(<Both pushed={statusOf({ opponentHere: false })} />);
+    await settle({ advance: PERIOD });
+    expect(screen.queryByTestId(rematchTestid.offer)).toBeNull();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    rerender(<Both pushed={statusOf({ youOffered: 1, opponentOffer: 1, matchId: "match-9" })} />);
+    await settle({ advance: PERIOD });
+    // Both listeners take the seat there, as one poll's answer does (R3207002).
+    expect(vi.mocked(navigate)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.match("match-9"));
+    expect(reads()).toBe(0);
+  });
+
+  it("R3213000 an offer sends no status read after it while the socket pushes", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    render(<Both pushed={statusOf()} />);
+    await settle({ advance: 0 });
+
+    fireEvent.click(screen.getByTestId(rematchTestid.offer));
+    await settle({ advance: PERIOD });
+    expect(vi.mocked(rematchOffer)).toHaveBeenCalledWith(TOKEN, MATCH_ID, 1);
+    expect(reads()).toBe(0);
+  });
+
+  it("R3213000 once the pushed status goes back to null, one read goes out at once, then one per period", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const { rerender } = render(<Both pushed={statusOf()} />);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(0);
+
+    // The socket dropped.
+    rerender(<Both pushed={null} />);
+    await settle({ advance: 0 });
+    expect(reads()).toBe(1);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(2);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(3);
+    expect(screen.getByTestId(rematchTestid.offer)).toBeInTheDocument();
+
+    // The next socket's greeting pushes it again, and the poll stops.
+    rerender(<Both pushed={statusOf({ youOffered: 1 })} />);
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(3);
+    expect(screen.getByTestId(rematchTestid.status)).toHaveTextContent(/waiting for your opponent/i);
   });
 });

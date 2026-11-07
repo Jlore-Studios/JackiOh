@@ -121,6 +121,8 @@ function Stack({
             <span
               key={`${keywordKey(keyword)}-${index}`}
               className="keyword keyword-icon"
+              role="img"
+              aria-label={wordsOf(keyword)}
               data-keyword={keyword.kind}
               data-n={"n" in keyword ? keyword.n : undefined}
               title={wordsOf(keyword)}
@@ -130,7 +132,7 @@ function Stack({
             </span>
           ))}
           {rest.length > 0 && (
-            <span className="cf-kw-more" title={rest.map(wordsOf).join(join)}>
+            <span className="cf-kw-more" role="img" aria-label={rest.map(wordsOf).join(join)} title={rest.map(wordsOf).join(join)}>
               +{rest.length}
             </span>
           )}

@@ -158,7 +158,9 @@ out failed there, against the newer `main`, and its fix starts from merging `mai
 a pull request only to bring it up to date: one that merges cleanly needs no update, since the queue tests it on
 the newest `main`, and every push runs its CI again on the organization's shared runners. Merge `main` in when
 GitHub shows a conflict or the queue took it out, and turn auto-merge on once it is ready, so the queue takes it
-as soon as its checks pass. Run
+as soon as its checks pass. A pull request's CI and a merge-queue build may show "Waiting" before they start:
+the runner gate holds them, with no runner, until GitHub's 20 have room (bot/README.md "The runner gate"),
+while `main`'s and a promotion's never wait. Run
 `cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
 `rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
 whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the

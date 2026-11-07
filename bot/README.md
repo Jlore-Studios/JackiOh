@@ -1221,6 +1221,40 @@ Squishy runs the same code under its own labels (`squishy:revise`, `squishy:fixi
 each tick (`--companions`, every five minutes), is where its red CI is stopped, and
 `squishy-commands.yml` delivers its CI events to `OnCI`.
 
+### The runner gate
+
+GitHub's free plan runs 20 hosted jobs at once for the whole organization, and the bots' own runs
+hold several of them. Every CI run asks for all of its jobs as soon as it can, so when many go at
+once each waits behind all the others at every stage (its scope, its builds, its tests, its
+summary) and none finishes soon: on 2026-11-05 merge-queue builds took 40 to 137 minutes, nearly all
+of it waiting. So a pull request's CI and a merge-queue build wait before they start, holding no
+runner, and start in order, once there is room
+([`go/internal/cigate/`](go/internal/cigate/)).
+
+- **How it waits.** ci.yml's `changes` job, which every other job of the run needs, runs in the
+  environment the repository variable `CI_GATE_ENVIRONMENT` names, `ci-runners`
+  ([`infra/github.tf`](../infra/github.tf)), whose one required reviewer is the night bot's account.
+  A job waiting for a reviewer holds no runner. Only a pull request into `main` and a merge-queue
+  build name it: `main`'s CI, a promotion's pull request (into `production`) and a dispatch never
+  wait, and with the variable unset nothing does.
+- **Who starts it.** The status loop, as that reviewer, every 30 seconds (`--gate-every`), and every
+  sweep (bot-commands' scheduled one among them), so a stopped loop slows the gate to the sweep's
+  pace rather than stopping CI. A tick counts the jobs queued for one of GitHub's own runners (the
+  bot's boxes' queues are theirs) and approves:
+  - merge-queue builds first, the oldest first, each while fewer than `QueueLimit` (16) are queued;
+  - then pull requests' runs, the oldest first, one a tick (`PullsPerTick`), each while fewer than
+    `PullLimit` (6) are queued;
+  - a run approved counts for `RunJobs` (12) for the rest of the tick, since it asks for most of
+    its jobs only once its first has run;
+  - and any run that has waited `MaxWaitQueue` (10 minutes, a queue build) or `MaxWaitPull` (30, a
+    pull request's) whatever is queued, and every waiting run when the jobs queued cannot be read:
+    the gate orders and delays CI, and never starves it.
+  Each approval's comment says why. Only the reviewer's process approves: Squishy's sweep skips it.
+- **The way out.** An admin may approve a waiting run by hand (the environment lets admins bypass
+  it). Deleting the `CI_GATE_ENVIRONMENT` variable (Settings -> Secrets and variables -> Actions ->
+  Variables, or its resource in `infra/github.tf`) turns the gate off for every run that starts
+  after.
+
 ### Ownership and the hold
 
 Work stays with its owner unless a person hands it off (#2748, section 1;

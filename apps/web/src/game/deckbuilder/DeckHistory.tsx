@@ -66,7 +66,7 @@ function HistoryRow({
       ) : (
         <button
           type="button"
-          className="ws-action"
+          className="ws-action button-secondary"
           data-testid={deckHistoryRestoreId(version.id)}
           aria-describedby={headId}
           aria-busy={restoring === version.id ? "true" : undefined}
@@ -163,7 +163,7 @@ export default function DeckHistory({
       <button
         ref={buttonRef}
         type="button"
-        className="ws-cosmetics-button"
+        className="ws-cosmetics-button button-secondary"
         data-testid={DECK_HISTORY_BUTTON}
         aria-label={t("Deck history")}
         title={t("Deck history")}

@@ -1,6 +1,6 @@
 //! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
 //! Ensures client reads server constants (CLAUDE.md rule 9).
-//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002, R3207000, R3207001.
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002, R3207000, R3207001, R3213000.
 
 use serde_json::{Value, json};
 
@@ -89,6 +89,8 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::QUEUE_POPULATION_POLL_SECONDS),
         ),
         ("LIVE_GAME_POLL_SECONDS", json!(c::LIVE_GAME_POLL_SECONDS)),
+        // SPEC §11 R3213000: the post-game frames' version, which the client holds a frame to.
+        ("POST_GAME_FRAME_VERSION", json!(c::POST_GAME_FRAME_VERSION)),
         ("DECK_AUTOSAVE_DEBOUNCE_MS", json!(c::DECK_AUTOSAVE_DEBOUNCE_MS)),
         (
             "DECK_AUTOSAVE_RETRY_SECONDS",
@@ -408,8 +410,9 @@ fn every_name_is_listed_once() {
         // #3013: PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000).
         // #3207: QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001).
         // #3212: PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001).
+        // #3213: POST_GAME_FRAME_VERSION (R3213000).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -433,7 +436,8 @@ fn every_name_is_listed_once() {
          NEWS_POST_SUMMARY_MAX_CHARS and NEWS_SUMMARY_MAX_SENTENCES (R3074000, R3074001, R3074003), \
          and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000), and #3207's \
          QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001), and #3212's \
-         PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001)"
+         PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
+         POST_GAME_FRAME_VERSION (R3213000)"
     );
 }
 

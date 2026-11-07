@@ -1,14 +1,14 @@
 // "Leave this game?": what "New game" and "Menu" ask while a practice game is still being played, since
 // it is minutes of play one stray tap from gone. Staying is the default: it has the focus, and Escape,
 // Back (R2127000) or a click outside the panel means stay. R765: a free game's question offers Save and
-// leave; a tutorial lesson is never kept (R668), so its question keeps the one way out.
+// leave; a tutorial lesson is never kept (R668), so its question keeps the one way out. It draws through
+// `Dialog.tsx` (R3220000): Keep playing first, Save and leave between, the way out last.
 
-import { useEffect, useId, useRef, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
+import { Dialog, type DialogAction } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { practiceTestid } from "./testids.ts";
-import "./practice.css";
 
 /** Where leaving goes: "New game", "Menu", or from a tutorial lesson "Exit tutorial". */
 export type PracticeLeaveTo = "setup" | "menu" | "lessons";
@@ -41,74 +41,29 @@ function saveBody(to: PracticeLeaveTo): string {
 }
 
 export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeLeaveProps): ReactElement {
-  const titleId = useId();
-  const stay = useRef<HTMLButtonElement>(null);
   const canSave = onSaveAndLeave !== undefined;
-  useBackLayer(onStay);
-
-  useEffect(() => {
-    stay.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") onStay();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onStay]);
+  const actions: DialogAction[] = [
+    ...(canSave
+      ? [{ label: t("Save and leave"), kind: "secondary" as const, onClick: onSaveAndLeave, testid: practiceTestid.leaveSave }]
+      : []),
+    {
+      label: canSave ? t("Leave without saving") : t("Leave game"),
+      kind: "danger",
+      onClick: onLeave,
+      testid: practiceTestid.leaveConfirm,
+    },
+  ];
 
   return (
-    <div
-      className="practice-leave-scrim"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onStay();
-      }}
-    >
-      <section
-        className="practice-leave"
-        data-testid={practiceTestid.leave}
-        data-can-save={canSave ? "true" : "false"}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <h2 className="practice-leave__title" id={titleId}>
-          {t("Leave this game?")}
-        </h2>
-        <p className="practice-leave__body">{t(canSave ? saveBody(to) : LEAVE_BODY[to])}</p>
-        <div className={canSave ? "practice-leave__actions practice-leave__actions--save" : "practice-leave__actions"}>
-          <button
-            ref={stay}
-            type="button"
-            className="practice-play"
-            data-testid={practiceTestid.leaveStay}
-            onClick={onStay}
-          >
-            {t("Keep playing")}
-          </button>
-          {canSave ? (
-            <button
-              type="button"
-              className="practice-result__secondary"
-              data-testid={practiceTestid.leaveSave}
-              onClick={onSaveAndLeave}
-            >
-              {t("Save and leave")}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="practice-result__secondary"
-            data-testid={practiceTestid.leaveConfirm}
-            onClick={onLeave}
-          >
-            {canSave ? t("Leave without saving") : t("Leave game")}
-          </button>
-        </div>
-      </section>
-    </div>
+    <Dialog
+      role="alertdialog"
+      testid={practiceTestid.leave}
+      data={{ "data-can-save": canSave ? "true" : "false" }}
+      title={t("Leave this game?")}
+      description={t(canSave ? saveBody(to) : LEAVE_BODY[to])}
+      onClose={onStay}
+      cancel={{ label: t("Keep playing"), kind: "primary", testid: practiceTestid.leaveStay }}
+      actions={actions}
+    />
   );
 }

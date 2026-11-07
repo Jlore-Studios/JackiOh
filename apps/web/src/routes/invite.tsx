@@ -610,6 +610,7 @@ function InviteScreen({ account }: { account: Account }) {
 
               <button
                 type="submit"
+                className="button-primary"
                 data-testid={INVITE_SUBMIT}
                 disabled={!canSubmit}
                 aria-busy={submitting}

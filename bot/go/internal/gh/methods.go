@@ -696,6 +696,21 @@ func (x *GitHub) CancelRun(runID any) {
 	x.Request("POST", x.r()+"/actions/runs/"+py.Str(runID)+"/cancel", nil, "", false, false)
 }
 
+// PendingDeployments is what a run's jobs wait on for a reviewer: one entry per environment, with
+// `environment` (its `id` and `name`) and `current_user_can_approve`. The runner gate reads it
+// (`cigate`, ci.yml's `changes` job waits in `ci-runners`).
+func (x *GitHub) PendingDeployments(runID any) []*pyjson.Object {
+	return objs(pyjson.List(x.Request("GET", x.r()+"/actions/runs/"+py.Str(runID)+"/pending_deployments",
+		nil, "", false, false)))
+}
+
+// ApproveDeployments approves, as one of their required reviewers, a run's jobs that wait on these
+// environments (by id), so they start (the runner gate, `cigate`).
+func (x *GitHub) ApproveDeployments(runID any, environmentIDs []any, comment string) {
+	x.Request("POST", x.r()+"/actions/runs/"+py.Str(runID)+"/pending_deployments",
+		pyjson.New("environment_ids", environmentIDs, "state", "approved", "comment", comment), "", false, false)
+}
+
 // RerunRun runs every job of a run that has ended again, as a new attempt of the same run: its
 // failed, cancelled and skipped jobs and the ones that passed (`rerun-failed-jobs` re-runs only the
 // failed ones and what needs them). A CI fix whose failing check passes locally asks for it, with no

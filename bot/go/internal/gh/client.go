@@ -75,6 +75,8 @@ type Client interface {
 	RerunFailedJobs(runID any)
 	CancelRun(runID any)
 	RerunRun(runID any)
+	PendingDeployments(runID any) []*pyjson.Object
+	ApproveDeployments(runID any, environmentIDs []any, comment string)
 	ListJobs(runID any, cached bool) []*pyjson.Object
 	JobLog(jobID any, tailChars int) string
 	ListArtifacts(runID any) []*pyjson.Object

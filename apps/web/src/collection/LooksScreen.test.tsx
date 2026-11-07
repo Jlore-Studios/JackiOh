@@ -16,6 +16,7 @@ import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { FullArtOwned } from "../cards/fullArt.ts";
 import { ownedCardCosmetics, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
 import { VERSION_SKETCH_FULL_ART_ANIMATED_ID, VERSION_SKETCH_FULL_ART_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID, VERSION_SKETCH_ID } from "../cards/versions.ts";
+import { dialogTestid } from "../game/Dialog.tsx";
 import type { TokenBarsResponse } from "../net/api.ts";
 import { cosmeticPacksFull, cosmeticPacksInfo, tokenBars } from "../shop/fixtures.ts";
 import { settle } from "../test/settle.ts";
@@ -124,6 +125,13 @@ describe("R3016001 a card's equip and buy screen", () => {
     fireEvent.click(screen.getByTestId(T.looksBuy(id)));
     const dialog = screen.getByRole("alertdialog");
     expect(dialog).toHaveTextContent("Buy Sketch full art, animated? This spends 1 Legendary token.");
+    // R3221000: a dialog over the screen's, Cancel first and the close (no ✕), Confirm last.
+    expect(screen.getByTestId(T.looksDialog(id))).toBe(dialog);
+    expect([...dialog.querySelectorAll<HTMLElement>(".dialog__actions > button")].map((button) => button.dataset.testid)).toEqual([
+      T.looksCancel(id),
+      T.looksConfirm(id),
+    ]);
+    expect(within(dialog).queryByTestId(dialogTestid.close)).toBeNull();
     // A Legendary chase: the Legendary token, or the full Chase Shard bar.
     expect(within(dialog).getByTestId(T.looksPay(id, "Legendary"))).toHaveTextContent("1 Legendary token (2 held)");
     expect(within(dialog).getByTestId(T.looksPay(id, "Legendary"))).toHaveAttribute("aria-pressed", "true");
@@ -272,6 +280,8 @@ describe("R3016001 a card's equip and buy screen", () => {
     expect(screen.getByTestId(T.looks)).toHaveAttribute("data-card", BIG_D);
     fireEvent.click(screen.getByTestId(T.looksClose));
     expect(screen.queryByTestId(T.looks)).toBeNull();
+    // The hover panel's button is gone, so the focus goes back to the card.
+    expect(tile).toHaveFocus();
 
     // From the fullscreen preview it opens over it, and Escape closes it alone.
     fireEvent.keyDown(tile, { key: "i" });
@@ -282,6 +292,11 @@ describe("R3016001 a card's equip and buy screen", () => {
     });
     fireEvent.click(opener);
     expect(screen.getByTestId(T.looks)).toBeTruthy();
+    // R3221000: its scrim comes after the preview's, at the same layer, so it draws over it.
+    expect(
+      screen.getByTestId(T.preview).parentElement!.compareDocumentPosition(screen.getByTestId(T.looks).parentElement!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     fireEvent.keyDown(screen.getByTestId(T.looksClose), { key: "Escape" });
     expect(screen.queryByTestId(T.looks)).toBeNull();
     expect(screen.getByTestId(T.preview)).toBeTruthy();

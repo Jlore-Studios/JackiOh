@@ -201,7 +201,7 @@ export default function UsernameField({ token, onSaved, label, disabled = false,
           {t(failed)}
         </p>
       ) : null}
-      <button type="submit" data-testid={usernameTestid.save} disabled={!canSave} aria-busy={saving}>
+      <button type="submit" className="button-primary" data-testid={usernameTestid.save} disabled={!canSave} aria-busy={saving}>
         {saving ? t("Saving…") : t("Save")}
       </button>
     </form>

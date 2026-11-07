@@ -48,3 +48,47 @@ export const HERO_TRAY_DESKTOP_COUNT = 4;
 export const HERO_TRAY_TABLET_COUNT = 3;
 /** #2877: how many entries the hero tray shows on a phone layout before folding the rest behind `+N`. */
 export const HERO_TRAY_PHONE_COUNT = 2;
+
+/** #3347: how long after the one before each card of the opening hand is dealt, in milliseconds (at Speed 1×). */
+export const DEAL_STAGGER_MS = 140;
+
+/** #3347: how long one dealt card takes to fly from its deck to its place in the hand, in milliseconds (at Speed 1×). */
+export const DEAL_FLIGHT_MS = 320;
+
+/** #3347: how long a deck's riffle plays, in milliseconds (at Speed 1×): the pile's top cards split and interleave once. */
+export const RIFFLE_MS = 520;
+
+/** #3347: how many leaves a deck's riffle draws, split between its two halves. */
+export const RIFFLE_LEAVES = 6;
+
+/** #3347: the least a hand card's place must have moved, in pixels, for the fan to spring it there instead of leaving it. */
+export const HAND_SPRING_MIN_PX = 2;
+
+/**
+ * #3341: each board layout's card height, `clamp(minPx, (100cqh - fixedPx) / rows, maxPx)`: `fixedPx`
+ * is what the layout spends on everything but cards (gaps, seats, controls, padding), `rows` how many
+ * card heights it stacks (the field's four rows and the hand's share). Mirrored in `game/board.css`
+ * (`--card-h`); `game/cardSizes.test.ts` holds the two together. The desktop also keeps ten hand
+ * cards side by side (B30): `(100cqw - widthFixedPx) / widthRows`, the width the 250px sidebar,
+ * the column gap and nine `--gap`s leave. `base` is the one-column board of 601–760px, `tablet` the
+ * upright tablet, `phone` the portrait phone and `landscape` the phone on its side.
+ */
+export const BOARD_CARD_BUDGET = {
+  desktop: { minPx: 56, fixedPx: 203, rows: 5.48, maxPx: 119, widthFixedPx: 316, widthRows: 10.66 },
+  tablet: { minPx: 60, fixedPx: 355, rows: 5.3, maxPx: 113 },
+  base: { minPx: 60, fixedPx: 330, rows: 5.88, maxPx: 112 },
+  phone: { minPx: 44, fixedPx: 330, rows: 5.24, maxPx: 94 },
+  landscape: { minPx: 40, fixedPx: 28, rows: 4.73, maxPx: 72 },
+} as const;
+
+/**
+ * #3341: how much bigger a lifted hand card is drawn than at rest, per layout (`--hand-lift-scale`
+ * in `game/board.css`; `game/cardSizes.test.ts` holds the two together).
+ */
+export const HAND_LIFT_SCALE = { desktop: 1.22, tablet: 1.14, phone: 1.9, landscape: 1.7 } as const;
+
+/**
+ * #3341: the share of the hand card's height a lifted card rises (`--hand-lift-rise` in
+ * `game/board.css`). The phone on its side has no height to spare, so its lift stays put.
+ */
+export const HAND_LIFT_RISE = { desktop: 0.1, tablet: 0.12, phone: 0.4 } as const;

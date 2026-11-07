@@ -8,7 +8,7 @@
 // offered patch is a tab, and the newest, short of games, says its data is still being collected (R3324000).
 // The header names the current patch (R3324001). The Cards tab also holds the games panel (R1994000) and the
 // cards made during a game, the Tokens and the Other created cards, two sortable sections that share no row
-// (R2089000, R2370000, R3184002, R3324002); its on/off controls are one kind of pressed button (R3324003). The
+// (R2089000, R2370000, R3184002, R3324002); its on/off controls are the Segmented's pressed buttons (R3324003). The
 // card drill-down shows the faces (a full-art card's still Epic while the Full-art cards setting is on,
 // R3011000), patch history, turn curve and co-played synergy.
 
@@ -23,6 +23,7 @@ import { FullArtShown, OwnCopy, fullArtSource } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -35,7 +36,6 @@ import {
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import type { CardTier } from "../wire/generated/CardTier.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -65,6 +65,7 @@ import { statsTestid } from "../stats/testids.ts";
 import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Segmented, Tabs } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
 import "./stats.css";
@@ -241,45 +242,32 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
 }
 
 /**
- * R2127000: the card drill-down's Back layer. It is mounted only while the drill-down is open, so Back
- * closes the drill-down as its Close does, and with it shut Back leaves the page as before.
- */
-function DrillDownBackLayer({ onClose }: { onClose: () => void }): null {
-  useBackLayer(onClose);
-  return null;
-}
-
-/**
  * R3324000: the Cards or Sets tab of a patch still collecting its data: the words in place of its figures, and the
  * way to the patch before. No count and no progress (R661).
  */
-function CollectingPanel({
-  tab,
+function CollectingNote({
   patch,
   previous,
   onPrevious,
 }: {
-  tab: "cards" | "sets";
   patch: string;
   previous: PatchWindow | null;
   onPrevious: (window: PatchWindow) => void;
 }): ReactElement {
   return (
-    <section id={`stats-panel-${tab}`} role="tabpanel" aria-labelledby={`stats-tab-${tab}`} className="stats-panel one-screen__body">
-      <EmptyState
-        text={t("Data for patch {patch} is still being collected at this time.", { patch })}
-        testId={statsTestid.patchCollecting}
-        action={
-          previous === null
-            ? undefined
-            : {
-                label: t("See patch {patch}", { patch: patchName(previous) }),
-                testId: statsTestid.patchCollectingBack,
-                onPress: () => onPrevious(previous),
-              }
-        }
-      />
-    </section>
+    <EmptyState
+      text={t("Data for patch {patch} is still being collected at this time.", { patch })}
+      testId={statsTestid.patchCollecting}
+      action={
+        previous === null
+          ? undefined
+          : {
+              label: t("See patch {patch}", { patch: patchName(previous) }),
+              testId: statsTestid.patchCollectingBack,
+              onPress: () => onPrevious(previous),
+            }
+      }
+    />
   );
 }
 
@@ -511,12 +499,11 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25; Escape and Back
-  // close it, R2127000). The control that opened it is kept when it is pressed, not read off the
-  // focus, which a click on a button does not move in every browser.
+  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25), drawn through
+  // Dialog.tsx (R3221000), whose keys close it and keep Tab inside, and Back too (R2127000). The control
+  // that opened it is kept when it is pressed, not read off the focus, which a click on a button does
+  // not move in every browser, and has the focus back once it closes.
   const drillDownOpener = useRef<HTMLElement | null>(null);
-  const drillDownDialog = useRef<HTMLDivElement>(null);
-  const drillDownCloseButton = useRef<HTMLButtonElement>(null);
   const drillDownOpen = Boolean(cardDrillDownId);
 
   const openDrillDown = (id: string, opener: HTMLElement): void => {
@@ -525,33 +512,9 @@ export default function StatsRoute(): ReactElement {
   };
 
   useEffect(() => {
-    if (!drillDownOpen) return;
-    drillDownCloseButton.current?.focus({ preventScroll: true });
-    // Both keys are read at the window, in the capture phase, so they hold wherever the focus is.
-    function onKey(event: globalThis.KeyboardEvent): void {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        setCardDrillDownId(null);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const dialog = drillDownDialog.current;
-      if (dialog === null) return;
-      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")];
-      if (order.length === 0) return;
-      const at = order.indexOf(document.activeElement as HTMLElement);
-      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
-      event.preventDefault();
-      event.stopPropagation();
-      order[next]?.focus();
-    }
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-      const opener = drillDownOpener.current;
-      if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
-    };
+    if (drillDownOpen) return;
+    const opener = drillDownOpener.current;
+    if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
   }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
@@ -665,6 +628,7 @@ export default function StatsRoute(): ReactElement {
 
   const summary = cardStatsData?.summary;
 
+
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
   const drillDownRadiantFace =
@@ -688,7 +652,7 @@ export default function StatsRoute(): ReactElement {
           <nav className="stats-patch-bar" data-testid={statsTestid.patchBar} aria-label={t("Patches")}>
             <button
               type="button"
-              className="stats-view-btn stats-patch-step"
+              className="stats-patch-step"
               data-testid={statsTestid.patchPrevious}
               disabled={previousWindow === null}
               aria-label={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
@@ -697,33 +661,33 @@ export default function StatsRoute(): ReactElement {
             >
               ←
             </button>
-            <ul className="stats-patch-tabs">
-              {pickable.map((window) => {
-                const index = patchList.indexOf(window);
-                return (
-                  <li key={patchTarget(window)}>
-                    <button
-                      type="button"
-                      className="stats-view-btn stats-patch-tab"
-                      data-testid={statsTestid.patchTab}
-                      data-patch={patchName(window)}
-                      aria-pressed={index === shownPatch}
-                      onClick={() => choosePatch(window)}
-                    >
-                      <span className="stats-patch-tab-name">{patchName(window)}</span>
-                      <span className="stats-patch-tab-games">
-                        {isCollecting(patchList, index)
-                          ? t("Collecting data")
-                          : t("{games} games", { games: formatNumber(window.games) })}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <Segmented
+              label={t("Patch")}
+              className="stats-patch-tabs"
+              value={shownPatch >= 0 ? patchTarget(patchList[shownPatch]!) : ""}
+              onChange={(target) => {
+                const chosen = patchList.find((window) => patchTarget(window) === target);
+                if (chosen) choosePatch(chosen);
+              }}
+              options={pickable.map((window) => ({
+                value: patchTarget(window),
+                testId: statsTestid.patchTab,
+                className: "stats-patch-tab",
+                label: (
+                  <>
+                    <span className="stats-patch-tab-name">{patchName(window)}</span>
+                    <span className="stats-patch-tab-games">
+                      {isCollecting(patchList, patchList.indexOf(window))
+                        ? t("Collecting data")
+                        : t("{games} games", { games: formatNumber(window.games) })}
+                    </span>
+                  </>
+                ),
+              }))}
+            />
             <button
               type="button"
-              className="stats-view-btn stats-patch-step"
+              className="stats-patch-step"
               data-testid={statsTestid.patchNext}
               disabled={nextWindow === null}
               aria-label={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
@@ -747,55 +711,28 @@ export default function StatsRoute(): ReactElement {
         )}
 
         {/* Tabs */}
-        <div className="stats-tabs" role="tablist" aria-label={t("Statistics views")}>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-cards"
-            aria-selected={tab === "cards"}
-            aria-controls="stats-panel-cards"
-            className={`stats-tab ${tab === "cards" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabCards}
-            onClick={() => setTab("cards")}
-          >
-            {t("Cards")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-sets"
-            aria-selected={tab === "sets"}
-            aria-controls="stats-panel-sets"
-            className={`stats-tab ${tab === "sets" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabSets}
-            onClick={() => setTab("sets")}
-          >
-            {t("Sets")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-players"
-            aria-selected={tab === "players"}
-            aria-controls="stats-panel-players"
-            className={`stats-tab ${tab === "players" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabPlayers}
-            onClick={() => setTab("players")}
-          >
-            {t("Players")}
-          </button>
-        </div>
-
-        {/* R3324000: a patch still collecting its data shows no figures on the Cards and Sets tabs */}
-        {collecting && (tab === "cards" || tab === "sets") && (
-          <CollectingPanel tab={tab} patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
-        )}
-
-        {/* CARDS TAB */}
-        {tab === "cards" && !collecting && (
-          <section id="stats-panel-cards" role="tabpanel" aria-labelledby="stats-tab-cards" className="stats-panel one-screen__body">
-            {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
-            <GamesPanel patch={patch} mode={mode} />
+        <Tabs
+          label={t("Statistics views")}
+          idPrefix="stats"
+          value={tab}
+          onChange={setTab}
+          className="one-screen__frame"
+          tablistClassName="stats-tabs"
+          tabClassName="stats-tab"
+          panelAs="section"
+          items={[
+            {
+              id: "cards",
+              label: t("Cards"),
+              testId: statsTestid.tabCards,
+              panelClassName: "stats-panel one-screen__body",
+              // R3324000: a patch still collecting its data shows no figures.
+              panel: collecting ? (
+                <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
+              ) : (
+                <>
+                  {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
+                  <GamesPanel patch={patch} mode={mode} />
 
             {/* Filter controls */}
             <div className="stats-filter-bar">
@@ -885,89 +822,81 @@ export default function StatsRoute(): ReactElement {
 
               {/* R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button */}
               <div className="stats-options">
-                <div className="stats-sort">
-                  <span className="stats-sort-label" id="stats-sort-label">
-                    {t("Sort")}
+              <div className="stats-sort">
+                <span className="stats-sort-label" id="stats-sort-label">
+                  {t("Sort")}
+                </span>
+                <select
+                  className="stats-select"
+                  aria-labelledby="stats-sort-label"
+                  data-testid={statsTestid.sortSelect}
+                  value={sortCol}
+                  onChange={(e) => {
+                    const next = e.target.value as SortColumn;
+                    setSortCol(next);
+                    setSortDir(defaultDirection(next));
+                  }}
+                >
+                  {SORT_COLUMNS.map((col) => (
+                    <option key={col} value={col}>
+                      {t(SORT_LABELS[col])}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="stats-sort-dir"
+                  data-testid={statsTestid.sortDir}
+                  aria-label={
+                    sortDir === "asc"
+                      ? t("Ascending; switch to descending")
+                      : t("Descending; switch to ascending")
+                  }
+                  title={sortDir === "asc" ? t("Ascending") : t("Descending")}
+                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                >
+                  {sortDir === "asc" ? "↑" : "↓"}
+                </button>
+              </div>
+
+              <div className="stats-view-toggle">
+                <span className="stats-sort-label" aria-hidden="true">
+                  {t("View")}
+                </span>
+                <Segmented
+                  label={t("View")}
+                  value={view}
+                  onChange={setView}
+                  options={[
+                    { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
+                    { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+                  ]}
+                />
+              </div>
+
+              {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
+              <div className="segmented">
+                <button
+                  type="button"
+                  className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
+                  data-testid={statsTestid.rangesToggle}
+                  aria-pressed={showRanges}
+                  onClick={() => setShowRanges((shown) => !shown)}
+                >
+                  {t("Show 95% ranges")}
+                </button>
+              </div>
+
+              {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
+              {view === "table" && (
+                <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
+                  <span className="stats-sort-label" id="stats-columns-label">
+                    {t("Columns")}
                   </span>
-                  <select
-                    className="stats-select"
-                    aria-labelledby="stats-sort-label"
-                    data-testid={statsTestid.sortSelect}
-                    value={sortCol}
-                    onChange={(e) => {
-                      const next = e.target.value as SortColumn;
-                      setSortCol(next);
-                      setSortDir(defaultDirection(next));
-                    }}
-                  >
-                    {SORT_COLUMNS.map((col) => (
-                      <option key={col} value={col}>
-                        {t(SORT_LABELS[col])}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="stats-sort-dir"
-                    data-testid={statsTestid.sortDir}
-                    aria-label={
-                      sortDir === "asc"
-                        ? t("Ascending; switch to descending")
-                        : t("Descending; switch to ascending")
-                    }
-                    title={sortDir === "asc" ? t("Ascending") : t("Descending")}
-                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                  >
-                    {sortDir === "asc" ? "↑" : "↓"}
-                  </button>
-                </div>
-
-                <div className="stats-view-toggle" role="group" aria-labelledby="stats-view-label">
-                  <span className="stats-sort-label" id="stats-view-label">
-                    {t("View")}
-                  </span>
-                  <button
-                    type="button"
-                    className={`stats-view-btn ${view === "table" ? "stats-view-btn--active" : ""}`}
-                    data-testid={statsTestid.viewTable}
-                    aria-pressed={view === "table"}
-                    onClick={() => setView("table")}
-                  >
-                    {t("Table")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`stats-view-btn ${view === "grid" ? "stats-view-btn--active" : ""}`}
-                    data-testid={statsTestid.viewGrid}
-                    aria-pressed={view === "grid"}
-                    onClick={() => setView("grid")}
-                  >
-                    {t("Grid")}
-                  </button>
-                </div>
-
-                {/* R2895000: the 95% ranges, off by default */}
-                <div className="stats-view-toggle">
-                  <button
-                    type="button"
-                    className={`stats-view-btn ${showRanges ? "stats-view-btn--active" : ""}`}
-                    data-testid={statsTestid.rangesToggle}
-                    aria-pressed={showRanges}
-                    onClick={() => setShowRanges((shown) => !shown)}
-                  >
-                    {t("Show 95% ranges")}
-                  </button>
-                </div>
-
-                {/* Column visibility toggles */}
-                {view === "table" && (
-                  <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
-                    <span className="stats-sort-label" id="stats-columns-label">
-                      {t("Columns")}
-                    </span>
+                  <div className="segmented">
                     <button
                       type="button"
-                      className={`stats-view-btn ${visibleCols.games ? "stats-view-btn--active" : ""}`}
+                      className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
                       data-testid={statsTestid.columnGames}
                       aria-pressed={visibleCols.games}
                       onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
@@ -976,7 +905,7 @@ export default function StatsRoute(): ReactElement {
                     </button>
                     <button
                       type="button"
-                      className={`stats-view-btn ${visibleCols.playRate ? "stats-view-btn--active" : ""}`}
+                      className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
                       data-testid={statsTestid.columnPlayRate}
                       aria-pressed={visibleCols.playRate}
                       onClick={() => setVisibleCols((c) => ({ ...c, playRate: !c.playRate }))}
@@ -984,7 +913,8 @@ export default function StatsRoute(): ReactElement {
                       {t("Play rate")}
                     </button>
                   </div>
-                )}
+                </div>
+              )}
               </div>
             </div>
 
@@ -1265,12 +1195,19 @@ export default function StatsRoute(): ReactElement {
                 <CreatedPanel kind="other" created={otherCreatedCards} minSample={minSample} nameOf={shownName} />
               </>
             )}
-          </section>
-        )}
-
-        {/* SETS TAB (R1966000) */}
-        {tab === "sets" && !collecting && (
-          <section id="stats-panel-sets" role="tabpanel" aria-labelledby="stats-tab-sets" className="stats-panel one-screen__body">
+          </>
+        ),
+      },
+      {
+        id: "sets",
+        label: t("Sets"),
+        testId: statsTestid.tabSets,
+        panelClassName: "stats-panel one-screen__body",
+        // R3324000: a patch still collecting its data has no sets to show.
+        panel: collecting ? (
+          <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
+        ) : (
+          <>
             {setsError ? (
               <div className="stats-error">
                 <p>{t("The set statistics didn't load.")}</p>
@@ -1446,12 +1383,16 @@ export default function StatsRoute(): ReactElement {
                 </p>
               </>
             )}
-          </section>
-        )}
-
-        {/* PLAYERS TAB */}
-        {tab === "players" && (
-          <section id="stats-panel-players" role="tabpanel" aria-labelledby="stats-tab-players" className="stats-panel one-screen__body">
+          </>
+        ),
+      },
+      {
+        id: "players",
+        label: t("Players"),
+        testId: statsTestid.tabPlayers,
+        panelClassName: "stats-panel one-screen__body",
+        panel: (
+          <>
             <div className="stats-player-head">
               <input
                 type="search"
@@ -1537,39 +1478,25 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             )}
-          </section>
-        )}
+          </>
+        ),
+      },
+    ]}
+  />
 
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
-          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)}>
-            <DrillDownBackLayer onClose={() => setCardDrillDownId(null)} />
-            <div
-              ref={drillDownDialog}
-              className="stats-drilldown-modal"
-              data-testid={statsTestid.drillDownModal}
-              data-radiant={drillDownRadiantFace ? "true" : undefined}
+            <Dialog
               role="dialog"
-              aria-modal="true"
-              aria-labelledby="drilldown-title"
-              onClick={(e) => e.stopPropagation()}
+              testid={statsTestid.drillDownModal}
+              className="stats-drilldown-modal"
+              data={drillDownRadiantFace ? { "data-radiant": "true" } : undefined}
+              closeTestid={statsTestid.drillDownClose}
+              closeLabel={t("Close card details")}
+              title={drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
+              onClose={() => setCardDrillDownId(null)}
+              actions={[]}
             >
-              <header className="stats-drilldown-header">
-                <h2 id="drilldown-title" className="stats-drilldown-title">
-                  {drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
-                </h2>
-                <button
-                  ref={drillDownCloseButton}
-                  type="button"
-                  className="stats-drilldown-close"
-                  data-testid={statsTestid.drillDownClose}
-                  aria-label={t("Close card details")}
-                  onClick={() => setCardDrillDownId(null)}
-                >
-                  ✕
-                </button>
-              </header>
-
               <div className="stats-drilldown-body">
                 {drillDownDef && drillDownFace && (
                   <div className="stats-drilldown-cards">
@@ -1723,8 +1650,7 @@ export default function StatsRoute(): ReactElement {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </Dialog>
         )}
       </div>
     </CardDefsProvider>

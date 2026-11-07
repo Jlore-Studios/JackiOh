@@ -282,6 +282,9 @@ pub struct DuelHost {
     bot_rematch_answered: PerPlayer<bool>,
     bot_rematch_replying: PerPlayer<bool>,
     bot_offer_timer: PerPlayer<Option<u32>>,
+    /// R3213000: the timer that marks the end of each bot home's linger, when its absence is told.
+    #[serde(default)]
+    bot_leave_timer: PerPlayer<Option<u32>>,
     bot_reply_timer: PerPlayer<Option<u32>>,
     bot_reply_stakes: PerPlayer<RematchStakes>,
 
@@ -359,6 +362,7 @@ impl DuelHost {
             bot_rematch_answered: PerPlayer::new(false, false),
             bot_rematch_replying: PerPlayer::new(false, false),
             bot_offer_timer: PerPlayer::new(None, None),
+            bot_leave_timer: PerPlayer::new(None, None),
             bot_reply_timer: PerPlayer::new(None, None),
             bot_reply_stakes: PerPlayer::new(STAKE_NORMAL, STAKE_NORMAL),
             game,
@@ -432,7 +436,16 @@ impl DuelHost {
             DuelEvent::EmotesMuted => self.emotes_muted = true,
             DuelEvent::ResultRecorded => self.on_result_recorded(now),
             DuelEvent::RematchOffered { from, stakes } => self.on_rematch_offered(from, stakes, now),
-            DuelEvent::RematchSent { home } => self.bot_rematch_replying[home] = false,
+            DuelEvent::RematchSent { home } => {
+                self.bot_rematch_replying[home] = false;
+                // R3213000: a reply that kept the bot past its linger ends its stay as it lands.
+                if self.finished
+                    && !self.stopped
+                    && self.bot_rematch[home].is_some_and(|linger| now >= linger.until)
+                {
+                    self.emit(DuelOutput::PresenceChanged);
+                }
+            }
             DuelEvent::Stop => self.on_stop(),
         }
         self.take_out()
@@ -800,6 +813,17 @@ impl DuelHost {
                     stakes: STAKE_NORMAL,
                     reply: false,
                 });
+            }
+            TimerKey::BotLeaves { player } => {
+                if self.bot_leave_timer[player] != Some(id) {
+                    return;
+                }
+                self.bot_leave_timer[player] = None;
+                // R3213000: the bot is gone as its linger ends, unless its reply is on its way, which
+                // keeps it until the reply lands (`RematchSent`).
+                if !self.stopped && !self.bot_rematch_replying[player] {
+                    self.emit(DuelOutput::PresenceChanged);
+                }
             }
             TimerKey::BotReply { player } => {
                 if self.bot_reply_timer[player] != Some(id) {
@@ -1373,6 +1397,11 @@ impl DuelHost {
                     plan,
                     until: at + plan.linger_ms,
                 });
+                // R3213000: the end of the linger is a change in who is here, which the seats are told.
+                self.bot_leave_timer[home] = Some(
+                    self.fx
+                        .set(TimerKey::BotLeaves { player: home }, at + plan.linger_ms),
+                );
             }
         }
     }

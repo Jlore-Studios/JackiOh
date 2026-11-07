@@ -7,13 +7,14 @@
 // are ⋯'s menu rows (`MatchMenu.tsx`). A hovered or selected hand card rings the cards its preview names (#991, SPEC §10.10).
 // R1297000: the viewer's half wears the wearer's playmat and backdrop. R1834004: an online board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts).
 
-import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useCallback, useContext, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
 import { animTestid } from "./animations.ts";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
 import { CatalogContext, MatchCardsProvider, type CardLookup } from "./catalog.ts";
+import { RIFFLE_LEAVES } from "./config.ts";
 import {
   LANES,
   NO_HIGHLIGHT,
@@ -35,6 +36,7 @@ import Marketplace from "./Marketplace.tsx";
 import MatchMenu from "./MatchMenu.tsx";
 import { usePhoneBar } from "./phoneBar.ts";
 import { offerDrawControlText } from "./DrawOffer.tsx";
+import CornerProps from "./arena/CornerProps.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
@@ -63,6 +65,7 @@ import "./board.css";
 import "./table.css";
 import "./highlights.css";
 import "./inspectable.css";
+import "./arena/arena.css";
 
 /** Top to bottom in every lane column (BUILD M5-T1). */
 const FIELD_ROWS: readonly { side: Side; row: Row }[] = [
@@ -296,6 +299,7 @@ function Pile({
   plays,
   back,
   children,
+  riffle = false,
 }: {
   label: string;
   regionId: string;
@@ -310,6 +314,8 @@ function Pile({
   back?: string;
   /** R318: the pile's overflow notice (OverflowNotices.tsx), drawn inside it. */
   children?: ReactNode;
+  /** #3347: a Deck pile draws the leaves its riffle plays with; board.css shows them only while the game marks it. */
+  riffle?: boolean;
 }): ReactElement {
   const lookup = useContext(CatalogContext);
   const hoverPreviews = useSetting("hoverPreviews");
@@ -372,6 +378,13 @@ function Pile({
         <span className="pile-n" data-testid={testId}>
           {count}
         </span>
+        {riffle ? (
+          <span className="pile-riffle" aria-hidden="true">
+            {Array.from({ length: RIFFLE_LEAVES }, (_unused, k) => (
+              <i key={k} className="pile-riffle-leaf" style={{ "--k": k } as CSSProperties} />
+            ))}
+          </span>
+        ) : null}
         {children}
       </span>
       {inspect.overlay}
@@ -449,6 +462,7 @@ function Seat({
             ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view, ...(back === undefined ? {} : { back }) } }
             : {})}
           back={back}
+          riffle
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
           {restingCount !== null && (
@@ -527,7 +541,7 @@ function ControlButton({
   return (
     <button
       type="button"
-      className={cx("control", `control-${control}`)}
+      className={cx("control", `control-${control}`, control === "end-turn" && "button-primary")}
       data-testid={testId}
       title={title}
       data-legal={legalAttr(legal)}
@@ -566,6 +580,7 @@ export default function Board({
   market,
   showOfferDraw = true,
   sandDisabled = false,
+  draining = false,
   onClick,
   onControl,
   emotes,
@@ -717,6 +732,9 @@ export default function Board({
         <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
           {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
           <SandSurface field={field} disabled={sandDisabled} table={table} theirTable={theirTable} />
+          {/* R3348001: each half's playmat props, from its seat's raw slot (the default mat has props too). The viewer's own answer taps, quietly while the queue drains; the opponent's are still. */}
+          <CornerProps mat={slots.table} half="yours" draining={draining} />
+          <CornerProps mat={theirSlots.table} half="theirs" />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
               {FIELD_ROWS.map((slot) => (

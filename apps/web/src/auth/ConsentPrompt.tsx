@@ -178,7 +178,7 @@ export default function ConsentPrompt({ token, me, onAnswered }: ConsentPromptPr
                 {t(error)}
               </p>
             ) : null}
-            <button type="submit" data-testid={consentTestid.submit} disabled={outcome === "posting"}>
+            <button type="submit" className="button-primary" data-testid={consentTestid.submit} disabled={outcome === "posting"}>
               {outcome === "posting" ? t("Saving…") : t("Continue")}
             </button>
           </form>

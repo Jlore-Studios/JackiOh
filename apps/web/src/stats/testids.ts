@@ -15,7 +15,7 @@ export const statsTestid = {
   gamesPanel: "stats-games-panel",
   gamesFew: "stats-games-few",
   gamesRetry: "stats-games-retry",
-  /** R1973002: the patch bar; R3324000: its patch tabs (each with `data-patch`) and a collecting patch's message. */
+  /** R1973002: the patch bar; R3324000: its patch tabs (a Segmented's options) and a collecting patch's message. */
   patchBar: "stats-patch-bar",
   patchTab: "stats-patch-tab",
   patchPrevious: "stats-patch-previous",

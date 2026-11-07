@@ -131,6 +131,10 @@ function endedOn(record: RunRecord): string {
 function expectRunDetails(record: RunRecord, time: string): void {
   const dialog = screen.getByRole("dialog", { name: `Run ${record.seed}` });
   expect(dialog).toHaveAttribute("aria-modal", "true");
+  // R3221000: it closes by the dialog's ✕, which holds the focus from the start.
+  const close = within(dialog).getByTestId(dungeonStatsTestid.dialogClose);
+  expect(close).toHaveAccessibleName("Close");
+  expect(close).toHaveFocus();
   const meta = within(dialog).getByTestId(dungeonStatsTestid.detailMeta);
   for (const text of [
     record.seed,

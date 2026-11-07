@@ -18,6 +18,7 @@ import {
   FX_PARTICLE_CAP_MIN,
   FX_PARTICLE_CAP_MOBILE,
 } from "./constants.ts";
+import { dropPointOfTestid } from "../game/drag/landing.ts";
 import { landingBox, mountDomEffect, mountHold, type DomEffect, type DomEffectBoxes } from "./dom.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
@@ -240,7 +241,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "callout":
       case "takeover":
       case "setPiece":
-      case "launch": {
+      case "launch":
+      case "ship": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };
@@ -297,7 +299,13 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const sourceBox = source !== null ? boxOfElement(source) : null;
         const copied = sourceBox !== null ? source : null;
         // R502: an empty `from` still supplies the stand-in's origin.
-        const from = sourceBox ?? (source === null && cue.from !== null ? measure(cue.from) : null);
+        const measured = sourceBox ?? (source === null && cue.from !== null ? measure(cue.from) : null);
+        // #3347: a card dropped from a drag flies on from where the pointer let go, not from its place in the fan.
+        const dropPoint = cue.from !== null && cue.from.kind === "testid" ? dropPointOfTestid(cue.from.testid) : null;
+        const from =
+          dropPoint !== null && measured !== null
+            ? { x: dropPoint.x - measured.width / 2, y: dropPoint.y - measured.height / 2, width: measured.width, height: measured.height }
+            : measured;
         const parent = copied?.parentElement ?? null;
         const font = parent !== null ? (parent.ownerDocument.defaultView?.getComputedStyle(parent).fontSize ?? null) : null;
         // Track only board movement; translate same-size stand-ins without layout.
@@ -395,11 +403,16 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         card.setAttribute("data-fx-pulled", "true");
         card.style.setProperty("--fx-pull-x", `${dx.toFixed(1)}px`);
         card.style.setProperty("--fx-pull-y", `${dy.toFixed(1)}px`);
+        // R3338000: a card drawn in its turn waits for it, and takes its share of the hold to get there.
+        if (cue.staggerMs !== undefined) card.style.setProperty("--fx-pull-delay", `${String(Math.max(0, cue.staggerMs))}ms`);
+        if (cue.travelMs !== undefined) card.style.setProperty("--fx-pull-ms", `${String(Math.max(0, cue.travelMs))}ms`);
         staged.push({
           undo: () => {
             card.removeAttribute("data-fx-pulled");
             card.style.removeProperty("--fx-pull-x");
             card.style.removeProperty("--fx-pull-y");
+            card.style.removeProperty("--fx-pull-delay");
+            card.style.removeProperty("--fx-pull-ms");
           },
           expiresAt,
         });

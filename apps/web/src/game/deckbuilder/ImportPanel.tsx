@@ -160,7 +160,7 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
       <div className="ws-actions">
         <button
           type="button"
-          className="ws-action ws-action--primary"
+          className="ws-action button-primary"
           data-testid={DECK_IMPORT_SUBMIT}
           disabled={decoded === null || !decoded.ok || atCap}
           aria-describedby={atCap ? reasonId : undefined}
@@ -171,7 +171,7 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
         >
           {t("Import as new deck")}
         </button>
-        <button type="button" className="ws-action" data-testid={DECK_IMPORT_CANCEL} onClick={onCancel}>
+        <button type="button" className="ws-action button-secondary" data-testid={DECK_IMPORT_CANCEL} onClick={onCancel}>
           {t("Cancel")}
         </button>
       </div>

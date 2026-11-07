@@ -16,6 +16,7 @@ import { SAND_FEEL } from "./SandSurface.tsx";
 import { LANES, NO_HIGHLIGHT, testid, type ClickTarget, type Highlight } from "./contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { stubPhoneBar } from "../test/phoneBar.ts";
+import { readSheet } from "../test/setup.ts";
 
 const FIELD_SLOTS = [
   { side: "opponent", row: "backrow" },
@@ -73,6 +74,42 @@ describe("Board", () => {
     active.rerender(<Board view={{ ...view, active: view.opponent.player }} highlight={NO_HIGHLIGHT} />);
     expect(screen.getByTestId(testid.endTurn)).toHaveTextContent("Enemy turn");
     expect(screen.getByTestId(testid.endTurn)).toBeDisabled();
+  });
+
+  it("#3219 a locked End turn is the real disabled, so it keeps the raised face main drew it with", () => {
+    // End turn is a `button-primary`, whose disabled rule draws it unlit. A locked End turn
+    // (nothing legal, as while an animation plays) carries `disabled` and not `aria-disabled`
+    // alone, so main's gold rule, `:not(:disabled)`, never drew it either: it fell to the bare
+    // `button` rule's raised face, which the disabled primary repeats. (jsdom weighs a selector list
+    // by its heaviest selector, so its cascade cannot judge this; the attributes and the faces can.)
+    const view = fullBoardView();
+    const states = [
+      { view, highlight: highlightOf([testid.endTurn]) },
+      { view, highlight: { ...highlightOf([testid.endTurn, testid.hero("you")]), glow: new Set([testid.power]) } },
+      { view, highlight: NO_HIGHLIGHT },
+      { view: { ...view, active: view.opponent.player }, highlight: NO_HIGHLIGHT },
+    ].map((props) => {
+      const board = render(<Board {...props} />);
+      const endTurn = screen.getByTestId(testid.endTurn);
+      const seen = [
+        endTurn.getAttribute("data-turn-state"),
+        endTurn.classList.contains("button-primary") ? "primary" : "no role",
+        endTurn.hasAttribute("disabled") ? "disabled" : "live",
+        endTurn.getAttribute("aria-disabled") ?? "-",
+      ].join(" ");
+      board.unmount();
+      return seen;
+    });
+    expect(states).toEqual(["waiting primary live -", "ready primary live -", "locked primary disabled true", "enemy primary disabled true"]);
+
+    const buttons = readSheet("src/buttons.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const body = (selector: string): string => buttons.split(`\n${selector} {\n`)[1]?.split("}")[0] ?? "";
+    const bare = body("button,\n.button-secondary");
+    const unlit = body('.button-primary:is(:disabled, [aria-disabled="true"])');
+    expect(bare).toContain("border: 1px solid var(--line-bright);");
+    expect(bare).toContain("background: var(--bg-raised);");
+    expect(unlit).toContain("border-color: var(--line-bright);");
+    expect(unlit).toContain("background: var(--bg-raised);");
   });
 
   it("depresses the physical End turn mechanism only when it dispatches", () => {

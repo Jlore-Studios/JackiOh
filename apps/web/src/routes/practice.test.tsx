@@ -1722,6 +1722,10 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     expect(screen.getByTestId(T.leaveStay)).toHaveFocus();
     expect(screen.getByTestId(T.leaveSave)).toHaveTextContent("Save and leave");
     expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave without saving");
+    // #3219: leaving without saving is the danger role, Keep playing the primary, Save the secondary.
+    expect(screen.getByTestId(T.leaveConfirm)).toHaveClass("button-danger");
+    expect(screen.getByTestId(T.leaveStay)).toHaveClass("button-primary");
+    expect(screen.getByTestId(T.leaveSave)).toHaveClass("button-secondary");
     cleanup();
 
     visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
@@ -1732,6 +1736,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     expect(lessonLeave).toHaveAttribute("data-can-save", "false");
     expect(screen.queryByTestId(T.leaveSave)).toBeNull();
     expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave game");
+    expect(screen.getByTestId(T.leaveConfirm)).toHaveClass("button-danger");
   });
 
   it("R765 Save and leave from New game keeps the game: the setup shows its banner, and so does the next visit, with no resume", async () => {
@@ -2791,6 +2796,7 @@ describe("practice plays on the full board, with sound and settings", () => {
         };
       },
       musicOutput: () => null,
+      sfxOutput: () => null,
       subscribeState: () => () => undefined,
       dispose: () => undefined,
       playSfx: () => true,

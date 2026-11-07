@@ -147,6 +147,13 @@ export const MUSIC_DUCK_RELEASE_TC_S = 0.25;
 export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "victory", "defeat"];
 /** The field's taps (game/SandSurface.tsx TAP_SFX, #1954): every press sounds, past SFX_RETRIGGER_MS and SFX_MAX_VOICES. */
 export const RAPID_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["sand", "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"]);
+/**
+ * #3347: a deck's riffle sounds this long after the shuffle it follows begins, the length of the pile's
+ * `shuffledIn` or `traded` motion (game/animations.ts), so the sound lands with the leaves.
+ */
+export const RIFFLE_SOUND_DELAY_MS = 300;
+/** R3348001: how much of its gain a quiet cue (`SfxParams.quiet`) keeps. */
+export const QUIET_SFX_GAIN = 0.35;
 /** Focus: how fast the music fades out when the page is hidden or blurred, and back. */
 export const MUSIC_FOCUS_TC_S = 0.15;
 /** Low health: the viewer's hero at or under this fraction of HERO_HEALTH plays the urgency track. */
@@ -219,6 +226,16 @@ export const MUSIC_INTRO_DECODED_MAX = 4;
  */
 export const MUSIC_INTRO_MIN_S = 3;
 export const MUSIC_INTRO_MAX_S = 12;
+/**
+ * R3332002: a Legendary's or a Mythic's play sting is the opening of its own intro, cut to this span
+ * (the shared `entrance` sting's) when the intro itself will not play: dynamic music off, or the music
+ * at zero. It plays on the effects bus, ducking nothing.
+ */
+export const MUSIC_STING_S = 1.4;
+/** R3332002: the sting's last this-many seconds fade it out, so the cut never clicks. */
+export const MUSIC_STING_FADE_S = 0.3;
+/** R3332002: the sting's gain on the effects bus, level with the effects around it (an intro sits above them). */
+export const MUSIC_STING_GAIN = 0.6;
 /**
  * R2722000: a Legendary's whole file runs at most this, and every Mythic's longer (tracks.mjs
  * INTRO_LEGENDARY_MAX_S), so a Mythic's entrance always outlasts a Legendary's.

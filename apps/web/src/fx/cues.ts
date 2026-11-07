@@ -33,6 +33,9 @@ import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
 import { planSetPiece } from "./setPieces.ts";
+import { planBattleship } from "./battleship.ts";
+import { planTerminus, planTerminusFollow } from "./terminus/index.ts";
+import { shiftCues } from "./terminus/build.ts";
 import { planStarship } from "./starship.ts";
 import { shotCue } from "./stage.ts";
 import { entranceCues, entranceEchoMs, entranceLandMs } from "./takeover.ts";
@@ -690,9 +693,12 @@ const shuffle: Recipe = (event, p) => {
     ];
   }
   if (event.type !== "shuffledIn") return [];
-  const library = animTestid.library(sideOf(p.view, event.player));
+  const side = sideOf(p.view, event.player);
+  const library = animTestid.library(side);
+  // #3347: a mulligan's returned cards fly into the deck from their hand (a back, whichever seat watches).
+  const from = p.view.phase === "mulligan" ? anchor(animTestid.hand(side)) : viewportCenter();
   return [
-    ghost(p.D, viewportCenter(), anchor(library)),
+    ghost(p.D, from, anchor(library)),
     burst(p.env.intensity, "arcane", anchor(library), "point", p.D, "shuffleArcane"),
   ];
 };
@@ -1196,17 +1202,30 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const motif = planCardMotif(entry, view, env);
   // R2800000: a board clear's set piece draws its wipe's removals in place of their own rows.
   const setPiece = planSetPiece(entry, view, env);
+  // R3338000: a Terminus card's signature draws its run in place of their own rows, as its planner says.
+  const terminus = planTerminus(entry, view, env);
   // R2801000: so does the Starship, its fuse run's fusions and its launch.
   const starship = planStarship(entry, view, env);
+  // R3336000: and the Drone Battleship's layers, the Shield's redirect and absorbed hits.
+  const battleship = planBattleship(entry, view, env);
   const replaced = (event: GameEvent): boolean =>
-    motif?.replaces.has(event) === true || setPiece?.replaces.has(event) === true || starship?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(starship?.cues ?? [])];
+    
+    motif?.replaces.has(event) === true ||
+    setPiece?.replaces.has(event) === true ||
+    terminus?.replaces.has(event) === true ||
+    starship?.replaces.has(event) === true ||
+    battleship?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? [])];
   if (entry.sweep !== undefined) {
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
   }
   if (entry.zone !== undefined) return zoneCues(entry, view, env);
-  if (entry.cast !== undefined) cues.push(...castCues(entry, view, env));
+  if (entry.cast !== undefined) {
+    // R3338000: a cast a Terminus card's signature holds (The Big Crunch's first) flares once the hold is over.
+    const wait = entry.signature === undefined ? 0 : (entry.setPiece?.holdMs ?? 0);
+    cues.push(...shiftCues(castCues({ ...entry, durationMs: entry.durationMs - wait }, view, env), wait));
+  }
   // R2789000: a combat keyword's beat decorates its entry, and draws a hit's row in its place where it says so.
   const beats = planBeats(entry, view, env);
   cues.push(...beats.cues);
@@ -1215,7 +1234,9 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const systemSkip = new Set<GameEvent>([
     ...(motif?.replaces ?? []),
     ...(setPiece?.replaces ?? []),
+    ...(terminus?.replaces ?? []),
     ...(starship?.replaces ?? []),
+    ...(battleship?.replaces ?? []),
     ...beats.replaces,
   ]);
   const system = planSystemMoment(entry, view, env, systemSkip);
@@ -1235,6 +1256,8 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     if (tgt === null) continue;
     cues.push(...RECIPES[recipe](event, { entry, view, env, D: entry.durationMs, tgt }));
   }
+  // R3338000: the turn a Terminus card owed opening, and The Big Crunch's point over its play.
+  cues.push(...planTerminusFollow(entry, view, env));
   // R2722001: a Legendary's or a Mythic's entrance, and a Mythic's takeover of the board (takeover.ts).
   cues.push(...entranceCues(entry, env, entry.durationMs));
   return cues;

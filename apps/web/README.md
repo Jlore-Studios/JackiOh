@@ -29,6 +29,18 @@ enforces rules and never sees hidden information.** In practice:
   The other seat's is its backs (`game/OpponentChoice.tsx`, R2739000) when the view's `pending` carries `optionCount`: that many of the opponent's card backs, laid out as the bare picker over the waiting notice's lighter dim and in the middle of the screen at every width (a phone docks the chooser's picker to its bottom edge), with no words or control and "Your opponent is choosing…" as the dialog's name; without it, the notice. Online, the back the opponent's pointer or focus is on is outlined in their color, still (R2739001): an engine card picker but the mulligan sends its option's index as it changes and null as it leaves, folds or closes (`game/choiceHover.ts`, `net.ts`'s `choiceHover` frame), which the server relays to the opponent alone and drops when the count is not shown; a play's own picker, a replay's, hotseat and practice send none.
   A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
 
+The arena (`src/game/arena/`, R3348000, R3348001): a living playmat that is only ever the viewer's own, and that
+no rule reads. `SandSurface.tsx` answers a press on any tile with a press-in and a ripple in its half's playmat
+family and that family's sound, harder on a legal tile and with a haptic on touch, and never stops the press. Each
+of the ten playmats keeps two corner props (`CornerProps.tsx`, drawn by `PropArt.tsx`): a tap sounds and moves
+one, `CORNER_ESCALATE_TAPS` taps in a row give its payoff, each tap rolls `CORNER_RARE_CHANCE` from the client's
+own random source (`arenaRandom`, never the game's RNG) and four mats hide a tap sequence. The layer takes a mat id
+and nothing else: it imports nothing from `net/`, `wire/` or `replay/`, sends and logs nothing, and answers quietly
+while the animation queue drains. A prop that would cover a tile, a hand, a seat, the controls or the log, or leave
+the screen, is not drawn (`fit.ts`); a phone 840 high or more gives the field a strip of mat above and below its
+lanes for them (`arena.css`), a shorter one has none to give. Every number is in `arena/config.ts`, and `arena.css` states the same times
+(`arena/arenaCss.test.ts`).
+
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
 variable over weight, Latin subset, self-hosted in `public/fonts` with their licenses. Each is
@@ -45,7 +57,7 @@ writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws wh
 at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
 no screen shows, still use filters).
 
-The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, `buttons.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
@@ -92,9 +104,60 @@ Back or Account link, Friends, language button and settings gear with one rule, 
 worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
 a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
 in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
-the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
-`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
-draws its own buttons.
+the replays and the deck screens are not `.tavern`, and the tavern's bare-button size rule and buttons.css's
+link-button skip `top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar
+(`placement="game"`) draws its own buttons.
+
+The buttons are four roles (#3219), each one skin in `src/buttons.css`, imported by `index.css` after the
+motion and drawn the same on every screen, in the tavern or not, on a menu or the board: `button-primary`
+(the one way on, `--primary-face`'s gold; the result panel's first action takes it by its place),
+`button-secondary` (on a `<button>` or an `<a>`), `button-danger` (`--danger`'s red, for the act that
+cannot be taken back: Concede, Delete account, Leave game, Leave fight) and `link-button` (a quiet text
+action). A `<button>` that names no role looks like the secondary. A control keeps only its own layout
+(size, margin, place), and the tavern only sizes its buttons. `src/buttons.test.ts` checks this: it draws
+each role inside and outside `.tavern`, finds no other sheet restating a role's skin or that of a one-off
+it replaced, and holds the button skins that remain no role's (the top bar's, card-like tiles, pressed
+toggles) to each sheet's count in `UNROLED`.
+
+The dialogs are one component (#3220, R3220000): `Dialog` in `src/game/Dialog.tsx`, drawn by
+`src/game/dialog.css`. A caller gives it its `role` (`dialog` or `alertdialog`), its `h2` `title`, an
+optional `description` (the panel's accessible description), `onClose`, its `actions` (each a label, a
+role among `primary`, `secondary` and `danger`, an `onClick` and a testid), its `testid`, and optionally a
+`className` that restyles the panel only, `data-*` attributes, a `header` above the title, `children`
+under the line and a `footer` under the row. An `alertdialog` takes a `cancel` too, the safe choice, which
+is its close and draws no ✕; a `dialog` draws a ✕ named "Close" at its top right (`dialog-close`). The row
+runs in one order: the safe choice first, holding the focus, then the actions as given with a `danger` one
+moved last, at the right; three answers put the first on a row of its own, and at 360 px and under the
+row stacks in the same order. Its scrim is one color at `--z-dialog` (`surfaces.css`), and its keys are
+`useModalKeys`'s (`together/modalKeys.ts`), whose third argument, the control to focus, also gives the
+focus back to the opener on close unless the caller has moved it: Escape, Back (a layer) and a click on
+the scrim close it (not one whose press began in the panel, a selection dragged out, R3221000), and Tab
+stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
+`ConfirmLeaveFight` and `PracticeResult` draw through it; `PracticeResult` keeps its look through
+`practice-result`, and its ✕, Escape, Back and a click outside view the board.
+
+Since #3221 (R3221000) the menus' dialogs draw through it too: `SettingsPanel`, the friends panel
+(`FriendsButton`), `ChatPanel`, `ChallengeDialog`, `TokenOffer`'s and the shop's chase question, the
+account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, `FieldGuide`,
+`PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`, `DevButton`'s panel,
+`CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own `closeTestid` and
+`closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
+else the ✕), `panelRef`, a `title` with markup of its own, and answers that are `disabled` or `busy`
+(`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
+wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
+Friends, Chat). `DialogClose` is the ✕ alone, for an overlay that keeps its own body: the inspect
+overlay's `CardDetail` and its sheets (`InspectSheet`, `CardListSheet`, `FaceDownSheet`, the Stack's
+`StackSheet`), `HeroInspect` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
+Tab only while theirs is the top layer (`useBackLayer` returns whether it is, and opens its layer in a
+layout effect, so an Escape read as soon as the overlay is drawn finds it on top), so a dialog opened over
+another closes first. The inspect overlay, portalled after every dialog, draws at `--z-dialog` while it
+is the top layer (`useTopBackLayer`, as state) and, under a layer opened after it (a result that ends the
+game over a card's detail), carries `data-under` and comes down to `--z-toast`, under every dialog, so the
+dialog seen is the one that takes the keys. `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
+Tab skips a hidden panel and a control at `tabindex="-1"`. `src/dialogs.test.ts` holds the sources to
+it: no `"Escape"` comparison outside the shared hooks and its named exceptions, no scrim outside
+`dialog.css` that paints itself or takes a raw layer, one ✕ glyph, no button labelled a text Close, and
+the inline confirms' safe choice first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
@@ -199,7 +262,7 @@ A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` 
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms, the practice result and, since #3221 (R3221000), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown and the menus' other dialogs, through it) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -253,7 +316,7 @@ present for exactly that window.
   route for exactly the window) shows it on both sides, the seat that is ready included, as
   `data-kind="mulligan"` over `MULLIGAN_CLOCK_MS`, with no turn clock.
 
-**Concede asks first** (`ConfirmConcede.tsx`, mounted by `Game.tsx`, so every mode has it). The
+**Concede asks first** (`ConfirmConcede.tsx`, drawn through `Dialog.tsx` and mounted by `Game.tsx`, so every mode has it). The
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
@@ -266,6 +329,23 @@ intent (after a card that gave an extra turn the second End turn was legal and e
 A new view or an `error` that gains text releases it; the error line clearing does not. Everything else, the
 board click and drag paths included, goes straight to `onAction`. Hotseat's views are new objects on every
 render, so it never blocks.
+
+**Card motion** (#3347). Cards move like cards, all client-side presentation keyed on public events and the
+player's own input (CLAUDE.md rule 7); the engine sends nothing new. A card played from the hand flies on an
+arc to its tile (the effects layer's stand-in, `fx/stage.ts`), starting where a drag let go
+(`game/drag/landing.ts` `dropPointOfTestid`) and turned toward the tile (`--fx-rot`), inside the play row's own
+time. A deck riffles once per action, after its last `shuffledIn` or `traded` (`game/animations.ts`
+`riffleEntries`, `RIFFLE_MS`, drawn by `Board.tsx`'s `pile-riffle` leaves); a mulligan's returned cards fly from
+their hand into it. The opening hand (a game whose first view is in the mulligan phase, `game/opening.ts`) is
+dealt a card at a time from the deck, `DEAL_STAGGER_MS` apart, the opponent's as backs; a tap ends it and goes
+on to what it was on. The fan springs where it reflows on `translate` (`game/handSpring.ts`,
+`--ease-overshoot`), and a hovered card parts its neighbours. A dragged card's ghost leans with the pointer's
+speed up to `DRAG_TILT_MAX_DEG` and settles flat, the tile under it lifts (`data-drag-over`), and a card let go
+over nothing springs back to the hand (`game/drag/tilt.ts`). Pick-up, drag-over, drop, return, deal and riffle
+each have a soft sound (`audio/sfx.ts`), and lifting a card buzzes a phone (`haptics/`). Speed scales it all
+(R201); `game/cardMotion.ts` gives the level: reduced motion is `still` (every move snaps to its end, no flight, no
+deal), effects off is `calm` (the sounds stay, the flourishes go), the rest `full`. `Game.tsx` writes it as
+`data-card-motion` and board.css reads it.
 
 **Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
@@ -384,7 +464,7 @@ other phones) they overlap the turned card's top-left, its attack gem and the st
 difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
-the unit's oval and the backrow's outline keep a card's shape.
+the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
@@ -450,7 +530,9 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000) other than `none` (`galleryPlayOf`): a cast,
 a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/motifs/gallery.ts`), a set piece or an aura
 plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
-card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It calls no engine.
+card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It also lists every card
+whose entry is its signature by set (R3332000), each played over the board its entrance reads (Felinor Fiender's over
+three Felinors, R3332001). It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -562,7 +644,8 @@ routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, bot
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
                         R338): choose a deck that has not won, lock it in, wait sealed; one clock
 routes/SeriesBanner.tsx the board's banner for a series game, each side's won decks as pips, and its
-                        "Continue" once the game is over
+                        "Continue" once the game is over; while the match socket is open it takes the
+                        socket's `series` frames and reads nothing after the result (R3213000)
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing, on Constructed or All
                         Random by its switch (`?ladder=random`, R2778000); rank/rank.ts says
@@ -742,7 +825,8 @@ sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.t
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open and the social socket is
+                         down, and read on its friend's chat push while it is live (R3214000); a message holding
                          this site's room link draws a Join button that navigates in-app (R2094000);
                          a send shows at once, sends go one at a time, a failed one offers Retry and
                          Discard (R2120000)
@@ -759,7 +843,15 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
                          GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
-                         hidden unless a challenge of the player's is open, R3205000)
+                         hidden unless a challenge of the player's is open, R3205000); it holds the tab's
+                         social socket and sends no read while it is live, and hands its chat and
+                         friends pushes to onChatPush and onFriendsPush (R3214000)
+together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
+                         (R1379000), the server's social read and chat and friends nudges pushed over it,
+                         the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
+                         token and a refusal final for its token (R1115000), a socket replaced once the
+                         session holds another token, its frames never shown; off under vitest
+                         unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden
@@ -1044,6 +1136,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `music-assets.test.ts` calls.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
+  A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
+  first `MUSIC_STING_S` play on the effects bus instead, and the shared `entrance` sting plays only for one with no intro.
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral

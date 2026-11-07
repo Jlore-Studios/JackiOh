@@ -2,12 +2,14 @@
 // and draw retry the same lesson. It reads only the human's `PlayerView` (CLAUDE.md rule 7).
 // R314, R2205002: a win names each mechanic the game did not show found, with its rule.
 // R2434002: a concede is the one way to lose a lesson (R2201000); this device keeps it as lost until won.
+// R3221000: it draws through Dialog.tsx as the practice result does (R3220000), a layer of its own.
 
-import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
+import { useEffect, useId, type CSSProperties, type ReactElement } from "react";
 
 import { DIFFICULTIES, TURN_CAP_PLAYER_TURNS } from "@jackioh/engine/config";
 import type { PlayerId, PlayerView } from "@jackioh/shared";
 
+import { Dialog, type DialogAction } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "../practice/config.ts";
 import { outcomeOf } from "../practice/PracticeResult.tsx";
@@ -139,8 +141,6 @@ export function TutorialResult({
   useLocale();
   const outcome = outcomeOf(result, viewer);
   const won = outcome === "win";
-  const titleId = useId();
-  const primary = useRef<HTMLButtonElement>(null);
 
   const conceded = outcome === "loss" && result.reason === "concede";
   useEffect(() => {
@@ -153,99 +153,50 @@ export function TutorialResult({
     if (won && named !== "") markFound(named.split(" "));
   }, [won, named]);
 
-  useEffect(() => {
-    primary.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") onViewBoard();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onViewBoard]);
-
   let title: string;
   let line: string;
-  let primaryButton: ReactElement;
+  let primary: DialogAction;
   if (!won) {
     title = conceded ? t("Lesson lost") : t("Not quite");
     line = notQuiteLine(outcome, result.reason);
-    primaryButton = (
-      <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.retry} onClick={onRetry}>
-        {t("Retry")}
-      </button>
-    );
+    primary = { label: t("Retry"), kind: "primary", onClick: onRetry, testid: tutorialTestid.retry };
   } else if (next === undefined) {
     title = t("Tutorial complete");
     line = t("You have finished every lesson. The whole game is yours: try it against the AI.");
-    primaryButton = (
-      <button
-        ref={primary}
-        type="button"
-        className="practice-play"
-        data-testid={tutorialTestid.playPractice}
-        onClick={onPlayPractice}
-      >
-        {t("Play a practice game")}
-      </button>
-    );
+    primary = { label: t("Play a practice game"), kind: "primary", onClick: onPlayPractice, testid: tutorialTestid.playPractice };
   } else {
     title = t("Lesson complete");
     line = unlockedNow
       ? t("Lesson {number}: {title} is unlocked.", { number: next.number, title: t(next.title) })
       : t("Next up: Lesson {number}: {title}.", { number: next.number, title: t(next.title) });
-    primaryButton = (
-      <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.next} onClick={onNext}>
-        {t("Next lesson")}
-      </button>
-    );
+    primary = { label: t("Next lesson"), kind: "primary", onClick: onNext, testid: tutorialTestid.next };
   }
 
+  // R3221000: the ✕, Escape, Back and a click outside view the board, as View the board does; the
+  // first answer takes the focus.
   return (
-    <div className="practice-result-scrim tutorial-result-scrim" data-outcome={outcome}>
-      <section
-        className="practice-result tutorial-result"
-        data-testid={tutorialTestid.result}
-        data-outcome={outcome}
-        data-lesson={lesson.id}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <Emblem won={won} number={lesson.number} />
-        <h2 className="practice-result__title tutorial-result__title" id={titleId}>
-          {title}
-        </h2>
-        <p className="practice-result__reason">{line}</p>
-        {won ? null : <p className="tutorial-result__tip">{t("Tip: {tip}", { tip: t(lesson.retryTip) })}</p>}
-        {won && missed.length > 0 ? <StillToFind ids={missed} /> : null}
-        {won && next === undefined ? <WhatsNext /> : null}
-        <p className="practice-result__meta">
-          {t("Tutorial · Lesson {number}: {title}", { number: lesson.number, title: t(lesson.title) })}
-        </p>
-        <div className="practice-result__actions">
-          {primaryButton}
-          <button
-            type="button"
-            className="practice-result__secondary"
-            data-testid={tutorialTestid.back}
-            onClick={onBack}
-          >
-            {t("Back to lessons")}
-          </button>
-        </div>
-        <button
-          type="button"
-          className="link-button practice-result__view"
-          data-testid={tutorialTestid.viewBoard}
-          onClick={onViewBoard}
-        >
+    <Dialog
+      role="dialog"
+      testid={tutorialTestid.result}
+      className="practice-result tutorial-result"
+      data={{ "data-outcome": outcome, "data-lesson": lesson.id }}
+      header={<Emblem won={won} number={lesson.number} />}
+      title={title}
+      description={line}
+      onClose={onViewBoard}
+      actions={[primary, { label: t("Back to lessons"), kind: "secondary", onClick: onBack, testid: tutorialTestid.back }]}
+      footer={
+        <button type="button" className="link-button practice-result__view" data-testid={tutorialTestid.viewBoard} onClick={onViewBoard}>
           {t("View the board")}
         </button>
-      </section>
-    </div>
+      }
+    >
+      {won ? null : <p className="tutorial-result__tip">{t("Tip: {tip}", { tip: t(lesson.retryTip) })}</p>}
+      {won && missed.length > 0 ? <StillToFind ids={missed} /> : null}
+      {won && next === undefined ? <WhatsNext /> : null}
+      <p className="practice-result__meta">
+        {t("Tutorial · Lesson {number}: {title}", { number: lesson.number, title: t(lesson.title) })}
+      </p>
+    </Dialog>
   );
 }

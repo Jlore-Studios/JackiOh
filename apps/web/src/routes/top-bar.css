@@ -8,8 +8,9 @@
    Deliberately not under `.tavern`: the replays and the deck screens are `.app-shell` pages with no
    `.tavern` root, and their bar is the same one (the nav carries the brass colors itself,
    auth/tavern.css). `:is(bar) .top-bar-button` weighs 0,2,0, above `.app-shell button` and every
-   control's own base rule. The tavern's wood-button and text-link rules (auth/tavern.css) would
-   outweigh it, so they skip `.top-bar-button` through a `:where(:not(...))` that adds no weight. */
+   control's own base rule. The tavern's bare-button size and text-link rules (auth/tavern.css) would
+   outweigh it, so they skip `.top-bar-button` through a `:where(:not(...))` that adds no weight, as
+   buttons.css's `link-button` skin does. */
 
 :is(.screen-nav, .landing-corner) .top-bar-button {
   min-height: var(--hit-min);

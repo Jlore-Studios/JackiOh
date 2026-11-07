@@ -66,7 +66,10 @@ const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 
 /** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
-  (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
+  (sheet) =>
+    sheet === "index.css" ||
+    sheet === "buttons.css" ||
+    (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
 /** Every other sheet's own sizes and faces: one that loses some lowers its number, and none gains one. */
@@ -77,7 +80,7 @@ const UNSCALED: Record<string, number> = {
   "auth/consent.css": 3,
   "auth/tavern.css": 20,
   "auth/two-step.css": 1,
-  "cards/cards.css": 29,
+  "cards/cards.css": 31,
   "cards/cardstate.css": 8,
   "cards/inspect/inspect.css": 34,
   "cards/inspect/list-play.css": 1,
@@ -97,7 +100,7 @@ const UNSCALED: Record<string, number> = {
   "packs/pack-object.css": 1,
   "packs/packs.css": 4,
   "patches/patches.css": 37,
-  "practice/practice.css": 36,
+  "practice/practice.css": 33,
   "practice/sandbox.css": 3,
   "routes/account.css": 3,
   "routes/game-banner.css": 5,
@@ -106,11 +109,11 @@ const UNSCALED: Record<string, number> = {
   "routes/privacy.css": 3,
   "routes/purchases.css": 2,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 27,
+  "routes/stats.css": 23,
   "settings/changeEmail.css": 1,
-  "settings/settings.css": 12,
+  "settings/settings.css": 10,
   "shop/shop.css": 2,
-  "together/together.css": 9,
+  "together/together.css": 6,
   "tutorial/path-visibility.css": 3,
   "tutorial/tutorial.css": 31,
 };

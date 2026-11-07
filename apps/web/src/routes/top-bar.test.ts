@@ -67,10 +67,11 @@ describe("#3189 the top bar's one skin", () => {
     }
   });
 
-  it("#3189 the tavern's wood-button and text-link rules skip the bar's buttons, at no weight", () => {
+  it("#3189 the tavern's size rules and buttons.css's link-button skip the bar's buttons, at no weight", () => {
     const tavern = sheet("auth/tavern.css");
-    expect(tavern.match(/button:where\(:not\(\.top-bar-button\)\):not\(\.link-button\)/g)).toHaveLength(2);
-    expect(tavern.match(/\.link-button:where\(:not\(\.top-bar-button\)\)/g)).toHaveLength(2);
+    expect(tavern.match(/button:where\(:not\(\.top-bar-button\)\):not\(\.link-button\)/g)).toHaveLength(1);
+    expect(tavern.match(/\.link-button:where\(:not\(\.top-bar-button\)\)/g)).toHaveLength(1);
+    expect(sheet("buttons.css").match(/\.link-button:where\(:not\(\.top-bar-button\)\)/g)).toHaveLength(3);
   });
 
   it("#3189 the nav carries the brass colors, so a screen that is not .tavern draws them", () => {

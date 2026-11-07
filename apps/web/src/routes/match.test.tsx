@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { DISCONNECT_GRACE_SECONDS, MULLIGAN_CLOCK_MS, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
 
@@ -29,6 +29,7 @@ import { gifTestid } from "../replay/ShareGif.tsx";
 import { writeSettings } from "../settings/index.ts";
 import { sidelineTestid } from "../sideline/testids.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
+import { settle } from "../test/settle.ts";
 import { navTestid } from "./nav.tsx";
 
 vi.mock("../net/navigate.ts", async (importOriginal) => {
@@ -1354,6 +1355,115 @@ describe("the death screen's rematch offers (R672)", () => {
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
     expect(screen.queryByTestId("rematch-offer")).toBeNull();
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+  });
+});
+
+describe("R3213000 the post-game frames on the board", () => {
+  const PERIOD = SERIES_POLL_SECONDS * 1000;
+  const FINISHED = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
+
+  /** A series game's series in this status, at this game, as the R259 block's answer is shaped. */
+  function seriesAt(status: "playing" | "picking", gameNo: number): Record<string, unknown> {
+    const decks = [0, 1, 2].map((slot) => ({ slot, name: `Deck ${String(slot + 1)}`, cards: [], won: false, games: 0 }));
+    return {
+      id: "series-1",
+      status,
+      gameNo,
+      winsNeeded: SERIES_WINS_NEEDED,
+      maxGames: SERIES_MAX_GAMES,
+      pickDeadline: null,
+      now: 0,
+      currentMatchId: status === "playing" ? "m-1" : null,
+      ranked: true,
+      you: { seat: "p1", wins: gameNo - 1, trioName: "Main trio", decks, pick: null, autoPick: false },
+      opponent: { wins: 0, decks: decks.map(({ slot }) => ({ slot, won: false })), picked: false },
+      games: [],
+      result: null,
+    };
+  }
+
+  /** `/series` answers this series (or none), `/rematch` that the opponent is here; it returns the calls. */
+  function stubPostGameFetch(series: Record<string, unknown> | null): { rematch: () => number; series: () => number } {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify(
+              String(url).includes("/api/matches/m-1/rematch")
+                ? { youOffered: null, opponentOffer: null, opponentHere: true, matchId: null }
+                : String(url).includes("/api/matches/m-1/series")
+                  ? { series }
+                  : { version: "v1", defs: {} },
+            ),
+          ),
+      } as unknown as Response),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const count = (path: string) => (): number => fetchMock.mock.calls.filter(([url]) => String(url).includes(path)).length;
+    return { rematch: count("/api/matches/m-1/rematch"), series: count("/api/matches/m-1/series") };
+  }
+
+  function deliver(frame: Record<string, unknown>): void {
+    act(() => {
+      live().onmessage?.({ data: JSON.stringify(frame) });
+    });
+  }
+
+  function drop(): void {
+    act(() => {
+      live().onclose?.({ code: 1006, reason: "", wasClean: false });
+    });
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R3213000 while the socket pushes the rematch status, the board reads none through the result, and reads it once the socket drops", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const reads = stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: null, opponentOffer: 2, opponentHere: true, matchId: null, mode: "bo1" });
+    pushView(FINISHED);
+    await settle({ advance: 3 * PERIOD });
+
+    expect(reads.rematch()).toBe(0);
+    // The result panel draws the pushed offer.
+    expect(screen.getByTestId("rematch-incoming")).toHaveTextContent(/double-or-nothing/i);
+
+    drop();
+    await settle({ advance: 0 });
+    expect(reads.rematch()).toBe(1);
+  });
+
+  it("R3213000 while the socket pushes the series, the board reads it no more through the result, and reads it once the socket drops", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const reads = stubPostGameFetch(seriesAt("playing", 1));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "series", v: POST_GAME_FRAME_VERSION, series: seriesAt("playing", 1) });
+    await settle({ advance: 0 });
+    // The mount's read went out before the socket's greeting.
+    const mounted = reads.series();
+
+    pushView(FINISHED);
+    deliver({ type: "series", v: POST_GAME_FRAME_VERSION, series: seriesAt("picking", 2) });
+    await settle({ advance: 3 * PERIOD });
+
+    expect(reads.series()).toBe(mounted);
+    expect(screen.getByTestId("series-banner-continue")).toHaveTextContent("Continue to game 2");
+    expect(screen.getByTestId("series-banner")).toHaveTextContent("You 1 – 0 Opponent");
+    // A series game offers no rematch, so nothing reads one either.
+    expect(reads.rematch()).toBe(0);
+
+    drop();
+    await settle({ advance: 0 });
+    expect(reads.series()).toBe(mounted + 1);
+    await settle({ advance: PERIOD });
+    expect(reads.series()).toBe(mounted + 2);
   });
 });
 

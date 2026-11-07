@@ -22,7 +22,10 @@ const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//
 
 /** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
-  (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
+  (sheet) =>
+    sheet === "index.css" ||
+    sheet === "buttons.css" ||
+    (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
 /** The vocabulary's sizes: a new duration or curve raises its number in the same change. */
@@ -36,6 +39,8 @@ const CURVES = [...read("motion.css").matchAll(/^\s*--ease-([\w-]+):\s*(cubic-be
 const KEEP: Record<string, string[]> = {
   "game/activate.css": ["300ms"], // BUILD's `activated` row
   "game/aim/opponentAim.css": ["700ms", "900ms"], // loops
+  // #3348: a tile's ripple (TILE_FEEL.rippleMs, twice: the press-in and the ring), then the corner props' tap, payoff, rare and sequence (CORNER_*_MS in game/arena/config.ts).
+  "game/arena/arena.css": ["520ms", "520ms", "380ms", "900ms", "1600ms", "1400ms"],
   "game/board.css": [
     "90ms", // R434's flip stagger
     ...["420ms", "1600ms", "260ms", "520ms", "2400ms", "700ms"], // the table's tap marks
@@ -59,8 +64,8 @@ const KEEP: Record<string, string[]> = {
 
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
 const ANIM_SCALED: Record<string, number> = {
-  "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 12, "game/drag/blocked.css": 1, "game/facedown.css": 2,
-  "game/highlights.css": 2, "game/notices.css": 1, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
+  "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 13, "game/drag/blocked.css": 1, "game/facedown.css": 2,
+  "game/dialog.css": 1, "game/highlights.css": 2, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
 };
 
 /** Every other sheet's own durations (`ownTimes`) plus its transitions and animations that name no curve (`offCurve`), loops, art and the table's marks among them: one that moves onto motion.css lowers its number, and none gains one. */
@@ -89,13 +94,13 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "game/table.css": 27,
   "packs/pack-object.css": 12,
   "packs/packs.css": 4,
-  "practice/practice.css": 49,
+  "practice/practice.css": 42,
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,
   "routes/lobby.css": 14,
-  "routes/stats.css": 6,
-  "settings/settings.css": 14,
+  "routes/stats.css": 4,
+  "settings/settings.css": 12,
   "shop/shop.css": 1,
   "skeleton/skeleton.css": 2,
   "tutorial/tutorial.css": 20,

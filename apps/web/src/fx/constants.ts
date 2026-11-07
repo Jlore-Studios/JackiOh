@@ -16,6 +16,8 @@ export const FX_MIND_CONTROL_FLIGHT_FRACTION = 0.7;
 export const FX_FUSE_FLIGHT_FRACTION = 0.5;
 export const FX_SLAM_AT = 0.6;
 export const FX_HOLD_MAX_MS = 6000;           // a stage effect's safety cap; it normally ends when the board shows the next view (R200)
+export const FX_HOLD_TURN_DEG = 12;           // #3347: a stand-in flying in from the side starts turned this far toward its direction, and straightens as it lands
+export const FX_HOLD_TURN_PX = 240;           // #3347: the sideways distance from its zone at which a stand-in is turned the whole FX_HOLD_TURN_DEG
 export const FX_CONCEAL_AT = 0.9;             // an "after" conceal is set at 0.9 D, while the card's own motion still runs
 export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's center (< 1: they overlap)
 export const FX_LUNGE_MIN_PX = 26;            // = animations.css --lunge-distance (BUILD: at least 20 px)
@@ -232,6 +234,25 @@ export const FX_MOTIF_MIN_CARDS = 3;
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R3332000: the signature tier's loudness budgets, inside R200's FX_MAX_TAIL_MS, one set piece per action
+// and SET_PIECE_HOLD_CAP_MS (R2785000). A Legendary's signature ends within SIGNATURE_LEGENDARY_MAX_MS of
+// its play's start, a Mythic's, its takeover's hold included, within SIGNATURE_MYTHIC_MAX_MS. A Spell's, seen
+// only briefly, ends within SIGNATURE_SPELL_SHARE of its rarity's and shakes the loudest
+// (SIGNATURE_SPELL_MAX_TRAUMA); a permanent's (a Unit, a Field Spell, a Trap) at most
+// SIGNATURE_PERMANENT_MAX_TRAUMA. A signature aura's look stays within AURA_SIGNATURE_MAX_INTENSITY in its
+// mote alpha, its tint and its edge glow, the quietest once in play.
+export const SIGNATURE_LEGENDARY_MAX_MS = 1_600;
+export const SIGNATURE_MYTHIC_MAX_MS = 2_600;
+export const SIGNATURE_SPELL_SHARE = 0.75;
+export const SIGNATURE_SPELL_MAX_TRAUMA = 1;
+export const SIGNATURE_PERMANENT_MAX_TRAUMA = 0.8;
+export const AURA_SIGNATURE_MAX_INTENSITY = 0.8;
+// R3332001: Felinor Fiender's assembly (fx/cards/core/felinorFiender.ts). The first Felinor's streak of
+// cat light leaves at FX_FELINOR_STREAK_AT of D, each next one FX_FELINOR_STREAK_STEP later, all landing
+// at FX_SLAM_AT; at most FX_FELINOR_STREAKS_MAX streak, one per unit zone of a side.
+export const FX_FELINOR_STREAK_AT = 0.1;
+export const FX_FELINOR_STREAK_STEP = 0.08;
+export const FX_FELINOR_STREAKS_MAX = 5;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
 // AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
 // all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS
@@ -356,6 +377,54 @@ export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
 // Motion its still frame stands this long and holds nothing.
 export const FX_STARSHIP_TAIL_MS = 400;
 export const FX_STARSHIP_STILL_MS = 1_600;
+// R3336000: the Drone Battleship (fx/battleship.ts). The Shield's armor plates glow at most this many; where on
+// each layer's card its dome, its reactor core and its bay doors sit (fractions of the card).
+export const FX_SHIP_PLATES_MAX = 8;
+export const FX_SHIP_DOME_AT = { x: 0.5, y: 0.22 } as const;
+export const FX_SHIP_CORE_AT = { x: 0.5, y: 0.62 } as const;
+export const FX_SHIP_BAY_AT = { x: 0.5, y: 0.5 } as const;
+// R3336000: a hit the dome takes ripples this many rings, FX_SHIP_RIPPLE_STEP of the entry apart; a drone leaves
+// its bay at FX_SHIP_LAUNCH_AT of the entry and flies this much of it (an Interceptor fast, a Corvette heavy);
+// the deck beneath a breaking layer lights up at FX_SHIP_LIGHTS_AT.
+export const FX_SHIP_RIPPLES = 2;
+export const FX_SHIP_RIPPLE_STEP = 0.2;
+export const FX_SHIP_LAUNCH_AT = 0.1;
+export const FX_SHIP_INTERCEPTOR_FLIGHT = 0.45;
+export const FX_SHIP_CORVETTE_FLIGHT = 0.85;
+export const FX_SHIP_LIGHTS_AT = 0.5;
+// R3336000: a Battleship cue outlasts its entry by this much (inside FX_MAX_TAIL_MS, R200); the arrival is this
+// many beats, one per layer summoned (Drone Core X's warp, cards/stinkyscape/battleshipWarp.ts).
+export const FX_SHIP_TAIL_MS = 400;
+export const FX_SHIP_ARRIVAL_BEATS = 3;
+// R3336000: the board's shake: the hangar locking on, the dome's flare, an ordinary hit on the dome, a Corvette
+// landing, the reactor's pulse (times how far it has melted, 0 to 1), a deck shearing off and the reactor's blast.
+export const FX_SHIP_LOCK_TRAUMA = 0.35;
+export const FX_SHIP_DOME_TRAUMA = 0.3;
+export const FX_SHIP_HIT_TRAUMA = 0.25;
+export const FX_SHIP_CORVETTE_TRAUMA = 0.2;
+export const FX_SHIP_TICK_TRAUMA = 0.3;
+export const FX_SHIP_BREAK_TRAUMA = 0.45;
+export const FX_SHIP_BLAST_TRAUMA = 0.95;
+// R3338000: the Terminus cards' set pieces (fx/terminus/). A set piece's beats fall evenly from
+// FX_TERMINUS_BEATS_FROM to FX_TERMINUS_BEATS_TO of its span (its hold, or, unheld, its swallow); its cue
+// outlasts its entry by FX_TERMINUS_TAIL_MS (inside FX_MAX_TAIL_MS, R200), and under Reduce Motion its
+// still frame stands FX_TERMINUS_STILL_MS and holds nothing.
+export const FX_TERMINUS_BEATS_FROM = 0.25;
+export const FX_TERMINUS_BEATS_TO = 0.85;
+export const FX_TERMINUS_TAIL_MS = 600;
+export const FX_TERMINUS_STILL_MS = 1_600;
+// R3338000: where on its zone Ceaseless Void's 10/10 burns once the fold settles, and the point of the
+// board Farewell's lamp hangs from.
+export const FX_TERMINUS_STATS_AT = { x: 0.85, y: 0.88 } as const;
+export const FX_TERMINUS_LAMP_AT = { x: 0.5, y: 0.05 } as const;
+// R3338000: the most graveyard cards Farewell lifts into its light, one a beat; Dice of Doom's Terminus
+// cards rain into the hand this share of the entry's motion apart.
+export const FX_TERMINUS_LIFT_MAX = 12;
+export const FX_TERMINUS_RAIN_STEP = 0.06;
+// R3338000: Event Horizon's extra turn opens with the board snapping back this hard; Last Word's turn
+// counts down 3, 2, 1 at these fractions of its opening entry.
+export const FX_TERMINUS_SNAP_TRAUMA = 0.5;
+export const FX_TERMINUS_COUNT_AT = [0.2, 0.45, 0.7] as const;
 // R961: the jade tally grows this much per step, at most this big.
 export const FX_JADE_SCALE_STEP = 0.15;
 export const FX_JADE_SCALE_MAX = 2;

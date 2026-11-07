@@ -760,7 +760,7 @@ describe("R654 public statistics route", () => {
     expect(within(screen.getByTestId(statsTestid.cardsTable)).getByRole("columnheader", { name: /Play rate/i })).toBeInTheDocument();
   });
 
-  it("R3324003 every on/off control of the Cards tab is a pressed button in one row of labelled groups, and none is a checkbox", async () => {
+  it("R3324003 every on/off control of the Cards tab is a pressed button in the Segmented's look, in one row of labelled groups, and none is a checkbox", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
 
@@ -775,8 +775,12 @@ describe("R654 public statistics route", () => {
       expect(row).toContainElement(control);
       expect(control.tagName).toBe("BUTTON");
       expect(control).toHaveClass("stats-view-btn");
-      expect(control).toHaveAttribute("aria-pressed");
+      // The shared look (#3222, tabs.css): a pressed one wears the Segmented's selected skin.
+      expect(control).toHaveClass("segmented__item");
+      expect(control.classList.contains("segmented__item--selected")).toBe(control.getAttribute("aria-pressed") === "true");
     }
+    // The sort direction is a plain button with the secondary role (buttons.css), not a link.
+    expect(screen.getByTestId(statsTestid.sortDir)).not.toHaveClass("link-button");
   });
 });
 
@@ -1269,7 +1273,7 @@ describe("the card drill-down dialog", () => {
     fireEvent.keyDown(row, { key: "Enter" });
     fireEvent.click(screen.getByRole("dialog"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    const scrim = container.querySelector(".stats-modal-scrim");
+    const scrim = container.querySelector(".dialog-scrim");
     if (scrim === null) throw new Error("no scrim");
     fireEvent.click(scrim);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -1314,13 +1318,14 @@ describe("the card drill-down dialog", () => {
       expect(previous).toHaveFocus();
     }
 
+    // R3221000: from the page behind, Tab comes back in on the first stop and Shift+Tab on the last, the ✕.
     const behind = screen.getByTestId(statsTestid.searchInput);
     behind.focus();
     press("Tab");
-    expect(close).toHaveFocus();
+    expect(radiant).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
-    expect(retry).toHaveFocus();
+    expect(close).toHaveFocus();
   });
 
   it("R2127000 Back closes the breakdown, gives the focus back to its row and keeps /stats with its tab and filters, a filter changed while it was open among them; with none open Back leaves", async () => {
@@ -1636,6 +1641,37 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
+  it("#3222 stats tabs answer arrow keys, moving between Cards, Sets, and Players", async () => {
+    serveSets();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    const tablist = screen.getByRole("tablist", { name: "Statistics views" });
+    const cardsTab = screen.getByTestId(statsTestid.tabCards);
+    const setsTab = screen.getByTestId(statsTestid.tabSets);
+    const playersTab = screen.getByTestId(statsTestid.tabPlayers);
+
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(cardsTab).toHaveAttribute("tabindex", "0");
+    expect(setsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(setsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(setsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(cardsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+  });
+
   it("R1966000 a read that fails shows Retry, which asks again", async () => {
     let up = false;
     serveSets(() =>
@@ -1698,12 +1734,15 @@ describe("R1973002 R3324000 the patch tabs", () => {
     );
   }
 
-  /** The patch tabs as their names, and the names of those pressed. */
+  /** A patch tab's name, the version that opened its patch. */
+  const nameOf = (tab: HTMLElement): string | null => tab.querySelector(".stats-patch-tab-name")?.textContent ?? null;
+
+  /** The patch tabs as their names, the names of those pressed, and each tab's words. */
   function tabs(): { names: (string | null)[]; pressed: (string | null)[]; texts: string[] } {
     const all = screen.getAllByTestId(statsTestid.patchTab);
     return {
-      names: all.map((tab) => tab.getAttribute("data-patch")),
-      pressed: all.filter((tab) => tab.getAttribute("aria-pressed") === "true").map((tab) => tab.getAttribute("data-patch")),
+      names: all.map(nameOf),
+      pressed: all.filter((tab) => tab.getAttribute("aria-pressed") === "true").map(nameOf),
       texts: all.map((tab) => tab.textContent ?? ""),
     };
   }
@@ -1726,8 +1765,12 @@ describe("R1973002 R3324000 the patch tabs", () => {
         "0.1.04,000 games",
       ],
     });
-    // Each tab is a pressed-state button, as the page's other one-of-a-few choices are (R3324003).
-    for (const tab of screen.getAllByTestId(statsTestid.patchTab)) expect(tab.tagName).toBe("BUTTON");
+    // The tabs are a Segmented (#3222): pressed-state buttons in one group, as the page's other one-of-a-few choices are (R3324003).
+    expect(screen.getByRole("group", { name: "Patch" })).toContainElement(screen.getAllByTestId(statsTestid.patchTab)[0]!);
+    for (const tab of screen.getAllByTestId(statsTestid.patchTab)) {
+      expect(tab.tagName).toBe("BUTTON");
+      expect(tab).toHaveClass("segmented__item");
+    }
     expect(screen.getByTestId(statsTestid.patchNext)).toBeDisabled();
 
     // Back one patch: 0.6.0, asked for at its version.
@@ -1755,7 +1798,7 @@ describe("R1973002 R3324000 the patch tabs", () => {
     await waitFor(() => expect(window.location.search).toBe(""), SLOW);
 
     // A tab asks for its patch at its newest version.
-    await user.click(screen.getAllByTestId(statsTestid.patchTab).find((tab) => tab.getAttribute("data-patch") === "0.4.0")!);
+    await user.click(screen.getAllByTestId(statsTestid.patchTab).find((tab) => nameOf(tab) === "0.4.0")!);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
     await waitFor(() => expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0"), SLOW);
   });

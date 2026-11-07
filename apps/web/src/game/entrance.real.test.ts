@@ -3,7 +3,10 @@
 // is set, on both seats, and no cue keys on a card a seat's view hides at that moment. Every seat is
 // fed the way Game feeds it: the new part of its view's window (`newEventsSince`), planned against the
 // view before (`planEntries`, `entranceEntries`, `planFx`), the sound director over the entries, and
-// the music director over the events the sound director resolves.
+// the music director over the events the sound director resolves. R3332002: a Legendary's or a
+// Mythic's sting is its own intro, whole on p1's board (dynamic music on) and cut to its opening on p2's
+// (dynamic music off), so neither takes the shared entrance sting, and a sting keys on a hidden card no
+// more than an intro does.
 
 import type { Action, ActionBody, CardType, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -43,6 +46,8 @@ const EXPERIMENT = "core-085";
 type Heard = {
   sfx: { id: SfxId; params?: SfxParams }[];
   intros: string[];
+  /** R3332002: the intros the music director cut to their opening, each its card's sting. */
+  stings: string[];
   entries: AnimationEntry[];
   fx: FxCue[];
   fresh: GameEvent[];
@@ -61,9 +66,13 @@ const resolve: EntranceResolver = (defId) => {
 /** The entries of a play itself, for "a set sounds and looks the same whatever card it hides". */
 const PLAY_TYPES = new Set<string>(["cardAnnounced", "cardPlayed", "summoned"]);
 
-/** One seat's board: its directors, the cards its queue has entered, and what each new view made it play. */
-function seat(first: PlayerView): Seat {
+/**
+ * One seat's board: its directors, the cards its queue has entered, and what each new view made it play.
+ * `dynamicMusic` off, a card's intro plays as its sting (R3332002).
+ */
+function seat(first: PlayerView, dynamicMusic: boolean): Seat {
   const intros: string[] = [];
+  const stings: string[] = [];
   const sfx: Heard["sfx"] = [];
   const sink: SoundSink = {
     playSfx: (id, params) => {
@@ -74,8 +83,16 @@ function seat(first: PlayerView): Seat {
     playEffect: () => true,
   };
   const music = createMusicDirector({
-    sink: { request: () => {}, resetResume: () => {}, preload: () => {}, playIntro: (id) => intros.push(id), stopIntro: () => {}, preloadIntros: () => {} },
-    settings: () => ({ ...DEFAULT_AUDIO_SETTINGS, dynamicMusic: true }),
+    sink: {
+      request: () => {},
+      resetResume: () => {},
+      preload: () => {},
+      playIntro: (id) => intros.push(id),
+      playSting: (id) => stings.push(id),
+      stopIntro: () => {},
+      preloadIntros: () => {},
+    },
+    settings: () => ({ ...DEFAULT_AUDIO_SETTINGS, dynamicMusic }),
     subscribeSettings: () => () => {},
     rotation: () => 0,
   });
@@ -87,6 +104,7 @@ function seat(first: PlayerView): Seat {
     hear(next) {
       sfx.length = 0;
       intros.length = 0;
+      stings.length = 0;
       const fresh = newEventsSince(s.view.events, next.events);
       const entrances = entranceEntries(planEntries(fresh, s.view, false), resolve, { seen: entered });
       const entries = setPieceEntries(entrances, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
@@ -104,7 +122,7 @@ function seat(first: PlayerView): Seat {
       });
       sound.onIdle();
       s.view = next;
-      return { sfx: [...sfx], intros: [...intros], entries, fx, fresh, play: play.sort() };
+      return { sfx: [...sfx], intros: [...intros], stings: [...stings], entries, fx, fresh, play: play.sort() };
     },
   };
   sound.onView(first);
@@ -135,7 +153,8 @@ function sandboxGame(seed: string) {
     if (legal.some((a) => a.type === "mulligan")) raw(who, { type: "mulligan", keep: Array.isArray(hand) ? hand.map((c) => c.instanceId) : [] });
     else raw(who, legal.find((a) => a.type === "answer") ?? { type: "endTurn" });
   }
-  const seats = { p1: seat(port.viewFor(state, "p1")), p2: seat(port.viewFor(state, "p2")) };
+  // R3332002: p1's board plays a card's intro whole, p2's cuts it to its opening as the card's sting.
+  const seats = { p1: seat(port.viewFor(state, "p1"), true), p2: seat(port.viewFor(state, "p2"), false) };
   return {
     legal: (player: PlayerId) => port.legalActions(state, player),
     view: (player: PlayerId) => port.viewFor(state, player),
@@ -182,10 +201,11 @@ function namedGrand(fresh: readonly GameEvent[]): string[] {
 const isEntranceFx = (cue: FxCue): cue is FxRaysCue | FxTakeoverCue =>
   cue.kind === "takeover" || (cue.kind === "rays" && (cue.tone === "legendary" || cue.tone === "mythic"));
 
-/** Every cue an entrance or a rarity makes: the intros, the entrance and rarity stings, the entrances, the rays and the takeover. */
+/** Every cue an entrance or a rarity makes: the intros and the stings cut from them, the entrance and rarity stings, the entrances, the rays and the takeover. */
 function grandCues(heard: Heard): string[] {
   return [
     ...heard.intros.map((id) => `intro:${id}`),
+    ...heard.stings.map((id) => `sting:${id}`),
     ...heard.sfx.filter((s) => s.id === "entrance" || s.id === "sting").map((s) => `sfx:${s.id}${s.params?.mythic === true ? ":mythic" : ""}${s.params?.tier === undefined ? "" : `:${s.params.tier}`}`),
     ...heard.entries.flatMap((entry) => (entry.entrance === undefined ? [] : [`entrance:${entry.entrance.tier}:${String((entry.setPiece?.holdMs ?? 0) > 0)}`])),
     ...heard.fx.filter(isEntranceFx).map((cue) => (cue.kind === "rays" ? `rays:${cue.tone}` : `takeover:${cue.look}`)),
@@ -264,8 +284,8 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
         const seen = heard[viewer];
         const named = namedGrand(seen.fresh);
         const where = `${label} on ${viewer}`;
-        // Every intro, entrance sting, entrance, ray and takeover is a card this seat's own events name.
-        for (const id of seen.intros) expect(named.map((d) => `intro-${d}`), where).toContain(id);
+        // Every intro, sting cut from one (R3332002), entrance sting, entrance, ray and takeover is a card this seat's own events name.
+        for (const id of [...seen.intros, ...seen.stings]) expect(named.map((d) => `intro-${d}`), where).toContain(id);
         for (const entry of seen.entries) if (entry.entrance !== undefined) expect(named, where).toContain(entry.entrance.defId);
         if (named.length === 0) {
           expect(seen.sfx.filter((s) => s.id === "entrance"), where).toEqual([]);
@@ -284,21 +304,23 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
     expect(must(summit).heard.p2.play).toEqual(must(cracker).heard.p2.play);
   });
 
-  it("R2722002 the reveal plays the full entrance on both seats", () => {
+  it("R2722002 R3332002 the reveal plays the full entrance on both seats, its own intro its sting", () => {
+    // p1's board plays the intro whole, p2's its opening as the sting; neither the shared entrance sting.
+    const opening = (viewer: PlayerId, id: string): string => (viewer === "p1" ? `intro:${id}` : `sting:${id}`);
     for (const viewer of SEATS) {
       expect(grandCues(cloaked.reveals.breaker[viewer]), `Knowledge Breaker on ${viewer}`).toEqual(
-        ["intro:intro-meditative-045", "sfx:entrance", "entrance:legendary:false", "rays:legendary"].sort(),
+        [opening(viewer, "intro-meditative-045"), "entrance:legendary:false", "rays:legendary"].sort(),
       );
       const summit = grandCues(cloaked.reveals.summit[viewer]);
       expect(summit, `Reach the Summit on ${viewer}`).toEqual(
-        ["intro:intro-meditative-008", "sfx:entrance:mythic", "entrance:mythic:true", "rays:mythic", "takeover:prismatic"].sort(),
+        [opening(viewer, "intro-meditative-008"), "entrance:mythic:true", "rays:mythic", "takeover:prismatic"].sort(),
       );
       expect(grandCues(cloaked.reveals.cracker[viewer]), `Toe Cracker on ${viewer}`).toEqual(["sfx:sting"]);
     }
     // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro, its
-    // entrance and its rays. (Its sting is the Common Unit's play that fires it.)
+    // entrance and its rays. (The rarity sting is the Common Unit's play that fires it.)
     for (const viewer of SEATS) {
-      expect(grandCues(trap.fire[viewer]), `the Trap on ${viewer}`).toEqual(["intro:intro-core-085", "sfx:entrance", "entrance:legendary:false", "rays:legendary", "sfx:sting"].sort());
+      expect(grandCues(trap.fire[viewer]), `the Trap on ${viewer}`).toEqual([opening(viewer, "intro-core-085"), "entrance:legendary:false", "rays:legendary", "sfx:sting"].sort());
     }
   });
 });

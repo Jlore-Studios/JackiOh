@@ -640,7 +640,17 @@ describe("deleting the account", () => {
       await userEvent.click(screen.getByTestId("account-manage-toggle"));
       await userEvent.click(screen.getByTestId("account-delete"));
 
+      // R3221000: the question is an alertdialog, its Cancel first and holding the focus, the deletion last.
+      const dialog = screen.getByRole("alertdialog", { name: "Delete your account?" });
+      expect(dialog).toBe(screen.getByTestId(accountTestid.deleteDialog));
+      expect(dialog).toHaveAccessibleDescription(
+        "This deletes your account for good and signs this device out. You can't undo it.",
+      );
+      const cancel = screen.getByTestId("account-delete-cancel");
+      expect(cancel).toHaveFocus();
       const confirm = screen.getByTestId("account-delete-confirm");
+      expect(cancel.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(confirm, "#3219: deleting the account is the danger role").toHaveClass("button-danger");
       expect(confirm, "nothing typed yet").toBeDisabled();
       await userEvent.type(screen.getByTestId("account-delete-input"), "delet");
       expect(confirm).toBeDisabled();
@@ -703,6 +713,12 @@ describe("deleting the account", () => {
     await userEvent.click(screen.getByTestId("account-delete-cancel"));
     expect(screen.queryByTestId("account-delete-input")).toBeNull();
     expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+
+    // R3221000: Escape answers Cancel too, and the focus goes back to the button that asked.
+    await userEvent.click(screen.getByTestId("account-delete"));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByTestId(accountTestid.deleteDialog)).toBeNull();
+    expect(screen.getByTestId("account-delete")).toHaveFocus();
   });
 });
 

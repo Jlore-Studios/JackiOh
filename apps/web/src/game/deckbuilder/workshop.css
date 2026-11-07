@@ -107,17 +107,6 @@
   white-space: nowrap;
 }
 
-.deckbuilder.app-shell .ws-action--primary {
-  border-color: color-mix(in srgb, var(--you) 70%, white);
-  background: color-mix(in srgb, var(--you) 55%, var(--bg-raised));
-  color: #fff;
-}
-
-.deckbuilder.app-shell .ws-action--danger {
-  border-color: color-mix(in srgb, var(--opponent) 65%, var(--line-bright));
-  background: color-mix(in srgb, var(--opponent) 14%, var(--bg-raised));
-}
-
 .deckbuilder.app-shell .ws-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;

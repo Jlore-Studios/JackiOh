@@ -625,8 +625,10 @@
   margin-top: 8px;
 }
 
-.landing .landing-quests-panel button,
-.landing .landing-news-panel button {
+/* The panels' wood, for a button that names no role: a role's skin is the same here as on every
+   screen (buttons.css, #3219), so the quests' Replace and Keep it stay text links. */
+.landing .landing-quests-panel button:where(:not(.button-primary, .button-secondary, .button-danger, .link-button)),
+.landing .landing-news-panel button:where(:not(.button-primary, .button-secondary, .button-danger, .link-button)) {
   border: 1px solid var(--tavern-brass);
   background: var(--tavern-wood);
   color: var(--tavern-parchment);

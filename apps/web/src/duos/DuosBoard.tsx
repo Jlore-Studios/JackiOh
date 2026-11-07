@@ -188,7 +188,7 @@ function ConcedeControl({ view, live, onConcede }: { view: DuosView; live: boole
       ) : null}
       <button
         type="button"
-        className="duos-concede__button"
+        className="duos-concede__button button-danger"
         data-testid={duosTestid.concede}
         data-armed={armed ? "true" : undefined}
         disabled={!live}

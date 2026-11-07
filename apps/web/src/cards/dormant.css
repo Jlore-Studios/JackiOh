@@ -91,16 +91,14 @@
   gap: 1cqmin;
 }
 
+/* R3333002: a plate draws its piece's module icon (StarshipHull.tsx sets the image), as wide as the icon's 3:2. */
 .cf .cf-starship-plate {
   display: block;
-  width: 8.5cqmin;
-  height: 5.5cqmin;
+  width: 10.5cqmin;
+  height: 7cqmin;
   border: 0.5cqmin solid var(--pal-slate-900);
   border-radius: 0.8cqmin;
-  background:
-    radial-gradient(circle at 22% 35%, var(--pal-slate-100) 0 0.6cqmin, transparent 0.8cqmin),
-    radial-gradient(circle at 78% 35%, var(--pal-slate-100) 0 0.6cqmin, transparent 0.8cqmin),
-    linear-gradient(to bottom, var(--pal-slate-400), var(--pal-slate-700));
+  background: center / 100% 100% no-repeat var(--pal-slate-700);
   box-shadow:
     inset 0 0.5cqmin 0 color-mix(in srgb, var(--pal-orange-400) 80%, transparent),
     0 0.3cqmin 0.6cqmin color-mix(in srgb, var(--pal-black) 60%, transparent);

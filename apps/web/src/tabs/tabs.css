@@ -1,0 +1,106 @@
+/* Tabs and Segmented component styling (#3222), taking selected looks from button roles (#3219). */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tabs__tablist {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.tabs__tablist::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs__tab {
+  flex: 0 0 auto;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--type-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.tabs__tab:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.tabs__tab[aria-selected="true"] {
+  border-bottom-color: var(--selected);
+  color: var(--text);
+}
+
+.tabs__tab:focus-visible {
+  outline: 2px solid var(--selected);
+  outline-offset: -2px;
+}
+
+/* Segmented one-of-n toggle buttons */
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.segmented__item {
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--type-sm);
+  white-space: nowrap;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.segmented__item:hover:not(:disabled, [aria-disabled="true"]) {
+  border-color: var(--text-dim);
+  background: color-mix(in srgb, var(--bg-raised) 70%, var(--line-bright));
+}
+
+.segmented__item[aria-pressed="true"],
+.segmented__item--selected {
+  border-color: var(--selected);
+  background: color-mix(in srgb, var(--selected) 12%, var(--bg-raised));
+  color: var(--text);
+}
+
+.segmented__item:focus-visible {
+  outline: 2px solid var(--selected);
+  outline-offset: 1px;
+}
+
+/* Shared filter <select> style with touch minimum height (R2122000) */
+.select-filter,
+.stats-select,
+.stats-patch-select,
+.dungeon-stats__select {
+  min-height: var(--hit-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--type-sm);
+}

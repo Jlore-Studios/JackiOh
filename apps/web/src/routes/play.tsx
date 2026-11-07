@@ -1312,6 +1312,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
                 />
                 <button
                   type="submit"
+                  className="button-secondary"
                   ref={joinSubmit}
                   data-testid={playTestid.joinSubmit}
                   disabled={busy || noChoice || locked}

@@ -1,6 +1,6 @@
 /* The table talk around the board: the draw offer's notices (DrawOffer.tsx) are inset into the
-   physical control rail; "Concede this game?" (ConfirmConcede.tsx) remains an interaction modal.
-   Both use the design tokens, so they read on any theme those tokens describe. */
+   physical control rail; "Concede this game?" draws through `Dialog.tsx`. The notices use the
+   design tokens, so they read on any theme those tokens describe. */
 
 /* ---- the draw offer ----------------------------------------------------------------------- */
 
@@ -63,17 +63,6 @@
   font-weight: 700;
 }
 
-.draw-offer__actions > .draw-offer__accept:not(:disabled) {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-}
-
-.draw-offer__actions > .draw-offer__accept:not(:disabled):hover {
-  background: var(--primary-face-hover);
-}
-
 /* What became of the offer says its piece and fades, like the refusal toast: once the animation
    table's own `drawAnswered` pulse (animations.css) has played on it, never over it. Reduced motion
    zeroes every delay, which would fade it at once, so there it simply stays for the rest of the turn. */
@@ -132,109 +121,5 @@
   .draw-offer__actions > button {
     flex: 1 1 0;
     min-width: 0;
-  }
-}
-
-/* ---- "Concede this game?" ----------------------------------------------------------------- */
-
-/* Above the prompt's scrim (40), the result overlay (39) and the drag layer (60): it is the one
-   question on the screen while it is open. */
-.concede-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-toast-top);
-  display: flex;
-  padding: max(var(--space-7), env(safe-area-inset-top)) max(var(--space-7), env(safe-area-inset-right))
-    max(var(--space-7), env(safe-area-inset-bottom)) max(var(--space-7), env(safe-area-inset-left));
-  overflow-y: auto;
-  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
-  animation: concede-fade-in calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out) both;
-}
-
-.concede-dialog {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-5);
-  width: min(380px, 100%);
-  margin: auto;
-  padding: var(--space-8) var(--space-8) var(--space-7);
-  border: 1px solid color-mix(in srgb, var(--opponent) 45%, var(--line-bright));
-  border-radius: var(--radius-lg);
-  background: var(--bg-raised);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--pal-black) 40%, transparent),
-    var(--shadow-3);
-  color: var(--text);
-  text-align: center;
-}
-
-.concede-dialog .concede-dialog__title {
-  margin: 0;
-  color: var(--text);
-  font-size: var(--type-2xl);
-  font-weight: 750;
-}
-
-.concede-dialog .concede-dialog__body {
-  max-width: none;
-  margin: 0;
-  color: var(--text-dim);
-  font-size: var(--type-md);
-}
-
-.concede-dialog__actions {
-  display: flex;
-  gap: var(--space-5);
-  width: 100%;
-  margin-top: var(--space-3);
-}
-
-.concede-dialog__actions > button {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 44px;
-  padding: var(--space-4) var(--space-6);
-  font-weight: 700;
-}
-
-/* Keep playing is the default and looks it; Concede wears the opponent's red, the color of a loss. */
-.concede-dialog__actions > .concede-dialog__stay {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-}
-
-.concede-dialog__actions > .concede-dialog__stay:hover {
-  background: var(--primary-face-hover);
-}
-
-.concede-dialog__actions > .concede-dialog__concede {
-  border-color: color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
-  background: color-mix(in srgb, var(--opponent) 22%, var(--bg-raised));
-  color: var(--text);
-}
-
-.concede-dialog__actions > .concede-dialog__concede:hover {
-  background: color-mix(in srgb, var(--opponent) 34%, var(--bg-raised));
-}
-
-.concede-dialog__actions > button:focus-visible {
-  outline: 2px solid var(--selected);
-  outline-offset: 2px;
-}
-
-@keyframes concede-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-/* The narrowest phones (360 px and under): the two answers stack, Keep playing on top. */
-@media (max-width: 360px) {
-  .concede-dialog__actions {
-    flex-direction: column;
   }
 }

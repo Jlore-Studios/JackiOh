@@ -181,7 +181,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                   {deck === null ? null : (
                     <button
                       type="button"
-                      className="ws-action"
+                      className="ws-action button-secondary"
                       data-testid={trioOpenDeckId(slot + 1)}
                       aria-label={t("Open {deck}", { deck: deckLabel(deck, limits.nameLength) })}
                       onClick={() => {
@@ -281,12 +281,12 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
         </div>
 
         <div className="ws-actions ws-actions--trio">
-          <button type="button" className="ws-action" data-testid={TRIO_COPY_CODE} onClick={copyCode}>
+          <button type="button" className="ws-action button-secondary" data-testid={TRIO_COPY_CODE} onClick={copyCode}>
             {t("Copy trio code")}
           </button>
           <button
             type="button"
-            className="ws-action ws-action--danger"
+            className="ws-action button-danger"
             data-testid={TRIO_DELETE}
             onClick={onDelete}
           >

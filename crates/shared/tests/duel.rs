@@ -100,6 +100,8 @@ struct Table {
     let_go: Vec<LetGo>,
     ceiling_draws: usize,
     voids: usize,
+    /// R3213000: how many times who is here changed with no socket arriving or leaving.
+    presence_changes: usize,
     /// How many of the next appends the log refuses.
     failing_appends: usize,
 }
@@ -131,6 +133,7 @@ impl Table {
             let_go: Vec::new(),
             ceiling_draws: 0,
             voids: 0,
+            presence_changes: 0,
             failing_appends: 0,
         }
     }
@@ -180,6 +183,7 @@ impl Table {
                 DuelOutput::Voided { .. } => self.voids += 1,
                 DuelOutput::CeilingDraw { .. } => self.ceiling_draws += 1,
                 DuelOutput::OfferRematch { home, stakes, reply } => self.offers.push((home, stakes, reply)),
+                DuelOutput::PresenceChanged => self.presence_changes += 1,
                 DuelOutput::LetGo { reason } => self.let_go.push(reason),
                 DuelOutput::Note { note } => self.notes.push(note),
                 DuelOutput::Panicked { .. }
@@ -1201,6 +1205,59 @@ mod bots {
         table.sleep(plan.linger_ms);
         assert!(table.host.presence(table.now).p2);
         table.feed(DuelEvent::RematchSent { home: P2 });
+        assert!(!table.host.presence(table.now).p2);
+    }
+
+    /// A ranked match on `seed` whose person at p1 has conceded to the bot at p2 that passes for one.
+    fn conceded_to_the_bot(seed: &str) -> Table {
+        let mut table = match_on(seed, true, true);
+        let keep = table.keep_hand(P1);
+        table.act(P1, "p1", keep);
+        let request = table.decides[0].clone();
+        let keep = table.keep_hand(P2);
+        decided(&mut table, &request, chose(Some(keep)));
+        let at = table
+            .timer(TimerKey::BotMove { player: P2 })
+            .expect("a think time");
+        table.sleep(at - table.now);
+        table.act(P1, "gg", ActionBody::Concede);
+        assert_eq!(table.records.len(), 1);
+        table
+    }
+
+    #[test]
+    fn r3213000_a_bots_linger_ending_is_a_presence_change_unless_its_reply_is_on_its_way() {
+        // A bot that meets the person's offer: its linger's end is armed with the game's end, and passes
+        // with no change while its reply is on its way; the reply landing is the change.
+        let seed = seed_where(|plan| plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        let end = table.now;
+        assert_eq!(
+            table.timer(TimerKey::BotLeaves { player: P2 }),
+            Some(end + plan.linger_ms)
+        );
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        table.sleep(plan.linger_ms.max(plan.reply_ms));
+        assert_eq!(table.offers.last(), Some(&(P2, STAKE_NORMAL, true)));
+        assert!(table.host.presence(table.now).p2);
+        assert_eq!(table.presence_changes, 0);
+        table.feed(DuelEvent::RematchSent { home: P2 });
+        assert_eq!(table.presence_changes, 1);
+        assert!(!table.host.presence(table.now).p2);
+
+        // A bot that meets no offer is gone as its linger ends, and that is the change.
+        let seed = seed_where(|plan| !plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        table.sleep(plan.linger_ms - 1);
+        assert_eq!(table.presence_changes, 0);
+        assert!(table.host.presence(table.now).p2);
+        table.sleep(1);
+        assert_eq!(table.presence_changes, 1);
         assert!(!table.host.presence(table.now).p2);
     }
 

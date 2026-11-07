@@ -712,7 +712,8 @@ func TestWorkflows_OneJobRewritesItEveryFiveMinutes(t *testing.T) {
 	// The workflow changed (#467): `python -m harness dashboard` is `harness dashboard`.
 	assertIn(t, "harness dashboard --sweep --stats --companions --controller \\\n"+
 		`            --every "${EVERY_SECONDS}" --runners-every `+
-		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --for "${LOOP_SECONDS}"`, refresh)
+		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"`,
+		refresh)
 	// Its runners section is redrawn alone between the rewrites, as often as the issue says.
 	assertIn(t, `RUNNERS_EVERY_SECONDS: "120"`, text)
 	assertEqual(t, dashboard.RunnersMinutes*60, 120)

@@ -4,6 +4,7 @@
 @import "./surfaces.css";
 @import "./motion.css";
 @import "./spacing.css";
+@import "./buttons.css";
 
 /* Base reset and the design tokens the board and the prompts share.
    Layout rules live next to their components: game/board.css, game/prompt.css. */
@@ -32,19 +33,6 @@
   --grade: var(--pal-sky-400);
   --mana: var(--pal-blue-600);
   --locked: var(--pal-grey-500);
-
-  /* The one primary button: End turn, in the tavern's gold (tavern.css's primary, the landing's
-     Play vs AI). The prompt's Confirm and the result panel's first action wear it too, so a screen
-     never shows two kinds of "go". The hover mixes 7% white into each of the face's stops. */
-  --primary-edge: var(--pal-gold-200);
-  --primary-face: linear-gradient(180deg, var(--pal-parchment) 0%, var(--pal-gold-400) 42%, var(--pal-brass-500) 58%, var(--pal-brass-600) 100%);
-  --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
-  --primary-ink: var(--pal-brass-950);
-  --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
-  /* The same button in green once nothing else is left (B15, highlights.css). */
-  --primary-face-ready: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-500) 55%, var(--pal-green-700));
-  --primary-face-ready-hover: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-400) 55%, var(--pal-green-500));
-  --primary-shadow-ready: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-green-900);
 
   --card-w: 82px;
   --card-h: 112px;
@@ -134,8 +122,6 @@ body {
 button {
   font: inherit;
   color: inherit;
-  background: var(--bg-raised);
-  border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-5);
   cursor: var(--cursor-glove-point, pointer);
@@ -262,13 +248,13 @@ h3,
   max-width: 64ch;
 }
 
-.app-shell a {
+.app-shell a:where(:not(.button-primary, .button-secondary, .button-danger, .link-button)) {
   color: var(--you);
   text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--you) 45%, transparent);
 }
 
-.app-shell a:hover {
+.app-shell a:where(:not(.button-primary, .button-secondary, .button-danger, .link-button)):hover {
   color: var(--text);
   border-bottom-color: var(--text);
 }
@@ -336,18 +322,13 @@ h3,
 
 /* --- controls ------------------------------------------------------------------------------ */
 
-.app-shell button,
-.form-card button {
+/* A dialog's ✕ keeps its own round size (game/dialog.css, R3221000); `:where()` leaves the weight as it was. */
+.app-shell button:where(:not(.dialog__close)),
+.form-card button:where(:not(.dialog__close)) {
   border-radius: var(--radius-sm);
   padding: var(--space-4) var(--space-7);
   font-weight: 550;
   transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), transform var(--motion-instant) var(--ease-standard);
-}
-
-.app-shell button:hover:not(:disabled),
-.form-card button:hover:not(:disabled) {
-  border-color: var(--text-dim);
-  background: color-mix(in srgb, var(--bg-raised) 70%, var(--line-bright));
 }
 
 .app-shell button:active:not(:disabled),
@@ -355,27 +336,13 @@ h3,
   transform: translateY(1px);
 }
 
-/* The one call to action on a screen. */
-.button-primary,
-.form-card button[type="submit"] {
-  background: var(--you);
-  border-color: color-mix(in srgb, var(--you) 70%, var(--pal-white));
-  color: var(--pal-white);
-}
-
-.button-primary:hover:not(:disabled),
-.form-card button[type="submit"]:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--you) 82%, var(--pal-white));
-  border-color: var(--pal-white);
-}
-
 /* An <a> that should read as a button: the landing's two calls to action. Kept as anchors rather
    than buttons because they navigate, and a real href is what middle-click and "open in new tab"
    need — `role="button"` only fixes how it is announced, not what it is. */
 .app-shell a.button-primary,
-.app-shell a.button-secondary {
+.app-shell a.button-secondary,
+.app-shell a.button-danger {
   display: inline-block;
-  border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   padding: var(--space-4) var(--space-7);
   font-weight: 550;
@@ -383,45 +350,10 @@ h3,
   transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
 }
 
-.app-shell a.button-primary {
-  background: var(--you);
-  border-color: color-mix(in srgb, var(--you) 70%, var(--pal-white));
-  color: var(--pal-white);
-}
-
-.app-shell a.button-primary:hover {
-  background: color-mix(in srgb, var(--you) 82%, var(--pal-white));
-  border-color: var(--pal-white);
-  color: var(--pal-white);
-}
-
-.app-shell a.button-secondary {
-  background: var(--bg-raised);
-  color: var(--text);
-}
-
-.app-shell a.button-secondary:hover {
-  border-color: var(--text-dim);
-  background: color-mix(in srgb, var(--bg-raised) 70%, var(--line-bright));
-  color: var(--text);
-}
-
-/* A button that should read as a link: the sign-in/sign-up toggle. Was used before it existed. */
+/* A button that should read as a link: the sign-in/sign-up toggle (its skin is buttons.css's). */
 .link-button {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--you);
-  cursor: var(--cursor-glove-point, pointer);
   align-self: flex-start;
   font-weight: 450;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.link-button:hover {
-  color: var(--text);
-  background: none;
 }
 
 /* A way back is a finger's target on a touch screen (task 7's 44 px floor), and so is the hotseat's
@@ -566,22 +498,13 @@ html {
   min-width: 0;
 }
 
-/* Reads as a control on the field, not a second call to action beside it. */
+/* Reads as a control on the field, not a second call to action beside it: a `button-secondary`. */
 .affix-button {
-  background: var(--bg-sunken);
-  border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   padding: 0 var(--space-6);
-  color: var(--text-dim);
   font-weight: 500;
   cursor: var(--cursor-glove-point, pointer);
   flex: 0 0 auto;
-}
-
-.affix-button:hover {
-  color: var(--text);
-  border-color: var(--text-dim);
-  background: var(--bg-sunken);
 }
 
 /* --- stat tiles (the account record) --------------------------------------------------------- */

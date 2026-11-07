@@ -287,6 +287,7 @@ order. Nothing in the machine reads a clock, draws from the OS or does I/O.
 | `botEmote` | a bot's persona sends an emote: the host sends it as a person's (hand, rate gate, relay, telemetry) and feeds `emote` if it let it through (R645, R1127) |
 | `record`, `voided`, `ceilingDraw` | the game's end with what the store must record (outcome, turns, which account each seat is credited to, the boards, the final hash); R679's void; R1253000's ceiling draw |
 | `offerRematch`, `letGo` | a bot makes a rematch offer (R639000); the host forgets the match (R776000) |
+| `presenceChanged` | a bot's post-game linger ended: tell each seat its rematch status again (R3213000) |
 | `greeting`, `applied`, `seatsSwapped`, `changed`, `pushed`, `refused`, `panicked`, `note` | markers the host may use: where its own frames go in a greeting, what telemetry reads, the abuse guard's refusal count, a panic to report, a log line |
 
 What the machine decides:
@@ -320,7 +321,10 @@ played the match: stakes are a rematch or a double-or-nothing, only a ranked mat
 offer counts only inside the finished match's window (R2685000), two equal offers make one game, and a
 failed create gives the claim back (R672). `next_seats` is the seats of the rematch (R1989000: they swap,
 with each profile's deck, portrait, slots and lean; an All Random one deals fresh). The server keeps one
-book per `App`; a host of one process may keep it beside its `DuelHost`.
+book per `App`; a host of one process may keep it beside its `DuelHost`. `post_game.rs` is what a seat's
+open socket is told after the game instead of a poll (R3213000): `PostGameFrame`'s `rematch` (the seat's
+`seen`, whether the opponent is here and the `RematchMode`) or `series` (the seat's `project_series`),
+each with the host's frame version `v`.
 
 Notes for a host:
 

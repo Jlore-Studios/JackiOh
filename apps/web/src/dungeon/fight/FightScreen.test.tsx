@@ -341,7 +341,10 @@ describe("R2972000 leaving a fight in progress asks first", () => {
     await screen.findByTestId(fightTestid.screen);
 
     expect(navigate(paths.play)).toBe(false);
-    fireEvent.click(await screen.findByTestId(fightTestid.leaveConfirm));
+    const leave = await screen.findByTestId(fightTestid.leaveConfirm);
+    // #3219: Leave fight is the danger role.
+    expect(leave).toHaveClass("button-danger");
+    fireEvent.click(leave);
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
     expect(host.starts()).toHaveLength(1);

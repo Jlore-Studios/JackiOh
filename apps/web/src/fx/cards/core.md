@@ -113,7 +113,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-090` | Super-Virus Injection | Spell | cast send | 1.19 | none: no motif reads shuffledIn | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-090-1` | Super-Virus | Spell | cast bolt | 0.97 | bolt | cast: the census agrees (bolt) |
 | `core-091` | Fed Fauci | Unit | trigger mana | 1.28 | none: vanilla | trigger: the census leaves out the events on the card itself; its start-of-turn mana (manaChanged), its one trigger's payoff, mana reads |
-| `core-092` | Felinor Fiender | Unit | none: no hook; its Legendary entrance plays | — | none: vanilla | the census agrees: no hook, and its Legendary entrance plays (R2722001) |
+| `core-092` | Felinor Fiender | Unit | signature; entrance felinorAssembly | 1.62 | none: vanilla | signature (R3332001): it assembles from every Felinor it counts |
 | `core-093` | Combo-Index | Field Spell | cast conjure; trigger tally; aura storm zone | 1.74 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census leaves out the events on the card itself, its counterChanged and questProgressed, which tally reads |
 | `core-093-1` | Combo-Fodder | Spell | cast bolt | 0.90 | lance | cast: the census's lance counted its Lifesteal heal as a second target; it deals damage to one, a bolt |
 | `core-094` | Genn's Greed | Spell | cast vanish Hustle/cash | 1.65 | vanish | cast: the census agrees (vanish) |
@@ -123,7 +123,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-097` | Zephrys | Spell | bespoke perfectWish | 1.73 | none: no motif reads addedToHand | bespoke: its "perfect" card blows in from the far side, which no hand motif says |
 | `core-098` | Heroic Power | Field Spell | cast conjure; activate bolt; aura holy zone | 1.60 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; activate: the census agrees (bolt): its powers' damage |
 | `core-099` | Craft a Card | Spell | bespoke fusionForge | 2.00 | none: no motif reads promptAnswered | bespoke: its Discovered Units fuse off the board, and no motif reads `fused` |
-| `core-100` | Ceaseless Void | Unit | setPiece voidFold | 2.00 | vanish | kept: #2800's `voidFold` set piece and `voidCollapse` entrance (R2800000, R670); its takeover is #2800's |
+| `core-100` | Ceaseless Void | Unit | setPiece voidFold | 2.00 | vanish | kept: #2800's `voidFold` set piece and `voidCollapse` entrance (R2800000, R670), grown by #3338 (R3338000): every other permanent is drawn into its chest in turn and its 10/10 burns in the dark; its takeover yields to it |
 | `core-t-rush` | Rush Token | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
 | `core-t-sheep` | Sheep Token | Unit | none: vanilla | — | not in census | a token the census never played: vanilla, its Worth a Tribute count |
 | `core-t-felinor` | Felinor Token | Unit | none: vanilla | — | not in census | a token the census never played: vanilla |
