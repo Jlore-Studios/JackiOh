@@ -17228,6 +17228,13 @@
     "3338": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42315785360",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-07T00:40:15Z",
+        "until": "2026-11-07T01:10:15Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
