@@ -3,7 +3,9 @@
 // a motif, a card recipe, a set piece or a Field card's aura on the board; R2797000 a death, trigger
 // or activate motif too, from its hook's marker). Pure, so the motif tests plan from the same fixtures
 // the gallery shows. R2794000: it also plays a marquee Unit's entrance as the Unit lands, and Classic's
-// Flourishes on their own fixtures.
+// Flourishes on their own fixtures. R3332000: an entry's `entrance` plays as its card lands, whatever the
+// entry's kind, a Field Spell's face up in the backrow; R3332001 over the board its entrance reads
+// (`galleryBoardOf`: Felinor Fiender's over three Felinors).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -13,10 +15,11 @@ import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
 import { entranceKeyOf } from "../cardFx.ts";
-import { isCardRecipeKey, isEntranceKey, type CardRecipeKey } from "../cards/bespoke.ts";
+import type { CardRecipeKey } from "../cards/bespoke.ts";
 import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
 import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
+import { felinorBoard } from "../cards/core/felinorFiender.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
 import type { FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -305,9 +308,9 @@ export function systemMomentFixture(moment: SystemMoment, view: PlayerView): Gam
  * #2793: how the gallery plays a card's table entry. `board` is a motif on its play (`cast`, `cry`),
  * played through the board's effects layer as the card resolves; R2797000 `hook` a motif on a `death`,
  * `trigger` or `activate` hook, played the same way from the hook's own marker under the play; `recipe`
- * a bespoke card recipe on its fixture; `entrance` (R2794000) a marquee Unit's bespoke entrance, played
- * as the Unit lands; `setPiece` a board clear's set piece on the wipe fixture; `aura` an entry with only
- * an aura, which stands while the card does.
+ * a bespoke card recipe on its fixture; `entrance` (R2794000, R3332000) an entry of an entrance alone,
+ * played as its card lands; `setPiece` a board clear's set piece on the wipe fixture; `aura` an entry
+ * with only an aura, which stands while the card does.
  */
 export type GalleryCardPlay =
   | { kind: "board"; motif: DrawnMotif }
@@ -327,15 +330,14 @@ const GALLERY_HOOK_KINDS = { death: "death", trigger: "whenever", activate: "act
 
 /**
  * #2793: how the gallery plays `entry`, or null for a `none` entry. A motif on the play wins over the
- * other hooks, any hook over an aura.
+ * other hooks, any hook over an entrance (R3332000), an entrance over an aura.
  */
 export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPlay | null {
   switch (entry.kind) {
     case "none":
       return null;
     case "bespoke":
-      if (isCardRecipeKey(entry.key)) return { kind: "recipe", key: entry.key };
-      return isEntranceKey(entry.key) ? { kind: "entrance", key: entry.key } : null;
+      return { kind: "recipe", key: entry.key };
     case "setPiece":
       return { kind: "setPiece" };
     case "hooks": {
@@ -346,6 +348,7 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
         if (spec === undefined || !isDrawnMotif(spec.motif)) continue;
         return { kind: "hook", hook, motif: spec.motif };
       }
+      if (entry.entrance !== undefined) return { kind: "entrance", key: entry.entrance };
       return entry.aura === undefined ? null : { kind: "aura" };
     }
   }
@@ -478,19 +481,34 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
 export const GALLERY_ENTRANCE_LANE = 3;
 
+/** R3332000: the backrow lane a Field Spell's gallery entrance lands in, the first, where its aura stands (`galleryFieldView`). */
+const GALLERY_FIELD_ENTRANCE_LANE = 1;
+
+/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors). */
+const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard };
+
+/** R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), else `view` itself. */
+export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {
+  const key = entranceKeyOf(defId);
+  const board = key === undefined ? undefined : ENTRANCE_BOARDS[key];
+  return board === undefined ? view : board(view);
+}
+
 /**
  * #2793: a card's table entry played out: the viewer plays the n-th play's id, its play's fixture
  * resolves under it (a set piece's, and R2797000 a hook's, on its hook's marker, and a Trap's after its
- * own `trapFired`), and it resolves. An `entrance` and an `aura` play nothing under it: the Unit landing
+ * own `trapFired`), and it resolves. An `entrance` and an `aura` play nothing under it: the card landing
  * draws the one, the card standing on the board the other. R2794000: a marquee Unit lands first, so its
  * entrance plays, then its play's fixture (Nature Titan's Cry); a set piece's play stays the board clear
- * alone.
+ * alone. R3332000: a Field Spell with an entrance lands face up in the backrow's first zone.
  */
 export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: PlayerView, n = 0): GameEvent[] {
   const instanceId = galleryPlayId(n);
   const player = view.viewer;
-  const landing: GameEvent[] =
-    play.kind !== "setPiece" && entranceKeyOf(defId) !== undefined ? [{ type: "summoned", player, instanceId, defId, row: "units", lane: GALLERY_ENTRANCE_LANE }] : [];
+  // R3332000: a Field Spell lands face up in the backrow, where its aura stands.
+  const field = CATALOG[defId]?.type === "Field Spell";
+  const zone = field ? ({ row: "backrow", lane: GALLERY_FIELD_ENTRANCE_LANE } as const) : ({ row: "units", lane: GALLERY_ENTRANCE_LANE } as const);
+  const landing: GameEvent[] = play.kind !== "setPiece" && entranceKeyOf(defId) !== undefined ? [{ type: "summoned", player, instanceId, defId, ...zone }] : [];
   const under = ((): GameEvent[] => {
     switch (play.kind) {
       case "board": {

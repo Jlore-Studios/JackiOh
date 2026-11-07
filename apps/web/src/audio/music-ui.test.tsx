@@ -32,6 +32,7 @@ function recordingPlayer(): MusicPlayer & { requests: MusicRequest[]; intros: st
     stopIntro: () => {
       rec.stops += 1;
     },
+    playSting: () => undefined,
     preloadIntros: () => undefined,
     intro: () => intros.at(-1) ?? null,
     resetResume: () => undefined,
