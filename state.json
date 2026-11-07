@@ -16741,15 +16741,16 @@
     "what": "review #3375 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-07T14:24:17Z",
+    "at": "2026-11-07T14:34:02Z",
     "notes": [
-      "#3369 is held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "#3375 is held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+      "#3369: `claude-6` can start again, so its hold is lifted",
+      "#3375: `claude-6` can start again, so its hold is lifted",
       "#3363 is held for `claude-7` until 09:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered build #3230 on agy (run 42378289768): built",
-      "started review #3380 on agy (run 42381637515)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-07T16:00:00Z; it can start a build or a plan again in 32m; `claude-8` is busy; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` 5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-07T15:30:00Z; it can start a build or a plan again in 2m; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 32h 32m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T16:30:00Z; it can start a build or a plan again in 2h 02m; waiting for their owners: #3363 held for `claude-7` until 09:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)); #3369 held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%)); #3375 held for `claude-6` until 08:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered plan #3340 on claude-4 (run 42380882765): planned",
+      "delivered review #3379 on claude-3 (run 42380825216): approved",
+      "started review #3369 on claude-6 (run 42382478687)",
+      "started review #3375 on claude-6 (run 42382536043)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-07T16:00:00Z; it can start a build or a plan again in 20m; `claude-8` is busy; `claude-1` is busy; `claude-4` 5-hour usage is 77%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-07T14:50:00Z; it can start a build or a plan again in 10m; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 32h 20m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T16:30:00Z; it can start a build or a plan again in 1h 50m; waiting for their owners: #3340 held for `claude-4` until 08:50 (5-hour usage is 77%, too close to its 70% cap to start a long run (it starts under 65%)); #3363 held for `claude-7` until 09:00 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17455,7 +17456,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T14:24:17Z",
+  "loop_tick": "2026-11-07T14:34:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
