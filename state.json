@@ -17743,10 +17743,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-8",
+        "built_by": "claude-6",
         "rejections": [],
         "reviews": [],
-        "sha": "3c007b876ae86c1d9f52f2bab55aa8f26f71441b",
+        "sha": "8d7e317277d6eff21e0c2dc4357edcffa323a2ba",
         "tiers": {}
       },
       "waiting_comment": 6699807814
