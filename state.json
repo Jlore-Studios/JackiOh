@@ -17463,24 +17463,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "gemini"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-8",
+        "built_by": "claude-4",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "provider": "agy",
-            "run": "42401344395",
-            "tier": "medium"
-          }
-        ],
-        "sha": "aa7c3dd0592b5ca1bf4daed525feb72f6bda9ac4",
-        "tiers": {
-          "gemini": "medium"
-        }
+        "reviews": [],
+        "sha": "7bf3e87dc9820fce7e313a957324fd2d27a47b3c",
+        "tiers": {}
       }
     },
     "3410": {
