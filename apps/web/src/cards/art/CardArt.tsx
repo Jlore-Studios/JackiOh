@@ -15,6 +15,10 @@
 // R2943001: a Set showcase restyle ("showcase-…") does the same. Given a `part` other than "whole" (Out of frame's),
 // the procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop or its subject alone
 // (`data-art-part`), and a delivered file, which has no parts, gives way to the painter.
+// R3017002: a repaint (Night's, Watercolor's, Stained-glass window's, Tarot card's: pictures.ts `isRepaint`) draws a
+// picture of its own, seeded apart as Alt art's is, under its treatment; a Starship's art and a Legacy card's keep their
+// one picture under it. Woodcut ("woodcut") and Neon sign ("neon") restyle the window's picture as Pixel does. Each draws
+// the painter's in place of a delivered file.
 // R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
 // (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
 
@@ -28,7 +32,7 @@ import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
-import { artSeedOf, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
+import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
 import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
@@ -117,8 +121,9 @@ export function CardArt({
   // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship and a Legacy card draw it whole.
   const split = hasArtParts(defId, starship) ? part : "whole";
   const real = starship === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
-  // R2940001: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture.
-  const ownPicture = picture !== "normal" && restyle === null && starship === null && coreId === null;
+  // R2940001: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture. R3017002: a
+  // repaint's is its own, under its treatment.
+  const ownPicture = picture !== "normal" && (restyle === null || isRepaint(picture)) && starship === null && coreId === null;
   const seedId = ownPicture ? artSeedOf(defId, picture) : defId;
 
   if (real !== null && real.src !== failedSrc) {

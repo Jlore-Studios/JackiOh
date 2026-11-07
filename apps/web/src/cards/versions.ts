@@ -14,6 +14,9 @@
 // the normal face; the Animated and Signature augments are retired. R3015002: every level of a variant draws its first
 // level's picture. R3015005: a card's pick names one level (`levelOfPick`, the server's `level_of_pick`), an older
 // pick's shape mapped as the server maps it, and wears the highest owned and offered at or below it (`wornLevel`).
+// R3017000 (#3017): #3017 adds six two-level variants, Night, Neon sign, Watercolor, Stained-glass window, Woodcut and
+// Tarot card; R3017002: each draws its own look (`artPictureOf`), four a new picture of the card's subject under a
+// treatment and Woodcut and Neon sign the normal one restyled.
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { COSMETICS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
@@ -78,6 +81,24 @@ export const VERSION_IMMERSIVE_ID = "version-immersive";
 
 /** R2944000: the Prismatic version, Mythic: mirror chrome, rainbow-edged and iridescent, the top chase; never gold. */
 export const VERSION_PRISMATIC_ID = "version-prismatic";
+
+/** R3017000: the Night variant's first level, Rare: a new picture of the card's subject under a night sky, a moon and stars. */
+export const VERSION_NIGHT_ID = "version-night";
+
+/** R3017000: the Neon sign variant's first level, Epic: the card's own picture as glowing tubes on a dark wall. */
+export const VERSION_NEON_ID = "version-neon";
+
+/** R3017000: the Watercolor variant's first level, Rare: a new picture of the card's subject in washes on paper. */
+export const VERSION_WATERCOLOR_ID = "version-watercolor";
+
+/** R3017000: the Stained-glass window variant's first level, Epic: a new picture of the card's subject in leaded panes. */
+export const VERSION_STAINED_GLASS_ID = "version-stained-glass";
+
+/** R3017000: the Woodcut variant's first level, Rare: the card's own picture cut as a three-tone print. */
+export const VERSION_WOODCUT_ID = "version-woodcut";
+
+/** R3017000: the Tarot card variant's first level, Epic: a new picture of the card's subject as a fortune card's, under an arch. */
+export const VERSION_TAROT_ID = "version-tarot";
 
 /** R3015000: the Default variant's second level, Epic: the normal face, its picture moving (R2715001). */
 export const VERSION_ANIMATED_ID = "version-animated";
@@ -198,15 +219,29 @@ function firstLevelOf(id: string | null): string | null {
   return ladderOf(at.variant)[0] ?? null;
 }
 
+/** R3017002: the picture each of part 6's variants draws, by its first level. */
+const PART_SIX_PICTURES: ReadonlyMap<string, ArtPicture> = new Map<string, ArtPicture>([
+  [VERSION_NIGHT_ID, "night"],
+  [VERSION_NEON_ID, "neon"],
+  [VERSION_WATERCOLOR_ID, "watercolor"],
+  [VERSION_STAINED_GLASS_ID, "stained-glass"],
+  [VERSION_WOODCUT_ID, "woodcut"],
+  [VERSION_TAROT_ID, "tarot"],
+]);
+
 /**
  * R2940001: the picture a face wearing `id` draws (pictures.ts): Alt art's for Alt art and Alt full art, the Sketch for
  * Sketch. R2942001: Pixel's and Comic's for those; Extended art draws the normal one. R2943001: Set showcase its set's
  * own treatment, a card of `set` (the normal picture for a set with none); Out of frame the normal one. R2944001:
  * Immersive its hazed depth (its window's backdrop, CardFace) and Prismatic its chrome. R3015002: every level of a
  * variant its first level's (the Sketch's full art the sketch, Alt art's full arts Alt art's, Full art's the normal).
+ * R3017002: each of part 6's its own: Night's, Neon sign's, Watercolor's, Stained-glass window's, Woodcut's and Tarot
+ * card's.
  */
 export function artPictureOf(id: string | null, set: string | null = null): ArtPicture {
   const version = firstLevelOf(id);
+  const partSix = version === null ? undefined : PART_SIX_PICTURES.get(version);
+  if (partSix !== undefined) return partSix;
   if (version === VERSION_ALT_ART_ID) return "alt";
   if (version === VERSION_SKETCH_ID) return "sketch";
   if (version === VERSION_PIXEL_ID) return "pixel";

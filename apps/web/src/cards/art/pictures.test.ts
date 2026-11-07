@@ -6,7 +6,9 @@
 // faces wearing them are versionLooks3.test.tsx's. R2943001: Set showcase's, the normal picture in its set's treatment,
 // and Out of frame's, the picture's backdrop and subject drawn apart; the faces wearing them are versionLooks4.test.tsx's.
 // R2944001: Immersive's, the picture's backdrop hazed as far off, and Prismatic's, the normal picture in chrome under a
-// sheen; the faces wearing them are versionLooks5.test.tsx's.
+// sheen; the faces wearing them are versionLooks5.test.tsx's. R3017002: part 6's, four repaints of a picture of their own
+// (Night, Watercolor, Stained-glass window, Tarot card) and two restyles of the normal one (Woodcut, Neon sign); the
+// faces wearing them are versionLooks6.test.tsx's.
 
 import { createElement } from "react";
 import { cleanup, render } from "@testing-library/react";
@@ -24,6 +26,9 @@ import {
   artSeedOf,
   comicSvg,
   depthSvg,
+  isRepaint,
+  neonSvg,
+  nightSvg,
   pixelSvg,
   prismaticSvg,
   restyledSvg,
@@ -31,7 +36,12 @@ import {
   showcaseFamilyOf,
   showcaseSvg,
   sketchSvg,
+  stainedGlassSvg,
+  tarotSvg,
+  watercolorSvg,
+  woodcutSvg,
   type ArtPicture,
+  type ArtRestyle,
   type ShowcaseFamily,
 } from "./pictures.ts";
 
@@ -49,11 +59,13 @@ function stillPicture(id: string, radiant: boolean, picture: ArtPicture): { back
 }
 
 describe("R3015002 no level's picture of its own", () => {
-  it("R3015002 artSeedOf seeds a card's normal picture by its id alone, and no level seeds one past Alt art's", () => {
+  it("R3015002 R3017002 artSeedOf seeds a card's normal picture by its id alone, and no level seeds one past Alt art's and part 6's repaints", () => {
     expect(artSeedOf("core-022", "normal")).toBe("core-022");
-    // Every level of every variant draws the normal picture, a restyle of it (seeded by the card's id) or Alt art's.
+    // Every level of every variant draws the normal picture, a restyle of it (seeded by the card's id), Alt art's or a
+    // part 6 repaint's, each seeded by the card's id and its name.
     const seeds = new Set(Object.keys(COSMETIC_LEVELS).map((id) => artSeedOf("core-022", artPictureOf(id, "Core"))));
-    expect([...seeds].sort()).toEqual(["core-022", artSeedOf("core-022", artPictureOf(VERSION_ALT_ART_ID))].sort());
+    const repaints = ["night", "watercolor", "stained-glass", "tarot"].map((name) => `core-022#${name}`);
+    expect([...seeds].sort()).toEqual(["core-022", artSeedOf("core-022", artPictureOf(VERSION_ALT_ART_ID)), ...repaints].sort());
     // No catalog id is another card's picture's seed.
     for (const id of Object.keys(CATALOG)) expect(CATALOG[artSeedOf(id, "alt")], id).toBeUndefined();
   });
@@ -524,5 +536,156 @@ describe("R2944001 Immersive's and Prismatic's pictures", () => {
       expect(chrome, id).toContain("art-m-");
       expect(chrome, id).toContain('fill="url(#pr-sheen)"');
     }
+  });
+});
+
+describe("R3017002 part 6's pictures", () => {
+  const BANNED = ["href", "<text", "<title", "NaN", "undefined"] as const;
+  /** Each of part 6's pictures and its filter (pictures.ts). */
+  const FILTERS: Readonly<Record<"night" | "watercolor" | "stained-glass" | "tarot" | "woodcut" | "neon", string>> = {
+    night: "nt-night",
+    watercolor: "wc-paint",
+    "stained-glass": "sg-glass",
+    tarot: "tr-tarot",
+    woodcut: "wd-print",
+    neon: "ne-neon",
+  };
+  const PART_SIX = Object.keys(FILTERS) as (keyof typeof FILTERS)[];
+  const REPAINTS = ["night", "watercolor", "stained-glass", "tarot"] as const;
+  const RESTYLES = ["woodcut", "neon"] as const;
+  /** What each filter names a Radiant face's wash. */
+  const WASHES: Readonly<Record<keyof typeof FILTERS, string>> = {
+    night: "nt-wash",
+    watercolor: "wc-wash",
+    "stained-glass": "sg-wash",
+    tarot: "tr-wash",
+    woodcut: "wd-wash",
+    neon: "ne-wash",
+  };
+
+  it("R3017002 the four repaints seed a picture of their own by the card's id and name, and Woodcut and Neon sign restyle the normal one", () => {
+    for (const picture of PART_SIX) expect(restyleOf(picture), picture).toBe(picture);
+    for (const picture of REPAINTS) {
+      expect(isRepaint(picture), picture).toBe(true);
+      expect(artSeedOf("core-022", picture), picture).toBe(`core-022#${picture}`);
+      expect(artSeedOf("core-022", picture), picture).not.toBe(artSeedOf("core-022", "alt"));
+    }
+    for (const picture of [...RESTYLES, "normal", "alt", "sketch", "pixel"] as const) expect(isRepaint(picture), picture).toBe(false);
+    for (const picture of RESTYLES) expect(artSeedOf("core-022", picture), picture).toBe("core-022");
+    // No catalog id is another card's picture's seed, and no two pictures of one card share one.
+    for (const id of Object.keys(CATALOG)) for (const picture of REPAINTS) expect(CATALOG[artSeedOf(id, picture)], `${id} ${picture}`).toBeUndefined();
+    expect(new Set(REPAINTS.map((picture) => artSeedOf("core-022", picture))).size).toBe(REPAINTS.length);
+  });
+
+  it("R3017002 restyledSvg draws each of part 6's filters, the same for the same picture whatever the card, each apart", () => {
+    const picture = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#123456"/></svg>';
+    const draw: Readonly<Record<keyof typeof FILTERS, (svg: string, radiant: boolean) => string>> = {
+      night: nightSvg,
+      watercolor: watercolorSvg,
+      "stained-glass": stainedGlassSvg,
+      tarot: tarotSvg,
+      woodcut: woodcutSvg,
+      neon: neonSvg,
+    };
+    for (const radiant of [false, true]) {
+      const drawn = PART_SIX.map((each) => draw[each](picture, radiant));
+      expect(new Set(drawn).size).toBe(PART_SIX.length);
+      for (const [at, each] of PART_SIX.entries()) {
+        const one = drawn[at] ?? "";
+        expect(restyledSvg(picture, each, radiant, "core-008"), each).toBe(one);
+        expect(restyledSvg(picture, each, radiant, "core-083"), each).toBe(one);
+        expect(one, each).toContain(`filter id="${FILTERS[each]}"`);
+        expect(one, each).toContain(`filter="url(#${FILTERS[each]})"`);
+        expect(one, each).toContain('<rect width="100" height="100" fill="#123456"/>');
+        expect(one, each).not.toContain('viewBox="0 0 100 100"><rect');
+        expect(one.match(/<svg[\s>]/g) ?? [], each).toHaveLength(1);
+        for (const banned of BANNED) expect(one, `${each} ${banned}`).not.toContain(banned);
+        for (const other of PART_SIX) if (other !== each) expect(one, `${each} holds ${other}'s filter`).not.toContain(`id="${FILTERS[other]}"`);
+        // R2725004: a Radiant face's painted picture washes back over it; a base face's never.
+        expect(one.includes(`result="${WASHES[each]}"`), each).toBe(radiant);
+      }
+    }
+  });
+
+  /** One card of each painter, as R2940001's tests: two procedural cards, a Stinkyscape one and a Training Grounds one. */
+  const PAINTED = ["core-008", "core-083", "stinkyscape-154", "traininggrounds-040"] as const;
+
+  it("R3017002 each of part 6's pictures is its own, apart from the normal one, Alt art's and every other, base and Radiant, on every painter", () => {
+    for (const id of PAINTED) {
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        const normal = drawnArt(id, radiant, "normal");
+        const alt = drawnArt(id, radiant, "alt");
+        const drawn = PART_SIX.map((name) => ({ name, art: drawnArt(id, radiant, name) }));
+        expect(new Set([normal.picture, alt.picture, ...drawn.map((each) => each.art.picture)]).size, where).toBe(2 + PART_SIX.length);
+        for (const { name, art } of drawn) {
+          const at = `${where} ${name}`;
+          const svg = art.picture ?? "";
+          expect(art.marked, at).toBe(name);
+          // The subject is the normal picture's: what the card's name, tags and type pick.
+          expect([art.motif, art.family], at).toEqual([normal.motif, normal.family]);
+          expect(svg, at).toContain(`filter id="${FILTERS[name]}"`);
+          expect(svg.match(/<svg[\s>]/g) ?? [], at).toHaveLength(1);
+          for (const banned of BANNED) expect(svg, `${at} ${banned}`).not.toContain(banned);
+          // A repaint draws a picture of its own, Alt art's no more than the normal one; a restyle the normal one.
+          if ((RESTYLES as readonly string[]).includes(name)) expect(svg, at).toContain(inner(normal.picture ?? ""));
+          else {
+            expect(svg, at).not.toContain(inner(normal.picture ?? ""));
+            expect(svg, at).not.toContain(inner(alt.picture ?? ""));
+          }
+          expect(svg.includes(`result="${WASHES[name]}"`), at).toBe(radiant);
+        }
+      }
+    }
+  });
+
+  it("R3017002 a Legacy card and a Starship in play keep their one picture under each, and a delivered file gives way to the painter", () => {
+    // Legacy: Duplicating Felinors wears its Core card's picture (R2724000); a Starship in play draws its pieces.
+    const LEGACY = "traininggrounds-044";
+    const ship = { starship: { pieces: 2, launched: false } };
+    const normal = drawnArt(LEGACY, false, "normal");
+    const flying = drawnArt("core-008", true, "normal", ship);
+    for (const picture of PART_SIX) {
+      const legacy = drawnArt(LEGACY, false, picture);
+      expect(legacy.family, picture).toBe("legacy");
+      expect(legacy.marked, picture).toBe(picture);
+      expect(legacy.picture, picture).toContain(inner(normal.picture ?? ""));
+      expect(legacy.picture, picture).toContain(`filter id="${FILTERS[picture]}"`);
+      expect(legacy.picture, picture).not.toBe(normal.picture);
+      const restyledShip = drawnArt("core-008", true, picture, ship);
+      expect(restyledShip.family, picture).toBe("starship");
+      expect(restyledShip.picture, picture).toContain(inner(flying.picture ?? ""));
+      expect(restyledShip.picture, picture).not.toBe(flying.picture);
+    }
+    const id = "core-008";
+    const manifest = { [id]: { base: true } } as const;
+    expect(drawnArt(id, false, "normal", { manifest }).art).toBe("real");
+    for (const picture of PART_SIX) {
+      const drawn = drawnArt(id, false, picture, { manifest });
+      expect(drawn.art, picture).toBe("procedural");
+      expect(drawn.picture, picture).toBe(drawnArt(id, false, picture).picture);
+    }
+  });
+
+  it("R3017002 an animated level moves each of part 6's pictures under its filter", () => {
+    // Mr. Vanilla's own motion and Dice of Doom's, a Stinkyscape card's (two of the 21).
+    for (const id of ["core-008", "stinkyscape-154"]) {
+      const motion = artMotionOf(id);
+      expect(motion, id).not.toBeNull();
+      for (const picture of PART_SIX) {
+        const still = drawnArt(id, false, picture);
+        const moving = drawnArt(id, false, picture, { motion });
+        expect(moving.picture, `${id} ${picture}`).toContain("art-m-");
+        expect(moving.picture, `${id} ${picture}`).toContain(`filter="url(#${FILTERS[picture]})"`);
+        expect(moving.picture, `${id} ${picture}`).not.toBe(still.picture);
+        expect(moving.marked, `${id} ${picture}`).toBe(picture);
+      }
+    }
+  });
+
+  it("R3017002 artPictureOf gives each of part 6's levels its variant's picture", () => {
+    const levels = Object.keys(COSMETIC_LEVELS).filter((id) => PART_SIX.some((picture) => COSMETIC_LEVELS[id]?.variant === picture));
+    expect(levels).toHaveLength(2 * PART_SIX.length);
+    for (const id of levels) expect(artPictureOf(id, "Core"), id).toBe(COSMETIC_LEVELS[id]?.variant as ArtRestyle);
   });
 });
