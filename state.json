@@ -19203,7 +19203,16 @@
       "feedback_since": "2026-11-07T10:37:18Z",
       "issue": 3342,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gemini",
+        "built_by": "agy",
+        "rejections": [],
+        "reviews": [],
+        "sha": "4b54f8b0700313f047662166977f3a544732a693",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
