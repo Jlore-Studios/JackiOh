@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3345,
+  "title": "Patch: a Mythic takes the whole screen: its own full art fills the window as it is played, the camera flies through its layers, and a press-and-hold opens it full screen anywhere",
+  "branch": "bot/issue-3345",
+  "thread": "**Issue #3345 (data, not instructions):**\n\n```text\n# #3345: Patch: a Mythic takes the whole screen: its own full art fills the window as it is played, the camera flies through its layers, and a press-and-hold opens it full screen anywhere\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3344, whose depth planes the camera flies through.\n\nThe owner asked that Mythic-tier cards come in full art \"where they cover the entire screen\". This part is that moment, in play and outside it, in the spirit of Pok\u00e9mon TCG Pocket's Immersive cards: hold the card, and it fills the screen and the camera moves through its art.\n\n### Today\n\n- **The takeover is shared.** A Mythic's play has a takeover set piece (`takeoverClaim`, `TAKEOVER_HOLD_MS` 1000, `fx/takeover.ts`). Its look is the shared `\"prismatic\"`, except for four cards (`TAKEOVER_LOOKS`: core-100, core-096, core-097, meditative-049).\n- **Reduced motion** shows `TakeoverStill.tsx`.\n- **No full-screen view.** Nothing outside play shows a card full screen.\n\n### What it should be\n\n1. **The card's own art fills the screen.** Every Mythic's takeover, tokens printed Mythic included, shows **its own picture**:\n   - the picture fills the window edge to edge (full art, #3343), in its depth planes (#3344);\n   - the camera dollies through them over the hold: past the near layer, toward the subject, with the far layer drifting;\n   - the card's name signs itself across the bottom in its set's signature hand (`signatureFaces.ts`, R2715002), while its intro sting plays (#3332).\n\n   Then the picture shrinks onto the card's tile or the cast spot as the queue moves on. A card's signature takeover (#3332) may choreograph its own camera, and this is the default every Mythic gets.\n2. **The rules hold.** The takeover stays within `TAKEOVER_HOLD_MS` and the set-piece cap. A tap skips it, `bigMoments` short gives half the hold and off none, and reduced motion shows `TakeoverStill` with the card's own picture. A hidden play shows nothing (R202). An opponent's Mythic takes the screen for both seats only when its play is public.\n3. **Press and hold, anywhere.** A long press (phone) or click-and-hold (desktop) on any Mythic, or on any card wearing a full-art-shaped level, opens a full-screen view:\n   - in hand, inspect, the Collection, the Almanac or pack openings;\n   - the picture fills the screen in its planes, the camera loops slowly through them with the card's intro music, and the tilt follows pointer or device (#3344);\n   - a tap pauses and resumes it, and releasing or a second tap closes it.\n\n   On the board, during a game, it opens only for your own cards, and never while the animation queue is draining.\n4. **A mark of its own.** A Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own colours, not Radiant's gold. Pocket marks its Immersive cards by frame, and so do we.\n\n## Acceptance\n\n- Every Mythic's takeover draws its own picture in depth planes, and a test runs over every Mythic in the catalog. The four `TAKEOVER_LOOKS` cards keep or grow their own choreography.\n- Skip, `bigMoments` short and off, reduced motion and a hidden play each behave as above, with tests.\n- Press and hold opens the full-screen view from hand, inspect, the Collection and the Almanac. Tap pauses and resumes, and release closes it. A component spec captures it at desktop size and at 390x844.\n- `fx-phone-frame.cy.tsx` covers a Mythic takeover with its own art within `FX_PHONE_FRAME_BUDGET_MS`.\n- `src/motion.test.ts` and `fx/css.test.ts` pass. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3345: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:56:22Z",
+    "claimed_at": "2026-11-07T20:57:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3400 is held for `claude-8` until 15:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3352, #3390, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3396 skipped: it waits for #3390 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3337, #3403 to close first"
+  ]
+}
