@@ -129,10 +129,18 @@ function tick(): void {
   );
 }
 
-/** R3214000: the socket turned live or stopped being; down, the poll reads at once and goes on. */
+/** The poll's own exception to R3205000: a challenge of the player's own is open or just sent. */
+function keepPolling(): boolean {
+  return reads.outgoing.length > 0 || followingChallenge();
+}
+
+/**
+ * R3214000: the socket turned live or stopped being; down, the poll reads at once and goes on. R3205000:
+ * a hidden tab's drop reads nothing (unless the poll would run hidden), since the poll reads when it shows.
+ */
 function onLive(live: boolean): void {
   publish({ ...reads, live });
-  if (!live) tick();
+  if (!live && (document.visibilityState !== "hidden" || keepPolling())) tick();
 }
 
 function onPush(push: SocialPush): void {
@@ -156,7 +164,7 @@ function start(): void {
     socket = openSocialSocket({ token: () => readSession()?.accessToken ?? null, socketFactory: factory, onLive, onPush });
   }
   tick();
-  stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, () => reads.outgoing.length > 0 || followingChallenge());
+  stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, keepPolling);
 }
 
 function stop(): void {

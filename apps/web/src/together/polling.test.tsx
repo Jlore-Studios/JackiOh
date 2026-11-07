@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 
+import { RECONNECT_DELAYS_MS, RECONNECT_JITTER } from "../game/net.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { FRIENDS_PATH, type Challenge, type Friend } from "../net/social.ts";
@@ -327,6 +328,10 @@ describe("R3214000 the social socket stands in for the polls", () => {
     await settle({ advance: 0 });
   };
 
+  /** The backoff's first step (R1441): it reopens no sooner than the step, and no later than its jitter allows. */
+  const firstStepMs = RECONNECT_DELAYS_MS[0] ?? 0;
+  const firstStepLatestMs = Math.floor(firstStepMs * (1 + RECONNECT_JITTER));
+
   beforeEach(() => {
     const fake = fakeSockets();
     sockets = fake.sockets;
@@ -371,13 +376,34 @@ describe("R3214000 the social socket stands in for the polls", () => {
     socket().drop(1006);
     await settle({ advance: 0 });
     expect(reads(server).social, "the drop reads at once").toBe(before + 1);
-    await settle({ advance: SOCIAL_POLL_MS });
-    expect(reads(server).social, "then at its pace").toBe(before + 2);
+    expect(sockets, "the drop's poll opens no socket before the backoff's first step (R1441)").toHaveLength(1);
+    await settle({ advance: firstStepMs - 1 });
+    expect(sockets).toHaveLength(1);
+    await settle({ advance: firstStepLatestMs - firstStepMs + 1 });
     expect(sockets, "the socket reopened on its backoff").toHaveLength(2);
+    await settle({ advance: SOCIAL_POLL_MS - firstStepLatestMs });
+    expect(reads(server).social, "then at its pace").toBe(before + 2);
 
     await goLive();
     await settle({ advance: 3 * SOCIAL_POLL_MS });
     expect(reads(server).social, "live again: no poll").toBe(before + 2);
+  });
+
+  it("R3214000 a drop while the tab is hidden reads nothing until it shows (R3205000)", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).social;
+
+    setVisibility("hidden");
+    socket().drop(1006);
+    await settle({ advance: 2 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "hidden: no read on the drop, nor at the poll's pace").toBe(before);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads(server).social, "shown: one read").toBe(before + 1);
   });
 
   it("R3214000 a friends push reads the open friends list again", async () => {

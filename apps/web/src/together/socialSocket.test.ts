@@ -27,7 +27,8 @@ type Harness = {
   wake: () => void;
 };
 
-function harness(token: string | null = "tok-a"): Harness {
+/** `retryOnDown`: `onLive(false)` asks the socket to retry, as `socialPoll.ts`'s poll does through its tick. */
+function harness(token: string | null = "tok-a", { retryOnDown = false }: { retryOnDown?: boolean } = {}): Harness {
   const { factory, sockets } = fakeSockets();
   let scheduled: { id: number; run: () => void }[] = [];
   const delays: number[] = [];
@@ -37,6 +38,7 @@ function harness(token: string | null = "tok-a"): Harness {
   let onWake: (() => void) | null = null;
   const pushes: SocialPush[] = [];
   const lives: boolean[] = [];
+  let retrying: SocialSocket | null = null;
 
   const timers: Timers = {
     setTimeout: (handler, ms) => {
@@ -54,7 +56,10 @@ function harness(token: string | null = "tok-a"): Harness {
   const client = openSocialSocket({
     token: () => current,
     onPush: (push) => pushes.push(push),
-    onLive: (live) => lives.push(live),
+    onLive: (live) => {
+      lives.push(live);
+      if (!live && retryOnDown) retrying?.retry();
+    },
     socketFactory: factory,
     url: serverSocketUrl(SOCIAL_SOCKET_PATH, "ws://server.test/ws/match"),
     timers,
@@ -68,6 +73,7 @@ function harness(token: string | null = "tok-a"): Harness {
       };
     },
   });
+  retrying = client;
 
   return {
     client,
@@ -99,8 +105,8 @@ function harness(token: string | null = "tok-a"): Harness {
 }
 
 /** The harness with its first socket open and live. */
-function live(token = "tok-a"): Harness {
-  const h = harness(token);
+function live(token = "tok-a", options: { retryOnDown?: boolean } = {}): Harness {
+  const h = harness(token, options);
   h.socket().open();
   h.socket().deliver(SOCIAL);
   return h;
@@ -162,6 +168,26 @@ describe("R3214000 the social socket", () => {
     h.runTimers();
     expect(h.sockets).toHaveLength(steps + 1);
     expect(h.lives).toEqual([true, false, true, false]);
+  });
+
+  it("R3214000 a drop waits its backoff step even when the poll retries as the socket goes down", () => {
+    const h = live("tok-a", { retryOnDown: true });
+    h.socket().drop(1006);
+    expect(h.lives).toEqual([true, false]);
+    expect(h.sockets, "no socket before the step runs").toHaveLength(1);
+    expect(h.pending()).toBe(1);
+    h.client.retry();
+    expect(h.sockets, "nor on a later retry while the step waits").toHaveLength(1);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.delays()).toEqual([RECONNECT_DELAYS_MS[0]]);
+
+    // A refusal for the same token, then a retry as it goes down: nothing opens.
+    h.socket().open();
+    h.socket().deliver(SOCIAL);
+    h.socket().drop(4403, "too many open tabs");
+    expect(h.sockets).toHaveLength(2);
+    expect(h.pending()).toBe(0);
   });
 
   it("R3214000 a 4401 reopens at once with a renewed token, and a refusal for the same token waits for another", () => {

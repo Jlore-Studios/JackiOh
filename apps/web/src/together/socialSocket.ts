@@ -113,8 +113,8 @@ export type SocialSocket = {
   /** Whether a `social` frame has come over the socket open now. */
   live: () => boolean;
   /**
-   * Opens a socket when none is open, unless the session's token is the one last refused (R1115000), and
-   * replaces one opened with a token the session no longer holds.
+   * Opens a socket when none is open and no drop's backoff step waits, unless the session's token is the
+   * one last refused (R1115000), and replaces one opened with a token the session no longer holds.
    */
   retry: () => void;
   /** Lets go of the socket for good; `onLive` is not called. */
@@ -142,8 +142,14 @@ export function openSocialSocket(options: SocialSocketOptions): SocialSocket {
   let live = false;
   /** The token a refusal closed the socket for; nothing opens again until the session holds another. */
   let refusedToken: string | null = null;
+  /** A drop's backoff step waits: nothing but that step (or a page's wake probe) opens the next socket. */
+  let waiting = false;
 
   const backoff = createBackoff(open, () => disposed, timers, random);
+  function scheduleReopen(): void {
+    waiting = true;
+    backoff.schedule();
+  }
   /** R1441: a woken page asks a quiet socket for its read, and replaces it if nothing answers. */
   const probe = createWakeProbe({
     socket: () => socket,
@@ -179,6 +185,7 @@ export function openSocialSocket(options: SocialSocketOptions): SocialSocket {
 
   function open(): void {
     backoff.cancel();
+    waiting = false;
     if (disposed || socket !== null) return;
     const bearer = token();
     if (bearer === null || bearer === refusedToken) return;
@@ -187,7 +194,7 @@ export function openSocialSocket(options: SocialSocketOptions): SocialSocket {
     try {
       created = socketFactory(url, socketProtocols(bearer));
     } catch {
-      backoff.schedule();
+      scheduleReopen();
       return;
     }
     socket = created;
@@ -218,22 +225,27 @@ export function openSocialSocket(options: SocialSocketOptions): SocialSocket {
       if (socket !== created) return;
       socket = null;
       probe.cancel();
+      // What comes next is settled before `onLive(false)`, whose poll asks this socket to `retry`: the
+      // drop's backoff must already wait then, or the retry would reopen at once (R1441).
+      if (!disposed) afterClose(event.code, bearer);
       setLive(false);
-      if (disposed) return;
-      if (event.code === UNAUTHORIZED_CLOSE_CODE) {
-        // R1115000: a 4401 refuses this handshake's token. One renewed meanwhile opens again now.
-        const renewed = token();
-        if (renewed !== null && renewed !== bearer) {
-          open();
-          return;
-        }
-      }
-      if (REFUSAL_CLOSE_CODES.includes(event.code)) {
-        refusedToken = bearer;
+    };
+  }
+
+  function afterClose(code: number, bearer: string): void {
+    if (code === UNAUTHORIZED_CLOSE_CODE) {
+      // R1115000: a 4401 refuses this handshake's token. One renewed meanwhile opens again now.
+      const renewed = token();
+      if (renewed !== null && renewed !== bearer) {
+        open();
         return;
       }
-      backoff.schedule();
-    };
+    }
+    if (REFUSAL_CLOSE_CODES.includes(code)) {
+      refusedToken = bearer;
+      return;
+    }
+    scheduleReopen();
   }
 
   probe.listen();
@@ -243,8 +255,10 @@ export function openSocialSocket(options: SocialSocketOptions): SocialSocket {
     live: () => live,
     retry: () => {
       if (disposed) return;
-      if (socket === null) open();
-      else if (token() !== openedWith) replace(socket);
+      if (socket === null) {
+        // A drop's backoff opens the next one on its step (R1441); a retry only opens one nothing waits on.
+        if (!waiting) open();
+      } else if (token() !== openedWith) replace(socket);
     },
     close: () => {
       disposed = true;

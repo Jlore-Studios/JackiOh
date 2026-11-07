@@ -1,7 +1,8 @@
 // A conversation with one friend (#936, B53, B58): the newest page, read again every `CHAT_POLL_MS`
 // while the panel is open (a read marks it read), and earlier pages by cursor (R1384000). R3214000: while
 // the tab's social socket is live (`socialPoll.ts`) there is no poll: the newest page is read when the
-// server pushes a message to or from this friend, and once each time the socket comes up or drops.
+// server pushes a message to or from this friend, and once each time the socket comes up or drops; a
+// hidden tab holds such a read until it shows (R3205000), since a read marks the page read.
 // CLAUDE.md rule 7: the box keeps a draft to `CHAT_MAX_CHARS` and will not send an empty one, as
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
 // refusal is shown in its own words. A message is drawn as text, never as markup.
@@ -11,7 +12,7 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type R
 import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
-import { pollWhileVisible } from "../game/net.ts";
+import { pageWake, pollWhileVisible } from "../game/net.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
@@ -90,10 +91,15 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const { live } = useSocialReads();
   /** Whether the social socket was live when the poll's effect last ran; null before it has. */
   const lastLive = useRef<boolean | null>(null);
+  /** R3205000: a read the socket asked for while the tab was hidden, made once when it shows. */
+  const held = useRef(false);
+  /** Reads now, or while the tab is hidden holds the read for when it shows (a read marks the page read). */
+  const readWhenShown = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     let canceled = false;
     let first = true;
+    held.current = false;
     const read = (): void => {
       attempt(() => getChat(friendId)).then(
         (page) => {
@@ -115,10 +121,14 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
       );
     };
     readNow.current = read;
+    readWhenShown.current = () => {
+      if (document.visibilityState === "hidden") held.current = true;
+      else read();
+    };
     read();
     // R3214000: a message to or from this friend, pushed over the live social socket.
     const stopPushes = onChatPush((from) => {
-      if (from === friendId) read();
+      if (from === friendId) readWhenShown.current();
     });
     return () => {
       canceled = true;
@@ -128,11 +138,19 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
 
   useEffect(() => {
     // R3214000: the socket came up or dropped, so a message between the last read and now is read.
-    if (lastLive.current !== null && lastLive.current !== live) readNow.current();
+    if (lastLive.current !== null && lastLive.current !== live) readWhenShown.current();
     lastLive.current = live;
-    if (live) return undefined;
-    // R3205000: a hidden tab reads nothing, and reads once when it shows again.
+    // R3205000: a hidden tab reads nothing, and reads once when it shows again: live, only a read it held.
+    if (live) {
+      return pageWake(() => {
+        // `pageWake` also wakes on the network's return, hidden or not.
+        if (!held.current || document.visibilityState === "hidden") return;
+        held.current = false;
+        readNow.current();
+      });
+    }
     return pollWhileVisible(() => {
+      held.current = false;
       readNow.current();
     }, CHAT_POLL_MS);
   }, [friendId, live]);

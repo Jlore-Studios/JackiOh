@@ -444,6 +444,35 @@ describe("R3214000 the open chat while the social socket is live", () => {
     expect(must(shown()[2], "the pushed message")).toContain("rematch?");
   });
 
+  it("R3214000 a hidden tab's chat push and drop read nothing until it shows, then once (R3205000)", async () => {
+    vi.useFakeTimers();
+    const messages = conversation();
+    const server = serve(messages);
+    const live = await openLive(server);
+
+    setVisibility("hidden");
+    messages.push(message("msg-3", ANN.profileId, "rematch?", 3));
+    socket().deliver({ type: "chat", friendId: ANN.profileId });
+    await settle({ advance: 0 });
+    expect(chatReads(server), "hidden: a read would mark it read unseen").toBe(live);
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(chatReads(server), "shown: the held read").toBe(live + 1);
+    expect(must(shown()[2], "the pushed message")).toContain("rematch?");
+    setVisibility("hidden");
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(chatReads(server), "live, a wake with nothing held reads nothing").toBe(live + 1);
+
+    setVisibility("hidden");
+    socket().drop(1006);
+    await settle({ advance: 3 * CHAT_POLL_MS });
+    expect(chatReads(server), "hidden: no read on the drop, nor at the poll's pace").toBe(live + 1);
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(chatReads(server), "shown: one read").toBe(live + 2);
+  });
+
   it("R3214000 after the connection drops the chat poll resumes", async () => {
     vi.useFakeTimers();
     const server = serve(conversation());
