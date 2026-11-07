@@ -16298,7 +16298,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-07T11:38:57Z",
+      "feedback_since": "2026-11-07T13:18:07Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3337,
@@ -16312,7 +16312,7 @@
       "queued_at": "2026-11-07T13:17:35Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "42376329465",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16333,11 +16333,11 @@
         "provider": "claude-2",
         "run": "42369064965"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-07T13:18:07Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
