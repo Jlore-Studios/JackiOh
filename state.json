@@ -34550,7 +34550,8 @@
       "2026-11-07T14:18:11Z,agy,usage-command,after,42378289768,65,2026-11-07T14:59:56Z,67,2026-11-13T23:59:56Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-07T14:13:24Z,42374345975,claude-3,sonnet+opus,build,3346,medium,built,,32.6,5,3038,641057,2.5431,2,49,,,772.8,claude-7,fresh,cap,1"
+      "2026-11-07T14:13:24Z,42374345975,claude-3,sonnet+opus,build,3346,medium,built,,32.6,5,3038,641057,2.5431,2,49,,,772.8,claude-7,fresh,cap,1",
+      "2026-11-07T14:18:25Z,42378289768,agy,gemini-3.8-flash-high,build,3230,medium,built,,33.9,904313,96271,0,,53,65,63,67,2624.3,claude-3,none,other,1"
     ]
   },
   "version": 1
