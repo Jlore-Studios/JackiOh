@@ -168,6 +168,35 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           9
         </span>
+        <span
+          aria-hidden="true"
+          class="pile-riffle"
+        >
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 0;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 1;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 2;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 3;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 4;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 5;"
+          />
+        </span>
       </span>
       <span
         aria-haspopup="dialog"
@@ -4145,6 +4174,35 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-testid="library-count-you"
         >
           12
+        </span>
+        <span
+          aria-hidden="true"
+          class="pile-riffle"
+        >
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 0;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 1;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 2;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 3;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 4;"
+          />
+          <i
+            class="pile-riffle-leaf"
+            style="--k: 5;"
+          />
         </span>
       </span>
       <span
