@@ -93,6 +93,14 @@
   border-radius: 50%;
 }
 
+/* #3341: a board unit's art that is not full art: the picture up to the face's frame, a rectangle the face's own panel
+   clips at its corners. Square, and none of the inset shade `.cf-art` lays over a picture's foot, which dulled it: the
+   rarity ring and the scrim behind the gems are the face's own (cards.css, `.cf-portrait::after`). */
+.cf-art--frame {
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* Deck-list tile: a wide strip that is opaque on the right and fades out to the left. */
 .cf-art--strip {
   background-position: center 38%;

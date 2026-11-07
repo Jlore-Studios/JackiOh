@@ -1783,6 +1783,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
   setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
   launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
+  ship: ["kind", "move", "at", "tint", "count", "lit", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
   rift: ["kind", "at", "side", "tint", "tearMs", "flareMs", "delayMs", "durationMs"],
   anomalyTitle: ["kind", "at", "text", "picture", "tint", "delayMs", "durationMs"],

@@ -567,7 +567,7 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
 /* B18 */
 
 describe("B18: Card picks its form from its props", () => {
-  it("B18 a unit is the minion form, with an oval CardArt in .cf-portrait, or R3046000 the full-art card's art across the face", () => {
+  it("B18 a unit is the minion form, with a frame CardArt in .cf-portrait (#3341), or R3046000 the full-art card's art across the face", () => {
     const view = fullBoardView();
     renderBoard(view);
     for (const u of allUnits(view)) {
@@ -578,13 +578,13 @@ describe("B18: Card picks its form from its props", () => {
       // R3046000: a full-art card (the fixture's core-004, -008, -011 and -013) prints its art across the face.
       const fullArt = isFullArtCard(u.defId);
       expect(cf.getAttribute("data-full-art"), u.defId).toBe(fullArt ? "true" : null);
-      inside(cf, `.cf-portrait > .cf-art.cf-art--${fullArt ? "full" : "oval"}`);
-      expect(cf.querySelector(`.cf-art--${fullArt ? "oval" : "full"}`), u.defId).toBeNull();
+      inside(cf, `.cf-portrait > .cf-art.cf-art--${fullArt ? "full" : "frame"}`);
+      expect(cf.querySelector(`.cf-art--${fullArt ? "frame" : "full"}`), u.defId).toBeNull();
       expect(cf.querySelector(".card-text"), u.defId).toBeNull();
     }
   });
 
-  it("R3046000 the board's full-art Units print the art across the face with the name after it, and the others keep the oval", () => {
+  it("R3046000 the board's full-art Units print the art across the face with the name after it, and the others draw it up to the frame", () => {
     const view = fullBoardView();
     renderBoard(view);
     const full = allUnits(view).filter((u) => isFullArtCard(u.defId));

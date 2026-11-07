@@ -2,7 +2,7 @@
 // by path; code outside goes through `cards/index.ts`, which re-exports from here.
 
 export type { ArtThemeId, Composition } from "./themes.ts";
-export { compositionFor, themeFor } from "./themes.ts";
+export { compositionFor, compositionOf, themeFor } from "./themes.ts";
 export { motifFor } from "./motifs.ts";
 export type { ArtSpec } from "./procedural.ts";
 export { artSpec } from "./procedural.ts";

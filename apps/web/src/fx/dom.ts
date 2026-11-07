@@ -1,7 +1,7 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
-// R2800000 set pieces, and R3337002's radar and R3337003's rift and title card.
+// R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
@@ -64,10 +64,22 @@ const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
 const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
   vortex: ["dark", "spiral", "core"],
   fold: ["edges", "light"],
+  // R3338000: the Terminus cards' set pieces (fx/terminus/).
+  rift: ["dark", "tear", "stars"],
+  lamp: ["dark", "cone", "glow"],
+  chalk: ["slate", "scrawl", "crack", "stamp"],
+  bend: ["lens", "clock"],
+  freeze: ["frost", "cracks"],
+  abyss: ["dark", "chains"],
+  crunch: ["collapse", "point"],
+  doom: ["dark", "stars"],
 };
 
 /** R2801000: a Starship launch's layers, above its counts (fx.css). */
 const LAUNCH_PARTS = ["flame", "trail"] as const;
+
+/** R3336000: a Battleship bay's two doors, left to right (fx.css). */
+const SHIP_DOOR_SIDES = ["left", "right"] as const;
 
 /** R3337003: an Anomaly's rift's layers, bottom to top (fx.css). */
 const RIFT_PARTS = ["tear", "flare"] as const;
@@ -280,6 +292,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     }
     case "roll": {
       el.setAttribute("data-text", t(cue.title));
+      // R3338000: Dice of Doom's d100 wears its own look (fx.css).
+      if (cue.look !== undefined) el.setAttribute("data-look", cue.look);
       rollItems(doc, el, cue);
       break;
     }
@@ -328,11 +342,23 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-spin", String(cue.spin));
       el.style.setProperty("--fx-hold", `${Math.max(0, cue.holdMs)}ms`);
+      // R3338000: one still frame under Reduce Motion, holding nothing.
+      if (cue.still === true) el.setAttribute("data-still", "true");
       for (const part of SET_PIECE_PARTS[cue.shape]) {
         const child = doc.createElement("div");
         child.className = `fx-setPiece-${part}`;
         el.appendChild(child);
       }
+      // R3338000: each beat a mark of its own (a star lighting, a lane chaining shut), lit at its time.
+      const beats = cue.beats ?? [];
+      if (beats.length > 0) el.style.setProperty("--fx-beats", String(beats.length));
+      beats.forEach((beatMs, index) => {
+        const beat = doc.createElement("div");
+        beat.className = "fx-setPiece-beat";
+        beat.style.setProperty("--fx-beat", `${String(Math.max(0, beatMs))}ms`);
+        beat.style.setProperty("--fx-beat-index", String(index));
+        el.appendChild(beat);
+      });
       break;
     }
     case "launch": {
@@ -356,6 +382,39 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         const child = doc.createElement("div");
         child.className = `fx-launch-${part}`;
         el.appendChild(child);
+      }
+      break;
+    }
+    case "ship": {
+      // R3336000: a Drone Battleship's layer over it: `count` armor plates, the first `lit` glowing down as the Shield
+      // took the hit ("plates"), or a bay's two doors sliding apart over `count` lights ("bay"). It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-move", cue.move);
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-count", String(cue.count));
+      el.style.setProperty("--fx-lit", String(cue.lit));
+      if (cue.move === "plates") {
+        for (let i = 0; i < cue.count; i += 1) {
+          const plate = doc.createElement("div");
+          plate.className = "fx-ship-plate";
+          plate.style.setProperty("--fx-plate", String(i));
+          if (i < cue.lit) plate.setAttribute("data-lit", "true");
+          el.appendChild(plate);
+        }
+      } else {
+        for (const side of SHIP_DOOR_SIDES) {
+          const door = doc.createElement("div");
+          door.className = "fx-ship-door";
+          door.setAttribute("data-side", side);
+          el.appendChild(door);
+        }
+        for (let i = 0; i < cue.count; i += 1) {
+          const light = doc.createElement("i");
+          light.className = "fx-ship-light";
+          el.appendChild(light);
+        }
       }
       break;
     }

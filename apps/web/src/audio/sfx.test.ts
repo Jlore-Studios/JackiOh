@@ -31,6 +31,10 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // R3336000: the Drone Battleship.
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
+  // R3338000: the Terminus set pieces' organ.
+  "organ",
   // R3337003: an Anomaly's sting.
   "anomaly",
 ];
@@ -119,6 +123,14 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
+  // R3338000.
+  organ: 2000,
   // R3337003.
   anomaly: 1200,
 };
@@ -710,6 +722,72 @@ describe("#1954 the playmat taps", () => {
   });
 });
 
+describe("R3338000 the Terminus organ", () => {
+  const organRun = (params: SfxParams): Run => runRecipe(`organ ${JSON.stringify(params)}`, SFX.organ.recipe, SFX.organ.durationMs, params);
+  /** Every pipe's pitch, lowest first. */
+  const pitches = (run: Run): number[] =>
+    run.made
+      .filter((n) => n.kind === "oscillator")
+      .map((n) => n.param("frequency").settled())
+      .sort((a, b) => a - b);
+  const ROOTS = 9;
+
+  it("R3338000 every root, and an amount out of range, keeps every clause of the recipe contract", () => {
+    const runs = [
+      ...Array.from({ length: ROOTS }, (_, i) => organRun({ amount: i + 1 })),
+      ...[0, -4, 2.4, ROOTS + 1, Number.NaN].map((amount) => organRun({ amount })),
+    ];
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("R3338000 each amount from 1 to 9 is a minor triad on a root of its own, each tone sine pipes at 1 to 4 times its pitch", () => {
+    const roots: number[] = [];
+    for (let amount = 1; amount <= ROOTS; amount += 1) {
+      const run = organRun({ amount });
+      const pipes = run.made.filter((n) => n.kind === "oscillator");
+      expect(pipes, `amount ${String(amount)}`).toHaveLength(12);
+      expect(new Set(pipes.map((n) => n.type)), `amount ${String(amount)}`).toEqual(new Set(["sine"]));
+      const heard = pitches(run);
+      const root = heard[0] ?? 0;
+      // The root, its minor third and its fifth (0, 3 and 7 semitones up), each at harmonics 1 to 4.
+      const triad = [0, 3, 7].flatMap((semitones) => [1, 2, 3, 4].map((harmonic) => root * 2 ** (semitones / 12) * harmonic)).sort((a, b) => a - b);
+      heard.forEach((hz, i) => expect(hz, `amount ${String(amount)} pipe ${String(i)}`).toBeCloseTo(triad[i] ?? 0, 1));
+      roots.push(root);
+    }
+    expect(new Set(roots).size).toBe(ROOTS);
+  });
+
+  it("R3338000 an amount outside 1 to 9 clamps to the nearest root, and no amount plays the first", () => {
+    const first = pitches(organRun({ amount: 1 }));
+    const last = pitches(organRun({ amount: ROOTS }));
+    for (const amount of [undefined, 0, -4, Number.NaN]) expect(pitches(organRun(amount === undefined ? {} : { amount })), String(amount)).toEqual(first);
+    for (const amount of [ROOTS + 1, 25, Number.POSITIVE_INFINITY]) expect(pitches(organRun({ amount })), String(amount)).toEqual(last);
+  });
+
+  it("R3338000 the organ swells in over 0.25 s, holds 1.6 s and is let go within its durationMs", () => {
+    const run = organRun({ amount: 5 });
+    // The one envelope every pipe feeds, the gain wired into out.
+    const wind = run.made.filter((n) => n.kind === "gain" && n.connections.includes(run.out));
+    expect(wind).toHaveLength(1);
+    const events = wind[0]?.param("gain").events ?? [];
+    expect(events.map((e) => e.method)).toEqual(["setValueAtTime", "linearRampToValueAtTime", "linearRampToValueAtTime", "exponentialRampToValueAtTime"]);
+    const [silent, swelled, held, released] = events.flatMap((e) => ("time" in e && "value" in e ? [e] : []));
+    expect(silent?.value).toBe(0);
+    expect(silent?.time).toBeCloseTo(AT, 9);
+    expect(swelled?.time).toBeCloseTo(AT + 0.25, 9);
+    expect(held?.time).toBeCloseTo(AT + 0.25 + 1.6, 9);
+    expect(held?.value, "a level hold").toBe(swelled?.value);
+    expect(released?.time ?? Infinity).toBeLessThanOrEqual(AT + SFX.organ.durationMs / 1000 + EPS);
+    expect(returnedSeconds(run)).toBeLessThanOrEqual(SFX.organ.durationMs / 1000);
+  });
+});
 describe("R3337003 each Anomaly's sting", () => {
   /** `code`'s sting through `renderSfx` at `pitch`, as the engine plays it. */
   const stingOf = (code: AnomalyCode, pitch = 1): Run =>

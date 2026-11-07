@@ -241,6 +241,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "takeover":
       case "setPiece":
       case "launch":
+      case "ship":
       case "rift":
       case "anomalyTitle":
       case "radar": {
@@ -398,11 +399,16 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         card.setAttribute("data-fx-pulled", "true");
         card.style.setProperty("--fx-pull-x", `${dx.toFixed(1)}px`);
         card.style.setProperty("--fx-pull-y", `${dy.toFixed(1)}px`);
+        // R3338000: a card drawn in its turn waits for it, and takes its share of the hold to get there.
+        if (cue.staggerMs !== undefined) card.style.setProperty("--fx-pull-delay", `${String(Math.max(0, cue.staggerMs))}ms`);
+        if (cue.travelMs !== undefined) card.style.setProperty("--fx-pull-ms", `${String(Math.max(0, cue.travelMs))}ms`);
         staged.push({
           undo: () => {
             card.removeAttribute("data-fx-pulled");
             card.style.removeProperty("--fx-pull-x");
             card.style.removeProperty("--fx-pull-y");
+            card.style.removeProperty("--fx-pull-delay");
+            card.style.removeProperty("--fx-pull-ms");
           },
           expiresAt,
         });

@@ -39,6 +39,8 @@ const EXPECTED_IDS = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
+  "organ",
   "anomaly",
 ] as const;
 
@@ -126,6 +128,14 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
+  // R3338000: the Terminus set pieces' organ.
+  organ: 2000,
   // R3337003: an Anomaly's sting, one voice per board.
   anomaly: 1200,
 };

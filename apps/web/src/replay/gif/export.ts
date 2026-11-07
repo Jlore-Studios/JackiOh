@@ -8,7 +8,7 @@ import type { ReplayStep } from "@jackioh/engine";
 import { DEFAULT_PORTRAIT, PORTRAIT_IDS } from "@jackioh/shared";
 import type { PlayerId, PortraitId } from "@jackioh/shared";
 
-import { compositionFor, themeFor } from "../../cards/art/themes.ts";
+import { compositionOf, themeFor } from "../../cards/art/themes.ts";
 import { artSpec } from "../../cards/art/procedural.ts";
 import type { ArtSpec } from "../../cards/art/procedural.ts";
 import { motifFor } from "../../cards/art/motifs.ts";
@@ -49,9 +49,10 @@ export function attemptsFor(preset: ReplayGifPreset): GifAttempt[] {
   return [preset, ...smaller].map((size) => ({ preset: size, fps: REPLAY_GIF_FPS })).concat({ preset: smallest, fps: REPLAY_GIF_FALLBACK_FPS });
 }
 
-function artFor(defId: string, tags: Parameters<typeof themeFor>[0], type: Parameters<typeof compositionFor>[0], name: string, radiant: boolean): ArtSpec {
+/** A card's procedural picture as its face draws it, its own composition included (R3338001). */
+function artFor(defId: string, tags: Parameters<typeof themeFor>[0], type: Parameters<typeof compositionOf>[1], name: string, radiant: boolean): ArtSpec {
   const theme = themeFor(tags, type);
-  return artSpec(defId, theme, compositionFor(type), radiant, motifFor(name, theme));
+  return artSpec(defId, theme, compositionOf(defId, type), radiant, motifFor(name, theme));
 }
 
 /**

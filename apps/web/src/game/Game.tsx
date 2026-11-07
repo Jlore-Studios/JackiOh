@@ -69,7 +69,7 @@ import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
-import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
+import { hasSetPiece, setPieceShapeOf, signatureClaim, signatureRunOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
 import { anomalyClaim } from "../fx/anomaly.ts";
 import { starshipClaim } from "../fx/starship.ts";
@@ -417,7 +417,9 @@ export default function Game({
       // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
       // R2801000: and a Starship's launch after both.
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry) ?? anomalyClaim(entry),
+      // R3338000: a Terminus card's signature run is one entry its set piece claims.
+      signatureOf: signatureRunOf,
+      setPieceOf: (entry) =>  setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? signatureClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry) ?? anomalyClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },

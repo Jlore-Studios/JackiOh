@@ -3,8 +3,9 @@
 // `entrance` since, never a `{ bespoke }`, so a bespoke key is a card recipe's. R2795000: Classic+'s
 // Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
-// Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798), and R3337002's and
-// R3337003's Scanning Probes' scan and Anomaly Found!'s call (#3337).
+// Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798). R3338000: Olivian
+// Expanse's rift is its set piece now (fx/terminus/). R3337002's and R3337003's Scanning Probes' scan and
+// Anomaly Found!'s call (#3337).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -27,7 +28,6 @@ import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
-import { terminusRift } from "./stinkyscape/terminusRift.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
 import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
@@ -49,7 +49,6 @@ export const CARD_RECIPES = {
   mindJudge,
   cnSweep,
   harmonyWave,
-  terminusRift,
   magiBoot,
   battleshipWarp,
   duoBond,

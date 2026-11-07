@@ -19,8 +19,12 @@
 // picture of its own, seeded apart as Alt art's is, under its treatment; a Starship's art and a Legacy card's keep their
 // one picture under it. Woodcut ("woodcut") and Neon sign ("neon") restyle the window's picture as Pixel does. Each draws
 // the painter's in place of a delivered file.
+// R3336000: a Drone Battleship layer on the board (`ship`, stinkyscape.ts `shipArtOf`) draws the decks of its ship still
+// standing, `data-art-decks`; its printed card draws its own deck large with the other two faint.
 // R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
 // (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
+// R3338001: a procedural picture draws the card's own composition where it has one (themes.ts `compositionOf`:
+// Ceaseless Void's giant-shaped hole), else its type's.
 // R3333000: a Starship's art is drawn from the pieces its view lists, oldest first, and its launch, in the hull design
 // of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`).
 // R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
@@ -40,14 +44,14 @@ import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { starshipArtOf } from "./starshipHulls.ts";
-import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
+import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
 import { anomalyArtUri, legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
-import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
+import { compositionOf, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
 
-export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full";
+export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full" | "frame";
 
 export type CardArtProps = {
   defId: string;
@@ -76,6 +80,8 @@ export type CardArtProps = {
   picture?: ArtPicture;
   /** R2943001: which part of the picture the window draws (pictures.ts `ArtPart`); "whole" by default. */
   part?: ArtPart;
+  /** R3336000: a Drone Battleship layer on the board (`shipArtOf`) draws the decks of its ship still standing; null draws its printed picture. */
+  ship?: ShipArt | null;
 };
 
 /**
@@ -111,6 +117,7 @@ export function CardArt({
   motion = null,
   picture = "normal",
   part = "whole",
+  ship = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -175,20 +182,20 @@ export function CardArt({
   }
 
   // R3333000: the design a Starship wears is its launched name's, the face's (`artSubjectOf` may stand another for it).
-  const ship = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant);
+  const starshipArt = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant);
   const uri = !near
     ? null
-    : ship !== null
-      ? starshipArtUri(ship, restyle)
+    : starshipArt !== null
+      ? starshipArtUri(starshipArt, restyle)
       : anomaly !== null
         ? anomalyArtUri(anomaly, radiant, restyle)
         : stinky
-          ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
+          ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split, ship)
           : yard
             ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
             : coreId !== null
               ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-              : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, restyle, split);
+              : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, motion, restyle, split);
   const family =
     starship !== null
       ? "starship"
@@ -209,10 +216,11 @@ export function CardArt({
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
       data-art-family={family}
-      data-art-design={ship?.design}
+      data-art-design={starshipArt?.design}
       data-art-picture={ownPicture || restyle !== null ? picture : undefined}
       data-art-part={split === "whole" ? undefined : split}
       data-art-anomaly={anomaly ?? undefined}
+      data-art-decks={stinky ? (shipDecksOf(defId, ship) ?? undefined) : undefined}
       data-art-pending={uri === null ? "true" : undefined}
       data-art-moving={uri !== null && starship === null && anomaly === null && coreId === null && motion !== null ? "true" : undefined}
       aria-hidden="true"

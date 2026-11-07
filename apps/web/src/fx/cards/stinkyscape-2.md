@@ -98,7 +98,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-151` | Call to Chaos (Scape Edition) | Spell | cast wipe | 1.85 | vanish | kept: #2800's `wipe` for a one-sided clear; the census's vanish reads its Anomaly's exiles, which wipe flares |
 | `stinkyscape-152` | Sanctum | Field Spell | cast conjure; aura holy side | 1.85 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it |
 | `stinkyscape-153` | Stimmycheck | Spell | cast mana Hustle/cash | 1.40 | none: no motif reads manaChanged | cast: no census family reads manaChanged and manaSpent, which mana (#2786) reads; Hustle/cash for its stimmy |
-| `stinkyscape-154` | Dice of Doom | Spell | cast send; trigger send | 1.60 | bolt | cast: the census's bolt is one damage in its window; its own effect is addedToHand, which send reads; trigger: its End of turn adds it back to the hand, addedToHand |
+| `stinkyscape-154` | Dice of Doom | Spell | setPiece diceOfDoom | 1.60 | bolt | set piece (R3338000): its d100 tumbles across the board onto its `rolled` result; on a 67 the board goes dark and every Terminus card's star rains into the hand, on a miss the die crumbles, and a Lucky reroll keeps a glint; its End of turn return plays its own `addedToHand` row |
 | `stinkyscape-155` | Comet Crash | Field Spell | cast bind; death send Hustle/ore; aura ember zone | 1.28 | none: no motif reads locked | cast: no census family reads locked, its Crater, which bind reads; death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Hustle/ore for its Resources; its aura is #2787's example |
 | `stinkyscape-156` | Catalyst Comet | Spell | cast send | 1.35 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads: it adds a card and shuffles itself in |
 | `stinkyscape-157` | The Gauntlet | Field Spell | cast conjure; aura storm board | 1.35 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; its Gauntlet spans the middle three lanes of both sides, so its aura covers the board |
@@ -125,9 +125,9 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-t-dormant-starship` | Dormant Starship | Unit | none: Starship part | — | none: unseen | the Starship itself: its fuse and launch are the Starship part's (#2782) |
 | `stinkyscape-t-drone-interceptor` | Drone Interceptor | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
 | `stinkyscape-t-drone-corvette` | Drone Corvette | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
-| `stinkyscape-t-shield-layer` | Drone Battleship (Shield Layer) | Unit | none: token | — | not in census | a token the census never saw: its redirect is the damage rows' |
-| `stinkyscape-t-propagation-layer` | Drone Battleship (Propagation Layer) | Unit | activate conjure Tech/rocket | 1.26 | vanish | activate: the census's vanish is a few exiles in its window; its own Activates summon, which conjure reads; Tech/rocket for its drones |
-| `stinkyscape-t-meltdown-layer` | Drone Battleship (Meltdown Layer) | Unit | none: token | — | none: no motif reads addedToHand | a token: its End of turn self-hit is the damage row's; the census's addedToHand is the turn's draw |
+| `stinkyscape-t-shield-layer` | Drone Battleship (Shield Layer) | Unit | none: Battleship planner | — | not in census | a token the census never saw: its redirect, the dome's flare and plates and its break are `fx/battleship.ts`'s (R3336000), not a hook's |
+| `stinkyscape-t-propagation-layer` | Drone Battleship (Propagation Layer) | Unit | none: Battleship planner | — | vanish | its Activates open a bay and launch the drone from it in Tech/rocket, which `fx/battleship.ts` plans (R3336000) from the public `activated` and `summoned`, so the conjure it had would draw a second summon over it |
+| `stinkyscape-t-meltdown-layer` | Drone Battleship (Meltdown Layer) | Unit | none: Battleship planner | — | none: no motif reads addedToHand | a token: its End of turn self-hit pulses the core, its attacks fire from the reactor and its death is the blast, all `fx/battleship.ts`'s (R3336000); the census's addedToHand is the turn's draw |
 | `stinkyscape-t-reknite` | Reknite | Spell | none: token | — | bolt | a token: its Armor is a modifier (modifierChanged), which its badge shows |
 | `stinkyscape-t-korrelite` | Korrelite | Spell | cast bolt Hustle/ore | 0.90 | bolt | cast: the census agrees (bolt); Hustle/ore for its Resource |
 | `stinkyscape-t-gellium` | Gellium | Spell | cast mend Hustle/ore | 0.90 | bolt | cast: the census's bolt is noise in its window; its own effect is healed, which mend (#2793) reads; Hustle/ore for its Resource |
@@ -160,7 +160,8 @@ rendering (`fx/cards/stinkyscape/`), drawn over the event rows (`keep`).
 | Anomaly Found! | `anomalyCall` | its lay is a set piece of its own (R3337003), which draws the exiles and the landing | as its `boardReplaced` opens the rift, a void ring and a burst of stars over the middle of its caster's side |
 
 No Legendary entrance or Mythic takeover is restyled, so R2722001 stands as it is: #109 xxFreshJack,
-#110 iKwzki, #111 Shockwave447, #148 Alteran Reach and #154 Dice of Doom keep the shared takeover, and
+#110 iKwzki, #111 Shockwave447 and #148 Alteran Reach keep the shared takeover (#154 Dice of Doom's yields to its
+own set piece, R3338000), and
 the range's Legendaries the shared Legendary entrance (#2803 reworks both). Anomaly Found!, a token
 printed Mythic, yields its takeover to the rift its play lays, as a Mythic yields to its own wipe
 (R3337003, R2800000), and none of the three cards above is a signature (R3332000): the probes are
@@ -194,11 +195,13 @@ Found! token keep `wipe`.
 
 ## Tokens given entries
 
-Of the file's 32 tokens, 22 have an entry other than `none`: Paycheck, the four War Doctrines,
-IN33DH3 Prime, Wardrum Blob, the Drone Battleship's Propagation Layer, Korrelite, Gellium, Axnit,
-Narcor, Red Narcor, Anomaly Found! and the AI tokens Escort Protocol, Mining Subroutine, Route
-Optimizer, Probe Relay, Combat Subroutine, Drone Uplink, Honeypot and Salvage Protocol. The rest are
-keywords only, or show nothing a motif reads.
+Of the file's 32 tokens, 21 have an entry other than `none`: Paycheck, the four War Doctrines,
+IN33DH3 Prime, Wardrum Blob, Korrelite, Gellium, Axnit, Narcor, Red Narcor, Anomaly Found! and the AI
+tokens Escort Protocol, Mining Subroutine, Route Optimizer, Probe Relay, Combat Subroutine, Drone
+Uplink, Honeypot and Salvage Protocol. The rest are keywords only, or show nothing a motif reads; the
+Drone Battleship's three layers are `none: Battleship planner` (R3336000): their moments are
+`fx/battleship.ts`'s, planned from public events and the layers the view draws, and no hook opens for
+the Shield's guard, a break or the blast.
 
 ## New motifs
 
