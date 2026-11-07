@@ -18808,14 +18808,16 @@
       "cleared": {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
+          "model": "opus",
           "provider": "claude-8",
-          "tier": "medium"
+          "tier": "strong"
         },
-        "at": "2026-11-07T08:57:01Z",
+        "at": "2026-11-07T10:46:59Z",
         "built_by": "claude-8",
         "by": "`claude` (medium)",
-        "sha": "706a50b9f081f586015daa9bb47960eb3196836a"
+        "carried_from": "706a50b9f081f586015daa9bb47960eb3196836a",
+        "resolved_by": "`claude` (strong)",
+        "sha": "ece4786b8bc0599f369d268edb1459047e6ea69a"
       },
       "died": 0,
       "difficulty": "medium",
