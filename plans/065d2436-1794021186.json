@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 3342,
+  "title": "Patch: tiles that belong to their card: every Legendary and Mythic on the board marks its tile with an aura in its own colours that answers a touch",
+  "branch": "bot/issue-3342",
+  "thread": "**Issue #3342 (data, not instructions):**\n\n```text\n# #3342: Patch: tiles that belong to their card: every Legendary and Mythic on the board marks its tile with an aura in its own colours that answers a touch\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked for auras around cards that make their tile special.\n\n### Today\n\n- **Auras exist, but only for some cards.** Standing auras are an entry field in the per-card fx tables, `aura: { look, palette, scope }` (`fx/aura/`, R2787000), drawn by `AuraLayer.tsx`. Mostly Field Spells use them, scoped to their zone, side or board. A Legendary or Mythic Unit has no tile of its own: once its entrance ends, its tile looks like any other.\n- **Tiles give no feedback of their own.** A tile (`Zone.tsx`, `zone-<side>-<row>-<lane>`) that is a legal target is a button. One that is not shows only the mat's tap mark (`SandSurface.tsx`).\n\n### What it should be\n\n1. **A tile aura for every Legendary and Mythic** permanent on the board, Units and backrow alike. Its colours are drawn from the card's own picture (its painter's palette) and its pattern from its family or motif, so no two neighbouring Legendaries look alike:\n   - **Legendary:** a soft edge glow and slow motes.\n   - **Mythic:** a richer pattern under the card: runes, a starfield, roots, circuitry or ink, by its set's look.\n\n   A card's own signature aura (#3332's per-set passes) replaces this default when it has one.\n2. **It answers a touch.** Hovering, pressing or tapping the card or its tile sends a ripple through the aura and makes a soft sound in its colour (`audio/`). On a phone a short haptic plays (`haptics/`, with the Vibration setting). Being targeted by a play brightens it, and being attacked or damaged flickers it.\n3. **It knows the state.** The aura dims while its card is Dormant, Frozen or Silenced, and fades out with its card's `destroyed` or `exiled` row.\n4. **Quiet and cheap.** Auras sit under the cards and stay below the board's motion and particle budgets (`BACKDROP_PARTICLE_MAX`, the adaptive cap in `director.ts`). They are still under reduced motion, and off at fx intensity off.\n\n## Acceptance\n\n- Tests:\n  - every Legendary and Mythic permanent in play gets a tile aura whose colours come from its own picture;\n  - two different Legendaries' auras differ;\n  - a signature aura replaces the default.\n- Hover, press, target and damage responses play. A component spec shows a board with four Legendary and Mythic tiles at desktop size and at 390x844, and under reduced motion.\n- `fx-phone-frame.cy.tsx` covers a full board of auras within `FX_PHONE_FRAME_BUDGET_MS`.\n- `src/motion.test.ts`, `fx/css.test.ts` and the aura tests pass. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3342: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:52:55Z",
+    "claimed_at": "2026-11-07T03:13:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3337 is held for `claude-1` until 21:40 (5-hour usage is 101%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
