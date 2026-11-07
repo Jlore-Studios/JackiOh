@@ -17572,8 +17572,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-07T06:05:13Z",
-      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
+      "owner_since": "2026-11-07T11:18:13Z",
+      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-07T02:38:52Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -18238,14 +18238,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3339,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-07T08:57:50Z",
+      "queued_at": "2026-11-07T11:18:13Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
@@ -18269,10 +18269,17 @@
         "provider": "claude-8",
         "run": "42357730005"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-07T08:58:43Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-07T11:18:13Z",
+        "until": "2026-11-07T11:48:13Z",
+        "why": "it conflicts with `main` now"
+      },
       "verdict_rounds": 4,
       "votes": {
         "approvals": [
@@ -18294,19 +18301,7 @@
           "claude": "medium"
         }
       },
-      "waiting_comment": 6702531167,
-      "waiting_turn": {
-        "behind": [
-          3370,
-          3362
-        ],
-        "ends": "2026-11-07T12:58:58Z",
-        "from_run": "42357730005",
-        "head": "497a19f86cf11306f016b91f6dca01d286521cd1",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-07T10:58:58Z"
-      }
+      "waiting_comment": 6702531167
     },
     "3359": {
       "action": "review",
