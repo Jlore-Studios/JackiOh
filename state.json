@@ -16824,22 +16824,30 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "gemini"
         ],
-        "builder": "claude",
-        "built_by": "claude-4",
+        "builder": "gemini",
+        "built_by": "agy",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/game/__snapshots__/Board.test.tsx.snap"
+          ],
+          "from": "e8ae136fc66f4792375ca266b048923cc7f8c2c4",
+          "main": "14687f5f0d97a0b9de2e5da15240cfed7894dc24"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "provider": "claude-4",
-            "run": "42391992153",
+            "family": "gemini",
+            "provider": "agy",
+            "run": "42396940100",
             "tier": "medium"
           }
         ],
-        "sha": "e8ae136fc66f4792375ca266b048923cc7f8c2c4",
+        "sha": "2a7cc864d5d70c13ba1704ca604e0e3a3690028c",
         "tiers": {
-          "claude": "medium"
+          "gemini": "medium"
         }
       }
     },
