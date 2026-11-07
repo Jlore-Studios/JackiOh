@@ -44,6 +44,7 @@ import { useFxSettings } from "../fx/settings.ts";
 import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { reducedMotionNow } from "../game/animations.ts";
+import { DialogClose } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   getPacks,
@@ -119,7 +120,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const domRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
 
-  // Escape closes as Close does: not while busy.
+  // Escape closes as the ✕ does: not while busy.
   useModalOverlay(onClose, sceneRef, !busy);
 
   // The director lives exactly as long as the canvas and the DOM root it draws into (FxLayer's).
@@ -379,9 +380,6 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
             {t("Next pack ({left} left)", { left })}
           </button>
         ) : null}
-        <button type="button" data-testid={packTestid.close} disabled={busy} onClick={onClose}>
-          {all ? t("Done") : t("Close")}
-        </button>
       </div>
 
       {fxOn ? (
@@ -390,6 +388,9 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           <div ref={domRef} className="fx-dom" />
         </div>
       ) : null}
+
+      {/* R3221000: the scene keeps its own body and closes by the one ✕ every dialog shows, not while busy. */}
+      <DialogClose testid={packTestid.close} disabled={busy} onClick={onClose} />
     </div>,
     document.body,
   );
@@ -530,7 +531,7 @@ export default function PackOpening({
     setRound((before) => before + 1);
   };
 
-  // Done, Close and Escape all end here; "Next pack" keeps the scene, so a batch settles once (R3211000).
+  // The ✕ and Escape both end here; "Next pack" keeps the scene, so a batch settles once (R3211000).
   const close = (): void => {
     if (busy) return;
     queued.current = [];

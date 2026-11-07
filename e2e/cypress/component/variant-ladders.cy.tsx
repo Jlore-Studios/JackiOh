@@ -1,7 +1,8 @@
 // R3015007, R3015002 (#3015): one card's variants as ladders of levels, in a real browser. apps/web's vitest suite proves
 // the ladders' model and markup (collection/collection.test.tsx) and every level's attributes (cards/variantLevels.test.tsx,
 // cards/fullArtTiers.test.tsx); what only a layout and style engine can say is measured here, on The Mother Pancake, a
-// Legendary Unit offered five variants (the Default, Full art, Alt art, the Sketch and Pixel):
+// Legendary Unit offered eight variants (the Default, Full art, Alt art, the Sketch and Pixel, and R3017001 Night,
+// Stained-glass window and Tarot card, its side of each of part 6's pairs):
 //  - its faces at every level of every ladder, base and Radiant: a variant draws one picture at every level, a level
 //    adding only the full-art frame, its picture's motion and a signature (the signed level over its animated full
 //    art's own picture, R3015002), the variants' pictures apart; a foil layers on a level (Full art's signed one, worn by
@@ -31,11 +32,14 @@ import {
   VERSION_FULL_ART_ANIMATED_ID,
   VERSION_FULL_ART_ID,
   VERSION_FULL_ART_SIGNED_ID,
+  VERSION_NIGHT_ID,
   VERSION_PIXEL_ID,
   VERSION_SKETCH_FULL_ART_ANIMATED_ID,
   VERSION_SKETCH_FULL_ART_ID,
   VERSION_SKETCH_FULL_ART_SIGNED_ID,
   VERSION_SKETCH_ID,
+  VERSION_STAINED_GLASS_ID,
+  VERSION_TAROT_ID,
   artPictureOf,
   isFullBleed,
   ladderOf,
@@ -51,7 +55,7 @@ type CardDef = (typeof CATALOG)[string];
 type Point = { x: number; y: number };
 type Shot = { width: number; height: number; data: Uint8ClampedArray; scale: number };
 
-/** The Mother Pancake: a Legendary Unit, one of the 21 full-art cards, offered five variants. */
+/** The Mother Pancake: a Legendary Unit, one of the 21 full-art cards, offered eight variants. */
 const CARD = "classicplus-012";
 /** The foil the other seat's copy wears on Full art's signed level. */
 const FOIL = "foil-rainbow";
@@ -221,6 +225,10 @@ const SAME: readonly (readonly [string | null, string, boolean])[] = [
   [VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID, true],
   [VERSION_ALT_FULL_ART_ANIMATED_ID, VERSION_ALT_FULL_ART_SIGNED_ID, true],
   [VERSION_SKETCH_FULL_ART_ANIMATED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID, true],
+  // R3017002: each of part 6's variants, its animated level over its art level's picture.
+  [VERSION_NIGHT_ID, `${VERSION_NIGHT_ID}-animated`, false],
+  [VERSION_STAINED_GLASS_ID, `${VERSION_STAINED_GLASS_ID}-animated`, false],
+  [VERSION_TAROT_ID, `${VERSION_TAROT_ID}-animated`, false],
 ];
 const APART: readonly (readonly [string | null, string])[] = [
   [null, VERSION_ALT_ART_ID],
@@ -230,6 +238,13 @@ const APART: readonly (readonly [string | null, string])[] = [
   [VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID],
   [VERSION_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ID],
   [VERSION_ALT_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ID],
+  // R3017002: part 6's pictures, apart from the normal one and from one another.
+  [null, VERSION_NIGHT_ID],
+  [null, VERSION_STAINED_GLASS_ID],
+  [null, VERSION_TAROT_ID],
+  [VERSION_NIGHT_ID, VERSION_STAINED_GLASS_ID],
+  [VERSION_NIGHT_ID, VERSION_TAROT_ID],
+  [VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID],
 ];
 
 describe("R3015007 R3015002 a card's variants as ladders of levels", () => {
@@ -247,7 +262,7 @@ describe("R3015007 R3015002 a card's variants as ladders of levels", () => {
   });
 
   it("R3015007 R3015002 one card's ladders, base and Radiant, a foil on one level", () => {
-    expect(variantsOn(CARD), "the card's variants").to.deep.eq([DEFAULT_VARIANT, "full-art", "alt-art", "sketch", "pixel"]);
+    expect(variantsOn(CARD), "the card's variants").to.deep.eq([DEFAULT_VARIANT, "full-art", "alt-art", "sketch", "pixel", "night", "stained-glass", "tarot"]);
     // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
     writeCardSettings({ animatedFoil: false });
     for (const radiant of [false, true]) {

@@ -1,7 +1,8 @@
 /* The practice route's own chrome: the setup screen, the loading and failure screens, the lesson
-   HUD above the board, the think indicator, the result dialog and "Leave this game?". The board itself
-   is Game.tsx, unchanged, laid out and drawn by board.css and the card faces exactly as in hotseat
-   and online play; this file only gives it the screen's height (see "the game screen").
+   HUD above the board, the think indicator and the result dialog's look ("Leave this game?" is
+   Dialog.tsx's). The board itself is Game.tsx, unchanged, laid out and drawn by board.css and the
+   card faces exactly as in hotseat and online play; this file only gives it the screen's height (see
+   "the game screen").
 
    Every color is a token from index.css, except in the lobby, which is in the tavern
    (auth/tavern.css, `.tavern` on the lobby's root) and takes its `--tavern-*` colors. A tier's
@@ -532,8 +533,8 @@
 
 /* Every "go" is a `button-primary` (buttons.css), the tavern's gold; this is its size. In the lobby
    tavern.css sizes it as every tavern screen's call to action: the serif, mixed case, pressed down
-   on click. The dialogs over the board (the result, "Leave this game?") sit outside the tavern and
-   take the size below. */
+   on click. The dialogs over the board sit outside the tavern: Dialog.tsx sizes the answers of the
+   practice result and of "Leave this game?" (dialog.css), and a lesson's result takes the size below. */
 .practice .practice-play {
   position: relative;
   min-width: 220px;
@@ -885,21 +886,10 @@
 
 /* ---- the result dialog -------------------------------------------------------------------- */
 
-/* Centered by the dialog's auto margins rather than by `place-items`, so a dialog taller than a
-   landscape phone scrolls from its top instead of being clipped above the fold. */
-.practice-result-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  overflow-y: auto;
-  background: radial-gradient(circle at 50% 45%, rgb(7 9 14 / 55%), rgb(7 9 14 / 90%));
-  backdrop-filter: blur(3px);
-  animation: practice-fade-in calc(260ms * var(--anim-scale, 1)) ease-out calc(300ms * var(--anim-scale, 1)) both;
-}
-
-.practice-result {
+/* The practice result (R3220000) and a lesson's (TutorialResult.tsx, R3221000) draw through Dialog.tsx,
+   whose scrim is dialog.css's: the `.dialog` twins below give its panel this look. */
+.practice-result,
+.dialog.practice-result {
   --glow: var(--radiant);
   position: relative;
   flex: none;
@@ -1042,7 +1032,8 @@
   filter: grayscale(1) brightness(0.72) drop-shadow(0 6px 18px rgb(0 0 0 / 70%));
 }
 
-.app-shell .practice-result__title {
+.app-shell .practice-result__title,
+.app-shell .practice-result .dialog__title {
   margin: 2px 0 0;
   background: linear-gradient(
     180deg,
@@ -1061,7 +1052,8 @@
   filter: drop-shadow(0 2px 0 rgb(0 0 0 / 60%)) drop-shadow(0 0 18px color-mix(in srgb, var(--glow) 45%, transparent));
 }
 
-.app-shell .practice-result__reason {
+.app-shell .practice-result__reason,
+.app-shell .practice-result .dialog__body {
   color: var(--text);
   font-size: 16px;
 }
@@ -1074,7 +1066,8 @@
   text-transform: uppercase;
 }
 
-.practice-result__actions {
+.practice-result__actions,
+.practice-result .dialog__actions {
   display: flex;
   gap: 10px;
   width: 100%;
@@ -1119,15 +1112,6 @@
   min-height: 44px;
 }
 
-@keyframes practice-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes practice-result-in {
   from {
     opacity: 0;
@@ -1139,84 +1123,6 @@
   }
 }
 
-/* ---- "Leave this game?" ------------------------------------------------------------------- */
-
-.practice-leave-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  display: flex;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  overflow-y: auto;
-  background: radial-gradient(circle at 50% 45%, rgb(7 9 14 / 50%), rgb(7 9 14 / 86%));
-  backdrop-filter: blur(3px);
-  animation: practice-fade-in calc(160ms * var(--anim-scale, 1)) ease-out both;
-}
-
-.practice-leave {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  width: min(400px, 100%);
-  margin: auto;
-  padding: 22px 22px 20px;
-  border: 1px solid color-mix(in srgb, var(--radiant) 35%, var(--line));
-  border-radius: 18px;
-  background:
-    radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--radiant) 10%, transparent), transparent 70%),
-    linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
-  box-shadow:
-    0 0 0 1px rgb(0 0 0 / 40%),
-    0 30px 80px -20px rgb(0 0 0 / 90%);
-  text-align: center;
-  animation: practice-result-in calc(260ms * var(--anim-scale, 1)) cubic-bezier(0.2, 1.3, 0.4, 1) both;
-}
-
-.app-shell .practice-leave__title {
-  color: var(--text);
-  font-size: 24px;
-  font-weight: 750;
-}
-
-.app-shell .practice-leave__body {
-  color: var(--text-dim);
-  font-size: 14px;
-}
-
-.practice-leave__actions {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  margin-top: 8px;
-}
-
-.practice-leave__actions > * {
-  flex: 1 1 0;
-}
-
-.practice .practice-leave__actions .practice-play {
-  min-width: 0;
-  min-height: 52px;
-  padding: 10px 14px;
-  font-size: 15px;
-}
-
-.practice .practice-leave__actions .practice-result__secondary {
-  min-height: 52px;
-}
-
-/* R765: a free game's three answers. Keep playing stays the wide default on top; the two ways out,
-   Save and leave and Leave without saving, share the row under it. */
-.practice-leave__actions--save {
-  flex-wrap: wrap;
-}
-
-.practice-leave__actions--save > .practice-play {
-  flex-basis: 100%;
-}
-
 /* ---- reduced motion ----------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1225,11 +1131,9 @@
   .practice-thinking__core,
   .practice-hud[data-thinking="true"]::after,
   .practice-shuffle span,
-  .practice-result-scrim,
   .practice-result,
-  .practice-result__rays,
-  .practice-leave-scrim,
-  .practice-leave {
+  .dialog.practice-result,
+  .practice-result__rays {
     animation: none;
   }
 
@@ -1481,7 +1385,8 @@
 
 /* Landscape phones: the dialog loses height, not content. */
 @media (max-height: 500px) {
-  .practice-result {
+  .practice-result,
+  .dialog.practice-result {
     gap: 6px;
     padding: 14px 20px 10px;
   }
@@ -1500,11 +1405,13 @@
     height: 63px;
   }
 
-  .app-shell .practice-result__title {
+  .app-shell .practice-result__title,
+  .app-shell .practice-result .dialog__title {
     font-size: 36px;
   }
 
-  .practice-result__actions {
+  .practice-result__actions,
+  .practice-result .dialog__actions {
     margin-top: 4px;
   }
 
@@ -1516,11 +1423,13 @@
 
 @media (max-width: 420px) {
   .practice-result__actions,
+  .practice-result .dialog__actions,
   .practice-result__replay {
     flex-direction: column;
   }
 
-  .app-shell .practice-result__title {
+  .app-shell .practice-result__title,
+  .app-shell .practice-result .dialog__title {
     font-size: 38px;
   }
 }

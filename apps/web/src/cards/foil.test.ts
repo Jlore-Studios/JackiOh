@@ -167,7 +167,10 @@ describe("the animated foil sweep", () => {
     expect(plain).not.toMatch(/--cf-edge/);
     const edged = ruleBody(/\.cf\[data-rarity="Mythic"\]:where\(\[data-foil="static"\], \[data-foil="animated"\]\)\s*\{/);
     expect(edged).toMatch(/conic-gradient\(/);
-    const ring = ruleBody(/\.cf\[data-rarity="Mythic"\]:where\(\[data-foil="static"\], \[data-foil="animated"\]\) \.cf-portrait\s*\{/);
+    // #3341: the ring is drawn inside the art's rim now (the art runs up to the frame), on the portrait's ::after.
+    const ring = ruleBody(
+      /\.cf\[data-layout="minion"\]\[data-rarity="Mythic"\]:where\(\[data-foil="static"\], \[data-foil="animated"\]\):not\(\[data-full-art="true"\]\) \.cf-portrait::after\s*\{/,
+    );
     expect(ring).toMatch(/#94d0ff/);
     expect(cardsCss).not.toMatch(/\.cf\[data-rarity="Mythic"\] \.cf-portrait/);
     const crest = ruleBody(/\.cf\[data-rarity="Mythic"\] \.cf-crest/);

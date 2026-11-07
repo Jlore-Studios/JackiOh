@@ -2110,6 +2110,67 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R636, R781004, R78: a token whose text draws its keywords as it arrives (the Stinkyscape Drone
+    /// Corvette) and that is summoned again later in the same action, back through Reborn, holds the
+    /// later arrival's draw in the state the action leaves; two attacks it declared before it died are
+    /// one legal Windfury turn, while its new stint, whose draw holds no Windfury, still declares one
+    /// (handicapped fuzz seed 7089: summoned at an end of turn, then the autopilot's whole turn).
+    #[test]
+    fn r636_a_keyword_drawing_token_reborn_inside_the_action_may_have_attacked_twice_before_it_died() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": DRONE_CORVETTE, "lane": 1 }] } }));
+        let corvette = g.unit_at(PlayerId::P1, 1).id;
+        let turn = g.state().turn;
+        let card = find_instance_mut(g.state_mut(), &corvette).expect("the Corvette");
+        card.summoned_turn = Some(turn);
+        let reborn = find_instance(g.state(), &corvette).expect("the Corvette");
+        assert!(
+            !keywords_of(g.state(), reborn)
+                .iter()
+                .any(|k| k.kind() == KeywordKind::Windfury),
+            "setup: the reborn Corvette's draw holds no Windfury"
+        );
+        let mut monitor = create_invariant_monitor(g.state());
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": corvette, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let summoned = |via: Option<&str>| {
+            let mut body = json!({
+                "type": "summoned", "player": "p1", "instanceId": corvette, "defId": DRONE_CORVETTE, "row": "units", "lane": 1,
+            });
+            if let Some(via) = via {
+                body["via"] = json!(via);
+            }
+            event(body)
+        };
+        let destroyed = event(json!({
+            "type": "destroyed", "instanceId": corvette, "defId": DRONE_CORVETTE, "owner": "p1", "controller": "p1",
+            "attack": 8, "maxHealth": 8,
+        }));
+        assert_eq!(
+            monitor.after(
+                &[
+                    summoned(None),
+                    declared(),
+                    declared(),
+                    destroyed,
+                    summoned(Some("Reborn"))
+                ],
+                g.state()
+            ),
+            no_violations()
+        );
+        let found = monitor.after(&[declared(), declared()], g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains("I2 extra attack: ") && found[0].contains("attack number 2"),
+            "{}",
+            found[0]
+        );
+    }
+
     /// R636: the Drone Corvette's two attacks, its death and Reborn's return inside one autopilot action
     /// (Stinkyscape #47, handicapped fuzz seed 7089): `p1`'s field holds `def` in lane 1 as the
     /// returned body, and the events are its summon, two attacks at the hero and its summon again.

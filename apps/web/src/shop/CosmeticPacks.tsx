@@ -12,12 +12,13 @@
 // equipped from the reveal too (R1955000, collection/EquipButton.tsx); the link to the Collection
 // stays.
 //
-// A chase spends the whole bar and nothing takes it back, so its Buy asks first, inline in the row's
-// place, with Cancel focused and Escape answering Cancel; only Confirm sends the one `buyChase`
-// (R2683000, as the token offer's R2480000). Open and the chase Buy wait, as the Shop's Buy does,
+// A chase spends the whole bar and nothing takes it back, so its Buy asks first, in the row's place,
+// with Cancel focused and Escape answering Cancel; only Confirm sends the one `buyChase` (R2683000, as
+// the token offer's R2480000). R3221000: the question is an `alertdialog` drawn through `Dialog.tsx`,
+// Cancel first and its close, Confirm last. Open and the chase Buy wait, as the Shop's Buy does,
 // while one of the tab's spends is out (R2378000, `net/spending.ts`), and their handlers check again.
 
-import { useEffect, useId, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -30,6 +31,7 @@ import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
 import "../economy/spend.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   buyChase,
@@ -400,7 +402,6 @@ function ShardBar({
   // `asked` the one whose Buy takes the focus back when Cancel or Escape answers.
   const [asking, setAsking] = useState<string | null>(null);
   const [asked, setAsked] = useState<string | null>(null);
-  const questionId = useId();
   const ask = (cosmeticId: string): void => {
     if (busy !== null || spendOutNow()) return;
     setAsked(cosmeticId);
@@ -408,12 +409,6 @@ function ShardBar({
   };
   const cancel = (): void => {
     setAsking(null);
-  };
-  // Escape answers Cancel and nothing else: a page above may close on an Escape that reaches the window.
-  const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== "Escape") return;
-    event.stopPropagation();
-    cancel();
   };
   // The spend is checked before the question closes, so a Confirm met by a spend out keeps the question.
   const confirm = (cosmetic: RegistryCosmetic, cardId: string | undefined): void => {
@@ -459,32 +454,27 @@ function ShardBar({
                 : open[0];
             const cardId = fits === null ? undefined : chosen;
             if (asking === cosmetic.id) {
+              // R3221000: drawn in the row's place, a dialog whose Escape answers Cancel and goes no further.
               return (
-                <div
+                <Dialog
                   key={`ask-${cosmetic.id}`}
-                  className="token-confirm"
                   role="alertdialog"
-                  aria-labelledby={questionId}
-                  onKeyDown={cancelOnEscape}
-                >
-                  <p id={questionId}>
-                    {t("Buy {name}? This spends your full Chase Shard bar.", { name: t(cosmetic.name) })}
-                  </p>
-                  <div className="token-confirm__actions">
-                    <button
-                      type="button"
-                      disabled={busy !== null || spendOut}
-                      onClick={() => {
+                  testid={shopTestid.chaseAsk(cosmetic.id)}
+                  title={t("Buy {name}? This spends your full Chase Shard bar.", { name: t(cosmetic.name) })}
+                  onClose={cancel}
+                  cancel={{ label: t("Cancel"), kind: "secondary", testid: shopTestid.chaseCancel(cosmetic.id) }}
+                  actions={[
+                    {
+                      label: t("Confirm"),
+                      kind: "primary",
+                      onClick: () => {
                         confirm(cosmetic, cardId);
-                      }}
-                    >
-                      {t("Confirm")}
-                    </button>
-                    <button type="button" autoFocus onClick={cancel}>
-                      {t("Cancel")}
-                    </button>
-                  </div>
-                </div>
+                      },
+                      testid: shopTestid.chaseConfirm(cosmetic.id),
+                      disabled: busy !== null || spendOut,
+                    },
+                  ]}
+                />
               );
             }
             return (

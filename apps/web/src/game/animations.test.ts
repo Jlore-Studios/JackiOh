@@ -21,6 +21,7 @@ import {
   newEventsSince,
   planEntries,
   prefersReducedMotion,
+  riffleEntries,
   sameOccurrence,
   targetFor,
 } from "./animations";
@@ -882,7 +883,8 @@ describe("createAnimationQueue", () => {
       burstBudgetMs: Number.POSITIVE_INFINITY,
     });
     const events = longStream(3);
-    const entries = planEntries(events, view, false);
+    // #3347: the action's last shuffle holds for its deck's riffle too, which `riffleEntries` adds.
+    const entries = riffleEntries(planEntries(events, view, false), { reduced: false, speed: 1 });
     const timed = entries.filter((e) => e.durationMs > 0);
 
     queue.enqueue(events, view);
@@ -897,7 +899,8 @@ describe("createAnimationQueue", () => {
     const clock = fakeClock();
     const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: false });
     const events = longStream(3);
-    const timed = planEntries(events, view, false).filter((e) => e.durationMs > 0);
+    // #3347: the action's last shuffle holds for its deck's riffle too, which `riffleEntries` adds.
+    const timed = riffleEntries(planEntries(events, view, false), { reduced: false, speed: 1 }).filter((e) => e.durationMs > 0);
     const planned = timed.reduce((sum, e) => sum + e.durationMs, 0);
     expect(planned, "this stream is well past the budget").toBeGreaterThan(BURST_BUDGET_MS);
 

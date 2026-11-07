@@ -22508,5 +22508,199 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12e",
+    "date": "2026-11-06",
+    "title": "Patch: many more card art variants, so every card has several",
+    "source": "#3017",
+    "notes": "Part 6 of the card variants: six two-level variants on #3015's ladders, each its art in the normal frame then animated, per card and granted to no account (R3017000): Night, Watercolor and Woodcut, Rare then Epic, and Neon sign, Stained-glass window and Tarot card, Epic then a Legendary chase. An offer's sample may start at a from (R3017001), so the six make three pairs, each splitting every non-token card between its two by one seed, the types weighted 60 or 40 in 100 toward the style that suits them: every card, Legacy ones included, is offered at least VARIANT_MIN_PER_CARD (three) variants besides the Default, each reaches every set that ships, and no two variants share their cards. Night, Watercolor, Stained-glass window and Tarot card repaint a new picture of the card's subject under a treatment of their own; Woodcut and Neon sign restyle its own picture (R3017002). A foil, a finish and a border layer on each, an animated level moves its picture and holds still under reduced motion, a Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Six new card variants",
+      "new": [
+        "Night: a new picture of the card under a night sky, with a moon and stars.",
+        "Watercolor: a new picture of the card in soft washes of paint on paper.",
+        "Stained-glass window: a new picture of the card in bright panes of glass, lit from behind and leaded.",
+        "Tarot card: a new picture of the card as a fortune card, under an arch with a sun, a crescent and stars.",
+        "Woodcut: the card's own picture as a three-tone print, its middle tone cut in long strokes.",
+        "Neon sign: the card's own picture as glowing tubes on a dark wall."
+      ],
+      "balance": [],
+      "changes": [
+        "Every card, Legacy cards too, can wear three more: Night or Neon sign, Watercolor or Stained-glass window, and Woodcut or Tarot card. Cards differ in which they get.",
+        "Each new variant has an animated level. Night, Watercolor and Woodcut are Rare, then Epic animated; the other three are Epic, then a Legendary chase animated.",
+        "Foils, finishes and borders work on every new level, and a Radiant card keeps its gold frame and marks. None of the new looks uses Radiant's gold."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "4d9000f9a5838e4668e5fa5483307797c148b8fd"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12f",
+    "date": "2026-11-07",
+    "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
+    "source": "#3333",
+    "notes": "Part of #3330's Stinkyscape art. Every Starship Piece, the 47 cards that print it and Stinkyscape #127 to #129 when Embiggened, has a module of its own, a part drawn where it mounts on a hull: the Beams, Repeaters, Cannons, Flak and Mining Drills bigger and busier each tier, the defenses, engines, launchers (each loaded with what it fires), pods (the Felinor Containment Chamber a cat at its porthole) and the odd ones each their own (R3333001). A piece's own card draws its module large on a cutaway of a hull in a bay by its family, and its fifty pictures are recorded again (R503). A Starship in play is the ship its pieces build, oldest first: each module on its hardpoint (the bow for weapons, the spine for defenses, the flanks for launchers and pods, the stern for engines, the keel for miners), a running light along the keel for each, its hull growing from a frigate to a dreadnought with its count; launched, it wears the hull design of the name it took, each of the seven its own prow, windows, livery and emblem; Dormant, it sits in a shipyard, welding sparks where its newest piece went in and a dock lamp brightening as it fills. A design and a livery are the painter's inputs, for #3330's cosmetic track (R3333000). A Dormant hull's plates and the pieces list show each piece's module icon (R3333002). No base face wears Radiant's gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Starships built from what they hold",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Starship is now drawn from the pieces fused into it: weapons on its bow, engines at its stern, drills under its keel, pods and launchers along its sides.",
+        "The more pieces a Starship holds, the bigger its hull, from a frigate to a dreadnought.",
+        "Each of the seven names a Starship can launch under has its own hull: The Ninth Life has whiskers and portholes, The Lantern Ferry a lantern on its bow, The Silent Choir organ pipes, and so on.",
+        "A Dormant Starship is drawn in a shipyard, sparks flying where its newest piece went in.",
+        "Every Starship Piece's card shows its part large, in a bay of its own, and a Cannon v5 or a Mining Drill v5 is clearly bigger than the tiers below it.",
+        "A Dormant Starship's hull plates and its list of pieces show a small picture of each piece's part."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "f15ce12a7d705fd0ef814cc0f910534dfe4df519"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12g",
+    "date": "2026-11-07",
+    "title": "Patch: Terminus cards end the world: a set piece and a picture of its own for each Terminus card, Olivian Expanse and Ceaseless Void, and Dice of Doom's d100 rolled on screen",
+    "source": "#3338",
+    "notes": "Part of #3330: the Terminus cards, the game's end-of-the-world cards, each get a set piece and a picture of their own (R3338000, R3338001). Olivian Expanse (S #4), its six Terminus cards (S #4.1 to #4.6), Ceaseless Void (#100) and Dice of Doom (S #154) each name a set piece in their set's effects table: Farewell's and the Void's play over their board clears as wipes do (R2800000), every other over a signature, the run of its hook's events of the types it names (The Big Crunch's first cast), held one capped beat as R2785000 holds every set piece, a Mythic's takeover yielding to it, short under Big moments' short, unheld under off, and one still frame under Reduce Motion. Dice of Doom's d100 lands on its public roll, its jackpot read off what the run did; a hidden card only ever shows as a card back (R202). Each set piece's bed opens on an organ chord of its own under the Mythic choir (R1883000). Eight Stinkyscape painters and the Void's giant-shaped hole draw the nine pictures, base and Radiant, and R503's fixtures are recorded again for them; the Void's cost gem drains as its cost falls in its owner's own hand (R3338002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "The Terminus cards end the world",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Olivian Expanse, its six Terminus cards, Ceaseless Void and Dice of Doom each have an animation of their own, with a sound built on an organ and the Mythic choir.",
+        "Tap to skip one. Big moments and Reduce motion shorten it or show it as a still.",
+        "Dice of Doom's hundred-sided die now rolls across the board and lands on its roll. On a 67 the Terminus cards rain into the hand; on a miss the die crumbles.",
+        "Each of the nine has a picture of its own, on its base and its Radiant face.",
+        "Ceaseless Void's cost gem drains in your hand as its cost falls."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6aea0f59f47c69618e7f0079127748bca02428e9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12h",
+    "date": "2026-11-07",
+    "title": "Patch: bigger, more vivid cards: larger faces on the board, in hand and in inspect, an art window up to the frame",
+    "source": "#3341",
+    "notes": "How cards look only: nothing plays differently. The board's card height budget (BOARD_CARD_BUDGET, game/config.ts) gives more of its height to cards: tighter gaps (the lanes' and your fan's, the room over your fan, and on a phone the rows', the mat's and the sides') raise the card at 1280x720, 1920x1080, 390x844, 360x780 and a phone on its side, each measured in a browser; a card is never smaller at any of them. A hovered or tapped hand card lifts larger (HAND_LIFT_SCALE). A unit that prints no full art draws its art up to the frame, the name plate and the gems over its edges, with a rarity ring at its rim in place of the oval; a hand card's art window grows where its name band and rules box give room, the box taking only the height its text needs (fit.ts measures it). The hover preview (and the phone sheet) is larger, and a taller screen draws it taller still, so its art stays over twice as wide as a board unit's. A small face's art is lifted in saturation and contrast (ART_SMALL_FACE_LIFT), never on a Radiant face's gold (R2725004).",
+    "player": {
+      "title": "Bigger, more vivid cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards on the board and in your hand are larger, on a desktop and on a phone.",
+        "A hand card you hover or tap lifts higher and grows bigger; on a phone it rises clear of your thumb.",
+        "A unit's art fills its card up to the frame, with its name and numbers over the edges; a hand card's art grows as its rules box shrinks to its text.",
+        "The card preview and the phone card sheet are larger, so the art can be studied.",
+        "Art keeps its colours, with more punch on small cards; Radiant's gold is unchanged."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9ce6dbcafa26c2d126b8dc520601727cfb830cf4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12i",
+    "date": "2026-11-07",
+    "title": "Patch: the Drone Battleship as one great ship in three decks",
+    "source": "#3336",
+    "notes": "How cards look and how the Battleship moves; nothing plays differently.",
+    "player": {
+      "title": "The Drone Battleship",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The Drone Battleship's three layers draw as the decks of one ship, with the stack showing as many decks as still stand.",
+        "The arrival drops each deck in turn, a hit redirected onto the Shield beams to its dome, drones launch from its bays, the Meltdown core pulses to a blast, and a broken layer shears its deck off."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "dd0f41602606ec3b1c82bac610a6a8040a5dd774"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12j",
+    "date": "2026-11-07",
+    "title": "Patch: move the menus' remaining dialogs and sheets onto the shared Dialog",
+    "source": "#3221",
+    "notes": "The menus' dialogs and sheets draw through the one Dialog (R3221000): settings, friends and chat are its sheet, every other dialog closes by the ✕ at its top right, a question with a Cancel puts Cancel first, and Escape and Tab go to the top dialog alone. The inspect overlay's card detail (R2529000 counts apps/web/src/cards/ as how cards look) takes the same ✕ in place of its text Close, the dialogs' layer and their scrim's colour. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "One kind of dialog on every screen",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every menu's dialog closes the same way: by the ✕ at its top right, or by Cancel, now first, where it asks a question.",
+        "On a phone, Settings, Friends and a chat rise from the foot of the screen.",
+        "Escape and Back close the dialog on top alone, so a question asked over another dialog closes first."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "765489f9534d437ca5867d2e3a82e527e23ee6d8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12k",
+    "date": "2026-11-07",
+    "title": "Patch: art-first cards in play",
+    "source": "#3339",
+    "notes": "Full-art looks and Legendary/Mythic cards drop names and text on the board to prioritize art; keyword marks and boardNames setting added.",
+    "player": {
+      "title": "Art-first cards in play",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards in play wearing full-art looks and every Legendary and Mythic card drop their name and text to let art stand edge-to-edge, showing their name on hover or a long press.",
+        "Card settings add Names on the board to choose between Art first, Always, or Never."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9bc6d50206e7021506d2ce07298784581c09164f"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

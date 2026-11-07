@@ -5,8 +5,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { mountDomEffect, type DomEffect } from "./dom.ts";
-import type { FxBox, FxDomCue } from "./types.ts";
+import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
+import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
+import type { FxBox, FxDomCue, FxHoldCue } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
 const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // center (730, 70)
@@ -243,6 +244,46 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect([...frame.children].map((child) => child.className)).toEqual(["fx-launch-flame", "fx-launch-trail"]);
     expect(mountDomEffect(root, still, {})).toBeNull();
   });
+
+  it("R3336000 a ship cue builds plates with their lit flags, and doors and lights", () => {
+    const plates: FxDomCue = { kind: "ship", move: "plates", at: anchor, tint: TINT, count: 5, lit: 3, delayMs: 0, durationMs: 900 };
+    const row = expectMounted(mountDomEffect(root, plates, { at: AT }), plates);
+    expectCenteredOn(row, AT);
+    expect(row.getAttribute("data-move")).toBe("plates");
+    expect(cssVar(row, "--fx-count")).toBe("5");
+    expect(cssVar(row, "--fx-lit")).toBe("3");
+    expect(cssVar(row, "--fx-tint-glow")).toBe(TINT.glow);
+    const tiles = [...row.children] as HTMLElement[];
+    expect(tiles.map((child) => child.className)).toEqual(Array<string>(5).fill("fx-ship-plate"));
+    expect(tiles.map((plate) => cssVar(plate, "--fx-plate"))).toEqual(["0", "1", "2", "3", "4"]);
+    // The first `lit` plates carry the flag, the rest do not.
+    expect(tiles.map((plate) => plate.getAttribute("data-lit"))).toEqual(["true", "true", "true", null, null]);
+    expect(textNodeCount(row)).toBe(0);
+    expect(row.outerHTML).not.toMatch(/card-u1|defId/);
+    row.remove();
+
+    const bay: FxDomCue = { kind: "ship", move: "bay", at: anchor, tint: TINT, count: 3, lit: 0, delayMs: 0, durationMs: 1200 };
+    const hangar = expectMounted(mountDomEffect(root, bay, { at: AT }), bay);
+    expect(hangar.getAttribute("data-move")).toBe("bay");
+    expect(cssVar(hangar, "--fx-count")).toBe("3");
+    expect(cssVar(hangar, "--fx-lit")).toBe("0");
+    const doors = [...hangar.querySelectorAll<HTMLElement>(".fx-ship-door")];
+    expect(doors.map((door) => door.getAttribute("data-side"))).toEqual(["left", "right"]);
+    const lights = [...hangar.querySelectorAll<HTMLElement>(".fx-ship-light")];
+    expect(lights).toHaveLength(3);
+    expect(lights.every((light) => light.tagName === "I")).toBe(true);
+    expect(hangar.querySelector(".fx-ship-plate")).toBeNull();
+    expect(hangar.children).toHaveLength(5);
+    // It names no card (R202): no text, and neither cue's markup holds the anchor's testid or a defId.
+    expect(textNodeCount(hangar)).toBe(0);
+    expect(hangar.outerHTML).not.toMatch(/card-u1|defId/);
+    hangar.remove();
+
+    // No anchor box, nothing built.
+    expect(mountDomEffect(root, plates, {})).toBeNull();
+    expect(mountDomEffect(root, bay, { at: null })).toBeNull();
+    expect(root.childElementCount).toBe(0);
+  });
 });
 
 /* What it refuses, and what it never does */
@@ -460,5 +501,40 @@ describe("a stand-in swells inward from an edge (integration QA: lane 1 on a pho
     const right = land.x + origin.x * land.width + (1 - origin.x) * land.width * scale;
     expect(origin.x).toBeGreaterThan(0.5);
     expect(right).toBeLessThanOrEqual(view.width);
+  });
+});
+
+/* #3347: a hold's stand-in leans the way it travels, and straightens as it lands. */
+describe("#3347 mountHold turns the stand-in toward its zone", () => {
+  const LAND: FxBox = { x: 500, y: 300, width: 60, height: 82 }; // center (530, 341)
+  const cue: FxHoldCue = {
+    kind: "hold",
+    from: null,
+    to: { kind: "testid", testid: "zone-you-units-3" },
+    delayMs: 0,
+    landMs: 240,
+    durationMs: 6000,
+  };
+  const rot = (from: FxBox | null): number => {
+    const hold = mountHold(root, cue, { source: null, from, land: LAND, font: null });
+    return Number.parseFloat(hold.el.style.getPropertyValue("--fx-rot"));
+  };
+  const startedAt = (x: number): FxBox => ({ x: x - 30, y: 600, width: 60, height: 82 });
+
+  it("#3347 the sign follows the start side: from the left it starts turned clockwise, from the right counterclockwise, from straight below not at all", () => {
+    expect(rot(startedAt(530 - FX_HOLD_TURN_PX / 2))).toBeGreaterThan(0);
+    expect(rot(startedAt(530 + FX_HOLD_TURN_PX / 2))).toBeLessThan(0);
+    expect(rot(startedAt(530))).toBe(0);
+  });
+
+  it("#3347 the turn is proportional up to FX_HOLD_TURN_PX and capped at FX_HOLD_TURN_DEG beyond it", () => {
+    expect(rot(startedAt(530 - FX_HOLD_TURN_PX / 2))).toBeCloseTo(FX_HOLD_TURN_DEG / 2, 1);
+    expect(rot(startedAt(530 - FX_HOLD_TURN_PX))).toBeCloseTo(FX_HOLD_TURN_DEG, 1);
+    expect(rot(startedAt(530 - 10 * FX_HOLD_TURN_PX))).toBeCloseTo(FX_HOLD_TURN_DEG, 1);
+    expect(rot(startedAt(530 + 10 * FX_HOLD_TURN_PX))).toBeCloseTo(-FX_HOLD_TURN_DEG, 1);
+  });
+
+  it("#3347 a stand-in with nothing to start from (a light that drops in) is not turned", () => {
+    expect(rot(null)).toBe(0);
   });
 });

@@ -127,3 +127,9 @@ path.cf-stamp-rim {
   height: auto;
   translate: none;
 }
+
+/* R3339000: a normal Unit's name plate is smaller (cards.css, 0.82 of `--mf-plate`) and its oval runs lower, so the stamp
+   stands on the smaller plate: a stamp any higher would reach into the longer oval. */
+.cf[data-layout="minion"]:not([data-full-art="true"]):not([data-art-first="true"]) .cf-stamp {
+  bottom: calc(var(--mf-stat, 26cqh) + var(--mf-plate, 11cqh) * 0.82 + 0.5cqh);
+}

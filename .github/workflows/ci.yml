@@ -500,11 +500,12 @@ jobs:
   # touches what stage 2 checks needs it: a card script, the engine, the cards crate's shared code or
   # data, or the AI. The paths here are a superset of the classifier's own (`classify::area`), so a
   # pull request stage 1 sends to stage 2 always has the base's build. The base is the merge
-  # commit's first parent, as rust-classify's is (#3071).
+  # commit's first parent, as rust-classify's is (#3071). Not on a promotion into production, which
+  # rust-classify skips.
   rust-base-build:
     name: rust (base build)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' }}
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -569,12 +570,15 @@ jobs:
   # build the one rust-build made of it, and the base its first parent: main as GitHub merged the pull
   # request onto it, so the diff is what lands. `pull_request.base.sha` can be commits behind, and a
   # diff from it holds main's own changes too, whose fragments may have shipped since (#3071).
-  # `pull-requests: write` and `issues: write` for its labels alone; the job runs no code but this
-  # repository's own build.
+  # Never on a promotion into production (docs/deploy-cloudflare.md §2.1): its diff is every commit
+  # of main since the last promotion, each classified and held to its fragments on its own pull request,
+  # and a `patches ship` among them has taken those fragments out of pending/, so every card they
+  # changed read as unclaimed (#3317, 109 of them). `pull-requests: write` and `issues: write` for
+  # its labels alone; the job runs no code but this repository's own build.
   rust-classify:
     name: rust (classify)
     needs: [changes, rust-build, rust-base-build]
-    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' }}
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -626,8 +630,10 @@ jobs:
             tar -xzf "$RUNNER_TEMP/rust-base.tgz" -C "$RUNNER_TEMP/base-jackioh"
             parent_bin=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
           fi
-          target/release/jackioh classify --base "$BASE" "${parent_bin[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
-          status=$?
+          # `|| status=$?`, as the runner's `bash -e` would stop at a failure before the problems below
+          # are printed and annotated.
+          status=0
+          target/release/jackioh classify --base "$BASE" "${parent_bin[@]}" --claims --json > "$RUNNER_TEMP/classify.json" || status=$?
           cat "$RUNNER_TEMP/classify.json"
           echo "labels=$(jq -c '.labels // []' "$RUNNER_TEMP/classify.json" 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
           jq -r '.problems // [] | .[] | "::error title=classify::" + .' "$RUNNER_TEMP/classify.json" 2>/dev/null || true
@@ -765,7 +771,7 @@ jobs:
           BUILD: ${{ needs.rust-build.result }}
           CHECKS: ${{ needs.rust-checks.result }}
           CLASSIFY: ${{ needs.rust-classify.result }}
-          PULL: ${{ github.event_name == 'pull_request' }}
+          PULL: ${{ github.event_name == 'pull_request' && github.base_ref != 'production' }}
           TRAINING: ${{ needs.training-gate.result }}
           AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
         run: |

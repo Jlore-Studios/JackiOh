@@ -24,6 +24,7 @@ import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { friendsTestid, togetherTestid } from "./testids.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { tabStops } from "./modalKeys.ts";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 
@@ -612,8 +613,13 @@ describe("#1831 the panel is a modal for the keyboard", () => {
       const panel = await openPanel();
       const close = within(panel).getByTestId(friendsTestid.close);
       const all = within(panel).getByTestId(friendsTestid.all);
+      // R3221000: the panel opens on its ✕, the Dialog's last stop: Tab wraps to the first, Shift+Tab steps back.
       expect(close).toHaveFocus();
 
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab" });
+      expect(tabStops(panel)[0]).toHaveFocus();
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab", shiftKey: true });
+      expect(close).toHaveFocus();
       fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab", shiftKey: true });
       expect(all).toHaveFocus();
       fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab" });
@@ -626,7 +632,7 @@ describe("#1831 the panel is a modal for the keyboard", () => {
 
       fireEvent.click(panel);
       expect(screen.getByTestId(friendsTestid.panel)).toBeInTheDocument();
-      fireEvent.click(must(document.querySelector<HTMLElement>(".friends-panel-scrim"), "the scrim"));
+      fireEvent.click(must(document.querySelector<HTMLElement>(".dialog-scrim"), "the scrim"));
       expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
       expect(opener).toHaveFocus();
     },
@@ -654,10 +660,12 @@ describe("#1831 challenging from the panel", () => {
 
       const form = await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
       expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      // R3221000: Cancel holds the focus; Send waits for the decks.
+      expect(screen.getByTestId(togetherTestid.challengeClose)).toHaveFocus();
       await waitFor(() => {
-        expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
+        expect(screen.getByTestId(togetherTestid.challengeSend)).toBeEnabled();
       }, SLOW);
-      expect(form).toHaveAttribute("role", "dialog");
+      expect(form).toHaveAttribute("role", "alertdialog");
 
       fireEvent.click(screen.getByTestId(togetherTestid.challengeSend));
       await waitFor(() => {
@@ -689,8 +697,9 @@ describe("#1831 challenging from the panel", () => {
       fireEvent.click(within(must(annRow, "Ann's row")).getByTestId(togetherTestid.challenge));
       await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
       await waitFor(() => {
-        expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
+        expect(screen.getByTestId(togetherTestid.challengeSend)).toBeEnabled();
       }, SLOW);
+      expect(screen.getByTestId(togetherTestid.challengeClose)).toHaveFocus();
 
       await pressBack();
       await waitFor(() => {

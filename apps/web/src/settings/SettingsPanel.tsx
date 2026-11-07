@@ -1,14 +1,8 @@
 // Settings dialog: desktop modal, phone bottom sheet (S8, B23–B24). Hidden tab panels preserve
 // control state and test access; settings write through immediately without a draft.
+// R3221000: drawn through the one Dialog as a sheet, whose keys (Escape, Tab, Back) are its own.
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactElement,
-} from "react";
+import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
 import { SETTINGS_SLOTS, type SettingsSectionId, type SettingsSlot } from "./slots.ts";
 import {
@@ -22,8 +16,9 @@ import {
 import { readRememberedTab, rememberTab } from "./tabs.ts";
 import { retrySettingsSync, useSettingsSyncState } from "./accountSync.ts";
 import { TryAgainButton } from "../auth/AccountError.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useBackLayer } from "../net/backLayers.ts";
+import { Tabs } from "../tabs/index.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
@@ -88,9 +83,6 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   },
 };
 
-const FOCUSABLE =
-  'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
-
 function resetSection(section: SectionSpec, slots: readonly SettingsSlot[]): void {
   const patch: Partial<Settings> = {};
   for (const setting of section.controls) patch[setting] = DEFAULT_SETTINGS[setting];
@@ -134,12 +126,9 @@ export default function SettingsPanel({
   useLocale();
   const settings = useSettings();
   const sync = useSettingsSyncState();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef(new Map<SettingsSectionId, HTMLButtonElement>());
   const base = useId();
-  // R2127000: Back closes the panel as Close does.
-  useBackLayer(onClose);
 
   const sections = SECTIONS.filter(
     (section) => section.controls.length > 0 || slots.some((slot) => slot.section === section.id),
@@ -176,121 +165,43 @@ export default function SettingsPanel({
     if (bodyRef.current !== null) bodyRef.current.scrollTop = 0;
   }, [active]);
 
-  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
-    const at = active === undefined ? -1 : ids.indexOf(active);
-    let to: number;
-    if (event.key === "ArrowRight") to = (at + 1) % ids.length;
-    else if (event.key === "ArrowLeft") to = (at - 1 + ids.length) % ids.length;
-    else if (event.key === "Home") to = 0;
-    else if (event.key === "End") to = ids.length - 1;
-    else return;
-    event.preventDefault();
-    const id = ids[to];
-    if (id === undefined) return;
-    choose(id);
-    tabRefs.current.get(id)?.focus();
-  };
-
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === "Escape") {
-      // Keep the board's Escape handler from firing too.
-      event.stopPropagation();
-      onClose();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    // Keep Tab inside the dialog; hidden panels are not endpoints.
-    const panel = panelRef.current;
-    if (panel === null) return;
-    const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-      (item) => item.closest("[hidden]") === null,
-    );
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (first === undefined || last === undefined) return;
-    const active = document.activeElement;
-    if (event.shiftKey && (active === first || active === panel)) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
+  // R2127000: Back closes the panel as Close does, through the Dialog.
   return (
-    <div
-      className="settings-scrim"
-      data-testid="settings-scrim"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Dialog
+      role="dialog"
+      sheet
+      title={t("Settings")}
+      onClose={onClose}
+      actions={[]}
+      testid="settings-panel"
+      scrimTestid="settings-scrim"
+      closeTestid="settings-close"
+      closeLabel={t("Close settings")}
+      className="settings-panel"
+      panelRef={panelRef}
     >
-      <div
-        ref={panelRef}
-        className="settings-panel"
-        data-testid="settings-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("Settings")}
-        tabIndex={-1}
-        onKeyDown={onKeyDown}
-      >
-        <header className="settings-head">
-          <h1 className="settings-title">{t("Settings")}</h1>
-          <button
-            type="button"
-            className="settings-close"
-            data-testid="settings-close"
-            aria-label={t("Close settings")}
-            onClick={onClose}
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
-        </header>
-        <div
-          className="settings-tabs"
-          role="tablist"
-          aria-label={t("Settings sections")}
-          data-testid="settings-tablist"
-          onKeyDown={onTabKeyDown}
-        >
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              ref={(node) => {
-                if (node === null) tabRefs.current.delete(section.id);
-                else tabRefs.current.set(section.id, node);
-              }}
-              type="button"
-              role="tab"
-              id={`${base}-tab-${section.id}`}
-              className="settings-tab"
-              data-testid={`settings-tab-${section.id}`}
-              aria-selected={section.id === active}
-              aria-controls={`${base}-panel-${section.id}`}
-              tabIndex={section.id === active ? 0 : -1}
-              onClick={() => {
-                choose(section.id);
-              }}
-            >
-              {t(section.title)}
-            </button>
-          ))}
-        </div>
-        <div className="settings-body" ref={bodyRef}>
-          {sections.map((section) => {
-            const sectionSlots = slots.filter((slot) => slot.section === section.id);
-            return (
-              <section
-                key={section.id}
-                id={`${base}-panel-${section.id}`}
-                className="settings-section"
-                role="tabpanel"
-                aria-labelledby={`${base}-tab-${section.id}`}
-                hidden={section.id !== active}
-                data-testid={`settings-section-${section.id}`}
-              >
+      <Tabs
+        label={t("Settings sections")}
+        testId="settings-tablist"
+        idPrefix={base}
+        value={active}
+        onChange={choose}
+        keepMounted
+        tablistClassName="settings-tabs"
+        tabClassName="settings-tab"
+        panelsClassName="settings-body"
+        panelsRef={bodyRef}
+        panelAs="section"
+        items={sections.map((section) => {
+          const sectionSlots = slots.filter((slot) => slot.section === section.id);
+          return {
+            id: section.id,
+            label: t(section.title),
+            testId: `settings-tab-${section.id}`,
+            panelTestId: `settings-section-${section.id}`,
+            panelClassName: "settings-section",
+            panel: (
+              <>
                 <h2 className="settings-section-title">{t(section.title)}</h2>
                 {section.controls.map((setting) => (
                   <SettingSwitch key={setting} setting={setting} checked={settings[setting]} />
@@ -300,48 +211,48 @@ export default function SettingsPanel({
                     {slot.render()}
                   </div>
                 ))}
-              </section>
-            );
-          })}
+              </>
+            ),
+          };
+        })}
+      />
+      {/*
+        R1758000: a save to the account that failed says so, quietly, on every tab, with Try again;
+        nothing while a request is out, once one succeeds, or with nothing syncing. R634's own
+        retries (online, the tab shown again, the next change) are unchanged.
+      */}
+      {sync.phase === "error" ? (
+        <div className="settings-sync">
+          <p className="settings-sync__text" role="status" data-testid="settings-sync-error">
+            {t("Settings didn't save to your account.")}
+          </p>
+          <TryAgainButton onRetry={retrySettingsSync} testId="settings-sync-retry" className="settings-sync__retry" />
         </div>
-        {/*
-          R1758000: a save to the account that failed says so, quietly, on every tab, with Try again;
-          nothing while a request is out, once one succeeds, or with nothing syncing. R634's own
-          retries (online, the tab shown again, the next change) are unchanged.
-        */}
-        {sync.phase === "error" ? (
-          <div className="settings-sync">
-            <p className="settings-sync__text" role="status" data-testid="settings-sync-error">
-              {t("Settings didn't save to your account.")}
-            </p>
-            <TryAgainButton onRetry={retrySettingsSync} testId="settings-sync-retry" className="settings-sync__retry" />
-          </div>
-        ) : null}
-        <footer className="settings-foot">
-          <button
-            type="button"
-            className="settings-reset settings-reset--tab"
-            data-testid="settings-reset-tab"
-            disabled={!canReset}
-            onClick={() => {
-              if (activeSection !== undefined) resetSection(activeSection, slots);
-            }}
-          >
-            {t("Reset this tab")}
-          </button>
-          <button
-            type="button"
-            className="settings-reset"
-            data-testid="settings-reset"
-            onClick={() => {
-              resetSettings();
-              for (const slot of slots) slot.reset?.();
-            }}
-          >
-            {t("Reset all")}
-          </button>
-        </footer>
-      </div>
-    </div>
+      ) : null}
+      <footer className="settings-foot">
+        <button
+          type="button"
+          className="settings-reset settings-reset--tab"
+          data-testid="settings-reset-tab"
+          disabled={!canReset}
+          onClick={() => {
+            if (activeSection !== undefined) resetSection(activeSection, slots);
+          }}
+        >
+          {t("Reset this tab")}
+        </button>
+        <button
+          type="button"
+          className="settings-reset"
+          data-testid="settings-reset"
+          onClick={() => {
+            resetSettings();
+            for (const slot of slots) slot.reset?.();
+          }}
+        >
+          {t("Reset all")}
+        </button>
+      </footer>
+    </Dialog>
   );
 }

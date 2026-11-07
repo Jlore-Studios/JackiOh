@@ -20,6 +20,7 @@ import { FullArtShown, OwnCopy, fullArtSource } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -32,7 +33,6 @@ import {
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import type { CardTier } from "../wire/generated/CardTier.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -54,6 +54,7 @@ import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Segmented, Tabs } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
 import "./stats.css";
@@ -227,15 +228,6 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
     cost: cost ? Number(cost) : undefined,
     mode: mode ? mode : undefined,
   };
-}
-
-/**
- * R2127000: the card drill-down's Back layer. It is mounted only while the drill-down is open, so Back
- * closes the drill-down as its Close does, and with it shut Back leaves the page as before.
- */
-function DrillDownBackLayer({ onClose }: { onClose: () => void }): null {
-  useBackLayer(onClose);
-  return null;
 }
 
 export default function StatsRoute(): ReactElement {
@@ -457,12 +449,11 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25; Escape and Back
-  // close it, R2127000). The control that opened it is kept when it is pressed, not read off the
-  // focus, which a click on a button does not move in every browser.
+  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25), drawn through
+  // Dialog.tsx (R3221000), whose keys close it and keep Tab inside, and Back too (R2127000). The control
+  // that opened it is kept when it is pressed, not read off the focus, which a click on a button does
+  // not move in every browser, and has the focus back once it closes.
   const drillDownOpener = useRef<HTMLElement | null>(null);
-  const drillDownDialog = useRef<HTMLDivElement>(null);
-  const drillDownCloseButton = useRef<HTMLButtonElement>(null);
   const drillDownOpen = Boolean(cardDrillDownId);
 
   const openDrillDown = (id: string, opener: HTMLElement): void => {
@@ -471,33 +462,9 @@ export default function StatsRoute(): ReactElement {
   };
 
   useEffect(() => {
-    if (!drillDownOpen) return;
-    drillDownCloseButton.current?.focus({ preventScroll: true });
-    // Both keys are read at the window, in the capture phase, so they hold wherever the focus is.
-    function onKey(event: globalThis.KeyboardEvent): void {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        setCardDrillDownId(null);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const dialog = drillDownDialog.current;
-      if (dialog === null) return;
-      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")];
-      if (order.length === 0) return;
-      const at = order.indexOf(document.activeElement as HTMLElement);
-      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
-      event.preventDefault();
-      event.stopPropagation();
-      order[next]?.focus();
-    }
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-      const opener = drillDownOpener.current;
-      if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
-    };
+    if (drillDownOpen) return;
+    const opener = drillDownOpener.current;
+    if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
   }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
@@ -685,50 +652,25 @@ export default function StatsRoute(): ReactElement {
         )}
 
         {/* Tabs */}
-        <div className="stats-tabs" role="tablist" aria-label={t("Statistics views")}>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-cards"
-            aria-selected={tab === "cards"}
-            aria-controls="stats-panel-cards"
-            className={`stats-tab ${tab === "cards" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabCards}
-            onClick={() => setTab("cards")}
-          >
-            {t("Cards")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-sets"
-            aria-selected={tab === "sets"}
-            aria-controls="stats-panel-sets"
-            className={`stats-tab ${tab === "sets" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabSets}
-            onClick={() => setTab("sets")}
-          >
-            {t("Sets")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-players"
-            aria-selected={tab === "players"}
-            aria-controls="stats-panel-players"
-            className={`stats-tab ${tab === "players" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabPlayers}
-            onClick={() => setTab("players")}
-          >
-            {t("Players")}
-          </button>
-        </div>
-
-        {/* CARDS TAB */}
-        {tab === "cards" && (
-          <section id="stats-panel-cards" role="tabpanel" aria-labelledby="stats-tab-cards" className="stats-panel one-screen__body">
-            {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
-            <GamesPanel patch={patch} mode={mode} />
+        <Tabs
+          label={t("Statistics views")}
+          idPrefix="stats"
+          value={tab}
+          onChange={setTab}
+          className="one-screen__frame"
+          tablistClassName="stats-tabs"
+          tabClassName="stats-tab"
+          panelAs="section"
+          items={[
+            {
+              id: "cards",
+              label: t("Cards"),
+              testId: statsTestid.tabCards,
+              panelClassName: "stats-panel one-screen__body",
+              panel: (
+                <>
+                  {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
+                  <GamesPanel patch={patch} mode={mode} />
 
             {/* Filter controls */}
             <div className="stats-filter-bar">
@@ -853,26 +795,16 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
 
-              <div className="stats-view-toggle" role="group" aria-label={t("View")}>
-                <button
-                  type="button"
-                  className={`stats-view-btn ${view === "table" ? "stats-view-btn--active" : ""}`}
-                  data-testid={statsTestid.viewTable}
-                  aria-pressed={view === "table"}
-                  onClick={() => setView("table")}
-                >
-                  {t("Table")}
-                </button>
-                <button
-                  type="button"
-                  className={`stats-view-btn ${view === "grid" ? "stats-view-btn--active" : ""}`}
-                  data-testid={statsTestid.viewGrid}
-                  aria-pressed={view === "grid"}
-                  onClick={() => setView("grid")}
-                >
-                  {t("Grid")}
-                </button>
-              </div>
+              <Segmented
+                label={t("View")}
+                className="stats-view-toggle"
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
+                  { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+                ]}
+              />
 
               {/* R2370000: the Tokens section, off by default */}
               <div className="stats-col-toggles">
@@ -1202,12 +1134,16 @@ export default function StatsRoute(): ReactElement {
             {!cardStatsLoading && !cardStatsError && (
               <CreatedPanel created={createdCards} minSample={minSample} nameOf={shownName} />
             )}
-          </section>
-        )}
-
-        {/* SETS TAB (R1966000) */}
-        {tab === "sets" && (
-          <section id="stats-panel-sets" role="tabpanel" aria-labelledby="stats-tab-sets" className="stats-panel one-screen__body">
+          </>
+        ),
+      },
+      {
+        id: "sets",
+        label: t("Sets"),
+        testId: statsTestid.tabSets,
+        panelClassName: "stats-panel one-screen__body",
+        panel: (
+          <>
             {setsError ? (
               <div className="stats-error">
                 <p>{t("The set statistics didn't load.")}</p>
@@ -1383,12 +1319,16 @@ export default function StatsRoute(): ReactElement {
                 </p>
               </>
             )}
-          </section>
-        )}
-
-        {/* PLAYERS TAB */}
-        {tab === "players" && (
-          <section id="stats-panel-players" role="tabpanel" aria-labelledby="stats-tab-players" className="stats-panel one-screen__body">
+          </>
+        ),
+      },
+      {
+        id: "players",
+        label: t("Players"),
+        testId: statsTestid.tabPlayers,
+        panelClassName: "stats-panel one-screen__body",
+        panel: (
+          <>
             <div className="stats-player-head">
               <input
                 type="search"
@@ -1474,39 +1414,25 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             )}
-          </section>
-        )}
+          </>
+        ),
+      },
+    ]}
+  />
 
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
-          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)}>
-            <DrillDownBackLayer onClose={() => setCardDrillDownId(null)} />
-            <div
-              ref={drillDownDialog}
-              className="stats-drilldown-modal"
-              data-testid={statsTestid.drillDownModal}
-              data-radiant={drillDownRadiantFace ? "true" : undefined}
+            <Dialog
               role="dialog"
-              aria-modal="true"
-              aria-labelledby="drilldown-title"
-              onClick={(e) => e.stopPropagation()}
+              testid={statsTestid.drillDownModal}
+              className="stats-drilldown-modal"
+              data={drillDownRadiantFace ? { "data-radiant": "true" } : undefined}
+              closeTestid={statsTestid.drillDownClose}
+              closeLabel={t("Close card details")}
+              title={drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
+              onClose={() => setCardDrillDownId(null)}
+              actions={[]}
             >
-              <header className="stats-drilldown-header">
-                <h2 id="drilldown-title" className="stats-drilldown-title">
-                  {drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
-                </h2>
-                <button
-                  ref={drillDownCloseButton}
-                  type="button"
-                  className="stats-drilldown-close"
-                  data-testid={statsTestid.drillDownClose}
-                  aria-label={t("Close card details")}
-                  onClick={() => setCardDrillDownId(null)}
-                >
-                  ✕
-                </button>
-              </header>
-
               <div className="stats-drilldown-body">
                 {drillDownDef && drillDownFace && (
                   <div className="stats-drilldown-cards">
@@ -1660,8 +1586,7 @@ export default function StatsRoute(): ReactElement {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </Dialog>
         )}
       </div>
     </CardDefsProvider>

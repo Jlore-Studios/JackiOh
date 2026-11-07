@@ -8,15 +8,20 @@
 // R3015000 (#3015): each look is a variant, a ladder of levels, every card's Default first; the Animated and Signature
 // augments are retired. R3015005: a card's pick names one level, an older pick's shape mapped as the server maps it
 // (`levelOfPick`, the server's `level_of_pick`), worn at the highest owned and offered at or below it (`wornLevel`).
-// R3015006: a retired entry owns the levels it maps to (`impliedBy`).
+// R3015006: a retired entry owns the levels it maps to (`impliedBy`). R3017000 (#3017): six two-level variants, Night,
+// Neon sign, Watercolor, Stained-glass window, Woodcut and Tarot card; R3017001: three pairs, each splitting every
+// card between its two, so every card has at least `VARIANT_MIN_PER_CARD` variants besides the Default; R3017002: the
+// picture each draws.
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { SHIPPED_SETS } from "@jackioh/shared";
 
 import { COSMETICS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { FULL_ARTS_OF_CARD, FULL_ART_CARDS, tierOfLook } from "./fullArt.ts";
 import { ownedCardCosmetics } from "./ownedFullArt.ts";
+import { aiConstants } from "../wasm/index.ts";
 import {
   AUGMENT_ANIMATED_ID,
   AUGMENT_SIGNATURE_ID,
@@ -34,6 +39,8 @@ import {
   VERSION_FULL_ART_ID,
   VERSION_FULL_ART_SIGNED_ID,
   VERSION_IMMERSIVE_ID,
+  VERSION_NEON_ID,
+  VERSION_NIGHT_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
   VERSION_PRISMATIC_ID,
@@ -42,6 +49,10 @@ import {
   VERSION_SKETCH_FULL_ART_ID,
   VERSION_SKETCH_FULL_ART_SIGNED_ID,
   VERSION_SKETCH_ID,
+  VERSION_STAINED_GLASS_ID,
+  VERSION_TAROT_ID,
+  VERSION_WATERCOLOR_ID,
+  VERSION_WOODCUT_ID,
   artPartOf,
   artPictureOf,
   impliedBy,
@@ -79,17 +90,45 @@ function lookOfPick(fullArt: boolean | string | null | undefined, augments: read
 /** The seven one-art variants of #2942–#2944, whose ladders are art then animated (R3015000). */
 const ONE_ART = [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID];
 
+/** R3017000: #3017's six variants' first levels, in the registry's order, each ladder art then animated. */
+const PART_SIX = [VERSION_NIGHT_ID, VERSION_NEON_ID, VERSION_WATERCOLOR_ID, VERSION_STAINED_GLASS_ID, VERSION_WOODCUT_ID, VERSION_TAROT_ID];
+
+/** R3017001: #3017's pairs, each splitting every card between its two. */
+const PAIRS = [
+  [VERSION_NIGHT_ID, VERSION_NEON_ID],
+  [VERSION_WATERCOLOR_ID, VERSION_STAINED_GLASS_ID],
+  [VERSION_WOODCUT_ID, VERSION_TAROT_ID],
+] as const;
+
 const COLLECTIBLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
 const isLegacy = (card: string): boolean => CATALOG[card]?.tags.includes("Legacy") === true;
 
 describe("R2725000 a card's look", () => {
   it("R3015000 every variant is a ladder of levels, ordered, signed only above an animated full art, every card with its Default", () => {
-    expect(VARIANTS).toEqual([DEFAULT_VARIANT, "full-art", "alt-art", "sketch", "extended-art", "pixel", "comic", "set-showcase", "out-of-frame", "immersive", "prismatic"]);
+    expect(VARIANTS).toEqual([
+      DEFAULT_VARIANT,
+      "full-art",
+      "alt-art",
+      "sketch",
+      "extended-art",
+      "pixel",
+      "comic",
+      "set-showcase",
+      "out-of-frame",
+      "immersive",
+      "prismatic",
+      "night",
+      "neon",
+      "watercolor",
+      "stained-glass",
+      "woodcut",
+      "tarot",
+    ]);
     expect(ladderOf(DEFAULT_VARIANT)).toEqual([VERSION_ANIMATED_ID]);
     expect(ladderOf("full-art")).toEqual([VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID]);
     expect(ladderOf("alt-art")).toEqual([VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ALT_FULL_ART_ANIMATED_ID, VERSION_ALT_FULL_ART_SIGNED_ID]);
     expect(ladderOf("sketch")).toEqual([VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ANIMATED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID]);
-    for (const first of ONE_ART) {
+    for (const first of [...ONE_ART, ...PART_SIX]) {
       const variant = levelOf(first)?.variant ?? "";
       // No full-art level and no signed one: art, then animated.
       expect(ladderOf(variant), variant).toEqual([first, `${first}-animated`]);
@@ -308,7 +347,8 @@ describe("R2725000 a card's look", () => {
   it("R2725001 R3015000 offers match COSMETIC_OFFERS", () => {
     const offered = COSMETICS.filter((cosmetic) => cosmetic.kind === "version" || cosmetic.kind === "augment").map((cosmetic) => cosmetic.id);
     // R2940000: #2725's three, then #2940's three versions; R2942000: then #2942's three; R2943000: then #2943's two;
-    // R2944000: then #2944's two; R3015000: then #3015's fifteen levels. The two augments are retired: no offer.
+    // R2944000: then #2944's two; R3015000: then #3015's fifteen levels; R3017000: then #3017's twelve. The two augments
+    // are retired: no offer.
     expect(offered).toEqual([
       VERSION_FULL_ART_ID,
       ANIM,
@@ -332,6 +372,7 @@ describe("R2725000 a card's look", () => {
       VERSION_SKETCH_FULL_ART_ANIMATED_ID,
       VERSION_SKETCH_FULL_ART_SIGNED_ID,
       ...ONE_ART.map((first) => `${first}-animated`),
+      ...PART_SIX.flatMap((id) => [id, `${id}-animated`]),
     ]);
     const levels = offered.filter((id) => id !== ANIM && id !== SIG);
     expect(Object.keys(COSMETIC_OFFERS)).toEqual(levels);
@@ -345,8 +386,10 @@ describe("R2725000 a card's look", () => {
         expect(CATALOG[card]?.token, `${id} on ${card}`).toBe(false);
         expect(offeredOn(id, card)).toBe(true);
       }
-      // Every level but the Default's animated one, which every card but a Legacy one is offered, passes Speciesist by.
-      expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(id === VERSION_ANIMATED_ID);
+      // Every level but the Default's animated one, which every card but a Legacy one is offered, passes Speciesist by,
+      // and the part 6 ones of each pair its side of the split lands on (R3017001).
+      const speciesist = [VERSION_ANIMATED_ID, ...[VERSION_NEON_ID, VERSION_WATERCOLOR_ID, VERSION_WOODCUT_ID].flatMap((first) => [first, `${first}-animated`])];
+      expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(speciesist.includes(id));
     }
     // Full art's levels and the Default's animated one on each of the 21 full-art cards, whose retired full arts map to
     // them (R3015006).
@@ -602,5 +645,53 @@ describe("R2725000 a card's look", () => {
       expect(isFullBleed(animated), animated).toBe(false);
       expect(lookOfLevel(animated), version).toEqual({ level: animated, version, animated: true, signed: false });
     }
+  });
+
+  it("R3017000 R3017002 artPictureOf for part 6, at both levels: four repaints and two restyles, none a full art nor signed", () => {
+    const pictures = ["night", "neon", "watercolor", "stained-glass", "woodcut", "tarot"];
+    for (const set of [null, "Core", "Classic+", "Stinkyscape", "Training Grounds"]) {
+      for (const [at, first] of PART_SIX.entries()) {
+        expect(artPictureOf(first, set), `${first} ${String(set)}`).toBe(pictures[at]);
+        expect(artPictureOf(`${first}-animated`, set), `${first} ${String(set)}`).toBe(pictures[at]);
+      }
+    }
+    for (const first of PART_SIX) {
+      const animated = `${first}-animated`;
+      expect(artPartOf(first), first).toBe("whole");
+      expect([isFullBleed(first), isFullBleed(animated)], first).toEqual([false, false]);
+      expect(lookOfLevel(first), first).toEqual({ level: first, version: first, animated: false, signed: false });
+      expect(lookOfLevel(animated), first).toEqual({ level: animated, version: first, animated: true, signed: false });
+      expect(levelsBelow(animated), first).toEqual([first]);
+    }
+  });
+
+  it("R3017001 each pair splits every collectible card and each part 6 variant reaches every shipped set", () => {
+    const { VARIANT_MIN_PER_CARD } = aiConstants() as unknown as { VARIANT_MIN_PER_CARD: number };
+    expect(VARIANT_MIN_PER_CARD).toBeGreaterThan(0);
+    const on = (id: string): ReadonlySet<string> => new Set(COSMETIC_OFFERS[id] ?? []);
+    const key = (cards: ReadonlySet<string>): string => [...cards].sort().join(" ");
+    // Every collectible card, a Legacy one too, is offered exactly one of each pair's first levels, so at least the floor
+    // of variants besides its Default; a Legacy one none of their animated levels.
+    expect(COLLECTIBLE.some((def) => isLegacy(def.id))).toBe(true);
+    for (const def of COLLECTIBLE) {
+      for (const [a, b] of PAIRS) expect(offeredOn(a, def.id) !== offeredOn(b, def.id), `${def.id}: ${a} or ${b}`).toBe(true);
+      expect(variantsOn(def.id).length - 1, def.id).toBeGreaterThanOrEqual(VARIANT_MIN_PER_CARD);
+      for (const first of PART_SIX) {
+        const levels = levelsOn(def.id, levelOf(first)?.variant ?? "");
+        expect(levels, `${first} on ${def.id}`).toEqual(!offeredOn(first, def.id) ? [] : isLegacy(def.id) ? [first] : [first, `${first}-animated`]);
+      }
+    }
+    // Each reaches every set that ships, and no two variants but the Default share their cards, nor does any take them all.
+    for (const first of PART_SIX) {
+      const sets = new Set([...on(first)].map((card) => CATALOG[card]?.set));
+      expect([...sets].sort(), first).toEqual([...SHIPPED_SETS].sort());
+    }
+    const firsts = VARIANTS.filter((variant) => variant !== DEFAULT_VARIANT).map((variant) => ladderOf(variant)[0] ?? "");
+    expect(firsts).toHaveLength(16);
+    expect(new Set(firsts.map((first) => key(on(first)))).size).toBe(firsts.length);
+    for (const first of firsts) expect(on(first).size, first).toBeLessThan(COLLECTIBLE.length);
+    // Speciesist and Scratch Pad between them are offered all six.
+    expect(PART_SIX.filter((first) => offeredOn(first, "core-002"))).toEqual([VERSION_NEON_ID, VERSION_WATERCOLOR_ID, VERSION_WOODCUT_ID]);
+    expect(PART_SIX.filter((first) => offeredOn(first, "meditativeplus-026"))).toEqual([VERSION_NIGHT_ID, VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID]);
   });
 });

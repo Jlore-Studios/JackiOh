@@ -61,14 +61,16 @@ const KEEP: Record<string, string[]> = {
   "auth/tavern.css": ["(max-width: 400px)"],
   // 900: up to 900 px tall (1280x900 too) the info column stands beside the faces (B29). 480: a phone upright, never on its side (568+).
   "cards/inspect/inspect.css": ["(max-height: 900px)", "(max-width: 480px)"],
+  // 840: a phone 390x844 and taller has height to spare in its lanes, so the field keeps a strip above and below for the corner props (R3348001); 390x664 and 360x640 have none.
+  "game/arena/arena.css": ["(min-height: 840px)"],
   // The control bar tightens where it ran off 360 and 375 px phones (B29); 390 keeps its gaps.
   "game/board.css": ["(max-width: 380px)"],
   // The filters fold under about 860 px tall, where three chip rows left one row of cards.
   "game/deckbuilder/deckbuilder.css": ["(max-height: 860px)"],
   // Rail, pool and sidebar side by side need 1101 px (DeckWorkshop.tsx's WORKSHOP_SPLIT_MIN_WIDTH_PX).
   "game/deckbuilder/workshop.css": ["(min-width: 1101px)", "(max-width: 1100px)"],
-  // The concede answers stack on the narrowest phones only.
-  "game/notices.css": ["(max-width: 360px)"],
+  // A dialog's answers stack on the narrowest phones only (R3220000).
+  "game/dialog.css": ["(max-width: 360px)"],
   // 480: 21vh cards two by two suit a phone upright; at 600 a 568x320 phone draws them 67 px wide. 701: 224 px Discover cards.
   "game/prompt.css": ["(max-width: 480px)", "(max-width: 480px)", "(min-height: 701px)"],
   // 820: Start sat on a laptop's fold up to 820 px tall. 420: buttons stack up to 412 px; 430 keeps a row.
@@ -77,8 +79,8 @@ const KEEP: Record<string, string[]> = {
   "routes/landing.css": ["(max-height: 800px)", "(max-height: 800px)"],
   // A row stacks up to 412 px; 430 keeps it.
   "routes/replays.css": ["(max-width: 420px)"],
-  // 820: one column up to an iPad Air upright; 760 squeezes 768 px, 899 takes 844x390. 480: the sheet is for a phone upright.
-  "together/together.css": ["(max-width: 820px)", "(max-width: 480px)"],
+  // 820: one column up to an iPad Air upright; 760 squeezes 768 px, 899 takes 844x390.
+  "together/together.css": ["(max-width: 820px)"],
   // The coach's lines, measured at phones' heights: 2 up to 679 px (390x664), 1 up to 655 (360x640).
   "tutorial/tutorial.css": ["(max-height: 679px)", "(max-height: 655px)"],
 };

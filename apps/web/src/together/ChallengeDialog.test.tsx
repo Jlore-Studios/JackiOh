@@ -1,5 +1,5 @@
 // #1568: the challenge dialog's deck read offers Try again when it fails, and reads again.
-// #1831: it opens on the last mode and pick, with Send focused, and remembers what it sent.
+// #1831: it opens on the last mode and pick, and remembers what it sent. R3221000: Cancel holds the focus.
 // R2031000: All Random offers "More cards from" on the device's online pick, sent as `leanSet`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -83,19 +83,21 @@ describe("#1568 the challenge dialog's deck read", () => {
 });
 
 describe("#1831 the challenge dialog opens on the last pick", () => {
-  it("#1831 nothing remembered: Best of 1, the first deck, Send focused", async () => {
+  it("#1831 R3221000 nothing remembered: Best of 1, the first deck, Cancel focused", async () => {
     serveDecks();
     render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
 
-    // Until the decks are read there is nothing to send: the focus starts on the mode.
+    // Until the decks are read there is nothing to send; Cancel, the safe choice, holds the focus throughout.
     expect(screen.getByTestId(challengeModeTestid("bo1"))).toBeChecked();
-    expect(screen.getByTestId(challengeModeTestid("bo1"))).toHaveFocus();
+    expect(screen.getByTestId(togetherTestid.challengeSend)).toBeDisabled();
+    expect(screen.getByTestId(togetherTestid.challengeClose)).toHaveFocus();
 
     const picker = (await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement;
     expect(picker.value).toBe("d-aggro");
     await waitFor(() => {
-      expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
+      expect(screen.getByTestId(togetherTestid.challengeSend)).toBeEnabled();
     });
+    expect(screen.getByTestId(togetherTestid.challengeClose)).toHaveFocus();
   });
 
   it("#2115 the decks are a panel skeleton while they are read, then the deck picker", async () => {
@@ -110,7 +112,7 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
     expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
-  it("#1831 the last mode and trio, Send focused", async () => {
+  it("#1831 R3221000 the last mode and trio, Cancel focused", async () => {
     window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "bo3", deckId: "d-control", trioId: "t-two" }));
     serveDecks();
     render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
@@ -119,19 +121,21 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
     const picker = (await screen.findByTestId(togetherTestid.challengeTrio)) as HTMLSelectElement;
     expect(picker.value).toBe("t-two");
     await waitFor(() => {
-      expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
+      expect(screen.getByTestId(togetherTestid.challengeSend)).toBeEnabled();
     });
+    expect(screen.getByTestId(togetherTestid.challengeClose)).toHaveFocus();
     fireEvent.click(screen.getByTestId(challengeModeTestid("bo1")));
     expect(((await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement).value).toBe("d-control");
   });
 
-  it("#1831 All Random, remembered, needs no deck: Send is focused at once", () => {
+  it("#1831 R3221000 All Random, remembered, needs no deck: Send is ready at once, Cancel focused", () => {
     window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "random", deckId: null, trioId: null }));
     serveDecks();
     render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
 
     expect(screen.getByTestId(challengeModeTestid("random"))).toBeChecked();
-    expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
+    expect(screen.getByTestId(togetherTestid.challengeSend)).toBeEnabled();
+    expect(screen.getByTestId(togetherTestid.challengeClose)).toHaveFocus();
   });
 
   it("#1831 a deck no longer saved falls back to the first", async () => {

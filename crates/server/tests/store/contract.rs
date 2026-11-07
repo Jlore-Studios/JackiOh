@@ -11368,7 +11368,8 @@ mod cosmetic_loadouts {
             .filter(|cosmetic| cosmetic.level.is_some())
             .map(|cosmetic| cosmetic.id.as_str())
             .collect();
-        assert_eq!(levels.len(), 26);
+        // #3015's 26 and #3017's twelve (R3017000).
+        assert_eq!(levels.len(), 38);
         let mut last = Value::Null;
         for id in levels {
             at += 1;

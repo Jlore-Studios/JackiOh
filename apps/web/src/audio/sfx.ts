@@ -23,6 +23,9 @@ export const SFX_IDS: readonly SfxId[] = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
+  "organ",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -1655,6 +1658,190 @@ const upgrade: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+// #3347: the card-motion sounds. A card lifted, carried over a tile, put down, sent home, dealt, and a
+// deck riffled: each quiet and over in a fraction of a second, so none of them talks over the play.
+
+/** A card lifted off the fan: a short breath of paper rising in pitch. */
+const pickUp: SfxRecipe = (ctx, out, at) => {
+  const len = 0.08;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 1800, 1.4);
+  glide(k, band.frequency, 2600, len);
+  chain(noise, band, envelope(k, 0, 0.008, 1.2, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** The dragged card over a tile it could land on: one soft high tick. */
+const dragOver: SfxRecipe = (ctx, out, at) => {
+  const len = 0.05;
+  const k = kit(ctx, out, at, len);
+  tone(k, out, "sine", 880, 0, 0.004, 0.35, len);
+  return len;
+};
+
+/** A card put down: a felt pat with a low body under it. */
+const drop: SfxRecipe = (ctx, out, at) => {
+  const len = 0.13;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 500, 1.5), envelope(k, 0, 0.006, 1, 0.1), out);
+  run(k, noise, 0, 0.1);
+  tone(k, out, "sine", 140, 0, 0.005, 0.5, len);
+  return len;
+};
+
+/** A card let go over nothing and sent home: the pick-up's breath, falling. */
+const returnToHand: SfxRecipe = (ctx, out, at) => {
+  const len = 0.19;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 3000, 1.2);
+  glide(k, band.frequency, 1200, len);
+  chain(noise, band, envelope(k, 0, 0.01, 1, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** One card flicked off the deck: a single crisp snap. */
+const deal: SfxRecipe = (ctx, out, at) => {
+  const len = 0.07;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 3800, 1.4), envelope(k, 0, 0.004, 1.2, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** Twelve clicks about 35 ms apart on one band: the leaves of a deck's two halves riffling together. */
+const riffle: SfxRecipe = (ctx, out, at) => {
+  const len = 0.46;
+  const k = kit(ctx, out, at, len);
+  const clicks = Array.from({ length: 12 }, (_, i) => i * 0.035);
+  clickTrain(k, out, clicks, 2200, 1.2, 1, 0.03);
+  return len;
+};
+
+// The Drone Battleship (R3336000): the great ship's horn, its dome, its bay doors, its reactor and its decks
+
+/** R3336000: a layer of the Battleship arrives (`summoned`, the Meltdown layer): two detuned low saws, a long horn blast. */
+const horn: SfxRecipe = (ctx, out, at) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  const throat = biquad(k, "lowpass", 220, 1.2);
+  glide(k, throat.frequency, 1400, 0.32);
+  glide(k, throat.frequency, 320, len);
+  const voices = level(k, 0.5);
+  chain(voices, throat, heldEnvelope(k, 0, 0.06, 0.5, 0.6, 0.4, len), out);
+  for (const cents of [-14, 14]) {
+    const saw = oscillator(k, "sawtooth", 73);
+    saw.detune.setValueAtTime(k.cents + cents, time(k, 0));
+    chain(saw, voices);
+    run(k, saw, 0, len);
+  }
+  return len;
+};
+
+/** R3336000: a hit is redirected onto the Shield layer (`redirected`): noise rising through a band, then the dome rings. */
+const domeFlare: SfxRecipe = (ctx, out, at) => {
+  const len = 0.78;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 500, 1.4);
+  glide(k, band.frequency, 4200, 0.3);
+  chain(noise, band, envelope(k, 0, 0.28, 0.5, 0.62), out);
+  run(k, noise, 0, 0.62);
+  fmBell(k, out, 1397, 1.41, 520, 0.22, 0.004, 0.3, len);
+  fmBell(k, out, 2093, 2.76, 360, 0.26, 0.004, 0.16, 0.66);
+  return len;
+};
+
+/** R3336000: the Propagation layer opens its bays (`activated`): a door sliding on its rail, then a low clank. */
+const bayDoor: SfxRecipe = (ctx, out, at) => {
+  const len = 0.62;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const rail = biquad(k, "bandpass", 260, 2.2);
+  glide(k, rail.frequency, 1100, 0.42);
+  chain(noise, rail, heldEnvelope(k, 0, 0.08, 0.5, 0.36, 0.35, 0.46), out);
+  chain(noise, biquad(k, "bandpass", 1900, 4), envelope(k, 0.44, 0.001, 0.7, 0.5), out);
+  run(k, noise, 0, 0.56);
+  const clank = tone(k, out, "sine", 82, 0.44, 0.004, 0.55, len);
+  glide(k, clank.frequency, 48, len);
+  return len;
+};
+
+/**
+ * R3336000: the Meltdown layer's core thumps (`damage` to itself, `destroyed`): `amount` 1 (a tick) to 10
+ * (the blast) makes it lower in the chest, longer, louder and rougher, so a ship near its end beats hardest.
+ */
+const reactorPulse: SfxRecipe = (ctx, out, at, params) => {
+  const t = amountT(params);
+  const len = 0.3 + 0.35 * t;
+  const k = kit(ctx, out, at, len);
+  const hz = 52 + 36 * t;
+  const thump = tone(k, out, "sine", hz, 0, 0.006, 0.3 + 0.35 * t, len);
+  glide(k, thump.frequency, hz * 0.55, len);
+  tone(k, out, "sine", hz * 2, 0, 0.004, 0.03 + 0.12 * t, 0.7 * len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 400 + 600 * t, 0), envelope(k, 0, 0.004, 0.1 + 0.3 * t, 0.8 * len), out);
+  run(k, noise, 0, 0.8 * len);
+  return len;
+};
+
+/** R3336000: a layer with decks beneath it breaks (`destroyed`): the plates tear off with a falling screech. */
+const deckShear: SfxRecipe = (ctx, out, at) => {
+  const len = 0.5;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const screech = biquad(k, "bandpass", 4800, 5);
+  glide(k, screech.frequency, 800, 0.42);
+  const tear = modulatedGain(k, "square", 46, 0.5, 0.5);
+  chain(noise, screech, tear, envelope(k, 0, 0.01, 1, len), out);
+  run(k, noise, 0, len);
+  const metal = oscillator(k, "sawtooth", 1900);
+  glide(k, metal.frequency, 520, 0.42);
+  chain(metal, biquad(k, "lowpass", 3000, 0), envelope(k, 0, 0.01, 0.2, len), out);
+  run(k, metal, 0, len);
+  return len;
+};
+
+// The Terminus organ (R3338000)
+
+/**
+ * R3338000: the organ's root for each Terminus set piece, by `amount`, 1 (Ceaseless Void's fold) to 9
+ * (Dice of Doom's d100) in setPieceBeds.ts: G2, then a semitone higher each, so no two share a key.
+ */
+const ORGAN_ROOTS_HZ = [98, 103.83, 110, 116.54, 123.47, 130.81, 138.59, 146.83, 155.56] as const;
+
+/**
+ * R3338000: a Terminus set piece's sting, after the Terminus intros' organ (R1883000): a minor triad on
+ * the root `amount` picks (anything else clamped into 1 to 9), each tone a pipe of sine partials at 1, 2,
+ * 3 and 4 times its pitch, swelling in over a quarter second, held 1.6 s and let go. Its bed's Mythic
+ * `entrance` sings the choir over its end.
+ */
+const organ: SfxRecipe = (ctx, out, at, params) => {
+  const swell = 0.25;
+  const held = swell + 1.6;
+  const len = 2;
+  const k = kit(ctx, out, at, len);
+  const pick = Math.min(ORGAN_ROOTS_HZ.length, Math.max(1, Math.round(params.amount ?? 1)));
+  const root = ORGAN_ROOTS_HZ[pick - 1] ?? ORGAN_ROOTS_HZ[0];
+  // Twelve pipes peak together at 0.72 at most, under full scale (B15).
+  const wind = heldEnvelope(k, 0, swell, 0.12, held, 0.12, len);
+  chain(wind, out);
+  // The root, its minor third and its fifth, equal-tempered.
+  for (const ratio of [1, 1.1892, 1.4983]) {
+    for (const [harmonic, weight] of [[1, 1], [2, 0.5], [3, 0.3], [4, 0.2]] as const) {
+      const pipe = oscillator(k, "sine", root * ratio * harmonic);
+      chain(pipe, level(k, weight), wind);
+      run(k, pipe, 0, len);
+    }
+  }
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -1735,6 +1922,21 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   tapNeon: { recipe: tapNeon, durationMs: 150, gain: 0.52 },
   tapParchment: { recipe: tapParchment, durationMs: 160, gain: 0.52 },
   tapAstral: { recipe: tapAstral, durationMs: 240, gain: 0.52 },
+  // #3347: cards that move like cards, each soft and short.
+  pickUp: { recipe: pickUp, durationMs: 90, gain: 0.4 },
+  dragOver: { recipe: dragOver, durationMs: 60, gain: 0.3 },
+  drop: { recipe: drop, durationMs: 140, gain: 0.45 },
+  returnToHand: { recipe: returnToHand, durationMs: 200, gain: 0.4 },
+  deal: { recipe: deal, durationMs: 80, gain: 0.4 },
+  riffle: { recipe: riffle, durationMs: 500, gain: 0.45 },
+  // R3336000: the Drone Battleship.
+  horn: { recipe: horn, durationMs: 950, gain: 0.8 },
+  domeFlare: { recipe: domeFlare, durationMs: 800, gain: 0.8 },
+  bayDoor: { recipe: bayDoor, durationMs: 650, gain: 0.8 },
+  reactorPulse: { recipe: reactorPulse, durationMs: 650, gain: 0.8 },
+  deckShear: { recipe: deckShear, durationMs: 550, gain: 0.7 },
+  // R3338000: the bed under a Terminus set piece, at the gain of the entrance that ends it.
+  organ: { recipe: organ, durationMs: 2000, gain: 0.6 },
 };
 
 /** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */

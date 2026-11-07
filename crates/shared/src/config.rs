@@ -1770,6 +1770,9 @@ pub const VERSION_OFFER_MIN_CARDS: usize = 20;
 /// SPEC §14.2, R2725001, R3015000: the fewest cards of each shipped set each level of each variant is offered on,
 /// so every set has some.
 pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
+/// SPEC §14.2, R3017001: the fewest variants besides the Default every non-token card is offered, Legacy cards
+/// included: #3017's three pairs each offer every card one of their two, so this holds by construction.
+pub const VARIANT_MIN_PER_CARD: usize = 3;
 /// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
 /// seeded hash, modulo this, falls below the percent.
 pub const OFFER_SAMPLE_PERCENT_SCALE: u32 = 100;

@@ -2,7 +2,12 @@
 
 /**
  * R2949001: a seeded share of the cards a clause's other fields take: a card is in it when the FNV-1a hash of
- * `<seed>/<card id>`, modulo `OFFER_SAMPLE_PERCENT_SCALE`, falls below `percent`. The registry's check holds
- * `percent` to some and not all, and `seed` to a slug.
+ * `<seed>/<card id>`, modulo `OFFER_SAMPLE_PERCENT_SCALE`, falls below `percent`. R3017001: and at or above
+ * `from`, 0 when absent, so two samples of one seed, one below a cut and one from it, split their cards between
+ * them. The registry's check holds the share to some and not all, `percent` to the scale, and `seed` to a slug.
  */
-export type OfferSample = { seed: string, percent: number, };
+export type OfferSample = { seed: string, 
+/**
+ * R3017001: the lowest hash the sample takes; 0, and left out of the registry's text, unless set.
+ */
+from?: number, percent: number, };

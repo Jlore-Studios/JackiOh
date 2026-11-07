@@ -1240,7 +1240,7 @@ describe("the card drill-down dialog", () => {
     fireEvent.keyDown(row, { key: "Enter" });
     fireEvent.click(screen.getByRole("dialog"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    const scrim = container.querySelector(".stats-modal-scrim");
+    const scrim = container.querySelector(".dialog-scrim");
     if (scrim === null) throw new Error("no scrim");
     fireEvent.click(scrim);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -1285,13 +1285,14 @@ describe("the card drill-down dialog", () => {
       expect(previous).toHaveFocus();
     }
 
+    // R3221000: from the page behind, Tab comes back in on the first stop and Shift+Tab on the last, the ✕.
     const behind = screen.getByTestId(statsTestid.searchInput);
     behind.focus();
     press("Tab");
-    expect(close).toHaveFocus();
+    expect(radiant).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
-    expect(retry).toHaveFocus();
+    expect(close).toHaveFocus();
   });
 
   it("R2127000 Back closes the breakdown, gives the focus back to its row and keeps /stats with its tab and filters, a filter changed while it was open among them; with none open Back leaves", async () => {
@@ -1605,6 +1606,37 @@ describe("R1966000 the Sets tab", () => {
       ["0.1.0", "bo1"],
     ]);
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
+  });
+
+  it("#3222 stats tabs answer arrow keys, moving between Cards, Sets, and Players", async () => {
+    serveSets();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    const tablist = screen.getByRole("tablist", { name: "Statistics views" });
+    const cardsTab = screen.getByTestId(statsTestid.tabCards);
+    const setsTab = screen.getByTestId(statsTestid.tabSets);
+    const playersTab = screen.getByTestId(statsTestid.tabPlayers);
+
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(cardsTab).toHaveAttribute("tabindex", "0");
+    expect(setsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(setsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(setsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(cardsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
   });
 
   it("R1966000 a read that fails shows Retry, which asks again", async () => {

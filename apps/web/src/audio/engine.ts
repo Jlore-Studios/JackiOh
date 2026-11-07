@@ -17,6 +17,7 @@ import {
   MUSIC_DUCK_RELEASE_TC_S,
   MUSIC_DUCK_SFX,
   PICKUP_MIN_GAP_MS,
+  QUIET_SFX_GAIN,
   RAPID_SFX,
   SFX_DUCK_ATTACK_TC_S,
   SFX_DUCK_RELEASE_TC_S,
@@ -505,7 +506,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       if (!rapid && sfxEnds.length >= SFX_MAX_VOICES) return false;
 
       const cue = ctx.createGain();
-      cue.gain.value = spec.gain;
+      cue.gain.value = spec.gain * (params?.quiet === true ? QUIET_SFX_GAIN : 1);
       const { input, extra } = sfxInput(ctx, buses, params?.pan);
       cue.connect(input);
       const lengthMs = spec.recipe(ctx, cue, ctx.currentTime + delay / 1000, params ?? {}) * 1000;
@@ -1072,6 +1073,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       };
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
+    sfxOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.sfx }),
     crowdOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, crowd: buses.crowd }),
     subscribeState: (listener) => {
       stateListeners.add(listener);

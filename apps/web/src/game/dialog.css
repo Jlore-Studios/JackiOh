@@ -1,0 +1,168 @@
+/* The one dialog (Dialog.tsx, R3220000): its scrim, its panel, its answers and its ✕, from the design
+   tokens, so it reads on any theme those tokens describe. A caller's `className` restyles the panel only:
+   the scrim, the layer, the row's order and the keys are the same for every dialog. */
+
+/* Above the prompt's scrim (40), the result overlay (45), the drag layer (60) and the toasts (70): it is
+   the one question on the screen while it is open. Centered by the panel's auto margins rather than by
+   `place-items`, so a dialog taller than a landscape phone scrolls from its top. */
+.dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  padding: max(var(--space-7), env(safe-area-inset-top)) max(var(--space-7), env(safe-area-inset-right))
+    max(var(--space-7), env(safe-area-inset-bottom)) max(var(--space-7), env(safe-area-inset-left));
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
+  animation: dialog-fade-in calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out) both;
+}
+
+/* R3221000: a scrim drawn as a tavern shell's child (the Dev tools, the Together page's chat and
+   challenge, the stats' and the dungeon's details) still covers the window. tavern.css's
+   `.tavern.app-shell > *` caps each child at the page's width with auto margins, which would centre the
+   scrim at 1120px and leave undimmed strips at its sides where a click reaches the page behind. */
+.tavern.app-shell > .dialog-scrim {
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+
+.dialog {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  width: min(400px, 100%);
+  margin: auto;
+  padding: var(--space-8) var(--space-8) var(--space-7);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 40%, transparent),
+    var(--shadow-3);
+  color: var(--text);
+  text-align: center;
+}
+
+.dialog .dialog__title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--type-2xl);
+  font-weight: 750;
+}
+
+/* A dialog's title keeps clear of its ✕. */
+.dialog[role="dialog"] .dialog__title {
+  padding-inline: var(--space-10);
+}
+
+.dialog .dialog__body {
+  max-width: none;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-md);
+}
+
+/* The answers, safe choice first and the act last at the right (Dialog.tsx); each takes its role's
+   skin (buttons.css). */
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.dialog__actions > button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-4) var(--space-6);
+  font-weight: 700;
+}
+
+/* R765: three answers. The safe choice stays the wide default on top; the other two share the row
+   under it. */
+.dialog__actions[data-count="3"] > button:first-child {
+  flex-basis: 100%;
+}
+
+.dialog__actions > button:focus-visible {
+  outline: 2px solid var(--selected);
+  outline-offset: 2px;
+}
+
+/* A dialog's ✕, at its top right; an alertdialog has none, its Cancel is the close. */
+.dialog__close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-lg);
+  line-height: 1;
+}
+
+/* The inspect overlay's own scrim (CardDetail.tsx), which its swipe fades, takes the dialog's colour
+   (R3221000); its layer is the dialog's (inspect.css). */
+.inspect-scrim {
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
+}
+
+@keyframes dialog-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* A finger's target. */
+@media (max-width: 1024px), (pointer: coarse) {
+  .dialog__close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* The narrowest phones (360 px and under): the answers stack, in the same order, the safe choice on top. */
+@media (max-width: 360px) {
+  .dialog__actions {
+    flex-direction: column;
+  }
+}
+
+/* R3221000: a sheet (Dialog's `sheet`), centred on a wide screen, sits at the foot of an upright phone... */
+@media (max-width: 600px) {
+  .dialog-scrim[data-sheet] {
+    padding: 0;
+  }
+
+  .dialog-scrim[data-sheet] > .dialog {
+    width: 100%;
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: max(var(--space-7), env(safe-area-inset-bottom));
+  }
+}
+
+/* ...and down the right edge of a phone on its side, the full height of the screen. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .dialog-scrim[data-sheet] {
+    padding: 0;
+  }
+
+  .dialog-scrim[data-sheet] > .dialog {
+    height: 100%;
+    margin: 0 0 0 auto;
+    border-right: 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    padding-right: max(var(--space-8), env(safe-area-inset-right));
+  }
+}

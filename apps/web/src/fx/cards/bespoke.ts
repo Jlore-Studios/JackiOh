@@ -1,8 +1,10 @@
-// R502, R670, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card
-// recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2795000:
-// Classic+'s Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
+// R502, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card recipes
+// that claim events of their play (cardFx.ts). R3332000: a marquee entrance (entrances.ts) is an entry's
+// `entrance` since, never a `{ bespoke }`, so a bespoke key is a card recipe's. R2795000: Classic+'s
+// Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
-// Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798).
+// Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798). R3338000: Olivian
+// Expanse's rift is its set piece now (fx/terminus/).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -23,7 +25,6 @@ import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
-import { terminusRift } from "./stinkyscape/terminusRift.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
 import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
@@ -45,7 +46,6 @@ export const CARD_RECIPES = {
   mindJudge,
   cnSweep,
   harmonyWave,
-  terminusRift,
   magiBoot,
   battleshipWarp,
   duoBond,
@@ -61,16 +61,10 @@ export const CARD_RECIPES = {
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
 
-export type BespokeKey = CardRecipeKey | EntranceKey;
-
 export function isCardRecipeKey(key: string): key is CardRecipeKey {
   return Object.prototype.hasOwnProperty.call(CARD_RECIPES, key);
 }
 
 export function isEntranceKey(key: string): key is EntranceKey {
   return Object.prototype.hasOwnProperty.call(ENTRANCE_TRAUMA, key);
-}
-
-export function isBespokeKey(key: string): key is BespokeKey {
-  return isCardRecipeKey(key) || isEntranceKey(key);
 }

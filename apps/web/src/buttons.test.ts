@@ -127,8 +127,8 @@ const UNROLED: Record<string, number> = {
   "routes/dev-panel.css": 4,
   // The landing's quests and news panels' wood, for their buttons that name no role.
   "routes/landing.css": 2,
-  // The stats page's toggles (the tabs/segmented issue), its retry and its pager.
-  "routes/stats.css": 8,
+  // The stats page's retry and its pager (the tabs/segmented issue moved toggles to tabs.css).
+  "routes/stats.css": 5,
   // The top bar's buttons (#3189), which draw themselves.
   "routes/top-bar.css": 4,
   // A lesson's unlocked edge and the field guide's clear button.

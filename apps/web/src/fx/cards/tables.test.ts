@@ -3,17 +3,21 @@
 // the loader's errors, each naming its file and card. R502, R670: the seven former `CARD_FX` cards are
 // `{ bespoke }` entries but #100 Ceaseless Void, whose `{ setPiece }` lands it with its collapse (R2800000).
 // R2787000: an entry's `aura`, and the ten Field Spells that wear one. R2794000: a Unit's `entrance` beside
-// its hooks (Nature Titan's, beside its Cry).
+// its hooks (Nature Titan's, beside its Cry). R3332000: the frame, an `entrance` beside any entry of a Unit
+// or a Field Spell or alone, a `takeover` beside a Mythic's and a `signature` naming its first beat, and
+// the eight marquee cards' entrances and looks folded into it.
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "../../wire/cards.ts";
 import { AURA_LOOK_NAMES, AURA_SCOPES } from "../aura/looks.ts";
 import { entranceKeyOf } from "../cardFx.ts";
+import { ENTRANCES } from "../entrances.ts";
 import { FX_PALETTES } from "../flavors.ts";
 import { FX_MOTIF_NAMES } from "../motifs/names.ts";
 import { SET_PIECE_KEYS } from "../setPieceKeys.ts";
-import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, parseFxCardTable, type FxCardFile } from "./tables.ts";
+import { takeoverLookOf } from "../takeover.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, OWN_TAKEOVER_LOOKS, isSignature, parseFxCardTable, type FxCardFile } from "./tables.ts";
 
 const IDS = Object.keys(CATALOG);
 const SPLIT = IDS.indexOf(FX_STINKYSCAPE_SPLIT);
@@ -133,23 +137,25 @@ describe("R2784000 the per-set effects tables", () => {
     expect(hooks.get("classic-071")?.kind).toBe("hooks");
   });
 
-  it("R2784000 R502 R670 R2800000 R2794000 the seven former CARD_FX cards keep their recipes: five bespoke, Nature Titan's entrance beside its Cry, and the Void's set piece lands with its collapse", () => {
-    const former = {
+  it("R2784000 R502 R670 R2800000 R2794000 R3332000 the seven former CARD_FX cards keep their recipes: three bespoke, two entrances alone, Nature Titan's entrance beside its Cry, and the Void's set piece lands with its collapse", () => {
+    const bespoke = {
       "core-021": { kind: "bespoke", key: "manaCrack" },
       "core-027": { kind: "bespoke", key: "bloodDrain" },
-      "classic-056": { kind: "bespoke", key: "tyrantSigil" },
-      "classic-080": { kind: "bespoke", key: "bigBoom" },
       "classicplus-024": { kind: "bespoke", key: "crushingWalls" },
     };
-    for (const [defId, entry] of Object.entries(former)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
+    for (const [defId, entry] of Object.entries(bespoke)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
+    // R3332000: an entrance alone is a hooks entry of no hook, no longer a `{ bespoke }`.
+    expect(FX_CARD_TABLE.get("classic-056")).toEqual({ kind: "hooks", hooks: {}, entrance: "tyrantSigil" });
+    expect(FX_CARD_TABLE.get("classic-080")).toEqual({ kind: "hooks", hooks: {}, entrance: "bigBoom" });
     expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "hooks", hooks: { cry: { motif: "flight" } }, entrance: "titanBloom" });
     expect(entranceKeyOf("classic-045")).toBe("titanBloom");
-    expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold" });
+    expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold", entrance: "voidCollapse", takeover: "void" });
     expect(entranceKeyOf("core-100")).toBe("voidCollapse");
-    expect(new Set([...Object.values(former).map((entry) => entry.key), entranceKeyOf("classic-045"), entranceKeyOf("core-100")]).size).toBe(7);
+    const entrances = ["classic-056", "classic-080", "classic-045", "core-100"].map((defId) => entranceKeyOf(defId));
+    expect(new Set([...Object.values(bespoke).map((entry) => entry.key), ...entrances]).size).toBe(7);
   });
 
-  it("R2794000 an entrance stands beside a Unit's hooks; an unknown one, one on a non-Unit, or one alone fails", () => {
+  it("R2794000 R3332000 an entrance stands beside a Unit's hooks or alone; an unknown one or one on a Spell fails", () => {
     const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
     const says = (body: string, problem: RegExp): void => {
       expect(() => parse(body)).toThrow(problem);
@@ -170,8 +176,89 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"classic-045": { entrance: "titanBlossom", cry: { motif: "flight" } }`, /^fx\/cards\/test\.json5: classic-045: unknown entrance "titanBlossom"$/);
     says(`"classic-045": { entrance: "manaCrack", cry: { motif: "flight" } }`, /classic-045: unknown entrance "manaCrack"$/);
     says(`"classic-045": { entrance: 7, cry: { motif: "flight" } }`, /classic-045: unknown entrance "7"$/);
-    says(`"core-035": { entrance: "titanBloom", cast: { motif: "bolt" } }`, /core-035: an entrance is a Unit's; this card is a Spell$/);
-    says(`"classic-045": { entrance: "titanBloom" }`, /classic-045: names no hook$/);
+    says(`"core-035": { entrance: "titanBloom", cast: { motif: "bolt" } }`, /core-035: an entrance is a Unit's or a Field Spell's; this card is a Spell$/);
+    // R3332000: an entrance alone is an entry of its own (until then it was a `{ bespoke }`).
+    expect(parse(`"classic-045": { entrance: "titanBloom" }`).get("classic-045")).toEqual({ kind: "hooks", hooks: {}, entrance: "titanBloom" });
+    says(`"classic-045": { takeover: "void" }`, /classic-045: a takeover is a Mythic's; this card is Legendary$/);
+  });
+
+  it("R3332000 the frame: an entrance beside any entry of a Unit or Field Spell or alone, a takeover beside a Mythic's, a signature that names its first beat", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    // Each kind with its frame, the frame's fields spread beside the kind's own.
+    expect(parse(`"core-100": { setPiece: "voidFold", entrance: "voidCollapse", takeover: "void", signature: true }`).get("core-100")).toEqual({
+      kind: "setPiece",
+      key: "voidFold",
+      entrance: "voidCollapse",
+      takeover: "void",
+      signature: true,
+    });
+    expect(parse(`"core-097": { bespoke: "perfectWish", takeover: "genie", signature: true }`).get("core-097")).toEqual({
+      kind: "bespoke",
+      key: "perfectWish",
+      takeover: "genie",
+      signature: true,
+    });
+    expect(parse(`"core-096": { cast: { motif: "snap" }, takeover: "pawn" }`).get("core-096")).toEqual({ kind: "hooks", hooks: { cast: { motif: "snap" } }, takeover: "pawn" });
+    expect(parse(`"core-092": { signature: true, entrance: "felinorAssembly" }`).get("core-092")).toEqual({ kind: "hooks", hooks: {}, entrance: "felinorAssembly", signature: true });
+    // A Legendary Field Spell (#93 Combo-Index) may land with an entrance of its own, beside its hooks and aura.
+    expect(parse(`"core-093": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, entrance: "titanBloom", signature: true }`).get("core-093")).toEqual({
+      kind: "hooks",
+      hooks: { cast: { motif: "conjure" } },
+      aura: { look: "storm", scope: "zone" },
+      entrance: "titanBloom",
+      signature: true,
+    });
+    // A token's rarity is the one it prints (a Classic+ token Unit printed Legendary).
+    const flagbearer = Object.keys(CATALOG).find((id) => CATALOG[id]?.token === true && CATALOG[id]?.printedRarity === "Legendary" && CATALOG[id]?.type === "Unit");
+    if (flagbearer === undefined) throw new Error("no printed-Legendary token Unit");
+    expect(isSignature(parse(`"${flagbearer}": { entrance: "titanBloom", signature: true }`).get(flagbearer)), flagbearer).toBe(true);
+    // An unframed entry keeps exactly its own keys.
+    expect(Object.keys(parse(`"core-021": { bespoke: "manaCrack" }`).get("core-021") ?? {})).toEqual(["kind", "key"]);
+    expect(Object.keys(parse(`"core-088": { setPiece: "nether" }`).get("core-088") ?? {})).toEqual(["kind", "key"]);
+    expect(Object.keys(parse(`"core-035": { cast: { motif: "bolt" } }`).get("core-035") ?? {})).toEqual(["kind", "hooks"]);
+    expect(isSignature(parse(`"core-097": { bespoke: "perfectWish" }`).get("core-097"))).toBe(false);
+    expect(isSignature(parse(`"core-092": "none: pending"`).get("core-092"))).toBe(false);
+    expect(isSignature(undefined)).toBe(false);
+    // Every error names its file and card.
+    says(`"core-092": { entrance: "catWalk" }`, /^fx\/cards\/test\.json5: core-092: unknown entrance "catWalk"$/);
+    says(`"core-096": { entrance: "voidCollapse", cast: { motif: "snap" } }`, /core-096: an entrance is a Unit's or a Field Spell's; this card is a Trap$/);
+    says(`"core-097": { bespoke: "perfectWish", entrance: "voidCollapse" }`, /core-097: an entrance is a Unit's or a Field Spell's; this card is a Spell$/);
+    says(`"core-100": { setPiece: "voidFold", takeover: "prismatic" }`, /core-100: unknown takeover "prismatic"$/);
+    says(`"core-100": { setPiece: "voidFold", takeover: 7 }`, /core-100: unknown takeover "7"$/);
+    says(`"core-092": { entrance: "felinorAssembly", takeover: "void" }`, /core-092: a takeover is a Mythic's; this card is Legendary$/);
+    says(`"core-092": { entrance: "felinorAssembly", signature: "yes" }`, /core-092: signature must be true$/);
+    says(`"core-092": { entrance: "felinorAssembly", signature: false }`, /core-092: signature must be true$/);
+    says(`"core-012": { entrance: "felinorAssembly", signature: true }`, /core-012: a signature is a Legendary's or a Mythic's; this card is Rare$/);
+    says(`"core-t-felinor": { entrance: "felinorAssembly", signature: true }`, /core-t-felinor: a signature is a Legendary's or a Mythic's; this card is Token$/);
+    says(`"core-092": { cry: { motif: "bless" }, signature: true }`, /core-092: a Unit's signature names its entrance$/);
+    says(`"core-093": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, signature: true }`, /core-093: a Field Spell's signature names its entrance or a \{ bespoke \} or \{ setPiece \} cast of its own$/);
+    says(`"core-097": { cast: { motif: "send" }, signature: true }`, /core-097: a Spell's signature is a \{ bespoke \} or \{ setPiece \} cast of its own$/);
+    says(`"core-097": { bespoke: "perfectWish", cast: { motif: "send" } }`, /core-097: a bespoke entry holds nothing else but its frame$/);
+    says(`"core-100": { setPiece: "voidFold", cry: { motif: "vanish" } }`, /core-100: a setPiece entry holds nothing else but its frame$/);
+    says(`"core-100": { takeover: "void" }`, /core-100: names no hook$/);
+    // A `{ bespoke }` names a card recipe alone: an entrance is no bespoke recipe.
+    says(`"classic-080": { bespoke: "bigBoom" }`, /classic-080: unknown bespoke "bigBoom"$/);
+    // A Spell's signature may be a set piece, a cast of its own (#87 Pocket Chaos, a Legendary Spell).
+    expect(parse(`"core-087": { setPiece: "vortex", signature: true }`).get("core-087")).toEqual({ kind: "setPiece", key: "vortex", signature: true });
+  });
+
+  it("R3332000 the eight marquee cards keep their entrances and looks", () => {
+    const entrances = { "core-100": "voidCollapse", "classic-080": "bigBoom", "classic-045": "titanBloom", "classic-056": "tyrantSigil" };
+    for (const [defId, key] of Object.entries(entrances)) expect(entranceKeyOf(defId), defId).toBe(key);
+    const looks = { "core-100": "void", "core-096": "pawn", "core-097": "genie", "meditative-049": "ai" };
+    for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
+    expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
+    // Every entrance the table names is a recipe, and the four marquees' and Felinor Fiender's are all of them.
+    const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
+      const key = entranceKeyOf(defId);
+      return key === undefined ? [] : [key];
+    });
+    for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
+    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), "felinorAssembly"]));
+    expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
 
   it("R2784000 the twelve examples name their motifs", () => {

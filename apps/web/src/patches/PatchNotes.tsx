@@ -5,7 +5,7 @@
 // any entry, opening its line and its cards (R3012000); an address hash does the same. Public patch
 // data only (CLAUDE.md rule 7).
 
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
@@ -13,8 +13,8 @@ import type { CardDef, CardDefs } from "@jackioh/shared";
 import { listSeparator, readerName } from "../cards/chinese.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
-import { OVERLAY_ROOT_PROPS, useModalOverlay } from "../cards/inspect/store.ts";
 import { CardDefsProvider } from "../cards/refContext.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
 import { Skeleton, useShownAfterDelay } from "../skeleton/Skeleton.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
@@ -400,37 +400,28 @@ function PatchEntry({ nest }: { nest: PatchNest }): ReactElement {
 }
 
 /**
- * #2052: the detail's place while a card opened from a patch loads, or after it failed. A dialog as the
- * detail is (`useModalOverlay`), so Escape, the scrim and Back close it too; its wait stays text (R2108000).
+ * #2052: the detail's place while a card opened from a patch loads, or after it failed. R3221000: a dialog
+ * drawn through Dialog.tsx, so its ✕, Escape, the scrim and Back close it; its wait stays text (R2108000),
+ * and the ✕ holds the focus, since Try again is no answer of the row.
  */
 function OpeningCard({ read, onClose }: { read: Exclude<Loaded<CardDef | null>, { status: "ready" }>; onClose: () => void }): ReactElement {
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const modal = useModalOverlay(onClose, closeButton);
   return createPortal(
-    <div className="inspect-layer inspect-layer--detail" {...OVERLAY_ROOT_PROPS}>
-      <div className="inspect-scrim" aria-hidden="true" {...modal.dismissProps} />
-      <div className="inspect-detail" data-testid={patchTestid.opening} role="dialog" aria-modal="true" aria-label={t("Card")}>
-        {read.status === "loading" ? (
-          <p className="patch-status" role="status" data-testid={patchTestid.openingLoading}>
-            {t("Loading this card…")}
+    <Dialog role="dialog" testid={patchTestid.opening} closeTestid={patchTestid.openingClose} title={t("Card")} onClose={onClose} actions={[]}>
+      {read.status === "loading" ? (
+        <p className="patch-status" role="status" data-testid={patchTestid.openingLoading}>
+          {t("Loading this card…")}
+        </p>
+      ) : (
+        <div className="patch-status">
+          <p role="alert" data-testid={patchTestid.openingError}>
+            {t("This card didn't load.")}
           </p>
-        ) : (
-          <div className="patch-status">
-            <p role="alert" data-testid={patchTestid.openingError}>
-              {t("This card didn't load.")}
-            </p>
-            <button type="button" className="patch-retry" data-testid={patchTestid.openingRetry} onClick={read.retry}>
-              {t("Try again")}
-            </button>
-          </div>
-        )}
-        <div className="inspect-actions">
-          <button ref={closeButton} type="button" className="inspect-close" data-testid={patchTestid.openingClose} {...modal.dismissProps}>
-            {t("Close")}
+          <button type="button" className="patch-retry" data-testid={patchTestid.openingRetry} onClick={read.retry}>
+            {t("Try again")}
           </button>
         </div>
-      </div>
-    </div>,
+      )}
+    </Dialog>,
     document.body,
   );
 }

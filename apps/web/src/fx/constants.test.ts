@@ -4,6 +4,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
 
 const S2 = {
@@ -22,6 +24,8 @@ const S2 = {
   FX_FUSE_FLIGHT_FRACTION: 0.5,
   FX_SLAM_AT: 0.6,
   FX_HOLD_MAX_MS: 6000,
+  FX_HOLD_TURN_DEG: 12, // #3347
+  FX_HOLD_TURN_PX: 240, // #3347
   FX_CONCEAL_AT: 0.9,
   FX_LUNGE_STANDOFF: 0.55,
   FX_LUNGE_MIN_PX: 26,
@@ -199,6 +203,16 @@ const S2 = {
   FX_MOTIF_MIN_CARDS: 3,
   FX_PHONE_FRAME_BUDGET_MS: 50,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
+  // Issue #3332: the signature budgets (R3332000) and Felinor Fiender's assembly (R3332001).
+  SIGNATURE_LEGENDARY_MAX_MS: 1_600,
+  SIGNATURE_MYTHIC_MAX_MS: 2_600,
+  SIGNATURE_SPELL_SHARE: 0.75,
+  SIGNATURE_SPELL_MAX_TRAUMA: 1,
+  SIGNATURE_PERMANENT_MAX_TRAUMA: 0.8,
+  AURA_SIGNATURE_MAX_INTENSITY: 0.8,
+  FX_FELINOR_STREAK_AT: 0.1,
+  FX_FELINOR_STREAK_STEP: 0.08,
+  FX_FELINOR_STREAKS_MAX: 5,
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
   AURA_MOTES_PER_AURA: 24,
@@ -303,6 +317,35 @@ const S2 = {
   FX_STARSHIP_BADGE_AT: { x: 0.5, y: 0.36 },
   FX_STARSHIP_TAIL_MS: 400,
   FX_STARSHIP_STILL_MS: 1_600,
+  FX_SHIP_PLATES_MAX: 8,
+  FX_SHIP_DOME_AT: { x: 0.5, y: 0.22 },
+  FX_SHIP_CORE_AT: { x: 0.5, y: 0.62 },
+  FX_SHIP_BAY_AT: { x: 0.5, y: 0.5 },
+  FX_SHIP_RIPPLES: 2,
+  FX_SHIP_RIPPLE_STEP: 0.2,
+  FX_SHIP_LAUNCH_AT: 0.1,
+  FX_SHIP_INTERCEPTOR_FLIGHT: 0.45,
+  FX_SHIP_CORVETTE_FLIGHT: 0.85,
+  FX_SHIP_LIGHTS_AT: 0.5,
+  FX_SHIP_TAIL_MS: 400,
+  FX_SHIP_ARRIVAL_BEATS: 3,
+  FX_SHIP_LOCK_TRAUMA: 0.35,
+  FX_SHIP_DOME_TRAUMA: 0.3,
+  FX_SHIP_HIT_TRAUMA: 0.25,
+  FX_SHIP_CORVETTE_TRAUMA: 0.2,
+  FX_SHIP_TICK_TRAUMA: 0.3,
+  FX_SHIP_BREAK_TRAUMA: 0.45,
+  FX_SHIP_BLAST_TRAUMA: 0.95,
+  FX_TERMINUS_BEATS_FROM: 0.25,
+  FX_TERMINUS_BEATS_TO: 0.85,
+  FX_TERMINUS_TAIL_MS: 600,
+  FX_TERMINUS_STILL_MS: 1_600,
+  FX_TERMINUS_STATS_AT: { x: 0.85, y: 0.88 },
+  FX_TERMINUS_LAMP_AT: { x: 0.5, y: 0.05 },
+  FX_TERMINUS_LIFT_MAX: 12,
+  FX_TERMINUS_RAIN_STEP: 0.06,
+  FX_TERMINUS_SNAP_TRAUMA: 0.5,
+  FX_TERMINUS_COUNT_AT: [0.2, 0.45, 0.7],
   FX_JADE_SCALE_STEP: 0.15,
   FX_JADE_SCALE_MAX: 2,
   FX_SETTINGS_KEY: "jackioh.fx.v1",
@@ -370,6 +413,17 @@ describe("S2 the effects constants", () => {
       constants.FX_STARSHIP_IGNITE_AT,
       constants.FX_STARSHIP_LIFT_AT,
       constants.FX_STARSHIP_LAND_AT,
+      // R3336000: the Battleship's ripple step, drone launch and flights, and the lights of the deck beneath.
+      constants.FX_SHIP_RIPPLE_STEP,
+      constants.FX_SHIP_LAUNCH_AT,
+      constants.FX_SHIP_INTERCEPTOR_FLIGHT,
+      constants.FX_SHIP_CORVETTE_FLIGHT,
+      constants.FX_SHIP_LIGHTS_AT,
+      // R3338000: the Terminus set pieces' beats and Last Word's countdown.
+      constants.FX_TERMINUS_BEATS_FROM,
+      constants.FX_TERMINUS_BEATS_TO,
+      constants.FX_TERMINUS_RAIN_STEP,
+      ...constants.FX_TERMINUS_COUNT_AT,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -389,6 +443,16 @@ describe("S2 the effects constants", () => {
     for (let k = 1; k < counts.length; k += 1) expect(counts[k]).toBeGreaterThan(counts[k - 1] ?? 1);
     expect(counts[counts.length - 1]).toBeLessThan(constants.FX_STARSHIP_IGNITE_AT);
     expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    // R3336000: the Battleship's tail stays inside FX_MAX_TAIL_MS (R200), a Corvette flies slower than an Interceptor, and the shake stays a trauma.
+    expect(constants.FX_SHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_SHIP_CORVETTE_FLIGHT).toBeGreaterThan(constants.FX_SHIP_INTERCEPTOR_FLIGHT);
+    for (const trauma of [constants.FX_SHIP_LOCK_TRAUMA, constants.FX_SHIP_DOME_TRAUMA, constants.FX_SHIP_HIT_TRAUMA, constants.FX_SHIP_CORVETTE_TRAUMA, constants.FX_SHIP_TICK_TRAUMA, constants.FX_SHIP_BREAK_TRAUMA]) {
+      expect(trauma).toBeLessThan(constants.FX_SHIP_BLAST_TRAUMA);
+    }
+    expect(constants.FX_SHIP_BLAST_TRAUMA).toBeLessThanOrEqual(1);
+    // R3338000: a Terminus set piece's beats run in order inside its span, and its tail inside FX_MAX_TAIL_MS.
+    expect(constants.FX_TERMINUS_BEATS_FROM).toBeLessThan(constants.FX_TERMINUS_BEATS_TO);
+    expect(constants.FX_TERMINUS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
     // #1446: a Beast's streak leaves at the embers' beat and lands inside its entry.
@@ -436,6 +500,8 @@ describe("S2 the effects constants", () => {
       constants.FX_TERMINUS_TRAUMA,
       constants.FX_MAGI_TRAUMA,
       constants.FX_WARP_TRAUMA,
+      // R3338000: Event Horizon's snap back.
+      constants.FX_TERMINUS_SNAP_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);
@@ -471,5 +537,30 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe("R3332000 the signature budgets", () => {
+  it("R3332000 the signature budgets sit inside the caps", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA } = constants;
+    // A Mythic's is the louder, its takeover's hold inside it, and both within the longest a set piece holds (R2785000).
+    expect(SIGNATURE_LEGENDARY_MAX_MS).toBeLessThan(SIGNATURE_MYTHIC_MAX_MS);
+    expect(SIGNATURE_MYTHIC_MAX_MS).toBeLessThanOrEqual(SET_PIECE_HOLD_CAP_MS);
+    expect(SIGNATURE_MYTHIC_MAX_MS - TAKEOVER_HOLD_MS).toBeGreaterThanOrEqual(SIGNATURE_LEGENDARY_MAX_MS);
+    // A Spell's is the shortest and shakes the loudest; every shake is at most trauma 1 (B9).
+    expect(SIGNATURE_SPELL_SHARE).toBeGreaterThan(0);
+    expect(SIGNATURE_SPELL_SHARE).toBeLessThan(1);
+    expect(SIGNATURE_PERMANENT_MAX_TRAUMA).toBeLessThan(SIGNATURE_SPELL_MAX_TRAUMA);
+    expect(SIGNATURE_SPELL_MAX_TRAUMA).toBeLessThanOrEqual(1);
+    // Every aura look already sits within a signature's aura cap, so a signature may wear any of them.
+    for (const [name, look] of Object.entries(AURA_LOOKS)) {
+      for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(constants.AURA_SIGNATURE_MAX_INTENSITY);
+    }
+  });
+
+  it("R3332001 Felinor Fiender's streaks all leave before its slam", () => {
+    const last = constants.FX_FELINOR_STREAK_AT + (constants.FX_FELINOR_STREAKS_MAX - 1) * constants.FX_FELINOR_STREAK_STEP;
+    expect(constants.FX_FELINOR_STREAK_AT).toBeGreaterThan(0);
+    expect(last).toBeLessThan(constants.FX_SLAM_AT);
   });
 });

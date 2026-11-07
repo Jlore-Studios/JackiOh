@@ -46,10 +46,10 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "auth/tavern.css": 27,
   "auth/two-step.css": 1,
   "cards/art/art.css": 7,
-  "cards/cards.css": 162,
+  "cards/cards.css": 171,
   "cards/cardstate.css": 24,
   "cards/cosmetics.css": 38,
-  "cards/dormant.css": 7,
+  "cards/dormant.css": 6,
   "cards/glitch.css": 9,
   "cards/inspect/inspect.css": 36,
   "cards/inspect/list-play.css": 2,
@@ -58,10 +58,10 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/setmark.css": 6,
   "cards/stamps.css": 1,
   "cards/wheel/wheel.css": 6,
-  "collection/collection.css": 27,
+  "collection/collection.css": 25,
   "collection/cosmeticLook.css": 1,
   "collection/tokenOffer.css": 1,
-  "duos/duos.css": 24,
+  "duos/duos.css": 23,
   "economy/economy.css": 8,
   "economy/jlore-pill.css": 4,
   "economy/spend.css": 1,
@@ -77,28 +77,28 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "packs/pack-object.css": 12,
   "packs/packs.css": 7,
   "patches/patches.css": 25,
-  "practice/practice.css": 69,
+  "practice/practice.css": 62,
   "practice/sandbox.css": 7,
   "rank/rankCrest.css": 1,
   "routes/account.css": 1,
-  "routes/command-menu.css": 3,
-  "routes/dev-panel.css": 5,
+  "routes/command-menu.css": 1,
+  "routes/dev-panel.css": 4,
   "routes/entry-card.css": 3,
   "routes/game-banner.css": 7,
   "routes/landing.css": 61,
   "routes/lobby.css": 37,
   "routes/replays.css": 1,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 15,
+  "routes/stats.css": 12,
   "routes/top-bar.css": 3,
   "settings/changeEmail.css": 2,
-  "settings/settings.css": 25,
-  "shop/shop.css": 2,
+  "settings/settings.css": 20,
+  "shop/shop.css": 1,
   "skeleton/skeleton.css": 4,
   "stats/tier.css": 1,
-  "together/together.css": 16,
+  "together/together.css": 7,
   "tutorial/path-visibility.css": 2,
-  "tutorial/tutorial.css": 44,
+  "tutorial/tutorial.css": 42,
   "undo/undo.css": 3,
 };
 
@@ -227,7 +227,7 @@ describe("#2109 the surface scale", () => {
       ["aim", 59],
       ["drag", 60],
       ["toast", 70],
-      ["toast-top", 72],
+      ["dialog", 72],
     ]);
     expect(LAYERS.length).toBe(SURFACE_LAYERS);
     const text = read("surfaces.css").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -252,10 +252,10 @@ describe("#2109 the surface scale", () => {
       ...SHADOWS.map((shadow) => `--shadow-${shadow[0]}`),
       ...LAYERS.map((layer) => `--z-${layer[0]}`),
     ]);
-    // Outside board scope, and frozen: the inspect overlay's (src/cards/) own two layers. No sheet gains a
-    // name of its own; one that loses its names empties its entry.
+    // Outside board scope, and frozen: the inspect overlay's (src/cards/) own hover layer; R3221000 put its
+    // modal one on --z-dialog. No sheet gains a name of its own; one that loses its names empties its entry.
     const FOREIGN: Record<string, string[]> = {
-      "cards/inspect/inspect.css": ["--z-inspect-hover", "--z-inspect-modal"],
+      "cards/inspect/inspect.css": ["--z-inspect-hover"],
     };
     for (const sheet of SHEETS) {
       const css = codeOf(sheet);

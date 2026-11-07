@@ -37,7 +37,7 @@ Every issue carries at least one type label:
 
 A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
 (`cargo jackioh classify`, R1365000), which CI's `rust (classify)` puts on and keeps up to date with
-every push (#1370). Nothing else sets them, and no label overrides the classifier:
+every push (#1370); not a promotion into production, whose commits each had theirs on main (#3317). Nothing else sets them, and no label overrides the classifier:
 
 | Label | For |
 |---|---|

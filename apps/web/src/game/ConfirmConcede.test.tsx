@@ -97,7 +97,7 @@ describe("ConfirmConcede on its own", () => {
     fireEvent.click(screen.getByTestId("concede-cancel"));
     press("Escape");
     fireEvent.keyDown(window, { key: "Escape" });
-    const scrim = container.querySelector(".concede-scrim");
+    const scrim = container.querySelector(".dialog-scrim");
     if (scrim === null) throw new Error("no scrim");
     fireEvent.click(scrim);
     // A click inside the panel is not a click outside it.
