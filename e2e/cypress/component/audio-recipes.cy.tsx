@@ -44,6 +44,8 @@ const EXPECTED_IDS = [
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
   "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
   "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
 ] as const;
@@ -150,6 +152,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   // R3346000: a play's cost impact and a firing trap's snap.
   playImpact: 500,
   trapSnap: 200,
+  // R3342000: the tile aura bell.
+  auraTouch: 200,
   // R3334000–R3334003: the Starship's moments.
   starshipDock: 450,
   starshipIgnite: 700,

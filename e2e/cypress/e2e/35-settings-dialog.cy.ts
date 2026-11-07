@@ -1,7 +1,7 @@
 // Settings-dialog coverage (R633, R634). The shared account changes only background music and ends off.
 
-import { SESSION_STORAGE_KEY, accounts, routes, server } from "../../support/config.ts";
-import { ts } from "../../support/testids.ts";
+import { SESSION_STORAGE_KEY, accounts, routes, server, timeouts } from "../../support/config.ts";
+import { WORKSHOP, ts } from "../../support/testids.ts";
 import {
   SETTINGS_CLOSE,
   SETTINGS_OPEN_NAV,
@@ -58,6 +58,14 @@ function backgroundOffOnTheAccount(): void {
 function spyOnTheAccount(): void {
   cy.intercept("GET", "**/api/settings").as("load");
   cy.intercept("PUT", "**/api/settings").as("save");
+}
+
+/**
+ * R3228000: `/decks` draws its gear while it waits, and a dialog opened from that gear closes when the decks land
+ * (the loading frame and the workshop are different trees), so the specs open it on the loaded workshop.
+ */
+function waitForDecks(): void {
+  cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("exist");
 }
 
 function openSettings(): void {
@@ -178,6 +186,7 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       spyOnTheAccount();
       cy.visitAs(account(), routes.deckbuilder());
       cy.wait("@load", { timeout: SYNC_TIMEOUT });
+      waitForDecks();
 
       openSettings();
       openTab("audio");
@@ -199,6 +208,7 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
         },
       });
       cy.wait("@load", { timeout: SYNC_TIMEOUT });
+      waitForDecks();
       openSettings();
       openTab("audio");
       cy.get(ts(MUSIC_BACKGROUND)).should("be.checked");

@@ -38,6 +38,8 @@ const UNION_ORDER: SfxId[] = [
   // R3338000: the Terminus set pieces' organ.
   "organ",
   "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
   // R3334000–R3334003: the Starship's moments.
   "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
@@ -145,6 +147,8 @@ const DURATION_MS: Record<SfxId, number> = {
   // R3346000.
   playImpact: 500,
   trapSnap: 200,
+  // R3342000.
+  auraTouch: 200,
   // R3334000–R3334003.
   starshipDock: 450,
   starshipIgnite: 700,

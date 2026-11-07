@@ -13,6 +13,7 @@
 import { CATALOG } from "@jackioh/cards";
 
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
+import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS, FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
@@ -30,6 +31,7 @@ import {
   unit,
   withEvents,
 } from "../../../apps/web/src/test/fixtures.ts";
+import { tileBoardView } from "../../../apps/web/src/test/tileBoard.ts";
 
 type PlayerView = ReturnType<typeof fullBoardView>;
 type GameEvent = Parameters<typeof withEvents>[1][number];
@@ -386,6 +388,17 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       mountScene(view, view, []);
       cy.get(`[data-aura-look]`, { timeout: 4_000 }).should("have.length.greaterThan", 0);
       cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+  });
+
+  it("R3342000 a full board of tile auras holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = tileBoardView();
+    expect(planTileAuras(view)).to.have.length(20);
+    holdsBudget("Twenty tile auras", () => {
+      mountScene(view, view, []);
+      cy.get(".tile-aura", { timeout: 4_000 }).should("have.length", 20);
       return sampleFrames();
     });
   });

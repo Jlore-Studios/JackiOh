@@ -27,6 +27,7 @@ import {
 import { listedFace } from "./faces.ts";
 import { glowAttr } from "./glow.ts";
 import LockIcon from "./LockIcon.tsx";
+import { TileAura } from "../fx/aura/TileAura.tsx";
 import { t } from "../i18n/i18n.ts";
 
 export type ZoneProps = {
@@ -105,6 +106,7 @@ export default function Zone(props: ZoneProps): ReactElement {
         props.onClick?.(target);
       }}
     >
+      <TileAura view={view} side={side} row={row} lane={lane} highlight={props.highlight} animating={props.animating} />
       {locked && <LockIcon />}
       {reserved && !locked && <span className="lock-icon reserved-icon" aria-label={t("Reserved zone")} title={heldFor(lookup, view, side, row, lane)} />}
       {unit !== null && (

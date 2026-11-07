@@ -12,12 +12,13 @@ import { playTier } from "../game/damageFeel.ts";
 import { readHapticsSettings } from "./settings.ts";
 
 export type HapticMoment =
-  | "drop" | "hit" | "turn" | "pickup" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare" | "playHeavy" | "playMassive";
+  | "drop" | "hit" | "turn" | "touch" | "pickup" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare" | "playHeavy" | "playMassive";
 
 export const HAPTIC_PATTERNS: { readonly [K in HapticMoment]: readonly number[] } = {
   drop: [12],
   hit: [24],
   turn: [16, 70, 16],
+  touch: [8],
   /** #3347: lifting a card from the hand, lighter than the drop that ends the drag. */
   pickup: [8],
   // A press on a tile (a legal one answers harder) and on a corner prop (a bigger payoff, a rare one).
@@ -59,6 +60,7 @@ export type HapticsOptions = {
 
 export type Haptics = {
   onEvent(event: GameEvent, view: PlayerView): void;
+  touch(): void;
   /** #3347: a buzz for a moment the player's own input makes (a pick-up), through the same gates as an event's. */
   moment(moment: HapticMoment): void;
   /** R3348000: a press's own buzz, behind the same switch, reduced motion and vibrate guards as `onEvent`, on its own gap. */
@@ -113,11 +115,18 @@ export function createHaptics(options: HapticsOptions = {}): Haptics {
         // Haptics must not interrupt the game.
       }
     },
+    touch() {
+      play("touch");
+    },
     moment: play,
   };
 }
 
 let shared: Haptics | null = null;
+
+export function touchHaptic(): void {
+  sharedHaptics().touch();
+}
 
 /**
  * #3347: the one `Haptics` of the page, so the game's events and the drag's pick-up share a gap clock
