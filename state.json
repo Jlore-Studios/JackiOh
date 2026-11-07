@@ -18459,6 +18459,8 @@
       }
     },
     "3362": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T05:31:12Z",
@@ -18472,8 +18474,11 @@
         "trail": "- said: \n- read_file: {\"EndLine\": 1195, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3336/crates/tools/src/classify.rs\", \"StartLine\": 1170}\n- said: \n- read_file: {\"EndLine\": 1170, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3336/crates/tools/src/classify.rs\", \"StartLine\": 1120}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && target/release/jackioh classify --help\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && git add crates/cards/patches/pending/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && TREE=$(git write-tree) && COMMIT=$(git commit-tree $TREE -p HEAD -m \"temp test\") && target/release/jackioh classify --base origin/main \u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && TREE=$(git write-tree) && COMMIT=$(GIT_AUTHOR_NAME=bot GIT_AUTHOR_EMAIL=bot@example.com GIT_COMMITTER_NAME=bot GIT_COMMITTER_EMAIL=bot@\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && sh scripts/build-wasm.sh\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3336/e2e/cypress/component/battleship.cy.tsx\", \"StartLine\": 1}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"86f32322-b3a8-4c3c-a8cf-f8856c1e59e8/task-232\"}\n- said: I have launched `scripts/build-wasm.sh` in the background and am waiting for the WebAssembly package to be compiled.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && pnpm --dir apps/web typecheck\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"86f32322-b3a8-4c3c-a8cf-f8856c1e59e8/task-240\"}\n- said: I have launched `pnpm --dir apps/web typecheck` in the background and am waiting for TypeScript typechecking to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && pnpm --dir apps/web exec vitest run src/cards src/fx src/audio\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"86f32322-b3a8-4c3c-a8cf-f8856c1e59e8/task-246\"}\n- said: I have launched vitest (`pnpm --dir apps/web exec vitest run src/cards src/fx src/audio`) in the background and am waiting for the test suite to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && E2E_COMPONENT_PORT=5281 xvfb-run -a pnpm --dir e2e test:component --spec cypress/component/battleship.cy.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/battleship.cy.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3336 && git status -- apps/web/src/wire\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3336/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Drone Battleship as one great ship: its three layers drawn as one stacked hull, a shield that visibly takes the hit, drones launching from its bays and a meltdown that glows to the end\"} --> ## What changed and why The Drone Battleship's three stack\u2026"
       },
       "issue": 3336,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T06:04:41Z",
         "from_run": "42343070145",
         "gates": [
           {
@@ -18532,8 +18537,15 @@
         "source": "build",
         "until": "2026-11-07T06:33:51Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-07T06:03:51Z",
+      "run_id": "pending:0dd79bd1-1794031460",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-07T06:04:41Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -18547,9 +18559,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T05:39:27Z",
+    "at": "2026-11-07T06:04:41Z",
     "url": "",
-    "what": "build #3337 on claude-2"
+    "what": "review #3362 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T05:52:51Z",
