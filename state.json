@@ -18544,6 +18544,8 @@
     "3362": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "a5c16c44127c68f97829e45faed9e45aaaa44240",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T05:31:12Z",
