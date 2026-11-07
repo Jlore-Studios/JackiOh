@@ -137,7 +137,10 @@ Friends, Chat). `DialogClose` is the ✕ alone, for an overlay that keeps its ow
 overlay's `CardDetail` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
 Tab only while theirs is the top layer (`useBackLayer` returns whether it is, and opens its layer in a
 layout effect, so an Escape read as soon as the overlay is drawn finds it on top), so a dialog opened over
-another closes first; `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
+another closes first. The inspect overlay, portalled after every dialog, draws at `--z-dialog` while it
+is the top layer (`useTopBackLayer`, as state) and, under a layer opened after it (a result that ends the
+game over a card's detail), carries `data-under` and comes down to `--z-toast`, under every dialog, so the
+dialog seen is the one that takes the keys. `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
 Tab skips a hidden panel and a control at `tabindex="-1"`. `src/dialogs.test.ts` holds the sources to
 it: no `"Escape"` comparison outside the shared hooks and its named exceptions, no scrim outside
 `dialog.css` that paints itself or takes a raw layer, one ✕ glyph, and the inline confirms' safe choice

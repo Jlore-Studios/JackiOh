@@ -303,7 +303,7 @@ export function CardListSheet({
   }, [opened]);
 
   return createPortal(
-    <div className="inspect-layer inspect-layer--list" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--list" {...modal.layerProps}>
       <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-list-sheet"

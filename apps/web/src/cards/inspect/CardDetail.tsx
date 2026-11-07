@@ -24,7 +24,7 @@ import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { VoicePreview } from "./VoicePreview.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DialogClose } from "../../game/Dialog.tsx";
-import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
+import { closeInspect, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
@@ -136,7 +136,7 @@ export function CardDetail({
   const glossary = mergeGlossary(base.glossary, radiant.glossary);
 
   return createPortal(
-    <div className="inspect-layer inspect-layer--detail" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--detail" {...modal.layerProps}>
       <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-detail"

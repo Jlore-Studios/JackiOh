@@ -9,7 +9,11 @@ import { useRef, useState, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Dialog, DialogClose, dialogTestid, type DialogAction } from "./Dialog.tsx";
+import { CATALOG } from "@jackioh/cards";
+
+import { CardDetail, closeInspect } from "../cards/inspect/index.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
+import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { pressBack } from "../test/history.ts";
 import { readSheet } from "../test/setup.ts";
 import { at } from "../test/stubServer.ts";
@@ -442,6 +446,70 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     expect(screen.queryByTestId("overlay")).toBeNull();
     expect(onUnder).not.toHaveBeenCalled();
     expect(opener, "the focus goes back to Card text").toHaveFocus();
+  });
+
+  it("R3221000 a dialog that opens over a card's detail draws over it and takes its keys", () => {
+    // A result that ends the game while a card's detail is open: the board's dialogs are not portalled,
+    // so at an equal layer the detail, portalled after them, would draw over the dialog that holds the keys.
+    const found = CATALOG["core-043"];
+    if (found === undefined) throw new Error("expected core-043 in the catalog");
+    const def = found;
+    const onResult = vi.fn();
+    function Board(): ReactElement {
+      const [result, setResult] = useState(false);
+      const [detail, setDetail] = useState(true);
+      return (
+        <>
+          <button type="button" data-testid="game-over" onClick={() => setResult(true)}>
+            Game over
+          </button>
+          {detail ? <CardDetail def={def} onClose={() => setDetail(false)} /> : null}
+          {result ? (
+            <Dialog
+              role="dialog"
+              testid="result"
+              title="Victory"
+              onClose={() => {
+                onResult();
+                setResult(false);
+              }}
+              actions={[action("view", "primary")]}
+            />
+          ) : null}
+        </>
+      );
+    }
+    const styles = ["src/surfaces.css", "src/cards/inspect/inspect.css"].map((path) => {
+      const style = document.createElement("style");
+      style.textContent = readSheet(path).replace(/^@import [^;]+;$/gm, "");
+      document.head.append(style);
+      return style;
+    });
+    try {
+      render(<Board />);
+      const layer = screen.getByTestId(INSPECT_DETAIL).closest<HTMLElement>(".inspect-layer");
+      if (layer === null) throw new Error("no inspect layer");
+      expect(layer, "alone, the detail is the top layer").not.toHaveAttribute("data-under");
+      expect(getComputedStyle(layer).getPropertyValue("z-index")).toBe("var(--z-dialog)");
+      fireEvent.click(screen.getByTestId("game-over"));
+      expect(screen.getByTestId("view")).toHaveFocus();
+      expect(layer, "under the result").toHaveAttribute("data-under", "");
+      expect(getComputedStyle(layer).getPropertyValue("z-index")).toBe("var(--z-toast)");
+      const tokens = readSheet("src/surfaces.css");
+      const layerOf = (name: string): number => Number(new RegExp(`--z-${name}:\\s*(\\d+);`).exec(tokens)?.[1]);
+      expect(layerOf("toast"), "under every dialog").toBeLessThan(layerOf("dialog"));
+      act(() => {
+        press("Escape");
+      });
+      expect(onResult, "Escape answers the result the player sees").toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId(INSPECT_DETAIL), "and leaves the detail under it").toBeInTheDocument();
+      expect(layer, "the detail is on top again").not.toHaveAttribute("data-under");
+    } finally {
+      act(() => {
+        closeInspect();
+      });
+      for (const style of styles) style.remove();
+    }
   });
 
   it("R3221000 Escape over an open tooltip leaves the dialog open", () => {

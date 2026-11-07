@@ -237,6 +237,14 @@
   z-index: var(--z-dialog);
 }
 
+/* ...while it is the top layer. Under a layer opened after it (a board's result or confirm, which is
+   not portalled, so the overlay at the end of <body> would draw over it at an equal z-index) it comes
+   down under every dialog, where it stood before R3221000, so the dialog that takes the keys is seen
+   (`useModalOverlay`'s `data-under`). */
+.inspect-layer[data-under] {
+  z-index: var(--z-toast);
+}
+
 .inspect-scrim {
   position: absolute;
   inset: 0;

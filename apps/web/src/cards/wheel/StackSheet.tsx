@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { t } from "../../i18n/i18n.ts";
 import type { FaceModel } from "../model.ts";
 import { INSPECT_CLOSE, INSPECT_SCRIM } from "../inspect/testids.ts";
-import { OVERLAY_ROOT_PROPS, useModalOverlay } from "../inspect/store.ts";
+import { useModalOverlay } from "../inspect/store.ts";
 import CardWheel, { type WheelItem } from "./CardWheel.tsx";
 
 import "./wheel.css";
@@ -63,7 +63,7 @@ export default function StackSheet({ title, top, topName, buried, onClose }: Sta
   const modal = useModalOverlay(onClose, closeButton);
   const items = stackItems(top, topName, buried);
   return createPortal(
-    <div className="inspect-layer inspect-layer--list" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--list" {...modal.layerProps}>
       <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div className="inspect-list-sheet stack-sheet" data-testid={stackTestid.sheet} role="dialog" aria-modal="true" aria-label={title}>
         <header className="stack-sheet-head">

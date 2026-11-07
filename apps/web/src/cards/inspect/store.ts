@@ -5,7 +5,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject, SyntheticEvent } from "react";
-import { useBackLayer } from "../../net/backLayers.ts";
+import { useTopBackLayer } from "../../net/backLayers.ts";
 import { CLICK_SUPPRESS_MS } from "./constants.ts";
 import type { Rect } from "./placement.ts";
 // R3221000: every modal overlay's `.inspect-scrim` takes the dialogs' colour from their sheet, which each
@@ -102,6 +102,13 @@ function restoreFocus(element: HTMLElement | null): void {
 type ModalOverlay = {
   /** Gives focus back, then calls the caller's onClose. */
   close: () => void;
+  /**
+   * Spread on the overlay's `.inspect-layer` root: `OVERLAY_ROOT_PROPS`, and `data-under` while a layer
+   * opened after it is on top. R3221000: the overlay draws at the dialogs' layer, over a menu's dialog it
+   * opens from (the card view's Card text), and comes down under a dialog that opens over it (a result
+   * that ends the game while a card's detail is open), so the dialog that takes the keys is the one seen.
+   */
+  layerProps: typeof OVERLAY_ROOT_PROPS & { "data-under"?: "" };
   dismissProps: {
     onPointerDown: () => void;
     onClick: (event: ReactMouseEvent<HTMLElement>) => void;
@@ -170,7 +177,7 @@ export function useModalOverlay(
     onCloseRef.current();
   };
   // R3221000: the keys go to the top layer alone, so a dialog opened over this one takes them first.
-  const isTop = useBackLayer(close, closable);
+  const { isTop, onTop } = useTopBackLayer(close, closable);
 
   useLayoutEffect(() => {
     const previous = document.activeElement;
@@ -204,6 +211,7 @@ export function useModalOverlay(
 
   return {
     close,
+    layerProps: onTop ? OVERLAY_ROOT_PROPS : { ...OVERLAY_ROOT_PROPS, "data-under": "" },
     dismissProps: {
       onPointerDown: () => {
         pressedRef.current = true;
