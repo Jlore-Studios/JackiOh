@@ -16204,7 +16204,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-07T17:49:55Z",
       "round_tier": "strong",
-      "run_id": "pending:9ab05f53-1794083928",
+      "run_id": "42412098692",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
