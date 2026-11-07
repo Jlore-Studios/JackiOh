@@ -17794,16 +17794,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "gemini",
-        "built_by": "agy",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
         "reviews": [],
-        "sha": "1dae6204b972b68a88c9e4a567451ab6c4f514f7",
-        "tiers": {
-          "claude": "medium"
-        }
+        "sha": "7bed919620d6f5681b77e6354e7640bb102988b7",
+        "tiers": {}
       }
     }
   },
