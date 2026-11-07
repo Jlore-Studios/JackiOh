@@ -29,6 +29,7 @@ import type { PlayerId } from "./PlayerId";
 import type { PlayerState } from "./PlayerState";
 import type { QueuedTrigger } from "./QueuedTrigger";
 import type { SecretRecord } from "./SecretRecord";
+import type { WinRateTable } from "./WinRateTable";
 import type { WorkItem } from "./WorkItem";
 import type { ZoneRef } from "./ZoneRef";
 
@@ -223,4 +224,13 @@ marketplace?: Marketplace,
  * `replay::hash_state` leaves it out, and only the card's owner is told it (`CardView.createdBy`).
  * Empty, and absent from the JSON, until a card's script creates a card.
  */
-generators?: { [key in string]: string }, };
+generators?: { [key in string]: string }, 
+/**
+ * R3049000: the win-rate snapshot the game was handed (`CreateGameOptions.winRates`), as
+ * `win_rates::kept_for_game` keeps it, which M #50 CN Tech and M+ #2 NA Tech read
+ * (`win_rates::win_rates_of`). A `create_game` input, frozen with the game, so every pick reads
+ * the same table however the live figures move. Absent in a game handed none, which hashes as
+ * it did before this field existed (D14) and reads its shipped catalog's frozen table instead
+ * (R1266000). Never in a view: the figures are public, but no rule shows them.
+ */
+winRates?: WinRateTable, };

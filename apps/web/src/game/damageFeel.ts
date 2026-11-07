@@ -97,6 +97,44 @@ export const UNIT_SLAM: Readonly<Record<SlamTier, SlamFeel>> = Object.freeze({
 
 export const SLAM_TIERS_ASCENDING: readonly SlamTier[] = ["tiny", "small", "medium", "large", "huge", "massive"];
 
+/** R3346000 (#3346): how heavy a play lands, by the mana it cost (`cardPlayed.costPaid`). */
+export type PlayTier = "light" | "medium" | "heavy" | "massive";
+
+/** The colour of a play's impact: a body landing, a charge and release, or the ground settling. */
+export type PlayType = "unit" | "spell" | "field";
+
+export type PlayFeel = {
+  /** The tier's lowest mana cost paid. */
+  min: number;
+  /** The impact's weight, 0 (a flick, a tap, a hum) to 1 (a thunderclap, a slam, a rumble). */
+  weight: number;
+};
+
+/**
+ * R3346000: the one tuning surface for a play's weight, beside `UNIT_SLAM` (which sizes the
+ * landing thud by the Unit's stats; this sizes the impact by what the card cost). The impact, the
+ * board shake and the phone's buzz all key on `playTier`. Client-only: it reads a public
+ * `costPaid` and changes no resolution, timing or legality.
+ */
+export const PLAY_IMPACT_TIERS: Readonly<Record<PlayTier, PlayFeel>> = Object.freeze({
+  light: { min: 0, weight: 0.2 },
+  medium: { min: 3, weight: 0.5 },
+  heavy: { min: 6, weight: 0.8 },
+  massive: { min: 9, weight: 1 },
+});
+
+export const PLAY_TIERS_ASCENDING: readonly PlayTier[] = ["light", "medium", "heavy", "massive"];
+
+/** A play's tier from the mana it cost; a cost that is not a finite, non-negative number is light. */
+export function playTier(costPaid: number): PlayTier {
+  const safe = Number.isFinite(costPaid) ? costPaid : 0;
+  for (let i = PLAY_TIERS_ASCENDING.length - 1; i > 0; i--) {
+    const tier = PLAY_TIERS_ASCENDING[i]!;
+    if (safe >= PLAY_IMPACT_TIERS[tier].min) return tier;
+  }
+  return "light";
+}
+
 /**
  * Several Units landing in one action play one after another (each is its own animation entry) and
  * share these totals, so a board flood never stacks into a long freeze or a violent shake.

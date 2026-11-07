@@ -255,7 +255,7 @@ for (const viewport of VIEWPORTS) {
       });
     });
 
-    it("R1330 R1449 the hero's inspect view stays on the screen, its portrait large, its menu in it and Close a touch target", () => {
+    it(`R1330 R1449 the hero's inspect view stays on the screen, its portrait large, its menu in it and Close the shared ✕${viewport.touch ? ", a touch target" : ""}`, () => {
       for (const side of ["you", "opponent"] as const) {
         openView(side);
         cy.get(ts("hero-inspect")).should(($view) => {
@@ -278,9 +278,12 @@ for (const viewport of VIEWPORTS) {
           );
         });
         cy.get(ts("hero-inspect-close")).should(($close) => {
-          expect(($close[0] as Element).getBoundingClientRect().height, "Close's height").to.be.at.least(
-            TOUCH_PX - EPSILON,
-          );
+          const close = $close[0] as Element;
+          // R3221000: the shared ✕, a finger's target wherever a finger is.
+          expect(close.classList.contains("dialog__close"), "the shared ✕").to.equal(true);
+          if (viewport.touch) {
+            expect(close.getBoundingClientRect().height, "Close's height").to.be.at.least(TOUCH_PX - EPSILON);
+          }
         });
         cy.get(ts("hero-inspect-close")).click();
         cy.get(ts("hero-inspect")).should("not.exist");

@@ -7,7 +7,7 @@
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
-import { damageTier, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
+import { damageTier, PLAY_IMPACT_TIERS, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 import { createRng } from "../fx/rng.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
@@ -26,6 +26,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
+  "playImpact", "trapSnap",
   "auraTouch",
 ];
 
@@ -439,6 +440,66 @@ const impact: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
+/**
+ * R3346000: the impact under a play, by the mana it cost (`playTier`, its weight `t` from
+ * PLAY_IMPACT_TIERS) and coloured by the card's type (`playType`): a Unit is a body landing, a Spell a
+ * charge and release, a Field Spell the ground settling. Each grows with `t` in length and in voices
+ * (a boom under a heavy Unit or Spell, a sub under a massive Field Spell). Its parts peak together
+ * under IMPACT_HEADROOM, as `impact` does (B15), and it ends within 0.5 s.
+ */
+const playImpact: SfxRecipe = (ctx, out, at, params) => {
+  const t = PLAY_IMPACT_TIERS[params.playTier ?? "light"].weight;
+  const heavy = t >= PLAY_IMPACT_TIERS.heavy.weight;
+  const massive = t >= PLAY_IMPACT_TIERS.massive.weight;
+  const peak = (0.4 + 0.4 * t) * IMPACT_HEADROOM;
+  switch (params.playType ?? "unit") {
+    case "unit": {
+      const len = 0.14 + 0.3 * t;
+      const k = kit(ctx, out, at, len);
+      const body = tone(k, out, "triangle", 200 - 90 * t, 0, 0.004, 0.5 * peak, len);
+      glide(k, body.frequency, (200 - 90 * t) * 0.45, len);
+      const thwack = noiseSource(k);
+      chain(thwack, biquad(k, "lowpass", 2400 - 1600 * t, 0), envelope(k, 0, 0.003, 0.35 * peak, 0.05), out);
+      run(k, thwack, 0, 0.05);
+      if (heavy) {
+        const boom = tone(k, out, "sine", 55, 0, 0.006, 0.45 * peak, len);
+        glide(k, boom.frequency, 35, len);
+      }
+      return len;
+    }
+    case "spell": {
+      const charge = 0.03 + 0.07 * t;
+      const len = charge + 0.1 + 0.28 * t;
+      const k = kit(ctx, out, at, len);
+      const soften = biquad(k, "lowpass", 3000, 0);
+      soften.connect(out);
+      const rise = tone(k, soften, "sawtooth", 300, 0, charge * 0.9, 0.3 * peak, charge + 0.02);
+      glide(k, rise.frequency, 1400, charge);
+      const crack = noiseSource(k);
+      const crackEnd = charge + 0.06 + 0.1 * t;
+      chain(crack, biquad(k, "highpass", 1500 - 800 * t, 0), envelope(k, charge, 0.003, 0.6 * peak, crackEnd), out);
+      run(k, crack, charge, crackEnd);
+      if (heavy) {
+        const boom = tone(k, out, "sine", 90, charge, 0.004, 0.55 * peak, len);
+        glide(k, boom.frequency, 45, len);
+      } else if (t <= PLAY_IMPACT_TIERS.light.weight) {
+        fmBell(k, out, 1760, 2, 200, charge, 0.003, 0.3 * peak, len);
+      }
+      return len;
+    }
+    case "field": {
+      const len = 0.18 + 0.3 * t;
+      const k = kit(ctx, out, at, len);
+      tone(k, out, "sine", 110 - 30 * t, 0, 0.06 + 0.06 * t, 0.4 * peak, len);
+      const rumble = noiseSource(k);
+      chain(rumble, biquad(k, "lowpass", 600 - 300 * t, 0), envelope(k, 0, 0.04, 0.4 * peak, len), out);
+      run(k, rumble, 0, len);
+      if (massive) tone(k, out, "sine", 40, 0, 0.05, 0.35 * peak, len);
+      return len;
+    }
+  }
+};
+
 const shieldShatter: SfxRecipe = (ctx, out, at) => {
   const len = 0.48;
   const k = kit(ctx, out, at, len);
@@ -535,6 +596,18 @@ const trapSting: SfxRecipe = (ctx, out, at) => {
     run(k, sq, 0, len);
   }
   tone(k, out, "sine", 1245, 0, 0.003, 0.43, 0.5);
+  return len;
+};
+
+/** R3346000: a trap firing: a sharp click and a short twang, the counterpart of `trapSet`'s soft click. */
+const trapSnap: SfxRecipe = (ctx, out, at) => {
+  const len = 0.2;
+  const k = kit(ctx, out, at, len);
+  const click = noiseSource(k);
+  chain(click, biquad(k, "highpass", 2500, 0), envelope(k, 0, 0.002, 0.6, 0.05), out);
+  run(k, click, 0, 0.05);
+  const twang = tone(k, out, "triangle", 880, 0, 0.003, 0.35, len);
+  glide(k, twang.frequency, 440, len);
   return len;
 };
 
@@ -1949,6 +2022,9 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   deckShear: { recipe: deckShear, durationMs: 550, gain: 0.7 },
   // R3338000: the bed under a Terminus set piece, at the gain of the entrance that ends it.
   organ: { recipe: organ, durationMs: 2000, gain: 0.6 },
+  // R3346000: a play's cost impact and a firing trap's snap, level with the thud and the set click.
+  playImpact: { recipe: playImpact, durationMs: 500, gain: 0.8 },
+  trapSnap: { recipe: trapSnap, durationMs: 200, gain: 0.8 },
   // R3342000: the tile aura bell, pitched by its hue.
   auraTouch: { recipe: auraTouch, durationMs: 200, gain: 0.4 },
 };

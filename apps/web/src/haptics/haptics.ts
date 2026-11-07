@@ -2,13 +2,17 @@
 // Public events only, so they neither enforce rules nor reveal information (CLAUDE.md rule 7).
 // R3348000, R3348001: a touch press on a tile or a corner prop buzzes too (`buzz`, `tapHaptic`), on its
 // own gap, so a tile never swallows the game's own drop.
+// R3346000: a heavy or massive play buzzes by the mana it cost, whichever seat plays it.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
+import { HIDDEN_DEF_ID } from "../audio/constants.ts";
 import { reducedMotionNow } from "../game/animations.ts";
+import { playTier } from "../game/damageFeel.ts";
 import { readHapticsSettings } from "./settings.ts";
 
-export type HapticMoment = "drop" | "hit" | "turn" | "touch" | "pickup" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare";
+export type HapticMoment =
+  | "drop" | "hit" | "turn" | "touch" | "pickup" | "tile" | "tileLegal" | "corner" | "cornerBig" | "cornerRare" | "playHeavy" | "playMassive";
 
 export const HAPTIC_PATTERNS: { readonly [K in HapticMoment]: readonly number[] } = {
   drop: [12],
@@ -23,14 +27,22 @@ export const HAPTIC_PATTERNS: { readonly [K in HapticMoment]: readonly number[] 
   corner: [8],
   cornerBig: [14, 40, 14],
   cornerRare: [10, 30, 10, 30, 24],
+  // R3346000: a play that cost 6 to 8 thumps twice, one that cost 9 or more rolls on.
+  playHeavy: [20, 30, 20],
+  playMassive: [30, 40, 30, 40, 60],
 };
 
 export const HAPTIC_MIN_GAP_MS = 120;
 
 export function hapticFor(event: GameEvent, view: PlayerView): HapticMoment | null {
   switch (event.type) {
-    case "cardPlayed":
+    case "cardPlayed": {
+      // R3346000: only a play the viewer can read (R203) and that is no set (`formerId`) is weighed by its cost.
+      const tier = event.defId === HIDDEN_DEF_ID || event.formerId !== undefined ? "light" : playTier(event.costPaid);
+      if (tier === "massive") return "playMassive";
+      if (tier === "heavy") return "playHeavy";
       return event.player === view.viewer ? "drop" : null;
+    }
     case "damage":
       return event.amount > 0 ? "hit" : null;
     case "turnStarted":
