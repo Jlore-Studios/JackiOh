@@ -16768,6 +16768,7 @@
     "3386": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -16783,16 +16784,19 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-07T14:55:10Z",
+      "feedback_since": "2026-11-07T17:33:52Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3340,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-11-07T17:33:10Z",
+      "round_tier": "medium",
       "run_id": "42396940100",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
@@ -16813,10 +16817,11 @@
         "provider": "claude-4",
         "run": "42383844802"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-07T17:33:52Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
