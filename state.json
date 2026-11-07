@@ -18678,11 +18678,11 @@
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "42355700936",
+            "run": "42361574044",
             "tier": "strong"
           }
         ],
-        "sha": "51d009aa1cf117a9d66f4029f7ebfd1219dd941c",
+        "sha": "40ba1afa6f3e22852b3e4c63ca6185f553dbf546",
         "tiers": {
           "claude": "strong"
         }
