@@ -45,7 +45,7 @@ export const ART_DETAIL_MAX_BYTES = 48 * 1024;
 export const ART_DETAIL_SHORT: ReadonlySet<string> = new Set<string>(SHORT);
 
 /** The most `ART_DETAIL_SHORT` may name: its length as #3331 left it, so it can only shrink. */
-export const ART_DETAIL_SHORT_MAX = 563;
+export const ART_DETAIL_SHORT_MAX = 561;
 
 /** The shapes a picture draws: its paths, circles, rects, ellipses, polygons, polylines and lines, after its `<defs>`. */
 export function artElements(svg: string): number {
