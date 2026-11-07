@@ -17234,11 +17234,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-07T16:52:44Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-07T21:28:42Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_at": "2026-11-07T17:08:02Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
