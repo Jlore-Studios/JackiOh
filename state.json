@@ -16078,7 +16078,7 @@
         "provider": "claude-6",
         "round_tier": "strong",
         "rounds_on": 3369,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-07T12:01:59Z",
         "source": "cross-review",
         "until": "2026-11-07T13:16:46Z"
