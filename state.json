@@ -16473,18 +16473,28 @@
         ],
         "builder": "claude",
         "built_by": "claude-3",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/audio/director.test.ts",
+            "apps/web/src/fx/cues.test.ts",
+            "apps/web/src/haptics/haptics.ts"
+          ],
+          "from": "cff506922e6939e7805928bb14c5499b8d93408b",
+          "main": "307394f04a6ef4640a4c6eec4676066378ea6ef0"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "42380825216",
-            "tier": "medium"
+            "run": "42386725465",
+            "tier": "strong"
           }
         ],
-        "sha": "cff506922e6939e7805928bb14c5499b8d93408b",
+        "sha": "e8a62cec8b327204610ed44a09e55e8ea1326a93",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
