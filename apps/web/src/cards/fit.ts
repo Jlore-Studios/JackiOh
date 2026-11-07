@@ -4,7 +4,7 @@
 
 import { useLayoutEffect, type RefObject } from "react";
 
-import { FIT_MIN, FIT_STEPS, NAME_TIER_MAX, TEXT_TIER_MAX } from "./constants.ts";
+import { FIT_MIN, FIT_STEPS, HAND_TEXT_BOX_MIN_CQH, NAME_TIER_MAX, TEXT_TIER_MAX } from "./constants.ts";
 
 /** A text limit: the lines a rules box holds at the reading floor, and the characters in each. */
 export type TextLimit = { readonly charsPerLine: number; readonly lines: number };
@@ -62,6 +62,15 @@ export const LONG_ATTRIBUTE = "data-long";
 /** On the face, with `data-long`: the long layout still printed under the floor, so the art gives up more (#617). */
 export const LONGEST_ATTRIBUTE = "data-longest";
 const FACE_SELECTOR = ".cf";
+/** #3341: the face's size container, whose height is the `cqh` of cards.css. */
+const CONTAINER_SELECTOR = ".cf-scale";
+/** #3341: a card in your hand (a face outside it keeps its rules box at its full height). */
+const HAND_SELECTOR = ".card-hand";
+/**
+ * #3341: on the face (`.cf`) of a card in a hand, the height in cqh its rules box needs for its text, which cards.css
+ * takes from the box's full height to grow the art window above it. Absent when the box needs all of it.
+ */
+export const NEED_PROPERTY = "--cf-text-need";
 /** CardFace's base text and radiant-clause halves of a rules box. */
 const BASE_SELECTOR = ".cf-text-base";
 const RADIANT_SELECTOR = ".cf-text-radiant";
@@ -161,8 +170,8 @@ function* clampAtFloor(element: HTMLElement, floorPx: number): Steps<void> {
   element.style.setProperty(CLAMP_LINES_PROPERTY, String(lines));
 }
 
-/** One fitting pass; without layout it only clears stale layout attributes. */
-function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
+/** One text-fitting pass; without layout it only clears stale layout attributes. */
+function* fitText(element: HTMLElement, options: FitOptions): Steps<void> {
   const face = options.floorPx === undefined ? null : element.closest<HTMLElement>(FACE_SELECTOR);
   if (yield* read(() => element.clientWidth === 0 && element.clientHeight === 0)) {
     if (element.hasAttribute(CLAMPED)) element.removeAttribute(CLAMPED);
@@ -202,6 +211,33 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
 
   // 3. The floor, clamped.
   yield* clampAtFloor(element, floorPx);
+}
+
+/**
+ * #3341: how tall a hand card's rules box needs to be for its fitted text, in cqh of the face's container: the text's own
+ * height (the box let go of its height for the reading), never under HAND_TEXT_BOX_MIN_CQH and never over the box's full
+ * height. Skipped for a face outside a hand, a box that clamps and the long layouts, whose boxes stay as cards.css has
+ * them. Rounded up to a tenth, so the box never ends a hair under its text.
+ */
+function* measureNeed(element: HTMLElement, face: HTMLElement | null): Steps<void> {
+  if (face === null || element.closest(HAND_SELECTOR) === null) return;
+  if (element.hasAttribute(CLAMPED) || face.hasAttribute(LONG_ATTRIBUTE)) return;
+  const container = element.closest<HTMLElement>(CONTAINER_SELECTOR) ?? face;
+  const { full, faceHeight } = yield* read(() => ({ full: element.clientHeight, faceHeight: container.clientHeight }));
+  element.style.height = "auto";
+  const natural = yield* read(() => element.offsetHeight);
+  element.style.removeProperty("height");
+  if (faceHeight <= 0 || full <= 0) return;
+  const need = Math.min(full, Math.max(natural + SLACK_PX, (HAND_TEXT_BOX_MIN_CQH / 100) * faceHeight));
+  face.style.setProperty(NEED_PROPERTY, String(Math.ceil((need / faceHeight) * 1000) / 10));
+}
+
+/** One fitting pass: the text's, then (#3341) the box a hand card's text needs. */
+function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
+  const face = options.floorPx === undefined ? null : element.closest<HTMLElement>(FACE_SELECTOR);
+  face?.style.removeProperty(NEED_PROPERTY);
+  yield* fitText(element, options);
+  yield* measureNeed(element, face);
 }
 
 /** A pass's settled box, used to detect a resize. */

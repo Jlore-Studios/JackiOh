@@ -186,6 +186,7 @@ const DOM_KINDS = {
   takeover: "fx-takeover-in",
   setPiece: "fx-set-piece-in",
   launch: "fx-launch-in",
+  ship: "fx-ship-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');

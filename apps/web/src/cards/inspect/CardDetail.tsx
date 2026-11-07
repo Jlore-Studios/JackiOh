@@ -1,5 +1,5 @@
 // Detail shows both faces, meta (lines of code last, E36), glossary and caller actions (B29); it is
-// the sole inspect slot, closed by Close, scrim or Escape (B25). Card-text refs are controls and Radiant
+// the sole inspect slot, closed by its ✕ (R3221000), scrim or Escape (B25). Card-text refs are controls and Radiant
 // differences are gold (R279, R277). Flavour then History follow the glossary (R660, R388).
 
 import { useLayoutEffect, useRef } from "react";
@@ -23,7 +23,8 @@ import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { VoicePreview } from "./VoicePreview.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
-import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
+import { DialogClose } from "../../game/Dialog.tsx";
+import { closeInspect, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
@@ -135,7 +136,7 @@ export function CardDetail({
   const glossary = mergeGlossary(base.glossary, radiant.glossary);
 
   return createPortal(
-    <div className="inspect-layer inspect-layer--detail" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--detail" {...modal.layerProps}>
       <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-detail"
@@ -146,7 +147,7 @@ export function CardDetail({
         aria-label={readerName(def)}
       >
         {/* The faces and everything about them scroll; the actions row is pinned under them, so
-            Add and Close are on screen as the dialog opens, whatever the card's length. */}
+            Add is on screen as the dialog opens, whatever the card's length. */}
         <div className="inspect-detail-body">
           <RefsInteractive>
             <div className="inspect-detail-faces">
@@ -181,16 +182,9 @@ export function CardDetail({
         <div className="inspect-actions">
           {actions}
           <VoicePreview defId={def.id} />
-          <button
-            ref={closeButton}
-            type="button"
-            className="inspect-close"
-            data-testid={INSPECT_CLOSE}
-            {...modal.dismissProps}
-          >
-            {t("Close")}
-          </button>
         </div>
+        {/* R3221000: the one ✕ every dialog closes by, at the top right. */}
+        <DialogClose buttonRef={closeButton} testid={INSPECT_CLOSE} {...modal.dismissProps} />
       </div>
     </div>,
     document.body,

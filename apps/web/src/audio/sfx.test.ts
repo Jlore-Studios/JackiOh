@@ -30,6 +30,8 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // R3336000: the Drone Battleship.
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   // R3338000: the Terminus set pieces' organ.
   "organ",
   // R3342000: the tile aura bell.
@@ -120,6 +122,12 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
   // R3338000.
   organ: 2000,
   // R3342000.

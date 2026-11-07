@@ -125,9 +125,9 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-t-dormant-starship` | Dormant Starship | Unit | none: Starship part | — | none: unseen | the Starship itself: its fuse and launch are the Starship part's (#2782) |
 | `stinkyscape-t-drone-interceptor` | Drone Interceptor | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
 | `stinkyscape-t-drone-corvette` | Drone Corvette | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
-| `stinkyscape-t-shield-layer` | Drone Battleship (Shield Layer) | Unit | none: token | — | not in census | a token the census never saw: its redirect is the damage rows' |
-| `stinkyscape-t-propagation-layer` | Drone Battleship (Propagation Layer) | Unit | activate conjure Tech/rocket | 1.26 | vanish | activate: the census's vanish is a few exiles in its window; its own Activates summon, which conjure reads; Tech/rocket for its drones |
-| `stinkyscape-t-meltdown-layer` | Drone Battleship (Meltdown Layer) | Unit | none: token | — | none: no motif reads addedToHand | a token: its End of turn self-hit is the damage row's; the census's addedToHand is the turn's draw |
+| `stinkyscape-t-shield-layer` | Drone Battleship (Shield Layer) | Unit | none: Battleship planner | — | not in census | a token the census never saw: its redirect, the dome's flare and plates and its break are `fx/battleship.ts`'s (R3336000), not a hook's |
+| `stinkyscape-t-propagation-layer` | Drone Battleship (Propagation Layer) | Unit | none: Battleship planner | — | vanish | its Activates open a bay and launch the drone from it in Tech/rocket, which `fx/battleship.ts` plans (R3336000) from the public `activated` and `summoned`, so the conjure it had would draw a second summon over it |
+| `stinkyscape-t-meltdown-layer` | Drone Battleship (Meltdown Layer) | Unit | none: Battleship planner | — | none: no motif reads addedToHand | a token: its End of turn self-hit pulses the core, its attacks fire from the reactor and its death is the blast, all `fx/battleship.ts`'s (R3336000); the census's addedToHand is the turn's draw |
 | `stinkyscape-t-reknite` | Reknite | Spell | none: token | — | bolt | a token: its Armor is a modifier (modifierChanged), which its badge shows |
 | `stinkyscape-t-korrelite` | Korrelite | Spell | cast bolt Hustle/ore | 0.90 | bolt | cast: the census agrees (bolt); Hustle/ore for its Resource |
 | `stinkyscape-t-gellium` | Gellium | Spell | cast mend Hustle/ore | 0.90 | bolt | cast: the census's bolt is noise in its window; its own effect is healed, which mend (#2793) reads; Hustle/ore for its Resource |
@@ -190,11 +190,13 @@ Found! token keep `wipe`.
 
 ## Tokens given entries
 
-Of the file's 32 tokens, 22 have an entry other than `none`: Paycheck, the four War Doctrines,
-IN33DH3 Prime, Wardrum Blob, the Drone Battleship's Propagation Layer, Korrelite, Gellium, Axnit,
-Narcor, Red Narcor, Anomaly Found! and the AI tokens Escort Protocol, Mining Subroutine, Route
-Optimizer, Probe Relay, Combat Subroutine, Drone Uplink, Honeypot and Salvage Protocol. The rest are
-keywords only, or show nothing a motif reads.
+Of the file's 32 tokens, 21 have an entry other than `none`: Paycheck, the four War Doctrines,
+IN33DH3 Prime, Wardrum Blob, Korrelite, Gellium, Axnit, Narcor, Red Narcor, Anomaly Found! and the AI
+tokens Escort Protocol, Mining Subroutine, Route Optimizer, Probe Relay, Combat Subroutine, Drone
+Uplink, Honeypot and Salvage Protocol. The rest are keywords only, or show nothing a motif reads; the
+Drone Battleship's three layers are `none: Battleship planner` (R3336000): their moments are
+`fx/battleship.ts`'s, planned from public events and the layers the view draws, and no hook opens for
+the Shield's guard, a break or the blast.
 
 ## New motifs
 

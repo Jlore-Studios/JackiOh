@@ -523,7 +523,7 @@ describe("#257 a hero with an emote up is lifted over the board, under every ove
       ["../game/animations.css", '[data-testid="result-overlay"]'],
       ["../game/animations.css", ".result-scrim"],
       ["../game/prompt.css", ".prompt-scrim"],
-      ["../settings/settings.css", ".settings-scrim"],
+      ["../game/dialog.css", ".dialog-scrim"],
     ];
     const lift = emoteLift();
     for (const [file, selector] of overlays) {

@@ -130,16 +130,7 @@ export function QuestsList({
                     confirming === quest.questId ? (
                       <div className="row entry-card__confirm" role="alertdialog" aria-label={t("Replace this quest?")}>
                         <p>{t("You lose its progress and get a different quest.")}</p>
-                        <button
-                          type="button"
-                          data-testid={questsTestid.replaceConfirm}
-                          disabled={busy}
-                          onClick={() => {
-                            void confirmReplace(quest.questId);
-                          }}
-                        >
-                          {t("Replace it")}
-                        </button>
+                        {/* R3221000: the safe choice first, the act last. */}
                         <button
                           type="button"
                           className="link-button"
@@ -149,6 +140,16 @@ export function QuestsList({
                           }}
                         >
                           {t("Keep it")}
+                        </button>
+                        <button
+                          type="button"
+                          data-testid={questsTestid.replaceConfirm}
+                          disabled={busy}
+                          onClick={() => {
+                            void confirmReplace(quest.questId);
+                          }}
+                        >
+                          {t("Replace it")}
                         </button>
                       </div>
                     ) : (

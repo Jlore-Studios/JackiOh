@@ -14,7 +14,7 @@ import { PORTRAITS } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
 import { flavourFor } from "../cards/flavour.ts";
-import { OVERLAY_ROOT_PROPS, useModalOverlay } from "../cards/inspect/store.ts";
+import { useModalOverlay } from "../cards/inspect/store.ts";
 import "../cards/inspect/inspect.css";
 import { t } from "../i18n/i18n.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
@@ -68,7 +68,7 @@ export function HeroInspect({
   const flavour = flavourFor(defId)?.flavour;
 
   return createPortal(
-    <div className="inspect-layer hero-inspect-layer" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer hero-inspect-layer" {...modal.layerProps}>
       <div className="inspect-scrim" data-testid={HERO_INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="hero-inspect"

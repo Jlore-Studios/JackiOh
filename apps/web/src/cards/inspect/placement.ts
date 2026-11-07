@@ -1,7 +1,7 @@
 // Where the hover preview goes (B27). Pure but for `rectOf`, which measures an anchor for it; the
 // caller measures the viewport.
 
-import { PREVIEW_GAP_PX, PREVIEW_MARGIN_PX } from "./constants.ts";
+import { PREVIEW_GAP_PX, PREVIEW_HEIGHT_PX, PREVIEW_HEIGHT_SHARE, PREVIEW_MARGIN_PX, PREVIEW_MAX_VIEWPORT_SHARE } from "./constants.ts";
 
 export type Rect = { left: number; top: number; width: number; height: number };
 
@@ -10,6 +10,14 @@ export function rectOf(element: Element): Rect {
   const box = element.getBoundingClientRect();
   return { left: box.left, top: box.top, width: box.width, height: box.height };
 }
+/**
+ * #3341: the hover preview card's height on a viewport this tall: PREVIEW_HEIGHT_PX, or PREVIEW_HEIGHT_SHARE of the
+ * viewport where that is more, and never more than PREVIEW_MAX_VIEWPORT_SHARE of it (inspect.css's `80vh` too).
+ */
+export function previewHeight(viewportHeight: number): number {
+  return Math.min(Math.max(PREVIEW_HEIGHT_PX, viewportHeight * PREVIEW_HEIGHT_SHARE), viewportHeight * PREVIEW_MAX_VIEWPORT_SHARE);
+}
+
 type PreviewSide = "right" | "left" | "above" | "below";
 
 /**

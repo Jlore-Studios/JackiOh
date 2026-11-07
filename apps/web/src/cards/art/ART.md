@@ -54,6 +54,16 @@ the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, i
 a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
 and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's.
 
+The Drone Battleship's three layers (`stinkyscape-t-meltdown-layer`, `-propagation-layer`, `-shield-layer`) are the
+decks of one ship (R3336000): the reactor keel with its core glowing through the vents, the hangar decks with their
+bay doors and racked drones, and the command superstructure with its emitter spires and dome, each in its layer's
+color, gilded when Radiant. A printed card draws its own deck large with the other two faint behind it. A layer on
+the board (`MinionFace` gives `CardArt` its `ship`, `shipArtOf`) draws its own deck and every deck beneath it,
+stacked, so the top card shows the ship as far as it stands, `data-art-decks` three, two or one; the keel's core
+glows hotter and its cracks spread with the health it has lost (in `SHIP_HEAT_STEPS`) and a low Brittle, and the
+hangar's lights stay lit for the bays that still hold drones. The three layers' hashes in
+`fixtures/stinkyscape-art-v0.5.0.json` were recorded again for it, and no other entry's.
+
 The Terminus cards draw pictures of their own (R3338001), found by id (`TERMINUS_KINDS`; Dice of Doom prints no
 Terminus tag): Olivian Expanse an endless violet expanse with the Terminus cards as distant falling stars, Farewell
 an empty table under a single lamp, KY's Last Exam one desk in an exam hall under a problem chalked across the sky,

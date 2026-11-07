@@ -20,6 +20,7 @@ import { FullArtShown, OwnCopy, fullArtSource } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -32,7 +33,6 @@ import {
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import type { CardTier } from "../wire/generated/CardTier.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -228,15 +228,6 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
     cost: cost ? Number(cost) : undefined,
     mode: mode ? mode : undefined,
   };
-}
-
-/**
- * R2127000: the card drill-down's Back layer. It is mounted only while the drill-down is open, so Back
- * closes the drill-down as its Close does, and with it shut Back leaves the page as before.
- */
-function DrillDownBackLayer({ onClose }: { onClose: () => void }): null {
-  useBackLayer(onClose);
-  return null;
 }
 
 export default function StatsRoute(): ReactElement {
@@ -458,12 +449,11 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25; Escape and Back
-  // close it, R2127000). The control that opened it is kept when it is pressed, not read off the
-  // focus, which a click on a button does not move in every browser.
+  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25), drawn through
+  // Dialog.tsx (R3221000), whose keys close it and keep Tab inside, and Back too (R2127000). The control
+  // that opened it is kept when it is pressed, not read off the focus, which a click on a button does
+  // not move in every browser, and has the focus back once it closes.
   const drillDownOpener = useRef<HTMLElement | null>(null);
-  const drillDownDialog = useRef<HTMLDivElement>(null);
-  const drillDownCloseButton = useRef<HTMLButtonElement>(null);
   const drillDownOpen = Boolean(cardDrillDownId);
 
   const openDrillDown = (id: string, opener: HTMLElement): void => {
@@ -472,33 +462,9 @@ export default function StatsRoute(): ReactElement {
   };
 
   useEffect(() => {
-    if (!drillDownOpen) return;
-    drillDownCloseButton.current?.focus({ preventScroll: true });
-    // Both keys are read at the window, in the capture phase, so they hold wherever the focus is.
-    function onKey(event: globalThis.KeyboardEvent): void {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        setCardDrillDownId(null);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const dialog = drillDownDialog.current;
-      if (dialog === null) return;
-      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")];
-      if (order.length === 0) return;
-      const at = order.indexOf(document.activeElement as HTMLElement);
-      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
-      event.preventDefault();
-      event.stopPropagation();
-      order[next]?.focus();
-    }
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-      const opener = drillDownOpener.current;
-      if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
-    };
+    if (drillDownOpen) return;
+    const opener = drillDownOpener.current;
+    if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
   }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
@@ -1456,34 +1422,17 @@ export default function StatsRoute(): ReactElement {
 
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
-          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)}>
-            <DrillDownBackLayer onClose={() => setCardDrillDownId(null)} />
-            <div
-              ref={drillDownDialog}
-              className="stats-drilldown-modal"
-              data-testid={statsTestid.drillDownModal}
-              data-radiant={drillDownRadiantFace ? "true" : undefined}
+            <Dialog
               role="dialog"
-              aria-modal="true"
-              aria-labelledby="drilldown-title"
-              onClick={(e) => e.stopPropagation()}
+              testid={statsTestid.drillDownModal}
+              className="stats-drilldown-modal"
+              data={drillDownRadiantFace ? { "data-radiant": "true" } : undefined}
+              closeTestid={statsTestid.drillDownClose}
+              closeLabel={t("Close card details")}
+              title={drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
+              onClose={() => setCardDrillDownId(null)}
+              actions={[]}
             >
-              <header className="stats-drilldown-header">
-                <h2 id="drilldown-title" className="stats-drilldown-title">
-                  {drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
-                </h2>
-                <button
-                  ref={drillDownCloseButton}
-                  type="button"
-                  className="stats-drilldown-close"
-                  data-testid={statsTestid.drillDownClose}
-                  aria-label={t("Close card details")}
-                  onClick={() => setCardDrillDownId(null)}
-                >
-                  ✕
-                </button>
-              </header>
-
               <div className="stats-drilldown-body">
                 {drillDownDef && drillDownFace && (
                   <div className="stats-drilldown-cards">
@@ -1637,8 +1586,7 @@ export default function StatsRoute(): ReactElement {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </Dialog>
         )}
       </div>
     </CardDefsProvider>

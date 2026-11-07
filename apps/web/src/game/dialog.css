@@ -17,6 +17,16 @@
   animation: dialog-fade-in calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out) both;
 }
 
+/* R3221000: a scrim drawn as a tavern shell's child (the Dev tools, the Together page's chat and
+   challenge, the stats' and the dungeon's details) still covers the window. tavern.css's
+   `.tavern.app-shell > *` caps each child at the page's width with auto margins, which would centre the
+   scrim at 1120px and leave undimmed strips at its sides where a click reaches the page behind. */
+.tavern.app-shell > .dialog-scrim {
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+
 .dialog {
   position: relative;
   flex: none;
@@ -100,6 +110,12 @@
   line-height: 1;
 }
 
+/* The inspect overlay's own scrim (CardDetail.tsx), which its swipe fades, takes the dialog's colour
+   (R3221000); its layer is the dialog's (inspect.css). */
+.inspect-scrim {
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
+}
+
 @keyframes dialog-fade-in {
   from {
     opacity: 0;
@@ -118,5 +134,35 @@
 @media (max-width: 360px) {
   .dialog__actions {
     flex-direction: column;
+  }
+}
+
+/* R3221000: a sheet (Dialog's `sheet`), centred on a wide screen, sits at the foot of an upright phone... */
+@media (max-width: 600px) {
+  .dialog-scrim[data-sheet] {
+    padding: 0;
+  }
+
+  .dialog-scrim[data-sheet] > .dialog {
+    width: 100%;
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: max(var(--space-7), env(safe-area-inset-bottom));
+  }
+}
+
+/* ...and down the right edge of a phone on its side, the full height of the screen. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .dialog-scrim[data-sheet] {
+    padding: 0;
+  }
+
+  .dialog-scrim[data-sheet] > .dialog {
+    height: 100%;
+    margin: 0 0 0 auto;
+    border-right: 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    padding-right: max(var(--space-8), env(safe-area-inset-right));
   }
 }

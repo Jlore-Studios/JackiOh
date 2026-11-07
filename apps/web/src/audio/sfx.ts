@@ -23,6 +23,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
   "auraTouch",
 ];
@@ -1668,6 +1669,90 @@ const upgrade: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+// The Drone Battleship (R3336000): the great ship's horn, its dome, its bay doors, its reactor and its decks
+
+/** R3336000: a layer of the Battleship arrives (`summoned`, the Meltdown layer): two detuned low saws, a long horn blast. */
+const horn: SfxRecipe = (ctx, out, at) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  const throat = biquad(k, "lowpass", 220, 1.2);
+  glide(k, throat.frequency, 1400, 0.32);
+  glide(k, throat.frequency, 320, len);
+  const voices = level(k, 0.5);
+  chain(voices, throat, heldEnvelope(k, 0, 0.06, 0.5, 0.6, 0.4, len), out);
+  for (const cents of [-14, 14]) {
+    const saw = oscillator(k, "sawtooth", 73);
+    saw.detune.setValueAtTime(k.cents + cents, time(k, 0));
+    chain(saw, voices);
+    run(k, saw, 0, len);
+  }
+  return len;
+};
+
+/** R3336000: a hit is redirected onto the Shield layer (`redirected`): noise rising through a band, then the dome rings. */
+const domeFlare: SfxRecipe = (ctx, out, at) => {
+  const len = 0.78;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 500, 1.4);
+  glide(k, band.frequency, 4200, 0.3);
+  chain(noise, band, envelope(k, 0, 0.28, 0.5, 0.62), out);
+  run(k, noise, 0, 0.62);
+  fmBell(k, out, 1397, 1.41, 520, 0.22, 0.004, 0.3, len);
+  fmBell(k, out, 2093, 2.76, 360, 0.26, 0.004, 0.16, 0.66);
+  return len;
+};
+
+/** R3336000: the Propagation layer opens its bays (`activated`): a door sliding on its rail, then a low clank. */
+const bayDoor: SfxRecipe = (ctx, out, at) => {
+  const len = 0.62;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const rail = biquad(k, "bandpass", 260, 2.2);
+  glide(k, rail.frequency, 1100, 0.42);
+  chain(noise, rail, heldEnvelope(k, 0, 0.08, 0.5, 0.36, 0.35, 0.46), out);
+  chain(noise, biquad(k, "bandpass", 1900, 4), envelope(k, 0.44, 0.001, 0.7, 0.5), out);
+  run(k, noise, 0, 0.56);
+  const clank = tone(k, out, "sine", 82, 0.44, 0.004, 0.55, len);
+  glide(k, clank.frequency, 48, len);
+  return len;
+};
+
+/**
+ * R3336000: the Meltdown layer's core thumps (`damage` to itself, `destroyed`): `amount` 1 (a tick) to 10
+ * (the blast) makes it lower in the chest, longer, louder and rougher, so a ship near its end beats hardest.
+ */
+const reactorPulse: SfxRecipe = (ctx, out, at, params) => {
+  const t = amountT(params);
+  const len = 0.3 + 0.35 * t;
+  const k = kit(ctx, out, at, len);
+  const hz = 52 + 36 * t;
+  const thump = tone(k, out, "sine", hz, 0, 0.006, 0.3 + 0.35 * t, len);
+  glide(k, thump.frequency, hz * 0.55, len);
+  tone(k, out, "sine", hz * 2, 0, 0.004, 0.03 + 0.12 * t, 0.7 * len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 400 + 600 * t, 0), envelope(k, 0, 0.004, 0.1 + 0.3 * t, 0.8 * len), out);
+  run(k, noise, 0, 0.8 * len);
+  return len;
+};
+
+/** R3336000: a layer with decks beneath it breaks (`destroyed`): the plates tear off with a falling screech. */
+const deckShear: SfxRecipe = (ctx, out, at) => {
+  const len = 0.5;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const screech = biquad(k, "bandpass", 4800, 5);
+  glide(k, screech.frequency, 800, 0.42);
+  const tear = modulatedGain(k, "square", 46, 0.5, 0.5);
+  chain(noise, screech, tear, envelope(k, 0, 0.01, 1, len), out);
+  run(k, noise, 0, len);
+  const metal = oscillator(k, "sawtooth", 1900);
+  glide(k, metal.frequency, 520, 0.42);
+  chain(metal, biquad(k, "lowpass", 3000, 0), envelope(k, 0, 0.01, 0.2, len), out);
+  run(k, metal, 0, len);
+  return len;
+};
+
 // The Terminus organ (R3338000)
 
 /**
@@ -1783,6 +1868,12 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   tapNeon: { recipe: tapNeon, durationMs: 150, gain: 0.52 },
   tapParchment: { recipe: tapParchment, durationMs: 160, gain: 0.52 },
   tapAstral: { recipe: tapAstral, durationMs: 240, gain: 0.52 },
+  // R3336000: the Drone Battleship.
+  horn: { recipe: horn, durationMs: 950, gain: 0.8 },
+  domeFlare: { recipe: domeFlare, durationMs: 800, gain: 0.8 },
+  bayDoor: { recipe: bayDoor, durationMs: 650, gain: 0.8 },
+  reactorPulse: { recipe: reactorPulse, durationMs: 650, gain: 0.8 },
+  deckShear: { recipe: deckShear, durationMs: 550, gain: 0.7 },
   // R3338000: the bed under a Terminus set piece, at the gain of the entrance that ends it.
   organ: { recipe: organ, durationMs: 2000, gain: 0.6 },
   // R3342000: the tile aura bell, pitched by its hue.

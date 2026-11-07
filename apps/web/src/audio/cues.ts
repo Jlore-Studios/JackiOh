@@ -9,7 +9,8 @@
 // (the `attack` hook is the board's, `usePickupSound`). MN05: Armor and the niche moments, R1363 to R1366.
 // R2722002: a hidden card makes its rarity's entrance as it reveals, at the first firing the seat reads,
 // never as it is set (`revealSting`, game/entrance.ts). R3332002: a Legendary's or Mythic's own intro is
-// its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro.
+// its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro. R3336000:
+// the Drone Battleship's layers and drones add their own sounds after the row's (`battleshipCues`, unpanned).
 
 import type {
   CardType,
@@ -58,6 +59,7 @@ import type {
   VoicePriority,
 } from "./types.ts";
 import { entryFor, hookFor } from "./voiceData.ts";
+import { battleshipCues } from "./battleshipCues.ts";
 
 /** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
 function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
@@ -752,5 +754,5 @@ function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): r
 export function cuesFor(event: GameEvent, ctx: CueContext): readonly SoundCue[] {
   const row = soundRow(event.type);
   if (row === undefined) return NONE;
-  return panned(event, ctx, row.cues(event, ctx));
+  return [...panned(event, ctx, row.cues(event, ctx)), ...battleshipCues(event, ctx)];
 }
