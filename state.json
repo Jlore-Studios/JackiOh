@@ -17074,6 +17074,11 @@
       "owner": "claude-8",
       "owner_since": "2026-11-07T16:52:44Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-07T18:21:12Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_at": "2026-11-07T17:08:02Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
@@ -17083,7 +17088,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42400095693",
       "runs_on": "ubuntu-latest",
       "session": {
