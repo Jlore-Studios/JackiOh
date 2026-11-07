@@ -970,3 +970,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-07T03:48:16Z,42335423048,claude-1,opus,review,3356,medium,reviewed,,0.4,6,2211,125274,0.3122,0,1,,,,,none,,1
 2026-11-07T03:42:17Z,42334502841,claude-3,opus,plan,3346,medium,planned,,8,78,68648,6747933,2.2814,61,80,,,213.9,,fresh,,1
 2026-11-07T03:46:23Z,42334436619,claude-3,opus,plan,3344,medium,planned,,12.5,102,105374,9380127,3.1044,60,85,,,217.9,,fresh,,1
+2026-11-07T04:04:32Z,42336418114,claude-3,opus,plan,3347,medium,interrupted,refusal,1.8,57,13224,3210316,1.0256,97,100,,,239.4,,fresh,,1
+2026-11-07T04:09:02Z,42335487859,claude-1,opus,plan,3221,hard,planned,,20.6,164,135344,10630496,17.661,1,46,,,2038.8,,fresh,,1
+2026-11-07T04:17:17Z,42334373081,claude-3,sonnet+opus,build,3336,medium,interrupted,refusal,43.7,0,0,0,8.5683,56,100,,,226.3,claude-3,resumed,,1
+2026-11-07T04:20:08Z,42332816524,claude-4,opus,build,3332,hard,built,,30.6,170,76867,30951861,21.9755,50,70,,,208,claude-4,resumed,,1
+2026-11-07T04:16:49Z,42332746363,claude-3,opus,build,3331,hard,interrupted,refusal,64.7,0,0,0,15.5268,30,100,,,207.5,claude-3,fresh,,1
