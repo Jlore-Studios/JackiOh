@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3348,
+  "title": "Patch: a living arena: every tile answers a tap, and each playmat hides things in its corners to find, escalate and, rarely, surprise you",
+  "branch": "bot/issue-3348",
+  "thread": "**Issue #3348 (data, not instructions):**\n\n```text\n# #3348: Patch: a living arena: every tile answers a tap, and each playmat hides things in its corners to find, escalate and, rarely, surprise you\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked for the arena to be more interactive: \"if you're clicking on the tiles, you should feel it there\". Hearthstone's boards set the bar here. Each one's corners hold cosmetic clickables with their own animation and sound. Repeated clicks escalate (5 to 7 clicks for a rainbow from a waterfall), some boards hide click sequences, some outcomes are rare and random (a golden vegetable at about 1 in 1,000), and each player's board is their own.\n\n### Today\n\n- **The mat.** Tapping empty mat (`SandSurface.tsx`, `isEmptySurfaceTarget`) leaves a mark by mat family (`TAP_FAMILY`) with a sound (`TAP_SFX`: tapWood, tapFelt, tapStone, tapNeon, tapParchment, tapAstral, sand), tuned by `SAND_FEEL`. Huge Units crack the sand or leave a crater (`slamSand`).\n- **Tiles.** A tile that is a legal target is a button, and swallows the tap. A tile that is not shows no feedback of its own.\n- **Haptics** never fire on taps or drags.\n- **The ten playmats** (`table-*`: tavern, wood, felt, neon-grid, marble, chessboard, desert-sand, obsidian-slab, ancient-map, astral) and ten backdrops (`field-*`, `Backdrop.tsx`) are static apart from their particles.\n\n### What it should be\n\n1. **Every tile answers.** Tapping or clicking any tile (`zone-<side>-<row>-<lane>`), on either side:\n   - presses it in with a ripple in the mat's material, with that material's sound;\n   - on a phone, adds a short haptic.\n\n   A legal tile answers more strongly, and lifts to meet a dragged card (#3347). An occupied tile ripples around its card. Hovering a tile on desktop lights its edge. None of this changes what a tap does: a legal tile still plays, and an illegal one still does nothing in the game.\n2. **Corners to find.** Each of the ten playmats gets two or more corner props of its own, drawn in the mat's look. Examples: a candle and a mug on the tavern; a chess knight and a clock on the chessboard; a compass and a sea serpent on the ancient map; a comet and a satellite on the astral mat; a cactus and a sand-buried skull on the desert sand. Each prop:\n   - animates and sounds when tapped;\n   - **escalates** with repeated taps (`CORNER_ESCALATE_TAPS`, proposed 5 to 7, to a bigger payoff: the candle flares, the knight leaps, the serpent surfaces);\n   - has a **rare outcome** at `CORNER_RARE_CHANCE` (proposed 1 in 1,000), drawn from the client's own random source and never the game's RNG.\n\n   A few mats hide a **sequence**: tap the props in the right order for a special moment.\n3. **Yours alone.** Corner play is local to the player's screen, never sent to the opponent, never in the log, and never pacing or blocking the game. The opponent's half shows their own mat (R1834004), with its props still, and only yours answer you. During the animation queue's drain, props still answer, quietly.\n4. **Mobile.** Corner props sit outside the lanes and the hand. Each tap target is at least `--hit-min` (R2122000), and on a phone the props fold to one per corner where room is short. The one-screen rule holds (e2e `46`, `47`).\n5. **Settings.** Reduced motion keeps the sounds and shows still changes. The haptics follow the Vibration switch, and fx intensity off quiets the props to a sound.\n\n## Acceptance\n\n- Tests:\n  - each tile answers a tap with its material's ripple and sound;\n  - a legal tile still fires its action;\n  - an illegal one fires nothing in the game.\n- Each playmat has its props. Escalation fires at the threshold, the rare outcome at its chance (a seeded client-random test), and a hidden sequence where a mat has one.\n- No corner interaction reaches the net layer or the log (a test on `net.ts` and the replay).\n- A component spec captures each mat's corners and an escalated and a rare outcome, at desktop size and at 390x844. e2e `46` and `47` pass.\n- Every number is a named constant. `src/motion.test.ts` holds the new times (its `KEEP` list where they are the table's own).\n- The web tests, `typecheck` and `eslint` pass, and the pull request carries a `## Player note`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3348: needs a plan; `claude-2` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T00:00:46Z",
+    "claimed_at": "2026-11-07T05:08:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
