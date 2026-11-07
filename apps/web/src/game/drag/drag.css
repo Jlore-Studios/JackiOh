@@ -113,10 +113,13 @@
   box-shadow:
     var(--shadow-3),
     0 0 14px color-mix(in srgb, var(--pal-ember-500) 35%, transparent);
-  transform: translate(-50%, -50%) rotate(-4deg) scale(1.06);
+  /* #3347: the ghost leans the way it moves, by its speed (DragLayer.tsx writes --drag-tilt), and is
+     flat when still; it used to rest at a fixed -4deg. */
+  transform: translate(-50%, -50%) rotate(var(--drag-tilt, 0deg)) scale(1.06);
   transition:
     border-color var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-fast) var(--ease-standard);
+    box-shadow var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-out);
   will-change: left, top;
 }
 
@@ -128,7 +131,34 @@
 
 /* On touch the ghost rides above the finger, so the finger never hides the card or its target. */
 .drag-ghost[data-pointer="touch"] {
-  transform: translate(-50%, calc(-100% - 16px)) rotate(-4deg) scale(1.06);
+  transform: translate(-50%, calc(-100% - 16px)) rotate(var(--drag-tilt, 0deg)) scale(1.06);
+}
+
+/* #3347: a card let go over nothing springs from where it was back to its place in the hand: the
+   ghost sits at that place, and its `translate` runs from the offset DragLayer measured to zero. */
+.drag-ghost[data-returning="true"] {
+  animation: drag-return var(--drag-return-ms) var(--ease-overshoot) both;
+}
+
+@keyframes drag-return {
+  from {
+    translate: var(--return-dx) var(--return-dy);
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+/* #3347: the tile under a card ghost lifts to meet it (DragLayer.tsx marks it; #3342's tile
+   feedback can restyle the hook). */
+[data-drag-over="true"] {
+  translate: 0 -4px;
+  transition: translate var(--motion-fast) var(--ease-out);
+}
+
+/* #3347: once the effects layer's stand-in flies the played card in, the landing ghost steps aside. */
+.game:has(.fx-hold) .drag-landing {
+  visibility: hidden;
 }
 
 .drag-ghost[data-valid="true"] {
