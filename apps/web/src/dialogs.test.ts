@@ -30,8 +30,16 @@ const SHEETS = files(SRC, (name) => name.endsWith(".css"))
   .map(rel)
   .sort();
 
+const parsed = new Map<string, ts.SourceFile>();
+
+/** A source's syntax tree, parsed once for every case that reads it. */
 function parse(file: string): ts.SourceFile {
-  return ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  let tree = parsed.get(file);
+  if (tree === undefined) {
+    tree = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    parsed.set(file, tree);
+  }
+  return tree;
 }
 
 function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
@@ -53,6 +61,8 @@ const isKey = (node: ts.Node): boolean => ts.isPropertyAccessExpression(node) &&
 
 /** A key compared with "Escape" (`event.key === "Escape"`, either way round), or a `case "Escape"`. */
 function escapeHandlers(file: string): number {
+  // A source that never writes the word holds no such comparison, and is not parsed.
+  if (!read(file).includes("Escape")) return 0;
   let count = 0;
   walk(parse(file), (node) => {
     if (ts.isBinaryExpression(node) && EQUALITY.has(node.operatorToken.kind)) {
@@ -108,6 +118,7 @@ function rules(css: string): [string, string][] {
 
 /** A glyph standing alone in an element, as a close's label would, or a string that is only the glyph. */
 function glyphs(file: string, glyph: string): number {
+  if (!read(file).includes(glyph)) return 0;
   let count = 0;
   walk(parse(file), (node) => {
     if (ts.isJsxText(node) && node.text.trim() === glyph) {
@@ -159,7 +170,7 @@ function classNames(file: string): string[] {
   walk(parse(file), (node) => {
     if (ts.isJsxAttribute(node) && node.name.getText() === "className") {
       walk(node, (inner) => {
-        if (ts.isStringLiteralLike(inner) || ts.isTemplateLiteralLikeNode(inner)) found.push(inner.text);
+        if (ts.isStringLiteralLike(inner) || ts.isTemplateLiteralToken(inner)) found.push(inner.text);
       });
     }
   });
@@ -198,6 +209,19 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     expect(countsOf((file) => glyphs(file, "×"))).toEqual({ "game/craft/CraftEditor.tsx": 2, "game/deckbuilder/DeckEditor.tsx": 1 });
   });
 
+  it("R3221000 the shells' button sizes pass the ✕ over", () => {
+    // Each outweighs `.dialog__close` (0,1,0) and would resize the ✕ of every dialog drawn in its shell.
+    const SIZES: readonly (readonly [string, string])[] = [
+      ["index.css", ".app-shell button"],
+      ["auth/tavern.css", ".tavern.app-shell:where(:not(.deckbuilder)) button:where("],
+    ];
+    for (const [sheet, start] of SIZES) {
+      const sized = rules(read(sheet)).filter(([selector, body]) => selector.startsWith(start) && /\bpadding\s*:/.test(body));
+      expect(sized.length, sheet).toBe(1);
+      expect(sized[0]?.[0], sheet).toContain(".dialog__close");
+    }
+  });
+
   it("R3221000 each listed dialog draws through Dialog.tsx", () => {
     for (const file of MOVED) {
       expect(read(file), file).toMatch(/<Dialog\b(?!Close)/);
@@ -208,5 +232,22 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     }
     // R3221000's exceptions with their own bodies: the inspect overlay's card and the pack scene take the ✕.
     for (const file of ["cards/inspect/CardDetail.tsx", "packs/PackOpening.tsx"]) expect(read(file), file).toContain("<DialogClose");
+  });
+
+  it("R3221000 every inline confirm puts the safe choice first", () => {
+    // The questions that stay in their row, under no dialog: `[file, the safe answer's testid, the act's]`.
+    const INLINE: readonly (readonly [string, string, string])[] = [
+      ["together/FriendRows.tsx", "togetherTestid.keep}", "togetherTestid.confirm}"],
+      ["routes/series.tsx", "seriesTestid.forfeitCancel}", "seriesTestid.forfeitConfirm}"],
+      ["routes/QuestsPanel.tsx", "questsTestid.replaceCancel}", "questsTestid.replaceConfirm}"],
+      ["dungeon/start/StartScreen.tsx", "dungeonTestid.abandonCancel}", "dungeonTestid.abandonConfirm}"],
+      ["auth/MoveToExisting.tsx", "moveTestid.keep}", "moveTestid.confirm}"],
+    ];
+    for (const [file, safe, act] of INLINE) {
+      const source = read(file);
+      const [at, actAt] = [source.indexOf(`data-testid={${safe}`), source.indexOf(`data-testid={${act}`)];
+      expect(at, `${file}: ${safe}`).toBeGreaterThan(-1);
+      expect(actAt, `${file}: ${act}`).toBeGreaterThan(at);
+    }
   });
 });

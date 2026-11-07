@@ -53,10 +53,10 @@ export function useOnComputer(): boolean {
   return useSyncExternalStore(subscribe, onComputer, () => false);
 }
 
-/** R3221000: the Dev tools on Dialog.tsx, under a `.tavern` for the panel's colours. */
+/** R3221000: the Dev tools on Dialog.tsx, under a tavern shell that draws no box (dev-panel.css) for their skin. */
 function DevPanel({ id, token, onClose }: { id: string; token: string; onClose: () => void }): ReactElement {
   return (
-    <div className="tavern">
+    <div className="tavern app-shell dev-layer">
       <Dialog
         role="dialog"
         id={id}

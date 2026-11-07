@@ -210,7 +210,8 @@ describe("R2800000 a board clear's set piece", () => {
 
   it("R2800000 R670 the Void lands with voidCollapse", () => {
     expect(entranceKeyOf("core-100")).toBe("voidCollapse");
-    expect(SET_PIECES.voidFold.entrance).toBe("voidCollapse");
+    // R3332000: the entrance stands beside the set piece in the Void's table entry.
+    expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold", entrance: "voidCollapse", takeover: "void" });
     const view = fullBoardView();
     const summoned: GameEvent = { type: "summoned", player: "p1", instanceId: "void", defId: "core-100", row: "units", lane: 3 };
     const [entry] = planEntries([summoned], view, false);

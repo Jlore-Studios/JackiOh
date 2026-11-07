@@ -1,7 +1,8 @@
 // R2722001: a Legendary's or a Mythic's entrance and a Mythic's takeover of the board (takeover.ts),
 // planned from the entry's `entrance` (game/animations.ts `entranceEntries`), held as its set piece
 // (`setPieceEntries`, R2785000) and bounded by R200.
-// R2722002: a hidden card's at its reveal, centred on the zone that flipped.
+// R2722002: a hidden card's at its reveal, centred on the zone that flipped. R3332000: a Mythic's own
+// look is its effects table entry's `takeover`.
 
 import type { CardType, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -15,10 +16,12 @@ import {
   type EntranceResolver,
 } from "../game/animations.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
+import { CATALOG } from "../wire/cards.ts";
+import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
-import { TAKEOVER_LOOKS, entranceCues, entranceLandMs } from "./takeover.ts";
+import { entranceCues, entranceLandMs, takeoverLookOf } from "./takeover.ts";
 import type { FxCue, FxPlanEnv, FxTakeoverCue } from "./types.ts";
 
 const CARDS: Record<string, { type: CardType; rarity: string }> = {
@@ -86,7 +89,10 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
     expect(takeoverOf(planFx(entry([play("meditative-049"), summon("meditative-049")]), p1, env()))?.look).toBe("ai");
     expect(takeoverOf(planFx(entry([play("meditative-008")]), p1, env()))?.look).toBe("prismatic");
-    expect(Object.keys(TAKEOVER_LOOKS).every((defId) => CARDS[defId]?.rarity === "Mythic")).toBe(true);
+    // R3332000: exactly the four marquee Mythics name a look of their own in the effects table.
+    const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
+    expect(own).toEqual(["core-096", "core-097", "core-100", "meditative-049"]);
+    for (const defId of own) expect(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity, defId).toBe("Mythic");
     for (const events of [[play("core-052"), summon("core-052")], [play("core-083")], [fired("core-085")]]) {
       const e = entry(events);
       expect(e.entrance?.tier).toBe("legendary");
@@ -99,6 +105,20 @@ describe("R2722001 a Mythic takes over the board", () => {
     const rings = legend.filter((c) => c.kind === "ring");
     expect(rings.length).toBe(2);
     expect(rings[1]?.delayMs ?? 0).toBeGreaterThan(rings[0]?.delayMs ?? 0);
+  });
+
+  it("R3332000 takeoverLookOf reads the table, prismatic by default", () => {
+    expect(takeoverLookOf("core-100")).toBe("void");
+    expect(takeoverLookOf("meditative-008")).toBe("prismatic");
+    expect(takeoverLookOf("core-052")).toBe("prismatic");
+    expect(takeoverLookOf("not-a-card")).toBe("prismatic");
+    // A table that gives a Mythic another look: its takeover wears it.
+    const table = parseFxCardTable("test.json5", `{ "meditative-008": { cast: { motif: "vanish" }, takeover: "genie" }, "core-100": "none: pending" }`);
+    expect(takeoverLookOf("meditative-008", table)).toBe("genie");
+    expect(takeoverLookOf("core-100", table)).toBe("prismatic");
+    const e = entry([play("meditative-008")]);
+    expect(takeoverOf(entranceCues(e, env(), e.durationMs, table))?.look).toBe("genie");
+    expect(takeoverOf(entranceCues(e, env(), e.durationMs))?.look).toBe("prismatic");
   });
 
   it("R2722001 intensity 0 plans none", () => {

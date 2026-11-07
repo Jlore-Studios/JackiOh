@@ -20,8 +20,13 @@
   background: color-mix(in srgb, var(--tavern-wood) 75%, transparent);
 }
 
-/* R3221000: the panel is a Dialog (Dialog.tsx), under a `.tavern` for its colours; its scrim, layer and
-   ✕ are the dialog's. */
+/* R3221000: the panel is a Dialog (Dialog.tsx), its scrim, layer and ✕ the dialog's. Portalled to the
+   body, it sits under a tavern shell that draws no box of its own, so the shell's height and padding do
+   not apply while its skin of the tools' forms and buttons does. */
+.tavern.app-shell.dev-layer {
+  display: contents;
+}
+
 .dialog.dev-panel {
   align-items: stretch;
   gap: 14px;
@@ -43,14 +48,12 @@
 }
 
 /* A wide screen: each row of tools side by side, wrapping, rather than the account card's column. */
-.dev-panel .account-actions {
-  display: flex;
+.tavern.app-shell .dev-panel .account-actions {
   flex-direction: row;
   flex-wrap: wrap;
-  gap: var(--space-5);
 }
 
-.dev-panel .account-actions > button {
+.tavern.app-shell .dev-panel .account-actions > button {
   width: auto;
   flex: 1 1 200px;
 }

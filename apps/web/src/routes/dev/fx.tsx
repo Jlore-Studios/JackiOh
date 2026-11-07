@@ -5,15 +5,18 @@
 // a recipe, a set piece or a Field card's aura, the card standing in the backrow; R2797000: a `death`,
 // `trigger` or `activate` motif from its hook's marker under the play; R2794000: a marquee Unit's
 // entrance as it lands), or as the fixture set piece (R2785000), its play holding the board for the set
-// piece's beat until a tap, a click or Space. Dev only: chunks.tsx loads it behind DEV_ONLY, so a
-// production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
+// piece's beat until a tap, a click or Space. R3332000: it lists every card's signature by set, for a
+// person to review each one; R3332001 a signature whose entrance reads the board plays over its own
+// (`galleryBoardOf`: Felinor Fiender's over three Felinors). Dev only: chunks.tsx loads it behind
+// DEV_ONLY, so a production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
 
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { flushSync } from "react-dom";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import { boardShakeSink, resolveAnchor } from "../../fx/anchors.ts";
-import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, isSignature } from "../../fx/cards/tables.ts";
 import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
@@ -22,6 +25,7 @@ import { planFx } from "../../fx/cues.ts";
 import { createFxMemory } from "../../fx/memory.ts";
 import {
   SYSTEM_MOMENTS,
+  galleryBoardOf,
   galleryCardEvents,
   galleryCues,
   galleryEntry,
@@ -52,6 +56,8 @@ export const fxGalleryTestid = {
   play: "fx-gallery-play",
   playCard: "fx-gallery-play-card",
   playSetPiece: "fx-gallery-play-set-piece",
+  signature: "fx-gallery-signature",
+  playSignature: "fx-gallery-play-signature",
   moment: "fx-gallery-moment",
   playMoment: "fx-gallery-play-moment",
 } as const;
@@ -77,13 +83,25 @@ function playLabel(play: GalleryCardPlay): string {
   }
 }
 
+type GalleryCard = { defId: string; name: string; label: string; play: GalleryCardPlay };
+
 /** #2793: every card whose table entry the gallery can play, in table order, with how it plays it. */
-export function galleryCards(): { defId: string; name: string; label: string; play: GalleryCardPlay }[] {
+export function galleryCards(): GalleryCard[] {
   return [...FX_CARD_TABLE].flatMap(([defId, entry]) => {
     const play = galleryPlayOf(defId, entry);
     if (play === null) return [];
     const name = CATALOG[defId]?.name ?? defId;
     return [{ defId, name, label: `${name} (${playLabel(play)})`, play }];
+  });
+}
+
+/** R3332000: every card whose entry is its signature, by set in the tables' order, each set's in table order; a set with none is left out. */
+export function gallerySignatures(): { set: string; cards: GalleryCard[] }[] {
+  const signed = galleryCards().filter((card) => isSignature(FX_CARD_TABLE.get(card.defId)));
+  const sets = [...new Set(FX_CARD_FILES.map((file) => file.set))];
+  return sets.flatMap((set) => {
+    const cards = signed.filter((card) => CATALOG[card.defId]?.set === set);
+    return cards.length === 0 ? [] : [{ set, cards }];
   });
 }
 
@@ -109,11 +127,13 @@ export default function FxGallery(): ReactElement {
   const base = useMemo(() => fullBoardView(), []);
   const lookup = useMemo(() => lookupFromDefs(CATALOG), []);
   const cards = useMemo(() => galleryCards(), []);
+  const signatures = useMemo(() => gallerySignatures(), []);
   const [settings] = useFxSettings();
   const [motif, setMotif] = useState<DrawnMotif>(FX_DRAWN_MOTIFS[0]);
   const [palette, setPalette] = useState<FxPalette>("Fire");
   const [scale, setScale] = useState<number>(1);
   const [defId, setDefId] = useState<string>(cards[0]?.defId ?? "");
+  const [signature, setSignature] = useState<string>(signatures[0]?.cards[0]?.defId ?? "");
   const [moment, setMoment] = useState<SystemMoment>(SYSTEM_MOMENTS[0] ?? "questProgressed");
   // Each card play is a new view whose events the board has not seen, so its effects layer plays them.
   const [shown, setShown] = useState<PlayerView>(base);
@@ -152,12 +172,16 @@ export default function FxGallery(): ReactElement {
   const playMotif = (): void => {
     director.current?.play(galleryCues(motif, palette, scale, base, intensity, settings.speed));
   };
-  const playCard = (asSetPiece: boolean): void => {
-    const card = cards.find((candidate) => candidate.defId === defId);
+  const playCardOf = (id: string, asSetPiece: boolean): void => {
+    const card = cards.find((candidate) => candidate.defId === id);
     if (card === undefined) return;
     plays.current += 1;
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
-    setShown(withEvents(galleryFieldView(card.defId, base), galleryCardEvents(card.defId, card.play, base, plays.current)));
+    // R3332001: a board of the entrance's own goes up first, with no new events, so the board plans the
+    // play against it (Game plans against the view it still shows).
+    const board = galleryBoardOf(card.defId, base);
+    if (board !== base) flushSync(() => setShown(board));
+    setShown(withEvents(galleryFieldView(card.defId, board), galleryCardEvents(card.defId, card.play, board, plays.current)));
   };
   // R2784000: every system moment through the real planner, on the gallery director.
   const playMoment = (): void => {
@@ -239,11 +263,28 @@ export default function FxGallery(): ReactElement {
               ))}
             </select>
           </label>
-          <button type="button" data-testid={fxGalleryTestid.playCard} onClick={() => playCard(false)}>
+          <button type="button" data-testid={fxGalleryTestid.playCard} onClick={() => playCardOf(defId, false)}>
             Play card
           </button>
-          <button type="button" data-testid={fxGalleryTestid.playSetPiece} onClick={() => playCard(true)}>
+          <button type="button" data-testid={fxGalleryTestid.playSetPiece} onClick={() => playCardOf(defId, true)}>
             Play as a set piece
+          </button>
+          <label style={ROW}>
+            Signature
+            <select data-testid={fxGalleryTestid.signature} value={signature} onChange={(event) => setSignature(event.target.value)}>
+              {signatures.map((group) => (
+                <optgroup key={group.set} label={group.set}>
+                  {group.cards.map((card) => (
+                    <option key={card.defId} value={card.defId}>
+                      {card.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <button type="button" data-testid={fxGalleryTestid.playSignature} onClick={() => playCardOf(signature, false)}>
+            Play signature
           </button>
           <label style={ROW}>
             Moment

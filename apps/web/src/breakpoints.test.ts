@@ -77,8 +77,8 @@ const KEEP: Record<string, string[]> = {
   "routes/landing.css": ["(max-height: 800px)", "(max-height: 800px)"],
   // A row stacks up to 412 px; 430 keeps it.
   "routes/replays.css": ["(max-width: 420px)"],
-  // 820: one column up to an iPad Air upright; 760 squeezes 768 px, 899 takes 844x390. 480: the sheet is for a phone upright.
-  "together/together.css": ["(max-width: 820px)", "(max-width: 480px)"],
+  // 820: one column up to an iPad Air upright; 760 squeezes 768 px, 899 takes 844x390.
+  "together/together.css": ["(max-width: 820px)"],
   // The coach's lines, measured at phones' heights: 2 up to 679 px (390x664), 1 up to 655 (360x640).
   "tutorial/tutorial.css": ["(max-height: 679px)", "(max-height: 655px)"],
 };

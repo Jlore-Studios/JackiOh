@@ -3,9 +3,10 @@
 // friends are one press away. Its badge reads what the shell's one poll published (`socialPoll.ts`),
 // so the button adds no request of its own.
 //
-// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`. Chat and
-// Challenge close it and open their own modal over the screen, which is left as it was. R3221000: it is
-// the one Dialog's, a sheet: the focus stays inside and returns to this button.
+// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`, and again
+// when the tab's social socket says it changed (R3214000). Chat and Challenge close it and open their
+// own modal over the screen, which is left as it was. R3221000: it is the one Dialog's, a sheet: the
+// focus stays inside and returns to this button.
 //
 // CLAUDE.md rule 7: nothing here is a rule. Which friend can be challenged or watched is the server's
 // status; Challenge is off while the player is in a game only to say what the server would, and the
@@ -39,7 +40,7 @@ import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
 import { usePolled } from "./session.ts";
-import { friendsBadgeCount, noteFriends, reloadSocial, useSocialReads } from "./socialPoll.ts";
+import { friendsBadgeCount, noteFriends, onFriendsPush, reloadSocial, useSocialReads } from "./socialPoll.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 
@@ -97,6 +98,9 @@ function FriendsPanel({
   useEffect(() => {
     if (friends.kind === "ready") noteFriends(friends.value);
   }, [friends]);
+
+  // R3214000: the server said the friends list changed (a request, a friend made or lost, a block).
+  useEffect(() => onFriendsPush(reloadFriends), [reloadFriends]);
 
   /** One of the panel's own changes, then the list read again. */
   const act = (work: () => Promise<unknown>): void => {

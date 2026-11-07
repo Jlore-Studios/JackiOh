@@ -6,7 +6,7 @@
 // (R1754000) or a view transition (R2117000). Nothing reads the window at load: Vite's config loader
 // imports `navigate.ts`, which imports this.
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 /** The `history.state` key that marks the layers' entry; it holds the address of the entry under it. */
 const BACK_ENTRY = "jackiohBackEntry";
@@ -180,7 +180,9 @@ export function useBackLayer(close: () => void, closable = true): () => boolean 
   useLayoutEffect(() => {
     latest.current = { close, closable };
   });
-  useEffect(() => {
+  // A layout effect, so the layer is there as soon as the overlay is drawn: an Escape the overlay's own
+  // keys read at once (`useModalOverlay` reads them from its layout effect) finds it on top.
+  useLayoutEffect(() => {
     const layer: Layer = {
       close: () => {
         latest.current.close();

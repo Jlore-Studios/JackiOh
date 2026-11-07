@@ -134,7 +134,8 @@ else the ✕), `panelRef`, a `title` with markup of its own, and answers that ar
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
 Friends, Chat). `DialogClose` is the ✕ alone, for an overlay that keeps its own body: the inspect
 overlay's `CardDetail` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
-Tab only while theirs is the top layer (`useBackLayer` returns whether it is), so a dialog opened over
+Tab only while theirs is the top layer (`useBackLayer` returns whether it is, and opens its layer in a
+layout effect, so an Escape read as soon as the overlay is drawn finds it on top), so a dialog opened over
 another closes first; `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
 Tab skips a hidden panel and a control at `tabindex="-1"`. `src/dialogs.test.ts` holds the sources to
 it: no `"Escape"` comparison outside the shared hooks and its named exceptions, no scrim outside
@@ -495,7 +496,9 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000) other than `none` (`galleryPlayOf`): a cast,
 a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/motifs/gallery.ts`), a set piece or an aura
 plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
-card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It calls no engine.
+card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It also lists every card
+whose entry is its signature by set (R3332000), each played over the board its entrance reads (Felinor Fiender's over
+three Felinors, R3332001). It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -788,7 +791,8 @@ sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.t
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open and the social socket is
+                         down, and read on its friend's chat push while it is live (R3214000); a message holding
                          this site's room link draws a Join button that navigates in-app (R2094000);
                          a send shows at once, sends go one at a time, a failed one offers Retry and
                          Discard (R2120000)
@@ -805,7 +809,15 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
                          GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
-                         hidden unless a challenge of the player's is open, R3205000)
+                         hidden unless a challenge of the player's is open, R3205000); it holds the tab's
+                         social socket and sends no read while it is live, and hands its chat and
+                         friends pushes to onChatPush and onFriendsPush (R3214000)
+together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
+                         (R1379000), the server's social read and chat and friends nudges pushed over it,
+                         the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
+                         token and a refusal final for its token (R1115000), a socket replaced once the
+                         session holds another token, its frames never shown; off under vitest
+                         unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden
@@ -1090,6 +1102,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `music-assets.test.ts` calls.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
+  A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
+  first `MUSIC_STING_S` play on the effects bus instead, and the shared `entrance` sting plays only for one with no intro.
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral

@@ -7,15 +7,21 @@
 // sends nothing while the tab is hidden and reads once when it shows again, unless a challenge of the
 // player's own is open or just sent: that room expires, and the follow that takes the challenger to
 // the board rides this poll (`ChallengeToast.tsx`, `follow.ts`).
+// R3214000: the poll also holds the tab's social socket (`socialSocket.ts`). While it is live (its first
+// `social` frame came) the server pushes the same read whenever it changes, and the poll sends nothing;
+// it reads at once when the socket drops and goes on at its pace until another is live. The socket's
+// `chat` and `friends` pushes go to their listeners (`onChatPush`, `onFriendsPush`): an open chat and an
+// open friends list read again.
 
 import { useEffect, useSyncExternalStore } from "react";
 
 import { pollWhileVisible } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
-import { getSocial, type Challenge } from "../net/social.ts";
+import { getSocial, type Challenge, type SocialRead } from "../net/social.ts";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge } from "./follow.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
+import { openSocialSocket, socialSocketFactory, type SocialPush, type SocialSocket } from "./socialSocket.ts";
 import { isQueueMode } from "../net/api.ts";
 
 export type SocialReads = {
@@ -29,6 +35,8 @@ export type SocialReads = {
   readonly requests: number;
   /** The server refused the session outright: no signed-in social layer to show. */
   readonly refused: boolean;
+  /** R3214000: the tab's social socket is live, so the server pushes these reads and no poll is sent. */
+  readonly live: boolean;
 };
 
 const NO_CHALLENGES: readonly Challenge[] = Object.freeze([]);
@@ -41,6 +49,7 @@ const EMPTY: SocialReads = Object.freeze({
   unread: NO_UNREAD,
   requests: 0,
   refused: false,
+  live: false,
 });
 
 let reads: SocialReads = EMPTY;
@@ -51,6 +60,10 @@ let stopPolling: (() => void) | null = null;
 /** Counts the times polling started over, so an answer to a read made before is dropped. */
 let generation = 0;
 let refusedToken: string | null = null;
+/** R3214000: the tab's social socket, while a screen polls and the socket is on. */
+let socket: SocialSocket | null = null;
+const chatListeners = new Set<(friendId: string) => void>();
+const friendsListeners = new Set<() => void>();
 
 function publish(next: SocialReads): void {
   if (next === reads) return;
@@ -72,6 +85,20 @@ function isChallenge(value: unknown): value is Challenge {
   );
 }
 
+/** A read of the challenges and the unread counts, the poll's or the socket's: published as checked lists. */
+function applySocial(answer: SocialRead): void {
+  refusedToken = null;
+  // Read as lists of challenges and counts whatever answered: the toast sits over every screen.
+  publish({
+    ...reads,
+    incoming: Array.isArray(answer.incoming) ? answer.incoming.filter(isChallenge) : NO_CHALLENGES,
+    outgoing: Array.isArray(answer.outgoing) ? answer.outgoing.filter(isChallenge) : NO_CHALLENGES,
+    challengeReads: reads.challengeReads + 1,
+    unread: unreadCountsOf(answer),
+    refused: false,
+  });
+}
+
 function tick(): void {
   const token = readSession()?.accessToken ?? null;
   if (token === null) {
@@ -83,20 +110,16 @@ function tick(): void {
     if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true });
     return;
   }
+  // R3214000: a socket that is down (never opened, refused for an older token) opens again with this
+  // one, and one opened for a token the session no longer holds is replaced.
+  socket?.retry();
+  // The live socket pushes what this would read.
+  if (reads.live) return;
   const started = generation;
   getSocial().then(
     (answer) => {
-      if (started !== generation) return;
-      refusedToken = null;
-      // Read as lists of challenges and counts whatever answered: the toast sits over every screen.
-      publish({
-        ...reads,
-        incoming: Array.isArray(answer.incoming) ? answer.incoming.filter(isChallenge) : NO_CHALLENGES,
-        outgoing: Array.isArray(answer.outgoing) ? answer.outgoing.filter(isChallenge) : NO_CHALLENGES,
-        challengeReads: reads.challengeReads + 1,
-        unread: unreadCountsOf(answer),
-        refused: false,
-      });
+      if (started !== generation || reads.live) return;
+      applySocial(answer);
     },
     (cause: unknown) => {
       if (started !== generation || !isRefusedSession(cause)) return;
@@ -106,12 +129,47 @@ function tick(): void {
   );
 }
 
+/** The poll's own exception to R3205000: a challenge of the player's own is open or just sent. */
+function keepPolling(): boolean {
+  return reads.outgoing.length > 0 || followingChallenge();
+}
+
+/**
+ * R3214000: the socket turned live or stopped being; down, the poll reads at once and goes on. R3205000:
+ * a hidden tab's drop reads nothing (unless the poll would run hidden), since the poll reads when it shows.
+ */
+function onLive(live: boolean): void {
+  publish({ ...reads, live });
+  if (!live && (document.visibilityState !== "hidden" || keepPolling())) tick();
+}
+
+function onPush(push: SocialPush): void {
+  if (readSession() === null) return;
+  switch (push.kind) {
+    case "social":
+      applySocial(push.read);
+      return;
+    case "chat":
+      for (const listener of [...chatListeners]) listener(push.friendId);
+      return;
+    case "friends":
+      for (const listener of [...friendsListeners]) listener();
+      return;
+  }
+}
+
 function start(): void {
+  const factory = socialSocketFactory();
+  if (factory !== null) {
+    socket = openSocialSocket({ token: () => readSession()?.accessToken ?? null, socketFactory: factory, onLive, onPush });
+  }
   tick();
-  stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, () => reads.outgoing.length > 0 || followingChallenge());
+  stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, keepPolling);
 }
 
 function stop(): void {
+  socket?.close();
+  socket = null;
   stopPolling?.();
   stopPolling = null;
   generation += 1;
@@ -151,6 +209,22 @@ export function useSocialPoll(): SocialReads {
 /** One of the player's own changes (a challenge answered, a chat read): the reads again at once, while polling. */
 export function reloadSocial(): void {
   if (pollers > 0) tick();
+}
+
+/** R3214000: calls `listener` with the friend a pushed chat message came from or went to; returns its unsubscribe. */
+export function onChatPush(listener: (friendId: string) => void): () => void {
+  chatListeners.add(listener);
+  return () => {
+    chatListeners.delete(listener);
+  };
+}
+
+/** R3214000: calls `listener` when the server says the friends list changed; returns its unsubscribe. */
+export function onFriendsPush(listener: () => void): () => void {
+  friendsListeners.add(listener);
+  return () => {
+    friendsListeners.delete(listener);
+  };
 }
 
 /** The friends list as a screen last read it: how many requests wait for the player. */

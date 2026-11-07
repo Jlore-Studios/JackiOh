@@ -7,7 +7,12 @@
 // R2787000: a hooks entry may also carry, or be only, an `aura: { look, palette?, scope }`, the standing
 // look its card wears while it holds (fx/aura/); a `zone` or `lane` aura stands in a Field card's zone.
 // R2794000: a Unit's hooks entry may also carry `entrance: "<key>"`, its marquee entrance (entrances.ts)
-// beside its hooks; an entrance alone stays `{ bespoke: "<key>" }`.
+// beside its hooks. R3332000: every entry but a `none` may carry the frame (`FxCardFrame`) beside its kind:
+// an `entrance` on a Unit's or a Field Spell's (alone, it is a hooks entry of no hook), a `takeover` look
+// of its own on a Mythic's (takeover.ts; the rest take "prismatic") and `signature: true` on a
+// Legendary's or a Mythic's, which must name its first beat: a Unit's entrance, a Field Spell's entrance
+// or cast of its own, any other card's cast of its own (`{ bespoke }` or `{ setPiece }`). A token's
+// rarity here is the one it prints (B2.5), as its entrance's (game/animations.ts `EntranceResolver`).
 
 import JSON5 from "json5";
 
@@ -20,7 +25,8 @@ import { isAuraFieldType, isAuraLook, isAuraScope, type AuraLook, type AuraScope
 import { isPalette, type FxPalette } from "../flavors.ts";
 import { isCardHook, isMotifName, type FxCardHook, type MotifName } from "../motifs/names.ts";
 import { isSetPieceKey, type SetPieceKey } from "../setPieceKeys.ts";
-import { isBespokeKey, isEntranceKey, type BespokeKey } from "./bespoke.ts";
+import type { TakeoverLook } from "../types.ts";
+import { isCardRecipeKey, isEntranceKey, type CardRecipeKey } from "./bespoke.ts";
 import type { EntranceKey } from "./recipe.ts";
 import rawClassic from "./classic.json5?raw";
 import rawClassicPlus from "./classicplus.json5?raw";
@@ -55,14 +61,37 @@ export type FxHookSpec = { motif: MotifName; palette?: FxPalette; row?: "keep" |
 /** R2787000: a card's standing look. `palette` is a flavor or `"<Flavor>/<sub-look>"` (the card's own look by default). */
 export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope };
 
+/** R3332000: a takeover look a Mythic may name as its own; every other Mythic takes the shared "prismatic". */
+export type OwnTakeoverLook = Exclude<TakeoverLook, "prismatic">;
+
+/** R3332000: every look `OwnTakeoverLook` holds; a missing one fails `typecheck`. */
+export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true };
+
+function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
+  return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);
+}
+
+/**
+ * R3332000: what an entry may carry beside its kind: the entrance its card lands with in place of its
+ * rarity's (a Unit's or a Field Spell's), the takeover look a Mythic's takeover wears, and whether the
+ * entry is the card's signature (a Legendary's or a Mythic's, its first beat named).
+ */
+export type FxCardFrame = { entrance?: EntranceKey; takeover?: OwnTakeoverLook; signature?: true };
+
 export type FxCardEntry =
   | { kind: "none"; reason: string }
-  | { kind: "bespoke"; key: BespokeKey }
-  | { kind: "setPiece"; key: SetPieceKey }
-  | { kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec; entrance?: EntranceKey };
+  | ({ kind: "bespoke"; key: CardRecipeKey } & FxCardFrame)
+  | ({ kind: "setPiece"; key: SetPieceKey } & FxCardFrame)
+  | ({ kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec } & FxCardFrame);
+
+/** The catalog facts an entry is checked against: the card's type and its rarity (a token's printed one). */
+type CardFacts = { type: string; rarity: string };
 
 const HOOK_FIELDS: readonly string[] = ["motif", "palette", "row"];
 const AURA_FIELDS: readonly string[] = ["look", "palette", "scope"];
+const FRAME_FIELDS: readonly string[] = ["entrance", "takeover", "signature"];
+/** R3332000: the cards that land on the field face up as they are played, so an entrance can draw them landing. */
+const ENTRANCE_TYPES: readonly string[] = ["Unit", "Field Spell"];
 
 function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => never): FxHookSpec {
   if (!isRecord(value)) fail(`${hook} must be { motif, palette?, row? }`);
@@ -102,45 +131,96 @@ function parseAura(value: unknown, type: string, fail: (problem: string) => neve
   return spec;
 }
 
-function parseEntry(value: unknown, type: string, fail: (problem: string) => never): FxCardEntry {
+function has(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+/** R3332000: the frame fields `value` names, each checked against the card; an absent one stays absent. */
+function parseFrame(value: Record<string, unknown>, card: CardFacts, fail: (problem: string) => never): FxCardFrame {
+  const frame: FxCardFrame = {};
+  if (has(value, "entrance")) {
+    const key = value.entrance;
+    if (typeof key !== "string" || !isEntranceKey(key)) fail(`unknown entrance "${String(key)}"`);
+    if (!ENTRANCE_TYPES.includes(card.type)) fail(`an entrance is a Unit's or a Field Spell's; this card is a ${card.type}`);
+    frame.entrance = key;
+  }
+  if (has(value, "takeover")) {
+    const look = value.takeover;
+    if (typeof look !== "string" || !isOwnTakeoverLook(look)) fail(`unknown takeover "${String(look)}"`);
+    if (card.rarity !== "Mythic") fail(`a takeover is a Mythic's; this card is ${card.rarity}`);
+    frame.takeover = look;
+  }
+  if (has(value, "signature")) {
+    if (value.signature !== true) fail("signature must be true");
+    if (card.rarity !== "Legendary" && card.rarity !== "Mythic") fail(`a signature is a Legendary's or a Mythic's; this card is ${card.rarity}`);
+    frame.signature = true;
+  }
+  return frame;
+}
+
+/**
+ * R3332000: a signature names its first beat: a Unit's entrance; a Field Spell's entrance or a cast of
+ * its own; any other card's cast of its own, a `{ bespoke }` recipe or a `{ setPiece }`.
+ */
+function checkSignature(frame: FxCardFrame, kind: "bespoke" | "setPiece" | "hooks", type: string, fail: (problem: string) => never): void {
+  if (frame.signature !== true) return;
+  const ownCast = kind === "bespoke" || kind === "setPiece";
+  if (type === "Unit") {
+    if (frame.entrance === undefined) fail("a Unit's signature names its entrance");
+  } else if (type === "Field Spell") {
+    if (frame.entrance === undefined && !ownCast) fail("a Field Spell's signature names its entrance or a { bespoke } or { setPiece } cast of its own");
+  } else if (!ownCast) {
+    fail(`a ${type}'s signature is a { bespoke } or { setPiece } cast of its own`);
+  }
+}
+
+/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else. */
+function onlyKeyAndFrame(value: Record<string, unknown>, kind: "bespoke" | "setPiece", fail: (problem: string) => never): void {
+  for (const field of Object.keys(value)) {
+    if (field !== kind && !FRAME_FIELDS.includes(field)) fail(`a ${kind} entry holds nothing else but its frame`);
+  }
+}
+
+function parseEntry(value: unknown, card: CardFacts, fail: (problem: string) => never): FxCardEntry {
+  const { type } = card;
   if (typeof value === "string") {
     if (!/^none: \S/.test(value)) fail(`a string entry must be "none: <reason>" (found ${JSON.stringify(value)})`);
     return { kind: "none", reason: value.slice("none: ".length) };
   }
   if (!isRecord(value)) fail(`must be "none: <reason>", { bespoke }, { setPiece } or hooks`);
-  if (Object.prototype.hasOwnProperty.call(value, "bespoke")) {
+  if (has(value, "bespoke")) {
     const key = value.bespoke;
-    if (Object.keys(value).length !== 1) fail("a bespoke entry holds nothing else");
-    if (typeof key !== "string" || !isBespokeKey(key)) fail(`unknown bespoke "${String(key)}"`);
-    return { kind: "bespoke", key };
+    onlyKeyAndFrame(value, "bespoke", fail);
+    if (typeof key !== "string" || !isCardRecipeKey(key)) fail(`unknown bespoke "${String(key)}"`);
+    const frame = parseFrame(value, card, fail);
+    checkSignature(frame, "bespoke", type, fail);
+    return { kind: "bespoke", key, ...frame };
   }
-  if (Object.prototype.hasOwnProperty.call(value, "setPiece")) {
+  if (has(value, "setPiece")) {
     const key = value.setPiece;
-    if (Object.keys(value).length !== 1) fail("a setPiece entry holds nothing else");
+    onlyKeyAndFrame(value, "setPiece", fail);
     if (typeof key !== "string" || !isSetPieceKey(key)) fail(`unknown set piece "${String(key)}"`);
-    return { kind: "setPiece", key };
+    const frame = parseFrame(value, card, fail);
+    checkSignature(frame, "setPiece", type, fail);
+    return { kind: "setPiece", key, ...frame };
   }
   const hooks: Partial<Record<FxCardHook, FxHookSpec>> = {};
   let aura: FxAuraSpec | undefined;
-  let entrance: EntranceKey | undefined;
   for (const [hook, spec] of Object.entries(value)) {
+    if (FRAME_FIELDS.includes(hook)) continue;
     if (hook === "aura") {
       aura = parseAura(spec, type, fail);
-      continue;
-    }
-    if (hook === "entrance") {
-      if (typeof spec !== "string" || !isEntranceKey(spec)) fail(`unknown entrance "${String(spec)}"`);
-      if (type !== "Unit") fail(`an entrance is a Unit's; this card is a ${type}`);
-      entrance = spec;
       continue;
     }
     if (!isCardHook(hook)) fail(`unknown hook "${hook}"`);
     hooks[hook] = parseHook(spec, hook, fail);
   }
-  if (Object.keys(hooks).length === 0 && aura === undefined) fail("names no hook");
+  const frame = parseFrame(value, card, fail);
+  if (Object.keys(hooks).length === 0 && aura === undefined && frame.entrance === undefined) fail("names no hook");
   if (hooks.cry !== undefined && type !== "Unit") fail(`cry is a Unit's play; this card is a ${type}, whose play is cast`);
   if (hooks.cast !== undefined && type === "Unit") fail("cast is a non-Unit's play; a Unit's is cry");
-  return { kind: "hooks", hooks, ...(aura === undefined ? {} : { aura }), ...(entrance === undefined ? {} : { entrance }) };
+  checkSignature(frame, "hooks", type, fail);
+  return { kind: "hooks", hooks, ...(aura === undefined ? {} : { aura }), ...frame };
 }
 
 /**
@@ -163,9 +243,15 @@ export function parseFxCardTable(file: string, source: string, catalog: Readonly
   for (const [id, value] of Object.entries(raw as Record<string, unknown>)) {
     const def = Object.prototype.hasOwnProperty.call(catalog, id) ? catalog[id] : undefined;
     if (def === undefined) failAt(id, "not a card in the catalog");
-    entries.set(id, parseEntry(value, def?.type ?? "", (problem) => failAt(id, problem)));
+    const card: CardFacts = { type: def?.type ?? "", rarity: def?.printedRarity ?? def?.rarity ?? "" };
+    entries.set(id, parseEntry(value, card, (problem) => failAt(id, problem)));
   }
   return entries;
+}
+
+/** R3332000: whether `entry` is its card's signature (`signature: true`, its first beat named). */
+export function isSignature(entry: FxCardEntry | undefined): boolean {
+  return entry !== undefined && entry.kind !== "none" && entry.signature === true;
 }
 
 /** Every card's entry, all eight files merged. */
