@@ -1,17 +1,26 @@
 // The keys of a modal: `game/Dialog.tsx`'s, every dialog drawn through it (#3220, R3220000), and the
 // challenge dialog's and the friends panel's (#1831): Escape and Back (R2127000) close it and Tab stays
 // inside it. Given the control to focus, it also takes the focus on open and gives it back on close.
+// R3221000: both keys go to the top layer alone, so a dialog opened over another closes first, and
+// Escape over an open tooltip closes the tooltip alone (R279, R2098000), as the inspect overlay's does.
 
 import { useEffect, useLayoutEffect, type RefObject } from "react";
 
 import { useBackLayer } from "../net/backLayers.ts";
 
-const TAB_STOPS = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])";
+const TAB_STOPS =
+  'a[href], button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), ' +
+  'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** A radio group is one stop, its checked radio, as the browser's own Tab takes it. */
+/**
+ * A radio group is one stop, its checked radio, as the browser's own Tab takes it; a control in a hidden
+ * panel (Settings' other tabs) or taken out of the order (a roving tab) is none.
+ */
 export function tabStops(modal: HTMLElement): HTMLElement[] {
   return [...modal.querySelectorAll<HTMLElement>(TAB_STOPS)].filter(
-    (element) => !(element instanceof HTMLInputElement && element.type === "radio" && !element.checked),
+    (element) =>
+      !(element instanceof HTMLInputElement && element.type === "radio" && !element.checked) &&
+      element.closest("[hidden]") === null,
   );
 }
 
@@ -21,7 +30,7 @@ export function useModalKeys(
   onClose: () => void,
   focus?: RefObject<HTMLElement | null>,
 ): void {
-  useBackLayer(onClose);
+  const isTop = useBackLayer(onClose);
   // R3220000: given `focus`, the modal focuses it on open and gives the focus back to its opener on close,
   // unless the caller has moved it by then (Game.tsx's refocusConcede).
   useLayoutEffect(() => {
@@ -38,7 +47,10 @@ export function useModalKeys(
   }, [root, focus]);
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent): void {
+      if (!isTop()) return;
       if (event.key === "Escape") {
+        const tip = root.current?.querySelector('[data-ref-open="true"], [data-tip-open="true"]') ?? null;
+        if (tip !== null) return;
         event.preventDefault();
         event.stopPropagation();
         onClose();
@@ -60,5 +72,5 @@ export function useModalKeys(
     return () => {
       window.removeEventListener("keydown", onKey, true);
     };
-  }, [root, onClose]);
+  }, [root, onClose, isTop]);
 }

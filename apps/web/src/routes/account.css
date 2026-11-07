@@ -9,18 +9,17 @@
   border-top: 1px solid rgba(201, 149, 63, 0.22);
 }
 
+/* R3221000: the question is a Dialog (Dialog.tsx); its typed word's field spans the panel. */
 .tavern.app-shell .account-delete__form {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   gap: 10px;
+  text-align: start;
 }
 
-.tavern.app-shell .account-delete__form > p {
+.tavern.app-shell .account-delete .dialog__body {
   color: var(--tavern-parchment);
-}
-
-.tavern.app-shell .account-actions > button.account-delete__confirm:disabled {
-  opacity: 0.55;
 }
 
 /* R1435: the username, set in the same brass-edged box as who is signed in, and the field (or the

@@ -1,6 +1,5 @@
 /* R3156000 (#3156): the front screen's Dev button and the dialog it opens (DevButton.tsx), for a
-   computer alone (devPanel.ts). The layer is the scrim: fixed over the page, so the tavern shell's
-   own height and padding do not apply. */
+   computer alone (devPanel.ts). */
 
 .landing .landing-corner .landing-dev-button {
   display: inline-flex;
@@ -21,49 +20,31 @@
   background: color-mix(in srgb, var(--tavern-wood) 75%, transparent);
 }
 
+/* R3221000: the panel is a Dialog (Dialog.tsx), its scrim, layer and ✕ the dialog's. Portalled to the
+   body, it sits under a tavern shell that draws no box of its own, so the shell's height and padding do
+   not apply while its skin of the tools' forms and buttons does. */
 .tavern.app-shell.dev-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: grid;
-  place-items: center;
-  min-height: 0;
-  padding: 24px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--tavern-night) 70%, transparent);
+  display: contents;
 }
 
-.dev-panel {
-  display: flex;
-  flex-direction: column;
+.dialog.dev-panel {
+  align-items: stretch;
   gap: 14px;
   box-sizing: border-box;
   width: min(880px, 100%);
   max-height: calc(100dvh - 48px);
-  padding: 20px 24px 24px;
+  padding: var(--space-8) var(--space-9) var(--space-9);
   overflow-y: auto;
   border: 1px solid var(--tavern-brass);
   border-radius: 14px;
   background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
   box-shadow: 0 18px 60px color-mix(in srgb, var(--tavern-night) 80%, transparent);
+  text-align: start;
 }
 
-.dev-panel__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.dev-panel__title {
-  margin: 0;
+.dialog.dev-panel .dialog__title {
+  padding-inline: 0 var(--space-11);
   color: var(--tavern-gold-pale);
-}
-
-.dev-panel__head .link-button {
-  min-width: 44px;
-  min-height: 44px;
-  font-size: var(--type-2xl);
 }
 
 /* A wide screen: each row of tools side by side, wrapping, rather than the account card's column. */
