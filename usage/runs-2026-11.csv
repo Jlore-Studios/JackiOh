@@ -1005,3 +1005,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-07T08:39:44Z,42341353543,claude-7,opus,build,3221,hard,built,,126.6,382,86141,41646989,13.5235,51,18,,,2119.8,claude-1,fresh,cap,2
 2026-11-07T08:49:56Z,42356372407,claude-8,sonnet,review,3366,medium,approved,,9.1,40,20617,2435338,0.9727,22,24,,,1.6,,none,,1
 2026-11-07T08:54:53Z,42349826788,claude-8,sonnet+opus,revise,3358,medium,built,,75.1,155,46522,21954115,5.5496,0,21,,,87.2,claude-8,resumed,,1
+2026-11-07T09:12:56Z,42357096185,claude-1,opus,plan,3335,hard,planned,,20.5,190,134456,18894762,19.7844,0,46,,,544.8,,fresh,,1
+2026-11-07T09:11:06Z,42356409545,claude-4,opus,plan,3334,hard,planned,,27.9,277,175411,34309565,17.3083,36,72,,,535.9,,fresh,,1
+2026-11-07T09:16:04Z,42351767719,claude-4,sonnet,review,3365,medium,approved,,32.2,129,49467,5587929,2.6163,30,74,,,0.9,,fresh,,5
+2026-11-07T09:37:13Z,42345394952,agy,gemini-3.8-flash-high,review,3362,medium,approved,,206.9,2290257,147903,0,,18,67,34,48,0.8,,none,,5
