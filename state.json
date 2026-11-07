@@ -17393,7 +17393,7 @@
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-8",
-        "round_tier": "medium",
+        "round_tier": "",
         "rounds_on": 3381,
         "rounds_used": 0,
         "since": "2026-11-07T18:10:03Z",
