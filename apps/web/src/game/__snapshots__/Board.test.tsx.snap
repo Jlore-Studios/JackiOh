@@ -3570,7 +3570,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-tile-pattern="circuitry"
           data-tile-state="standing"
           data-tile-tier="Mythic"
-          style="--tile-core: #dfdfff; --tile-body: #e9ffa0; --tile-glow: #e9ffa0; --tile-glow-px: 12px; --tile-edge: 0.6; --tile-pattern-opacity: 0.35; --tile-flip: 1; --tile-phase: -5000ms; --tile-pulse-ms: 6000ms; --tile-ripple-ms: 700ms; --tile-flicker-ms: 450ms; --tile-out-ms: 350ms;"
+          style="--tile-core: #dfdfff; --tile-body: #ffffff; --tile-glow: #b45cf6; --tile-glow-px: 12px; --tile-edge: 0.6; --tile-pattern-opacity: 0.35; --tile-flip: 1; --tile-phase: -5000ms; --tile-pulse-ms: 6000ms; --tile-ripple-ms: 700ms; --tile-flicker-ms: 450ms; --tile-out-ms: 350ms;"
         >
           <svg
             aria-hidden="true"
