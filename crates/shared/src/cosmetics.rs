@@ -77,7 +77,8 @@ use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId};
 use jackioh_engine::{CardDef, CardDefs, CardType, Rarity, SetName, Tag};
 
 use crate::config::{
-    GLOBAL_COSMETIC_FLOOR_RARITY, OFFER_SAMPLE_PERCENT_SCALE, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
+    FLEET_TRACK_LEVELS, GLOBAL_COSMETIC_FLOOR_RARITY, OFFER_SAMPLE_PERCENT_SCALE,
+    PLAYER_SETTINGS_TEXT_MAX_LENGTH,
 };
 
 /// The registry's text, compiled in.
@@ -161,7 +162,9 @@ impl FullArtPick {
 /// (`CardBack`) (R1297000); a card's full-art face (`FullArt`), picked only by the card's own pick
 /// (R1313000, R2655000); the deck's hero portrait (`Portrait`), an account cosmetic (R641, R1827000); a card's
 /// version (`Version`), the one look it wears, and an augment (`Augment`) layered on whichever version it wears,
-/// each per card and picked by the card's own pick alone (R2725000).
+/// each per card and picked by the card's own pick alone (R2725000). R3335000: four account kinds dress every
+/// Starship the account launches: its hull design (`StarshipHull`), its colours and emblem (`StarshipLivery`), its
+/// engine glow and launch trail (`StarshipTrail`) and its modules' recolour (`StarshipPieceSkin`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",
@@ -180,30 +183,51 @@ pub enum CosmeticKind {
     Portrait,
     Version,
     Augment,
+    StarshipHull,
+    StarshipLivery,
+    StarshipTrail,
+    StarshipPieceSkin,
 }
 
 impl CosmeticKind {
     /// The kinds a player picks one of in the settings, in list order, one default each; `FullArt`
-    /// is none (R1313000), and `Portrait` is a deck's pick alone (R1827000).
-    pub const PICKED: [Self; 6] = [
+    /// is none (R1313000), and `Portrait` is a deck's pick alone (R1827000). R3335000: the four Starship kinds
+    /// last, picked on the account alone.
+    pub const PICKED: [Self; 10] = [
         Self::Foil,
         Self::Finish,
         Self::Border,
         Self::Table,
         Self::Field,
         Self::CardBack,
+        Self::StarshipHull,
+        Self::StarshipLivery,
+        Self::StarshipTrail,
+        Self::StarshipPieceSkin,
     ];
 
     /// The kinds with exactly one default: those of [`Self::PICKED`], then `Portrait`, whose
     /// default is `portrait-vanilla` (R641, R1827000).
-    pub const DEFAULTED: [Self; 7] = [
+    pub const DEFAULTED: [Self; 11] = [
         Self::Foil,
         Self::Finish,
         Self::Border,
         Self::Table,
         Self::Field,
         Self::CardBack,
+        Self::StarshipHull,
+        Self::StarshipLivery,
+        Self::StarshipTrail,
+        Self::StarshipPieceSkin,
         Self::Portrait,
+    ];
+
+    /// R3335000: the four kinds that dress a launched Starship, in list order.
+    pub const STARSHIP: [Self; 4] = [
+        Self::StarshipHull,
+        Self::StarshipLivery,
+        Self::StarshipTrail,
+        Self::StarshipPieceSkin,
     ];
 
     /// A per-card kind, owned for one card (§14.2): a version and an augment too (R2725000). The deck slots'
@@ -347,6 +371,14 @@ pub struct Cosmetic {
     /// rated game grants it to each person it leaves Jlorious ([`JLORIOUS_CARD_BACK`]).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub jlorious: bool,
+    /// R3335002: the earned track that alone pays it, the Fleet track (§14.15). Gated as a Jlorious one is: no roll,
+    /// pack, token, Chase Shard bar or ladder bot's wardrobe offers it, so it is never a chase, a default, a starter
+    /// or per card ([`Cosmetic::earned_only`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track: Option<CosmeticTrack>,
+    /// R3335001: the level of its `track` that pays it, from 1; nothing else has one.
+    #[serde(default, rename = "trackLevel", skip_serializing_if = "Option::is_none")]
+    pub track_level: Option<u32>,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000). A card
     /// has at most one full art of each rarity (R2655000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -361,7 +393,26 @@ pub struct Cosmetic {
     pub level: Option<VariantLevel>,
 }
 
+/// R3335002: an earned track that alone pays a cosmetic (`Cosmetic::track`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum CosmeticTrack {
+    /// §14.15: the Fleet track, earned by playing Stinkyscape in recorded games.
+    Fleet,
+}
+
 impl Cosmetic {
+    /// R3335002: owned only by earning it, by reaching Jlorious (R2755000) or by a track's level (R3335001): no
+    /// roll, pack, token, Chase Shard bar or ladder bot's wardrobe offers it.
+    pub fn earned_only(&self) -> bool {
+        self.jlorious || self.track.is_some()
+    }
+
     /// R3015000: a retired entry, kept with its owners and read for what it maps to ([`implied_by`]), but dropped,
     /// sold and picked by nothing: the full arts (R2725000) and the Animated and Signature augments.
     pub fn is_retired(&self) -> bool {
@@ -784,18 +835,29 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
                 ));
             }
         }
-        // R1333000: a chase is exactly a Legendary or Mythic cosmetic, but a Jlorious one, which
-        // nothing drops (R2755000).
-        if cosmetic.chase != (cosmetic.rarity.is_chase() && !cosmetic.jlorious) {
+        // R1333000: a chase is exactly a Legendary or Mythic cosmetic, but a Jlorious one or a track's, which
+        // nothing drops (R2755000, R3335002).
+        if cosmetic.chase != (cosmetic.rarity.is_chase() && !cosmetic.earned_only()) {
             out.push(format!(
-                "the cosmetic {id:?} is {} and its chase mark is {}, but a cosmetic is a chase exactly when it is Legendary or Mythic and not Jlorious",
+                "the cosmetic {id:?} is {} and its chase mark is {}, but a cosmetic is a chase exactly when it is Legendary or Mythic and not earned only",
                 cosmetic.rarity, cosmetic.chase
             ));
         }
-        // R2755000: a Jlorious cosmetic is an account cosmetic every account must earn.
-        if cosmetic.jlorious && (cosmetic.kind.is_per_card() || cosmetic.default || cosmetic.starter) {
+        // R2755000, R3335002: a Jlorious cosmetic or a track's is an account cosmetic every account must earn.
+        if cosmetic.earned_only() && (cosmetic.kind.is_per_card() || cosmetic.default || cosmetic.starter) {
             out.push(format!(
-                "the Jlorious cosmetic {id:?} is a per-card cosmetic, a default or a starter, which only reaching Jlorious may grant"
+                "the earned-only cosmetic {id:?} is a per-card cosmetic, a default or a starter, which only reaching Jlorious or a track's level may grant"
+            ));
+        }
+        // R3335002: one way to earn it; R3335001: a track's cosmetic names its level, and nothing else does.
+        if cosmetic.jlorious && cosmetic.track.is_some() {
+            out.push(format!(
+                "the cosmetic {id:?} is both Jlorious and a track's, but one way earns it"
+            ));
+        }
+        if cosmetic.track.is_some() != cosmetic.track_level.is_some() {
+            out.push(format!(
+                "the cosmetic {id:?} has a track without a level or a level without a track"
             ));
         }
         if cosmetic.kind == CosmeticKind::FullArt && cosmetic.default {
@@ -848,7 +910,44 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
         }
     }
     level_problems(cosmetics, &mut out);
+    fleet_problems(cosmetics, &mut out);
     out
+}
+
+/// R3335001: what is wrong with the Fleet track's rewards: a registry that lists one lists the whole track, one per
+/// level from 1 to `FLEET_TRACK_LEVELS`, each level once, the last [`FLEET_CAPSTONE`], a Mythic hull design. The
+/// shipped registry lists it (`r3335002_the_fleet_track_has_one_reward_per_level_the_stinkyscape_hull_last`).
+fn fleet_problems(cosmetics: &[Cosmetic], out: &mut Vec<String>) {
+    if cosmetics.iter().all(|cosmetic| cosmetic.track.is_none()) {
+        return;
+    }
+    let mut levels: Vec<u32> = cosmetics
+        .iter()
+        .filter(|cosmetic| cosmetic.track == Some(CosmeticTrack::Fleet))
+        .filter_map(|cosmetic| cosmetic.track_level)
+        .collect();
+    levels.sort_unstable();
+    if !levels.iter().copied().eq(1..=FLEET_TRACK_LEVELS) {
+        out.push(format!(
+            "the Fleet track's rewards are at the levels {levels:?}, but it pays one at each level from 1 to {FLEET_TRACK_LEVELS}"
+        ));
+    }
+    let last = cosmetics.iter().find(|cosmetic| {
+        cosmetic.track == Some(CosmeticTrack::Fleet) && cosmetic.track_level == Some(FLEET_TRACK_LEVELS)
+    });
+    if last.is_none_or(|last| last.id != FLEET_CAPSTONE) {
+        out.push(format!(
+            "the Fleet track's level {FLEET_TRACK_LEVELS} does not pay {FLEET_CAPSTONE:?}, its capstone"
+        ));
+    }
+    if let Some(capstone) = cosmetics.iter().find(|cosmetic| cosmetic.id == FLEET_CAPSTONE)
+        && (capstone.kind != CosmeticKind::StarshipHull || capstone.rarity != CosmeticRarity::Mythic)
+    {
+        out.push(format!(
+            "the Fleet capstone {FLEET_CAPSTONE:?} is a {} {:?}, but it is a Mythic hull design",
+            capstone.rarity, capstone.kind
+        ));
+    }
 }
 
 /// R3015000, R3015001: what is wrong with the registry's ladders. A version has a level and nothing else does, its
@@ -1094,12 +1193,15 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
 /// Every one is `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000); on the shipped
 /// registry they are the five portraits but vanilla (R1827000), then #1833's six playmats, six
 /// backdrops and six card backs (R1833000), its first Legendary and Mythic account cosmetics among
-/// them. A Jlorious one is never among them (R2755000).
+/// them. A Jlorious one is never among them (R2755000), nor a track's (R3335002).
 pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| {
-            !cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious
+            !cosmetic.kind.is_per_card()
+                && !cosmetic.default
+                && !cosmetic.starter
+                && !cosmetic.earned_only()
         })
         .cloned()
         .collect()
@@ -1108,12 +1210,12 @@ pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
 /// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
 /// not a default or a starter, in the registry's order. A chase drops when a slot lands on its
 /// tier (R1333000), and a per-card one on a card it is offered (R2725001). A Jlorious one never drops
-/// (R2755000), nor a retired full art (R2725000) or augment (R3015000).
+/// (R2755000), nor a track's (R3335002), nor a retired full art (R2725000) or augment (R3015000).
 pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| {
-            !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious && !cosmetic.is_retired()
+            !cosmetic.default && !cosmetic.starter && !cosmetic.earned_only() && !cosmetic.is_retired()
         })
         .cloned()
         .collect()
@@ -1229,6 +1331,22 @@ pub const VERSION_TAROT_ID: &str = "version-tarot";
 /// grants (`Cosmetic::jlorious`).
 pub const JLORIOUS_CARD_BACK: &str = "card-back-jlorious";
 
+/// R3335003: the Jlorious Starship, a hull design in its own livery, granted beside [`JLORIOUS_CARD_BACK`].
+pub const JLORIOUS_STARSHIP: &str = "starship-hull-jlorious";
+
+/// R2755000, R3335003: every cosmetic a rated game grants each person it leaves Jlorious, the card back first.
+pub const JLORIOUS_COSMETICS: [&str; 2] = [JLORIOUS_CARD_BACK, JLORIOUS_STARSHIP];
+
+/// R3335001: the Fleet track's last level's reward, the Stinkyscape hull: a Mythic flagship.
+pub const FLEET_CAPSTONE: &str = "starship-hull-stinkyscape";
+
+/// R3335001: the cosmetic the Fleet track's `level` pays, from 1 to `FLEET_TRACK_LEVELS`; none past it.
+pub fn fleet_reward(level: u32) -> Option<&'static Cosmetic> {
+    registry().iter().find(|cosmetic| {
+        cosmetic.track == Some(CosmeticTrack::Fleet) && cosmetic.track_level == Some(level)
+    })
+}
+
 /// What a portrait's registry id starts with: `portrait-` and its `PortraitId` (R1827000).
 pub const PORTRAIT_ID_PREFIX: &str = "portrait-";
 
@@ -1276,6 +1394,8 @@ mod tests {
             starter: true,
             chase: false,
             jlorious: false,
+            track: None,
+            track_level: None,
             card: None,
             offer: Vec::new(),
             level: None,
@@ -1310,6 +1430,10 @@ mod tests {
             entry("table-tavern", CosmeticKind::Table, true),
             entry("field-none", CosmeticKind::Field, true),
             entry("card-back-standard", CosmeticKind::CardBack, true),
+            entry("starship-hull-standard", CosmeticKind::StarshipHull, true),
+            entry("starship-livery-standard", CosmeticKind::StarshipLivery, true),
+            entry("starship-trail-standard", CosmeticKind::StarshipTrail, true),
+            entry("starship-piece-skin-standard", CosmeticKind::StarshipPieceSkin, true),
         ];
         cosmetics.extend(portraits());
         cosmetics
@@ -1472,16 +1596,32 @@ mod tests {
     /// R3015000: the fifteen levels #3015 appends after #2944's two, last in the registry but for #3017's twelve.
     const R3015000_NEW: usize = 15;
 
-    /// R3017000: the twelve levels #3017 appends after #3015's fifteen, last in the registry.
+    /// R3017000: the twelve levels #3017 appends after #3015's fifteen, last in the registry but for #3335's.
     const R3017000_NEW: usize = 12;
+
+    /// R3335000: the 35 #3335 appends after #3017's twelve, last in the registry: the four Starship defaults, the
+    /// Jlorious Starship (R3335003) and the Fleet track's thirty rewards (R3335001).
+    const R3335000_NEW: usize = 4 + 1 + 30;
+
+    /// The shipped registry before #3335's 35 (R3335000).
+    fn before_r3335000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[..cosmetics.len() - R3335000_NEW]
+    }
+
+    /// The 35 #3335 appends, last in the registry (R3335000).
+    fn r3335000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[cosmetics.len() - R3335000_NEW..]
+    }
 
     /// The shipped registry before #3017's twelve levels (R3017000).
     fn before_r3017000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3335000(cosmetics);
         &cosmetics[..cosmetics.len() - R3017000_NEW]
     }
 
-    /// The twelve #3017 appends, last in the registry (R3017000).
+    /// The twelve #3017 appends, last in the registry but for #3335's (R3017000).
     fn r3017000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        let cosmetics = before_r3335000(cosmetics);
         &cosmetics[cosmetics.len() - R3017000_NEW..]
     }
 
@@ -1607,10 +1747,18 @@ mod tests {
         ("classicplus-075", "j-jungle-explorer"),
     ];
 
+    /// The kinds a player picked before #3335 added the four Starship kinds (R3335000), which only the Fleet track
+    /// and reaching Jlorious fill.
+    fn picked_before_r3335000() -> impl Iterator<Item = CosmeticKind> {
+        CosmeticKind::PICKED
+            .into_iter()
+            .filter(|kind| !CosmeticKind::STARSHIP.contains(kind))
+    }
+
     #[test]
     fn r1295000_the_shipped_registry_passes_with_one_default_and_nine_items_per_kind() {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
-        for kind in CosmeticKind::PICKED {
+        for kind in picked_before_r3335000() {
             let of_kind: Vec<&Cosmetic> = cosmetics
                 .iter()
                 .filter(|cosmetic| cosmetic.kind == kind)
@@ -1621,11 +1769,11 @@ mod tests {
                 "{kind:?}'s defaults"
             );
             // Three since #1295 and #1297, and six more since #1833 (R1833000), the Jlorious card
-            // back aside (R2755000).
+            // back (R2755000) and the Fleet track's (R3335002) aside.
             assert_eq!(
                 of_kind
                     .iter()
-                    .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+                    .filter(|cosmetic| !cosmetic.default && !cosmetic.earned_only())
                     .count(),
                 9,
                 "{kind:?}'s items"
@@ -1650,7 +1798,7 @@ mod tests {
             assert_eq!(
                 of_kind
                     .iter()
-                    .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+                    .filter(|cosmetic| !cosmetic.default && !cosmetic.earned_only())
                     .count(),
                 9,
                 "{kind:?}'s items"
@@ -1956,9 +2104,11 @@ mod tests {
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
         }
         // Nothing before them is a version or an augment, or has an offer; only #2940's three, #2942's three,
-        // #2943's two, #2944's two, #3015's fifteen (R3015000) and #3017's twelve (R3017000) come after them.
+        // #2943's two, #2944's two, #3015's fifteen (R3015000), #3017's twelve (R3017000) and #3335's 35 (R3335000)
+        // come after them.
         assert!(
             cosmetics[..cosmetics.len()
+                - R3335000_NEW
                 - R3017000_NEW
                 - R3015000_NEW
                 - R2944000_NEW.len()
@@ -3269,6 +3419,10 @@ mod tests {
             {"id":"table-tavern","kind":"table","name":"Tavern table","rarity":"Common","default":true},
             {"id":"field-none","kind":"field","name":"No backdrop","rarity":"Common","default":true},
             {"id":"card-back-standard","kind":"cardBack","name":"Standard back","rarity":"Common","default":true},
+            {"id":"starship-hull-standard","kind":"starshipHull","name":"Hull","rarity":"Common","default":true},
+            {"id":"starship-livery-standard","kind":"starshipLivery","name":"Livery","rarity":"Common","default":true},
+            {"id":"starship-trail-standard","kind":"starshipTrail","name":"Trail","rarity":"Common","default":true},
+            {"id":"starship-piece-skin-standard","kind":"starshipPieceSkin","name":"Skin","rarity":"Common","default":true},
             {"id":"portrait-vanilla","kind":"portrait","name":"Vanilla","rarity":"Common","default":true},
             {"id":"portrait-gary","kind":"portrait","name":"Gary","rarity":"Epic","default":false},
             {"id":"portrait-timmy","kind":"portrait","name":"Timmy","rarity":"Epic","default":false},
@@ -3447,7 +3601,7 @@ mod tests {
             assert_eq!(
                 problems(&cosmetics),
                 vec![format!(
-                    "the cosmetic \"foil-wrong\" is {rarity} and its chase mark is {chase}, but a cosmetic is a chase exactly when it is Legendary or Mythic and not Jlorious"
+                    "the cosmetic \"foil-wrong\" is {rarity} and its chase mark is {chase}, but a cosmetic is a chase exactly when it is Legendary or Mythic and not earned only"
                 )]
             );
         }
@@ -3795,10 +3949,12 @@ mod tests {
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
         // #1833's 72, #2655's 57 after them (R2655000), #2755's one (R2755000), #2715's 21 (R2715000),
         // #2725's three (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000),
-        // #2944's two (R2944000), #3015's fifteen (R3015000) and #3017's twelve last (R3017000).
+        // #2944's two (R2944000), #3015's fifteen (R3015000), #3017's twelve (R3017000) and #3335's 35 last
+        // (R3335000).
         assert_eq!(
             cosmetics.len(),
-            72 + R3017000_NEW
+            72 + R3335000_NEW
+                + R3017000_NEW
                 + R3015000_NEW
                 + R2655000_NEW
                 + R2755000_NEW
@@ -3836,7 +3992,7 @@ mod tests {
                 assert!(cosmetic.rarity >= GLOBAL_COSMETIC_FLOOR_RARITY, "{}", cosmetic.id);
             }
         }
-        for kind in CosmeticKind::PICKED {
+        for kind in picked_before_r3335000() {
             let of_kind: Vec<&Cosmetic> = new.iter().filter(|cosmetic| cosmetic.kind == kind).collect();
             assert_eq!(of_kind.len(), 6, "{kind:?}");
             assert_eq!(
@@ -4038,8 +4194,9 @@ mod tests {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         // Appended after #2655's full arts, with only #2715's Animated arts (R2715000), #2725's three
         // (R2725000), #2940's three (R2940000), #2942's three (R2942000), #2943's two (R2943000), #2944's two
-        // (R2944000), #3015's fifteen (R3015000) and #3017's twelve (R3017000) after it.
+        // (R2944000), #3015's fifteen (R3015000), #3017's twelve (R3017000) and #3335's 35 (R3335000) after it.
         let back = &cosmetics[cosmetics.len()
+            - R3335000_NEW
             - R3017000_NEW
             - R3015000_NEW
             - R2944000_NEW.len()
@@ -4053,9 +4210,14 @@ mod tests {
         assert_eq!(back.kind, CosmeticKind::CardBack);
         assert_eq!(back.rarity, CosmeticRarity::Mythic);
         assert!(back.jlorious && !back.chase && !back.starter && !back.default);
-        // The only Jlorious cosmetic, and neither a duplicate's global roll nor a cosmetic pack
-        // offers it.
-        assert_eq!(cosmetics.iter().filter(|cosmetic| cosmetic.jlorious).count(), 1);
+        // R3335003: the Jlorious cosmetics are it and the Jlorious Starship, and neither a duplicate's global roll
+        // nor a cosmetic pack offers it.
+        let jlorious: Vec<&str> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.jlorious)
+            .map(|cosmetic| cosmetic.id.as_str())
+            .collect();
+        assert_eq!(jlorious, JLORIOUS_COSMETICS);
         assert!(
             global_cosmetics(&cosmetics)
                 .iter()
@@ -4102,11 +4264,212 @@ mod tests {
             assert!(
                 problems(&cosmetics)
                     .iter()
-                    .any(|problem| problem.contains("only reaching Jlorious may grant")),
+                    .any(|problem| problem.contains("only reaching Jlorious or a track's level may grant")),
                 "{wrong:?}: {:?}",
                 problems(&cosmetics)
             );
         }
+    }
+
+    #[test]
+    fn r3335000_each_starship_kind_has_one_owned_default() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        // #3335's 35, last in the registry: the four defaults first, then the Jlorious Starship, then the Fleet
+        // track's thirty in level order.
+        let new = r3335000_new(&cosmetics);
+        assert!(
+            before_r3335000(&cosmetics)
+                .iter()
+                .all(|cosmetic| !CosmeticKind::STARSHIP.contains(&cosmetic.kind) && cosmetic.track.is_none())
+        );
+        for (kind, cosmetic) in CosmeticKind::STARSHIP.into_iter().zip(new) {
+            assert_eq!(cosmetic.kind, kind);
+            assert!(cosmetic.default && cosmetic.starter, "{}", cosmetic.id);
+            assert_eq!(default_of(&cosmetics, kind), cosmetic.id);
+            assert!(owns(cosmetic, None, &OwnedCosmetics::default()), "{}", cosmetic.id);
+            assert!(!kind.is_per_card() && !kind.is_offered(), "{kind:?}");
+            assert!(CosmeticKind::PICKED.contains(&kind) && CosmeticKind::DEFAULTED.contains(&kind));
+        }
+        assert_eq!(new[4].id, JLORIOUS_STARSHIP);
+        let levels: Vec<Option<u32>> = new[5..].iter().map(|cosmetic| cosmetic.track_level).collect();
+        assert_eq!(levels, (1..=FLEET_TRACK_LEVELS).map(Some).collect::<Vec<_>>());
+        // Only the defaults are Common; nothing else of the four kinds is owned without a grant.
+        for cosmetic in cosmetics
+            .iter()
+            .filter(|cosmetic| CosmeticKind::STARSHIP.contains(&cosmetic.kind) && !cosmetic.default)
+        {
+            assert!(cosmetic.earned_only(), "{}", cosmetic.id);
+            assert!(!owns(cosmetic, None, &OwnedCosmetics::default()), "{}", cosmetic.id);
+        }
+        // A kind's name travels as the camel-case word the settings group keys on.
+        assert_eq!(
+            serde_json::to_string(&CosmeticKind::StarshipPieceSkin).unwrap(),
+            "\"starshipPieceSkin\""
+        );
+    }
+
+    #[test]
+    fn r3335002_no_pool_offers_a_fleet_reward_or_the_jlorious_starship() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let earned: Vec<&Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.earned_only())
+            .collect();
+        // The two Jlorious cosmetics and the Fleet track's thirty.
+        assert_eq!(earned.len(), JLORIOUS_COSMETICS.len() + FLEET_TRACK_LEVELS as usize);
+        assert!(earned.iter().any(|cosmetic| cosmetic.id == JLORIOUS_STARSHIP));
+        for pool in [
+            global_cosmetics(&cosmetics),
+            cosmetic_pack_cosmetics(&cosmetics),
+            pack_cosmetics(&cosmetics),
+        ] {
+            assert!(
+                pool.iter().all(|cosmetic| !cosmetic.earned_only()),
+                "{:?}",
+                pool.iter()
+                    .filter(|cosmetic| cosmetic.earned_only())
+                    .map(|cosmetic| &cosmetic.id)
+                    .collect::<Vec<_>>()
+            );
+        }
+        // Each is a chase's rarity or below it, and never marked one, so the Chase Shard's list skips it.
+        assert!(earned.iter().all(|cosmetic| !cosmetic.chase));
+    }
+
+    #[test]
+    fn r3335002_an_earned_only_cosmetic_is_never_a_chase_default_starter_or_per_card() {
+        let fleet = Cosmetic {
+            rarity: CosmeticRarity::Legendary,
+            starter: false,
+            track: Some(CosmeticTrack::Fleet),
+            track_level: Some(1),
+            ..entry("starship-livery-earned", CosmeticKind::StarshipLivery, false)
+        };
+        let mut cosmetics = defaults();
+        cosmetics.push(fleet.clone());
+        // One Fleet reward alone is no whole track, which the check refuses; a registry with none passes.
+        assert!(
+            problems(&cosmetics)
+                .iter()
+                .any(|problem| problem.contains("Fleet track's rewards are at the levels [1]")),
+            "{:?}",
+            problems(&cosmetics)
+        );
+        assert!(problems(&defaults()).is_empty(), "{:?}", problems(&defaults()));
+        let shape = |cosmetics: &[Cosmetic]| -> Vec<String> {
+            problems(cosmetics)
+                .into_iter()
+                .filter(|problem| !problem.contains("Fleet track's") && !problem.contains("Fleet capstone"))
+                .collect()
+        };
+        assert!(shape(&cosmetics).is_empty(), "{:?}", shape(&cosmetics));
+        for (wrong, says) in [
+            (
+                Cosmetic {
+                    chase: true,
+                    ..fleet.clone()
+                },
+                "not earned only",
+            ),
+            (
+                Cosmetic {
+                    starter: true,
+                    ..fleet.clone()
+                },
+                "only reaching Jlorious or a track's level may grant",
+            ),
+            (
+                Cosmetic {
+                    default: true,
+                    ..fleet.clone()
+                },
+                "only reaching Jlorious or a track's level may grant",
+            ),
+            (
+                Cosmetic {
+                    kind: CosmeticKind::Foil,
+                    id: "foil-earned".to_owned(),
+                    ..fleet.clone()
+                },
+                "only reaching Jlorious or a track's level may grant",
+            ),
+            (
+                Cosmetic {
+                    jlorious: true,
+                    ..fleet.clone()
+                },
+                "both Jlorious and a track's",
+            ),
+            (
+                Cosmetic {
+                    track_level: None,
+                    ..fleet.clone()
+                },
+                "a track without a level",
+            ),
+            (
+                Cosmetic {
+                    track: None,
+                    ..fleet.clone()
+                },
+                "a level without a track",
+            ),
+        ] {
+            let mut cosmetics = defaults();
+            cosmetics.push(wrong.clone());
+            assert!(
+                shape(&cosmetics).iter().any(|problem| problem.contains(says)),
+                "{wrong:?}: {:?}",
+                problems(&cosmetics)
+            );
+        }
+    }
+
+    #[test]
+    fn r3335002_the_fleet_track_has_one_reward_per_level_the_stinkyscape_hull_last() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        for level in 1..=FLEET_TRACK_LEVELS {
+            let reward = fleet_reward(level).unwrap_or_else(|| panic!("level {level} pays nothing"));
+            assert_eq!(reward.track, Some(CosmeticTrack::Fleet));
+            assert!(!reward.kind.is_per_card(), "{}", reward.id);
+            assert!(reward.rarity >= GLOBAL_COSMETIC_FLOOR_RARITY, "{}", reward.id);
+        }
+        assert!(fleet_reward(0).is_none() && fleet_reward(FLEET_TRACK_LEVELS + 1).is_none());
+        let capstone = fleet_reward(FLEET_TRACK_LEVELS).map(|cosmetic| cosmetic.id.as_str());
+        assert_eq!(capstone, Some(FLEET_CAPSTONE));
+        // Every Starship kind is paid, and a Stinkyscape card back, playmat and backdrop.
+        for kind in CosmeticKind::STARSHIP.into_iter().chain(crate::loadout::DECK_SLOT_KINDS) {
+            assert!(
+                (1..=FLEET_TRACK_LEVELS).any(|level| fleet_reward(level).is_some_and(|c| c.kind == kind)),
+                "{kind:?}"
+            );
+        }
+        // Moving the capstone, or dropping a level, is refused.
+        let mut moved = cosmetics.clone();
+        for cosmetic in &mut moved {
+            if cosmetic.track_level == Some(FLEET_TRACK_LEVELS) {
+                cosmetic.track_level = Some(FLEET_TRACK_LEVELS - 1);
+            } else if cosmetic.track_level == Some(FLEET_TRACK_LEVELS - 1) {
+                cosmetic.track_level = Some(FLEET_TRACK_LEVELS);
+            }
+        }
+        assert!(
+            problems(&moved).iter().any(|problem| problem.contains("its capstone")),
+            "{:?}",
+            problems(&moved)
+        );
+        let dropped: Vec<Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.track_level != Some(1))
+            .cloned()
+            .collect();
+        assert!(
+            problems(&dropped)
+                .iter()
+                .any(|problem| problem.contains("Fleet track's rewards are at the levels")),
+            "{:?}",
+            problems(&dropped)
+        );
     }
 
     use CosmeticRarity::{Epic, Legendary, Mythic, Rare};

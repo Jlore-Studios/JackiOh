@@ -534,6 +534,8 @@ mod tests {
             created_used: None,
             created_unused: None,
             created_played: None,
+            starship_pieces_fused: None,
+            starships_launched: None,
         };
         let line = |id: &str, source: GameSource, pilots: PerPlayer<Pilot>| {
             let record = GameRecord {

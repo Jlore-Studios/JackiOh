@@ -156,6 +156,15 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_played: Option<Vec<CreatedUse>>,
+    /// R3335001: the Starship Pieces that fused into this seat's Starships (§6.1), each fusion once. Absent when
+    /// there were none, and from every record written before the count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starship_pieces_fused: Option<i32>,
+    /// R3335001: the Starships this seat launched (§6.3). Absent when there were none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starships_launched: Option<i32>,
 }
 
 /// R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
@@ -2262,6 +2271,8 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             Some(value) => Some(ids(Some(value), &format!("{at}.createdUnused"))?),
         },
         created_played: created_uses(record.get("createdPlayed"), &format!("{at}.createdPlayed"))?,
+        starship_pieces_fused: seat_count(record.get("starshipPiecesFused"), &format!("{at}.starshipPiecesFused"))?,
+        starships_launched: seat_count(record.get("starshipsLaunched"), &format!("{at}.starshipsLaunched"))?,
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -2413,6 +2424,8 @@ mod tests {
             created_used: None,
             created_unused: None,
             created_played: None,
+            starship_pieces_fused: None,
+            starships_launched: None,
         }
     }
 
@@ -3484,6 +3497,8 @@ mod tests {
                 created_used: None,
                 created_unused: None,
                 created_played: None,
+                starship_pieces_fused: None,
+                starships_launched: None,
             }
         }
 

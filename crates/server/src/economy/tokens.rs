@@ -138,11 +138,13 @@ pub(crate) struct Choice {
     pub owned: bool,
 }
 
-/// R2725000, R2725001: why no token or Chase Shard bar buys `cosmetic` on `card_id`, a 400's words: a retired
-/// full art or (R3015000) augment, which nothing sells, or a version the card is not offered. `None` when either
-/// may.
+/// R2725000, R2725001: why no token or Chase Shard bar buys `cosmetic` on `card_id`, a 400's words: an earned-only
+/// one (R2755000's Jlorious cosmetics, R3335002's Fleet track rewards), which nothing sells, a retired full art or
+/// (R3015000) augment, or a version the card is not offered. `None` when either may.
 pub(crate) fn unsold(cosmetic: &Cosmetic, card_id: Option<&str>) -> Option<&'static str> {
-    if cosmetic.is_retired() {
+    if cosmetic.earned_only() {
+        Some(EARNED_ONLY)
+    } else if cosmetic.is_retired() {
         Some("that cosmetic is retired")
     } else if cosmetic.kind.is_offered() && !offered(cosmetic, card_id) {
         Some("that cosmetic is not offered on that card")
@@ -150,6 +152,9 @@ pub(crate) fn unsold(cosmetic: &Cosmetic, card_id: Option<&str>) -> Option<&'sta
         None
     }
 }
+
+/// R3335002: what a token or the Chase Shard bar aimed at an earned-only cosmetic answers, a 400 spending nothing.
+pub(crate) const EARNED_ONLY: &str = "that cosmetic is earned only, never bought";
 
 /// R3015004: what a token or the Chase Shard bar aimed past a variant's next level answers, a 400 spending nothing.
 pub(crate) const NOT_NEXT_LEVEL: &str = "that level needs every level below it owned first";

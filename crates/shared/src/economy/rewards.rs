@@ -24,6 +24,7 @@ use crate::config::{
     JLORE_UNRANKED_WIN, MS_PER_DAY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL,
     XP_COOP_SCALE, XP_GAME_CAP, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
+use crate::economy::fleet::{FleetPlay, FleetTrack, counts_fleet, pay_fleet};
 use crate::economy::ledger::{Cause, InventoryItem, LedgerGrant, QuestBook, QuestChange, SetTrack};
 use crate::economy::math::{level_for_xp, level_span_xp, xp_to_next_level};
 use crate::economy::quests::{GameTally, QuestDef, progress_of, quest_def, quest_xp, top_up_book};
@@ -90,6 +91,10 @@ pub struct GameSummary {
     /// [[R3013000]]: the cards the seat played that count toward its proficiency, one id per play
     /// (`proficiency::proficiency_plays`); counted only in a mode that counts them.
     pub proficiency: Vec<String>,
+    /// [[R3335001]]: what the seat did that the Fleet track pays for (`fleet::fleet_play`), all zero in a mode
+    /// that pays none ([`crate::economy::fleet::counts_fleet`]) and in a summary written before #3335.
+    #[serde(default)]
+    pub fleet: FleetPlay,
 }
 
 /// Where one set track stands (§14.7), as `GET /api/tracks` spells it (`api::economy::get_tracks`):
@@ -333,6 +338,9 @@ pub struct GameRecords {
     pub paid_today: i64,
     pub tracks: Vec<SetTrack>,
     pub quests: QuestBook,
+    /// [[R3335001]]: the account's Fleet track, with the XP its games paid it today.
+    #[serde(default)]
+    pub fleet: FleetTrack,
 }
 
 /// A finished game paid: what it paid, for a client to animate, and every write to make.
@@ -345,8 +353,8 @@ pub struct GameRecords {
 #[serde(rename_all = "camelCase")]
 pub struct GamePayout {
     pub economy: GameEconomy,
-    /// The writes, in order: the game's Jlore, its XP on every active track and the levels it reached, the
-    /// quests that arrived, then each quest's progress and completion with what a completion pays.
+    /// The writes, in order: the game's Jlore, its XP on every active track and the levels it reached, its Fleet
+    /// XP and the levels' rewards (R3335001), the quests that arrived, then each quest's progress and completion with what a completion pays.
     pub grants: Vec<LedgerGrant>,
 }
 
@@ -588,6 +596,10 @@ pub fn pay_game(records: &GameRecords, summary: &GameSummary, seed: &str) -> Gam
     }
     let xp = game_xp(summary.mode, summary.actions, summary.won == Some(true));
     pay_xp_onto(&mut tracks, &mut grants, xp, Cause::Track, &summary.match_id);
+    // R3335001: a recorded 1v1 game's Fleet XP and the levels it reaches, apart from the set tracks.
+    if counts_fleet(summary.mode) {
+        grants.extend(pay_fleet(&records.fleet, &summary.fleet, summary.won, &summary.match_id));
+    }
 
     let topped = top_up_book(&records.quests, seed, summary.at);
     grants.extend(topped.grants);
@@ -774,6 +786,7 @@ mod tests {
             bot: false,
             tally: GameTally::default(),
             proficiency: Vec::new(),
+            fleet: FleetPlay::default(),
         };
         assert_eq!(summary.player, PlayerId::P1);
         assert_eq!(summary.won, Some(true));
@@ -798,6 +811,7 @@ mod tests {
             bot: false,
             tally: GameTally::default(),
             proficiency: Vec::new(),
+            fleet: FleetPlay::default(),
         }
     }
 
@@ -814,6 +828,7 @@ mod tests {
             paid_today,
             tracks,
             quests,
+            fleet: FleetTrack::default(),
         }
     }
 

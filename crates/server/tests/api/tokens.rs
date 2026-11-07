@@ -232,6 +232,8 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         card: None,
         offer: Vec::new(),
         level: None,
+        track: None,
+        track_level: None,
     }
 }
 

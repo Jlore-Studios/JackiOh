@@ -13,7 +13,8 @@
 //!   nothing. `api::results`'s write pays every 1v1 match it records (ladder, unranked and Conquest),
 //!   and `duos::finish_match` a co-op game, counting each person's own moves ([[R1502000]]).
 //! - A ladder, unranked or Conquest game also counts the cards each seat played toward its proficiency
-//!   (§14.14, `proficiency::add_plays`, [[R3013000]]).
+//!   (§14.14, `proficiency::add_plays`, [[R3013000]]), and pays the Fleet track what the seat did with
+//!   Stinkyscape (§14.15, `jackioh_shared::economy::fleet`, [[R3335001]]).
 //!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on (the two above, and
 //! `api::codes`'s redemption for the starting rewards).
@@ -50,6 +51,10 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
             .day,
         tracks: tx.economy_tracks_get(&summary.profile_id).await?,
         quests: tx.economy_quests_get(&summary.profile_id).await?,
+        // [[R3335001]]: the Fleet track and its XP today, which a recorded 1v1 game pays onto.
+        fleet: tx
+            .economy_fleet_get(&summary.profile_id, from, until)
+            .await?,
     };
     let payout = pay_game(&records, summary, &fresh_seed());
     let writing = Writing {

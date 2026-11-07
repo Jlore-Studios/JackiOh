@@ -394,6 +394,8 @@ mod tests {
             starter: false,
             chase: rarity.is_chase(),
             jlorious: false,
+            track: None,
+            track_level: None,
             card: None,
             offer: Vec::new(),
             level: None,

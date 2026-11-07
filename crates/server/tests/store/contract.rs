@@ -10760,6 +10760,8 @@ mod economy {
             card: None,
             offer: Vec::new(),
             level: None,
+            track: None,
+            track_level: None,
         };
         let rarities = [
             PrintedRarity::Common,

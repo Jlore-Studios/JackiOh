@@ -3,30 +3,38 @@
 // first; a launched Starship wears the hull design of the name it took (`STARSHIP_NAMES`, R1852004), and a Dormant
 // one, still unnamed, sits in a shipyard. A design and a livery are the painter's inputs (`StarshipArt`), so a
 // cosmetic may hand it another (#3330). Presentation only (CLAUDE.md rule 7): the pieces are the view's, public on
-// both seats (R1852005).
+// both seats (R1852005). R3335000 (#3335): a launched Starship wears its seat's Starship cosmetics
+// (starshipLooks.ts), a hull design of their own among them, the Stinkyscape flagship's the most elaborate of all.
 
 import type { StarshipPieceRef } from "../../wire/generated/StarshipPieceRef.ts";
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId } from "./hash.ts";
+import { HULL_DESIGNS, LIVERIES, lookPick, PIECE_SKINS, TRAILS, type ModuleSkin, type StarshipLook, type StarshipTrail } from "./starshipLooks.ts";
 import { MODULE_BOX, type Hardpoint } from "./starshipModules.ts";
 import { circle, ellipse, glyph, inked, line, OUTLINE, path, poly, rect, twinkle, type Paint } from "./stinkyDraw.ts";
 import { mixHex } from "./themes.ts";
 
 export type StarshipDesignId =
   | "ninth-life" | "frontiers-promise" | "celestial-archive" | "lantern-ferry" | "jlockeed-skylark" | "ember-of-departure" | "silent-choir"
-  | "shipyard";
+  | "shipyard"
+  | "scout" | "courier" | "freighter" | "corsair" | "cathedral" | "leviathan" | "ark" | "stinkyscape" | "jlorious";
 
 /** A design's bow. */
-export type Prow = "whiskered" | "wedge" | "dish" | "junk" | "canard" | "ram" | "pipes" | "ribs";
+export type Prow = "whiskered" | "wedge" | "dish" | "junk" | "canard" | "ram" | "pipes" | "ribs" | "flagship";
 /** A design's line of windows. */
-export type WindowLine = "portholes" | "ribbon" | "grid" | "lanterns" | "slits" | "cracks" | "sparse" | "dark";
+export type WindowLine = "portholes" | "ribbon" | "grid" | "lanterns" | "slits" | "cracks" | "sparse" | "dark" | "galleries";
 
 /** A hull's colors: its plating, its trim, its stripe, its windows lit and its engines' glow. */
 export type Livery = { hull: string; trim: string; stripe: string; window: string; glow: string };
 
-export type HullDesign = { id: StarshipDesignId; prow: Prow; windows: WindowLine; livery: Livery; emblem: EmblemGlyph | null };
+/** A hull design; `sky` is the name its picture's sky grows from, its id when it has none. */
+export type HullDesign = { id: StarshipDesignId; prow: Prow; windows: WindowLine; livery: Livery; emblem: EmblemGlyph | null; sky?: string };
 
-/** Each of the seven names' hull, as its name suits, and the shipyard's bare one. No livery is in Radiant's gold. */
+/**
+ * Each of the seven names' hull, as its name suits, the shipyard's bare one and, R3335000, each hull design cosmetic's
+ * (`HULL_DESIGNS`): the names' prows and windows in new pairs, each in a livery of its own under its emblem, but for the
+ * Stinkyscape flagship's, a prow and galleries no other design has. No livery is in Radiant's gold.
+ */
 export const STARSHIP_DESIGNS: Readonly<Record<StarshipDesignId, HullDesign>> = {
   "ninth-life": {
     id: "ninth-life",
@@ -83,6 +91,79 @@ export const STARSHIP_DESIGNS: Readonly<Record<StarshipDesignId, HullDesign>> = 
     windows: "dark",
     livery: { hull: "#8a8f96", trim: "#5a5f66", stripe: "#ff6a14", window: "#2a2f37", glow: "#ff8a3a" },
     emblem: null,
+  },
+  // A picket's canards and a lookout's portholes, in field green.
+  scout: {
+    id: "scout",
+    prow: "canard",
+    windows: "portholes",
+    livery: { hull: "#5a7a5a", trim: "#d8e0c8", stripe: "#ff6a2a", window: "#c8ffd8", glow: "#8affc8" },
+    emblem: "eye",
+  },
+  // A mail runner's wedge and slits, teal and white, under a sky of its own: its id's hangs a planet in Radiant's gold.
+  courier: {
+    id: "courier",
+    prow: "wedge",
+    windows: "slits",
+    livery: { hull: "#2a9a9a", trim: "#f0f8f8", stripe: "#ff5a6a", window: "#e0ffff", glow: "#6affea" },
+    emblem: "bolt",
+    sky: "courier-post",
+  },
+  // A hauler's blunt ram and few windows, in cargo orange.
+  freighter: {
+    id: "freighter",
+    prow: "ram",
+    windows: "sparse",
+    livery: { hull: "#c8642a", trim: "#3a3f48", stripe: "#e8e8ec", window: "#ffc8a0", glow: "#ff8a4a" },
+    emblem: "crate",
+  },
+  // A raider's wedge, scarred, black and crimson.
+  corsair: {
+    id: "corsair",
+    prow: "wedge",
+    windows: "cracks",
+    livery: { hull: "#1f1a22", trim: "#c8142a", stripe: "#e8e0e0", window: "#ff4a5a", glow: "#ff2a4a" },
+    emblem: "bones",
+  },
+  // A spire over lancet windows, pale stone and stained glass.
+  cathedral: {
+    id: "cathedral",
+    prow: "dish",
+    windows: "sparse",
+    livery: { hull: "#c8c4d8", trim: "#4a3a6a", stripe: "#a82a5a", window: "#8ad8ff", glow: "#e0b0ff" },
+    emblem: "halo",
+  },
+  // A deep thing's barbels and its lures, in abyssal teal.
+  leviathan: {
+    id: "leviathan",
+    prow: "whiskered",
+    windows: "lanterns",
+    livery: { hull: "#1a4a5a", trim: "#6ad0c8", stripe: "#0a2a3a", window: "#7affd0", glow: "#3affc8" },
+    emblem: "jaws",
+  },
+  // A refuge's high junk bow and portholes, green with life.
+  ark: {
+    id: "ark",
+    prow: "junk",
+    windows: "portholes",
+    livery: { hull: "#4a7a4a", trim: "#eef0e6", stripe: "#3a8ad8", window: "#d8ffb0", glow: "#9aff8a" },
+    emblem: "leaf",
+  },
+  // The Mythic capstone: the flagship's own bow and galleries, in the Stinkyscape's indigo, cyan and magenta.
+  stinkyscape: {
+    id: "stinkyscape",
+    prow: "flagship",
+    windows: "galleries",
+    livery: { hull: "#3a2f7a", trim: "#43f5d2", stripe: "#d43fd0", window: "#e6d8ff", glow: "#7affea" },
+    emblem: "vortex",
+  },
+  // The Jlorious rank's: violet and ivory under a star.
+  jlorious: {
+    id: "jlorious",
+    prow: "pipes",
+    windows: "ribbon",
+    livery: { hull: "#5a2a9a", trim: "#f6f2ea", stripe: "#9a5ae8", window: "#fff8f0", glow: "#c89aff" },
+    emblem: "star",
   },
 };
 
@@ -221,6 +302,54 @@ export function liveryPaint(livery: Livery): HullPaint {
 
 type Pt = readonly [number, number];
 
+/** R3335000: the flagship's bow, a raised forecastle running out to a ram, as shares of the half length and height. */
+const FLAGSHIP_OUTLINE: readonly Pt[] = [[0.86, -1.2], [0.97, -0.95], [1.06, -0.5], [1.2, -0.1], [1.06, 0.25], [1, 0.62], [0.84, 0.95]];
+/** The armour bands along it, each the first moved this far aft. */
+const FLAGSHIP_BAND: readonly Pt[] = [[0.84, -1], [0.95, -0.5], [1.06, -0.1], [0.96, 0.3], [0.88, 0.75]];
+const FLAGSHIP_BANDS: readonly number[] = [0, -0.07, -0.14];
+/** Its lance out past the ram, the lamp at its point, its canards under the bow and the running lamps down its edge. */
+const FLAGSHIP_LANCE_TIP: Pt = [1.36, -0.1];
+const FLAGSHIP_LANCE: readonly Pt[] = [[1.16, -0.22], FLAGSHIP_LANCE_TIP, [1.16, 0.02]];
+const FLAGSHIP_TIP = 0.7;
+const FLAGSHIP_CANARD: readonly Pt[] = [[0.78, 0.7], [1.02, 1.05], [0.74, 1.3]];
+const FLAGSHIP_LAMPS: readonly Pt[] = [[0.99, -0.72], [1.1, -0.28], [1.04, 0.36], [0.94, 0.72]];
+const FLAGSHIP_LAMP = 0.45;
+/** The bridge on its forecastle (its aft edge, width, top and foot) and its lit band (inset, from its top, height). */
+const FLAGSHIP_BRIDGE = { x: 0.76, width: 0.11, top: -1.8, foot: -1, inset: 0.015, band: 0.15, bandHeight: 0.15 } as const;
+/** The mast over the bridge, its yard and the pennant it flies, how far forward it streams and how deep it hangs. */
+const FLAGSHIP_MAST = { x: 0.82, top: -2.8, yard: -2.45, yardHalf: 0.04, pennant: 0.13, pennantDrop: 0.3 } as const;
+
+function scaled(list: readonly Pt[], L: number, H: number): Pt[] {
+  return list.map(([x, y]) => [x * L, y * H] as const);
+}
+
+/**
+ * R3335000: what the flagship's bow adds over its hull: armour bands along it, a lance past its ram with a lamp at its
+ * point, a bridge on its forecastle under a mast flying the flagship's pennant, canards under it and running lamps down
+ * its edge.
+ */
+function flagshipBow(L: number, H: number, p: HullPaint, lit: boolean): string {
+  const lamp = lit ? p.window : p.dark;
+  const beacon = lit ? p.glow : p.dark;
+  const bands = FLAGSHIP_BANDS.map((aft) => `M${FLAGSHIP_BAND.map(([x, y]) => `${fmt((x + aft) * L)} ${fmt(y * H)}`).join("L")}`).join("");
+  const b = FLAGSHIP_BRIDGE;
+  const m = FLAGSHIP_MAST;
+  const [tipX, tipY] = FLAGSHIP_LANCE_TIP;
+  return [
+    path(bands, "none", { stroke: p.trim, "stroke-width": 0.5, "stroke-linejoin": "round" }),
+    poly(scaled(FLAGSHIP_CANARD, L, H), p.trim, p.line),
+    poly(scaled(FLAGSHIP_LANCE, L, H), p.light, p.line),
+    circle(tipX * L, tipY * H, FLAGSHIP_TIP, beacon),
+    rect(b.x * L, b.top * H, b.width * L, (b.foot - b.top) * H, p.hull, inked(p)),
+    rect((b.x + b.inset) * L, (b.top + b.band) * H, (b.width - 2 * b.inset) * L, b.bandHeight * H, lamp),
+    line(m.x * L, b.top * H, m.x * L, m.top * H, p.trim, 0.4),
+    line((m.x - m.yardHalf) * L, m.yard * H, (m.x + m.yardHalf) * L, m.yard * H, p.trim, 0.3),
+    poly([[m.x * L, m.top * H], [(m.x + m.pennant) * L, (m.top + m.pennantDrop / 2) * H], [m.x * L, (m.top + m.pennantDrop) * H]], p.accent, p.line),
+    circle(m.x * L, m.top * H, FLAGSHIP_LAMP, beacon),
+    ...FLAGSHIP_LAMPS.map(([x, y]) => circle(x * L, y * H, FLAGSHIP_LAMP, lamp)),
+  ].join("");
+}
+
 /** A prow's outline from the deck's front corner to the keel's, and what it adds on top of the hull. */
 function prow(kind: Prow, L: number, H: number, p: HullPaint, lit: boolean): { outline: Pt[]; over: string } {
   const lamp = lit ? p.window : p.dark;
@@ -261,10 +390,30 @@ function prow(kind: Prow, L: number, H: number, p: HullPaint, lit: boolean): { o
       const ribs = [0.78, 0.86].map((x) => line(x * L, -0.9 * H, x * L, 0.8 * H, p.trim, 0.5)).join("");
       return { outline: [[0.9 * L, -0.6 * H], [0.96 * L, 0.2 * H], [0.8 * L, 0.8 * H]], over: ribs };
     }
+    case "flagship":
+      return { outline: scaled(FLAGSHIP_OUTLINE, L, H), over: flagshipBow(L, H, p, lit) };
   }
 }
 
 const PORTHOLE = 0.75;
+/**
+ * R3335000: the flagship's galleries: a deck of arched windows, `step` apart, `half` wide on either side of their
+ * middle, their straight sides `rise` tall above their sill at `foot`, under a cornice and over a balcony's rail that
+ * run `overhang` past the first, and a deck of square ports below; every height from the window line's middle.
+ */
+const GALLERY = {
+  step: 2.6,
+  half: 0.6,
+  rise: 1.1,
+  foot: 0.7,
+  cornice: -1.4,
+  rail: 1.2,
+  railWidth: 0.4,
+  overhang: 0.6,
+  portInset: 0.1,
+  portY: 2,
+  portHeight: 0.8,
+} as const;
 
 /** Many boxes of one fill as one path, so a long window line weighs little. */
 function boxes(list: readonly (readonly [number, number, number, number])[], fill: string): string {
@@ -325,6 +474,18 @@ function windows(kind: WindowLine, L: number, H: number, p: HullPaint, lit: bool
     case "dark":
       along(3, (x) => panes.push([x, y - 0.5, 1, 1]));
       break;
+    case "galleries": {
+      const g = GALLERY;
+      let arches = "";
+      along(g.step, (x) => {
+        arches += `M${fmt(x)} ${fmt(y + g.foot)}v${-g.rise}a${g.half} ${g.half} 0 0 1 ${2 * g.half} 0v${g.rise}Z`;
+        panes.push([x + g.portInset, y + g.portY, 2 * (g.half - g.portInset), g.portHeight]);
+      });
+      out.push(line(from - g.overhang, y + g.cornice, to + g.step, y + g.cornice, p.trim, g.railWidth));
+      out.push(path(arches, lamp, inked(p)));
+      out.push(line(from - g.overhang, y + g.rail, to + g.step, y + g.rail, p.trim, g.railWidth));
+      break;
+    }
   }
   if (panes.length > 0) out.push(boxes(panes, lamp));
   return out.join("");
@@ -467,21 +628,49 @@ export function shipyardMarkup(cls: StarshipClass, newest: { x: number; y: numbe
 
 // What the painter draws
 
-/** A Starship's picture's inputs: its pieces oldest first, its launch, its design and its livery (`null`: the design's own). */
+/**
+ * A Starship's picture's inputs: its pieces oldest first, its launch, its design and its livery (`null`: the design's
+ * own), and R3335000's engine trail and piece skin (`null` or none: the livery's glow, the modules' gunmetal).
+ */
 export type StarshipArt = {
   pieces: readonly StarshipPieceRef[];
   launched: boolean;
   design: StarshipDesignId;
   livery: Livery | null;
   radiant: boolean;
+  trail?: StarshipTrail | null;
+  skin?: ModuleSkin | null;
 };
 
-export function starshipArtOf(pieces: readonly StarshipPieceRef[], launched: boolean, name: string | undefined, radiant: boolean): StarshipArt {
-  return { pieces, launched, design: starshipDesignOf(launched, name), livery: null, radiant };
+/**
+ * R3335000: a Starship's picture's inputs, a launched one's in its seat's `look`: its hull pick's design in place of
+ * its name's, its livery, trail and piece skin, each kind's standard (or an id no cosmetic has) keeping what it draws
+ * without one. A Dormant one keeps its shipyard whatever the look.
+ */
+export function starshipArtOf(
+  pieces: readonly StarshipPieceRef[],
+  launched: boolean,
+  name: string | undefined,
+  radiant: boolean,
+  look: StarshipLook | null = null,
+): StarshipArt {
+  const art: StarshipArt = { pieces, launched, design: starshipDesignOf(launched, name), livery: null, radiant };
+  if (look === null || !launched) return art;
+  return {
+    ...art,
+    design: lookPick(HULL_DESIGNS, look.starshipHull) ?? art.design,
+    livery: lookPick(LIVERIES, look.starshipLivery),
+    trail: lookPick(TRAILS, look.starshipTrail),
+    skin: lookPick(PIECE_SKINS, look.starshipPieceSkin),
+  };
+}
+
+function keyOf(value: object | null | undefined): string {
+  return value === null || value === undefined ? "" : JSON.stringify(value);
 }
 
 /** A Starship's picture's memo key: everything it draws from, its pieces by id and face, oldest first. */
 export function starshipArtKey(ship: StarshipArt): string {
   const pieces = ship.pieces.map((piece) => `${piece.defId}${piece.radiant ? "*" : ""}`).join(",");
-  return `starship|${ship.design}|${ship.livery === null ? "" : JSON.stringify(ship.livery)}|${ship.launched}|${ship.radiant}|${pieces}`;
+  return `starship|${ship.design}|${keyOf(ship.livery)}|${keyOf(ship.trail)}|${keyOf(ship.skin)}|${ship.launched}|${ship.radiant}|${pieces}`;
 }

@@ -292,7 +292,8 @@ pub async fn cosmetics(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// Every cosmetic of the registry but each kind's default, which every account owns with no row
-/// (§14.2), and the Jlorious card back, which only reaching Jlorious grants (R2755000): a per-card
+/// (§14.2), and the Jlorious card back and Starship, which only reaching Jlorious grants (R2755000,
+/// R3335003); the Fleet track's rewards among them (R3335002), so a dev account wears each: a per-card
 /// cosmetic on every card it is offered (R2725001), a full art on the one card it names (R1313000),
 /// a version or an augment on each card its offer takes, an account kind once. Answers the rows
 /// written; one owned already writes none.

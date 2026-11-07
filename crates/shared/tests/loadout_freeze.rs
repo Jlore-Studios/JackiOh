@@ -29,6 +29,8 @@ fn entry(id: &str, kind: CosmeticKind, default: bool, starter: bool) -> Cosmetic
         starter,
         chase: false,
         jlorious: false,
+        track: None,
+        track_level: None,
         card: None,
         offer: Vec::new(),
         level: None,

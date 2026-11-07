@@ -180,6 +180,28 @@ pub enum LedgerGrant {
         #[cfg_attr(feature = "ts", ts(optional))]
         reference: Option<String>,
     },
+    /// [[R3335001]]: XP and levels reached added to the account's Fleet track (§14.15), each signed; the store's
+    /// track row after it is [`crate::economy::fleet::FleetTrack`] moved by them (a track not yet written starts at
+    /// level 0 with no XP).
+    Fleet {
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        xp: i64,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        levels: i64,
+        cause: Cause,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
+    },
+    /// [[R3335001]]: a Fleet track level's reward, an account cosmetic owned from now on, its ledger reason `track`
+    /// (R3335002). An account that owns it already (a dev account's fill, §14.10) keeps it, and the store writes
+    /// no row.
+    FleetReward {
+        cosmetic_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        reference: Option<String>,
+    },
     /// A held quest's change (§14.9): it arrives, progresses by `progress`, completes or is replaced. `at` is
     /// when the change is dated: an arrival is dated when it fell due (R1304000).
     Quest {

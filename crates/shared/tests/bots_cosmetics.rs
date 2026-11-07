@@ -84,6 +84,8 @@ fn test_registry() -> Vec<Cosmetic> {
         starter: false,
         chase: false,
         jlorious: false,
+        track: None,
+        track_level: None,
         card: None,
         offer: Vec::new(),
         level: None,
