@@ -4,6 +4,10 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import Card from "../game/Card.tsx";
+import { WearerProvider } from "../game/wearer.ts";
+import { card as cardView, unit as unitView } from "../test/fixtures.ts";
+import { LONG_PRESS_MS } from "./inspect/constants.ts";
 import { ART_PLANES } from "./art/index.ts";
 import { FULLSCREEN_HOLD_MS, FULLSCREEN_SLOP_PX } from "./constants.ts";
 import {
@@ -209,5 +213,96 @@ describe("R3345000 animation queue hold guard", () => {
     expect(isHeld()).toBe(true);
     rerender(<QueueHolder held={false} />);
     expect(isHeld()).toBe(false);
+  });
+});
+
+describe("R3345000 a board card's full-screen hold follows the animation queue", () => {
+  const MYTHIC = "core-100";
+
+  function QueueHolder({ held }: { held: boolean }) {
+    useTiltHold(held);
+    return null;
+  }
+
+  /** A finger down for longer than the long press, and still down: lifting it closes the view (R3345000). */
+  function pressAndHold(element: HTMLElement): void {
+    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS + 50);
+    });
+  }
+
+  function lift(element: HTMLElement): void {
+    fireEvent.pointerUp(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+  }
+
+  /** A Zone's mount of a board unit: `Card` with the unit as its card, the way Zone.tsx renders it. */
+  function Board({ owner, held }: { owner: "p1" | "p2"; held: boolean }) {
+    const unit = unitView(owner, { instanceId: "mythic-unit", defId: MYTHIC });
+    return (
+      <WearerProvider seat="p1" viewer="p1">
+        <Card testId="card-mythic-unit" card={unit} unit={unit} onField />
+        <QueueHolder held={held} />
+        <FullScreenArtHost />
+      </WearerProvider>
+    );
+  }
+
+  it("R3345000 your own board Mythic opens it on a hold while the queue is idle", () => {
+    render(<Board owner="p1" held={false} />);
+    pressAndHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+  });
+
+  it("R3345000 your own board Mythic does not open it while the queue drains,", () => {
+    render(<Board owner="p1" held={true} />);
+    pressAndHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
+  it("R3345000 the guard follows the queue: a drain that starts or ends after the card rendered is honoured", () => {
+    const { rerender } = render(<Board owner="p1" held={false} />);
+    // The drain starts after the card rendered idle: the hold must not open.
+    rerender(<Board owner="p1" held={true} />);
+    pressAndHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+    expect(isHeld()).toBe(true);
+
+    // The drain ends: the very next hold opens, with no unrelated re-render in between.
+    lift(screen.getByTestId("card-mythic-unit"));
+    rerender(<Board owner="p1" held={false} />);
+    expect(isHeld()).toBe(false);
+    pressAndHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+  });
+
+  it("R3345000 a drain that starts while the finger is already down stops the hold from opening", () => {
+    const { rerender } = render(<Board owner="p1" held={false} />);
+    const unit = screen.getByTestId("card-mythic-unit");
+    fireEvent.pointerDown(unit, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    rerender(<Board owner="p1" held={true} />);
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS + 50);
+    });
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
+  it("R3345000 the opponent's board Mythic never opens it", () => {
+    render(<Board owner="p2" held={false} />);
+    pressAndHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
+  it("R3345000 a Mythic in your own hand opens it, queue draining or not", () => {
+    const mythic = cardView({ instanceId: "mythic-hand", defId: MYTHIC });
+    render(
+      <WearerProvider seat="p1" viewer="p1">
+        <Card testId="hand-card-mythic-hand" card={mythic} inOwnHand />
+        <QueueHolder held={true} />
+        <FullScreenArtHost />
+      </WearerProvider>,
+    );
+    pressAndHold(screen.getByTestId("hand-card-mythic-hand"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
   });
 });

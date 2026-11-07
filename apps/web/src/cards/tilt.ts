@@ -134,6 +134,11 @@ export function isHeld(): boolean {
   return holds > 0;
 }
 
+/** R3345000: `isHeld`, subscribed: a component reading it renders again whenever the queue starts or stops draining. */
+export function useIsHeld(): boolean {
+  return useSyncExternalStore(subscribeHold, isHeld, () => false);
+}
+
 function notifyHold(): void {
   for (const listener of [...holdListeners]) listener();
 }
@@ -291,7 +296,7 @@ function attach(face: HTMLElement, host: HTMLElement, mode: Exclude<TiltMode, "o
  * and once not it listens to nothing and holds no property, so it rests level.
  */
 export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMode, allowed: boolean): void {
-  const held = useSyncExternalStore(subscribeHold, isHeld, () => false);
+  const held = useIsHeld();
   const { deviceTilt } = useCardSettings();
   const active = mode !== "off" && allowed && !held;
   useEffect(() => {
