@@ -15034,10 +15034,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-07T12:38:11Z",
       "owner_why": "it took it up; released from its hold: `claude-3` has no runner free where it runs",
+      "paused": {
+        "at": "2026-11-07T12:46:21Z",
+        "interrupt": "usage",
+        "provider": "claude-7"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T03:55:36Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -15047,11 +15053,13 @@
       "provider": "claude-7",
       "queued_at": "2026-11-06T23:58:58Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "42373368109",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T12:38:11Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "waiting_comment": 6703042373
     },
     "3347": {
