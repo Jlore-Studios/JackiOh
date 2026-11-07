@@ -14881,6 +14881,13 @@
     "3340": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42380882765",
+        "model": "sonnet",
+        "provider": "claude-4",
+        "since": "2026-11-07T14:35:25Z",
+        "until": "2026-11-07T15:05:25Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
