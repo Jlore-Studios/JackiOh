@@ -15036,9 +15036,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-07T12:38:11Z",
-      "owner_why": "it took it up; released from its hold: `claude-3` has no runner free where it runs",
+      "owner": "claude-3",
+      "owner_since": "2026-11-07T12:51:48Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-07T16:00:00Z; it can start again only in 2h 08m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-07T12:46:21Z",
         "interrupt": "usage",
@@ -15050,11 +15050,11 @@
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-06T23:58:58Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "42373368109",
+      "run_id": "pending:c4eba8f5-1794055877",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -15073,7 +15073,7 @@
         "provider": "claude-7",
         "run": "42373368109"
       },
-      "started_at": "2026-11-07T12:38:11Z",
+      "started_at": "2026-11-07T12:51:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16531,9 +16531,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T12:51:03Z",
+    "at": "2026-11-07T12:51:48Z",
     "url": "",
-    "what": "build #3335 on claude-3"
+    "what": "build #3346 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-07T12:35:45Z",
