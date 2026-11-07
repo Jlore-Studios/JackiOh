@@ -17642,6 +17642,8 @@
       "waiting_comment": 6699807814
     },
     "3355": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T23:59:19Z",
@@ -17655,8 +17657,11 @@
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && pnpm --dir apps/web test src/tabs/Tabs.test.tsx src/tabs/Segmented.test.tsx src/settings/tabs.test.tsx src/settings/wiring.test.tsx src\u2026\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-578\"}\n- said: \n- schedule: {\"DurationSeconds\": 15, \"Prompt\": \"Check test suite completion\"}\n- said: Waiting for vitest suite to finish.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-578\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && cargo fmt --check && pnpm --dir apps/web typecheck && pnpm exec eslint apps/web\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-589\"}\n- said: \n- schedule: {\"DurationSeconds\": 10, \"Prompt\": \"Check typecheck completion\"}\n- said: Waiting for typecheck and eslint to finish.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-589\"}\n- said: \n- run_command: ps aux | grep eslint\n- said: \n- schedule: {\"DurationSeconds\": 15, \"Prompt\": \"Check task-589\"}\n- said: Waiting for typecheck and eslint to finish.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-589\"}\n- said: \n- run_command: pstree -p 11791\n- said: \n- run_command: ps -f -p 11843\n- said: \n- run_command: cat /proc/11843/cmdline | tr '\\0' ' '\n- said: \n- schedule: {\"DurationSeconds\": 10, \"Prompt\": \"Check eslint finish\"}\n- said: Waiting for eslint to complete.\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-613\"}\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one Tabs and one segmented-toggle component for the menus' tabs and filters\"} --> ### Summary of Changes This patch resolves issue #3222 by unifying tab and segmented filter controls into two reusable components sharing a single design-token stylesheet,\u2026"
       },
       "issue": 3222,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T00:45:59Z",
         "from_run": "42315396620",
         "gates": [
           {
@@ -17715,8 +17720,15 @@
         "source": "build",
         "until": "2026-11-07T01:14:18Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-07T00:44:18Z",
+      "run_id": "pending:a8287afe-1794012302",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-07T00:45:59Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -17730,9 +17742,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T00:24:15Z",
+    "at": "2026-11-07T00:45:59Z",
     "url": "",
-    "what": "review #3353 on claude-8"
+    "what": "review #3355 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T00:21:19Z",
