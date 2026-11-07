@@ -262,6 +262,27 @@ Ten Field Spells wear one as the pattern for the set passes:
 
 No modifier example is wired yet, and a bespoke entry (Hinder's rider) cannot take an aura.
 
+### Tile auras
+
+Tile auras (#3342, R3342000) mark the tile of every face-up Legendary and Mythic permanent on
+the board (Units and backrow alike). A tile aura is a DOM element inside `.zone` that paints
+under the card (`fx/aura/TileAura.tsx`, `tile.css`).
+
+- **Colors:** derived from the card's picture (its painter palette), shifted within
+  `±TILE_HUE_SPREAD_DEG` by its id hash so distinct Legendaries differ.
+- **Tiers:** Legendary gets a soft edge glow (`TILE_GLOW_PX.Legendary`) and motes
+  (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
+  Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
+  a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui) uses that
+  standing aura in `AuraLayer` instead.
+- **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
+  buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
+  divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
+  it out over `TILE_FADE_OUT_MS`.
+- **Budgets:** motes are capped at `TILE_PARTICLE_SHARE` of `FX_PARTICLE_CAP_MOBILE`. Under
+  reduced motion, animations stop and motes/ripples omit; at intensity `off`, tile auras do not render.
+
 ## The tables
 
 `apps/web/src/fx/cards/<set>.json5`, one per set: `core`, `classic`, `classicplus`, `meditative`,

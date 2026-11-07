@@ -141,6 +141,7 @@ const isZero = (value: string | undefined): boolean => value !== undefined && /^
 const fx = parseSheet(readSheet("src/fx/fx.css"));
 const anim = parseSheet(readSheet("src/game/animations.css"));
 const surfaces = parseSheet(readSheet("src/surfaces.css"));
+const tile = parseSheet(readSheet("src/fx/aura/tile.css"));
 
 /** A `z-index` as its number: a layer token (`var(--z-…)`, #2109) reads through surfaces.css. */
 function layerOf(value: string | undefined): string | undefined {
@@ -574,5 +575,33 @@ describe("Every motion runs on the compositor (review: lunge, splat, dissolve, h
     expect(compositorOnly({ name: "mask-position", value: "0 100%" })).toBe(false);
     expect(compositorOnly({ name: "box-shadow", value: "0 0 4px red" })).toBe(false);
     expect(compositorOnly({ name: "filter", value: "brightness(1.2) sepia(40%)" })).toBe(true);
+  });
+});
+
+describe("R3342000 tile.css", () => {
+  it("R3342000 tile.css keyframes pass compositorOnly", () => {
+    const bodies = keyframeBodies(tile);
+    expect(bodies.size).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    for (const [name, body] of bodies) {
+      for (const decl of animatedDecls(body)) {
+        if (!compositorOnly(decl)) offenders.push(`${name}: ${decl.name}: ${decl.value}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("R3342000 both reduced-motion blocks set animation: none", () => {
+    const mediaReduced = tile.rules.filter((rule) => rule.media !== null && REDUCED.test(rule.media));
+    expect(mediaReduced.length).toBeGreaterThan(0);
+    for (const rule of mediaReduced) {
+      expect(rule.decls.get("animation")).toMatch(/^none/);
+    }
+
+    const rootReduced = tile.rules.filter((rule) => rule.selectors.some((s) => s.includes(':root[data-reduce-motion="true"]')));
+    expect(rootReduced.length).toBeGreaterThan(0);
+    for (const rule of rootReduced) {
+      expect(rule.decls.get("animation")).toMatch(/^none/);
+    }
   });
 });

@@ -25,7 +25,9 @@ export type SfxId =
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
   | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
-  | "organ";
+  | "organ"
+  // R3342000: the tile aura touch bell.
+  | "auraTouch";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -70,6 +72,8 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /** auraTouch: the aura's hue, 0-360. */
+  hue?: number;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */

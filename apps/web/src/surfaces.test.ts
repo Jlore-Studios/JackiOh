@@ -69,6 +69,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "emotes/portrait.css": 20,
   "empty/empty.css": 1,
   "fx/aura/aura.css": 3,
+  "fx/aura/tile.css": 2,
   "fx/fx.css": 106,
   "game/deckbuilder/deckbuilder.css": 66,
   "game/deckbuilder/workshop.css": 30,
