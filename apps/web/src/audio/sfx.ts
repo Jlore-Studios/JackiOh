@@ -23,6 +23,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
 ];
@@ -1657,6 +1658,71 @@ const upgrade: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+// #3347: the card-motion sounds. A card lifted, carried over a tile, put down, sent home, dealt, and a
+// deck riffled: each quiet and over in a fraction of a second, so none of them talks over the play.
+
+/** A card lifted off the fan: a short breath of paper rising in pitch. */
+const pickUp: SfxRecipe = (ctx, out, at) => {
+  const len = 0.08;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 1800, 1.4);
+  glide(k, band.frequency, 2600, len);
+  chain(noise, band, envelope(k, 0, 0.008, 1.2, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** The dragged card over a tile it could land on: one soft high tick. */
+const dragOver: SfxRecipe = (ctx, out, at) => {
+  const len = 0.05;
+  const k = kit(ctx, out, at, len);
+  tone(k, out, "sine", 880, 0, 0.004, 0.35, len);
+  return len;
+};
+
+/** A card put down: a felt pat with a low body under it. */
+const drop: SfxRecipe = (ctx, out, at) => {
+  const len = 0.13;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 500, 1.5), envelope(k, 0, 0.006, 1, 0.1), out);
+  run(k, noise, 0, 0.1);
+  tone(k, out, "sine", 140, 0, 0.005, 0.5, len);
+  return len;
+};
+
+/** A card let go over nothing and sent home: the pick-up's breath, falling. */
+const returnToHand: SfxRecipe = (ctx, out, at) => {
+  const len = 0.19;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 3000, 1.2);
+  glide(k, band.frequency, 1200, len);
+  chain(noise, band, envelope(k, 0, 0.01, 1, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** One card flicked off the deck: a single crisp snap. */
+const deal: SfxRecipe = (ctx, out, at) => {
+  const len = 0.07;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 3800, 1.4), envelope(k, 0, 0.004, 1.2, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** Twelve clicks about 35 ms apart on one band: the leaves of a deck's two halves riffling together. */
+const riffle: SfxRecipe = (ctx, out, at) => {
+  const len = 0.46;
+  const k = kit(ctx, out, at, len);
+  const clicks = Array.from({ length: 12 }, (_, i) => i * 0.035);
+  clickTrain(k, out, clicks, 2200, 1.2, 1, 0.03);
+  return len;
+};
+
 // The Drone Battleship (R3336000): the great ship's horn, its dome, its bay doors, its reactor and its decks
 
 /** R3336000: a layer of the Battleship arrives (`summoned`, the Meltdown layer): two detuned low saws, a long horn blast. */
@@ -1856,6 +1922,13 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   tapNeon: { recipe: tapNeon, durationMs: 150, gain: 0.52 },
   tapParchment: { recipe: tapParchment, durationMs: 160, gain: 0.52 },
   tapAstral: { recipe: tapAstral, durationMs: 240, gain: 0.52 },
+  // #3347: cards that move like cards, each soft and short.
+  pickUp: { recipe: pickUp, durationMs: 90, gain: 0.4 },
+  dragOver: { recipe: dragOver, durationMs: 60, gain: 0.3 },
+  drop: { recipe: drop, durationMs: 140, gain: 0.45 },
+  returnToHand: { recipe: returnToHand, durationMs: 200, gain: 0.4 },
+  deal: { recipe: deal, durationMs: 80, gain: 0.4 },
+  riffle: { recipe: riffle, durationMs: 500, gain: 0.45 },
   // R3336000: the Drone Battleship.
   horn: { recipe: horn, durationMs: 950, gain: 0.8 },
   domeFlare: { recipe: domeFlare, durationMs: 800, gain: 0.8 },

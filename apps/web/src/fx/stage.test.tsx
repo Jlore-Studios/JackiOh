@@ -7,6 +7,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MIN_ENTRY_MS, createAnimationQueue, planEntries, type AnimationEntry } from "../game/animations.ts";
+import { setLanding } from "../game/drag/landing.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import {
   FX_CONCEAL_AT,
@@ -731,5 +732,77 @@ describe("B46 FxLayer releases the stage when the shown view changes", () => {
     utils.rerender(tree(fullBoardView()));
     expect(document.querySelectorAll('[data-fx="hold"]')).toHaveLength(0);
     expect(hand.hasAttribute("data-fx-concealed")).toBe(false);
+  });
+});
+
+/* #3347: cards that move like cards: a hand play flies within its row's time, from where the drag let go. */
+describe("#3347 a card played from the hand flies", () => {
+  it("#3347 the hold lands inside its row's time", () => {
+    const events = [play("p1", HAND), summon("p1", HAND)];
+    const shown = withEvents(fullBoardView(), events);
+    const [entry] = planEntries(events, shown, false);
+    expect(entry).toBeDefined();
+    if (entry === undefined) return;
+    const holds = planStage(entry, shown, env()).filter((cue) => cue.kind === "hold");
+    expect(holds).toHaveLength(1);
+    for (const cue of holds) if (cue.kind === "hold") expect(cue.landMs).toBeLessThanOrEqual(entry.durationMs);
+  });
+
+  it("#3347 an opponent's play flies from hand-opponent, a back whose cue names no card", () => {
+    const cues = stage([play("p2", "c99"), summon("p2", "c99", 2)]);
+    const holds = cues.filter((cue) => cue.kind === "hold");
+    expect(holds).toHaveLength(1);
+    expect(holds[0]).toMatchObject({ kind: "hold", from: tid("hand-opponent") });
+    expect(JSON.stringify(cues)).not.toContain("defId");
+    expect(JSON.stringify(cues)).not.toContain("core-019");
+  });
+
+  it("#3347 a dropped card's stand-in starts where the pointer let go, centred on that point", () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const h = directorHarness();
+    setLanding(HAND, { x: 640, y: 450 });
+    try {
+      h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    } finally {
+      setLanding(null);
+    }
+    const hold = h.root.querySelector<HTMLElement>('[data-fx="hold"]');
+    expect(hold).not.toBeNull();
+    if (hold === null) return;
+    const land = landingBox(ZONE_BOX, HAND_BOX);
+    expect(hold.style.getPropertyValue("--fx-dx")).toBe(`${640 - (land.x + land.width / 2)}px`);
+    expect(hold.style.getPropertyValue("--fx-dy")).toBe(`${450 - (land.y + land.height / 2)}px`);
+    // Turned toward its zone: it starts right of the zone's centre (640 > 420), so counterclockwise.
+    expect(Number.parseFloat(hold.style.getPropertyValue("--fx-rot"))).toBeLessThan(0);
+  });
+
+  it("#3347 without a release point a stand-in starts from the card's place in the hand, as it did", () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const h = directorHarness();
+    h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    const hold = h.root.querySelector<HTMLElement>('[data-fx="hold"]');
+    const land = landingBox(ZONE_BOX, HAND_BOX);
+    expect(hold?.style.getPropertyValue("--fx-dx")).toBe(`${HAND_BOX.x + HAND_BOX.width / 2 - (land.x + land.width / 2)}px`);
+  });
+
+  it("#3347 a release point of another card moves nothing", () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const h = directorHarness();
+    setLanding("c999", { x: 640, y: 450 });
+    try {
+      h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    } finally {
+      setLanding(null);
+    }
+    const land = landingBox(ZONE_BOX, HAND_BOX);
+    expect(h.root.querySelector<HTMLElement>('[data-fx="hold"]')?.style.getPropertyValue("--fx-dx")).toBe(
+      `${HAND_BOX.x + HAND_BOX.width / 2 - (land.x + land.width / 2)}px`,
+    );
   });
 });

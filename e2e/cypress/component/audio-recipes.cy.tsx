@@ -38,6 +38,8 @@ const EXPECTED_IDS = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // #3347: cards that move like cards.
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
 ] as const;
@@ -126,6 +128,13 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // #3347: cards that move like cards.
+  pickUp: 90,
+  dragOver: 60,
+  drop: 140,
+  returnToHand: 200,
+  deal: 80,
+  riffle: 500,
   // R3336000: the Drone Battleship.
   horn: 950,
   domeFlare: 800,
