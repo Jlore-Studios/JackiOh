@@ -40,6 +40,8 @@ import {
   VERSION_FULL_ART_SIGNED_ID,
   lookOfLevel,
 } from "./versions.ts";
+import { isCoarsePointer } from "./inspect/useInspectTrigger.tsx";
+import { KEYWORD_MARK } from "./keywordMarks.ts";
 
 const DEFS = Object.values(CATALOG);
 
@@ -445,5 +447,158 @@ describe("R3046000 the stylesheets put the name band below the art", () => {
     expect(declsOf(keywords, `${MINION} .kw-fx[data-kw-layer="veil"]`).get("border-radius")).toBe("0");
     // Taunt's steel ring is drawn over the art, since its shield is not.
     expect(cards).toContain(`${MINION}[data-taunt="true"] .cf-portrait::after`);
+  });
+});
+
+describe("R3339000 art-first cards in play", () => {
+  const cards = sheetText("src/cards/cards.css");
+  const ART_FIRST_MINION = '.cf[data-layout="minion"][data-art-first="true"]';
+  const ART_FIRST_COMPACT = '.cf[data-layout="compact"][data-art-first="true"]';
+
+  it("R3339000 art-first faces render no name, type line or rules text in full-art-shaped looks and Legendary/Mythic", () => {
+    const legendary = DEFS.find((d) => d.rarity === "Legendary" && d.type === "Unit")!;
+    const mythic = DEFS.find((d) => d.rarity === "Mythic" && d.type === "Unit")!;
+    expect(legendary).toBeDefined();
+    expect(mythic).toBeDefined();
+
+    for (const def of [legendary, mythic]) {
+      const cf = minionOf(def.id);
+      expect(cf.getAttribute("data-art-first")).toBe("true");
+      expect(cf.querySelector(".card-name:not(.card-name-hover)")).toBeNull();
+      expect(cf.querySelector(".card-name-hover")?.textContent).toBe(def.name);
+      expect(cf.querySelector(".card-type")).toBeNull();
+      expect(cf.querySelector(".card-text")).toBeNull();
+      expect(cf.querySelector(".cost-gem")).not.toBeNull();
+      expect(cf.querySelector(".stats .stat-attack")).not.toBeNull();
+      expect(cf.querySelector(".stats .stat-health")).not.toBeNull();
+      cleanup();
+    }
+
+    const fullArtLevels = [
+      "version-full-art",
+      "version-alt-full-art",
+      "version-sketch-full-art",
+      "version-extended-art",
+      "version-out-of-frame",
+      "version-set-showcase",
+      "version-immersive",
+      "version-prismatic",
+      "version-full-art-animated",
+      "version-full-art-signed",
+    ];
+
+    for (const level of fullArtLevels) {
+      const offered = (COSMETIC_OFFERS[level] ?? []).find((id) => CATALOG[id]?.type === "Unit" && CATALOG[id]?.set !== "Training Grounds") ?? "core-004";
+      wear(offered, level);
+      const cf = minionOf(offered);
+      expect(cf.getAttribute("data-art-first"), level).toBe("true");
+      expect(cf.querySelector(".card-name:not(.card-name-hover)"), level).toBeNull();
+      expect(cf.querySelector(".card-name-hover")?.textContent, level).toBe(defOf(offered).name);
+      expect(cf.querySelector(".card-type"), level).toBeNull();
+      expect(cf.querySelector(".card-text"), level).toBeNull();
+      cleanup();
+    }
+
+    // Backrow art-first face
+    const backrowDef = defOf("core-018");
+    const bcf = backrowOf("core-018");
+    expect(bcf.getAttribute("data-art-first")).toBe("true");
+    expect(bcf.querySelector(".card-name:not(.card-name-hover)")).toBeNull();
+    expect(bcf.querySelector(".card-name-hover")?.textContent).toBe(backrowDef.name);
+    expect(bcf.querySelector(".card-type")).toBeNull();
+    expect(bcf.querySelector(".card-text")).toBeNull();
+    cleanup();
+  });
+
+  it("R3339000 Common Unit keeps smaller translucent name plate", () => {
+    const common = DEFS.find((d) => d.rarity === "Common" && d.type === "Unit" && !isFullArtCard(d.id))!;
+    expect(common).toBeDefined();
+    const cf = minionOf(common.id);
+    expect(cf.hasAttribute("data-art-first")).toBe(false);
+    const name = cf.querySelector(".card-name.card-name-compact-translucent");
+    expect(name).not.toBeNull();
+    expect(name?.textContent).toBe(common.name);
+    expect(cf.querySelector(".cf-portrait > .cf-art.cf-art--oval")).not.toBeNull();
+  });
+
+  it("R3339000 keyword chips render as icon marks with accessible names", () => {
+    const u = unit("p1", {
+      defId: "core-004",
+      keywords: [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Rush" }, { kind: "Poisonous" }],
+      armor: 2,
+    });
+    const face = faceModel({
+      defId: u.defId,
+      def: defOf(u.defId),
+      radiant: false,
+      live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
+    });
+    const { container } = render(<MinionFace face={face} unit={u} worn />);
+    const cf = container.querySelector<HTMLElement>(".cf")!;
+    const chips = cf.querySelectorAll(".keywords .keyword");
+    expect(chips.length).toBeGreaterThan(0);
+    for (const chip of chips) {
+      expect(chip.getAttribute("role")).toBe("img");
+      expect(chip.getAttribute("aria-label")).toBeTruthy();
+      const kw = chip.getAttribute("data-keyword") as keyof typeof KEYWORD_MARK;
+      expect(chip.textContent?.trim()).toBe(KEYWORD_MARK[kw]);
+    }
+  });
+
+  it("R3339000 hover and focus reveal name plate, and boardNames setting controls visibility", () => {
+    const common = DEFS.find((d) => d.rarity === "Common" && d.type === "Unit" && !isFullArtCard(d.id))!;
+    const legendary = DEFS.find((d) => d.rarity === "Legendary" && d.type === "Unit")!;
+
+    // 1. artFirst (default): art-first hides static plate; common keeps it
+    writeCardSettings({ boardNames: "artFirst" });
+    let lcf = minionOf(legendary.id);
+    expect(lcf.querySelector(".card-name:not(.card-name-hover)")).toBeNull();
+    expect(lcf.querySelector(".card-name-hover")).not.toBeNull();
+    cleanup();
+    let ccf = minionOf(common.id);
+    expect(ccf.querySelector(".card-name:not(.card-name-hover)")).not.toBeNull();
+    cleanup();
+
+    // 2. always: both show static plate
+    writeCardSettings({ boardNames: "always" });
+    lcf = minionOf(legendary.id);
+    expect(lcf.querySelector(".card-name:not(.card-name-hover)")).not.toBeNull();
+    cleanup();
+    ccf = minionOf(common.id);
+    expect(ccf.querySelector(".card-name:not(.card-name-hover)")).not.toBeNull();
+    cleanup();
+
+    // 3. never: neither shows static plate; both have hover plate
+    writeCardSettings({ boardNames: "never" });
+    lcf = minionOf(legendary.id);
+    expect(lcf.querySelector(".card-name:not(.card-name-hover)")).toBeNull();
+    expect(lcf.querySelector(".card-name-hover")).not.toBeNull();
+    cleanup();
+    ccf = minionOf(common.id);
+    expect(ccf.querySelector(".card-name:not(.card-name-hover)")).toBeNull();
+    expect(ccf.querySelector(".card-name-hover")).not.toBeNull();
+    cleanup();
+  });
+
+  it("R3339000 stylesheets lay art-first portrait edge-to-edge and style hover plate", () => {
+    const portrait = declsOf(cards, `${ART_FIRST_MINION} .cf-portrait`);
+    expect(portrait.get("top")).toBe("0");
+    expect(portrait.get("left")).toBe("0");
+    expect(portrait.get("right")).toBe("0");
+    expect(portrait.get("bottom")).toBe("0");
+    expect(portrait.get("border-radius")).toBe("0");
+
+    expect(declsOf(cards, ART_FIRST_COMPACT).get("--cf-band")).toBe("0cqh");
+    expect(declsOf(cards, `${ART_FIRST_COMPACT}[data-card-type] .cf-art-frame`).get("inset")).toBe("0");
+
+    const hoverPlate = declsOf(cards, ".cf .card-name-hover");
+    expect(hoverPlate.get("opacity")).toBe("0");
+    expect(hoverPlate.get("transition")).toContain("var(--motion-fast)");
+    expect(cards).toContain(".cf:hover .card-name-hover");
+    expect(cards).toContain(".cf:focus-within .card-name-hover");
+  });
+
+  it("R3339000 useInspectTrigger handles coarse pointer inspect routing", () => {
+    expect(typeof isCoarsePointer).toBe("function");
   });
 });

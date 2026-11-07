@@ -70,7 +70,13 @@ export type InspectBindings = {
 
 type Timer = ReturnType<typeof setTimeout>;
 
-type Press = { x: number; y: number; pointerId: number };
+type Press = { x: number; y: number; pointerId: number; pointerType: string };
+
+/** R3339000: whether the active device uses a coarse pointer (phone, touchscreen). */
+export function isCoarsePointer(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
 
 /** idle; pending: a touch is down and its timer runs; fired: the long-press happened. */
 type PressState = "idle" | "pending" | "fired";
@@ -186,13 +192,14 @@ export function useInspectTrigger(
         holdPreview.current = null;
         disarmSuppressor();
         clearPress();
-        const holds = event.pointerType === "touch" || (opts.holdAnyPointer === true && event.button === 0);
+        const isCoarse = isCoarsePointer() || event.pointerType === "touch";
+        const holds = event.pointerType === "touch" || isCoarse || (opts.holdAnyPointer === true && event.button === 0);
         if (!holds || opts.longPress === false) return;
         // R2098000: a press that starts on a glossary term showing its rule is that term's long press.
         if (startsOnTermTip(event.target)) return;
         const element = event.currentTarget;
         const pressKey = current.key;
-        press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+        press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType };
         pressState.current = "pending";
         t.press = setTimeout(() => {
           t.press = null;
@@ -203,10 +210,18 @@ export function useInspectTrigger(
             return;
           }
           const onLongPress = now.options.onLongPress;
-          // R2617000: a hold is the hover; with previews off it opens the sheet, so a touch screen can still read the card.
-          const previewHold = onLongPress === undefined && hoverAllowed();
+          const coarse = isCoarsePointer() || press.current?.pointerType === "touch";
           pressState.current = "fired";
           armSuppressor();
+          // R3339000: a long press on a coarse pointer (phone) opens the inspect sheet.
+          if (coarse) {
+            press.current = null;
+            if (onLongPress !== undefined) onLongPress();
+            else openInspect({ key: pressKey, mode: "sheet", anchor: rectOf(element) });
+            return;
+          }
+          // R2617000: on a desktop hold, a hold is the hover preview; with previews off it opens the sheet.
+          const previewHold = onLongPress === undefined && hoverAllowed();
           if (previewHold) {
             // `press` keeps the start point, so a drift past the slop still ends the look.
             holdPreview.current = pressKey;

@@ -11,6 +11,7 @@ import { DEFAULT_HAPTICS_SETTINGS, writeHapticsSettings } from "../haptics/setti
 import { resetLocale } from "../i18n/i18n.ts";
 import {
   AnimatedFoilSwitch,
+  BoardNamesSelect,
   FullArtSwitch,
   FxControls,
   LanguageSelect,
@@ -86,6 +87,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(OpponentCosmeticsSwitch),
     reset: () => {
       writeCardSettings({ opponentCosmetics: CARD_SETTINGS_DEFAULTS.opponentCosmetics });
+    },
+  },
+  {
+    section: "visuals",
+    id: "card-board-names",
+    render: () => createElement(BoardNamesSelect),
+    reset: () => {
+      writeCardSettings({ boardNames: CARD_SETTINGS_DEFAULTS.boardNames });
     },
   },
   {

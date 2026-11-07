@@ -348,7 +348,7 @@ describe("R3046000 the real board", () => {
   beforeEach(() => {
     __resetSettingsForTests();
     resetCosmeticsForTests();
-    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, boardNames: "always" });
     clearPicks();
   });
 
@@ -399,5 +399,78 @@ describe("R3046000 the real board", () => {
         expect(plain.length, "plain Units keep their ovals").to.be.at.least(1);
       });
     });
+  }
+});
+
+describe("R3339000 art-first cards on the real board", () => {
+  const BOARD = '[data-testid="board"]';
+  const VIEWPORTS = [
+    { label: "desktop", width: 1280, height: 720 },
+    { label: "phone", width: 390, height: 844 },
+  ] as const;
+  const SETTINGS = ["artFirst", "always", "never"] as const;
+
+  /** `fullBoardView()` with Bread and Butter face-up in lane 1 of the viewer's backrow. */
+  function view() {
+    const base = fullBoardView();
+    return { ...base, you: { ...base.you, backrow: [faceUpBackrow("p1", { defId: FULL_ART_BACKROW, type: "Field Trap" }), ...base.you.backrow.slice(1)] } };
+  }
+
+  beforeEach(() => {
+    __resetSettingsForTests();
+    resetCosmeticsForTests();
+    clearPicks();
+  });
+
+  for (const viewport of VIEWPORTS) {
+    for (const setting of SETTINGS) {
+      it(`R3339000 renders board faces at ${viewport.label} with boardNames=${setting}`, () => {
+        writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, boardNames: setting });
+        cy.viewport(viewport.width, viewport.height);
+        cy.mount(
+          <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+            <div className="app-shell app-shell--wide">
+              <Game view={view()} legal={[]} onAction={() => undefined} />
+            </div>
+          </CatalogContext.Provider>,
+        );
+        cy.get(`${BOARD} .field .card`).should("have.length", 20);
+        cy.document().should((doc) => {
+          const artFirstUnits = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .card[data-face="minion"] > .cf[data-art-first="true"]`)];
+          expect(artFirstUnits.length, "art-first units on the board").to.be.at.least(4);
+
+          for (const cf of artFirstUnits) {
+            const staticName = cf.querySelector<HTMLElement>(".card-name:not(.card-name-hover)");
+            const hoverName = cf.querySelector<HTMLElement>(".card-name-hover");
+            expect(hoverName !== null, "hover name plate is present").to.eq(true);
+
+            if (setting === "always") {
+              expect(staticName !== null, "always shows static name plate").to.eq(true);
+            } else {
+              expect(staticName, `${setting} hides static name on art-first cards`).to.eq(null);
+            }
+          }
+
+          const normalUnits = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .card[data-face="minion"] > .cf:not([data-art-first="true"])`)];
+          expect(normalUnits.length, "normal units on the board").to.be.at.least(1);
+
+          for (const cf of normalUnits) {
+            const staticName = cf.querySelector<HTMLElement>(".card-name:not(.card-name-hover)");
+            if (setting === "never") {
+              expect(staticName, "never hides static name on all cards").to.eq(null);
+            } else {
+              expect(staticName !== null, `${setting} shows static name on normal cards`).to.eq(true);
+            }
+          }
+
+          // Keyword marks are present as icon marks with role="img" and accessible labels
+          const marks = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .card[data-face="minion"] .keywords .keyword`)];
+          for (const mark of marks) {
+            expect(mark.getAttribute("role")).to.eq("img");
+            expect(Boolean(mark.getAttribute("aria-label")), "has accessible label").to.eq(true);
+          }
+        });
+      });
+    }
   }
 });

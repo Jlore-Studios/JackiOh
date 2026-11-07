@@ -103,7 +103,7 @@ import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, boardLookOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, isArtFirstBoardFace, showsFullArt, showsStaticBoardName, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
@@ -295,6 +295,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
+  // R3339000: an art-first backrow card in play drops its static name and type line.
+  const artFirst = !full && isArtFirstBoardFace(face, cardLook);
+  const showStaticName = full ? true : showsStaticBoardName(artFirst, settings.boardNames);
   // Issues #814, #1017: the face model gives the box's words whole, as a short form, or as a Quest's stage
   // (R2450000), each with its own spans; the box's size is the layout's.
   const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
@@ -304,7 +307,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare ? "" : face.name);
+  useFitText(nameRef, bare || !showStaticName ? "" : face.name);
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
@@ -367,6 +370,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      data-art-first={artFirst ? "true" : undefined}
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-version={look.version ?? undefined}
@@ -406,7 +410,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               tags={face.tags}
               type={face.type}
               name={face.englishName ?? face.name}
-              shape={fullArt || extended ? "full" : ART_SHAPE[face.type]}
+              shape={fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type]}
               lazy={lazyArt}
               starship={starship}
               picture={picture}
@@ -453,13 +457,17 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         {bare ? (
           <span className="cf-hand-name">{face.name}</span>
-        ) : (
+        ) : showStaticName ? (
           <span
             className="card-name"
             ref={nameRef}
             data-pixel-name={pixelName !== null ? "true" : undefined}
             style={pixelName !== null ? ({ "--cf-pixel-name": `url("${pixelName}")` } as CSSProperties) : undefined}
           >
+            {face.name}
+          </span>
+        ) : (
+          <span className="card-name card-name-hover" aria-hidden="true">
             {face.name}
           </span>
         )}
@@ -478,7 +486,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         {stamp !== null && <ProficiencyStamp level={stamp} />}
 
-        {!fullArt && <span className="card-type">{face.typeLine}</span>}
+        {!fullArt && !artFirst && <span className="card-type">{face.typeLine}</span>}
 
         {full && !fullArt && (
           <span
