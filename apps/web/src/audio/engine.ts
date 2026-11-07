@@ -166,6 +166,12 @@ function defaultVisibility(): DocumentVisibilityState {
   return document.visibilityState;
 }
 
+/** R3346000: a cue's own trim (`SfxParams.gain`), clamped to [0, 1]; 1 when it has none. */
+function trimOf(params: SfxParams | undefined): number {
+  const gain = params?.gain;
+  return gain !== undefined && Number.isFinite(gain) ? Math.min(1, Math.max(0, gain)) : 1;
+}
+
 // A rendered line's audible span
 
 type Span = { offsetS: number; lengthS: number };
@@ -506,7 +512,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       if (!rapid && sfxEnds.length >= SFX_MAX_VOICES) return false;
 
       const cue = ctx.createGain();
-      cue.gain.value = spec.gain * (params?.quiet === true ? QUIET_SFX_GAIN : 1);
+      cue.gain.value = spec.gain * (params?.quiet === true ? QUIET_SFX_GAIN : 1) * trimOf(params);
       const { input, extra } = sfxInput(ctx, buses, params?.pan);
       cue.connect(input);
       const lengthMs = spec.recipe(ctx, cue, ctx.currentTime + delay / 1000, params ?? {}) * 1000;

@@ -6,6 +6,7 @@
 //   E2E_COMPONENT_PORT=5282 pnpm --dir e2e exec cypress run --component --browser chrome \
 //     --spec cypress/component/audio-recipes.cy.tsx
 
+import { PLAY_TIERS_ASCENDING } from "../../../apps/web/src/game/damageFeel.ts";
 import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
@@ -44,6 +45,7 @@ const EXPECTED_IDS = [
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
   "anomaly",
+  "playImpact", "trapSnap",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -147,6 +149,9 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   organ: 2000,
   // R3337003: an Anomaly's sting, one voice per board.
   anomaly: 1200,
+  // R3346000: a play's cost impact and a firing trap's snap.
+  playImpact: 500,
+  trapSnap: 200,
 };
 
 /** B14 parameter sets used here too. */
@@ -233,6 +238,10 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
         { id: "spell", params: { timbre } },
       ]),
       { id: "entrance", params: { mythic: true } },
+      // R3346000: a play's impact at every cost tier, in each type's colour.
+      ...PLAY_TIERS_ASCENDING.flatMap((playTier): { id: SfxId; params: SfxParams }[] =>
+        (["unit", "spell", "field"] as const).map((playType) => ({ id: "playImpact", params: { playTier, playType } })),
+      ),
       // R506 variants outside PARAM_SETS.
       { id: "chaosRoll", params: { amount: 3 } },
       { id: "brand", params: { release: true } },

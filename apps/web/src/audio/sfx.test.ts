@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { PLAY_TIERS_ASCENDING, type PlayType } from "../game/damageFeel.ts";
 import { CHAOS_REVEAL_MAX, EFFECT_PITCH_JITTER, IMPACT_AMOUNT_CAP } from "./constants.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
@@ -39,6 +40,7 @@ const UNION_ORDER: SfxId[] = [
   "organ",
   // R3337003: an Anomaly's sting.
   "anomaly",
+  "playImpact", "trapSnap",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -142,6 +144,9 @@ const DURATION_MS: Record<SfxId, number> = {
   organ: 2000,
   // R3337003.
   anomaly: 1200,
+  // R3346000.
+  playImpact: 500,
+  trapSnap: 200,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -629,6 +634,73 @@ describe("R669 the play sting", () => {
     const panned = stingRun({ tier: "rare", pan: 0.6 });
     expect(panned.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
     expect(returnedSeconds(panned)).toBe(returnedSeconds(plain));
+  });
+});
+
+describe("R3346000 the play impact and the trap snap", () => {
+  const TYPES: readonly PlayType[] = ["unit", "spell", "field"];
+  const impactRun = (playTier: (typeof PLAY_TIERS_ASCENDING)[number], playType: PlayType): Run =>
+    runRecipe(`playImpact ${playTier} ${playType}`, SFX.playImpact.recipe, SFX.playImpact.durationMs, { playTier, playType });
+  const runs = [
+    ...TYPES.flatMap((type) => PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type))),
+    runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {}),
+    runRecipe("trapSnap", SFX.trapSnap.recipe, SFX.trapSnap.durationMs, {}),
+  ];
+
+  it("R3346000 every tier of every type, and the trap snap, keep every clause of the recipe contract", () => {
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("R3346000 each type grows with the tier: a longer sound, and from medium up no fewer voices, a boom or sub at the top", () => {
+    for (const type of TYPES) {
+      const tiers = PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type));
+      const lengths = tiers.map(returnedSeconds);
+      for (let i = 1; i < lengths.length; i += 1) {
+        expect(lengths[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} outlasts the tier below`).toBeGreaterThan(lengths[i - 1] ?? Infinity);
+      }
+      // A Spell's light flick has its bell (two voices), which its medium play drops for a longer charge.
+      const voices = tiers.map((run) => run.made.filter((n) => n.started).length);
+      for (let i = 2; i < voices.length; i += 1) {
+        expect(voices[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} has no fewer voices`).toBeGreaterThanOrEqual(voices[i - 1] ?? Infinity);
+      }
+      // A heavy Unit's or Spell's boom and a massive Field Spell's sub are voices the medium play has not got.
+      expect(voices[3], `${type}: a massive play has more voices than a medium one`).toBeGreaterThan(voices[1] ?? Infinity);
+    }
+  });
+
+  it("R3346000 the three types are three different sounds at the same tier", () => {
+    for (const tier of PLAY_TIERS_ASCENDING) {
+      const shapes = TYPES.map((type) => {
+        const run = impactRun(tier, type);
+        return JSON.stringify({ kinds: run.made.map((n) => n.kind), length: returnedSeconds(run) });
+      });
+      expect(new Set(shapes).size, `${tier}: no two types build the same graph`).toBe(TYPES.length);
+    }
+  });
+
+  it("R3346000 a missing tier or type is a light Unit", () => {
+    const plain = runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {});
+    const light = impactRun("light", "unit");
+    expect(plain.made.map((n) => n.kind)).toEqual(light.made.map((n) => n.kind));
+    expect(returnedSeconds(plain)).toBe(returnedSeconds(light));
+  });
+
+  it("R3346000 gain and pan change nothing in the recipe: the engine trims and pans", () => {
+    const plain = impactRun("heavy", "spell");
+    const trimmed = runRecipe("trimmed", SFX.playImpact.recipe, SFX.playImpact.durationMs, { playTier: "heavy", playType: "spell", gain: 0.6, pan: 0.5 });
+    expect(trimmed.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
+    expect(returnedSeconds(trimmed)).toBe(returnedSeconds(plain));
+  });
+
+  it("R3346000 every tier of every type fits the 500 ms row", () => {
+    for (const run of runs) expect(returnedSeconds(run), run.label).toBeLessThanOrEqual(SFX.playImpact.durationMs / 1000);
   });
 });
 
