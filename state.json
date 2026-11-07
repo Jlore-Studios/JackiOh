@@ -18782,6 +18782,7 @@
           }
         ],
         "head": "8284491b1e4b3939743ed77b33100a5e8611a61d",
+        "interruptions": 0,
         "kind": "revise",
         "model": "sonnet",
         "provider": "claude-4",
