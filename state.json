@@ -17359,6 +17359,14 @@
       "queued_at": "2026-11-07T00:04:54Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "3353": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-06T23:13:22Z",
+      "issue": 3214,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
