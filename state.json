@@ -18183,16 +18183,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "gemini",
-        "built_by": "agy",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
         "reviews": [],
-        "sha": "ecaf147c788a8e76bcddefd6c15296a9db5ff1d2",
-        "tiers": {
-          "claude": "medium"
-        }
+        "sha": "c1598e44f4a9e0c16dd24ce4941329a9db3829d3",
+        "tiers": {}
       },
       "waiting_comment": 6702531167
     },
