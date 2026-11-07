@@ -212,6 +212,8 @@ for (const viewport of VIEWPORTS) {
         cy.get('.cf-plane[data-plane="near"]').should("have.css", "overflow", "visible");
         cy.get('.cf-plane[data-plane="near"]').should(($near) => {
           expect(getComputedStyle($near[0] as HTMLElement).clipPath).to.match(new RegExp(`^inset\\(-${String(CARD_FRAME_BREAK_PX)}px`));
+          // The window keeps its shape (a Unit's oval): the raised clip rounds its corners, it never squares them.
+          expect(getComputedStyle($near[0] as HTMLElement).clipPath).to.contain("round");
         });
         cy.get('.cf-plane[data-plane="near"] > .cf-art').should("have.css", "scale", String(CARD_FRAME_BREAK_SCALE));
         // The planes that are not the subject's keep the window's clip.

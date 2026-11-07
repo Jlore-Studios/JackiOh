@@ -91,13 +91,57 @@
   );
 }
 
+/* A Field Trap's window is a tall hexagon (cards.css, which styles only the window's own direct child), so its planes
+   take the hexagon too, not the Trap's chamfered box. */
+.cf[data-card-type="Field Trap"] .cf-plane.cf-art--notched {
+  clip-path: polygon(50% 0, 100% 14%, 100% 86%, 50% 100%, 0 86%, 0 14%);
+}
+
 /* A Legendary or Mythic face in hand and in inspect (`data-frame-break`, depth.ts `breaksFrame`): the near plane's
-   subject stands taller from its foot, and may rise over the window's top edge by CARD_FRAME_BREAK_PX (`--cf-frame-break`),
-   clear to the sides and the foot of its window. `.cf-scale`'s own clip still stops it at the face's edge. */
+   subject stands taller from its foot, and may rise over the window's top edge by CARD_FRAME_BREAK_PX (`--cf-frame-break`).
+   It keeps its window's shape (art.css's `cf-art--<shape>`): the plane's clip is that shape with its top raised by the
+   break, so the subject crosses the top edge where the shape is and never draws over a corner the shape cuts away, the
+   bezel or the ring. `.cf-scale`'s own clip still stops it at the face's edge. */
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"] {
   overflow: visible;
   border-radius: 0;
   clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--portrait {
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 48% 48% 40% 40% / 55% 55% 45% 45%);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--window {
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 6% / 8%);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--arch {
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 50% 50% 4% 4% / 40% 40% 4% 4%);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--notched {
+  clip-path: polygon(
+    10% calc(-1 * var(--cf-frame-break, 0px)),
+    90% calc(-1 * var(--cf-frame-break, 0px)),
+    100% 13%,
+    100% 87%,
+    90% 100%,
+    10% 100%,
+    0 87%,
+    0 13%
+  );
+}
+
+.cf[data-frame-break="true"][data-card-type="Field Trap"] .cf-plane[data-plane="near"].cf-art--notched {
+  clip-path: polygon(
+    50% calc(-1 * var(--cf-frame-break, 0px)),
+    100% 14%,
+    100% 86%,
+    50% 100%,
+    0 86%,
+    0 14%
+  );
 }
 
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"] > .cf-art {

@@ -626,6 +626,28 @@ describe("R3344000 Legendary and Mythic faces in hand and inspect may break the 
     expect(CARD_FRAME_BREAK_SCALE).toBeGreaterThan(1);
     expect(CARD_FRAME_BREAK_PX).toBeGreaterThan(0);
   });
+
+  it("R3344000 the frame-break keeps the near plane's window shape, and never squares its corners", () => {
+    const art = sheet("art/art.css");
+    const css = sheet("depth.css");
+    const raised = "calc(-1 * var(--cf-frame-break, 0px))";
+    const clipOf = (shape: string, extra = ""): string =>
+      new RegExp(`\\.cf\\[data-frame-break="true"\\]${extra} \\.cf-plane\\[data-plane="near"\\]\\.cf-art--${shape}\\s*\\{\\s*clip-path: ([^;]*);`).exec(css)?.[1] ?? "";
+    // The rounded shapes: art.css's own radii, in the raised inset's `round`.
+    for (const shape of ["portrait", "window", "arch"]) {
+      const radius = new RegExp(`\\.cf-art--${shape}\\s*\\{\\s*border-radius: ([^;]*);`).exec(art)?.[1] ?? "";
+      expect(radius, shape).not.toBe("");
+      expect(clipOf(shape).replace(/\s+/g, " "), shape).toBe(`inset(${raised} 0 0 0 round ${radius})`);
+    }
+    // The notched shapes: art.css's and cards.css's polygons with their top vertices raised.
+    expect(clipOf("notched")).toContain(`10% ${raised}`);
+    expect(clipOf("notched")).toContain(`90% ${raised}`);
+    expect(clipOf("notched")).toContain("100% 13%");
+    expect(clipOf("notched", '\\[data-card-type="Field Trap"\\]')).toContain(`50% ${raised}`);
+    expect(clipOf("notched", '\\[data-card-type="Field Trap"\\]')).toContain("100% 14%");
+    // A Field Trap's planes are the hexagon at rest too.
+    expect(css).toMatch(/\.cf\[data-card-type="Field Trap"\] \.cf-plane\.cf-art--notched\s*\{\s*clip-path: polygon\(50% 0, 100% 14%/);
+  });
 });
 
 describe("R3344000 the depth stylesheet's perspective, planes and spring", () => {
