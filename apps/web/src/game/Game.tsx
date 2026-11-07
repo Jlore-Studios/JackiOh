@@ -536,9 +536,11 @@ export default function Game({
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
         // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
-        // other seat's is up in the showcase already), once per card.
+        // other seat's is up in the showcase already), once per card. R3337003: a play that lays an
+        // Anomaly yields it to the Anomaly's still title card, as its takeover yields to the rift.
+        const rifted = new Set(slams.flatMap((entry) => entry.rift?.sourceId ?? []));
         const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
-          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer,
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer && !rifted.has(entry.entrance.instanceId),
         )?.entrance;
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }

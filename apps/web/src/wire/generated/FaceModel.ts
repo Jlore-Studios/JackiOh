@@ -125,7 +125,12 @@ printed: RichText | null, brittle: number | null, temporary: number | null, elem
 /**
  * The keyword chips a tuned face prints at the foot of its box.
  */
-tuningChips: Array<TuningChip>, enchantments: Array<Enchantment>, animated: AnimatedFace | null, berserk: boolean, frozen: boolean, dormant: DormantFace | null, frozenForever: boolean, starship: StarshipFace | null, created: boolean, createdBy?: string, 
+tuningChips: Array<TuningChip>, enchantments: Array<Enchantment>, animated: AnimatedFace | null, berserk: boolean, frozen: boolean, dormant: DormantFace | null, frozenForever: boolean, starship: StarshipFace | null, 
+/**
+ * R3337001: the code of the board an Anomaly Found! in play holds (its label, R2247000), whose
+ * picture its art draws; absent for any other card and for a printed face.
+ */
+anomaly?: string, created: boolean, createdBy?: string, 
 /**
  * E36: the lines of code of the card's script.
  */

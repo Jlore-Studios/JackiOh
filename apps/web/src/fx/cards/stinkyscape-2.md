@@ -161,7 +161,10 @@ rendering (`fx/cards/stinkyscape/`), drawn over the event rows (`keep`).
 
 No Legendary entrance or Mythic takeover is restyled, so R2722001 stands as it is: #109 xxFreshJack,
 #110 iKwzki, #111 Shockwave447, #148 Alteran Reach and #154 Dice of Doom keep the shared takeover, and
-the range's Legendaries the shared Legendary entrance (#2803 reworks both).
+the range's Legendaries the shared Legendary entrance (#2803 reworks both). Anomaly Found!, a token
+printed Mythic, yields its takeover to the rift its play lays, as a Mythic yields to its own wipe
+(R3337003, R2800000), and none of the three cards above is a signature (R3332000): the probes are
+Common and Rare, and the rift's hold is longer than a Mythic Spell's signature budget.
 
 ## The Starship parts
 

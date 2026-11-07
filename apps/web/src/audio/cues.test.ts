@@ -39,6 +39,7 @@ import {
   type CueContext,
   type PlayFrame,
 } from "./cues.ts";
+import { MUSIC_CARDS } from "./musicData.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
@@ -1108,8 +1109,12 @@ describe("R506 a token's printed rarity gives its summon the rarity sting", () =
     expect(realCard(PANCAKE_UNIT)?.printedRarity).toBeUndefined();
   });
 
-  it("R506 a unit token that prints Legendary enters with the Legendary sting; one that prints Epic does not", () => {
-    expect(sfxOf(cuesFor(landedAs(GOLEM_TOKEN), withRealCatalog()), "entrance")).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
+  it("R506 R3332002 a unit token that prints Legendary enters with the Legendary sting, unless its own intro is its sting; one that prints Epic does not", () => {
+    const legendToken: CueCard = { type: "Unit", tags: ["Token"], rarity: "Token", printedRarity: "Legendary" };
+    expect(sfxOf(cuesFor(landedAs("core-t-y"), ctx({ card: () => legendToken })), "entrance")).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
+    // R3332002: the real Classic Golem has an intro of its own (music-cards.json), which is its sting.
+    expect(MUSIC_CARDS[GOLEM_TOKEN]?.intro).toBe(`intro-${GOLEM_TOKEN}`);
+    expect(sfxOf(cuesFor(landedAs(GOLEM_TOKEN), withRealCatalog()), "entrance")).toBeUndefined();
     expect(sfxOf(cuesFor(landedAs(EPIC_TOKEN), withRealCatalog()), "entrance")).toBeUndefined();
     expect(sfxOf(cuesFor(landedAs(AI_TOKEN_UNIT), withRealCatalog()), "entrance")).toBeUndefined();
   });
@@ -1131,6 +1136,55 @@ describe("R506 a token's printed rarity gives its summon the rarity sting", () =
     });
     expect(sfxOf(cuesFor(landedAs(HIDDEN_DEF_ID, "units", HIDDEN_DEF_ID), context), "entrance")).toBeUndefined();
     expect(asked).toEqual([]);
+  });
+});
+
+describe("R3332002 a Legendary's or a Mythic's own intro is its sting", () => {
+  /** #92 Felinor Fiender (a Legendary Unit), #100 Ceaseless Void (a Mythic Unit), #97 Zephrys (a Mythic Spell), #85 a Legendary Trap. */
+  const FELINOR_FIENDER = "core-092";
+  const CEASELESS_VOID = "core-100";
+  const ZEPHRYS = "core-097";
+  const EXPERIMENT = "core-085";
+  /** Made-up Legendary and Mythic cards, each of a kind, that no intro names. */
+  const NO_INTRO: Record<string, CueCard> = {
+    "made-legend-unit": { type: "Unit", tags: [], rarity: "Legendary" },
+    "made-mythic-unit": { type: "Unit", tags: [], rarity: "Mythic" },
+    "made-mythic-spell": { type: "Spell", tags: [], rarity: "Mythic" },
+    "made-legend-trap": { type: "Trap", tags: [], rarity: "Legendary" },
+  };
+  /** A cast's sting rides its card's kind in the sound table: both Spells are spells there. */
+  const lines: CardAudioTable = { ...REAL_LINES, cards: { ...REAL_LINES.cards, [ZEPHRYS]: { kind: "spell" }, "made-mythic-spell": { kind: "spell" } } };
+  const either = (over: Partial<CueContext> = {}): CueContext =>
+    withRealCatalog({ card: (defId) => NO_INTRO[defId] ?? realCard(defId), lines, ...over });
+  const entranceOf = (event: GameEvent): SoundCue | undefined => sfxOf(cuesFor(event, either()), "entrance");
+
+  it("R3332002 a Legendary or a Mythic with an intro takes no shared entrance; one without keeps it", () => {
+    // The real cards are what they say, and each has an intro of its own.
+    for (const [defId, type, rarity] of [
+      [FELINOR_FIENDER, "Unit", "Legendary"],
+      [CEASELESS_VOID, "Unit", "Mythic"],
+      [ZEPHRYS, "Spell", "Mythic"],
+      [EXPERIMENT, "Trap", "Legendary"],
+    ] as const) {
+      expect(realCard(defId), defId).toMatchObject({ type, rarity });
+      expect(MUSIC_CARDS[defId]?.intro, defId).toBe(`intro-${defId}`);
+    }
+    for (const defId of Object.keys(NO_INTRO)) expect(MUSIC_CARDS[defId], defId).toBeUndefined();
+
+    // A Unit's arrival, a Spell's cast, a Trap's first firing: the intro is the sting, so none is shared.
+    expect(entranceOf(landedAs(FELINOR_FIENDER))).toBeUndefined();
+    expect(entranceOf(landedAs(CEASELESS_VOID))).toBeUndefined();
+    expect(entranceOf(played(ZEPHRYS, "p2"))).toBeUndefined();
+    expect(shape(played(ZEPHRYS, "p2"), either())).toEqual([sfx("play"), sfx("spell", 60)].sort());
+    expect(entranceOf(trapFired(EXPERIMENT, "p2"))).toBeUndefined();
+    // The thud still carries what the catalog says of the card (#92 is a Human): only the shared sting yields.
+    expect(sfxOf(cuesFor(landedAs(FELINOR_FIENDER), either()), "summon")?.params?.timbre).toBe("human");
+
+    // With no intro, the shared sting is the fallback: brass for a Legendary, prismatic for a Mythic.
+    expect(entranceOf(landedAs("made-legend-unit"))).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
+    expect(entranceOf(landedAs("made-mythic-unit"))).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: 0 });
+    expect(entranceOf(played("made-mythic-spell", "p2"))).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: STING_DELAY_MS });
+    expect(entranceOf(trapFired("made-legend-trap", "p2"))).toEqual({ kind: "sfx", id: "entrance", delayMs: STING_DELAY_MS });
   });
 });
 

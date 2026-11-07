@@ -1,7 +1,8 @@
 // R3337003: an Anomaly's lay in the runner. A `boardReplaced` that names an Anomaly (R3337000) and every
 // event after it up to the next hook play as one rift entry, which the Anomaly claims as its set piece
 // (`anomalyClaim`), held as R2785000 holds every set piece: capped, scaled, set by Big moments, and none
-// under Reduce motion. A replacement naming no Anomaly plays as it did.
+// under Reduce motion; Anomaly Found!, printed Mythic, yields its takeover to it, as R2800000's Mythic
+// yields to its own wipe. A replacement naming no Anomaly plays as it did.
 
 import type { GameEvent, PlayerId, UnitView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -20,10 +21,12 @@ import {
   scaleForSpeed,
   slamEntries,
   type AnimationEntry,
+  type EntranceResolver,
 } from "./animations.ts";
 import { testid } from "./contract.ts";
 import { createPlayTracker } from "./runs.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
+import { CATALOG } from "../wire/cards.ts";
 
 const ANOMALY_FOUND = "stinkyscape-t-anomaly-found";
 const ASTEROID = "stinkyscape-171";
@@ -58,7 +61,13 @@ function cast(anomaly: string | undefined, a: UnitView, b: UnitView): GameEvent[
   return [played, replaced, exiled(a), exiled(b), summoned("rock-1", 2), summoned("rock-2", 4), summoned("trap", 3, "backrow"), cry, resolved];
 }
 
-/** A queue whose timers run when the test says, claiming set pieces as Game does. */
+/** As the board resolves an entrance (`createEntranceResolver`): Anomaly Found! is a Spell that prints Mythic. */
+const entranceOf: EntranceResolver = (defId) => {
+  const def = CATALOG[defId];
+  return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
+};
+
+/** A queue whose timers run when the test says, claiming set pieces as Game does, the takeover's after them. */
 function queueOf(settings: { speed?: number; bigMoments?: FxBigMoments } = {}, reducedMotion = false) {
   const timers: { ms: number; run: () => void }[] = [];
   const started: AnimationEntry[] = [];
@@ -69,6 +78,7 @@ function queueOf(settings: { speed?: number; bigMoments?: FxBigMoments } = {}, r
     },
     settings: () => ({ speed: settings.speed ?? 1, motion: "system", intensity: "normal", bigMoments: settings.bigMoments ?? "full" }),
     setPieceOf: anomalyClaim,
+    entranceOf,
     burstBudgetMs: BURST_BUDGET_MS,
   });
   queue.subscribeSignals((signal) => {
@@ -101,6 +111,7 @@ describe("R3337003 an Anomaly's rift entry", () => {
         { zone: testid.zone("you", "units", 4), row: "units" },
         { zone: testid.zone("you", "backrow", 3), row: "backrow" },
       ],
+      sourceId: "found",
     });
     // The board's own swap motion yields to the set piece: no frame for the board.
     expect(rift?.frames.has(testid.board)).toBe(false);
@@ -156,5 +167,18 @@ describe("R3337003 an Anomaly's rift entry", () => {
     const reduced = heldBy({}, true);
     expect(reduced?.setPiece).toBeUndefined();
     expect(reduced?.durationMs).toBe(0);
+  });
+
+  it("R3337003 Anomaly Found!, printed Mythic, yields its takeover to its rift, the action's one set piece", () => {
+    const { view, a, b } = board();
+    expect(entranceOf(ANOMALY_FOUND)?.rarity).toBe("Mythic");
+    const { queue, playAll } = queueOf();
+    queue.enqueue(cast("FO", a, b), view);
+    const started = playAll();
+    const play = started.find((entry) => entry.events.includes(played));
+    expect(play?.entrance).toMatchObject({ tier: "mythic", instanceId: "found", yielded: true });
+    expect(play?.setPiece).toBeUndefined();
+    expect(started.find((entry) => entry.rift !== undefined)?.setPiece).toEqual({ key: ANOMALY_SET_PIECE, holdMs: ANOMALY_RIFT_HOLD_MS });
+    expect(started.filter((entry) => entry.setPiece !== undefined)).toHaveLength(1);
   });
 });

@@ -1,6 +1,7 @@
-// R502, R670, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card
-// recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2795000:
-// Classic+'s Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
+// R502, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card recipes
+// that claim events of their play (cardFx.ts). R3332000: a marquee entrance (entrances.ts) is an entry's
+// `entrance` since, never a `{ bespoke }`, so a bespoke key is a card recipe's. R2795000: Classic+'s
+// Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
 // Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798), and R3337002's and
 // R3337003's Scanning Probes' scan and Anomaly Found!'s call (#3337).
@@ -66,16 +67,10 @@ export const CARD_RECIPES = {
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
 
-export type BespokeKey = CardRecipeKey | EntranceKey;
-
 export function isCardRecipeKey(key: string): key is CardRecipeKey {
   return Object.prototype.hasOwnProperty.call(CARD_RECIPES, key);
 }
 
 export function isEntranceKey(key: string): key is EntranceKey {
   return Object.prototype.hasOwnProperty.call(ENTRANCE_TRAUMA, key);
-}
-
-export function isBespokeKey(key: string): key is BespokeKey {
-  return isCardRecipeKey(key) || isEntranceKey(key);
 }

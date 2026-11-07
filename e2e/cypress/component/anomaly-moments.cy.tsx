@@ -194,6 +194,8 @@ describe("R3337003 discovering an Anomaly over a real board", () => {
       it("R3337003 the board that stands wears its Anomaly's backdrop", () => {
         const view = fullBoardView();
         mountScene(view, view, cast(view, "WH"));
+        // The cast is under way before it is waited out: the board shows the laid view once it settles.
+        cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "anomaly");
         cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
         cy.get('[data-testid="aura-anomaly-p1"]', { timeout: 4_000 }).should("have.attr", "data-anomaly", "WH").and("have.attr", "data-aura-scope", "side");
         cy.screenshot(`anomaly-backdrop-${vp.name}`, { capture: "viewport", overwrite: true });

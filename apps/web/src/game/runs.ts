@@ -504,13 +504,15 @@ export function launchAt(events: readonly GameEvent[], at: number, view: PlayerV
 
 /**
  * R3337003: an Anomaly laid on `player`'s side, as the runner plays it: its code (R3337000), the side it
- * lands on, and each card the board's `summoned` lays, in order, as the zone it lands in and its row.
+ * lands on, each card the board's `summoned` lays, in order, as the zone it lands in and its row, and
+ * `sourceId`, the play open as it lands (Anomaly Found!'s own, or #151's), or null for none.
  */
 export type AnomalyRift = {
   player: PlayerId;
   code: AnomalyCode;
   side: Side;
   landings: readonly { zone: string; row: Row }[];
+  sourceId: string | null;
 };
 
 /** R3337003: what ends a rift: the next hook (a laid Cry firing, R1855001), a question, a Trap, the play's end, another replacement, the game's or the turn's end. */
@@ -522,7 +524,7 @@ const RIFT_ENDS = new Set<GameEvent["type"]>(["hookResolving", "promptOpened", "
  * them. A replacement naming none plays as its own row. The code and the zones are public (R202): the
  * laid board is, and a face-down card's landing names only its zone.
  */
-export function riftAt(events: readonly GameEvent[], at: number, view: PlayerView): { rift: AnomalyRift; length: number } | null {
+export function riftAt(events: readonly GameEvent[], at: number, view: PlayerView, play?: OpenPlay): { rift: AnomalyRift; length: number } | null {
   const head = events[at];
   if (head?.type !== "boardReplaced" || !isAnomalyCode(head.anomaly)) return null;
   const side = sideOf(view, head.player);
@@ -532,5 +534,5 @@ export function riftAt(events: readonly GameEvent[], at: number, view: PlayerVie
     if (event.type === "summoned" && event.player === head.player) landings.push({ zone: testid.zone(side, event.row, event.lane), row: event.row });
     i += 1;
   }
-  return { rift: { player: head.player, code: head.anomaly, side, landings }, length: i - at };
+  return { rift: { player: head.player, code: head.anomaly, side, landings, sourceId: play?.instanceId ?? null }, length: i - at };
 }

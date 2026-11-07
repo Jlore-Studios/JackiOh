@@ -1122,7 +1122,7 @@ export type EntryEntrance = {
   anchor: string | null;
   /**
    * R2800000: this Mythic's own wipe in the same action is the action's set piece, so its takeover
-   * yields to it: the entrance claims no hold and draws no takeover.
+   * yields to it: the entrance claims no hold and draws no takeover. R3337003: so is the rift its play lays.
    */
   yielded?: true;
 };
@@ -1164,8 +1164,14 @@ export function setPieceEntries(
   opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
 ): AnimationEntry[] {
   let held = 0;
-  // R2800000: a Mythic whose own wipe in this action is a set piece yields its takeover to it.
-  const own = new Set(entries.flatMap((entry) => (entry.wipe !== undefined && claimOf(entry) !== null ? [entry.wipe.sourceId] : [])));
+  // R2800000: a Mythic whose own wipe in this action is a set piece yields its takeover to it;
+  // R3337003: and so does one whose play lays an Anomaly, to its rift (Anomaly Found! prints Mythic).
+  const own = new Set(
+    entries.flatMap((entry) => {
+      const sourceId = entry.wipe?.sourceId ?? entry.rift?.sourceId ?? null;
+      return sourceId !== null && claimOf(entry) !== null ? [sourceId] : [];
+    }),
+  );
   return entries.map((entry) => {
     const entrance = entry.entrance;
     if (entrance?.tier === "mythic" && own.has(entrance.instanceId)) return { ...entry, entrance: { ...entrance, yielded: true } };
@@ -1386,7 +1392,7 @@ export function planEntries(
 
     // R3337003: an Anomaly's lay, its side's cards going and its board's coming, plays as one pinned
     // entry its set piece claims. The board's own swap motion yields to it (no frame for the board).
-    const rifted = riftAt(events, i, view);
+    const rifted = riftAt(events, i, view, plays.current());
     if (rifted !== null) {
       const run = take(i, rifted.length);
       out.push({

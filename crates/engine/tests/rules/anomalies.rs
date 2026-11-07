@@ -145,12 +145,10 @@ mod r1855000_a_board_replacement_exiles_its_casters_side_and_lays_the_preset {
         );
         for viewer in [P1, P2] {
             assert!(
-                s.view(viewer)
-                    .events
-                    .contains(&GameEvent::BoardReplaced {
-                        player: P1,
-                        anomaly: None
-                    }),
+                s.view(viewer).events.contains(&GameEvent::BoardReplaced {
+                    player: P1,
+                    anomaly: None
+                }),
                 "{viewer:?} sees the replacement"
             );
         }
@@ -762,11 +760,22 @@ mod r3337000_board_replaced_names_its_anomaly {
             anomaly: Some(CHARTED_ANOMALY.to_string()),
         };
         assert_eq!(replaced(s.last_events()), vec![named.clone()]);
-        assert_eq!(serde_json::to_value(&named).expect("serializes")["anomaly"], json!(CHARTED_ANOMALY));
+        assert_eq!(
+            serde_json::to_value(&named).expect("serializes")["anomaly"],
+            json!(CHARTED_ANOMALY)
+        );
         for viewer in [P1, P2] {
-            assert_eq!(replaced(&s.view(viewer).events), vec![named.clone()], "{viewer:?} reads the code");
+            assert_eq!(
+                replaced(&s.view(viewer).events),
+                vec![named.clone()],
+                "{viewer:?} reads the code"
+            );
         }
-        assert_eq!(s.unit(P1, 1).expect("the grunt").def_id, grunt.id, "the preset is laid as ever");
+        assert_eq!(
+            s.unit(P1, 1).expect("the grunt").def_id,
+            grunt.id,
+            "the preset is laid as ever"
+        );
     }
 
     #[test]
@@ -797,6 +806,10 @@ mod r3337000_board_replaced_names_its_anomaly {
                 anomaly: None
             }
         );
-        assert_eq!(serde_json::to_string(&event).expect("serializes"), old, "written back byte for byte");
+        assert_eq!(
+            serde_json::to_string(&event).expect("serializes"),
+            old,
+            "written back byte for byte"
+        );
     }
 }
