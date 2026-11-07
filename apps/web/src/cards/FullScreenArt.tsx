@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { getMusicPlayer } from "../audio/music.ts";
 import { MUSIC_CARDS } from "../audio/musicData.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { useModalKeys } from "../together/modalKeys.ts";
 import { ART_PLANES, artPlaneUri } from "./art/pictures.ts";
 import { closeFullScreenArt, useFullScreenArt } from "./fullscreen.ts";
 import { useCardSettings } from "./settings.ts";
@@ -59,14 +60,8 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
     return () => window.removeEventListener("pointerup", onPointerUp);
   }, [heldPointerId, onClose]);
 
-  // Escape key closes
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  // Escape and Back close it: the shared modal keys (R2126000 freezes the board's own key handlers).
+  useModalKeys(containerRef, onClose);
 
   // Tilt listener: follows pointer or device orientation
   useEffect(() => {
