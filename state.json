@@ -18215,7 +18215,7 @@
       "waiting_comment": 6700265883
     },
     "3358": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_fixed_head": "497a19f86cf11306f016b91f6dca01d286521cd1",
@@ -18242,7 +18242,7 @@
       "issue": 3339,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
@@ -18251,7 +18251,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42357730005",
+      "run_id": "pending:12cafefd-1794050460",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18272,16 +18272,9 @@
         "run": "42357730005"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T08:58:43Z",
+      "started_at": "2026-11-07T11:21:32Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-07T11:18:13Z",
-        "until": "2026-11-07T11:48:13Z",
-        "why": "it conflicts with `main` now"
-      },
       "verdict_rounds": 4,
       "votes": {
         "approvals": [
@@ -19372,9 +19365,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T11:20:46Z",
+    "at": "2026-11-07T11:21:32Z",
     "url": "",
-    "what": "revise #3363 on claude-7"
+    "what": "revise #3358 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T10:56:28Z",
