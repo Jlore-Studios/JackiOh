@@ -17926,13 +17926,14 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-1",
       "queued_at": "2026-11-07T00:59:16Z",
-      "run_id": "42321633843",
+      "run_id": "pending:0c579c28-1794019349",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 120,
-      "started_at": "2026-11-07T01:00:41Z",
+      "started_at": "2026-11-07T02:43:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18103,9 +18104,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T02:42:15Z",
+    "at": "2026-11-07T02:43:02Z",
     "url": "",
-    "what": "build #3339 on agy"
+    "what": "spot-check #3356 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T02:24:19Z",
@@ -34904,7 +34905,15 @@
         "n": 120,
         "pr": 3356,
         "queued_at": "2026-11-07T01:34:46Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:0c579c28-1794019349",
         "sha": "c62f023280ece602550c328276e4995720c53a6f",
+        "started_at": "2026-11-07T02:43:02Z",
         "status": "queued",
         "title": "Patch: drop the square shadow behind the card face's cost gem",
         "tries": 0
