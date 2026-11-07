@@ -17367,6 +17367,8 @@
       "stop_requested": false
     },
     "3353": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-06T23:13:22Z",
@@ -17380,8 +17382,11 @@
         "trail": "Socket.test.ts\", \"description\": \"Read client socket tests\"}\n- Bash: {\"command\": \"sed -n 140,400p apps/web/src/together/socialSocket.test.ts; sed -n 1,80p apps/web/src/test/fakeSocket.ts\", \"description\": \"Read rest of client socket tests and fake socket\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3214/apps/web/src/together/socialSocket.test.ts\", \"old_string\": \" it(\\\"R3214000 a woken page probes a quiet socket with hello an\u2026\n- Bash: {\"command\": \"cd apps/web && pnpm exec vitest run src/together src/net/gate-session-changes.test.tsx src/routes/gate.test.tsx src/game/net.test.ts 2>&1 | tail -15\", \"description\": \"Run the client test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3214 && git diff apps/web/src/together/polling.test.tsx | head -200\", \"description\": \"Review polling test additions\"}\n- Bash: {\"command\": \"tail -5 /tmp/server-tests-3214.log; grep -E \\\"test result|FAILED|panicked\\\" /tmp/server-tests-3214.log | head -20\", \"description\": \"Check server test results\"}\n- Bash: {\"command\": \"for r in R0148 R0194 R1379000 R1115000 R1441 R2478000 R835002 R3205000 R3210000 R2609000 R1831000 R1103000; do ls spec/rulings/$r.md >/dev/null 2>&1 && echo \\\"ok $r\\\" || echo \\\"MISSING $\u2026\n- Bash: {\"command\": \"tail -3 /tmp/server-tests-3214.log; grep -E \\\"test result\\\" /tmp/server-tests-3214.log | awk '{p+=$4; f+=$6} END {print \\\"passed\\\", p, \\\"failed\\\", f}'; grep -E \\\"FAILED|failed;\\\" /tmp/se\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/spec/rulings/R3214000.md\", \"content\": \"---\\nid: R3214000\\ntitle: \\\"Challenges, unread counts, chat and friends-list changes arrive over one live \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3214/spec/pending/3214.md\", \"content\": \"**[[R3214000]] Challenges, unread counts, chat and friends-list changes arrive over one live socket per tab, a\u2026\n- Bash: {\"command\": \"grep -n \\\"R3214000\\\" apps/web/src/together/ChatPanel.test.tsx | head; cargo jackioh spec check 2>&1 | tail -8\", \"description\": \"Run spec check for the new ruling\", \"timeout\": 900000}\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- build run 2: full `cargo test -p jackioh-server`: 2406 passed, 0 failed. Wrote R3214000, spec/pending/3214.md, \\u00a79.4/\\u00a79.5 edits, docs/architectur\u2026\n- Bash: {\"command\": \"cargo jackioh patches check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"description\": \"Run patches, c\u2026\n- Bash: {\"command\": \"git status --porcelain; git status --porcelain -- apps/web/src/wire\", \"description\": \"Check working tree status\"}\n- Bash: {\"command\": \"grep -rn \\\"/ws\\\" apps/edge/src/*.ts | grep -v test | head -10\", \"description\": \"Verify edge worker routes /ws paths\"}\n- Bash: {\"command\": \"grep -n -i \\\"sleep\\\\|websocket\\\\|idle\\\" docs/deploy-cloudflare.md | head -15\", \"description\": \"Check container sleep and websocket notes\"}\n- Bash: {\"command\": \"sed -n 20,30p docs/deploy-cloudflare.md; sed -n 400,415p docs/deploy-cloudflare.md\", \"description\": \"Read container sleep section\"}\n- Bash: {\"command\": \"git diff apps/web/README.md; git diff apps/web/src/together/ChatPanel.test.tsx | sed -n 1,120p\", \"description\": \"Review web README and ChatPanel test diff\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p).read()\\na=\\\"\\\"\\\" token and a refusal final for its token (R1115000); off in the unit tests\\\"\\\"\\\"\\nassert a in s\\ns=s.replace(a,\\\"\\\"\\\"\u2026\n- Bash: {\"command\": \"git diff crates/server/src/social/friends.rs crates/server/src/social/chat.rs crates/server/src/social/challenges.rs crates/server/src/actor/rooms.rs | grep \\\"^[+-]\\\" | grep -v \\\"^+++\\\\|\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-changed-3214.log \u2026\n- said: Meanwhile, I'll rewrite the notes' State section.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"## State\\\")\\nj=s.index(\\\"## Log\\\")\\nstate=\\\"\\\"\\\"## State\\n\\nRun 2 (build, opus, 2026-11-06) built the whole plan; noth\u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings 2>&1 | grep -E \\\"^(error|warning)\\\" -A8 | head -30; echo done\", \"description\": \"Run workspace clippy\", \"timeout\": 1800000}\n- Bash: {\"command\": \"tail -5 /tmp/web-changed-3214.log\", \"description\": \"Peek at web test progress\"}\n- Bash: {\"command\": \"grep -n \\\"/ws/watch\\\\|/ws/duos\\\" docs/v0.3.0/SURFACE.md | head\", \"description\": \"Check SURFACE doc for socket routes\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"web changed-tests run finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -q \\\"^exit \\\" /tmp/web-changed-3214.log; do sleep 5; done; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tm\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -q \"^exit \" /tmp/web-changed-3214.log; do sleep 5; done; grep -E \"Test Files|Tests |FAIL|^exit\" /tmp/w\u2026\n- Bash: {\"command\": \"grep -cE \\\"\\u2713|\\u2717|\\u00d7\\\" /tmp/web-changed-3214.log; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web-changed-3214.log | head\", \"description\": \"Check web run progress\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit \\\" /tmp/web-changed-3214.log; do sleep 5; done'; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web-changed-3214.log | head\", \"description\": \"Wa\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- build run 2: harness's web command (`vitest run --project web --changed origin/main \\u2026`): 229 files, 4922 tests passed. Workspace clippy clean. Done; \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 2 of 2): challenges and chat arrive over one live connection\"} --> ## What changed Each signed-in tab now holds one WebSocket at `/ws/social`. The server writes to it when something changes, and while it is up the tab sends no social poll and no ch\u2026"
       },
       "issue": 3214,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T00:24:15Z",
         "from_run": "42310409050",
         "gates": [
           {
@@ -17473,7 +17478,11 @@
         "source": "build",
         "until": "2026-11-07T00:52:51Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-07T00:22:51Z",
+      "run_id": "pending:df32b607-1794011020",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17492,6 +17501,9 @@
         "provider": "claude-8",
         "run": "42310409050"
       },
+      "started_at": "2026-11-07T00:24:15Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17505,9 +17517,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T00:13:34Z",
+    "at": "2026-11-07T00:24:15Z",
     "url": "",
-    "what": "plan #3336 on claude-3"
+    "what": "review #3353 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T00:10:42Z",
