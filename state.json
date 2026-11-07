@@ -19068,10 +19068,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-3",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "be5cfa80c7c5f1a7ab0316e8efdfa7832337ab3e",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "3370": {
