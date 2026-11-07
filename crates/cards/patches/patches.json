@@ -22570,5 +22570,33 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12g",
+    "date": "2026-11-07",
+    "title": "Patch: Terminus cards end the world: a set piece and a picture of its own for each Terminus card, Olivian Expanse and Ceaseless Void, and Dice of Doom's d100 rolled on screen",
+    "source": "#3338",
+    "notes": "Part of #3330: the Terminus cards, the game's end-of-the-world cards, each get a set piece and a picture of their own (R3338000, R3338001). Olivian Expanse (S #4), its six Terminus cards (S #4.1 to #4.6), Ceaseless Void (#100) and Dice of Doom (S #154) each name a set piece in their set's effects table: Farewell's and the Void's play over their board clears as wipes do (R2800000), every other over a signature, the run of its hook's events of the types it names (The Big Crunch's first cast), held one capped beat as R2785000 holds every set piece, a Mythic's takeover yielding to it, short under Big moments' short, unheld under off, and one still frame under Reduce Motion. Dice of Doom's d100 lands on its public roll, its jackpot read off what the run did; a hidden card only ever shows as a card back (R202). Each set piece's bed opens on an organ chord of its own under the Mythic choir (R1883000). Eight Stinkyscape painters and the Void's giant-shaped hole draw the nine pictures, base and Radiant, and R503's fixtures are recorded again for them; the Void's cost gem drains as its cost falls in its owner's own hand (R3338002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "The Terminus cards end the world",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Olivian Expanse, its six Terminus cards, Ceaseless Void and Dice of Doom each have an animation of their own, with a sound built on an organ and the Mythic choir.",
+        "Tap to skip one. Big moments and Reduce motion shorten it or show it as a still.",
+        "Dice of Doom's hundred-sided die now rolls across the board and lands on its roll. On a 67 the Terminus cards rain into the hand; on a miss the die crumbles.",
+        "Each of the nine has a picture of its own, on its base and its Radiant face.",
+        "Ceaseless Void's cost gem drains in your hand as its cost falls."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6aea0f59f47c69618e7f0079127748bca02428e9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
