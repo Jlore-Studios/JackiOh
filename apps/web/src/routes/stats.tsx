@@ -691,6 +691,7 @@ export default function StatsRoute(): ReactElement {
           idPrefix="stats"
           value={tab}
           onChange={setTab}
+          className="one-screen__frame"
           tablistClassName="stats-tabs"
           tabClassName="stats-tab"
           panelAs="section"

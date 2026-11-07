@@ -1,4 +1,4 @@
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, Ref } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { useRef } from "react";
 
 import "./tabs.css";
@@ -26,7 +26,7 @@ export type TabsProps<T extends string = string> = {
   tablistClassName?: string;
   tabClassName?: string;
   panelsClassName?: string;
-  panelsRef?: Ref<HTMLDivElement>;
+  panelsRef?: { current: HTMLDivElement | null } | ((instance: HTMLDivElement | null) => void) | null;
   keepMounted?: boolean;
   panelAs?: "div" | "section";
 };

@@ -3,6 +3,8 @@
 .tabs {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .tabs__tablist {
@@ -58,6 +60,7 @@
 }
 
 .segmented__item {
+  min-width: var(--hit-min);
   min-height: var(--hit-min);
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--line-bright);
