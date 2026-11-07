@@ -16343,17 +16343,25 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-2",
+        "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/audio/types.ts"
+          ],
+          "from": "f1097d1c1870a389b6e7a306736bf0d826d053ef",
+          "main": "765489f9534d437ca5867d2e3a82e527e23ee6d8"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "42375421385",
+            "run": "42376329465",
             "tier": "strong"
           }
         ],
-        "sha": "f1097d1c1870a389b6e7a306736bf0d826d053ef",
+        "sha": "03d2231cada887e128af8bd984ac0de402b76624",
         "tiers": {
           "claude": "strong"
         }
