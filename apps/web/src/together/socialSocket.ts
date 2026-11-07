@@ -72,8 +72,14 @@ export function parseSocialPush(data: unknown): SocialPush | null {
   }
 }
 
-/** The factory the tab's social socket is opened with; null opens none (`test/setup.ts`). */
-let factory: SocketFactory | null = browserSocket;
+/**
+ * The factory the tab's social socket is opened with; null opens none. It starts off under vitest
+ * (`MODE` is `"test"` only there, as `main.tsx` says), since some tests stub `WebSocket` and count the
+ * sockets a page opens; a test that drives the socket installs its own and puts null back. Not set in
+ * `test/setup.ts`: a module a setup file imports is cached before a test file's `vi.mock` applies, so
+ * this module's imports (`cards/cosmetics.ts` through `game/net.ts`) would never see a mocked one.
+ */
+let factory: SocketFactory | null = import.meta.env.MODE === "test" ? null : browserSocket;
 
 /** Sets the factory the next `socialPoll.ts` start opens its socket with, or turns the socket off (null). */
 export function setSocialSocketFactory(next: SocketFactory | null): void {

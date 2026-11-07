@@ -333,6 +333,10 @@ describe("R3214000 the social socket stands in for the polls", () => {
     setSocialSocketFactory(fake.factory);
   });
 
+  afterEach(() => {
+    setSocialSocketFactory(null);
+  });
+
   it("R3214000 while the connection is up no social poll is sent, and a pushed challenge shows", async () => {
     const server = serve();
     render(<ChallengeToast />);

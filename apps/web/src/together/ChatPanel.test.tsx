@@ -420,6 +420,10 @@ describe("R3214000 the open chat while the social socket is live", () => {
     setSocialSocketFactory(fake.factory);
   });
 
+  afterEach(() => {
+    setSocialSocketFactory(null);
+  });
+
   it("R3214000 while the connection is up the open chat sends no poll and reads once on its friend's chat push", async () => {
     vi.useFakeTimers();
     const messages = conversation();

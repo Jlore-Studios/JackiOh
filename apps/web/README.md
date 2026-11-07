@@ -779,8 +779,8 @@ together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token 
                          (R1379000), the server's social read and chat and friends nudges pushed over it,
                          the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
                          token and a refusal final for its token (R1115000), a socket replaced once the
-                         session holds another token, its frames never shown; off in the unit tests
-                         unless one installs a factory (test/setup.ts, test/fakeSocket.ts)
+                         session holds another token, its frames never shown; off under vitest
+                         unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden
