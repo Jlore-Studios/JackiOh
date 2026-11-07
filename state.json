@@ -16182,11 +16182,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42398580181",
+      "run_id": "pending:a6b01afd-1794076644",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-07T17:54:08Z",
+      "started_at": "2026-11-07T18:38:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -17427,9 +17427,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T18:26:55Z",
+    "at": "2026-11-07T18:38:09Z",
     "url": "",
-    "what": "review #3409 on agy"
+    "what": "revise #3372 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-07T18:19:43Z",
