@@ -16535,6 +16535,24 @@
         "tiers": {}
       },
       "waiting_comment": 6707558352
+    },
+    "3377": {
+      "difficulty_by": {
+        "at": "2026-11-07T13:40:46Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #3367, a hard change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-07T13:40:46Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 3367,
+      "stop_requested": false
     }
   },
   "labels_synced": "fce3910f5abefcbe",
