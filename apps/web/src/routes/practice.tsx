@@ -1124,8 +1124,8 @@ function PracticeScreen({
           config.lesson === undefined && unearned !== null ? (
             <p className="notice practice-unearned" data-testid={practiceTestid.unearned} role="status">
               <span>{earningText(unearned)}</span>
-              <button type="button" aria-label={t("Close")} onClick={() => setUnearnedAckedFor(game)}>
-                {t("Close")}
+              <button type="button" aria-label={t("Dismiss")} onClick={() => setUnearnedAckedFor(game)}>
+                {t("Dismiss")}
               </button>
             </p>
           ) : undefined

@@ -2399,7 +2399,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(toast.closest(".board-notices")).not.toBeNull();
     expect(toast.closest(".control-bar")).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByTestId(practiceTestid.unearned)).toBeNull();
     // The game carries on: the board is still there and End turn still acts.
     expect(screen.getByTestId("game")).toBeInTheDocument();

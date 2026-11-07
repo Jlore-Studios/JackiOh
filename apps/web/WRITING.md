@@ -88,7 +88,8 @@ One verb names each action across all dialogs and screens:
 | Verb | Action |
 |---|---|
 | Back | Leave an inner screen or return to the previous view. |
-| Close | Close a dialog, sheet, or overlay notice. |
+| Close | The name of a dialog's or sheet's ✕ (never a text label on a button: R3221000). |
+| Dismiss | Take an inline notice or panel away: the practice game's earning notice, the Conquest explainer. |
 | Cancel | Dismiss a modal confirmation without taking the action. |
 | Leave | Abandon or exit an ongoing match, practice game, or dungeon fight. |
 | Stay | Remain in the game when prompted to leave or concede. |
