@@ -2009,7 +2009,7 @@
   box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
   clip-path: none;
   color: #f0f3fa;
-  font-size: max(7.5px, 7.4cqh);
+  font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
   font-weight: 700;
   letter-spacing: 0;
   line-height: max(11cqh, 10px);
@@ -2020,6 +2020,26 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+/* A backrow card's plate takes two lines, as its band did, and its name shrinks as the band's did (`--cf-fit`, no pixel
+   floor) before it is clamped: its face is small and a name such as "Pareto Optimality" does not fit one line. */
+.cf[data-layout="compact"][data-card-type] .card-name.card-name-hover {
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  height: max(22cqh, 18px);
+  padding: 0 3cqw;
+  font-size: calc(9cqh * var(--cf-fit, 1));
+  line-height: 1.04;
+  white-space: normal;
+}
+
+/* Two lines, then an ellipsis, if even the floor will not fit. */
+.cf[data-layout="compact"][data-card-type] .card-name.card-name-hover[data-clamped="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .cf[data-layout="minion"][data-card-type] .card-name.card-name-hover {

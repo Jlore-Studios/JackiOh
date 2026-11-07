@@ -313,7 +313,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare || !showStaticName ? "" : face.name);
+  useFitText(nameRef, bare ? "" : showStaticName ? face.name : `hover ${face.name}`);
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
@@ -474,7 +474,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
           </span>
         ) : (
           // R3339000: transparent until hover or focus, and in the accessibility tree all the while: the name is read as it was.
-          <span className="card-name card-name-hover">{face.name}</span>
+          <span className="card-name card-name-hover" ref={nameRef}>
+            {face.name}
+          </span>
         )}
 
         {signed && <FullArtSignature name={face.englishName ?? face.name} defId={face.defId} />}

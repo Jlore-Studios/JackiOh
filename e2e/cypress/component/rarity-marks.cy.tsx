@@ -111,11 +111,13 @@ describe("R2721000 the rarity marks on a face", () => {
       expect(sheen.content, "the sheen layer").to.not.equal("none");
       expect(sheen.backgroundImage, "the Mythic sheen").to.contain("255, 106, 213");
       expect(getComputedStyle(hand).backgroundImage, "the rainbow edge").to.contain("conic-gradient");
-      // The board Mythic's ring is back.
-      expect(
-        getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element).boxShadow,
-        "the board Mythic ring",
-      ).to.contain("148, 208, 255");
+      // R3339000: a Mythic Unit on the board is art first: its art runs edge to edge, no oval to wear a ring, so the
+      // Mythic's rarity foil is the rainbow edge round the art, as a full-art Unit's rim is (R3046000).
+      const board = faceOf(doc, `${MYTHIC}-board`);
+      expect(board.getAttribute("data-art-first"), "the board Mythic is art first").to.equal("true");
+      expect(board.getAttribute("data-foil"), "the board Mythic wears its foil").to.equal("animated");
+      expect(getComputedStyle(board.querySelector(".cf-portrait") as Element).boxShadow, "no oval ring on edge-to-edge art").to.equal("none");
+      expect(getComputedStyle(board).backgroundImage, "the board Mythic's rainbow edge").to.contain("conic-gradient");
       // Both Legendary faces are as at the defaults.
       for (const name of [`${LEGENDARY}-hand`, `${LEGENDARY}-board`]) {
         const cf = faceOf(doc, name);

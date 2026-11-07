@@ -578,8 +578,11 @@ describe("B18: Card picks its form from its props", () => {
       // R3046000: a full-art card (the fixture's core-004, -008, -011 and -013) prints its art across the face.
       const fullArt = isFullArtCard(u.defId);
       expect(cf.getAttribute("data-full-art"), u.defId).toBe(fullArt ? "true" : null);
-      inside(cf, `.cf-portrait > .cf-art.cf-art--${fullArt ? "full" : "oval"}`);
-      expect(cf.querySelector(`.cf-art--${fullArt ? "oval" : "full"}`), u.defId).toBeNull();
+      // R3339000: a Legendary or Mythic Unit is art first in any look: its art runs edge to edge, full-art card or not.
+      const artFirst = cf.getAttribute("data-art-first") === "true";
+      const edgeToEdge = fullArt || artFirst;
+      inside(cf, `.cf-portrait > .cf-art.cf-art--${edgeToEdge ? "full" : "oval"}`);
+      expect(cf.querySelector(`.cf-art--${edgeToEdge ? "oval" : "full"}`), u.defId).toBeNull();
       expect(cf.querySelector(".card-text"), u.defId).toBeNull();
     }
   });
@@ -597,7 +600,8 @@ describe("B18: Card picks its form from its props", () => {
       const name = inside(cf, ".card-name");
       expect(art.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING, u.defId).not.toBe(0);
       expect(name.textContent, u.defId).toBe(nameOf(u.defId));
-      expect(art.classList.contains("cf-art--full"), u.defId).toBe(isFullArtCard(u.defId));
+      // R3339000: edge to edge for a full-art card and for an art-first one (Legendary or Mythic), the oval for the rest.
+      expect(art.classList.contains("cf-art--full"), u.defId).toBe(isFullArtCard(u.defId) || cf.getAttribute("data-art-first") === "true");
       // Its stats, cost and chips stay on the face, full art or not.
       expect(inside(cf, ".stat-attack").getAttribute("data-attack"), u.defId).toBe(String(u.attack));
       inside(cf, ".cost-gem");

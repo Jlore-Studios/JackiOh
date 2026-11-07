@@ -154,7 +154,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   const { artFirst, staticName } = boardNameOf(face, cardLook, settings.boardNames);
   const dormant = dormantAttr(face.dormant);
   const nameRef = useRef<HTMLSpanElement>(null);
-  useFitText(nameRef, staticName ? face.name : "");
+  // The hover plate is fitted as the static plate is: the name it shows is whole, or ends in an ellipsis at the floor.
+  useFitText(nameRef, staticName ? face.name : `hover ${face.name}`);
 
   const attackTone = face.stats?.attackTone ?? "base";
   const healthTone = face.stats?.healthTone ?? "base";
@@ -216,7 +217,9 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             {face.name}
           </span>
         ) : (
-          <span className="card-name card-name-hover">{face.name}</span>
+          <span className="card-name card-name-hover" ref={nameRef}>
+            {face.name}
+          </span>
         )}
 
         {unit.vanilla === true && (
