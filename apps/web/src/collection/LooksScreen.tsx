@@ -28,6 +28,7 @@ import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { buyChase, getCosmeticPacks, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarState } from "../net/api.ts";
 import { useBackLayer } from "../net/backLayers.ts";
+import { Segmented } from "../tabs/index.ts";
 import { messageOf } from "../net/errors.ts";
 import { spendOutNow } from "../net/spending.ts";
 import { REGISTRY, type RegistryCosmetic } from "../shop/shop.ts";
@@ -144,21 +145,17 @@ function PayQuestion({
     <div className="collection-looks__question" role="alertdialog" aria-labelledby={questionId} data-testid={T.looksDialog(rung.id)} onKeyDown={cancelOnEscape}>
       <p id={questionId}>{questionWords(asking.way, rung.name)}</p>
       {ways.length > 1 ? (
-        <div className="collection-looks__ways" role="group" aria-label={t("Pay with")}>
-          {ways.map((way) => (
-            <button
-              key={way}
-              type="button"
-              data-testid={T.looksPay(rung.id, way)}
-              aria-pressed={asking.way === way}
-              onClick={() => {
-                choose(way);
-              }}
-            >
-              {wayWords(way, held)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label={t("Pay with")}
+          className="collection-looks__ways"
+          value={asking.way}
+          onChange={choose}
+          options={ways.map((way) => ({
+            value: way,
+            label: wayWords(way, held),
+            testId: T.looksPay(rung.id, way),
+          }))}
+        />
       ) : null}
       <div className="collection-looks__answers">
         <button type="button" data-testid={T.looksConfirm(rung.id)} disabled={busy} onClick={confirm}>

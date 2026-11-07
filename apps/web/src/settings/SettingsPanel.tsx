@@ -24,6 +24,7 @@ import { retrySettingsSync, useSettingsSyncState } from "./accountSync.ts";
 import { TryAgainButton } from "../auth/AccountError.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
+import { Tabs } from "../tabs/index.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
@@ -136,7 +137,6 @@ export default function SettingsPanel({
   const sync = useSettingsSyncState();
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef(new Map<SettingsSectionId, HTMLButtonElement>());
   const base = useId();
   // R2127000: Back closes the panel as Close does.
   useBackLayer(onClose);
@@ -175,21 +175,6 @@ export default function SettingsPanel({
   useEffect(() => {
     if (bodyRef.current !== null) bodyRef.current.scrollTop = 0;
   }, [active]);
-
-  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
-    const at = active === undefined ? -1 : ids.indexOf(active);
-    let to: number;
-    if (event.key === "ArrowRight") to = (at + 1) % ids.length;
-    else if (event.key === "ArrowLeft") to = (at - 1 + ids.length) % ids.length;
-    else if (event.key === "Home") to = 0;
-    else if (event.key === "End") to = ids.length - 1;
-    else return;
-    event.preventDefault();
-    const id = ids[to];
-    if (id === undefined) return;
-    choose(id);
-    tabRefs.current.get(id)?.focus();
-  };
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === "Escape") {
@@ -248,62 +233,42 @@ export default function SettingsPanel({
             <span aria-hidden="true">✕</span>
           </button>
         </header>
-        <div
-          className="settings-tabs"
-          role="tablist"
-          aria-label={t("Settings sections")}
-          data-testid="settings-tablist"
-          onKeyDown={onTabKeyDown}
-        >
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              ref={(node) => {
-                if (node === null) tabRefs.current.delete(section.id);
-                else tabRefs.current.set(section.id, node);
-              }}
-              type="button"
-              role="tab"
-              id={`${base}-tab-${section.id}`}
-              className="settings-tab"
-              data-testid={`settings-tab-${section.id}`}
-              aria-selected={section.id === active}
-              aria-controls={`${base}-panel-${section.id}`}
-              tabIndex={section.id === active ? 0 : -1}
-              onClick={() => {
-                choose(section.id);
-              }}
-            >
-              {t(section.title)}
-            </button>
-          ))}
-        </div>
-        <div className="settings-body" ref={bodyRef}>
-          {sections.map((section) => {
+        <Tabs
+          label={t("Settings sections")}
+          testId="settings-tablist"
+          idPrefix={base}
+          value={active}
+          onChange={choose}
+          keepMounted
+          tablistClassName="settings-tabs"
+          tabClassName="settings-tab"
+          panelsClassName="settings-body"
+          panelsRef={bodyRef}
+          panelAs="section"
+          items={sections.map((section) => {
             const sectionSlots = slots.filter((slot) => slot.section === section.id);
-            return (
-              <section
-                key={section.id}
-                id={`${base}-panel-${section.id}`}
-                className="settings-section"
-                role="tabpanel"
-                aria-labelledby={`${base}-tab-${section.id}`}
-                hidden={section.id !== active}
-                data-testid={`settings-section-${section.id}`}
-              >
-                <h2 className="settings-section-title">{t(section.title)}</h2>
-                {section.controls.map((setting) => (
-                  <SettingSwitch key={setting} setting={setting} checked={settings[setting]} />
-                ))}
-                {sectionSlots.map((slot) => (
-                  <div key={slot.id} className="settings-slot" data-settings-slot={slot.id}>
-                    {slot.render()}
-                  </div>
-                ))}
-              </section>
-            );
+            return {
+              id: section.id,
+              label: t(section.title),
+              testId: `settings-tab-${section.id}`,
+              panelTestId: `settings-section-${section.id}`,
+              panelClassName: "settings-section",
+              panel: (
+                <>
+                  <h2 className="settings-section-title">{t(section.title)}</h2>
+                  {section.controls.map((setting) => (
+                    <SettingSwitch key={setting} setting={setting} checked={settings[setting]} />
+                  ))}
+                  {sectionSlots.map((slot) => (
+                    <div key={slot.id} className="settings-slot" data-settings-slot={slot.id}>
+                      {slot.render()}
+                    </div>
+                  ))}
+                </>
+              ),
+            };
           })}
-        </div>
+        />
         {/*
           R1758000: a save to the account that failed says so, quietly, on every tab, with Try again;
           nothing while a request is out, once one succeeds, or with nothing syncing. R634's own

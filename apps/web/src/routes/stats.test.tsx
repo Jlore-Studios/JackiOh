@@ -1607,6 +1607,37 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
+  it("#3222 stats tabs answer arrow keys, moving between Cards, Sets, and Players", async () => {
+    serveSets();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    const tablist = screen.getByRole("tablist", { name: "Statistics views" });
+    const cardsTab = screen.getByTestId(statsTestid.tabCards);
+    const setsTab = screen.getByTestId(statsTestid.tabSets);
+    const playersTab = screen.getByTestId(statsTestid.tabPlayers);
+
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(cardsTab).toHaveAttribute("tabindex", "0");
+    expect(setsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(setsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(setsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(cardsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+  });
+
   it("R1966000 a read that fails shows Retry, which asks again", async () => {
     let up = false;
     serveSets(() =>

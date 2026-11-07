@@ -91,35 +91,6 @@
   cursor: inherit;
 }
 
-/* Tabs */
-.stats-tabs {
-  display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--line, #2c3245);
-  padding-bottom: 2px;
-}
-
-.stats-tab {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-dim, #9aa1b8);
-  font-size: 15px;
-  font-weight: 600;
-  padding: 8px 16px;
-  cursor: var(--cursor-glove-point, pointer);
-  transition: all 120ms ease;
-}
-
-.stats-tab:hover {
-  color: var(--text, #fff);
-}
-
-.stats-tab--active {
-  color: var(--accent, #60a5fa);
-  border-bottom-color: var(--accent, #60a5fa);
-}
-
 /* Filter bar */
 .stats-filter-bar {
   display: flex;
@@ -188,8 +159,7 @@
   font-size: 12.5px;
 }
 
-.app-shell.stats-page .stats-sort-dir,
-.app-shell.stats-page .stats-view-btn {
+.app-shell.stats-page .stats-sort-dir {
   padding: 5px 12px;
   border-radius: 6px;
   border: 1px solid var(--line-bright, #454d66);
@@ -197,11 +167,6 @@
   color: var(--text, #fff);
   font-size: 13px;
   cursor: var(--cursor-glove-point, pointer);
-}
-
-.app-shell.stats-page .stats-view-btn[aria-pressed="true"],
-.app-shell.stats-page .stats-view-btn.stats-view-btn--active {
-  border-color: var(--tavern-gold, #f5a623);
 }
 
 .stats-grid {

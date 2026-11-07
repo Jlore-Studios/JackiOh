@@ -95,7 +95,7 @@ const UNMIGRATED: Record<string, number> = {
   "routes/purchases.css": 2,
   "routes/replays.css": 5,
   "routes/site-footer.css": 5,
-  "routes/stats.css": 82,
+  "routes/stats.css": 78,
   "routes/top-bar.css": 9,
   "settings/changeEmail.css": 4,
   "settings/settings.css": 43,
