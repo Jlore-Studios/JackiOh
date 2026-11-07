@@ -43,6 +43,7 @@ import {
   isFullBleed,
   offeredOn,
 } from "./versions.ts";
+import { facePicture } from "../test/artPicture.ts";
 import { legacyText } from "../test/faceData.ts";
 
 /** R2943000: #2943's two versions, in the registry's order. */
@@ -94,9 +95,9 @@ function drawnBy(art: HTMLElement | null | undefined): string {
   return decodeURIComponent(art?.style.backgroundImage ?? "");
 }
 
-/** The art window's picture: what its CSS background draws (the backdrop on an Out of frame face). */
+/** The art window's picture (the backdrop on an Out of frame face); R3344000: the planes' together on a face with depth (test/artPicture.ts). */
 function pictureOf(cf: HTMLElement): string {
-  return drawnBy(cf.querySelector<HTMLElement>(".cf-art:not(.cf-art--cutout)"));
+  return facePicture(cf);
 }
 
 /** The Out of frame face's cut-out subject, or null. */

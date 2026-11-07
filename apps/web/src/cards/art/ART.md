@@ -144,7 +144,8 @@ A card on the board moves its art too, and answers the player (`artLive.ts`, `ar
   the subject over it (`.cf-art-subject`, part "subject") and the motes (`.cf-art-motes`, `particleLayerUri`: the
   particles alone). So every painter's roles, subject, light and motes, give every card the reactions, and a recipe
   needs nothing of its own for them. A picture with no parts (a delivered file, a restyle, a Starship's, a Legacy
-  card's, a Battleship's) stays one image and answers as a whole.
+  card's, a Battleship's) stays one image and answers as a whole. So does a face that draws depth planes (R3344000, an Epic or rarer face):
+  its planes are its layers, so its window is not split again.
 - **The reactions.** Hover or focus: the subject turns and leans toward the pointer (`--art-aim-x`/`-y` from
   `aimOf`), the motes scatter and settle. Press: the subject flinches (`scale`) and springs back on the overshoot
   curve. `attackDeclared`: the subject swings on the attack's own `--fx-lunge-x/y` and the motes fire. All in

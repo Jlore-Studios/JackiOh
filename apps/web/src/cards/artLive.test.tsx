@@ -181,6 +181,28 @@ describe("R3340000 which board faces move", () => {
     expect(tile?.hasAttribute("data-art-hover")).toBe(false);
     for (const cf of [mythic, animated]) expect(cf?.getAttribute("data-art-hover"), "a card in play tracks the pointer").toBe("false");
   });
+
+  it("R3340000 a moving backrow face with depth planes draws them in place of the layers, and still answers with its whole art", () => {
+    // R3344000 gives an Epic or rarer face its picture as depth planes (far in the window, the rest in `.cf-planes`); such a
+    // window has parts, not the whole picture the three layers split, so it moves through the planes and answers whole.
+    const mythicSpell = Object.values(CATALOG).find((def) => def.rarity === "Mythic" && def.type === "Spell" && !def.token);
+    if (mythicSpell === undefined) throw new Error("no Mythic Spell");
+    const { container } = render(
+      <FullArtOwned owned="every">
+        <div className="card cf-host">
+          <CardFace face={faceModel({ defId: mythicSpell.id, def: defOf(mythicSpell.id), radiant: false })} layout="compact" worn onBoard />
+        </div>
+      </FullArtOwned>,
+    );
+    const cf = container.querySelector<HTMLElement>(".cf--compact");
+    expect(cf?.getAttribute("data-art-motion")).toBe("animated");
+    expect(cf?.getAttribute("data-depth"), "an Epic or rarer face draws its picture as planes").toBe("true");
+    expect(container.querySelectorAll(".cf-plane").length).toBeGreaterThan(0);
+    expect(container.querySelector("[data-art-live]"), "planes are the layers: the window is not split again").toBeNull();
+    expect(container.querySelector(".cf-art-subject")).toBeNull();
+    fire(host(cf as HTMLElement), "pointerenter");
+    expect(cf?.getAttribute("data-art-hover")).toBe("true");
+  });
 });
 
 describe("R3340000 the slots go by rank, in one budget the hand shares", () => {

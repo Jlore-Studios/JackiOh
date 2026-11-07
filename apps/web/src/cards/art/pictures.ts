@@ -22,6 +22,7 @@
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { fmt, hashId } from "./hash.ts";
+import type { ArtRole } from "./motion.ts";
 import { ART_BOX } from "./procedural.ts";
 
 /**
@@ -73,10 +74,64 @@ const SHOWCASE_PREFIX = "showcase-";
 const SHOWCASE_RESTYLES: ReadonlySet<string> = new Set(Object.values(SHOWCASE_FAMILIES).map((family) => `${SHOWCASE_PREFIX}${family}`));
 
 /**
- * R2943001: which part of a painter's picture a face draws: all of it, its backdrop alone (the subject left out) or
- * its subject alone (on nothing), which Out of frame lays over its frame.
+ * R3344000: the depth planes a face with depth stacks a painter's picture in, far to nearest: the background, the
+ * props, the subject, and what lies over it (its over layers, its light and its motes, and its particles).
  */
-export type ArtPart = "whole" | "backdrop" | "subject";
+export type ArtPlane = "far" | "middle" | "near" | "nearest";
+
+/** R3344000: every plane, far to nearest, the order a face stacks them in. */
+export const ART_PLANES: readonly ArtPlane[] = ["far", "middle", "near", "nearest"];
+
+/**
+ * R2943001: which part of a painter's picture a face draws: all of it, its backdrop alone (the subject left out) or
+ * its subject alone (on nothing), which Out of frame lays over its frame. R3344000: or one depth plane of it.
+ */
+export type ArtPart = "whole" | "backdrop" | "subject" | ArtPlane;
+
+/** R3344000: the plane each of a painter's layer roles (motion.ts, R2715001) is drawn in. */
+export const PLANE_OF_ROLE: Readonly<Record<ArtRole, ArtPlane>> = {
+  back: "far",
+  props: "middle",
+  subject: "near",
+  over: "nearest",
+  light: "nearest",
+  motes: "nearest",
+};
+
+/**
+ * R2943001, R3344000: whether `part` draws a layer of `role`: the whole picture every layer, its backdrop every layer
+ * but the subject's, its subject the subject's alone, and a plane the layers of its roles (`PLANE_OF_ROLE`).
+ */
+export function partDraws(part: ArtPart, role: ArtRole): boolean {
+  switch (part) {
+    case "whole":
+      return true;
+    case "backdrop":
+      return role !== "subject";
+    case "subject":
+      return role === "subject";
+    default:
+      return PLANE_OF_ROLE[role] === part;
+  }
+}
+
+/**
+ * R2943001, R3344000: whether `part` draws what a painter holds in no role, which belongs to `plane`: its sky and rays
+ * and vignette to the far plane, its particles to the nearest. The whole picture draws all of it, its backdrop all but
+ * what the subject's plane holds, its subject only that, and a plane its own.
+ */
+export function partHolds(part: ArtPart, plane: ArtPlane): boolean {
+  switch (part) {
+    case "whole":
+      return true;
+    case "backdrop":
+      return plane !== "near";
+    case "subject":
+      return plane === "near";
+    default:
+      return part === plane;
+  }
+}
 
 /**
  * R2940001: which of a card's pictures a face draws: its normal one, Alt art's own, or the normal one sketched;
