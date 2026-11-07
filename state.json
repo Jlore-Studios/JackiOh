@@ -35870,7 +35870,8 @@
       "2026-11-07T22:14:56Z,claude-8,stream,call,42419490474,3,2026-11-08T03:10:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-07T22:03:18Z,42415293157,agy,gemini-3.8-flash-high,build,3345,medium,built,,43.4,1194061,151354,0,,31,49,93,99,1282.8,agy,none,,1"
+      "2026-11-07T22:03:18Z,42415293157,agy,gemini-3.8-flash-high,build,3345,medium,built,,43.4,1194061,151354,0,,31,49,93,99,1282.8,agy,none,,1",
+      "2026-11-07T22:15:37Z,42419490474,claude-8,opus+sonnet,review,3419,medium,reviewed,,1.4,16,10237,732376,0.513,1,3,,,1.2,,none,,1"
     ]
   },
   "version": 1
