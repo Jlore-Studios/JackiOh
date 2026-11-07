@@ -17441,6 +17441,11 @@
       "owner": "claude-8",
       "owner_since": "2026-11-07T01:23:34Z",
       "owner_why": "it took it up; released from its hold: `claude-8` has no runner free where it runs",
+      "paused": {
+        "at": "2026-11-07T02:54:33Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T00:40:02Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -17450,7 +17455,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-06T23:47:49Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "42327552207",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T02:06:32Z",
