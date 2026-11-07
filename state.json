@@ -18547,6 +18547,7 @@
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 128,
       "started_at": "2026-11-07T09:40:43Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36558,7 +36559,7 @@
         "verdict": "clean"
       }
     ],
-    "count": 127
+    "count": 128
   },
   "statistics": {
     "at": "2026-11-07T11:06:35Z"
