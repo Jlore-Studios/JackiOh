@@ -18406,13 +18406,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
-        "sha": "097ef93656e599b15e07151a2c117321f1710cea",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "42342108754",
+            "tier": "strong"
+          }
+        ],
+        "sha": "f763d9bfb8c94f64d626d144da8776b635eac268",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "3362": {
