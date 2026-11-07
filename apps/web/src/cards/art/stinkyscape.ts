@@ -1,7 +1,9 @@
 // R2170000 (#2170): the Stinkyscape set's own art, drawn instead of `artSpec`: a space backdrop under
 // one subject its family fixes and its name details. Presentation only (CLAUDE.md rule 7); geometry
 // comes from streams the Radiant face shares, so the faces differ only in paint and gold rays. No
-// other set reaches this file, so no shipped card's picture moves (R503).
+// other set reaches this file, so no shipped card's picture moves (R503). R3333001: a Starship Piece's
+// own card draws its module (starshipModules.ts) in its bay; R3333000: a Starship in play is drawn from
+// its pieces and its design (starshipHulls.ts, `starshipSvg`); R3333002: a piece's module icon.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -11,8 +13,8 @@ import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } fr
 import { MOTIFS, motifFor } from "./motifs.ts";
 import type { ArtPart } from "./pictures.ts";
 import {
-  hardpointPlacements, hullMarkup, liveryPaint, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX, starshipClassOf,
-  type HullPaint, type StarshipArt,
+  escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
+  starshipClassOf, type HullPaint, type StarshipArt,
 } from "./starshipHulls.ts";
 import {
   MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type StarshipModule,
@@ -1659,12 +1661,13 @@ export function starshipSvg(ship: StarshipArt): string {
   const shown = ship.pieces.slice(0, STARSHIP_MODULES_MAX);
   const modules = shown.map((piece) => starshipModuleOf(piece.defId));
   const places = hardpointPlacements(cls, modules.map((m) => m.mount));
+  const paints = modules.map((m, i) => (shown[i]?.radiant === true || ship.radiant ? gild(modulePaint(m)) : modulePaint(m)));
   const mounted = (keep: (m: StarshipModule) => boolean): string =>
     modules
       .map((m, i) => {
         const place = places[i];
-        if (place === undefined || !keep(m)) return "";
-        const paint = shown[i]?.radiant === true || ship.radiant ? gild(modulePaint(m)) : modulePaint(m);
+        const paint = paints[i];
+        if (place === undefined || paint === undefined || !keep(m)) return "";
         const wide = BARBETTE_WIDTH * MODULE_BOX * place.scale;
         const barbette = place.lift > 0 ? rect(place.x - wide / 2, place.y, wide, place.lift, p.hull, inked(p)) : "";
         return barbette + group(at(place.x, place.y, 0, place.scale), moduleMarkup(m, paint));
@@ -1677,11 +1680,12 @@ export function starshipSvg(ship: StarshipArt): string {
   }
   body.push(mounted((m) => m.mount === "stern"));
   body.push(hullMarkup(design, cls, p, ship.launched));
+  body.push(ledgerMarkup(cls, paints.map((paint) => [paint.accent, paint.glow] as const), ship.launched, p));
   body.push(mounted((m) => m.mount !== "stern"));
   if (ship.launched) {
     const escorts = Math.min(STARSHIP_ESCORTS_MAX, Math.ceil(ship.pieces.length / STARSHIP_PIECES_PER_ESCORT));
     STARSHIP_ESCORTS.slice(0, escorts).forEach(([x, gap]) => {
-      body.push(group(at(x * L, gap < 0 ? -H + gap : H + gap, 0, STARSHIP_ESCORT_SCALE), hullMarkup(design, starshipClassOf(0), p, true)));
+      body.push(group(at(x * L, gap < 0 ? -H + gap : H + gap, 0, STARSHIP_ESCORT_SCALE), escortMarkup(design, p)));
     });
   } else {
     const last = places[places.length - 1];

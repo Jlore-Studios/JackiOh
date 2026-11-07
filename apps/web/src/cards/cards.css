@@ -644,6 +644,16 @@
   gap: 0.2em 0.45em;
 }
 
+/* R3333002: a piece's module icon beside its name, the one its hull plate draws (StarshipPieces.tsx sets the image). */
+.cf .cf-starship-icon {
+  display: inline-block;
+  width: 1.5em;
+  height: 1em;
+  margin-right: 0.25em;
+  vertical-align: -0.15em;
+  background: center / contain no-repeat;
+}
+
 .cf .cf-starship-piece + .cf-starship-piece::before {
   content: "·";
   margin-right: 0.45em;

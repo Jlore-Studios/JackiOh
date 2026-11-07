@@ -9,7 +9,7 @@ import type { StarshipPieceRef } from "../../wire/generated/StarshipPieceRef.ts"
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId } from "./hash.ts";
 import { MODULE_BOX, type Hardpoint } from "./starshipModules.ts";
-import { circle, ellipse, glyph, group, inked, line, OUTLINE, path, poly, rect, twinkle, type Paint } from "./stinkyDraw.ts";
+import { circle, ellipse, glyph, inked, line, OUTLINE, path, poly, rect, twinkle, type Paint } from "./stinkyDraw.ts";
 import { mixHex } from "./themes.ts";
 
 export type StarshipDesignId =
@@ -86,7 +86,7 @@ export const STARSHIP_DESIGNS: Readonly<Record<StarshipDesignId, HullDesign>> = 
   },
 };
 
-/** R1852004's seven names, each its design; stinkyscape.test.ts holds the names to the engine's `STARSHIP_NAMES`. */
+/** R1852004's seven names, each its design; starship.test.tsx holds the names to the engine's `STARSHIP_NAMES`. */
 export const STARSHIP_DESIGN_NAMES: Readonly<Record<string, StarshipDesignId>> = {
   "The Ninth Life": "ninth-life",
   "Frontier's Promise": "frontiers-promise",
@@ -264,10 +264,18 @@ function prow(kind: Prow, L: number, H: number, p: HullPaint, lit: boolean): { o
   }
 }
 
+const PORTHOLE = 0.75;
+
+/** Many boxes of one fill as one path, so a long window line weighs little. */
+function boxes(list: readonly (readonly [number, number, number, number])[], fill: string): string {
+  return path(list.map(([x, y, w, h]) => `M${fmt(x)} ${fmt(y)}h${fmt(w)}v${fmt(h)}h${fmt(-w)}Z`).join(""), fill);
+}
+
 /** The window line a design draws along its hull, lit or dark. */
 function windows(kind: WindowLine, L: number, H: number, p: HullPaint, lit: boolean): string {
   const lamp = lit ? p.window : p.dark;
   const out: string[] = [];
+  const panes: [number, number, number, number][] = [];
   const y = -0.38 * H;
   const from = -0.66 * L;
   const to = 0.6 * L;
@@ -275,33 +283,50 @@ function windows(kind: WindowLine, L: number, H: number, p: HullPaint, lit: bool
     for (let x = from; x <= to; x += step) draw(x);
   };
   switch (kind) {
-    case "portholes":
-      along(3.6, (x) => out.push(circle(x, y, 0.75, lamp, inked(p))));
+    case "portholes": {
+      let d = "";
+      along(3.6, (x) => {
+        d += `M${fmt(x - PORTHOLE)} ${fmt(y)}a${PORTHOLE} ${PORTHOLE} 0 1 0 ${2 * PORTHOLE} 0a${PORTHOLE} ${PORTHOLE} 0 1 0 ${-2 * PORTHOLE} 0Z`;
+      });
+      out.push(path(d, lamp, inked(p)));
       break;
+    }
     case "ribbon":
       out.push(rect(from, y - 0.6, to - from, 1.2, lamp, { rx: 0.6 }));
       break;
     case "grid":
-      along(2.4, (x) => out.push(rect(x, y - 1.1, 1.2, 0.8, lamp), rect(x, y + 0.3, 1.2, 0.8, lamp)));
+      along(2.4, (x) => panes.push([x, y - 1.1, 1.2, 0.8], [x, y + 0.3, 1.2, 0.8]));
       break;
-    case "lanterns":
-      along(4.8, (x) => out.push(rect(x - 0.8, y - 1.5, 1.6, 0.5, p.trim), circle(x, y, 0.85, lamp)));
+    case "lanterns": {
+      const caps: [number, number, number, number][] = [];
+      along(4.8, (x) => {
+        caps.push([x - 0.8, y - 1.5, 1.6, 0.5]);
+        out.push(circle(x, y, 0.85, lamp));
+      });
+      out.push(boxes(caps, p.trim));
       break;
-    case "slits":
-      along(3, (x) => out.push(poly([[x, y + 0.5], [x + 1.6, y - 0.5], [x + 2.2, y - 0.5], [x + 0.6, y + 0.5]], lamp, "none")));
+    }
+    case "slits": {
+      let d = "";
+      along(3, (x) => {
+        d += `M${fmt(x)} ${fmt(y + 0.5)}l1.6 -1h0.6l-1.6 1Z`;
+      });
+      out.push(path(d, lamp));
       break;
+    }
     case "cracks":
       out.push(path(`M${fmt(from)} ${fmt(y)}L${fmt(from + 4)} ${fmt(y - 1)}L${fmt(from + 7)} ${fmt(y + 0.6)}L${fmt(from + 11)} ${fmt(y - 0.4)}`, "none", { stroke: lamp, "stroke-width": 0.6 }));
       out.push(path(`M${fmt(0.1 * L)} ${fmt(0.1 * H)}L${fmt(0.25 * L)} ${fmt(-0.3 * H)}L${fmt(0.32 * L)} ${fmt(0.2 * H)}L${fmt(0.5 * L)} ${fmt(-0.1 * H)}`, "none", { stroke: lamp, "stroke-width": 0.5 }));
-      along(6, (x) => out.push(rect(x, y - 0.4, 1.4, 0.8, lamp)));
+      along(6, (x) => panes.push([x, y - 0.4, 1.4, 0.8]));
       break;
     case "sparse":
       along(7, (x) => out.push(rect(x, y - 1.6, 0.9, 2.6, lamp, { rx: 0.45 })));
       break;
     case "dark":
-      along(3, (x) => out.push(rect(x, y - 0.5, 1, 1, lamp)));
+      along(3, (x) => panes.push([x, y - 0.5, 1, 1]));
       break;
   }
+  if (panes.length > 0) out.push(boxes(panes, lamp));
   return out.join("");
 }
 
@@ -336,6 +361,51 @@ export function hullMarkup(design: HullDesign, cls: StarshipClass, p: HullPaint,
   }
   if (big >= 3) out.push(rect(-0.76 * L, -2.9 * H, 0.06 * L, 0.7 * H, p.hull, inked(p)), circle(-0.73 * L, -2.9 * H, 0.7, lit ? p.glow : p.dark));
   out.push(front.over);
+  return out.join("");
+}
+
+/**
+ * An escort: a frigate of `design` in silhouette, its prow's outline, stripe and engine burn but none of its windows,
+ * emblem or towers, which at an escort's size no one could see.
+ */
+export function escortMarkup(design: HullDesign, p: HullPaint): string {
+  const L = FRIGATE.length;
+  const H = FRIGATE.height;
+  const front = prow(design.prow, L, H, p, true);
+  const outline: Pt[] = [[-L, -0.7 * H], [-0.88 * L, -H], [0.72 * L, -H], ...front.outline, [0.6 * L, H], [-0.7 * L, H], [-L, 0.7 * H]];
+  return (
+    poly([[-L, -0.45 * H], [-1.5 * L, 0], [-L, 0.45 * H]], p.glow, "none", { opacity: 0.8 }) +
+    poly(outline, p.hull, p.line) +
+    rect(-0.95 * L, 0.3 * H, 1.55 * L, 0.2 * H, p.accent)
+  );
+}
+
+// The ledger
+
+/** How far apart a ledger's lamps sit at most, and their size. */
+const LEDGER_STEP_MAX = 4;
+const LEDGER_LAMP = 0.6;
+const LEDGER_Y = 0.8;
+const LEDGER_FROM = 0.5;
+const LEDGER_TO = -0.7;
+/** A Dormant ledger's lamps are unlit, its colors this faint. */
+const LEDGER_DIM = 0.45;
+
+/**
+ * A hull's ledger: a running light along its keel for each module it mounts, the oldest nearest the bow, each in its
+ * module's two colors (`ring`, its group's; `core`, its kind's), so the order its pieces went in shows wherever on the
+ * hull they mount. Lit once it launches.
+ */
+export function ledgerMarkup(cls: StarshipClass, lamps: readonly (readonly [string, string])[], lit: boolean, p: HullPaint): string {
+  if (lamps.length === 0) return "";
+  const L = cls.length;
+  const y = LEDGER_Y * cls.height;
+  const step = Math.min(LEDGER_STEP_MAX, (L * (LEDGER_FROM - LEDGER_TO)) / Math.max(1, lamps.length - 1));
+  const out: string[] = [rect(LEDGER_TO * L - 1, y - 1, LEDGER_FROM * L - LEDGER_TO * L + 2, 2, p.dark, { rx: 1, opacity: 0.8 })];
+  lamps.forEach(([ring, core], k) => {
+    const x = LEDGER_FROM * L - k * step;
+    out.push(circle(x, y, LEDGER_LAMP, ring, lit ? {} : { opacity: LEDGER_DIM }), circle(x, y, LEDGER_LAMP * 0.5, core, lit ? {} : { opacity: LEDGER_DIM }));
+  });
   return out.join("");
 }
 
