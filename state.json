@@ -17733,23 +17733,6 @@
       "requested_by": "jgoetzmann",
       "run_id": "42341431254",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "plan",
-        "artifact": 13560320585,
-        "artifact_bytes": 299173,
-        "artifact_name": "work",
-        "at": "2026-11-07T04:13:15Z",
-        "bytes": 392156,
-        "cwd": "/home/runner/work/_temp/work/item-3347",
-        "ended": "interrupted: `claude-3` reached its usage limit",
-        "head": "abe3471c89603b826f709de9898e51227ed69ad9",
-        "id": "a3eb2ad3-4fa8-4bce-af8d-eda66ab7903c",
-        "kind": "plan",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-3347",
-        "provider": "claude-3",
-        "run": "42336418114"
-      },
       "started_at": "2026-11-07T05:08:13Z",
       "stop_requested": false,
       "taken_asks": []
