@@ -18053,6 +18053,14 @@
         }
       },
       "waiting_comment": 6700265883
+    },
+    "3358": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-07T02:42:15Z",
+      "issue": 3339,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
