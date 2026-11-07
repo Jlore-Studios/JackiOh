@@ -225,6 +225,8 @@ describe("R3331000 the five proof cards", () => {
       expect(radiant.sky, id).not.toEqual(base.sky);
       expect(base.rays, id).toHaveLength(0);
       expect(radiant.rays.length, id).toBeGreaterThan(0);
+      // Each face's shapes differ from the picture it drew with no recipe (Classic keeps no fixture of its own).
+      for (const face of [false, true]) expect(specOf(card, face).ridges, id).not.toEqual(specOf(card, face, null).ridges);
       // What the face shows draws every shape of the scene, on both faces.
       for (const face of [false, true]) {
         const svg = svgOf(proceduralCardArtUri(card, face));
