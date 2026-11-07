@@ -17313,11 +17313,6 @@
       "owner": "claude-3",
       "owner_since": "2026-11-07T00:13:34Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-07T01:18:50Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "planned_at": "2026-11-07T00:39:07Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
