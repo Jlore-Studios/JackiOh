@@ -15702,15 +15702,6 @@
       "failures": 0,
       "feedback_since": "2026-11-07T09:53:56Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-07T10:46:58Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "",
-        "provider": "claude-4",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- Bash: {\"command\": \"pnpm exec vitest run --project web src/breakpoints.test.ts 2>&1 | tail -30; grep -n \\\"min-height: 840\\\" apps/web/src/game/arena/arena.css; sed -n 1,140p apps/web/src/breakpoints.test.ts\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"height: 840px\\\\|height: 839px\\\" apps/web/src --include=*.css --include=*.ts --include=*.tsx | grep -v \\\"arena/arena.css\\\" | head; sed -n 255,275p apps/web/src/game/arena/arena\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np=\\\"apps/web/src/breakpoints.test.ts\\\"\\ns=open(p).read()\\nold=''' // A dialog's answers stack'''\\nnew=''' // 840: a phone 390x844 and taller has height to spare in its l\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np=\\\"apps/web/src/breakpoints.test.ts\\\"\\ns=open(p).read()\\ni=s.index(\\\" // 840: a phone\\\")\\nj=s.index(\\\" // A dialog's answers\\\")\\nblk=s[i:j]\\ns=s[:i]+s[j:]\\nk=s.index(\\\"\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | grep -E \\\"FAIL|Test F\u2026\n- Bash: {\"command\": \"cd . && sed -i '1,$d' .bot-notes.md && cat > .bot-notes.md <<'E'\\n## State\\nPass 4 (ci): web (unit 2/8) failed on breakpoints.test.ts (#3227, new on main): arena.css's (min-height: 840px\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a living arena: every tile answers a tap, and each playmat hides things in its corners to find, escalate and, rarely, surprise you\"} --> ## Summary Every tile (`zone-<side>-<row>-<lane>`, either side, or the card in it) now answers a press with a press-\u2026"
-      },
       "interruptions": 0,
       "issue": 3348,
       "kind": "review",
