@@ -49,7 +49,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/cards.css": 162,
   "cards/cardstate.css": 24,
   "cards/cosmetics.css": 38,
-  "cards/dormant.css": 7,
+  "cards/dormant.css": 6,
   "cards/glitch.css": 9,
   "cards/inspect/inspect.css": 36,
   "cards/inspect/list-play.css": 2,
