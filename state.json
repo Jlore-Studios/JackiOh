@@ -18522,9 +18522,10 @@
     "3363": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-07T05:30:40Z",
+      "feedback_since": "2026-11-07T07:17:59Z",
       "handoff": {
         "at": "2026-11-07T06:29:55Z",
         "family": "claude",
@@ -18536,10 +18537,13 @@
       },
       "issue": 3331,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "pending_request": false,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-11-07T06:51:55Z",
+      "round_tier": "strong",
       "run_id": "42350697474",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -18560,10 +18564,11 @@
         "provider": "claude-2",
         "run": "42343031888"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-07T07:17:59Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
