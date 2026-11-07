@@ -36110,7 +36110,8 @@
       "2026-11-07T06:20:57Z,claude-8,refusal,call,42345438065,100,2026-11-07T07:00:00Z,,,rejected,100,,2026-11-07T07:00:00Z"
     ],
     "runs": [
-      "2026-11-07T06:12:07Z,42341314375,claude-4,opus,revise,3360,hard,built,,16.8,36,5554,1197608,0.7905,10,11,,,1,claude-4,fresh,,1"
+      "2026-11-07T06:12:07Z,42341314375,claude-4,opus,revise,3360,hard,built,,16.8,36,5554,1197608,0.7905,10,11,,,1,claude-4,fresh,,1",
+      "2026-11-07T06:20:57Z,42345438065,claude-8,sonnet+opus,revise,3358,medium,interrupted,refusal,12.4,136,67544,10063119,2.4813,85,100,,,26.6,claude-2,fresh,other,1"
     ]
   },
   "version": 1
