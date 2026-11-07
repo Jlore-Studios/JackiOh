@@ -16641,6 +16641,13 @@
       "failures": 0,
       "feedback_since": "2026-11-07T12:51:03Z",
       "forced": false,
+      "hold": {
+        "ends": "2026-11-07T19:34:36Z",
+        "owner": "claude-3",
+        "since": "2026-11-07T17:34:36Z",
+        "until": "2026-11-07T17:50:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "issue": 3335,
       "kind": "revise",
