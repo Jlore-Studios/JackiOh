@@ -39,7 +39,7 @@ describe("#2932 the rail rides the top strip on a phone held upright", () => {
     const rail = game.querySelector(":scope > .board-rail");
     expect(rail, "the rail is `.game`'s own child").not.toBeNull();
     expect(rail?.classList.contains("board-rail--top")).toBe(true);
-    expect(rail?.textContent).toContain("← Back");
+    expect(rail?.textContent).toContain("Back");
     expect(game.querySelector(".control-bar .board-rail"), "the control bar holds no rail").toBeNull();
     expect(game.querySelectorAll(".board-rail")).toHaveLength(1);
   });

@@ -589,7 +589,7 @@ describe("R654 public statistics route", () => {
     render(<SiteFooter />);
     const footerLink = screen.getByTestId(siteFooterTestid.stats);
     expect(footerLink).toHaveAttribute("href", "/stats");
-    expect(footerLink).toHaveTextContent("Stats");
+    expect(footerLink).toHaveTextContent("Statistics");
   });
 
   it("R2325000 R661 shows no banner, no reading notes, no source and no live-game count", async () => {
@@ -769,7 +769,7 @@ describe("R377 public statistics match type", () => {
     expect([...select.options].map((option) => option.textContent)).toEqual([
       "All modes",
       "Constructed",
-      "All Random",
+      "All random",
       "Best of 1",
       "Conquest",
     ]);
@@ -1720,7 +1720,7 @@ describe("R1973002 the patch bar", () => {
 
     // Back one patch: 0.6.0, asked for at its version.
     const previous = screen.getByTestId(statsTestid.patchPrevious);
-    expect(previous).toHaveTextContent("← Previous patch (0.6.0)");
+    expect(previous).toHaveTextContent("Previous patch (0.6.0)");
     await user.click(previous);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.6.0");
@@ -1731,7 +1731,7 @@ describe("R1973002 the patch bar", () => {
 
     // Forward: the next patch, then the newest, which is the plain address.
     const next = screen.getByTestId(statsTestid.patchNext);
-    expect(next).toHaveTextContent("Next patch (0.6.0) →");
+    expect(next).toHaveTextContent("Next patch (0.6.0)");
     await user.click(next);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     await user.click(screen.getByTestId(statsTestid.patchNext));

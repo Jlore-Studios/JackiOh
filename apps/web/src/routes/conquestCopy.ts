@@ -27,7 +27,7 @@ export const CONQUEST_MESSAGES = {
   draws: "A drawn game counts for neither player and locks neither deck. The series ends after at most {games} games.",
   concedeVsForfeit: "Conceding or disconnecting during a game loses only that game. Between games, you may forfeit the entire series.",
   ratingMovesOnce: "Games in a series do not move your rating individually; a ranked series moves your rating once when it ends.",
-  dismiss: "Got it",
+  dismiss: "Close",
   toggleOpen: "How Conquest works",
   lockInReminder: "Locking in is final and sealed. A win locks this deck for the rest of the series.",
   seriesEndRatingReminder: "Your rating moves once for the whole series, not for each of its games.",

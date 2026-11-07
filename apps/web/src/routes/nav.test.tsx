@@ -79,4 +79,17 @@ describe("R3218000 BackLink's slots", () => {
     fireEvent.click(back);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it("R3230000 Back is an arrow icon and the word Back", () => {
+    const { unmount } = render(<BackLink showSettings={false} />);
+    const back = screen.getByTestId(navTestid.back);
+    expect(back.textContent).toBe("Back");
+    expect(back.querySelector("svg.arrow-icon--back[aria-hidden='true']")).not.toBeNull();
+
+    unmount();
+    render(<BackLink showSettings={false} label="Back to Play together" />);
+    const custom = screen.getByTestId(navTestid.back);
+    expect(custom.textContent).toBe("Back to Play together");
+    expect(custom.querySelector("svg.arrow-icon--back[aria-hidden='true']")).not.toBeNull();
+  });
 });

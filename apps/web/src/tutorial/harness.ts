@@ -77,7 +77,7 @@ type Options = {
   budget?: SearchBudget;
   /** A fixture script in place of the lesson's own (the coach framework's tests). */
   script?: LessonScript;
-  /** What the player's Field Guide holds as the lesson starts (R2205002). */
+  /** What the player's Field guide holds as the lesson starts (R2205002). */
   known?: readonly string[];
 };
 
