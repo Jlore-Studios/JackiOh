@@ -16204,6 +16204,8 @@
     "3371": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "4ccbb17c7cc76fddd74847011ae01538aae1b262",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T10:37:18Z",
