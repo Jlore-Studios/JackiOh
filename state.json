@@ -16648,6 +16648,7 @@
       "planned_at": "2026-11-07T15:49:00Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
+      "planned_model": "gemini-3.8-flash-high",
       "planned_tier": "medium",
       "provider": "agy",
       "run_id": "42383908142",
