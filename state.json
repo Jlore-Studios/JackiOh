@@ -19203,6 +19203,7 @@
       "run_id": "42363473406",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "spot_check_n": 127,
       "started_at": "2026-11-07T10:19:34Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36513,7 +36514,7 @@
         "verdict": "clean"
       }
     ],
-    "count": 126
+    "count": 127
   },
   "statistics": {
     "at": "2026-11-07T11:06:35Z"
