@@ -845,6 +845,40 @@
   border-bottom: 1.6cqh solid transparent;
 }
 
+/* #3341: a hand card's rules box is as tall as its text, and the art above it takes the rest. fit.ts measures the
+   text after it has fitted it (the box at its full height first) and sets `--cf-text-need`, the box's height in cqh,
+   never under HAND_TEXT_BOX_MIN_CQH; `--cf-grow` is how much of the box's 31.5cqh the text does not need, which the art
+   window gains and the name ribbon, the rarity gem and the box lose in step. A face with no measure (a box that
+   clamps, the long layouts below, a full art or Extended art face, whose art already runs across it) keeps the box
+   and the art as they were; so does any face outside a hand, and a face under 150px, which has no box (below). The
+   box's foot, at 87cqh, stays where it was. */
+.card-hand .cf:not([data-long]) {
+  --cf-grow: max(0cqh, calc(31.5cqh - var(--cf-text-need, 31.5) * 1cqh));
+}
+
+@container cardface (not (max-height: 149px)) {
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .cf-art-frame {
+    height: calc(37cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"])[data-card-type="Unit"] .cf-art-frame {
+    height: calc(40cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .card-name {
+    top: calc(42cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .cf-gem {
+    top: calc(50.2cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .card-text:not([data-clamped="true"]) {
+    top: calc(55.5cqh + var(--cf-grow));
+    height: calc(var(--cf-text-h) - var(--cf-grow));
+  }
+}
+
 /* The long layout (fit.ts sets `data-long` on a face whose rules would otherwise print under
    FIT_FLOOR_PX): the art window gives up half its height, the name ribbon and the rarity gem move
    up after it, and the rules box takes the room, half as tall again. The text starts from full
@@ -1583,6 +1617,24 @@
     height: 50cqh;
   }
 
+  /* #3341: a hand card's art window grows 4cqh (HAND_ART_GROW_CQH) down the room the name band gave up: the band
+     starts 4cqh lower and, with no Unit's numbers under it, is that much shorter. The Unit's band keeps its height
+     (its numbers hold the foot), so its two lines take the corners' top. Ahead of the full art and Extended art rules
+     below, which keep the art across the whole face. */
+  .card-hand .cf:not([data-layout="minion"]) .cf-art-frame {
+    height: calc(43cqh + 4cqh);
+  }
+
+  .card-hand .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .cf-art-frame {
+    height: calc(50cqh + 4cqh);
+  }
+
+  /* #3341: a small picture holds its colour (ART_SMALL_FACE_LIFT): more saturation and contrast, no tint, and none
+     on a Radiant face's gold window (R2725004), whose paint the Radiant face keeps as it is. */
+  .cf:not([data-radiant-face="true"]) .cf-art:not([data-art-variant="radiant"]) {
+    filter: saturate(1.15) contrast(1.06);
+  }
+
   /* R1017001: a full-art face keeps its art across the whole face at hand size too. R3046000: a compact face keeps
      its name in a band below the art (compact full art, below). */
   .cf[data-full-art="true"]:not([data-layout="minion"]):not([data-layout="compact"])[data-card-type] .cf-art-frame {
@@ -1617,6 +1669,16 @@
   .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .card-name {
     top: 59cqh;
     height: 31cqh;
+  }
+
+  /* #3341: a hand card's name band follows its art down 4cqh (HAND_ART_GROW_CQH); a Unit's keeps its height. */
+  .card-hand .cf:not([data-layout="minion"]) .card-name {
+    top: 56cqh;
+  }
+
+  .card-hand .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .card-name {
+    top: 63cqh;
+    height: 27cqh;
   }
 
   /* Two lines, then an ellipsis, if even FIT_MIN will not fit. */
@@ -1763,13 +1825,16 @@
 /* ------------------------------------------------------------------------------- minion ----- */
 
 /* The board minion, bottom up: the attack and health gems on the bottom corners, the name plate
-   directly above them, and the oval portrait over the rest, its lower rim tucked under the plate.
+   directly above them, and the portrait over the rest, its lower edge tucked under the plate (#3341:
+   a picture up to the frame, below; a worn rim or a full-art unit's own box, further down).
    Every vertical offset derives from one gem size, `--mf-stat`, so the plate can never slide under
    the gems whatever the zone's aspect ratio (a 48x66 phone zone or a 120x150 preview). */
 .cf[data-layout="minion"] {
   --mf-stat: min(30cqmin, 26cqh);
   /* Never shorter than the name's 7.5px floor needs (below): on a 58x80 zone 11cqh is 9px. */
   --mf-plate: max(11cqh, 10px);
+  /* #3341: where the art ends above the face's foot, half a gem (MINION_ART_FOOT_SHARE), so the gems straddle its edge. */
+  --mf-art-foot: calc(var(--mf-stat) * 0.5);
 
   width: 100%;
   height: 100%;
@@ -1792,41 +1857,12 @@
 .cf .cf-portrait {
   position: absolute;
   z-index: 1;
-  top: 3cqh;
-  left: 9cqw;
-  right: 9cqw;
-  bottom: calc(var(--mf-stat) + var(--mf-plate) * 0.5);
+  top: 0;
+  right: 0;
+  bottom: var(--mf-art-foot);
+  left: 0;
   display: block;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1.4cqmin var(--cf-rarity),
-    0 0 0 2.2cqmin rgb(0 0 0 / 0.55),
-    0 0.6cqmin 1.6cqmin rgb(0 0 0 / 0.75);
   isolation: isolate;
-}
-
-.cf[data-radiant-face="true"] .cf-portrait {
-  box-shadow:
-    0 0 0 1.6cqmin var(--foil-gold),
-    0 0 3.5cqmin color-mix(in srgb, var(--foil-gold) 75%, transparent);
-}
-
-.cf[data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]) .cf-portrait {
-  box-shadow:
-    0 0 0 1.4cqmin #ff6ad5,
-    0 0 0 2.6cqmin #94d0ff,
-    0 0 3cqmin rgb(255 106 213 / 0.6);
-}
-
-/* Taunt: Hearthstone's big shield-shaped border. A steel shield stands behind the portrait and
-   shows past it on every side, and the portrait's ring turns steel too, so a Taunt reads at a
-   glance even on a 48px phone zone. The shield is the Taunt treatment of the keyword visuals
-   (keywords.css, `[data-keyword-fx="Taunt"]`, R438); the ring stays keyed on `data-taunt`. */
-.cf[data-taunt="true"] .cf-portrait {
-  box-shadow:
-    0 0 0 1.6cqmin #c3cad8,
-    0 0 0 2.6cqmin #2b303b,
-    0 0.6cqmin 1.6cqmin rgb(0 0 0 / 0.75);
 }
 
 .cf[data-layout="minion"] .cf-crest {
@@ -1914,6 +1950,40 @@
 
 .cf[data-layout="minion"][data-full-art="true"] .stats {
   bottom: var(--mf-plate);
+}
+
+/* #3341: a unit that is not full art draws its art up to the frame too, not an oval in a box: the picture runs
+   from the panel's top and sides down to half a gem above its foot (`--mf-art-foot`, MINION_ART_FOOT_SHARE; `.cf
+   .cf-portrait`, above), so the attack and health gems straddle its lower edge and the name plate lies on it, the way
+   a full-art unit's gems and band do. The panel's rounded corners clip the picture. Nothing is drawn over it but a
+   rarity ring at its rim, which keeps the rings of the oval it replaces (a Radiant's gold, a Mythic's foil, a Taunt's
+   steel: Hearthstone's shield-shaped border, now a ring since the picture covers the shield that stood behind it, the
+   keyword visuals' `[data-keyword-fx="Taunt"]`, R438, keywords.css), and a scrim at its foot behind the gems, so the
+   colours of the art itself are never washed by a tint. */
+.cf[data-layout="minion"]:not([data-full-art="true"]) .cf-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1.4cqmin var(--cf-rarity);
+  background: linear-gradient(180deg, transparent 62%, rgb(0 0 0 / 0.35));
+  pointer-events: none;
+}
+
+.cf[data-layout="minion"][data-radiant-face="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow: inset 0 0 0 1.6cqmin var(--foil-gold);
+}
+
+.cf[data-layout="minion"][data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]):not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1.4cqmin #ff6ad5,
+    inset 0 0 0 2.6cqmin #94d0ff;
+}
+
+.cf[data-layout="minion"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 4.4cqmin #c3cad8,
+    inset 0 0 0 5.4cqmin #2b303b;
 }
 
 /* R243's Vanilla marker: a plain paper stamp at the portrait's top right, clear of the cost gem and

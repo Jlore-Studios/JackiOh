@@ -131,7 +131,7 @@ describe("R3046000 a full-art Unit on the board", () => {
         expect(cf.getAttribute("data-version"), where).toBe(VERSION_FULL_ART_ID);
         const art = cf.querySelector(".cf-portrait > .cf-art");
         expect(art?.classList.contains("cf-art--full"), `${where}: the art is the full face's`).toBe(true);
-        expect(cf.querySelector(".cf-art--oval"), `${where}: no oval`).toBeNull();
+        expect(cf.querySelector(".cf-art--oval, .cf-art--frame"), `${where}: no oval, no plain frame`).toBeNull();
         // The name's band comes after the art, and says the card's name.
         const name = cf.querySelector(".card-name");
         expect(follows(art, name), `${where}: the name comes after the art`).toBe(true);
@@ -145,12 +145,13 @@ describe("R3046000 a full-art Unit on the board", () => {
     }
   });
 
-  it("R3046000 a Unit that is not full art keeps its oval window and draws no art flag", () => {
+  it("R3046000 a Unit that is not full art draws its art up to the frame (#3341) and draws no art flag", () => {
     for (const id of PLAIN_UNITS) {
       const cf = minionOf(id);
       expect(cf.hasAttribute("data-full-art"), id).toBe(false);
       expect(cf.hasAttribute("data-version"), id).toBe(false);
-      expect(cf.querySelector(".cf-portrait > .cf-art.cf-art--oval"), id).not.toBeNull();
+      expect(cf.querySelector(".cf-portrait > .cf-art.cf-art--frame"), id).not.toBeNull();
+      expect(cf.querySelector(".cf-art--oval"), id).toBeNull();
       expect(cf.querySelector(".cf-art--full"), id).toBeNull();
       cleanup();
     }
@@ -188,7 +189,7 @@ describe("R3046000 a full-art Unit on the board", () => {
 
     const lesson = minionOf("core-004", { wrap: (face) => <FullArtAllowed allowed={false}>{face}</FullArtAllowed> });
     expect(lesson.hasAttribute("data-full-art"), "a tutorial lesson's board").toBe(false);
-    expect(lesson.querySelector(".cf-art--oval")).not.toBeNull();
+    expect(lesson.querySelector(".cf-art--frame")).not.toBeNull();
     cleanup();
 
     // Where ownership decides, only the viewer's own unit whose full art is owned prints it (R1313000).
@@ -214,10 +215,10 @@ describe("R3046000 a full-art Unit on the board", () => {
     expect(unlisted).toBeDefined();
     const plain = minionOf(unlisted?.id ?? "");
     expect(plain.hasAttribute("data-full-art")).toBe(false);
-    expect(plain.querySelector(".cf-art--oval")).not.toBeNull();
+    expect(plain.querySelector(".cf-art--frame")).not.toBeNull();
   });
 
-  it("R3046000 a card offered the Full art version prints it on the board when its pick wears it, and its pick of none prints the oval", () => {
+  it("R3046000 a card offered the Full art version prints it on the board when its pick wears it, and its pick of none prints the frame art", () => {
     const [id] = offeredBeyondRegistry(VERSION_FULL_ART_ID);
     if (id === undefined) throw new Error("no card is offered the Full art version");
     expect(minionOf(id).hasAttribute("data-full-art"), "no pick: the setting prints full art on the registry's cards alone").toBe(false);
@@ -274,12 +275,12 @@ describe("R3046000 a full-art Unit on the board", () => {
     }
   });
 
-  it("R3046000 a card that wears Animated alone, on its normal face, keeps its window", () => {
+  it("R3046000 a card that wears Animated alone, on its normal face, keeps its frame art", () => {
     // R3015000: the Default variant's animated level.
     wear("core-002", VERSION_ANIMATED_ID);
     const cf = minionOf("core-002");
     expect(cf.hasAttribute("data-full-art")).toBe(false);
-    expect(cf.querySelector(".cf-art--oval")).not.toBeNull();
+    expect(cf.querySelector(".cf-art--frame")).not.toBeNull();
   });
 });
 
@@ -439,10 +440,12 @@ describe("R3046000 the stylesheets put the name band below the art", () => {
     const cosmetics = readSheet("src/cards/cosmetics.css");
     expect(cosmetics).toContain('.cf[data-layout="minion"][data-frame]:not([data-full-art="true"]) .cf-scale::before');
     const keywords = sheetText("src/cards/keywords.css");
-    expect(keywords).toContain(`${MINION} .kw-fx[data-keyword-fx="Taunt"]`);
-    expect(keywords).toContain(`${MINION} .kw-fx[data-keyword-fx="Stack"]`);
+    // #3341: a unit that is not full art draws its picture up to the frame too, so the shield and the card edges that
+    // stood behind its oval are hidden under any picture, and its veils are square.
+    expect(keywords).toContain('.cf[data-layout="minion"] .kw-fx[data-keyword-fx="Taunt"]');
+    expect(keywords).toContain('.cf[data-layout="minion"] .kw-fx[data-keyword-fx="Stack"]');
     expect(declsOf(keywords, MINION).get("--kw-portrait-bottom")).toBe("var(--mf-plate, 11cqh)");
-    expect(declsOf(keywords, `${MINION} .kw-fx[data-kw-layer="veil"]`).get("border-radius")).toBe("0");
+    expect(declsOf(keywords, '.cf[data-layout="minion"] .kw-fx[data-kw-layer="veil"]').get("border-radius")).toBe("0");
     // Taunt's steel ring is drawn over the art, since its shield is not.
     expect(cards).toContain(`${MINION}[data-taunt="true"] .cf-portrait::after`);
   });
