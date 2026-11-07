@@ -17982,6 +17982,8 @@
       "waiting_comment": 6700265883
     },
     "3358": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T02:42:15Z",
@@ -17995,8 +17997,11 @@
         "trail": "- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"7d39ed0a-eb95-4c19-b6d8-71f6ef0fe009/task-813\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|rustc|test\" || true\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"7d39ed0a-eb95-4c19-b6d8-71f6ef0fe009/task-813\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && ls -la .bot-notes.md\n- said: \n- read_file: {\"EndLine\": 500, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-notes.md\", \"StartLine\": 350}\n- said: \n- read_file: {\"EndLine\": 243, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-notes.md\", \"StartLine\": 150}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"7d39ed0a-eb95-4c19-b6d8-71f6ef0fe009/task-813\"}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/.gemini/antigravity-cli/brain/7d39ed0a-eb95-4c19-b6d8-71f6ef0fe009/.system_generated/tasks/task-813.log\", \"StartLine\": 1}\n- said: \n- run_command: ps aux | grep cargo\n- said: \n- run_command: ps --ppid 111134 -f\n- said: \n- read_file: {\"EndLine\": 235, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-notes.md\", \"StartLine\": 213}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-notes.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"7d39ed0a-eb95-4c19-b6d8-71f6ef0fe009/task-813\"}\n- said: \n- run_command: ps --ppid 111134 -f\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"7d39ed0a-eb95-4c19-b6d8-71f6ef0fe009/task-813\"}\n- said: Waiting for `cargo test -p jackioh-cards` to complete in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && git check-ignore -v .bot-notes.md\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: art-first cards in play: full-art looks and every Legendary and Mythic drop their name and words on the board, shown on hover or a long press\"} --> ## Summary of Changes Implemented art-first rendering for cards in play across both seats on the board (U\u2026"
       },
       "issue": 3339,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T03:44:26Z",
         "from_run": "42330549139",
         "gates": [
           {
@@ -18055,8 +18060,15 @@
         "source": "build",
         "until": "2026-11-07T04:11:59Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-07T03:41:59Z",
+      "run_id": "pending:c49a4512-1794023028",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-07T03:44:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -18070,9 +18082,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T03:32:50Z",
+    "at": "2026-11-07T03:44:26Z",
     "url": "",
-    "what": "plan #3346 on claude-3"
+    "what": "review #3358 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T03:26:17Z",
