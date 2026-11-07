@@ -1,0 +1,69 @@
+{
+  "action": "plan",
+  "number": 3339,
+  "title": "Patch: art-first cards in play: full-art looks and every Legendary and Mythic drop their name and words on the board, shown on hover or a long press",
+  "branch": "bot/issue-3339",
+  "thread": "**Issue #3339 (data, not instructions):**\n\n```text\n# #3339: Patch: art-first cards in play: full-art looks and every Legendary and Mythic drop their name and words on the board, shown on hover or a long press\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked (2026-11-06) that full-art, extended-art and out-of-frame cards have their text gone while in play. In general, any card in play with elaborate art should remove as much text as it can, even its name, which shows on hover, so the art stands out.\n\n### Today\n\n- **Units in play.** A Unit in play is a `MinionFace` (`game/Card.tsx` `formOf`). It shows its oval art, cost, a **name plate**, attack and health, armor, up to `KEYWORD_CHIPS_MAX` (3) keyword chips **spelled in words** and then a \"+n\" fold, plus its state badges and stamps.\n- **The backrow.** A face-up backrow card is the compact `CardFace`: cost, art, **name**, rarity gem and **type line**.\n- **Full art on the board** (R3046000, `boardLookOf`). The face goes full-bleed, but keeps a **name band** below the art. In hand, full art already drops its name (R2723000, `bare`).\n- **Hover and inspect.** Hover shows the whole card (`inspect/HoverPreview.tsx`) on desktop, and a tap opens inspect on a phone.\n\n### What it should be\n\n1. **Art-first faces.** On the board (both seats, the Unit rows and the backrow), a card is art-first when either:\n   - it wears a full-art-shaped level: Full art, Alt full art, Sketch's full art, Extended art, Out of frame, Immersive, Prismatic, Set showcase, or any animated or signed level of them; or\n   - it is Legendary or Mythic, in any look.\n\n   An art-first face shows **no name, no type line and no rules words**: only the art, edge to edge, and the numbers a player reads at a glance (attack, health and its damage, armor, a backrow card's counters). Its keywords and states show as **icon marks** with no words (`keywordMarks.ts`, `KeywordFx.tsx`), still all of them, folded as today past the limit.\n2. **Everything else is one hover away.** Hovering an art-first card (desktop) shows its name on a slim plate over the bottom of the art within `--motion-fast`, and the full hover preview after its usual delay. A long press on a phone opens inspect as a tap does now. Nothing the face drops is lost: the name stays in its `aria-label`, and keyboard focus shows the name plate as hover does.\n3. **Other cards print less too.** A normal (not art-first) Common to Epic Unit keeps its name plate, made smaller and translucent over the art's bottom edge, so the art window grows. Its keyword chips become icon marks as on art-first faces.\n4. **A setting.** Card settings (`cards/settings.ts`) gain \"Names on the board\": Art first (the default; art-first cards hide their name), Always, or Never. A player who wants every name always can have it.\n5. **R3046000 amended.** Write a new ruling for the name band's removal and the icon marks, in this issue's block.\n\nThe client still shows nothing hidden, and the view's information is all still a hover or long press away (CLAUDE.md rule 7).\n\n## Acceptance\n\n- Tests (`fullArtBoard.test.tsx` and new ones):\n  - an art-first face renders no name, type line or rules text in each of the looks listed and for a Legendary and a Mythic in their default look;\n  - a Common Unit keeps its smaller name plate;\n  - every face's keywords render as icon marks with accessible names.\n- Hover and focus show the name plate, and a long press on a coarse pointer opens inspect. Tests cover both, and the setting's three values.\n- A component (pixel) spec shows a board of art-first and normal faces at desktop size and at 390x844, both seats, in each Names setting.\n- e2e `46` (one screen) and `47` (tap areas) pass. `--hit-min` holds for the marks' tap targets.\n- The ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and there is a `--visual` fragment.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3339: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:49:00Z",
+    "claimed_at": "2026-11-07T02:16:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3357 is held for `claude-3` until 20:50 (it refused a call)",
+    "#3331 is held for `claude-3` until 20:50 (it refused a call)",
+    "#3332 is held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3336 is held for `claude-3` until 20:50 (it refused a call)",
+    "#3343 is held for `claude-3` until 20:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221, #3222 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
