@@ -146,7 +146,8 @@ else the ✕), `panelRef`, a `title` with markup of its own, and answers that ar
 (`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
 Friends, Chat). `DialogClose` is the ✕ alone, for an overlay that keeps its own body: the inspect
-overlay's `CardDetail` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
+overlay's `CardDetail` and its sheets (`InspectSheet`, `CardListSheet`, `FaceDownSheet`, the Stack's
+`StackSheet`), `HeroInspect` and the pack scene take it. `useModalKeys` and `useModalOverlay` act on Escape and
 Tab only while theirs is the top layer (`useBackLayer` returns whether it is, and opens its layer in a
 layout effect, so an Escape read as soon as the overlay is drawn finds it on top), so a dialog opened over
 another closes first. The inspect overlay, portalled after every dialog, draws at `--z-dialog` while it
@@ -155,8 +156,8 @@ game over a card's detail), carries `data-under` and comes down to `--z-toast`, 
 dialog seen is the one that takes the keys. `useModalKeys` leaves Escape to an open tooltip inside (R279, R2098000), and its
 Tab skips a hidden panel and a control at `tabindex="-1"`. `src/dialogs.test.ts` holds the sources to
 it: no `"Escape"` comparison outside the shared hooks and its named exceptions, no scrim outside
-`dialog.css` that paints itself or takes a raw layer, one ✕ glyph, and the inline confirms' safe choice
-first.
+`dialog.css` that paints itself or takes a raw layer, one ✕ glyph, no button labelled a text Close, and
+the inline confirms' safe choice first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
@@ -285,6 +286,21 @@ own keys (Enter, Space, Escape in a dialog) are unhinted, and no hint adds a key
 `shortcuts/shortcuts.test.tsx`'s `BOARD_KEY_HANDLERS` freezes the key handlers of the board's sources,
 so a new one fails it (there is no End-turn key). Presentation only (rule 7).
 
+**Card depth** (R3344000, R3344001): a face that is Epic or rarer, or prints full art, draws its picture as four stacked planes
+by the roles its painter tags its layers with (`cards/art/pictures.ts` `PLANE_OF_ROLE`: the background far, the props
+in the middle, the subject near, what lies over it, its light and its motes nearest), and tilts toward the pointer up to
+`CARD_TILT_MAX_DEG`, the planes shifting by their depth (`CARD_DEPTH_STEP_PX`) under a glare that lies opposite the tilt
+(`cards/depth.ts`, `cards/tilt.ts`, `cards/depth.css`). A Legendary or Mythic face in the viewer's own hand and in inspect
+lets its subject break the window's top edge. A delivered art file (no layers), a Starship in play and a Legacy card (one
+picture), a restyled picture and Immersive, Out of frame and Extended art (layers of their own) stay as they were, and the
+Reduce motion setting, the system's and the fx intensity off draw the flat picture with its foil still. `CardFace`'s `tilt`
+says where a face listens: `"host"` its parent (a card in hand, on the board, in the Collection), `"window"` the whole
+window's pointer (the hover preview, which takes none), `"drag"` that and a touch drag on the face (inspect, where the
+sheet's own swipe does not start on it); the card views also tilt with the phone's orientation once "Tilt with my phone" is
+on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the switch's tap). One face tilts at a time and
+none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
+an isolated group, which draws what it holds flat, so the planes move by `translate`. Presentation only (rule 7).
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -328,6 +344,23 @@ intent (after a card that gave an extra turn the second End turn was legal and e
 A new view or an `error` that gains text releases it; the error line clearing does not. Everything else, the
 board click and drag paths included, goes straight to `onAction`. Hotseat's views are new objects on every
 render, so it never blocks.
+
+**Card motion** (#3347). Cards move like cards, all client-side presentation keyed on public events and the
+player's own input (CLAUDE.md rule 7); the engine sends nothing new. A card played from the hand flies on an
+arc to its tile (the effects layer's stand-in, `fx/stage.ts`), starting where a drag let go
+(`game/drag/landing.ts` `dropPointOfTestid`) and turned toward the tile (`--fx-rot`), inside the play row's own
+time. A deck riffles once per action, after its last `shuffledIn` or `traded` (`game/animations.ts`
+`riffleEntries`, `RIFFLE_MS`, drawn by `Board.tsx`'s `pile-riffle` leaves); a mulligan's returned cards fly from
+their hand into it. The opening hand (a game whose first view is in the mulligan phase, `game/opening.ts`) is
+dealt a card at a time from the deck, `DEAL_STAGGER_MS` apart, the opponent's as backs; a tap ends it and goes
+on to what it was on. The fan springs where it reflows on `translate` (`game/handSpring.ts`,
+`--ease-overshoot`), and a hovered card parts its neighbours. A dragged card's ghost leans with the pointer's
+speed up to `DRAG_TILT_MAX_DEG` and settles flat, the tile under it lifts (`data-drag-over`), and a card let go
+over nothing springs back to the hand (`game/drag/tilt.ts`). Pick-up, drag-over, drop, return, deal and riffle
+each have a soft sound (`audio/sfx.ts`), and lifting a card buzzes a phone (`haptics/`). Speed scales it all
+(R201); `game/cardMotion.ts` gives the level: reduced motion is `still` (every move snaps to its end, no flight, no
+deal), effects off is `calm` (the sounds stay, the flourishes go), the rest `full`. `Game.tsx` writes it as
+`data-card-motion` and board.css reads it.
 
 **Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 

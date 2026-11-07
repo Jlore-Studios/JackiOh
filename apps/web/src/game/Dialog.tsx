@@ -16,8 +16,8 @@
 //   the toasts: it is the one question on the screen while it is open.
 // - Sheet (R3221000): `sheet` keeps the panel centred on a wide screen and puts it at the foot of an
 //   upright phone and down the right edge of a phone on its side (dialog.css); keys and close are the same.
-// - `DialogClose` is the ✕ alone, for an overlay that keeps its own body (the inspect overlay's card, the
-//   pack scene): the one close glyph every dialog shows.
+// - `DialogClose` is the ✕ alone, for an overlay that keeps its own body (the inspect overlay's card and
+//   its sheets, hero inspect, the pack scene): the one close glyph every dialog shows.
 
 import {
   useId,

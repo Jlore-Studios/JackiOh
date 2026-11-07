@@ -63,6 +63,7 @@ import {
   isFullBleed,
   lookOfLevel,
 } from "./versions.ts";
+import { facePicture } from "../test/artPicture.ts";
 import { legacyText } from "../test/faceData.ts";
 
 /** R2655001: the fifteen cards #2655 adds to the six hero portraits' cards. */
@@ -145,7 +146,7 @@ function defaultTierOf(id: string, moving = false): string | null {
 
 /** The art window's picture, decoded: what its CSS background draws. */
 function pictureOf(cf: HTMLElement): string {
-  return decodeURIComponent(cf.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "");
+  return facePicture(cf);
 }
 
 /** A seat's loadout whose cards' own picks are `cards`, every slot its default. */

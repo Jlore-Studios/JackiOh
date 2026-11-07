@@ -6,8 +6,14 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getAudioEngine } from "../../audio/engine.ts";
+import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
 import Game from "../../game/Game.tsx";
+import { dropPointOfTestid } from "../../game/drag/landing.ts";
 import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
+import { DRAG_RETURN_MS, DRAG_TILT_MAX_DEG, DRAG_TILT_SETTLE_MS } from "../../game/drag/tilt.ts";
+import { HAPTIC_PATTERNS, resetSharedHapticsForTests } from "../../haptics/haptics.ts";
+import { resetHapticsSettingsForTests, writeHapticsSettings } from "../../haptics/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, card, emptySide, unit } from "../fixtures.ts";
 
@@ -652,5 +658,257 @@ describe("B42 a dropped play stays where it landed until the board shows the pla
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// #3347: cards that move like cards: the ghost leans with its speed, a miss springs home, each step has its sound
+describe("#3347 a drag with weight", () => {
+  let clock = 0;
+  let playSfx: ReturnType<typeof vi.spyOn>;
+  let vibrate: ReturnType<typeof vi.fn>;
+
+  const sounds = (): string[] => playSfx.mock.calls.map((call: readonly unknown[]) => String(call[0]));
+  const tiltOf = (): number => Number.parseFloat(el("drag-ghost").style.getPropertyValue("--drag-tilt"));
+  const advance = (ms: number): void => {
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  };
+
+  beforeEach(() => {
+    clock = 1000;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    playSfx = vi.spyOn(getAudioEngine(), "playSfx").mockReturnValue(true);
+    vibrate = vi.fn(() => true);
+    Object.defineProperty(navigator, "vibrate", { configurable: true, value: vibrate });
+    resetSharedHapticsForTests();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(navigator, "vibrate");
+    resetSharedHapticsForTests();
+    resetHapticsSettingsForTests();
+    resetFxSettingsForTests();
+  });
+
+  it("#3347 fast moves lean the ghost the way it moves, within the cap, and it is flat DRAG_TILT_SETTLE_MS after it stops", () => {
+    renderGame();
+    lift(el("hand-card-h1"));
+    expect(tiltOf()).toBe(0);
+
+    clock += 10;
+    move(START.x + 40, START.y - 20); // 4000 px/s to the right: past the cap
+    expect(tiltOf()).toBe(DRAG_TILT_MAX_DEG);
+
+    clock += 10;
+    move(START.x + 40 + 9, START.y - 20); // 900 px/s: half of the full speed
+    expect(tiltOf()).toBeCloseTo(DRAG_TILT_MAX_DEG / 2, 1);
+
+    clock += 10;
+    move(START.x + 40 + 9 - 20, START.y - 20); // back to the left
+    expect(tiltOf()).toBeLessThan(0);
+    expect(tiltOf()).toBeGreaterThanOrEqual(-DRAG_TILT_MAX_DEG);
+
+    advance(DRAG_TILT_SETTLE_MS - 1);
+    expect(tiltOf()).not.toBe(0);
+    advance(1);
+    expect(tiltOf()).toBe(0);
+    expect(el("drag-ghost").style.getPropertyValue("--drag-tilt")).toBe("0deg");
+  });
+
+  it("#3347 an attacker's arrow has no ghost to lean, and a drag that ends leaves no timer behind", () => {
+    renderGame();
+    lift(el("card-u1"));
+    clock += 10;
+    move(START.x + 40, START.y - 20);
+    expect(screen.queryByTestId("drag-ghost")).toBeNull();
+
+    cleanup();
+    renderGame();
+    lift(el("hand-card-h1"));
+    clock += 10;
+    move(START.x + 40, START.y - 20);
+    release();
+    expect(vi.getTimerCount()).toBe(1); // the return's alone
+    advance(DRAG_RETURN_MS);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("#3347 a card let go over nothing springs back to its place in the hand, and sends nothing", () => {
+    const { onAction } = renderGame();
+    lift(el("hand-card-h1"));
+    over();
+    move(420, 180);
+    release(420, 180);
+
+    expectNoDrag();
+    const home = el("drag-returning-card");
+    expect(home).toHaveAttribute("data-returning", "true");
+    expect(home).toHaveAttribute("data-instance-id", "h1");
+    expect(home.style.getPropertyValue("--return-dx")).toBe("420px");
+    expect(home.style.getPropertyValue("--return-dy")).toBe("180px");
+    expect(home.style.getPropertyValue("--drag-return-ms")).toBe(`${String(DRAG_RETURN_MS)}ms`);
+    expect(onAction).not.toHaveBeenCalled();
+
+    advance(DRAG_RETURN_MS - 1);
+    expect(screen.queryByTestId("drag-returning")).not.toBeNull();
+    advance(1);
+    expect(screen.queryByTestId("drag-returning")).toBeNull();
+    expect(screen.queryByTestId("drag-returning-card")).toBeNull();
+  });
+
+  it("#3347 the spring home takes the effects speed's share of DRAG_RETURN_MS", () => {
+    setFxSettings({ speed: 2 });
+    renderGame();
+    lift(el("hand-card-h1"));
+    over();
+    release(100, 100);
+    expect(el("drag-returning-card").style.getPropertyValue("--drag-return-ms")).toBe(`${String(DRAG_RETURN_MS / 2)}ms`);
+    advance(DRAG_RETURN_MS / 2);
+    expect(screen.queryByTestId("drag-returning")).toBeNull();
+  });
+
+  it("#3347 a card played does not spring home, and the play's release point is where the stand-in starts", () => {
+    const { onAction } = renderGame();
+    lift(el("hand-card-h1"));
+    over(el("zone-you-units-4"));
+    move(420, 180);
+    release(420, 180);
+
+    expect(onAction).toHaveBeenCalledWith(H1_LANE4);
+    expect(screen.queryByTestId("drag-returning")).toBeNull();
+    expect(dropPointOfTestid("hand-card-h1")).toEqual({ x: 420, y: 180 });
+    expect(dropPointOfTestid("hand-card-s1")).toBeNull();
+  });
+
+  it("#3347 pick-up, each tile entered, the drop and the return each sound once", () => {
+    renderGame();
+    lift(el("hand-card-h1"));
+    expect(sounds()).toEqual(["pickUp"]);
+
+    over(el("zone-you-units-4"));
+    move(420, 180);
+    move(425, 185); // still over the same tile: no new tick
+    expect(sounds()).toEqual(["pickUp", "dragOver"]);
+
+    over(el("zone-you-units-3"));
+    move(300, 180);
+    expect(sounds()).toEqual(["pickUp", "dragOver", "dragOver"]);
+
+    over(); // off every tile: nothing to sound
+    move(100, 100);
+    expect(sounds()).toEqual(["pickUp", "dragOver", "dragOver"]);
+
+    over(el("zone-you-units-3"));
+    move(300, 180);
+    release(300, 180);
+    expect(sounds()).toEqual(["pickUp", "dragOver", "dragOver", "dragOver", "drop"]);
+  });
+
+  it("#3347 a card let go over nothing sounds the return once, and Escape the same", () => {
+    renderGame();
+    lift(el("hand-card-h1"));
+    over();
+    move(100, 100);
+    release(100, 100);
+    expect(sounds()).toEqual(["pickUp", "returnToHand"]);
+
+    cleanup();
+    playSfx.mockClear();
+    renderGame();
+    lift(el("hand-card-h1"));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(sounds()).toEqual(["pickUp", "returnToHand"]);
+  });
+
+  it("#3347 an attacker's drag has no card to lift or send home: none of the card sounds", () => {
+    renderGame();
+    lift(el("card-u1"));
+    over();
+    move(100, 100);
+    release(100, 100);
+    expect(sounds()).toEqual([]);
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it("#3347 lifting a card buzzes once, and not with the Vibration setting off", () => {
+    renderGame();
+    lift(el("hand-card-h1"));
+    expect(vibrate).toHaveBeenCalledTimes(1);
+    expect(vibrate).toHaveBeenCalledWith([...HAPTIC_PATTERNS.pickup]);
+
+    cleanup();
+    vibrate.mockClear();
+    resetSharedHapticsForTests();
+    writeHapticsSettings({ vibration: false });
+    renderGame();
+    lift(el("hand-card-h1"));
+    expect(vibrate).not.toHaveBeenCalled();
+    expect(sounds().filter((id) => id === "pickUp")).toHaveLength(2); // the sound is not the buzz's to gate
+  });
+
+  it("#3347 under reduced motion the ghost stays flat and a miss snaps home, but the sounds stay", () => {
+    writeSettings({ reduceMotion: true });
+    renderGame();
+    lift(el("hand-card-h1"));
+    clock += 10;
+    move(START.x + 40, START.y - 20);
+    expect(tiltOf()).toBe(0);
+    over();
+    release(100, 100);
+    expect(screen.queryByTestId("drag-returning")).toBeNull();
+    expect(sounds()).toEqual(["pickUp", "returnToHand"]);
+  });
+
+  it("#3347 with effects off the ghost stays flat and a miss snaps home, but the sounds stay", () => {
+    setFxSettings({ intensity: "off" });
+    renderGame();
+    lift(el("hand-card-h1"));
+    clock += 10;
+    move(START.x + 40, START.y - 20);
+    expect(tiltOf()).toBe(0);
+    over();
+    release(100, 100);
+    expect(screen.queryByTestId("drag-returning")).toBeNull();
+    expect(sounds()).toEqual(["pickUp", "returnToHand"]);
+  });
+
+  it("#3347 the tile under the ghost lifts to meet it, and lets go when the ghost leaves", () => {
+    renderGame();
+    lift(el("hand-card-h1"));
+    expect(el("zone-you-units-4")).not.toHaveAttribute("data-drag-over");
+
+    over(el("zone-you-units-4"));
+    move(420, 180);
+    expect(el("zone-you-units-4")).toHaveAttribute("data-drag-over", "true");
+    expect(el("zone-you-units-3")).not.toHaveAttribute("data-drag-over");
+
+    over(el("zone-you-units-3"));
+    move(300, 180);
+    expect(el("zone-you-units-4")).not.toHaveAttribute("data-drag-over");
+    expect(el("zone-you-units-3")).toHaveAttribute("data-drag-over", "true");
+
+    over();
+    move(100, 100);
+    expect(el("zone-you-units-3")).not.toHaveAttribute("data-drag-over");
+  });
+
+  it("#3347 an attack's arrow marks no tile, and a ended drag leaves none marked", () => {
+    renderGame();
+    lift(el("card-u1"));
+    over(el("hero-opponent"));
+    move(600, 60);
+    expect(document.querySelector("[data-drag-over]")).toBeNull();
+
+    cleanup();
+    renderGame();
+    lift(el("hand-card-h1"));
+    over(el("zone-you-units-4"));
+    move(420, 180);
+    release(420, 180);
+    expect(document.querySelector("[data-drag-over]")).toBeNull();
   });
 });

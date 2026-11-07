@@ -623,8 +623,9 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
     cy.get('.cf[data-art-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", NEW_CARDS.length * 2);
     cy.get('[data-art-moving="true"]').should("not.exist");
     cy.get("[data-face] .cf-art[data-art-pending]").should("not.exist");
-    cy.get('.cf-art[data-art-picture="alt"]').should("have.length", NEW_CARDS.length * 2 * 2);
-    cy.get('.cf-art[data-art-picture="sketch"]').should("have.length", NEW_CARDS.length * 2 * 2);
+    // One window a face (R3344000: the planes a face with depth stacks over its window draw the same picture, and are not counted).
+    cy.get('.cf-art-frame > .cf-art[data-art-picture="alt"]').should("have.length", NEW_CARDS.length * 2 * 2);
+    cy.get('.cf-art-frame > .cf-art[data-art-picture="sketch"]').should("have.length", NEW_CARDS.length * 2 * 2);
     cy.document().its("fonts.status").should("eq", "loaded");
     const taken: { windows?: Map<string, Record<string, DOMRect>> } = {};
     cy.document().then((doc) => {

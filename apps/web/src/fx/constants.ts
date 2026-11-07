@@ -16,6 +16,8 @@ export const FX_MIND_CONTROL_FLIGHT_FRACTION = 0.7;
 export const FX_FUSE_FLIGHT_FRACTION = 0.5;
 export const FX_SLAM_AT = 0.6;
 export const FX_HOLD_MAX_MS = 6000;           // a stage effect's safety cap; it normally ends when the board shows the next view (R200)
+export const FX_HOLD_TURN_DEG = 12;           // #3347: a stand-in flying in from the side starts turned this far toward its direction, and straightens as it lands
+export const FX_HOLD_TURN_PX = 240;           // #3347: the sideways distance from its zone at which a stand-in is turned the whole FX_HOLD_TURN_DEG
 export const FX_CONCEAL_AT = 0.9;             // an "after" conceal is set at 0.9 D, while the card's own motion still runs
 export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's center (< 1: they overlap)
 export const FX_LUNGE_MIN_PX = 26;            // = animations.css --lunge-distance (BUILD: at least 20 px)
@@ -37,6 +39,12 @@ export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
 /** R2722001: a Legendary's or a Mythic's entrance lands this hard (0.5 until R2722001 made it bigger). */
 export const FX_LEGENDARY_TRAUMA = 0.7;
+/**
+ * R3346000: the board shake under a heavy play (cost 6 to 8) and a massive one (9 or more), by the mana it
+ * cost (game/damageFeel.ts PLAY_IMPACT_TIERS). A light or medium play does not shake the board.
+ */
+export const FX_PLAY_HEAVY_TRAUMA = 0.35;
+export const FX_PLAY_MASSIVE_TRAUMA = 0.7;
 /** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
 export const FX_TAKEOVER_TAIL_MS = 700;
 /** R2722001: the takeover's shake as its card lands (R2803000: eased for the phone frame budget; the result still thumps hardest). */

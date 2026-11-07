@@ -3,6 +3,8 @@
 
 import type { VoiceEmoteId } from "@jackioh/shared";
 
+import type { PlayTier, PlayType } from "../game/damageFeel.ts";
+
 import type { CARD_HOOKS } from "./constants.ts";
 
 export type SfxId =
@@ -24,10 +26,14 @@ export type SfxId =
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
   | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // #3347: cards that move like cards (game/drag/cues.ts, game/Game.tsx's opening, audio/director.ts's riffle).
+  | "pickUp" | "dragOver" | "drop" | "returnToHand" | "deal" | "riffle"
   // R3336000: the Drone Battleship's horn, dome flare, bay door, reactor pulse and deck shear.
   | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
-  | "organ";
+  | "organ"
+  // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
+  | "playImpact" | "trapSnap";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -75,6 +81,12 @@ export type SfxParams = {
   sandBuild?: number;
   /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
   quiet?: boolean;
+  /** playImpact (R3346000): how heavy the play was, by the mana it cost (game/damageFeel.ts `playTier`). Absent: light. */
+  playTier?: PlayTier;
+  /** playImpact (R3346000): the played card's colour, a Unit's body, a Spell's charge or a Field Spell's ground. Absent: unit. */
+  playType?: PlayType;
+  /** A cue's own trim, 0..1 (R3346000: the other seat's play impact and snap). The engine scales; no recipe reads it. */
+  gain?: number;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */
