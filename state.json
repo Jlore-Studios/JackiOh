@@ -18573,6 +18573,14 @@
         "sha": "6209876b4cfb412a0d0cfdb1887c7dde5c1ac974",
         "tiers": {}
       }
+    },
+    "3365": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-07T06:30:27Z",
+      "issue": 3348,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
