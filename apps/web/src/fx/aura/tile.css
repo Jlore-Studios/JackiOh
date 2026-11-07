@@ -1,0 +1,158 @@
+/* R3342000: tile aura styles (issue #3342).
+ * Every Legendary and Mythic permanent marks its tile with an aura.
+ * Animates only transform and opacity on the compositor (CLAUDE.md rule 9).
+ */
+
+.tile-aura {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.tile-aura::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 var(--tile-glow-px) var(--tile-glow),
+    0 0 var(--tile-glow-px) var(--tile-glow);
+  --tile-pulse-max: var(--tile-edge);
+  --tile-pulse-min: calc(var(--tile-edge) * 0.7);
+  opacity: var(--tile-edge);
+  animation: tile-pulse var(--tile-pulse-ms) linear infinite;
+}
+
+.tile-aura-pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: var(--tile-core);
+  fill: none;
+  --tile-pulse-max: var(--tile-pattern-opacity);
+  --tile-pulse-min: calc(var(--tile-pattern-opacity) * 0.6);
+  opacity: var(--tile-pattern-opacity);
+  transform: scaleX(var(--tile-flip));
+  animation: tile-pulse var(--tile-pulse-ms) linear var(--tile-phase) infinite;
+}
+
+.tile-aura-mote {
+  position: absolute;
+  left: var(--mx);
+  top: var(--my);
+  width: var(--msize);
+  height: var(--msize);
+  background: var(--tile-core);
+  border-radius: var(--radius-round);
+  pointer-events: none;
+  animation: tile-mote var(--mdur) linear var(--mdelay) infinite;
+}
+
+.tile-aura-mote[data-mote-shape="drop"] {
+  height: calc(var(--msize) * 1.6);
+  border-radius: var(--radius-round) var(--radius-round) 0 0;
+}
+
+.tile-aura-mote[data-mote-shape="pixel"] {
+  border-radius: 0;
+}
+
+.tile-aura-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--tile-core);
+  pointer-events: none;
+  animation: tile-ripple var(--tile-ripple-ms) var(--ease-out) forwards;
+}
+
+.tile-aura[data-tile-state="dim"] {
+  opacity: 0.3;
+}
+
+.tile-aura[data-tile-state="out"] {
+  animation: tile-out var(--tile-out-ms) var(--ease-in) forwards;
+}
+
+.tile-aura[data-tile-lit="true"]::after {
+  opacity: var(--tile-edge);
+}
+
+.tile-aura[data-tile-hit="true"] {
+  animation: tile-flicker var(--tile-flicker-ms) linear;
+}
+
+@keyframes tile-pulse {
+  0%, 100% {
+    opacity: var(--tile-pulse-max, 1);
+  }
+  50% {
+    opacity: var(--tile-pulse-min, 0.65);
+  }
+}
+
+@keyframes tile-mote {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(var(--mdx), var(--mdy));
+    opacity: 0;
+  }
+}
+
+@keyframes tile-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+@keyframes tile-flicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes tile-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-aura,
+  .tile-aura * {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion="true"] .tile-aura,
+:root[data-reduce-motion="true"] .tile-aura * {
+  animation: none !important;
+}

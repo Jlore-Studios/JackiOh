@@ -24,6 +24,10 @@ const SLACK_PX = 1;
 const ZONE_EDGE_PX = 3;
 /** How much taller a board card must be than the budget it had: more than rounding. */
 const LARGER_PX = 1.5;
+/** R3348001 (arena.css): a phone this high or higher keeps a strip of mat above and below its field for the corner props. */
+const STRIP_MIN_HEIGHT_PX = 840;
+/** The share of the budget's card its rows keep with those strips (arena.css: `minmax(calc(var(--card-h) * 0.9), 1fr)`). */
+const STRIP_FLOOR_SHARE = 0.9;
 /** A preview's art against a board unit's whole face. */
 const PREVIEW_ART_TIMES = 2;
 /** A phone's sheet card before #3341: `min(380px, 56dvh)`. */
@@ -140,8 +144,15 @@ describe("#3341 bigger cards on a full board and a 10-card hand", () => {
         const field = [...doc.querySelectorAll<HTMLElement>(`${ts("board")} .field .zone > .card`)];
         expect(field.length, "the field's cards").to.be.greaterThan(10);
         const shortest = Math.min(...field.map((fieldCard) => fieldCard.offsetHeight));
-        expect(shortest, "a field card is at least the budget's card inside its zone").to.be.at.least(now - ZONE_EDGE_PX - SLACK_PX);
-        expect(shortest, "a field card is larger than it was").to.be.at.least(was - ZONE_EDGE_PX + LARGER_PX);
+        if (size.layout === "phone" && size.height >= STRIP_MIN_HEIGHT_PX) {
+          // R3348001 (arena.css): a phone this tall keeps a strip of mat above and below the field for its corner props, out of
+          // the zones' height, and the rows' floor gives up a tenth of the card for it: the field's card is no smaller than it was.
+          expect(shortest, "a field card keeps the rows' floor the corner strips leave").to.be.at.least(now * STRIP_FLOOR_SHARE - ZONE_EDGE_PX - SLACK_PX);
+          expect(shortest, "a field card is no smaller than it was").to.be.at.least(was - ZONE_EDGE_PX - SLACK_PX);
+        } else {
+          expect(shortest, "a field card is at least the budget's card inside its zone").to.be.at.least(now - ZONE_EDGE_PX - SLACK_PX);
+          expect(shortest, "a field card is larger than it was").to.be.at.least(was - ZONE_EDGE_PX + LARGER_PX);
+        }
       });
     });
   }
@@ -174,6 +185,9 @@ describe("#3341 a desktop's hover preview shows the art over twice as wide as th
 
 describe("#3341 a phone's inspect sheet draws a taller card", () => {
   afterEach(() => {
+    // `writeSettings` persists, and the browser keeps its storage from one spec to the next (as mobile-ux.cy.tsx clears it):
+    // hover previews left off would reach every spec after this one.
+    localStorage.clear();
     __resetSettingsForTests();
   });
 
