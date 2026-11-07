@@ -18149,11 +18149,6 @@
       "kind": "revise",
       "last_findings": [],
       "live": "revising",
-      "paused": {
-        "at": "2026-11-07T06:21:36Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-07T05:38:40Z",
