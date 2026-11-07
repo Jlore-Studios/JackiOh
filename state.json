@@ -16814,6 +16814,8 @@
       }
     },
     "3383": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T13:52:37Z",
@@ -16827,8 +16829,11 @@
         "trail": "read()\\n\\nold_head=\\\"\\\"\\\"/* The glare's layers: one over the art window, blended in the way of an art (`color-dodge`), and \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3344/apps/web/src/cards/depth.test.tsx\", \"old_string\": \" // Each blends inside a group of its own area's: the art frame and the \u2026\n- Bash: {\"command\": \"cd e2e && E2E_COMPONENT_PORT=5291 timeout 580 pnpm exec cypress run --component --spec cypress/component/zz-part4.cy.tsx 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E \\\"passing|failing|As\u2026\n- said: Part 4 passes. Now the temp spec goes, and the regression batch of existing component specs plus mine run.\n- Bash: {\"command\": \"rm -f cypress/component/zz-part4.cy.tsx && rm -rf artifacts && git status --short | head; ls cypress/component | head -60\", \"description\": \"Delete temp spec and artifacts; list component\u2026\n- Bash: {\"command\": \"SPECS=$(for f in card-versions animated-art card-faces full-art-finishes legacy-art card-sizes fx-phone-frame card-depth card-cosmetics full-art-hand full-art-board full-art-tiers starsh\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/vitest-changed.log | tail -15 | cut -c1-200\", \"description\": \"Check vitest changed run\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/vitest-changed.log; do sleep 10; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/vitest-changed.log | grep -E \\\"Test Files|Tests |FAIL|\\u00d7|^exit\\\" | head -20\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3344 && sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/vitest-changed.log | grep -A25 \\\"FAIL.*patches/diff.test\\\" | head -50 | cut -c1-250\", \"description\": \"Read t\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/cards/depth.test.tsx src/cards/tilt.test.tsx src/patches/diff.test.ts src/surfaces.test.ts src/motion.test.ts 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' |\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/cy-batch.log; do sleep 10; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-batch.log | grep -E \\\"Running:|passing|failing|\\u2716|\\u2714|^exit|AssertionError\\\" | cu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3344/e2e && sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-batch.log | grep -B12 \\\"at least the budget's card\\\" | head -40 | cut -c1-250; grep -n \\\"at least the\u2026\n- Bash: {\"command\": \"sed -n 95,160p cypress/component/card-sizes.cy.tsx\", \"description\": \"Read the card-sizes test body\"}\n- Bash: {\"command\": \"E2E_COMPONENT_PORT=5291 timeout 580 pnpm exec cypress run --component --spec cypress/component/card-sizes.cy.tsx 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E \\\"passing|failing|AssertionE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3344 && sed -n 1,60p scripts/worktree.sh | cut -c1-180\", \"description\": \"Read worktree.sh\"}\n- Bash: {\"command\": \"cp apps/web/src/cards/depth.ts /tmp/depth.ts.orig && sed -i 's/ if (!planed || glitch) return false;/ if (!planed || glitch || planed) return false;/' apps/web/src/cards/depth.ts && grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3344 && timeout 500 scripts/worktree.sh base origin/main 2>&1 | tail -5; ls ../jackioh-wt/base | head -30; ls ../jackioh-wt/base/e2e | head\", \"descri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/jackioh-wt/base 2>/dev/null || cd /home/runner/work/_temp/work/jackioh-wt/base 2>/dev/null || cd /home/runner/work/_temp/work/item-3344/../jackioh-wt/base; pwd\u2026\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/base && git branch -D wt/base && git worktree list && git status --short\", \"description\": \"Remove the temporary base worktree and its branch\"}\n- Bash: {\"command\": \"(cargo fmt --check > /tmp/cargo-checks.log 2>&1; echo \\\"fmt exit $?\\\" >> /tmp/cargo-checks.log; cargo jackioh spec check >> /tmp/cargo-checks.log 2>&1; echo \\\"spec exit $?\\\" >> /tmp/carg\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"## Log\\\",\\\"- Pass 2 result: card-versions part 4 FIXED: cause was the frame glare's `mix-blend-mode: overlay` (even \u2026\n- Bash: {\"command\": \"pnpm --dir e2e typecheck:component 2>&1 | tail -3; pnpm --dir apps/web exec vitest run src/fx/css.test.ts src/cards/cosmetics.test.tsx src/palette.test.ts src/spacing.test.ts src/typesca\u2026\n- Bash: {\"command\": \"grep -n -i \\\"fade\\\\|opacity\\\\|unseen\\\\|at rest\\\" spec/rulings/R3344000.md spec/rulings/R3344001.md spec/pending/3344.md apps/web/README.md | head -20; sed -n 28,45p spec/rulings/R3344000\u2026\n- Bash: {\"command\": \"cat spec/pending/3344.md | cut -c1-1800\", \"description\": \"Read pending paragraph\"}\n- said: Add the render-surface lesson to both the ruling and the pending paragraph, as a decision with its rejected alternative.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/pending/3344.md'\\ns=open(p).read()\\nold=\\\"a glare tinted by the foil (it could land in the gold window); and a frame-break on every face.\\\"\\nnew=\\\"a glare tint\u2026\n- Bash: {\"command\": \"until grep -q \\\"^done\\\" /tmp/cargo-checks.log; do sleep 10; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cargo-checks.log | grep -v Compiling | tail -15 | cut -c1-200\", \"description\": \"Wait fo\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -2; cargo jackioh classify --base origin/main --claims 2>&1 | tail -8 | cut -c1-250\", \"description\": \"Rerun spec check and classify with claims\", \"ti\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims >/dev/null 2>&1; echo \\\"classify exit $?\\\"; git status --short; git status --short --ignored | grep -v node_modules | grep '!!'; cat cr\u2026\n- Bash: {\"command\": \"rm -rf e2e/artifacts && python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"## Log\\\",\\\"- Pass 2 final: all checks run and green (fmt, spec check, patches check, classif\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up\"} --> ## What changed Every Epic, Legendary or Mythic face, and every face that prints full art, now \u2026"
       },
       "issue": 3344,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T15:16:12Z",
         "from_run": "42378959478",
         "gates": [
           {
@@ -16920,7 +16925,11 @@
         "source": "build",
         "until": "2026-11-07T15:44:50Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-07T15:14:50Z",
+      "run_id": "pending:41523b29-1794064532",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16939,6 +16948,9 @@
         "provider": "claude-1",
         "run": "42378959478"
       },
+      "started_at": "2026-11-07T15:16:12Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16952,9 +16964,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T15:06:00Z",
+    "at": "2026-11-07T15:16:12Z",
     "url": "",
-    "what": "revise #3380 on claude-4"
+    "what": "review #3383 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T15:03:10Z",
