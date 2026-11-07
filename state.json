@@ -12422,9 +12422,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "agy",
-      "owner_since": "2026-11-07T14:59:50Z",
-      "owner_why": "its approval shipped `d6ff669f4c41`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-4",
+      "owner_since": "2026-11-07T15:06:00Z",
+      "owner_why": "handed off from `agy`: `agy` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-07T13:27:01Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -16606,7 +16606,7 @@
       }
     },
     "3380": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -16633,17 +16633,17 @@
       "interruptions": 0,
       "issue": 3230,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "agy",
       "pending_request": false,
-      "provider": "agy",
+      "provider": "claude-4",
       "queued_at": "2026-11-07T14:59:48Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42381637515",
-      "runs_on": "night-vm-agy",
+      "run_id": "pending:1cee86e3-1794063922",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-07T14:26:50Z",
+      "started_at": "2026-11-07T15:06:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16835,9 +16835,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T15:05:08Z",
+    "at": "2026-11-07T15:06:00Z",
     "url": "",
-    "what": "revise #3363 on claude-7"
+    "what": "revise #3380 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-07T14:49:30Z",
