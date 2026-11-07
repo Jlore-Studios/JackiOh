@@ -20471,14 +20471,14 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-07T16:30:00Z",
-          "utilization": 0.49
+          "utilization": 0.91
         },
-        "observed_at": "2026-11-07T12:47:40Z",
+        "observed_at": "2026-11-07T13:04:11Z",
         "seven_day": {
           "resets_at": "2026-11-14T05:00:00Z",
-          "utilization": 0.11
+          "utilization": 0.15
         },
-        "status": "allowed"
+        "status": "allowed_warning"
       }
     },
     "claude-3": {
@@ -34217,6 +34217,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-07T12:52:52Z,claude-2,ping,before,42374241672,91,2026-11-07T16:30:00Z,15,2026-11-14T05:00:00Z,allowed_warning,90,90,"
+    ]
   },
   "version": 1
 }
