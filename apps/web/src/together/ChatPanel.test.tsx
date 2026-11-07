@@ -1,6 +1,7 @@
 // #936 S8 B58: `ChatPanel`, the conversation with one friend. A refusal (B53: empty, too long, not
 // friends, rate-limited) shows in the server's words without adding a message. The Friends button's
 // panel (#1831) lists friends, each opening this panel. #1898: a failed read says why with Try again.
+// R3214000: while the tab's social socket (a fake, `test/fakeSocket.ts`) is live the panel sends no poll.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAT_POLL_MS } from "@jackioh/server-config";
 
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
+import { fakeSockets, type FakeSocket } from "../test/fakeSocket.ts";
 import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
@@ -16,6 +18,8 @@ import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { useSocialPoll } from "./socialPoll.ts";
+import { setSocialSocketFactory } from "./socialSocket.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
 
 const SLOW = { timeout: 5_000 } as const;
@@ -378,6 +382,109 @@ describe("B58 polling while open", () => {
 
     await settle({ advance: CHAT_POLL_MS });
     expect(reads()).toBe(first + 2);
+  });
+});
+
+describe("R3214000 the open chat while the social socket is live", () => {
+  let sockets: FakeSocket[] = [];
+  const socket = (): FakeSocket => must(sockets.at(-1), "the tab's social socket");
+  const chatReads = (server: StubServer): number => server.to("GET", CHAT).length;
+
+  /** The shell's social poll, which holds the tab's social socket (`socialPoll.ts`). */
+  function SocialPoll(): null {
+    useSocialPoll();
+    return null;
+  }
+
+  /** The panel beside the shell's poll, its socket open and live. */
+  async function openLive(server: StubServer): Promise<number> {
+    render(
+      <>
+        <SocialPoll />
+        <ChatPanel friend={ANN} onClose={vi.fn()} />
+      </>,
+    );
+    await opened();
+    const before = chatReads(server);
+    expect(before).toBeGreaterThan(0);
+    socket().open();
+    socket().deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+    await settle({ advance: 0 });
+    expect(chatReads(server), "the socket came up: one read for what came meanwhile").toBe(before + 1);
+    return before + 1;
+  }
+
+  beforeEach(() => {
+    const fake = fakeSockets();
+    sockets = fake.sockets;
+    setSocialSocketFactory(fake.factory);
+  });
+
+  afterEach(() => {
+    setSocialSocketFactory(null);
+  });
+
+  it("R3214000 while the connection is up the open chat sends no poll and reads once on its friend's chat push", async () => {
+    vi.useFakeTimers();
+    const messages = conversation();
+    const server = serve(messages);
+    const live = await openLive(server);
+
+    await settle({ advance: 5 * CHAT_POLL_MS });
+    expect(chatReads(server)).toBe(live);
+
+    socket().deliver({ type: "chat", friendId: "f-bob" });
+    await settle({ advance: 0 });
+    expect(chatReads(server), "another friend's message reads nothing here").toBe(live);
+
+    messages.push(message("msg-3", ANN.profileId, "rematch?", 3));
+    socket().deliver({ type: "chat", friendId: ANN.profileId });
+    await settle({ advance: 0 });
+    expect(chatReads(server)).toBe(live + 1);
+    expect(must(shown()[2], "the pushed message")).toContain("rematch?");
+  });
+
+  it("R3214000 a hidden tab's chat push and drop read nothing until it shows, then once (R3205000)", async () => {
+    vi.useFakeTimers();
+    const messages = conversation();
+    const server = serve(messages);
+    const live = await openLive(server);
+
+    setVisibility("hidden");
+    messages.push(message("msg-3", ANN.profileId, "rematch?", 3));
+    socket().deliver({ type: "chat", friendId: ANN.profileId });
+    await settle({ advance: 0 });
+    expect(chatReads(server), "hidden: a read would mark it read unseen").toBe(live);
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(chatReads(server), "shown: the held read").toBe(live + 1);
+    expect(must(shown()[2], "the pushed message")).toContain("rematch?");
+    setVisibility("hidden");
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(chatReads(server), "live, a wake with nothing held reads nothing").toBe(live + 1);
+
+    setVisibility("hidden");
+    socket().drop(1006);
+    await settle({ advance: 3 * CHAT_POLL_MS });
+    expect(chatReads(server), "hidden: no read on the drop, nor at the poll's pace").toBe(live + 1);
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(chatReads(server), "shown: one read").toBe(live + 2);
+  });
+
+  it("R3214000 after the connection drops the chat poll resumes", async () => {
+    vi.useFakeTimers();
+    const server = serve(conversation());
+    const live = await openLive(server);
+
+    socket().drop(1006);
+    await settle({ advance: 0 });
+    expect(chatReads(server), "the drop reads at once").toBe(live + 1);
+    await settle({ advance: CHAT_POLL_MS });
+    expect(chatReads(server), "then at its pace").toBe(live + 2);
+    await settle({ advance: CHAT_POLL_MS });
+    expect(chatReads(server)).toBe(live + 3);
   });
 });
 

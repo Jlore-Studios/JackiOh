@@ -1,7 +1,9 @@
 // R2803000: the audit's coverage test over every fx/cards table (docs/polish/9-card-animations.md,
 // "The tables"): at least FX_COVERAGE_FLOOR of the catalog's non-token cards wears an entry other
 // than `none`; every Spell, Field Spell, Trap and Field Trap has a `cast` (or a recipe or set piece
-// of its own, or the one `none` a Starship part may wear); every Field Spell wears an `aura`.
+// of its own, or the one `none` a Starship part may wear; R3332000: a Field Spell's own `entrance`, which
+// draws its play's landing); every Field Spell wears an `aura`; and every frame sits on a card that may
+// carry it, every `entrance` a Unit's or a Field Spell's and every `takeover` a Mythic's.
 
 import { describe, expect, it } from "vitest";
 
@@ -31,6 +33,8 @@ describe("R2803000 the audit's coverage", () => {
       const entry = entryOf(id);
       if (entry.kind === "bespoke" || entry.kind === "setPiece") continue;
       if (entry.kind === "hooks" && entry.hooks.cast !== undefined) continue;
+      // R3332000: a Field Spell's play is its landing, which its own entrance draws.
+      if (entry.kind === "hooks" && type === "Field Spell" && entry.entrance !== undefined) continue;
       expect(entry.kind === "none" ? `none: ${entry.reason}` : entry.kind, `${id} (${String(type)})`).toBe(STARSHIP_PART_NONE);
     }
   });
@@ -41,6 +45,18 @@ describe("R2803000 the audit's coverage", () => {
     for (const id of fields) {
       const entry = entryOf(id);
       expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+    }
+  });
+
+  it("R3332000 every entrance is a Unit's or a Field Spell's, every takeover a Mythic's and every signature a Legendary's or a Mythic's", () => {
+    for (const id of Object.keys(CATALOG)) {
+      const entry = entryOf(id);
+      if (entry.kind === "none") continue;
+      const def = CATALOG[id];
+      const rarity = def?.printedRarity ?? def?.rarity;
+      if (entry.entrance !== undefined) expect(["Unit", "Field Spell"], `${id} entrance`).toContain(def?.type);
+      if (entry.takeover !== undefined) expect(rarity, `${id} takeover`).toBe("Mythic");
+      if (entry.signature === true) expect(["Legendary", "Mythic"], `${id} signature`).toContain(rarity);
     }
   });
 });

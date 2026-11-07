@@ -6,7 +6,8 @@
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
-//   { entrance: "<key>", <hook>: … }        a marquee Unit's entrance (fx/entrances.ts) beside its hooks (R2794000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -67,7 +68,7 @@
   "classic-053": { cry: { motif: "tally" }, trigger: { motif: "flight" } }, // Plague Crawler
   "classic-054": { cast: { motif: "transmute" } }, // Rewind
   "classic-055": { cast: { motif: "bolt", palette: "Fire" } }, // Book of Wildfire
-  "classic-056": { bespoke: "tyrantSigil" }, // Spell Tyrant
+  "classic-056": { entrance: "tyrantSigil" }, // Spell Tyrant
   "classic-057": { cast: { motif: "bolt" } }, // Echo
   "classic-058": { cast: { motif: "flight" }, trigger: { motif: "flight" }, aura: { look: "bloom", scope: "side" } }, // Common Resources
   "classic-059": { cry: { motif: "bolt" } }, // Plague Doctor
@@ -91,7 +92,7 @@
   "classic-077": "none: vanilla", // Anti-Magic Monkey
   "classic-078": { cast: { motif: "vanish" }, activate: { motif: "vanish" }, aura: { look: "arcane", scope: "zone" } }, // Mutate Spell
   "classic-079": { cast: { motif: "vanish" } }, // Risky Die
-  "classic-080": { bespoke: "bigBoom" }, // BOOM! Big Max
+  "classic-080": { entrance: "bigBoom" }, // BOOM! Big Max
   "classic-081": { cast: { motif: "flight" }, activate: { motif: "flight" }, aura: { look: "bloom", scope: "side" } }, // The Power to Thrive
   "classic-082": { death: { motif: "flight", palette: "Beast/wool" } }, // Sheeople
   "classic-083": { cast: { motif: "lance" } }, // Flame Lance

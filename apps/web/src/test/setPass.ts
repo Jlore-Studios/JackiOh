@@ -39,6 +39,9 @@ export function describeEntry(entry: FxCardEntry): string {
       return `setPiece ${entry.key}`;
     case "hooks": {
       const parts: string[] = [];
+      // R3332000: a signature first, then its entrance, then the hooks.
+      if (entry.signature === true) parts.push("signature");
+      if (entry.entrance !== undefined) parts.push(`entrance ${entry.entrance}`);
       for (const hook of FX_CARD_HOOKS) {
         const spec = entry.hooks[hook];
         if (spec === undefined) continue;

@@ -353,7 +353,8 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<Sock
 // The upgrade
 
 /// What refused a socket after its upgrade: a refusal with its close code and message, or a fault.
-/// `/ws/duos` and `/ws/watch` are refused with it too (`duos::ws`, `social::watch`).
+/// `/ws/duos`, `/ws/watch` and `/ws/social` are refused with it too (`duos::ws`, `social::watch`,
+/// `social::live`).
 pub(crate) enum UpgradeFailure {
     Refused { code: u16, message: String },
     Threw(String),
@@ -443,7 +444,8 @@ async fn seats_finished_match(
 
 /// The account behind an upgrade's token (R1379000): no token, one the auth refuses or no profile is
 /// 4401 "sign in first", past the account's R109 budget 4429 (R2478000), §9.4's gate 4403 with its own
-/// words. `path` names the socket in the budget's log line; `/ws/duos` and `/ws/watch` use it too.
+/// words. `path` names the socket in the budget's log line; `/ws/duos`, `/ws/watch` and `/ws/social`
+/// use it too.
 pub(crate) async fn authenticate_upgrade(
     app: &Arc<App>,
     token: Option<String>,
@@ -808,6 +810,63 @@ pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
             register_client(key, &socket);
             crate::social::watch::serve(&app, &socket, token, listener).await;
             let _ = pumping.await;
+            unregister_client(key, &socket);
+        })
+}
+
+/// R3214000: the social socket, one per signed-in tab (`social::live`).
+pub const SOCIAL_PATH: &str = "/ws/social";
+
+/// R3214000: upgrades `/ws/social` with the origin check, the frame cap and a per-address count, as
+/// `/ws/watch` is upgraded.
+pub async fn handle_social(app: Arc<App>, req: Request) -> Response {
+    let options = AttachOptions::for_app(&app);
+    let allowed = options.allowed_origins.clone().unwrap_or_default();
+    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+
+    let (mut parts, _body) = req.into_parts();
+    if !origin_allowed(&allowed, &parts.headers) {
+        tracing::warn!(event = "ws.upgrade.origin_refused", path = SOCIAL_PATH);
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
+    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
+    let key = app_key(&app);
+    // Counted apart from the match, co-op and watch sockets, under a key of its own, so a person's
+    // idle tabs never take the room a game's socket needs.
+    let Some(slot) = AddressSlot::claim(key, format!("{SOCIAL_PATH} {address}"), max_per_address) else {
+        tracing::warn!(
+            event = "ws.upgrade.too_many",
+            path = SOCIAL_PATH,
+            limit = max_per_address
+        );
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(upgrade) => upgrade,
+        Err(rejection) => return rejection.into_response(),
+    };
+    let token = upgrade_token(&parts.headers, &parts.uri);
+
+    upgrade
+        .max_message_size(MAX_FRAME_BYTES)
+        .max_frame_size(MAX_FRAME_BYTES)
+        .protocols([WS_SUBPROTOCOL])
+        .on_upgrade(move |ws| async move {
+            let _slot = slot;
+            let (socket, frames) = Socket::channel();
+            let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
+            register_client(key, &socket);
+            // Held until the connection ends; dropping it takes the socket off its account's list.
+            let admitted = crate::social::live::serve(&app, &socket, token).await;
+            let _ = pumping.await;
+            drop(admitted);
             unregister_client(key, &socket);
         })
 }
