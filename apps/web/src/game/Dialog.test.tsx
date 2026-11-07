@@ -437,6 +437,33 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("R3221000 a press that began in the panel and ends over the scrim keeps it open", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog role="dialog" testid="chat" title="Chat" onClose={onClose} actions={[]}>
+        <p>A line to select</p>
+        <input aria-label="Draft" />
+      </Dialog>,
+    );
+    const dialog = screen.getByTestId("chat");
+    const scrim = dialog.parentElement;
+    if (scrim === null) throw new Error("no scrim");
+    // A selection dragged out of the text or the input: the browser clicks the common ancestor.
+    for (const start of [within(dialog).getByText("A line to select"), within(dialog).getByLabelText("Draft")]) {
+      fireEvent.pointerDown(start);
+      fireEvent.click(scrim);
+      expect(onClose).not.toHaveBeenCalled();
+    }
+    // A press that begins and ends on the scrim still closes it, as does a click with no press before it.
+    fireEvent.pointerDown(scrim);
+    fireEvent.click(scrim);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    fireEvent.pointerDown(dialog);
+    fireEvent.click(dialog);
+    fireEvent.click(scrim);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it("R3221000 Tab skips a hidden panel and a control out of the order", () => {
     render(
       <Dialog role="dialog" testid="tabs" title="Tabs" onClose={vi.fn()} actions={[action("shown", "primary")]}>

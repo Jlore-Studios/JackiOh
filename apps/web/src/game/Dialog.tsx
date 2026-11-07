@@ -8,7 +8,8 @@
 // - Order: the safe choice first, holding the focus from the start, so a stray Enter or Space never
 //   acts; the act last, at the right, and a `danger` answer always last. A third answer goes between,
 //   and the safe choice then takes the first row (R765). The row stacks in the same order at 360 px.
-// - Keys: `useModalKeys`'s. Escape, Back (a layer, R2127000) and a click on the scrim close it, Tab
+// - Keys: `useModalKeys`'s. Escape, Back (a layer, R2127000) and a click on the scrim close it (one
+//   whose press began in the panel does not, R3221000), Tab
 //   stays inside, and the focus goes back to the opener unless the caller has moved it. It takes no
 //   key handler of its own (R2126000).
 // - Layer: `--z-dialog` (surfaces.css), over the prompt's scrim, the result overlay, the drag layer and
@@ -131,6 +132,7 @@ export function Dialog(props: DialogProps): ReactElement {
   const ownRoot = useRef<HTMLElement>(null);
   const root = props.panelRef ?? ownRoot;
   const first = useRef<HTMLButtonElement>(null);
+  const pressedInside = useRef(false);
   useModalKeys(root, onClose, props.focus ?? first);
 
   const row: readonly DialogAction[] = [
@@ -144,8 +146,15 @@ export function Dialog(props: DialogProps): ReactElement {
       className="dialog-scrim"
       data-testid={props.scrimTestid}
       {...(props.sheet === true ? { "data-sheet": "" } : {})}
+      // A press that began in the panel and was let go over the scrim (a text selection dragged out of
+      // the chat or an input) clicks the scrim, their nearest common ancestor: that one keeps it open.
+      onPointerDownCapture={(event) => {
+        pressedInside.current = event.target !== event.currentTarget;
+      }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        const inside = pressedInside.current;
+        pressedInside.current = false;
+        if (event.target === event.currentTarget && !inside) onClose();
       }}
     >
       <section

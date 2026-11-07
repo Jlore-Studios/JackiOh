@@ -61,7 +61,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "collection/collection.css": 25,
   "collection/cosmeticLook.css": 1,
   "collection/tokenOffer.css": 1,
-  "duos/duos.css": 24,
+  "duos/duos.css": 23,
   "economy/economy.css": 8,
   "economy/jlore-pill.css": 4,
   "economy/spend.css": 1,

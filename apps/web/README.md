@@ -119,7 +119,8 @@ moved last, at the right; three answers put the first on a row of its own, and a
 row stacks in the same order. Its scrim is one color at `--z-dialog` (`surfaces.css`), and its keys are
 `useModalKeys`'s (`together/modalKeys.ts`), whose third argument, the control to focus, also gives the
 focus back to the opener on close unless the caller has moved it: Escape, Back (a layer) and a click on
-the scrim close it, and Tab stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
+the scrim close it (not one whose press began in the panel, a selection dragged out, R3221000), and Tab
+stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
 `ConfirmLeaveFight` and `PracticeResult` draw through it; `PracticeResult` keeps its look through
 `practice-result`, and its ✕, Escape, Back and a click outside view the board.
 
