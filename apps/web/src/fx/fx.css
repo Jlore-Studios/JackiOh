@@ -2643,7 +2643,7 @@
   width: var(--fx-w, 82px);
   height: var(--fx-h, 110px);
   translate: -50% -50%;
-  z-index: 3;
+  z-index: var(--z-overlay);
   --fx-ship-plate-step: 60ms;
   --fx-ship-plate-dim: 0.3;
   --fx-ship-plate-w: calc(var(--fx-w, 82px) * 0.11);
@@ -2678,15 +2678,15 @@
   margin: calc(var(--fx-ship-plate-h) / -2) 0 0 calc(var(--fx-ship-plate-w) / -2);
   transform-origin: 50% calc(var(--fx-ship-plate-h) / 2 + var(--fx-ship-arc));
   rotate: calc((var(--fx-plate) - (var(--fx-count) - 1) / 2) * var(--fx-ship-fan));
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--fx-tint-rim);
-  background: linear-gradient(to bottom, var(--fx-tint-core), var(--fx-tint-glow));
-  box-shadow: 0 0 8px var(--fx-tint-glow);
+  background: var(--fx-tint-core);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--fx-tint-glow) 100%, transparent);
   opacity: var(--fx-ship-plate-dim);
 }
 
 .fx-ship-plate[data-lit="true"] {
-  animation: fx-ship-plate-glow calc(var(--fx-ms) - var(--fx-plate) * var(--fx-ship-plate-step)) ease-out
+  animation: fx-ship-plate-glow calc(var(--fx-ms) - var(--fx-plate) * var(--fx-ship-plate-step)) var(--ease-out)
     calc(var(--fx-plate) * var(--fx-ship-plate-step)) forwards;
 }
 
@@ -2706,7 +2706,7 @@
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--fx-tint-glow) 45%, transparent) 0, transparent 70%);
+  background: color-mix(in srgb, var(--fx-tint-glow) 25%, transparent);
 }
 
 .fx-ship-door {
@@ -2715,8 +2715,8 @@
   bottom: 0;
   width: 50%;
   border: 1px solid var(--fx-tint-rim);
-  background: linear-gradient(to bottom, var(--fx-steel), var(--fx-ink));
-  animation: fx-ship-door-left calc(var(--fx-ms) * var(--fx-ship-door-share)) ease-in-out forwards;
+  background: var(--fx-steel);
+  animation: fx-ship-door-left calc(var(--fx-ms) * var(--fx-ship-door-share)) var(--ease-in-out) forwards;
 }
 
 .fx-ship-door[data-side="left"] {
@@ -2750,11 +2750,11 @@
   position: relative;
   width: var(--fx-ship-plate-w);
   aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--fx-tint-core) 0, var(--fx-tint-glow) 55%, var(--fx-tint-rim) 100%);
-  box-shadow: 0 0 10px var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-core);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--fx-tint-glow) 100%, transparent);
   opacity: var(--fx-ship-plate-dim);
-  animation: fx-ship-light-on calc(var(--fx-ms) * var(--fx-ship-light-share)) ease-out calc(var(--fx-ms) * var(--fx-ship-door-share)) both;
+  animation: fx-ship-light-on calc(var(--fx-ms) * var(--fx-ship-light-share)) var(--ease-out) calc(var(--fx-ms) * var(--fx-ship-door-share)) both;
 }
 
 @keyframes fx-ship-light-on {
