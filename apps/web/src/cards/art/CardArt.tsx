@@ -46,7 +46,7 @@ import { compositionOf, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
 
-export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full";
+export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full" | "frame";
 
 export type CardArtProps = {
   defId: string;
