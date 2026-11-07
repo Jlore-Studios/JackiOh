@@ -16683,6 +16683,8 @@
       }
     },
     "3380": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T13:43:46Z",
@@ -16696,8 +16698,11 @@
         "trail": "- said: Typecheck is running. I'll wait for the task to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && pnpm exec eslint apps/web e2e\n- said: I've started ESLint on `apps/web` and `e2e`. Waiting for results.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"cfde7280-a86b-498c-b926-02064dfc62cb/task-595\"}\n- said: ESLint is currently scanning the files. I'll wait for the task to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && cargo jackioh classify --base origin/main --claims\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && pnpm --dir apps/web test src/i18n/i18n.test.ts src/writing.test.ts src/routes/page-names.test.tsx src/routes/nav.test.tsx\n- said: I've re-run the core guard test suites (`i18n.test.ts`, `writing.test.ts`, `page-names.test.tsx`, `nav.test.tsx`). Waiting for the run to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"cfde7280-a86b-498c-b926-02064dfc62cb/task-607\"}\n- said: The test runner is finishing up. Waiting for the final result.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && git status\n- said: \n- run_command: rm -f /tmp/rename3230.mjs /tmp/test-stray.mjs\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3230/spec/rulings/R3230000.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3230/spec/pending/3230.md\", \"StartLine\": 1}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && cargo jackioh spec check\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3230/apps/web/src/routes/ArrowIcon.tsx\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 70, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3230/apps/web/src/routes/page-names.test.tsx\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 310, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3230/apps/web/src/writing.test.ts\", \"StartLine\": 240}\n- said: \n- read_file: {\"EndLine\": 240, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3230/apps/web/src/writing.test.ts\", \"StartLine\": 200}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && git diff --stat origin/main\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3230 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: sentence case and one word per action across the client's labels and page names\"} --> ### Summary of Work 1. **Glossary and Style Guide**: - Added the comprehensive Glossary section to [`apps/web/WRITING.md`](file:///home/agent-agy/actions-runner/_work/\u2026"
       },
       "issue": 3230,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T14:26:50Z",
         "from_run": "42378289768",
         "gates": [
           {
@@ -16756,8 +16761,15 @@
         "source": "build",
         "until": "2026-11-07T14:55:41Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-07T14:25:41Z",
+      "run_id": "pending:cba37967-1794061579",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-07T14:26:50Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -16771,9 +16783,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T14:17:11Z",
+    "at": "2026-11-07T14:26:50Z",
     "url": "",
-    "what": "plan #3340 on claude-4"
+    "what": "review #3380 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T14:13:19Z",
