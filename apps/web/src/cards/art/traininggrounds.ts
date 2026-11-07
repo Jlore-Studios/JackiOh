@@ -1075,7 +1075,8 @@ function placedGlyph(placed: ArtSpec["emblem"], opacity: number): string {
  */
 export function legacySvg(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
   const theme = themeFor(tags, type);
-  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme));
+  // R3331000: a Legacy card freezes its Core card's subject as it was, so it never takes the Core card's scene.
+  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme), null);
   const seed = hashId(defId);
   const based: Paint = { ...LEGACY_PAINT, sky: LEGACY_SKIES[core.skyScheme] };
   const p = radiant ? gild(based) : based;

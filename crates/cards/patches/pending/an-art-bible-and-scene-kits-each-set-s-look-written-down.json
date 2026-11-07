@@ -1,0 +1,18 @@
+{
+  "title": "Patch: an art bible and scene kits: each set's look written down, pictures composed as scenes, and more detail the rarer the card",
+  "sources": "#3331",
+  "notes": "The foundation of #3330's per-set picture passes. ART.md gains an art bible: each set family's home, palette in palette.css names, light, line, camera and what each rarity adds. A card's picture can now be composed as a scene from a recipe of seven layers of kit parts (sceneRecipes.ts, sceneKit.ts, figureKit.ts: 86 parts, a figure kit of poses, heads, headgear, outfits by tag and held items), seeded by its id, the Radiant face repainting the same shapes (R3331000). Five proof cards draw from recipes: Corpse Plantation (Classic #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender (Stinkyscape #15); every other card's picture is byte for byte unchanged. A detail floor per rarity (Common 30 drawn elements up to Mythic 140) starts as a ratchet of the 561 cards under it today, under a 48 KiB ceiling per picture (R3331001). R503's pin on Core's v0.1 pictures is lifted by the owner's decision of 2026-11-06: the three golden fixtures are records, holding every card with no recipe (R3331002). How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Richer card pictures, starting with five",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Five cards now show a picture composed as a whole scene, more detailed the rarer the card: Corpse Plantation, Speciesist, Heroic Power, Ceaseless Void and Arg Arg Defender.",
+      "Every other card keeps its picture for now. Each set's pictures, Core's included, are redrawn as scenes in the patches to come."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
