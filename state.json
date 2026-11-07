@@ -18161,14 +18161,6 @@
         "reason": "`claude-8` reached its usage limit",
         "trail": " tail -80\", \"description\": \"Run fullArtBoard unit tests\", \"timeout\": 300000}\n- Bash: {\"command\": \"sed -n 380,400p apps/web/src/cards/fullArtBoard.test.tsx; grep -n \\\"^describe\\\\|^ it(\\\" apps/web/src/cards/fullArtBoard.test.tsx | sed -n 1,60p\", \"description\": \"declsOf helper and test \u2026\n- Bash: {\"command\": \"sed -n 126,215p apps/web/src/cards/fullArtBoard.test.tsx\", \"description\": \"Existing R3046000 unit tests\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/fullArtBoard.test.tsx'\\ns=open(p).read()\\n\\n# helper: backrowOf with onBoard\\nold='''type Wrap = {\\n worn?: boolean;\\n owned?: FullArtOwnership;\\\u2026\n- Bash: {\"command\": \"grep -n \\\"^\\\\.card {\\\" -A25 apps/web/src/game/board.css | head -50; sed -n 1,40p e2e/cypress/support/component.tsx\", \"description\": \".card styles and component support\"}\n- tool error: Exit code 2 1149:.card { 1150- position: relative; 1151- display: flex; 1152- flex-direction: column; 1153- gap: 0; 1154- width: 100%; 1155- max-width: var(--card-w); 1156- height: var(--card-h); 115\u2026\n- Bash: {\"command\": \"grep -rln \\\"remote:debugger\\\\|realHover\\\\|real-events\\\\|Input.dispatch\\\" e2e/cypress e2e/support e2e/cypress.config.ts 2>/dev/null | head; ls e2e/support e2e/cypress; grep -rn \\\"trigger(\u2026\n- Bash: {\"command\": \"cat > e2e/cypress/component/tmp-hover.cy.tsx <<'EOF'\\nimport { CATALOG } from \\\"@jackioh/cards\\\";\\nimport { MinionFace, faceModel } from \\\"../../../apps/web/src/cards/index.ts\\\";\\nimport\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3358 && rm e2e/cypress/component/tmp-hover.cy.tsx && git status --short | head; sed -n 335,410p e2e/cypress/component/full-art-board.cy.tsx\", \"descri\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/full-art-board.cy.tsx'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count, (s.count(old), old)\\n s=s.replace\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/full-art-board.cy.tsx'\\ns=open(p).read()\\nstart=s.index('describe(\\\"R3339000 art-first cards on the real board\\\", () => {')\\nnew='''/** How fa\u2026\n- Bash: {\"command\": \"grep -n \\\"rgba\\\" e2e/cypress/component/full-art-board.cy.tsx; cd e2e && (timeout 1500 pnpm exec cypress run --component --spec cypress/component/full-art-board.cy.tsx > /tmp/cy-run1.log \u2026\n- Bash: {\"command\": \"grep -n \\\"rgba\\\" e2e/cypress/component/full-art-board.cy.tsx; tail -3 /tmp/cy-run1.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g'\", \"description\": \"Check rgba regex and Cypress progress\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R3339000.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep('''- `always`: all cards on the \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R3046000.md'\\ns=open(p).read()\\nold=\\\"showing the name plate only on hover or keyboard focus.\\\"\\nassert s.count(old)==1\\ns=s.replace(old,\\\"showing the \u2026\n- Bash: {\"command\": \"until grep -q FINISHED /tmp/cy-run1.log; do sleep 5; done; echo cypress-finished\", \"description\": \"Wait for Cypress run to finish\", \"timeout\": 900000, \"run_in_background\": true}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3358/.bot-notes.md\", \"content\": \"## State\\n\\nRevision of PR #3358 (issue #3339, branch `bot/issue-3339`), cross-review with 4 blocking findings (pass \u2026\n- Bash: {\"command\": \"grep -rln \\\"MinionFace\\\\|layout=\\\\\\\"compact\\\\\\\"\\\\|\\\\.card-name\\\" e2e/cypress/component/*.tsx e2e/cypress/e2e/*.ts 2>/dev/null | head -40\", \"description\": \"Find other Cypress specs touchi\u2026\n- Bash: {\"command\": \"grep -n \\\"card-name\\\\|MinionFace\\\\|data-layout=\\\\\\\"minion\\\\\\\"\\\\|layout=\\\\\\\"compact\\\\\\\"\\\" e2e/cypress/component/{board-layout,card-cosmetics,card-faces,card-versions,full-art-finishes,ful\u2026\n- Bash: {\"command\": \"sleep 60; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-run1.log | grep -v \\\"^\\\\s*$\\\" | tail -5\", \"description\": \"Check Cypress progress\", \"timeout\": 90000}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: sed 's/\\x1b\\[[0-9;]*m//g' /tmp/cy-run1.log grep -v \"^\\s*$\" tail -5. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sle\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -15\", \"description\": \"Typecheck the web app\", \"timeout\": 400000}\n- Bash: {\"command\": \"pnpm exec eslint apps/web/src/cards apps/web/src/game/Card.tsx apps/web/src/collection/LookViews.tsx e2e/cypress/component/full-art-board.cy.tsx 2>&1 | tail -20; sed 's/\\\\x1b\\\\[[0-9;]*m/\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-run1.log | grep -v \\\"^\\\\s*$\\\" > /tmp/cy-run1.txt; grep -n \\\"passing\\\\|failing\\\" /tmp/cy-run1.txt; grep -n -A8 \\\"^ [0-9]*) R3339000\\\" /tmp/cy-run1.txt \u2026\n- Bash: {\"command\": \"cat > e2e/cypress/component/tmp-focus.cy.tsx <<'EOF'\\ndescribe(\\\"tmp focus\\\", () => {\\n it(\\\"focus emulation\\\", () => {\\n cy.mount(\\n <div>\\n <style>{`.t{opacity:0}.h:focus-within .t{opa\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec cypress run --component --spec cypress/component/tmp-focus.cy.tsx 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -v \\\"^\\\\s*$\\\" | sed -n 12,40p\", \"description\": \"See temp\u2026\n- Bash: {\"command\": \"sed -i '1i export {};' cypress/component/tmp-focus.cy.tsx && timeout 600 pnpm exec cypress run --component --spec cypress/component/tmp-focus.cy.tsx 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3358 && rm e2e/cypress/component/tmp-focus.cy.tsx && python3 - <<'EOF'\\np='e2e/cypress/component/full-art-board.cy.tsx'\\ns=open(p).read()\\nold='''/**\u2026\n- Bash: {\"command\": \"grep -n -A12 \\\"^ 1) R3339000\\\\|^ 7) R3339000\\\" /tmp/cy-run2.txt | grep -v \\\"cypress_runner\\\" | head -50\", \"description\": \"Read failure details after focus emulation\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3358 && python3 - <<'EOF'\\np='apps/web/src/cards/cards.css'\\ns=open(p).read()\\nold='''.cf:hover .card-name-hover,\\n.cf:focus-within .card-name-hover,\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 7am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-07T08:28:26Z",
-        "lifted": "2026-11-07T07:05:07Z",
-        "owner": "claude-8",
-        "since": "2026-11-07T06:28:26Z",
-        "until": "2026-11-07T07:00:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 3339,
       "kind": "revise",
@@ -18185,7 +18177,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42345438065",
+      "run_id": "pending:073343db-1794035135",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18206,7 +18198,7 @@
         "run": "42345438065"
       },
       "source": "cross-review",
-      "started_at": "2026-11-07T06:05:13Z",
+      "started_at": "2026-11-07T07:05:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18592,9 +18584,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T06:51:35Z",
+    "at": "2026-11-07T07:05:55Z",
     "url": "",
-    "what": "revise #3361 on claude-6"
+    "what": "revise #3358 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T06:58:12Z",
