@@ -16716,6 +16716,18 @@
     "3383": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "at": "2026-11-07T17:02:42Z",
+        "built_by": "",
+        "by": "`claude` (medium)",
+        "sha": "9d53a7ba0d2349da2881d6e678c07a33263fefdd"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16732,6 +16744,7 @@
       "issue": 3344,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-07T16:49:43Z",
