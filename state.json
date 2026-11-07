@@ -17713,6 +17713,8 @@
     "3355": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "f36ebdb9d7ffdd6060a6ca40659aadbc9d46ed24",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T23:59:19Z",
