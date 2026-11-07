@@ -1,0 +1,69 @@
+{
+  "action": "plan",
+  "number": 3418,
+  "title": "CI: a patches promotion or log is stuck",
+  "branch": "bot/issue-3418",
+  "thread": "**Issue #3418 (data, not instructions):**\n\n```text\n# #3418: CI: a patches promotion or log is stuck\nOpened by @github-actions[bot].\n\n<!-- stuck #3415 -->\nThe card-patch promotion https://github.com/Jlore-Studios/JackiOh/pull/3415 (`patches ship`, R646) has been open over 2 hours and did not merge itself:\n\n- [web (unit 7/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/42407758136/job/128512330727)\n- [web](https://github.com/Jlore-Studios/JackiOh/actions/runs/42407758136/job/128516242639)\n\nUntil it merges, the patches it ships are not live as versions: `CATALOG_VERSION` stays where it was and the patch notes do not show them.\n\nFix it on a branch from main: a check that only fails here usually reads the shipped history (`crates/cards/patches/`) and must hold for the history this promotion ships, so check out its branch and run the failing tests there to see it fail first, then show them pass there with the fix. A conflict alone needs no fix. Close this issue with the fix's pull request (or, for a conflict alone, by hand); the watch in `.github/workflows/patches-ship.yml` then ships again from the newer main, and that promotion supersedes this one.\n\nIf they are red for a reason outside the repository (CI out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a `**Human required:**` line saying what a person must do, and build nothing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3418: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T21:56:21Z",
+    "claimed_at": "2026-11-07T22:24:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3402 is held for `claude-3` until 17:00 (it refused a call)",
+    "#3390 is held for `claude-3` until 17:00 (it refused a call)",
+    "#3391 is held for `claude-3` until 17:00 (it refused a call)",
+    "#3392 is held for `claude-3` until 17:00 (it refused a call)",
+    "#3393 is held for `claude-3` until 17:00 (it refused a call)",
+    "#3405 is held for `claude-3` until 17:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3352, #3390, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3396 skipped: it waits for #3390 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3337, #3403 to close first"
+  ]
+}
