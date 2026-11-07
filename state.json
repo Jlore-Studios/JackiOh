@@ -17560,6 +17560,7 @@
         "by": "`claude` (medium)",
         "sha": "7bf3e87dc9820fce7e313a957324fd2d27a47b3c"
       },
+      "closed_at": "2026-11-07T21:38:38Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -17581,6 +17582,7 @@
       "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-4",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
