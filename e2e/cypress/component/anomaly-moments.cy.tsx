@@ -29,8 +29,9 @@ const ROCK = "stinkyscape-169";
 
 /**
  * Mounts the board, then plays `events` over `shown`, as the effects layer's own specs do. Every effect the
- * layer mounts from then on is recorded in the list returned, as `kind` and `kind:side`: a find's ghost lives
- * about a tenth of a second, which a query between two others can miss.
+ * layer mounts from then on is recorded in the list returned, as `kind` and `kind:side`, and a title card as
+ * `kind=name` too (`titled`): a find's ghost lives about a tenth of a second, and the title card of Big moments
+ * "short" and "off" about one, which a query between two others can miss.
  */
 function mountScene(initial: PlayerView, shown: PlayerView, events: GameEvent[]): string[] {
   const lookup = lookupFromDefs(CATALOG);
@@ -51,6 +52,8 @@ function mountScene(initial: PlayerView, shown: PlayerView, events: GameEvent[])
           if (!(added instanceof Element)) continue;
           const kind = added.getAttribute("data-fx") ?? "";
           mounted.push(kind, `${kind}:${added.getAttribute("data-side") ?? ""}`);
+          const name = added.querySelector(".fx-anomalyTitle-name")?.getAttribute("data-text");
+          if (typeof name === "string") mounted.push(`${kind}=${name}`);
         }
       });
       record.observe($dom[0] as Element, { childList: true });
@@ -92,7 +95,9 @@ function cast(view: PlayerView, code: AnomalyCode): GameEvent[] {
 /**
  * The viewport mid-effect, the page running on through the capture as the other effect specs' captures do. A
  * capture stalls the page for a moment, which can drop a cue of a tenth of a second in the scene it is taken
- * in or the next, so the scans' captures are taken after every scan's checks (`SCANS`).
+ * in or the next, so the scans' captures are taken after every scan's checks (`SCANS`). After one, the page draws
+ * about one frame a second, which can pass by a cue of about a second (Big moments "short" and "off"'s title card),
+ * so those forms are checked before any capture and not captured.
  */
 function shot(name: string): void {
   cy.screenshot(name, { capture: "viewport", overwrite: true, disableTimersAndAnimations: false });
@@ -101,6 +106,11 @@ function shot(name: string): void {
 /** The title card the effects layer stamps for `code`: its name (a `data-text`, no text node). */
 function title(code: AnomalyCode): string {
   return `${FX_DOM} [data-fx="anomalyTitle"] .fx-anomalyTitle-name[data-text="${ANOMALIES[code].name}"]`;
+}
+
+/** The title card of `code` as `mountScene` records it once mounted. */
+function titled(code: AnomalyCode): string {
+  return `anomalyTitle=${ANOMALIES[code].name}`;
 }
 
 /** A find of a plain or a Radiant Anomaly Found!, on the owner's seat. */
@@ -173,6 +183,36 @@ describe("R3337003 discovering an Anomaly over a real board", () => {
     });
   }
 
+  // R3337003: Big moments "short" and "off", whose title card stands about a second, at both sizes, before any capture
+  // too (`shot`), and not captured.
+  for (const vp of VIEWPORTS) {
+    describe(`R3337003 Big moments at ${vp.name} size (${String(vp.width)}x${String(vp.height)})`, () => {
+      beforeEach(() => {
+        cy.viewport(vp.width, vp.height);
+      });
+
+      it("R3337003 Big moments short shows the title card and the landing, with no rift", () => {
+        setFxSettings({ bigMoments: "short" });
+        const view = fullBoardView();
+        const mounted = mountScene(view, view, cast(view, "WH"));
+        cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "anomaly");
+        cy.wrap(mounted, { timeout: 4_000 }).should("include", titled("WH"));
+        cy.get(`${FX_DOM} [data-fx="rift"]`).should("not.exist");
+        cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+      });
+
+      it("R3337003 Big moments off shows the title card alone, holding nothing", () => {
+        setFxSettings({ bigMoments: "off" });
+        const view = fullBoardView();
+        const mounted = mountScene(view, view, cast(view, "WH"));
+        cy.wrap(mounted, { timeout: 4_000 }).should("include", titled("WH"));
+        cy.get(GAME).should("not.have.attr", "data-set-piece");
+        cy.get(`${FX_DOM} [data-fx="rift"]`).should("not.exist");
+        cy.get("[data-animating]", { timeout: 8_000 }).should("not.exist");
+      });
+    });
+  }
+
   for (const vp of VIEWPORTS) {
     describe(`at ${vp.name} size (${String(vp.width)}x${String(vp.height)})`, () => {
       beforeEach(() => {
@@ -192,28 +232,6 @@ describe("R3337003 discovering an Anomaly over a real board", () => {
           cy.get(`${FX_DOM} [data-fx="anomalyTitle"]`, { timeout: 4_000 }).should("not.exist");
         });
       }
-
-      it("R3337003 Big moments short shows the title card and the landing, with no rift", () => {
-        setFxSettings({ bigMoments: "short" });
-        const view = fullBoardView();
-        mountScene(view, view, cast(view, "WH"));
-        cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "anomaly");
-        cy.get(title("WH"), { timeout: 4_000 }).should("exist");
-        cy.get(`${FX_DOM} [data-fx="rift"]`).should("not.exist");
-        shot(`anomaly-short-${vp.name}`);
-        cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
-      });
-
-      it("R3337003 Big moments off shows the title card alone, holding nothing", () => {
-        setFxSettings({ bigMoments: "off" });
-        const view = fullBoardView();
-        mountScene(view, view, cast(view, "WH"));
-        cy.get(title("WH"), { timeout: 4_000 }).should("exist");
-        cy.get(GAME).should("not.have.attr", "data-set-piece");
-        cy.get(`${FX_DOM} [data-fx="rift"]`).should("not.exist");
-        shot(`anomaly-off-${vp.name}`);
-        cy.get("[data-animating]", { timeout: 8_000 }).should("not.exist");
-      });
 
       it("R3337003 Reduce Motion stands one still title card", () => {
         setFxSettings({ motion: "reduce" });

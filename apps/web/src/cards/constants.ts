@@ -142,6 +142,49 @@ export const IMMERSIVE_TILT_RANGE_DEG = 30;
 export const IMMERSIVE_TILT_REST_DEG = 45;
 
 /**
+ * R3344001: how far a face with depth tilts toward the pointer, the device or a drag at its far edge, in degrees, each
+ * way. tilt.ts writes the angle (`--cf-tilt-rx`, `--cf-tilt-ry`), which depth.css reads as it is.
+ */
+export const CARD_TILT_MAX_DEG = 12;
+
+/**
+ * R3344001: how far each depth plane (`--cf-plane`, 1 for the middle, 3 for the nearest) shifts against the face per
+ * tilt step, in px, at full tilt on a face CARD_DEPTH_FACE_PX wide: the planes parallax by their depth. CardFace writes
+ * it as `--cf-depth-step`, in cqw so a smaller face shifts less.
+ */
+export const CARD_DEPTH_STEP_PX = 3;
+
+/** R3344001: the face width, in px, that CARD_DEPTH_STEP_PX is measured at (a hand card on a phone). */
+export const CARD_DEPTH_FACE_PX = 170;
+
+/** R3344001: CARD_DEPTH_STEP_PX as a share of the face's width, in percent: what `--cf-depth-step` is written in, as cqw. */
+export const CARD_DEPTH_STEP_CQW = (CARD_DEPTH_STEP_PX / CARD_DEPTH_FACE_PX) * 100;
+
+/**
+ * R3344000: how far a Legendary or Mythic face's near plane (its subject) may rise over the face's top edge, in px,
+ * clipped by the face's own edge as Out of frame's subject is. CardFace writes it as `--cf-frame-break`.
+ */
+export const CARD_FRAME_BREAK_PX = 8;
+
+/** R3344000: how far that near plane is scaled up from its foot, so its subject stands taller than its window. */
+export const CARD_FRAME_BREAK_SCALE = 1.12;
+
+/**
+ * R3344001: the perspective the face's parent gives a tilting face, in px. Mirrored in depth.css's `perspective`
+ * (depth.test.tsx holds the two equal).
+ */
+export const CARD_PERSPECTIVE_PX = 900;
+
+/**
+ * R3344000: how far a glare travels from the middle of its layer at full tilt, in percent of the layer, each way; it
+ * moves opposite the tilt (tilt.ts `glareOf`).
+ */
+export const CARD_GLARE_TRAVEL_PCT = 60;
+
+/** R3344000: how far a glare's gradient reaches before it is clear, in percent of its layer. CardFace writes it as `--cf-glare-size`. */
+export const CARD_GLARE_SIZE_PCT = 55;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim.

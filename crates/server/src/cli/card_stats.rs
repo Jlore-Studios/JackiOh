@@ -12,8 +12,8 @@
 //! `--source=all` (R378). Forced runs never reach the table, as `stats-import` refuses their records whole
 //! (R1284000).
 //!
-//! R1367000, R1368000: `--window[=<version>]` prints the input `cargo jackioh winrates --refresh` takes.
-//! Only the totals hold every game a window spans (R1044001 purges a record's detail after
+//! R1367000: `--window[=<version>]` prints every card over its own window, as `GET /api/stats/cards`
+//! reads it and as a match's win-rate snapshot is taken (R3049000). Only the totals hold every game a window spans (R1044001 purges a record's detail after
 //! `GAME_RECORD_RAW_RETENTION_DAYS`, so a `stats-export` file undercounts it).
 //!
 //! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which the AI's development run prints
@@ -43,9 +43,9 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --card=<id>                One card's row only.
   --json                     The report as JSON.
   --window[=<version>]       R1367000: every card over its own window at the version (default the
-                             newest shipped), as GET /api/stats/cards reads it, printed as JSON:
-                             the input `cargo jackioh winrates --refresh` takes (R1368000). Not
-                             with --source, --mode or --patch.";
+                             newest shipped), as GET /api/stats/cards reads it and a match's
+                             win-rate snapshot is taken (R3049000), printed as JSON. Not with
+                             --source, --mode or --patch.";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CardStatsOptions {

@@ -6,6 +6,8 @@
 //! New bots draw strength (R610), persona (R645), schedule, and username (`bots::names`).
 //! Bo1 decks draw from human decklists and random decks (R750000, R1453), each kept only when legal
 //! and dealt again on a new catalog or deck size (R1705001), then the Conquest trio (R641000, R253).
+//! The random decks lean on the win-rate snapshot the refresh takes of the cached card stats
+//! (R3049002).
 //! Refreshes draw cosmetics (R1834005), kept on the `bots` row and never in the ledger, and manage
 //! top-bot grinding (R1555000). The queue's sweeper runs `release_stale_starts` whatever
 //! `LADDER_BOTS` says, as R1450's open-row sweep would hold a bot too long.
@@ -236,12 +238,15 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         tx.stats_decklists(&app.catalog.version).await?
     };
     tx.commit().await?;
+    // R3049002: every deal of this refresh leans on one snapshot of the cached card stats.
+    let win_rates = crate::api::stats::win_rate_snapshot(app).await;
     for bot in &stale {
         let decks = draw_decks(
             &format!("{seed}:{}", bot.profile_id),
             &lists,
             &snapshot,
             bot_target_strength(bot.strength),
+            Some(&win_rates),
         );
         let mut tx = app.db.begin(None).await?;
         tx.bots_set_decks(&bot.profile_id, &decks, &app.catalog.version)
@@ -263,6 +268,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
             &bot.decks,
             &snapshot,
             bot_target_strength(bot.strength),
+            Some(&win_rates),
         ) else {
             tracing::warn!(event = "bots.pool.trio_short", botId = %bot.profile_id);
             continue;

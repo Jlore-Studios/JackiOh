@@ -18,8 +18,8 @@
 //! tables under `win_rates/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an entry
 //! that differs from the newest shipped snapshot without exactly one fragment's claim or is claimed and
 //! does not, a `plays` id that is no shipped card, a fragment that claims nothing or leaves its title,
-//! sources or notes empty (R388), a player note that breaks the note rules (R724001), a win-rate table
-//! moved without exactly one claim or claimed unmoved (R1329000), and a technical log out of shape
+//! sources or notes empty (R388), a player note that breaks the note rules (R724001), a carried
+//! version whose win-rate table is not its frozen file (R1329000), and a technical log out of shape
 //! (R1369000); a changed script needs no claim, the pull request's `classify` check holds that. `ship`
 //! needs full history (`fetch-depth: 0`); `patches-ship.yml` runs it after every merge that touches
 //! `pending/`. No clock (CLAUDE.md rule 4): dates come from the git history. Each of `js`, `patch`,
@@ -607,6 +607,7 @@ pub mod patches_io {
     use crate::classify::Tier;
 
     /// `crates/cards/patches/`.
+    #[cfg(test)]
     pub fn patches_dir() -> PathBuf {
         super::repo_root().join("crates/cards/patches")
     }
@@ -622,6 +623,7 @@ pub mod patches_io {
     }
 
     /// Pending fragments: one file per patch being built, never edited after it ships (R646).
+    #[cfg(test)]
     pub fn pending_dir() -> PathBuf {
         patches_dir().join("pending")
     }
@@ -1068,9 +1070,6 @@ pub mod patches_io {
         /// `classify`'s stage 2, they hold a quarter of its unforced games (R2455000).
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         pub rule: bool,
-        /// R1329000: the patch ships `crates/cards/data/win_rates.json` as it stands.
-        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-        pub win_rates: bool,
         /// R2529000: the patch changes how cards look (`classify::CARD_VISUALS`), a micro.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         pub visual: bool,
@@ -1323,12 +1322,11 @@ pub mod patches_io {
     }
 
     /// The input of `check_fragments`: the fragment files, the working catalog and the newest shipped
-    /// snapshot, and whether the win-rate table's rows differ from the newest shipped version's.
+    /// snapshot.
     pub struct CheckFragmentsArgs<'a> {
         pub files: &'a [NamedFragment],
         pub catalog: &'a Catalog,
         pub newest: &'a Catalog,
-        pub win_rates_changed: bool,
     }
 
     /// Every way the pending fragments disagree with the newest shipped snapshot, each naming the card
@@ -1353,18 +1351,17 @@ pub mod patches_io {
             for problem in player_note_problems(&fragment.player) {
                 problems.push(format!("pending/{name}'s player note {problem} (R724001)"));
             }
-            // A patch changes a card, a card's play or look, a rule, the win-rate table or a system;
-            // one that claims none would bump the version over nothing (R650, R1329000, R1366000,
-            // R2529000).
+            // A patch changes a card, a card's play or look, a rule or a system; one that claims none
+            // would bump the version over nothing (R650, R1366000, R2529000). No patch ships a
+            // win-rate table since #3049 (R3049000).
             if fragment.cards.is_empty()
                 && fragment.plays.is_empty()
                 && !fragment.rule
-                && !fragment.win_rates
                 && !fragment.visual
                 && fragment.system.is_none()
             {
                 problems.push(format!(
-                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system, no win-rate table), but a patch ships a change"
+                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
                 ));
             }
             // R2529000: only the owner names a system.
@@ -1419,34 +1416,6 @@ pub mod patches_io {
                     names[0]
                 ));
             }
-        }
-        // R1329000: the win-rate table is held to one claim as a card is, exactly when its rows moved.
-        let table_claims: Vec<&String> = args
-            .files
-            .iter()
-            .filter(|named| named.fragment.win_rates)
-            .map(|named| &named.name)
-            .collect();
-        if args.win_rates_changed {
-            if table_claims.is_empty() {
-                problems.push(
-                    "the win-rate table (crates/cards/data/win_rates.json) differs from the newest shipped version's but no pending fragment claims it (R1329000)"
-                        .to_string(),
-                );
-            } else if table_claims.len() > 1 {
-                let named: Vec<String> = table_claims
-                    .iter()
-                    .map(|name| format!("pending/{name}"))
-                    .collect();
-                problems.push(format!(
-                    "the win-rate table is claimed by {}, but it ships in one patch (R1329000)",
-                    named.join(" and ")
-                ));
-            }
-        } else if let Some(first) = table_claims.first() {
-            problems.push(format!(
-                "the win-rate table is claimed by pending/{first} but its rows are the newest shipped version's (R1329000)"
-            ));
         }
         problems
     }
@@ -1524,7 +1493,6 @@ pub mod versions {
 
 const CATALOG_REL: &str = "crates/cards/catalog.json";
 const PATCHES_REL: &str = "crates/cards/patches";
-const WIN_RATES_REL: &str = "crates/cards/data/win_rates.json";
 
 /// Every patches path under one root, so tests promote a fixture repo instead of this one.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1534,8 +1502,6 @@ pub struct PatchPaths {
     pub shipped_json: PathBuf,
     pub pending_dir: PathBuf,
     pub catalog: PathBuf,
-    /// R1329000: the working win-rate table, which a patch ships when its fragment claims it.
-    pub win_rates: PathBuf,
 }
 
 /// The `PatchPaths` under `repo_root`.
@@ -1546,17 +1512,8 @@ pub fn patch_paths(repo_root: &Path) -> PatchPaths {
         shipped_json: dir.join("shipped.json"),
         pending_dir: dir.join("pending"),
         catalog: repo_root.join(CATALOG_REL),
-        win_rates: repo_root.join(WIN_RATES_REL),
         dir,
     }
-}
-
-/// R1329000: whether the working win-rate table's rows differ from those `newest`, the newest
-/// shipped version, shipped with.
-fn win_rates_changed(paths: &PatchPaths, newest: &str) -> anyhow::Result<bool> {
-    let (_, shipped) = read_win_rates(&win_rates_path(newest, &paths.dir)?)?;
-    let (_, working) = read_win_rates(&paths.win_rates)?;
-    Ok(!same_win_rates(&shipped, &working))
 }
 
 /// `catalog.json` as a patch sees it: its shipped view (R1420), without its flavors (R1437000).
@@ -1642,9 +1599,8 @@ pub struct FragmentArgs {
 
 /// Writes (or updates) the fragment `pending/<slug>.json` after its title (R1366000). `cards` defaults
 /// to every catalog id that differs from the newest shipped snapshot; `player`, `plays` and `rule` to
-/// what the fragment holds, or an empty note for `patches check` to name (R724001). It claims the
-/// win-rate table when its rows differ from the newest shipped version's and no other fragment does
-/// (R1329000).
+/// what the fragment holds, or an empty note for `patches check` to name (R724001). It claims no
+/// win-rate table: none ships with a patch since #3049 (R3049000).
 pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<NamedFragment> {
     let paths = patch_paths(repo_root);
     let patches = read_patches(&paths.patches_json)?;
@@ -1668,9 +1624,6 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<N
         .ok()
         .and_then(|text| serde_json::from_str(&text).ok())
         .unwrap_or_default();
-    let claimed_elsewhere = read_fragments(&paths.pending_dir)?
-        .iter()
-        .any(|named| named.name != name && named.fragment.win_rates);
     let fragment = PendingFragment {
         version: None,
         title: args.title.clone(),
@@ -1680,7 +1633,6 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<N
         cards,
         plays: args.plays.clone().unwrap_or(held.plays),
         rule: args.rule.unwrap_or(held.rule),
-        win_rates: !claimed_elsewhere && win_rates_changed(&paths, &newest.version)?,
         visual: args.visual.unwrap_or(held.visual),
         system: args.system.or(held.system),
     };
@@ -1705,7 +1657,6 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
         files: &files,
         catalog: &catalog,
         newest: &newest_snapshot,
-        win_rates_changed: win_rates_changed(&paths, &newest.version)?,
     });
     // R1366000: every fragment ships under a name its tier gives after the newest version, so fail
     // now when the newest has no form to follow, instead of failing at promotion.
@@ -1937,8 +1888,7 @@ struct Queued {
     at: usize,
 }
 
-/// A queued fragment with its snapshot's text, proved to change exactly the cards it claims, its
-/// win-rate table's text, proved to change exactly when it claims the table (R1329000), and the
+/// A queued fragment with its snapshot's text, proved to change exactly the cards it claims, and the
 /// version its tier names (R1366000).
 struct Proved {
     name: String,
@@ -1950,7 +1900,6 @@ struct Proved {
     /// R2529000: a named system alone made it a patch.
     system: bool,
     raw: String,
-    table: String,
     /// R2173000: the version's BUSTED and complicated lists, once it holds a card that reads them.
     lists: Option<String>,
 }
@@ -1972,8 +1921,7 @@ pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
 /// R1366000: a patch's tier and the families that play differently in it, from the snapshot before it
 /// and its own (each with its cards' sets) and the fragment's `plays` and `rule` (`classify::read_diff`,
 /// `classify::classify`, R1365000), which count as stage 2's: the pull request's `classify` check
-/// confirmed them. A patch that changes no card (the win-rate table alone, R1329000, or how cards look,
-/// R2529000) is a micro: every patch bumps the version. A fragment claiming a system the owner names is
+/// confirmed them. A patch that changes no card (how cards look, R2529000) is a micro: every patch bumps the version. A fragment claiming a system the owner names is
 /// a patch whatever its cards earn (R2529000); the third value says whether the system alone made it one.
 fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>, bool) {
     tier_among(previous, snapshot, fragment, classify::SYSTEM_RELEASES)
@@ -2045,9 +1993,7 @@ fn with_claims(previous: &Catalog, current: &Catalog, claims: &[String]) -> Cata
 
 /// Promotes every pending fragment to a shipped patch in the order of the first-parent commit that
 /// added it (ship order, R646), dated by that commit. Its snapshot is the patch before it with the cards
-/// it claims as `catalog.json` holds them now (`with_claims`), its win-rate table `data/win_rates.json`
-/// when it claims the table and the patch before it's otherwise (R1329000), and its version is named
-/// from its tier (`tier_of`, `versions::name_by_tier`, R1366000). Idempotent. Since `check` passes, a
+/// it claims as `catalog.json` holds them now (`with_claims`), and its version is named from its tier (`tier_of`, `versions::name_by_tier`, R1366000). Idempotent. Since `check` passes, a
 /// claimed card changed again after its fragment merged, a fragment edited to claim more, or two
 /// fragments one commit added all ship: what a fragment claims is what its patch ships.
 pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
@@ -2107,11 +2053,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let current: Catalog = serde_json::from_str(&current_text)
         .with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
     let mut previous = read_snapshot(&newest.version, &paths.dir)?;
-    // R1329000: the same for the win-rate table, which the one fragment that claims it ships as
-    // `data/win_rates.json` holds it now, and every other carries from the patch before it.
-    let (working_text, working) = read_win_rates(&paths.win_rates)?;
-    let (mut previous_text, mut previous_table) =
-        read_win_rates(&win_rates_path(&newest.version, &paths.dir)?)?;
+    // R3049000: no version ships a win-rate table since #3049; the frozen files under `win_rates/`
+    // stay the tables the versions before it shipped with (R1329000).
     // R2173000: a version that holds a card reading the BUSTED or complicated lists ships the lists
     // the scripts make as they stand, as the build compiles them; one that holds none keeps none.
     let full: Catalog = serde_json::from_str(&file)
@@ -2157,24 +2100,6 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             }
             text
         };
-        let (mut table_text, table) = if fragment.win_rates {
-            if same_win_rates(&working, &previous_table) {
-                bail!(
-                    "pending/{name}: it claims the win-rate table, but its rows are the patch before it's; nothing was shipped"
-                );
-            }
-            (working_text.clone(), working.clone())
-        } else {
-            (previous_text, previous_table)
-        };
-        if at + 1 == count {
-            if !same_win_rates(&table, &working) {
-                bail!(
-                    "the pending fragments' claims do not make crates/cards/data/win_rates.json; nothing was shipped"
-                );
-            }
-            table_text = working_text.clone();
-        }
         let lists = scripts
             .readers
             .iter()
@@ -2188,7 +2113,6 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         taken.insert(version.clone());
         newest_name = version.clone();
         previous = snapshot;
-        (previous_text, previous_table) = (table_text.clone(), table);
         proved.push(Proved {
             name,
             fragment,
@@ -2198,7 +2122,6 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             plays,
             system,
             raw,
-            table: table_text,
             lists,
         });
     }
@@ -2209,8 +2132,6 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     // The last patch shipped is the newest one, so the version moves first: a version site that is
     // missing stops the promotion before any history is written.
     bump_sites(&last.version, repo_root)?;
-    let tables_dir = paths.dir.join("win_rates");
-    fs::create_dir_all(&tables_dir).with_context(|| format!("{} cannot be created", tables_dir.display()))?;
     let mut names = Vec::with_capacity(proved.len());
     for Proved {
         name,
@@ -2221,15 +2142,11 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         plays,
         system,
         raw,
-        table,
         lists,
     } in proved
     {
         let path = snapshot_path(&version, &paths.dir)?;
         fs::write(&path, &raw).with_context(|| format!("{} cannot be written", path.display()))?;
-        let table_path = win_rates_path(&version, &paths.dir)?;
-        fs::write(&table_path, &table)
-            .with_context(|| format!("{} cannot be written", table_path.display()))?;
         let timestamp = git(repo_root, &["log", "-1", "--format=%ct", &commit], &[])?;
         let seconds: i64 = timestamp
             .trim()
@@ -2251,8 +2168,6 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         });
         let written =
             fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
-        let written_table = fs::read_to_string(&table_path)
-            .with_context(|| format!("{} cannot be read", table_path.display()))?;
         let card_metrics_blob = match lists {
             Some(lists) => {
                 let lists_path = card_lists::lists_path(&version, &paths.dir)?;
@@ -2268,7 +2183,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             version: version.clone(),
             commit,
             blob: git_blob_hash(&written),
-            win_rates_blob: Some(git_blob_hash(&written_table)),
+            // R3049000: no table ships with a version since #3049.
+            win_rates_blob: None,
             card_metrics_blob,
         });
         remove_file(&paths.pending_dir.join(&name));
@@ -2439,11 +2355,6 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     } else {
         format!(" ({})", fragment.cards.join(", "))
     };
-    let table = if fragment.win_rates {
-        " and the win-rate table"
-    } else {
-        ""
-    };
     let plays = if fragment.plays.is_empty() {
         String::new()
     } else {
@@ -2451,7 +2362,7 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     };
     let rule = if fragment.rule { ", and a rule" } else { "" };
     println!(
-        "fragment pending/{name}: claims {} card(s){listed}{table}{plays}{rule}",
+        "fragment pending/{name}: claims {} card(s){listed}{plays}{rule}",
         fragment.cards.len()
     );
     Ok(())
@@ -2636,7 +2547,6 @@ mod tests {
                         files: &[fragment],
                         catalog: &catalog,
                         newest: &catalog,
-                        win_rates_changed: false,
                     })
                 };
                 assert_eq!(check(named("looks.json", looks)), Vec::<String>::new());
@@ -2729,12 +2639,6 @@ mod tests {
             }
         }
 
-        /// `named` claiming the win-rate table too (R1329000).
-        fn claiming_table(mut named: NamedFragment) -> NamedFragment {
-            named.fragment.win_rates = true;
-            named
-        }
-
         fn set(ids: &[&str]) -> IndexSet<String> {
             ids.iter().map(|id| (*id).to_string()).collect()
         }
@@ -2744,17 +2648,6 @@ mod tests {
                 files,
                 catalog,
                 newest,
-                win_rates_changed: false,
-            })
-        }
-
-        /// R1329000: `check` on a catalog that is `newest`, the win-rate table's rows moved or not.
-        fn check_table(files: &[NamedFragment], changed: bool, newest: &Catalog) -> Vec<String> {
-            check_fragments(&CheckFragmentsArgs {
-                files,
-                catalog: newest,
-                newest,
-                win_rates_changed: changed,
             })
         }
 
@@ -2838,7 +2731,7 @@ mod tests {
                 assert_eq!(
                     check(&none, &newest, &newest),
                     strings(&[
-                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system, no win-rate table), but a patch ships a change"
+                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
                     ])
                 );
                 let mut plays = none.clone();
@@ -2860,40 +2753,6 @@ mod tests {
                         "pending/t.json claims \"zzz\" plays differently, but it is no shipped card (R1366000)"
                     ])
                 );
-            }
-
-            // The table's claim alone makes a patch, too.
-            #[test]
-            fn r1329000_holds_the_win_rate_table_to_one_claim_exactly_when_its_rows_changed() {
-                let newest = catalog_of(vec![card("aaa", 1)]);
-                let table_only = claiming_table(named("table.json", "t", "s", "n", &[]));
-                assert_eq!(
-                    check_table(std::slice::from_ref(&table_only), true, &newest),
-                    Vec::<String>::new()
-                );
-                assert_eq!(
-                    check_table(&[], true, &newest),
-                    strings(&[
-                        "the win-rate table (crates/cards/data/win_rates.json) differs from the newest shipped version's but no pending fragment claims it (R1329000)"
-                    ])
-                );
-                let twice = vec![
-                    table_only.clone(),
-                    claiming_table(named("table-again.json", "t", "s", "n", &[])),
-                ];
-                assert_eq!(
-                    check_table(&twice, true, &newest),
-                    strings(&[
-                        "the win-rate table is claimed by pending/table.json and pending/table-again.json, but it ships in one patch (R1329000)"
-                    ])
-                );
-                assert_eq!(
-                    check_table(&[table_only], false, &newest),
-                    strings(&[
-                        "the win-rate table is claimed by pending/table.json but its rows are the newest shipped version's (R1329000)"
-                    ])
-                );
-                assert_eq!(check_table(&[], false, &newest), Vec::<String>::new());
             }
 
             #[test]
@@ -3582,7 +3441,8 @@ mod tests {
                         version: "v0.1.1b".to_string(),
                         commit: c1.clone(),
                         blob: git_blob_hash(&read(&dir.join("v0.1.1b.json"))),
-                        win_rates_blob: Some(git_blob_hash(&read(&dir.join("win_rates/v0.1.1b.json")))),
+                        // R3049000: no table ships with a version.
+                        win_rates_blob: None,
                         card_metrics_blob: None,
                     }
                 );
@@ -4225,82 +4085,49 @@ mod tests {
                 assert_eq!(read_snapshot("v0.1.1d", &dir).unwrap(), both);
             }
 
-            // R1329000: v0.1.1b changes a card, v0.1.1c claims the win-rate table alone, a micro since it
-            // changes no card (R1366000), and v0.1.1d a card after it. Each version ships the table as
-            // it stands for it, the empty one before the claim and `data/win_rates.json` from it on,
-            // with each file's blob in shipped.json.
+            // R1329000, R3049000: no patch ships a win-rate table since #3049. The fragment holds no claim
+            // of one, the version it ships gains no `win_rates/` file and no blob in shipped.json, and
+            // the frozen table an earlier version shipped with stays as it was.
             #[test]
-            fn r1329000_ships_the_win_rate_table_with_the_one_fragment_that_claims_it() {
+            fn r1329000_r3049000_a_shipped_fragment_writes_no_win_rate_table() {
                 let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
-                let temp = shipped_repo("jackioh-ship-table-", &base);
+                let temp = shipped_repo("jackioh-ship-no-table-", &base);
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
+                let frozen = win_rates_text("v0.1.1", &[("aaa", 30, 40)]);
                 write_files(
                     root,
-                    &[(
-                        "crates/cards/catalog.json",
-                        json(&base_with(&base, vec![card("aaa", 2)])),
-                    )],
+                    &[
+                        ("crates/cards/patches/win_rates/v0.1.1.json", frozen.clone()),
+                        (
+                            "crates/cards/catalog.json",
+                            json(&base_with(&base, vec![card("aaa", 2)])),
+                        ),
+                    ],
                 );
-                let first = write_fragment(root, &fragment_args("t", "s", "n", None))
-                    .unwrap()
-                    .fragment;
-                assert!(!first.win_rates, "the table has not moved");
+                write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
+                assert!(
+                    !read(&dir.join("pending/t.json")).contains("winRates"),
+                    "the fragment claims no table"
+                );
                 commit_at(root, "fragment t", "2026-10-01T12:00:00+00:00");
-                let table = win_rates_text("v0.1.1c", &[("aaa", 30, 40)]);
-                write_files(root, &[("crates/cards/data/win_rates.json", table.clone())]);
-                assert_eq!(
-                    check_patches(root).unwrap(),
-                    strings(&[
-                        "the win-rate table (crates/cards/data/win_rates.json) differs from the newest shipped version's but no pending fragment claims it (R1329000)"
-                    ])
-                );
-                let claim = write_fragment(root, &fragment_args("t2", "s", "n", Some(&[][..])))
-                    .unwrap()
-                    .fragment;
-                assert!(claim.win_rates && claim.cards.is_empty(), "{claim:?}");
-                commit_at(root, "fragment t2", "2026-10-02T12:00:00+00:00");
-                write_files(
-                    root,
-                    &[(
-                        "crates/cards/catalog.json",
-                        json(&base_with(&base, vec![card("aaa", 2), card("bbb", 2)])),
-                    )],
-                );
-                let after = write_fragment(root, &fragment_args("t3", "s", "n", Some(&["bbb"][..])))
-                    .unwrap()
-                    .fragment;
-                assert!(!after.win_rates, "t2 claims the table");
-                commit_at(root, "fragment t3", "2026-10-03T12:00:00+00:00");
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
-
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                assert!(!dir.join("win_rates/v0.1.1b.json").exists(), "no table shipped");
                 assert_eq!(
-                    ship_patches(root).unwrap(),
-                    shipped_of(&["v0.1.1b", "v0.1.1c", "v0.1.1d"])
-                );
-                assert_eq!(read(&dir.join("win_rates/v0.1.1b.json")), empty_win_rates_text());
-                assert_eq!(read(&dir.join("win_rates/v0.1.1c.json")), table);
-                assert_eq!(read(&dir.join("win_rates/v0.1.1d.json")), table);
-                let table_patch = &read_patches(&dir.join("patches.json")).unwrap()[2];
-                assert_eq!(
-                    (table_patch.tier, table_patch.plays.clone()),
-                    (Some(Tier::Micro), Some(Vec::new()))
+                    read(&dir.join("win_rates/v0.1.1.json")),
+                    frozen,
+                    "the frozen table stays"
                 );
                 let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
                 assert_eq!(
-                    shipped[0].win_rates_blob, None,
-                    "v0.1.1 shipped before the tables"
+                    shipped.last().map(|entry| entry.version.as_str()),
+                    Some("v0.1.1b")
                 );
-                for entry in &shipped[1..] {
-                    let file = read(&win_rates_path(&entry.version, &dir).unwrap());
-                    assert_eq!(
-                        entry.win_rates_blob,
-                        Some(git_blob_hash(&file)),
-                        "{}",
-                        entry.version
-                    );
-                }
-                // The newest shipped version's table is the working one, so nothing is left to claim.
+                assert_eq!(
+                    shipped.last().and_then(|entry| entry.win_rates_blob.clone()),
+                    None
+                );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
 
@@ -4369,33 +4196,6 @@ mod tests {
                     )))
                 );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
-            }
-
-            #[test]
-            fn r1329000_ships_nothing_while_no_fragment_claims_a_changed_table() {
-                let base = catalog_of(vec![card("aaa", 1)]);
-                let temp = shipped_repo("jackioh-ship-unclaimed-table-", &base);
-                let root = temp.path();
-                write_files(
-                    root,
-                    &[(
-                        "crates/cards/catalog.json",
-                        json(&catalog_of(vec![card("aaa", 2)])),
-                    )],
-                );
-                write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
-                commit_at(root, "fragment t", "2026-10-01T12:00:00+00:00");
-                write_files(
-                    root,
-                    &[(
-                        "crates/cards/data/win_rates.json",
-                        win_rates_text("v0.1.1b", &[("aaa", 30, 40)]),
-                    )],
-                );
-                commit_at(root, "the table, unclaimed", "2026-10-02T12:00:00+00:00");
-                let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
-                assert!(refused.contains("no pending fragment claims it"), "{refused}");
-                assert_eq!(git(root, &["status", "--porcelain"], None), "");
             }
 
             #[test]

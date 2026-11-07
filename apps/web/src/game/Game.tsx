@@ -29,6 +29,7 @@ import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerVi
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
+import { useTiltHold } from "../cards/tilt.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import type { ChoiceHover } from "./choiceHover.ts";
@@ -306,6 +307,8 @@ export default function Game({
    * the view does not render (a destroyed card), and "no element is animating" is not "caught up".
    */
   const [inFlight, setInFlight] = useState<AnimationEntry | null>(null);
+  // R3344001: no card tilts while the queue is draining an entry.
+  useTiltHold(inFlight !== null);
   const inFlightDamage = inFlight?.events.find(
     (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage",
   );
