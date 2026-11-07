@@ -34915,7 +34915,9 @@
           "provider": "claude-6"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-07T03:55:03Z",
         "every": 5,
+        "findings": 0,
         "head": "a4d0724238db14c2af29c6f820c600ae885b1670",
         "issue": 3329,
         "last_why": "interrupted: `claude-4` stops before it starts: 5-hour usage is 55%, at or over its 50% cap outside its hours; it resets at 2026-11-07T04:10:00Z",
@@ -34929,12 +34931,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:e070506a-1794023081",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42335423048",
         "sha": "c62f023280ece602550c328276e4995720c53a6f",
         "started_at": "2026-11-07T03:45:16Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: drop the square shadow behind the card face's cost gem",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 122
