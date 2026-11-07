@@ -15084,8 +15084,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-3",
-      "owner_since": "2026-11-07T12:51:48Z",
-      "owner_why": "handed off from `claude-7`: `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-07T16:00:00Z; it can start again only in 2h 08m, more than the 120 minutes an item waits for its owner",
+      "owner_since": "2026-11-07T15:30:03Z",
+      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-07T03:55:36Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -16509,12 +16509,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3346,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-11-07T14:15:01Z",
+      "queued_at": "2026-11-07T15:30:03Z",
       "run_id": "42380825216",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16535,9 +16535,17 @@
         "provider": "claude-3",
         "run": "42374345975"
       },
+      "source": "conflict",
       "started_at": "2026-11-07T14:16:26Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-3",
+        "since": "2026-11-07T15:30:03Z",
+        "until": "2026-11-07T16:00:03Z",
+        "why": "it conflicts with `main` now"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -16557,18 +16565,6 @@
         "tiers": {
           "claude": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3371,
-          3366
-        ],
-        "ends": "2026-11-07T16:36:16Z",
-        "from_run": "42380825216",
-        "head": "cff506922e6939e7805928bb14c5499b8d93408b",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-07T14:36:16Z"
       }
     },
     "3380": {
