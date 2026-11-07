@@ -15694,33 +15694,13 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "built_by": "claude-7",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/art/stinkyscape.test.tsx",
-            "apps/web/src/cards/art/svg.ts"
-          ],
-          "from": "40ba1afa6f3e22852b3e4c63ca6185f553dbf546",
-          "main": "dd0f41602606ec3b1c82bac610a6a8040a5dd774"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-7",
-            "run": "42367795020",
-            "tier": "strong"
-          }
-        ],
-        "sha": "be74d7528b8d9035fc88f0927d6057225dc037cf",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "3bc2b0630d36763a04af283f9caea592ce2f7ea0",
+        "tiers": {}
       },
       "waiting_comment": 6707669953
     },
