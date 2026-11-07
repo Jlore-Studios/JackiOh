@@ -277,7 +277,12 @@ describe("R438 a unit with each keyword renders its treatment", () => {
     const cf = renderUnit({ keywords: [{ kind: "Taunt" }] });
     expect(cf.getAttribute("data-taunt")).toBe("true");
     expect(fxOf(cf, "Taunt")?.querySelector(".kw-taunt-shield")).not.toBeNull();
-    expect(cardsCss.rules.some((rule) => rule.selectors.some((s) => norm(s) === '.cf[data-taunt="true"] .cf-portrait'))).toBe(true);
+    // #3341: over the art's rim (the picture runs up to the frame), on the portrait's ::after.
+    expect(
+      cardsCss.rules.some((rule) =>
+        rule.selectors.some((s) => norm(s) === '.cf[data-layout="minion"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after'),
+      ),
+    ).toBe(true);
     // The shield moved: nothing draws it twice.
     expect(cardsCss.text).not.toMatch(/data-taunt="true"\]\s*\.cf-portrait::before/);
     const none = renderUnit({ keywords: [] });

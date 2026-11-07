@@ -43,6 +43,11 @@
   /* Your hand is drawn bigger than the field, as in Hearthstone: it is what you read most. */
   --hand-card-h: calc(var(--card-h) * 1.3);
   --hand-card-w: calc(var(--hand-card-h) * 0.72);
+  /* #3341: a lifted hand card (a hover, a tap, keyboard focus) rises this share of its own height and
+     is drawn this many times as big; each layout below sets its own, as `HAND_LIFT_RISE` and
+     `HAND_LIFT_SCALE` in game/config.ts state them. */
+  --hand-lift-scale: 1.22;
+  --hand-lift-rise: 0.1;
   --selected: var(--pal-sky-300);
   --seat-radius: var(--radius-md);
 
@@ -639,8 +644,9 @@ button.modifier-badge[data-open="true"] {
   background: transparent;
 }
 
-/* Room above your fan for a lifted card (translateY(-8px) on desktop), so a lift stays inside
-   the hand and never covers `hero-you` or `power` in the seat above it. */
+/* Room above your fan for the card you are playing (it only steps up, translateY(-10px) on a
+   phone). A card lifted to be read rises further, over the seat above, drawn above everything but a
+   glowing hero (`.hero[data-glow="ready"]`, below). */
 .hand-you {
   position: relative;
   padding-top: var(--space-5);
@@ -754,7 +760,7 @@ button.modifier-badge[data-open="true"] {
 .hand-you .hand-slot[data-lifted="true"],
 .hand-you .hand-slot:has(> .card:focus-visible) {
   z-index: var(--z-hover);
-  transform: translateY(-8px);
+  transform: translateY(calc(var(--hand-card-h) * var(--hand-lift-rise) * -1)) scale(var(--hand-lift-scale));
 }
 
 .hand-you .hand-slot[data-lifted="true"] > .card {
@@ -2541,7 +2547,7 @@ button.modifier-badge[data-open="true"] {
   .board {
     /* Four field rows and your hand (1.48) stacked. */
     --card-h: clamp(56px, 11.5vh, 92px);
-    --card-h: clamp(56px, calc((100cqh - 215px) / 5.48), 112px);
+    --card-h: clamp(56px, calc((100cqh - 203px) / 5.48), 119px);
     /* A lane here is three or four cards wide, so a field card takes a square of it: the name
        fits on a line and a backrow card's text has room. The hand keeps its tall cards. */
     --card-w: var(--card-h);
@@ -2551,7 +2557,17 @@ button.modifier-badge[data-open="true"] {
     --hand-card-h: calc(var(--card-h) * 1.48);
     grid-template-columns: minmax(0, 1fr) minmax(0, 250px);
     grid-template-rows: auto 1fr auto auto;
+    /* #3341: tighter gaps before a smaller card: the lanes' and the fan's `--gap` 6 to 4px, and (below)
+       the room over your fan 10 to 4px, which `BOARD_CARD_BUDGET.desktop` gave back to the card (the
+       lanes' three gaps are 6px and the fan's nine 18px of `fixedPx` and `widthFixedPx`, the hand's
+       6px). The rows' gaps and the mat's padding stay: the seats' status trays hang into them
+       (#2877), and a tray never covers a zone. */
+    --gap: var(--space-2);
     column-gap: var(--space-6);
+  }
+
+  .board > .hand-you {
+    padding-top: var(--space-2);
   }
 
   .board > .seat-opponent {
@@ -2658,7 +2674,7 @@ button.modifier-badge[data-open="true"] {
    board shrinking to fit ten of them across 1024px. */
 @media (min-width: 1025px) {
   .board {
-    --card-h: clamp(56px, min(calc((100cqh - 215px) / 5.48), calc((100cqw - 334px) / 10.66)), 112px);
+    --card-h: clamp(56px, min(calc((100cqh - 203px) / 5.48), calc((100cqw - 316px) / 10.66)), 119px);
   }
 
   /* The same width bound keeps a lane over 2.1 card heights wide here, so the rows may grow to
@@ -2807,7 +2823,7 @@ button.modifier-badge[data-open="true"] {
 @media (hover: hover) and (pointer: fine) {
   .hand-you[data-hover-preview="on"] .hand-slot:hover {
     z-index: var(--z-hover);
-    transform: translateY(-8px);
+    transform: translateY(calc(var(--hand-card-h) * var(--hand-lift-rise) * -1)) scale(var(--hand-lift-scale));
   }
 
   /* #3347: the cards either side of the one hovered part to make room for it. */
@@ -2824,8 +2840,13 @@ button.modifier-badge[data-open="true"] {
    about 3deg at either end whatever the hand size (6deg spread over n cards). `padding-inline` is
    the room the end cards' tilted corners swing into, so they stay inside `hand-you`. A tablet's
    hand cards are already big, so a lifted one rises a little and barely grows; the phone layouts
-   below lift further. The desktop keeps the flat fan and the 8px lift above. */
+   below lift further. The desktop keeps the flat fan. */
 @media (max-width: 899px), (max-width: 1024px) and (orientation: portrait) {
+  .board {
+    --hand-lift-scale: 1.14;
+    --hand-lift-rise: 0.12;
+  }
+
   .hand-you .hand-cards {
     padding-inline: var(--space-2);
   }
@@ -2836,7 +2857,7 @@ button.modifier-badge[data-open="true"] {
 
   .hand-you .hand-slot[data-lifted="true"],
   .hand-you .hand-slot:has(> .card:focus-visible) {
-    transform: translateY(calc(var(--hand-card-h) * -0.12)) scale(1.08);
+    transform: translateY(calc(var(--hand-card-h) * var(--hand-lift-rise) * -1)) scale(var(--hand-lift-scale));
   }
 }
 
@@ -2878,10 +2899,14 @@ button.modifier-badge[data-open="true"] {
    seats. */
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .board {
-    --gap: var(--space-2);
-    gap: var(--space-3);
-    padding: var(--space-3) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom))
-      max(var(--space-3), env(safe-area-inset-left));
+    /* #3341: tighter gaps before a smaller card, which `BOARD_CARD_BUDGET` gave back to the card: the
+       board's rows 6 to 4px, the lanes' and the fan's `--gap` 4 to 2px, the mat's padding (below) 4 to
+       2px, and the sides' 6 to 4px. Upright, a field card is as wide as its lane lets it (cards.css, the
+       phone's `--field-ratio-min`), so what the sides and gaps give back in width is the card's too. */
+    --gap: var(--space-1);
+    gap: var(--space-2);
+    padding: var(--space-3) max(var(--space-2), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom))
+      max(var(--space-2), env(safe-area-inset-left));
     font-size: var(--type-sm-em);
     border-radius: var(--radius-md);
   }
@@ -3013,13 +3038,13 @@ button.modifier-badge[data-open="true"] {
   }
 
   .field {
-    padding: var(--space-2);
+    padding: var(--space-1);
     border-radius: var(--radius-md);
   }
 
   .hand {
     gap: var(--space-2);
-    padding: var(--space-2);
+    padding: var(--space-2) var(--space-1);
   }
 
   .hand-you {
@@ -3077,11 +3102,12 @@ button.modifier-badge[data-open="true"] {
 
   .board {
     /* Four field rows and your hand (1.24) stacked; the opponent's hand sits beside their seat.
-       The 90px cap keeps each card of a seven-card fan 44px wide at 390px (B30). */
+       The 94px cap keeps each card of a seven-card fan 44px wide at 390px (B30), with the hand's sides
+       2px each (#3341; it was 90px, with 4). */
     --card-h: clamp(44px, 10.6vh, 92px);
     /* #2877: the budget holds both seats' fixed tray channels too, 18px past the padding the
        seats already had. */
-    --card-h: clamp(44px, calc((100cqh - 348px) / 5.24), 90px);
+    --card-h: clamp(44px, calc((100cqh - 330px) / 5.24), 94px);
     --card-w: calc(var(--card-h) * 0.72);
     /* #2932: a field card keeps a card shape: its width is never under 0.72 of its height (the
        phone's card) and never over 0.86 of it (the shape the desktop draws units at, whose faces
@@ -3096,6 +3122,8 @@ button.modifier-badge[data-open="true"] {
        cards read without a tap; B30's strips still hold for a 7- and a 10-card hand. */
     --hand-card-h: calc(var(--card-h) * 1.24);
     --hand-card-w: calc(var(--hand-card-h) * 0.68);
+    --hand-lift-scale: 1.9;
+    --hand-lift-rise: 0.4;
     grid-template-columns: minmax(0, 1fr) minmax(0, 34%);
     grid-template-rows: auto 1fr auto auto auto;
   }
@@ -3221,7 +3249,7 @@ button.modifier-badge[data-open="true"] {
      duos.css's own budget, for its taller rail, the stronger rule. */
   .board:where(:has(> .control-bar > .board-rail)) {
     --board-rail-phone-h: 62px;
-    --card-h: clamp(44px, calc((100cqh - 348px - var(--board-rail-phone-h)) / 5.24), 90px);
+    --card-h: clamp(44px, calc((100cqh - 330px - var(--board-rail-phone-h)) / 5.24), 94px);
   }
 
   .board .control-bar .control {
@@ -3277,12 +3305,12 @@ button.modifier-badge[data-open="true"] {
   }
 
   /* Reading: a tap on a card that is not the play in flight (or keyboard focus on it) raises it
-     clear of the fan and grows it to be read, 1.6 times, growing away from the screen's edge at
-     either end of the hand. */
+     clear of the fan, and of the thumb that tapped it, and grows it to be read, 1.9 times (#3341),
+     growing away from the screen's edge at either end of the hand. */
   .hand-you .hand-slot[data-lifted="true"]:not(:has(> .card[data-selected="true"])),
   .hand-you .hand-slot:has(> .card:focus-visible) {
     transform-origin: calc((var(--i, 0) + 0.5) / var(--n, 1) * 100%) 100%;
-    transform: translateY(calc(var(--hand-card-h) * -0.3)) scale(1.6);
+    transform: translateY(calc(var(--hand-card-h) * var(--hand-lift-rise) * -1)) scale(var(--hand-lift-scale));
   }
 
   /* Playing: the card being played only steps up out of the fan, so what it is aimed at (a zone,
@@ -3544,7 +3572,7 @@ button.modifier-badge[data-open="true"] {
   .board {
     /* The field's four rows beside the seats, and under them the peek of your hand (0.73). */
     --card-h: clamp(40px, 14.5vh, 62px);
-    --card-h: clamp(40px, calc((100cqh - 40px) / 4.73), 62px);
+    --card-h: clamp(40px, calc((100cqh - 28px) / 4.73), 72px);
     /* A lane is about 74px wide and a row 56px tall, so a field card is a tile a little wider than
        it is tall and fills the lane: at square, one-word names ("Carnivorous", "Pointmaster")
        did not fit its width. */
@@ -3554,10 +3582,11 @@ button.modifier-badge[data-open="true"] {
        turn plate says it) pays for the taller peek. */
     --hand-card-h: calc(var(--card-h) * 1.4);
     --hand-card-w: calc(var(--hand-card-h) * 0.8);
+    --hand-lift-scale: 1.7;
     grid-template-columns: minmax(0, 224px) minmax(0, 1fr) minmax(0, 176px);
     /* Two equal rows beside the field, one per side of its center line, and the hand's row. */
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
-    row-gap: var(--space-3);
+    row-gap: var(--space-2);
     overflow: clip;
   }
 
@@ -3690,12 +3719,13 @@ button.modifier-badge[data-open="true"] {
   }
 
   /* A lifted card rises the height that was hidden, and a little more, so all of it shows. Read
-     (a tap on a card that is not the play in flight), it also grows 1.7 times, away from the edge
-     of the screen at either end; played, it keeps its size so the field stays in sight. */
+     (a tap on a card that is not the play in flight), it also grows `--hand-lift-scale` (1.7)
+     times, away from the edge of the screen at either end; played, it keeps its size so the field
+     stays in sight. */
   .hand-you .hand-slot[data-lifted="true"]:not(:has(> .card[data-selected="true"])),
   .hand-you .hand-slot:has(> .card:focus-visible) {
     transform-origin: calc((var(--i, 0) + 0.5) / var(--n, 1) * 100%) 100%;
-    transform: translateY(calc(var(--hand-card-h) * -0.5 - 8px)) scale(1.7);
+    transform: translateY(calc(var(--hand-card-h) * -0.5 - 8px)) scale(var(--hand-lift-scale));
   }
 
   .hand-you .hand-slot[data-lifted="true"]:has(> .card[data-selected="true"]) {

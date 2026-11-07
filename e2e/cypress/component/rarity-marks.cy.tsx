@@ -89,7 +89,8 @@ describe("R2721000 the rarity marks on a face", () => {
         getComputedStyle(faceOf(doc, `${MYTHIC}-hand`).querySelector(".cf-gem") as Element).backgroundImage,
         "the Mythic gem",
       ).to.contain("conic-gradient");
-      expect(getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element).boxShadow, "the board Mythic ring").to.not.contain(
+      // #3341: the ring is drawn over the art's rim, on the portrait's ::after.
+      expect(getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element, "::after").boxShadow, "the board Mythic ring").to.not.contain(
         "148, 208, 255",
       );
     });
@@ -113,7 +114,7 @@ describe("R2721000 the rarity marks on a face", () => {
       expect(getComputedStyle(hand).backgroundImage, "the rainbow edge").to.contain("conic-gradient");
       // The board Mythic's ring is back.
       expect(
-        getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element).boxShadow,
+        getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element, "::after").boxShadow,
         "the board Mythic ring",
       ).to.contain("148, 208, 255");
       // Both Legendary faces are as at the defaults.

@@ -33,6 +33,7 @@ import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
 import { planSetPiece } from "./setPieces.ts";
+import { planBattleship } from "./battleship.ts";
 import { planTerminus, planTerminusFollow } from "./terminus/index.ts";
 import { shiftCues } from "./terminus/build.ts";
 import { planStarship } from "./starship.ts";
@@ -1205,12 +1206,16 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const terminus = planTerminus(entry, view, env);
   // R2801000: so does the Starship, its fuse run's fusions and its launch.
   const starship = planStarship(entry, view, env);
+  // R3336000: and the Drone Battleship's layers, the Shield's redirect and absorbed hits.
+  const battleship = planBattleship(entry, view, env);
   const replaced = (event: GameEvent): boolean =>
+    
     motif?.replaces.has(event) === true ||
     setPiece?.replaces.has(event) === true ||
     terminus?.replaces.has(event) === true ||
-    starship?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? [])];
+    starship?.replaces.has(event) === true ||
+    battleship?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? [])];
   if (entry.sweep !== undefined) {
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
@@ -1231,6 +1236,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     ...(setPiece?.replaces ?? []),
     ...(terminus?.replaces ?? []),
     ...(starship?.replaces ?? []),
+    ...(battleship?.replaces ?? []),
     ...beats.replaces,
   ]);
   const system = planSystemMoment(entry, view, env, systemSkip);

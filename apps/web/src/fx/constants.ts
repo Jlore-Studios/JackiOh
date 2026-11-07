@@ -377,6 +377,34 @@ export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
 // Motion its still frame stands this long and holds nothing.
 export const FX_STARSHIP_TAIL_MS = 400;
 export const FX_STARSHIP_STILL_MS = 1_600;
+// R3336000: the Drone Battleship (fx/battleship.ts). The Shield's armor plates glow at most this many; where on
+// each layer's card its dome, its reactor core and its bay doors sit (fractions of the card).
+export const FX_SHIP_PLATES_MAX = 8;
+export const FX_SHIP_DOME_AT = { x: 0.5, y: 0.22 } as const;
+export const FX_SHIP_CORE_AT = { x: 0.5, y: 0.62 } as const;
+export const FX_SHIP_BAY_AT = { x: 0.5, y: 0.5 } as const;
+// R3336000: a hit the dome takes ripples this many rings, FX_SHIP_RIPPLE_STEP of the entry apart; a drone leaves
+// its bay at FX_SHIP_LAUNCH_AT of the entry and flies this much of it (an Interceptor fast, a Corvette heavy);
+// the deck beneath a breaking layer lights up at FX_SHIP_LIGHTS_AT.
+export const FX_SHIP_RIPPLES = 2;
+export const FX_SHIP_RIPPLE_STEP = 0.2;
+export const FX_SHIP_LAUNCH_AT = 0.1;
+export const FX_SHIP_INTERCEPTOR_FLIGHT = 0.45;
+export const FX_SHIP_CORVETTE_FLIGHT = 0.85;
+export const FX_SHIP_LIGHTS_AT = 0.5;
+// R3336000: a Battleship cue outlasts its entry by this much (inside FX_MAX_TAIL_MS, R200); the arrival is this
+// many beats, one per layer summoned (Drone Core X's warp, cards/stinkyscape/battleshipWarp.ts).
+export const FX_SHIP_TAIL_MS = 400;
+export const FX_SHIP_ARRIVAL_BEATS = 3;
+// R3336000: the board's shake: the hangar locking on, the dome's flare, an ordinary hit on the dome, a Corvette
+// landing, the reactor's pulse (times how far it has melted, 0 to 1), a deck shearing off and the reactor's blast.
+export const FX_SHIP_LOCK_TRAUMA = 0.35;
+export const FX_SHIP_DOME_TRAUMA = 0.3;
+export const FX_SHIP_HIT_TRAUMA = 0.25;
+export const FX_SHIP_CORVETTE_TRAUMA = 0.2;
+export const FX_SHIP_TICK_TRAUMA = 0.3;
+export const FX_SHIP_BREAK_TRAUMA = 0.45;
+export const FX_SHIP_BLAST_TRAUMA = 0.95;
 // R3338000: the Terminus cards' set pieces (fx/terminus/). A set piece's beats fall evenly from
 // FX_TERMINUS_BEATS_FROM to FX_TERMINUS_BEATS_TO of its span (its hold, or, unheld, its swallow); its cue
 // outlasts its entry by FX_TERMINUS_TAIL_MS (inside FX_MAX_TAIL_MS, R200), and under Reduce Motion its

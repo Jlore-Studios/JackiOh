@@ -428,7 +428,7 @@ other phones) they overlap the turned card's top-left, its attack gem and the st
 difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
-the unit's oval and the backrow's outline keep a card's shape.
+the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root

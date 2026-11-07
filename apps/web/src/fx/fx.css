@@ -3276,6 +3276,145 @@
   opacity: 0.7;
 }
 
+/* ---------------------------------------------- ship: a Drone Battleship's plates and bay --- */
+
+/* R3336000: a Drone Battleship's layer (fx/battleship.ts), over the layer's card. `data-move="plates"` is
+   the Shield's armor: `--fx-count` plates fanned in an arc over the dome, the first `--fx-lit` of them (the
+   ones with `data-lit`) flashing bright and dying down to the dim every plate rests at, one after the next,
+   each `--fx-ship-plate-step` after the last. `data-move="bay"` is the Propagation layer's hangar: two doors
+   slide apart over the first `--fx-ship-door-share` of `--fx-ms` and stay open, then `--fx-count` lights come
+   on in the cue's tint and stay on to the end. Nothing here outlasts `--fx-ms`. It has no still frame: under
+   Reduce Motion nothing is drawn (R200). It names no card (R202). */
+
+.fx-ship {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w, 82px);
+  height: var(--fx-h, 110px);
+  translate: -50% -50%;
+  z-index: var(--z-overlay);
+  --fx-ship-plate-step: 60ms;
+  --fx-ship-plate-dim: 0.3;
+  --fx-ship-plate-w: calc(var(--fx-w, 82px) * 0.11);
+  --fx-ship-plate-h: calc(var(--fx-w, 82px) * 0.2);
+  --fx-ship-arc: calc(var(--fx-w, 82px) * 0.6);
+  --fx-ship-fan: 14deg;
+  --fx-ship-door-share: 0.3;
+  --fx-ship-light-share: 0.2;
+  --fx-ship-door-open: 88%;
+  animation: fx-ship-in var(--fx-ms) linear both;
+}
+
+@keyframes fx-ship-in {
+  0% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The plates: each sits at the center and swings out on the arc's radius to its place in the fan. */
+.fx-ship-plate {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--fx-ship-plate-w);
+  height: var(--fx-ship-plate-h);
+  margin: calc(var(--fx-ship-plate-h) / -2) 0 0 calc(var(--fx-ship-plate-w) / -2);
+  transform-origin: 50% calc(var(--fx-ship-plate-h) / 2 + var(--fx-ship-arc));
+  rotate: calc((var(--fx-plate) - (var(--fx-count) - 1) / 2) * var(--fx-ship-fan));
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--fx-tint-rim);
+  background: var(--fx-tint-core);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--fx-tint-glow) 100%, transparent);
+  opacity: var(--fx-ship-plate-dim);
+}
+
+.fx-ship-plate[data-lit="true"] {
+  animation: fx-ship-plate-glow calc(var(--fx-ms) - var(--fx-plate) * var(--fx-ship-plate-step)) var(--ease-out)
+    calc(var(--fx-plate) * var(--fx-ship-plate-step)) forwards;
+}
+
+@keyframes fx-ship-plate-glow {
+  0% {
+    opacity: 1;
+    filter: brightness(1.8);
+  }
+  100% {
+    opacity: var(--fx-ship-plate-dim);
+    filter: brightness(1);
+  }
+}
+
+/* The bay: the doors fill the box, each half of it, and the lights wait behind them in a row. */
+.fx-ship[data-move="bay"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  background: color-mix(in srgb, var(--fx-tint-glow) 25%, transparent);
+}
+
+.fx-ship-door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  border: 1px solid var(--fx-tint-rim);
+  background: var(--fx-steel);
+  animation: fx-ship-door-left calc(var(--fx-ms) * var(--fx-ship-door-share)) var(--ease-in-out) forwards;
+}
+
+.fx-ship-door[data-side="left"] {
+  left: 0;
+}
+
+.fx-ship-door[data-side="right"] {
+  right: 0;
+  animation-name: fx-ship-door-right;
+}
+
+@keyframes fx-ship-door-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(var(--fx-ship-door-open) * -1));
+  }
+}
+
+@keyframes fx-ship-door-right {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(var(--fx-ship-door-open));
+  }
+}
+
+.fx-ship-light {
+  position: relative;
+  width: var(--fx-ship-plate-w);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-core);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--fx-tint-glow) 100%, transparent);
+  opacity: var(--fx-ship-plate-dim);
+  animation: fx-ship-light-on calc(var(--fx-ms) * var(--fx-ship-light-share)) var(--ease-out) calc(var(--fx-ms) * var(--fx-ship-door-share)) both;
+}
+
+@keyframes fx-ship-light-on {
+  0% {
+    opacity: var(--fx-ship-plate-dim);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer
@@ -3296,7 +3435,7 @@
   }
 
   /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped;
-     R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's. */
+     R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's. R3336000: a ship cue has no still, so the rule above hides it. */
   .fx-dom > .fx-callout[data-still="true"],
   .fx-dom > .fx-launch[data-still="true"],
   .fx-dom > .fx-setPiece[data-still="true"] {
