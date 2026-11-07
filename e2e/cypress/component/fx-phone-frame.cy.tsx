@@ -3,14 +3,17 @@
 // Nether (scaled back for the budget: fewer pull/implode particles, a softer shake, and a smaller
 // vortex spiral with its mask retuned to the same visible arms), the Starship launch, the Drone
 // Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
-// visible disc), and a board with 4 auras.
+// visible disc), and a board with 4 auras. R3332001: Felinor Fiender's signature, the first, over the
+// gallery's board with its three Felinors.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
 
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
+import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
+import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import {
@@ -213,6 +216,22 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       ]);
       cy.get(GAME).should("have.attr", "data-takeover", "mythic");
       cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+  });
+
+  it("R3332001 Felinor Fiender's signature holds the phone frame budget mid-flight", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const FIENDER = "core-092";
+    const entry = FX_CARD_TABLE.get(FIENDER);
+    const play = entry === undefined ? null : galleryPlayOf(FIENDER, entry);
+    if (play === null) throw new Error("Felinor Fiender has no gallery play");
+    const board = galleryBoardOf(FIENDER, fullBoardView());
+    holdsBudget("Felinor Fiender's signature", () => {
+      mountScene(board, galleryFieldView(FIENDER, board), galleryCardEvents(FIENDER, play, board, 1));
+      cy.get(GAME).find("[data-animating]").should("exist");
       cy.get(CANVAS).should("exist");
       return sampleFrames();
     });

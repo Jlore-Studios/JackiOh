@@ -312,6 +312,8 @@ export type AudioEngine = SoundSink & {
   subscribeSpeaking(listener: () => void): () => void;
   /** R631: the context and the music bus the music plays into, once the first unlock made them; else null. */
   musicOutput(): { context: AudioContext; input: AudioNode } | null;
+  /** R3332002: the context and the effects bus a card's sting plays into, once the first unlock made them; else null. */
+  sfxOutput(): { context: AudioContext; input: AudioNode } | null;
   /** Called when the context is made and each time a resume settles. Returns the unsubscribe. */
   subscribeState(listener: () => void): () => void;
   dispose(): void;

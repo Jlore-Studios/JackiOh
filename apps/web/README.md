@@ -107,6 +107,22 @@ each role inside and outside `.tavern`, finds no other sheet restating a role's 
 it replaced, and holds the button skins that remain no role's (the top bar's, card-like tiles, pressed
 toggles) to each sheet's count in `UNROLED`.
 
+The dialogs are one component (#3220, R3220000): `Dialog` in `src/game/Dialog.tsx`, drawn by
+`src/game/dialog.css`. A caller gives it its `role` (`dialog` or `alertdialog`), its `h2` `title`, an
+optional `description` (the panel's accessible description), `onClose`, its `actions` (each a label, a
+role among `primary`, `secondary` and `danger`, an `onClick` and a testid), its `testid`, and optionally a
+`className` that restyles the panel only, `data-*` attributes, a `header` above the title, `children`
+under the line and a `footer` under the row. An `alertdialog` takes a `cancel` too, the safe choice, which
+is its close and draws no ✕; a `dialog` draws a ✕ named "Close" at its top right (`dialog-close`). The row
+runs in one order: the safe choice first, holding the focus, then the actions as given with a `danger` one
+moved last, at the right; three answers put the first on a row of its own, and at 360 px and under the
+row stacks in the same order. Its scrim is one color at `--z-dialog` (`surfaces.css`), and its keys are
+`useModalKeys`'s (`together/modalKeys.ts`), whose third argument, the control to focus, also gives the
+focus back to the opener on close unless the caller has moved it: Escape, Back (a layer) and a click on
+the scrim close it, and Tab stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
+`ConfirmLeaveFight` and `PracticeResult` draw through it; `PracticeResult` keeps its look through
+`practice-result`, and its ✕, Escape, Back and a click outside view the board.
+
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
 (`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
 language, the gear, so Back is the leftmost control and the gear the rightmost. On a phone (600 px, the touch
@@ -210,7 +226,7 @@ A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` 
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms and the practice result, through it), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -264,7 +280,7 @@ present for exactly that window.
   route for exactly the window) shows it on both sides, the seat that is ready included, as
   `data-kind="mulligan"` over `MULLIGAN_CLOCK_MS`, with no turn clock.
 
-**Concede asks first** (`ConfirmConcede.tsx`, mounted by `Game.tsx`, so every mode has it). The
+**Concede asks first** (`ConfirmConcede.tsx`, drawn through `Dialog.tsx` and mounted by `Game.tsx`, so every mode has it). The
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
@@ -461,7 +477,9 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000) other than `none` (`galleryPlayOf`): a cast,
 a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/motifs/gallery.ts`), a set piece or an aura
 plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
-card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It calls no engine.
+card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It also lists every card
+whose entry is its signature by set (R3332000), each played over the board its entrance reads (Felinor Fiender's over
+three Felinors, R3332001). It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -754,7 +772,8 @@ sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.t
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open and the social socket is
+                         down, and read on its friend's chat push while it is live (R3214000); a message holding
                          this site's room link draws a Join button that navigates in-app (R2094000);
                          a send shows at once, sends go one at a time, a failed one offers Retry and
                          Discard (R2120000)
@@ -771,7 +790,15 @@ together/FriendsButton.tsx  the Friends button at the top right of every signed-
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
                          GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
-                         hidden unless a challenge of the player's is open, R3205000)
+                         hidden unless a challenge of the player's is open, R3205000); it holds the tab's
+                         social socket and sends no read while it is live, and hands its chat and
+                         friends pushes to onChatPush and onFriendsPush (R3214000)
+together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
+                         (R1379000), the server's social read and chat and friends nudges pushed over it,
+                         the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
+                         token and a refusal final for its token (R1115000), a socket replaced once the
+                         session holds another token, its frames never shown; off under vitest
+                         unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
                          both paused while the tab is hidden
@@ -1056,6 +1083,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `music-assets.test.ts` calls.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
+  A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
+  first `MUSIC_STING_S` play on the effects bus instead, and the shared `entrance` sting plays only for one with no intro.
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral

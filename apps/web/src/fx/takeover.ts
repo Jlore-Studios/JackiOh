@@ -13,19 +13,26 @@
 // none of it (planFx is never asked). The marquee Mythics take a look of their own (R670), the rest the
 // shared prismatic one. A Legendary takes no takeover; its entrance is the rays, a gold burst, a ring
 // with its echo and FX_LEGENDARY_TRAUMA, drawn here when no summon of it draws them already (a Spell's cast, a reveal).
+// R3332000: a Mythic's own look is its table entry's `takeover` (`takeoverLookOf`), and a Field Spell
+// landing face up with an `entrance` of its own draws that in place of the shared rays, burst and ring.
 
-import { leadMs, type AnimationEntry } from "../game/animations.ts";
+import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
+import { CATALOG } from "../wire/cards.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
+import { entranceKeyOf } from "./cardFx.ts";
+import { FX_CARD_TABLE, type FxCardEntry } from "./cards/tables.ts";
 import { FX_CENTER, FX_LEGENDARY_TRAUMA, FX_SLAM_AT, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
+import { entranceEvent } from "./entrances.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } from "./types.ts";
 
-/** R670, R2722001: the marquee Mythics' own takeovers; every other Mythic takes the shared "prismatic". */
-export const TAKEOVER_LOOKS: Readonly<Record<string, TakeoverLook>> = {
-  "core-100": "void", // #100 Ceaseless Void: the board falls into the dark it leaves
-  "core-096": "pawn", // #96 My Pawn: a hand of cards dealt across the table
-  "core-097": "genie", // #97 Zephrys: the west wind's gold
-  "meditative-049": "ai", // Meditative #49 YileGPT: a terminal's green
-};
+/**
+ * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
+ * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"), else the shared "prismatic".
+ */
+export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
+  const entry = table.get(defId);
+  return (entry === undefined || entry.kind === "none" ? undefined : entry.takeover) ?? "prismatic";
+}
 
 /** R2722001: each look's colors, the sweep's rim, the light's core and the glow over the dark. */
 export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
@@ -61,8 +68,20 @@ export function entranceLandMs(entry: Pick<AnimationEntry, "slam" | "setPiece">,
   return wait + frac(FX_SLAM_AT, D - wait);
 }
 
+/**
+ * R3332000: whether `entry` lands its entrance's Field Spell face up with an entrance of its own
+ * (cardFx.ts plans it on the `summoned`), which stands in for the shared rays, burst and ring.
+ */
+function ownFieldLanding(entry: AnimationEntry, table: ReadonlyMap<string, FxCardEntry>): boolean {
+  const entrance = entry.entrance;
+  if (entrance === undefined || entrance.reveal || entranceKeyOf(entrance.defId, table) === undefined) return false;
+  const type = (CATALOG[entrance.defId] ?? entry.view.defs?.[entrance.defId])?.type;
+  if (type !== "Field Spell") return false;
+  return entry.events.some((e) => entranceEvent(e, HIDDEN_ID, type)?.instanceId === entrance.instanceId);
+}
+
 /** R2722001: the cues of `entry`'s entrance, or none: no entrance, or the effects off. */
-export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intensity">, D: number): FxCue[] {
+export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intensity">, D: number, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): FxCue[] {
   const entrance = entry.entrance;
   const i = env.intensity;
   if (entrance === undefined || !(i > 0)) return [];
@@ -72,7 +91,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   const cues: FxCue[] = [];
   // A Unit summoned face-up draws its rarity's rays, burst and shake in cues.ts `summon` already.
   const summoned = !entrance.reveal && entry.events.some((e) => e.type === "summoned" && e.row === "units" && e.instanceId === entrance.instanceId);
-  if (!summoned) {
+  if (!summoned && !ownFieldLanding(entry, table)) {
     // R2803000: the Legendary lands in the same two-wave language as the Mythic's takeover below,
     // one volume down: its gold echo follows its ring a wave behind, with no takeover and no second shake.
     const echoMs = entranceEchoMs(D, landMs);
@@ -86,7 +105,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   }
   // R2800000: a Mythic whose own wipe is the action's set piece yields its takeover to it.
   if (!mythic || entrance.yielded === true) return cues;
-  const look = TAKEOVER_LOOKS[entrance.defId] ?? "prismatic";
+  const look = takeoverLookOf(entrance.defId, table);
   const takeover: FxTakeoverCue = { kind: "takeover", look, tint: TAKEOVER_TINTS[look], at, landMs, delayMs: 0, durationMs: D + FX_TAKEOVER_TAIL_MS };
   cues.push(
     takeover,

@@ -2,7 +2,8 @@
 // screen (R203). It applies after the board settles and switches stations at readable cards' R204
 // moments; a hidden card counts as it reveals, never as it is set (R2722002). No card plays a theme
 // (R822000): a readable Legendary's or Mythic's intro (R1350) is its music, and R1351 stops it on
-// result, hand-over, dynamic off or exit.
+// result, hand-over, dynamic off or exit. R3332002: the intro is the card's sting too; with dynamic
+// music off or the music at zero, its opening plays as the sting instead (`playSting`).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
@@ -24,6 +25,8 @@ export type MusicSink = {
   preload(ids: readonly string[]): void;
   /** R1350: a card's intro, on top of the music. */
   playIntro(id: string): void;
+  /** R3332002: a card's intro cut to its opening, the card's sting, on the effects bus. */
+  playSting(id: string): void;
   /** R1351: the intro playing is cut short. */
   stopIntro(): void;
   /** R1350: intros the viewer may soon play, fetched ahead. */
@@ -145,9 +148,12 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
     if (result !== null) sink.stopIntro();
   }
 
-  /** R1350: the intros of the cards in the viewer's own hand (every one readable), fetched ahead once each. */
+  /**
+   * R1350: the intros of the cards in the viewer's own hand (every one readable), fetched ahead once
+   * each; R3332002: with dynamic music off too, since a card's sting is its intro's opening.
+   */
   function preloadHand(view: PlayerView): void {
-    if (!settings().dynamicMusic || !Array.isArray(view.you.hand)) return;
+    if (!Array.isArray(view.you.hand)) return;
     const ids: string[] = [];
     for (const card of view.you.hand) {
       const id = cards[card.defId]?.intro;
@@ -195,11 +201,17 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       if (disposed || viewer === null || view.viewer !== viewer) return;
       const cast = castOf(event, lines, fired);
       if (cast !== null && event.type === "cardPlayed" && entryFor(lines, cast.defId)?.kind === "unit") playedUnits.add(event.instanceId);
-      if (!settings().dynamicMusic) return;
-      // R1350: the card's intro first, so the station it may switch to comes in under it.
+      // R1350: the card's intro first, so the station it may switch to comes in under it. R3332002: the
+      // intro is the card's sting too, so where it will not play (dynamic music off, the music at zero)
+      // its opening stings on the effects bus instead.
       const opens = cast?.defId ?? arrivalOf(event, playedUnits);
       const intro = opens === null ? undefined : cards[opens]?.intro;
-      if (intro !== undefined) sink.playIntro(intro);
+      const { dynamicMusic, music } = settings();
+      if (intro !== undefined) {
+        if (dynamicMusic && music > 0) sink.playIntro(intro);
+        else sink.playSting(intro);
+      }
+      if (!dynamicMusic) return;
       const switched = cast === null ? undefined : cards[cast.defId]?.station;
       if (cast === null || switched === undefined) return;
       stations.set(cast.player, switched);

@@ -220,6 +220,16 @@ export const MUSIC_INTRO_DECODED_MAX = 4;
 export const MUSIC_INTRO_MIN_S = 3;
 export const MUSIC_INTRO_MAX_S = 12;
 /**
+ * R3332002: a Legendary's or a Mythic's play sting is the opening of its own intro, cut to this span
+ * (the shared `entrance` sting's) when the intro itself will not play: dynamic music off, or the music
+ * at zero. It plays on the effects bus, ducking nothing.
+ */
+export const MUSIC_STING_S = 1.4;
+/** R3332002: the sting's last this-many seconds fade it out, so the cut never clicks. */
+export const MUSIC_STING_FADE_S = 0.3;
+/** R3332002: the sting's gain on the effects bus, level with the effects around it (an intro sits above them). */
+export const MUSIC_STING_GAIN = 0.6;
+/**
  * R2722000: a Legendary's whole file runs at most this, and every Mythic's longer (tracks.mjs
  * INTRO_LEGENDARY_MAX_S), so a Mythic's entrance always outlasts a Legendary's.
  */

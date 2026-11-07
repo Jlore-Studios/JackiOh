@@ -1,6 +1,8 @@
 // Audio as the integration branch wires it into Game (docs/polish/reference.md, "audio x cards"): the
 // board's `CatalogContext` reaches the sound director (a card behind the sentinel keeps plain sounds, R203), and a voice line holding the channel marks the
-// board `data-speaking`, the attribute practice's pacing holds the AI on (SPEC §9.9).
+// board `data-speaking`, the attribute practice's pacing holds the AI on (SPEC §9.9). R3332002: a
+// Legendary's or Mythic's sting is its own intro (every one in the catalog has one), played whole or cut
+// to its opening, so the board's catalog reaches the director in each card's thud instead.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -11,7 +13,8 @@ import { CATALOG } from "@jackioh/cards";
 
 import { HIDDEN_DEF_ID } from "./constants.ts";
 import { setAudioEngineForTests } from "./engine.ts";
-import { resetAudioSettingsForTests } from "./settings.ts";
+import { setMusicPlayerForTests, type MusicPlayer } from "./music.ts";
+import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "./test/fakeAudio.ts";
 import type { AudioEngine, SfxId, SfxParams } from "./types.ts";
 import { durationFor } from "../game/animations.ts";
@@ -77,7 +80,36 @@ const summoned = (defId: string, instanceId = "u9"): GameEvent => ({
 const LEGENDARY_UNIT = "core-052";
 const MYTHIC_UNIT = "core-100";
 
+/** R3332002: a music player that records the intros and stings the board's music director asks for, and plays nothing. */
+function recordingMusic(): MusicPlayer & { intros: string[]; stings: string[] } {
+  const intros: string[] = [];
+  const stings: string[] = [];
+  return {
+    intros,
+    stings,
+    request: () => undefined,
+    playIntro: (id) => {
+      intros.push(id);
+    },
+    stopIntro: () => undefined,
+    playSting: (id) => {
+      stings.push(id);
+    },
+    preloadIntros: () => undefined,
+    intro: () => intros.at(-1) ?? null,
+    resetResume: () => undefined,
+    preload: () => undefined,
+    setBusy: () => undefined,
+    current: () => null,
+    wanted: () => null,
+    opponentTurn: () => false,
+    log: () => [],
+    dispose: () => undefined,
+  };
+}
+
 let engine: SpeakingEngine;
+let music: ReturnType<typeof recordingMusic>;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -85,11 +117,14 @@ beforeEach(() => {
   resetAudioSettingsForTests();
   engine = speakingEngine();
   setAudioEngineForTests(engine);
+  music = recordingMusic();
+  setMusicPlayerForTests(music);
 });
 
 afterEach(() => {
   cleanup();
   setAudioEngineForTests(null);
+  setMusicPlayerForTests(null);
   resetAudioSettingsForTests();
   vi.useRealTimers();
   localStorage.clear();
@@ -101,20 +136,33 @@ describe("the board's catalog reaches the sound director", () => {
     expect([CATALOG[MYTHIC_UNIT]?.type, CATALOG[MYTHIC_UNIT]?.rarity]).toEqual(["Unit", "Mythic"]);
   });
 
-  it("a Legendary unit enters with the brass sting and a Mythic with the prismatic one, as their entries start", () => {
+  it("R3332002 a Legendary unit and a Mythic enter on their own intros, not the shared sting, as their entries start", () => {
     play([summoned(LEGENDARY_UNIT, "u1"), summoned(MYTHIC_UNIT, "u2")]);
-    expect(sfx(engine, "entrance")).toEqual([undefined, { mythic: true }]);
+    expect(sfx(engine, "entrance")).toEqual([]);
+    expect(music.intros).toEqual([`intro-${LEGENDARY_UNIT}`, `intro-${MYTHIC_UNIT}`]);
+    // The catalog reached the director: #52's thud carries its family (#100's tag, Terminus, has none).
+    expect(sfx(engine, "summon").map((params) => params?.timbre)).toEqual(["human", undefined]);
   });
 
-  it("the sting starts with its summon's entry, with the rays, not when the view arrives", () => {
+  it("R3332002 the sting starts with its summon's entry, with the rays, not when the view arrives", () => {
     const first = baseView();
     const { rerender } = render(game(first, true));
     rerender(game(withEvents(first, [{ type: "turnStarted", player: "p1", turn: 3 }, summoned(LEGENDARY_UNIT)]), true));
-    expect(sfx(engine, "entrance"), "the turn banner is still animating").toEqual([]);
+    expect(music.intros, "the turn banner is still animating").toEqual([]);
+    expect(sfx(engine, "summon"), "the turn banner is still animating").toEqual([]);
     act(() => {
       vi.advanceTimersByTime(durationFor("turnStarted", false));
     });
-    expect(sfx(engine, "entrance")).toEqual([undefined]);
+    expect(music.intros).toEqual([`intro-${LEGENDARY_UNIT}`]);
+    expect(sfx(engine, "summon")).toHaveLength(1);
+  });
+
+  it("R3332002 with dynamic music off, a Legendary's sting is its intro's opening, still no shared one", () => {
+    writeAudioSettings({ dynamicMusic: false });
+    play([summoned(LEGENDARY_UNIT, "u1"), summoned(MYTHIC_UNIT, "u2")]);
+    expect(music.stings).toEqual([`intro-${LEGENDARY_UNIT}`, `intro-${MYTHIC_UNIT}`]);
+    expect(music.intros).toEqual([]);
+    expect(sfx(engine, "entrance")).toEqual([]);
   });
 
   it("a unit's thud carries its family: #52 is a Human", () => {
@@ -136,13 +184,14 @@ describe("the board's catalog reaches the sound director", () => {
     expect(sfx(engine, "summon").every((params) => params?.timbre === undefined)).toBe(true);
   });
 
-  it("R506 through the board: a token that prints Legendary enters with the sting, and the new tags' families reach the director", () => {
+  it("R506 R3332002 through the board: a token that prints Legendary enters on its own intro, and the new tags' families reach the director", () => {
     play([
       summoned("classicplus-073-1", "u1"),
       summoned("classicplus-012", "u2"),
       { type: "cardPlayed", player: "p1", instanceId: "c3", defId: "classic-016", costPaid: 1 },
     ]);
-    expect(sfx(engine, "entrance").length).toBeGreaterThanOrEqual(2);
+    expect(sfx(engine, "entrance")).toEqual([]);
+    expect(music.intros).toEqual(["intro-classicplus-073-1", "intro-classicplus-012"]);
     expect(sfx(engine, "summon").map((params) => params?.timbre)).toContain("pancake");
     expect(sfx(engine, "spell")).toContainEqual({ timbre: "book" });
   });

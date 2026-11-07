@@ -78,7 +78,7 @@ const UNMIGRATED: Record<string, number> = {
   "packs/pack-object.css": 2,
   "packs/packs.css": 11,
   "patches/patches.css": 97,
-  "practice/practice.css": 145,
+  "practice/practice.css": 134,
   "practice/sandbox.css": 13,
   "rank/rankCrest.css": 2,
   "rank/streakFlame.css": 1,

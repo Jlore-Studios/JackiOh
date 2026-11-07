@@ -1,17 +1,21 @@
 // R502: the unmistakable cast on draw, and the per-card flourishes of #21 Hinder, #27 Blood Ridden
 // Glowy Jelly Bean and Classic+ #24 Crushing Walls (cardFx.ts), planned the way FxLayer plans them,
 // from the redacted stream alone. The last block drives the real engine (audio/test/realGame.ts).
+// R3332000: every entrance an entry names is a recipe, and a Field Spell's plays as it lands face up.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { animTestid, planEntries, type AnimationEntry } from "../game/animations.ts";
+import { animTestid, entranceEntries, planEntries, type AnimationEntry, type EntranceResolver } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
+import { CATALOG } from "../wire/cards.ts";
+import { entranceKeyOf, planCardFx } from "./cardFx.ts";
 import { CARD_RECIPES } from "./cards/bespoke.ts";
-import { FX_CARD_TABLE } from "./cards/tables.ts";
-import { ENTRANCES, isEntranceKey } from "./entrances.ts";
+import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
+import { ENTRANCES } from "./entrances.ts";
+import { entranceCues } from "./takeover.ts";
 import {
   FX_BLOOD_FLIGHT_FRACTION,
   FX_BLOOD_PICK_BASE,
@@ -309,11 +313,46 @@ describe("R502 the per-card table", () => {
     expect(FX_CARD_TABLE.get(HINDER)).toEqual({ kind: "bespoke", key: "manaCrack" });
     expect(FX_CARD_TABLE.get(BLOOD)).toEqual({ kind: "bespoke", key: "bloodDrain" });
     expect(FX_CARD_TABLE.get(WALLS)).toEqual({ kind: "bespoke", key: "crushingWalls" });
-    for (const entry of FX_CARD_TABLE.values()) {
-      if (entry.kind !== "bespoke") continue;
-      const key = entry.key;
-      expect(isEntranceKey(key) ? typeof ENTRANCES[key] : typeof CARD_RECIPES[key]).toBe("function");
+    for (const [defId, entry] of FX_CARD_TABLE) {
+      if (entry.kind === "bespoke") expect(typeof CARD_RECIPES[entry.key], defId).toBe("function");
+      // R3332000: and every entrance it names, whatever the entry's kind.
+      const key = entranceKeyOf(defId);
+      if (key !== undefined) expect(typeof ENTRANCES[key], defId).toBe("function");
     }
+  });
+
+  it("R3332000 a Field Spell's own entrance plays as it lands face up and the shared Legendary entrance yields", () => {
+    // #93 Combo-Index, a Legendary Field Spell, given an entrance of its own beside its hooks and aura.
+    const FIELD = "core-093";
+    const table = parseFxCardTable("test.json5", `{ "${FIELD}": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, entrance: "titanBloom" } }`);
+    expect(entranceKeyOf(FIELD, table)).toBe("titanBloom");
+    expect(entranceKeyOf(FIELD)).toBeUndefined();
+    const resolve: EntranceResolver = (defId) => {
+      const def = CATALOG[defId];
+      return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
+    };
+    const view = fullBoardView();
+    const landing: GameEvent = { type: "summoned", player: "p1", instanceId: "f1", defId: FIELD, row: "backrow", lane: 1 };
+    const events: GameEvent[] = [played("p1", "f1", FIELD), landing];
+    const [entry] = entranceEntries(planEntries(events, withEvents(view, events), false), resolve, { seen: new Set() });
+    if (entry === undefined) throw new Error("no entry");
+    expect(entry.entrance?.tier).toBe("legendary");
+    const env = envOf();
+    env.memory.remember(entry.events);
+    const D = entry.durationMs;
+    const tgt = testid.zone("you", "backrow", 1);
+    const own = planCardFx(landing, { entry, view, env, D }, table);
+    expect(own).toEqual({ cues: ENTRANCES.titanBloom({ D, tgt, intensity: env.intensity }), row: "replace" });
+    // The shared rays, gold burst, rings and shake yield to it; with no entrance of its own they play.
+    expect(entranceCues(entry, env, D, table)).toEqual([]);
+    expect(entranceCues(entry, env, D).map((cue) => cue.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
+    // Set face down (its fresh id's `formerId`, R227), it lands with no entrance, and the shared one stays.
+    const set: GameEvent = { ...landing, instanceId: "f2", formerId: "f1" };
+    expect(planCardFx(set, { entry: { ...entry, events: [set] }, view, env, D }, table)).toBeNull();
+    // A Unit's row is no Field Spell's landing.
+    expect(planCardFx({ ...landing, row: "units", lane: 3 }, { entry, view, env, D }, table)).toBeNull();
+    // R202: the hidden sentinel keys nothing.
+    expect(planCardFx({ ...landing, defId: "hidden", instanceId: "hidden" }, { entry, view, env, D }, table)).toBeNull();
   });
 
   it("R200 every cue the cast on draw and the per-card recipes plan starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
