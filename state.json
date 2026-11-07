@@ -18248,6 +18248,8 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-07T04:53:05Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "42340381915",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
