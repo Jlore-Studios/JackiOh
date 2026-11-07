@@ -18468,8 +18468,14 @@
     "what": "build #3337 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-11-07T05:45:59Z",
-    "notes": [],
+    "at": "2026-11-07T05:52:51Z",
+    "notes": [
+      "#3341 is held for `claude-3` until Sat 01:50 (it refused a call)",
+      "#3342 is held for `claude-3` until Sat 01:50 (it refused a call)",
+      "#3343 is held for `claude-3` until Sat 01:50 (it refused a call)",
+      "#3344 is held for `claude-3` until Sat 01:50 (it refused a call)",
+      "#3346 is held for `claude-3` until Sat 01:50 (it refused a call)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19174,7 +19180,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T05:45:59Z",
+  "loop_tick": "2026-11-07T05:52:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
