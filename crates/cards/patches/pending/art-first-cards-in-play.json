@@ -1,0 +1,18 @@
+{
+  "title": "Patch: art-first cards in play",
+  "sources": "#3339",
+  "notes": "Full-art looks and Legendary/Mythic cards drop names and text on the board to prioritize art; keyword marks and boardNames setting added.",
+  "player": {
+    "title": "Art-first cards in play",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Cards in play wearing full-art looks and every Legendary and Mythic card drop their name and text to let art stand edge-to-edge, showing their name on hover or a long press.",
+      "Card settings add Names on the board to choose between Art first, Always, or Never."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

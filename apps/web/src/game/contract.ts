@@ -303,6 +303,8 @@ export type BoardProps = {
   showOfferDraw?: boolean;
   /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
   sandDisabled?: boolean;
+  /** R3348001: the animation queue is draining, so the playmat's corner props answer quietly. Absent, false. */
+  draining?: boolean;
   onClick?: (target: ClickTarget) => void;
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */

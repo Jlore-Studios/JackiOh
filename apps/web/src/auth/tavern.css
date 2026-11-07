@@ -347,9 +347,9 @@
    its role's, or `button-secondary`'s where it names none (buttons.css): this rule only sets the
    tavern's size. Not in the deck builder (/decks), whose chips, tiles and card buttons are sized to
    its pixel budget by deckbuilder.css, and not the top bar's buttons, which draw themselves
-   (routes/top-bar.css); `:where()` leaves the rule's weight as it was, so the sheets that outrank it
-   still do. */
-.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
+   (routes/top-bar.css), nor a dialog's ✕, which keeps its own round size (game/dialog.css, R3221000);
+   `:where()` leaves the rule's weight as it was, so the sheets that outrank it still do. */
+.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close)) {
   min-height: 44px;
   padding: 8px 18px;
   border-radius: 10px;
