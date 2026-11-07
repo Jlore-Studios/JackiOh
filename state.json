@@ -16969,11 +16969,10 @@
     "what": "review #3383 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-07T15:03:10Z",
+    "at": "2026-11-07T15:13:19Z",
     "notes": [
-      "#3363: `claude-7` can start again, so its hold is lifted",
-      "started revise #3363 on claude-7 (run 42384642658)",
-      "started revise #3380 on claude-4 (run 42384716906)",
+      "delivered build #3344 on claude-1 (run 42378959478): built",
+      "started review #3383 on claude-1 (run 42385555619)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -17680,7 +17679,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T15:03:10Z",
+  "loop_tick": "2026-11-07T15:13:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
