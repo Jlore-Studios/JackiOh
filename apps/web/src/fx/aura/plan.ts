@@ -3,7 +3,8 @@
 //
 // A face-up Field Spell or Field Trap whose table entry has an `aura` wears it over its own zone, its
 // lane, its side or the board; a face-down card, the controller's own unrevealed Field Trap and a Unit
-// standing in a backrow zone wear none. A listed modifier wears the aura of the readable play that was
+// standing in a backrow zone wear none. R3402000: a face-up Unit whose entry's aura is a `zone` one wears it
+// over its own unit zone (Silly Silas's mirrorball); a face-down or hidden one wears none. A listed modifier wears the aura of the readable play that was
 // resolving when it was added (`attributeModifiers`), since its view names no source (R169). An aura
 // begins as it appears and ends as it leaves, and at most AURA_MAX_PER_ZONE cover a zone, nearest scope
 // first and then newest.
@@ -14,7 +15,7 @@ import { FLAVOR_FALLBACK } from "../../cards/flavor.ts";
 import { laneZoneTestids } from "../../game/actions.ts";
 import { LANES, sideView, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
+import { FX_CARD_TABLE, entryAura, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_MAX_PER_ZONE, AURA_MOTES_PER_AURA, AURA_PARTICLE_SHARE, AURA_SOURCES_LIMIT } from "../constants.ts";
 import { FLAVOR_LOOKS, paletteLook, type FlavorColors } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
@@ -23,15 +24,19 @@ import { AURA_SCOPES, isAuraFieldType, type AuraLook, type AuraScope } from "./l
 
 const HIDDEN_ID = "hidden";
 const SIDES: readonly Side[] = ["you", "opponent"];
+/** R3402000: the card type whose own zone aura stands in the unit row. */
+const UNIT_TYPE = "Unit";
 
 /** One aura as planned: what it covers and how it looks. `defId` is the planner's; it never reaches the page (R202). */
 export type AuraSpec = {
-  /** `field-<instanceId>` for a Field card, `mod-<player>-<modifierId>` for a modifier. */
+  /** `field-<instanceId>` for a Field card, `unit-<instanceId>` for a Unit (R3402000), `mod-<player>-<modifierId>` for a modifier. */
   key: string;
   defId: string;
   instanceId: string;
   side: Side;
-  /** The Field card's backrow lane; null for a modifier, whose `zone` or `lane` scope is its side. */
+  /** R3402000: the row its zone is in: a Unit's `units`, a Field card's and a modifier's `backrow`. */
+  row: "units" | "backrow";
+  /** The Field card's backrow lane or the Unit's unit lane; null for a modifier, whose `zone` or `lane` scope is its side. */
   lane: number | null;
   scope: AuraScope;
   look: AuraLook;
@@ -52,16 +57,24 @@ export function auraTestid(key: string): string {
   return `aura-${key}`;
 }
 
-function specOf(key: string, defId: string, instanceId: string, side: Side, lane: number | null, aura: FxAuraSpec, view: PlayerView): AuraSpec {
+function specOf(
+  key: string,
+  defId: string,
+  instanceId: string,
+  side: Side,
+  lane: number | null,
+  aura: FxAuraSpec,
+  view: PlayerView,
+  row: AuraSpec["row"] = "backrow",
+): AuraSpec {
   const look = (aura.palette !== undefined ? paletteLook(aura.palette) : undefined) ?? flavorLookOf(defId, instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
   const colors = look.colors;
   const scope = lane === null && (aura.scope === "zone" || aura.scope === "lane") ? "side" : aura.scope;
-  return { key, defId, instanceId, side, lane, scope, look: aura.look, colors };
+  return { key, defId, instanceId, side, row, lane, scope, look: aura.look, colors };
 }
 
 function auraOf(table: ReadonlyMap<string, FxCardEntry>, defId: string): FxAuraSpec | undefined {
-  const entry = table.get(defId);
-  return entry?.kind === "hooks" ? entry.aura : undefined;
+  return entryAura(table.get(defId));
 }
 
 /** Every aura the view shows, your side first: its standing Field cards, then its attributed modifiers. */
@@ -74,6 +87,13 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
       if (slot.defId === HIDDEN_ID || !isAuraFieldType(slot.type)) return;
       const aura = auraOf(table, slot.defId);
       if (aura !== undefined) out.push(specOf(`field-${slot.instanceId}`, slot.defId, slot.instanceId, side, index + 1, aura, view));
+    });
+    // R3402000: a Unit's zone aura stands on its own unit zone while it is face up there and readable (R202).
+    seat.units.forEach((unit, index) => {
+      if (unit === null || unit === undefined || unit.defId === HIDDEN_ID || unit.instanceId === HIDDEN_ID) return;
+      if ((CATALOG[unit.defId] ?? view.defs?.[unit.defId])?.type !== UNIT_TYPE) return;
+      const aura = auraOf(table, unit.defId);
+      if (aura?.scope === "zone") out.push(specOf(`unit-${unit.instanceId}`, unit.defId, unit.instanceId, side, index + 1, aura, view, "units"));
     });
     for (const modifier of seat.modifiers) {
       const source = sources.get(sourceKey(seat.player, modifier.id));
@@ -117,12 +137,12 @@ function sideZones(side: Side): string[] {
   return LANES.flatMap((lane) => [testid.zone(side, "units", lane), testid.zone(side, "backrow", lane)]);
 }
 
-/** The zones an aura covers, by testid. */
-export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane">): string[] {
+/** The zones an aura covers, by testid; R3402000 a zone aura's in its `row` (the backrow unless it says). */
+export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane"> & Partial<Pick<AuraSpec, "row">>): string[] {
   if (spec.scope === "board") return [...sideZones("you"), ...sideZones("opponent")];
   if (spec.scope === "side" || spec.lane === null) return sideZones(spec.side);
   if (spec.scope === "lane") return laneZoneTestids(spec.lane);
-  return [testid.zone(spec.side, "backrow", spec.lane)];
+  return [testid.zone(spec.side, spec.row ?? "backrow", spec.lane)];
 }
 
 /** `begin` while it fades in with its burst, `standing` while it holds, `end` while it fades out. */

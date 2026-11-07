@@ -4,13 +4,22 @@
 // Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
 // Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798). R3338000: Olivian
-// Expanse's rift is its set piece now (fx/terminus/).
+// Expanse's rift is its set piece now (fx/terminus/). R3402001: Core's signatures add Silly Silas's
+// mirrorball shuffle, Unlicensed Experimentation's clamp weld, Pocket Chaos's swap, Combo-Index's grade
+// rings, Call to Chaos's reels, My Pawn's strings and Heroic Power's doors.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
+import { chaosReels } from "./core/callToChaos.ts";
+import { gradeRings } from "./core/comboIndex.ts";
 import { fusionForge } from "./core/craftACard.ts";
+import { heroicDoors } from "./core/heroicPower.ts";
 import { manaCrack } from "./core/hinder.ts";
+import { pawnStrings } from "./core/myPawn.ts";
+import { pocketSwap } from "./core/pocketChaos.ts";
+import { mirrorballShuffle } from "./core/sillySilas.ts";
 import { legendaryTide } from "./core/transmogulate.ts";
+import { clampWeld } from "./core/unlicensedExperimentation.ts";
 import { perfectWish } from "./core/zephrys.ts";
 import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
@@ -39,6 +48,13 @@ export const CARD_RECIPES = {
   legendaryTide,
   perfectWish,
   fusionForge,
+  mirrorballShuffle,
+  clampWeld,
+  pocketSwap,
+  gradeRings,
+  chaosReels,
+  pawnStrings,
+  heroicDoors,
   rollbackSweep,
   constantStamp,
   inkTear,

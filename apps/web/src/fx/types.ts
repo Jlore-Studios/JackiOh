@@ -155,7 +155,7 @@ export type FxFogCue = {
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
  * the effects' tail (R200).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "rotunda" | "forge";
 export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board

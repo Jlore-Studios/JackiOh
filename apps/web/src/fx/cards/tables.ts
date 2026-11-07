@@ -13,6 +13,8 @@
 // Legendary's or a Mythic's, which must name its first beat: a Unit's entrance, a Field Spell's entrance
 // or cast of its own, any other card's cast of its own (`{ bespoke }` or `{ setPiece }`). A token's
 // rarity here is the one it prints (B2.5), as its entrance's (game/animations.ts `EntranceResolver`).
+// R3402000: a `{ bespoke }` entry may carry an `aura` too (`entryAura` reads either kind's), a Unit's a
+// `zone` one, which stands on its own unit zone; the own takeover looks gain "rotunda" and "forge".
 
 import JSON5 from "json5";
 
@@ -65,7 +67,7 @@ export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope
 export type OwnTakeoverLook = Exclude<TakeoverLook, "prismatic">;
 
 /** R3332000: every look `OwnTakeoverLook` holds; a missing one fails `typecheck`. */
-export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true };
+export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true, rotunda: true, forge: true };
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
   return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);
@@ -80,7 +82,7 @@ export type FxCardFrame = { entrance?: EntranceKey; takeover?: OwnTakeoverLook; 
 
 export type FxCardEntry =
   | { kind: "none"; reason: string }
-  | ({ kind: "bespoke"; key: CardRecipeKey } & FxCardFrame)
+  | ({ kind: "bespoke"; key: CardRecipeKey; aura?: FxAuraSpec } & FxCardFrame)
   | ({ kind: "setPiece"; key: SetPieceKey } & FxCardFrame)
   | ({ kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec } & FxCardFrame);
 
@@ -92,6 +94,8 @@ const AURA_FIELDS: readonly string[] = ["look", "palette", "scope"];
 const FRAME_FIELDS: readonly string[] = ["entrance", "takeover", "signature"];
 /** R3332000: the cards that land on the field face up as they are played, so an entrance can draw them landing. */
 const ENTRANCE_TYPES: readonly string[] = ["Unit", "Field Spell"];
+/** R3402000: the one card type besides a Field card whose aura may stand in its own zone. */
+const UNIT_TYPE = "Unit";
 
 function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => never): FxHookSpec {
   if (!isRecord(value)) fail(`${hook} must be { motif, palette?, row? }`);
@@ -120,8 +124,9 @@ function parseAura(value: unknown, type: string, fail: (problem: string) => neve
   const { look, palette, scope } = value;
   if (typeof look !== "string" || !isAuraLook(look)) fail(`unknown aura look "${String(look)}"`);
   if (typeof scope !== "string" || !isAuraScope(scope)) fail(`unknown aura scope "${String(scope)}"`);
-  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type)) {
-    fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is side or board`);
+  // R3402000: a Unit's own zone is where it stands, so it may wear a zone aura; a lane aura stays a Field card's.
+  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type) && !(scope === "zone" && type === UNIT_TYPE)) {
+    fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is ${type === UNIT_TYPE ? "zone, " : ""}side or board`);
   }
   const spec: FxAuraSpec = { look, scope };
   if (palette !== undefined) {
@@ -174,10 +179,11 @@ function checkSignature(frame: FxCardFrame, kind: "bespoke" | "setPiece" | "hook
   }
 }
 
-/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else. */
+/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else; R3402000 a `{ bespoke }`'s `aura` too. */
 function onlyKeyAndFrame(value: Record<string, unknown>, kind: "bespoke" | "setPiece", fail: (problem: string) => never): void {
   for (const field of Object.keys(value)) {
-    if (field !== kind && !FRAME_FIELDS.includes(field)) fail(`a ${kind} entry holds nothing else but its frame`);
+    if (field === kind || FRAME_FIELDS.includes(field) || (kind === "bespoke" && field === "aura")) continue;
+    fail(`a ${kind} entry holds nothing else but its frame${kind === "bespoke" ? " and an aura" : ""}`);
   }
 }
 
@@ -192,9 +198,10 @@ function parseEntry(value: unknown, card: CardFacts, fail: (problem: string) => 
     const key = value.bespoke;
     onlyKeyAndFrame(value, "bespoke", fail);
     if (typeof key !== "string" || !isCardRecipeKey(key)) fail(`unknown bespoke "${String(key)}"`);
+    const aura = has(value, "aura") ? parseAura(value.aura, type, fail) : undefined;
     const frame = parseFrame(value, card, fail);
     checkSignature(frame, "bespoke", type, fail);
-    return { kind: "bespoke", key, ...frame };
+    return { kind: "bespoke", key, ...(aura === undefined ? {} : { aura }), ...frame };
   }
   if (has(value, "setPiece")) {
     const key = value.setPiece;
@@ -252,6 +259,11 @@ export function parseFxCardTable(file: string, source: string, catalog: Readonly
 /** R3332000: whether `entry` is its card's signature (`signature: true`, its first beat named). */
 export function isSignature(entry: FxCardEntry | undefined): boolean {
   return entry !== undefined && entry.kind !== "none" && entry.signature === true;
+}
+
+/** R2787000, R3402000: the standing look `entry` wears, a hooks entry's or a `{ bespoke }` entry's `aura`. */
+export function entryAura(entry: FxCardEntry | undefined): FxAuraSpec | undefined {
+  return entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
 }
 
 /** Every card's entry, all eight files merged. */

@@ -13,7 +13,7 @@ import { BACKDROP_PARTICLE_MAX } from "../../game/config.ts";
 import { testid } from "../../game/contract.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
+import { FX_CARD_TABLE, entryAura, parseFxCardTable } from "../cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import {
   TILE_FADE_OUT_MS,
@@ -41,7 +41,7 @@ describe("R3342000 tile aura planner", () => {
       if (tier === null) continue;
       if (def.type !== "Unit" && def.type !== "Field Spell" && def.type !== "Field Trap" && def.type !== "Trap") continue;
       const tableEntry = FX_CARD_TABLE.get(id);
-      if (tableEntry?.kind === "hooks" && tableEntry.aura !== undefined) continue;
+      if (entryAura(tableEntry) !== undefined) continue;
 
       const isUnit = def.type === "Unit";
       const view = baseView({
@@ -204,8 +204,10 @@ describe("R3342000 tile aura planner", () => {
         ],
       }),
     });
-    const aura1 = planTileAura(view, "you", "units", 1);
-    const aura2 = planTileAura(view, "you", "units", 2);
+    // R3402000: Silly Silas wears a signature aura in the table now, so the default is planned without one.
+    const aura1 = planTileAura(view, "you", "units", 1, new Map());
+    const aura2 = planTileAura(view, "you", "units", 2, new Map());
+    expect(aura1).not.toBeNull();
     expect(aura1?.colors).not.toEqual(aura2?.colors);
 
     // Fingerprint unique within each set
@@ -290,11 +292,13 @@ describe("R3342000 tile aura planner", () => {
         }),
       });
 
-    expect(planTileAura(makeUnitView({ slumber: {} }), "you", "units", 1)?.dim).toBe(true);
-    expect(planTileAura(makeUnitView({ frozen: true }), "you", "units", 1)?.dim).toBe(true);
-    expect(planTileAura(makeUnitView({ frozenForever: true }), "you", "units", 1)?.dim).toBe(true);
-    expect(planTileAura(makeUnitView({ vanilla: true }), "you", "units", 1)?.dim).toBe(true);
-    expect(planTileAura(makeUnitView({}), "you", "units", 1)?.dim).toBe(false);
+    // R3402000: Silly Silas's signature aura replaces his default in the table, so these plan without one.
+    const none = new Map();
+    expect(planTileAura(makeUnitView({ slumber: {} }), "you", "units", 1, none)?.dim).toBe(true);
+    expect(planTileAura(makeUnitView({ frozen: true }), "you", "units", 1, none)?.dim).toBe(true);
+    expect(planTileAura(makeUnitView({ frozenForever: true }), "you", "units", 1, none)?.dim).toBe(true);
+    expect(planTileAura(makeUnitView({ vanilla: true }), "you", "units", 1, none)?.dim).toBe(true);
+    expect(planTileAura(makeUnitView({}), "you", "units", 1, none)?.dim).toBe(false);
 
     // Backrow vanilla
     const backrowVanilla = baseView({

@@ -33,8 +33,12 @@ export function describeEntry(entry: FxCardEntry): string {
   switch (entry.kind) {
     case "none":
       return `none: ${entry.reason}`;
-    case "bespoke":
-      return `bespoke ${entry.key}`;
+    case "bespoke": {
+      // R3402000: a signature first, then its entrance, its recipe and its aura.
+      const parts = [entry.signature === true ? "signature" : undefined, entry.entrance === undefined ? undefined : `entrance ${entry.entrance}`, `bespoke ${entry.key}`];
+      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
+      return parts.filter((part) => part !== undefined).join("; ");
+    }
     case "setPiece":
       return `setPiece ${entry.key}`;
     case "hooks": {

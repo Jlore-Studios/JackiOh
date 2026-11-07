@@ -46,6 +46,9 @@ const EXPECTED_IDS = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  // R3402001: the ten Core signatures.
+  "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
+  "wishWind", "heroicFanfare", "forgeAnvil",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -152,6 +155,17 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   trapSnap: 200,
   // R3342000: the tile aura bell.
   auraTouch: 200,
+  // R3402001: the ten Core signatures.
+  silasScratch: 1250,
+  crucibleChoir: 1170,
+  hatchWeld: 1550,
+  pocketZip: 1170,
+  stadiumCheer: 1550,
+  jackpotReels: 1190,
+  pawnWaltz: 2500,
+  wishWind: 1900,
+  heroicFanfare: 2500,
+  forgeAnvil: 1900,
 };
 
 /** B14 parameter sets used here too. */
@@ -383,6 +397,10 @@ const ROUTINE: readonly Cue[] = [
   { id: "sting", params: { tier: "rare" } },
   { id: "sting", params: { tier: "epic" } },
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
+    (id): Cue => ({ id, params: {} }),
+  ),
+  // R3402001: the ten Core signatures.
+  ...(["silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz", "wishWind", "heroicFanfare", "forgeAnvil"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
 ];

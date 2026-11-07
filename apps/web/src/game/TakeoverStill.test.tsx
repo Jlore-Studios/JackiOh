@@ -1,7 +1,7 @@
 // R2722001: a Mythic's entrance on the board. With motion, the entry in flight holds for the takeover
 // (`data-takeover`, and since R2785000 its set piece's `data-set-piece` and `--set-piece-hold`); under
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
-// TAKEOVER_STILL_MS instead.
+// TAKEOVER_STILL_MS instead. R3402000: a Mythic whose takeover has art of its own shows it at rest there.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent } from "@jackioh/shared";
@@ -11,13 +11,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
-import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
+import TakeoverStill, { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
+import { TAKEOVER_TINTS, takeoverLookOf } from "../fx/takeover.ts";
+import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 /** #97 Zephrys, a Mythic Spell; #52 Silly Silas, a Legendary Unit. */
 const ZEPHRYS = "core-097";
+/** R3402000: #98 Heroic Power, a Mythic whose takeover has its own art; Meditative #8 Reach the Summit, a Mythic on the shared look. */
+const HEROIC_POWER = "core-098";
+const PRISMATIC_MYTHIC = "meditative-008";
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 const cast = (defId: string): GameEvent => ({ type: "cardPlayed", player: "p1", instanceId: `i-${defId}`, defId, costPaid: 3 });
 
@@ -80,5 +85,40 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     playOut("core-083");
     expect(screen.queryByTestId("takeover-still")).toBeNull();
     expect(screen.getByTestId("game")).not.toHaveAttribute("data-takeover");
+  });
+
+  it("R3402000 reduced motion shows the Mythic's takeover art still", () => {
+    const stand = (defId: string): HTMLElement => {
+      render(
+        <CatalogContext.Provider value={lookup}>
+          <TakeoverStill defId={defId} instanceId={`i-${defId}`} view={baseView()} onDone={vi.fn()} />
+        </CatalogContext.Provider>,
+      );
+      return screen.getByTestId("takeover-still");
+    };
+    // #98 Heroic Power: its rotunda stands first in the still, behind the rays, the card and the ring.
+    const still = stand(HEROIC_POWER);
+    const art = still.firstElementChild;
+    expect(art?.matches('svg.takeover-still-art[data-look="rotunda"]')).toBe(true);
+    expect(art?.getAttribute("aria-hidden")).toBe("true");
+    expect(art?.getAttribute("viewBox")).toBe(TAKEOVER_ART_VIEWBOX);
+    expect(art?.getAttribute("preserveAspectRatio")).toBe(TAKEOVER_ART_ASPECT);
+    const shapes = TAKEOVER_ART.rotunda ?? [];
+    expect(shapes.length).toBeGreaterThan(0);
+    expect([...(art?.children ?? [])].map((shape) => shape.getAttribute("class"))).toEqual(shapes.map((shape) => `takeover-still-art-${shape.part}`));
+    expect(art?.querySelectorAll(".takeover-still-art-door")).toHaveLength(13);
+    // Painted from its look's tint; it names no card (R202) and holds nothing for the queue (R200).
+    expect((art as SVGElement | null)?.style.getPropertyValue("--takeover-glow")).toBe(TAKEOVER_TINTS.rotunda.glow);
+    expect(art?.querySelector("text")).toBeNull();
+    expect(art?.outerHTML).not.toMatch(/core-|Heroic Power/);
+    expect(still.querySelector("[data-animating]")).toBeNull();
+    expect(still.querySelector(".takeover-still-card")).not.toBeNull();
+    cleanup();
+
+    // A Mythic on the shared prismatic look keeps the still as it was.
+    expect(takeoverLookOf(PRISMATIC_MYTHIC)).toBe("prismatic");
+    const plain = stand(PRISMATIC_MYTHIC);
+    expect(plain.querySelector(".takeover-still-art")).toBeNull();
+    expect(plain.firstElementChild?.classList.contains("takeover-still-rays")).toBe(true);
   });
 });

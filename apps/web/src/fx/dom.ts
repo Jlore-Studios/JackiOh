@@ -5,6 +5,7 @@
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
+import { buildTakeoverArt } from "./takeoverArt.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -57,7 +58,7 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/** R2722001: a takeover's layers, bottom to top (fx.css). */
+/** R2722001: a takeover's layers, bottom to top (fx.css); R3402000: a look's own art goes over the dark. */
 const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
 
 /** R2800000: each set piece shape's layers, bottom to top (fx.css). */
@@ -325,6 +326,14 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
+        // R3402000: a look with a scene of its own draws it over the dark, under the sweep (takeoverArt.ts).
+        const scene = part === "dark" ? buildTakeoverArt(doc, cue.look) : null;
+        if (scene !== null) {
+          const art = doc.createElement("div");
+          art.className = "fx-takeover-art";
+          art.appendChild(scene);
+          el.appendChild(art);
+        }
       }
       break;
     }

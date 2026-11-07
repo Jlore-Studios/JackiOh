@@ -15,7 +15,7 @@ import { setAudioEngineForTests } from "../../audio/engine.ts";
 import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import { planAuras } from "../../fx/aura/plan.ts";
 import { entranceKeyOf, planCardFx, planCardMotif } from "../../fx/cardFx.ts";
-import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, entryAura, parseFxCardTable } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { planFx } from "../../fx/cues.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
@@ -151,7 +151,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(galleryCards().filter((card) => ids.has(card.defId)).map((card) => card.defId)).toEqual(drawable.map(([defId]) => defId));
     for (const [defId, entry] of drawable) {
       // R2787000: a Field card's aura stands in the backrow zone the gallery lays it in.
-      if (entry.kind === "hooks" && entry.aura !== undefined && galleryFieldView(defId, view) !== view) {
+      if (entryAura(entry) !== undefined && galleryFieldView(defId, view) !== view) {
         expect(planAuras(galleryFieldView(defId, view), new Map()).map((aura) => aura.defId), defId).toContain(defId);
       }
       const play = galleryPlayOf(defId, entry);
@@ -188,7 +188,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(signatures.flatMap((group) => group.cards.map((card) => card.defId))).toEqual(signed);
     expect(signatures.map((group) => group.set)).toEqual([...new Set(signed.map((defId) => CATALOG[defId]?.set))]);
     for (const group of signatures) for (const card of group.cards) expect(CATALOG[card.defId]?.set, card.defId).toBe(group.set);
-    expect(signatures[0]).toMatchObject({ set: "Core", cards: [{ defId: "core-092", play: { kind: "entrance", key: "felinorAssembly" } }] });
+    // R3402001: Core's eleven, in catalog order, Felinor Fiender's among them.
+    expect(signatures[0]?.set).toBe("Core");
+    expect(signatures[0]?.cards.map((card) => card.defId)).toEqual(["core-052", "core-083", "core-085", "core-087", "core-092", "core-093", "core-095", "core-096", "core-097", "core-098", "core-099"]);
+    expect(signatures[0]?.cards.find((card) => card.defId === "core-092")).toMatchObject({ defId: "core-092", play: { kind: "entrance", key: "felinorAssembly" } });
 
     // Planned over its board, Felinor Fiender's landing draws a streak from each of the three Felinors.
     const base = fullBoardView();
@@ -208,6 +211,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const select = screen.getByTestId(fxGalleryTestid.signature);
     expect([...select.querySelectorAll("optgroup")].map((group) => group.getAttribute("label"))).toEqual(signatures.map((group) => group.set));
     expect(optionsOf(fxGalleryTestid.signature)).toEqual(signed);
+    fireEvent.change(select, { target: { value: "core-092" } });
     fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
     for (const [lane, defId] of [[1, "core-t-felinor"], [2, "core-043"], [5, "core-012"]] as const) {
       expect(document.querySelector(`[data-testid="zone-you-units-${String(lane)}"] [data-def-id="${defId}"]`), `lane ${String(lane)}`).not.toBeNull();

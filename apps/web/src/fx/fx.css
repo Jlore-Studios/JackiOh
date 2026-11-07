@@ -2101,6 +2101,334 @@
   }
 }
 
+/* R3402000: a Core Mythic's own art (takeoverArt.ts), over the dark and under the sweep: one svg sliced
+   to cover the screen, faded in to the landing at --fx-land and out again by --fx-ms. Each part is painted
+   from the look's tint, and the look's own parts move by transform and opacity alone (R200): My Pawn's
+   hand reaches in and its strings snap taut down to the pieces; Zephrys's silk turns, his card backs
+   orbit and the spirit uncoils from its tail; Heroic Power's doors light one by one; Craft a Card's
+   gears turn and its hammer falls onto the anvil at --fx-land, throwing sparks. A shape's place among its
+   part's shapes (`--fx-art-i` of `--fx-art-n`, dom.ts) staggers the strings and the doors. Every motion
+   is the takeover's, so reduced motion stops it with the rest. */
+.fx-takeover-art {
+  position: absolute;
+  inset: 0;
+  animation:
+    fx-takeover-art-in var(--fx-land) var(--ease-out) both,
+    fx-takeover-art-out calc(var(--fx-ms) - var(--fx-land)) var(--ease-in) var(--fx-land) forwards;
+}
+
+.fx-takeover-art > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes fx-takeover-art-in {
+  0% {
+    opacity: 0;
+    scale: 1.06;
+  }
+  100% {
+    opacity: 0.88;
+    scale: 1;
+  }
+}
+
+@keyframes fx-takeover-art-out {
+  0% {
+    opacity: 0.88;
+  }
+  30% {
+    opacity: 0.88;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The parts' paint: the veil washes the screen in the look's glow; figures and glass in its core and rim. */
+.fx-takeover-art-veil {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 26%, transparent);
+}
+
+.fx-takeover-art-hood,
+.fx-takeover-art-gear,
+.fx-takeover-art-anvil,
+.fx-takeover-art-hammer,
+.fx-takeover-art-card {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 32%, var(--pal-black));
+  stroke: color-mix(in srgb, var(--fx-tint-rim) 70%, transparent);
+  stroke-width: 0.4;
+  stroke-linejoin: round;
+}
+
+.fx-takeover-art-shadow,
+.fx-takeover-art-hero {
+  fill: color-mix(in srgb, var(--pal-black) 88%, transparent);
+}
+
+.fx-takeover-art-eye,
+.fx-takeover-art-oculus,
+.fx-takeover-art-spark,
+.fx-takeover-art-hub {
+  fill: var(--fx-tint-core);
+}
+
+.fx-takeover-art-card-mark {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 30%, transparent);
+  stroke: var(--fx-tint-rim);
+  stroke-width: 0.3;
+}
+
+.fx-takeover-art-board,
+.fx-takeover-art-crystal {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 34%, transparent);
+  stroke: var(--fx-tint-rim);
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+}
+
+.fx-takeover-art-slab,
+.fx-takeover-art-rail {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  stroke: var(--fx-tint-core);
+  stroke-width: 0.25;
+}
+
+.fx-takeover-art-squares {
+  fill: color-mix(in srgb, var(--fx-tint-core) 34%, transparent);
+}
+
+.fx-takeover-art-piece,
+.fx-takeover-art-hand,
+.fx-takeover-art-cuff,
+.fx-takeover-art-spirit,
+.fx-takeover-art-arm,
+.fx-takeover-art-door {
+  fill: color-mix(in srgb, var(--fx-tint-core) 82%, transparent);
+  stroke: var(--fx-tint-rim);
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+}
+
+.fx-takeover-art-cuff {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 45%, var(--pal-black));
+}
+
+.fx-takeover-art-spirit,
+.fx-takeover-art-arm {
+  fill: color-mix(in srgb, var(--fx-tint-glow) 70%, var(--fx-tint-core));
+  stroke-width: 0.5;
+}
+
+.fx-takeover-art-door {
+  stroke: var(--fx-tint-glow);
+}
+
+.fx-takeover-art-wall,
+.fx-takeover-art-dome {
+  fill: color-mix(in srgb, var(--fx-tint-rim) 20%, transparent);
+  stroke: color-mix(in srgb, var(--fx-tint-rim) 50%, transparent);
+  stroke-width: 0.3;
+}
+
+.fx-takeover-art-floor {
+  fill: color-mix(in srgb, var(--fx-tint-rim) 36%, transparent);
+  stroke: var(--fx-tint-glow);
+  stroke-width: 0.4;
+}
+
+.fx-takeover-art-string,
+.fx-takeover-art-silk,
+.fx-takeover-art-rib,
+.fx-takeover-art-pillar,
+.fx-takeover-art-inlay,
+.fx-takeover-art-facet,
+.fx-takeover-art-rail-glow {
+  fill: none;
+  stroke: var(--fx-tint-core);
+  stroke-width: 0.25;
+  stroke-linecap: round;
+}
+
+.fx-takeover-art-silk {
+  stroke: color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  stroke-width: 1.8;
+}
+
+.fx-takeover-art-pillar {
+  stroke: color-mix(in srgb, var(--fx-tint-rim) 80%, transparent);
+  stroke-width: 0.7;
+}
+
+.fx-takeover-art-rib,
+.fx-takeover-art-inlay {
+  stroke: color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  stroke-width: 0.35;
+}
+
+.fx-takeover-art-rail-glow {
+  stroke-width: 0.5;
+}
+
+/* My Pawn: the hand reaches in, and each string drops from its fingertip and snaps taut, one after another. */
+.fx-takeover[data-look="pawn"] :is(.fx-takeover-art-hand, .fx-takeover-art-cuff) {
+  animation: fx-takeover-art-reach var(--fx-land) var(--ease-out) both;
+}
+
+.fx-takeover[data-look="pawn"] .fx-takeover-art-string {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: fx-takeover-art-snap calc(var(--fx-land) * 0.8) var(--ease-in) calc(var(--fx-art-i) / var(--fx-art-n) * var(--fx-land) * 0.2) both;
+}
+
+@keyframes fx-takeover-art-reach {
+  0% {
+    translate: 0 -6px;
+  }
+  50% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes fx-takeover-art-snap {
+  0% {
+    scale: 1 0;
+    opacity: 0;
+  }
+  50% {
+    scale: 1 0.4;
+    opacity: 0.8;
+  }
+  82% {
+    scale: 1 1.1;
+    opacity: 1;
+  }
+  100% {
+    scale: 1 1;
+    opacity: 1;
+  }
+}
+
+/* Zephrys: the cyclone's silk turns about its eye and the card backs orbit it, as the spirit uncoils from its tail. */
+.fx-takeover[data-look="genie"] .fx-takeover-art-silk {
+  transform-box: view-box;
+  transform-origin: 50% 56%;
+  animation: fx-takeover-art-turn var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-takeover[data-look="genie"] :is(.fx-takeover-art-card, .fx-takeover-art-card-mark) {
+  transform-box: view-box;
+  transform-origin: 50% 56%;
+  animation: fx-takeover-art-orbit var(--fx-ms) linear both;
+}
+
+.fx-takeover[data-look="genie"] :is(.fx-takeover-art-spirit, .fx-takeover-art-arm, .fx-takeover-art-eye) {
+  transform-box: view-box;
+  transform-origin: 50% 84%;
+  animation: fx-takeover-art-uncoil var(--fx-land) var(--ease-overshoot) both;
+}
+
+@keyframes fx-takeover-art-turn {
+  0% {
+    rotate: -150deg;
+  }
+  100% {
+    rotate: 60deg;
+  }
+}
+
+@keyframes fx-takeover-art-orbit {
+  0% {
+    rotate: -40deg;
+  }
+  100% {
+    rotate: 50deg;
+  }
+}
+
+@keyframes fx-takeover-art-uncoil {
+  0% {
+    scale: 0.3;
+    rotate: -30deg;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    rotate: 0deg;
+    opacity: 1;
+  }
+}
+
+/* Heroic Power: the thirteen doors light in turn, left to right, the last as the card lands. */
+.fx-takeover[data-look="rotunda"] .fx-takeover-art-door {
+  animation: fx-takeover-art-light calc(var(--fx-land) / 2) var(--ease-out) calc(var(--fx-art-i) / var(--fx-art-n) * var(--fx-land) / 2) both;
+}
+
+@keyframes fx-takeover-art-light {
+  0% {
+    opacity: 0.2;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.85;
+  }
+}
+
+/* Craft a Card: the gears turn overhead; the hammer winds up and falls onto the anvil at --fx-land, and the
+   strike's sparks fly from there. */
+.fx-takeover[data-look="forge"] .fx-takeover-art-gear {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-takeover-art-turn var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-takeover[data-look="forge"] .fx-takeover-art-hammer {
+  transform-box: view-box;
+  transform-origin: 50% 14%;
+  animation: fx-takeover-art-strike var(--fx-land) var(--ease-in) both;
+}
+
+.fx-takeover[data-look="forge"] .fx-takeover-art-spark {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-takeover-art-spark calc(var(--fx-ms) - var(--fx-land)) var(--ease-out) var(--fx-land) both;
+}
+
+@keyframes fx-takeover-art-strike {
+  0% {
+    rotate: -34deg;
+  }
+  70% {
+    rotate: -42deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@keyframes fx-takeover-art-spark {
+  0% {
+    scale: 0.2;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    scale: 1.8;
+    opacity: 0;
+  }
+}
+
 .fx-takeover-sweep {
   position: absolute;
   left: var(--fx-x);

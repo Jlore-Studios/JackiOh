@@ -8,6 +8,9 @@
 // SIGNATURE_MYTHIC_MAX_MS, a takeover's hold included), a Spell's within SIGNATURE_SPELL_SHARE of it;
 // every shake stays within its type's (SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA), and a
 // signature's aura within AURA_SIGNATURE_MAX_INTENSITY. Each is planned over its gallery board (`galleryBoardOf`).
+// R3402000: each action of its gallery play is timed from its own start (`actionsOf`): a Trap's firing
+// comes a turn or more after its set, a trigger at a turn's end and an Activate on a later click, so
+// each is an action of its own in a game, as the queue holds it; a `{ bespoke }` entry's aura is held too.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -27,7 +30,7 @@ import {
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_CARD_TABLE, isSignature } from "./tables.ts";
+import { FX_CARD_TABLE, entryAura, isSignature } from "./tables.ts";
 import { AURA_LOOKS } from "../aura/looks.ts";
 import {
   AURA_SIGNATURE_MAX_INTENSITY,
@@ -48,6 +51,22 @@ import { hasSetPiece, SET_PIECE_KEYS, SET_PIECES, planSetPiece, signatureRunOf, 
 import { planTerminus } from "../terminus/index.ts";
 import { entranceCues } from "../takeover.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
+
+/**
+ * R3402000: a gallery play's events, split into the actions a game deals them in: the play itself, and
+ * each later hook it runs as an action of its own, a Trap's firing and a trigger's or an Activate's
+ * marker (a Death's too). A Cry's marker resolves inside its play and stays in it.
+ */
+function actionsOf(events: readonly GameEvent[]): GameEvent[][] {
+  const actions: GameEvent[][] = [];
+  for (const event of events) {
+    const later = event.type === "trapFired" || (event.type === "hookResolving" && event.hook !== "cry");
+    const last = actions[actions.length - 1];
+    if (last === undefined || (later && last.length > 0)) actions.push([event]);
+    else last.push(event);
+  }
+  return actions;
+}
 
 /** A cue's end, as R2800000's own R200 test counts it: bursts burn, shots fly then burst, shakes ride, the rest run out. */
 function endOf(cue: FxCue): number {
@@ -160,30 +179,33 @@ describe("R3332000 every signature keeps its loudness budget", () => {
       const play = galleryPlayOf(defId, entry);
       if (play === null) throw new Error(`${defId}'s signature has no gallery play`);
       // Its gallery play over its own board, entered and held as the queue holds it: a Mythic's takeover or
-      // a wipe's set piece, at speed 1 with Big moments full, its loudest.
+      // a wipe's set piece, at speed 1 with Big moments full, its loudest; R3402000 each action of it from its own start.
       const board = galleryBoardOf(defId, view);
       const events = galleryCardEvents(defId, play, board, 1);
       const fielded = withEvents(galleryFieldView(defId, board), events);
-      const entered = entranceEntries(planEntries(events, fielded, false, undefined, hasSetPiece), resolve, { seen: new Set() });
-      const planned = setPieceEntries(entered, (e) => wipeClaim(e) ?? takeoverClaim(e), { reduced: false, bigMoments: "full", speed: 1 });
+      const seen = new Set<string>();
       const env = envOf();
-      let offset = 0;
       let drawn = false;
-      for (const entryPlanned of planned) {
-        env.memory.remember(entryPlanned.events);
-        const cues = cuesOf(entryPlanned, env);
-        if (cues.length > 0) drawn = true;
-        for (const cue of cues) {
-          const where = `${defId} ${cue.kind} at ${String(offset)}`;
-          // A pull and a conceal are the stage's: the board's next view ends them (R200).
-          if (cue.kind === "pull" || cue.kind === "conceal") continue;
-          expect(offset + endOf(cue), where).toBeLessThanOrEqual(ceiling);
-          if (cue.kind === "shake") expect(cue.trauma, where).toBeLessThanOrEqual(maxTrauma);
+      for (const [n, action] of actionsOf(events).entries()) {
+        const entered = entranceEntries(planEntries(action, fielded, false, undefined, hasSetPiece), resolve, { seen });
+        const planned = setPieceEntries(entered, (e) => wipeClaim(e) ?? takeoverClaim(e), { reduced: false, bigMoments: "full", speed: 1 });
+        let offset = 0;
+        for (const entryPlanned of planned) {
+          env.memory.remember(entryPlanned.events);
+          const cues = cuesOf(entryPlanned, env);
+          if (cues.length > 0) drawn = true;
+          for (const cue of cues) {
+            const where = `${defId} action ${String(n)} ${cue.kind} at ${String(offset)}`;
+            // A pull and a conceal are the stage's: the board's next view ends them (R200).
+            if (cue.kind === "pull" || cue.kind === "conceal") continue;
+            expect(offset + endOf(cue), where).toBeLessThanOrEqual(ceiling);
+            if (cue.kind === "shake") expect(cue.trauma, where).toBeLessThanOrEqual(maxTrauma);
+          }
+          offset += entryPlanned.durationMs;
         }
-        offset += entryPlanned.durationMs;
       }
       expect(drawn, `${defId}'s signature plans`).toBe(true);
-      const aura = entry.kind === "hooks" ? entry.aura : undefined;
+      const aura = entryAura(entry);
       if (aura !== undefined) {
         const look = AURA_LOOKS[aura.look];
         for (const value of [look.alpha, look.tint, look.edge]) expect(value, `${defId} aura ${aura.look}`).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);

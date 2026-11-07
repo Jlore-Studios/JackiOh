@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { entryOf } from "../../test/setPass.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE } from "./tables.ts";
+import { FX_CARD_TABLE, entryAura } from "./tables.ts";
 import { FX_COVERAGE_FLOOR } from "../constants.ts";
 
 /** The catalog's non-token cards, in catalog order. */
@@ -44,7 +44,8 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3402000: a `{ bespoke }` entry may wear it too.
+      expect(entryAura(entry), id).toBeDefined();
     }
   });
 

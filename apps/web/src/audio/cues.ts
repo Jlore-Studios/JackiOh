@@ -11,6 +11,7 @@
 // never as it is set (`revealSting`, game/entrance.ts). R3332002: a Legendary's or Mythic's own intro is
 // its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro. R3336000:
 // the Drone Battleship's layers and drones add their own sounds after the row's (`battleshipCues`, unpanned).
+// R3402001: ten Core Legendaries and Mythics add their signatures after those (`signatureCues`, unpanned).
 
 import type {
   CardType,
@@ -62,6 +63,7 @@ import type {
 } from "./types.ts";
 import { entryFor, hookFor } from "./voiceData.ts";
 import { battleshipCues } from "./battleshipCues.ts";
+import { signatureCues } from "./signatureCues.ts";
 
 /** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
 function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
@@ -790,5 +792,5 @@ function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): r
 export function cuesFor(event: GameEvent, ctx: CueContext): readonly SoundCue[] {
   const row = soundRow(event.type);
   if (row === undefined) return NONE;
-  return [...panned(event, ctx, row.cues(event, ctx)), ...battleshipCues(event, ctx)];
+  return [...panned(event, ctx, row.cues(event, ctx)), ...battleshipCues(event, ctx), ...signatureCues(event, ctx)];
 }

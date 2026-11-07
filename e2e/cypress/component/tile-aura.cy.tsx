@@ -8,11 +8,15 @@ import { baseView, emptySide, faceUpBackrow, unit } from "../../../apps/web/src/
 
 const noop = (): void => undefined;
 
+/**
+ * Four Legendary and Mythic permanents that wear the default tile aura: a signature aura replaces it
+ * (R3342000), so neither Silly Silas's mirrorball nor a Field Spell's aura stands here (R3402000).
+ */
 function fourTileBoard() {
   return baseView({
     you: emptySide("p1", {
       units: [
-        unit("p1", { defId: "core-052", instanceId: "u-leg-1" }),
+        unit("p1", { defId: "core-092", instanceId: "u-leg-1" }),
         unit("p1", { defId: "core-100", instanceId: "u-myth-1" }),
         null,
         null,
@@ -23,8 +27,8 @@ function fourTileBoard() {
     opponent: emptySide("p2", {
       units: [null, null, null, null, null],
       backrow: [
-        faceUpBackrow("p2", { defId: "core-093", instanceId: "b-leg-2", type: "Field Spell" }),
-        faceUpBackrow("p2", { defId: "core-098", instanceId: "b-myth-2", type: "Field Spell" }),
+        faceUpBackrow("p2", { defId: "core-085", instanceId: "b-leg-2", type: "Trap" }),
+        faceUpBackrow("p2", { defId: "core-096", instanceId: "b-myth-2", type: "Trap" }),
         null,
         null,
         null,

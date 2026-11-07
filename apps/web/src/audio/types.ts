@@ -35,7 +35,10 @@ export type SfxId =
   // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
   | "playImpact" | "trapSnap"
   // R3342000: the tile aura touch bell.
-  | "auraTouch";
+  | "auraTouch"
+  // R3402001: ten Core Legendaries' and Mythics' signatures, one each (signatureCues.ts).
+  | "silasScratch" | "crucibleChoir" | "hatchWeld" | "pocketZip" | "stadiumCheer" | "jackpotReels" | "pawnWaltz"
+  | "wishWind" | "heroicFanfare" | "forgeAnvil";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

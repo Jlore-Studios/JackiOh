@@ -40,6 +40,9 @@ const UNION_ORDER: SfxId[] = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  // R3402001: the ten Core signatures.
+  "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
+  "wishWind", "heroicFanfare", "forgeAnvil",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -146,6 +149,17 @@ const DURATION_MS: Record<SfxId, number> = {
   trapSnap: 200,
   // R3342000.
   auraTouch: 200,
+  // R3402001.
+  silasScratch: 1250,
+  crucibleChoir: 1170,
+  hatchWeld: 1550,
+  pocketZip: 1170,
+  stadiumCheer: 1550,
+  jackpotReels: 1190,
+  pawnWaltz: 2500,
+  wishWind: 1900,
+  heroicFanfare: 2500,
+  forgeAnvil: 1900,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

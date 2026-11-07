@@ -2,7 +2,8 @@
 // "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom", #56 Spell Tyrant "tyrantSigil"),
 // in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table names it
 // as its `entrance` (R2784000, R3332000, fx/cards/tables.ts); each recipe is its card's own file in
-// fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's. R3332000: a
+// fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's; R3402001: #52
+// Silly Silas "silasSpotlight", #93 Combo-Index "comboStadium" and #98 Heroic Power "heroicPedestal". R3332000: a
 // Field Spell's own entrance plays as it lands face up in the backrow. It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
@@ -17,7 +18,10 @@ import { bigBoom } from "./cards/classic/bigMax.ts";
 import { titanBloom } from "./cards/classic/natureTitan.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
+import { comboStadium } from "./cards/core/comboIndex.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
+import { heroicPedestal } from "./cards/core/heroicPower.ts";
+import { silasSpotlight } from "./cards/core/sillySilas.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
@@ -27,7 +31,16 @@ import type { FxCue } from "./types.ts";
 export { ENTRANCE_FUSE_AT, ENTRANCE_TRAUMA, type EntranceKey, type EntrancePlan } from "./cards/recipe.ts";
 export { isEntranceKey } from "./cards/bespoke.ts";
 
-export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil, felinorAssembly };
+export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
+  voidCollapse,
+  bigBoom,
+  titanBloom,
+  tyrantSigil,
+  felinorAssembly,
+  silasSpotlight,
+  comboStadium,
+  heroicPedestal,
+};
 
 /* #1445: one summon entrance per flavor */
 

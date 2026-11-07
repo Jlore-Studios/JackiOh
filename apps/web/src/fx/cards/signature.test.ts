@@ -12,7 +12,7 @@ import { FX_CARD_TABLE, isSignature } from "./tables.ts";
 /** Every Legendary and Mythic still owed a signature, in catalog order, by set. */
 const SIGNATURE_PENDING: readonly string[] = [
   // Core
-  "core-052", "core-083", "core-085", "core-087", "core-093", "core-095", "core-096", "core-097", "core-098", "core-099", "core-100",
+  "core-100",
   // Classic
   "classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080",
   "classic-085", "classic-090",

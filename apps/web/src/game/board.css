@@ -2047,6 +2047,141 @@ button.modifier-badge[data-open="true"] {
   opacity: 0.8;
 }
 
+/* R3402000: a Mythic's own takeover scene at rest (fx/takeoverArt.ts), first in the still and so behind
+   its rays, card and ring: each part painted from the look's tint (`--takeover-rim`, `--takeover-core`,
+   `--takeover-glow`, TakeoverStill.tsx) as fx.css paints the takeover's own. Nothing in it animates. */
+.takeover-still-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.88;
+}
+
+.takeover-still-art-veil {
+  fill: color-mix(in srgb, var(--takeover-glow) 26%, transparent);
+}
+
+.takeover-still-art-hood,
+.takeover-still-art-gear,
+.takeover-still-art-anvil,
+.takeover-still-art-hammer,
+.takeover-still-art-card {
+  fill: color-mix(in srgb, var(--takeover-glow) 32%, var(--pal-black));
+  stroke: color-mix(in srgb, var(--takeover-rim) 70%, transparent);
+  stroke-width: 0.4;
+  stroke-linejoin: round;
+}
+
+.takeover-still-art-shadow,
+.takeover-still-art-hero {
+  fill: color-mix(in srgb, var(--pal-black) 88%, transparent);
+}
+
+.takeover-still-art-eye,
+.takeover-still-art-oculus,
+.takeover-still-art-spark,
+.takeover-still-art-hub {
+  fill: var(--takeover-core);
+}
+
+.takeover-still-art-card-mark {
+  fill: color-mix(in srgb, var(--takeover-glow) 30%, transparent);
+  stroke: var(--takeover-rim);
+  stroke-width: 0.3;
+}
+
+.takeover-still-art-board,
+.takeover-still-art-crystal {
+  fill: color-mix(in srgb, var(--takeover-glow) 34%, transparent);
+  stroke: var(--takeover-rim);
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+}
+
+.takeover-still-art-slab,
+.takeover-still-art-rail {
+  fill: color-mix(in srgb, var(--takeover-glow) 60%, transparent);
+  stroke: var(--takeover-core);
+  stroke-width: 0.25;
+}
+
+.takeover-still-art-squares {
+  fill: color-mix(in srgb, var(--takeover-core) 34%, transparent);
+}
+
+.takeover-still-art-piece,
+.takeover-still-art-hand,
+.takeover-still-art-cuff,
+.takeover-still-art-spirit,
+.takeover-still-art-arm,
+.takeover-still-art-door {
+  fill: color-mix(in srgb, var(--takeover-core) 82%, transparent);
+  stroke: var(--takeover-rim);
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+}
+
+.takeover-still-art-cuff {
+  fill: color-mix(in srgb, var(--takeover-glow) 45%, var(--pal-black));
+}
+
+.takeover-still-art-spirit,
+.takeover-still-art-arm {
+  fill: color-mix(in srgb, var(--takeover-glow) 70%, var(--takeover-core));
+  stroke-width: 0.5;
+}
+
+.takeover-still-art-door {
+  stroke: var(--takeover-glow);
+}
+
+.takeover-still-art-wall,
+.takeover-still-art-dome {
+  fill: color-mix(in srgb, var(--takeover-rim) 20%, transparent);
+  stroke: color-mix(in srgb, var(--takeover-rim) 50%, transparent);
+  stroke-width: 0.3;
+}
+
+.takeover-still-art-floor {
+  fill: color-mix(in srgb, var(--takeover-rim) 36%, transparent);
+  stroke: var(--takeover-glow);
+  stroke-width: 0.4;
+}
+
+.takeover-still-art-string,
+.takeover-still-art-silk,
+.takeover-still-art-rib,
+.takeover-still-art-pillar,
+.takeover-still-art-inlay,
+.takeover-still-art-facet,
+.takeover-still-art-rail-glow {
+  fill: none;
+  stroke: var(--takeover-core);
+  stroke-width: 0.25;
+  stroke-linecap: round;
+}
+
+.takeover-still-art-silk {
+  stroke: color-mix(in srgb, var(--takeover-glow) 70%, transparent);
+  stroke-width: 1.8;
+}
+
+.takeover-still-art-pillar {
+  stroke: color-mix(in srgb, var(--takeover-rim) 80%, transparent);
+  stroke-width: 0.7;
+}
+
+.takeover-still-art-rib,
+.takeover-still-art-inlay {
+  stroke: color-mix(in srgb, var(--takeover-glow) 60%, transparent);
+  stroke-width: 0.35;
+}
+
+.takeover-still-art-rail-glow {
+  stroke-width: 0.5;
+}
+
 /* R2785000: the first skip control there is. "Tap to skip" fades in `--set-piece-skip-delay` into a set
    piece's hold, above the effects layer; it takes no pointer event, as the tap that skips lands on the board. */
 .set-piece-skip {

@@ -1,5 +1,6 @@
 // R2787000: what wears an aura (a face-up Field Spell or Field Trap, a modifier a readable play added),
-// what it covers, how auras stack, how each begins and ends, and the motes' budget.
+// what it covers, how auras stack, how each begins and ends, and the motes' budget. R3402000: a face-up
+// Unit's zone aura on its own unit zone, and the three signature looks.
 
 import type { BackrowView, GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   AURA_MAX_PER_ZONE,
   AURA_MOTES_PER_AURA,
   AURA_PARTICLE_SHARE,
+  AURA_SIGNATURE_MAX_INTENSITY,
   AURA_SOURCES_LIMIT,
   FX_INTENSITY_SCALE,
   FX_PARTICLE_CAP,
@@ -78,7 +80,7 @@ const modifier = (player: PlayerId, modifierId: string, added = true): GameEvent
 const trapFired = (controller: PlayerId, row: Row, lane: number): GameEvent => ({ type: "trapFired", instanceId: "t9", defId: "core-084", controller, row, lane });
 
 function spec(key: string, scope: AuraScope, side: Side = "you", lane: number | null = 1, look: AuraLook = "storm"): AuraSpec {
-  return { key, defId: "core-014", instanceId: key, side, lane, scope, look, colors: FLAVOR_LOOKS.Tech.colors };
+  return { key, defId: "core-014", instanceId: key, side, row: "backrow", lane, scope, look, colors: FLAVOR_LOOKS.Tech.colors };
 }
 
 function tracked(key: string, scope: AuraScope, seen: number, phase: AuraPhase = "standing", side: Side = "you", lane: number | null = 1): TrackedAura {
@@ -108,7 +110,8 @@ describe("R2787000 what wears an aura", () => {
       ["meditativeplus-009", "opponent", 1, "side", "arcane"],
       ["core-018", "opponent", 2, "zone", "frost"],
     ]);
-    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
+    // The eight looks R2787000 began with; R3402000's three signature looks stand on Units below.
+    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane"]));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));
     expect(planned[0]?.key).toBe(`field-${you[0] && !you[0].faceDown ? you[0].instanceId : ""}`);
     expect(planned[5]?.key).toBe("mod-p1-m5");
@@ -207,6 +210,53 @@ describe("R2787000 what wears an aura", () => {
     expect(sources.has(sourceKey("p1", "m0"))).toBe(false);
     expect(sources.has(sourceKey("p1", "m1"))).toBe(false);
     expect(sources.has(sourceKey("p1", `m${String(AURA_SOURCES_LIMIT + 1)}`))).toBe(true);
+  });
+});
+
+describe("R3402000 a Unit's own zone aura", () => {
+  /** Silly Silas (a Unit) in a zone aura, a Unit in a side aura, and Heroic Power and Combo-Index (Field Spells) in the other two new looks. */
+  const SIGNATURES = parseFxCardTable(
+    "signature.json5",
+    `{
+      "core-052": { bespoke: "mirrorballShuffle", entrance: "silasSpotlight", aura: { look: "mirrorball", palette: "Tech/hologram", scope: "zone" }, signature: true },
+      "core-002": { cry: { motif: "bolt" }, aura: { look: "storm", scope: "side" } },
+      "core-093": { bespoke: "gradeRings", aura: { look: "stadium", scope: "zone" } },
+      "core-098": { bespoke: "heroicDoors", aura: { look: "pedestal", palette: "Holy", scope: "zone" } },
+    }`,
+  );
+
+  it("R3402000 a Unit's zone aura stands on its own unit zone, never face down or hidden", () => {
+    resetIds();
+    const silas = unit("p2", { defId: "core-052" });
+    const view = board([field("p1", "core-093"), field("p1", "core-098")], [], "p1", {});
+    view.opponent.units = [null, silas, null, null, null];
+    // A Unit's side aura is no zone aura: it stands as a modifier's would, never on the Unit's zone.
+    view.you.units = [unit("p1", { defId: "core-002" }), null, null, null, null];
+    const planned = planAuras(view, new Map(), SIGNATURES);
+    expect(planned.map((aura) => [aura.key, aura.side, aura.row, aura.lane, aura.scope, aura.look])).toEqual([
+      [`field-${view.you.backrow[0]?.faceDown === false ? view.you.backrow[0].instanceId : ""}`, "you", "backrow", 1, "zone", "stadium"],
+      [`field-${view.you.backrow[1]?.faceDown === false ? view.you.backrow[1].instanceId : ""}`, "you", "backrow", 2, "zone", "pedestal"],
+      [`unit-${silas.instanceId}`, "opponent", "units", 2, "zone", "mirrorball"],
+    ]);
+    const mirrorball = planned[2];
+    if (mirrorball === undefined) throw new Error("no mirrorball");
+    expect(auraZones(mirrorball)).toEqual([testid.zone("opponent", "units", 2)]);
+    expect(mirrorball.colors).toEqual(FLAVOR_SUB_LOOKS.Tech?.hologram?.colors);
+    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(["mirrorball", "stadium", "pedestal"]));
+    // R202: a hidden Unit (a face-down card in a Stack, the other seat's unknown) wears none.
+    view.opponent.units = [null, unit("p2", { defId: "hidden", instanceId: "hidden" }), null, null, null];
+    expect(planAuras(view, new Map(), SIGNATURES).some((aura) => aura.row === "units")).toBe(false);
+    // A Unit off the field wears none: the aura stands only while it does.
+    view.opponent.units = [null, null, null, null, null];
+    expect(planAuras(view, new Map(), SIGNATURES).some((aura) => aura.row === "units")).toBe(false);
+  });
+
+  it("R3402000 the three signature looks stay within a signature aura's cap", () => {
+    for (const name of ["mirrorball", "stadium", "pedestal"] as const) {
+      expect(AURA_LOOK_NAMES).toContain(name);
+      const look = AURA_LOOKS[name];
+      for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);
+    }
   });
 });
 

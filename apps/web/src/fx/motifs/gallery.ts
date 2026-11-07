@@ -373,7 +373,12 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Celestial Caller summons a Sun in lane 2 and a Moon in lane 4, Dino-size sets the viewer's first unit
  * to 10/10 and Goetzmann Game Design adds its card. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
- * into the deck and draws one, and King Wagtoggle swaps the decks.
+ * into the deck and draws one, and King Wagtoggle swaps the decks. R3402001: Silly Silas's Cry rotates
+ * the field left, handing the other side's first unit over; Unlicensed Experimentation fires and fuses
+ * that unit onto the viewer's second; Pocket Chaos swaps the boards and hands the other player a hidden
+ * card; Combo-Index's end-of-turn trigger progresses its grade and adds a card; Call to Chaos rolls a
+ * draw; My Pawn fires and cancels the other side's first unit's attack; and Heroic Power is activated,
+ * dealing 2 to the enemy hero.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -485,6 +490,42 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
+  // R3402001: Core's signatures, each on the fewest events its beats read, with ids off the view.
+  mirrorballShuffle: (view) => {
+    const foe = unitsOf(view.opponent)[0];
+    return [
+      { type: "rotated", direction: "left" },
+      ...(foe === undefined ? [] : [{ type: "controlChanged", instanceId: foe.instanceId, controller: view.viewer, row: "units", lane: 1 } satisfies GameEvent]),
+    ];
+  },
+  clampWeld: (view, instanceId, player) => {
+    const foe = unitsOf(view.opponent)[0];
+    const mine = unitsOf(view.you)[1];
+    const fired: GameEvent = { type: "trapFired", instanceId, defId: "core-085", controller: player, row: "backrow", lane: GALLERY_TRAP_LANE };
+    return foe === undefined || mine === undefined
+      ? [fired]
+      : [fired, { type: "fused", instanceIds: [foe.instanceId, mine.instanceId], resultInstanceId: mine.instanceId, defId: mine.defId }];
+  },
+  pocketSwap: (_view, _instanceId, player) => [
+    { type: "swapped", what: "board" },
+    { type: "addedToHand", player: player === "p1" ? "p2" : "p1", instanceId: "hidden", defId: "hidden" },
+  ],
+  gradeRings: (_view, instanceId, player) => [
+    { type: "hookResolving", sourceId: instanceId, defId: "core-093", controller: player, hook: "endOfTurn" },
+    { type: "questProgressed", player, instanceId, quest: "fx-grade", progress: 1, goal: 5 },
+    { type: "addedToHand", player, instanceId: "fx-graded", defId: "core-055" },
+  ],
+  chaosReels: (_view, instanceId, player) => [{ type: "chaosRolled", player, instanceId, defId: "core-095", effects: ["draw"] }],
+  pawnStrings: (view, instanceId, player) => {
+    const foe = unitsOf(view.opponent)[0];
+    const fired: GameEvent = { type: "trapFired", instanceId, defId: "core-096", controller: player, row: "backrow", lane: GALLERY_TRAP_LANE };
+    return foe === undefined ? [fired] : [fired, { type: "attackCancelled", attackerId: foe.instanceId, targetId: `hero-${player}`, byInstanceId: instanceId }];
+  },
+  heroicDoors: (_view, instanceId, player) => [
+    { type: "hookResolving", sourceId: instanceId, defId: "core-098", controller: player, hook: "activate" },
+    { type: "activated", player, instanceId, defId: "core-098", ability: "power" },
+    { type: "damage", sourceId: instanceId, targetId: `hero-${player === "p1" ? "p2" : "p1"}`, amount: 2, combat: false },
+  ],
 };
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */

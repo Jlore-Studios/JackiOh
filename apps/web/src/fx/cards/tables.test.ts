@@ -5,7 +5,8 @@
 // R2787000: an entry's `aura`, and the ten Field Spells that wear one. R2794000: a Unit's `entrance` beside
 // its hooks (Nature Titan's, beside its Cry). R3332000: the frame, an `entrance` beside any entry of a Unit
 // or a Field Spell or alone, a `takeover` beside a Mythic's and a `signature` naming its first beat, and
-// the eight marquee cards' entrances and looks folded into it.
+// the eight marquee cards' entrances and looks folded into it. R3402000: a `{ bespoke }` entry's aura, a
+// Unit's zone aura, and the two new own takeover looks.
 
 import { describe, expect, it } from "vitest";
 
@@ -17,7 +18,7 @@ import { FX_PALETTES } from "../flavors.ts";
 import { FX_MOTIF_NAMES } from "../motifs/names.ts";
 import { SET_PIECE_KEYS } from "../setPieceKeys.ts";
 import { takeoverLookOf } from "../takeover.ts";
-import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, OWN_TAKEOVER_LOOKS, isSignature, parseFxCardTable, type FxCardFile } from "./tables.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, OWN_TAKEOVER_LOOKS, entryAura, isSignature, parseFxCardTable, type FxCardFile } from "./tables.ts";
 
 const IDS = Object.keys(CATALOG);
 const SPLIT = IDS.indexOf(FX_STINKYSCAPE_SPLIT);
@@ -236,7 +237,7 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"core-092": { cry: { motif: "bless" }, signature: true }`, /core-092: a Unit's signature names its entrance$/);
     says(`"core-093": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, signature: true }`, /core-093: a Field Spell's signature names its entrance or a \{ bespoke \} or \{ setPiece \} cast of its own$/);
     says(`"core-097": { cast: { motif: "send" }, signature: true }`, /core-097: a Spell's signature is a \{ bespoke \} or \{ setPiece \} cast of its own$/);
-    says(`"core-097": { bespoke: "perfectWish", cast: { motif: "send" } }`, /core-097: a bespoke entry holds nothing else but its frame$/);
+    says(`"core-097": { bespoke: "perfectWish", cast: { motif: "send" } }`, /core-097: a bespoke entry holds nothing else but its frame and an aura$/);
     says(`"core-100": { setPiece: "voidFold", cry: { motif: "vanish" } }`, /core-100: a setPiece entry holds nothing else but its frame$/);
     says(`"core-100": { takeover: "void" }`, /core-100: names no hook$/);
     // A `{ bespoke }` names a card recipe alone: an entrance is no bespoke recipe.
@@ -248,16 +249,18 @@ describe("R2784000 the per-set effects tables", () => {
   it("R3332000 the eight marquee cards keep their entrances and looks", () => {
     const entrances = { "core-100": "voidCollapse", "classic-080": "bigBoom", "classic-045": "titanBloom", "classic-056": "tyrantSigil" };
     for (const [defId, key] of Object.entries(entrances)) expect(entranceKeyOf(defId), defId).toBe(key);
-    const looks = { "core-100": "void", "core-096": "pawn", "core-097": "genie", "meditative-049": "ai" };
+    // R3402000: Heroic Power's rotunda and Craft a Card's forge join them.
+    const looks = { "core-100": "void", "core-096": "pawn", "core-097": "genie", "meditative-049": "ai", "core-098": "rotunda", "core-099": "forge" };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
-    // Every entrance the table names is a recipe, and the four marquees' and Felinor Fiender's are all of them.
+    // Every entrance the table names is a recipe, and the four marquees', Felinor Fiender's and R3402001 Core's
+    // three signature entrances (Silly Silas's, Combo-Index's and Heroic Power's) are all of them.
     const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
       const key = entranceKeyOf(defId);
       return key === undefined ? [] : [key];
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
-    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), "felinorAssembly"]));
+    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), "felinorAssembly", "silasSpotlight", "comboStadium", "heroicPedestal"]));
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
 
@@ -310,8 +313,44 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"core-035": { aura: { look: "ember", scope: "lane" } }`, /core-035: a lane aura stands in a zone; this card is a Spell, whose aura is side or board$/);
     expect(parse(`"core-035": { aura: { look: "ember", scope: "side" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "ember", scope: "side" } });
     expect(parse(`"core-035": { aura: { look: "ember", scope: "board" } }`).get("core-035")?.kind).toBe("hooks");
-    says(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "side" } }`, /core-021: a bespoke entry holds nothing else/);
+    // R3402000: a `{ bespoke }` entry may wear an aura now; a `{ setPiece }` still may not.
+    says(`"core-088": { setPiece: "nether", aura: { look: "frost", scope: "side" } }`, /core-088: a setPiece entry holds nothing else but its frame$/);
     says(`"core-035": {}`, /core-035: names no hook/);
+  });
+
+  it("R3402000 a bespoke entry may carry an aura, and a Unit a zone aura", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    expect(parse(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "side" } }`).get("core-021")).toEqual({
+      kind: "bespoke",
+      key: "manaCrack",
+      aura: { look: "frost", scope: "side" },
+    });
+    // A Unit's own zone is where it stands: Silly Silas wears his beside his recipe and his entrance.
+    expect(parse(`"core-052": { bespoke: "mirrorballShuffle", entrance: "silasSpotlight", aura: { look: "mirrorball", scope: "zone" }, signature: true }`).get("core-052")).toEqual({
+      kind: "bespoke",
+      key: "mirrorballShuffle",
+      entrance: "silasSpotlight",
+      aura: { look: "mirrorball", scope: "zone" },
+      signature: true,
+    });
+    expect(parse(`"core-002": { cry: { motif: "bolt" }, aura: { look: "ember", scope: "zone" } }`).get("core-002")).toEqual({
+      kind: "hooks",
+      hooks: { cry: { motif: "bolt" } },
+      aura: { look: "ember", scope: "zone" },
+    });
+    // A lane aura is still a Field card's, and a Spell's aura still stands on its side or the board.
+    says(`"core-002": { cry: { motif: "bolt" }, aura: { look: "ember", scope: "lane" } }`, /core-002: a lane aura stands in a zone; this card is a Unit, whose aura is zone, side or board$/);
+    says(`"core-083": { bespoke: "legendaryTide", aura: { look: "ember", scope: "zone" } }`, /core-083: a zone aura stands in a zone; this card is a Spell, whose aura is side or board$/);
+    says(`"core-083": { bespoke: "legendaryTide", aura: { look: "sparkle", scope: "side" } }`, /core-083: unknown aura look "sparkle"$/);
+    // `entryAura` reads either kind's, and none of a set piece, a `none` or a missing entry.
+    expect(entryAura(FX_CARD_TABLE.get("core-052"))).toEqual({ look: "mirrorball", scope: "zone" });
+    expect(entryAura(FX_CARD_TABLE.get("core-014"))).toEqual({ look: "storm", scope: "side" });
+    expect(entryAura(FX_CARD_TABLE.get("core-088"))).toBeUndefined();
+    expect(entryAura(FX_CARD_TABLE.get("core-003"))).toBeUndefined();
+    expect(entryAura(undefined)).toBeUndefined();
   });
 
   it("R2787000 R2794000 the ten example Field Spells across the sets wear their auras", () => {
