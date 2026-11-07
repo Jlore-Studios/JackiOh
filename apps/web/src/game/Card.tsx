@@ -9,7 +9,8 @@
 // `BRITTLE_LAST_COUNT` (R385, R638) wears Allure's aura (R963, R1045000) in gray, a mark of its own outranks it;
 // #2437 Temporary `TEMPORARY_LAST_COUNT` (R637, R2179001) fuchsia. R1295000: a stolen unit keeps its owner's
 // look, the resolving strip wears defaults. R1655000: the viewer's own card wears its own picks. R384, R510:
-// `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx).
+// `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx). R3338002: a
+// Ceaseless Void in the viewer's own hand drains its gem as its cost falls (cards/gemDrain.ts); no other card's does.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
@@ -39,6 +40,7 @@ import {
   type InspectSubject,
 } from "../cards/index.ts";
 import { cx } from "../cards/CardFace.tsx";
+import { gemDrainOf } from "../cards/gemDrain.ts";
 import CardMarks from "../cards/CardMarks.tsx";
 import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
@@ -50,6 +52,7 @@ import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
+import { printedCost } from "./decks.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
 import { useAwakening } from "./awakening.ts";
@@ -420,6 +423,9 @@ export default function Card(props: CardProps): ReactElement {
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
   const spent = unit !== undefined && unit !== null && isSpent(unit, acting);
+  // R3338002: the card's own cost against its printed one, in its owner's own hand only (R202).
+  const printed = info.def === undefined ? undefined : printedCost(info.def.cost);
+  const gemDrain = props.inOwnHand === true ? gemDrainOf(card.defId, card.cost, printed) : null;
 
   const root = (
     <div
@@ -478,6 +484,7 @@ export default function Card(props: CardProps): ReactElement {
             worn={worn}
             ownHand={worn && props.inOwnHand === true}
             onBoard={form === "compact"}
+            gemDrain={gemDrain}
           />
         </TermTips>
       )}

@@ -86,6 +86,9 @@
 // R3013002: the face wears its card's proficiency stamp (stamps.ts): the account's pick on the viewer's own copy
 // (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
 // of every part, base and Radiant alike.
+//
+// R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
+// cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -152,6 +155,11 @@ export type CardFaceProps = {
    * a notice, a cosmetic's sample) prints its name as it always has.
    */
   onBoard?: boolean;
+  /**
+   * R3338002: how far the cost gem has drained, 0 to 1 (gemDrain.ts `gemDrainOf`), which Card.tsx gives only a card
+   * in its owner's own hand whose gem drains; absent or null, the gem is drawn whole.
+   */
+  gemDrain?: number | null;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -281,7 +289,14 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false, ownHand = false, onBoard = false }: CardFaceProps): ReactElement {
+export function CardFace({
+  face,
+  layout = "full",
+  className,
+  lazyArt = false,
+  ascentLevel,
+  worn = false,
+  ownHand = false, onBoard = false, gemDrain = null, }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -389,7 +404,16 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       style={scales}
     >
       <span className="cf-scale">
-        <span className="cost-gem" data-cost={face.cost.value} data-tone={face.cost.tone} data-digits={costDigits(face.cost.text)}>
+        <span
+          className="cost-gem"
+          data-cost={face.cost.value}
+          data-tone={face.cost.tone}
+          data-digits={costDigits(face.cost.text)}
+          data-gem-drain={gemDrain === null ? undefined : "true"}
+          style={gemDrain === null ? undefined : ({ "--cost-drain": String(gemDrain) } as CSSProperties)}
+        >
+          {/* R3338002: the gem's level, falling as the Void's cost does (cards.css). */}
+          {gemDrain !== null && <span className="cf-cost-drain" aria-hidden="true" />}
           {face.cost.text}
           {face.cost.alt !== null && <EmbiggenedCost cost={face.cost.alt} />}
         </span>

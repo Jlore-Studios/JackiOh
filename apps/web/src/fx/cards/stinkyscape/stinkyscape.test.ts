@@ -1,12 +1,12 @@
-// R2797000: Stinkyscape's three Flourishes (fx/cards/stinkyscape/): Olivian Expanse's rift, Imitated
-// Instrumentality's boots and Drone Core X's warp, planned the way FxLayer plans them (remember, then
-// plan), each held inside its entry and its tail (R200), keyed by readable plays only (R202) and drawing
-// nothing with the effects off.
+// R2797000: Stinkyscape's Flourishes (fx/cards/stinkyscape/): Imitated Instrumentality's boots and Drone
+// Core X's warp, planned the way FxLayer plans them (remember, then plan), each held inside its entry and
+// its tail (R200), keyed by readable plays only (R202) and drawing nothing with the effects off. Olivian
+// Expanse's rift became its set piece (R3338000, fx/terminus/terminus.test.ts).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { animTestid, planEntries, type AnimationEntry } from "../../../game/animations.ts";
+import { planEntries, type AnimationEntry } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
 import { frac } from "../../build.ts";
@@ -18,7 +18,6 @@ import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 
-const RIFT = "stinkyscape-004";
 const MAGI = "stinkyscape-018";
 const WARP = "stinkyscape-036";
 
@@ -55,12 +54,10 @@ const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === 
 
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });
 const resolved = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 });
-const added = (player: PlayerId, instanceId: string): GameEvent => ({ type: "addedToHand", player, instanceId, defId: "stinkyscape-004-1" });
 const summoned = (player: PlayerId, instanceId: string, defId: string, row: "units" | "backrow", lane: number): GameEvent => ({ type: "summoned", player, instanceId, defId, row, lane });
 
 /** Each recipe's card and a play of it, as the engine streams one: the events it keys on and those it leaves. */
 const PLAYS: Readonly<Record<string, (player: PlayerId, instanceId: string) => GameEvent[]>> = {
-  [RIFT]: (player, id) => [played(player, id, RIFT), added(player, "t1"), added(player, "t2"), resolved(player, id, RIFT)],
   [MAGI]: (player, id) => [
     played(player, id, MAGI),
     summoned(player, "m1", "stinkyscape-018-1", "backrow", 3),
@@ -89,34 +86,9 @@ function inside(results: ReturnType<typeof planAll>): FxCue[][] {
 }
 
 describe("R2797000 Stinkyscape's Flourishes", () => {
-  it("R2797000 the three recipes are their cards' bespoke entries", () => {
-    expect(FX_CARD_TABLE.get(RIFT)).toEqual({ kind: "bespoke", key: "terminusRift" });
+  it("R2797000 the recipes are their cards' bespoke entries", () => {
     expect(FX_CARD_TABLE.get(MAGI)).toEqual({ kind: "bespoke", key: "magiBoot" });
     expect(FX_CARD_TABLE.get(WARP)).toEqual({ kind: "bespoke", key: "battleshipWarp" });
-  });
-
-  it("R2797000 terminusRift tears a void rift over the board and flies the card it gives up into its caster's hand, once a play", () => {
-    const view = fullBoardView();
-    const stream = PLAYS[RIFT]?.("p1", "ex") ?? [];
-    const results = planAll(stream, view);
-    const [first, second] = cuesOn(results, "addedToHand");
-    const plain = bare(stream, view);
-    const t = timesOf(results.find(({ entry }) => entry.events.some((event) => event.type === "addedToHand"))?.entry.durationMs ?? 0);
-    const rift = (first ?? []).slice(0, (first ?? []).length - (plain[0] ?? []).length);
-    expect(rift.map((cue) => `${cue.kind}@${String(cue.delayMs)}`)).toEqual([`ring@${String(t.G)}`, `burst@${String(t.G)}`, `ghost@${String(t.T)}`, `burst@${String(t.L)}`, `ring@${String(t.Li)}`, `shake@${String(t.L)}`]);
-    expect(rift[0]).toEqual(expect.objectContaining({ preset: "void", at: tid(testid.board) }));
-    expect(rift[1]).toEqual(expect.objectContaining({ preset: "void", spread: "area", at: tid(testid.board) }));
-    expect(rift[2]).toEqual(expect.objectContaining({ from: tid(testid.board), to: tid(animTestid.hand("you")), durationMs: t.L - t.T }));
-    expect(rift[3]).toEqual(expect.objectContaining({ preset: "sparkle", at: tid(animTestid.hand("you")) }));
-    // The added card's own row still plays under it, and the play's second card added draws only its row.
-    expect(first?.slice(rift.length)).toEqual(plain[0]);
-    expect(second).toEqual(plain[1]);
-    // An opponent's rift flies into their hand.
-    const theirs = cuesOn(planAll(PLAYS[RIFT]?.("p2", "ex") ?? [], view), "addedToHand")[0] ?? [];
-    expect(theirs.some((cue) => cue.kind === "ghost" && cue.to.kind === "testid" && cue.to.testid === animTestid.hand("opponent"))).toBe(true);
-    // A play that adds nothing draws nothing of the rift.
-    const empty = planAll([played("p1", "ex", RIFT), resolved("p1", "ex", RIFT)], view).flatMap(({ cues }) => cues);
-    expect(empty.some((cue) => cue.kind === "ring" && cue.preset === "void")).toBe(false);
   });
 
   it("R2797000 magiBoot boots each MAGI with a hologram beam from its caster's hero into its zone, the beams of one entry FX_MAGI_STAGGER of D apart", () => {

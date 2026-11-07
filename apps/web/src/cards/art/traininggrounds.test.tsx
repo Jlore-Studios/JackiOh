@@ -16,7 +16,7 @@ import { hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
 import { artSpec } from "./procedural.ts";
 import { legacyArtUri, proceduralArtUri, trainingGroundsArtUri } from "./svg.ts";
-import { compositionFor, themeFor } from "./themes.ts";
+import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import {
   isTrainingGroundsArt,
   LEGACY_PAINT,
@@ -285,12 +285,14 @@ describe("R2724000: each Legacy card redraws its Core card's subject in the yard
 });
 
 describe("R2724000: no other card's picture moves", () => {
+  // Each picture as CardArt draws it, its card's own composition included: #3338 recorded Core #100 Ceaseless
+  // Void again, now a hole in the shape of a giant (R3338001).
   const recorded = ART_BEFORE_2724 as unknown as Readonly<Record<string, readonly [number, number]>>;
   const KEPT = Object.values(CATALOG).filter((card) => (card.set === "Core" || card.set === "Training Grounds") && snapshotArtOf(card.id) === null);
   function pictureOf(card: CardDef, radiant: boolean): string {
     if (isTrainingGroundsArt(card.id)) return trainingGroundsArtUri(card.id, card.name, card.tags, card.type, radiant);
     const theme = themeFor(card.tags, card.type);
-    return proceduralArtUri(card.id, theme, compositionFor(card.type), radiant, motifFor(card.name, theme));
+    return proceduralArtUri(card.id, theme, compositionOf(card.id, card.type), radiant, motifFor(card.name, theme));
   }
 
   it("R2724000 the fixture covers every Core card and every Training Grounds card but the Legacy ones", () => {
