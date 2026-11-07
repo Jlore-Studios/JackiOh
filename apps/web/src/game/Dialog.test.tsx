@@ -348,6 +348,32 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     expect(side).toMatch(/\.dialog-scrim\[data-sheet\] > \.dialog \{[^}]*height: 100%;[^}]*margin: 0 0 0 auto;/);
   });
 
+  it("R3221000 a scrim under a tavern shell covers the window, not the shell's capped column", () => {
+    // tavern.css last, as main.tsx loads it after the sheets the components import: the worst order.
+    const styles = ["src/game/dialog.css", "src/auth/tavern.css"].map((path) => {
+      const style = document.createElement("style");
+      style.textContent = readSheet(path).replace(/^@import [^;]+;$/gm, "");
+      document.head.append(style);
+      return style;
+    });
+    try {
+      for (const shell of ["app-shell tavern", "tavern app-shell dev-layer", "app-shell app-shell--wide tavern one-screen"]) {
+        const { unmount } = render(
+          <div className={shell}>
+            <Dialog role="dialog" testid="capped" title="Capped" onClose={vi.fn()} actions={[]} />
+          </div>,
+        );
+        const scrim = getComputedStyle(screen.getByTestId("capped").parentElement as HTMLElement);
+        expect(scrim.getPropertyValue("max-width"), shell).toBe("none");
+        expect(scrim.getPropertyValue("width"), shell).toBe("auto");
+        expect([scrim.getPropertyValue("margin-left"), scrim.getPropertyValue("margin-right")], shell).toEqual(["0px", "0px"]);
+        unmount();
+      }
+    } finally {
+      for (const style of styles) style.remove();
+    }
+  });
+
   it("R3221000 Escape and Tab belong to the top dialog, so a dialog over another closes first", async () => {
     const onOuter = vi.fn();
     const onInner = vi.fn();

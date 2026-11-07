@@ -17,6 +17,16 @@
   animation: dialog-fade-in calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out) both;
 }
 
+/* R3221000: a scrim drawn as a tavern shell's child (the Dev tools, the Together page's chat and
+   challenge, the stats' and the dungeon's details) still covers the window. tavern.css's
+   `.tavern.app-shell > *` caps each child at the page's width with auto margins, which would centre the
+   scrim at 1120px and leave undimmed strips at its sides where a click reaches the page behind. */
+.tavern.app-shell > .dialog-scrim {
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+
 .dialog {
   position: relative;
   flex: none;
