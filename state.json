@@ -18121,38 +18121,19 @@
       "interruptions": 0,
       "issue": 3339,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "With Names on the board set to Always, an art-first full-art backrow card keeps a static name plate that the CSS shrinks to zero height, so the name is not visible.",
-          "evidence": "CardFace.tsx sets `showStaticName = showsStaticBoardName(artFirst, 'always') = true`, so a real `.card-name` renders. cards.css:1755 sets `.cf[data-layout=\"compact\"][data-art-first=\"true\"] { --cf-band: 0cqh }`. The R3046000 rule `.cf[...][data-full-art=\"true\"][data-card-type] .card-name { height: var(--cf-band) }` (cards.css ~1707) then gives the name a height of 0. The `always` promise (\"all cards on the board show their name plate\") is not met for these cards. The new Cypress spec `R3339000 renders board faces\u2026` checks only that the `.card-name` node exists, not that it has a size. Fix: make the layout depend on whether the static name shows, for example a `data-static-name` attribute, and not on `data-art-first` alone. Also give the plate a real height in `always` mode, or keep the band.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/cards.css:1755"
-        },
-        {
-          "claim": "The existing R3046000 Cypress component specs now contradict the new layout, and the builder neither updated nor re-ran them. They are in `proven_in` for R3046000 and R3339000.",
-          "evidence": "The `R3046000 a full-art Unit on the board` and backrow describes run with default settings (`artFirst`). They call `expectArtAboveBand` and assert `art.bottom \u2248 name.top`, a band taller than 8px, and a backrow band of 0.24 of the face's height (lines ~150-190 and ~290). Under the new CSS the art-first portrait is `bottom: 0` (cards.css) and the backrow `--cf-band` is `0cqh`. The `.card-name` found is now the hover plate or a zero-height box, so these assertions fail. The `R3046000 the real board` describe at line ~348 was only 'fixed' by forcing `boardNames: \"always\"`. In that mode art-first units still draw edge-to-edge with a translucent overlay plate, so `art.bottom \u2248 name.top` and the 'stats clear of the name' check still fail. The spec's other `.card-name` geometry specs (keyword-visuals, board-layout, card-faces, etc.) were not examined or run. Fix: update or replace these specs for art-first geometry, and run `pnpm --dir e2e test:component`.",
-          "severity": "blocking",
-          "where": "e2e/cypress/component/full-art-board.cy.tsx:150"
-        },
-        {
-          "claim": "Art-first applies to every `layout=\"compact\"` CardFace, not only to cards in play on the board, so the practice sandbox's results picker, the overflow notices and the collection's cosmetic samples also lose their names and type lines.",
-          "evidence": "`artFirst = !full && isArtFirstBoardFace(face, cardLook)`, with no board or in-play condition. Other `layout=\"compact\"` callers: practice/SandboxPanel.tsx:92, game/OverflowNotices.tsx:123, collection/CardCosmeticsView.tsx:118, collection/VariantLadders.tsx:48 and collection/LookViews.tsx:118. The issue scopes the change to 'On the board (both seats, the Unit rows and the backrow)'. In the sandbox picker, every Legendary, Mythic and full-art card is now a nameless tile unless hovered. Under `boardNames: never`, every card there is nameless. Fix: pass an explicit flag from game/Card.tsx (the board's backrow) and gate on it, or use `face.inPlay`.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/CardFace.tsx:299"
-        },
-        {
-          "claim": "The claim that the name 'stays in its aria-label' is not delivered. `aria-label` is placed on role-less `<span>` roots, which assistive tech generally ignores, and the visible hover plate is `aria-hidden`.",
-          "evidence": "CardFace.tsx:382 and MinionFace.tsx:179 add `aria-label={face.name}` to a plain `<span className=\"cf\u2026\">` with no role. game/Card.tsx's root `<div>` (shared props, lines 340-357) has no aria-label or role, only a `title` that is dropped when hover previews are on (Card.tsx:~465). The only text node carrying the name is the `aria-hidden` `.card-name-hover`. Before this change the name was a readable `.card-name` text node. So art-first board cards lose their accessible name. The tests only assert the attribute string, not an exposed name. The attribute is also added to every CardFace layout, including full faces in hand, the collection and the inspect sheet. Fix: drop `aria-hidden` from the hover plate and visually hide it with CSS, or put a `.sr-only` name span inside the face, or label the focusable `.card` root. Don't add `aria-label` to non-landmark generic spans.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/CardFace.tsx:382"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
+      "paused": {
+        "at": "2026-11-07T06:21:36Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-07T05:38:40Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "medium",
       "run_id": "42345438065",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -18160,6 +18141,7 @@
       "started_at": "2026-11-07T06:05:13Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "gemini",
