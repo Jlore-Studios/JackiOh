@@ -17,7 +17,7 @@ use crate::config::{
 };
 use crate::cosmetics::{
     Cosmetic, CosmeticRarity, OwnedCosmetics, cosmetic_pack_cosmetics, implying, is_default_look,
-    levels_below, offered, registry,
+    levels_below, offered,
 };
 use crate::economy::roll::PoolCard;
 use crate::economy::tiers::{cosmetic_tier, tier_draw};
@@ -56,18 +56,16 @@ impl CosmeticHoldings {
         self.owned.get(card_id).copied().unwrap_or(0) >= i64::from(MAX_COPIES)
     }
 
-    /// Whether the account owns the per-card cosmetic `id` on `card_id`: a row of it, or of a retired entry that
-    /// owns it there (R2725002, R3015006), or (R3343000) the card's default look, which every account owns there.
-    fn holds(&self, card_id: &str, id: &str) -> bool {
+    /// Whether the account owns the per-card cosmetic `cosmetic` on `card_id`: a row of it, or of a retired entry
+    /// that owns it there (R2725002, R3015006), or (R3343000) the card's default look, which every account owns
+    /// there. `cosmetic` is the roll's own entry, so an opening logged before a level became a default look
+    /// replays with it unowned (R1306003).
+    fn holds(&self, card_id: &str, cosmetic: &Cosmetic) -> bool {
         let row = |id: &str| {
             self.card_cosmetics
                 .contains(&(card_id.to_string(), id.to_string()))
         };
-        row(id)
-            || implying(id).any(row)
-            || registry()
-                .iter()
-                .any(|cosmetic| cosmetic.id == id && is_default_look(cosmetic, card_id))
+        row(&cosmetic.id) || implying(&cosmetic.id).any(row) || is_default_look(cosmetic, card_id)
     }
 }
 
@@ -190,8 +188,8 @@ fn open_places<'p>(
     let below = levels_below(droppable, cosmetic);
     pool.iter()
         .filter(|card| offered(cosmetic, Some(&card.id)))
-        .filter(|card| !holdings.holds(&card.id, &cosmetic.id))
-        .filter(|card| below.iter().all(|level| holdings.holds(&card.id, &level.id)) == next)
+        .filter(|card| !holdings.holds(&card.id, cosmetic))
+        .filter(|card| below.iter().all(|level| holdings.holds(&card.id, level)) == next)
         .map(|card| card.id.as_str())
         .collect()
 }
@@ -277,7 +275,7 @@ pub fn slot_grant(
                 card_granted: !holdings.owns(card),
                 below: levels_below(droppable, cosmetic)
                     .into_iter()
-                    .filter(|below| !holdings.holds(card, &below.id))
+                    .filter(|below| !holdings.holds(card, below))
                     .map(|below| below.id.clone())
                     .collect(),
             };
@@ -1056,12 +1054,69 @@ mod tests {
         };
         let nothing = CosmeticHoldings::default();
         // Ceaseless Void, a Mythic, holds its Full art with no row, and Speciesist, a Common, does not.
-        assert!(nothing.holds("core-100", VERSION_FULL_ART_ID));
-        assert!(!nothing.holds("core-002", VERSION_FULL_ART_ID));
+        assert!(nothing.holds("core-100", by_id(VERSION_FULL_ART_ID)));
+        assert!(!nothing.holds("core-002", by_id(VERSION_FULL_ART_ID)));
         let pool = [card("core-100", PrintedRarity::Mythic)];
         assert!(placements(by_id(VERSION_FULL_ART_ID), &droppable, &pool, &nothing).is_empty());
         let animated = by_id(VERSION_FULL_ART_ANIMATED_ID);
         assert_eq!(placements(animated, &droppable, &pool, &nothing), ["core-100"]);
         assert!(skip_placements(animated, &droppable, &pool, &nothing).is_empty());
+    }
+
+    #[test]
+    fn r3343000_r1306003_an_opening_logged_before_a_default_look_replays_with_it_unowned() {
+        use crate::cosmetics::{VERSION_FULL_ART_ID, registry};
+        // What a log from before #3343 holds: the droppable entries with no level a default look.
+        let before: Vec<Cosmetic> = cosmetic_pack_cosmetics(registry())
+            .into_iter()
+            .map(|mut cosmetic| {
+                if let Some(level) = cosmetic.level.as_mut() {
+                    level.default_on.clear();
+                }
+                cosmetic
+            })
+            .collect();
+        let full_art = before
+            .iter()
+            .find(|cosmetic| cosmetic.id == VERSION_FULL_ART_ID)
+            .expect("Full art drops");
+        // The roll's own entry, not the live registry's, says whether Ceaseless Void holds its Full art: in those
+        // entries it is a level like any, unowned with no row and open as the next.
+        let nothing = CosmeticHoldings::default();
+        assert!(!nothing.holds("core-100", full_art));
+        let pool = [card("core-100", PrintedRarity::Mythic)];
+        assert_eq!(placements(full_art, &before, &pool, &nothing), ["core-100"]);
+        // An opening over them that grants it, as its level or below a skip, replays from its log exactly.
+        let grants_full_art = |opening: &CosmeticOpening| {
+            opening.slots.iter().any(|slot| match &slot.grant {
+                CosmeticSlotGrant::Cosmetic {
+                    cosmetic_id, below, ..
+                } => cosmetic_id == VERSION_FULL_ART_ID || below.iter().any(|id| id == VERSION_FULL_ART_ID),
+                CosmeticSlotGrant::Bars => false,
+            })
+        };
+        let (seed, opening) = (0..400)
+            .map(|seed| format!("r3343000-{seed}"))
+            .map(|seed| {
+                let opening = roll_cosmetic_pack(&pool, &nothing, &before, &seed);
+                (seed, opening)
+            })
+            .find(|(_, opening)| grants_full_art(opening))
+            .expect("an opening grants Full art on Ceaseless Void");
+        let log = CosmeticOpeningLog::of("catalog-before-3343", &before, &seed, &opening);
+        let json = serde_json::to_string(&log).expect("a log");
+        assert!(!json.contains("defaultOn"), "{json}");
+        let log: CosmeticOpeningLog = serde_json::from_str(&json).expect("the log read back");
+        assert_eq!(
+            roll_cosmetic_pack(&pool, &nothing, &log.cosmetics, &log.seed),
+            opening
+        );
+        // The live registry, where Full art is Ceaseless Void's default look, never grants it there.
+        assert!(!grants_full_art(&roll_cosmetic_pack(
+            &pool,
+            &nothing,
+            registry(),
+            &seed
+        )));
     }
 }
