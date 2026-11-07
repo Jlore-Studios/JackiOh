@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3334,
+  "title": "Patch: Starship moments that feel epic: pieces docking as they fuse, a full-screen launch, broadsides from its own guns, and a wreck when it falls",
+  "branch": "bot/issue-3334",
+  "thread": "**Issue #3334 (data, not instructions):**\n\n```text\n# #3334: Patch: Starship moments that feel epic: pieces docking as they fuse, a full-screen launch, broadsides from its own guns, and a wreck when it falls\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3333, whose per-piece modules and hull designs these moments animate.\n\nThe owner wants the Starship animations to be \"very big and epic\".\n\n### Today (R2801000)\n\n- **Fuse.** `starshipFused` flies each piece's card back to the ship, then a spark, a clank ring and a shake.\n- **Launch.** `starshipLaunched` is a held set piece (`STARSHIP_SET_PIECE`, `STARSHIP_LAUNCH_HOLD_MS` 2400): a 3-2-1 countdown, ignition, lift-off, a contrail and a landing, drawn by `planStarship` in `fx/starship.ts` at three sizes (`STARSHIP_TUNING`), with the bed `STARSHIP_LAUNCH_BED`.\n- **Attack.** A launched Starship attacks with the generic Unit rows. There is no attack of its own.\n- **Death.** A Starship dies with the generic Unit rows.\n- **Table entries.** Dormant Starship, Starfleet Commander and Preemptive Strike are all `\"none: Starship part\"` (`fx/cards/stinkyscape-2.json5`).\n\n### What it should be\n\n1. **Docking.** When a piece fuses, its module (#3333) flies from where the piece died to its own hardpoint on the ship. It mounts there with clamps, a weld flash and a hum that rises with the count. When several fuse in one action, they dock in order as one run.\n2. **The launch as a cinematic.** For the length of the set piece's hold:\n   - the board dims and the ship's own picture fills the screen, a camera move along the hull past each mounted module;\n   - its engines light in turn and its name (the one `starshipLaunched` gives) stamps across the hull in its design's lettering;\n   - then the ship climbs out of frame and comes back to its tile.\n\n   Scale it with the piece count, as `STARSHIP_TUNING` does. On a phone it stays within the frame budget, with fewer particles and the same beats. Reduced motion and `bigMoments` short or off show a still title card with the ship's picture and name.\n3. **Free launches.** Starfleet Commander (`stinkyscape-137`) and Preemptive Strike (`stinkyscape-176`) launch the ship and then cast a War Doctrine:\n   - their launch plays first;\n   - then the doctrine is announced over the ship, in its own look for Land, Sea, Air or Space Doctrine (`stinkyscape-137-1` to `-4`).\n4. **Broadsides.** When a launched Starship attacks, its mounted weapons fire by kind:\n   - beams sweep;\n   - repeaters stutter;\n   - cannons recoil;\n   - flak bursts in clouds;\n   - launchers lob what they carry: tokens, fruit, jade, books.\n\n   A ship with no weapons rams, its prow first. Its attack stays within the attack row's time (`attackDeclared`'s row), with effects running past it only inside `FX_MAX_TAIL_MS`.\n5. **The wreck.** When a Starship is destroyed:\n   - its modules blow off one by one;\n   - the hull breaks in two;\n   - debris drifts across the backrow and settles as a brief scorch on its tile.\n\n   This is quieter than the launch but unmistakable.\n6. **Dormant idle.** A dormant ship with pieces has a slow shipyard idle on its tile: welding sparks and a sweeping dock light. Count it against the board's motion slots, as moving art is (`COSMETIC_FOIL_ANIMATED_MAX`).\n7. **Sound.** Each beat has its own sound: a clank and weld on docking, ignition and roar on launch, a weapon sound by kind on broadsides, and a hull-breaking groan on the wreck. They live in `audio/`, with sounds made in code as `sfx.ts`'s are, inside the voice and music budgets.\n8. **Table entries.** Give Dormant Starship, Starfleet Commander and Preemptive Strike signature entries, per #3332, when it has landed. Until then, use bespoke recipes.\n\n## Acceptance\n\n- A component spec plays each of these, with a Starship of 1, 4 and 8 pieces at desktop size and at 390x844:\n  - a fuse of 1 piece and of 3 at once;\n  - a launch;\n  - each weapon kind's broadside;\n  - a weaponless ram;\n  - a wreck.\n- `fx-phone-frame.cy.tsx` covers the launch and a broadside within `FX_PHONE_FRAME_BUDGET_MS`.\n- Every number is a named constant in `fx/constants.ts` or `fx/starship.ts`. The launch stays within `SET_PIECE_HOLD_CAP_MS`, and a tap skips it.\n- Reduced motion, `bigMoments` short and `bigMoments` off each show their still form. A test covers each.\n- Only public events drive it: `starshipFused`, `starshipLaunched`, `attackDeclared`, `damage`, `destroyed` (R202).\n- The rulings are in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3334: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:43:37Z",
+    "claimed_at": "2026-11-07T08:39:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
