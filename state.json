@@ -18204,6 +18204,8 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "ci_fixed_head": "497a19f86cf11306f016b91f6dca01d286521cd1",
+      "ci_fixes": 1,
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
