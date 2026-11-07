@@ -17163,15 +17163,8 @@
       "taken_asks": []
     },
     "3333": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42315489650",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-07T00:43:05Z",
-        "until": "2026-11-07T01:13:05Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17183,25 +17176,24 @@
         "reason": "planned on opus",
         "trail": "eb/src/cards/versionLooks*.test.tsx apps/web/src/cards/CardA\u2026\n- Bash: {\"command\": \"sed -n 150,162p apps/web/src/cards/art/pictures.test.ts; sed -n 238,254p apps/web/src/cards/art/pictures.test.ts; sed -n 418,425p apps/web/src/cards/art/pictures.test.ts; grep -n \\\"^func\u2026\n- Bash: {\"command\": \"git show a3f7cd93e2 --stat | head -20; git show 063cd0a537 --stat | head\", \"description\": \"Inspect queue commits for #3331/#3332\"}\n- Bash: {\"command\": \"git show a3f7cd93e2 | head -40; git branch -a 2>/dev/null | grep -i \\\"3331\\\\|3332\\\\|3330\\\" | head\", \"description\": \"Show #3331 queue state entry\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"--source\\\\\\\"\\\\|\\\\\\\"--visual\\\\\\\"\\\\|\\\\\\\"--notes\\\\\\\"\\\\|Patch: \\\\|fn slug\\\" crates/tools/src/patches.rs | head -20\", \"description\": \"Check patches CLI flags and title handling\"}\n- Bash: {\"command\": \"sed -n 2890,2912p crates/tools/src/patches.rs; grep -n \\\"fn fragment_name\\\" -A 25 crates/tools/src/patches.rs | head -40\", \"description\": \"Read fragment_name slug rules\"}\n- Bash: {\"command\": \"grep -o '\\\"KY\\\"\\\\|\\\"CN\\\"\\\\|\\\"Felinor\\\"\\\\|\\\"Jlockeed\\\"\\\\|\\\"Human\\\"' apps/web/src/wire/generated/Tag.ts | sort -u | tr '\\\\n' ' '; grep -n \\\"TRIBAL_TAGS\\\" apps/web/src/wire/engineConfig.ts \u2026\n- Bash: {\"command\": \"grep -rln \\\"engineConfig.ts\\\" apps/web/src --include=*.test.* | head; grep -rn \\\"engine/config\\\\\\\"\\\" apps/web/src/cards/*.ts* | head -3\", \"description\": \"Check tests reading engineConfig\u2026\n- Bash: {\"command\": \"grep -n \\\"TRIBAL_TAGS\\\\|VOTE_TALLY\\\\|LOSER_DRAWS\\\" docs/v0.3.0/SURFACE.md | head -5\", \"description\": \"Check SURFACE.md lists engineConfig constants\"}\n- Bash: {\"command\": \"ls spec/rulings/R2170000.md spec/rulings/R0503.md spec/rulings/R1852004.md 2>&1; tail -5 spec/rulings/R2170000.md | cut -c1-300; grep -n \\\"erasableSyntaxOnly\\\\|verbatimModuleSyntax\\\\|all\u2026\n- Bash: {\"command\": \"sed -n 1,40p e2e/cypress/component/fx-layer.cy.tsx | grep -n \\\"import\\\\|const LAYER\\\\|const FX_DOM\\\"\", \"description\": \"Read fx-layer spec imports\"}\n- Bash: {\"command\": \"grep -n \\\"const SLUG_MAX\\\" crates/tools/src/patches.rs; grep -n \\\"fn r2249000\\\\|r2249000\\\" crates/engine/tests/rules/starship.rs | head -3\", \"description\": \"Check slug length and engine-\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3333/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery Starship Piece definition (the 47 in `STARSHIP_PIECES` plus `stinkyscape-127`\\u2013`129`) gets a modu\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; sed -n 138,176p apps/web/src/cards/cosmetics.test.tsx | head -5; grep -n \\\"^import\\\\|RADIANT_GOLD\\\" apps/web/src/cards/cosmetics.test.tsx | head -30 | grep -i \\\"go\u2026\n- Bash: {\"command\": \"grep -n \\\"^function hsl\\\\|^function inRadiantGold\\\\|^function hexes\\\" apps/web/src/cards/cosmetics.test.tsx\", \"description\": \"Find helper line numbers\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3333/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe issue asks for five things:\\n\\n1. **A module per piece.** Each of the 50 piece definitions (`STARSHIP_P\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3333/.bot-plan.md\", \"content\": \"## Goal\\n\\nEach of the 50 piece definitions (`STARSHIP_PIECES` plus `stinkyscape-127`\\u2013`129`) draws a distinct mod\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; sed '/^```sh/,/^ ```$/d' .bot-plan.md | wc -w\", \"description\": \"Count plan words with and without the script\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport re\\nt=open('.bot-plan.md').read()\\ntoks=t.split()\\nprint(len(toks), sum(1 for x in toks if re.search(r'[A-Za-z0-9]',x)))\\n\\\"\", \"description\": \"Count word-like to\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"Each of the 50 piece definitions (`STARSHIP_PIECES` plus `stink\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3333/.bot-plan.md\", \"offset\": 48, \"limit\": 110}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\nstart=t.index(\\\" | Id | Kind |\\\")\\nend=t.index(\\\" - `MODULE_KINDS:\\\")\\nt=t[:st\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\nstart=t.index(\\\" | Region | x | y |\\\")\\nend=t.index(\\\" The scale is the span\\\"\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3333/.bot-plan.md\"}\n- Bash: {\"command\": \"sed -n 200,280p crates/engine/tests/export_config.rs\", \"description\": \"Check export_config for usage enforcement\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\nstart=t.index(\\\"Paths are under `apps/web/src/cards/` unless given in full.\\\")\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\nreps=[\\n(\\\"\\\"\\\" - Types:\\n - `Hardpoint`: bow, flank, stern, keel, spine;\\n - \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"6. **`svg.ts`.**\\n - `starshipArtUri(ship, restyle = null)`, ke\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3333/.bot-plan.md'\\nt=open(p).read()\\na=\\\"\\\"\\\" - **Paint.** `p = modulePaint(m)` and `bay = HANGAR_PAINTS[m.hangar]`, both gild\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3333/.bot-plan.md\"}\n- Bash: {\"command\": \"grep -n \\\"^import\\\" apps/web/src/cards/art/emblems.ts apps/web/src/cards/art/themes.ts apps/web/src/cards/art/hash.ts apps/web/src/cards/art/motifGlyphs.ts\", \"description\": \"Verify no cy\u2026\n- said: ## Goal The 50 piece definitions (`STARSHIP_PIECES` plus `stinkyscape-127`\u2013`129`) each draw a distinct module, and weapon and miner modules grow by tier. A Starship's picture mounts its pieces' modules on hardpoints, oldest first, and grows frigate \u2192 dreadnought by count. Launched, it wears its `ST\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-07T00:00:10Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-8",
+      "owner_since": "2026-11-07T01:01:36Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-07T00:42:54Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "claude-8",
       "queued_at": "2026-11-06T23:43:04Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42315489650",
+      "run_id": "pending:e08b6fbe-1794013257",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T00:00:10Z",
+      "started_at": "2026-11-07T01:01:36Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17804,9 +17796,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T01:00:41Z",
+    "at": "2026-11-07T01:01:36Z",
     "url": "",
-    "what": "review #3356 on claude-6"
+    "what": "build #3333 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T00:36:52Z",
