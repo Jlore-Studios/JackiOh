@@ -21441,7 +21441,7 @@
           "resets_at": "2026-11-07T03:40:00Z",
           "utilization": 1.01
         },
-        "observed_at": "2026-11-07T02:53:03Z",
+        "observed_at": "2026-11-07T02:53:42Z",
         "rejected_resets_at": "2026-11-07T03:40:00Z",
         "status": "rejected"
       }
@@ -35358,7 +35358,8 @@
       "2026-11-07T01:26:29Z,claude-6,stream,call,42323750726,6,2026-11-07T04:10:00Z,,,allowed,50,,",
       "2026-11-07T01:29:44Z,claude-6,stream,call,42323750726,7,2026-11-07T04:10:00Z,,,allowed,50,,",
       "2026-11-07T01:44:45Z,claude-6,stream,call,42323750726,8,2026-11-07T04:10:00Z,,,allowed,50,,",
-      "2026-11-07T02:45:30Z,claude-1,ping,before,42330673129,101,2026-11-07T03:40:00Z,,,rejected,40,,"
+      "2026-11-07T02:45:30Z,claude-1,ping,before,42330673129,101,2026-11-07T03:40:00Z,,,rejected,40,,",
+      "2026-11-07T02:45:35Z,claude-1,ping,before,42330608725,101,2026-11-07T03:40:00Z,,,rejected,40,,"
     ],
     "runs": [
       "2026-11-07T02:37:32Z,42328439806,agy,gemini-3.8-flash-high,plan,3339,medium,planned,,20.3,795508,90389,0,,31,40,9,12,147.8,,none,,1",
