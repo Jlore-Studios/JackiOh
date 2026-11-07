@@ -377,6 +377,39 @@
   color: #ff7a7a;
 }
 
+/* R3338002: Ceaseless Void's gem in its owner's own hand (CardFace's `data-gem-drain`, gemDrain.ts) drains as
+   its cost falls: a dark fill comes down from the crystal's top to `--cost-drain` of its height (0 full, 1
+   empty), a pale surface riding its edge, so the gem's liquid level falls. The layer sits over the crystal
+   and under the number, clipped to the same hexagon, and moves by transform alone; the level eases from one
+   cost to the next only with motion allowed (the motion gate below), and under reduced motion it steps. */
+.cf .cost-gem .cf-cost-drain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+  pointer-events: none;
+}
+
+.cf .cost-gem .cf-cost-drain::before,
+.cf .cost-gem .cf-cost-drain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.cf .cost-gem .cf-cost-drain::before {
+  background: color-mix(in srgb, var(--pal-slate-900) 86%, transparent);
+  transform: scaleY(var(--cost-drain, 0));
+  transform-origin: 50% 0;
+}
+
+/* The surface: a thin band at the layer's top, moved down to the level (a percentage of its own height). */
+.cf .cost-gem .cf-cost-drain::after {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-sky-300) 75%, transparent) 0 4%, transparent 4%);
+  transform: translateY(calc(var(--cost-drain, 0) * 100%));
+}
+
 .cf .cf-cost-alt {
   position: absolute;
   right: -3.5cqw;
@@ -2341,6 +2374,12 @@
     translate: calc(var(--cf-immersive-x, 0) * 6%) calc(var(--cf-immersive-y, 0) * 6%);
     transition: translate 160ms ease-out;
     animation: cf-immersive-breathe 7s ease-in-out infinite alternate;
+  }
+
+  /* R3338002: the Void's gem level eases down as its cost falls, by transform alone; under reduced motion it steps. */
+  :root:not([data-reduce-motion="true"]) .cf .cost-gem .cf-cost-drain::before,
+  :root:not([data-reduce-motion="true"]) .cf .cost-gem .cf-cost-drain::after {
+    transition: transform var(--motion-slow) var(--ease-out);
   }
 }
 

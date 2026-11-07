@@ -26,7 +26,7 @@ import {
   galleryPlayOf,
   systemMomentFixture,
 } from "../../fx/motifs/gallery.ts";
-import { hasSetPiece } from "../../fx/setPieces.ts";
+import { hasSetPiece, signatureRunOf } from "../../fx/setPieces.ts";
 import type { FxPlanEnv } from "../../fx/types.ts";
 import { BURST_BUDGET_MS, planEntries } from "../../game/animations.ts";
 import { FX_DRAWN_MOTIFS } from "../../fx/motifs/names.ts";
@@ -57,7 +57,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // #2798: Stinkyscape part two's 89 (R2801000: its six Starship cards among them); R2797000: Stinkyscape
     // 001 to 090's 94; R2794000: Classic's 79 (its plays' motifs, its hooks' on their markers, its three
     // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
-    expect(cards).toHaveLength(645);
+    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`.
+    expect(cards).toHaveLength(647);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -81,7 +82,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       // Planned as the board's effects layer plans it: remember, then plan.
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
-      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
+      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece, signatureRunOf);
       let drawn = false;
       // A marquee Unit's entrance plays as it lands, Nature Titan's before its Cry's motif.
       let landed = entranceKeyOf(defId) === undefined || play.kind === "setPiece";
@@ -91,7 +92,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
         // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
         if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
         if ((play.kind === "recipe" || play.kind === "entrance") && recipe) drawn = true;
-        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+        // R3338000: a Terminus card's set piece is its signature's, a board clear's its wipe's.
+        if (play.kind === "setPiece" && (planned.wipe?.by === defId || planned.signature?.by === defId)) drawn = true;
         if (recipe && planned.events.some((event) => event.type === "summoned")) landed = true;
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
@@ -150,14 +152,15 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       // Planned as the board's effects layer plans it: remember, then plan.
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
-      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
+      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece, signatureRunOf);
       let drawn = false;
       for (const planned of entries) {
         env.memory.remember(planned.events);
         // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
         if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
         if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
-        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+        // R3338000: a Terminus card's set piece is its signature's, a board clear's its wipe's.
+        if (play.kind === "setPiece" && (planned.wipe?.by === defId || planned.signature?.by === defId)) drawn = true;
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
     }
@@ -198,7 +201,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
       let drawn = false;
-      for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece)) {
+      for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece, signatureRunOf)) {
         env.memory.remember(planned.events);
         // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
         if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
@@ -223,12 +226,13 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
       let drawn = false;
-      for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece)) {
+      for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece, signatureRunOf)) {
         env.memory.remember(planned.events);
         // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
         if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
         if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
-        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+        // R3338000: a Terminus card's set piece is its signature's, a board clear's its wipe's.
+        if (play.kind === "setPiece" && (planned.wipe?.by === defId || planned.signature?.by === defId)) drawn = true;
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
     }

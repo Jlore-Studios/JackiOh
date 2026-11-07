@@ -419,6 +419,43 @@ export function wipeAt(
   return { wipe: { by: hook.defId, sourceId: hook.sourceId, sides, anchor }, length };
 }
 
+// Signatures
+
+/**
+ * R3338000: a Terminus card's signature moment as the runner plays it, one entry its set piece claims:
+ * the readable card it is, its instance and its controller.
+ */
+export type Signature = { by: string; sourceId: string; player: PlayerId };
+
+/**
+ * R3338000: the signature at `at`, or null: the run of consecutive events from `at` whose types `runOf`
+ * names for the hook resolving (a Trap's own `trapFired` at `at` is its own), when the seat reads that
+ * hook's card (R202). The caller closes the hook after it, so a hook makes one signature.
+ */
+export function signatureRunAt(
+  events: readonly GameEvent[],
+  at: number,
+  hook: OpenHook | undefined,
+  runOf: (defId: string) => readonly GameEvent["type"][] | "cast" | null,
+): { signature: Signature; length: number } | null {
+  const first = events[at];
+  if (first === undefined) return null;
+  const owner: OpenHook | undefined =
+    first.type === "trapFired"
+      ? { defId: first.defId, sourceId: first.instanceId, controller: first.controller, trap: { row: first.row, lane: first.lane } }
+      : hook;
+  if (owner === undefined || owner.defId === HIDDEN) return null;
+  const types = runOf(owner.defId);
+  if (types === null || types === "cast" || !types.includes(first.type)) return null;
+  let i = at;
+  for (let event = events[i]; event !== undefined && types.includes(event.type); event = events[i]) {
+    // A Trap's own run starts at its firing, and another firing starts another run.
+    if (i > at && event.type === "trapFired") break;
+    i += 1;
+  }
+  return { signature: { by: owner.defId, sourceId: owner.sourceId, player: owner.controller }, length: i - at };
+}
+
 // The Starship
 
 /**

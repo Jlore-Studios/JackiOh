@@ -303,6 +303,16 @@ const S2 = {
   FX_STARSHIP_BADGE_AT: { x: 0.5, y: 0.36 },
   FX_STARSHIP_TAIL_MS: 400,
   FX_STARSHIP_STILL_MS: 1_600,
+  FX_TERMINUS_BEATS_FROM: 0.25,
+  FX_TERMINUS_BEATS_TO: 0.85,
+  FX_TERMINUS_TAIL_MS: 600,
+  FX_TERMINUS_STILL_MS: 1_600,
+  FX_TERMINUS_STATS_AT: { x: 0.85, y: 0.88 },
+  FX_TERMINUS_LAMP_AT: { x: 0.5, y: 0.05 },
+  FX_TERMINUS_LIFT_MAX: 12,
+  FX_TERMINUS_RAIN_STEP: 0.06,
+  FX_TERMINUS_SNAP_TRAUMA: 0.5,
+  FX_TERMINUS_COUNT_AT: [0.2, 0.45, 0.7],
   FX_JADE_SCALE_STEP: 0.15,
   FX_JADE_SCALE_MAX: 2,
   FX_SETTINGS_KEY: "jackioh.fx.v1",
@@ -370,6 +380,11 @@ describe("S2 the effects constants", () => {
       constants.FX_STARSHIP_IGNITE_AT,
       constants.FX_STARSHIP_LIFT_AT,
       constants.FX_STARSHIP_LAND_AT,
+      // R3338000: the Terminus set pieces' beats and Last Word's countdown.
+      constants.FX_TERMINUS_BEATS_FROM,
+      constants.FX_TERMINUS_BEATS_TO,
+      constants.FX_TERMINUS_RAIN_STEP,
+      ...constants.FX_TERMINUS_COUNT_AT,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -389,6 +404,9 @@ describe("S2 the effects constants", () => {
     for (let k = 1; k < counts.length; k += 1) expect(counts[k]).toBeGreaterThan(counts[k - 1] ?? 1);
     expect(counts[counts.length - 1]).toBeLessThan(constants.FX_STARSHIP_IGNITE_AT);
     expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    // R3338000: a Terminus set piece's beats run in order inside its span, and its tail inside FX_MAX_TAIL_MS.
+    expect(constants.FX_TERMINUS_BEATS_FROM).toBeLessThan(constants.FX_TERMINUS_BEATS_TO);
+    expect(constants.FX_TERMINUS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
     // #1446: a Beast's streak leaves at the embers' beat and lands inside its entry.
@@ -436,6 +454,8 @@ describe("S2 the effects constants", () => {
       constants.FX_TERMINUS_TRAUMA,
       constants.FX_MAGI_TRAUMA,
       constants.FX_WARP_TRAUMA,
+      // R3338000: Event Horizon's snap back.
+      constants.FX_TERMINUS_SNAP_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);

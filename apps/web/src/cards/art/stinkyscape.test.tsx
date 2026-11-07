@@ -13,7 +13,7 @@ import { CardArt } from "./CardArt.tsx";
 import { hashId } from "./hash.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
 import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
-import { compositionFor, themeFor } from "./themes.ts";
+import { compositionOf, themeFor } from "./themes.ts";
 
 afterEach(cleanup);
 
@@ -232,7 +232,7 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
       const art = container.querySelector<HTMLElement>(".cf-art");
       const theme = themeFor(card.tags, card.type);
       expect(art?.dataset.artFamily, card.id).toBeUndefined();
-      expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionFor(card.type), false, null));
+      expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionOf(card.id, card.type), false, null));
       cleanup();
     }
   });
@@ -244,7 +244,9 @@ describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it w
   // #2521 recorded S #176 Preemptive Strike and S #177 Cloaking Module as they ship, and S #137 again:
   // renamed Starfleet Commander, a Human, it draws from its new name. #3142 recorded S #45 Drone Commander
   // (a Human officer, no longer a hive ship) and S #150.1 Stinkyscape Golem (no longer a fighter hull)
-  // again (R3142002, R2529000).
+  // again (R3142002, R2529000). #3338 recorded S #4 Olivian Expanse, its six Terminus cards S #4.1–#4.6 and
+  // S #154 Dice of Doom again, each now drawing a picture of its own and no longer the shared black hole or
+  // a planet (R3338001).
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
 
   it("R503 the fixture covers every Stinkyscape entry", () => {

@@ -27,6 +27,7 @@ import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_NEXT_REFRESH_MODIFIER_ID } from
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
 import { planStillCallouts } from "./motifs/beats.ts";
 import { planStarshipStill } from "./starship.ts";
+import { planTerminusStill } from "./terminus/index.ts";
 import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
 import { createFxMemory } from "./memory.ts";
@@ -246,12 +247,16 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         }
         case "still": {
           // R2789000: an entry of no duration (reduced motion): its keyword callouts, held still;
-          // R2801000: and a Starship's launch, one still frame of it.
+          // R2801000: and a Starship's launch, one still frame of it; R3338000: and a Terminus set piece's.
           const target = director.current;
           if (!live.current.still || target === null) return;
           const env = planEnv();
           env.memory.remember(signal.entry.events);
-          target.play([...planStillCallouts(signal.entry, signal.entry.view, env), ...planStarshipStill(signal.entry, signal.entry.view, env)]);
+          target.play([
+            ...planStillCallouts(signal.entry, signal.entry.view, env),
+            ...planStarshipStill(signal.entry, signal.entry.view, env),
+            ...planTerminusStill(signal.entry, signal.entry.view, env),
+          ]);
           return;
         }
         case "idle":

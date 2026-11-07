@@ -22,7 +22,9 @@ import type { FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
+import type { SetPieceKey } from "../setPieceKeys.ts";
 import { SYSTEM_MOMENTS, type SystemMoment } from "../systemMoments.ts";
+import { TERMINUS_IDS } from "../terminus/ids.ts";
 import type { FxCue } from "../types.ts";
 import { planMotif } from "./index.ts";
 import { isDrawnMotif, type DrawnMotif, type FxCardHook } from "./names.ts";
@@ -306,15 +308,15 @@ export function systemMomentFixture(moment: SystemMoment, view: PlayerView): Gam
  * played through the board's effects layer as the card resolves; R2797000 `hook` a motif on a `death`,
  * `trigger` or `activate` hook, played the same way from the hook's own marker under the play; `recipe`
  * a bespoke card recipe on its fixture; `entrance` (R2794000) a marquee Unit's bespoke entrance, played
- * as the Unit lands; `setPiece` a board clear's set piece on the wipe fixture; `aura` an entry with only
- * an aura, which stands while the card does.
+ * as the Unit lands; `setPiece` a board clear's set piece on the wipe fixture (R3338000: a Terminus
+ * card's on its own, `SET_PIECE_FIXTURES`); `aura` an entry with only an aura, which stands while the card does.
  */
 export type GalleryCardPlay =
   | { kind: "board"; motif: DrawnMotif }
   | { kind: "hook"; hook: GalleryHook; motif: DrawnMotif }
   | { kind: "recipe"; key: CardRecipeKey }
   | { kind: "entrance"; key: EntranceKey }
-  | { kind: "setPiece" }
+  | { kind: "setPiece"; key: SetPieceKey }
   | { kind: "aura" };
 
 /** The hooks besides the play's, in the order the gallery picks one. */
@@ -337,7 +339,7 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
       if (isCardRecipeKey(entry.key)) return { kind: "recipe", key: entry.key };
       return isEntranceKey(entry.key) ? { kind: "entrance", key: entry.key } : null;
     case "setPiece":
-      return { kind: "setPiece" };
+      return { kind: "setPiece", key: entry.key };
     case "hooks": {
       const play = entry.hooks.cast ?? entry.hooks.cry;
       if (play !== undefined && isDrawnMotif(play.motif)) return { kind: "board", motif: play.motif };
@@ -360,8 +362,8 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Constant changes the cost of the viewer's first hand card, and Book of Pain discards two of the other
  * player's cards. #2796: Auspicious Rock costs its caster 2 and rolls a Jade into the hand, Spiritually
  * 中国 turns every one of the viewer's hand cards into one CN card and summons a CN Unit, and Harmony
- * Spirit sets every unit to 3/3. R2797000: Olivian Expanse adds its Discovered card, Imitated
- * Instrumentality summons its three Field Spells and Drone Core X its Battleship. #2798: iKwzki Duos
+ * Spirit sets every unit to 3/3. R2797000: Imitated Instrumentality summons its three Field Spells and
+ * Drone Core X its Battleship. #2798: iKwzki Duos
  * with the player's first unit, Flash Freeze freezes every unit on both sides and Stratos Swarm fills
  * the player's empty zones with Stratos (its first unit zone, a full board having none). #2799:
  * Celestial Caller summons a Sun in lane 2 and a Moon in lane 4, Dino-size sets the viewer's first unit
@@ -423,7 +425,6 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
     ]),
-  terminusRift: (view, instanceId, player) => motifFixture("send", view, instanceId, player),
   magiBoot: (_view, _instanceId, player) =>
     (["stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3"] as const).map((defId, k) => ({
       type: "summoned" as const,
@@ -478,6 +479,114 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
 export const GALLERY_ENTRANCE_LANE = 3;
 
+/** R3338000: the Calls to Chaos the gallery's Big Crunch casts, two of its six (Core #95, Classic+ #73). */
+const GALLERY_CRUNCH_CASTS = ["core-095", "classicplus-073"] as const;
+/** R3338000: the lanes the gallery's 1v1 Final Destination Locks: every lane but its third. */
+const GALLERY_LOCKED_LANES = [1, 2, 4, 5] as const;
+/** R3338000: Dice of Doom's die, its jackpot face and the faces the gallery's miss and Embiggened rolls draw. */
+const DOOM_SIDES = 100;
+const DOOM_JACKPOT = 67;
+const DOOM_MISS = 12;
+const DOOM_LUCKY = 40;
+/** R3338000: KY's Last Exam's right answer, its damage (its catalog `damage`). */
+const GALLERY_EXAM_DAMAGE = 30;
+/** R3338000: the health 1v1 Final Destination sets each hero's to. */
+const GALLERY_FINAL_HEALTH = 1;
+
+type FixtureOf = (view: PlayerView, instanceId: string, player: PlayerId, defId: string) => GameEvent[];
+
+const cry = (instanceId: string, player: PlayerId, defId: string): GameEvent => ({ type: "hookResolving", sourceId: instanceId, defId, controller: player, hook: "cry" });
+const fired = (instanceId: string, player: PlayerId, defId: string): GameEvent => ({ type: "trapFired", instanceId, defId, controller: player, row: "backrow", lane: GALLERY_TRAP_LANE });
+const otherOf = (player: PlayerId): PlayerId => (player === "p1" ? "p2" : "p1");
+
+/** R2800000: a board clear's set piece, on the wipe fixture under its hook's marker. */
+const wipeFixture: FixtureOf = (view, instanceId, player, defId) => [cry(instanceId, player, defId), ...motifFixture("wipe", view, instanceId, player)];
+
+/**
+ * R3338000: how Dice of Doom's roll lands: a 67 (every Terminus card added), a miss, or an Embiggened
+ * miss (Lucky rolls it twice, keeping its first face, and gains Lucky +1 for good).
+ */
+export type DoomRoll = "jackpot" | "miss" | "embiggened";
+
+/** R3338000: Dice of Doom's run under its marker, as its own seat sees it (the cards it adds named, R202's other seat aside). */
+export function doomFixture(_view: PlayerView, instanceId: string, player: PlayerId, roll: DoomRoll, defId: string = "stinkyscape-154"): GameEvent[] {
+  const faces = roll === "jackpot" ? [DOOM_JACKPOT] : roll === "miss" ? [DOOM_MISS] : [DOOM_MISS, DOOM_LUCKY];
+  const events: GameEvent[] = [
+    cry(instanceId, player, defId),
+    { type: "rolled", player, instanceId, defId, kind: "die", sides: DOOM_SIDES, rolls: [{ faces, kept: 0 }] },
+  ];
+  if (roll === "embiggened") events.push({ type: "keywordGranted", instanceId, keyword: { kind: "Lucky", n: 1 } });
+  if (roll === "jackpot") {
+    TERMINUS_IDS.forEach((terminus, k) => events.push({ type: "addedToHand", player, instanceId: `fx-terminus-${String(k)}`, defId: terminus }));
+  }
+  return events;
+}
+
+/**
+ * R2800000, R3338000: each set piece's fixture under the gallery's play of `instanceId`: a board clear's
+ * the wipe fixture (Farewell's exiles every unit and the cards in both graveyards), and each Terminus
+ * card's its own run: Olivian Expanse adds the Terminus card it Discovers, KY's Last Exam deals its
+ * damage to the enemy hero, Event Horizon owes its extra turn, Last Word fires and ends the enemy's turn
+ * with its units' Charge owed, 1v1 Final Destination fires and Locks every lane but its third, sets both
+ * heroes to 1 and discards a Spell from the enemy's hand, The Big Crunch casts two Calls to Chaos, and
+ * Dice of Doom rolls its 67.
+ */
+export const SET_PIECE_FIXTURES: { readonly [K in SetPieceKey]: FixtureOf } = {
+  nether: wipeFixture,
+  voidFold: wipeFixture,
+  vortex: wipeFixture,
+  farewell: (view, instanceId, player, defId) => {
+    const units = [...view.you.units, ...view.opponent.units].flatMap((unit) => (unit === null ? [] : [unit]));
+    const piles = [view.you, view.opponent].flatMap((side) => side.graveyard.map((card): GameEvent => ({ type: "exiled", instanceId: card.instanceId, defId: card.defId, owner: side.player })));
+    return [
+      cry(instanceId, player, defId),
+      ...units.map((unit): GameEvent => ({ type: "exiled", instanceId: unit.instanceId, defId: unit.defId, owner: unit.owner })),
+      ...piles,
+    ];
+  },
+  terminusRift: (_view, instanceId, player, defId) => [
+    cry(instanceId, player, defId),
+    { type: "addedToHand", player, instanceId: "fx-terminus-picked", defId: TERMINUS_IDS[3] ?? defId },
+  ],
+  lastExam: (_view, instanceId, player, defId) => [
+    cry(instanceId, player, defId),
+    { type: "damage", sourceId: instanceId, targetId: `hero-${otherOf(player)}`, amount: GALLERY_EXAM_DAMAGE, combat: false },
+  ],
+  eventHorizon: (_view, instanceId, player, defId) => [cry(instanceId, player, defId), { type: "modifierChanged", player, modifierId: "extraTurns", added: true }],
+  lastWord: (_view, instanceId, player, defId) => [
+    fired(instanceId, player, defId),
+    { type: "enteredGraveyard", instanceId, defId, owner: player },
+    { type: "modifierChanged", player: otherOf(player), modifierId: "fx-turn-ends", added: true },
+    { type: "modifierChanged", player, modifierId: "fx-charge", added: true },
+  ],
+  finalDestination: (view, instanceId, player, defId) => {
+    const hand = Array.isArray(view.opponent.hand) ? view.opponent.hand : [];
+    const spell = hand[0];
+    return [
+      fired(instanceId, player, defId),
+      ...GALLERY_LOCKED_LANES.flatMap((lane) =>
+        [otherOf(player), player].flatMap((who) => (["units", "backrow"] as const).map((row): GameEvent => ({ type: "locked", player: who, row, lane }))),
+      ),
+      ...[player, otherOf(player)].map((who): GameEvent => ({ type: "healthSet", player: who, health: GALLERY_FINAL_HEALTH, sourceId: instanceId })),
+      ...(spell === undefined
+        ? [{ type: "discarded", instanceId: "fx-discarded-1", defId: "core-016", owner: otherOf(player) } satisfies GameEvent]
+        : [{ type: "discarded", instanceId: spell.instanceId, defId: spell.defId, owner: otherOf(player) } satisfies GameEvent]),
+      { type: "enteredGraveyard", instanceId, defId, owner: player },
+    ];
+  },
+  bigCrunch: (_view, instanceId, player, defId) => [
+    cry(instanceId, player, defId),
+    ...GALLERY_CRUNCH_CASTS.flatMap((cast, k): GameEvent[] => {
+      const id = `fx-crunch-${String(k)}`;
+      return [
+        { type: "cardPlayed", player, instanceId: id, defId: cast, costPaid: 0 },
+        { type: "cardResolved", player, instanceId: id, defId: cast, permanent: false, costPaid: 0 },
+      ];
+    }),
+  ],
+  diceOfDoom: (view, instanceId, player, defId) => doomFixture(view, instanceId, player, "jackpot", defId),
+};
+
 /**
  * #2793: a card's table entry played out: the viewer plays the n-th play's id, its play's fixture
  * resolves under it (a set piece's, and R2797000 a hook's, on its hook's marker, and a Trap's after its
@@ -502,7 +611,7 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
       case "recipe":
         return RECIPE_FIXTURES[play.key](view, instanceId, player);
       case "setPiece":
-        return [{ type: "hookResolving", sourceId: instanceId, defId, controller: player, hook: "cry" }, ...motifFixture("wipe", view, instanceId, player)];
+        return SET_PIECE_FIXTURES[play.key](view, instanceId, player, defId);
       case "hook":
         return [
           { type: "hookResolving", sourceId: instanceId, defId, controller: player, hook: GALLERY_HOOK_KINDS[play.hook] },

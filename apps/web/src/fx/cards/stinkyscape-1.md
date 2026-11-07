@@ -19,21 +19,22 @@ row's name, type, entry and scale to the catalog and the table, and the table to
 Every hook draws on the board (R2797000): `cast` and `cry` as the card resolves, `death`, `trigger` and
 `activate` from the hook's own `hookResolving` marker (R2783000), and a Trap's `cast` from its
 `trapFired`. A hook no marker reports (an attack's, a Starship's launch) is `none`. Set-piece
-candidates, each on a motif for now: `stinkyscape-004-5` 1v1 Final Destination, `stinkyscape-034` Drone
-Core VIII and `stinkyscape-036` Drone Core X.
+candidates, each on a motif for now: `stinkyscape-034` Drone Core VIII and `stinkyscape-036` Drone Core X.
+Olivian Expanse and its six Terminus tokens are #3338's: each has a set piece of its own (R3338000,
+`fx/terminus/`), which the per-set passes leave alone.
 
 | Card | Name | Type | Entry | Scale | Census | Why |
 | --- | --- | --- | --- | --- | --- | --- |
 | `stinkyscape-001` | Freeze Ray | Spell | cast hex | 1.00 | none: no motif reads marked | cast: its Freezes are marks (`marked`), which hex (#2797) reads; the census's `none: no motif reads marked` predates hex |
 | `stinkyscape-002` | Absolute Zero | Spell | cast hex Spirit | 1.28 | vanish | cast: its Freeze forever is a mark, which hex reads, in Spirit's cold blue; the census's families read damage, removals, counters, costs and returns only, so its vanish is noise in the window, not this card's effect |
 | `stinkyscape-003` | Meteor | Spell | cast nova | 1.55 | volley | cast: kept as #2784's nova example; its damage tramples onto the adjacent Units at once, one blast rather than the census's fan of volley shots |
-| `stinkyscape-004` | Olivian Expanse | Spell | bespoke terminusRift | 2.00 | none: no motif reads addedToHand | bespoke: a Mythic whose whole play is its Discover; `terminusRift` tears a void rift over the board that the Terminus card flies out of into the hand (R2797000); the census predates send |
-| `stinkyscape-004-1` | Farewell | Spell | setPiece vortex | 1.19 | vanish | unchanged: its vortex set piece (R2800000) holds the board as it exiles every permanent, the census's vanish |
-| `stinkyscape-004-2` | KY's Last Exam | Spell | cast bolt Nerd/chalk | 1.19 | bolt | cast: the census agrees (bolt), its damage at the enemy hero, in Nerd's chalk for the exam |
-| `stinkyscape-004-3` | Event Horizon | Spell | none: its extra turn moves nothing on the board; no motif reads modifierChanged | — | none: no motif reads modifierChanged | the census agrees: its extra turn is a modifier, which no motif reads |
-| `stinkyscape-004-4` | Last Word | Trap | cast snap | 1.19 | none: vanilla | cast: a Trap's cast plays from its `trapFired` (R2797000), which snap reads; the census's families read damage, removals, counters, costs and returns only |
-| `stinkyscape-004-5` | 1v1 Final Destination | Trap | cast bind | 1.19 | none: vanilla | cast: its firing Locks every lane but one, which bind reads; the census's families read damage, removals, counters, costs and returns only; a set-piece candidate |
-| `stinkyscape-004-6` | The Big Crunch | Spell | none: its effects resolve under each Call to Chaos it casts, whose own entry plays | — | not in census | not in census (never played): each Call to Chaos it casts resolves as its own play, under its own entry |
+| `stinkyscape-004` | Olivian Expanse | Spell | setPiece terminusRift | 2.00 | none: no motif reads addedToHand | set piece (R3338000): a Mythic whose whole play is its Discover; its rift opens over the board, the Terminus cards circle in it as stars, and one falls into the caster's hand as a card back; the census predates send |
+| `stinkyscape-004-1` | Farewell | Spell | setPiece farewell | 1.19 | vanish | set piece (R3338000): a board clear of its own, the census's vanish: a lamp swings over the table and every permanent and graveyard card it exiles lifts into its light and fades, one by one |
+| `stinkyscape-004-2` | KY's Last Exam | Spell | setPiece lastExam | 1.19 | bolt | set piece (R3338000): the impossible problem chalks itself across the board, and the census's bolt, in Nerd's chalk, is the answer into the enemy hero, cracking the chalk and stamping its Echo |
+| `stinkyscape-004-3` | Event Horizon | Spell | setPiece eventHorizon | 1.19 | none: no motif reads modifierChanged | set piece (R3338000): its extra turn is a modifier, which no motif reads, so time bends on its own: the board smears to its centre under a stretched clock, the turn banner shows twice, and the extra turn opens snapping back |
+| `stinkyscape-004-4` | Last Word | Trap | setPiece lastWord | 1.19 | none: vanilla | set piece (R3338000): from its `trapFired`, everything freezes in mid-strike and the hit on its hero shatters; the next turn opens with every Unit lit for Charge and a countdown that burns away |
+| `stinkyscape-004-5` | 1v1 Final Destination | Trap | setPiece finalDestination | 1.19 | none: vanilla | set piece (R3338000), the candidate this pass named: every lane but one chains shut over the abyss, both hero health counters spin down to 1, and the discarded Spells burn off both hands |
+| `stinkyscape-004-6` | The Big Crunch | Spell | setPiece bigCrunch | 1.19 | not in census | set piece (R3338000): over its first cast the board's backdrop collapses to a bright point, and each Call to Chaos it casts plays its own row out of that point, which holds until its play resolves |
 | `stinkyscape-005` | Masochism Unmasked | Field Trap | cast snap; aura ember zone | 1.19 | none: vanilla | cast: its reveal is a `trapFired`, which snap reads (R2797000); aura: an ember glow on its zone while it stands; the census's families read damage, removals, counters, costs and returns only |
 | `stinkyscape-006` | Tylannt | Unit | none: its Cry completes Quest stages (questCompleted), which no motif reads | — | none: no motif reads questCompleted | the census agrees: no motif reads questCompleted, and at one card in this half it is under the three a new motif needs |
 | `stinkyscape-007` | The Greatest Heist | Field Spell | cast send Hustle/cash; aura arcane zone Hustle/cash | 1.62 | none: no motif reads addedToHand | cast: its Cry Discovers a card (`addedToHand`), which send (#2793) reads, in Hustle's cash; aura: arcane in the same palette; the census predates send |

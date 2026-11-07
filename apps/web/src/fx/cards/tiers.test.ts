@@ -26,7 +26,8 @@ import { FX_HOLD_MAX_MS, FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAI
 import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
 import { galleryCardEvents, galleryFieldView, galleryPlayOf } from "../motifs/gallery.ts";
-import { hasSetPiece, SET_PIECE_KEYS, SET_PIECES, planSetPiece } from "../setPieces.ts";
+import { hasSetPiece, SET_PIECE_KEYS, SET_PIECES, planSetPiece, signatureRunOf } from "../setPieces.ts";
+import { planTerminus } from "../terminus/index.ts";
 import { entranceCues } from "../takeover.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
 
@@ -139,13 +140,14 @@ describe("R2803000 every set piece hold is capped and single per action", () => 
     for (const key of SET_PIECE_KEYS) {
       const [defId] = [...FX_CARD_TABLE].find(([, entry]) => entry.kind === "setPiece" && entry.key === key) ?? [];
       if (defId === undefined) throw new Error(`no card names ${key}`);
-      const events = galleryCardEvents(defId, { kind: "setPiece" }, view, 1);
+      const events = galleryCardEvents(defId, { kind: "setPiece", key }, view, 1);
       const env = envOf();
-      const entered = planEntries(events, withEvents(view, events), false, undefined, hasSetPiece);
-      const wipe = entered.find((entry) => entry.wipe !== undefined);
-      if (wipe === undefined) throw new Error(`${defId} has no wipe`);
-      const D = wipe.durationMs;
-      const cues = planSetPiece(wipe, view, env)?.cues ?? [];
+      // R3338000: a board clear's is its wipe, a Terminus card's its signature.
+      const entered = planEntries(events, withEvents(view, events), false, undefined, hasSetPiece, signatureRunOf);
+      const piece = entered.find((entry) => entry.wipe !== undefined || entry.signature !== undefined);
+      if (piece === undefined) throw new Error(`${defId} has no set piece entry`);
+      const D = piece.durationMs;
+      const cues = (planSetPiece(piece, view, env) ?? planTerminus(piece, view, env))?.cues ?? [];
       expect(cues.length, key).toBeGreaterThan(0);
       for (const cue of cues) {
         if (cue.kind === "pull" || cue.kind === "conceal") {
