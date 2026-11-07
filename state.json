@@ -16667,15 +16667,16 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-1",
       "queued_at": "2026-11-07T16:49:43Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42393268888",
+      "run_id": "42403042303",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 135,
-      "started_at": "2026-11-07T16:49:59Z",
+      "started_at": "2026-11-07T18:51:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17465,9 +17466,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T18:38:57Z",
-    "url": "",
-    "what": "plan #3410 on agy"
+    "at": "2026-11-07T18:51:56Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42403042303",
+    "what": "spot-check #3383 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T18:34:17Z",
@@ -34978,7 +34979,15 @@
         "n": 135,
         "pr": 3383,
         "queued_at": "2026-11-07T18:50:49Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "42403042303",
         "sha": "01c93697dafcb1fc844ce336569801d193f53798",
+        "started_at": "2026-11-07T18:51:56Z",
         "status": "queued",
         "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
         "tries": 0
