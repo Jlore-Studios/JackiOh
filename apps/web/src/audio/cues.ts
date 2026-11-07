@@ -22,6 +22,7 @@ import type {
   UnitView,
 } from "@jackioh/shared";
 
+import { isAnomalyCode } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { armorTookHalf, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
@@ -647,7 +648,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
 
   // Issue #1855: Anomalies, the board swap (R1855000)
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
-  boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R3337003: a Stinkyscape Anomaly's lay (R3337000's `anomaly`, public as the board is) sounds its own
+  // sting instead; any other replacement, or a code this build does not know, keeps the whoosh.
+  boardReplaced: {
+    sfx: "whoosh",
+    cues: (event) => (isAnomalyCode(event.anomaly) ? [sfx("anomaly", { anomaly: event.anomaly })] : [sfx("whoosh")]),
+  },
 
   // ---- Issue #2652: coin flips and die rolls (R2652001) ----
   // The batch spins as the slot machine's reel does, before the outcome sounds its own result.

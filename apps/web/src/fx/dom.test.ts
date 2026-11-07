@@ -243,6 +243,47 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect([...frame.children].map((child) => child.className)).toEqual(["fx-launch-flame", "fx-launch-trail"]);
     expect(mountDomEffect(root, still, {})).toBeNull();
   });
+
+  it("R3337003 rift mounts its tear and flare at their times, on its side", () => {
+    const rift: FxDomCue = { kind: "rift", at: anchor, side: "opponent", tint: TINT, tearMs: 280, flareMs: 1540, delayMs: 0, durationMs: 4300 };
+    const el = expectMounted(mountDomEffect(root, rift, { at: AT }), rift);
+    expect(el.getAttribute("data-side")).toBe("opponent");
+    expect(cssVar(el, "--fx-tear")).toBe("280ms");
+    expect(cssVar(el, "--fx-flare")).toBe("1540ms");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-rift-tear", "fx-rift-flare"]);
+    expect(textNodeCount(el)).toBe(0);
+    expect(mountDomEffect(root, rift, {})).toBeNull();
+  });
+
+  it("R3337003 anomalyTitle mounts its picture and its name, never as a text node; still when asked", () => {
+    const title: FxDomCue = { kind: "anomalyTitle", at: anchor, text: "Wormhole", picture: "data:image/svg+xml,%3Csvg%3E", tint: TINT, delayMs: 0, durationMs: 1800 };
+    const el = expectMounted(mountDomEffect(root, title, { at: AT }), title);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-anomalyTitle-picture", "fx-anomalyTitle-name"]);
+    expect(cssVar(el.querySelector<HTMLElement>(".fx-anomalyTitle-picture") as HTMLElement, "--fx-picture")).toBe('url("data:image/svg+xml,%3Csvg%3E")');
+    expect(el.querySelector(".fx-anomalyTitle-name")?.getAttribute("data-text")).toBe("Wormhole");
+    expect(el.hasAttribute("data-still")).toBe(false);
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+    const still = expectMounted(mountDomEffect(root, { ...title, still: true }, { at: AT }), { ...title, still: true });
+    expect(still.getAttribute("data-still")).toBe("true");
+  });
+
+  it("R3337002 radar mounts one wedge from the caster's hand; a ghost out of a rift may spin", () => {
+    const radar: FxDomCue = { kind: "radar", at: anchor, side: "you", tint: TINT, delayMs: 0, durationMs: 900 };
+    const el = expectMounted(mountDomEffect(root, radar, { at: AT }), radar);
+    expect(el.getAttribute("data-side")).toBe("you");
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-radar-wedge"]);
+    expect(textNodeCount(el)).toBe(0);
+    expect(mountDomEffect(root, radar, {})).toBeNull();
+    el.remove();
+    const ghost: FxDomCue = { kind: "ghost", from: anchor, to: anchor, delayMs: 0, durationMs: 400, spin: true };
+    const spun = expectMounted(mountDomEffect(root, ghost, { from: AT, to: TO }), ghost);
+    expect(spun.getAttribute("data-spin")).toBe("true");
+    spun.remove();
+    const plain: FxDomCue = { kind: "ghost", from: anchor, to: anchor, delayMs: 0, durationMs: 400 };
+    expect(expectMounted(mountDomEffect(root, plain, { from: AT, to: TO }), plain).hasAttribute("data-spin")).toBe(false);
+  });
 });
 
 /* What it refuses, and what it never does */

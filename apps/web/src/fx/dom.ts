@@ -1,7 +1,7 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches
-// and R2800000 set pieces.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
+// R2800000 set pieces, and R3337002's radar and R3337003's rift and title card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
@@ -68,6 +68,9 @@ const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
 
 /** R2801000: a Starship launch's layers, above its counts (fx.css). */
 const LAUNCH_PARTS = ["flame", "trail"] as const;
+
+/** R3337003: an Anomaly's rift's layers, bottom to top (fx.css). */
+const RIFT_PARTS = ["tear", "flare"] as const;
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -203,6 +206,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       el.style.setProperty("--fx-y", px(start.y));
       el.style.setProperty("--fx-dx", px(end.x - start.x));
       el.style.setProperty("--fx-dy", px(end.y - start.y));
+      if (cue.spin === true) el.setAttribute("data-spin", "true");
       break;
     }
     case "arrows": {
@@ -353,6 +357,51 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         child.className = `fx-launch-${part}`;
         el.appendChild(child);
       }
+      break;
+    }
+    case "rift": {
+      // R3337003: an Anomaly's rift down the middle of the caster's half, tearing open at `--fx-tear` and
+      // flaring white at `--fx-flare`; the cards it takes are the stage's (`pull`). It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-side", cue.side);
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-tear", `${Math.max(0, cue.tearMs)}ms`);
+      el.style.setProperty("--fx-flare", `${Math.max(0, cue.flareMs)}ms`);
+      for (const part of RIFT_PARTS) {
+        const child = doc.createElement("div");
+        child.className = `fx-rift-${part}`;
+        el.appendChild(child);
+      }
+      break;
+    }
+    case "anomalyTitle": {
+      // R3337003: the Anomaly's title card, its public name (`data-text`, no text node) over its picture.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      if (cue.still === true) el.setAttribute("data-still", "true");
+      tintVars(el, cue.tint);
+      const picture = doc.createElement("div");
+      picture.className = "fx-anomalyTitle-picture";
+      picture.style.setProperty("--fx-picture", `url("${cue.picture}")`);
+      const name = doc.createElement("div");
+      name.className = "fx-anomalyTitle-name";
+      name.setAttribute("data-text", t(cue.text));
+      el.append(picture, name);
+      break;
+    }
+    case "radar": {
+      // R3337002: a Scanning Probe's sweep, one wedge turning from `at`. It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-side", cue.side);
+      tintVars(el, cue.tint);
+      const wedge = doc.createElement("div");
+      wedge.className = "fx-radar-wedge";
+      el.appendChild(wedge);
       break;
     }
   }

@@ -21,11 +21,14 @@
 // the painter's in place of a delivered file.
 // R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
 // (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
+// R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
+// (`data-art-anomaly`), one picture as a Starship's is; a code that is none of the ten draws the card's own.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import { isAnomalyCode, type AnomalyCode } from "../anomalies.ts";
 import { useDefResolver } from "../refContext.tsx";
 import { artSubjectOf } from "./fusedArt.ts";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
@@ -34,7 +37,7 @@ import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
-import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { anomalyArtUri, legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
@@ -55,6 +58,11 @@ export type CardArtProps = {
   lazy?: boolean;
   /** R2249000: a Starship in play (`FaceModel.starship`) wears its own art, never its fused definition's. */
   starship?: { pieces: number; launched: boolean } | null;
+  /**
+   * R3337001: the board an Anomaly Found! in play holds (`FaceModel.anomaly`), whose picture it wears; null, or a code
+   * that is none of the ten, draws its own. A Starship's art comes first.
+   */
+  anomaly?: string | null;
   /** R2715001: the card's moving art, which its procedural picture draws in place of the still one; null holds it still. */
   motion?: ArtMotion | null;
   /** R2940001, R2942001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
@@ -65,10 +73,15 @@ export type CardArtProps = {
 
 /**
  * R2943001: whether a window draws a card's picture in parts (`ArtPart`): its painter's own, which a Starship in play
- * and a Legacy card do not have, their painters drawing one picture.
+ * and a Legacy card do not have, their painters drawing one picture; nor (R3337001) an Anomaly Found! holding a board.
  */
-export function hasArtParts(defId: string, starship: CardArtProps["starship"]): boolean {
-  return starship == null && snapshotArtOf(defId) === null;
+export function hasArtParts(defId: string, starship: CardArtProps["starship"], anomaly: CardArtProps["anomaly"] = null): boolean {
+  return starship == null && heldAnomaly(anomaly) === null && snapshotArtOf(defId) === null;
+}
+
+/** R3337001: the board whose picture a window draws: the held code, if it is one of the ten. */
+function heldAnomaly(anomaly: CardArtProps["anomaly"]): AnomalyCode | null {
+  return isAnomalyCode(anomaly) ? anomaly : null;
 }
 
 function classes(shape: ArtShape, className: string | undefined): string {
@@ -87,6 +100,7 @@ export function CardArt({
   className,
   lazy = false,
   starship = null,
+  anomaly: held = null,
   motion = null,
   picture = "normal",
   part = "whole",
@@ -118,12 +132,15 @@ export function CardArt({
   const variant = radiant ? "radiant" : "base";
   // R2940001: the Sketch pencils the window's picture, whatever draws it; R2942001: Pixel and Comic restyle it so.
   const restyle = restyleOf(picture);
-  // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship and a Legacy card draw it whole.
-  const split = hasArtParts(defId, starship) ? part : "whole";
-  const real = starship === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
-  // R2940001: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture. R3017002: a
-  // repaint's is its own, under its treatment.
-  const ownPicture = picture !== "normal" && (restyle === null || isRepaint(picture)) && starship === null && coreId === null;
+  // R3337001: the board an Anomaly Found! holds, whose picture it wears unless it is a Starship.
+  const anomaly = starship === null ? heldAnomaly(held) : null;
+  // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship, an Anomaly holding a board and a
+  // Legacy card draw it whole.
+  const split = hasArtParts(defId, starship, anomaly) ? part : "whole";
+  const real = starship === null && anomaly === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
+  // R2940001: the seed the painter grows this picture from; a Starship, an Anomaly holding a board and a Legacy card
+  // draw one picture. R3017002: a repaint's is its own, under its treatment.
+  const ownPicture = picture !== "normal" && (restyle === null || isRepaint(picture)) && starship === null && anomaly === null && coreId === null;
   const seedId = ownPicture ? artSeedOf(defId, picture) : defId;
 
   if (real !== null && real.src !== failedSrc) {
@@ -154,13 +171,15 @@ export function CardArt({
     ? null
     : starship !== null
       ? starshipArtUri(starship.pieces, starship.launched, radiant, restyle)
-      : stinky
-        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
-        : yard
-          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
-          : coreId !== null
-            ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-            : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, restyle, split);
+      : anomaly !== null
+        ? anomalyArtUri(anomaly, radiant, restyle)
+        : stinky
+          ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
+          : yard
+            ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
+            : coreId !== null
+              ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
+              : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, restyle, split);
   const family =
     starship !== null
       ? "starship"
@@ -183,8 +202,9 @@ export function CardArt({
       data-art-family={family}
       data-art-picture={ownPicture || restyle !== null ? picture : undefined}
       data-art-part={split === "whole" ? undefined : split}
+      data-art-anomaly={anomaly ?? undefined}
       data-art-pending={uri === null ? "true" : undefined}
-      data-art-moving={uri !== null && starship === null && coreId === null && motion !== null ? "true" : undefined}
+      data-art-moving={uri !== null && starship === null && anomaly === null && coreId === null && motion !== null ? "true" : undefined}
       aria-hidden="true"
       style={
         uri === null

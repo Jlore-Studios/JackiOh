@@ -9,6 +9,7 @@
 //! Board swap via replace_board (#1855) on caster's side: exiles board except Dormant (R1839000); lays zones and fires Cries with random choices (R1855000, R1855001).
 //! Rolls BASE_BOARDS / RICH_BOARDS (R43, R151, R1879000, ST-S20-2, ST-S20-3, R2247000).
 //! Asteroid resourcePool (R1855002, #169); Flying backrow drones (R1879001); Drone Battleship stack (R1879002, R1842000, #151).
+//! Its `boardReplaced` names the board's code, for the client's set piece (R3337000).
 
 use jackioh_engine::prelude::*;
 
@@ -217,7 +218,8 @@ pub const RICH_BOARDS: [Board; 3] = [AN, AA, FO];
 /// All ten, S #151's "any Anomaly" (ST-S25-7).
 pub const ALL_BOARDS: [Board; 10] = [WH, BF, AL, AT, SP, MT, DH, FO, AN, AA];
 
-/// `board` as `replace_board`'s preset (R1855000), its pool a rider on every card it lays (R1855002).
+/// `board` as `replace_board`'s preset (R1855000), its pool a rider on every card it lays (R1855002)
+/// and its code the one `boardReplaced` names (R3337000).
 pub fn preset(board: &Board) -> ReplaceBoardArgs {
     let memory = (!board.resource_pool.is_empty()).then(|| {
         IndexMap::from([(
@@ -239,6 +241,8 @@ pub fn preset(board: &Board) -> ReplaceBoardArgs {
                 stack: lay.stack.then_some(true),
             })
             .collect(),
+        // R3337000: `boardReplaced` names the Anomaly laid.
+        anomaly: Some(board.code.to_string()),
     }
 }
 
@@ -677,6 +681,91 @@ mod tests {
             s.play(ID, json!({}));
             let code = laid(&s, &ALL_BOARDS);
             assert!(BASE_BOARDS.iter().any(|board| board.code == code));
+        }
+    }
+
+    /// R3337000: the cast's `boardReplaced` names the code of the board it lays, which both seats read.
+    mod r3337000_its_board_replaced_names_the_board {
+        use super::*;
+
+        /// Holds `board` (R2247000), plays the card, and finds its code on the `boardReplaced` its caster
+        /// steps through and the one its opponent's view reads.
+        fn names_its_code(board: &Board) {
+            let radiant = RICH_BOARDS.iter().any(|rich| rich.code == board.code);
+            let mut s = setup(&format!("r3337000-{}", board.code), radiant, json!([]));
+            let id = s.card(ID).id.clone();
+            s.card_mut(&id).memory.insert(CARD_LABEL_KEY.to_string(), json!(board.code));
+            s.play(id.as_str(), json!({}));
+            assert_eq!(laid(&s, &ALL_BOARDS), board.code, "it lays the board it holds");
+            let named = |events: &[GameEvent]| -> Vec<Option<String>> {
+                events
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::BoardReplaced { player, anomaly } if *player == P1 => Some(anomaly.clone()),
+                        _ => None,
+                    })
+                    .collect()
+            };
+            let code = Some(board.code.to_string());
+            assert_eq!(named(s.last_events()), vec![code.clone()], "{}", board.code);
+            assert_eq!(named(&s.view(P2).events), vec![code], "{}: the opponent reads it", board.code);
+        }
+
+        #[test]
+        fn r3337000_wh_names_its_code() {
+            names_its_code(&WH);
+        }
+
+        #[test]
+        fn r3337000_bf_names_its_code() {
+            names_its_code(&BF);
+        }
+
+        #[test]
+        fn r3337000_al_names_its_code() {
+            names_its_code(&AL);
+        }
+
+        #[test]
+        fn r3337000_at_names_its_code() {
+            names_its_code(&AT);
+        }
+
+        #[test]
+        fn r3337000_sp_names_its_code() {
+            names_its_code(&SP);
+        }
+
+        #[test]
+        fn r3337000_mt_names_its_code() {
+            names_its_code(&MT);
+        }
+
+        #[test]
+        fn r3337000_dh_names_its_code() {
+            names_its_code(&DH);
+        }
+
+        #[test]
+        fn r3337000_fo_names_its_code() {
+            names_its_code(&FO);
+        }
+
+        #[test]
+        fn r3337000_an_names_its_code() {
+            names_its_code(&AN);
+        }
+
+        #[test]
+        fn r3337000_aa_names_its_code() {
+            names_its_code(&AA);
+        }
+
+        #[test]
+        fn r3337000_every_preset_carries_its_boards_code() {
+            for board in ALL_BOARDS {
+                assert_eq!(preset(&board).anomaly.as_deref(), Some(board.code));
+            }
         }
     }
 

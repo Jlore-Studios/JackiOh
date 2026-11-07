@@ -10,6 +10,7 @@ import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
+import { ANOMALY_CODES, type AnomalyCode } from "../cards/anomalies.ts";
 
 /** The SfxId union, in its declared order. */
 const UNION_ORDER: SfxId[] = [
@@ -30,6 +31,8 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // R3337003: an Anomaly's sting.
+  "anomaly",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -116,6 +119,8 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // R3337003.
+  anomaly: 1200,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -702,5 +707,70 @@ describe("#1954 the playmat taps", () => {
     expect(shapeOf({ ...base, variation: 0.9 })).not.toBe(shapeOf({ ...base, variation: 0.1 }));
     expect(shapeOf({ ...base, sandVariant: 3 })).not.toBe(shapeOf({ ...base, sandVariant: 0 }));
     expect(shapeOf({ ...base, sandBuild: 6 })).not.toBe(shapeOf({ ...base, sandBuild: 1 }));
+  });
+});
+
+describe("R3337003 each Anomaly's sting", () => {
+  /** `code`'s sting through `renderSfx` at `pitch`, as the engine plays it. */
+  const stingOf = (code: AnomalyCode, pitch = 1): Run =>
+    runRecipe(
+      `anomaly ${code} at pitch ${String(pitch)}`,
+      (c, out, at, p) => renderSfx("anomaly", c, out, at, p, pitch),
+      SFX.anomaly.durationMs,
+      { anomaly: code },
+    );
+  const problems = (runs: readonly Run[]): string[] => [
+    ...runs.flatMap(subsetProblems),
+    ...runs.flatMap(lengthProblems),
+    ...runs.flatMap(scheduleProblems),
+    ...runs.flatMap(stopProblems),
+    ...runs.flatMap(wiringProblems),
+    ...runs.flatMap(rampProblems),
+  ];
+  const shapeOf = (run: Run): string =>
+    JSON.stringify([
+      run.made.map((node) => [node.kind, node.type]),
+      run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null]),
+    ]);
+  const plainWhoosh = (): string => shapeOf(runRecipe("whoosh", SFX.whoosh.recipe, SFX.whoosh.durationMs, {}));
+  /** Every frequency the run's oscillators are set to or glide to. */
+  const pitchesOf = (run: Run): number[] =>
+    run.made
+      .filter((node) => node.kind === "oscillator")
+      .flatMap((node) =>
+        node.param("frequency").events.flatMap((e) => (e.method === "setValueAtTime" || e.method === "exponentialRampToValueAtTime" ? [e.value] : [])),
+      );
+
+  it("R3337003 every code keeps every clause of the recipe contract, as written and at the bank's lowest and highest pitch", () => {
+    expect(problems(ANOMALY_CODES.flatMap((code) => [stingOf(code), stingOf(code, 0.25), stingOf(code, 4)]))).toEqual([]);
+  });
+
+  it("R3337003 no two codes build the same graph, and none is the plain whoosh", () => {
+    const shapes = ANOMALY_CODES.map((code) => shapeOf(stingOf(code)));
+    expect(new Set(shapes).size).toBe(ANOMALY_CODES.length);
+    expect(shapes).not.toContain(plainWhoosh());
+  });
+
+  it("R3337003 with no code, or one this build does not know, it plays the plain whoosh and never throws", () => {
+    for (const params of [{}, { anomaly: "ZZ" }, { anomaly: "wh" }] as unknown as SfxParams[]) {
+      const run = runRecipe(`anomaly ${JSON.stringify(params)}`, SFX.anomaly.recipe, SFX.anomaly.durationMs, params);
+      expect(run.threw, JSON.stringify(params)).toBeNull();
+      expect(shapeOf(run), JSON.stringify(params)).toBe(plainWhoosh());
+    }
+  });
+
+  it("R3337003 each sounds what its board is: the Wormhole's sweep, the rocks' rumble, the bell, the buzz and the chimes", () => {
+    const pitches = (code: AnomalyCode): number[] => pitchesOf(stingOf(code));
+    expect(pitches("WH")).toEqual(expect.arrayContaining([55, 110]));
+    expect(pitches("MT")).toContain(98);
+    expect(pitches("FO")).toEqual(expect.arrayContaining([523, 784]));
+    expect(pitches("AN")).toContain(880);
+    expect(pitches("AA")).toContain(660);
+    for (const code of ["AL", "AT", "AN", "AA"] as const) {
+      const run = stingOf(code);
+      expect(run.made.some((node) => node.kind === "bufferSource"), `${code} rumbles on noise`).toBe(true);
+      expect(run.made.some((node) => node.kind === "biquad" && node.type === "lowpass"), `${code} low-passes it`).toBe(true);
+    }
+    expect(stingOf("DH").made.some((node) => node.kind === "oscillator" && node.type === "sawtooth"), "the drones buzz").toBe(true);
   });
 });

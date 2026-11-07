@@ -1,10 +1,12 @@
 // R2787000: the aura layer over the shown view. Every browser API comes in through `seams`: a fixed box
-// for every aura, a frame source the test runs by hand and a visibility it toggles.
+// for every aura, a frame source the test runs by hand and a visibility it toggles. R3337003: an
+// Anomaly's backdrop on the page.
 
 import type { BackrowView, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { anomalyArtUri } from "../../cards/art/svg.ts";
 import { baseView, emptySide, faceDownBackrow, faceUpBackrow, resetIds } from "../../test/fixtures.ts";
 import { setReducedMotion } from "../../test/setup.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
@@ -40,6 +42,7 @@ const TABLE = parseFxCardTable(
     "classic-075": { aura: { look: "holy", palette: "Fire", scope: "lane" } },
     "meditative-040": { aura: { look: "bloom", scope: "board" } },
     "meditativeplus-009": { aura: { look: "arcane", scope: "side" } },
+    "stinkyscape-155": { aura: { look: "drift", scope: "side" } },
     "core-018": { aura: { look: "frost", scope: "zone" } },
     "core-035": { aura: { look: "ember", scope: "side" } },
   }`,
@@ -367,5 +370,57 @@ describe("R2787000 the aura layer", () => {
     expect(m.aura("mod-p1-m5")).toHaveAttribute("data-aura-phase", "end");
     fx.pump(AURA_FADE_OUT_MS);
     expect(m.layer()).toBeNull();
+  });
+});
+
+describe("R3337003 an Anomaly's backdrop", () => {
+  const wormhole: GameEvent = { type: "boardReplaced", player: "p1", anomaly: "WH" };
+
+  it("R3337003 an Anomaly's backdrop stands over its caster's side with its code and picture until the side is replaced again, and none under reduced motion", () => {
+    resetIds();
+    const fx = fakeSeams();
+    const before = board([], []);
+    const laid = board([], [], "p1", { events: [wormhole] });
+    const m = mount(before, fx);
+    // The newest view has the lay; the board still shows the one before it.
+    m.show(before, laid);
+    expect(m.layer()).toBeNull();
+    m.show(laid, laid);
+    const backdrop = m.aura("anomaly-p1");
+    expect(backdrop).toHaveAttribute("data-anomaly", "WH");
+    expect(backdrop).toHaveAttribute("data-aura-look", "void");
+    expect(backdrop).toHaveAttribute("data-aura-scope", "side");
+    expect(backdrop).toHaveAttribute("data-aura-phase", "begin");
+    expect(backdrop?.style.getPropertyValue("--aura-picture")).toBe(`url("${anomalyArtUri("WH", false)}")`);
+    // A Field Spell's aura carries neither.
+    const weapons = field("p2", "core-014");
+    const both = board([], [weapons], "p1", { events: [wormhole] });
+    m.show(both, both);
+    expect(m.aura(fieldKey(weapons))).not.toHaveAttribute("data-anomaly");
+    expect(m.aura(fieldKey(weapons))?.style.getPropertyValue("--aura-picture")).toBe("");
+    // Replaced again with no Anomaly, it ends.
+    const cleared = board([], [], "p1", { events: [wormhole, { type: "boardReplaced", player: "p1" }] });
+    m.show(cleared, cleared);
+    expect(m.aura("anomaly-p1")).toHaveAttribute("data-aura-phase", "end");
+    fx.pump(AURA_FADE_OUT_MS);
+    expect(m.layer()).toBeNull();
+  });
+
+  it("R3337003 reduced motion, the media query's or the panel's, lays no backdrop", () => {
+    resetIds();
+    setReducedMotion(true);
+    const laid = board([], [], "p1", { events: [wormhole] });
+    const still = mount(laid, fakeSeams());
+    expect(still.aura("anomaly-p1")).toBeNull();
+    expect(still.layer()).toBeNull();
+    cleanup();
+    setReducedMotion(false);
+    writeSettings({ reduceMotion: true });
+    const panel = mount(laid, fakeSeams());
+    expect(panel.aura("anomaly-p1")).toBeNull();
+    act(() => {
+      writeSettings({ reduceMotion: false });
+    });
+    expect(panel.aura("anomaly-p1")).toHaveAttribute("data-anomaly", "WH");
   });
 });

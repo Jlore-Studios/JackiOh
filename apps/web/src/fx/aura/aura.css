@@ -9,6 +9,9 @@
  * opacity only (fx.css's rule for what the compositor runs). R200: the layer takes no pointer event,
  * never carries `data-animating` and adds no scrollable width. Under reduced motion, the media query or
  * the settings panel's `data-reduce-motion`, nothing moves and the tint and the edge stand still.
+ *
+ * R3337003: an Anomaly's backdrop (`.aura[data-anomaly]`) fills its tint with the board's faint picture
+ * (`--aura-picture`), under the motes; reduced motion shows none (the layer plans none then, too).
  */
 
 .aura-layer {
@@ -50,6 +53,15 @@
   opacity: var(--aura-tint);
 }
 
+/* A standing aura makes no stacking context of its own, so the layer's lays the picture under the motes' canvas. */
+.aura[data-anomaly]::before {
+  z-index: var(--z-below);
+  background: var(--aura-picture) center / cover no-repeat;
+  opacity: 0.14;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
 .aura::after {
   box-shadow:
     inset 0 0 var(--aura-glow-px) var(--aura-glow),
@@ -87,8 +99,16 @@
   .aura {
     animation: none !important;
   }
+
+  .aura[data-anomaly] {
+    display: none;
+  }
 }
 
 :root[data-reduce-motion="true"] .aura {
   animation: none !important;
+}
+
+:root[data-reduce-motion="true"] .aura[data-anomaly] {
+  display: none;
 }

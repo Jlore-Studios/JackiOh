@@ -3,6 +3,7 @@
 
 import type { VoiceEmoteId } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../cards/anomalies.ts";
 import type { CARD_HOOKS } from "./constants.ts";
 
 export type SfxId =
@@ -23,7 +24,9 @@ export type SfxId =
   | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
-  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral";
+  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // R3337003: a Stinkyscape Anomaly laid, one sting per board (`SfxParams.anomaly`).
+  | "anomaly";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -67,6 +70,11 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /**
+   * R3337003: anomaly: the code of the Anomaly laid (`boardReplaced.anomaly`), which picks its sting.
+   * Absent, or a code this build does not know: the plain whoosh.
+   */
+  anomaly?: AnomalyCode;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */

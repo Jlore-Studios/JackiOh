@@ -14,13 +14,14 @@
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../anomalies.ts";
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
 import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
-import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
+import { ANOMALY_SEED_PREFIX, anomalySvg, starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -223,6 +224,20 @@ export function starshipArtUri(pieces: number, launched: boolean, radiant: boole
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(starshipSvg(pieces, launched, radiant), restyle, radiant, STARSHIP_SKETCH_SEED))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/**
+ * R3337001: an Anomaly Found!'s art for the board its code names (stinkyscape.ts `anomalySvg`), cached on its code and
+ * face; a restyle's strokes grow from the board's own seed.
+ */
+export function anomalyArtUri(code: AnomalyCode, radiant: boolean, restyle: ArtRestyle | null = null): string {
+  const key = `anomaly|${code}|${radiant}${restyleKey(restyle)}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(anomalySvg(code, radiant), restyle, radiant, `${ANOMALY_SEED_PREFIX}${code}`))}`;
   proceduralCache.set(key, uri);
   return uri;
 }

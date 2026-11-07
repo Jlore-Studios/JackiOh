@@ -1,6 +1,6 @@
 // R2170000: the Stinkyscape set's own art (#2170, stinkyscape.ts). Each family draws one look, each
 // weapon the weapon it names, both faces share their geometry, and no other set's card reaches any of
-// it, so every picture R503 pinned stays.
+// it, so every picture R503 pinned stays. R3337001: an Anomaly Found! in play draws the board it holds.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -8,11 +8,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { ANOMALY_CODES } from "../anomalies.ts";
 import STINKYSCAPE_V050 from "./fixtures/stinkyscape-art-v0.5.0.json";
 import { CardArt } from "./CardArt.tsx";
 import { hashId } from "./hash.ts";
-import { isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
-import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
+import { anomalySvg, isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
+import { anomalyArtUri, proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
 
 afterEach(cleanup);
@@ -233,6 +234,50 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
       const theme = themeFor(card.tags, card.type);
       expect(art?.dataset.artFamily, card.id).toBeUndefined();
       expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionFor(card.type), false, null));
+      cleanup();
+    }
+  });
+});
+
+describe("R3337001: an Anomaly Found! in play draws the board it holds", () => {
+  const found = byName("Anomaly Found!");
+
+  function art(anomaly: string | null, radiant = false): HTMLElement {
+    const { container } = render(
+      <CardArt defId={found.id} radiant={radiant} tags={found.tags} type={found.type} name={found.name} shape="portrait" anomaly={anomaly} />,
+    );
+    const drawn = container.querySelector<HTMLElement>(".cf-art");
+    if (drawn === null) throw new Error("no art");
+    return drawn;
+  }
+
+  it("R3337001 each Anomaly draws its own picture", () => {
+    // The spiral every Anomaly Found! drew before, as the art path draws it holding no board.
+    const spirals = [svgOf(found, false), svgOf(found, true)];
+    const drawn = ANOMALY_CODES.flatMap((code) => [anomalySvg(code, false), anomalySvg(code, true)]);
+    expect(new Set(drawn).size).toBe(ANOMALY_CODES.length * 2);
+    for (const svg of drawn) {
+      expect(spirals).not.toContain(svg);
+      expect(svg.startsWith('<svg viewBox="0 0 100 100"')).toBe(true);
+      expect(svg.match(/<svg/g)).toHaveLength(1);
+      expect(svg).not.toMatch(/NaN|undefined|Infinity|<text|<title|href|<image/);
+    }
+    for (const code of ANOMALY_CODES) expect(anomalySvg(code, true), code).toBe(anomalySvg(code, true));
+  });
+
+  it("R3337001 a held code draws that code's picture", () => {
+    for (const [code, radiant] of [["WH", false], ["MT", false], ["FO", true]] as const) {
+      const held = art(code, radiant);
+      expect(held.dataset.artAnomaly).toBe(code);
+      expect(held.style.backgroundImage).toContain(anomalyArtUri(code, radiant));
+      cleanup();
+    }
+    // Holding no board, or a code that is none of the ten, it draws the spiral it always drew.
+    const spiral = stinkyscapeArtUri(found.id, found.name, found.tags, found.type, false);
+    for (const anomaly of [null, "ZZ"]) {
+      const plain = art(anomaly);
+      expect(plain.dataset.artAnomaly, String(anomaly)).toBeUndefined();
+      expect(plain.style.backgroundImage, String(anomaly)).toContain(spiral);
       cleanup();
     }
   });

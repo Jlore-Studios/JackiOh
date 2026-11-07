@@ -5,7 +5,7 @@
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { flavorOfId } from "../cards/flavor.ts";
-import { animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { ANOMALY_SET_PIECE, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import {
   FX_CONCEAL_AT,
@@ -122,7 +122,8 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
     }
     case "summoned": {
       const zone = targetFor(event, view);
-      if (zone === null) return [];
+      // R3337003: an Anomaly's held set piece lands its board's cards out of its rift itself (fx/anomaly.ts).
+      if (zone === null || (entry.rift !== undefined && entry.setPiece?.key === ANOMALY_SET_PIECE)) return [];
       // #2111, R2111000: whatever lands in a backrow zone is set, not slammed.
       const set = event.row === "backrow";
       const played = entry.events.find(
