@@ -16015,7 +16015,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-07T15:57:51Z",
+      "feedback_since": "2026-11-07T19:55:00Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3342,
@@ -16031,11 +16031,11 @@
       "run_id": "42408502863",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-07T19:55:00Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "gemini"
