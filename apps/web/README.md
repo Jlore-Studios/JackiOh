@@ -29,6 +29,17 @@ enforces rules and never sees hidden information.** In practice:
   The other seat's is its backs (`game/OpponentChoice.tsx`, R2739000) when the view's `pending` carries `optionCount`: that many of the opponent's card backs, laid out as the bare picker over the waiting notice's lighter dim and in the middle of the screen at every width (a phone docks the chooser's picker to its bottom edge), with no words or control and "Your opponent is choosing…" as the dialog's name; without it, the notice. Online, the back the opponent's pointer or focus is on is outlined in their color, still (R2739001): an engine card picker but the mulligan sends its option's index as it changes and null as it leaves, folds or closes (`game/choiceHover.ts`, `net.ts`'s `choiceHover` frame), which the server relays to the opponent alone and drops when the count is not shown; a play's own picker, a replay's, hotseat and practice send none.
   A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
 
+The arena (`src/game/arena/`, R3348000, R3348001): a living playmat that is only ever the viewer's own, and that
+no rule reads. `SandSurface.tsx` answers a press on any tile with a press-in and a ripple in its half's playmat
+family and that family's sound, harder on a legal tile and with a haptic on touch, and never stops the press. Each
+of the ten playmats keeps two corner props (`CornerProps.tsx`, drawn by `PropArt.tsx`): a tap sounds and moves
+one, `CORNER_ESCALATE_TAPS` taps in a row give its payoff, each tap rolls `CORNER_RARE_CHANCE` from the client's
+own random source (`arenaRandom`, never the game's RNG) and four mats hide a tap sequence. The layer takes a mat id
+and nothing else: it imports nothing from `net/`, `wire/` or `replay/`, sends and logs nothing, and answers quietly
+while the animation queue drains. A prop that would cover a tile, a hand, a seat, the controls or the log, or leave
+the screen, is not drawn (`fit.ts`). Every number is in `arena/config.ts`, and `arena.css` states the same times
+(`arena/arenaCss.test.ts`).
+
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
 variable over weight, Latin subset, self-hosted in `public/fonts` with their licenses. Each is

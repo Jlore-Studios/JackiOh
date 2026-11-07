@@ -1,0 +1,394 @@
+/* The living arena (#3348, R3348000, R3348001): every tile answers a press, and each playmat keeps two
+   corner props to find. A board sheet: colors come from palette.css, lengths from spacing.css and
+   --hit-min, radii, shadows and layers from surfaces.css, curves from motion.css. The times in
+   `animation` declarations are CORNER_*_MS and TILE_FEEL.rippleMs (arena/config.ts); arenaCss.test.ts
+   holds the two together. Reduce motion zeroes them like every duration, and the layers then draw the
+   still look (`data-play="still"`) instead. Nothing here takes a press: both layers are for the eye
+   and the corner props' own buttons. */
+
+/* ---- A tile's answer ---------------------------------------------------------------------------
+   One span per press, over the tile (or round the card it holds): ::before presses the tile in, ::after
+   is the ripple, in the look of its half's playmat family (board.css's .tap-mark--*, drawn flat). */
+.tile-answers {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+
+.tile-answer {
+  --tile-ink: var(--pal-parchment);
+  --tile-wash: var(--pal-black);
+  --tile-press: 20%;
+  --tile-grow: 1.7;
+  --tile-line: 2px;
+  --tile-ring: calc(min(var(--tile-w), var(--tile-h)) * 0.7);
+
+  position: absolute;
+  left: var(--tile-x);
+  top: var(--tile-y);
+  width: var(--tile-w);
+  height: var(--tile-h);
+  pointer-events: none;
+}
+
+.tile-answer[data-strength="strong"] {
+  --tile-press: 36%;
+  --tile-grow: 2.3;
+  --tile-line: 3px;
+  --tile-ring: calc(min(var(--tile-w), var(--tile-h)) * 0.9);
+}
+
+.tile-answer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--tile-wash) var(--tile-press), transparent);
+}
+
+.tile-answer::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--tile-cx) - var(--tile-x));
+  top: calc(var(--tile-cy) - var(--tile-y));
+  width: var(--tile-ring);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: var(--tile-line) solid color-mix(in srgb, var(--tile-ink) 70%, transparent);
+  border-radius: var(--radius-round);
+}
+
+/* An occupied tile ripples round its card: the ring is the card's box, grown. */
+.tile-answer[data-occupied]::after {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  translate: none;
+  border-radius: var(--radius-md);
+}
+
+.tile-answer[data-family="sand"] {
+  --tile-ink: var(--pal-gold-200);
+  --tile-wash: var(--pal-wood-900);
+}
+
+.tile-answer[data-family="sand"]::after {
+  border-style: dotted;
+}
+
+.tile-answer[data-family="wood"] {
+  --tile-ink: var(--pal-parchment);
+  --tile-wash: var(--pal-brass-950);
+}
+
+.tile-answer[data-family="felt"] {
+  --tile-ink: var(--pal-black);
+  --tile-wash: var(--pal-black);
+  --tile-press: 30%;
+}
+
+.tile-answer[data-family="felt"][data-strength="strong"] {
+  --tile-press: 46%;
+}
+
+.tile-answer[data-family="stone"] {
+  --tile-ink: var(--pal-white);
+  --tile-wash: var(--pal-slate-900);
+}
+
+.tile-answer[data-family="stone"]::after {
+  border-style: double;
+  --tile-line: 4px;
+}
+
+.tile-answer[data-family="neon"] {
+  --tile-ink: var(--tap-tint);
+  --tile-wash: var(--tap-tint);
+  --tile-press: 14%;
+}
+
+.tile-answer[data-family="neon"]::after {
+  border-color: var(--tap-tint);
+  box-shadow: 0 0 6px var(--tap-tint), inset 0 0 4px var(--tap-tint);
+}
+
+.tile-answer[data-family="parchment"] {
+  --tile-ink: var(--pal-brass-800);
+  --tile-wash: var(--pal-wood-600);
+}
+
+.tile-answer[data-family="astral"] {
+  --tile-ink: var(--pal-violet-300);
+  --tile-wash: var(--pal-blue-900);
+}
+
+.tile-answer[data-family="astral"]::after {
+  border-style: dashed;
+}
+
+.tile-answer[data-play="move"]::before {
+  animation: tile-press 520ms var(--ease-out) forwards;
+}
+
+.tile-answer[data-play="move"]::after {
+  animation: tile-ring 520ms var(--ease-out) forwards;
+}
+
+.tile-answer[data-play="move"][data-occupied]::after {
+  animation-name: tile-ring-card;
+}
+
+/* Reduce motion, or effects off: the same look at rest, gone with its element. */
+.tile-answer[data-play="still"]::after {
+  opacity: 0.7;
+}
+
+@keyframes tile-press {
+  0% { scale: 1; opacity: 1; }
+  25% { scale: 0.96; }
+  100% { scale: 1; opacity: 0; }
+}
+
+@keyframes tile-ring {
+  0% { scale: 0.3; opacity: 0.95; }
+  100% { scale: var(--tile-grow); opacity: 0; }
+}
+
+@keyframes tile-ring-card {
+  0% { scale: 0.96; opacity: 0.95; }
+  100% { scale: 1.16; opacity: 0; }
+}
+
+/* Hovering a tile on a desktop lights its edge. A locked, reserved, glowing or selected tile keeps its own. */
+@media (hover: hover) and (pointer: fine) {
+  .field .zone:hover:not(.zone-locked, .zone-reserved, [data-glow], [data-selected="true"]) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  }
+}
+
+/* ---- The corner props ------------------------------------------------------------------------
+   One layer per half of the field, over the lanes' own box and under nothing: each prop is
+   --hit-min square, never over a tile, a hand, a seat, the controls or the log. CornerProps.tsx
+   measures that and sets data-fit; a prop that does not fit is not drawn, and takes no tap. The
+   opponent's props are the viewer's to see only: still, and no hit. */
+.corner-props {
+  --corner-inset: var(--space-2);
+
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+
+.board .corner-props .corner-prop {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: transparent;
+  color: inherit;
+  pointer-events: auto;
+}
+
+.board .corner-props .corner-prop:hover:not(:disabled) {
+  border: 0;
+  background: transparent;
+}
+
+.corner-props[data-half="yours"] .corner-prop {
+  bottom: var(--corner-inset);
+}
+
+.corner-props[data-half="theirs"] .corner-prop {
+  top: var(--corner-inset);
+  pointer-events: none;
+}
+
+.corner-props .corner-prop[data-corner="left"] {
+  left: var(--space-2);
+}
+
+.corner-props .corner-prop[data-corner="right"] {
+  right: var(--space-2);
+}
+
+.corner-props .corner-prop[data-fit="false"],
+.corner-props .corner-prop[data-fit="pending"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.corner-prop__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.corner-prop svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.corner-prop .pa { fill: var(--prop-a); }
+.corner-prop .pb { fill: var(--prop-b); }
+.corner-prop .pc { fill: var(--prop-c); }
+
+/* Beside the mat, in the sidebar's column, wherever the board has one. */
+@media (min-width: 1025px), (min-width: 900px) and (orientation: landscape) and (min-height: 501px) {
+  .corner-props .corner-prop[data-corner="left"] {
+    left: calc(100% + var(--space-6));
+  }
+
+  .corner-props .corner-prop[data-corner="right"] {
+    right: auto;
+    left: calc(100% + var(--space-6) + var(--hit-min) + var(--space-3));
+  }
+}
+
+/* Each playmat's props are drawn in its look: three colors from the palette, a body, an edge and a light. */
+.corner-props[data-mat="table-tavern"] { --prop-a: var(--pal-wood-600); --prop-b: var(--pal-brass-500); --prop-c: var(--pal-gold-300); }
+.corner-props[data-mat="table-wood"] { --prop-a: var(--pal-wood-700); --prop-b: var(--pal-parchment); --prop-c: var(--pal-gold-400); }
+.corner-props[data-mat="table-felt"] { --prop-a: var(--pal-green-700); --prop-b: var(--pal-green-200); --prop-c: var(--pal-parchment); }
+.corner-props[data-mat="table-neon-grid"] { --prop-a: var(--pal-purple-400); --prop-b: var(--pal-cyan-400); --prop-c: var(--pal-lime-400); }
+.corner-props[data-mat="table-marble"] { --prop-a: var(--pal-slate-100); --prop-b: var(--pal-slate-400); --prop-c: var(--pal-gold-300); }
+.corner-props[data-mat="table-chessboard"] { --prop-a: var(--pal-parchment); --prop-b: var(--pal-wood-800); --prop-c: var(--pal-gold-400); }
+.corner-props[data-mat="table-desert-sand"] { --prop-a: var(--pal-green-500); --prop-b: var(--pal-gold-200); --prop-c: var(--pal-orange-400); }
+.corner-props[data-mat="table-obsidian-slab"] { --prop-a: var(--pal-slate-800); --prop-b: var(--pal-violet-500); --prop-c: var(--pal-violet-300); }
+.corner-props[data-mat="table-ancient-map"] { --prop-a: var(--pal-brass-800); --prop-b: var(--pal-wood-700); --prop-c: var(--pal-parchment); }
+.corner-props[data-mat="table-astral"] { --prop-a: var(--pal-blue-700); --prop-b: var(--pal-violet-300); --prop-c: var(--pal-white); }
+
+/* A tap: the prop's small motion. */
+.corner-prop[data-play="move"][data-state="tap"] .corner-prop__art {
+  animation: 380ms var(--ease-overshoot) both;
+}
+
+.corner-prop[data-play="move"][data-state="tap"][data-move="wiggle"] .corner-prop__art { animation-name: prop-wiggle; }
+.corner-prop[data-play="move"][data-state="tap"][data-move="pop"] .corner-prop__art { animation-name: prop-pop; }
+.corner-prop[data-play="move"][data-state="tap"][data-move="hop"] .corner-prop__art { animation-name: prop-hop; }
+.corner-prop[data-play="move"][data-state="tap"][data-move="tilt"] .corner-prop__art { animation-name: prop-tilt; }
+
+/* Tapped again and again: the prop's bigger payoff. */
+.corner-prop[data-play="move"][data-state="escalate"] .corner-prop__art {
+  animation: 900ms var(--ease-out) both;
+}
+
+.corner-prop[data-play="move"][data-state="escalate"][data-payoff="flare"] .corner-prop__art { animation-name: prop-flare; }
+.corner-prop[data-play="move"][data-state="escalate"][data-payoff="shake"] .corner-prop__art { animation-name: prop-shake; }
+.corner-prop[data-play="move"][data-state="escalate"][data-payoff="spin"] .corner-prop__art { animation-name: prop-spin; }
+.corner-prop[data-play="move"][data-state="escalate"][data-payoff="leap"] .corner-prop__art { animation-name: prop-leap; }
+.corner-prop[data-play="move"][data-state="escalate"][data-payoff="surface"] .corner-prop__art { animation-name: prop-surface; }
+.corner-prop[data-play="move"][data-state="escalate"][data-payoff="glow"] .corner-prop__art { animation-name: prop-glow; }
+
+/* The rare one: a gold shimmer. */
+.corner-prop[data-state="rare"] {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pal-gold-300) 80%, transparent);
+}
+
+.corner-prop[data-play="move"][data-state="rare"] .corner-prop__art {
+  animation: prop-rare 1600ms var(--ease-in-out) both;
+}
+
+/* A finished hidden sequence lights both props. */
+.corner-prop[data-state="sequence"] {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--prop-c) 80%, transparent);
+}
+
+.corner-prop[data-play="move"][data-state="sequence"] .corner-prop__art {
+  animation: prop-sequence 1400ms var(--ease-in-out) both;
+}
+
+/* Reduced motion, a drain in progress: the change shows still. */
+.corner-prop[data-play="still"][data-state] .corner-prop__art {
+  filter: brightness(1.3);
+}
+
+.corner-prop[data-play="still"][data-state] {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--prop-c) 75%, transparent);
+}
+
+.corner-prop[data-play="still"][data-state="rare"] {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pal-gold-300) 85%, transparent);
+}
+
+@keyframes prop-wiggle {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: -10deg; }
+  60% { rotate: 8deg; }
+}
+
+@keyframes prop-pop {
+  0%, 100% { scale: 1; }
+  40% { scale: 1.28; }
+}
+
+@keyframes prop-hop {
+  0%, 100% { translate: 0 0; }
+  40% { translate: 0 -28%; }
+}
+
+@keyframes prop-tilt {
+  0%, 100% { rotate: 0deg; }
+  50% { rotate: 16deg; }
+}
+
+@keyframes prop-flare {
+  0%, 100% { scale: 1; filter: brightness(1); }
+  30% { scale: 1.5; filter: brightness(1.8); }
+}
+
+@keyframes prop-shake {
+  0%, 100% { translate: 0 0; }
+  12% { translate: -14% 0; }
+  28% { translate: 14% 0; }
+  44% { translate: -11% 0; }
+  60% { translate: 11% 0; }
+  76% { translate: -6% 0; }
+}
+
+@keyframes prop-spin {
+  0% { rotate: 0deg; scale: 1; }
+  50% { scale: 1.25; }
+  100% { rotate: 360deg; scale: 1; }
+}
+
+@keyframes prop-leap {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  40% { translate: 0 -55%; rotate: 18deg; scale: 1.2; }
+  70% { translate: 0 0; rotate: 0deg; scale: 1; }
+  85% { translate: 0 -10%; }
+}
+
+@keyframes prop-surface {
+  0% { translate: 0 60%; opacity: 0.2; scale: 0.7; }
+  45% { translate: 0 -24%; opacity: 1; scale: 1.2; }
+  100% { translate: 0 0; opacity: 1; scale: 1; }
+}
+
+@keyframes prop-glow {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  40% { filter: brightness(1.9) saturate(1.6); }
+}
+
+@keyframes prop-rare {
+  0% { scale: 1; rotate: 0deg; filter: brightness(1); }
+  20% { scale: 1.7; rotate: 120deg; filter: brightness(2.2) saturate(1.6); }
+  60% { scale: 1.4; rotate: 480deg; filter: brightness(1.6); }
+  100% { scale: 1; rotate: 720deg; filter: brightness(1); }
+}
+
+@keyframes prop-sequence {
+  0%, 100% { scale: 1; filter: brightness(1); }
+  25%, 75% { scale: 1.35; filter: brightness(1.7); }
+  50% { scale: 1.05; filter: brightness(1.2); }
+}
