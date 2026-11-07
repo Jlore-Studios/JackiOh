@@ -80,6 +80,25 @@ describe("#2932 a phone's field unit stands its Activate control and keyword mar
     expect(card.querySelector(".keywords, .keyword-icon"), "no marks on the face").toBeNull();
   });
 
+  it("R3339000 the stack's marks and its +n are images with accessible names, as the face's are", () => {
+    restore = stubPhonePortrait(true);
+    stubLayout("30.6px");
+    renderGame();
+    const more = document.querySelector<HTMLElement>(".field-badges .cf-kw-more");
+    expect(more?.getAttribute("role")).toBe("img");
+    expect(more?.getAttribute("aria-label")).toContain("Rush");
+    expect(more?.getAttribute("aria-label")).toContain("Can't Defend");
+    cleanup();
+    stubLayout("60px");
+    renderGame();
+    const marks = [...document.querySelectorAll(".field-badges .keyword-icon")];
+    expect(marks).toHaveLength(2);
+    for (const mark of marks) {
+      expect(mark.getAttribute("role")).toBe("img");
+      expect(mark.getAttribute("aria-label")).toBeTruthy();
+    }
+  });
+
   it("the control still reports its press as the card's own Activate action", () => {
     restore = stubPhonePortrait(true);
     renderGame();
