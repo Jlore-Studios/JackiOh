@@ -17074,6 +17074,13 @@
     "3400": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42393498773",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-07T17:31:32Z",
+        "until": "2026-11-07T18:01:32Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
