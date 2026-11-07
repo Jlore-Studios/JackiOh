@@ -24,9 +24,9 @@ use jackioh_engine::config::{
     EMOTE_HAND_VOICE, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
     KY_COMPETITION_SECONDS, LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA,
     PROMPT_CARD_OPTION_LIMIT, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS,
-    ROLL_TAILS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
-    TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
-    VOTE_TALLY_SIZE,
+    ROLL_TAILS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX,
+    STARSHIP_NAMES, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET,
+    TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
 };
 use serde::Serialize;
 
@@ -170,6 +170,13 @@ fn engine_config_ts() -> String {
             Some("readonly [SetName, ...SetName[]]"),
             &SHIPPED_SETS,
         ),
+        // R1852004, R3333000: the names a Starship launches under, each of which its art gives a hull
+        // design of its own; a web test holds the designs to them.
+        constant(
+            "STARSHIP_NAMES",
+            Some("readonly (readonly [string, Tag | null])[]"),
+            STARSHIP_NAMES,
+        ),
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
         // R1705005: the human seat's handicap in a lesson.
@@ -204,7 +211,7 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    assert_eq!(text.matches("\nexport const ").count(), 53, "{text}");
+    assert_eq!(text.matches("\nexport const ").count(), 54, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 
