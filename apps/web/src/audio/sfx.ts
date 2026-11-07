@@ -29,6 +29,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "organ",
   "anomaly",
   "playImpact", "trapSnap",
+  "auraTouch",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -902,6 +903,17 @@ const tapAstral: SfxRecipe = (ctx, out, at, params) => {
   fmBell(k, out, hz, 3.5, 180, 0, 0.003, 0.2 + build * 0.02, len);
   tone(k, out, "sine", hz * 2, 0.05, 0.002, 0.06, len);
   tone(k, out, "sine", hz * 3, 0.1, 0.002, 0.04, len);
+  return len;
+};
+
+const AURA_NOTES_HZ = [523.25, 587.33, 659.25, 783.99, 880, 1046.5] as const;
+const auraTouch: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.2;
+  const k = kit(ctx, out, at, len);
+  const hue = (((params.hue ?? 0) % 360) + 360) % 360;
+  const hz = AURA_NOTES_HZ[Math.floor(hue / 60) % AURA_NOTES_HZ.length] ?? 523.25;
+  fmBell(k, out, hz, 3.5, 160, 0, 0.003, 0.16, len);
+  tone(k, out, "sine", hz * 2, 0.04, 0.002, 0.04, len);
   return len;
 };
 
@@ -2309,6 +2321,8 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   // R3346000: a play's cost impact and a firing trap's snap, level with the thud and the set click.
   playImpact: { recipe: playImpact, durationMs: 500, gain: 0.8 },
   trapSnap: { recipe: trapSnap, durationMs: 200, gain: 0.8 },
+  // R3342000: the tile aura bell, pitched by its hue.
+  auraTouch: { recipe: auraTouch, durationMs: 200, gain: 0.4 },
 };
 
 /** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */

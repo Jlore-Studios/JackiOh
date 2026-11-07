@@ -36,7 +36,9 @@ export type SfxId =
   // R3337003: a Stinkyscape Anomaly laid, one sting per board (`SfxParams.anomaly`).
   | "anomaly"
   // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
-  | "playImpact" | "trapSnap";
+  | "playImpact" | "trapSnap"
+  // R3342000: the tile aura touch bell.
+  | "auraTouch";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -87,6 +89,8 @@ export type SfxParams = {
    * Absent, or a code this build does not know: the plain whoosh.
    */
   anomaly?: AnomalyCode;
+  /** auraTouch: the aura's hue, 0-360. */
+  hue?: number;
   /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
   quiet?: boolean;
   /** playImpact (R3346000): how heavy the play was, by the mana it cost (game/damageFeel.ts `playTier`). Absent: light. */

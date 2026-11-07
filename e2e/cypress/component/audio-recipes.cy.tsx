@@ -46,6 +46,8 @@ const EXPECTED_IDS = [
   "organ",
   "anomaly",
   "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -152,6 +154,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   // R3346000: a play's cost impact and a firing trap's snap.
   playImpact: 500,
   trapSnap: 200,
+  // R3342000: the tile aura bell.
+  auraTouch: 200,
 };
 
 /** B14 parameter sets used here too. */
