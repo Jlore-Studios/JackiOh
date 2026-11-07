@@ -15859,6 +15859,8 @@
     "3367": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "8a9e119f09ed52261e5ef9cba3fb4ebcf591bb66",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T05:07:09Z",
