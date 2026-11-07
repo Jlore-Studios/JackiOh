@@ -38,6 +38,7 @@ import {
   WAR_DOCTRINES,
   WAR_DOCTRINE_LOOKS,
   broadsideFireMs,
+  cameraPoint,
   planStarship,
   starshipClaim,
   starshipFuseLandMs,
@@ -240,6 +241,32 @@ describe("R3334001 the launch", () => {
     }).find((e) => e.launch !== undefined);
     if (capped === undefined) throw new Error("no capped launch");
     expectBounded(planStarship(capped, view, env())?.cues ?? [], capped.durationMs, "capped launch");
+  });
+
+  it("R3334001 the camera looks only where the zoomed picture still fills the screen", () => {
+    for (const size of ["small", "medium", "large"] as const) {
+      const zoom = STARSHIP_TUNING[size].zoom;
+      // In frame is 1/zoom of the picture's side, so the camera may move half the rest from the middle.
+      const reach = (1 - 1 / zoom) / 2;
+      for (const v of [0, 0.1, 0.3, 0.5, 0.7, 0.9, 1]) {
+        const p = cameraPoint({ x: v, y: 1 - v }, zoom);
+        for (const c of [p.x, p.y]) {
+          expect(c - 1 / (2 * zoom), `${size} ${String(v)}`).toBeGreaterThanOrEqual(-1e-9);
+          expect(c + 1 / (2 * zoom), `${size} ${String(v)}`).toBeLessThanOrEqual(1 + 1e-9);
+        }
+        // A point already in reach is the camera's own.
+        if (Math.abs(v - 0.5) <= reach) expect(p.x).toBeCloseTo(v, 9);
+        else expect(Math.abs(p.x - 0.5)).toBeCloseTo(reach, 9);
+      }
+    }
+    // A held launch's pan is kept in reach, and still runs stern to bow.
+    const held = [BEAM, RUSH, ENGINE, SHIELD, CANNON];
+    const view = dormantBoard(held);
+    const film = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env())?.cues ?? []);
+    if (film === undefined) throw new Error("no cinematic");
+    expect(film.cameraFrom).toEqual(cameraPoint(film.cameraFrom, film.zoom));
+    expect(film.cameraTo).toEqual(cameraPoint(film.cameraTo, film.zoom));
+    expect(film.cameraFrom.x).toBeLessThan(film.cameraTo.x);
   });
 
   it("R3334001 short, off and unheld draw the title card", () => {

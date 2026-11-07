@@ -362,9 +362,8 @@ export const FX_SYSTEM_TRAUMA = 0.3;
 export const FX_STARSHIP_FUSE_STAGGER_MS = 250;
 export const FX_STARSHIP_FUSE_LAND_AT = 0.6;
 export const FX_STARSHIP_FUSE_TRAUMA = 0.25;
-// R2801000: the launch's countdown, as fractions of its hold, the count shown being the counts left
-// (3, 2, 1); its engines ignite at FX_STARSHIP_IGNITE_AT of the hold.
-export const FX_STARSHIP_COUNT_AT = [0, 0.25, 0.5] as const;
+// R2801000, R3334001: the launch's tile cues ignite its engines at FX_STARSHIP_IGNITE_AT of the hold
+// (R3334001 took out the countdown that ran before it).
 export const FX_STARSHIP_IGNITE_AT = 0.75;
 // R2801000: after the hold, as fractions of the launch's own motion: the contrail's flight up, and the landing.
 export const FX_STARSHIP_LIFT_AT = 0.45;

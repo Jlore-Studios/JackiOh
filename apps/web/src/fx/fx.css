@@ -3450,8 +3450,10 @@
 }
 
 /* R3334001: a Starship's launch as a cinematic over the whole layer, through its set piece's hold. The
-   board dims; the ship's own picture fills the screen, the camera (`--fx-zoom` close) panning from its
-   stern (`--fx-cam-x0/y0`) to its bow (`--fx-cam-x1/y1`) from `--fx-pan-at` for `--fx-pan-ms`, each
+   board dims; the ship's own picture fills the screen (a square at least as wide and as tall as it, the
+   camera's points kept where the zoomed picture still covers it, starship.ts `cameraPoint`), the camera
+   (`--fx-zoom` close) panning from its stern (`--fx-cam-x0/y0`) to its bow (`--fx-cam-x1/y1`) from
+   `--fx-pan-at` for `--fx-pan-ms`, each
    module's mark lighting as it passes (`.fx-cinematic-stop`, at its `--fx-at`); then it pulls back to the
    whole ship, its engines light one after another, throwing sparks, its public name stamps across the
    hull at `--fx-stamp` in its design's lettering (`data-font`), and at `--fx-climb` it climbs out of frame
@@ -3479,7 +3481,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(96vw, 96vh);
+  width: max(100vw, 100vh);
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: var(--radius-lg);

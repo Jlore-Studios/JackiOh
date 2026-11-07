@@ -147,6 +147,12 @@ export const MUSIC_DUCK_RELEASE_TC_S = 0.25;
 export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "victory", "defeat"];
 /** The field's taps (game/SandSurface.tsx TAP_SFX, #1954): every press sounds, past SFX_RETRIGGER_MS and SFX_MAX_VOICES. */
 export const RAPID_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["sand", "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"]);
+/**
+ * R3334000: the sounds a run sends at once, each delayed to its own beat (a fuse run's docks,
+ * starshipSounds.ts): their retrigger guard reads when each sounds, not when it was sent, so two
+ * docks a beat apart both sound and two at one beat do not.
+ */
+export const SCHEDULED_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["starshipDock"]);
 /** Focus: how fast the music fades out when the page is hidden or blurred, and back. */
 export const MUSIC_FOCUS_TC_S = 0.15;
 /** Low health: the viewer's hero at or under this fraction of HERO_HEALTH plays the urgency track. */

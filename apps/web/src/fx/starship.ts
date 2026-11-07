@@ -181,6 +181,9 @@ export const STARSHIP_MOMENT_TUNING = {
 /** A Starship's picture's side, in its own units (stinkyscape.ts `BOX`): its points are shares of it. */
 const PICTURE_UNITS = 100;
 
+/** The middle of a Starship's picture, as a share of its side. */
+const PICTURE_MIDDLE = 0.5;
+
 /** R3334001: each launched design's lettering, as its name suits (`StarshipLettering`). */
 export const STARSHIP_LETTERING: { readonly [D in Exclude<StarshipDesignId, "shipyard">]: StarshipLettering } = {
   "ninth-life": { font: "signature", weight: 400, tracking: 0, italic: false },
@@ -439,6 +442,17 @@ function letteringOf(ship: StarshipArt): Pick<FxCinematicCue, "lettering" | "let
 const share = (p: StarshipPoint): { x: number; y: number } => ({ x: p.x / PICTURE_UNITS, y: p.y / PICTURE_UNITS });
 
 /**
+ * R3334001: where the camera may look on the picture, `zoom` close: no farther from its middle than keeps
+ * the zoomed picture filling the screen (fx.css draws it at least as wide and as tall as the screen, so a
+ * share of 1/zoom of it is in frame and its middle may move half the rest either way).
+ */
+export function cameraPoint(p: { x: number; y: number }, zoom: number): { x: number; y: number } {
+  const reach = PICTURE_MIDDLE * (1 - 1 / Math.max(1, zoom));
+  const keep = (v: number): number => Math.min(PICTURE_MIDDLE + reach, Math.max(PICTURE_MIDDLE - reach, v));
+  return { x: keep(p.x), y: keep(p.y) };
+}
+
+/**
  * R3334001: the launch's cinematic over the hold `H` (or, `still`, its title card): the camera's pan from
  * stern to bow, a stop at each module timed by where it stands, the engines lit in turn, the name's stamp
  * and the climb.
@@ -467,8 +481,8 @@ function cinematicCue(launch: StarshipLaunch, entry: AnimationEntry, view: Playe
     size,
     tint: tintOf(rocketLook()),
     at: tid(launch.anchor ?? ""),
-    cameraFrom: stern,
-    cameraTo: bow,
+    cameraFrom: cameraPoint(stern, tune.zoom),
+    cameraTo: cameraPoint(bow, tune.zoom),
     panAtMs: frac(C.panFrom, H),
     panEndMs: frac(C.panTo, H),
     zoom: tune.zoom,
