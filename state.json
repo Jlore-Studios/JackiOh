@@ -17618,6 +17618,14 @@
         "sha": "3c007b876ae86c1d9f52f2bab55aa8f26f71441b",
         "tiers": {}
       }
+    },
+    "3355": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-06T23:59:19Z",
+      "issue": 3222,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
