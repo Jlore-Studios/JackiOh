@@ -16277,11 +16277,11 @@
       "last_findings": [],
       "live": "reviewing",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-07T13:05:59Z",
       "round_tier": "",
-      "run_id": "42374241672",
+      "run_id": "pending:e1fddd8d-1794056736",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16302,7 +16302,7 @@
         "run": "42369064965"
       },
       "source": "",
-      "started_at": "2026-11-07T12:50:19Z",
+      "started_at": "2026-11-07T13:06:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16450,9 +16450,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T12:51:48Z",
+    "at": "2026-11-07T13:06:16Z",
     "url": "",
-    "what": "build #3346 on claude-3"
+    "what": "review #3372 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T12:45:13Z",
