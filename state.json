@@ -15672,19 +15672,11 @@
       "failures": 0,
       "feedback_since": "2026-11-07T11:20:46Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-07T15:40:02Z",
-        "lifted": "2026-11-07T15:03:39Z",
-        "owner": "claude-7",
-        "since": "2026-11-07T13:40:02Z",
-        "until": "2026-11-07T15:00:00Z",
-        "why": "5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "issue": 3331,
       "kind": "revise",
       "last_findings": [],
-      "live": "resolving",
+      "live": "fixing-ci",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
@@ -15692,7 +15684,7 @@
       "queued_at": "2026-11-07T13:39:52Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42367795020",
+      "run_id": "pending:afbf827c-1794063865",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15713,7 +15705,7 @@
         "run": "42367795020"
       },
       "source": "ci",
-      "started_at": "2026-11-07T11:20:46Z",
+      "started_at": "2026-11-07T15:05:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -16843,9 +16835,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T14:56:00Z",
+    "at": "2026-11-07T15:05:08Z",
     "url": "",
-    "what": "plan #3381 on agy"
+    "what": "revise #3363 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-07T14:49:30Z",
