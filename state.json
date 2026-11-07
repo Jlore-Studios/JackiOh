@@ -17798,6 +17798,14 @@
           "claude": "medium"
         }
       }
+    },
+    "3357": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-06T23:58:32Z",
+      "issue": 3220,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
