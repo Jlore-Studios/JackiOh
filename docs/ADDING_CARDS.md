@@ -23,7 +23,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 6 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name comment written by `cargo jackioh names`: the voice of a Unit's play, attack and death lines (R1448), of anything else's cast line, and any effects (R655; the file's header says how). The lines' words are row 7's | `voice-lines.test.ts`, `voiceData.test.ts` |
 | 7 | `crates/cards/card-text.yaml` | the card's entry in catalog order, its name comment written by `cargo jackioh names` (#2498; the file's header says how): its `flavour`, one short line in the source notes' voice, no rules words, at most 120 characters (R660); its `voice` lines, one for each hook row 6 gives a voice; and its `zh` (row 11). Then run `cargo test -p jackioh-tools --test export_card_text`, which writes `crates/cards/flavour.json`, `crates/cards/chinese.json` and `apps/web/src/audio/voice-text.json` from it, and commit them. It is not card data, so no fragment claims it | `crates/tools/tests/export_card_text.rs`, `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx`, `voice-lines.test.ts` |
 | 8 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
-| 9 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
+| 9 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the version sites move at promotion, not here | `patches check` |
 | 10 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its license row | `music-assets.test.ts` (the daily audio run) |
 | 11 | `crates/cards/card-text.yaml` (the entry's `zh`, row 7) | the card's Chinese (R1303): `name`, `base` and `radiant` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
 | 12 | `apps/web/src/fx/cards/<set>.json5` (Stinkyscape's `stinkyscape-1` to 090, `stinkyscape-2` from 091) | the card's line in catalog order, its name comment written by `cargo jackioh names` (R2784000; the file's header says how): a motif per hook (`{ cast: { motif: "bolt" } }`, `cry` for a Unit), `{ bespoke: "<recipe>" }` with its recipe in `fx/cards/<set>/`, `{ setPiece: "<key>" }` for a card that clears the board (R2800000, `fx/setPieces.ts`), or `"none: <reason>"`; a Field Spell's or a lasting effect's standing look is an `aura: { look, palette?, scope }` beside its hooks or alone (R2787000), and a marquee Unit's entrance an `entrance: "<key>"` beside its hooks (R2794000); a new recipe's fixture goes in `RECIPE_FIXTURES` (`fx/motifs/gallery.ts`) so `/dev/fx` plays it ([docs/polish/9-card-animations.md](polish/9-card-animations.md)) | `tables.test.ts` |
@@ -195,21 +195,18 @@ history, its snapshots or the catalog version. The player note, `player` (R72400
 notes page shows of the patch: no flag sets it, so write it into the fragment by hand, a short title
 and one fact per line under `new`, `balance`, `changes`, `text` and `fixes`
 ([issues-and-patches.md](issues-and-patches.md), Patch notes players read); running the command again
-keeps it. A patch that refreshes the win-rate table, `crates/cards/data/win_rates.json`
-(`cargo jackioh winrates`), claims it in its fragment: the command writes `"winRates": true` when the
-table's rows differ from the newest shipped version's and no other fragment claims them, and such a
-fragment may claim no card (R1329000). No one refreshes the table by hand: once per patch,
-`.github/workflows/winrates-refresh.yml` runs `cargo jackioh winrates --refresh` on production's
-windowed figures and opens the refresh as its own pull request, its fragment claiming the table and
-CN Tech and NA Tech (R1368000). A set's release is the exception: a cards test fails while a shipped set has no row CN Tech can pick, so the release plays a development run (cargo jackioh stats --out <file>) and runs cargo jackioh winrates --refresh <file>… over it, which fills the table, provisional, with its fragment (R2386000). `cargo jackioh patches check` must pass before the branch merges,
-and fails while the note is empty or the table changed unclaimed.
+keeps it. No card data holds win rates: M #50 CN Tech and M+ #2 NA Tech read the snapshot of the
+server's cached card stats each game is handed as it starts, so a new set's cards rank as soon as their
+games are filed, and nothing is refreshed by hand (R3049000). `cargo jackioh patches check` must pass
+before the branch merges, and fails while the note is empty.
 The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`: it snapshots the patch
-before it with the cards the fragment claims as the catalog holds them (R1280000), writes the version's
-win-rate table to `crates/cards/patches/win_rates/<version>.json`, appends the shipped patch and bumps
-the catalog version wherever it is written; the binaries compile it in from `patches.json`.
+before it with the cards the fragment claims as the catalog holds them (R1280000), appends the shipped
+patch and bumps the catalog version wherever it is written; the binaries compile it in from
+`patches.json`.
 
 Replays fold a game under the version it was played on (R767000): the build carries every older
-shipped version's definitions, rebuilt from the snapshots, and its win-rate table (R1329000), and runs
+shipped version's definitions, rebuilt from the snapshots, and the frozen win-rate table it shipped with,
+if any (R1329000), which its games read unless they hold a snapshot (R3049000), and runs
 its own scripts for them. A patch
 that changes what a card's script does, not only a number in its definition, keeps the script it
 replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to

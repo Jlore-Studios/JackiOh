@@ -971,7 +971,8 @@ pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 /// ending the turn, so the AI cast it until the match's action cap (#1885).
 pub const AI_SAME_CARD_PLAYS_PER_TURN: usize = 3;
 
-/// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the compiled win-rate table.
+/// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the win-rate table it is handed
+/// (`AiDeckOptions::win_rates`, R3049002).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AiWinRate {
     /// The in-deck games a card's row needs before its rate moves its weight (R377's figures).

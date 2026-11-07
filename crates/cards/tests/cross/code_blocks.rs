@@ -61,5 +61,5 @@ fn r1183004_cn_techs_block_reads_its_script() {
             .any(|line| line == "fn tech(radiant: bool) -> Script {")
     );
     // Its own id is `ID` where the code reads it, as the script names it.
-    assert!(code.contains("win_rate_leader(ID)"));
+    assert!(code.contains("win_rate_leader(&*ctx.state, ID)"));
 }

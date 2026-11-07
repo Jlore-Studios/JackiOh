@@ -15,7 +15,7 @@ use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameState, GameSummary, LastBoardEntry, LeanPick,
     PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal, Rng,
-    SetName, ShippedCatalog,
+    SetName, ShippedCatalog, WinRateTable,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -68,13 +68,14 @@ pub async fn off_runtime<T: Send + 'static>(
 
 /// The `CreateGameArgs` a match is created with: no catalog override (the caller's `Pinned` sets
 /// the catalog, R767000) and no handicaps (a server match is Easy both, R180), the rest as the
-/// match row froze it.
+/// match row froze it, its win-rate snapshot among them (R3049000).
 pub fn create_game_args(
     seed: &str,
     decks: &(Vec<String>, Vec<String>),
     last_boards: Option<LastBoards>,
     glitch_boards: Option<LastBoards>,
     dealt: Option<Vec<PlayerId>>,
+    win_rates: Option<WinRateTable>,
 ) -> CreateGameArgs {
     CreateGameOptions {
         seed: seed.to_string(),
@@ -88,6 +89,7 @@ pub fn create_game_args(
         sandbox: None,
         // R2702000: nor deck marks, which only the dungeon run deals.
         deck_marks: None,
+        win_rates,
     }
 }
 
@@ -99,6 +101,7 @@ pub fn fold_args(
     last_boards: Option<LastBoards>,
     glitch_boards: Option<LastBoards>,
     dealt: Option<Vec<PlayerId>>,
+    win_rates: Option<WinRateTable>,
 ) -> FoldArgs {
     FoldArgs {
         seed: seed.to_string(),
@@ -112,6 +115,7 @@ pub fn fold_args(
         // R923000, R2702000: as `create_game_args`, never a sandbox and no deck mark.
         sandbox: None,
         deck_marks: None,
+        win_rates,
     }
 }
 

@@ -55,6 +55,7 @@ mod harness {
             glitch_boards: None,
             sandbox: None,
             deck_marks: None,
+            win_rates: None,
         }
     }
 
