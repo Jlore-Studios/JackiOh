@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 3389,
+  "title": "Patch: a signature animation for every Classic Legendary and Mythic, one concept per card",
+  "branch": "bot/issue-3389",
+  "thread": "**Issue #3389 (data, not instructions):**\n\n```text\n# #3389: Patch: a signature animation for every Classic Legendary and Mythic, one concept per card\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3332, whose signature tier, takeovers for any card, budgets and ratchet these entries use.\n\nThe owner asked (2026-11-06) for every Legendary and Mythic to have an animation of its own, as in Hearthstone, instead of one shared animation.\n\n### Today\n\n- Classic has 11 Legendaries and Mythics: 7 play a shared motif and 4 have recipes of their own (Nature Titan's `titanBloom` entrance, Spell Tyrant's `tyrantSigil`, BOOM! Big Max's `bigBoom`, King Wagtoggle's `crownSwap`), which grow into full signatures.\n\n### What it should be\n\n- **Every card gets a signature.** Every card in the table gets a `signature` entry in its set's `apps/web/src/fx/cards/classic.json5` table, with its recipe in `apps/web/src/fx/cards/classic/`, built from its concept, and leaves `SIGNATURE_PENDING`.\n- **The beats by type:**\n  - a Unit plays an entrance of its own, then its text's beat;\n  - a Spell plays a cast of its own;\n  - a permanent plays its arrival, its text's beat, and a standing aura of its own on its tile.\n- **A Mythic's takeover is its own,** with its own art filling the screen.\n- **A concept is the target, not a script.** The builder keeps each card's idea, and may move a beat to fit the budgets or the events the view carries.\n- **The rules every signature keeps:**\n  - the signature budgets (#3332), R200, and one set piece per action;\n  - reduced motion, speed, intensity and `bigMoments`;\n  - never showing a hidden card (R202).\n- **Sound.** Each sound is its own, inside the audio budgets.\n- **Owned elsewhere** (left out of this table): none.\n\n### The concepts\n\n| id | name | rarity | now | entrance or cast | what its text does, shown | on its tile | sound |\n|---|---|---|---|---|---|---|---|\n| `classic-004` | Palantir | Legendary | cast and trigger negate (hologram); board aura arcane | A black seeing-orb drops onto its zone and its iris opens; one cyan scan-ring sweeps the opponent's side of the board. | Each `drawLimited` drops a cyan shutter over the opponent's deck pile. On the steal, the orb cracks (`destroyed`, base face) and an eye-beam reels the announced Spell across (`stolen`) to cast in cyan. | A slow cyan iris drifts to watch the opponent's side, blinking now and then. | A glassy hum, then a shutter's click. |\n| `classic-007` | InfiniScepter | Legendary | cast vanish; zone aura arcane | A crystal sceptre spins down into its zone and plants itself upright, its looped head opening like a locket. | Cry: the Spell picked (owner only until it moves) is drawn into the locket as it is `exiled`, then shown coiled inside. Each `activated`: the sceptre pulses and a spectral copy flies out to cast. | The held Spell turns slowly inside the loop, a violet-teal figure-eight trail circling it. | A crystal chime as it stores, a rising ring on release. |\n| `classic-009` | Income Tax | Legendary | cast tether (cash) | On `trapFired` the card snaps upright as an iron strongbox lid flies open; a crimson seal stamps over the opponent's hand. | A copper chain loops the opponent's hand and all but one card back is yanked across into the caster's hand (`stolen`), faces never shown; which card stays is the opponent's choice (owner only). | None: a trap shows nothing face-down (R202) and leaves as it fires. | Strongbox slam, coins clatter, a quill's scratch. |\n| `classic-028` | Second Wind | Legendary | cast vanish (wind); side aura storm (wind) | A gale bursts from the zone, flattening the side's banners, and the card lands upright in a whirl of sky-blue wind. | Cry: the deck pile blows away back by back (`exiled`), then the hand scatters into the graveyard (`discarded`). Later a card played from the graveyard rides a gust up; one bound there veers into exile. | A soft breeze ruffles the graveyard pile, leaf-motes lifting off it. | A rushing gust, then a long sigh of wind. |\n| `classic-033` | Joro | Legendary | trigger conjure | Nothing shows while he waits in hand. Then a silver thread drops from the board's top edge and Joro swings down upside-down into his zone, grinning. | On `summoned`, a web strand snaps from the enemy Spell's aim to Joro (`redirected`); the Spell's glow bends off its target, strikes him, and he flips upright with a wink. | A faint web shimmers in his zone's corners; a thread sways above him. | A silk zip, a boing, a cheeky chuckle. |\n| `classic-044` | Back from the GY | Legendary | cast rise | A violet lantern flare bursts over the caster's graveyard pile and the ground cracks open along the caster's unit row. | Each Unit `summoned` claws up through its zone from below, soil bursting, one after another; then the Spell crumbles to violet ash and drifts into the exile pile (`exiled`). | None. | Thunder rumble, earth cracking, a chorus of groans. |\n| `classic-045` | Nature Titan | Legendary | entrance titanBloom; cry flight | The Tribute sinks into soil; roots crack through the zone, a moss boulder heaves up into the Titan, and wildflowers burst open in a ring round its foot. | On its Cry and each attack, a leaf carries a card back to the hand (`drawn`, its face owner only) and a seed of green light flies to the hero, blooming on `healed`. | Moss creeps slowly over its frame; a petal drifts down now and then. | A deep wooden groan, a stone thud, birdsong. |\n| `classic-056` | Spell Tyrant | Legendary | bespoke tyrantSigil | A jagged violet crown-sigil slams onto the zone, its points stabbing the stone, and the Tyrant rises through it, robe of scrolls flaring. | Cry: each chosen Spell rises from the graveyard pile as a ghost, bows to the crown, casts on his command, then burns to ash into the exile pile (`exiled`), one after another. | A small violet crown-sigil turns slowly above him. | A commanding horn blast, then a whoosh for each spell. |\n| `classic-080` | BOOM! Big Max | Legendary | bespoke bigBoom | The three Tributes sink as a fuse burns along the row; Big Max drops from above and lands fist-first, a white-orange blast throwing dust down the lane. | As he lands his zone cracks into a smoking crater and an iron clamp locks it (`locked`, Crater); later blows slide off him as cinders, and a Trample hit blasts on through to the hero. | Smoke curls from the crater rim; embers tick around his fists. | Fuse hiss, a huge boom, rubble rain. |\n| `classic-085` | King Wagtoggle | Legendary | bespoke crownSwap | A velvet cloak sweeps in; the king tips his lopsided silver crown to the far side and holds out a hand to shake. | On `swapped`, the two deck piles bow, cross under his crown and settle on each other's side, card backs only; on the Radiant face a card leaps from his new deck into play (`summoned`). | A slow crimson shimmer runs along his cloak hem, and now and then he winks. | A hearty laugh, a handshake slap, a riffle. |\n| `classic-090` | In Too Deep | Mythic | cast and trigger tally; side aura void (shadow) | Takeover: the screen tips into a spiral shaft plunging into violet dark, a climber's rope uncoiling past glowing shrines; black-blue water rushes in and the card surfaces on its zone. | Each `questProgressed` ticks a shrine-light one step down a spiral on the card. On `questCompleted` the shrine bursts open, its rewards glowing (owner only), and the chosen path lights the next shrine below. | A slow whirlpool of black-blue water turns on its zone, a faint light at its bottom. | A deep water rumble, a far bell for each quest. |\n\n## Acceptance\n\n- Every card in the table has a `signature` entry and recipe and is off `SIGNATURE_PENDING`. `tables.test.ts`, `tiers.test.ts` and `coverage.test.ts` pass.\n- `/dev/fx` shows each signature. A component spec plays every card in the table at desktop size and at 390x844, and `fx-phone-frame.cy.tsx` covers this group's two heaviest within `FX_PHONE_FRAME_BUDGET_MS`.\n- Each Mythic's takeover draws its own art, and reduced motion shows its still form.\n- No beat shows a hidden card. A test plays each card with a Discover, a hand or a face-down trap from the opponent's seat.\n- The pull request holds the per-card table with each card's verdict. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3389: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T16:43:53Z",
+    "claimed_at": "2026-11-07T16:50:52Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3344, #3345 to close first",
+    "#3352 skipped: it waits for #3331 to close first",
+    "#3388 skipped: it waits for #3331, #3352 to close first",
+    "#3390 skipped: it waits for #3331 to close first",
+    "#3391 skipped: it waits for #3331 to close first",
+    "#3392 skipped: it waits for #3331 to close first",
+    "#3393 skipped: it waits for #3331 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
