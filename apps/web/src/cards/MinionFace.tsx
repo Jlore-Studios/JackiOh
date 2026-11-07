@@ -246,8 +246,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
         {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
         {dormant === undefined ? null : <DormantSeal />}
 
-        {/* R2801000: a Dormant Starship's hull, a plate bolted on for each piece fused into it. */}
-        {face.starship != null && !face.starship.launched ? <StarshipHull pieces={face.starship.pieces} /> : null}
+        {/* R2801000: a Dormant Starship's hull, a plate bolted on for each piece fused into it; R3333002: its module's icon. */}
+        {face.starship != null && !face.starship.launched ? <StarshipHull list={face.starship.list} /> : null}
 
         <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 

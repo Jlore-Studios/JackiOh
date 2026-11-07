@@ -8,12 +8,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { RADIANT_GOLD_HUE_MAX_DEG, RADIANT_GOLD_HUE_MIN_DEG, RADIANT_GOLD_LIGHTNESS_MAX, RADIANT_GOLD_LIGHTNESS_MIN, RADIANT_GOLD_SATURATION_MIN } from "../constants.ts";
 import STINKYSCAPE_V050 from "./fixtures/stinkyscape-art-v0.5.0.json";
 import { CardArt } from "./CardArt.tsx";
 import { hashId } from "./hash.ts";
+import { moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf } from "./starshipModules.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
 import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
-import { compositionFor, themeFor } from "./themes.ts";
+import { compositionOf, themeFor } from "./themes.ts";
 
 afterEach(cleanup);
 
@@ -216,6 +218,56 @@ describe("R2170000: the set's art is clean, deterministic and gilded on the Radi
   });
 });
 
+/** A hex color's hue in degrees and saturation and lightness from 0 to 1 (as cosmetics.test.tsx reads them). */
+function hsl(hex: string): { h: number; s: number; l: number } {
+  const digits = hex.length <= 4 ? [...hex].map((digit) => digit + digit).join("") : hex;
+  const [r, g, b] = [0, 2, 4].map((at) => parseInt(digits.slice(at, at + 2), 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return { h: 0, s: 0, l };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const sector = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: sector * 60, s, l };
+}
+
+/** R2725004: whether a color is within Radiant's gold window. */
+function inRadiantGold(hex: string): boolean {
+  const { h, s, l } = hsl(hex);
+  return (
+    h >= RADIANT_GOLD_HUE_MIN_DEG &&
+    h <= RADIANT_GOLD_HUE_MAX_DEG &&
+    s >= RADIANT_GOLD_SATURATION_MIN &&
+    l >= RADIANT_GOLD_LIGHTNESS_MIN &&
+    l <= RADIANT_GOLD_LIGHTNESS_MAX
+  );
+}
+
+/** Every `#…` color in `text`, without its `#`. */
+function hexes(text: string): string[] {
+  return [...text.matchAll(/#([0-9a-fA-F]{3,8})\b/g)].map((match) => match[1] ?? "");
+}
+
+describe("R3333001: a Starship Piece's own card draws its module", () => {
+  it("R3333001 every piece's own card draws its module in its bay, with no Radiant gold on its base face", () => {
+    const pictures = new Set<string>();
+    for (const id of Object.keys(STARSHIP_MODULE_IDS)) {
+      const card = CATALOG[id];
+      if (card === undefined) throw new Error(`no ${id}`);
+      const m = starshipModuleOf(id);
+      const base = svgOf(card, false);
+      const radiant = svgOf(card, true);
+      // The module, large, in the module's own paint, on the base face.
+      expect(base, id).toContain(moduleMarkup(m, modulePaint(m)));
+      pictures.add(base);
+      expect(hexes(base).filter(inRadiantGold), `${id} base`).toEqual([]);
+      expect(hexes(radiant).some(inRadiantGold), `${id} Radiant`).toBe(true);
+    }
+    expect(pictures.size).toBe(Object.keys(STARSHIP_MODULE_IDS).length);
+  });
+});
+
 describe("R2170000: CardArt draws the set's art and leaves every other card's", () => {
   it("R2170000 a Stinkyscape face carries its family and the set's picture, read from its name", () => {
     const card = byName("Cannon v3");
@@ -232,7 +284,7 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
       const art = container.querySelector<HTMLElement>(".cf-art");
       const theme = themeFor(card.tags, card.type);
       expect(art?.dataset.artFamily, card.id).toBeUndefined();
-      expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionFor(card.type), false, null));
+      expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionOf(card.id, card.type), false, null));
       cleanup();
     }
   });
@@ -244,7 +296,9 @@ describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it w
   // #2521 recorded S #176 Preemptive Strike and S #177 Cloaking Module as they ship, and S #137 again:
   // renamed Starfleet Commander, a Human, it draws from its new name. #3142 recorded S #45 Drone Commander
   // (a Human officer, no longer a hive ship) and S #150.1 Stinkyscape Golem (no longer a fighter hull)
-  // again (R3142002, R2529000).
+  // again (R3142002, R2529000). #3333 recorded the fifty Starship Pieces again, each its module in its bay (R3333001).
+  // #3338 recorded S #4 Olivian Expanse, its six Terminus cards S #4.1–#4.6 and S #154 Dice of Doom again, each
+  // now drawing a picture of its own and no longer the shared black hole or a planet (R3338001).
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
 
   it("R503 the fixture covers every Stinkyscape entry", () => {

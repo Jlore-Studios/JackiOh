@@ -47,6 +47,12 @@ import {
 
 afterEach(cleanup);
 
+/** A Dormant Starship's two pieces, oldest first (R3333000: its picture is drawn from them). */
+const SHIP_PIECES = [
+  { defId: "stinkyscape-038", radiant: false },
+  { defId: "stinkyscape-043", radiant: false },
+] as const;
+
 /** The still picture `id`'s full face draws for `picture`: its art's CSS background, and what it marks. */
 function stillPicture(id: string, radiant: boolean, picture: ArtPicture): { background: string; marked: string | null } {
   const def = CATALOG[id];
@@ -164,7 +170,7 @@ describe("R2940001 Alt art's picture and the Sketch", () => {
     expect(sketch.picture).toContain(inner(normal.picture ?? ""));
     expect(sketch.picture).toContain('filter id="sk-pencil"');
     // A Starship in play draws its pieces; its Sketch pencils them.
-    const ship = { starship: { pieces: 2, launched: false } };
+    const ship = { starship: { launched: false, list: SHIP_PIECES } };
     const flying = drawnArt("core-008", true, "normal", ship);
     const pencilled = drawnArt("core-008", true, "sketch", ship);
     expect(pencilled.family).toBe("starship");
@@ -251,7 +257,7 @@ describe("R2942001 Pixel's and Comic's pictures", () => {
   it("R2942001 a Legacy card's and a Starship's picture are restyled, and a delivered file gives way to the painter", () => {
     const LEGACY = "traininggrounds-044";
     const normal = drawnArt(LEGACY, false, "normal");
-    const ship = { starship: { pieces: 2, launched: false } };
+    const ship = { starship: { launched: false, list: SHIP_PIECES } };
     const flying = drawnArt("core-008", true, "normal", ship);
     for (const picture of ["pixel", "comic"] as const) {
       const legacy = drawnArt(LEGACY, false, picture);
@@ -431,7 +437,7 @@ describe("R2943001 Set showcase's and Out of frame's pictures", () => {
       expect(drawn.picture, part).toBe(drawnArt(id, false, "normal", { part }).picture);
     }
     const LEGACY = "traininggrounds-044";
-    const ship = { starship: { pieces: 2, launched: false } };
+    const ship = { starship: { launched: false, list: SHIP_PIECES } };
     expect([hasArtParts(LEGACY, null), hasArtParts("core-008", ship.starship)]).toEqual([false, false]);
     for (const part of ["backdrop", "subject"] as const) {
       expect(drawnArt(LEGACY, false, "normal", { part }), part).toEqual(drawnArt(LEGACY, false, "normal"));
@@ -642,7 +648,7 @@ describe("R3017002 part 6's pictures", () => {
   it("R3017002 a Legacy card and a Starship in play keep their one picture under each, and a delivered file gives way to the painter", () => {
     // Legacy: Duplicating Felinors wears its Core card's picture (R2724000); a Starship in play draws its pieces.
     const LEGACY = "traininggrounds-044";
-    const ship = { starship: { pieces: 2, launched: false } };
+    const ship = { starship: { launched: false, list: SHIP_PIECES } };
     const normal = drawnArt(LEGACY, false, "normal");
     const flying = drawnArt("core-008", true, "normal", ship);
     for (const picture of PART_SIX) {

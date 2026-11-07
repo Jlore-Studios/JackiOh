@@ -1,15 +1,28 @@
 // R2170000 (#2170): the Stinkyscape set's own art, drawn instead of `artSpec`: a space backdrop under
 // one subject its family fixes and its name details. Presentation only (CLAUDE.md rule 7); geometry
 // comes from streams the Radiant face shares, so the faces differ only in paint and gold rays. No
-// other set reaches this file, so no shipped card's picture moves (R503).
+// other set reaches this file, so no shipped card's picture moves (R503). R3333001: a Starship Piece's
+// own card draws its module (starshipModules.ts) in its bay; R3333000: a Starship in play is drawn from
+// its pieces and its design (starshipHulls.ts, `starshipSvg`); R3333002: a piece's module icon.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
-import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
+import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
 import type { ArtPart } from "./pictures.ts";
+import {
+  escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
+  starshipClassOf, type HullPaint, type StarshipArt,
+} from "./starshipHulls.ts";
+import {
+  MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type StarshipModule,
+} from "./starshipModules.ts";
+import {
+  at, between, circle, DEGREES, ellipse, FULL_TURN, glyph, group, inked, line, mirror, OUTLINE, path, poly, rect, STROKE, twinkle, whole,
+  type Paint, type Rng,
+} from "./stinkyDraw.ts";
 import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const STINKYSCAPE_PREFIX = "stinkyscape-";
@@ -134,6 +147,22 @@ const DOCTRINE_WORDS: readonly (readonly [string, string])[] = [
   ["firststrike", "strike"],
 ];
 
+/**
+ * R3338001: the Terminus cards' pictures of their own, by id (Dice of Doom prints no Terminus tag, so its id is what
+ * finds it): Olivian Expanse and its six Terminus cards, and Dice of Doom. Any other Terminus card keeps the shared
+ * black hole (`terminus`, the `hole` kind).
+ */
+export const TERMINUS_KINDS: Readonly<Record<string, string>> = {
+  "stinkyscape-004": "expanse",
+  "stinkyscape-004-1": "lamp",
+  "stinkyscape-004-2": "exam",
+  "stinkyscape-004-3": "edge",
+  "stinkyscape-004-4": "crown",
+  "stinkyscape-004-5": "destination",
+  "stinkyscape-004-6": "crunch",
+  "stinkyscape-154": "d100",
+};
+
 const ROMAN: Readonly<Record<string, number>> = { I: 1, V: 5, X: 10 };
 const TIER_MAX = 10;
 
@@ -178,6 +207,8 @@ export function stinkySubject(defId: string, name: string | undefined, tags: rea
   const tier = tierOf(name ?? "");
   const weapon = wordIn(lower, WEAPON_WORDS);
   const has = (tag: Tag): boolean => tags.includes(tag);
+  const terminusKind = Object.hasOwn(TERMINUS_KINDS, defId) ? TERMINUS_KINDS[defId] : undefined;
+  if (terminusKind !== undefined) return { family: "terminus", kind: terminusKind, tier };
   if (has("AI")) return { family: "ai", kind: type === "Unit" ? "unit" : "chip", tier };
   if (has("Terminus") || lower.includes("olivian")) return { family: "terminus", kind: "hole", tier };
   if (has("War Doctrine") || lower.includes("firststrike")) {
@@ -225,20 +256,6 @@ export function stinkySubject(defId: string, name: string | undefined, tags: rea
 }
 
 // Paint
-
-type Paint = {
-  space: readonly [string, string];
-  nebula: readonly [string, string];
-  /** The main surface's light, middle and shadow tones. */
-  light: string;
-  hull: string;
-  dark: string;
-  accent: string;
-  glow: string;
-  line: string;
-};
-
-const OUTLINE = "#0a0d14";
 
 export const FAMILY_PAINTS: Readonly<Record<StinkyFamily, Paint>> = {
   drone: { space: ["#0b2a33", "#03080c"], nebula: ["#1fb5a8", "#2a4fb8"], light: "#c5d3df", hull: "#6b7a8c", dark: "#2a323e", accent: "#ff6b3d", glow: "#43f5d2", line: OUTLINE },
@@ -319,9 +336,26 @@ function gild(paint: Paint): Paint {
   };
 }
 
+/**
+ * R3338001: each Terminus picture's own tones over the family's: a violet expanse, a lamp's warm wood, chalk on a
+ * slate sky, a blue-white light at the horizon, a hand and its gold crown, a cold lane over a violet abyss, a
+ * collapse burning white, a pale die on black velvet. The shared black hole (`hole`) has none, so it keeps its own.
+ */
+const TERMINUS_TONES: Readonly<Record<string, Partial<Paint>>> = {
+  expanse: { space: ["#1c0b33", "#030008"], nebula: ["#8a3ae0", "#3a1a9a"], light: "#eedcff", hull: "#6a3ac8", dark: "#12062a", accent: "#ffe7b0", glow: "#d2a8ff" },
+  lamp: { nebula: ["#5a2a10", "#1a1030"], light: "#ffe9b8", hull: "#6a4026", dark: "#140a04", accent: "#ffcf6a", glow: "#ffd28a" },
+  exam: { space: ["#0e1a16", "#010403"], nebula: ["#2a5a4a", "#2a1a4a"], light: "#f4f1e6", hull: "#7a5a3a", dark: "#0a1210", accent: "#ffcf6a", glow: "#e8f4ff" },
+  edge: { nebula: ["#1a3a8a", "#3a1a6a"], light: "#ffffff", hull: "#3a6ad8", dark: "#000000", accent: "#ffffff", glow: "#bfe8ff" },
+  crown: { nebula: ["#6a2a12", "#2a1a5a"], light: "#f0cfae", hull: "#c08a62", dark: "#2a1410", accent: "#ffd23a", glow: "#ffe9a0" },
+  destination: { nebula: ["#5a1aa8", "#1a3a8a"], light: "#f0f4ff", hull: "#4a5ad8", dark: "#0a0c1c", accent: "#ff6a5a", glow: "#a8f0ff" },
+  crunch: { nebula: ["#d43fd0", "#3a1a6a"], light: "#ffffff", hull: "#ff9a2a", dark: "#000000", accent: "#ff8af5", glow: "#fff0d8" },
+  d100: { space: ["#0c0a10", "#000000"], nebula: ["#3a0a1a", "#16141e"], light: "#f6f4fa", hull: "#b9b6c8", dark: "#1c1a26", accent: "#ffcf6a", glow: "#ff6a5a" },
+};
+
 function kindPaint(base: Paint, subject: StinkySubject, lower: string): Paint {
   const kind = subject.kind;
   if (subject.family === "jlockeed") return base;
+  if (subject.family === "terminus") return { ...base, ...(Object.hasOwn(TERMINUS_TONES, kind) ? TERMINUS_TONES[kind] : {}) };
   const color = KIND_COLORS[kind];
   if (subject.family === "resource" && color !== undefined) return { ...base, accent: color };
   if (subject.family === "fleet" && kind === "pod") {
@@ -339,13 +373,8 @@ function kindPaint(base: Paint, subject: StinkySubject, lower: string): Paint {
 
 // Drawing
 
-type Rng = () => number;
-
 const BOX = 100;
 const HALF = BOX / 2;
-const DEGREES = Math.PI / 180;
-const FULL_TURN = 360;
-const STROKE = 0.7;
 /** Where the subject sits: a little below the middle, as every window crops it (ART.md). */
 const SUBJECT_X = 50;
 const SUBJECT_Y = 52;
@@ -374,90 +403,6 @@ const VIGNETTE_START = 0.62;
 const VIGNETTE_OPACITY = 0.55;
 const GRID_STEP = 10;
 const GRID_MAJOR = 5;
-
-function between(rng: Rng, low: number, high: number): number {
-  return low + (high - low) * rng();
-}
-
-function whole(rng: Rng, low: number, high: number): number {
-  return low + Math.floor(rng() * (high - low + 1));
-}
-
-function attrs(values: Readonly<Record<string, string | number>>): string {
-  return Object.entries(values)
-    .map(([key, value]) => `${key}="${typeof value === "number" ? fmt(value) : value}"`)
-    .join(" ");
-}
-
-function shape(tag: string, values: Readonly<Record<string, string | number>>): string {
-  return `<${tag} ${attrs(values)}/>`;
-}
-
-function points(list: readonly (readonly [number, number])[]): string {
-  return list.map(([x, y]) => `${fmt(x)},${fmt(y)}`).join(" ");
-}
-
-function poly(list: readonly (readonly [number, number])[], fill: string, line: string, extra: Record<string, string | number> = {}): string {
-  return shape("polygon", { points: points(list), fill, stroke: line, "stroke-width": STROKE, "stroke-linejoin": "round", ...extra });
-}
-
-function mirror(list: readonly (readonly [number, number])[]): (readonly [number, number])[] {
-  return [...list, ...[...list].reverse().map(([x, y]) => [x, -y] as const)];
-}
-
-function circle(cx: number, cy: number, r: number, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("circle", { cx, cy, r, fill, ...extra });
-}
-
-function ellipse(cx: number, cy: number, rx: number, ry: number, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("ellipse", { cx, cy, rx, ry, fill, ...extra });
-}
-
-function rect(x: number, y: number, w: number, h: number, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("rect", { x, y, width: w, height: h, fill, ...extra });
-}
-
-function path(d: string, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("path", { d, fill, ...extra });
-}
-
-function line(x1: number, y1: number, x2: number, y2: number, stroke: string, width: number, extra: Record<string, string | number> = {}): string {
-  return shape("line", { x1, y1, x2, y2, stroke, "stroke-width": width, "stroke-linecap": "round", ...extra });
-}
-
-function inked(p: Paint): Record<string, string | number> {
-  return { stroke: p.line, "stroke-width": STROKE };
-}
-
-function group(transform: string, body: string, extra: Record<string, string | number> = {}): string {
-  const more = Object.keys(extra).length === 0 ? "" : ` ${attrs(extra)}`;
-  return `<g transform="${transform}"${more}>${body}</g>`;
-}
-
-function at(x: number, y: number, rotate = 0, scale = 1): string {
-  return `translate(${fmt(x)} ${fmt(y)}) rotate(${fmt(rotate)}) scale(${fmt(scale)})`;
-}
-
-function twinkle(x: number, y: number, r: number, fill: string, opacity: number): string {
-  const w = r * 0.22;
-  return path(
-    `M${fmt(x)} ${fmt(y - r)}L${fmt(x + w)} ${fmt(y - w)}L${fmt(x + r)} ${fmt(y)}L${fmt(x + w)} ${fmt(y + w)}` +
-      `L${fmt(x)} ${fmt(y + r)}L${fmt(x - w)} ${fmt(y + w)}L${fmt(x - r)} ${fmt(y)}L${fmt(x - w)} ${fmt(y - w)}Z`,
-    fill,
-    { opacity },
-  );
-}
-
-/** One of EMBLEMS' glyphs, centered at (x, y), `size` across. */
-function glyph(name: EmblemGlyph, x: number, y: number, size: number, fill: string, stroke: string): string {
-  const drawn = EMBLEMS[name];
-  const scale = size / EMBLEM_BOX;
-  const center = EMBLEM_BOX / 2;
-  return group(
-    `translate(${fmt(x)} ${fmt(y)}) scale(${fmt(scale)}) translate(-${center} -${center})`,
-    path(drawn.d, fill, { stroke, "stroke-width": 1.1, "stroke-linejoin": "round", "fill-rule": drawn.rule }),
-  );
-}
 
 // The backdrop
 
@@ -1217,10 +1162,15 @@ function doctrine(p: Paint, kind: string): string {
   return out.join("");
 }
 
+/** The shared black hole's accretion disk, its back half; R3338001: no Terminus card's own picture draws it. */
+export const TERMINUS_DISK_BACK = "M-40 0A40 11 0 0 1 40 0L26 0A26 6 0 0 0 -26 0Z";
+const TERMINUS_DISK_FRONT = "M-40 0A40 11 0 0 0 40 0L26 0A26 6 0 0 1 -26 0Z";
+
+/** The shared black hole, which any Terminus card `TERMINUS_KINDS` does not list still draws. */
 function terminus(rng: Rng, p: Paint): string {
   const tilt = between(rng, -16, 16);
   const disk = (half: "back" | "front"): string =>
-    group(at(0, 0, tilt), path(half === "back" ? "M-40 0A40 11 0 0 1 40 0L26 0A26 6 0 0 0 -26 0Z" : "M-40 0A40 11 0 0 0 40 0L26 0A26 6 0 0 1 -26 0Z", "url(#ad)", { opacity: 0.95 }));
+    group(at(0, 0, tilt), path(half === "back" ? TERMINUS_DISK_BACK : TERMINUS_DISK_FRONT, "url(#ad)", { opacity: 0.95 }));
   return [
     circle(0, 0, 30, p.hull, { opacity: 0.12 }),
     disk("back"),
@@ -1230,6 +1180,418 @@ function terminus(rng: Rng, p: Paint): string {
     circle(0, 0, 13.4, "none", { stroke: p.accent, "stroke-width": 0.8 }),
     disk("front"),
   ].join("");
+}
+
+// R3338001: the Terminus cards' pictures of their own (`TERMINUS_KINDS`), each drawn about (0, 0) as every subject
+// is, from the subject's stream alone, so Alt art lays each out anew and the Radiant face keeps the geometry.
+
+/** A path's `d` from its commands and numbers, each number written as SVG takes it. */
+function pathOf(parts: readonly (string | number)[]): string {
+  return parts.map((part) => (typeof part === "number" ? fmt(part) : part)).join(" ");
+}
+
+/** The Terminus cards falling across Olivian Expanse's sky. */
+const EXPANSE_STARS = 6;
+
+/** Olivian Expanse: an endless violet expanse, the six Terminus cards falling across its sky as distant stars. */
+function expanseScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  const horizon = between(rng, 4, 12);
+  const vanish = between(rng, -14, 14);
+  // The plain, lit at its horizon and running off into the dark.
+  out.push(rect(-60, horizon, 120, 60, "url(#hl)", { opacity: 0.62 }));
+  out.push(ellipse(vanish, horizon, 58, 5, p.glow, { opacity: 0.35 }));
+  out.push(ellipse(vanish, horizon, 30, 1.6, p.light, { opacity: 0.6 }));
+  // Its rows, closer as they recede, and the lines that meet at the vanishing point: it goes on for ever.
+  let gap = 1.6;
+  for (let y = horizon + 2; y < 50; y += gap) {
+    out.push(line(-60, y, 60, y, p.glow, 0.25 + gap * 0.03, { opacity: 0.3 }));
+    gap *= 1.5;
+  }
+  for (let k = -6; k <= 6; k += 1) out.push(line(vanish, horizon, vanish + k * between(rng, 13, 17), 50, p.glow, 0.3, { opacity: 0.25 }));
+  // The six cards, falling the same way, each in its own slot of the sky, a trail behind each.
+  const fall = (rng() < 0.5 ? -1 : 1) * between(rng, 28, 48);
+  const behind = (fall - 90) * DEGREES;
+  const ux = Math.cos(behind);
+  const uy = Math.sin(behind);
+  for (let k = 0; k < EXPANSE_STARS; k += 1) {
+    const x = -40 + (80 * (k + 0.5)) / EXPANSE_STARS + between(rng, -4, 4);
+    const y = between(rng, -36, horizon - 12);
+    const length = between(rng, 10, 18);
+    out.push(poly([[x - uy * 0.8, y + ux * 0.8], [x + ux * length, y + uy * length], [x + uy * 0.8, y - ux * 0.8]], p.glow, "none", { opacity: 0.55 }));
+    out.push(line(x, y, x + ux * length * 0.5, y + uy * length * 0.5, "#ffffff", 0.35, { opacity: 0.8 }));
+    out.push(circle(x, y, 2.8, p.glow, { opacity: 0.35 }));
+    out.push(group(at(x, y, fall), rect(-1.4, -2, 2.8, 4, p.light, { rx: 0.5, stroke: p.accent, "stroke-width": 0.4 })));
+  }
+  return out.join("");
+}
+
+/** Farewell: an empty table under a single lamp, every card gone but the marks where they lay. */
+function lampScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  const lx = between(rng, -6, 6);
+  const shade = between(rng, -32, -26);
+  const tx = lx + between(rng, -4, 4);
+  const ty = between(rng, 10, 15);
+  const rx = between(rng, 24, 30);
+  const ry = rx * 0.26;
+  // The shadow on the floor, the legs, and the table's edge under its top.
+  out.push(ellipse(tx, 40, rx * 0.95, 4, "#000000", { opacity: 0.5 }));
+  for (const [dx, from, foot] of [[-0.4, -0.4, 34], [0.4, -0.4, 34], [-0.72, 0.4, 40], [0.72, 0.4, 40]] as const) {
+    out.push(rect(tx + rx * dx - 1.1, ty + ry * from, 2.2, foot - ty - ry * from, p.dark, inked(p)));
+  }
+  out.push(ellipse(tx, ty + 2.2, rx, ry, p.dark, inked(p)));
+  out.push(ellipse(tx, ty, rx, ry, p.hull, inked(p)));
+  // The lamp's cone of light down to the table, and the pool it leaves there.
+  const rim = shade + 9;
+  out.push(poly([[lx - 7, rim], [lx + 7, rim], [tx + rx * 0.9, ty], [tx - rx * 0.9, ty]], p.glow, "none", { opacity: 0.14 }));
+  out.push(poly([[lx - 4, rim], [lx + 4, rim], [tx + rx * 0.55, ty], [tx - rx * 0.55, ty]], p.glow, "none", { opacity: 0.12 }));
+  out.push(ellipse(tx, ty, rx * 0.62, ry * 0.62, p.glow, { opacity: 0.45 }));
+  // Where the cards lay: their outlines, and nothing in them.
+  const marks = whole(rng, 3, 5);
+  for (let k = 0; k < marks; k += 1) {
+    const mx = tx + between(rng, -rx * 0.55, rx * 0.55);
+    const my = ty + between(rng, -ry * 0.45, ry * 0.45);
+    const turn = between(rng, -40, 40);
+    out.push(
+      group(
+        `translate(${fmt(mx)} ${fmt(my)}) scale(1 0.3) rotate(${fmt(turn)})`,
+        rect(-2.6, -3.6, 5.2, 7.2, "none", { stroke: p.light, "stroke-width": 0.7, "stroke-dasharray": "1 0.8", opacity: 0.7, rx: 0.6 }),
+      ),
+    );
+  }
+  // The lamp: its cord, its shade and its bulb.
+  out.push(line(lx, -60, lx, shade, p.hull, 0.7));
+  out.push(circle(lx, rim + 0.5, 7, p.glow, { opacity: 0.3 }));
+  out.push(poly([[lx - 2.2, shade], [lx + 2.2, shade], [lx + 7.5, rim], [lx - 7.5, rim]], "url(#hl)", p.line));
+  out.push(ellipse(lx, rim, 7.5, 1.4, p.dark, inked(p)));
+  out.push(circle(lx, rim + 0.6, 2, "#ffffff", { opacity: 0.95 }));
+  return out.join("");
+}
+
+type ChalkMark = (x: number, y: number, u: number) => string;
+
+/** The marks KY's Last Exam chalks, each about two `u` tall about (x, y); no text, so no letter is drawn as one. */
+const CHALK_MARKS: Readonly<Record<string, ChalkMark>> = {
+  integral: (x, y, u) => pathOf(["M", x + u * 0.9, y - u * 1.6, "Q", x + u * 0.2, y - u * 2.2, x, y - u * 0.8, "L", x, y + u * 0.8, "Q", x - u * 0.2, y + u * 2.2, x - u * 0.9, y + u * 1.6]),
+  sigma: (x, y, u) => pathOf(["M", x + u, y - u * 1.4, "L", x - u, y - u * 1.4, "L", x + u * 0.2, y, "L", x - u, y + u * 1.4, "L", x + u, y + u * 1.4]),
+  pi: (x, y, u) => pathOf(["M", x - u * 1.1, y - u * 0.9, "L", x + u * 1.1, y - u * 1.1, "M", x - u * 0.5, y - u, "Q", x - u * 0.4, y + u * 0.6, x - u * 0.9, y + u * 1.2, "M", x + u * 0.5, y - u, "L", x + u * 0.6, y + u * 1.2]),
+  root: (x, y, u) => pathOf(["M", x - u * 1.4, y + u * 0.2, "L", x - u * 0.9, y - u * 0.1, "L", x - u * 0.3, y + u * 1.3, "L", x + u * 0.3, y - u * 1.5, "L", x + u * 1.8, y - u * 1.5]),
+  infinity: (x, y, u) => pathOf(["M", x, y, "Q", x - u * 0.6, y - u, x - u * 1.2, y, "Q", x - u * 0.6, y + u, x, y, "Q", x + u * 0.6, y - u, x + u * 1.2, y, "Q", x + u * 0.6, y + u, x, y]),
+  square: (x, y, u) => pathOf(["M", x - u, y - u, "L", x + u * 0.6, y + u, "M", x + u * 0.6, y - u, "L", x - u, y + u, "M", x + u * 0.9, y - u * 1.6, "Q", x + u * 1.5, y - u * 2.2, x + u * 1.7, y - u * 1.4, "L", x + u * 0.9, y - u * 0.6, "L", x + u * 1.8, y - u * 0.6]),
+  plus: (x, y, u) => pathOf(["M", x - u, y, "L", x + u, y, "M", x, y - u, "L", x, y + u]),
+};
+const CHALK_EQUALS: ChalkMark = (x, y, u) => pathOf(["M", x - u, y - u * 0.4, "L", x + u, y - u * 0.4, "M", x - u, y + u * 0.4, "L", x + u, y + u * 0.4]);
+const CHALK_ASK: ChalkMark = (x, y, u) =>
+  pathOf(["M", x - u * 0.8, y - u * 0.9, "Q", x - u * 0.6, y - u * 1.8, x, y - u * 1.8, "Q", x + u * 0.9, y - u * 1.7, x + u * 0.8, y - u * 0.8, "Q", x + u * 0.6, y - u * 0.1, x, y + u * 0.2, "L", x, y + u * 0.7, "M", x, y + u * 1.3, "L", x, y + u * 1.4]);
+/** How many marks the problem writes before its "= ?". */
+const CHALK_TERMS_MIN = 4;
+const CHALK_TERMS_MAX = 5;
+const CHALK_DUST = 10;
+const CLOCK_HOURS = 12;
+/** The one desk, drawn larger than the hall around it so it reads on a small face. */
+const EXAM_DESK_SCALE = 1.4;
+
+/** KY's Last Exam: one desk in an exam hall at the end of time, its clock at midnight, an impossible problem chalked across the sky. */
+function examScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  // The problem: a shuffled run of marks, then "= ?", written along a slope across the sky.
+  const terms = whole(rng, CHALK_TERMS_MIN, CHALK_TERMS_MAX);
+  const shuffled = Object.values(CHALK_MARKS)
+    .map((mark) => ({ mark, key: rng() }))
+    .sort((a, b) => a.key - b.key)
+    .slice(0, terms)
+    .map((entry) => entry.mark);
+  const marks = [...shuffled, CHALK_EQUALS, CHALK_ASK];
+  const u = between(rng, 2.6, 3.2);
+  const base = between(rng, -30, -22);
+  const slope = between(rng, -0.08, 0.08);
+  const step = 80 / marks.length;
+  let problem = "";
+  marks.forEach((mark, k) => {
+    const x = -40 + step * (k + 0.5);
+    problem += mark(x, base + slope * x + between(rng, -1.5, 1.5), u);
+  });
+  const chalk = { stroke: p.light, "stroke-linecap": "round", "stroke-linejoin": "round" } as const;
+  out.push(path(problem, "none", { ...chalk, "stroke-width": 2.4, opacity: 0.16 }));
+  out.push(path(problem, "none", { ...chalk, "stroke-width": 0.9, opacity: 0.9 }));
+  out.push(path(pathOf(["M", -42, base + 7, "Q", 0, base + 10 + between(rng, -2, 2), 42, base + 6]), "none", { ...chalk, "stroke-width": 0.6, opacity: 0.6 }));
+  for (let k = 0; k < CHALK_DUST; k += 1) {
+    out.push(circle(between(rng, -42, 42), base + between(rng, -6, 8), between(rng, 0.15, 0.4), p.light, { opacity: between(rng, 0.3, 0.7) }));
+  }
+  // The hall's floor, its boards running off toward a vanishing point.
+  const floor = between(rng, 20, 24);
+  const vx = between(rng, -10, 10);
+  out.push(rect(-60, floor, 120, 40, p.dark, { opacity: 0.6 }));
+  out.push(line(-60, floor, 60, floor, p.light, 0.3, { opacity: 0.35 }));
+  for (let k = -5; k <= 5; k += 1) out.push(line(vx + k * 5, floor, vx + k * 18, 50, p.light, 0.25, { opacity: 0.18 }));
+  // The clock on one side, stopped at midnight.
+  const side = rng() < 0.5 ? -1 : 1;
+  const clockX = side * between(rng, 28, 34);
+  const clockY = between(rng, -2, 6);
+  out.push(circle(clockX, clockY, 6, p.dark, { stroke: p.light, "stroke-width": 0.7 }));
+  for (let k = 0; k < CLOCK_HOURS; k += 1) {
+    const a = (k * FULL_TURN * DEGREES) / CLOCK_HOURS;
+    out.push(line(clockX + 4.6 * Math.cos(a), clockY + 4.6 * Math.sin(a), clockX + 5.4 * Math.cos(a), clockY + 5.4 * Math.sin(a), p.light, 0.4));
+  }
+  out.push(line(clockX, clockY, clockX, clockY - 4.2, p.light, 0.6));
+  out.push(line(clockX, clockY, clockX + 0.4, clockY - 3, p.light, 0.9));
+  out.push(circle(clockX, clockY, 0.6, p.accent));
+  // The one desk, away from the clock, its feet on the floor: its back legs, its top, its front legs, and the paper
+  // and pencil on it.
+  const desk: string[] = [];
+  for (const x of [-11, 9]) desk.push(rect(x, -2, 1.4, 9, p.hull, inked(p)));
+  desk.push(poly([[-12, -3], [11, -3], [14, 1], [-9, 1]], p.hull, p.line));
+  desk.push(rect(-9, 1, 23, 1.8, mixHex(p.hull, "#000000", 0.35), inked(p)));
+  for (const x of [-8.5, 12]) desk.push(rect(x, 2.8, 1.6, 9.2, p.hull, inked(p)));
+  desk.push(poly([[-3, -2.4], [4, -2.4], [5.4, 0.4], [-1.6, 0.4]], p.light, p.line));
+  for (const y of [-1.6, -0.8]) desk.push(line(-1.4, y, 3.6, y, p.dark, 0.25, { opacity: 0.6 }));
+  desk.push(line(6, -1, 10, -2.2, p.accent, 0.7));
+  out.push(group(at(between(rng, -8, 8) - side * 4, floor - 8 * EXAM_DESK_SCALE, 0, EXAM_DESK_SCALE), desk.join("")));
+  return out.join("");
+}
+
+/** Event Horizon: a light caught at the edge of a black hole, the hours round it stopped, starlight bent about it. */
+function edgeScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  const r = between(rng, 13, 16);
+  out.push(circle(0, 0, r * 2, p.glow, { opacity: 0.08 }));
+  out.push(circle(0, 0, r * 1.45, p.hull, { opacity: 0.14 }));
+  // Starlight lensed round it: arcs, never a disk.
+  const arcs = whole(rng, 2, 3);
+  for (let k = 0; k < arcs; k += 1) {
+    const turn = between(rng, 0, FULL_TURN);
+    const a = r * between(rng, 1.5, 2.1);
+    out.push(group(at(0, 0, turn), path(pathOf(["M", -a, 0, "A", a, a * 0.62, 0, 0, 1, a, 0]), "none", { stroke: p.glow, "stroke-width": 0.5, opacity: 0.45 })));
+  }
+  // The stopped clock: its hours round the horizon, every third one longer.
+  for (let k = 0; k < CLOCK_HOURS; k += 1) {
+    const a = (k * FULL_TURN * DEGREES) / CLOCK_HOURS;
+    const quarter = k % 3 === 0;
+    const reach = r + (quarter ? 8.5 : 7);
+    out.push(line((r + 5) * Math.cos(a), (r + 5) * Math.sin(a), reach * Math.cos(a), reach * Math.sin(a), p.light, quarter ? 0.8 : 0.4, { opacity: 0.55 }));
+  }
+  // The photon ring and the hole.
+  out.push(circle(0, 0, r + 1.4, "none", { stroke: p.glow, "stroke-width": 2.8, opacity: 0.55 }));
+  out.push(circle(0, 0, r, "#000000"));
+  out.push(circle(0, 0, r + 0.4, "none", { stroke: "#ffffff", "stroke-width": 0.6, opacity: 0.9 }));
+  // The light: come from far off, bent toward the hole, and held at its edge.
+  const caught = between(rng, -150, -30) * DEGREES;
+  const hx = (r + 0.6) * Math.cos(caught);
+  const hy = (r + 0.6) * Math.sin(caught);
+  const sx = (rng() < 0.5 ? -1 : 1) * 52;
+  const sy = between(rng, -30, 10);
+  const ray = pathOf(["M", sx, sy, "Q", (sx + hx) / 2, Math.min(sy, hy) - r * 0.6, hx, hy]);
+  out.push(path(ray, "none", { stroke: p.glow, "stroke-width": 2.2, opacity: 0.4, "stroke-linecap": "round" }));
+  out.push(path(ray, "none", { stroke: "#ffffff", "stroke-width": 0.6, opacity: 0.9, "stroke-linecap": "round" }));
+  out.push(circle(hx, hy, 3.4, p.glow, { opacity: 0.5 }));
+  out.push(twinkle(hx, hy, 4.4, "#ffffff", 1));
+  return out.join("");
+}
+
+/** The crown's three stones. */
+const CROWN_JEWELS: readonly string[] = [VAMP_RED, "#3a7ad0", "#2fbf7a"];
+
+/** Last Word: a hand reaching up to catch a falling crown. */
+function crownScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  // The hand, leaning as it reaches, its sleeve running out of the window's foot: fingers, palm, thumb.
+  const hand: string[] = [rect(-8, 18, 16, 40, p.dark, inked(p)), rect(-8.6, 16, 17.2, 4, p.hull, { ...inked(p), rx: 1 })];
+  const fingers: readonly (readonly [number, number, number])[] = [[-5.4, 10, -8], [-1.8, 12.5, -2], [1.8, 11.5, 3], [5.2, 8.5, 9]];
+  for (const [x, length, turn] of fingers) hand.push(group(at(x, 4, turn), rect(-1.6, -length, 3.2, length + 2, p.light, { ...inked(p), rx: 1.6 })));
+  hand.push(path("M-7 17L-7.6 5Q-7.4 2 -4 2L4.4 2Q7.4 2 7.4 5L7 17Z", p.light, inked(p)));
+  hand.push(path("M2 3L4.4 2Q7.4 2 7.4 5L7 17L3 17Z", p.hull, { opacity: 0.45 }));
+  hand.push(path("M-7.2 12Q-11 9 -12.4 3Q-12.6 1 -11 1.4Q-9.6 2 -8.6 5L-7 8Z", p.light, inked(p)));
+  hand.push(path("M-4 11Q0 13 4 11", "none", { stroke: p.hull, "stroke-width": 0.6, opacity: 0.8 }));
+  out.push(group(at(between(rng, -6, 6), 4, between(rng, -14, 14)), hand.join("")));
+  // The crown above the fingertips, turning as it falls, its fall streaked above it.
+  const cx = between(rng, -8, 8);
+  const cy = between(rng, -26, -20);
+  for (const dx of [-6, 0, 6]) out.push(line(cx + dx, cy - 12 - between(rng, 0, 4), cx + dx, cy - 20 - between(rng, 0, 6), p.glow, 0.5, { opacity: 0.45 }));
+  const body = [
+    poly([[-10, 0], [-11, -9], [-5.5, -3.5], [0, -11], [5.5, -3.5], [11, -9], [10, 0]], p.accent, p.line),
+    rect(-10.4, -0.6, 20.8, 4.6, mixHex(p.accent, "#000000", 0.22), { ...inked(p), rx: 0.8 }),
+    ...([[-11, -9], [0, -11], [11, -9]] as const).map(([x, y]) => circle(x, y, 1.3, p.light, inked(p))),
+    ...[-6, 0, 6].map((x, index) => circle(x, 1.7, 1.3, CROWN_JEWELS[index] ?? VAMP_RED, inked(p))),
+    path("M-8 -1.2L-7.6 -6", "none", { stroke: "#ffffff", "stroke-width": 0.7, opacity: 0.6, "stroke-linecap": "round" }),
+  ].join("");
+  out.push(circle(cx, cy - 3, 14, p.glow, { opacity: 0.08 }));
+  out.push(circle(cx, cy - 3, 9, p.glow, { opacity: 0.12 }));
+  out.push(group(at(cx, cy, between(rng, -35, 35)), body));
+  out.push(twinkle(cx + 9, cy - 8, 2.6, "#ffffff", 0.9));
+  return out.join("");
+}
+
+/** The lanes 1v1 Final Destination stands over: one open, the rest locked and broken. */
+const DESTINATION_LANES = 5;
+const DESTINATION_SHARDS = 3;
+const DESTINATION_HERO_SCALE = 1.5;
+
+/** 1v1 Final Destination: one lane of light over an abyss, a hero at each end, the other lanes broken and dark. */
+function destinationScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  // The abyss, going down and down.
+  out.push(ellipse(0, 26, 56, 22, "#000000", { opacity: 0.7 }));
+  for (let k = 1; k <= 4; k += 1) out.push(ellipse(0, 26 + k * 2, 56 - k * 11, 22 - k * 4.6, "none", { stroke: p.hull, "stroke-width": 0.5, opacity: 0.35 - k * 0.06 }));
+  // The lanes: every one but the open one broken into dark pieces.
+  const open = whole(rng, 0, DESTINATION_LANES - 1);
+  const rows = Array.from({ length: DESTINATION_LANES }, (_, row) => -22 + row * 11 + between(rng, -1, 1));
+  rows.forEach((y, row) => {
+    if (row === open) return;
+    let x = -40;
+    while (x < 40) {
+      const w = Math.min(between(rng, 6, 14), 40 - x);
+      out.push(rect(x, y - 1, w, 2, p.hull, { ...inked(p), opacity: 0.45 }));
+      x += w + between(rng, 3, 7);
+    }
+  });
+  // Pieces of them falling into the abyss.
+  for (let k = 0; k < DESTINATION_SHARDS; k += 1) {
+    out.push(group(at(between(rng, -30, 30), between(rng, 24, 38), between(rng, -60, 60)), rect(-2, -0.8, 4, 1.6, p.hull, { ...inked(p), opacity: 0.4 })));
+  }
+  // The open lane, lit, and its two heroes, one at each end, facing each other.
+  const y = rows[open] ?? 0;
+  out.push(rect(-42, y - 3, 84, 6, p.glow, { opacity: 0.22, rx: 3 }));
+  out.push(rect(-40, y - 1.3, 80, 2.6, p.glow, { opacity: 0.95, rx: 1.3 }));
+  out.push(line(-40, y, 40, y, "#ffffff", 0.6, { opacity: 0.9 }));
+  for (const [x, paint] of [[-35, p.light], [35, p.accent]] as const) {
+    const hero = [
+      circle(0, -4, 4.2, paint, { opacity: 0.22 }),
+      poly([[-2.4, -1.4], [-1.3, -7.6], [1.3, -7.6], [2.4, -1.4]], paint, p.line),
+      circle(0, -9.4, 1.8, paint, inked(p)),
+    ].join("");
+    out.push(group(at(x, y - 1.3, 0, DESTINATION_HERO_SCALE), hero));
+  }
+  return out.join("");
+}
+
+/** The Big Crunch: the universe collapsing to a point, its light streaming in and its galaxies drawn after it. */
+function crunchScene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  const twist = between(rng, 18, 34) * (rng() < 0.5 ? -1 : 1);
+  // The rings it is shrinking through.
+  for (const r of [40, 27, 16]) out.push(circle(0, 0, r, "none", { stroke: p.glow, "stroke-width": 0.5, opacity: 0.25, "stroke-dasharray": "2 1.6" }));
+  // Galaxies stretched as they fall in.
+  const galaxies = whole(rng, 3, 4);
+  const start = between(rng, 0, FULL_TURN);
+  for (let k = 0; k < galaxies; k += 1) {
+    const a = start + (FULL_TURN * k) / galaxies + between(rng, -20, 20);
+    const reach = between(rng, 22, 34);
+    out.push(group(at(reach * Math.cos(a * DEGREES), reach * Math.sin(a * DEGREES), a + twist), ellipse(0, 0, 7, 2.2, p.accent, { opacity: 0.35 }) + ellipse(0, 0, 3.4, 1.1, p.light, { opacity: 0.7 })));
+  }
+  // The light streaming in, curving as it goes.
+  const streaks = whole(rng, 22, 30);
+  const colors = [p.glow, p.accent, p.light];
+  for (let k = 0; k < streaks; k += 1) {
+    const a = (FULL_TURN * k) / streaks + between(rng, -5, 5);
+    const outer = between(rng, 26, 50);
+    const inner = between(rng, 5, 10);
+    const w = between(rng, 0.5, 1.3);
+    const from = a * DEGREES;
+    const to = (a + twist) * DEGREES;
+    const bend = (a + twist * 0.4) * DEGREES;
+    const mid = (outer + inner) / 2;
+    const ox = outer * Math.cos(from);
+    const oy = outer * Math.sin(from);
+    const nx = -Math.sin(from) * w;
+    const ny = Math.cos(from) * w;
+    const qx = mid * Math.cos(bend);
+    const qy = mid * Math.sin(bend);
+    const streak = pathOf(["M", ox + nx, oy + ny, "Q", qx, qy, inner * Math.cos(to), inner * Math.sin(to), "Q", qx, qy, ox - nx, oy - ny, "Z"]);
+    out.push(path(streak, colors[k % colors.length] ?? p.glow, { opacity: between(rng, 0.45, 0.85) }));
+  }
+  // The point it all falls into.
+  out.push(circle(0, 0, 9, p.glow, { opacity: 0.35 }));
+  out.push(circle(0, 0, 4.2, p.light, { opacity: 0.9 }));
+  out.push(twinkle(0, 0, 11, "#ffffff", 0.95));
+  out.push(circle(0, 0, 1.6, "#ffffff"));
+  return out.join("");
+}
+
+const VELVET = "#2a0612";
+const VELVET_SHEEN = "#7a2034";
+
+/** The die's 67, a "6" and a "7" stroked about (x, y), `u` half their height: no text, so each digit is a path. */
+function sixtySeven(x: number, y: number, u: number): string {
+  const six = x - u * 0.62;
+  const seven = x + u * 0.62;
+  const r = u * 0.48;
+  return pathOf([
+    "M", six + u * 0.4, y - u, "Q", six - u * 0.5, y - u * 0.75, six - r, y + u * 0.45,
+    "A", r, r, 0, 1, 0, six + r, y + u * 0.45, "A", r, r, 0, 1, 0, six - r, y + u * 0.45,
+    "M", seven - u * 0.5, y - u, "L", seven + u * 0.5, y - u, "L", seven - u * 0.15, y + u,
+  ]);
+}
+
+/** Dice of Doom: a hundred-sided die on black velvet, 67 glowing faintly on the face it shows. */
+function d100Scene(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  // The velvet, draped in folds, and the sheen along them.
+  const lift = between(rng, 10, 16);
+  const folds = whole(rng, 3, 5);
+  let drape = pathOf(["M", -60, lift + 4]);
+  for (let k = 0; k < folds; k += 1) {
+    const x0 = -60 + (120 * k) / folds;
+    const x1 = -60 + (120 * (k + 1)) / folds;
+    drape += pathOf(["Q", (x0 + x1) / 2, lift + between(rng, -5, 3), x1, lift + between(rng, 1, 5)]);
+  }
+  out.push(path(`${drape}L60 60L-60 60Z`, VELVET));
+  for (let k = 0; k < folds; k += 1) {
+    const x = -60 + (120 * (k + 0.5)) / folds + between(rng, -6, 6);
+    out.push(path(pathOf(["M", x, lift + 2, "Q", x + between(rng, -8, 8), lift + 20, x + between(rng, -6, 6), 50]), "none", {
+      stroke: VELVET_SHEEN,
+      "stroke-width": between(rng, 1.4, 3),
+      opacity: 0.35,
+      "stroke-linecap": "round",
+    }));
+  }
+  // The die resting on it, its shadow under it, and the facets over it turned as it landed.
+  const r = between(rng, 17, 20);
+  const dx = between(rng, -6, 6);
+  const dy = lift + 2 - r;
+  out.push(ellipse(dx, lift + 3, r * 0.9, 3.2, "#000000", { opacity: 0.6 }));
+  out.push(circle(dx, dy, r, "url(#dr)", inked(p)));
+  const seam = { stroke: p.dark, "stroke-width": 0.4, opacity: 0.45 };
+  const facets: string[] = [];
+  for (let k = -2; k <= 2; k += 1) {
+    const ly = k * r * 0.34;
+    const lx = r * Math.sqrt(Math.max(0, 1 - (ly / r) ** 2));
+    facets.push(path(pathOf(["M", -lx, ly, "A", lx, lx * 0.3, 0, 0, 0, lx, ly]), "none", seam));
+  }
+  for (const share of [0.38, 0.72]) {
+    for (const sweep of [0, 1]) facets.push(path(pathOf(["M", 0, -r, "A", r * share, r, 0, 0, sweep, 0, r]), "none", seam));
+  }
+  facets.push(line(0, -r, 0, r, p.dark, 0.4, { opacity: 0.45 }));
+  // The face it shows, and the 67 on it, glowing faintly.
+  const fx = between(rng, -3, 3);
+  const fy = between(rng, -3, 3);
+  facets.push(poly([[fx - 5, fy - 4.4], [fx + 5, fy - 4.4], [fx + 6, fy + 0.4], [fx, fy + 5.6], [fx - 6, fy + 0.4]], p.light, p.dark, { opacity: 0.92 }));
+  facets.push(circle(fx, fy, 6, p.glow, { opacity: 0.2 }));
+  const digits = sixtySeven(fx, fy, 2.6);
+  facets.push(path(digits, "none", { stroke: p.glow, "stroke-width": 2.2, opacity: 0.35, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  facets.push(path(digits, "none", { stroke: p.glow, "stroke-width": 0.9, opacity: 0.95, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  out.push(group(at(dx, dy, between(rng, -25, 25)), facets.join("")));
+  out.push(circle(dx - r * 0.4, dy - r * 0.45, r * 0.18, "#ffffff", { opacity: 0.45 }));
+  out.push(twinkle(dx - r * 0.42, dy - r * 0.5, 2.4, "#ffffff", 0.8));
+  return out.join("");
+}
+
+/** R3338001: each Terminus picture's painter, by its kind (`TERMINUS_KINDS`). */
+const TERMINUS_SCENES: Readonly<Record<string, (rng: Rng, p: Paint) => string>> = {
+  expanse: expanseScene,
+  lamp: lampScene,
+  exam: examScene,
+  edge: edgeScene,
+  crown: crownScene,
+  destination: destinationScene,
+  crunch: crunchScene,
+  d100: d100Scene,
+};
+
+/** A Terminus card's picture: its own, else the shared black hole. */
+function terminusScene(rng: Rng, p: Paint, kind: string): string {
+  const scene = Object.hasOwn(TERMINUS_SCENES, kind) ? TERMINUS_SCENES[kind] : undefined;
+  return scene === undefined ? terminus(rng, p) : scene(rng, p);
 }
 
 function insect(p: Paint, kind: string): string {
@@ -1418,7 +1780,7 @@ function subjectMarkup(rng: Rng, p: Paint, subject: StinkySubject, lower: string
     case "doctrine":
       return doctrine(p, kind);
     case "terminus":
-      return terminus(rng, p);
+      return terminusScene(rng, p, kind);
     case "swarm":
       return swarm(rng, p, kind);
     case "acclaimed":
@@ -1477,10 +1839,27 @@ function rays(seed: number): string {
   return out.join("");
 }
 
+/** The document every Stinkyscape face prints: its sky, its rays when Radiant, its subject, its particles and vignette. */
+function stinkyDocument(defs: Defs, sky: string, subject: string, radiant: boolean, seed: number, motion: ArtMotion | null, seedId: string, part: ArtPart): string {
+  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing.
+  const behindSubject = part !== "subject";
+  const figure = part !== "backdrop";
+  return (
+    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    `<defs>${defs.join("")}</defs>` +
+    motionStyle(motion, CENTER_ORIGIN) +
+    (behindSubject ? moving("back", sky, motion) + (radiant ? rays(seed) : "") : "") +
+    (figure ? moving("subject", subject, motion) : "") +
+    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
+    "</svg>"
+  );
+}
+
 /**
  * The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. R2949000: its subject is
  * `defId`'s, and the rest of the picture grows from `seedId` (pictures.ts `artSeedOf`), the card's id by default.
  * R2943001: `part` "backdrop" leaves its subject out, and "subject" draws the subject alone (pictures.ts `ArtPart`).
+ * R3333001: a Starship Piece's card draws its module instead, in its bay (`pieceCardSvg`).
  */
 export function stinkyscapeSvg(
   defId: string,
@@ -1492,6 +1871,7 @@ export function stinkyscapeSvg(
   seedId: string = defId,
   part: ArtPart = "whole",
 ): string {
+  if (STARSHIP_MODULE_IDS[defId] !== undefined) return pieceCardSvg(starshipModuleOf(defId), radiant, motion, seedId, part);
   const subject = stinkySubject(defId, name, tags, type);
   const lower = (name ?? "").toLowerCase();
   const seed = hashId(seedId);
@@ -1506,30 +1886,198 @@ export function stinkyscapeSvg(
   const planet = subject.family !== "terminus" && !(subject.family === "space" && subject.kind !== "reticle");
   const sky = backdrop(behind, p, subject.family, planet, defs);
   const drawn = subjectMarkup(ahead, p, subject, lower, name);
-  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing.
-  const behindSubject = part !== "subject";
-  const figure = part !== "backdrop";
-  return (
-    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
-    `<defs>${defs.join("")}</defs>` +
-    motionStyle(motion, CENTER_ORIGIN) +
-    (behindSubject ? moving("back", sky, motion) + (radiant ? rays(seed) : "") : "") +
-    (figure ? moving("subject", group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn), motion) : "") +
-    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
-    "</svg>"
-  );
+  const placed = group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn);
+  return stinkyDocument(defs, sky, placed, radiant, seed, motion, seedId, part);
 }
 
-// R2249000: the Starship's own art
+// R3333001: a Starship Piece's own card, its module drawn large on a cutaway of a hull, in its group's bay
 
-/** The seed every Starship's art grows from, so a Starship keeps one look whatever fuses into it. */
-const STARSHIP_SEED_ID = "stinkyscape-t-dormant-starship";
-/** The most modules, escorts and lit pieces one Starship's art draws, however many pieces it holds. */
-const STARSHIP_MODULES_MAX = 8;
+/** Each bay's paint: its wall, floor and props, its light strips and the stripe it is marked with. None is gold. */
+const HANGAR_PAINTS: Readonly<Record<Hangar, Paint>> = {
+  range: { space: ["#2a1a1e", "#0c0608"], nebula: ["#d0482a", "#7a2a8f"], light: "#c9ced6", hull: "#4a4f58", dark: "#16181d", accent: "#d8443a", glow: "#ff8a3a", line: OUTLINE },
+  orebay: { space: ["#2a221c", "#0a0806"], nebula: ["#c8743a", "#4d6b2a"], light: "#b9ab98", hull: "#5a4f44", dark: "#1a1612", accent: "#ff7a1a", glow: "#4fa8ff", line: OUTLINE },
+  shieldlab: { space: ["#0c2a3a", "#03090e"], nebula: ["#1fb5a8", "#2a4fb8"], light: "#c8e8f4", hull: "#3a5a6a", dark: "#0e1c24", accent: "#3ab0ff", glow: "#5ad8ff", line: OUTLINE },
+  teststand: { space: ["#2a1410", "#0a0504"], nebula: ["#d0482a", "#3a1a6a"], light: "#c9ced6", hull: "#4a4440", dark: "#14100e", accent: "#ff4a3a", glow: "#ff7a2a", line: OUTLINE },
+  loading: { space: ["#1a2430", "#06090c"], nebula: ["#3a6ad8", "#a03ad8"], light: "#d9e1ea", hull: "#4a5a6a", dark: "#121820", accent: "#d8443a", glow: "#ffa04a", line: OUTLINE },
+  medbay: { space: ["#24403e", "#081212"], nebula: ["#3ad0a0", "#3a6ad8"], light: "#e8f4f2", hull: "#4a6a68", dark: "#0e1e1c", accent: "#ff6a9a", glow: "#7af0d0", line: OUTLINE },
+  hangar: { space: ["#22222e", "#08080c"], nebula: ["#5a3ad8", "#d83a8a"], light: "#d9e1ea", hull: "#4a4a5a", dark: "#121218", accent: "#b48aff", glow: "#bfe4ff", line: OUTLINE },
+  blueprint: FAMILY_PAINTS.jlockeed,
+};
+
+/** How large a piece's card draws its module, and how far its bay's floor and window reach. */
+const MODULE_CARD_SCALE = 2.8;
+/** How far a card's subject sits from its module's middle toward its stand, so the two share the window's middle. */
+const CARD_STAND_SHIFT: Readonly<Record<StarshipModule["mount"], readonly [number, number]>> = {
+  bow: [0, -2],
+  spine: [0, -2],
+  keel: [0, 2],
+  stern: [-2, 0],
+  flank: [0, 0],
+};
+const BAY_FLOOR_Y = 72;
+const BAY_STRIPS_MIN = 2;
+const BAY_STRIPS_MAX = 4;
+const BAY_STARS_MIN = 10;
+const BAY_STARS_MAX = 18;
+const BAY_TARGET_WHITE = "#e8e8f0";
+const BAY_SPACE = "#04060f";
+
+/** A bay's prop, by its kind: a range's target, an ore bay's piles, a lab's hex grid, a test stand's baffles and more. */
+function bayProps(rng: Rng, bay: Paint, hangar: Hangar): string {
+  const out: string[] = [];
+  switch (hangar) {
+    case "range": {
+      const y = between(rng, 44, 56);
+      for (const [r, fill] of [[7, bay.accent], [5, BAY_TARGET_WHITE], [3, bay.accent], [1.2, BAY_TARGET_WHITE]] as const) out.push(circle(88, y, r, fill, { opacity: 0.85 }));
+      out.push(line(88, y + 7, 88, BAY_FLOOR_Y, bay.hull, 1));
+      break;
+    }
+    case "orebay":
+      for (const [x, w] of [[2, 22], [76, 22]] as const) {
+        out.push(poly([[x, 90], [x + w * 0.3, 78], [x + w * 0.7, 76], [x + w, 90]], bay.hull, bay.line));
+        for (let i = 0; i < 4; i += 1) out.push(circle(x + between(rng, 4, w - 4), between(rng, 80, 88), between(rng, 0.8, 1.6), bay.glow, { opacity: 0.85 }));
+      }
+      break;
+    case "shieldlab": {
+      let d = "";
+      for (let row = 0; row < 3; row += 1) {
+        for (let col = 0; col < 7; col += 1) {
+          const cx = 8 + col * 14 + (row % 2) * 7;
+          const cy = 40 + row * 11;
+          d += `M${fmt(cx - 6)} ${fmt(cy)}L${fmt(cx - 3)} ${fmt(cy - 5.2)}L${fmt(cx + 3)} ${fmt(cy - 5.2)}L${fmt(cx + 6)} ${fmt(cy)}L${fmt(cx + 3)} ${fmt(cy + 5.2)}L${fmt(cx - 3)} ${fmt(cy + 5.2)}Z`;
+        }
+      }
+      out.push(path(d, "none", { stroke: bay.glow, "stroke-width": 0.4, opacity: 0.3 }));
+      break;
+    }
+    case "teststand":
+      for (const x of [2, 12]) out.push(poly([[x, 40], [x + 8, 36], [x + 8, BAY_FLOOR_Y], [x, BAY_FLOOR_Y]], bay.hull, bay.line));
+      out.push(ellipse(16, 84, 18, 4, bay.dark, { opacity: 0.8 }));
+      break;
+    case "loading":
+      for (const [x, y, s] of [[3, 58, 14], [17, 64, 8], [82, 60, 12]] as const) {
+        out.push(rect(x, y, s, BAY_FLOOR_Y - y, bay.hull, inked(bay)), line(x, y, x + s, BAY_FLOOR_Y, bay.dark, 0.6), line(x + s, y, x, BAY_FLOOR_Y, bay.dark, 0.6));
+      }
+      break;
+    case "medbay":
+      out.push(rect(80, 38, 14, 14, BAY_TARGET_WHITE, { ...inked(bay), rx: 1.5 }), rect(85.6, 40.4, 2.8, 9.2, bay.accent), rect(82.4, 43.6, 9.2, 2.8, bay.accent));
+      for (const y of [40, 50, 60]) out.push(rect(4, y, 12, 7, bay.hull, inked(bay)), circle(13, y + 2, 0.8, bay.glow));
+      break;
+    case "hangar": {
+      const x = between(rng, 62, 80);
+      out.push(rect(0, 10, BOX, 2.4, bay.hull, inked(bay)), rect(x - 3, 12.4, 6, 3, bay.dark, inked(bay)), line(x, 15.4, x, 28, bay.light, 0.4));
+      out.push(path(`M${fmt(x)} 28q2 1 0.8 3`, "none", { stroke: bay.light, "stroke-width": 0.8 }));
+      break;
+    }
+    case "blueprint":
+      break;
+  }
+  return out.join("");
+}
+
+/** A bay a piece's card stands in: its wall and a window on space, light strips above, a floor, and its props. */
+function hangarBackdrop(rng: Rng, bay: Paint, hangar: Hangar, defs: Defs): string {
+  defs.push(
+    `<linearGradient id="sp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bay.space[0]}"/>` +
+      `<stop offset="1" stop-color="${bay.space[1]}"/></linearGradient>`,
+  );
+  const out: string[] = [rect(0, 0, BOX, BOX, "url(#sp)")];
+  const wx = between(rng, 12, 30);
+  const ww = between(rng, 40, 56);
+  out.push(rect(wx, 8, ww, 22, BAY_SPACE, { stroke: bay.light, "stroke-width": 1.2, rx: 2 }));
+  const stars = whole(rng, BAY_STARS_MIN, BAY_STARS_MAX);
+  for (let i = 0; i < stars; i += 1) out.push(circle(between(rng, wx + 1, wx + ww - 1), between(rng, 9, 29), between(rng, 0.15, 0.5), "#ffffff", { opacity: between(rng, 0.4, 1) }));
+  for (const share of [1 / 3, 2 / 3]) out.push(line(wx + ww * share, 8, wx + ww * share, 30, bay.light, 0.6));
+  const strips = whole(rng, BAY_STRIPS_MIN, BAY_STRIPS_MAX);
+  for (let i = 0; i < strips; i += 1) {
+    const x = ((i + 0.5) * BOX) / strips;
+    out.push(rect(x - 7, 1, 14, 3, bay.glow, { opacity: 0.18 }), rect(x - 5, 1.6, 10, 1.4, bay.glow, { opacity: 0.85 }));
+  }
+  out.push(rect(0, BAY_FLOOR_Y, BOX, BOX - BAY_FLOOR_Y, bay.dark));
+  for (let i = -4; i <= 4; i += 1) out.push(line(HALF + i * 9, BAY_FLOOR_Y, HALF + i * 24, BOX, bay.hull, 0.4, { opacity: 0.6 }));
+  for (const y of [78, 87]) out.push(line(0, y, BOX, y, bay.hull, 0.3, { opacity: 0.5 }));
+  out.push(line(0, BAY_FLOOR_Y, BOX, BAY_FLOOR_Y, bay.light, 0.5, { opacity: 0.6 }));
+  out.push(bayProps(rng, bay, hangar));
+  return out.join("");
+}
+
+/** A cut section of a hull's plating under a deck (y from 0 down), its ribs bare: the bay's stand for a module. */
+function deckSection(p: Paint, bay: Paint): string {
+  const out = [
+    poly([[-12, 1.6], [12, 1.6], [11.2, 3], [12.4, 4.4], [11, 5.8], [-11.2, 5.8], [-12.4, 4.6], [-11, 3.2]], p.dark, p.line),
+    poly([[-13, 0], [13, 0], [12, 1.6], [-12, 1.6]], p.light, p.line),
+    rect(-13, 0.3, 26, 0.5, bay.accent),
+  ];
+  for (const x of [-8, -4, 0, 4, 8]) out.push(line(x, 1.6, x, 5.6, p.hull, 0.8));
+  out.push(line(-11.4, 3.7, 11.4, 3.7, p.hull, 0.5));
+  return out.join("");
+}
+
+/** A cut section of a hull's side behind a flank module, its ribs bare at the cut ends. */
+function flankSection(p: Paint, bay: Paint): string {
+  const out = [
+    path("M-13 -6Q0 -8 13 -6L12 -3L13.4 0L12 3L13 6Q0 8 -13 6L-12 3L-13.4 0L-12 -3Z", p.dark, inked(p)),
+    path("M-13 -6Q0 -8 13 -6L12.6 -4.6Q0 -6.6 -12.6 -4.6Z", p.light),
+    rect(-12.4, 4, 24.8, 0.6, bay.accent),
+  ];
+  for (const x of [-8, 8]) out.push(line(x, -6.4, x, 6.4, p.hull, 0.7));
+  return out.join("");
+}
+
+/** A Starship Piece's own card's subject: its module large on a cutaway of the hull where it mounts. */
+function moduleCardMarkup(m: StarshipModule, p: Paint, bay: Paint): string {
+  const [cx, cy] = moduleCenter(m);
+  const section = deckSection(p, bay);
+  const stand =
+    m.mount === "keel"
+      ? group("scale(1 -1)", section)
+      : m.mount === "stern"
+        ? group("rotate(-90)", section)
+        : m.mount === "flank"
+          ? flankSection(p, bay)
+          : section;
+  // The module's middle and its stand's share the window's middle.
+  const [sx, sy] = CARD_STAND_SHIFT[m.mount];
+  return group(at((sx - cx) * MODULE_CARD_SCALE, (sy - cy) * MODULE_CARD_SCALE, 0, MODULE_CARD_SCALE), stand + moduleMarkup(m, p));
+}
+
+/** R3333001: a Starship Piece's own card: its module on a cutaway of a hull in its group's bay, tilted a little. */
+function pieceCardSvg(m: StarshipModule, radiant: boolean, motion: ArtMotion | null, seedId: string, part: ArtPart): string {
+  const seed = hashId(seedId);
+  const base = modulePaint(m);
+  const p = radiant ? gild(base) : base;
+  const bay = radiant ? gild(HANGAR_PAINTS[m.hangar]) : HANGAR_PAINTS[m.hangar];
+  const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
+  const ahead = seededRandom((seed ^ SUBJECT_SALT) >>> 0);
+  const tilt = between(ahead, -SUBJECT_TILT_JITTER, SUBJECT_TILT_JITTER);
+  const defs: Defs = [];
+  gradients(p, defs);
+  const sky = m.hangar === "blueprint" ? backdrop(behind, bay, "jlockeed", false, defs) : hangarBackdrop(behind, bay, m.hangar, defs);
+  const placed = group(at(SUBJECT_X, SUBJECT_Y, tilt), moduleCardMarkup(m, p, bay));
+  return stinkyDocument(defs, sky, placed, radiant, seed, motion, seedId, part);
+}
+
+// R2249000, R3333000: a Starship's own art, drawn from what it holds
+
+/** The seed a Starship's sky grows from: its design's, so a ship keeps one sky whatever fuses into it. */
+const STARSHIP_SEED_PREFIX = "starship-";
 const STARSHIP_ESCORTS_MAX = 3;
+/** A launched Starship is escorted by one frigate for every this many pieces it holds, up to the most. */
+const STARSHIP_PIECES_PER_ESCORT = 3;
+const STARSHIP_ESCORT_SCALE = 0.25;
+/** Where its escorts fly, as shares of its half length and gaps above or below its hull. */
+const STARSHIP_ESCORTS: readonly (readonly [number, number])[] = [[0.35, -22], [-0.35, 20], [0.8, 17]];
 const STARSHIP_STREAKS = 14;
-const STARSHIP_SCALE = 1.22;
-const STARSHIP_TILT = -14;
+/** A launched Starship climbs; a Dormant one sits level in its yard. */
+const STARSHIP_TILT_LAUNCHED = -8;
+/** A barbette under a raised module is this share of its module's box wide. */
+const BARBETTE_WIDTH = 0.6;
+/** The most a Starship's picture may weigh, unencoded, however many pieces it holds: two may share a board. */
+export const STARSHIP_ART_MAX_BYTES = 49_152;
+const ICON_PLATE = "#3f4964";
+const ICON_RIVET = "#9aa1b8";
+/** How large a module's icon draws it on its plate. */
+const MODULE_ICON_SCALE = 0.75;
 
 function streak(rng: Rng, p: Paint): string {
   const y = between(rng, 6, 94);
@@ -1540,62 +2088,89 @@ function streak(rng: Rng, p: Paint): string {
   });
 }
 
-function module(p: Paint, x: number, y: number, side: number, lit: boolean): string {
-  const strut = line(x, 0, x, y, p.dark, 1.4);
-  const pod = ellipse(x, y, 4.6, 2.6, "url(#hl)", inked(p));
-  const core = circle(x + 1.2, y, 1.1, lit ? p.glow : p.dark, lit ? { opacity: 0.95 } : {});
-  const fin = poly([[x - 4, y], [x - 7, y + side * 3], [x - 2.5, y + side * 1.8]], p.hull, p.line);
-  return strut + fin + pod + core;
+function gildHull(p: HullPaint): HullPaint {
+  return { ...gild(p), trim: mixHex(p.trim, RADIANT_PALETTE.mote, GILD_MIX), window: mixHex(p.window, RADIANT_PALETTE.glow, GILD_MIX) };
 }
 
-/** R2249000: the art every Starship wears, Dormant or launched, however many pieces are fused into it. */
-export function starshipSvg(pieces: number, launched: boolean, radiant: boolean): string {
-  const seed = hashId(STARSHIP_SEED_ID);
-  const base: Paint = { ...FAMILY_PAINTS.fleet, glow: launched ? "#7fe8ff" : FAMILY_PAINTS.fleet.glow };
-  const p = radiant ? gild(base) : base;
+/**
+ * R3333000: the art a Starship wears, Dormant or launched, drawn from its inputs (`StarshipArt`): its class from the
+ * count of its pieces, each piece's module (gilded when the piece or the face is Radiant) on its hardpoint oldest
+ * first, its design's hull in its livery, and the shipyard about a Dormant one or, launched, its engines' burn, warp
+ * streaks and escorts. Never its definition's id or name, which a fusion changes (R2249000).
+ */
+export function starshipSvg(ship: StarshipArt): string {
+  const design = STARSHIP_DESIGNS[ship.design];
+  const seed = hashId(`${STARSHIP_SEED_PREFIX}${ship.design}`);
+  const base = liveryPaint(ship.livery ?? design.livery);
+  const p = ship.radiant ? gildHull(base) : base;
   const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
-  const ahead = seededRandom((seed ^ SUBJECT_SALT) >>> 0);
   const defs: Defs = [];
   gradients(p, defs);
-  defs.push(
-    `<radialGradient id="sh"><stop offset="0.6" stop-color="${p.glow}" stop-opacity="0"/>` +
-      `<stop offset="0.9" stop-color="${p.glow}" stop-opacity="${launched ? 0.35 : 0.12}"/>` +
-      `<stop offset="1" stop-color="${p.glow}" stop-opacity="0"/></radialGradient>`,
-    `<radialGradient id="ha"><stop offset="0" stop-color="${p.nebula[0]}" stop-opacity="0.7"/>` +
-      `<stop offset="1" stop-color="${p.nebula[1]}" stop-opacity="0"/></radialGradient>`,
-  );
   const sky = backdrop(behind, p, "fleet", true, defs);
+  const cls = starshipClassOf(ship.pieces.length);
+  const L = cls.length;
+  const H = cls.height;
+  const shown = ship.pieces.slice(0, STARSHIP_MODULES_MAX);
+  const modules = shown.map((piece) => starshipModuleOf(piece.defId));
+  const places = hardpointPlacements(cls, modules.map((m) => m.mount));
+  const paints = modules.map((m, i) => (shown[i]?.radiant === true || ship.radiant ? gild(modulePaint(m)) : modulePaint(m)));
+  const mounted = (keep: (m: StarshipModule) => boolean): string =>
+    modules
+      .map((m, i) => {
+        const place = places[i];
+        const paint = paints[i];
+        if (place === undefined || paint === undefined || !keep(m)) return "";
+        const wide = BARBETTE_WIDTH * MODULE_BOX * place.scale;
+        const barbette = place.lift > 0 ? rect(place.x - wide / 2, place.y, wide, place.lift, p.hull, inked(p)) : "";
+        return barbette + group(at(place.x, place.y, 0, place.scale), moduleMarkup(m, paint));
+      })
+      .join("");
   const body: string[] = [];
-  // The halo behind it and, launched, the warp streaks it leaves.
-  body.push(ellipse(0, 0, 52, 30, "url(#ha)", { opacity: 0.55 }));
-  const shown = Math.max(0, Math.min(pieces, STARSHIP_MODULES_MAX));
-  const lit = launched ? shown : 0;
-  const modules: string[] = [];
-  for (let i = 0; i < shown; i += 1) {
-    const side = i % 2 === 0 ? -1 : 1;
-    const x = -26 + Math.floor(i / 2) * 13;
-    modules.push(module(p, x, side * between(ahead, 17, 21), side, i < lit));
+  if (ship.launched) {
+    body.push(poly([[-L, -0.45 * H], [-L - 10 - 0.3 * L, 0], [-L, 0.45 * H]], p.glow, "none", { opacity: 0.7 }));
+    body.push(poly([[-L, -0.2 * H], [-L - 6 - 0.15 * L, 0], [-L, 0.2 * H]], "#ffffff", "none", { opacity: 0.8 }));
   }
-  body.push(modules.join(""));
-  body.push(group(at(0, 0, 0, 1.18), hull(ahead, p, launched ? "battleship" : "dormant")));
-  body.push(ellipse(2, 0, 50, 27, "url(#sh)"));
-  body.push(ellipse(2, 0, 50, 27, "none", { stroke: p.glow, "stroke-width": 0.5, opacity: launched ? 0.7 : 0.25, "stroke-dasharray": launched ? "none" : "2 2" }));
-  if (launched) {
-    const escorts = Math.max(1, Math.min(STARSHIP_ESCORTS_MAX, Math.ceil(pieces / 2)));
-    for (let i = 0; i < escorts; i += 1) {
-      const y = (i % 2 === 0 ? -1 : 1) * (32 + i * 4);
-      body.push(group(at(18 - i * 16, y, 0, 0.3), hull(ahead, p, "fighter")));
-    }
+  body.push(mounted((m) => m.mount === "stern"));
+  body.push(hullMarkup(design, cls, p, ship.launched));
+  body.push(ledgerMarkup(cls, paints.map((paint) => [paint.accent, paint.glow] as const), ship.launched, p));
+  body.push(mounted((m) => m.mount !== "stern"));
+  if (ship.launched) {
+    const escorts = Math.min(STARSHIP_ESCORTS_MAX, Math.ceil(ship.pieces.length / STARSHIP_PIECES_PER_ESCORT));
+    STARSHIP_ESCORTS.slice(0, escorts).forEach(([x, gap]) => {
+      body.push(group(at(x * L, gap < 0 ? -H + gap : H + gap, 0, STARSHIP_ESCORT_SCALE), escortMarkup(design, p)));
+    });
+  } else {
+    const last = places[places.length - 1];
+    body.push(shipyardMarkup(cls, last === undefined ? null : { x: last.x, y: last.y }, ship.pieces.length, p));
   }
-  const streaks = launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, p)).join("") : "";
+  const streaks = ship.launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, p)).join("") : "";
   return (
     `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
     `<defs>${defs.join("")}</defs>` +
     sky +
     streaks +
-    (radiant ? rays(seed) : "") +
-    group(at(SUBJECT_X, SUBJECT_Y, STARSHIP_TILT, STARSHIP_SCALE), body.join("")) +
+    (ship.radiant ? rays(seed) : "") +
+    group(at(SUBJECT_X, SUBJECT_Y, ship.launched ? STARSHIP_TILT_LAUNCHED : 0, cls.zoom), body.join("")) +
     rect(0, 0, BOX, BOX, "url(#v)") +
+    "</svg>"
+  );
+}
+
+/**
+ * R3333002: a piece's module as a small icon on a riveted slate plate, for a Dormant hull's plates and the pieces
+ * list: an id that is no piece draws the spare plate.
+ */
+export function starshipModuleIconSvg(defId: string, radiant: boolean): string {
+  const m = starshipModuleOf(defId);
+  const base = modulePaint(m);
+  const p = radiant ? gild(base) : base;
+  const [cx, cy] = moduleCenter(m);
+  const rivets = [[-13, -8], [13, -8], [-13, 8], [13, 8]].map(([x, y]) => circle(x ?? 0, y ?? 0, 0.7, ICON_RIVET)).join("");
+  return (
+    `<svg viewBox="-15 -10 30 20" width="30" height="20" xmlns="http://www.w3.org/2000/svg">` +
+    rect(-15, -10, 30, 20, ICON_PLATE, { rx: 2 }) +
+    rivets +
+    group(at(-cx * MODULE_ICON_SCALE, -cy * MODULE_ICON_SCALE, 0, MODULE_ICON_SCALE), moduleMarkup(m, p)) +
     "</svg>"
   );
 }

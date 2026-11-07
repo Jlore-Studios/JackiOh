@@ -54,6 +54,16 @@ the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, i
 a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
 and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's.
 
+The Terminus cards draw pictures of their own (R3338001), found by id (`TERMINUS_KINDS`; Dice of Doom prints no
+Terminus tag): Olivian Expanse an endless violet expanse with the Terminus cards as distant falling stars, Farewell
+an empty table under a single lamp, KY's Last Exam one desk in an exam hall under a problem chalked across the sky,
+Event Horizon a light caught at a black hole's edge, Last Word a hand catching a falling crown, 1v1 Final
+Destination one lane of light over an abyss with a hero at each end, The Big Crunch the universe collapsing to a
+point and Dice of Doom a hundred-sided die on black velvet, 67 glowing faintly on one face. None draws the shared
+black hole's disk (`TERMINUS_DISK_BACK`), which a Terminus card the table does not list still draws. Core #100
+Ceaseless Void, a procedural card, draws a composition of its own (`CARD_COMPOSITIONS`, `compositionOf`): a hole in
+the shape of a giant, stars falling into its outline.
+
 ## The Training Grounds set's own art
 
 The Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds.ts`'s procedural art
@@ -69,6 +79,29 @@ whose art it draws (`fusedArt.ts`): a fused definition holding a Miner (Stinkysc
 draws the last ingredient that is neither, the host an Equip was fused onto, by that card's id, name and tags, so its
 delivered file, family, seed and theme are the host's. Any other card, and a fusion whose ingredients a digest id hides,
 draws as it is handed; a Starship in play draws its own (R2249000).
+
+## The Starship's art (R3333000, R3333001, R3333002)
+
+Three files draw it, on `stinkyDraw.ts`'s primitives (the shapes `stinkyscape.ts` draws with, moved there unchanged):
+
+- `starshipModules.ts`: each of the fifty piece definitions' module (`STARSHIP_MODULE_IDS`: the 47 cards printing
+  Starship Piece and Stinkyscape #127 to #129), its kind, its name's tier, the hardpoint it mounts on (bow, spine,
+  flank, keel or stern) and the bay its own card stands in. A module is drawn about its mount in flat fills, never a
+  gradient, so any picture mounts it without its defs; the Beams, Repeaters, Cannons, Flak and Drills grow v1 to v5.
+  An id that is no piece draws the spare plate.
+- `starshipHulls.ts`: the hull designs (`STARSHIP_DESIGNS`, one for each of `STARSHIP_NAMES` and the shipyard's), the
+  classes from a frigate to a dreadnought (`STARSHIP_CLASSES`), the hardpoints' placements, the hull, its ledger of
+  running lights (one a piece, oldest at the bow, so the order shows), the escorts and the shipyard, and
+  `StarshipArt`, the painter's inputs: its pieces oldest first, its launch, its design, its livery (`null`: the
+  design's own) and its face. A cosmetic (#3330) hands the painter another design or livery; its memo key
+  (`starshipArtKey`) holds them all.
+- `stinkyscape.ts`: `starshipSvg(ship)`, the picture, under `STARSHIP_ART_MAX_BYTES` with 16 Radiant pieces, since a
+  board can hold two; a piece's own card (`pieceCardSvg`), its module large on a cutaway of a hull in its bay; and
+  `starshipModuleIconSvg`, the icon a Dormant hull's plates (`StarshipHull.tsx`) and the pieces list
+  (`StarshipPieces.tsx`) show.
+
+`<CardArt starship={{ launched, list }}>` reads the design from the face's name, the one a launched Starship took, and
+marks it `data-art-design`. The collection's Dormant Starship, out of play, keeps its R503 picture.
 
 ## The full-art cards' moving art
 
