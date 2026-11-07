@@ -14869,6 +14869,8 @@
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-07T10:37:18Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 4,
       "waiting_comment": 6703040026
