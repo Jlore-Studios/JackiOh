@@ -19320,6 +19320,99 @@
       "feedback_since": "2026-11-07T08:59:21Z",
       "issue": 3337,
       "kind": "revise",
+      "own_review": {
+        "from_run": "42357772242",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 7.3,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 0.3,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 1.6,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 3.2,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "clippy",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo clippy --workspace --all-targets -- -D warnings",
+            "seconds": 170.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "cargo tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+            "seconds": 775.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "web tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+            "seconds": 659.2,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "60400aceee292a51a63eda82e651948fa2b94c7d",
+        "kind": "build",
+        "model": "opus",
+        "provider": "claude-1",
+        "round_tier": "strong",
+        "rounds_on": 3337,
+        "rounds_used": 0,
+        "since": "2026-11-07T11:17:09Z",
+        "source": "build",
+        "until": "2026-11-07T11:47:09Z"
+      },
+      "queued_at": "2026-11-07T11:17:09Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
