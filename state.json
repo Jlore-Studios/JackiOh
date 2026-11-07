@@ -18718,6 +18718,8 @@
     "3365": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "8229afbe90a0bf4443c50e2dfe12edebb4a18cc5",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T06:30:27Z",
