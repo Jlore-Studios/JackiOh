@@ -14944,8 +14944,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "agy",
-      "owner_since": "2026-11-07T10:37:18Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` has no runner free where it runs",
+      "owner_since": "2026-11-07T15:28:00Z",
+      "owner_why": "its turn came (#3366, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-07T03:27:29Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -16174,18 +16174,26 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3342,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-07T11:14:08Z",
+      "queued_at": "2026-11-07T15:28:00Z",
       "run_id": "42367714856",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "source": "conflict",
       "started_at": "2026-11-07T11:19:44Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-07T15:28:00Z",
+        "until": "2026-11-07T15:58:00Z",
+        "why": "#3366, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "gemini"
@@ -16205,17 +16213,6 @@
         "tiers": {
           "gemini": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3366
-        ],
-        "ends": "2026-11-07T15:41:46Z",
-        "from_run": "42367714856",
-        "head": "4ccbb17c7cc76fddd74847011ae01538aae1b262",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-07T13:41:46Z"
       }
     },
     "3372": {
