@@ -17290,7 +17290,16 @@
       "feedback_since": "2026-11-07T15:56:52Z",
       "issue": 3381,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
+        "reviews": [],
+        "sha": "aa7c3dd0592b5ca1bf4daed525feb72f6bda9ac4",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
