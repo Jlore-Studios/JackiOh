@@ -13740,9 +13740,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-07T00:50:17Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-8` has no runner free where it runs",
+      "owner": "claude-6",
+      "owner_since": "2026-11-07T01:22:42Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-8` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-06T23:10:18Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -17604,7 +17604,7 @@
       "stop_requested": false
     },
     "3353": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": true,
       "ci_fixes": 1,
@@ -17627,12 +17627,12 @@
       "interruptions": 0,
       "issue": 3214,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-6",
       "queued_at": "2026-11-07T00:55:02Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42318013203",
+      "run_id": "pending:c10bf02b-1794014479",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17653,7 +17653,7 @@
         "run": "42318013203"
       },
       "source": "ci",
-      "started_at": "2026-11-07T00:24:15Z",
+      "started_at": "2026-11-07T01:22:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17984,9 +17984,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T01:02:34Z",
+    "at": "2026-11-07T01:22:42Z",
     "url": "",
-    "what": "build #3337 on claude-7"
+    "what": "revise #3353 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-07T00:57:37Z",
