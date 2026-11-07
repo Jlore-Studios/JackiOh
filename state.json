@@ -34551,7 +34551,7 @@
           "resets_at": "2026-11-07T12:00:00Z",
           "utilization": 0.34
         },
-        "observed_at": "2026-11-07T10:58:32Z",
+        "observed_at": "2026-11-07T11:32:19Z",
         "status": "allowed"
       }
     },
@@ -37069,7 +37069,8 @@
       "2026-11-07T10:23:39Z,claude-1,stream,call,42357772242,67,2026-11-07T13:50:00Z,,,allowed,100,,",
       "2026-11-07T10:33:40Z,claude-1,stream,call,42357772242,86,2026-11-07T13:50:00Z,,,allowed,100,,",
       "2026-11-07T10:43:25Z,claude-1,stream,call,42357772242,92,2026-11-07T13:50:00Z,,,allowed_warning,100,,",
-      "2026-11-07T11:28:57Z,claude-1,ping,before,42367975517,101,2026-11-07T13:50:00Z,,,rejected,100,,"
+      "2026-11-07T11:28:57Z,claude-1,ping,before,42367975517,101,2026-11-07T13:50:00Z,,,rejected,100,,",
+      "2026-11-07T11:23:35Z,claude-8,ping,before,42367850965,34,2026-11-07T12:00:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-07T11:02:14Z,42366316721,claude-4,sonnet,review,3365,medium,interrupted,5-hour cap,0,0,0,0,,70,70,,,2.5,claude-4,none,,0",
