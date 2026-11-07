@@ -14880,9 +14880,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-07T17:33:10Z",
-      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
+      "owner": "agy",
+      "owner_since": "2026-11-07T17:33:52Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-07T14:35:17Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
@@ -16834,7 +16834,7 @@
       }
     },
     "3386": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -16856,13 +16856,13 @@
       "interruptions": 0,
       "issue": 3340,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "agy",
       "queued_at": "2026-11-07T17:33:10Z",
-      "run_id": "42391992153",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:10d796b0-1794072775",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16882,16 +16882,9 @@
         "run": "42383844802"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T16:34:37Z",
+      "started_at": "2026-11-07T17:33:52Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-07T17:33:10Z",
-        "until": "2026-11-07T18:03:10Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17291,9 +17284,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T17:17:14Z",
+    "at": "2026-11-07T17:33:52Z",
     "url": "",
-    "what": "plan #3395 on claude-2"
+    "what": "revise #3386 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T17:14:18Z",
