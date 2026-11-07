@@ -16272,23 +16272,21 @@
             "apps/web/src/audio/sfx.test.ts",
             "apps/web/src/audio/sfx.ts",
             "apps/web/src/audio/types.ts",
-            "apps/web/src/cards/art/stinkyscape.test.tsx",
-            "e2e/cypress/component/audio-recipes.cy.tsx",
-            "e2e/cypress/component/fx-phone-frame.cy.tsx"
+            "e2e/cypress/component/audio-recipes.cy.tsx"
           ],
-          "from": "9f120276ffc982663421ce3fd86c5e9c63cad12e",
-          "main": "3f127f68c1667bd5632b9b87944c955c407301f4"
+          "from": "a2fbc9f0eb05f1bea2e2ca86034e235482ec1ab1",
+          "main": "03e0cbaf9d4af6778fde7354ca2901650d8bae44"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "42412098692",
+            "run": "42416893876",
             "tier": "strong"
           }
         ],
-        "sha": "a2fbc9f0eb05f1bea2e2ca86034e235482ec1ab1",
+        "sha": "2d94022917faaefed46d3665a99b7a01ee81e721",
         "tiers": {
           "claude": "strong"
         }
