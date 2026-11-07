@@ -6,7 +6,9 @@
 // standing in a backrow zone wear none. A listed modifier wears the aura of the readable play that was
 // resolving when it was added (`attributeModifiers`), since its view names no source (R169). An aura
 // begins as it appears and ends as it leaves, and at most AURA_MAX_PER_ZONE cover a zone, nearest scope
-// first and then newest.
+// first and then newest. R3399001: a face-up Unit whose entry has an aura (a Classic+ signature's) wears
+// it over its own unit zone, its side or the board; a face-down or hidden one wears none, and a modifier
+// its Cry adds wears no second copy of it.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -14,7 +16,7 @@ import { FLAVOR_FALLBACK } from "../../cards/flavor.ts";
 import { laneZoneTestids } from "../../game/actions.ts";
 import { LANES, sideView, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
+import { FX_CARD_TABLE, auraOfEntry, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_MAX_PER_ZONE, AURA_MOTES_PER_AURA, AURA_PARTICLE_SHARE, AURA_SOURCES_LIMIT } from "../constants.ts";
 import { FLAVOR_LOOKS, paletteLook, type FlavorColors } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
@@ -26,12 +28,14 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 
 /** One aura as planned: what it covers and how it looks. `defId` is the planner's; it never reaches the page (R202). */
 export type AuraSpec = {
-  /** `field-<instanceId>` for a Field card, `mod-<player>-<modifierId>` for a modifier. */
+  /** `field-<instanceId>` for a Field card, `unit-<instanceId>` for a Unit (R3399001), `mod-<player>-<modifierId>` for a modifier. */
   key: string;
   defId: string;
   instanceId: string;
   side: Side;
-  /** The Field card's backrow lane; null for a modifier, whose `zone` or `lane` scope is its side. */
+  /** The row its card stands in: a Field card's backrow, a Unit's units (R3399001); a modifier's is `backrow`, unused. */
+  row: "units" | "backrow";
+  /** The card's lane; null for a modifier, whose `zone` or `lane` scope is its side. */
   lane: number | null;
   scope: AuraScope;
   look: AuraLook;
@@ -52,16 +56,15 @@ export function auraTestid(key: string): string {
   return `aura-${key}`;
 }
 
-function specOf(key: string, defId: string, instanceId: string, side: Side, lane: number | null, aura: FxAuraSpec, view: PlayerView): AuraSpec {
+function specOf(key: string, defId: string, instanceId: string, side: Side, row: AuraSpec["row"], lane: number | null, aura: FxAuraSpec, view: PlayerView): AuraSpec {
   const look = (aura.palette !== undefined ? paletteLook(aura.palette) : undefined) ?? flavorLookOf(defId, instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
   const colors = look.colors;
   const scope = lane === null && (aura.scope === "zone" || aura.scope === "lane") ? "side" : aura.scope;
-  return { key, defId, instanceId, side, lane, scope, look: aura.look, colors };
+  return { key, defId, instanceId, side, row, lane, scope, look: aura.look, colors };
 }
 
 function auraOf(table: ReadonlyMap<string, FxCardEntry>, defId: string): FxAuraSpec | undefined {
-  const entry = table.get(defId);
-  return entry?.kind === "hooks" ? entry.aura : undefined;
+  return auraOfEntry(table.get(defId));
 }
 
 /** Every aura the view shows, your side first: its standing Field cards, then its attributed modifiers. */
@@ -73,16 +76,22 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
       if (slot === null || slot === undefined || slot.faceDown || slot.unrevealed === true || slot.unit !== undefined) return;
       if (slot.defId === HIDDEN_ID || !isAuraFieldType(slot.type)) return;
       const aura = auraOf(table, slot.defId);
-      if (aura !== undefined) out.push(specOf(`field-${slot.instanceId}`, slot.defId, slot.instanceId, side, index + 1, aura, view));
+      if (aura !== undefined) out.push(specOf(`field-${slot.instanceId}`, slot.defId, slot.instanceId, side, "backrow", index + 1, aura, view));
+    });
+    // R3399001: a face-up Unit on top of its zone wears its entry's aura there (R202: a hidden one none).
+    seat.units.forEach((unit, index) => {
+      if (unit === null || unit === undefined || unit.defId === HIDDEN_ID) return;
+      const aura = auraOf(table, unit.defId);
+      if (aura !== undefined) out.push(specOf(`unit-${unit.instanceId}`, unit.defId, unit.instanceId, side, "units", index + 1, aura, view));
     });
     for (const modifier of seat.modifiers) {
       const source = sources.get(sourceKey(seat.player, modifier.id));
       if (source === undefined) continue;
-      // A Field card's aura stands with the card itself, not with what it installs.
+      // A Field card's aura stands with the card itself, not with what it installs; R3399001: so does a Unit's.
       const type = (CATALOG[source.defId] ?? view.defs?.[source.defId])?.type;
-      if (type !== undefined && isAuraFieldType(type)) continue;
+      if (type !== undefined && (isAuraFieldType(type) || type === "Unit")) continue;
       const aura = auraOf(table, source.defId);
-      if (aura !== undefined) out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, null, aura, view));
+      if (aura !== undefined) out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, "backrow", null, aura, view));
     }
   }
   return out;
@@ -118,11 +127,11 @@ function sideZones(side: Side): string[] {
 }
 
 /** The zones an aura covers, by testid. */
-export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane">): string[] {
+export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane"> & Partial<Pick<AuraSpec, "row">>): string[] {
   if (spec.scope === "board") return [...sideZones("you"), ...sideZones("opponent")];
   if (spec.scope === "side" || spec.lane === null) return sideZones(spec.side);
   if (spec.scope === "lane") return laneZoneTestids(spec.lane);
-  return [testid.zone(spec.side, "backrow", spec.lane)];
+  return [testid.zone(spec.side, spec.row ?? "backrow", spec.lane)];
 }
 
 /** `begin` while it fades in with its burst, `standing` while it holds, `end` while it fades out. */

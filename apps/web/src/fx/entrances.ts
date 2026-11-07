@@ -18,6 +18,23 @@ import { titanBloom } from "./cards/classic/natureTitan.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
+import { flexBurst } from "./cards/classicplus/botLoser.ts";
+import { templeStack } from "./cards/classicplus/classicGolem.ts";
+import { obeliskRise } from "./cards/classicplus/datacenter.ts";
+import { bannerPlant } from "./cards/classicplus/flagbearer.ts";
+import { greatBanner } from "./cards/classicplus/flagbearerPrime.ts";
+import { griddleFreeze } from "./cards/classicplus/frostspatula.ts";
+import { vineSwing } from "./cards/classicplus/jlease.ts";
+import { vineNap } from "./cards/classicplus/jungleLoser.ts";
+import { giftDesk } from "./cards/classicplus/kysGift.ts";
+import { briefcaseStride } from "./cards/classicplus/lobbyist.ts";
+import { spotlightPose } from "./cards/classicplus/midLoser.ts";
+import { kitchenDoor } from "./cards/classicplus/mommyBarker.ts";
+import { pancakeStack } from "./cards/classicplus/motherPancake.ts";
+import { staffShuffle } from "./cards/classicplus/supportLoser.ts";
+import { shieldPlant } from "./cards/classicplus/topLoser.ts";
+import { waffleIron } from "./cards/classicplus/waffleShell.ts";
+import { drumLeap } from "./cards/classicplus/wardrum.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
@@ -27,7 +44,31 @@ import type { FxCue } from "./types.ts";
 export { ENTRANCE_FUSE_AT, ENTRANCE_TRAUMA, type EntranceKey, type EntrancePlan } from "./cards/recipe.ts";
 export { isEntranceKey } from "./cards/bespoke.ts";
 
-export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil, felinorAssembly };
+export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
+  voidCollapse,
+  bigBoom,
+  titanBloom,
+  tyrantSigil,
+  felinorAssembly,
+  // R3399000: Classic+'s signatures.
+  pancakeStack,
+  waffleIron,
+  griddleFreeze,
+  kitchenDoor,
+  shieldPlant,
+  vineNap,
+  spotlightPose,
+  staffShuffle,
+  flexBurst,
+  drumLeap,
+  giftDesk,
+  bannerPlant,
+  greatBanner,
+  briefcaseStride,
+  templeStack,
+  vineSwing,
+  obeliskRise,
+};
 
 /* #1445: one summon entrance per flavor */
 

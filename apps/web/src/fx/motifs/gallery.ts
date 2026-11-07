@@ -20,8 +20,39 @@ import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
 import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
+import { holoLoomFixture } from "../cards/classicplus/aiSlop.ts";
+import { killNotchFixture } from "../cards/classicplus/botLoser.ts";
+import { chaosLeverFixture } from "../cards/classicplus/callToChaos.ts";
+import { printSlotFixture } from "../cards/classicplus/datacenter.ts";
+import { batterBubbleFixture } from "../cards/classicplus/deathBoil.ts";
+import { pancakeMouthFixture } from "../cards/classicplus/devour.ts";
+import { bannerFoldFixture } from "../cards/classicplus/flagbearer.ts";
+import { bannerShadowFixture } from "../cards/classicplus/flagbearerPrime.ts";
+import { doughArmFixture } from "../cards/classicplus/fluffyGrip.ts";
+import { spatulaFlipFixture } from "../cards/classicplus/frostspatula.ts";
+import { whiteoutFixture } from "../cards/classicplus/frozenWastes.ts";
+import { grapeBounceFixture } from "../cards/classicplus/goldenGrape.ts";
+import { packLobFixture } from "../cards/classicplus/jlease.ts";
+import { relicSpillFixture } from "../cards/classicplus/jleasePack.ts";
+import { puzzleBoxFixture } from "../cards/classicplus/joggsBox.ts";
+import { giftBoxesFixture } from "../cards/classicplus/kysGift.ts";
+import { slateTestFixture } from "../cards/classicplus/kysTest.ts";
+import { lineupFixture } from "../cards/classicplus/league.ts";
+import { hungryPotFixture } from "../cards/classicplus/legion.ts";
+import { sealedEnvelopeFixture } from "../cards/classicplus/lobbyist.ts";
+import { coinCallFixture } from "../cards/classicplus/midLoser.ts";
+import { pancakeTrayFixture } from "../cards/classicplus/mommyBarker.ts";
+import { pancakeFlipFixture } from "../cards/classicplus/motherPancake.ts";
+import { vineRipenFixture } from "../cards/classicplus/mythicGrape.ts";
+import { sepiaPortalFixture } from "../cards/classicplus/portal.ts";
+import { flourCloudFixture } from "../cards/classicplus/powderSpray.ts";
+import { sighMendFixture } from "../cards/classicplus/supportLoser.ts";
+import { stairGlueFixture } from "../cards/classicplus/twiceForward.ts";
+import { waffleGridFixture } from "../cards/classicplus/waffleShell.ts";
+import { drumBeatFixture } from "../cards/classicplus/wardrum.ts";
+import { zealotCycloneFixture } from "../cards/classicplus/zealotism.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
-import type { FxCardEntry } from "../cards/tables.ts";
+import { FX_CARD_TABLE, auraOfEntry, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
@@ -485,6 +516,38 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
+  // R3399000: Classic+'s signatures take their own fixtures (fx/cards/classicplus/), as the engine emits each card's events.
+  pancakeFlip: pancakeFlipFixture,
+  pancakeMouth: pancakeMouthFixture,
+  batterBubble: batterBubbleFixture,
+  doughArm: doughArmFixture,
+  flourCloud: flourCloudFixture,
+  waffleGrid: waffleGridFixture,
+  whiteout: whiteoutFixture,
+  hungryPot: hungryPotFixture,
+  spatulaFlip: spatulaFlipFixture,
+  pancakeTray: pancakeTrayFixture,
+  lineup: lineupFixture,
+  coinCall: coinCallFixture,
+  sighMend: sighMendFixture,
+  killNotch: killNotchFixture,
+  zealotCyclone: zealotCycloneFixture,
+  sepiaPortal: sepiaPortalFixture,
+  drumBeat: drumBeatFixture,
+  slateTest: slateTestFixture,
+  giftBoxes: giftBoxesFixture,
+  holoLoom: holoLoomFixture,
+  bannerFold: bannerFoldFixture,
+  bannerShadow: bannerShadowFixture,
+  puzzleBox: puzzleBoxFixture,
+  sealedEnvelope: sealedEnvelopeFixture,
+  grapeBounce: grapeBounceFixture,
+  vineRipen: vineRipenFixture,
+  chaosLever: chaosLeverFixture,
+  stairGlue: stairGlueFixture,
+  packLob: packLobFixture,
+  relicSpill: relicSpillFixture,
+  printSlot: printSlotFixture,
 };
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
@@ -602,7 +665,12 @@ export const SET_PIECE_FIXTURES: { readonly [K in SetPieceKey]: FixtureOf } = {
 const GALLERY_FIELD_ENTRANCE_LANE = 1;
 
 /** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors). */
-const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard };
+const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = {
+  felinorAssembly: felinorBoard,
+  // R3399000: Felinor Flagbearer's ribbons and Prime's banner shadow reach the Felinors beside them.
+  bannerPlant: felinorBoard,
+  greatBanner: felinorBoard,
+};
 
 /** R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), else `view` itself. */
 export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {
@@ -658,10 +726,18 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
 
 /**
  * #2793: the view a card plays over: a Field Spell's or a Field Trap's own, face up in the viewer's
- * first backrow zone, so its aura stands there (fx/aura/plan.ts); any other card's the view as it is.
+ * first backrow zone, so its aura stands there (fx/aura/plan.ts); R3399001 a Unit's whose entry wears an
+ * aura, standing in the viewer's unit zone of `GALLERY_ENTRANCE_LANE` under that zone's own id, so its
+ * tile aura shows; any other card's the view as it is.
  */
 export function galleryFieldView(defId: string, view: PlayerView): PlayerView {
   const type = CATALOG[defId]?.type;
+  if (type === "Unit") {
+    const at = GALLERY_ENTRANCE_LANE - 1;
+    const unit = view.you.units[at];
+    if (auraOfEntry(FX_CARD_TABLE.get(defId)) === undefined || unit === null || unit === undefined) return view;
+    return { ...view, you: { ...view.you, units: view.you.units.map((zone, k) => (k === at ? { ...unit, defId } : zone)) } };
+  }
   const first = view.you.backrow[0];
   if (type === undefined || !isAuraFieldType(type) || first === null || first === undefined || first.faceDown) return view;
   return { ...view, you: { ...view.you, backrow: [{ ...first, defId, type }, ...view.you.backrow.slice(1)] } };

@@ -16,12 +16,7 @@ const SIGNATURE_PENDING: readonly string[] = [
   // Classic
   "classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080",
   "classic-085", "classic-090",
-  // Classic+
-  "classicplus-012", "classicplus-012-1", "classicplus-012-2", "classicplus-012-3", "classicplus-012-4", "classicplus-012-5", "classicplus-012-6",
-  "classicplus-012-7", "classicplus-012-8", "classicplus-013", "classicplus-019", "classicplus-019-1", "classicplus-019-2", "classicplus-019-3",
-  "classicplus-019-4", "classicplus-019-5", "classicplus-027", "classicplus-029", "classicplus-035", "classicplus-037", "classicplus-042",
-  "classicplus-042-1", "classicplus-043", "classicplus-046", "classicplus-046-1", "classicplus-047", "classicplus-048", "classicplus-065-4",
-  "classicplus-065-5", "classicplus-073", "classicplus-073-1", "classicplus-074", "classicplus-075", "classicplus-075-1", "classicplus-078",
+  // Classic+: none (R3399000, #3399).
   // Meditative
   "meditative-007", "meditative-008", "meditative-011", "meditative-017", "meditative-020", "meditative-026", "meditative-039-4", "meditative-039-5",
   "meditative-040", "meditative-042", "meditative-045", "meditative-045-1", "meditative-047", "meditative-049", "meditative-049-1",

@@ -21,7 +21,7 @@ import {
 } from "../constants.ts";
 import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
-import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, type AuraLook, type AuraScope } from "./looks.ts";
+import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, AURA_SHARED_LOOK_NAMES, type AuraLook, type AuraScope } from "./looks.ts";
 import {
   attributeModifiers,
   auraBudget,
@@ -78,7 +78,7 @@ const modifier = (player: PlayerId, modifierId: string, added = true): GameEvent
 const trapFired = (controller: PlayerId, row: Row, lane: number): GameEvent => ({ type: "trapFired", instanceId: "t9", defId: "core-084", controller, row, lane });
 
 function spec(key: string, scope: AuraScope, side: Side = "you", lane: number | null = 1, look: AuraLook = "storm"): AuraSpec {
-  return { key, defId: "core-014", instanceId: key, side, lane, scope, look, colors: FLAVOR_LOOKS.Tech.colors };
+  return { key, defId: "core-014", instanceId: key, side, row: "backrow", lane, scope, look, colors: FLAVOR_LOOKS.Tech.colors };
 }
 
 function tracked(key: string, scope: AuraScope, seen: number, phase: AuraPhase = "standing", side: Side = "you", lane: number | null = 1): TrackedAura {
@@ -108,7 +108,7 @@ describe("R2787000 what wears an aura", () => {
       ["meditativeplus-009", "opponent", 1, "side", "arcane"],
       ["core-018", "opponent", 2, "zone", "frost"],
     ]);
-    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
+    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_SHARED_LOOK_NAMES));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));
     expect(planned[0]?.key).toBe(`field-${you[0] && !you[0].faceDown ? you[0].instanceId : ""}`);
     expect(planned[5]?.key).toBe("mod-p1-m5");

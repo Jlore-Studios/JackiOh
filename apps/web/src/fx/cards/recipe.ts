@@ -33,6 +33,24 @@ export const ENTRANCE_TRAUMA = {
   titanBloom: FX_LEGENDARY_TRAUMA,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
   felinorAssembly: FX_LEGENDARY_TRAUMA,
+  // R3399000: Classic+'s signatures, in catalog order.
+  pancakeStack: FX_LEGENDARY_TRAUMA,
+  waffleIron: FX_LEGENDARY_TRAUMA,
+  griddleFreeze: FX_LEGENDARY_TRAUMA,
+  kitchenDoor: FX_LEGENDARY_TRAUMA,
+  shieldPlant: FX_LEGENDARY_TRAUMA,
+  vineNap: FX_LEGENDARY_TRAUMA,
+  spotlightPose: FX_LEGENDARY_TRAUMA,
+  staffShuffle: FX_LEGENDARY_TRAUMA,
+  flexBurst: FX_LEGENDARY_TRAUMA,
+  drumLeap: FX_LEGENDARY_TRAUMA,
+  giftDesk: FX_LEGENDARY_TRAUMA,
+  bannerPlant: FX_LEGENDARY_TRAUMA,
+  greatBanner: FX_LEGENDARY_TRAUMA,
+  briefcaseStride: FX_LEGENDARY_TRAUMA,
+  templeStack: FX_LEGENDARY_TRAUMA,
+  vineSwing: FX_LEGENDARY_TRAUMA,
+  obeliskRise: FX_LEGENDARY_TRAUMA,
 } as const;
 
 /** Where Big Max's fuse sparks, as a fraction of the entry, before the slam at FX_SLAM_AT. */

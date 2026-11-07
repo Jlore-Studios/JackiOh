@@ -41,6 +41,12 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   pawn: { rim: "#e5e7eb", core: "#fde68a", glow: "#f87171" },
   genie: { rim: "#fbbf24", core: "#fff7d6", glow: "#38bdf8" },
   ai: { rim: "#22c55e", core: "#dcfce7", glow: "#4ade80" },
+  // R3399002: Classic+'s Mythics: Zephrys Zealotism's indigo cyclone, Portal to the Past's sepia vortex,
+  // Twice Forward's violet stair and its cyan cracks, Mythic Grape's violet grape over its green vines.
+  zealot: { rim: "#4f46e5", core: "#e0e7ff", glow: "#818cf8" },
+  portal: { rim: "#a16207", core: "#fef3c7", glow: "#d6a35c" },
+  stair: { rim: "#7c3aed", core: "#ede9fe", glow: "#22d3ee" },
+  vineyard: { rim: "#9333ea", core: "#f3e8ff", glow: "#65a30d" },
 };
 
 /** Every burst an entrance throws, at intensity "normal" (rule 9). R2803000: the Mythic's eased for the phone frame budget. */
