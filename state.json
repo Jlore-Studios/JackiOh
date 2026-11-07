@@ -16249,6 +16249,8 @@
       }
     },
     "3375": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T10:49:04Z",
@@ -16262,8 +16264,11 @@
         "trail": "hrome/component/screenshots/*/\", \"description\": \"Clean up old artifacts, list kep\u2026\n- said: I wrote the new spec and changed the other two; all three pass in Electron (your command's default browser) and in Chrome (the browser CI's component job uses). Nothing under `apps/web/src/` was edited, and I found no app bug. **Files** - `/home/runner/work/_temp/work/item-3334/e2e/cypress/componen\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; ls -la e2e/artifacts/item-3334-chrome/component/screenshots/starship-moments.cy.tsx/ 2>&1; git check-ignore -v e2e/artifacts/item-3334-chrome 2\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/e2e/artifacts/item-3334-chrome/component/screenshots/starship-moments.cy.tsx/starship-launch-cinematic-1280x720.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; grep -n \\\"fx-cinematic\\\" apps/web/src/fx/fx.css | head -60\", \"description\": \"Find the cinematic CSS rules\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/apps/web/src/fx/fx.css\", \"offset\": 3445, \"limit\": 280}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/e2e/artifacts/item-3334-chrome/component/screenshots/starship-moments.cy.tsx/starship-wreck-break-1280x720.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/e2e/artifacts/item-3334-chrome/component/screenshots/starship-moments.cy.tsx/starship-launch-cinematic-390x844.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; grep -rn \\\"cameraFrom\\\\|cameraTo\\\\|fx-cam-x\\\\|min(96vw\\\" apps/web/src e2e/cypress | grep -v \\\"^apps/web/src/fx/starship.ts\\\\|fx.css:36\\\" | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; python3 - <<'EOF'\\ndef rep(p, a, b, n=1):\\n s = open(p).read()\\n assert s.count(a) == n, (p, a, s.count(a))\\n s = s.replace(a, b)\\n open(p, 'w'\u2026\n- said: Adding a test for the camera clamp next to the existing one.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; grep -n \\\"^import\\\\|^} from\\\\|^ [a-zA-Z_]*,$\\\" apps/web/src/fx/starshipMoments.test.ts | head -40; grep -n \\\"it(\\\\\\\"R3334001\\\" apps/web/src/fx/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; python3 - <<'EOF'\\np='apps/web/src/fx/starshipMoments.test.ts'\\ns=open(p).read()\\ns=s.replace(''' broadsideFireMs,\\n planStarship,\\n''',''' bro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; sed -n 95,200p apps/web/src/fx/starshipMoments.test.ts\", \"description\": \"Read the launch helpers in the moments test\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; python3 - <<'EOF'\\np='apps/web/src/fx/starshipMoments.test.ts'\\ns=open(p).read()\\na=''' const fused = [\\\"stinkyscape-t-dormant-starship\\\", \\\"st\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; python3 - <<'EOF'\\np='apps/web/src/fx/starshipMoments.test.ts'\\ns=open(p).read()\\na=''' // In frame is 1/zoom of the picture's side, so its mid\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; grep -n \\\"test:component\\\\|typecheck:component\\\" e2e/package.json; grep -n \\\"CAPTURES\\\\|cy.screenshot\\\" e2e/cypress/component/starship-moments.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; echo \\\"- build run 2: cinematic did not fill the screen (left gap in Chrome captures): camera square now max(100vw,100vh) and camera points cla\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; grep -nE \\\"(it|describe)\\\\(\\\" e2e/cypress/component/starship-moments.cy.tsx e2e/cypress/component/fx-phone-frame.cy.tsx e2e/cypress/component/f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; python3 - <<'EOF'\\nadds = {\\n 'R3334000': ['e2e/cypress/component/starship-moments.cy.tsx', 'e2e/cypress/component/fx-layer.cy.tsx'],\\n 'R33340\u2026\n- Bash: {\"command\": \"until grep -qE \\\"All specs passed|failed \\\\(|Run Finished|exit [0-9]\\\" /tmp/cy3334.log; do sleep 10; done; sleep 5; grep -E \\\"\\u2714|\\u2716|passing|failing|All specs|exit\\\" /tmp/cy3334.l\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; find e2e/artifacts -name \\\"starship-launch-cinematic-*.png\\\" -newer /tmp/vtc3334.log | head\", \"description\": \"Find the fresh cinematic captures\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/e2e/artifacts/component/screenshots/starship-moments.cy.tsx/starship-launch-cinematic-1280x720.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/e2e/artifacts/component/screenshots/starship-moments.cy.tsx/starship-launch-cinematic-390x844.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; echo \\\"- build run 2: Chrome starship-moments 28/28, fx-phone-frame 9/9 after the camera fix; captures now fill the screen. Running fx-layer + \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; timeout 900 pnpm exec eslint apps/web/src/fx apps/web/src/audio apps/web/src/cards apps/web/src/game apps/web/src/routes/dev e2e/cypress/compon\u2026\n- Bash: {\"command\": \"grep -E \\\"\\u2714|\\u2716|passing|failing|All specs|exit\\\" /tmp/cy3334b.log | tail -8\", \"description\": \"Show the fx-layer and audio-recipes results\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334/apps/web && timeout 1200 pnpm exec vitest run src/fx src/audio src/game/StarshipBoard.test.tsx src/game/starship.real.test.ts src/cards/starship\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; git status --short; git worktree list | head\", \"description\": \"Check working tree for stray files and worktrees\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3334; python3 - <<'EOF'\\np='spec/pending/3334.md'\\ns=open(p).read()\\na='''- The cinematic plays only at Big moments \\\"full\\\":'''\\nb='''- The picture \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Starship moments that feel epic: pieces docking as they fuse, a full-screen launch, broadsides from its own guns, and a wreck when it falls\"} --> ## What changed The Starship now has its own animations for every moment. This is presentation only (CLAUDE\u2026"
       },
       "issue": 3334,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T12:28:35Z",
         "from_run": "42365544683",
         "gates": [
           {
@@ -16355,8 +16360,15 @@
         "source": "build",
         "until": "2026-11-07T12:57:24Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-07T12:27:24Z",
+      "run_id": "pending:e6762189-1794054483",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-07T12:28:35Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16370,9 +16382,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T12:14:57Z",
+    "at": "2026-11-07T12:28:35Z",
     "url": "",
-    "what": "revise #3366 on claude-8"
+    "what": "review #3375 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-07T12:12:23Z",
