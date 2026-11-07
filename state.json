@@ -18291,7 +18291,19 @@
           "claude": "medium"
         }
       },
-      "waiting_comment": 6702531167
+      "waiting_comment": 6702531167,
+      "waiting_turn": {
+        "behind": [
+          3370,
+          3362
+        ],
+        "ends": "2026-11-07T12:58:58Z",
+        "from_run": "42357730005",
+        "head": "497a19f86cf11306f016b91f6dca01d286521cd1",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-07T10:58:58Z"
+      }
     },
     "3359": {
       "action": "review",
