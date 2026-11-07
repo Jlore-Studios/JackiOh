@@ -1097,3 +1097,10 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-07T18:54:29Z,42402329917,agy,gemini-3.8-flash-high,plan,3410,medium,planned,,15.2,509033,86177,0,,34,39,83,84,22,,none,,1
 2026-11-07T18:53:03Z,42398302324,claude-6,opus,revise,3375,hard,interrupted,5-hour cap,0.3,0,0,0,,56,76,,,0.8,claude-6,none,,1
 2026-11-07T19:16:11Z,42403694214,claude-3,opus,plan,3391,hard,planned,,15.3,114,94017,9889657,5.723,52,77,,,129,,fresh,,1
+2026-11-07T19:23:33Z,42404672039,agy,gemini-3.8-flash-high,build,3410,medium,built,,15.3,152396,14158,0,,40,40,84,85,50.6,agy,none,,1
+2026-11-07T19:18:32Z,42403757796,claude-3,opus,plan,3392,hard,planned,,16.8,194,95617,18412465,7.7613,54,81,,,129.2,,fresh,,1
+2026-11-07T19:19:41Z,42398511076,claude-3,opus,revise,3382,hard,approved,,28.6,66,15437,8288912,35.9908,6,82,,,23.4,claude-3,resumed,cap,2
+2026-11-07T19:42:32Z,42406975574,claude-3,opus,plan,3405,hard,interrupted,refusal,3.5,0,0,0,3.3557,92,100,,,151,claude-4,fresh,cap,1
+2026-11-07T19:42:26Z,42405527378,claude-3,opus,plan,3393,hard,interrupted,refusal,22.4,118,62019,10776739,5.4065,82,100,,,150.4,,fresh,,1
+2026-11-07T19:48:47Z,42406841910,agy,gemini-3.8-flash-high,review,3413,medium,approved,,14.3,107243,11892,0,,40,41,85,85,2.9,,none,,1
+2026-11-07T19:50:55Z,42402268158,claude-3,opus,revise,3372,hard,interrupted,refusal,36.1,4,1262,101635,1.6019,48,80,,,0.5,claude-3,fresh,,1
