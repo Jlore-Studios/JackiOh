@@ -34995,7 +34995,10 @@
           "provider": ""
         },
         "difficulty": "medium",
+        "done_at": "2026-11-07T19:02:20Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3412,
         "head": "9d53a7ba0d2349da2881d6e678c07a33263fefdd",
         "issue": 3344,
         "merged_at": "2026-11-07T18:50:49Z",
@@ -35008,12 +35011,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "42403042303",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42403042303",
         "sha": "01c93697dafcb1fc844ce336569801d193f53798",
         "started_at": "2026-11-07T18:51:56Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 135
