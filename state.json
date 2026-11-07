@@ -18131,6 +18131,8 @@
       }
     },
     "3359": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T03:11:08Z",
@@ -18144,8 +18146,11 @@
         "trail": "tion\": \"Read the Card intros bullet\"}\n- said: Now writing the spec edits: \u00a710.10, \u00a710.11, the three new notes, the amended notes, and the pending paragraphs.\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new, count=1):\\n s=open(p).read()\\n assert old in s, (p, old[:80])\\n s=s.replace(old,new,count)\\n open(p,'w').write(s)\\np='spec/10-engine-guide.md'\\nsu\u2026\n- Bash: {\"command\": \"mkdir -p spec/rulings && cat > spec/rulings/R3332000.md <<'EOF'\\n---\\nid: R3332000\\ntitle: \\\"A card's frame in its effects table: an entrance beside any entry of a Unit or a Field Spell,\u2026\n- Bash: {\"command\": \"grep -E \\\"\\u2713|\\u2716|passing|failing|pending|Tests:|Passing:|Failing:|All specs|exit|mean frame\\\" /tmp/cy.log | head -50\", \"description\": \"Read the Cypress run results\"}\n- Bash: {\"command\": \"grep -o \\\"Felinor Fiender's signature holds[^\\\\[]*\\\\|Felinor Fiender's signature: mean[^\\u2502]*\\\" /tmp/cy.log | head -3; find e2e -name \\\"fx-signature-felinor*\\\" | head; git status --sh\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/e2e/artifacts/component/screenshots/fx-signature.cy.tsx/fx-signature-felinor-fiender-1280x720.png\"}\n- Bash: {\"command\": \"sed -n 8,30p spec/rulings/R0670.md; echo ----; grep -n \\\"entrance\\\" spec/rulings/R0669.md | cut -c1-300; echo ----; grep -n \\\"entrance\\\" spec/rulings/R2722000.md | cut -c1-400; grep -n \\\u2026\n- Bash: {\"command\": \"sed -n 19p spec/rulings/R2722000.md; sed -n 11p spec/rulings/R0669.md | cut -c290-900; sed -n 14p spec/rulings/R2784000.md | cut -c1-900\", \"description\": \"Read the full sentences to amen\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ndef sub(p, old, new, count=1):\\n s=open(p).read()\\n assert old in s, (p, old[:80])\\n s=s.replace(old,new,count)\\n open(p,'w').write(s)\\n# Titles: add the am\u2026\n- said: Now run `spec check` (it builds the tools crate in release, which takes a while):\n- Bash: {\"command\": \"timeout 1500 cargo jackioh spec check 2>&1 | tail -15\", \"description\": \"Run the spec check\", \"timeout\": 1600000}\n- Bash: {\"command\": \"grep -n \\\"^#\\\\|Tiers\\\\|^| \\\" docs/polish/9-card-animations.md | head -60\", \"description\": \"Survey the card animations doc\"}\n- Bash: {\"command\": \"sed -n 12,36p docs/polish/9-card-animations.md; grep -n \\\"^## \\\\|The tables\\\" docs/polish/9-card-animations.md\", \"description\": \"Read the Tiers section and doc headings\"}\n- Bash: {\"command\": \"sed -n 264,300p docs/polish/9-card-animations.md; sed -n 407,430p docs/polish/9-card-animations.md\", \"description\": \"Read The tables and The gallery sections\"}\n- said: Now the docs edits:\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new, count=1):\\n s=open(p).read()\\n assert old in s, (p, old[:80])\\n s=s.replace(old,new,count)\\n open(p,'w').write(s)\\np='docs/polish/9-card-animation\u2026\n- Bash: {\"command\": \"sed -n 455,470p apps/web/README.md; sed -n 1055,1066p apps/web/README.md\", \"description\": \"Read the README gallery and intro paragraphs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new, count=1):\\n s=open(p).read()\\n assert old in s, (p, old[:80])\\n s=s.replace(old,new,count)\\n open(p,'w').write(s)\\np='apps/web/README.md'\\nsub(p,\\\u2026\n- Bash: {\"command\": \"git rev-parse --short origin/main; timeout 900 cargo jackioh names --check 2>&1 | tail -3; timeout 900 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\":\u2026\n- Bash: {\"command\": \"(timeout 2400 pnpm --dir apps/web test > /tmp/webtest.log 2>&1; echo \\\"exit $?\\\" >> /tmp/webtest.log)\", \"description\": \"Run the web app's full unit test suite\", \"timeout\": 2500000, \"run_\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index(\\\"## State\\\"):s.index(\\\"## Log\\\")]\\nnew=\\\"\\\"\\\"## State\\n\\nBuild pass 1 (opus), resumed 2026-11-07 after a usage cut \u2026\n- Bash: {\"command\": \"sleep 1; tail -5 /tmp/webtest.log\", \"description\": \"Peek at the web test progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"git diff 552a13d860 -- apps/web/src/fx/takeover.ts apps/web/src/fx/entrances.ts | grep \\\"^[+-]\\\" | grep -v \\\"^+++\\\\|^---\\\" | head -60\", \"description\": \"Review the takeover and entrances \u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/webtest.log; do sleep 5; done; grep -E \\\"Test Files|Tests |exit|FAIL\\\" /tmp/webtest.log | head -20\", \"description\": \"Wait for the full web test run to finish\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/e2e/artifacts/component/screenshots/fx-signature.cy.tsx/fx-signature-felinor-fiender-390x844.png\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new, count=1):\\n s=open(p).read()\\n assert old in s, (p, old[:80])\\n s=s.replace(old,new,count)\\n open(p,'w').write(s)\\np='e2e/cypress/component/fx-sig\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/e2e/artifacts/component/screenshots/fx-signature.cy.tsx/fx-signature-felinor-fiender-390x844.png\"}\n- Bash: {\"command\": \"timeout 600 pnpm --dir e2e typecheck:component 2>&1 | tail -2; timeout 600 pnpm exec eslint e2e/cypress/component/fx-signature.cy.tsx 2>&1 | tail -3; echo eslint-exit $?; grep -E \\\"Test \u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/webtest.log; do sleep 10; done; grep -E \\\"Test Files|Tests |^exit| FAIL \\\" /tmp/webtest.log | head -20\", \"description\": \"Wait for the web test run to end\", \"\u2026\n- Bash: {\"command\": \"git status --short; grep -nE \\\"\\\\.(skip|only)\\\\(\\\" $(git diff --name-only 552a13d860 -- '*.test.ts' '*.test.tsx' '*.cy.tsx'; git ls-files --others --exclude-standard -- '*.test.ts' '*.cy\u2026\n- Bash: {\"command\": \"timeout 600 cargo jackioh spec check 2>&1 | tail -1; cargo fmt --check && echo fmt-ok; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index(\\\"## State\\\"):s.index(\\\"## Lo\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: signature animations for every Legendary and Mythic, the frame: entrances and takeovers for any card, loudness budgets, and a ratchet that ends shared motifs on them\"} --> ## What changed This lays the groundwork for #3330's per-set signature passes. It\u2026"
       },
       "issue": 3332,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T04:27:20Z",
         "from_run": "42332816524",
         "gates": [
           {
@@ -18237,7 +18242,11 @@
         "source": "build",
         "until": "2026-11-07T04:55:15Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-07T04:25:15Z",
+      "run_id": "pending:55f8f9ee-1794025608",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18256,6 +18265,9 @@
         "provider": "claude-4",
         "run": "42332816524"
       },
+      "started_at": "2026-11-07T04:27:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18269,9 +18281,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T04:15:17Z",
+    "at": "2026-11-07T04:27:20Z",
     "url": "",
-    "what": "build #3221 on claude-1"
+    "what": "review #3359 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-07T04:11:55Z",
