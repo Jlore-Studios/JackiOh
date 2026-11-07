@@ -18193,13 +18193,7 @@
           "claude": "medium"
         }
       },
-      "waiting_comment": 6702531167,
-      "wip": {
-        "at": "2026-11-07T06:21:31Z",
-        "provider": "claude-8",
-        "sha": "64f290e7775cf5487e857a6d25bf54208513144f",
-        "start": "ecaf147c788a8e76bcddefd6c15296a9db5ff1d2"
-      }
+      "waiting_comment": 6702531167
     },
     "3359": {
       "action": "review",
