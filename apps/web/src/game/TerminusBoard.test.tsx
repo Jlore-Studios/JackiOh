@@ -84,46 +84,38 @@ describe("R3338000 a Terminus card's set piece on the board", () => {
     expect(screen.queryByTestId(SKIP_HINT)).toBeNull();
   });
 
-  it("R3338000 short and off", () => {
-    for (const key of KEYS) {
-      setFxSettings({ bigMoments: "short" });
-      const short = playOn(key);
-      expect(short, key).toHaveAttribute("data-set-piece", key);
-      expect(short.style.getPropertyValue("--set-piece-hold"), key).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
-      cleanup();
-      resetFxSettingsForTests();
-
-      setFxSettings({ bigMoments: "off" });
-      // Played through, the board never holds and never shows the hint.
-      let held = false;
-      playOn(key, (game) => {
-        held ||= game.hasAttribute("data-set-piece") || screen.queryByTestId(SKIP_HINT) !== null;
-        return false;
-      });
-      expect(held, key).toBe(false);
-      cleanup();
-      resetFxSettingsForTests();
-    }
+  // One test a card and a setting: each plays the board through on its own.
+  it.each(KEYS)("R3338000 Big moments short holds the short beat: %s", (key) => {
+    setFxSettings({ bigMoments: "short" });
+    const short = playOn(key);
+    expect(short).toHaveAttribute("data-set-piece", key);
+    expect(short.style.getPropertyValue("--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
   });
 
-  it("R3338000 reduce motion: no hold, a still [data-fx=setPiece][data-still]", () => {
+  it.each(KEYS)("R3338000 Big moments off holds nothing: %s", (key) => {
+    setFxSettings({ bigMoments: "off" });
+    // Played through, the board never holds and never shows the hint.
+    let held = false;
+    playOn(key, (game) => {
+      held ||= game.hasAttribute("data-set-piece") || screen.queryByTestId(SKIP_HINT) !== null;
+      return false;
+    });
+    expect(held).toBe(false);
+  });
+
+  it.each(KEYS)("R3338000 reduce motion: no hold, a still [data-fx=setPiece][data-still]: %s", (key) => {
     // jsdom lays nothing out: give every element a box, so the still frame has somewhere to stand.
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
       x: 300, y: 200, left: 300, top: 200, width: 90, height: 126, right: 390, bottom: 326, toJSON: () => ({}),
     } as DOMRect);
-    for (const key of KEYS) {
-      writeSettings({ reduceMotion: true });
-      const game = playOn(key, () => document.querySelector('[data-fx="setPiece"]') !== null);
-      expect(game, key).toHaveAttribute("data-reduced-motion", "true");
-      expect(game, key).not.toHaveAttribute("data-set-piece");
-      expect(screen.queryByTestId(SKIP_HINT), key).toBeNull();
-      const still = document.querySelector<HTMLElement>('[data-fx="setPiece"]');
-      expect(still, key).not.toBeNull();
-      expect(still, key).toHaveAttribute("data-still", "true");
-      expect(still, key).toHaveAttribute("data-shape", SET_PIECES[key].shape);
-      cleanup();
-      __resetSettingsForTests();
-      document.body.innerHTML = "";
-    }
+    writeSettings({ reduceMotion: true });
+    const game = playOn(key, () => document.querySelector('[data-fx="setPiece"]') !== null);
+    expect(game).toHaveAttribute("data-reduced-motion", "true");
+    expect(game).not.toHaveAttribute("data-set-piece");
+    expect(screen.queryByTestId(SKIP_HINT)).toBeNull();
+    const still = document.querySelector<HTMLElement>('[data-fx="setPiece"]');
+    expect(still).not.toBeNull();
+    expect(still).toHaveAttribute("data-still", "true");
+    expect(still).toHaveAttribute("data-shape", SET_PIECES[key].shape);
   });
 });

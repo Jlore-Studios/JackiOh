@@ -304,6 +304,6 @@ describe("R3338000 the Terminus set pieces", () => {
   it("R3338000 TERMINUS_IDS are the catalog's Terminus cards, in its order", () => {
     const tagged = Object.keys(CATALOG).filter((id) => CATALOG[id]?.tags.includes("Terminus") === true);
     expect(tagged).toEqual([...TERMINUS_IDS]);
-    expect(SET_PIECE_KEYS).toEqual(expect.arrayContaining(TERMINUS_KEYS));
+    expect(SET_PIECE_KEYS).toEqual(expect.arrayContaining([...TERMINUS_KEYS]));
   });
 });
