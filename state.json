@@ -18077,19 +18077,12 @@
         "reason": "`agy` reached its usage limit",
         "trail": "- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fc9e01da-fd3c-4309-9e18-5f05f23d4417/task-90\"}\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check vitest --changed progress again\"}\n- said: Monitoring test execution.\n- said: \n- read_file: {\"EndLine\": 320, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3358/apps/web/src/settings/accountSync.test.tsx\", \"StartLine\": 270}"
       },
-      "hold": {
-        "ends": "2026-11-07T06:58:11Z",
-        "lifted": "2026-11-07T05:04:46Z",
-        "owner": "agy",
-        "since": "2026-11-07T04:58:11Z",
-        "until": "2026-11-07T05:02:20Z",
-        "why": "it refused a call"
-      },
       "issue": 3339,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-07T03:44:26Z",
+        "claimed": true,
+        "claimed_at": "2026-11-07T05:06:04Z",
         "from_run": "42330549139",
         "gates": [
           {
@@ -18152,10 +18145,10 @@
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-07T03:41:59Z",
-      "run_id": "42335359844",
+      "run_id": "pending:76ad7ffa-1794027945",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "started_at": "2026-11-07T03:44:26Z",
+      "started_at": "2026-11-07T05:06:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18312,9 +18305,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T04:53:24Z",
+    "at": "2026-11-07T05:06:04Z",
     "url": "",
-    "what": "review #3360 on claude-4"
+    "what": "review #3358 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T04:56:41Z",
