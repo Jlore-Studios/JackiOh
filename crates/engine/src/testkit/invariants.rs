@@ -1880,6 +1880,14 @@ pub struct InvariantMonitor {
     dormant: IndexSet<String>,
 }
 
+/// R781004: whether `later`, the rest of an action's events, summons `id` again (back through Reborn): an
+/// arrival whose fresh draw is the one the state the action leaves holds.
+fn summoned_later(id: &str, later: &[GameEvent]) -> bool {
+    later
+        .iter()
+        .any(|event| matches!(event, GameEvent::Summoned { instance_id, .. } if instance_id == id))
+}
+
 pub fn create_invariant_monitor(start: &GameState) -> InvariantMonitor {
     InvariantMonitor::new(start)
 }
@@ -2494,9 +2502,7 @@ impl InvariantMonitor {
                     self.enter(instance_id);
                     self.note_entry_windfury(instance_id, state);
                     if let GameEvent::Summoned { def_id, .. } = event {
-                        let back_later = events[index + 1..].iter().any(|later| {
-                            matches!(later, GameEvent::Summoned { instance_id: again, .. } if again == instance_id)
-                        });
+                        let back_later = summoned_later(instance_id, &events[index + 1..]);
                         self.note_drawn_windfury(instance_id, def_id, state, back_later);
                     }
                     // R12, R781004: a steal keeps the card on the field, its drawn keywords with it.
@@ -2621,7 +2627,8 @@ impl InvariantMonitor {
                     ..
                 } => {
                     self.note_entry_windfury(result_instance_id, state);
-                    self.note_drawn_windfury(result_instance_id, def_id, state, false);
+                    let back_later = summoned_later(result_instance_id, &events[index + 1..]);
+                    self.note_drawn_windfury(result_instance_id, def_id, state, back_later);
                 }
                 GameEvent::KeywordGranted {
                     instance_id,

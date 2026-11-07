@@ -54,6 +54,7 @@ import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Segmented, Tabs } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
 import "./stats.css";
@@ -685,50 +686,25 @@ export default function StatsRoute(): ReactElement {
         )}
 
         {/* Tabs */}
-        <div className="stats-tabs" role="tablist" aria-label={t("Statistics views")}>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-cards"
-            aria-selected={tab === "cards"}
-            aria-controls="stats-panel-cards"
-            className={`stats-tab ${tab === "cards" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabCards}
-            onClick={() => setTab("cards")}
-          >
-            {t("Cards")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-sets"
-            aria-selected={tab === "sets"}
-            aria-controls="stats-panel-sets"
-            className={`stats-tab ${tab === "sets" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabSets}
-            onClick={() => setTab("sets")}
-          >
-            {t("Sets")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-players"
-            aria-selected={tab === "players"}
-            aria-controls="stats-panel-players"
-            className={`stats-tab ${tab === "players" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabPlayers}
-            onClick={() => setTab("players")}
-          >
-            {t("Players")}
-          </button>
-        </div>
-
-        {/* CARDS TAB */}
-        {tab === "cards" && (
-          <section id="stats-panel-cards" role="tabpanel" aria-labelledby="stats-tab-cards" className="stats-panel one-screen__body">
-            {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
-            <GamesPanel patch={patch} mode={mode} />
+        <Tabs
+          label={t("Statistics views")}
+          idPrefix="stats"
+          value={tab}
+          onChange={setTab}
+          className="one-screen__frame"
+          tablistClassName="stats-tabs"
+          tabClassName="stats-tab"
+          panelAs="section"
+          items={[
+            {
+              id: "cards",
+              label: t("Cards"),
+              testId: statsTestid.tabCards,
+              panelClassName: "stats-panel one-screen__body",
+              panel: (
+                <>
+                  {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
+                  <GamesPanel patch={patch} mode={mode} />
 
             {/* Filter controls */}
             <div className="stats-filter-bar">
@@ -853,26 +829,16 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
 
-              <div className="stats-view-toggle" role="group" aria-label={t("View")}>
-                <button
-                  type="button"
-                  className={`stats-view-btn ${view === "table" ? "stats-view-btn--active" : ""}`}
-                  data-testid={statsTestid.viewTable}
-                  aria-pressed={view === "table"}
-                  onClick={() => setView("table")}
-                >
-                  {t("Table")}
-                </button>
-                <button
-                  type="button"
-                  className={`stats-view-btn ${view === "grid" ? "stats-view-btn--active" : ""}`}
-                  data-testid={statsTestid.viewGrid}
-                  aria-pressed={view === "grid"}
-                  onClick={() => setView("grid")}
-                >
-                  {t("Grid")}
-                </button>
-              </div>
+              <Segmented
+                label={t("View")}
+                className="stats-view-toggle"
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
+                  { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+                ]}
+              />
 
               {/* R2370000: the Tokens section, off by default */}
               <div className="stats-col-toggles">
@@ -1202,12 +1168,16 @@ export default function StatsRoute(): ReactElement {
             {!cardStatsLoading && !cardStatsError && (
               <CreatedPanel created={createdCards} minSample={minSample} nameOf={shownName} />
             )}
-          </section>
-        )}
-
-        {/* SETS TAB (R1966000) */}
-        {tab === "sets" && (
-          <section id="stats-panel-sets" role="tabpanel" aria-labelledby="stats-tab-sets" className="stats-panel one-screen__body">
+          </>
+        ),
+      },
+      {
+        id: "sets",
+        label: t("Sets"),
+        testId: statsTestid.tabSets,
+        panelClassName: "stats-panel one-screen__body",
+        panel: (
+          <>
             {setsError ? (
               <div className="stats-error">
                 <p>{t("The set statistics didn't load.")}</p>
@@ -1383,12 +1353,16 @@ export default function StatsRoute(): ReactElement {
                 </p>
               </>
             )}
-          </section>
-        )}
-
-        {/* PLAYERS TAB */}
-        {tab === "players" && (
-          <section id="stats-panel-players" role="tabpanel" aria-labelledby="stats-tab-players" className="stats-panel one-screen__body">
+          </>
+        ),
+      },
+      {
+        id: "players",
+        label: t("Players"),
+        testId: statsTestid.tabPlayers,
+        panelClassName: "stats-panel one-screen__body",
+        panel: (
+          <>
             <div className="stats-player-head">
               <input
                 type="search"
@@ -1474,8 +1448,11 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             )}
-          </section>
-        )}
+          </>
+        ),
+      },
+    ]}
+  />
 
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
