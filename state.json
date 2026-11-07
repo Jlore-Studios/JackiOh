@@ -18548,6 +18548,7 @@
     "3362": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_fixed_head": "a5c16c44127c68f97829e45faed9e45aaaa44240",
       "ci_fixes": 1,
       "cleared": {
@@ -18565,23 +18566,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-07T05:31:12Z",
+      "feedback_since": "2026-11-07T09:40:43Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3336,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-11-07T09:40:21Z",
+      "round_tier": "medium",
       "run_id": "42360742977",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-07T09:40:43Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gemini"
