@@ -24,6 +24,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
   "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
+  "organ",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -1721,6 +1722,41 @@ const riffle: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+// The Terminus organ (R3338000)
+
+/**
+ * R3338000: the organ's root for each Terminus set piece, by `amount`, 1 (Ceaseless Void's fold) to 9
+ * (Dice of Doom's d100) in setPieceBeds.ts: G2, then a semitone higher each, so no two share a key.
+ */
+const ORGAN_ROOTS_HZ = [98, 103.83, 110, 116.54, 123.47, 130.81, 138.59, 146.83, 155.56] as const;
+
+/**
+ * R3338000: a Terminus set piece's sting, after the Terminus intros' organ (R1883000): a minor triad on
+ * the root `amount` picks (anything else clamped into 1 to 9), each tone a pipe of sine partials at 1, 2,
+ * 3 and 4 times its pitch, swelling in over a quarter second, held 1.6 s and let go. Its bed's Mythic
+ * `entrance` sings the choir over its end.
+ */
+const organ: SfxRecipe = (ctx, out, at, params) => {
+  const swell = 0.25;
+  const held = swell + 1.6;
+  const len = 2;
+  const k = kit(ctx, out, at, len);
+  const pick = Math.min(ORGAN_ROOTS_HZ.length, Math.max(1, Math.round(params.amount ?? 1)));
+  const root = ORGAN_ROOTS_HZ[pick - 1] ?? ORGAN_ROOTS_HZ[0];
+  // Twelve pipes peak together at 0.72 at most, under full scale (B15).
+  const wind = heldEnvelope(k, 0, swell, 0.12, held, 0.12, len);
+  chain(wind, out);
+  // The root, its minor third and its fifth, equal-tempered.
+  for (const ratio of [1, 1.1892, 1.4983]) {
+    for (const [harmonic, weight] of [[1, 1], [2, 0.5], [3, 0.3], [4, 0.2]] as const) {
+      const pipe = oscillator(k, "sine", root * ratio * harmonic);
+      chain(pipe, level(k, weight), wind);
+      run(k, pipe, 0, len);
+    }
+  }
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -1808,6 +1844,8 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   returnToHand: { recipe: returnToHand, durationMs: 200, gain: 0.4 },
   deal: { recipe: deal, durationMs: 80, gain: 0.4 },
   riffle: { recipe: riffle, durationMs: 500, gain: 0.45 },
+  // R3338000: the bed under a Terminus set piece, at the gain of the entrance that ends it.
+  organ: { recipe: organ, durationMs: 2000, gain: 0.6 },
 };
 
 /** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */

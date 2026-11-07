@@ -377,6 +377,26 @@ export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
 // Motion its still frame stands this long and holds nothing.
 export const FX_STARSHIP_TAIL_MS = 400;
 export const FX_STARSHIP_STILL_MS = 1_600;
+// R3338000: the Terminus cards' set pieces (fx/terminus/). A set piece's beats fall evenly from
+// FX_TERMINUS_BEATS_FROM to FX_TERMINUS_BEATS_TO of its span (its hold, or, unheld, its swallow); its cue
+// outlasts its entry by FX_TERMINUS_TAIL_MS (inside FX_MAX_TAIL_MS, R200), and under Reduce Motion its
+// still frame stands FX_TERMINUS_STILL_MS and holds nothing.
+export const FX_TERMINUS_BEATS_FROM = 0.25;
+export const FX_TERMINUS_BEATS_TO = 0.85;
+export const FX_TERMINUS_TAIL_MS = 600;
+export const FX_TERMINUS_STILL_MS = 1_600;
+// R3338000: where on its zone Ceaseless Void's 10/10 burns once the fold settles, and the point of the
+// board Farewell's lamp hangs from.
+export const FX_TERMINUS_STATS_AT = { x: 0.85, y: 0.88 } as const;
+export const FX_TERMINUS_LAMP_AT = { x: 0.5, y: 0.05 } as const;
+// R3338000: the most graveyard cards Farewell lifts into its light, one a beat; Dice of Doom's Terminus
+// cards rain into the hand this share of the entry's motion apart.
+export const FX_TERMINUS_LIFT_MAX = 12;
+export const FX_TERMINUS_RAIN_STEP = 0.06;
+// R3338000: Event Horizon's extra turn opens with the board snapping back this hard; Last Word's turn
+// counts down 3, 2, 1 at these fractions of its opening entry.
+export const FX_TERMINUS_SNAP_TRAUMA = 0.5;
+export const FX_TERMINUS_COUNT_AT = [0.2, 0.45, 0.7] as const;
 // R961: the jade tally grows this much per step, at most this big.
 export const FX_JADE_SCALE_STEP = 0.15;
 export const FX_JADE_SCALE_MAX = 2;

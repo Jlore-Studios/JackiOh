@@ -40,6 +40,7 @@ const EXPECTED_IDS = [
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
   // #3347: cards that move like cards.
   "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
+  "organ",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -133,6 +134,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   returnToHand: 200,
   deal: 80,
   riffle: 500,
+  // R3338000: the Terminus set pieces' organ.
+  organ: 2000,
 };
 
 /** B14 parameter sets used here too. */

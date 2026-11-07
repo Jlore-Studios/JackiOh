@@ -254,8 +254,16 @@ export function createSoundDirector(
       // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
       // stack a sound per card; condense the entry to one of each sfx and its most important line.
       // R2800000: so is a wipe, voiced once its set piece's hold is over; R2801000: a Starship's fuse run
-      // sounds once, and its launch roars as its hold ends, when it lifts off.
-      if (entry.sweep !== undefined || entry.zone !== undefined || entry.wipe !== undefined || entry.fuse !== undefined || entry.launch !== undefined) {
+      // sounds once, and its launch roars as its hold ends, when it lifts off; R3338000: a Terminus card's
+      // signature run is voiced once, condensed, after its hold.
+      if (
+        entry.sweep !== undefined ||
+        entry.zone !== undefined ||
+        entry.wipe !== undefined ||
+        entry.fuse !== undefined ||
+        entry.launch !== undefined ||
+        entry.signature !== undefined
+      ) {
         const items: Owed[] = [];
         for (const event of entry.events) {
           const index = owed.findIndex((item) => item.event === event);

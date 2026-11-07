@@ -64,6 +64,15 @@ const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
 const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
   vortex: ["dark", "spiral", "core"],
   fold: ["edges", "light"],
+  // R3338000: the Terminus cards' set pieces (fx/terminus/).
+  rift: ["dark", "tear", "stars"],
+  lamp: ["dark", "cone", "glow"],
+  chalk: ["slate", "scrawl", "crack", "stamp"],
+  bend: ["lens", "clock"],
+  freeze: ["frost", "cracks"],
+  abyss: ["dark", "chains"],
+  crunch: ["collapse", "point"],
+  doom: ["dark", "stars"],
 };
 
 /** R2801000: a Starship launch's layers, above its counts (fx.css). */
@@ -276,6 +285,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     }
     case "roll": {
       el.setAttribute("data-text", t(cue.title));
+      // R3338000: Dice of Doom's d100 wears its own look (fx.css).
+      if (cue.look !== undefined) el.setAttribute("data-look", cue.look);
       rollItems(doc, el, cue);
       break;
     }
@@ -324,11 +335,23 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-spin", String(cue.spin));
       el.style.setProperty("--fx-hold", `${Math.max(0, cue.holdMs)}ms`);
+      // R3338000: one still frame under Reduce Motion, holding nothing.
+      if (cue.still === true) el.setAttribute("data-still", "true");
       for (const part of SET_PIECE_PARTS[cue.shape]) {
         const child = doc.createElement("div");
         child.className = `fx-setPiece-${part}`;
         el.appendChild(child);
       }
+      // R3338000: each beat a mark of its own (a star lighting, a lane chaining shut), lit at its time.
+      const beats = cue.beats ?? [];
+      if (beats.length > 0) el.style.setProperty("--fx-beats", String(beats.length));
+      beats.forEach((beatMs, index) => {
+        const beat = doc.createElement("div");
+        beat.className = "fx-setPiece-beat";
+        beat.style.setProperty("--fx-beat", `${String(Math.max(0, beatMs))}ms`);
+        beat.style.setProperty("--fx-beat-index", String(index));
+        el.appendChild(beat);
+      });
       break;
     }
     case "launch": {
