@@ -14768,9 +14768,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-07T11:34:15Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-1` 5-hour usage is 101%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-07T13:50:00Z; it can start again only in 2h 15m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-2",
+      "owner_since": "2026-11-07T11:38:57Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-1` 5-hour usage is 101%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-07T13:50:00Z; it can start again only in 2h 15m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-07T00:41:03Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -16202,7 +16202,7 @@
       }
     },
     "3372": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "difficulty": "hard",
       "failures": 0,
@@ -16218,11 +16218,11 @@
       },
       "issue": 3337,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-2",
       "queued_at": "2026-11-07T11:35:00Z",
-      "run_id": "42367647287",
+      "run_id": "pending:bc00a2ca-1794051340",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16243,7 +16243,7 @@
         "run": "42357772242"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T11:18:46Z",
+      "started_at": "2026-11-07T11:38:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16259,9 +16259,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T11:35:25Z",
+    "at": "2026-11-07T11:38:57Z",
     "url": "",
-    "what": "review #3365 on claude-2"
+    "what": "revise #3372 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-07T11:11:48Z",
