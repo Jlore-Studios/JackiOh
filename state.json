@@ -16729,9 +16729,11 @@
         "sha": "9d53a7ba0d2349da2881d6e678c07a33263fefdd"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T13:52:37Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-07T16:47:05Z",
         "family": "claude",
@@ -16741,6 +16743,7 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 51%, at or over its 40% cap outside its hours; it resets at 2026-11-07T18:50:00Z",
         "trail": "- Bash: {\"command\": \"git status --short | grep -E '^(UU|AA|DU|UD)'; grep -rn '^<<<<<<<\\\\|^>>>>>>>\\\\|^=======$' apps/web/src/cards/CardFace.tsx apps/web/src/cards/settings.test.ts apps/web/src/cards/settings.\u2026\n- said: Start with the smaller files.\n- Bash: {\"command\": \"cd apps/web/src; sed -n 485,515p cards/CardFace.tsx; echo ------; sed -n 80,130p cards/settings.ts; echo -----; sed -n 85,120p settings/slots.ts; echo ----; sed -n 100,116p settings/wiri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383/apps/web/src; grep -n \\\"artFirst\\\\|const shape\\\\|shape=\\\" cards/CardFace.tsx | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383/apps/web/src; python3 - <<'E'\\nimport re\\np='cards/CardFace.tsx'\\ns=open(p).read()\\ns=re.sub(r\\\"<<<<<<< HEAD\\\\n(\\\\s*shape=\\\\{shape\\\\}\\\\n)\\\\|\\\\|\\\u2026\n- said: Fix the tidy list formatting, then the rest of settings.ts and the test file.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383/apps/web/src; sed -i 's/^ \\\"deviceTilt\\\",\\\\];/ \\\"deviceTilt\\\",\\\\n];/' cards/settings.ts; sed -n 1,60p cards/settings.ts | grep -n \\\"deviceTilt\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383/apps/web/src; python3 - <<'E'\\nimport re\\np='cards/settings.test.ts'\\ns=open(p).read()\\ns=re.sub(r\\\"<<<<<<< HEAD\\\\n.*?\\\\|\\\\|\\\\|\\\\|\\\\|\\\\|\\\\| 7654\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383; grep -rln '^<<<<<<<\\\\|^>>>>>>>' apps e2e spec crates --include=* 2>/dev/null | head; git add apps/web/src/cards/CardFace.tsx apps/web/src/cards\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383; ls apps/web/src/wasm/pkg >/dev/null 2>&1 && echo wasm ok; timeout 900 pnpm --dir apps/web exec vitest run --project web src/cards/settings.test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383; timeout 1200 pnpm --dir apps/web exec vitest run --project web src/cards src/game src/collection src/surfaces.test.ts src/palette.test.ts 2>&1 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3383; printf '\\\\n- Pass 3 (sonnet): resolved the 5 merge conflicts (CardFace shape now also \\\"full\\\" for artFirst; settings.ts/slots/tests carry both\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up\"} --> ## What changed Every Epic, Legendary or Mythic face, and every face that prints full art, now \u2026"
       },
+      "interruptions": 0,
       "issue": 3344,
       "kind": "review",
       "live": "reviewing",
