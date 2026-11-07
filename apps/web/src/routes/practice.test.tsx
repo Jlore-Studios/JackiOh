@@ -2796,6 +2796,7 @@ describe("practice plays on the full board, with sound and settings", () => {
         };
       },
       musicOutput: () => null,
+      sfxOutput: () => null,
       subscribeState: () => () => undefined,
       dispose: () => undefined,
       playSfx: () => true,

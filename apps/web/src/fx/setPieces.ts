@@ -14,7 +14,7 @@ import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
 import { HIDDEN_ID, SET_PIECE_HOLD_MS, locateInstance, type AnimationEntry, type SetPieceClaim } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
-import { ENTRANCE_TRAUMA, type EntranceKey } from "./cards/recipe.ts";
+import { ENTRANCE_TRAUMA } from "./cards/recipe.ts";
 import { FX_CARD_TABLE } from "./cards/tables.ts";
 import { FX_HOLD_MAX_MS, FX_MOTIF_CENTER_LANE } from "./constants.ts";
 import { FLAVOR_LOOKS, type FlavorLook } from "./flavors.ts";
@@ -40,8 +40,8 @@ export const SET_PIECE_TUNING = {
 
 /**
  * One set piece: its shape, the beat it asks for at speed 1, which way its spiral turns, how hard the
- * board shakes at the swallow, the flavor whose colors it wears (absent: the card's own) and the
- * bespoke entrance its card lands with (R670), for a Unit whose set piece follows its landing.
+ * board shakes at the swallow and the flavor whose colors it wears (absent: the card's own). R3332000:
+ * the entrance a Unit whose set piece follows its landing lands with is its table entry's `entrance`.
  */
 export type SetPieceSpec = {
   shape: SetPieceShape;
@@ -49,7 +49,6 @@ export type SetPieceSpec = {
   spin: 1 | -1;
   trauma: number;
   palette?: Flavor;
-  entrance?: EntranceKey;
 };
 
 /** R2800000: every set piece by key; a missing one fails `typecheck`. */
@@ -58,7 +57,7 @@ export const SET_PIECES: { readonly [K in SetPieceKey]: SetPieceSpec } = {
   // R2803000: eased for the phone frame budget (was 1).
   nether: { shape: "vortex", holdMs: SET_PIECE_HOLD_MS, spin: 1, trauma: 0.7, palette: "Dark" },
   // #100 Ceaseless Void: the board's edges fold into black around it, and it stands alone in the light.
-  voidFold: { shape: "fold", holdMs: VOID_FOLD_HOLD_MS, spin: 1, trauma: ENTRANCE_TRAUMA.voidCollapse, palette: "Dark", entrance: "voidCollapse" },
+  voidFold: { shape: "fold", holdMs: VOID_FOLD_HOLD_MS, spin: 1, trauma: ENTRANCE_TRAUMA.voidCollapse, palette: "Dark" },
   // Every other board clear: the shared vortex, turning the other way, in the card's own colors.
   vortex: { shape: "vortex", holdMs: SET_PIECE_HOLD_MS, spin: -1, trauma: 0.8 },
 };

@@ -1,7 +1,8 @@
-// The keys of a modal like `game/ConfirmConcede.tsx` (#1569), shared by the challenge dialog and the
-// friends panel (#1831): Escape and Back (R2127000) close it and Tab stays inside it.
+// The keys of a modal: `game/Dialog.tsx`'s, every dialog drawn through it (#3220, R3220000), and the
+// challenge dialog's and the friends panel's (#1831): Escape and Back (R2127000) close it and Tab stays
+// inside it. Given the control to focus, it also takes the focus on open and gives it back on close.
 
-import { useEffect, type RefObject } from "react";
+import { useEffect, useLayoutEffect, type RefObject } from "react";
 
 import { useBackLayer } from "../net/backLayers.ts";
 
@@ -15,8 +16,26 @@ export function tabStops(modal: HTMLElement): HTMLElement[] {
 }
 
 /** Both keys are read at the window, in the capture phase, so they hold wherever a click left the focus. */
-export function useModalKeys(root: RefObject<HTMLElement | null>, onClose: () => void): void {
+export function useModalKeys(
+  root: RefObject<HTMLElement | null>,
+  onClose: () => void,
+  focus?: RefObject<HTMLElement | null>,
+): void {
   useBackLayer(onClose);
+  // R3220000: given `focus`, the modal focuses it on open and gives the focus back to its opener on close,
+  // unless the caller has moved it by then (Game.tsx's refocusConcede).
+  useLayoutEffect(() => {
+    if (focus === undefined) return;
+    const active = document.activeElement;
+    const opener = active instanceof HTMLElement && active !== document.body ? active : null;
+    const modal = root.current;
+    focus.current?.focus({ preventScroll: true });
+    return () => {
+      const now = document.activeElement;
+      const left = now === null || now === document.body || (modal?.contains(now) ?? false);
+      if (left && opener?.isConnected === true) opener.focus({ preventScroll: true });
+    };
+  }, [root, focus]);
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent): void {
       if (event.key === "Escape") {

@@ -3,7 +3,8 @@
 // friends are one press away. Its badge reads what the shell's one poll published (`socialPoll.ts`),
 // so the button adds no request of its own.
 //
-// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`. Chat and
+// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`, and again
+// when the tab's social socket says it changed (R3214000). Chat and
 // Challenge close it and open their own modal over the screen, which is left as it was. A modal like
 // the client's others (`ChallengeDialog.tsx`): the focus stays inside and returns to this button.
 //
@@ -39,7 +40,7 @@ import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
 import { tabStops, useModalKeys } from "./modalKeys.ts";
 import { usePolled } from "./session.ts";
-import { friendsBadgeCount, noteFriends, reloadSocial, useSocialReads } from "./socialPoll.ts";
+import { friendsBadgeCount, noteFriends, onFriendsPush, reloadSocial, useSocialReads } from "./socialPoll.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 
@@ -107,6 +108,9 @@ function FriendsPanel({
   useEffect(() => {
     if (friends.kind === "ready") noteFriends(friends.value);
   }, [friends]);
+
+  // R3214000: the server said the friends list changed (a request, a friend made or lost, a block).
+  useEffect(() => onFriendsPush(reloadFriends), [reloadFriends]);
 
   /** One of the panel's own changes, then the list read again. */
   const act = (work: () => Promise<unknown>): void => {
