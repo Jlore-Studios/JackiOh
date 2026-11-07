@@ -17447,6 +17447,13 @@
     "3410": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-07T19:05:27Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the planner gave no rating line"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
