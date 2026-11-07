@@ -37,7 +37,8 @@ one, `CORNER_ESCALATE_TAPS` taps in a row give its payoff, each tap rolls `CORNE
 own random source (`arenaRandom`, never the game's RNG) and four mats hide a tap sequence. The layer takes a mat id
 and nothing else: it imports nothing from `net/`, `wire/` or `replay/`, sends and logs nothing, and answers quietly
 while the animation queue drains. A prop that would cover a tile, a hand, a seat, the controls or the log, or leave
-the screen, is not drawn (`fit.ts`). Every number is in `arena/config.ts`, and `arena.css` states the same times
+the screen, is not drawn (`fit.ts`); a phone 840 high or more gives the field a strip of mat above and below its
+lanes for them (`arena.css`), a shorter one has none to give. Every number is in `arena/config.ts`, and `arena.css` states the same times
 (`arena/arenaCss.test.ts`).
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display

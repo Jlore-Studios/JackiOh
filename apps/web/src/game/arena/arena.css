@@ -256,6 +256,23 @@
   }
 }
 
+/* A tall phone, 390x844 and over: the lanes have height to spare (a card there is width-bound, so each
+   zone is taller than its card), so the field keeps a strip of mat above its first row and below its
+   last, one --hit-min tall, and each half's two props sit in theirs: a corner each, outside the lanes.
+   The strips come out of the zones' spare height; a shorter phone has none to give, so it gets no strip
+   and the fit check hides its props rather than shrink a card (R3348001, "Where they sit"). */
+@media (max-width: 600px) and (min-height: 840px) {
+  .board .field {
+    padding-block: calc(var(--hit-min) + var(--space-2) * 2);
+  }
+
+  /* A row's floor is its card's height (board.css), which the strips' share would push the page past:
+     the floor gives that share up, and the rows, a card there still width-bound, keep its shape. */
+  .board .lane {
+    grid-template-rows: repeat(4, minmax(calc(var(--card-h) * 0.9), 1fr));
+  }
+}
+
 /* Each playmat's props are drawn in its look: three colors from the palette, a body, an edge and a light. */
 .corner-props[data-mat="table-tavern"] { --prop-a: var(--pal-wood-600); --prop-b: var(--pal-brass-500); --prop-c: var(--pal-gold-300); }
 .corner-props[data-mat="table-wood"] { --prop-a: var(--pal-wood-700); --prop-b: var(--pal-parchment); --prop-c: var(--pal-gold-400); }

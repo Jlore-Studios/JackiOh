@@ -2,8 +2,9 @@
 // tests prove what the layer writes (game/arena/CornerProps.test.tsx) and what the sheet states
 // (arena/arenaCss.test.ts); what only a style engine can say is measured here: the props are 44 px or
 // more each way, none covers a tile, a hand, a seat or the controls, and an escalated and a rare outcome
-// are captured beside each mat's corners. The phone's board has no spare mat, so a prop that would cover
-// something is hidden there (R3348001, "Where they sit"); the spec captures what is shown.
+// are captured beside each mat's corners. At 390x844 the field keeps a strip of mat above and below its
+// lanes for them (arena.css); a shorter phone has no height to spare and its props are hidden by the fit
+// check, which the unit tests prove (R3348001, "Where they sit").
 
 import { cosmeticsOf } from "../../../apps/web/src/cards/cosmetics.ts";
 import { setArenaRandomForTests } from "../../../apps/web/src/game/arena/play.ts";
@@ -50,6 +51,10 @@ function overlap(a: DOMRect, b: DOMRect): boolean {
 
 for (const viewport of VIEWPORTS) {
   describe(`R3348001 the corner props at ${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`, () => {
+    // The runner's window is 720 high: a viewport capture of a taller page would be drawn at 720, where the
+    // phone's props are hidden, so the phone's captures are of the runner, which shows the page at 390x844.
+    const capture = viewport.height > 720 ? "runner" : "viewport";
+
     afterEach(() => {
       setArenaRandomForTests(null);
     });
@@ -66,7 +71,7 @@ for (const viewport of VIEWPORTS) {
 
         cy.document().then((doc) => {
           const props = shown(doc);
-          if (viewport.label === "desktop") expect(props, `${table}: both props fit beside the mat at the desktop`).to.have.length(2);
+          expect(props, `${table}: both props are drawn at ${viewport.label}`).to.have.length(2);
           const obstacles = [...doc.querySelectorAll(CORNER_OBSTACLES)].map((obstacle) => obstacle.getBoundingClientRect());
           for (const prop of props) {
             const box = prop.getBoundingClientRect();
@@ -75,17 +80,16 @@ for (const viewport of VIEWPORTS) {
             for (const obstacle of obstacles) expect(overlap(box, obstacle), `${prop.dataset.prop ?? ""} covers nothing`).to.equal(false);
           }
           expect(doc.documentElement.scrollWidth, "the page does not scroll sideways").to.be.at.most(viewport.width);
+          cy.wrap(props[0]?.dataset.prop ?? "", { log: false }).as("tapped");
         });
-        cy.screenshot(`arena-${table}-${viewport.label}`, { capture: "viewport", overwrite: true });
+        cy.screenshot(`arena-${table}-${viewport.label}`, { capture, overwrite: true });
 
-        cy.document().then((doc) => {
-          const [prop] = shown(doc);
-          if (prop === undefined) return;
-          const id = prop.dataset.prop ?? "";
+        cy.get<string>("@tapped").then((id) => {
+          expect(id, `${table}: a prop to tap at ${viewport.label}`).to.not.equal("");
           // The longest streak is 7 taps: the seventh is the payoff.
           for (let tap = 0; tap < 7; tap += 1) cy.get(`${YOURS}[data-prop="${id}"]`).click();
           cy.get(`${YOURS}[data-prop="${id}"]`).should("have.attr", "data-state", "escalate");
-          cy.screenshot(`arena-${table}-${viewport.label}-escalated`, { capture: "viewport", overwrite: true });
+          cy.screenshot(`arena-${table}-${viewport.label}-escalated`, { capture, overwrite: true });
 
           // A command, not a bare call: Cypress queues the clicks above, and a call here would run before them.
           cy.then(() => {
@@ -93,7 +97,7 @@ for (const viewport of VIEWPORTS) {
           });
           cy.get(`${YOURS}[data-prop="${id}"]`).click();
           cy.get(`${YOURS}[data-prop="${id}"]`).should("have.attr", "data-state", "rare");
-          cy.screenshot(`arena-${table}-${viewport.label}-rare`, { capture: "viewport", overwrite: true });
+          cy.screenshot(`arena-${table}-${viewport.label}-rare`, { capture, overwrite: true });
         });
       });
     }
