@@ -17817,7 +17817,7 @@
       "waiting_comment": 6703388812
     },
     "3348": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -17832,22 +17832,22 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-2",
-      "owner_since": "2026-11-07T05:08:46Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-4",
+      "owner_since": "2026-11-07T06:30:27Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-07T05:27:54Z",
       "planned_by": "`claude-2` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-2",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-2",
+      "provider": "claude-4",
       "queued_at": "2026-11-07T00:00:46Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42341467451",
+      "run_id": "pending:71b8810b-1794032999",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T05:08:46Z",
+      "started_at": "2026-11-07T06:30:27Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18624,9 +18624,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T06:14:11Z",
+    "at": "2026-11-07T06:30:27Z",
     "url": "",
-    "what": "review #3360 on claude-4"
+    "what": "build #3348 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-07T06:20:46Z",
