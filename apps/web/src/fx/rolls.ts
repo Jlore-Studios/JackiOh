@@ -139,9 +139,11 @@ const PANEL: FxAnchor = { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y
 
 /**
  * R2652001, R200: the panel for one `rolled` entry of duration D. Every coin or die lands inside the
- * entry, and the panel is gone D + FX_BANNER_TAIL_MS after it starts (FX_BANNER_TAIL_MS ≤ T).
+ * entry, and the panel is gone D + FX_BANNER_TAIL_MS after it starts (FX_BANNER_TAIL_MS ≤ T). R3338000:
+ * `landMs` lands every one at that moment instead (Dice of Doom's d100, at the middle of its set piece's
+ * span), and `look` names the panel's own look.
  */
-export function rollCues(event: GameEvent, D: number, intensity: number): FxCue[] {
+export function rollCues(event: GameEvent, D: number, intensity: number, opts: { landMs?: number; look?: "doom" } = {}): FxCue[] {
   const batch = rollBatchOf(event);
   if (batch === null || batch.rolls.length === 0) return [];
   const n = batch.rolls.length;
@@ -149,7 +151,7 @@ export function rollCues(event: GameEvent, D: number, intensity: number): FxCue[
     faces: roll.faces.map((face) => faceWord(batch.kind, face)),
     kept: roll.kept,
     tumble: rollTumble(batch.kind, batch.sides, keptFace(roll), i).map((face) => faceWord(batch.kind, face)),
-    landMs: Math.min(D, frac(rollLandAt(i, n), D)),
+    landMs: Math.min(D, opts.landMs ?? frac(rollLandAt(i, n), D)),
   }));
   const panel: FxRollCue = {
     kind: "roll",
@@ -158,6 +160,7 @@ export function rollCues(event: GameEvent, D: number, intensity: number): FxCue[
     items,
     delayMs: 0,
     durationMs: D + FX_BANNER_TAIL_MS,
+    ...(opts.look === undefined ? {} : { look: opts.look }),
   };
   return [panel, ...items.map((item) => tunedBurst(intensity, "gold", PANEL, "point", item.landMs, ROLL_TUNING.landing))];
 }

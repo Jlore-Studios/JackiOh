@@ -23,6 +23,8 @@ import {
   sweepAt,
   volleyAt,
   wipeAt,
+  signatureRunAt,
+  type Signature,
   type Pile,
   type PlayTracker,
   type StarshipFuse,
@@ -943,6 +945,8 @@ export const ZONE_IMPACT_MS = 700;
 export const SWEEP_MS = 600;
 /** R2800000: a set-piece card's run of removals, played as one entry its set piece draws (after its hold). */
 export const WIPE_MS = 600;
+/** R3338000: a Terminus card's signature run, played as one entry its set piece draws (after its hold). */
+export const SIGNATURE_RUN_MS = 1_200;
 /** R2801000: one piece's bolt-on into its Dormant Starship, the `starshipFused` row's time. */
 export const STARSHIP_FUSE_MS = ANIMATIONS.starshipFused.durationMs;
 /** R2801000: a fuse run staggers this many pieces at most; any more land with the last of them. */
@@ -992,7 +996,15 @@ export type AnimationEntry = {
   entrance?: EntryEntrance;
   /** R2785000: this entry is its action's set piece and holds the game for one capped beat (`setPieceEntries`). */
   setPiece?: EntrySetPiece;
+  /** R3338000: a Terminus card's signature moment, one run of its hook's events (or its first cast), which its set piece claims. */
+  signature?: EntrySignature;
 };
+
+/**
+ * R3338000: the card whose signature an entry is: its readable definition, its instance and its
+ * controller, as the seat's own stream named them (R202).
+ */
+export type EntrySignature = Signature;
 
 /**
  * #185: one landing's share of its action's slam (SLAM_BURST): the tier sets the look and the sound,
@@ -1124,9 +1136,9 @@ export function leadMs(entry: Pick<AnimationEntry, "slam" | "setPiece">): number
   return (entry.slam?.anticipationMs ?? 0) + (entry.setPiece?.holdMs ?? 0);
 }
 
-/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece. */
+/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece (R3338000: unless it yielded). */
 export function takeoverClaim(entry: AnimationEntry): SetPieceClaim | null {
-  return entry.entrance?.tier === "mythic" ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS } : null;
+  return entry.entrance?.tier === "mythic" && entry.entrance.yielded !== true ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS } : null;
 }
 
 /**
@@ -1145,7 +1157,9 @@ export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed:
  * `SET_PIECES_PER_ACTION`, their `setPiece`, adding its hold to the entry's `durationMs` ahead of its
  * motion; the queue pins it against the burst budget. A later claim in the same action, an entry that
  * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing. R2800000: a
- * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing.
+ * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing. R3338000: so
+ * does one whose own signature is, and an entry whose entrance yielded may still be claimed for another
+ * set piece (a Terminus Trap's firing is its own signature's entry).
  */
 export function setPieceEntries(
   entries: readonly AnimationEntry[],
@@ -1153,11 +1167,16 @@ export function setPieceEntries(
   opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
 ): AnimationEntry[] {
   let held = 0;
-  // R2800000: a Mythic whose own wipe in this action is a set piece yields its takeover to it.
-  const own = new Set(entries.flatMap((entry) => (entry.wipe !== undefined && claimOf(entry) !== null ? [entry.wipe.sourceId] : [])));
-  return entries.map((entry) => {
-    const entrance = entry.entrance;
-    if (entrance?.tier === "mythic" && own.has(entrance.instanceId)) return { ...entry, entrance: { ...entrance, yielded: true } };
+  // R2800000, R3338000: a Mythic whose own wipe or signature in this action is a set piece yields its takeover to it.
+  const own = new Set(
+    entries.flatMap((entry) => {
+      const sourceId = entry.wipe?.sourceId ?? entry.signature?.sourceId;
+      return sourceId !== undefined && claimOf(entry) !== null ? [sourceId] : [];
+    }),
+  );
+  return entries.map((given) => {
+    const entrance = given.entrance;
+    const entry = entrance?.tier === "mythic" && own.has(entrance.instanceId) ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
     if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
     const claim = claimOf(entry);
     const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
@@ -1232,7 +1251,16 @@ export function pileTestid(pile: Pile): string {
  */
 function pinned(entry: AnimationEntry): boolean {
   // R2785000 (from R2722001's takeover): a set piece's hold is the action's one capped beat, never squeezed.
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.wipe !== undefined || entry.type === "rolled" || entry.setPiece !== undefined;
+  // R3338000: so is a Terminus card's signature run, one entry for many events.
+  return (
+    entry.cast !== undefined ||
+    entry.zone !== undefined ||
+    entry.sweep !== undefined ||
+    entry.wipe !== undefined ||
+    entry.type === "rolled" ||
+    entry.setPiece !== undefined ||
+    entry.signature !== undefined
+  );
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
@@ -1277,7 +1305,9 @@ function castFrame(event: GameEvent, view: PlayerView): string | null {
  * Turns an event stream into entries, collapsing each `cardPlayed` + `summoned` pair; `reducedMotion` zeroes
  * every duration. `plays` remembers the plays still resolving from one batch to the next; a caller without
  * one gets a fresh tracker, which reads casts inside this batch alone. `wipeOf` names the cards with a set
- * piece, whose hook's run of removals plays as one wipe (R2800000); by default none does.
+ * piece, whose hook's run of removals plays as one wipe (R2800000); by default none does. R3338000:
+ * `signatureOf` names a Terminus card's signature moment, its hook's run of those event types (one entry)
+ * or its first cast (`"cast"`); by default none has one.
  */
 export function planEntries(
   events: readonly GameEvent[],
@@ -1285,6 +1315,7 @@ export function planEntries(
   reducedMotion: boolean,
   plays: PlayTracker = createPlayTracker(),
   wipeOf: (defId: string) => boolean = () => false,
+  signatureOf: (defId: string) => readonly GameEventType[] | "cast" | null = () => null,
 ): AnimationEntry[] {
   const out: AnimationEntry[] = [];
   const timed = (ms: number): number => (reducedMotion ? 0 : ms);
@@ -1330,6 +1361,23 @@ export function planEntries(
         wipe: wiped.wipe,
       });
       i += wiped.length;
+      continue;
+    }
+
+    // R3338000: a Terminus card's signature, one run of its hook's events, plays as one pinned entry.
+    const signed = signatureRunAt(events, i, plays.hook(), signatureOf);
+    if (signed !== null) {
+      const run = take(i, signed.length);
+      plays.closeHook();
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(SIGNATURE_RUN_MS),
+        frames: frameMap(run.map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        signature: signed.signature,
+      });
+      i += signed.length;
       continue;
     }
 
@@ -1411,9 +1459,15 @@ export function planEntries(
       const length = at - i + 1 + (isSummonOfPlay(played, landed) ? 1 : 0);
       const run = events.slice(i, i + length);
       let cast: { by: string; ordinal: number } | null = null;
+      let signature: EntrySignature | undefined;
       for (const seen of run) {
         const made = plays.see(seen);
-        if (made !== null) cast = { by: made.by.defId, ordinal: made.ordinal };
+        if (made === null) continue;
+        cast = { by: made.by.defId, ordinal: made.ordinal };
+        // R3338000: a card whose signature is its casts (The Big Crunch) signs its first.
+        if (made.ordinal === 1 && signatureOf(made.by.defId) === "cast") {
+          signature = { by: made.by.defId, sourceId: made.by.instanceId, player: made.by.player };
+        }
       }
       out.push({
         events: run,
@@ -1422,6 +1476,7 @@ export function planEntries(
         frames: frameMap(run.map((e) => [castFrame(e, view), e.type] as const)),
         view,
         cast: cast ?? { by: HIDDEN_ID, ordinal: 1 },
+        ...(signature === undefined ? {} : { signature }),
       });
       i += length;
       continue;
@@ -1544,6 +1599,8 @@ export type AnimationQueueOptions = {
   setPieces?: boolean;
   /** R2800000: the cards with a set piece, whose hook's removals play as one wipe (`planEntries`). Absent: none. */
   wipeOf?: (defId: string) => boolean;
+  /** R3338000: a Terminus card's signature moment (`planEntries`). Absent: none has one. */
+  signatureOf?: (defId: string) => readonly GameEventType[] | "cast" | null;
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
@@ -1759,7 +1816,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       // Read live, so a change in the settings panel applies from the next action on (R201).
       const settings = readSettings();
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
-      const planned = planEntries(events, view, reduced, plays, options.wipeOf);
+      const planned = planEntries(events, view, reduced, plays, options.wipeOf, options.signatureOf);
       const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
       const scaled = slammed.map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);

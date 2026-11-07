@@ -16,7 +16,7 @@ pasted in by a person, and each name then joins `FX_MOTIF_NAMES` (see "Open" at 
 | none | `"none: <reason>"` | the card's event rows alone (`ANIMATIONS`' `fx` recipes, the flavor's cast, impact, entrance and exit) | nothing to draw |
 | motif | `{ <hook>: { motif, palette?, row? } }` | a shared motif from `fx/motifs/`, on top of or in place of the event rows | the motif's planner, shared by every card that names it |
 | bespoke | `{ bespoke: "<recipe>" }` | a recipe of the card's own, in `fx/cards/<set>/` | the card's own file |
-| set piece | `{ setPiece: "<key>" }` | a board clear's set piece: its hook's removals as one wipe the queue holds for one capped, skippable beat (R2785000, R2800000) | `fx/setPieces.ts`, its board motion `game/board.css` and its sound bed `audio/setPieceBeds.ts` |
+| set piece | `{ setPiece: "<key>" }` | a board clear's set piece: its hook's removals as one wipe the queue holds for one capped, skippable beat (R2785000, R2800000); or a Terminus card's, its signature run (R3338000) | `fx/setPieces.ts` (a Terminus card's planner in `fx/terminus/`), its board motion `game/board.css` and its sound bed `audio/setPieceBeds.ts` |
 | signature | `signature: true` beside any of the last three, on a Legendary's or a Mythic's (R3332000) | the card's own animation, as in Hearthstone: its entrance (a Unit's, a Field Spell's) or a cast of its own (any other card's `bespoke` or `setPiece`), then the beat its text plays, and optionally an aura of its own, within its rarity's and type's budget ([Signatures](#signatures)) | the card's own files in `fx/cards/<set>/` |
 
 Every catalog card starts as `"none: pending"` and moves up a tier in its set's pass. A bespoke
@@ -49,11 +49,11 @@ number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: ea
 out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
 phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
 
-Stinkyscape's first pass (#2797, R2797000) adds three more, in `fx/cards/stinkyscape/`, the same way:
+Stinkyscape's first pass (#2797, R2797000) adds two more, in `fx/cards/stinkyscape/`, the same way
+(its third, Olivian Expanse's `terminusRift`, became its set piece, R3338000):
 
 | Card | Recipe | Why bespoke |
 |---|---|---|
-| #4 Olivian Expanse | `terminusRift` | a Mythic whose whole play is one Discover: a void rift tears open over the board's centre at its first card added, and the card flies out of it into the caster's hand |
 | #18 Imitated Instrumentality | `magiBoot` | its three Field Spells come online one after another: a hologram beam from the caster's hero into each zone, booting with a ring and a burst, `FX_MAGI_STAGGER` of the entry apart within one |
 | #36 Drone Core X | `battleshipWarp` | the Mythic top of the Drone Core line: stars gather where the Drone Battleship will stand and it streaks in from the board's top edge (`FX_WARP_FROM`), landing in exhaust |
 
@@ -427,7 +427,7 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 | hook | a drawn motif on `death`, `trigger` or `activate` only | the hook's marker under the card's play, then the motif's fixture, through the real board's effects layer (R2797000) |
 | recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' fixtures sit beside their recipes in `fx/cards/classic/`) |
 | entrance | an `entrance` alone (R2794000, R3332000) | the card lands in the viewer's unit row as it plays (a Field Spell face up in the first backrow zone), so its entrance plays, over the board its entrance reads (`galleryBoardOf`: Felinor Fiender's three Felinors) |
-| set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds |
+| set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds; a Terminus card's own run (`SET_PIECE_FIXTURES`, R3338000) |
 | aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
 
 A Field Spell or Field Trap of any play stands in that zone as it plays (`galleryFieldView`), so its
@@ -484,8 +484,9 @@ the removals sound once, condensed, as it ends.
 | Key | Shape | Beat | Palette | Cards |
 |---|---|---|---|---|
 | `nether` | vortex, the board swallowed into the Nether | `SET_PIECE_HOLD_MS` | Dark | Core #88 Twisting Nether (Radiant's "enemy permanents" over that side alone) |
-| `voidFold` | fold: the edges close in to black, the cards sink, the light comes back at the Void | `VOID_FOLD_HOLD_MS` | Dark | Core #100 Ceaseless Void, which lands with its `voidCollapse` entrance first and whose takeover yields to the fold |
-| `vortex` | vortex, turning the other way | `SET_PIECE_HOLD_MS` | the card's own | Core #17 Flood, Classic #43 Plague Nuke, Classic+ #1 Doom Shroom (at its zone), Classic+ #12.6 Frozen Wastes, Stinkyscape #4.1 Farewell, Stinkyscape #117 Core System |
+| `voidFold` | fold: the edges close in to black, each card is drawn into the Void's chest in turn, and its 10/10 burns in the dark (R3338000) | `VOID_FOLD_HOLD_MS` | Dark | Core #100 Ceaseless Void, which lands with its `voidCollapse` entrance first and whose takeover yields to the fold |
+| `vortex` | vortex, turning the other way | `SET_PIECE_HOLD_MS` | the card's own | Core #17 Flood, Classic #43 Plague Nuke, Classic+ #1 Doom Shroom (at its zone), Classic+ #12.6 Frozen Wastes, Stinkyscape #117 Core System |
+| `farewell` | lamp: a lamp swings over the table, every card it exiles lifts into its light and fades in turn, then a slow exhale and no shake (R3338000) | 2.8 s | Dark | Stinkyscape #4.1 Farewell |
 
 The clears of one side, or too small to hold the game, take `wipe` on their hook: Classic+ #32.2
 Brawl (it spares a Unit), both Calls to Chaos (Classic+ #73, Stinkyscape #151: one random effect of
@@ -493,6 +494,27 @@ theirs clears one side), the Anomaly Found! token (its caster's side) and Traini
 Floodgates (`death: wipe`, its own side, from its Death's marker). Stinkyscape
 #12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
 ids R97 hides on both seats.
+
+### The Terminus cards (R3338000)
+
+The end-of-the-world cards (#3338) each have a set piece of their own, its planner in `fx/terminus/`.
+Besides Ceaseless Void's fold and Farewell's lamp, above, each is a **signature**: the runner plays its
+hook's run of the event types its set piece names (`moment`, `signatureRunOf`) as one pinned
+`SIGNATURE_RUN_MS` entry (`game/runs.ts` `signatureRunAt`; The Big Crunch's is its first cast), which
+the queue claims (`signatureClaim`) and holds as every set piece. A Mythic's takeover yields to its own
+signature. Under Reduce Motion each is one still frame (`planTerminusStill`). Each bed opens on its own
+`organ` chord and closes on the Mythic choir. No cue names a card: a card a seat cannot read is a card
+back flying to its hand (R202).
+
+| Key | Shape | Beat | Its run | What it draws |
+|---|---|---|---|---|
+| `terminusRift` | rift | 2.4 s | the Discover's `addedToHand` | Stinkyscape #4 Olivian Expanse: a violet rift, a star circling in it for each Terminus card, one falling into the hand |
+| `lastExam` | chalk | 2.4 s | the answer's `damage` | #4.2 KY's Last Exam: the problem chalked across the board, the chalk bolt into the enemy hero, a crack and its Echo stamped |
+| `eventHorizon` | bend | 2.4 s | the extra turn's `modifierChanged` | #4.3 Event Horizon: the board smears to its centre under a stretched clock, the turn banner twice; the extra turn opens snapping back |
+| `lastWord` | freeze | 2.2 s | its firing, its way to the graveyard, its modifiers | #4.4 Last Word: everything frozen in mid-strike, the hit on its hero shattering; the next turn opens with Charge on each Unit and a 3, 2, 1 |
+| `finalDestination` | abyss | 2.8 s | its firing, `locked`, `healthSet`, its discards | #4.5 1v1 Final Destination: every lane but one chained shut over the abyss, the heroes spun down to 1, the Spells burning off the hands |
+| `bigCrunch` | crunch | 2 s | its first cast | #4.6 The Big Crunch: the backdrop collapsing to a bright point, which holds over each entry of its play |
+| `diceOfDoom` | doom | 2.8 s (a miss 1.2 s) | `rolled`, its Lucky gain, the cards it adds or burns | Stinkyscape #154 Dice of Doom: a big d100 tumbling in onto its roll; on a 67 the board dark and the Terminus cards raining in, on a miss the die crumbling, a Lucky reroll's glint |
 
 ## The Starship
 

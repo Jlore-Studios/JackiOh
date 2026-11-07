@@ -2467,6 +2467,652 @@
   }
 }
 
+/* R3338000: the Terminus cards' set pieces (fx/terminus/), over the whole layer like the vortex and the
+   fold, every part timed off `--fx-hold` (the hold, or unheld, the span its beats use) and gone by
+   --fx-ms (R200). A beat (`.fx-setPiece-beat`, one per `beats` entry) is lit at its `--fx-beat`, the
+   `--fx-beat-index`-th of `--fx-beats`: a star, a chalk line, a lane's chain. Each part is the board's
+   colors and the Dark look's, never a card face (R202). Transform and opacity only. */
+.fx-setPiece-beat {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 2.2vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
+  box-shadow: 0 0 10px 4px color-mix(in srgb, var(--fx-tint-glow) 80%, transparent);
+  opacity: 0;
+  animation: fx-terminus-beat calc(var(--fx-ms) - var(--fx-beat, 0ms)) var(--ease-out) var(--fx-beat, 0ms) both;
+}
+
+@keyframes fx-terminus-beat {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+/* S #4 Olivian Expanse: a violet tear opens over the board, and the Terminus cards circle in it as stars. */
+.fx-setPiece-tear {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 7vmin;
+  height: 28vmin;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--pal-black);
+  box-shadow: 0 0 28px 10px color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-violet-500));
+  animation: fx-terminus-tear var(--fx-ms) var(--ease-standard) both;
+}
+
+@keyframes fx-terminus-tear {
+  0% {
+    transform: scaleX(0.02) scaleY(0.3);
+    opacity: 0;
+  }
+  25% {
+    transform: scaleX(1) scaleY(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scaleX(1.2) scaleY(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.02) scaleY(0.4);
+    opacity: 0;
+  }
+}
+
+.fx-setPiece-stars {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 40vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--fx-tint-glow) 18%, transparent) 0deg, transparent 4deg, transparent 51deg);
+  animation: fx-terminus-orbit var(--fx-hold) linear both;
+}
+
+@keyframes fx-terminus-orbit {
+  0% {
+    transform: rotate(0deg) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotate(270deg) scale(1);
+    opacity: 0.8;
+  }
+}
+
+.fx-setPiece[data-shape="rift"] .fx-setPiece-beat {
+  rotate: calc(var(--fx-beat-index, 0) * 1turn / var(--fx-beats, 1));
+  animation:
+    fx-terminus-beat calc(var(--fx-ms) - var(--fx-beat, 0ms)) var(--ease-out) var(--fx-beat, 0ms) both,
+    fx-terminus-circle var(--fx-hold) linear both;
+}
+
+@keyframes fx-terminus-circle {
+  0% {
+    transform: rotate(0deg) translateX(18vmin);
+  }
+  100% {
+    transform: rotate(270deg) translateX(18vmin);
+  }
+}
+
+/* S #4.1 Farewell: a single lamp over an empty table, its cone swinging, its glow lifting what it takes. */
+.fx-setPiece[data-shape="lamp"] .fx-setPiece-dark {
+  overflow: hidden;
+  background: none;
+}
+
+/* The lamp's pool of light: a clear ellipse under it, the dark around it its glow's spread. */
+.fx-setPiece[data-shape="lamp"] .fx-setPiece-dark::before {
+  content: "";
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 40%;
+  height: 90%;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  box-shadow: 0 0 160px 3000px color-mix(in srgb, var(--pal-black) 88%, transparent);
+}
+
+.fx-setPiece-cone {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 70vmin;
+  height: 90vh;
+  translate: -50% 0;
+  transform-origin: 50% 0;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  background: color-mix(in srgb, var(--pal-parchment) 24%, transparent);
+  animation: fx-terminus-swing var(--fx-hold) var(--ease-in-out) both;
+}
+
+@keyframes fx-terminus-swing {
+  0% {
+    transform: rotate(9deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  50% {
+    transform: rotate(-7deg);
+  }
+  80% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+    opacity: 0.85;
+  }
+}
+
+.fx-setPiece-glow {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 6vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
+  box-shadow: 0 0 40px 18px color-mix(in srgb, var(--pal-gold-200) 70%, transparent);
+  animation: fx-terminus-exhale var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-terminus-exhale {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* S #4.2 KY's Last Exam: the slate of the sky, the problem's chalk lines written one a beat, the crack
+   of the right answer through them and its Echo stamped over them at the hold's end. */
+.fx-setPiece-slate {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, color-mix(in srgb, var(--pal-green-900) 40%, var(--pal-black)) 88%, transparent);
+  box-shadow: inset 0 0 160px 40px color-mix(in srgb, color-mix(in srgb, var(--pal-green-900) 25%, var(--pal-black)) 92%, transparent);
+  animation: fx-terminus-fade var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-terminus-fade {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-setPiece-scrawl {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 18%;
+  height: 34%;
+  transform-origin: 0 50%;
+  background: repeating-linear-gradient(180deg, transparent 0, transparent 14%, color-mix(in srgb, var(--pal-white) 70%, transparent) 14.6%, transparent 15.4%, transparent 25%);
+  animation: fx-terminus-write var(--fx-hold) steps(12, end) both;
+}
+
+@keyframes fx-terminus-write {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.fx-setPiece[data-shape="chalk"] .fx-setPiece-beat {
+  left: 12%;
+  width: 76%;
+  height: 0.5vmin;
+  aspect-ratio: auto;
+  top: calc(20% + var(--fx-beat-index, 0) * 7%);
+  translate: 0 0;
+  border-radius: var(--radius-xs);
+  transform-origin: 0 50%;
+  background: color-mix(in srgb, var(--pal-white) 80%, transparent);
+  box-shadow: none;
+  animation: fx-terminus-chalk calc(var(--fx-ms) - var(--fx-beat, 0ms)) var(--ease-out) var(--fx-beat, 0ms) both;
+}
+
+@keyframes fx-terminus-chalk {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  30% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0.6;
+  }
+}
+
+.fx-setPiece-crack {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: 3vmin;
+  height: 46%;
+  translate: -50% 0;
+  transform-origin: 50% 0;
+  clip-path: polygon(40% 0, 70% 18%, 35% 36%, 75% 58%, 30% 78%, 60% 100%, 50% 100%, 20% 78%, 62% 58%, 22% 36%, 58% 18%, 30% 0);
+  background: var(--pal-white);
+  animation: fx-terminus-crack calc(var(--fx-ms) - var(--fx-hold)) var(--ease-out) var(--fx-hold) both;
+}
+
+@keyframes fx-terminus-crack {
+  0% {
+    transform: scaleY(0);
+    opacity: 1;
+  }
+  20% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+.fx-setPiece-stamp {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 18vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  border: 1vmin solid color-mix(in srgb, var(--pal-purple-400) 85%, var(--pal-white));
+  background: color-mix(in srgb, var(--pal-purple-400) 18%, transparent);
+  animation: fx-terminus-stamp calc(var(--fx-ms) - var(--fx-hold)) var(--ease-overshoot) var(--fx-hold) both;
+}
+
+.fx-setPiece-stamp::after {
+  content: "↻";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--pal-white);
+  font-size: max(var(--type-3xl), 11vmin);
+  font-weight: 800;
+}
+
+@keyframes fx-terminus-stamp {
+  0% {
+    transform: scale(2.4) rotate(-20deg);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1) rotate(-8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-8deg);
+    opacity: 0;
+  }
+}
+
+/* S #4.3 Event Horizon: a lens bends the light toward the centre, under a stretched clock. */
+.fx-setPiece-lens {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 16vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  border: 1vmin solid color-mix(in srgb, var(--pal-gold-300) 60%, transparent);
+  background: var(--pal-black);
+  box-shadow:
+    0 0 24px 6px color-mix(in srgb, var(--pal-gold-300) 45%, transparent),
+    0 0 140px 90px color-mix(in srgb, var(--fx-tint-rim) 22%, transparent);
+  animation: fx-terminus-lens var(--fx-hold) var(--ease-in) both;
+}
+
+@keyframes fx-terminus-lens {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+}
+
+.fx-setPiece-clock {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 22vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  border: 0.6vmin solid color-mix(in srgb, var(--pal-white) 70%, transparent);
+  animation: fx-terminus-clock var(--fx-ms) var(--ease-in-out) both;
+}
+
+/* Its two hands, at twelve and at three. */
+.fx-setPiece-clock::before,
+.fx-setPiece-clock::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.fx-setPiece-clock::before {
+  width: 0.5vmin;
+  height: 46%;
+  translate: -50% -100%;
+  background: color-mix(in srgb, var(--pal-white) 80%, transparent);
+}
+
+.fx-setPiece-clock::after {
+  width: 40%;
+  height: 0.5vmin;
+  translate: 0 -50%;
+  background: color-mix(in srgb, var(--pal-white) 60%, transparent);
+}
+
+@keyframes fx-terminus-clock {
+  0% {
+    transform: rotate(0deg) scale(0.6, 0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  70% {
+    transform: rotate(80deg) scale(0.8, 1.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: rotate(90deg) scale(1, 1);
+    opacity: 0;
+  }
+}
+
+/* S #4.4 Last Word: frost over everything in mid-strike, and the cracks of the shattered hit. */
+.fx-setPiece-frost {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-blue-200) 10%, transparent);
+  box-shadow: inset 0 0 180px 60px color-mix(in srgb, var(--pal-sky-300) 55%, transparent);
+  animation: fx-terminus-frost var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-terminus-frost {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-setPiece-cracks {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 80vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 7deg, color-mix(in srgb, var(--pal-white) 75%, transparent) 0deg 0.8deg, transparent 0.8deg 29deg);
+  mask-image: radial-gradient(circle, var(--pal-black) 0, var(--pal-black) 40%, transparent 70%);
+  animation: fx-terminus-shatter calc(var(--fx-ms) - var(--fx-hold) / 2) var(--ease-out) calc(var(--fx-hold) / 2) both;
+}
+
+@keyframes fx-terminus-shatter {
+  0% {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+  10% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* S #4.5 1v1 Final Destination: everything but one lane of light drops into the dark, chained shut. */
+.fx-setPiece[data-shape="abyss"] .fx-setPiece-dark {
+  overflow: hidden;
+  background: none;
+}
+
+/* The dark either side of the one lane of light around --fx-x, each side's edge softened by its glow. */
+.fx-setPiece[data-shape="abyss"] .fx-setPiece-dark::before,
+.fx-setPiece[data-shape="abyss"] .fx-setPiece-dark::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--pal-black) 92%, transparent);
+  box-shadow: 0 0 24px 6px color-mix(in srgb, var(--pal-black) 92%, transparent);
+}
+
+.fx-setPiece[data-shape="abyss"] .fx-setPiece-dark::before {
+  left: 0;
+  width: calc(var(--fx-x) - 9vmin);
+}
+
+.fx-setPiece[data-shape="abyss"] .fx-setPiece-dark::after {
+  left: calc(var(--fx-x) + 9vmin);
+  right: 0;
+}
+
+.fx-setPiece-chains {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(60deg, transparent 0, transparent 2.6vmin, color-mix(in srgb, var(--pal-slate-400) 50%, transparent) 2.6vmin, color-mix(in srgb, var(--pal-slate-400) 50%, transparent) 3.2vmin);
+  mask-image: linear-gradient(90deg, var(--pal-black) calc(var(--fx-x) - 9vmin), transparent calc(var(--fx-x) - 6vmin), transparent calc(var(--fx-x) + 6vmin), var(--pal-black) calc(var(--fx-x) + 9vmin));
+  animation: fx-terminus-chains var(--fx-hold) steps(4, end) both;
+}
+
+@keyframes fx-terminus-chains {
+  0% {
+    transform: translateY(-4vmin);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+}
+
+.fx-setPiece[data-shape="abyss"] .fx-setPiece-beat {
+  display: none;
+}
+
+/* S #4.6 The Big Crunch: the backdrop collapses to a bright point, which holds while its play resolves. */
+.fx-setPiece-collapse {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 160vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  border: 40vmax solid var(--pal-black);
+  box-shadow: inset 0 0 200px 60px color-mix(in srgb, var(--fx-tint-core) 45%, var(--pal-black));
+  animation: fx-terminus-collapse var(--fx-hold) var(--ease-in) both;
+}
+
+@keyframes fx-terminus-collapse {
+  0% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.08);
+    opacity: 0.9;
+  }
+}
+
+.fx-setPiece-point {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 2.5vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
+  box-shadow: 0 0 24px 10px color-mix(in srgb, var(--pal-gold-200) 80%, transparent);
+  animation: fx-terminus-point calc(var(--fx-ms) - var(--fx-hold)) var(--ease-in-out) var(--fx-hold) both;
+}
+
+@keyframes fx-terminus-point {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* S #154 Dice of Doom: the board goes dark on a 67 alone, and a star lights for each Terminus card. */
+.fx-setPiece[data-shape="doom"] .fx-setPiece-dark {
+  opacity: 0;
+  animation: none;
+}
+
+.fx-setPiece[data-shape="doom"]:has(.fx-setPiece-beat) .fx-setPiece-dark {
+  animation: fx-set-piece-dark var(--fx-hold) var(--ease-in) both;
+}
+
+.fx-setPiece[data-shape="doom"] .fx-setPiece-stars {
+  display: none;
+}
+
+.fx-setPiece[data-shape="doom"] .fx-setPiece-beat {
+  top: 22%;
+  left: calc(50% + (var(--fx-beat-index, 0) - (var(--fx-beats, 1) - 1) / 2) * 7vmin);
+  width: 4vmin;
+}
+
+/* S #154 Dice of Doom's d100: a big die tumbling in from the board's left edge, slowing into the panel's place. */
+.fx-roll[data-look="doom"] {
+  font-size: clamp(var(--type-lg), 5vw, var(--type-3xl));
+  box-shadow:
+    var(--shadow-3),
+    0 0 42px color-mix(in srgb, var(--pal-violet-500) 55%, transparent);
+}
+
+.fx-roll[data-look="doom"] .fx-roll-item {
+  animation: fx-roll-doom var(--fx-land-ms, 0ms) var(--ease-out) both;
+}
+
+.fx-roll[data-look="doom"] .fx-roll-face {
+  width: 4.2em;
+  height: 1.8em;
+  background: color-mix(in srgb, color-mix(in srgb, var(--pal-violet-700) 25%, var(--pal-black)) 70%, var(--fx-ink));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--pal-purple-400) 80%, transparent);
+}
+
+.fx-roll[data-look="doom"] .fx-roll-cell {
+  color: var(--fx-white);
+}
+
+@keyframes fx-roll-doom {
+  0% {
+    transform: translateX(-60vw) rotate(-1080deg) scale(0.7);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* R3338000: the still frame Reduce Motion draws: each part at rest, holding nothing. */
+.fx-setPiece[data-still="true"],
+.fx-setPiece[data-still="true"] * {
+  animation: none;
+}
+
+.fx-setPiece[data-still="true"] > * {
+  opacity: 0.75;
+}
+
 /* ------------------------------------------------------ launch: a Starship lifting off --- */
 
 /* R2801000: a Starship's launch (fx/starship.ts), over the ship. Through its set piece's hold a 3-2-1
@@ -2786,9 +3432,10 @@
   }
 
   /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped;
-     R2801000: so is a Starship launch's still frame. R3336000: a ship cue has no still, so the rule above hides it. */
+     R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's. R3336000: a ship cue has no still, so the rule above hides it. */
   .fx-dom > .fx-callout[data-still="true"],
-  .fx-dom > .fx-launch[data-still="true"] {
+  .fx-dom > .fx-launch[data-still="true"],
+  .fx-dom > .fx-setPiece[data-still="true"] {
     visibility: visible;
   }
 }

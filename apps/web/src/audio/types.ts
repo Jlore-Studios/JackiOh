@@ -25,7 +25,9 @@ export type SfxId =
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
   | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
   // R3336000: the Drone Battleship's horn, dome flare, bay door, reactor pulse and deck shear.
-  | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear";
+  | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
+  // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
+  | "organ";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -42,6 +44,7 @@ export type SfxParams = {
    * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
    * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
    * reactorPulse: how close the Battleship's Meltdown layer is to its blast, 1 (a tick) to 10 (the blast).
+   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1).
    */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */

@@ -84,7 +84,7 @@
   "stinkyscape-151": { cast: { motif: "wipe" } }, // Call to Chaos (Scape Edition)
   "stinkyscape-152": { cast: { motif: "conjure" }, aura: { look: "holy", scope: "side" } }, // Sanctum
   "stinkyscape-153": { cast: { motif: "mana", palette: "Hustle/cash" } }, // Stimmycheck
-  "stinkyscape-154": { cast: { motif: "send" }, trigger: { motif: "send" } }, // Dice of Doom
+  "stinkyscape-154": { setPiece: "diceOfDoom" }, // Dice of Doom
   "stinkyscape-155": { cast: { motif: "bind" }, death: { motif: "send", palette: "Hustle/ore" }, aura: { look: "ember", scope: "zone" } }, // Comet Crash
   "stinkyscape-156": { cast: { motif: "send" } }, // Catalyst Comet
   "stinkyscape-157": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "board" } }, // The Gauntlet

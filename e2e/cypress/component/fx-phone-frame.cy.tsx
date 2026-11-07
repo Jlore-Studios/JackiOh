@@ -4,7 +4,7 @@
 // vortex spiral with its mask retuned to the same visible arms), the Starship launch, the Drone
 // Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
 // visible disc), and a board with 4 auras. R3332001: Felinor Fiender's signature, the first, over the
-// gallery's board with its three Felinors.
+// gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -13,7 +13,7 @@ import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
-import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import { doomFixture, galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import {
@@ -236,6 +236,45 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       return sampleFrames();
     });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+  });
+
+  it("R3338000 Ceaseless Void holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = fullBoardView();
+    const me = view.viewer;
+    holdsBudget("Ceaseless Void", () => {
+      mountScene(view, view, [
+        { type: "cardPlayed", player: me, instanceId: "fx-void", defId: "core-100", costPaid: 0 },
+        { type: "hookResolving", sourceId: "fx-void", defId: "core-100", controller: me, hook: "cry" },
+        ...removals(view, "exiled"),
+        { type: "cardResolved", player: me, instanceId: "fx-void", defId: "core-100", permanent: true, costPaid: 0 },
+      ]);
+      cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "voidFold");
+      cy.get(`${FX_DOM} [data-fx="setPiece"]`).should("have.attr", "data-shape", "fold");
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    cy.get(GAME).should("not.have.attr", "data-set-piece");
+  });
+
+  it("R3338000 Dice of Doom's 67 holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = fullBoardView();
+    const me = view.viewer;
+    holdsBudget("Dice of Doom's 67", () => {
+      mountScene(view, view, [
+        { type: "cardPlayed", player: me, instanceId: "fx-doom", defId: "stinkyscape-154", costPaid: 0 },
+        ...doomFixture(view, "fx-doom", me, "jackpot"),
+        { type: "cardResolved", player: me, instanceId: "fx-doom", defId: "stinkyscape-154", permanent: false, costPaid: 0 },
+      ]);
+      cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "diceOfDoom");
+      cy.get(`${FX_DOM} [data-fx="roll"]`).should("have.attr", "data-look", "doom");
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    cy.get(GAME).should("not.have.attr", "data-set-piece");
   });
 
   it("R2803000 a board with 4 auras holds the phone frame budget", () => {

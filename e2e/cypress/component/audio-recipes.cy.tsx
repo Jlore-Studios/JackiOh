@@ -39,6 +39,7 @@ const EXPECTED_IDS = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
+  "organ",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -131,6 +132,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   bayDoor: 650,
   reactorPulse: 650,
   deckShear: 550,
+  // R3338000: the Terminus set pieces' organ.
+  organ: 2000,
 };
 
 /** B14 parameter sets used here too. */

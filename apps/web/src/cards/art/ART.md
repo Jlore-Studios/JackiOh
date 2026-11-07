@@ -64,6 +64,16 @@ glows hotter and its cracks spread with the health it has lost (in `SHIP_HEAT_ST
 hangar's lights stay lit for the bays that still hold drones. The three layers' hashes in
 `fixtures/stinkyscape-art-v0.5.0.json` were recorded again for it, and no other entry's.
 
+The Terminus cards draw pictures of their own (R3338001), found by id (`TERMINUS_KINDS`; Dice of Doom prints no
+Terminus tag): Olivian Expanse an endless violet expanse with the Terminus cards as distant falling stars, Farewell
+an empty table under a single lamp, KY's Last Exam one desk in an exam hall under a problem chalked across the sky,
+Event Horizon a light caught at a black hole's edge, Last Word a hand catching a falling crown, 1v1 Final
+Destination one lane of light over an abyss with a hero at each end, The Big Crunch the universe collapsing to a
+point and Dice of Doom a hundred-sided die on black velvet, 67 glowing faintly on one face. None draws the shared
+black hole's disk (`TERMINUS_DISK_BACK`), which a Terminus card the table does not list still draws. Core #100
+Ceaseless Void, a procedural card, draws a composition of its own (`CARD_COMPOSITIONS`, `compositionOf`): a hole in
+the shape of a giant, stars falling into its outline.
+
 ## The Training Grounds set's own art
 
 The Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds.ts`'s procedural art
