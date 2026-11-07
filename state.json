@@ -16188,12 +16188,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "wip": {
-        "at": "2026-11-07T19:53:44Z",
-        "provider": "claude-3",
-        "sha": "fc79f8ec3a12c77beb1295f179ed487c694d7d2c",
-        "start": "998a497cc47ed35d9d585c9a3fda37ee736807b5"
       }
     },
     "3375": {
