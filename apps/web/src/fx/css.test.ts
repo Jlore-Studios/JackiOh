@@ -185,6 +185,12 @@ const DOM_KINDS = {
   takeover: "fx-takeover-in",
   setPiece: "fx-set-piece-in",
   launch: "fx-launch-in",
+  module: "fx-module-in",
+  weld: "fx-weld-in",
+  cinematic: "fx-cinematic-in",
+  doctrine: "fx-doctrine-in",
+  wreck: "fx-wreck-in",
+  scorch: "fx-scorch-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');

@@ -24,6 +24,7 @@
 // attack and health gems on the art's lower corners and the cost gem, chips, marks and states over it (cards.css).
 // A unit that is not full art keeps its oval window.
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
+// R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
 
 import { useRef, type ReactElement } from "react";
 
@@ -46,6 +47,7 @@ import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, StateBadgeKind } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
 import { useCardSettings } from "./settings.ts";
+import { ShipyardIdle } from "./ShipyardIdle.tsx";
 import { artPictureOf } from "./versions.ts";
 import { useCardStamp } from "./stamps.ts";
 
@@ -180,6 +182,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             starship={face.starship}
             picture={look === null ? "normal" : artPictureOf(look.version, face.set)}
           />
+          {/* R3334000: a Dormant Starship's shipyard idles over its picture, in one of the moving-art slots. */}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} animated={settings.animatedFoil} /> : null}
         </span>
 
         <KeywordFx plan={plan} />

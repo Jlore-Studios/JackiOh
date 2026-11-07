@@ -3,7 +3,9 @@
 // comes from streams the Radiant face shares, so the faces differ only in paint and gold rays. No
 // other set reaches this file, so no shipped card's picture moves (R503). R3333001: a Starship Piece's
 // own card draws its module (starshipModules.ts) in its bay; R3333000: a Starship in play is drawn from
-// its pieces and its design (starshipHulls.ts, `starshipSvg`); R3333002: a piece's module icon.
+// its pieces and its design (starshipHulls.ts, `starshipSvg`); R3333002: a piece's module icon. R3334000:
+// where on a Starship's picture its modules, engines, prow and shipyard are, and a module's docking sprite,
+// for the effects layer.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -13,11 +15,12 @@ import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } fr
 import { MOTIFS, motifFor } from "./motifs.ts";
 import type { ArtPart } from "./pictures.ts";
 import {
-  escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
-  starshipClassOf, type HullPaint, type StarshipArt,
+  escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardLampOf, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
+  starshipClassOf, type HullPaint, type Placement, type StarshipArt, type StarshipClass,
 } from "./starshipHulls.ts";
 import {
-  MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type StarshipModule,
+  MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type Hardpoint, type ModuleGroup,
+  type ModuleKind, type StarshipModule,
 } from "./starshipModules.ts";
 import {
   at, between, circle, DEGREES, ellipse, FULL_TURN, glyph, group, inked, line, mirror, OUTLINE, path, poly, rect, STROKE, twinkle, whole,
@@ -2092,6 +2095,84 @@ function gildHull(p: HullPaint): HullPaint {
   return { ...gild(p), trim: mixHex(p.trim, RADIANT_PALETTE.mote, GILD_MIX), window: mixHex(p.window, RADIANT_PALETTE.glow, GILD_MIX) };
 }
 
+/** What a Starship's picture mounts: its class, the pieces it shows (its oldest, up to the most), their modules and their places. */
+type StarshipLayout = { cls: StarshipClass; shown: StarshipArt["pieces"]; modules: StarshipModule[]; places: Placement[] };
+
+function starshipLayout(ship: StarshipArt): StarshipLayout {
+  const cls = starshipClassOf(ship.pieces.length);
+  const shown = ship.pieces.slice(0, STARSHIP_MODULES_MAX);
+  const modules = shown.map((piece) => starshipModuleOf(piece.defId));
+  return { cls, shown, modules, places: hardpointPlacements(cls, modules.map((m) => m.mount)) };
+}
+
+/** How far a Starship's picture tilts its hull, in degrees. */
+function starshipTilt(ship: StarshipArt): number {
+  return ship.launched ? STARSHIP_TILT_LAUNCHED : 0;
+}
+
+// R3334000: where on a Starship's picture things are, so the effects layer can play on them: points in the square
+// picture's units (0 to 100, x right, y down), each mapped from hull space as `starshipSvg` places the hull.
+
+export type StarshipPoint = { x: number; y: number };
+
+/** A module the picture mounts, its piece and where its middle is drawn. */
+export type StarshipMountPoint = { defId: string; radiant: boolean; kind: ModuleKind; group: ModuleGroup; mount: Hardpoint; x: number; y: number };
+
+/** A point in hull space (`body`) where the picture draws it: the hull's group translates, rotates and then scales it. */
+export function starshipPicturePoint(ship: StarshipArt, body: StarshipPoint): StarshipPoint {
+  const zoom = starshipClassOf(ship.pieces.length).zoom;
+  const tilt = starshipTilt(ship) * DEGREES;
+  const cos = Math.cos(tilt);
+  const sin = Math.sin(tilt);
+  return { x: SUBJECT_X + zoom * (body.x * cos - body.y * sin), y: SUBJECT_Y + zoom * (body.x * sin + body.y * cos) };
+}
+
+/** Each module the picture mounts (its oldest pieces', up to `STARSHIP_MODULES_MAX`), in list order, at its middle. */
+export function starshipMountPoints(ship: StarshipArt): StarshipMountPoint[] {
+  const { shown, modules, places } = starshipLayout(ship);
+  return modules.flatMap((m, i) => {
+    const place = places[i];
+    const piece = shown[i];
+    if (place === undefined || piece === undefined) return [];
+    const [cx, cy] = moduleCenter(m);
+    const middle = starshipPicturePoint(ship, { x: place.x + cx * place.scale, y: place.y + cy * place.scale });
+    return [{ defId: piece.defId, radiant: piece.radiant || ship.radiant, kind: m.kind, group: m.group, mount: m.mount, x: middle.x, y: middle.y }];
+  });
+}
+
+/** Where its engines burn: its stern modules, in list order, else the stern's middle. */
+export function starshipEnginePoints(ship: StarshipArt): StarshipPoint[] {
+  const sterns = starshipMountPoints(ship)
+    .filter((point) => point.mount === "stern")
+    .map(({ x, y }) => ({ x, y }));
+  return sterns.length > 0 ? sterns : [starshipPicturePoint(ship, { x: -starshipClassOf(ship.pieces.length).length, y: 0 })];
+}
+
+/** The tip of its bow. */
+export function starshipProwPoint(ship: StarshipArt): StarshipPoint {
+  return starshipPicturePoint(ship, { x: starshipClassOf(ship.pieces.length).length, y: 0 });
+}
+
+/** The middle of its hull. */
+export function starshipCenterPoint(ship: StarshipArt): StarshipPoint {
+  return starshipPicturePoint(ship, { x: 0, y: 0 });
+}
+
+/**
+ * A Dormant Starship's shipyard idle's points: its dock lamp, the cone of its light (the lamp its first point) and
+ * where `shipyardMarkup` welds its newest piece in, null with no pieces.
+ */
+export function shipyardIdleOf(ship: StarshipArt): { lamp: StarshipPoint; cone: readonly StarshipPoint[]; newest: StarshipPoint | null } {
+  const { cls, places } = starshipLayout(ship);
+  const { lamp, cone } = shipyardLampOf(cls);
+  const last = places[places.length - 1];
+  return {
+    lamp: starshipPicturePoint(ship, lamp),
+    cone: cone.map(([x, y]) => starshipPicturePoint(ship, { x, y })),
+    newest: last === undefined ? null : starshipPicturePoint(ship, { x: last.x, y: last.y }),
+  };
+}
+
 /**
  * R3333000: the art a Starship wears, Dormant or launched, drawn from its inputs (`StarshipArt`): its class from the
  * count of its pieces, each piece's module (gilded when the piece or the face is Radiant) on its hardpoint oldest
@@ -2107,12 +2188,9 @@ export function starshipSvg(ship: StarshipArt): string {
   const defs: Defs = [];
   gradients(p, defs);
   const sky = backdrop(behind, p, "fleet", true, defs);
-  const cls = starshipClassOf(ship.pieces.length);
+  const { cls, shown, modules, places } = starshipLayout(ship);
   const L = cls.length;
   const H = cls.height;
-  const shown = ship.pieces.slice(0, STARSHIP_MODULES_MAX);
-  const modules = shown.map((piece) => starshipModuleOf(piece.defId));
-  const places = hardpointPlacements(cls, modules.map((m) => m.mount));
   const paints = modules.map((m, i) => (shown[i]?.radiant === true || ship.radiant ? gild(modulePaint(m)) : modulePaint(m)));
   const mounted = (keep: (m: StarshipModule) => boolean): string =>
     modules
@@ -2150,7 +2228,7 @@ export function starshipSvg(ship: StarshipArt): string {
     sky +
     streaks +
     (ship.radiant ? rays(seed) : "") +
-    group(at(SUBJECT_X, SUBJECT_Y, ship.launched ? STARSHIP_TILT_LAUNCHED : 0, cls.zoom), body.join("")) +
+    group(at(SUBJECT_X, SUBJECT_Y, starshipTilt(ship), cls.zoom), body.join("")) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
   );
@@ -2171,6 +2249,23 @@ export function starshipModuleIconSvg(defId: string, radiant: boolean): string {
     rect(-15, -10, 30, 20, ICON_PLATE, { rx: 2 }) +
     rivets +
     group(at(-cx * MODULE_ICON_SCALE, -cy * MODULE_ICON_SCALE, 0, MODULE_ICON_SCALE), moduleMarkup(m, p)) +
+    "</svg>"
+  );
+}
+
+/**
+ * R3334000: a piece's module alone, as its icon draws it but on no plate and at its own size, centered in its box
+ * (`MODULE_BOX`): the sprite the effects layer flies onto a hull as the piece docks.
+ */
+export function starshipModuleSvg(defId: string, radiant: boolean): string {
+  const m = starshipModuleOf(defId);
+  const base = modulePaint(m);
+  const p = radiant ? gild(base) : base;
+  const [cx, cy] = moduleCenter(m);
+  const half = MODULE_BOX / 2;
+  return (
+    `<svg viewBox="${-half} ${-half} ${MODULE_BOX} ${MODULE_BOX}" width="${MODULE_BOX}" height="${MODULE_BOX}" xmlns="http://www.w3.org/2000/svg">` +
+    group(at(-cx, -cy), moduleMarkup(m, p)) +
     "</svg>"
   );
 }

@@ -375,6 +375,9 @@ export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
 // Motion its still frame stands this long and holds nothing.
 export const FX_STARSHIP_TAIL_MS = 400;
 export const FX_STARSHIP_STILL_MS = 1_600;
+// R3334002: a launched Starship with no weapons rams prow first, its lunge turned this many degrees
+// toward its target (jk-lunge's `--fx-lunge-turn`).
+export const FX_STARSHIP_RAM_TURN_DEG = 30;
 // R3338000: the Terminus cards' set pieces (fx/terminus/). A set piece's beats fall evenly from
 // FX_TERMINUS_BEATS_FROM to FX_TERMINUS_BEATS_TO of its span (its hold, or, unheld, its swallow); its cue
 // outlasts its entry by FX_TERMINUS_TAIL_MS (inside FX_MAX_TAIL_MS, R200), and under Reduce Motion its

@@ -39,6 +39,8 @@ const EXPECTED_IDS = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
   "organ",
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -127,6 +129,17 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   tapAstral: 240,
   // R3338000: the Terminus set pieces' organ.
   organ: 2000,
+  // R3334000–R3334003: the Starship's moments.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
 };
 
 /** B14 parameter sets used here too. */

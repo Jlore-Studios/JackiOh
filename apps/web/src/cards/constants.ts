@@ -167,3 +167,12 @@ export const DORMANT_PULSE_MS = 3200;
 
 /** R2801000: the most hull plates a Dormant Starship's face bolts on, one a piece (StarshipHull.tsx). */
 export const STARSHIP_HULL_PLATES_MAX = 8;
+
+/** R3334000: one swing of a Dormant Starship's shipyard light across its hull and back (ShipyardIdle.tsx, dormant.css). */
+export const SHIPYARD_IDLE_SWEEP_MS = 4200;
+
+/** R3334000: one flicker of the shipyard's welding sparks where its newest piece went in (ShipyardIdle.tsx, dormant.css). */
+export const SHIPYARD_IDLE_WELD_MS = 900;
+
+/** R3334000: how many welding sparks the shipyard's idle throws, each a share of a flicker behind the last (ShipyardIdle.tsx). */
+export const SHIPYARD_IDLE_SPARKS = 5;

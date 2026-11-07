@@ -1747,6 +1747,7 @@ const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
   callout: ["still"],
   launch: ["still"],
+  cinematic: ["still"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1779,10 +1780,20 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
   launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
+  // R3334000–R3334003: the Starship's moments.
+  module: ["kind", "uri", "motion", "from", "to", "share", "landMs", "spin", "delayMs", "durationMs"],
+  weld: ["kind", "at", "hum", "delayMs", "durationMs"],
+  cinematic: [
+    "kind", "art", "name", "lettering", "letters", "size", "tint", "at", "cameraFrom", "cameraTo", "panAtMs", "panEndMs", "zoom",
+    "stops", "engines", "sparks", "stampMs", "climbMs", "delayMs", "durationMs",
+  ],
+  doctrine: ["kind", "doctrine", "text", "tint", "at", "delayMs", "durationMs"],
+  wreck: ["kind", "art", "at", "breakMs", "turn", "delayMs", "durationMs"],
+  scorch: ["kind", "at", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {
-  testid: { required: ["kind", "testid"], optional: ["at"] },
+  testid: { required: ["kind", "testid"], optional: ["at", "art"] },
   crystal: { required: ["kind", "side", "index"], optional: [] },
   handCard: { required: ["kind", "side", "pick"], optional: [] },
   viewport: { required: ["kind", "at"], optional: [] },

@@ -5,7 +5,8 @@
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
+import { pointIn } from "./anchors.ts";
+import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -77,6 +78,52 @@ const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
 
 /** R2801000: a Starship launch's layers, above its counts (fx.css). */
 const LAUNCH_PARTS = ["flame", "trail"] as const;
+
+/** A share as a CSS percentage. */
+const PERCENT = 100;
+
+/** R3334000: a weld's parts: a clamp either side of the module and the weld's flash between them. */
+const WELD_PARTS = ["clamp", "clamp", "flash"] as const;
+
+/** R3334003: a wreck's two halves, fore and aft. */
+const WRECK_HALVES = ["fore", "aft"] as const;
+
+function ms(value: number): string {
+  return `${Math.max(0, Math.round(value))}ms`;
+}
+
+function placeAtPoint(el: HTMLElement, point: { x: number; y: number }): void {
+  el.style.setProperty("--fx-x", px(point.x));
+  el.style.setProperty("--fx-y", px(point.y));
+}
+
+function atOf(anchor: FxAnchor): FxPoint | undefined {
+  return anchor.kind === "testid" ? anchor.at : undefined;
+}
+
+/**
+ * R3334000: a Starship's own picture (or one of its modules'), as its card draws it (cards/art, the same
+ * procedural SVG the board's face shows): never an image asset (B27), never a card's face (R202).
+ */
+function picture(doc: Document, className: string, src: string): HTMLImageElement {
+  const img = doc.createElement("img");
+  img.className = className;
+  img.alt = "";
+  img.draggable = false;
+  img.decoding = "async";
+  img.src = src;
+  return img;
+}
+
+/** R3334001: one of a cinematic's points, at its share of the picture, lit at its time. */
+function timedPoint(doc: Document, className: string, point: FxTimedPoint): HTMLElement {
+  const el = doc.createElement("div");
+  el.className = className;
+  el.style.setProperty("--fx-px", `${(point.x * PERCENT).toFixed(2)}%`);
+  el.style.setProperty("--fx-py", `${(point.y * PERCENT).toFixed(2)}%`);
+  el.style.setProperty("--fx-at", ms(point.atMs));
+  return el;
+}
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -376,6 +423,130 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         child.className = `fx-launch-${part}`;
         el.appendChild(child);
       }
+      break;
+    }
+    case "module": {
+      // R3334000: a Starship module (its picture, never a card's face, R202) flying from `from`'s point to
+      // `to`'s: docking on its hardpoint, kicking back where it stands, or torn off the hull and tumbling.
+      const from = boxes.from ?? null;
+      const to = boxes.to ?? null;
+      if (from === null || to === null) return null;
+      const start = pointIn(from, atOf(cue.from));
+      const end = pointIn(to, atOf(cue.to));
+      el.style.setProperty("--fx-x", px(start.x));
+      el.style.setProperty("--fx-y", px(start.y));
+      el.style.setProperty("--fx-dx", px(end.x - start.x));
+      el.style.setProperty("--fx-dy", px(end.y - start.y));
+      el.style.setProperty("--fx-size", px(to.width * cue.share));
+      el.style.setProperty("--fx-spin", String(cue.spin));
+      el.style.setProperty("--fx-land", ms(cue.landMs));
+      el.setAttribute("data-motion", cue.motion);
+      el.appendChild(picture(doc, "fx-module-img", cue.uri));
+      break;
+    }
+    case "weld": {
+      // R3334000: the clamps closing on a docked module and its weld's flash, humming `--fx-hum` of full.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtPoint(el, pointIn(at, atOf(cue.at)));
+      el.style.setProperty("--fx-hum", cue.hum.toFixed(3));
+      WELD_PARTS.forEach((part, index) => {
+        const child = doc.createElement("div");
+        child.className = `fx-weld-${part}`;
+        if (part === "clamp") child.setAttribute("data-side", String(index));
+        el.appendChild(child);
+      });
+      break;
+    }
+    case "cinematic": {
+      // R3334001: a Starship's launch as a cinematic over the whole layer: the board dims, its picture fills
+      // the screen, the camera pans along its hull past each module, its engines light, its public name
+      // stamps across it, and it climbs out toward its tile (`at`). `still`: the title card.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-size", cue.size);
+      if (cue.still === true) el.setAttribute("data-still", "true");
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-stamp", ms(cue.stampMs));
+      el.style.setProperty("--fx-climb", ms(cue.climbMs));
+      el.style.setProperty("--fx-climb-ms", ms(cue.durationMs - cue.climbMs));
+      el.style.setProperty("--fx-pan-at", ms(cue.panAtMs));
+      el.style.setProperty("--fx-pan-ms", ms(cue.panEndMs - cue.panAtMs));
+      el.style.setProperty("--fx-pull-ms", ms(cue.stampMs - cue.panEndMs));
+      const dim = doc.createElement("div");
+      dim.className = "fx-cinematic-dim";
+      const climb = doc.createElement("div");
+      climb.className = "fx-cinematic-climb";
+      const camera = doc.createElement("div");
+      camera.className = "fx-cinematic-camera";
+      camera.appendChild(picture(doc, "fx-cinematic-art", cue.art));
+      camera.style.setProperty("--fx-cam-x0", cue.cameraFrom.x.toFixed(4));
+      camera.style.setProperty("--fx-cam-y0", cue.cameraFrom.y.toFixed(4));
+      camera.style.setProperty("--fx-cam-x1", cue.cameraTo.x.toFixed(4));
+      camera.style.setProperty("--fx-cam-y1", cue.cameraTo.y.toFixed(4));
+      camera.style.setProperty("--fx-zoom", String(cue.zoom));
+      for (const stop of cue.stops) camera.appendChild(timedPoint(doc, "fx-cinematic-stop", stop));
+      for (const engine of cue.engines) {
+        const lit = timedPoint(doc, "fx-cinematic-engine", engine);
+        lit.style.setProperty("--fx-rest", ms(cue.durationMs - engine.atMs));
+        for (let k = 0; k < cue.sparks; k += 1) {
+          const spark = doc.createElement("div");
+          spark.className = "fx-cinematic-spark";
+          spark.style.setProperty("--fx-spark", String(k));
+          spark.style.setProperty("--fx-sparks", String(cue.sparks));
+          lit.appendChild(spark);
+        }
+        camera.appendChild(lit);
+      }
+      const name = doc.createElement("div");
+      name.className = "fx-cinematic-name";
+      name.setAttribute("data-text", cue.name);
+      name.setAttribute("data-font", cue.lettering.font);
+      name.setAttribute("data-italic", String(cue.lettering.italic));
+      name.style.setProperty("--fx-letter-weight", String(cue.lettering.weight));
+      name.style.setProperty("--fx-letter-tracking", `${cue.lettering.tracking}em`);
+      name.style.setProperty("--fx-letter-fill", cue.letters.fill);
+      name.style.setProperty("--fx-letter-edge", cue.letters.edge);
+      climb.appendChild(camera);
+      climb.appendChild(name);
+      el.appendChild(dim);
+      el.appendChild(climb);
+      break;
+    }
+    case "doctrine": {
+      // R3334001: a War Doctrine announced over its Starship, in its own look; its name the card's public one.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtPoint(el, pointIn(at, atOf(cue.at)));
+      el.setAttribute("data-doctrine", cue.doctrine);
+      el.setAttribute("data-text", cue.text);
+      tintVars(el, cue.tint);
+      const insignia = doc.createElement("div");
+      insignia.className = "fx-doctrine-insignia";
+      el.appendChild(insignia);
+      break;
+    }
+    case "wreck": {
+      // R3334003: a Starship's hull breaking in two over its art, each half its picture's fore or aft half.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      cover(el, at);
+      el.style.setProperty("--fx-break", ms(cue.breakMs));
+      el.style.setProperty("--fx-break-ms", ms(cue.durationMs - cue.breakMs));
+      el.style.setProperty("--fx-turn", `${cue.turn}deg`);
+      for (const half of WRECK_HALVES) {
+        const child = picture(doc, "fx-wreck-half", cue.art);
+        child.setAttribute("data-half", half);
+        el.appendChild(child);
+      }
+      break;
+    }
+    case "scorch": {
+      // R3334003: a brief scorch settling over the zone a Starship fell in.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      cover(el, at);
       break;
     }
   }

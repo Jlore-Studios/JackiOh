@@ -17,11 +17,12 @@ import {
   FX_PARTICLE_CAP,
   FX_PARTICLE_CAP_MIN,
   FX_PARTICLE_CAP_MOBILE,
+  FX_STARSHIP_RAM_TURN_DEG,
 } from "./constants.ts";
 import { landingBox, mountDomEffect, mountHold, type DomEffect, type DomEffectBoxes } from "./dom.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
-import { pointIn } from "./anchors.ts";
+import { artBoxOf, pointIn } from "./anchors.ts";
 import { createRng } from "./rng.ts";
 import { createShake } from "./shake.ts";
 import type { FxSurface } from "./surface.ts";
@@ -161,7 +162,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   const measure = (anchor: FxAnchor): FxBox | null => {
     if (anchor.kind === "testid") {
       const standIn = carried.get(anchor.testid);
-      if (standIn !== undefined) return boxOfElement(standIn) ?? options.measure(anchor);
+      // R3334000: a share of a carried card's art is one of its stand-in's.
+      if (standIn !== undefined) return (anchor.art === undefined ? boxOfElement(standIn) : artBoxOf(standIn, anchor.art)) ?? options.measure(anchor);
     }
     return options.measure(anchor);
   };
@@ -240,7 +242,12 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "callout":
       case "takeover":
       case "setPiece":
-      case "launch": {
+      case "launch":
+      case "weld":
+      case "cinematic":
+      case "doctrine":
+      case "wreck":
+      case "scorch": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };
@@ -253,7 +260,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         break;
       }
       case "ghost":
-      case "fog": {
+      case "fog":
+      case "module": {
         const from = measure(cue.from);
         if (from === null) return;
         const to = measure(cue.to);
@@ -350,16 +358,19 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const attacker = element(cue.attacker);
         const target = element(cue.target);
         if (attacker === null || target === null) return;
-        const aim = (x: string, y: string): void => {
+        const aim = (x: string, y: string, turnDeg?: number): void => {
           attacker.style.setProperty("--fx-lunge-x", x);
           attacker.style.setProperty("--fx-lunge-y", y);
           // R2789000: a Flying attacker's lunge arcs over the lane, lifted toward the viewer.
           if (cue.arc === true) attacker.style.setProperty("--fx-lunge-lift", String(FX_FLYING_LUNGE_LIFT));
+          // R3334002: an unarmed Starship rams prow first, turned toward its target.
+          if (turnDeg !== undefined) attacker.style.setProperty("--fx-lunge-turn", `${turnDeg}deg`);
           staged.push({
             undo: () => {
               attacker.style.removeProperty("--fx-lunge-x");
               attacker.style.removeProperty("--fx-lunge-y");
               attacker.style.removeProperty("--fx-lunge-lift");
+              attacker.style.removeProperty("--fx-lunge-turn");
             },
             expiresAt,
           });
@@ -381,7 +392,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const uy = Math.abs(dy) / distance;
         const extents = (ux * (a.width + b.width) + uy * (a.height + b.height)) / 2;
         const reach = Math.min(FX_LUNGE_MAX_PX, Math.max(FX_LUNGE_MIN_PX, distance - extents * FX_LUNGE_STANDOFF));
-        aim(`${((dx / distance) * reach).toFixed(1)}px`, `${((dy / distance) * reach).toFixed(1)}px`);
+        // Its prow faces right, so a target above turns it counterclockwise.
+        const turn = cue.ram === true ? (dy < 0 ? -FX_STARSHIP_RAM_TURN_DEG : FX_STARSHIP_RAM_TURN_DEG) : undefined;
+        aim(`${((dx / distance) * reach).toFixed(1)}px`, `${((dy / distance) * reach).toFixed(1)}px`, turn);
         return;
       }
       case "pull": {

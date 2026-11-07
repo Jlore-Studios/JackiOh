@@ -11,10 +11,15 @@ import type { CardDef } from "@jackioh/shared";
 import { RADIANT_GOLD_HUE_MAX_DEG, RADIANT_GOLD_HUE_MIN_DEG, RADIANT_GOLD_LIGHTNESS_MAX, RADIANT_GOLD_LIGHTNESS_MIN, RADIANT_GOLD_SATURATION_MIN } from "../constants.ts";
 import STINKYSCAPE_V050 from "./fixtures/stinkyscape-art-v0.5.0.json";
 import { CardArt } from "./CardArt.tsx";
-import { hashId } from "./hash.ts";
-import { moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf } from "./starshipModules.ts";
-import { isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
-import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
+import { fmt, hashId } from "./hash.ts";
+import { SHIPYARD_LAMP, shipyardLampOf, STARSHIP_MODULES_MAX, starshipArtOf, starshipClassOf, type StarshipArt } from "./starshipHulls.ts";
+import { moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf } from "./starshipModules.ts";
+import { points } from "./stinkyDraw.ts";
+import {
+  isStinkyscapeArt, shipyardIdleOf, STARSHIP_PIECES, starshipCenterPoint, starshipEnginePoints, starshipModuleIconSvg, starshipModuleSvg,
+  starshipMountPoints, starshipPicturePoint, starshipProwPoint, starshipSvg, stinkyscapeSvg, stinkySubject, tierOf, type StarshipPoint, type StinkyFamily,
+} from "./stinkyscape.ts";
+import { proceduralArtUri, starshipModuleIconUri, starshipModuleUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
 afterEach(cleanup);
@@ -265,6 +270,149 @@ describe("R3333001: a Starship Piece's own card draws its module", () => {
       expect(hexes(radiant).some(inRadiantGold), `${id} Radiant`).toBe(true);
     }
     expect(pictures.size).toBe(Object.keys(STARSHIP_MODULE_IDS).length);
+  });
+});
+
+/** Bow weapons, flank launchers, a stern engine, a spine defense and a keel drill: eight different pieces. */
+const SHIP_PIECES = ["058", "140", "090", "051", "141", "052", "038", "066"].map((suffix) => `stinkyscape-${suffix}`);
+
+/** How far a point may sit from where the picture draws it: the picture prints its numbers to two places. */
+const DRAWN_SLACK = 0.05;
+
+function near(a: StarshipPoint, b: StarshipPoint): boolean {
+  return Math.abs(a.x - b.x) <= DRAWN_SLACK && Math.abs(a.y - b.y) <= DRAWN_SLACK;
+}
+
+function inside(point: StarshipPoint): boolean {
+  return point.x >= 0 && point.x <= 100 && point.y >= 0 && point.y <= 100;
+}
+
+/** The hull's own transform in `svg`, read back from the picture: its translate (at the center point), rotate and scale. */
+function hullTransform(svg: string, ship: StarshipArt): (body: StarshipPoint) => StarshipPoint {
+  const center = starshipCenterPoint(ship);
+  const open = `<g transform="translate(${fmt(center.x)} ${fmt(center.y)}) rotate(`;
+  const found = /^(-?[\d.]+)\) scale\(([\d.]+)\)">/.exec(svg.slice(svg.indexOf(open) + open.length));
+  expect(svg.indexOf(open)).toBeGreaterThan(0);
+  const tilt = (Number(found?.[1]) * Math.PI) / 180;
+  const zoom = Number(found?.[2]);
+  return (body) => ({
+    x: center.x + zoom * (body.x * Math.cos(tilt) - body.y * Math.sin(tilt)),
+    y: center.y + zoom * (body.x * Math.sin(tilt) + body.y * Math.cos(tilt)),
+  });
+}
+
+/** Where `svg` mounts `defId`'s module (its base paint), read back from its group: the mount and its scale, in hull space. */
+function mountedAt(svg: string, defId: string): { x: number; y: number; scale: number } {
+  const m = starshipModuleOf(defId);
+  const end = svg.indexOf(moduleMarkup(m, modulePaint(m)));
+  expect(end, defId).toBeGreaterThan(0);
+  const open = svg.lastIndexOf('<g transform="', end - 1);
+  const found = /^<g transform="translate\((-?[\d.]+) (-?[\d.]+)\) rotate\(0\) scale\(([\d.]+)\)">$/.exec(svg.slice(open, end));
+  expect(found, defId).not.toBeNull();
+  return { x: Number(found?.[1]), y: Number(found?.[2]), scale: Number(found?.[3]) };
+}
+
+describe("R3334000: where on a Starship's picture its parts are", () => {
+  it("R3334000 points follow starshipSvg", () => {
+    for (const n of [1, 4, 8]) {
+      const list = SHIP_PIECES.slice(0, n).map((defId) => ({ defId, radiant: false }));
+      for (const launched of [false, true]) {
+        const label = `${String(n)} ${launched ? "launched" : "Dormant"}`;
+        const ship = starshipArtOf(list, launched, launched ? "The Silent Choir" : undefined, false);
+        const svg = starshipSvg(ship);
+        const toPicture = hullTransform(svg, ship);
+        const mounts = starshipMountPoints(ship);
+        // One a mounted module, in list order, each where the picture draws its module's middle.
+        expect(mounts.map((point) => point.defId), label).toEqual(list.map((piece) => piece.defId));
+        mounts.forEach((point) => {
+          const m = starshipModuleOf(point.defId);
+          expect(point, label).toMatchObject({ kind: m.kind, group: m.group, mount: m.mount, radiant: false });
+          const place = mountedAt(svg, point.defId);
+          const [cx, cy] = moduleCenter(m);
+          expect(near(point, toPicture({ x: place.x + cx * place.scale, y: place.y + cy * place.scale })), `${label} ${point.defId}`).toBe(true);
+          expect(inside(point), `${label} ${point.defId}`).toBe(true);
+        });
+        // The engines burn at the stern mounts, else at the stern's middle.
+        const sterns = mounts.filter((point) => point.mount === "stern");
+        const engines = starshipEnginePoints(ship);
+        const L = starshipClassOf(n).length;
+        if (n === 1) {
+          expect(sterns, label).toEqual([]);
+          expect(engines).toHaveLength(1);
+          expect(near(engines[0] ?? { x: NaN, y: NaN }, toPicture({ x: -L, y: 0 })), label).toBe(true);
+        } else {
+          expect(sterns.length, label).toBeGreaterThan(0);
+          expect(engines, label).toEqual(sterns.map(({ x, y }) => ({ x, y })));
+        }
+        // The prow ahead of the middle, both where the picture draws them.
+        const center = starshipCenterPoint(ship);
+        const prow = starshipProwPoint(ship);
+        expect(near(prow, toPicture({ x: L, y: 0 })), label).toBe(true);
+        expect(prow.x, label).toBeGreaterThan(center.x);
+        if (launched) expect(prow.y, label).toBeLessThan(center.y);
+        else expect(prow.y, label).toBeCloseTo(center.y, 6);
+        for (const point of [...engines, prow, center]) expect(inside(point), label).toBe(true);
+        // The launched tilt lifts the prow above where the Dormant ship's sits.
+        if (launched) expect(prow.y).toBeLessThan(starshipProwPoint({ ...ship, launched: false }).y);
+        if (launched) continue;
+        // The shipyard's lamp and its cone where the picture draws them, and the weld at the newest module's mount.
+        const idle = shipyardIdleOf(ship);
+        const yard = shipyardLampOf(starshipClassOf(n));
+        expect(svg, label).toContain(`<polygon points="${points(yard.cone)}" fill="${SHIPYARD_LAMP}"`);
+        expect(svg, label).toContain(`<circle cx="${fmt(yard.lamp.x)}" cy="${fmt(yard.lamp.y)}" r="1.4" fill="${SHIPYARD_LAMP}"`);
+        expect(near(idle.lamp, toPicture(yard.lamp)), label).toBe(true);
+        expect(idle.cone).toHaveLength(yard.cone.length);
+        idle.cone.forEach((point, k) => {
+          const [x, y] = yard.cone[k] ?? [NaN, NaN];
+          expect(near(point, toPicture({ x, y })), `${label} cone ${String(k)}`).toBe(true);
+        });
+        expect(near(idle.cone[0] ?? { x: NaN, y: NaN }, idle.lamp), label).toBe(true);
+        const newest = mountedAt(svg, list[list.length - 1]?.defId ?? "");
+        expect(idle.newest !== null && near(idle.newest, toPicture(newest)), label).toBe(true);
+        for (const point of [idle.lamp, ...idle.cone]) expect(inside(point), label).toBe(true);
+      }
+    }
+    // Past the most it mounts, a point for each module the picture mounts, its oldest pieces'.
+    const many = Object.keys(STARSHIP_MODULE_IDS).slice(0, STARSHIP_MODULES_MAX + 4);
+    for (const launched of [false, true]) {
+      const mounts = starshipMountPoints(starshipArtOf(many.map((defId) => ({ defId, radiant: false })), launched, launched ? "The Ninth Life" : undefined, false));
+      expect(mounts.map((point) => point.defId)).toEqual(many.slice(0, STARSHIP_MODULES_MAX));
+      for (const point of mounts) expect(inside(point), point.defId).toBe(true);
+    }
+    // A Radiant piece's module is gilded, and on a Radiant Starship every one.
+    const mixed = SHIP_PIECES.slice(0, 4).map((defId, k) => ({ defId, radiant: k === 2 }));
+    expect(starshipMountPoints(starshipArtOf(mixed, false, undefined, false)).map((point) => point.radiant)).toEqual([false, false, true, false]);
+    expect(starshipMountPoints(starshipArtOf(mixed, false, undefined, true)).every((point) => point.radiant)).toBe(true);
+    // An empty yard welds nothing, and its engines still burn at the stern.
+    const empty = starshipArtOf([], false, undefined, false);
+    expect(starshipMountPoints(empty)).toEqual([]);
+    expect(shipyardIdleOf(empty).newest).toBeNull();
+    expect(starshipEnginePoints(empty)).toEqual([starshipPicturePoint(empty, { x: -starshipClassOf(0).length, y: 0 })]);
+  });
+
+  it("R3334000 a module's docking sprite is its module alone, centered, with no plate, and cached", () => {
+    for (const defId of [...SHIP_PIECES, "stinkyscape-t-dormant-starship"]) {
+      const m = starshipModuleOf(defId);
+      for (const radiant of [false, true]) {
+        const sprite = starshipModuleSvg(defId, radiant);
+        expect(sprite.startsWith('<svg viewBox="-12 -12 24 24" width="24" height="24"'), defId).toBe(true);
+        expect(sprite.match(/<svg/g)).toHaveLength(1);
+        expect(sprite, defId).not.toMatch(/NaN|undefined|Infinity|<text|<title|href/);
+        // The icon's plate and rivets are not there; the icon's module is, at its own size, about its middle.
+        expect(sprite, defId).not.toContain("#3f4964");
+        expect(starshipModuleIconSvg(defId, radiant), defId).toContain("#3f4964");
+        const [cx, cy] = moduleCenter(m);
+        expect(sprite, defId).toContain(`<g transform="translate(${fmt(-cx)} ${fmt(-cy)}) rotate(0) scale(1)">`);
+        if (!radiant) expect(sprite, defId).toContain(moduleMarkup(m, modulePaint(m)));
+      }
+      expect(starshipModuleSvg(defId, true)).not.toBe(starshipModuleSvg(defId, false));
+      // Its data URI is cached apart from the icon's.
+      const uri = starshipModuleUri(defId, false);
+      expect(uri.startsWith("data:image/svg+xml,")).toBe(true);
+      expect(starshipModuleUri(defId, false)).toBe(uri);
+      expect(decodeURIComponent(uri.slice("data:image/svg+xml,".length))).toBe(starshipModuleSvg(defId, false));
+      expect(uri).not.toBe(starshipModuleIconUri(defId, false));
+    }
   });
 });
 

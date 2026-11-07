@@ -7,11 +7,13 @@
 // recipes of its moment over it and ends in a Mythic's choir (`entrance`), and its signature run sounds
 // once, condensed, after the hold, as a wipe does. It reads only the entry's set piece, which keys on a
 // definition the seat reads (R202); an entry with no hold (Big moments "off", Reduce motion, the effects
-// off) has no bed.
+// off) has no bed. R3334001: a launch's bed is the Starship's own ignition and roar (sfx.ts), timed to
+// its cinematic; its other moments sound from starshipSounds.ts.
 
 import { STARSHIP_SET_PIECE, type AnimationEntry } from "../game/animations.ts";
-import { FX_STARSHIP_COUNT_AT, FX_STARSHIP_IGNITE_AT, FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
+import { FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
 import { isSetPieceKey, type SetPieceKey } from "../fx/setPieceKeys.ts";
+import { STARSHIP_CINEMATIC } from "../fx/starship.ts";
 import type { SfxId, SfxParams, SoundCue } from "./types.ts";
 
 /**
@@ -112,17 +114,14 @@ export const SET_PIECE_BEDS: { readonly [K in SetPieceKey]: readonly SetPieceBed
   ],
 };
 
-/** R2801000: the first countdown beep's clockTick `amount`; each later count beeps one higher. */
-export const STARSHIP_BEEP_AMOUNT = 8;
-
 /**
- * R2801000: a Starship launch's bed: a beep at each count of its countdown, rising, the engines' burn at
- * the ignition and, after the hold, the landing's heavy thud. Its own row's roar (`starshipLaunched`'s
- * `entrance`) sounds as the hold ends, when it lifts off (director.ts).
+ * R2801000, R3334001: a Starship launch's bed: its engines igniting as the cinematic lights them, its
+ * roar as it climbs out of frame and, after the hold, the landing's heavy thud. Its own row's
+ * `entrance` sounds as the hold ends, when it lifts off (director.ts).
  */
 export const STARSHIP_LAUNCH_BED: readonly SetPieceBedStep[] = [
-  ...FX_STARSHIP_COUNT_AT.map((at, k): SetPieceBedStep => ({ id: "clockTick", at, params: { amount: STARSHIP_BEEP_AMOUNT + k } })),
-  { id: "burn", at: FX_STARSHIP_IGNITE_AT },
+  { id: "starshipIgnite", at: STARSHIP_CINEMATIC.enginesFrom },
+  { id: "starshipRoar", at: STARSHIP_CINEMATIC.climbAt },
   { id: "summon", at: FX_STARSHIP_LAND_AT, after: true, params: { slamTier: "huge" } },
 ];
 

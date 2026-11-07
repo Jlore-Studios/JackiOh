@@ -18,6 +18,7 @@ import {
   FX_SLAM_AT,
 } from "./constants.ts";
 import { flavorLook, type FlavorLook } from "./flavors.ts";
+import { starshipBroadside } from "./starship.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "./types.ts";
 
 /** The contact spark's base count and power (rule 9). */
@@ -168,12 +169,24 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const attacker = targetFor(event, view);
       const target = attackTarget(event.targetId, view);
       if (attacker === null || target === null || attacker === target) return [];
-      const look = FX_FLAVOR_LIVE ? rangedLook(event.attackerId, view) : null;
+      // R3334002: a launched Starship fires its broadside where it stands (starship.ts draws the guns),
+      // or, with no weapons, rams prow first.
+      const broadside = starshipBroadside(view, event.attackerId);
+      if (broadside !== null && broadside.length > 0) return [{ kind: "lunge", attacker, target, delayMs: 0, durationMs: D, still: true }];
+      const look = broadside === null && FX_FLAVOR_LIVE ? rangedLook(event.attackerId, view) : null;
       if (look !== null) return shotCues(look, attacker, target, c);
       const tuning = STAGE_TUNING.contactSpark;
       return [
         // R2789000: a Flying attacker's lunge arcs over the lane.
-        { kind: "lunge", attacker, target, delayMs: 0, durationMs: D, ...(flies(event.attackerId, view) ? { arc: true as const } : {}) },
+        {
+          kind: "lunge",
+          attacker,
+          target,
+          delayMs: 0,
+          durationMs: D,
+          ...(flies(event.attackerId, view) ? { arc: true as const } : {}),
+          ...(broadside === null ? {} : { ram: true as const }),
+        },
         {
           kind: "burst",
           preset: "spark",

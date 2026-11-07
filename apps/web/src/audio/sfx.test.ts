@@ -32,6 +32,9 @@ const UNION_ORDER: SfxId[] = [
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
   // R3338000: the Terminus set pieces' organ.
   "organ",
+  // R3334000–R3334003: the Starship's moments.
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -120,6 +123,17 @@ const DURATION_MS: Record<SfxId, number> = {
   tapAstral: 240,
   // R3338000.
   organ: 2000,
+  // R3334000–R3334003.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -773,5 +787,63 @@ describe("R3338000 the Terminus organ", () => {
     expect(held?.value, "a level hold").toBe(swelled?.value);
     expect(released?.time ?? Infinity).toBeLessThanOrEqual(AT + SFX.organ.durationMs / 1000 + EPS);
     expect(returnedSeconds(run)).toBeLessThanOrEqual(SFX.organ.durationMs / 1000);
+  });
+});
+
+describe("R3334000 the Starship's moments", () => {
+  /** The design's gain column for the ten, in the SfxId union's order (their durationMs is DURATION_MS's). */
+  const STARSHIP_GAIN = {
+    starshipDock: 0.8,
+    starshipIgnite: 0.8,
+    starshipRoar: 0.9,
+    starshipBeam: 0.6,
+    starshipRepeater: 0.6,
+    starshipCannon: 0.85,
+    starshipFlak: 0.7,
+    starshipLauncher: 0.6,
+    starshipRam: 0.85,
+    starshipWreck: 0.85,
+  } as const satisfies Partial<Record<SfxId, number>>;
+  const IDS = Object.keys(STARSHIP_GAIN) as (keyof typeof STARSHIP_GAIN)[];
+  const SHIP_SIZE_MAX = 8;
+  const starshipRun = (id: SfxId, params: SfxParams): Run => runRecipe(`${id} ${JSON.stringify(params)}`, SFX[id].recipe, SFX[id].durationMs, params);
+  /** The dock's hum: its one triangle, the pitch it holds. */
+  const hum = (amount: number): number =>
+    starshipRun("starshipDock", { amount }).made.find((n) => n.kind === "oscillator" && n.type === "triangle")?.param("frequency").settled() ?? 0;
+
+  it("R3334000 ten sounds keep the contract and differ", () => {
+    expect(IDS).toHaveLength(10);
+    expect(UNION_ORDER.slice(-IDS.length)).toEqual(IDS);
+    const runs: Run[] = [];
+    for (const id of IDS) {
+      expect(SFX[id].durationMs, id).toBe(DURATION_MS[id]);
+      expect(SFX[id].gain, id).toBe(STARSHIP_GAIN[id]);
+      for (const params of [...PARAM_SETS, { amount: SHIP_SIZE_MAX }, { amount: Number.NaN }, { pan: -0.6 }]) runs.push(starshipRun(id, params));
+    }
+    // Every count of pieces a dock may name, and past it.
+    for (let amount = 0; amount <= SHIP_SIZE_MAX + 1; amount += 1) runs.push(starshipRun("starshipDock", { amount }));
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+
+    // Each is a sound of its own: no two build the same graph.
+    const shapes = IDS.map((id) => {
+      const run = starshipRun(id, {});
+      return JSON.stringify([run.made.map((node) => node.kind), run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null])]);
+    });
+    expect(new Set(shapes).size).toBe(IDS.length);
+
+    // The dock's hum rises with the ship's pieces, a step for each, held past the largest.
+    expect(hum(SHIP_SIZE_MAX)).toBeGreaterThan(hum(1));
+    const hums = Array.from({ length: SHIP_SIZE_MAX }, (_, i) => hum(i + 1));
+    for (let i = 1; i < SHIP_SIZE_MAX; i += 1) expect(hums[i] ?? 0, `${String(i + 1)} pieces hum higher`).toBeGreaterThan(hums[i - 1] ?? Infinity);
+    expect(hum(SHIP_SIZE_MAX + 4)).toBe(hum(SHIP_SIZE_MAX));
+    expect(hum(0)).toBe(hum(1));
+    expect(hum(Number.NaN)).toBe(hum(1));
   });
 });
