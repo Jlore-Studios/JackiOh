@@ -12,6 +12,7 @@ import type { FxDescriptor } from "../fx/types.ts";
 import { getFxSettings, normalizeSpeed, type FxBigMoments, type FxSettings } from "../fx/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
+import { RIFFLE_MS } from "./config.ts";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { firstReveal, isFaceDownSet } from "./entrance.ts";
 import {
@@ -992,7 +993,61 @@ export type AnimationEntry = {
   entrance?: EntryEntrance;
   /** R2785000: this entry is its action's set piece and holds the game for one capped beat (`setPieceEntries`). */
   setPiece?: EntrySetPiece;
+  /** #3347: the decks riffle once this entry's own motion is over (`riffleEntries`). */
+  riffle?: EntryRiffle;
 };
+
+/**
+ * #3347: one riffle of the shuffled decks, after the last shuffle of an action. `sides` are the decks
+ * that riffle ("you" first), `delayMs` is how long into the entry it starts (the entry's own motion
+ * before it), and `ms` how long it takes: 0 under reduced motion, where the riffle snaps to its end.
+ */
+export type EntryRiffle = { sides: Side[]; delayMs: number; ms: number };
+
+/** #3347: a `shuffledIn` or a `traded`, the events that shuffle a library. */
+export function isShuffle(event: GameEvent): boolean {
+  return event.type === "shuffledIn" || event.type === "traded";
+}
+
+/** #3347: the last shuffle of one action's events, the one its riffle follows; null when it shuffles nothing. */
+export function lastShuffleOf(events: readonly GameEvent[]): GameEvent | null {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i];
+    if (event !== undefined && isShuffle(event)) return event;
+  }
+  return null;
+}
+
+/**
+ * #3347: marks the entry holding the last shuffle of an action so its deck riffles once (one riffle per
+ * action, however many cards went in), after the entry's own motion, and lengthens the entry by it.
+ * `sides` are every deck the action shuffled. The riffle's time is the table's `RIFFLE_MS` at the
+ * viewer's speed (R201); reduced motion marks it 0 and keeps the entry as it is. Needs only public events
+ * (CLAUDE.md rule 7), and the entries without a shuffle come back untouched.
+ */
+export function riffleEntries(
+  entries: readonly AnimationEntry[],
+  options: { reduced: boolean; speed: number },
+): AnimationEntry[] {
+  let last = -1;
+  entries.forEach((entry, i) => {
+    if (entry.events.some(isShuffle)) last = i;
+  });
+  const marked = entries[last];
+  if (marked === undefined) return [...entries];
+  const sides: Side[] = [];
+  for (const entry of entries) {
+    for (const event of entry.events) {
+      if (event.type !== "shuffledIn" && event.type !== "traded") continue;
+      const side = sideOf(entry.view, event.player);
+      if (!sides.includes(side)) sides.push(side);
+    }
+  }
+  sides.sort((a, b) => (a === b ? 0 : a === "you" ? -1 : 1));
+  const ms = options.reduced ? 0 : Math.round(RIFFLE_MS / normalizeSpeed(options.speed));
+  const riffle: EntryRiffle = { sides, delayMs: marked.durationMs, ms };
+  return entries.map((entry, i) => (i === last ? { ...entry, riffle, durationMs: entry.durationMs + ms } : entry));
+}
 
 /**
  * #185: one landing's share of its action's slam (SLAM_BURST): the tier sets the look and the sound,
@@ -1765,7 +1820,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });
-      const entranced = options.entranceOf === undefined ? scaled : entranceEntries(scaled, options.entranceOf, { seen: entered });
+      const riffled = riffleEntries(scaled, { reduced, speed: settings.speed });
+      const entranced = options.entranceOf === undefined ? riffled : entranceEntries(riffled, options.entranceOf, { seen: entered });
       // R2785000: the action's set piece, if any entry is one; none on a silent board, reduced or with the effects off.
       const claimOf: SetPieceClaimer = (entry) => options.setPieceOf?.(entry) ?? takeoverClaim(entry);
       const entries =

@@ -30,6 +30,8 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // #3347: cards that move like cards.
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -116,6 +118,13 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // #3347: cards that move like cards.
+  pickUp: 90,
+  dragOver: 60,
+  drop: 140,
+  returnToHand: 200,
+  deal: 80,
+  riffle: 500,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

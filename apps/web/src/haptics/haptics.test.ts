@@ -5,7 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameEvent } from "@jackioh/shared";
 
 import { baseView } from "../test/fixtures.ts";
-import { HAPTIC_MIN_GAP_MS, HAPTIC_PATTERNS, createHaptics, hapticFor } from "./haptics.ts";
+import {
+  HAPTIC_MIN_GAP_MS,
+  HAPTIC_PATTERNS,
+  createHaptics,
+  hapticFor,
+  resetSharedHapticsForTests,
+  sharedHaptics,
+} from "./haptics.ts";
 import {
   DEFAULT_HAPTICS_SETTINGS,
   HAPTICS_SETTINGS_KEY,
@@ -76,6 +83,63 @@ describe("R669 haptics", () => {
     expect(() => {
       haptics.onEvent(turn("p1"), view);
     }).not.toThrow();
+  });
+});
+
+describe("#3347 the pick-up buzz", () => {
+  it("#3347 moment(pickup) buzzes its pattern once and honours the gap", () => {
+    let t = 1000;
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    const haptics = createHaptics({ vibrate, now: () => t, reducedMotion: () => false });
+    haptics.moment("pickup");
+    haptics.moment("pickup");
+    expect(vibrate.mock.calls).toEqual([[[...HAPTIC_PATTERNS.pickup]]]);
+    t += HAPTIC_MIN_GAP_MS - 1;
+    haptics.moment("pickup");
+    expect(vibrate).toHaveBeenCalledTimes(1);
+    t += 1;
+    haptics.moment("pickup");
+    expect(vibrate).toHaveBeenCalledTimes(2);
+  });
+
+  it("#3347 a pick-up and an event's buzz share one gap clock", () => {
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    const haptics = createHaptics({ vibrate, now: () => 1000, reducedMotion: () => false });
+    haptics.moment("pickup");
+    haptics.onEvent(played("p1"), view);
+    expect(vibrate).toHaveBeenCalledTimes(1);
+  });
+
+  it("#3347 a pick-up honours the vibration switch, reduced motion and a device with no vibrate", () => {
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    let reduced = true;
+    const haptics = createHaptics({ vibrate, now: () => 0, reducedMotion: () => reduced });
+    haptics.moment("pickup");
+    reduced = false;
+    writeHapticsSettings({ vibration: false });
+    haptics.moment("pickup");
+    expect(vibrate).not.toHaveBeenCalled();
+    writeHapticsSettings({ vibration: true });
+    haptics.moment("pickup");
+    expect(vibrate).toHaveBeenCalledTimes(1);
+    expect(() => {
+      createHaptics({ vibrate: null }).moment("pickup");
+    }).not.toThrow();
+  });
+
+  it("#3347 the shared haptics looks navigator.vibrate up at each buzz", () => {
+    resetSharedHapticsForTests();
+    const haptics = sharedHaptics();
+    expect(sharedHaptics()).toBe(haptics);
+    const vibrate = vi.fn(() => true);
+    Object.defineProperty(navigator, "vibrate", { configurable: true, value: vibrate });
+    try {
+      haptics.moment("pickup");
+      expect(vibrate).toHaveBeenCalledWith([...HAPTIC_PATTERNS.pickup]);
+    } finally {
+      Reflect.deleteProperty(navigator, "vibrate");
+      resetSharedHapticsForTests();
+    }
   });
 });
 

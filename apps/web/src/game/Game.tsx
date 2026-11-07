@@ -60,6 +60,8 @@ import {
 } from "./animations.ts";
 import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget, type HeroAside } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
+import { cardMotionLevel } from "./cardMotion.ts";
+import { aimDeal, clearDeal, planOpening, type OpeningPlan } from "./opening.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
 import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
@@ -68,6 +70,8 @@ import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import { getFxSettings, useFxSettings } from "../fx/settings.ts";
+import { getAudioEngine } from "../audio/engine.ts";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
@@ -322,6 +326,41 @@ export default function Game({
   const portrait = usePhonePortrait();
   const railTop = phoneRailTop && portrait && boardRail !== undefined && boardRail !== null;
   const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
+  // #3347: how much of the card-motion flourishes the settings allow (game/cardMotion.ts): board.css reads it as `data-card-motion`.
+  const [fx] = useFxSettings();
+  const motion = cardMotionLevel(reducedMotion || fx.motion === "reduce", fx.intensity);
+  // #3347: the opening deal, while it runs (game/opening.ts); its timers sound the riffle and each card dealt.
+  const [opening, setOpening] = useState<OpeningPlan | null>(null);
+  const openingTimers = useRef<number[]>([]);
+  const endOpening = useCallback((): void => {
+    for (const timer of openingTimers.current) window.clearTimeout(timer);
+    openingTimers.current = [];
+    setOpening(null);
+    if (root.current !== null) clearDeal(root.current);
+  }, []);
+  const startOpening = useCallback(
+    (plan: OpeningPlan): void => {
+      const play = (id: "riffle" | "deal"): void => {
+        try {
+          getAudioEngine().playSfx(id);
+        } catch {
+          // Sound is never a rule: no engine (jsdom) or a refused sound drops the cue.
+        }
+      };
+      setOpening(plan);
+      play("riffle");
+      for (const deal of plan.deals) openingTimers.current.push(window.setTimeout(() => play("deal"), deal.atMs));
+      openingTimers.current.push(window.setTimeout(endOpening, plan.totalMs));
+    },
+    [endOpening],
+  );
+  useEffect(
+    () => () => {
+      for (const timer of openingTimers.current) window.clearTimeout(timer);
+      openingTimers.current = [];
+    },
+    [],
+  );
   const hitStopTimer = useRef<number | null>(null);
   const triggerHitStopMs = useCallback((durationMs: number): void => {
     if (durationMs <= 0) return;
@@ -469,6 +508,35 @@ export default function Game({
     };
   }, [runner]);
 
+  // #3347: the riffle's and the deal's times, on the root where board.css reads them. Written here and not
+  // in the root's `style` (a conditional object below), so a render never drops them mid-motion.
+  useLayoutEffect(() => {
+    const element = root.current;
+    if (element === null) return undefined;
+    const riffle = inFlight?.riffle;
+    const props: [string, string][] =
+      opening !== null
+        ? [
+            ["--riffle-ms", `${String(opening.riffleMs)}ms`],
+            ["--riffle-delay", "0ms"],
+            ["--deal-ms", `${String(opening.flightMs)}ms`],
+          ]
+        : riffle === undefined
+          ? []
+          : [
+              ["--riffle-ms", `${String(riffle.ms)}ms`],
+              ["--riffle-delay", `${String(riffle.delayMs)}ms`],
+            ];
+    for (const [name, value] of props) element.style.setProperty(name, value);
+    return () => {
+      for (const [name] of props) element.style.removeProperty(name);
+    };
+  }, [inFlight, opening]);
+  // The deal's aim is read from the hands as they are laid out, so after the render that shows `data-dealing`.
+  useLayoutEffect(() => {
+    if (opening !== null && root.current !== null) aimDeal(root.current, opening);
+  }, [opening]);
+
   // R2785000: a tap or a click on the board, or Space, ends a set piece's hold at once and does
   // nothing else: the click reaches no control, and the Space that skipped presses no focused button
   // (its keyup, which would, is swallowed too). A key in a text field is the field's. Listening for
@@ -478,6 +546,9 @@ export default function Game({
     if (element === null) return undefined;
     let swallowUp = false;
     const onClick = (event: MouseEvent): void => {
+      // #3347: a tap ends the opening deal at once, and goes on to whatever it was on (the mulligan's Keep
+      // among them): a deal is no hold, and swallowing the tap would cost the player one press.
+      if (openingTimers.current.length > 0) endOpening();
       if (!runner.skip()) return;
       event.stopPropagation();
       event.preventDefault();
@@ -504,7 +575,7 @@ export default function Game({
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("keyup", onKeyUp, true);
     };
-  }, [runner]);
+  }, [runner, endOpening]);
 
   // A LAYOUT effect: `data-animating` has to be on the DOM by the time the click that caused the
   // action has returned, or `cy.settled()` reads a stale view as up to date.
@@ -521,6 +592,12 @@ export default function Game({
       previous === null || previous.viewer !== view.viewer
         ? []
         : newEventsSince(previous.events, view.events);
+
+    // #3347: the first view of a game in the mulligan phase is its opening deal, which has no event to animate.
+    if (previous === null && !silent && !replay) {
+      const plan = planOpening(view, getFxSettings().speed);
+      if (plan !== null && motion !== "still") startOpening(plan);
+    }
 
     if (previous !== null && previous.viewer !== view.viewer) runner.drain();
     // Planned against the view the board is STILL SHOWING, the only board that still has the card
@@ -548,7 +625,7 @@ export default function Game({
       setStill(null);
     }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion, startOpening]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -745,6 +822,9 @@ export default function Game({
       data-slam-side={inFlightSlam?.side}
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
+      data-card-motion={motion}
+      data-dealing={opening !== null && motion === "full" ? "true" : undefined}
+      data-riffle={opening !== null ? "you opponent" : inFlight?.riffle?.sides.join(" ")}
       data-takeover={takeoverHold > 0 ? "mythic" : undefined}
       data-set-piece={setPiece?.key}
       data-set-piece-shape={setPieceShape}

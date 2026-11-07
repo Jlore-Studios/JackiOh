@@ -23,7 +23,9 @@ export type SfxId =
   | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
-  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral";
+  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // #3347: cards that move like cards (game/drag/cues.ts, game/Game.tsx's opening, audio/director.ts's riffle).
+  | "pickUp" | "dragOver" | "drop" | "returnToHand" | "deal" | "riffle";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

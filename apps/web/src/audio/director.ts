@@ -15,8 +15,15 @@
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
-import { newEventsSince, type AnimationEntry } from "../game/animations.ts";
-import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS, PLAY_STACK_MAX } from "./constants.ts";
+import { lastShuffleOf, newEventsSince, type AnimationEntry } from "../game/animations.ts";
+import {
+  FLUSH_GAP_MS,
+  FLUSH_MAX_SFX,
+  HIDDEN_DEF_ID,
+  PAIR_OFFSET_MS,
+  PLAY_STACK_MAX,
+  RIFFLE_SOUND_DELAY_MS,
+} from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { setPieceBed } from "./setPieceBeds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
@@ -81,6 +88,8 @@ export function createSoundDirector(
   const voiced = new WeakSet<GameEvent>();
   /** Every event object of every view fed in: one the director did not owe is old news. */
   const known = new WeakSet<GameEvent>();
+  /** #3347: the last shuffle of each action's events, after which the decks riffle: one riffle per action. */
+  const riffleAfter = new WeakSet<GameEvent>();
   const lastMana = new Map<PlayerId, number>();
   /** Instances whose `cardPlayed` has sounded, so their `summoned` does not speak again (R204). */
   const played = new Set<string>();
@@ -151,6 +160,7 @@ export function createSoundDirector(
     if (event.type === "cardPlayed" && event.instanceId !== HIDDEN_DEF_ID) played.add(event.instanceId);
     follow(event, cast !== null);
     observe?.(event, view);
+    if (riffleAfter.has(event)) return [...cues, { kind: "sfx", id: "riffle", delayMs: RIFFLE_SOUND_DELAY_MS }];
     return cues;
   }
 
@@ -222,7 +232,10 @@ export function createSoundDirector(
         return;
       }
       const planned = seen;
-      for (const event of newEventsSince(planned.events, view.events)) {
+      const batch = newEventsSince(planned.events, view.events);
+      const shuffle = lastShuffleOf(batch);
+      if (shuffle !== null) riffleAfter.add(shuffle);
+      for (const event of batch) {
         if (voiced.has(event) || isOwed(event)) continue;
         owed.push({ event, view: planned });
       }
