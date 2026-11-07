@@ -19027,9 +19027,11 @@
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T07:51:01Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-07T09:57:47Z",
         "family": "claude",
@@ -19039,6 +19041,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 3343,
       "kind": "revise",
       "last_findings": [
