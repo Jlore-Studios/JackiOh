@@ -581,11 +581,22 @@
   --mini-zone: rgb(0 229 255 / 10%);
 }
 
-:is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-neon-grid"]::before {
+/* R3335001: the Stinkyscape playmat is the neon grid recolored in the set's deep space: its nebula's
+   blue lines over a navy that falls to black, its lane in the fleet's engine glow. */
+:is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-stinkyscape"] {
+  --mini-line: color-mix(in srgb, var(--pal-violet-300) 45%, transparent);
+  --mini-zone: color-mix(in srgb, var(--pal-blue-600) 12%, transparent);
+  --grid-ink: color-mix(in srgb, var(--pal-blue-600) 40%, transparent);
+  --grid-top: var(--pal-slate-900);
+  --grid-foot: var(--pal-black);
+}
+
+:is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-neon-grid"]::before,
+:is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-stinkyscape"]::before {
   background:
-    linear-gradient(rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 10px 10px,
-    linear-gradient(90deg, rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 10px 10px,
-    linear-gradient(180deg, #0b1230, #050920);
+    linear-gradient(var(--grid-ink, rgb(0 229 255 / 30%)) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(90deg, var(--grid-ink, rgb(0 229 255 / 30%)) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(180deg, var(--grid-top, #0b1230), var(--grid-foot, #050920));
 }
 
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-marble"] {
@@ -1114,4 +1125,52 @@
 .tavern.app-shell .collection-looks__ways > button[aria-pressed="true"] {
   outline: 2px solid var(--tavern-gold);
   outline-offset: 1px;
+}
+
+/* R3335000: a Starship look's picture (StarshipPreview.tsx): the painter's launched Starship, square as its art is,
+   in a tile, the equipped look's preview and a `.cosmetic-look` outside the tavern frame (a Fleet reward). */
+:is(.tavern.app-shell, .cosmetic-look) .collection-starship {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid var(--pal-black);
+  border-radius: var(--radius-sm);
+}
+
+.tavern.app-shell .collection-tile__starship {
+  display: block;
+  width: 100%;
+}
+
+.tavern.app-shell .collection-tile[data-owned="false"] .collection-tile__starship {
+  filter: grayscale(1) brightness(0.5);
+}
+
+.tavern.app-shell .collection-starship-looks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tavern.app-shell .collection-starship-equipped {
+  width: min(100%, 240px);
+}
+
+/* R3335001: the Fleet track's next rewards, each its look over its name, as a tile is drawn. */
+.tavern.app-shell .collection-fleet__rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .collection-fleet__reward {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 128px;
 }

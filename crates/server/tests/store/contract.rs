@@ -9385,6 +9385,8 @@ mod economy {
             "tracks": j(&q!(harness, t => t.economy_tracks_get(profile_id))),
             "quests": j(&q!(harness, t => t.economy_quests_get(profile_id))),
             "cosmetics": j(&q!(harness, t => t.economy_cosmetics_get(profile_id))),
+            // R3335001: the Fleet track's XP and level, read over an empty day so its XP today is 0.
+            "fleet": j(&q!(harness, t => t.economy_fleet_get(profile_id, 0, 0))),
             "ledger": j(&q!(harness, t => t.economy_ledger_get(profile_id))),
         })
     }
@@ -9398,7 +9400,8 @@ mod economy {
             "tracks": [],
             "quests": { "held": [], "nextDueAt": null },
             "cosmetics": { "cards": [], "account": [] },
-            "ledger": { "jlore": [], "inventory": [], "counters": [], "tracks": [], "quests": [], "cosmetics": [] },
+            "fleet": { "xp": 0, "level": 0, "xpToday": 0 },
+            "ledger": { "jlore": [], "inventory": [], "counters": [], "tracks": [], "quests": [], "cosmetics": [], "fleet": [] },
         })
     }
 
@@ -9433,6 +9436,10 @@ mod economy {
             .await
             .map_err(shown)?;
         t.economy_cosmetics_grant(&cosmetic(profile_id, None, BOARD_COSMETIC, 1, at))
+            .await
+            .map_err(shown)?;
+        // R3335001: the Fleet track's row and its ledger row.
+        t.economy_fleet_grant(&fleet(profile_id, [10, 0], "game", at))
             .await
             .map_err(shown)?;
         Ok(())
@@ -11023,7 +11030,9 @@ mod economy {
             );
         }
         assert!(call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [0, 0], "game", now))).is_err());
-        assert!(call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [10, 0], "track", now))).is_err());
+        assert!(
+            call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [10, 0], "track", now))).is_err()
+        );
         assert_eq!(
             q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
             track(180, 1, 100)
@@ -11043,7 +11052,12 @@ mod economy {
                 (0, 1, EconomyReason::Game, false),
             ]
         );
-        assert!(ledger.fleet.iter().all(|row| row.reference.as_deref() == Some("m-3335")));
+        assert!(
+            ledger
+                .fleet
+                .iter()
+                .all(|row| row.reference.as_deref() == Some("m-3335"))
+        );
 
         assert!(q!(harness, t => t.profiles_remove(&other.id)));
         assert_eq!(
@@ -11068,14 +11082,19 @@ mod economy {
             q!(harness, t => t.economy_cosmetics_get(&profile.id)).account,
             vec![JLORIOUS_STARSHIP.to_string()]
         );
-        let rows: Vec<(String, EconomyReason, Option<String>)> = q!(harness, t => t.economy_ledger_get(&profile.id))
-            .cosmetics
-            .into_iter()
-            .map(|row| (row.cosmetic_id, row.reason, row.reference))
-            .collect();
+        let rows: Vec<(String, EconomyReason, Option<String>)> =
+            q!(harness, t => t.economy_ledger_get(&profile.id))
+                .cosmetics
+                .into_iter()
+                .map(|row| (row.cosmetic_id, row.reason, row.reference))
+                .collect();
         assert_eq!(
             rows,
-            vec![(JLORIOUS_STARSHIP.to_string(), EconomyReason::Jlorious, Some("j-1".to_string()))]
+            vec![(
+                JLORIOUS_STARSHIP.to_string(),
+                EconomyReason::Jlorious,
+                Some("j-1".to_string())
+            )]
         );
     }
 

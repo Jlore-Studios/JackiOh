@@ -1,7 +1,7 @@
 // R1953001 (#1953): a held token, offered only in a locked item's fullscreen preview (ItemPreview.tsx,
 // R2730000), and only where a held token covers it (R1305003, §14.2): a Legendary token covers a
 // Legendary chase too, and no token a Mythic (R2728000), a default or a starter; a card token covers
-// any unowned card (§14.5).
+// any unowned card (§14.5). R3335002: nor an earned-only one (`earnedOnly`), a Fleet track reward or a Jlorious one.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7): the held counts are `GET /api/tokens`' and the offer only
 // hides what the server would refuse. A refusal shows the server's words and changes nothing.
@@ -11,6 +11,7 @@
 
 import { useEffect, useId, useState, type KeyboardEvent, type ReactElement } from "react";
 
+import { earnedOnly } from "../cards/cosmetics.ts";
 import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getTokens, redeemCardToken, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
@@ -37,25 +38,24 @@ export function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
   }
 }
 
+/** What the token offers read of a registry entry. */
+type OfferedCosmetic = Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind" | "jlorious" | "track">;
+
 /**
  * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003), so a chase
- * only a Legendary token covers, and a Mythic none (R2728000). Null for a default or a starter, and
- * where nothing held covers it or the held tokens are unread.
+ * only a Legendary token covers, and a Mythic none (R2728000). Null for a default or a starter, an earned-only one
+ * (R3335002), and where nothing held covers it or the held tokens are unread.
  */
-export function offerTier(
-  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind">,
-  held: HeldTokens | null,
-): CosmeticTokenTier | null {
+export function offerTier(cosmetic: OfferedCosmetic, held: HeldTokens | null): CosmeticTokenTier | null {
   // R2725000: a retired full art is sold no more (the server's 400); R3015004: nor a retired augment.
   if (held === null || cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt" || cosmetic.kind === "augment") return null;
+  // R3335002: a Fleet track reward and a Jlorious one are earned, never bought.
+  if (earnedOnly(cosmetic)) return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
 }
 
 /** R3016001: every held token whose tier covers `cosmetic`, the cheapest first (`offerTier` is the first); none where it offers none. */
-export function coveringTiers(
-  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind">,
-  held: HeldTokens | null,
-): CosmeticTokenTier[] {
+export function coveringTiers(cosmetic: OfferedCosmetic, held: HeldTokens | null): CosmeticTokenTier[] {
   if (held === null || offerTier(cosmetic, held) === null) return [];
   return OFFERED_TOKENS.filter((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0);
 }

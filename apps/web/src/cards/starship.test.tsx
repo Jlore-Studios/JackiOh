@@ -39,7 +39,10 @@ import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { STARSHIP_PIECES_TESTID } from "./StarshipPieces.tsx";
 import { STARSHIP_HULL_PLATES_MAX } from "./StarshipHull.tsx";
-import { renderBoard } from "../test/board.tsx";
+import { renderBoard, withCatalog } from "../test/board.tsx";
+import Board from "../game/Board.tsx";
+import { AccountCosmeticsOwned, DEFAULT_CARD_COSMETICS, cosmeticsOf, resetCosmeticsForTests, writeCosmetics } from "./cosmetics.ts";
+import type { SeatLoadouts } from "./loadouts.ts";
 import { RADIANT_GOLD_HUE_MAX_DEG, RADIANT_GOLD_HUE_MIN_DEG, RADIANT_GOLD_LIGHTNESS_MAX, RADIANT_GOLD_LIGHTNESS_MIN, RADIANT_GOLD_SATURATION_MIN } from "./constants.ts";
 import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
 
@@ -431,6 +434,62 @@ describe("R3335000: a launched Starship wears its seat's Starship cosmetics", ()
     }
   });
 
+  it("R3335000 on the board a launched Starship wears its seat's picks, the viewer's own the account's it owns", () => {
+    const look: StarshipLook = {
+      starshipHull: "starship-hull-corsair",
+      starshipLivery: "starship-livery-arctic",
+      starshipTrail: "starship-trail-ion",
+      starshipPieceSkin: "starship-piece-skin-verdigris",
+    };
+    const hold = [{ defId: BEAM }, { defId: DRILL }];
+    const ships = (theirs: UnitView, mine: UnitView): PlayerView =>
+      baseView({
+        you: emptySide("p1", { units: [null, mine, null, null, null] }),
+        opponent: emptySide("p2", { hand: { count: 4 }, units: [null, null, theirs, null, null] }),
+      });
+    const view = ships(
+      unit("p2", { instanceId: "theirs", defId: HULL, starship: { pieces: hold, name: "The Lantern Ferry", launched: 1 } }),
+      unit("p1", { instanceId: "mine", defId: HULL, starship: { pieces: hold, name: "Frontier's Promise", launched: 1 } }),
+    );
+    const loadouts: SeatLoadouts = {
+      p1: { seat: { ...DEFAULT_CARD_COSMETICS }, cards: {} },
+      p2: { seat: { ...DEFAULT_CARD_COSMETICS, ...look }, cards: {} },
+    };
+    const artOf = (root: HTMLElement, id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-testid="card-${id}"] .cf-art`);
+    const flown = hold.map((piece) => ({ ...piece, radiant: false }));
+    try {
+      // The opponent's wears its seat's frozen look; the viewer's own, with no picks, its name's design.
+      writeCosmetics({ starshipHull: "starship-hull-scout" });
+      let board = renderBoard(view, { wearCosmetics: true, loadouts });
+      const theirs = artOf(board, "theirs");
+      expect(theirs?.getAttribute("data-art-design")).toBe("corsair");
+      expect(theirs?.style.backgroundImage).toContain(starshipArtUri(starshipArtOf(flown, true, "The Lantern Ferry", false, look)));
+      // The viewer's own wears the account's pick, every cosmetic owned with no ledger above it.
+      expect(artOf(board, "mine")?.getAttribute("data-art-design")).toBe("scout");
+      cleanup();
+      // A pick the account does not own is worn as its kind's standard; the seat's frozen one still stands.
+      board = render(
+        withCatalog(
+          <AccountCosmeticsOwned owned={new Set()}>
+            <Board view={view} wearCosmetics loadouts={loadouts} />
+          </AccountCosmeticsOwned>,
+        ),
+      ).container;
+      expect(artOf(board, "mine")?.getAttribute("data-art-design")).toBe("frontiers-promise");
+      expect(artOf(board, "theirs")?.getAttribute("data-art-design")).toBe("corsair");
+      cleanup();
+      // With no loadout (practice, hotseat) the opponent's draws the standard look.
+      board = renderBoard(view, { wearCosmetics: true });
+      expect(artOf(board, "theirs")?.getAttribute("data-art-design")).toBe("lantern-ferry");
+      // Out of a game (no wearer), every face draws the standard, whatever the account picked.
+      cleanup();
+      expect(artOf(renderBoard(view), "mine")?.getAttribute("data-art-design")).toBe("frontiers-promise");
+    } finally {
+      resetCosmeticsForTests();
+      localStorage.clear();
+    }
+  });
+
   it("R3335000 a Dormant one keeps the shipyard", () => {
     for (const radiant of [false, true]) {
       const plain = starshipArtOf(list, false, undefined, radiant);
@@ -464,6 +523,11 @@ describe("R3335000: a launched Starship wears its seat's Starship cosmetics", ()
     }
     const every = LOOK_KINDS.flatMap((kind) => Object.keys(STARSHIP_LOOK_RECORDS[kind]));
     expect(new Set(every).size).toBe(every.length);
+    // Every registry entry of the four kinds has its look, and every look is a registry entry of its kind.
+    for (const kind of LOOK_KINDS) {
+      expect(cosmeticsOf(kind).map((cosmetic) => cosmetic.id).sort(), kind).toEqual(Object.keys(STARSHIP_LOOK_RECORDS[kind]).sort());
+      expect(DEFAULT_CARD_COSMETICS[kind], kind).toBe(STARSHIP_LOOK_STANDARD[kind]);
+    }
     // Each hull pick a design of its own, none the shipyard's nor a name's, and every design a name's, the
     // shipyard's or a pick's.
     const picked = Object.values(HULL_DESIGNS).flatMap((design) => (design === null ? [] : [design]));

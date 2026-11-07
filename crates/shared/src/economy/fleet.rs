@@ -163,7 +163,12 @@ pub fn fleet_view(track: &FleetTrack) -> FleetTrackView {
 /// `FLEET_TRACK_XP_DAILY_MAX` ([`LedgerGrant::Fleet`], with the levels it reached), then each level reached in
 /// `(track.level, new level]` its reward ([`LedgerGrant::FleetReward`]), every row naming `reference` (the match).
 /// No XP left today, or none earned, writes nothing. XP past the last level still lands on the track.
-pub fn pay_fleet(track: &FleetTrack, play: &FleetPlay, won: Option<bool>, reference: &str) -> Vec<LedgerGrant> {
+pub fn pay_fleet(
+    track: &FleetTrack,
+    play: &FleetPlay,
+    won: Option<bool>,
+    reference: &str,
+) -> Vec<LedgerGrant> {
     let left = (FLEET_TRACK_XP_DAILY_MAX - track.xp_today).max(0);
     let xp = fleet_game_xp(play, won).min(left);
     if xp <= 0 {
@@ -272,7 +277,11 @@ mod tests {
         assert_eq!(fleet_play(Some(&off_deck), defs()), FleetPlay::default());
         assert_eq!(fleet_play(None, defs()), FleetPlay::default());
         // Only a recorded 1v1 game counts.
-        assert!(counts_fleet(GameMode::Ladder) && counts_fleet(GameMode::Unranked) && counts_fleet(GameMode::Conquest));
+        assert!(
+            counts_fleet(GameMode::Ladder)
+                && counts_fleet(GameMode::Unranked)
+                && counts_fleet(GameMode::Conquest)
+        );
         assert!(!counts_fleet(GameMode::Practice) && !counts_fleet(GameMode::Coop));
     }
 
@@ -290,7 +299,10 @@ mod tests {
         let met = fleet_play(Some(&half), defs());
         let short = fleet_play(Some(&less), defs());
         assert!(met.deck_share_met && !short.deck_share_met);
-        assert_eq!(fleet_game_xp(&met, Some(true)), i64::from(FLEET_TRACK_XP_STINKYSCAPE_WIN));
+        assert_eq!(
+            fleet_game_xp(&met, Some(true)),
+            i64::from(FLEET_TRACK_XP_STINKYSCAPE_WIN)
+        );
         assert_eq!(fleet_game_xp(&met, Some(false)), 0);
         assert_eq!(fleet_game_xp(&met, None), 0);
         assert_eq!(fleet_game_xp(&short, Some(true)), 0);
@@ -415,6 +427,9 @@ mod tests {
         });
         assert_eq!((last.level_xp, last.xp_to_next), (None, None));
         assert!(last.next_rewards.is_empty());
-        assert_eq!(fleet_view(&FleetTrack::default()).next_rewards.len(), FLEET_TRACK_NEXT_REWARDS_SHOWN);
+        assert_eq!(
+            fleet_view(&FleetTrack::default()).next_rewards.len(),
+            FLEET_TRACK_NEXT_REWARDS_SHOWN
+        );
     }
 }

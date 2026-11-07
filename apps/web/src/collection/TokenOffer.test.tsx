@@ -25,7 +25,7 @@ import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
 import { collectionTestid as T } from "./collection.ts";
 import { collectionOwning } from "./fixtures.ts";
 import OwnedCards from "./OwnedCards.tsx";
-import { offerTier, type HeldTokens } from "./TokenOffer.tsx";
+import { coveringTiers, offerTier, type HeldTokens } from "./TokenOffer.tsx";
 
 const TOKEN = "token-1";
 
@@ -621,5 +621,36 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
     expect(screen.getByTestId(T.card("core-002"))).toHaveAttribute("data-owned", "false");
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(1);
     expect(server.to("GET", "/api/collection"), "nothing was granted, so the collection is not read again").toHaveLength(0);
+  });
+});
+
+describe("R3335002 an earned-only cosmetic takes no token", () => {
+  it("R3335002 no token offer on a Fleet reward", async () => {
+    const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9 });
+    // Every Fleet track reward and the Jlorious ones, of every rarity a token reaches, none covered.
+    const earned = COSMETICS.filter((cosmetic) => "track" in cosmetic || "jlorious" in cosmetic);
+    expect(new Set(earned.map((cosmetic) => cosmetic.rarity))).toEqual(new Set(["Epic", "Legendary", "Mythic"]));
+    for (const cosmetic of earned) {
+      expect(offerTier(cosmetic, plenty), cosmetic.id).toBeNull();
+      expect(coveringTiers(cosmetic, plenty), cosmetic.id).toEqual([]);
+    }
+    // An Epic one that is no reward is covered beside them.
+    expect(offerTier(entry("table-marble"), plenty)).toBe("Epic");
+
+    // On the tiles: the Fleet playmat's locked tile names the level that pays it, and its preview offers no token.
+    tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
+    render(
+      <ViewerAccountCosmetics token={TOKEN} gated read={() => Promise.resolve(new Set<string>())}>
+        <AccountCosmeticTiles token={TOKEN} />
+      </ViewerAccountCosmetics>,
+    );
+    expect(await within(tilePreviewOf("table-marble")).findByTestId(T.tokenOffer("table-marble"))).toBeInTheDocument();
+    closePreview();
+    const fleet = screen.getByTestId(T.tile("table-stinkyscape"));
+    expect(fleet).toHaveAttribute("data-owned", "false");
+    expect(fleet).toHaveTextContent("Fleet track level 16");
+    tilePreviewOf("table-stinkyscape");
+    await settle();
+    expect(within(screen.getByTestId(T.preview)).queryByTestId(T.tokenOffer("table-stinkyscape"))).toBeNull();
   });
 });

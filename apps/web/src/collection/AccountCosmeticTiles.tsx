@@ -18,7 +18,7 @@ import {
   type DeckSlotKind,
 } from "../cards/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
-import { accountTiles, collectionTestid as T, cosmeticKindWords, type AccountTile } from "./collection.ts";
+import { accountTiles, collectionTestid as T, cosmeticKindWords, earnWords, type AccountTile } from "./collection.ts";
 import { MiniBoard } from "./CosmeticLook.tsx";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
@@ -72,7 +72,8 @@ function Tile({
       <TilePicture kind={kind} id={cosmetic.id} equipped={equipped} />
       <span className="collection-tile__name">{t(cosmetic.name)}</span>
       <span className="collection-tile__rarity">{t(cosmetic.rarity)}</span>
-      {owned ? null : <span className="collection-tile__lock">{t("Locked")}</span>}
+      {/* R3335002: an earned-only one says how it is earned (its Fleet track level), and no token covers it. */}
+      {owned ? null : <span className="collection-tile__lock">{earnWords(cosmetic) ?? t("Locked")}</span>}
       <button
         type="button"
         className="collection-tile__button"

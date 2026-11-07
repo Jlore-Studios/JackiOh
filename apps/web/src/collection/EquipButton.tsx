@@ -2,13 +2,14 @@
 // Collection's pickers write with no request: the server settled the grant (CLAUDE.md rule 7). A
 // portrait is a deck's pick (R641, R1827000), so it has no button. R3015005: a level's Equip wears that one level on
 // its card (`writeCardLevel`), and a retired full art's or augment's (granted before #3015) the level it maps to there
-// (`levelOfPick`); the wear path decides what is worn.
+// (`levelOfPick`); the wear path decides what is worn. R3335000: a Starship cosmetic is an account pick, as a playmat is.
 
 import type { ReactElement } from "react";
 
 import {
   CARD_SLOT_KINDS,
   DECK_SLOT_KINDS,
+  STARSHIP_SLOT_KINDS,
   useCardPicks,
   useCosmetics,
   writeCardLevel,
@@ -19,6 +20,7 @@ import {
   type CardSlotKind,
   type CosmeticId,
   type DeckSlotKind,
+  type StarshipSlotKind,
 } from "../cards/cosmetics.ts";
 import { levelOfPick } from "../cards/versions.ts";
 import { t } from "../i18n/i18n.ts";
@@ -27,7 +29,7 @@ import { COSMETICS } from "../wire/generated/cosmetics.ts";
 export type EquipTarget =
   | { store: "card"; cardId: string; kind: CardSlotKind; id: CosmeticId }
   | { store: "level"; cardId: string; id: string }
-  | { store: "account"; kind: DeckSlotKind; id: CosmeticId };
+  | { store: "account"; kind: DeckSlotKind | StarshipSlotKind; id: CosmeticId };
 
 /**
  * What equipping `cosmeticId`, granted on `cardId` (null for an account one), writes: none for a portrait, an unknown id,
@@ -43,7 +45,7 @@ export function equipTarget(cosmeticId: string, cardId: string | null): EquipTar
     const level = levelOfPick(cardId, found.kind === "augment" ? undefined : found.id, found.kind === "augment" ? [found.id] : []);
     return level === null ? null : { store: "level", cardId, id: level };
   }
-  const account = DECK_SLOT_KINDS.find((kind) => kind === found.kind);
+  const account = [...DECK_SLOT_KINDS, ...STARSHIP_SLOT_KINDS].find((kind) => kind === found.kind);
   return account === undefined ? null : { store: "account", kind: account, id: found.id };
 }
 

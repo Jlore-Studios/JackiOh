@@ -55,9 +55,9 @@
 -- MIRRORS crates/shared/cosmetics.json (its last 35 entries).
 insert into public.cosmetics (id, kind, name, rarity, is_default, chase)
 values ('starship-hull-standard', 'starshipHull', 'Its name''s hull', 'Common', true, false),
-       ('starship-livery-standard', 'starshipLivery', 'The hull''s own colours', 'Common', true, false),
+       ('starship-livery-standard', 'starshipLivery', 'The hull''s own colors', 'Common', true, false),
        ('starship-trail-standard', 'starshipTrail', 'The hull''s own burn', 'Common', true, false),
-       ('starship-piece-skin-standard', 'starshipPieceSkin', 'Each module''s own colours', 'Common', true, false),
+       ('starship-piece-skin-standard', 'starshipPieceSkin', 'Each module''s own colors', 'Common', true, false),
        ('starship-hull-jlorious', 'starshipHull', 'Jlorious', 'Mythic', false, false),
        ('starship-livery-hazard', 'starshipLivery', 'Hazard stripes', 'Epic', false, false),
        ('starship-trail-ion', 'starshipTrail', 'Ion wake', 'Epic', false, false),
@@ -87,7 +87,7 @@ values ('starship-hull-standard', 'starshipHull', 'Its name''s hull', 'Common', 
        ('starship-trail-singularity', 'starshipTrail', 'Singularity', 'Mythic', false, false),
        ('starship-hull-ark', 'starshipHull', 'Ark', 'Mythic', false, false),
        ('starship-piece-skin-chrome', 'starshipPieceSkin', 'Chrome modules', 'Mythic', false, false),
-       ('starship-livery-flagship', 'starshipLivery', 'Flagship colours', 'Mythic', false, false),
+       ('starship-livery-flagship', 'starshipLivery', 'Flagship colors', 'Mythic', false, false),
        ('starship-hull-stinkyscape', 'starshipHull', 'Stinkyscape', 'Mythic', false, false)
 on conflict (id) do nothing;
 

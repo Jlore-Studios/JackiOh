@@ -29,6 +29,7 @@ use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreGrant, JloreReason, QuestChange,
     QuestGrant, SetTrack, TrackGrant,
 };
+use jackioh_shared::economy::fleet::{FleetTrack, fleet_view};
 use jackioh_shared::economy::math::total_xp_for_level;
 use jackioh_shared::economy::track_rewards::reward_for_level;
 
@@ -901,7 +902,7 @@ mod no_payout {
                 to_json(&ledger_of(app, profile).await),
                 json!({
                     "jlore": [], "inventory": [], "counters": [],
-                    "tracks": [], "quests": [], "cosmetics": [],
+                    "tracks": [], "quests": [], "cosmetics": [], "fleet": [],
                 }),
                 "{profile} holds no ledger row"
             );
@@ -1042,7 +1043,7 @@ mod no_payout {
             to_json(&ledger_of(&app, B).await),
             json!({
                 "jlore": [], "inventory": [], "counters": [],
-                "tracks": [], "quests": [], "cosmetics": [],
+                "tracks": [], "quests": [], "cosmetics": [], "fleet": [],
             })
         );
     }
@@ -1192,7 +1193,11 @@ mod reads {
                 })
             })
             .collect();
-        assert_eq!(body, json!({ "tracks": virgin }));
+        // R3335001: and the Fleet track, at level 0, beside them (`tests/api/fleet.rs` holds its figures).
+        assert_eq!(
+            body,
+            json!({ "tracks": virgin, "fleet": to_json(&fleet_view(&FleetTrack::default())) })
+        );
 
         append_log_to(&app, MATCH_ID, &actions_of("p1", 10)).await;
         let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);

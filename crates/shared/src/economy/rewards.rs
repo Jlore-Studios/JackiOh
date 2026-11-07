@@ -598,7 +598,12 @@ pub fn pay_game(records: &GameRecords, summary: &GameSummary, seed: &str) -> Gam
     pay_xp_onto(&mut tracks, &mut grants, xp, Cause::Track, &summary.match_id);
     // R3335001: a recorded 1v1 game's Fleet XP and the levels it reaches, apart from the set tracks.
     if counts_fleet(summary.mode) {
-        grants.extend(pay_fleet(&records.fleet, &summary.fleet, summary.won, &summary.match_id));
+        grants.extend(pay_fleet(
+            &records.fleet,
+            &summary.fleet,
+            summary.won,
+            &summary.match_id,
+        ));
     }
 
     let topped = top_up_book(&records.quests, seed, summary.at);

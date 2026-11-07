@@ -87,6 +87,9 @@
 // (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
 // of every part, base and Radiant alike.
 //
+// R3335000: a launched Starship's art wears its Starship look (cosmetics.ts `useStarshipLook`): the account's picks on
+// the viewer's own copy (`worn`), the seat's frozen ones below a `TheirCopy`, else the standard.
+//
 // R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
 // cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
 
@@ -100,7 +103,7 @@ import { showcaseFamilyOf } from "./art/pictures.ts";
 import { CardStates } from "./CardStates.tsx";
 import { useImmersiveShift } from "./immersive.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
+import { useArtMotion, useCosmeticAttributes, useStarshipLook } from "./cosmetics.ts";
 import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
 import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
@@ -332,6 +335,8 @@ export function CardFace({
   // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
   const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil && !lazyArt);
   const stamp = useCardStamp(face, worn);
+  // R3335000: the Starship look a launched Starship wears: the viewer's own picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -435,6 +440,7 @@ export function CardFace({
               shape={fullArt || extended ? "full" : ART_SHAPE[face.type]}
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               picture={picture}
               motion={motion}
               part={outOfFrame || immersive ? "backdrop" : "whole"}
@@ -451,6 +457,7 @@ export function CardFace({
               className="cf-art--cutout"
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               picture={picture}
               motion={motion}
               part="subject"
@@ -468,6 +475,7 @@ export function CardFace({
                 className="cf-art--near"
                 lazy={lazyArt}
                 starship={starship}
+                look={starshipLook}
                 picture="normal"
                 motion={motion}
                 part="subject"

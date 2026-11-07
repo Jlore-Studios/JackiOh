@@ -1198,10 +1198,7 @@ pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| {
-            !cosmetic.kind.is_per_card()
-                && !cosmetic.default
-                && !cosmetic.starter
-                && !cosmetic.earned_only()
+            !cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter && !cosmetic.earned_only()
         })
         .cloned()
         .collect()
@@ -1342,9 +1339,9 @@ pub const FLEET_CAPSTONE: &str = "starship-hull-stinkyscape";
 
 /// R3335001: the cosmetic the Fleet track's `level` pays, from 1 to `FLEET_TRACK_LEVELS`; none past it.
 pub fn fleet_reward(level: u32) -> Option<&'static Cosmetic> {
-    registry().iter().find(|cosmetic| {
-        cosmetic.track == Some(CosmeticTrack::Fleet) && cosmetic.track_level == Some(level)
-    })
+    registry()
+        .iter()
+        .find(|cosmetic| cosmetic.track == Some(CosmeticTrack::Fleet) && cosmetic.track_level == Some(level))
 }
 
 /// What a portrait's registry id starts with: `portrait-` and its `PortraitId` (R1827000).
@@ -1433,7 +1430,11 @@ mod tests {
             entry("starship-hull-standard", CosmeticKind::StarshipHull, true),
             entry("starship-livery-standard", CosmeticKind::StarshipLivery, true),
             entry("starship-trail-standard", CosmeticKind::StarshipTrail, true),
-            entry("starship-piece-skin-standard", CosmeticKind::StarshipPieceSkin, true),
+            entry(
+                "starship-piece-skin-standard",
+                CosmeticKind::StarshipPieceSkin,
+                true,
+            ),
         ];
         cosmetics.extend(portraits());
         cosmetics
@@ -4286,7 +4287,11 @@ mod tests {
             assert_eq!(cosmetic.kind, kind);
             assert!(cosmetic.default && cosmetic.starter, "{}", cosmetic.id);
             assert_eq!(default_of(&cosmetics, kind), cosmetic.id);
-            assert!(owns(cosmetic, None, &OwnedCosmetics::default()), "{}", cosmetic.id);
+            assert!(
+                owns(cosmetic, None, &OwnedCosmetics::default()),
+                "{}",
+                cosmetic.id
+            );
             assert!(!kind.is_per_card() && !kind.is_offered(), "{kind:?}");
             assert!(CosmeticKind::PICKED.contains(&kind) && CosmeticKind::DEFAULTED.contains(&kind));
         }
@@ -4299,7 +4304,11 @@ mod tests {
             .filter(|cosmetic| CosmeticKind::STARSHIP.contains(&cosmetic.kind) && !cosmetic.default)
         {
             assert!(cosmetic.earned_only(), "{}", cosmetic.id);
-            assert!(!owns(cosmetic, None, &OwnedCosmetics::default()), "{}", cosmetic.id);
+            assert!(
+                !owns(cosmetic, None, &OwnedCosmetics::default()),
+                "{}",
+                cosmetic.id
+            );
         }
         // A kind's name travels as the camel-case word the settings group keys on.
         assert_eq!(
@@ -4316,7 +4325,10 @@ mod tests {
             .filter(|cosmetic| cosmetic.earned_only())
             .collect();
         // The two Jlorious cosmetics and the Fleet track's thirty.
-        assert_eq!(earned.len(), JLORIOUS_COSMETICS.len() + FLEET_TRACK_LEVELS as usize);
+        assert_eq!(
+            earned.len(),
+            JLORIOUS_COSMETICS.len() + FLEET_TRACK_LEVELS as usize
+        );
         assert!(earned.iter().any(|cosmetic| cosmetic.id == JLORIOUS_STARSHIP));
         for pool in [
             global_cosmetics(&cosmetics),
@@ -4438,7 +4450,10 @@ mod tests {
         let capstone = fleet_reward(FLEET_TRACK_LEVELS).map(|cosmetic| cosmetic.id.as_str());
         assert_eq!(capstone, Some(FLEET_CAPSTONE));
         // Every Starship kind is paid, and a Stinkyscape card back, playmat and backdrop.
-        for kind in CosmeticKind::STARSHIP.into_iter().chain(crate::loadout::DECK_SLOT_KINDS) {
+        for kind in CosmeticKind::STARSHIP
+            .into_iter()
+            .chain(crate::loadout::DECK_SLOT_KINDS)
+        {
             assert!(
                 (1..=FLEET_TRACK_LEVELS).any(|level| fleet_reward(level).is_some_and(|c| c.kind == kind)),
                 "{kind:?}"
@@ -4454,7 +4469,9 @@ mod tests {
             }
         }
         assert!(
-            problems(&moved).iter().any(|problem| problem.contains("its capstone")),
+            problems(&moved)
+                .iter()
+                .any(|problem| problem.contains("its capstone")),
             "{:?}",
             problems(&moved)
         );

@@ -8,11 +8,12 @@ use serde_json::{Value, json};
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
-use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, FLEET_TRACK_LEVELS, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
+use jackioh_server::config::{
+    CARD_TOKEN_BAR_SIZE, FLEET_TRACK_LEVELS, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
+};
 use jackioh_server::cosmetics::{
-    ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK, JLORIOUS_COSMETICS,
-    VERSION_ID_PREFIX,
-    offered, shipped,
+    ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK,
+    JLORIOUS_COSMETICS, VERSION_ID_PREFIX, offered, shipped,
 };
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};

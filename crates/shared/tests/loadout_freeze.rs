@@ -173,6 +173,89 @@ fn r1834002_an_unknown_or_unowned_pick_freezes_as_the_default() {
     );
 }
 
+/// R3335000: the test registry with, for each Starship kind, its default and one earned item.
+fn starship_registry() -> Vec<Cosmetic> {
+    let mut cosmetics = test_registry();
+    for (kind, prefix) in [
+        (CosmeticKind::StarshipHull, "starship-hull"),
+        (CosmeticKind::StarshipLivery, "starship-livery"),
+        (CosmeticKind::StarshipTrail, "starship-trail"),
+        (CosmeticKind::StarshipPieceSkin, "starship-piece-skin"),
+    ] {
+        cosmetics.push(entry(&format!("{prefix}-default"), kind, true, true));
+        cosmetics.push(entry(&format!("{prefix}-earned"), kind, false, false));
+    }
+    cosmetics
+}
+
+#[test]
+fn r3335000_a_seat_freezes_its_owned_starship_picks_and_defaults_the_rest() {
+    let registry = starship_registry();
+    let owned = OwnedCosmetics {
+        cards: Vec::new(),
+        account: vec![
+            "starship-hull-earned".to_owned(),
+            "starship-trail-earned".to_owned(),
+        ],
+    };
+    let picks = account(
+        &[
+            // Owned: worn.
+            (CosmeticKind::StarshipHull, "starship-hull-earned"),
+            (CosmeticKind::StarshipTrail, "starship-trail-earned"),
+            // Owned, but of another kind: the default.
+            (CosmeticKind::StarshipLivery, "starship-hull-earned"),
+            // Not owned: the default.
+            (CosmeticKind::StarshipPieceSkin, "starship-piece-skin-earned"),
+        ],
+        true,
+    );
+    // A deck carries no Starship slot, so its slots change none of the four.
+    let deck = DeckSlots {
+        table: Some("table-starter".to_owned()),
+        ..DeckSlots::default()
+    };
+    let seat = freeze_loadout(&registry, &owned, &picks, Some(&deck), &[], &[]).seat;
+    assert_eq!(seat.table, "table-starter");
+    assert_eq!(seat.starship_hull, "starship-hull-earned");
+    assert_eq!(seat.starship_trail, "starship-trail-earned");
+    assert_eq!(seat.starship_livery, "starship-livery-default");
+    assert_eq!(seat.starship_piece_skin, "starship-piece-skin-default");
+    assert_eq!(seat.get(CosmeticKind::StarshipHull), "starship-hull-earned");
+    // No pick at all: every Starship default.
+    let bare = freeze_loadout(
+        &registry,
+        &owned,
+        &AccountPicks::of_settings(None),
+        None,
+        &[],
+        &[],
+    );
+    assert_eq!(bare.seat, SeatLoadout::defaults_of(&registry));
+    assert_eq!(bare.seat.starship_hull, "starship-hull-default");
+}
+
+#[test]
+fn r3335000_a_loadout_frozen_before_3335_reads_starship_defaults() {
+    let seat = SeatLoadout::defaults_of(registry());
+    let mut old = serde_json::to_value(&seat).expect("a seat's loadout serializes");
+    let fields = old.as_object_mut().expect("a seat's loadout is an object");
+    for key in [
+        "starshipHull",
+        "starshipLivery",
+        "starshipTrail",
+        "starshipPieceSkin",
+    ] {
+        assert!(fields.remove(key).is_some(), "{key}");
+    }
+    let read: SeatLoadout = serde_json::from_value(old).expect("a loadout frozen before #3335 reads");
+    assert_eq!(read, seat);
+    assert_eq!(read.starship_hull, "starship-hull-standard");
+    assert_eq!(read.starship_livery, "starship-livery-standard");
+    assert_eq!(read.starship_trail, "starship-trail-standard");
+    assert_eq!(read.starship_piece_skin, "starship-piece-skin-standard");
+}
+
 #[test]
 fn r1834002_per_card_only_for_owned_deck_cards() {
     let registry = test_registry();

@@ -786,7 +786,12 @@ impl Tx<'_> {
     /// R3335001: the account's Fleet track (§14.15), no row reading as level 0 with no XP, and the XP its `game`
     /// rows add up to with `at` in `[from, until)` (milliseconds), the day a payout is held to. Read under the
     /// account's economy lock, so the sum is the one a payout adds to.
-    pub async fn economy_fleet_get(&mut self, profile_id: &str, from: i64, until: i64) -> StoreResult<FleetTrack> {
+    pub async fn economy_fleet_get(
+        &mut self,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> StoreResult<FleetTrack> {
         economy_dispatch!(self, fleet_get(profile_id, from, until))
     }
 
@@ -1163,11 +1168,11 @@ mod pg {
 
     use super::{
         CardCosmetic, CardPicks, CardProficiency, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant,
-        EconomyLedger, EconomyReason, FleetGrant, FleetRow, FleetTrack, FullArtPick, GameJloreTotals, HeldQuest,
-        IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim,
-        PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
-        QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, fleet_after, from_literal, literal,
-        track_after,
+        EconomyLedger, EconomyReason, FleetGrant, FleetRow, FleetTrack, FullArtPick, GameJloreTotals,
+        HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
+        PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook,
+        QuestChange, QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, fleet_after,
+        from_literal, literal, track_after,
     };
     use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
@@ -2895,8 +2900,9 @@ mod fake {
         CardCosmetic, CardPicks, CardProficiency, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant,
         EconomyLedger, EconomyReason, EconomyTables, FleetGrant, FleetTrack, GameJloreTotals, HeldQuest,
         IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, NewsClaim, OwnedCosmetics,
-        PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
-        QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, fleet_after, literal, track_after,
+        PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook,
+        QuestChange, QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, fleet_after, literal,
+        track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -3117,7 +3123,12 @@ mod fake {
         Ok(Some(next))
     }
 
-    pub fn fleet_get(f: &mut FakeTx<'_>, profile_id: &str, from: i64, until: i64) -> Result<FleetTrack, StoreError> {
+    pub fn fleet_get(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<FleetTrack, StoreError> {
         let tables = call(f, "economy.fleet.get")?;
         let row = tables
             .fleet_tracks

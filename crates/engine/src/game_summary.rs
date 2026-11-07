@@ -652,7 +652,11 @@ mod tests {
         let mut reading = reading();
         read(
             &mut reading,
-            &[fused(PlayerId::P1, 1), fused(PlayerId::P1, 2), fused(PlayerId::P2, 1)],
+            &[
+                fused(PlayerId::P1, 1),
+                fused(PlayerId::P1, 2),
+                fused(PlayerId::P2, 1),
+            ],
             &state,
             &state,
         );
@@ -661,10 +665,16 @@ mod tests {
             (reading.starship_pieces_fused.p1, reading.starship_pieces_fused.p2),
             (2, 1)
         );
-        assert_eq!((reading.starships_launched.p1, reading.starships_launched.p2), (1, 0));
+        assert_eq!(
+            (reading.starships_launched.p1, reading.starships_launched.p2),
+            (1, 0)
+        );
         let p1 = seat_summary(&reading, Vec::new(), PlayerId::P1);
         let p2 = seat_summary(&reading, Vec::new(), PlayerId::P2);
-        assert_eq!((p1.starship_pieces_fused, p1.starships_launched), (Some(2), Some(1)));
+        assert_eq!(
+            (p1.starship_pieces_fused, p1.starships_launched),
+            (Some(2), Some(1))
+        );
         // None launched is absent from the record, as it is from one written before the count.
         assert_eq!((p2.starship_pieces_fused, p2.starships_launched), (Some(1), None));
         let json = serde_json::to_value(&p2).unwrap_or_default();

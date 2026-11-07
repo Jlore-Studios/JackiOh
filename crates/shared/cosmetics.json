@@ -192,9 +192,9 @@
     { "id": "version-tarot", "kind": "version", "name": "Tarot card", "rarity": "Epic", "default": false, "level": { "variant": "tarot", "rank": 1, "adds": "art" }, "offer": [{ "types": ["Unit", "Trap", "Field Trap"], "sample": { "seed": "version-woodcut-tarot", "from": 60, "percent": 100 } }, { "types": ["Spell", "Field Spell"], "sample": { "seed": "version-woodcut-tarot", "from": 40, "percent": 100 } }] },
     { "id": "version-tarot-animated", "kind": "version", "name": "Tarot card, animated", "rarity": "Legendary", "default": false, "chase": true, "level": { "variant": "tarot", "rank": 2, "adds": "animated" }, "offer": [{ "types": ["Unit", "Trap", "Field Trap"], "sample": { "seed": "version-woodcut-tarot", "from": 60, "percent": 100 } }, { "types": ["Spell", "Field Spell"], "sample": { "seed": "version-woodcut-tarot", "from": 40, "percent": 100 } }] },
     { "id": "starship-hull-standard", "kind": "starshipHull", "name": "Its name's hull", "rarity": "Common", "default": true, "starter": true },
-    { "id": "starship-livery-standard", "kind": "starshipLivery", "name": "The hull's own colours", "rarity": "Common", "default": true, "starter": true },
+    { "id": "starship-livery-standard", "kind": "starshipLivery", "name": "The hull's own colors", "rarity": "Common", "default": true, "starter": true },
     { "id": "starship-trail-standard", "kind": "starshipTrail", "name": "The hull's own burn", "rarity": "Common", "default": true, "starter": true },
-    { "id": "starship-piece-skin-standard", "kind": "starshipPieceSkin", "name": "Each module's own colours", "rarity": "Common", "default": true, "starter": true },
+    { "id": "starship-piece-skin-standard", "kind": "starshipPieceSkin", "name": "Each module's own colors", "rarity": "Common", "default": true, "starter": true },
     { "id": "starship-hull-jlorious", "kind": "starshipHull", "name": "Jlorious", "rarity": "Mythic", "default": false, "starter": false, "jlorious": true },
     { "id": "starship-livery-hazard", "kind": "starshipLivery", "name": "Hazard stripes", "rarity": "Epic", "default": false, "starter": false, "track": "fleet", "trackLevel": 1 },
     { "id": "starship-trail-ion", "kind": "starshipTrail", "name": "Ion wake", "rarity": "Epic", "default": false, "starter": false, "track": "fleet", "trackLevel": 2 },
@@ -224,7 +224,7 @@
     { "id": "starship-trail-singularity", "kind": "starshipTrail", "name": "Singularity", "rarity": "Mythic", "default": false, "starter": false, "track": "fleet", "trackLevel": 26 },
     { "id": "starship-hull-ark", "kind": "starshipHull", "name": "Ark", "rarity": "Mythic", "default": false, "starter": false, "track": "fleet", "trackLevel": 27 },
     { "id": "starship-piece-skin-chrome", "kind": "starshipPieceSkin", "name": "Chrome modules", "rarity": "Mythic", "default": false, "starter": false, "track": "fleet", "trackLevel": 28 },
-    { "id": "starship-livery-flagship", "kind": "starshipLivery", "name": "Flagship colours", "rarity": "Mythic", "default": false, "starter": false, "track": "fleet", "trackLevel": 29 },
+    { "id": "starship-livery-flagship", "kind": "starshipLivery", "name": "Flagship colors", "rarity": "Mythic", "default": false, "starter": false, "track": "fleet", "trackLevel": 29 },
     { "id": "starship-hull-stinkyscape", "kind": "starshipHull", "name": "Stinkyscape", "rarity": "Mythic", "default": false, "starter": false, "track": "fleet", "trackLevel": 30 }
   ]
 }

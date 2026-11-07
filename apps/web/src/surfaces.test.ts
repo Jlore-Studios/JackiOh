@@ -72,7 +72,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "fx/fx.css": 106,
   "game/deckbuilder/deckbuilder.css": 66,
   "game/deckbuilder/workshop.css": 30,
-  "game/table.css": 44,
+  "game/table.css": 43,
   "notfound/notfound.css": 2,
   "packs/pack-object.css": 12,
   "packs/packs.css": 7,

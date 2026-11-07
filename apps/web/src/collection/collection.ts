@@ -8,7 +8,15 @@ import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CARD_SLOT_KINDS, cosmeticsOf, type CardPicks, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
+import {
+  CARD_SLOT_KINDS,
+  cosmeticsOf,
+  type CardPicks,
+  type Cosmetic,
+  type CosmeticId,
+  type DeckSlotKind,
+  type StarshipSlotKind,
+} from "../cards/cosmetics.ts";
 import { DEFAULT_VARIANT, FIRST_RANK, isNextLevel, ladderOf, levelOf, levelOfPick, levelsBelow, levelsOn, variantsOn, wornLevel } from "../cards/versions.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
@@ -16,8 +24,8 @@ import { packName } from "../packs/packs.ts";
 import { quantitiesOf } from "../shop/shop.ts";
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 
-/** The panels that read for themselves; the quests panel owns its own read. */
-export type CollectionPart = "cards" | "wallet" | "tracks";
+/** The panels that read for themselves; the quests panel owns its own read. R3335001: the Fleet track's is the tracks' read. */
+export type CollectionPart = "cards" | "wallet" | "tracks" | "fleet";
 
 /** R1579000: the hub's sections that open in place, by `?section=`. */
 export const COLLECTION_SECTIONS = ["cards", "cosmetics"] as const;
@@ -49,6 +57,18 @@ export const collectionTestid = {
   trackXp: (set: string) => `collection-track-xp-${set}`,
   trackRewards: (set: string) => `collection-track-rewards-${set}`,
   trackLock: (set: string) => `collection-track-lock-${set}`,
+  // R3335001: the Fleet track (FleetTrackPanel), its level, its bar's words, today's XP and its next rewards.
+  fleet: "collection-fleet",
+  fleetLevel: "collection-fleet-level",
+  fleetXp: "collection-fleet-xp",
+  fleetToday: "collection-fleet-today",
+  fleetRewards: "collection-fleet-rewards",
+  fleetReward: (id: string) => `collection-fleet-reward-${id}`,
+  // R3335000: the Starship looks (StarshipLooks), the equipped one's preview, and a locked tile's words.
+  starshipLooks: "collection-starship-looks",
+  starshipEquipped: "collection-starship-equipped",
+  cosmeticsTab: (tab: string) => `collection-cosmetics-tab-${tab}`,
+  tileEarn: (id: string) => `collection-tile-earn-${id}`,
   body: "collection-body",
   door: (id: CollectionDoor) => `collection-door-${id}`,
   // R1655000: a card in context (CardCosmeticsView) and the account's tiles (AccountCosmeticTiles).
@@ -171,6 +191,14 @@ export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
       return t("Version");
     case "augment":
       return t("Augments");
+    case "starshipHull":
+      return t("Hull design");
+    case "starshipLivery":
+      return t("Livery");
+    case "starshipTrail":
+      return t("Engine trail");
+    case "starshipPieceSkin":
+      return t("Piece skin");
   }
 }
 
@@ -282,9 +310,26 @@ export function equippedRung(defId: string, picks: CardPicks, owns: (defId: stri
 export type AccountTile = { cosmetic: Cosmetic; owned: boolean };
 
 /**
- * R1579000, R1655000: `kind`'s entries in the registry's order, owned as `owns` says (R1833000:
- * `useOwnsAccountCosmetic`'s; a default and a starter are every account's, §14.2).
+ * R3335002: how an earned-only cosmetic is earned, in a player's words: the Fleet track level that pays it (R3335001),
+ * or reaching Jlorious (R3335003); null for any other, which nothing but its own source earns.
  */
-export function accountTiles(kind: DeckSlotKind, owns: (id: string) => boolean): AccountTile[] {
+export function earnWords(cosmetic: {
+  readonly kind: string;
+  readonly jlorious?: boolean | undefined;
+  readonly track?: string | null | undefined;
+  readonly trackLevel?: number | null | undefined;
+}): string | null {
+  if (cosmetic.jlorious === true) return t("Reach Jlorious");
+  if (cosmetic.track === "fleet" && typeof cosmetic.trackLevel === "number") {
+    return t("Fleet track level {level}", { level: formatNumber(cosmetic.trackLevel) });
+  }
+  return null;
+}
+
+/**
+ * R1579000, R1655000: `kind`'s entries in the registry's order, owned as `owns` says (R1833000:
+ * `useOwnsAccountCosmetic`'s; a default and a starter are every account's, §14.2). R3335000: a Starship kind's too.
+ */
+export function accountTiles(kind: DeckSlotKind | StarshipSlotKind, owns: (id: string) => boolean): AccountTile[] {
   return cosmeticsOf(kind).map((cosmetic) => ({ cosmetic, owned: owns(cosmetic.id) }));
 }

@@ -555,7 +555,10 @@ mod r2755000_the_jlorious_card_back {
             .filter(|row| row.cosmetic_id == JLORIOUS_STARSHIP)
             .map(|row| (row.reason, row.reference))
             .collect();
-        assert_eq!(owned.account.iter().any(|id| id == JLORIOUS_STARSHIP), !rows.is_empty());
+        assert_eq!(
+            owned.account.iter().any(|id| id == JLORIOUS_STARSHIP),
+            !rows.is_empty()
+        );
         rows
     }
 

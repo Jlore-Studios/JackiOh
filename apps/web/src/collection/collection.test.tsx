@@ -1418,8 +1418,9 @@ describe("R1655000 the account's cosmetics as tiles", () => {
       ["table-obsidian-slab", false],
       ["table-ancient-map", false],
       ["table-astral", false],
+      ["table-stinkyscape", false],
     ]);
-    expect(accountTiles("table", (id) => ownsAccountCosmetic(new Set(["table-astral"]), id)).at(-1)?.owned).toBe(true);
+    expect(accountTiles("table", (id) => ownsAccountCosmetic(new Set(["table-astral"]), id)).find((tile) => tile.cosmetic.id === "table-astral")?.owned).toBe(true);
     expect(accountTiles("table", (id) => ownsAccountCosmetic("every", id)).every((tile) => tile.owned)).toBe(true);
     expect(accountTiles("cardBack", () => false).map((tile) => tile.cosmetic.id)).toEqual(cosmeticsOf("cardBack").map((cosmetic) => cosmetic.id));
   });

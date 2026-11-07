@@ -52,9 +52,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         tracks: tx.economy_tracks_get(&summary.profile_id).await?,
         quests: tx.economy_quests_get(&summary.profile_id).await?,
         // [[R3335001]]: the Fleet track and its XP today, which a recorded 1v1 game pays onto.
-        fleet: tx
-            .economy_fleet_get(&summary.profile_id, from, until)
-            .await?,
+        fleet: tx.economy_fleet_get(&summary.profile_id, from, until).await?,
     };
     let payout = pay_game(&records, summary, &fresh_seed());
     let writing = Writing {

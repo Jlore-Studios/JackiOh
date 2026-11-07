@@ -2271,8 +2271,14 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             Some(value) => Some(ids(Some(value), &format!("{at}.createdUnused"))?),
         },
         created_played: created_uses(record.get("createdPlayed"), &format!("{at}.createdPlayed"))?,
-        starship_pieces_fused: seat_count(record.get("starshipPiecesFused"), &format!("{at}.starshipPiecesFused"))?,
-        starships_launched: seat_count(record.get("starshipsLaunched"), &format!("{at}.starshipsLaunched"))?,
+        starship_pieces_fused: seat_count(
+            record.get("starshipPiecesFused"),
+            &format!("{at}.starshipPiecesFused"),
+        )?,
+        starships_launched: seat_count(
+            record.get("starshipsLaunched"),
+            &format!("{at}.starshipsLaunched"),
+        )?,
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());

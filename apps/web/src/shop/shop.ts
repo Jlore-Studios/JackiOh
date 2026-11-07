@@ -13,6 +13,7 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
+import { earnedOnly } from "../cards/cosmetics.ts";
 import { impliedBy, isNextLevel, isOfferedId, offeredOn } from "../cards/versions.ts";
 import type {
   BoughtPackResponse,
@@ -36,6 +37,9 @@ export type RegistryCosmetic = {
   readonly chase: boolean;
   /** R2755000: owned only by reaching Jlorious; the registry writes it only where it is true. */
   readonly jlorious?: boolean | undefined;
+  /** R3335002: the earned track that alone pays it (the Fleet track's, R3335001), and its level there; the registry writes them only where set. */
+  readonly track?: string | undefined;
+  readonly trackLevel?: number | undefined;
   readonly card?: string | undefined;
 };
 
@@ -194,8 +198,9 @@ export function buyableThere(cosmeticId: string, cardId: string, owned: OwnedCos
 }
 
 /**
- * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000) but never the
- * Jlorious card back, which only reaching Jlorious grants (R2755000), nor a retired full art (R2725000) or augment
+ * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000) but never an earned-only one
+ * (R3335002, `earnedOnly`): the Jlorious card back and Starship, which only reaching Jlorious grants (R2755000,
+ * R3335003), and a Fleet track reward (R3335001); nor a retired full art (R2725000) or augment
  * (R3015000), the account does not own, a per-card one for a card it owns where it is a next level (R3015004,
  * `buyableThere`; the server's `buy_chase`). `registry` defaults to the shipped one; a test passes its own.
  */
@@ -206,7 +211,7 @@ export function chaseCandidates(
 ): RegistryCosmetic[] {
   return registry.filter((cosmetic) => {
     if (cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt" || cosmetic.kind === "augment") return false;
-    if (cosmetic.jlorious === true || cosmeticTier(cosmetic.rarity) < cosmeticTier("Legendary")) return false;
+    if (earnedOnly(cosmetic) || cosmeticTier(cosmetic.rarity) < cosmeticTier("Legendary")) return false;
     const fits = fittingCards(cosmetic, quantities);
     if (fits === null) return !owned.account.includes(cosmetic.id);
     return fits.some((cardId) => buyableThere(cosmetic.id, cardId, owned));

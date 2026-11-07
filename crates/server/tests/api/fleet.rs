@@ -11,7 +11,8 @@ use serde_json::{Value, json};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     FLEET_TRACK_LEVELS, FLEET_TRACK_XP_DAILY_MAX, FLEET_TRACK_XP_PER_LAUNCH, FLEET_TRACK_XP_PER_LEVEL,
-    FLEET_TRACK_XP_PER_PIECE_FUSED, FLEET_TRACK_XP_PER_STINKYSCAPE_PLAY, FLEET_TRACK_XP_STINKYSCAPE_WIN, MS_PER_DAY,
+    FLEET_TRACK_XP_PER_PIECE_FUSED, FLEET_TRACK_XP_PER_STINKYSCAPE_PLAY, FLEET_TRACK_XP_STINKYSCAPE_WIN,
+    MS_PER_DAY,
 };
 use jackioh_server::cosmetics::fleet_reward;
 use jackioh_server::economy::quests::GameTally;
@@ -55,9 +56,11 @@ fn cards(app: &App) -> (String, String, String) {
             .iter()
             .find(|id| {
                 app.catalog.is_token(id) == token
-                    && app.catalog.defs.get(id.as_str()).is_some_and(|def| {
-                        (def.set == SetName::Stinkyscape) == stinkyscape
-                    })
+                    && app
+                        .catalog
+                        .defs
+                        .get(id.as_str())
+                        .is_some_and(|def| (def.set == SetName::Stinkyscape) == stinkyscape)
             })
             .cloned()
             .expect("the catalog ships one")
@@ -66,7 +69,14 @@ fn cards(app: &App) -> (String, String, String) {
 }
 
 /// One finished game of `mode` for `profile_id` at `at`, doing `fleet`.
-fn game(mode: GameMode, profile_id: &str, match_id: &str, at: i64, won: bool, fleet: FleetPlay) -> GameSummary {
+fn game(
+    mode: GameMode,
+    profile_id: &str,
+    match_id: &str,
+    at: i64,
+    won: bool,
+    fleet: FleetPlay,
+) -> GameSummary {
     GameSummary {
         mode,
         profile_id: profile_id.to_owned(),
@@ -140,7 +150,10 @@ async fn r3335001_a_ladder_game_pays_each_fleet_source_once() {
         + 3 * i64::from(FLEET_TRACK_XP_PER_PIECE_FUSED)
         + i64::from(FLEET_TRACK_XP_PER_LAUNCH)
         + i64::from(FLEET_TRACK_XP_STINKYSCAPE_WIN);
-    assert!(xp < i64::from(FLEET_TRACK_XP_PER_LEVEL), "one game reaches no level here");
+    assert!(
+        xp < i64::from(FLEET_TRACK_XP_PER_LEVEL),
+        "one game reaches no level here"
+    );
     assert_eq!(
         track_of(&app, &a, at).await,
         FleetTrack {
@@ -153,7 +166,13 @@ async fn r3335001_a_ladder_game_pays_each_fleet_source_once() {
     let (rows, rewards) = ledger_of(&app, &a).await;
     assert_eq!(rows.len(), 1, "{rows:?}");
     assert_eq!(
-        (rows[0].xp, rows[0].levels, rows[0].reason, rows[0].reference.as_deref(), rows[0].dev),
+        (
+            rows[0].xp,
+            rows[0].levels,
+            rows[0].reason,
+            rows[0].reference.as_deref(),
+            rows[0].dev
+        ),
         (xp, 0, EconomyReason::Game, Some("match-3335"), false)
     );
     assert!(rewards.is_empty());
@@ -207,19 +226,43 @@ async fn r3335001_the_daily_cap_holds_and_the_next_day_pays() {
     // Enough games to pass the cap: the one that crosses it is paid the part that fits, the rest nothing.
     let games = FLEET_TRACK_XP_DAILY_MAX / per_game + 2;
     for n in 0..games {
-        pay(&app, &game(GameMode::Ladder, &a, &format!("m-{n}"), at + n, false, launches(3))).await;
+        pay(
+            &app,
+            &game(
+                GameMode::Ladder,
+                &a,
+                &format!("m-{n}"),
+                at + n,
+                false,
+                launches(3),
+            ),
+        )
+        .await;
     }
     let today = track_of(&app, &a, at).await;
     assert_eq!(today.xp_today, FLEET_TRACK_XP_DAILY_MAX);
     assert_eq!(today.xp, FLEET_TRACK_XP_DAILY_MAX);
     let (rows, _) = ledger_of(&app, &a).await;
-    assert_eq!(rows.iter().map(|row| row.xp).sum::<i64>(), FLEET_TRACK_XP_DAILY_MAX);
-    assert!(rows.iter().all(|row| row.xp > 0), "a capped game writes no row of nothing");
+    assert_eq!(
+        rows.iter().map(|row| row.xp).sum::<i64>(),
+        FLEET_TRACK_XP_DAILY_MAX
+    );
+    assert!(
+        rows.iter().all(|row| row.xp > 0),
+        "a capped game writes no row of nothing"
+    );
     // The next UTC day starts the count again.
     let tomorrow = at + MS_PER_DAY;
-    pay(&app, &game(GameMode::Ladder, &a, "m-next", tomorrow, false, launches(3))).await;
+    pay(
+        &app,
+        &game(GameMode::Ladder, &a, "m-next", tomorrow, false, launches(3)),
+    )
+    .await;
     let next = track_of(&app, &a, tomorrow).await;
-    assert_eq!((next.xp, next.xp_today), (FLEET_TRACK_XP_DAILY_MAX + per_game, per_game));
+    assert_eq!(
+        (next.xp, next.xp_today),
+        (FLEET_TRACK_XP_DAILY_MAX + per_game, per_game)
+    );
 }
 
 #[tokio::test]
@@ -239,7 +282,11 @@ async fn r3335001_a_level_grants_its_reward_once_with_reason_track() {
         at,
     })));
     assert_eq!(track_of(&app, &a, at).await.xp_today, 0);
-    pay(&app, &game(GameMode::Ladder, &a, "m-level", at, false, launches(1))).await;
+    pay(
+        &app,
+        &game(GameMode::Ladder, &a, "m-level", at, false, launches(1)),
+    )
+    .await;
     let level_1 = fleet_reward(1).expect("level 1 pays a cosmetic").id.clone();
     let track = track_of(&app, &a, at).await;
     assert_eq!((track.level, track.xp), (1, i64::from(FLEET_TRACK_XP_PER_LEVEL)));
@@ -249,7 +296,11 @@ async fn r3335001_a_level_grants_its_reward_once_with_reason_track() {
     let owned = store!(app, |t| t.economy_cosmetics_get(&a));
     assert!(owned.account.contains(&level_1));
     // The next game reaches no new level and pays no reward again.
-    pay(&app, &game(GameMode::Ladder, &a, "m-after", at, false, launches(1))).await;
+    pay(
+        &app,
+        &game(GameMode::Ladder, &a, "m-after", at, false, launches(1)),
+    )
+    .await;
     let (_, rewards) = ledger_of(&app, &a).await;
     assert_eq!(rewards, vec![(level_1, Some("m-level".to_owned()))]);
     assert_eq!(track_of(&app, &a, at).await.level, 1);
@@ -278,12 +329,19 @@ async fn r3335001_get_tracks_answers_the_fleet_track() {
         })
     );
     // A game today moves it, its XP today among it.
-    pay(&app, &game(GameMode::Ladder, &a, "m-get", now_ms(), false, launches(1))).await;
+    pay(
+        &app,
+        &game(GameMode::Ladder, &a, "m-get", now_ms(), false, launches(1)),
+    )
+    .await;
     let (_, _, body) = call(&app, "GET", "/api/tracks", Some(TOKEN), Value::Null).await;
     let launch = i64::from(FLEET_TRACK_XP_PER_LAUNCH);
     assert_eq!(fresh(&body)["xp"], json!(launch));
     assert_eq!(fresh(&body)["xpToday"], json!(launch));
-    assert_eq!(fresh(&body)["xpToNext"], json!(i64::from(FLEET_TRACK_XP_PER_LEVEL) - launch));
+    assert_eq!(
+        fresh(&body)["xpToNext"],
+        json!(i64::from(FLEET_TRACK_XP_PER_LEVEL) - launch)
+    );
     // At the last level there is no next: no bar's span, nothing to name.
     assert!(store!(app, |t| t.economy_fleet_grant(&FleetGrant {
         profile_id: a.clone(),

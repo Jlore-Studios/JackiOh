@@ -62,5 +62,8 @@ pub async fn get_tracks(app: &Arc<App>, req: Req) -> ApiResult {
             })
         })
         .collect();
-    Ok(json(200, json!({ "tracks": entries, "fleet": fleet_view(&fleet) })))
+    Ok(json(
+        200,
+        json!({ "tracks": entries, "fleet": fleet_view(&fleet) }),
+    ))
 }

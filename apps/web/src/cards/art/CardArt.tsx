@@ -26,7 +26,8 @@
 // R3338001: a procedural picture draws the card's own composition where it has one (themes.ts `compositionOf`:
 // Ceaseless Void's giant-shaped hole), else its type's.
 // R3333000: a Starship's art is drawn from the pieces its view lists, oldest first, and its launch, in the hull design
-// of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`).
+// of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`). R3335000: a
+// launched one wears the Starship look its face gives (`look`), a hull pick's design in place of its name's.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -41,6 +42,7 @@ import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { starshipArtOf } from "./starshipHulls.ts";
+import type { StarshipLook } from "./starshipLooks.ts";
 import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
 import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
@@ -74,6 +76,8 @@ export type CardArtProps = {
   part?: ArtPart;
   /** R3336000: a Drone Battleship layer on the board (`shipArtOf`) draws the decks of its ship still standing; null draws its printed picture. */
   ship?: ShipArt | null;
+  /** R3335000: the Starship look a launched Starship wears (cosmetics.ts `useStarshipLook`); null draws it in none. */
+  look?: StarshipLook | null;
 };
 
 /**
@@ -104,6 +108,7 @@ export function CardArt({
   picture = "normal",
   part = "whole",
   ship = null,
+  look = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -165,7 +170,8 @@ export function CardArt({
   }
 
   // R3333000: the design a Starship wears is its launched name's, the face's (`artSubjectOf` may stand another for it).
-  const starshipArt = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant);
+  // R3335000: a launched one in its seat's look, its hull pick's design in place of its name's.
+  const starshipArt = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant, look);
   const uri = !near
     ? null
     : starshipArt !== null
