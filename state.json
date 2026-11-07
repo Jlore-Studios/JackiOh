@@ -17365,6 +17365,11 @@
     "3409": {
       "action": "review",
       "asks": [],
+      "ci_early": true,
+      "ci_fixes": 1,
+      "ci_on_head": true,
+      "ci_run_id": 42399888933,
+      "ci_sha": "aa7c3dd0592b5ca1bf4daed525feb72f6bda9ac4",
       "cleared": {
         "approver": {
           "family": "gemini",
@@ -17385,12 +17390,13 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3381,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-07T18:25:01Z",
+      "queued_at": "2026-11-07T18:49:45Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "42401344395",
@@ -17413,6 +17419,7 @@
         "provider": "claude-8",
         "run": "42388823369"
       },
+      "source": "ci",
       "started_at": "2026-11-07T18:26:55Z",
       "stop_requested": false,
       "taken_asks": [],
