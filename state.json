@@ -17305,15 +17305,8 @@
       "waiting_comment": 6700419024
     },
     "3334": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42356409545",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-07T09:17:41Z",
-        "until": "2026-11-07T09:47:41Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17325,10 +17318,9 @@
         "reason": "planned on opus",
         "trail": " -8\", \"description\": \"Check catalog doctrine names and translations\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"Starfleet Commander\\\\\\\"\\\\|\\\\\\\"Preemptive Strike\\\\\\\"\\\\|\\\\\\\"Sea Doctrine\\\\\\\"\\\\|\\\\\\\"Dormant Starship\\\\\\\"\\\" apps/web/src/i18n/zh-CN.json | head\", \"description\": \"Check whether \u2026\n- Bash: {\"command\": \"grep -n \\\"^ cardPlayed: {\\\\|^ awakened: {\\\\|^ cardAnnounced: {\\\" -A 4 apps/web/src/game/animations.ts | grep -n \\\"durationMs\\\\|: {\\\"; grep -rn \\\"awakened\\\" apps/web/src/fx/cards/*/*.ts |\u2026\n- Bash: {\"command\": \"sed -n 100,185p apps/web/src/fx/cards/stinkyscape-2.test.ts\", \"description\": \"Read stinkyscape-2 recipe test details\"}\n- Bash: {\"command\": \"grep -n \\\"function endOf\\\" -A 16 apps/web/src/fx/cards/tiers.test.ts; grep -n \\\"function cuesOf\\\" -A 8 apps/web/src/fx/cards/tiers.test.ts\", \"description\": \"Read tiers.test endOf and cue\u2026\n- Bash: {\"command\": \"grep -n \\\"FX_BRAND\\\" apps/web/src/fx/constants.ts; grep -n \\\"export function brandCues\\\" -A 14 apps/web/src/fx/brand.ts\", \"description\": \"Check brand cue timings\"}\n- Bash: {\"command\": \"grep -n \\\"^radiant\\\\|^instanceId\\\\|^defId\\\" apps/web/src/wire/generated/UnitView.ts; grep -n \\\"export function locateInstance\\\\|export const HIDDEN_ID\\\" apps/web/src/game/animations.ts; \u2026\n- Bash: {\"command\": \"grep -n \\\"radiant\\\\|instanceId\\\\|defId\\\" apps/web/src/wire/generated/UnitView.ts | head -8\", \"description\": \"Check UnitView radiant field\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## More findings\\n- classify: any non-test change under apps/web/src/cards/ is CardVisual -> needs pending fragment `cargo jackioh patches \\\"<title>\\\" --vi\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"content\": \"# Plan for #3334 (final draft; planner notes were folded in)\\n\\n**Goal.** The Starship's moments become set-piece size\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"cp .bot-plan.md /tmp/claude-1001/bot-plan-notes-3334.md 2>/dev/null || cp .bot-plan.md /tmp/bot-plan-notes-3334.md; echo ok\", \"description\": \"Back up planner notes before rewriting draft\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"content\": \"**Goal.** The Starship's moments become set-piece sized, presentation only (CLAUDE.md rule 7). They key on nothing but\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\nt=open('.bot-plan.md').read()\\nsecs=re.split(r'\\\\n(?=\\\\*\\\\*[A-Z][a-z ]+\\\\.\\\\*\\\\*)',t)\\nfor s in secs:\\n print(s[:30].replace('\\\\n',' '), len(s.split()))\\nEO\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"content\": \"**Goal.** Presentation only (CLAUDE.md rule 7). The changes key only on public events: `starshipFused`, `starshipLaunc\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"python3 -c \\\"\\nimport re\\nt=open('.bot-plan.md').read()\\ntoks=[w for w in t.split() if not re.fullmatch(r'[|\\\\-:]+|\\\\[ \\\\]|-', w)]\\nprint(len(toks))\\\"\", \"description\": \"Count words exclu\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"old_string\": \"**Goal.** Presentation only (CLAUDE.md rule 7). The changes key only on public events: `stars\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"old_string\": \"- `fx/starship.test.ts`:\\n - Rewrite \\\"held: three counts\\\" as \\\"R2801000 R3334001 held: no c\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"old_string\": \"**Risks.**\\n- **Hidden information.** Every input is public. R97's sentinel plans nothing, an\u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport re\\nt=open('.bot-plan.md').read()\\ntoks=[w for w in t.split() if not re.fullmatch(r'[|\\\\-:]+|\\\\[ \\\\]|-', w)]\\nprint(len(toks), len(t))\\\"\", \"description\": \"Recount p\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"old_string\": \" Lettering, `STARSHIP_LETTERING`:\\n - ninth-life: signature\\n - frontiers-promise: display, t\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"old_string\": \" **Helpers:**\\n - `starshipUnitOf(view, id)` \\u2192 `{ unit, side, row, lane }`.\\n - `shipArt\u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport re\\nt=open('.bot-plan.md').read()\\ntoks=[w for w in t.split() if not re.fullmatch(r'[|\\\\-:]+|\\\\[ \\\\]|-', w)]\\nprint(len(toks), len(t))\\\"\", \"description\": \"Recount p\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"offset\": 60, \"limit\": 90}\n- Bash: {\"command\": \"grep -n \\\"starshipFused\\\\|starshipLaunched\\\" apps/web/src/audio/cues.test.ts apps/web/src/audio/director.test.ts | head\", \"description\": \"Check audio tests referencing starship rows\"}\n- Bash: {\"command\": \"sed -n 330,345p apps/web/src/audio/cues.test.ts; sed -n 380,400p apps/web/src/audio/cues.test.ts; grep -n \\\"silent(\\\" apps/web/src/audio/cues.ts | head -3\", \"description\": \"Read the cues\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\nt=open(p).read()\\nold=\\\"\\\"\\\" - `cues.ts`:\\n - `starshipFused` becomes `silent(\\u2026)`.\\n - `attackDeclared` plays `NONE` for a launched Starship.\\n \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"offset\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3334/.bot-plan.md\", \"limit\": 60}\n- said: **Goal.** This is presentation only (CLAUDE.md rule 7), keyed only on public events (R202): `starshipFused`, `starshipLaunched`, `attackDeclared`, `destroyed` and a readable doctrine `cardPlayed`. - **Docking:** each piece's module (#3333) flies to its hardpoint, clamps on, welds, and hums higher a\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-07T08:39:28Z",
       "owner_why": "it plans it",
@@ -17341,9 +17333,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-06T23:43:37Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42356409545",
+      "run_id": "pending:440d9762-1794045709",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T08:39:28Z",
+      "started_at": "2026-11-07T10:02:15Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19041,9 +19033,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T09:53:56Z",
+    "at": "2026-11-07T10:02:15Z",
     "url": "",
-    "what": "revise #3365 on claude-4"
+    "what": "build #3334 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-07T09:50:23Z",
