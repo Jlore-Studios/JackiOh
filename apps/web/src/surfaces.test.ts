@@ -77,7 +77,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "packs/pack-object.css": 12,
   "packs/packs.css": 7,
   "patches/patches.css": 25,
-  "practice/practice.css": 69,
+  "practice/practice.css": 64,
   "practice/sandbox.css": 7,
   "rank/rankCrest.css": 1,
   "routes/account.css": 1,
@@ -227,7 +227,7 @@ describe("#2109 the surface scale", () => {
       ["aim", 59],
       ["drag", 60],
       ["toast", 70],
-      ["toast-top", 72],
+      ["dialog", 72],
     ]);
     expect(LAYERS.length).toBe(SURFACE_LAYERS);
     const text = read("surfaces.css").replace(/\/\*[\s\S]*?\*\//g, "");
