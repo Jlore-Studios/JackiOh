@@ -80,6 +80,29 @@ draws the last ingredient that is neither, the host an Equip was fused onto, by 
 delivered file, family, seed and theme are the host's. Any other card, and a fusion whose ingredients a digest id hides,
 draws as it is handed; a Starship in play draws its own (R2249000).
 
+## The Starship's art (R3333000, R3333001, R3333002)
+
+Three files draw it, on `stinkyDraw.ts`'s primitives (the shapes `stinkyscape.ts` draws with, moved there unchanged):
+
+- `starshipModules.ts`: each of the fifty piece definitions' module (`STARSHIP_MODULE_IDS`: the 47 cards printing
+  Starship Piece and Stinkyscape #127 to #129), its kind, its name's tier, the hardpoint it mounts on (bow, spine,
+  flank, keel or stern) and the bay its own card stands in. A module is drawn about its mount in flat fills, never a
+  gradient, so any picture mounts it without its defs; the Beams, Repeaters, Cannons, Flak and Drills grow v1 to v5.
+  An id that is no piece draws the spare plate.
+- `starshipHulls.ts`: the hull designs (`STARSHIP_DESIGNS`, one for each of `STARSHIP_NAMES` and the shipyard's), the
+  classes from a frigate to a dreadnought (`STARSHIP_CLASSES`), the hardpoints' placements, the hull, its ledger of
+  running lights (one a piece, oldest at the bow, so the order shows), the escorts and the shipyard, and
+  `StarshipArt`, the painter's inputs: its pieces oldest first, its launch, its design, its livery (`null`: the
+  design's own) and its face. A cosmetic (#3330) hands the painter another design or livery; its memo key
+  (`starshipArtKey`) holds them all.
+- `stinkyscape.ts`: `starshipSvg(ship)`, the picture, under `STARSHIP_ART_MAX_BYTES` with 16 Radiant pieces, since a
+  board can hold two; a piece's own card (`pieceCardSvg`), its module large on a cutaway of a hull in its bay; and
+  `starshipModuleIconSvg`, the icon a Dormant hull's plates (`StarshipHull.tsx`) and the pieces list
+  (`StarshipPieces.tsx`) show.
+
+`<CardArt starship={{ launched, list }}>` reads the design from the face's name, the one a launched Starship took, and
+marks it `data-art-design`. The collection's Dormant Starship, out of play, keeps its R503 picture.
+
 ## The full-art cards' moving art
 
 A full-art card's procedural picture also has a moving version (R2715001, `motion.ts`): given the

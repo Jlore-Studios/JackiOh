@@ -1,10 +1,13 @@
 // R2249000: a Starship's rules box in play: no text (model.ts's `textInPlay`), only the Starship term
 // and the Starship Pieces fused into it, oldest first, each a card reference (CardRef.tsx). The list
-// is the view's, public on both seats, and nothing is decided (CLAUDE.md rule 7).
+// is the view's, public on both seats, and nothing is decided (CLAUDE.md rule 7). R3333002: each name
+// has its module's icon beside it (`starshipModuleIconUri`), the one its hull plate and art draw.
 
 import type { ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
+import { starshipModuleOf } from "./art/starshipModules.ts";
+import { starshipModuleIconUri } from "./art/svg.ts";
 import { CardRef } from "./CardRef.tsx";
 import type { StarshipFace } from "../wire/generated/StarshipFace.ts";
 import { useDefResolver } from "./refContext.tsx";
@@ -30,6 +33,12 @@ export function StarshipPieces({ starship }: { starship: StarshipFace }): ReactE
             const name = def?.name ?? piece.defId;
             return (
               <span key={`${piece.defId}-${String(index)}`} className="cf-starship-piece" role="listitem" data-piece={piece.defId}>
+                <i
+                  className="cf-starship-icon"
+                  aria-hidden="true"
+                  data-module={starshipModuleOf(piece.defId).kind}
+                  style={{ backgroundImage: `url("${starshipModuleIconUri(piece.defId, piece.radiant)}")` }}
+                />
                 {def === undefined ? (
                   name
                 ) : (

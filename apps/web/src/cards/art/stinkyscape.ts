@@ -1,15 +1,28 @@
 // R2170000 (#2170): the Stinkyscape set's own art, drawn instead of `artSpec`: a space backdrop under
 // one subject its family fixes and its name details. Presentation only (CLAUDE.md rule 7); geometry
 // comes from streams the Radiant face shares, so the faces differ only in paint and gold rays. No
-// other set reaches this file, so no shipped card's picture moves (R503).
+// other set reaches this file, so no shipped card's picture moves (R503). R3333001: a Starship Piece's
+// own card draws its module (starshipModules.ts) in its bay; R3333000: a Starship in play is drawn from
+// its pieces and its design (starshipHulls.ts, `starshipSvg`); R3333002: a piece's module icon.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
-import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
+import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
 import type { ArtPart } from "./pictures.ts";
+import {
+  escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
+  starshipClassOf, type HullPaint, type StarshipArt,
+} from "./starshipHulls.ts";
+import {
+  MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type StarshipModule,
+} from "./starshipModules.ts";
+import {
+  at, between, circle, DEGREES, ellipse, FULL_TURN, glyph, group, inked, line, mirror, OUTLINE, path, poly, rect, STROKE, twinkle, whole,
+  type Paint, type Rng,
+} from "./stinkyDraw.ts";
 import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const STINKYSCAPE_PREFIX = "stinkyscape-";
@@ -244,20 +257,6 @@ export function stinkySubject(defId: string, name: string | undefined, tags: rea
 
 // Paint
 
-type Paint = {
-  space: readonly [string, string];
-  nebula: readonly [string, string];
-  /** The main surface's light, middle and shadow tones. */
-  light: string;
-  hull: string;
-  dark: string;
-  accent: string;
-  glow: string;
-  line: string;
-};
-
-const OUTLINE = "#0a0d14";
-
 export const FAMILY_PAINTS: Readonly<Record<StinkyFamily, Paint>> = {
   drone: { space: ["#0b2a33", "#03080c"], nebula: ["#1fb5a8", "#2a4fb8"], light: "#c5d3df", hull: "#6b7a8c", dark: "#2a323e", accent: "#ff6b3d", glow: "#43f5d2", line: OUTLINE },
   fleet: { space: ["#141d3d", "#04060f"], nebula: ["#4f5dd8", "#a13fa8"], light: "#d9e1ea", hull: "#7d8ba0", dark: "#323c4d", accent: "#d8443a", glow: "#ffb45a", line: OUTLINE },
@@ -374,13 +373,8 @@ function kindPaint(base: Paint, subject: StinkySubject, lower: string): Paint {
 
 // Drawing
 
-type Rng = () => number;
-
 const BOX = 100;
 const HALF = BOX / 2;
-const DEGREES = Math.PI / 180;
-const FULL_TURN = 360;
-const STROKE = 0.7;
 /** Where the subject sits: a little below the middle, as every window crops it (ART.md). */
 const SUBJECT_X = 50;
 const SUBJECT_Y = 52;
@@ -409,90 +403,6 @@ const VIGNETTE_START = 0.62;
 const VIGNETTE_OPACITY = 0.55;
 const GRID_STEP = 10;
 const GRID_MAJOR = 5;
-
-function between(rng: Rng, low: number, high: number): number {
-  return low + (high - low) * rng();
-}
-
-function whole(rng: Rng, low: number, high: number): number {
-  return low + Math.floor(rng() * (high - low + 1));
-}
-
-function attrs(values: Readonly<Record<string, string | number>>): string {
-  return Object.entries(values)
-    .map(([key, value]) => `${key}="${typeof value === "number" ? fmt(value) : value}"`)
-    .join(" ");
-}
-
-function shape(tag: string, values: Readonly<Record<string, string | number>>): string {
-  return `<${tag} ${attrs(values)}/>`;
-}
-
-function points(list: readonly (readonly [number, number])[]): string {
-  return list.map(([x, y]) => `${fmt(x)},${fmt(y)}`).join(" ");
-}
-
-function poly(list: readonly (readonly [number, number])[], fill: string, line: string, extra: Record<string, string | number> = {}): string {
-  return shape("polygon", { points: points(list), fill, stroke: line, "stroke-width": STROKE, "stroke-linejoin": "round", ...extra });
-}
-
-function mirror(list: readonly (readonly [number, number])[]): (readonly [number, number])[] {
-  return [...list, ...[...list].reverse().map(([x, y]) => [x, -y] as const)];
-}
-
-function circle(cx: number, cy: number, r: number, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("circle", { cx, cy, r, fill, ...extra });
-}
-
-function ellipse(cx: number, cy: number, rx: number, ry: number, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("ellipse", { cx, cy, rx, ry, fill, ...extra });
-}
-
-function rect(x: number, y: number, w: number, h: number, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("rect", { x, y, width: w, height: h, fill, ...extra });
-}
-
-function path(d: string, fill: string, extra: Record<string, string | number> = {}): string {
-  return shape("path", { d, fill, ...extra });
-}
-
-function line(x1: number, y1: number, x2: number, y2: number, stroke: string, width: number, extra: Record<string, string | number> = {}): string {
-  return shape("line", { x1, y1, x2, y2, stroke, "stroke-width": width, "stroke-linecap": "round", ...extra });
-}
-
-function inked(p: Paint): Record<string, string | number> {
-  return { stroke: p.line, "stroke-width": STROKE };
-}
-
-function group(transform: string, body: string, extra: Record<string, string | number> = {}): string {
-  const more = Object.keys(extra).length === 0 ? "" : ` ${attrs(extra)}`;
-  return `<g transform="${transform}"${more}>${body}</g>`;
-}
-
-function at(x: number, y: number, rotate = 0, scale = 1): string {
-  return `translate(${fmt(x)} ${fmt(y)}) rotate(${fmt(rotate)}) scale(${fmt(scale)})`;
-}
-
-function twinkle(x: number, y: number, r: number, fill: string, opacity: number): string {
-  const w = r * 0.22;
-  return path(
-    `M${fmt(x)} ${fmt(y - r)}L${fmt(x + w)} ${fmt(y - w)}L${fmt(x + r)} ${fmt(y)}L${fmt(x + w)} ${fmt(y + w)}` +
-      `L${fmt(x)} ${fmt(y + r)}L${fmt(x - w)} ${fmt(y + w)}L${fmt(x - r)} ${fmt(y)}L${fmt(x - w)} ${fmt(y - w)}Z`,
-    fill,
-    { opacity },
-  );
-}
-
-/** One of EMBLEMS' glyphs, centered at (x, y), `size` across. */
-function glyph(name: EmblemGlyph, x: number, y: number, size: number, fill: string, stroke: string): string {
-  const drawn = EMBLEMS[name];
-  const scale = size / EMBLEM_BOX;
-  const center = EMBLEM_BOX / 2;
-  return group(
-    `translate(${fmt(x)} ${fmt(y)}) scale(${fmt(scale)}) translate(-${center} -${center})`,
-    path(drawn.d, fill, { stroke, "stroke-width": 1.1, "stroke-linejoin": "round", "fill-rule": drawn.rule }),
-  );
-}
 
 // The backdrop
 
@@ -1929,10 +1839,27 @@ function rays(seed: number): string {
   return out.join("");
 }
 
+/** The document every Stinkyscape face prints: its sky, its rays when Radiant, its subject, its particles and vignette. */
+function stinkyDocument(defs: Defs, sky: string, subject: string, radiant: boolean, seed: number, motion: ArtMotion | null, seedId: string, part: ArtPart): string {
+  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing.
+  const behindSubject = part !== "subject";
+  const figure = part !== "backdrop";
+  return (
+    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    `<defs>${defs.join("")}</defs>` +
+    motionStyle(motion, CENTER_ORIGIN) +
+    (behindSubject ? moving("back", sky, motion) + (radiant ? rays(seed) : "") : "") +
+    (figure ? moving("subject", subject, motion) : "") +
+    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
+    "</svg>"
+  );
+}
+
 /**
  * The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. R2949000: its subject is
  * `defId`'s, and the rest of the picture grows from `seedId` (pictures.ts `artSeedOf`), the card's id by default.
  * R2943001: `part` "backdrop" leaves its subject out, and "subject" draws the subject alone (pictures.ts `ArtPart`).
+ * R3333001: a Starship Piece's card draws its module instead, in its bay (`pieceCardSvg`).
  */
 export function stinkyscapeSvg(
   defId: string,
@@ -1944,6 +1871,7 @@ export function stinkyscapeSvg(
   seedId: string = defId,
   part: ArtPart = "whole",
 ): string {
+  if (STARSHIP_MODULE_IDS[defId] !== undefined) return pieceCardSvg(starshipModuleOf(defId), radiant, motion, seedId, part);
   const subject = stinkySubject(defId, name, tags, type);
   const lower = (name ?? "").toLowerCase();
   const seed = hashId(seedId);
@@ -1958,30 +1886,198 @@ export function stinkyscapeSvg(
   const planet = subject.family !== "terminus" && !(subject.family === "space" && subject.kind !== "reticle");
   const sky = backdrop(behind, p, subject.family, planet, defs);
   const drawn = subjectMarkup(ahead, p, subject, lower, name);
-  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing.
-  const behindSubject = part !== "subject";
-  const figure = part !== "backdrop";
-  return (
-    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
-    `<defs>${defs.join("")}</defs>` +
-    motionStyle(motion, CENTER_ORIGIN) +
-    (behindSubject ? moving("back", sky, motion) + (radiant ? rays(seed) : "") : "") +
-    (figure ? moving("subject", group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn), motion) : "") +
-    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
-    "</svg>"
-  );
+  const placed = group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn);
+  return stinkyDocument(defs, sky, placed, radiant, seed, motion, seedId, part);
 }
 
-// R2249000: the Starship's own art
+// R3333001: a Starship Piece's own card, its module drawn large on a cutaway of a hull, in its group's bay
 
-/** The seed every Starship's art grows from, so a Starship keeps one look whatever fuses into it. */
-const STARSHIP_SEED_ID = "stinkyscape-t-dormant-starship";
-/** The most modules, escorts and lit pieces one Starship's art draws, however many pieces it holds. */
-const STARSHIP_MODULES_MAX = 8;
+/** Each bay's paint: its wall, floor and props, its light strips and the stripe it is marked with. None is gold. */
+const HANGAR_PAINTS: Readonly<Record<Hangar, Paint>> = {
+  range: { space: ["#2a1a1e", "#0c0608"], nebula: ["#d0482a", "#7a2a8f"], light: "#c9ced6", hull: "#4a4f58", dark: "#16181d", accent: "#d8443a", glow: "#ff8a3a", line: OUTLINE },
+  orebay: { space: ["#2a221c", "#0a0806"], nebula: ["#c8743a", "#4d6b2a"], light: "#b9ab98", hull: "#5a4f44", dark: "#1a1612", accent: "#ff7a1a", glow: "#4fa8ff", line: OUTLINE },
+  shieldlab: { space: ["#0c2a3a", "#03090e"], nebula: ["#1fb5a8", "#2a4fb8"], light: "#c8e8f4", hull: "#3a5a6a", dark: "#0e1c24", accent: "#3ab0ff", glow: "#5ad8ff", line: OUTLINE },
+  teststand: { space: ["#2a1410", "#0a0504"], nebula: ["#d0482a", "#3a1a6a"], light: "#c9ced6", hull: "#4a4440", dark: "#14100e", accent: "#ff4a3a", glow: "#ff7a2a", line: OUTLINE },
+  loading: { space: ["#1a2430", "#06090c"], nebula: ["#3a6ad8", "#a03ad8"], light: "#d9e1ea", hull: "#4a5a6a", dark: "#121820", accent: "#d8443a", glow: "#ffa04a", line: OUTLINE },
+  medbay: { space: ["#24403e", "#081212"], nebula: ["#3ad0a0", "#3a6ad8"], light: "#e8f4f2", hull: "#4a6a68", dark: "#0e1e1c", accent: "#ff6a9a", glow: "#7af0d0", line: OUTLINE },
+  hangar: { space: ["#22222e", "#08080c"], nebula: ["#5a3ad8", "#d83a8a"], light: "#d9e1ea", hull: "#4a4a5a", dark: "#121218", accent: "#b48aff", glow: "#bfe4ff", line: OUTLINE },
+  blueprint: FAMILY_PAINTS.jlockeed,
+};
+
+/** How large a piece's card draws its module, and how far its bay's floor and window reach. */
+const MODULE_CARD_SCALE = 2.8;
+/** How far a card's subject sits from its module's middle toward its stand, so the two share the window's middle. */
+const CARD_STAND_SHIFT: Readonly<Record<StarshipModule["mount"], readonly [number, number]>> = {
+  bow: [0, -2],
+  spine: [0, -2],
+  keel: [0, 2],
+  stern: [-2, 0],
+  flank: [0, 0],
+};
+const BAY_FLOOR_Y = 72;
+const BAY_STRIPS_MIN = 2;
+const BAY_STRIPS_MAX = 4;
+const BAY_STARS_MIN = 10;
+const BAY_STARS_MAX = 18;
+const BAY_TARGET_WHITE = "#e8e8f0";
+const BAY_SPACE = "#04060f";
+
+/** A bay's prop, by its kind: a range's target, an ore bay's piles, a lab's hex grid, a test stand's baffles and more. */
+function bayProps(rng: Rng, bay: Paint, hangar: Hangar): string {
+  const out: string[] = [];
+  switch (hangar) {
+    case "range": {
+      const y = between(rng, 44, 56);
+      for (const [r, fill] of [[7, bay.accent], [5, BAY_TARGET_WHITE], [3, bay.accent], [1.2, BAY_TARGET_WHITE]] as const) out.push(circle(88, y, r, fill, { opacity: 0.85 }));
+      out.push(line(88, y + 7, 88, BAY_FLOOR_Y, bay.hull, 1));
+      break;
+    }
+    case "orebay":
+      for (const [x, w] of [[2, 22], [76, 22]] as const) {
+        out.push(poly([[x, 90], [x + w * 0.3, 78], [x + w * 0.7, 76], [x + w, 90]], bay.hull, bay.line));
+        for (let i = 0; i < 4; i += 1) out.push(circle(x + between(rng, 4, w - 4), between(rng, 80, 88), between(rng, 0.8, 1.6), bay.glow, { opacity: 0.85 }));
+      }
+      break;
+    case "shieldlab": {
+      let d = "";
+      for (let row = 0; row < 3; row += 1) {
+        for (let col = 0; col < 7; col += 1) {
+          const cx = 8 + col * 14 + (row % 2) * 7;
+          const cy = 40 + row * 11;
+          d += `M${fmt(cx - 6)} ${fmt(cy)}L${fmt(cx - 3)} ${fmt(cy - 5.2)}L${fmt(cx + 3)} ${fmt(cy - 5.2)}L${fmt(cx + 6)} ${fmt(cy)}L${fmt(cx + 3)} ${fmt(cy + 5.2)}L${fmt(cx - 3)} ${fmt(cy + 5.2)}Z`;
+        }
+      }
+      out.push(path(d, "none", { stroke: bay.glow, "stroke-width": 0.4, opacity: 0.3 }));
+      break;
+    }
+    case "teststand":
+      for (const x of [2, 12]) out.push(poly([[x, 40], [x + 8, 36], [x + 8, BAY_FLOOR_Y], [x, BAY_FLOOR_Y]], bay.hull, bay.line));
+      out.push(ellipse(16, 84, 18, 4, bay.dark, { opacity: 0.8 }));
+      break;
+    case "loading":
+      for (const [x, y, s] of [[3, 58, 14], [17, 64, 8], [82, 60, 12]] as const) {
+        out.push(rect(x, y, s, BAY_FLOOR_Y - y, bay.hull, inked(bay)), line(x, y, x + s, BAY_FLOOR_Y, bay.dark, 0.6), line(x + s, y, x, BAY_FLOOR_Y, bay.dark, 0.6));
+      }
+      break;
+    case "medbay":
+      out.push(rect(80, 38, 14, 14, BAY_TARGET_WHITE, { ...inked(bay), rx: 1.5 }), rect(85.6, 40.4, 2.8, 9.2, bay.accent), rect(82.4, 43.6, 9.2, 2.8, bay.accent));
+      for (const y of [40, 50, 60]) out.push(rect(4, y, 12, 7, bay.hull, inked(bay)), circle(13, y + 2, 0.8, bay.glow));
+      break;
+    case "hangar": {
+      const x = between(rng, 62, 80);
+      out.push(rect(0, 10, BOX, 2.4, bay.hull, inked(bay)), rect(x - 3, 12.4, 6, 3, bay.dark, inked(bay)), line(x, 15.4, x, 28, bay.light, 0.4));
+      out.push(path(`M${fmt(x)} 28q2 1 0.8 3`, "none", { stroke: bay.light, "stroke-width": 0.8 }));
+      break;
+    }
+    case "blueprint":
+      break;
+  }
+  return out.join("");
+}
+
+/** A bay a piece's card stands in: its wall and a window on space, light strips above, a floor, and its props. */
+function hangarBackdrop(rng: Rng, bay: Paint, hangar: Hangar, defs: Defs): string {
+  defs.push(
+    `<linearGradient id="sp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bay.space[0]}"/>` +
+      `<stop offset="1" stop-color="${bay.space[1]}"/></linearGradient>`,
+  );
+  const out: string[] = [rect(0, 0, BOX, BOX, "url(#sp)")];
+  const wx = between(rng, 12, 30);
+  const ww = between(rng, 40, 56);
+  out.push(rect(wx, 8, ww, 22, BAY_SPACE, { stroke: bay.light, "stroke-width": 1.2, rx: 2 }));
+  const stars = whole(rng, BAY_STARS_MIN, BAY_STARS_MAX);
+  for (let i = 0; i < stars; i += 1) out.push(circle(between(rng, wx + 1, wx + ww - 1), between(rng, 9, 29), between(rng, 0.15, 0.5), "#ffffff", { opacity: between(rng, 0.4, 1) }));
+  for (const share of [1 / 3, 2 / 3]) out.push(line(wx + ww * share, 8, wx + ww * share, 30, bay.light, 0.6));
+  const strips = whole(rng, BAY_STRIPS_MIN, BAY_STRIPS_MAX);
+  for (let i = 0; i < strips; i += 1) {
+    const x = ((i + 0.5) * BOX) / strips;
+    out.push(rect(x - 7, 1, 14, 3, bay.glow, { opacity: 0.18 }), rect(x - 5, 1.6, 10, 1.4, bay.glow, { opacity: 0.85 }));
+  }
+  out.push(rect(0, BAY_FLOOR_Y, BOX, BOX - BAY_FLOOR_Y, bay.dark));
+  for (let i = -4; i <= 4; i += 1) out.push(line(HALF + i * 9, BAY_FLOOR_Y, HALF + i * 24, BOX, bay.hull, 0.4, { opacity: 0.6 }));
+  for (const y of [78, 87]) out.push(line(0, y, BOX, y, bay.hull, 0.3, { opacity: 0.5 }));
+  out.push(line(0, BAY_FLOOR_Y, BOX, BAY_FLOOR_Y, bay.light, 0.5, { opacity: 0.6 }));
+  out.push(bayProps(rng, bay, hangar));
+  return out.join("");
+}
+
+/** A cut section of a hull's plating under a deck (y from 0 down), its ribs bare: the bay's stand for a module. */
+function deckSection(p: Paint, bay: Paint): string {
+  const out = [
+    poly([[-12, 1.6], [12, 1.6], [11.2, 3], [12.4, 4.4], [11, 5.8], [-11.2, 5.8], [-12.4, 4.6], [-11, 3.2]], p.dark, p.line),
+    poly([[-13, 0], [13, 0], [12, 1.6], [-12, 1.6]], p.light, p.line),
+    rect(-13, 0.3, 26, 0.5, bay.accent),
+  ];
+  for (const x of [-8, -4, 0, 4, 8]) out.push(line(x, 1.6, x, 5.6, p.hull, 0.8));
+  out.push(line(-11.4, 3.7, 11.4, 3.7, p.hull, 0.5));
+  return out.join("");
+}
+
+/** A cut section of a hull's side behind a flank module, its ribs bare at the cut ends. */
+function flankSection(p: Paint, bay: Paint): string {
+  const out = [
+    path("M-13 -6Q0 -8 13 -6L12 -3L13.4 0L12 3L13 6Q0 8 -13 6L-12 3L-13.4 0L-12 -3Z", p.dark, inked(p)),
+    path("M-13 -6Q0 -8 13 -6L12.6 -4.6Q0 -6.6 -12.6 -4.6Z", p.light),
+    rect(-12.4, 4, 24.8, 0.6, bay.accent),
+  ];
+  for (const x of [-8, 8]) out.push(line(x, -6.4, x, 6.4, p.hull, 0.7));
+  return out.join("");
+}
+
+/** A Starship Piece's own card's subject: its module large on a cutaway of the hull where it mounts. */
+function moduleCardMarkup(m: StarshipModule, p: Paint, bay: Paint): string {
+  const [cx, cy] = moduleCenter(m);
+  const section = deckSection(p, bay);
+  const stand =
+    m.mount === "keel"
+      ? group("scale(1 -1)", section)
+      : m.mount === "stern"
+        ? group("rotate(-90)", section)
+        : m.mount === "flank"
+          ? flankSection(p, bay)
+          : section;
+  // The module's middle and its stand's share the window's middle.
+  const [sx, sy] = CARD_STAND_SHIFT[m.mount];
+  return group(at((sx - cx) * MODULE_CARD_SCALE, (sy - cy) * MODULE_CARD_SCALE, 0, MODULE_CARD_SCALE), stand + moduleMarkup(m, p));
+}
+
+/** R3333001: a Starship Piece's own card: its module on a cutaway of a hull in its group's bay, tilted a little. */
+function pieceCardSvg(m: StarshipModule, radiant: boolean, motion: ArtMotion | null, seedId: string, part: ArtPart): string {
+  const seed = hashId(seedId);
+  const base = modulePaint(m);
+  const p = radiant ? gild(base) : base;
+  const bay = radiant ? gild(HANGAR_PAINTS[m.hangar]) : HANGAR_PAINTS[m.hangar];
+  const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
+  const ahead = seededRandom((seed ^ SUBJECT_SALT) >>> 0);
+  const tilt = between(ahead, -SUBJECT_TILT_JITTER, SUBJECT_TILT_JITTER);
+  const defs: Defs = [];
+  gradients(p, defs);
+  const sky = m.hangar === "blueprint" ? backdrop(behind, bay, "jlockeed", false, defs) : hangarBackdrop(behind, bay, m.hangar, defs);
+  const placed = group(at(SUBJECT_X, SUBJECT_Y, tilt), moduleCardMarkup(m, p, bay));
+  return stinkyDocument(defs, sky, placed, radiant, seed, motion, seedId, part);
+}
+
+// R2249000, R3333000: a Starship's own art, drawn from what it holds
+
+/** The seed a Starship's sky grows from: its design's, so a ship keeps one sky whatever fuses into it. */
+const STARSHIP_SEED_PREFIX = "starship-";
 const STARSHIP_ESCORTS_MAX = 3;
+/** A launched Starship is escorted by one frigate for every this many pieces it holds, up to the most. */
+const STARSHIP_PIECES_PER_ESCORT = 3;
+const STARSHIP_ESCORT_SCALE = 0.25;
+/** Where its escorts fly, as shares of its half length and gaps above or below its hull. */
+const STARSHIP_ESCORTS: readonly (readonly [number, number])[] = [[0.35, -22], [-0.35, 20], [0.8, 17]];
 const STARSHIP_STREAKS = 14;
-const STARSHIP_SCALE = 1.22;
-const STARSHIP_TILT = -14;
+/** A launched Starship climbs; a Dormant one sits level in its yard. */
+const STARSHIP_TILT_LAUNCHED = -8;
+/** A barbette under a raised module is this share of its module's box wide. */
+const BARBETTE_WIDTH = 0.6;
+/** The most a Starship's picture may weigh, unencoded, however many pieces it holds: two may share a board. */
+export const STARSHIP_ART_MAX_BYTES = 49_152;
+const ICON_PLATE = "#3f4964";
+const ICON_RIVET = "#9aa1b8";
+/** How large a module's icon draws it on its plate. */
+const MODULE_ICON_SCALE = 0.75;
 
 function streak(rng: Rng, p: Paint): string {
   const y = between(rng, 6, 94);
@@ -1992,62 +2088,89 @@ function streak(rng: Rng, p: Paint): string {
   });
 }
 
-function module(p: Paint, x: number, y: number, side: number, lit: boolean): string {
-  const strut = line(x, 0, x, y, p.dark, 1.4);
-  const pod = ellipse(x, y, 4.6, 2.6, "url(#hl)", inked(p));
-  const core = circle(x + 1.2, y, 1.1, lit ? p.glow : p.dark, lit ? { opacity: 0.95 } : {});
-  const fin = poly([[x - 4, y], [x - 7, y + side * 3], [x - 2.5, y + side * 1.8]], p.hull, p.line);
-  return strut + fin + pod + core;
+function gildHull(p: HullPaint): HullPaint {
+  return { ...gild(p), trim: mixHex(p.trim, RADIANT_PALETTE.mote, GILD_MIX), window: mixHex(p.window, RADIANT_PALETTE.glow, GILD_MIX) };
 }
 
-/** R2249000: the art every Starship wears, Dormant or launched, however many pieces are fused into it. */
-export function starshipSvg(pieces: number, launched: boolean, radiant: boolean): string {
-  const seed = hashId(STARSHIP_SEED_ID);
-  const base: Paint = { ...FAMILY_PAINTS.fleet, glow: launched ? "#7fe8ff" : FAMILY_PAINTS.fleet.glow };
-  const p = radiant ? gild(base) : base;
+/**
+ * R3333000: the art a Starship wears, Dormant or launched, drawn from its inputs (`StarshipArt`): its class from the
+ * count of its pieces, each piece's module (gilded when the piece or the face is Radiant) on its hardpoint oldest
+ * first, its design's hull in its livery, and the shipyard about a Dormant one or, launched, its engines' burn, warp
+ * streaks and escorts. Never its definition's id or name, which a fusion changes (R2249000).
+ */
+export function starshipSvg(ship: StarshipArt): string {
+  const design = STARSHIP_DESIGNS[ship.design];
+  const seed = hashId(`${STARSHIP_SEED_PREFIX}${ship.design}`);
+  const base = liveryPaint(ship.livery ?? design.livery);
+  const p = ship.radiant ? gildHull(base) : base;
   const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
-  const ahead = seededRandom((seed ^ SUBJECT_SALT) >>> 0);
   const defs: Defs = [];
   gradients(p, defs);
-  defs.push(
-    `<radialGradient id="sh"><stop offset="0.6" stop-color="${p.glow}" stop-opacity="0"/>` +
-      `<stop offset="0.9" stop-color="${p.glow}" stop-opacity="${launched ? 0.35 : 0.12}"/>` +
-      `<stop offset="1" stop-color="${p.glow}" stop-opacity="0"/></radialGradient>`,
-    `<radialGradient id="ha"><stop offset="0" stop-color="${p.nebula[0]}" stop-opacity="0.7"/>` +
-      `<stop offset="1" stop-color="${p.nebula[1]}" stop-opacity="0"/></radialGradient>`,
-  );
   const sky = backdrop(behind, p, "fleet", true, defs);
+  const cls = starshipClassOf(ship.pieces.length);
+  const L = cls.length;
+  const H = cls.height;
+  const shown = ship.pieces.slice(0, STARSHIP_MODULES_MAX);
+  const modules = shown.map((piece) => starshipModuleOf(piece.defId));
+  const places = hardpointPlacements(cls, modules.map((m) => m.mount));
+  const paints = modules.map((m, i) => (shown[i]?.radiant === true || ship.radiant ? gild(modulePaint(m)) : modulePaint(m)));
+  const mounted = (keep: (m: StarshipModule) => boolean): string =>
+    modules
+      .map((m, i) => {
+        const place = places[i];
+        const paint = paints[i];
+        if (place === undefined || paint === undefined || !keep(m)) return "";
+        const wide = BARBETTE_WIDTH * MODULE_BOX * place.scale;
+        const barbette = place.lift > 0 ? rect(place.x - wide / 2, place.y, wide, place.lift, p.hull, inked(p)) : "";
+        return barbette + group(at(place.x, place.y, 0, place.scale), moduleMarkup(m, paint));
+      })
+      .join("");
   const body: string[] = [];
-  // The halo behind it and, launched, the warp streaks it leaves.
-  body.push(ellipse(0, 0, 52, 30, "url(#ha)", { opacity: 0.55 }));
-  const shown = Math.max(0, Math.min(pieces, STARSHIP_MODULES_MAX));
-  const lit = launched ? shown : 0;
-  const modules: string[] = [];
-  for (let i = 0; i < shown; i += 1) {
-    const side = i % 2 === 0 ? -1 : 1;
-    const x = -26 + Math.floor(i / 2) * 13;
-    modules.push(module(p, x, side * between(ahead, 17, 21), side, i < lit));
+  if (ship.launched) {
+    body.push(poly([[-L, -0.45 * H], [-L - 10 - 0.3 * L, 0], [-L, 0.45 * H]], p.glow, "none", { opacity: 0.7 }));
+    body.push(poly([[-L, -0.2 * H], [-L - 6 - 0.15 * L, 0], [-L, 0.2 * H]], "#ffffff", "none", { opacity: 0.8 }));
   }
-  body.push(modules.join(""));
-  body.push(group(at(0, 0, 0, 1.18), hull(ahead, p, launched ? "battleship" : "dormant")));
-  body.push(ellipse(2, 0, 50, 27, "url(#sh)"));
-  body.push(ellipse(2, 0, 50, 27, "none", { stroke: p.glow, "stroke-width": 0.5, opacity: launched ? 0.7 : 0.25, "stroke-dasharray": launched ? "none" : "2 2" }));
-  if (launched) {
-    const escorts = Math.max(1, Math.min(STARSHIP_ESCORTS_MAX, Math.ceil(pieces / 2)));
-    for (let i = 0; i < escorts; i += 1) {
-      const y = (i % 2 === 0 ? -1 : 1) * (32 + i * 4);
-      body.push(group(at(18 - i * 16, y, 0, 0.3), hull(ahead, p, "fighter")));
-    }
+  body.push(mounted((m) => m.mount === "stern"));
+  body.push(hullMarkup(design, cls, p, ship.launched));
+  body.push(ledgerMarkup(cls, paints.map((paint) => [paint.accent, paint.glow] as const), ship.launched, p));
+  body.push(mounted((m) => m.mount !== "stern"));
+  if (ship.launched) {
+    const escorts = Math.min(STARSHIP_ESCORTS_MAX, Math.ceil(ship.pieces.length / STARSHIP_PIECES_PER_ESCORT));
+    STARSHIP_ESCORTS.slice(0, escorts).forEach(([x, gap]) => {
+      body.push(group(at(x * L, gap < 0 ? -H + gap : H + gap, 0, STARSHIP_ESCORT_SCALE), escortMarkup(design, p)));
+    });
+  } else {
+    const last = places[places.length - 1];
+    body.push(shipyardMarkup(cls, last === undefined ? null : { x: last.x, y: last.y }, ship.pieces.length, p));
   }
-  const streaks = launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, p)).join("") : "";
+  const streaks = ship.launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, p)).join("") : "";
   return (
     `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
     `<defs>${defs.join("")}</defs>` +
     sky +
     streaks +
-    (radiant ? rays(seed) : "") +
-    group(at(SUBJECT_X, SUBJECT_Y, STARSHIP_TILT, STARSHIP_SCALE), body.join("")) +
+    (ship.radiant ? rays(seed) : "") +
+    group(at(SUBJECT_X, SUBJECT_Y, ship.launched ? STARSHIP_TILT_LAUNCHED : 0, cls.zoom), body.join("")) +
     rect(0, 0, BOX, BOX, "url(#v)") +
+    "</svg>"
+  );
+}
+
+/**
+ * R3333002: a piece's module as a small icon on a riveted slate plate, for a Dormant hull's plates and the pieces
+ * list: an id that is no piece draws the spare plate.
+ */
+export function starshipModuleIconSvg(defId: string, radiant: boolean): string {
+  const m = starshipModuleOf(defId);
+  const base = modulePaint(m);
+  const p = radiant ? gild(base) : base;
+  const [cx, cy] = moduleCenter(m);
+  const rivets = [[-13, -8], [13, -8], [-13, 8], [13, 8]].map(([x, y]) => circle(x ?? 0, y ?? 0, 0.7, ICON_RIVET)).join("");
+  return (
+    `<svg viewBox="-15 -10 30 20" width="30" height="20" xmlns="http://www.w3.org/2000/svg">` +
+    rect(-15, -10, 30, 20, ICON_PLATE, { rx: 2 }) +
+    rivets +
+    group(at(-cx * MODULE_ICON_SCALE, -cy * MODULE_ICON_SCALE, 0, MODULE_ICON_SCALE), moduleMarkup(m, p)) +
     "</svg>"
   );
 }

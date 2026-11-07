@@ -23,11 +23,14 @@
 // (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
 // R3338001: a procedural picture draws the card's own composition where it has one (themes.ts `compositionOf`:
 // Ceaseless Void's giant-shaped hole), else its type's.
+// R3333000: a Starship's art is drawn from the pieces its view lists, oldest first, and its launch, in the hull design
+// of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`).
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import type { StarshipPieceRef } from "../../wire/generated/StarshipPieceRef.ts";
 import { useDefResolver } from "../refContext.tsx";
 import { artSubjectOf } from "./fusedArt.ts";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
@@ -35,6 +38,7 @@ import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
+import { starshipArtOf } from "./starshipHulls.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
 import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
@@ -55,8 +59,11 @@ export type CardArtProps = {
   className?: string;
   /** Avoid parsing art for grid cards scrolled past (near.ts); use the theme sky until near. */
   lazy?: boolean;
-  /** R2249000: a Starship in play (`FaceModel.starship`) wears its own art, never its fused definition's. */
-  starship?: { pieces: number; launched: boolean } | null;
+  /**
+   * R2249000: a Starship in play (`FaceModel.starship`) wears its own art, never its fused definition's; R3333000: drawn
+   * from the pieces it lists, oldest first.
+   */
+  starship?: { launched: boolean; list: readonly StarshipPieceRef[] } | null;
   /** R2715001: the card's moving art, which its procedural picture draws in place of the still one; null holds it still. */
   motion?: ArtMotion | null;
   /** R2940001, R2942001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
@@ -152,10 +159,12 @@ export function CardArt({
     );
   }
 
+  // R3333000: the design a Starship wears is its launched name's, the face's (`artSubjectOf` may stand another for it).
+  const ship = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant);
   const uri = !near
     ? null
-    : starship !== null
-      ? starshipArtUri(starship.pieces, starship.launched, radiant, restyle)
+    : ship !== null
+      ? starshipArtUri(ship, restyle)
       : stinky
         ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
         : yard
@@ -183,6 +192,7 @@ export function CardArt({
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
       data-art-family={family}
+      data-art-design={ship?.design}
       data-art-picture={ownPicture || restyle !== null ? picture : undefined}
       data-art-part={split === "whole" ? undefined : split}
       data-art-pending={uri === null ? "true" : undefined}

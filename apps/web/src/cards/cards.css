@@ -385,7 +385,7 @@
 .cf .cost-gem .cf-cost-drain {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: var(--z-below);
   overflow: hidden;
   clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
   pointer-events: none;
@@ -404,9 +404,9 @@
   transform-origin: 50% 0;
 }
 
-/* The surface: a thin band at the layer's top, moved down to the level (a percentage of its own height). */
+/* The surface: a thin line on the layer's top edge, moved down to the level (a percentage of its own height). */
 .cf .cost-gem .cf-cost-drain::after {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-sky-300) 75%, transparent) 0 4%, transparent 4%);
+  border-top: 0.5cqw solid color-mix(in srgb, var(--pal-sky-300) 75%, transparent);
   transform: translateY(calc(var(--cost-drain, 0) * 100%));
 }
 
@@ -675,6 +675,16 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.2em 0.45em;
+}
+
+/* R3333002: a piece's module icon beside its name, the one its hull plate draws (StarshipPieces.tsx sets the image). */
+.cf .cf-starship-icon {
+  display: inline-block;
+  width: 1.5em;
+  height: 1em;
+  margin-right: 0.25em;
+  vertical-align: -0.15em;
+  background: center / contain no-repeat;
 }
 
 .cf .cf-starship-piece + .cf-starship-piece::before {
