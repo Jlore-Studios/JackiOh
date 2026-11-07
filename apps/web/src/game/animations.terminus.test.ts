@@ -228,4 +228,53 @@ describe("R3338000 a Terminus card's signature is one entry", () => {
     expect(holdOf(burned)).toBe(SET_PIECES.diceOfDoom.holdMs);
     expect(DOOM_MISS_HOLD_MS).toBeLessThan(SET_PIECES.diceOfDoom.holdMs);
   });
+
+  it("R3338000 Dice of Doom's end-of-turn return plays its own rows, into a hand or burned, on both seats", () => {
+    const view = fullBoardView();
+    const back = (player: PlayerId, full: boolean): GameEvent[] => [
+      { type: "hookResolving", sourceId: "dd", defId: DICE_OF_DOOM, controller: player, hook: "endOfTurn" },
+      { type: "bounced", instanceId: "dd", defId: DICE_OF_DOOM, owner: player },
+      ...(full
+        ? [
+            { type: "burned", instanceId: "dd", defId: DICE_OF_DOOM, owner: player } as const,
+            { type: "enteredGraveyard", instanceId: "dd", defId: DICE_OF_DOOM, owner: player } as const,
+          ]
+        : [{ type: "addedToHand", player, instanceId: "dd", defId: DICE_OF_DOOM } as const]),
+      { type: "turnEnded", player, turn: 3, unspentMana: 0 },
+    ];
+    for (const player of ["p1", "p2"] as const) {
+      for (const full of [false, true]) {
+        const events = back(player, full);
+        const label = `${player} ${full ? "burned" : "in hand"}`;
+        expect(signed(planEntries(events, withEvents(view, events), false, createPlayTracker(), hasSetPiece, signatureRunOf)), label).toEqual([]);
+        const { queue, playAll } = queueOf();
+        queue.enqueue(events, withEvents(view, []));
+        expect(playAll().filter((entry) => entry.setPiece !== undefined), label).toEqual([]);
+      }
+    }
+  });
+
+  it("R3338000 a Dice jackpot into a full hand is one entry, its burns and their graveyards among it", () => {
+    const view = fullBoardView();
+    const jackpot = doomFixture(view, "dd", "p1", "jackpot");
+    // The hand holds five: the last two Terminus cards burn, each into the graveyard.
+    let added = 0;
+    const full = jackpot.flatMap((event): GameEvent[] => {
+      if (event.type !== "addedToHand") return [event];
+      added += 1;
+      if (added <= 5) return [event];
+      return [
+        { type: "burned", instanceId: event.instanceId, defId: event.defId, owner: event.player },
+        { type: "enteredGraveyard", instanceId: event.instanceId, defId: event.defId, owner: event.player },
+      ];
+    });
+    const events: GameEvent[] = [
+      { type: "cardPlayed", player: "p1", instanceId: "dd", defId: DICE_OF_DOOM, costPaid: 0 },
+      ...full,
+      { type: "cardResolved", player: "p1", instanceId: "dd", defId: DICE_OF_DOOM, permanent: false, costPaid: 0 },
+    ];
+    const [entry, ...more] = signed(planEntries(events, withEvents(view, events), false, createPlayTracker(), hasSetPiece, signatureRunOf));
+    expect(more).toEqual([]);
+    expect(entry?.events).toEqual(full.slice(1));
+  });
 });

@@ -2,6 +2,7 @@
 // slowing, and lands on its `rolled` result halfway through the span (R2652001's faces, public to both
 // seats). On a 67 the board goes dark, a star lights for each Terminus card it adds, and they rain into
 // its caster's hand as card backs once the hold ends; the opponent sees how many, never which (R202).
+// One a full hand burns falls past it into its owner's graveyard instead, in an ember.
 // On a miss the die crumbles. A die that rolled more than once (Lucky, an Embiggened Dice's for good)
 // keeps a Lucky glint. The jackpot is read off what the run did (the cards it added or burned), never
 // off the face, so the client restates no card's number. It draws its run in place of their own rows.
@@ -33,11 +34,16 @@ export const doom: TerminusPlanner = (m) => {
     const after = m.H > 0 ? m.M : m.D - m.S;
     const fall = Math.max(1, frac(TERMINUS_TUNING.rainFall, after));
     const hand = tid(animTestid.hand(sideOf(m.view, m.signature.player)));
-    rain.forEach((_, k) => {
+    rain.forEach((event, k) => {
       const at = m.S + frac(k * FX_TERMINUS_RAIN_STEP, after);
-      cues.push({ kind: "ghost", from: BOARD, to: hand, delayMs: at, durationMs: fall });
+      // A card a full hand burns falls past it into its owner's graveyard, in an ember.
+      const to = event.type === "burned" ? tid(animTestid.graveyard(sideOf(m.view, event.owner))) : hand;
+      cues.push({ kind: "ghost", from: BOARD, to, delayMs: at, durationMs: fall });
+      if (event.type === "burned") cues.push(tunedBurst(m.i, "ember", to, "point", at + fall, TERMINUS_TUNING.burn));
     });
-    cues.push({ ...tunedBurst(m.i, "star", hand, "area", m.S + fall, TERMINUS_TUNING.rain), colors: m.look.colors });
+    if (rain.some((event) => event.type === "addedToHand")) {
+      cues.push({ ...tunedBurst(m.i, "star", hand, "area", m.S + fall, TERMINUS_TUNING.rain), colors: m.look.colors });
+    }
   } else {
     // A miss: the die crumbles where it landed.
     const at = frac(TERMINUS_TUNING.crumbleAt, m.S);

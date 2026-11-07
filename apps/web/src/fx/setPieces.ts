@@ -75,7 +75,7 @@ export const DOOM_MISS_HOLD_MS = 1_200;
 
 /**
  * R3338000: what a set piece plays over: a board clear's run of removals (`"wipe"`, R2800000), its card's
- * first cast (`"cast"`), or the run of its hook's events of these types from the first of them.
+ * first cast (`"cast"`), or the run of its hook's events of these types, opened by the first type listed.
  */
 export type SetPieceMoment = "wipe" | "cast" | readonly GameEventType[];
 
@@ -129,7 +129,8 @@ export const SET_PIECES: { readonly [K in SetPieceKey]: SetPieceSpec } = {
   // S #154 Dice of Doom: the d100 tumbles across the board onto its roll; on a 67 the Terminus cards rain.
   diceOfDoom: {
     shape: "doom",
-    moment: ["rolled", "keywordGranted", "addedToHand", "burned"],
+    // A burned card lands in the graveyard (`enteredGraveyard`), inside the run (crates/engine draw.rs).
+    moment: ["rolled", "keywordGranted", "addedToHand", "burned", "enteredGraveyard"],
     holdMs: TERMINUS_HOLD_MS.diceOfDoom,
     spin: 1,
     trauma: FX_TERMINUS_TRAUMA,

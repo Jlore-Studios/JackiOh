@@ -196,6 +196,54 @@ describe("R3338000 the Terminus set pieces", () => {
     expect(glint === undefined, roll).toBe(roll !== "embiggened");
   });
 
+  it("R3338000 a Dice jackpot into a full hand rains what it added into the hand and burns the rest into the graveyard", () => {
+    const view = fullBoardView();
+    let added = 0;
+    const under = doomFixture(view, "dd", "p1", "jackpot").flatMap((event): GameEvent[] => {
+      if (event.type !== "addedToHand") return [event];
+      added += 1;
+      if (added <= 5) return [event];
+      return [
+        { type: "burned", instanceId: event.instanceId, defId: event.defId, owner: event.player },
+        { type: "enteredGraveyard", instanceId: event.instanceId, defId: event.defId, owner: event.player },
+      ];
+    });
+    const results = play(played("p1", "dd", DICE_OF_DOOM, under, 0), view);
+    const { entry, cues } = pieceEntry(results);
+    expect(entry.setPiece).toEqual({ key: "diceOfDoom", holdMs: SET_PIECES.diceOfDoom.holdMs });
+    expect(entry.events).toEqual(under.slice(1));
+    // Nothing of the run plays a row of its own after the set piece.
+    const run = under.slice(1);
+    expect(results.filter((result) => result.entry !== entry && result.entry.events.some((event) => run.includes(event))).map((result) => result.entry.type)).toEqual([]);
+    const ghosts = cues.filter((cue) => cue.kind === "ghost");
+    const to = ghosts.map((ghost) => (ghost.to.kind === "testid" ? ghost.to.testid : null));
+    expect(to.filter((testid) => testid === animTestid.hand("you"))).toHaveLength(5);
+    expect(to.filter((testid) => testid === animTestid.graveyard("you"))).toHaveLength(2);
+    expect(ghosts).toHaveLength(TERMINUS_IDS.length);
+    const end = entry.durationMs + FX_MAX_TAIL_MS;
+    for (const cue of cues) expect(endOf(cue), cue.kind).toBeLessThanOrEqual(end);
+  });
+
+  it("R3338000 Dice of Doom's end-of-turn return signs nothing: its bounce plays its own rows", () => {
+    const view = fullBoardView();
+    for (const full of [false, true]) {
+      const events: GameEvent[] = [
+        { type: "hookResolving", sourceId: "dd", defId: DICE_OF_DOOM, controller: "p1", hook: "endOfTurn" },
+        { type: "bounced", instanceId: "dd", defId: DICE_OF_DOOM, owner: "p1" },
+        ...(full
+          ? ([
+              { type: "burned", instanceId: "dd", defId: DICE_OF_DOOM, owner: "p1" },
+              { type: "enteredGraveyard", instanceId: "dd", defId: DICE_OF_DOOM, owner: "p1" },
+            ] as const)
+          : ([{ type: "addedToHand", player: "p1", instanceId: "dd", defId: DICE_OF_DOOM }] as const)),
+        { type: "turnEnded", player: "p1", turn: 3, unspentMana: 0 },
+      ];
+      const results = play(events, view);
+      expect(results.some(({ entry }) => entry.signature !== undefined || entry.setPiece !== undefined), String(full)).toBe(false);
+      expect(results.flatMap(({ cues }) => cues).some((cue) => cue.kind === "setPiece"), String(full)).toBe(false);
+    }
+  });
+
   it("R3338000 R202 from the opponent's seat: Olivian's Discover and Dice's 67 name no card, and land in the opponent's hand", () => {
     const view = fullBoardView();
     const names = TERMINUS_IDS.map((id) => CATALOG[id]?.name ?? id);

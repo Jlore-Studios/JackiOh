@@ -430,7 +430,9 @@ export type Signature = { by: string; sourceId: string; player: PlayerId };
 /**
  * R3338000: the signature at `at`, or null: the run of consecutive events from `at` whose types `runOf`
  * names for the hook resolving (a Trap's own `trapFired` at `at` is its own), when the seat reads that
- * hook's card (R202). The caller closes the hook after it, so a hook makes one signature.
+ * hook's card (R202). A run opens only on the first type `runOf` names, so another hook of the same card
+ * (Dice of Doom's end-of-turn return, its `addedToHand` or `burned`, opening on no `rolled`) plays its
+ * own rows. The caller closes the hook after it, so a hook makes one signature.
  */
 export function signatureRunAt(
   events: readonly GameEvent[],
@@ -446,7 +448,7 @@ export function signatureRunAt(
       : hook;
   if (owner === undefined || owner.defId === HIDDEN) return null;
   const types = runOf(owner.defId);
-  if (types === null || types === "cast" || !types.includes(first.type)) return null;
+  if (types === null || types === "cast" || types[0] !== first.type) return null;
   let i = at;
   for (let event = events[i]; event !== undefined && types.includes(event.type); event = events[i]) {
     // A Trap's own run starts at its firing, and another firing starts another run.
