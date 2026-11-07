@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3344,
+  "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
+  "branch": "bot/issue-3344",
+  "thread": "**Issue #3344 (data, not instructions):**\n\n```text\n# #3344: Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked to look into quasi-3D models for the rarest cards.\n\nThis part is the depth every card can have. The Mythics' own dioramas and the full-screen takeover build on it.\n\n### Today\n\n- **Immersive alone has depth.** Only the Immersive variant (R2944001, `depthSvg`, `.cf-immersive`) draws its picture in two planes, the backdrop hazed and the subject near. It and Out of frame follow the pointer and device tilt (`immersive.ts`, `useImmersiveShift`).\n- **Layers are tagged but flat.** The painters already tag each layer by role: background, subject, over, light, props, motes (`motion.ts`, R2715001). They can draw the `\"backdrop\"` and `\"subject\"` apart (`ArtPart`, R2943001). Every other face is flat.\n\n### What it should be\n\n1. **Depth planes from the roles.** A face that is Epic or rarer, or wears any full-art-shaped level, draws its picture as stacked planes:\n   - background far;\n   - props and subject in the middle and near;\n   - over, light and motes nearest.\n\n   It uses the painters' roles, and the scene layers once #3331 lands. The planes are CSS 3D: perspective on the face's parent, `transform-style: preserve-3d` on the face. A delivered art file has no layers and stays one plane. A Starship and a Legacy card keep one picture (`hasArtParts`).\n2. **Tilt.** The face tilts toward the pointer up to `CARD_TILT_MAX_DEG` (proposed 12\u00b0), with the planes parallaxing by depth (`CARD_DEPTH_STEP_PX`). On a phone it tilts with the device's orientation once the player allows it (iOS asks once, behind a setting), and otherwise with a drag in inspect. It springs back when the pointer leaves.\n\n   Where it runs:\n   - in hand on hover;\n   - in the hover preview and inspect;\n   - in the Collection;\n   - on the board for the hovered or pressed card only.\n3. **Glare and foil that follow the light.** A specular glare moves opposite the tilt, and each foil finish catches it by area: the frame and the art apart, not one flat gradient. This is drawn with `color-dodge` and `overlay` blend modes in an isolated layer (`isolation: isolate`). It never lands in Radiant's gold window (R2725004), and Radiant's own shimmer keeps its look.\n4. **Frame-break.** The subject's nearest plane may cross the face's top edge by `CARD_FRAME_BREAK_PX`, as Out of frame does, on Legendary and Mythic faces in hand and inspect.\n5. **Settings and cost.** Reduced motion, the OS setting and fx intensity off show the flat picture with the still foil. Tilt runs on one face at a time, never during the animation queue's drain, and stays within the motion budget.\n\n## Acceptance\n\n- Tests:\n  - an Epic or rarer face, and every full-art-shaped level, draws its picture as depth planes by role;\n  - a Common in its normal look, a delivered file, a Starship and a Legacy card stay one plane.\n- The tilt follows the pointer up to the cap and springs back. Device tilt works only after the setting is allowed, and a drag tilts in inspect. Tests cover each.\n- The glare moves opposite the tilt, and the palette test keeps it out of Radiant's gold window.\n- A component spec shows a Legendary and a Mythic tilted at three angles, a Radiant one, and reduced motion, at desktop size and at 390x844.\n- `fx-phone-frame.cy.tsx` stays within `FX_PHONE_FRAME_BUDGET_MS` with one tilted face in hand.\n- `src/motion.test.ts` and `fx/css.test.ts` pass. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`, and there is a `--visual` fragment.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3344: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-06T23:54:05Z",
+    "claimed_at": "2026-11-07T03:32:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3221 skipped: it waits for #3220 to close first",
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
