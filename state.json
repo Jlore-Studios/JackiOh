@@ -17904,6 +17904,8 @@
       }
     },
     "3421": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T22:11:12Z",
@@ -17917,8 +17919,11 @@
         "trail": "|board\\\\|ENTRANCE\\\" \", \"description\": \"See how MARQUEE is built\"}\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/fx/entrances.test.ts\", \"description\": \"Read entrances test header\"}\n- Bash: {\"command\": \"sed -n 40,58p apps/web/src/fx/entrances.test.ts\", \"description\": \"Read planAll and emptyLane helpers\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/fx/entrances.test.ts'\\ns=open(p).read()\\ndef sub(old,new):\\n global s\\n assert old in s, old[:80]\\n s=s.replace(old,new,1)\\nsub('''type CatalogEntry = \u2026\n- Bash: {\"command\": \"echo \\\"- pass 3: full web vitest: only failures were entrances.test (fixed: token printed rarity; entrance given view+landing) and load timeouts in wording/landing (pass alone). typechec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3400 && git diff origin/main --stat | tail -5; cat apps/web/src/fx/figures.ts | sed -n 30,40p\", \"description\": \"Check diff stats and figures.ts\"}\n- Bash: {\"command\": \"grep -n \\\"Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land\\\" apps/web/src/fx/constants.ts\", \"description\": \"Find FX_GAME_DESIGN_TRAUMA comment\"}\n- Bash: {\"command\": \"sed -i \\\"226s|.*|// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land (R3400001: Goetzmann Game Design's\\\\n// signature shakes as its takeover's hold en\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/cy.log; do sleep 15; done; grep -E \\\"\\u2713|\\u2716|passing|failing|pending|exit|Spec|Tests:|Passing:|Failing:\\\" /tmp/cy.log | tail -60\", \"description\": \"Wait\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy.log | grep -E \\\"^\\\\s+[0-9]+\\\\) |AssertionError|Error:|expected|Timed out\\\" | head -60\", \"description\": \"Show Cypress failure details\"}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy.log | grep -B2 -A25 \\\"3) polish 2 \\u2014 B57\\\" | grep -v \\\"^\\\\s*at \\\" | head -50; ls e2e/cypress/reports 2>/dev/null | head; grep -rn \\\"layout:report\\\u2026\n- Bash: {\"command\": \"sed -n 165,195p e2e/cypress.config.ts; ls e2e/*.json e2e/cypress/*.json 2>/dev/null | head; find e2e -name \\\"*layout*report*\\\" -newer /tmp/wasm.log 2>/dev/null | head\", \"description\": \"F\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy.log | grep \\\"M5-T1 layout\\\" | grep -E \\\"routine|reference\\\" | head -3 | python3 -c \\\"\\nimport sys,json\\nfor line in sys.stdin:\\n j=json.loads(line.spl\u2026\n- Bash: {\"command\": \"cd apps/web/src/audio && python3 - <<'EOF'\\np='sfx.ts'\\ns=open(p).read()\\ndef sub(old,new):\\n global s\\n assert old in s, old[:80]\\n s=s.replace(old,new,1)\\n# cursorTear louder\\nsub(''' \u2026\n- Bash: {\"command\": \"sed -n 160,171p ../game/animations.ts; grep -rn \\\"chaosRolled\\\\|ChaosBanner\\\\|showcase\\\" ../game/Game.tsx | head -8\", \"description\": \"Read cardPlayed target and showcase hooks\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3400/apps/web && cat > src/fx/zz-debug.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { entranceEntries, planEntries, setPieceEntries, takeo\u2026\n- Bash: {\"command\": \"cat > src/fx/zz-debug.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { entranceEntries, planEntries, setPieceEntries, takeoverClaim, type EntranceResolver } from \\\"../game/anima\u2026\n- Bash: {\"command\": \"grep -n \\\"pause\\\\|chaos\\\" src/fx/FxLayer.tsx | head -10; grep -rn \\\"chaos\\\" src/game/showcase/*.tsx 2>/dev/null | grep -i \\\"hold\\\\|pause\\\\|queue\\\" | head -5\", \"description\": \"Look for fx\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3400 && python3 - <<'EOF'\\ndef sub(p, old, new):\\n s=open(p).read()\\n assert old in s, (p, old[:80])\\n s=s.replace(old,new,1)\\n open(p,'w').write(s)\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3400 && echo \\\"- pass 3: cypress run 1: Mythic Spell takeovers did not mount (anchor hand-card absent) -> own-cast takeover now centred; Chaos canvas\u2026\n- Bash: {\"command\": \"cd apps/web/src/audio && python3 - <<'EOF'\\np='sfx.ts'\\ns=open(p).read()\\ndef sub(old,new):\\n global s\\n assert old in s, old[:90]\\n s=s.replace(old,new,1)\\n# inkSummit: separate noise s\u2026\n- Bash: {\"command\": \"cd apps/web/src/audio && python3 - <<'EOF'\\np='sfx.ts'\\ns=open(p).read()\\ndef sub(old,new):\\n global s\\n assert old in s, old[:90]\\n s=s.replace(old,new,1)\\nsub('''heldEnvelope(k, 0, 0.0\u2026\n- Bash: {\"command\": \"cd apps/web/src/audio && python3 - <<'EOF'\\np='sfx.ts'\\ns=open(p).read()\\nold=''' for (const [n, hz] of [523, 659, 784, 1047].entries()) {\\n const start = 0.7 + n * 0.09;\\n tone(k, brigh\u2026\n- Bash: {\"command\": \"cd apps/web/src/audio && sed -i 's/pencilArpeggio: { recipe: pencilArpeggio, durationMs: 1400, gain: 0.8 }/pencilArpeggio: { recipe: pencilArpeggio, durationMs: 1400, gain: 0.47 }/' sfx.\u2026\n- Bash: {\"command\": \"echo \\\"- pass 3: audio-recipes.cy passes (113), all 8 sounds ~-7.5 dB (stray noise leak fixed: a noise source shared across envelopes played at gain 1 before its later envelope opened). \u2026\n- Bash: {\"command\": \"cd apps/web && cat > src/fx/zz-debug.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { tileBoardView } from \\\"../test/tileBoard.ts\\\";\\nimport { planTileAuras } from \\\"./aura/tile\u2026\n- Bash: {\"command\": \"timeout 1500 pnpm exec vitest run src/fx src/audio src/game/TakeoverStill.test.tsx src/routes/dev src/motion.test.ts src/surfaces.test.ts src/palette.test.ts src/typescale.test.ts 2>&1 |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3400 && timeout 900 pnpm exec eslint apps/web/src/fx apps/web/src/audio apps/web/src/game/TakeoverStill.tsx apps/web/src/game/TakeoverStill.test.tsx \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nstate='''## State\\n\\n- DONE (pass 3). All plan items built; checks green: web vitest (\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a signature animation for every Meditative+ and Training Grounds Legendary and Mythic, one concept per card\"} --> All eight Legendaries and Mythics of Meditative+ and Training Grounds now have their own signature. Each one comes off `SIGNATURE_PENDING` \u2026"
       },
       "issue": 3400,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T23:53:23Z",
         "from_run": "42419419170",
         "gates": [
           {
@@ -18010,7 +18015,11 @@
         "source": "build",
         "until": "2026-11-08T00:21:55Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-07T23:51:55Z",
+      "run_id": "pending:77462cef-1794095568",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18029,6 +18038,9 @@
         "provider": "claude-8",
         "run": "42419419170"
       },
+      "started_at": "2026-11-07T23:53:23Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18042,9 +18054,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T23:40:23Z",
+    "at": "2026-11-07T23:53:23Z",
     "url": "",
-    "what": "spot-check #3369 on claude-2"
+    "what": "review #3421 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T23:37:01Z",
