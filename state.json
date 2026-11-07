@@ -16073,6 +16073,7 @@
           }
         ],
         "head": "ef7d3601fea25a7827bf1a737ef9259685579eb7",
+        "interruptions": 0,
         "kind": "revise",
         "model": "opus",
         "provider": "claude-6",
