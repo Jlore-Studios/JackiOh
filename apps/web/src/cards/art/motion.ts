@@ -51,6 +51,11 @@ export type ArtBeat = { readonly move: ArtMove; readonly seconds: number };
 /** R2715001: one card's moving art: a beat for each role it moves, and its particles. */
 export type ArtMotion = { readonly [R in ArtRole]?: ArtBeat } & {
   readonly particles: { readonly kind: ParticleKind; readonly beat: ArtBeat };
+  /**
+   * R3340000: a live board face draws its particles as a layer of their own over the subject (`particleLayerUri`), so the
+   * picture beneath leaves them out: `particleMarkup` draws none and `motionStyle` no rule for them.
+   */
+  readonly detached?: true;
 };
 
 /**
@@ -124,9 +129,10 @@ const particles = (kind: ParticleKind, move: ArtMove, seconds: number): ArtMotio
  * R2715001: each full-art card's moving art, by card id (the cosmetics registry's full-art cards,
  * R2655001; a token listed under one takes its parent's, R2655002). Each moves two of its picture's
  * elements or more on beats of their own, and no two are alike; `motion.test.ts` holds every full-art
- * card of the registry to an entry.
+ * card of the registry to an entry. The 21 are hand-written; R3340000 adds a recipe for every other
+ * Legendary and Mythic (`RARE_ART_MOTION`).
  */
-export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = {
+const FULL_ART_CARD_MOTION: Readonly<Record<string, ArtMotion>> = {
   // Big D-fender: a shield wall that breathes behind its sparks.
   "core-001": { subject: beat("breathe", 4), back: beat("swell", 7), props: beat("float", 3), particles: particles("spark", "glint", 2.4) },
   // Gary the Gambler: coins rain while his lucky glyph spins.
@@ -183,14 +189,190 @@ export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = {
   "classicplus-075": { subject: beat("bob", 4.2), back: beat("drift", 11), props: beat("flutter", 3), particles: particles("leaf", "fall", 3.8) },
 };
 
+/** R3340000: the kinds of card a recipe is built for, by the card's type: a Unit, a Spell, a Field Spell, a Trap or Field Trap. */
+type Archetype = "unit" | "spell" | "field" | "trap";
+
+/**
+ * R3340000: each archetype's roles: the moves a recipe picks among (the one at its running count, wrapping) and the
+ * seconds of the role's loop before the recipe's stretch (`RECIPE_STRETCH_SECONDS`).
+ */
+const ARCHETYPES: Readonly<Record<Archetype, readonly (readonly [ArtRole, readonly ArtMove[], number])[]>> = {
+  unit: [
+    ["subject", ["bob", "breathe", "sway", "hop"], 4],
+    ["back", ["drift"], 9],
+    ["props", ["float"], 3.5],
+  ],
+  spell: [
+    ["subject", ["breathe"], 4.5],
+    ["light", ["flare"], 3.5],
+    ["props", ["spin"], 7],
+  ],
+  field: [
+    ["back", ["swell", "drift"], 8],
+    ["over", ["swell"], 6],
+    ["light", ["pulse"], 4.5],
+  ],
+  trap: [
+    ["subject", ["breathe"], 4],
+    ["props", ["spin", "tick"], 5],
+    ["light", ["flare"], 3.2],
+  ],
+};
+
+/** R3340000: how much slower each recipe in the list runs than the one before it, so no two recipes are alike. */
+const RECIPE_STRETCH_SECONDS = 0.05;
+/** R3340000: how a recipe's particles move, by kind: leaves and drops fall, the rest rise, and every loop takes this long before the stretch. */
+const RARE_PARTICLE_SECONDS = 2.4;
+const RARE_FALLING: ReadonlySet<ParticleKind> = new Set(["leaf", "drop"]);
+
+/** Seconds, rounded to hundredths so a stretch never leaves a float's tail in a beat. */
+const hundredths = (seconds: number): number => Math.round(seconds * 100) / 100;
+
+/**
+ * R3340000: the recipe for the `index`th card of the list: its archetype's roles, each on the move that index picks and a
+ * loop `index * RECIPE_STRETCH_SECONDS` longer, with particles of `kind`.
+ */
+function recipe(archetype: Archetype, kind: ParticleKind, index: number): ArtMotion {
+  const stretch = index * RECIPE_STRETCH_SECONDS;
+  const roles: { -readonly [R in ArtRole]?: ArtBeat } = {};
+  for (const [role, moves, seconds] of ARCHETYPES[archetype]) {
+    roles[role] = beat(moves[index % moves.length] ?? "float", hundredths(seconds + stretch));
+  }
+  const move: ArtMove = RARE_FALLING.has(kind) ? "fall" : "rise";
+  return { ...roles, particles: particles(kind, move, hundredths(RARE_PARTICLE_SECONDS + stretch)) };
+}
+
+/**
+ * R3340000: the Legendaries' and Mythics' recipes that were not hand-written, by card id: each card's archetype (its
+ * type) and its particles (its tag, else its set), in card-id order. None draws a gold particle (R2725004: a base face's
+ * art is tinted no gold). `motion.test.ts` holds every Legendary and Mythic of the catalog to an entry.
+ */
+const RARE_CARDS: readonly (readonly [string, Archetype, ParticleKind])[] = [
+  ["classic-004", "field", "ember"], // Palantir
+  ["classic-007", "field", "ember"], // InfiniScepter
+  ["classic-009", "trap", "ember"], // Income Tax
+  ["classic-028", "field", "ember"], // Second Wind
+  ["classic-033", "unit", "ember"], // Joro
+  ["classic-044", "spell", "ember"], // Back from the GY
+  ["classic-045", "unit", "ember"], // Nature Titan
+  ["classic-056", "unit", "ember"], // Spell Tyrant
+  ["classic-080", "unit", "ember"], // BOOM! Big Max
+  ["classic-085", "unit", "ember"], // King Wagtoggle
+  ["classicplus-013", "unit", "note"], // Mommy Barker
+  ["classicplus-027", "spell", "ember"], // Zephrys Zealotism
+  ["classicplus-029", "spell", "ember"], // Portal to the Past
+  ["classicplus-035", "spell", "ember"], // Rollback
+  ["classicplus-037", "unit", "ember"], // Wardrum
+  ["classicplus-042", "spell", "leaf"], // KY's Test
+  ["classicplus-043", "spell", "ember"], // AI Slop
+  ["classicplus-047", "spell", "ember"], // Jogg's Box
+  ["classicplus-073", "spell", "ember"], // Call to Chaos (Classic+ Edition)
+  ["classicplus-074", "trap", "ember"], // Twice Forward One Step Backwards
+  ["classicplus-078", "field", "ember"], // Claude's Datacenter
+  ["core-052", "unit", "note"], // Silly Silas
+  ["core-083", "spell", "ember"], // Transmogulate
+  ["core-085", "trap", "ember"], // Unlicensed Experimentation
+  ["core-087", "spell", "ember"], // Pocket Chaos
+  ["core-092", "unit", "note"], // Felinor Fiender
+  ["core-093", "field", "ember"], // Combo-Index
+  ["core-095", "spell", "ember"], // Call to Chaos (Core Edition)
+  ["core-096", "trap", "ember"], // My Pawn
+  ["core-097", "spell", "ember"], // Zephrys
+  ["core-098", "field", "ember"], // Heroic Power
+  ["core-099", "spell", "ember"], // Craft a Card
+  ["core-100", "unit", "ember"], // Ceaseless Void
+  ["meditative-007", "field", "bubble"], // Introspection
+  ["meditative-008", "spell", "ember"], // Reach the Summit
+  ["meditative-011", "field", "bubble"], // Double Header
+  ["meditative-017", "spell", "bubble"], // True Craft a Card
+  ["meditative-020", "spell", "ember"], // Aestheticize the Game
+  ["meditative-026", "field", "bubble"], // Alternate Fate
+  ["meditative-040", "field", "ember"], // Feng Shui
+  ["meditative-042", "spell", "ember"], // CN Flea Market
+  ["meditative-045", "unit", "ember"], // Knowledge Breaker
+  ["meditative-047", "unit", "ember"], // 饕餮
+  ["meditative-049", "unit", "ember"], // YileGPT
+  ["meditative-051", "unit", "bubble"], // Devin Bot
+  ["meditative-063", "field", "bubble"], // Skull of J'Nari
+  ["meditative-065", "unit", "bubble"], // Keymaster Keenus
+  ["meditative-071", "field", "bubble"], // Pareto Optimality
+  ["meditative-075", "field", "bubble"], // Ever Growing Tree
+  ["meditative-079", "unit", "leaf"], // Touched by KY
+  ["meditative-080", "field", "bubble"], // Aluneth
+  ["meditative-086", "unit", "bubble"], // Mayor Medinamogger
+  ["meditative-095", "spell", "ember"], // Call to Chaos (Meditative Edition)
+  ["meditative-097", "spell", "bubble"], // Jlockeed's Evil Blueprints
+  ["meditativeplus-001", "spell", "ember"], // Bob's Plan
+  ["meditativeplus-024", "unit", "bubble"], // Bob, Wisconsin's Strongest Soldier
+  ["meditativeplus-026", "spell", "bubble"], // Scratch Pad
+  ["stinkyscape-004", "spell", "bubble"], // Olivian Expanse
+  ["stinkyscape-006", "unit", "note"], // Tylannt
+  ["stinkyscape-007", "field", "bubble"], // The Greatest Heist
+  ["stinkyscape-016", "field", "bubble"], // Rod of Ages
+  ["stinkyscape-018", "spell", "bubble"], // Imitated Instrumentality
+  ["stinkyscape-026", "unit", "note"], // ZolarKeth
+  ["stinkyscape-034", "spell", "bubble"], // Drone Core VIII
+  ["stinkyscape-035", "spell", "bubble"], // Drone Core IX
+  ["stinkyscape-036", "spell", "bubble"], // Drone Core X
+  ["stinkyscape-037", "unit", "note"], // Kwzka
+  ["stinkyscape-039", "field", "bubble"], // The Narcor Project
+  ["stinkyscape-044", "spell", "ember"], // Great Paperclip Theory
+  ["stinkyscape-058", "unit", "bubble"], // Beam v5
+  ["stinkyscape-059", "unit", "bubble"], // Repeater v5
+  ["stinkyscape-060", "unit", "bubble"], // Cannon v5
+  ["stinkyscape-061", "unit", "bubble"], // Flak v5
+  ["stinkyscape-066", "unit", "bubble"], // Miner v5
+  ["stinkyscape-070", "unit", "bubble"], // Z'Zoth
+  ["stinkyscape-071", "unit", "bubble"], // A'Zoth
+  ["stinkyscape-073", "unit", "bubble"], // Paragon Mk2
+  ["stinkyscape-074", "unit", "bubble"], // Paragon-X
+  ["stinkyscape-080", "unit", "bubble"], // Galaxy
+  ["stinkyscape-085", "unit", "bubble"], // Prototype-X1
+  ["stinkyscape-086", "unit", "bubble"], // Prototype-X2
+  ["stinkyscape-087", "unit", "heart"], // Siva 1
+  ["stinkyscape-088", "unit", "note"], // Siva 2
+  ["stinkyscape-109", "unit", "note"], // xxFreshJack
+  ["stinkyscape-110", "unit", "note"], // iKwzki
+  ["stinkyscape-111", "unit", "note"], // Shockwave447
+  ["stinkyscape-112", "field", "bubble"], // Job Application
+  ["stinkyscape-115", "unit", "note"], // Scornboi
+  ["stinkyscape-116", "unit", "ember"], // Megabase
+  ["stinkyscape-137", "unit", "note"], // Starfleet Commander
+  ["stinkyscape-147", "unit", "note"], // IN33DH3
+  ["stinkyscape-148", "field", "ember"], // Alteran Reach
+  ["stinkyscape-149", "spell", "bubble"], // Wildar
+  ["stinkyscape-150", "spell", "ember"], // Call to Chaos (Stinky Edition)
+  ["stinkyscape-151", "spell", "ember"], // Call to Chaos (Scape Edition)
+  ["stinkyscape-152", "field", "bubble"], // Sanctum
+  ["stinkyscape-153", "spell", "bubble"], // Stimmycheck
+  ["stinkyscape-176", "spell", "bubble"], // Preemptive Strike
+  ["stinkyscape-t-dormant-starship", "unit", "bubble"], // Dormant Starship
+  ["traininggrounds-037", "spell", "leaf"], // Seance
+  ["traininggrounds-038", "unit", "note"], // Tutorial Master
+  ["traininggrounds-039", "spell", "ember"], // Call to Chaos (Training-Grounds Edition)
+];
+
+const RARE_ART_MOTION: Readonly<Record<string, ArtMotion>> = Object.fromEntries(
+  RARE_CARDS.map(([id, archetype, kind], index) => [id, recipe(archetype, kind, index)] as const),
+);
+
+/**
+ * R2715001, R3340000: every moving art by card id: the 21 full-art cards' own and a recipe for every other Legendary and
+ * Mythic, so none borrows one (`artMotionFor`).
+ */
+export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = { ...FULL_ART_CARD_MOTION, ...RARE_ART_MOTION };
+
 /**
  * R2725004: the particle kinds drawn in a gold or a cream near it (`particleShape`), which a card's borrowed
  * motion never takes: the Animated augment tints no base face's art Radiant's gold.
  */
 export const GOLD_PARTICLES: ReadonlySet<ParticleKind> = new Set(["coin", "spark", "star", "crumb", "confetti"]);
 
-/** R2725000: the motions a card with none of its own may borrow, in `FULL_ART_MOTION`'s order: those with no gold particle. */
-const BORROWED_MOTIONS: readonly ArtMotion[] = Object.values(FULL_ART_MOTION).filter((motion) => !GOLD_PARTICLES.has(motion.particles.kind));
+/**
+ * R2725000: the motions a card with none of its own may borrow, in `FULL_ART_CARD_MOTION`'s order: those with no gold
+ * particle. R3340000: only the 21's, so a card that borrows keeps the motion it borrowed before the rare recipes.
+ */
+const BORROWED_MOTIONS: readonly ArtMotion[] = Object.values(FULL_ART_CARD_MOTION).filter((motion) => !GOLD_PARTICLES.has(motion.particles.kind));
 
 /**
  * R2725000: the moving art `defId` draws at an animated level (R3015002: every animated and signed level of every
@@ -230,10 +412,21 @@ export function motionStyle(motion: ArtMotion | null, subjectOrigin: string): st
     rules.push(roleRule(`.art-m-${role}`, step, role === "subject" ? subjectOrigin : CENTER_ORIGIN));
     used.add(step.move);
   }
-  rules.push(roleRule(".art-m-particle", motion.particles.beat, CENTER_ORIGIN));
-  used.add(motion.particles.beat.move);
+  if (motion.detached !== true) {
+    rules.push(roleRule(".art-m-particle", motion.particles.beat, CENTER_ORIGIN));
+    used.add(motion.particles.beat.move);
+  }
   const frames = [...used].map((move) => `@keyframes art-${move}{${ART_MOVES[move].keyframes}}`).join("");
   return `<style>@media (prefers-reduced-motion: no-preference){${rules.join("")}${frames}}</style>`;
+}
+
+/**
+ * R3340000: the `<style>` of a particle layer drawn on its own (`particleLayerUri`): the rule for the particles and
+ * the keyframes of their move, inside the reduced-motion gate.
+ */
+export function particleStyle(motion: ArtMotion): string {
+  const move = motion.particles.beat.move;
+  return `<style>@media (prefers-reduced-motion: no-preference){${roleRule(".art-m-particle", motion.particles.beat, CENTER_ORIGIN)}@keyframes art-${move}{${ART_MOVES[move].keyframes}}}</style>`;
 }
 
 /** A staggered layer's start: `index` steps of its loop already run, so a row of glyphs never moves as one. */
@@ -298,10 +491,10 @@ function particleShape(kind: ParticleKind, index: number): string {
 /**
  * R2715001: a moving picture's particles, drawn over everything but the vignette: `PARTICLE_COUNT` of
  * `motion`'s kind, placed by a stream of `defId`'s own and staggered along their loop. Empty with no
- * motion.
+ * motion. R3340000: and with a detached one, whose particles are a layer of their own.
  */
 export function particleMarkup(motion: ArtMotion | null, defId: string): string {
-  if (motion === null) return "";
+  if (motion === null || motion.detached === true) return "";
   const rng = seededRandom((hashId(defId) ^ PARTICLE_SALT) >>> 0);
   const { kind, beat: step } = motion.particles;
   const out: string[] = [];

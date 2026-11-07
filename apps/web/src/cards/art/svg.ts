@@ -16,7 +16,7 @@ import type { CardType, Tag } from "@jackioh/shared";
 
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
-import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
+import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, particleStyle, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
 import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
@@ -174,9 +174,9 @@ export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId
 // never served for the card's normal one.
 const proceduralCache = new Map<string, string>();
 
-/** R2715001: what a moving picture's memo key ends with. */
+/** R2715001: what a moving picture's memo key ends with. R3340000: a detached one (no particles in it) keeps its own. */
 function movingKey(motion: ArtMotion | null): string {
-  return motion === null ? "" : "|moving";
+  return motion === null ? "" : motion.detached === true ? "|moving-detached" : "|moving";
 }
 
 /** R2940001, R2942001: what a restyled picture's memo key ends with, so the plain one and the Sketch keep theirs. */
@@ -218,6 +218,26 @@ export function proceduralArtUri(
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
   const svg = artSvg(artSpec(defId, theme, composition, radiant, motif), motion, defId, part);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, defId))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/**
+ * R3340000: a moving face's particles as a picture of their own: the same document box as the art's, `PARTICLE_COUNT` of the
+ * motion's kind placed by `seedId` as `particleMarkup` places them, moving by their own rule inside the reduced-motion
+ * gate, and nothing else, so a live face lays it over its subject and the motes answer the pointer apart from the art.
+ * Cached on the seed, the kind and its beat.
+ */
+export function particleLayerUri(motion: ArtMotion, seedId: string): string {
+  const { kind, beat } = motion.particles;
+  const key = `${seedId}|particles|${kind}|${beat.move}|${beat.seconds}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const svg =
+    `<svg viewBox="0 0 ${ART_BOX} ${ART_BOX}" width="${ART_BOX}" height="${ART_BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    `${particleStyle(motion)}${particleMarkup({ particles: motion.particles }, seedId)}</svg>`;
+  const uri = `${DATA_PREFIX}${encodeSvg(svg)}`;
   proceduralCache.set(key, uri);
   return uri;
 }

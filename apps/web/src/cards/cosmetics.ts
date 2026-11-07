@@ -19,16 +19,15 @@ import {
   createElement,
   useCallback,
   useContext,
-  useEffect,
-  useState,
   useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from "react";
 
 import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
-import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import { useFxSettings } from "../fx/settings.ts";
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
+import { REST_RANK, resetMotionSlotsForTests, useMotionSlot, usePageVisible, type SlotRank } from "./motionSlots.ts";
 import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor } from "./frame.ts";
@@ -599,42 +598,6 @@ export function useOwnsAccountCosmetic(): (id: string) => boolean {
   return useCallback((id) => ownsAccountCosmetic(owned, id), [owned]);
 }
 
-// The cap on moving foils. A face that wants its foil to move claims a slot when it mounts and
-// gives it back when it unmounts or stops wanting it; past COSMETIC_FOIL_ANIMATED_MAX it waits in
-// line, first come first served, and moves once a slot passes to it.
-
-const moving = new Set<symbol>();
-const queued: symbol[] = [];
-const slotListeners = new Set<() => void>();
-
-function notifySlots(): void {
-  for (const listener of [...slotListeners]) listener();
-}
-
-function claimSlot(token: symbol): void {
-  if (moving.size < COSMETIC_FOIL_ANIMATED_MAX) moving.add(token);
-  else queued.push(token);
-  notifySlots();
-}
-
-function releaseSlot(token: symbol): void {
-  moving.delete(token);
-  const waiting = queued.indexOf(token);
-  if (waiting >= 0) queued.splice(waiting, 1);
-  while (moving.size < COSMETIC_FOIL_ANIMATED_MAX && queued.length > 0) {
-    const next = queued.shift();
-    if (next !== undefined) moving.add(next);
-  }
-  notifySlots();
-}
-
-function subscribeSlots(listener: () => void): () => void {
-  slotListeners.add(listener);
-  return () => {
-    slotListeners.delete(listener);
-  };
-}
-
 /**
  * R1833000: the finishes and borders that move (cosmetics.css), each taking a foil's slot: the
  * Legendary and Mythic ones (R1953001: Gilded edge among them).
@@ -652,22 +615,9 @@ export function isChaseCosmetic(id: string): boolean {
   return COSMETICS.find((cosmetic) => cosmetic.id === id)?.chase === true;
 }
 
-/** Whether this face's foil may move now: it wants to, and holds one of the slots. */
+/** Whether this face's foil may move now: it wants to, and holds one of the slots (motionSlots.ts). */
 function useFoilSlot(wanted: boolean): boolean {
-  const [token] = useState(() => Symbol("cosmetic-foil"));
-  useEffect(() => {
-    if (!wanted) return undefined;
-    claimSlot(token);
-    return () => {
-      releaseSlot(token);
-    };
-  }, [wanted, token]);
-  const holds = useSyncExternalStore(
-    subscribeSlots,
-    () => moving.has(token),
-    () => false,
-  );
-  return wanted && holds;
+  return useMotionSlot(wanted, REST_RANK);
 }
 
 /**
@@ -675,11 +625,17 @@ function useFoilSlot(wanted: boolean): boolean {
  * Mythic face, full layout, Animated foil on, not a lazy grid face), neither the Reduce motion setting
  * nor the system asks for reduced motion, and it holds one of the foil's slots. R2944002: or an Immersive
  * face's depth, in the same slot, one per face whether it is Animated or not. Its hooks run on every face.
+ * R3340000: the slots are ranked by `rank` (motionSlots.ts), the hand's and the board's alike; a hidden tab holds every
+ * face still, so frees its slots; Fx intensity "Off" and the Effects setting's Reduce motion do too, and at "Low" only a
+ * face that ranks first, a Mythic or a Legendary may claim.
  */
-export function useArtMotion(wanted: boolean): boolean {
+export function useArtMotion(wanted: boolean, rank: SlotRank = REST_RANK): boolean {
   const panel = useSetting("reduceMotion");
   const system = useOsReducedMotion();
-  return useFoilSlot(wanted && !panel && !system);
+  const visible = usePageVisible();
+  const [{ intensity, motion }] = useFxSettings();
+  const allowed = motion === "reduce" || intensity === "off" ? false : intensity === "low" ? rank.hovered || rank.rarity !== null : true;
+  return useMotionSlot(wanted && !panel && !system && visible && allowed, rank);
 }
 
 /** The attributes a face wears for its cosmetics: none at all for the defaults. */
@@ -727,7 +683,5 @@ export function resetCosmeticsForTests(): void {
   cardPickWriteListeners.clear();
   if (storageListening) window.removeEventListener("storage", onCosmeticsStorage);
   storageListening = false;
-  moving.clear();
-  queued.length = 0;
-  slotListeners.clear();
+  resetMotionSlotsForTests();
 }

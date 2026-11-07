@@ -196,3 +196,9 @@ export const HAND_ART_GROW_CQH = 4;
  * reading floor fit it.
  */
 export const HAND_TEXT_BOX_MIN_CQH = 12;
+
+/**
+ * R3340000: how many steps a unit's missing health is cut into on its art (wear.ts `damageLevel`): each step shows one more
+ * crack, from the first (some health gone) to the last (a quarter of it left or less).
+ */
+export const ART_WEAR_LEVELS = 4;

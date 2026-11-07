@@ -72,6 +72,10 @@
 // R3046000: a compact face (a face-up backrow card) prints full art too: the art across the face, still, and its name in
 // a band below the art, with the cost gem, the rarity gem and set mark, the crest and the states over it and no type line
 // (`data-full-art` on a compact face, cards.css; fullArt.ts `boardLookOf`). A compact face that is not full art keeps its window.
+// R3340000: a compact face in play (`onBoard`) moves its art when its card wears an animated or signed level or is a Mythic, as
+// a full face does, drawing no signature, sweep or drift, taking a motion slot ranked by the pointer, focus and rarity
+// (`useArtMotion`, motionSlots.ts), and answers the pointer and a press (artLive.ts, `data-art-hover`): a hovered one claims a
+// slot to answer in. Its art is in layers while it moves (CardArt `live`).
 //
 // R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
 // (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
@@ -98,7 +102,9 @@ import { CardArt, type ArtShape } from "./art/index.ts";
 import { hasArtParts } from "./art/CardArt.tsx";
 import { showcaseFamilyOf } from "./art/pictures.ts";
 import { CardStates } from "./CardStates.tsx";
+import { useArtLive } from "./artLive.ts";
 import { useImmersiveShift } from "./immersive.ts";
+import { slotRarityOf } from "./motionSlots.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
 import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
@@ -350,16 +356,24 @@ export function CardFace({
   const tier = full ? tierOfLook(look) : null;
   // R2725003: an animated full art lays the band over it and drifts it. R3015002: a signed level signs the name
   // across its full art, but in the viewer's own hand.
-  const moving = fullArt && look.animated;
-  const signed = fullArt && look.signed && !bare;
+  // R3340000: a compact face's look carries the flags, its art moving by them (`artMoves`); only a full face sweeps and signs.
+  const moving = full && fullArt && look.animated;
+  const signed = full && fullArt && look.signed && !bare;
   // R2943001: a Starship in play's and a Legacy card's pictures have no parts.
   const starship = face.inPlay ? face.starship : null;
   // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
   const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
   // R2715001: an Animated look moves its art's own layers while a slot is theirs. R2944002: Immersive's depth moves in
-  // the same slot, one per face, Animated or not.
-  const artMoves = look.animated;
-  const artMotion = useArtMotion((artMoves || immersive) && settings.animatedFoil && !lazyArt);
+  // the same slot, one per face, Animated or not. R3340000: a card in play moves its art for an animated or signed level and
+  // for a Mythic; a hovered or focused one claims a slot to answer in, ranked first (motionSlots.ts).
+  const board = !full && onBoard;
+  const artMoves = full ? look.animated : board && (cardLook.animated || rarity === "Mythic");
+  const live = useArtLive(faceRef, artMoves || board);
+  const engaged = board && live.hovered;
+  const artMotion = useArtMotion((artMoves || immersive || engaged) && settings.animatedFoil && !lazyArt && live.onScreen, {
+    hovered: live.hovered,
+    rarity: slotRarityOf(rarity),
+  });
   useImmersiveShift(faceRef, immersive && artMotion);
   // R2942001: Extended art's picture runs past its window across the face; Pixel sets the name in its pixel face, when
   // the face has every character of it and it is short enough to read (`PIXEL_NAME_MAX_GLYPHS`; a small face prints
@@ -372,7 +386,7 @@ export function CardFace({
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
   // R3015002: one picture per variant at every level, and its own motion at every animated one.
   const picture = artPictureOf(look.version, face.set);
-  const motion = artMotion && artMoves ? artMotionOf(face.defId) : null;
+  const motion = artMotion && (artMoves || engaged) ? artMotionOf(face.defId) : null;
 
   return (
     <span
@@ -398,7 +412,8 @@ export function CardFace({
       data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
-      data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (artMotion ? "animated" : "static") : undefined}
+      data-art-hover={board ? (live.hovered ? "true" : "false") : undefined}
       data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
       {...cosmetics}
       style={scales}
@@ -446,6 +461,7 @@ export function CardFace({
               picture={picture}
               motion={motion}
               part={outOfFrame || immersive ? "backdrop" : "whole"}
+              live={board && motion !== null}
             />
           )}
           {outOfFrame && (

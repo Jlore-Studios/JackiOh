@@ -4,7 +4,8 @@
 // vortex spiral with its mask retuned to the same visible arms), the Starship launch, the Drone
 // Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
 // visible disc), and a board with 4 auras. R3332001: Felinor Fiender's signature, the first, over the
-// gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3340000: a board of
+// six moving faces (every Mythic's art moves on the board, in the six motion slots).
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -275,6 +276,21 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
     cy.get(GAME).should("not.have.attr", "data-set-piece");
+  });
+
+  it("R3340000 a board of six moving faces holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    // The fixture's opponent already fields Ceaseless Void, a Mythic; five Mythic Units of ours make the six faces whose art moves.
+    const view = fullBoardView();
+    const MYTHICS = ["meditative-049", "stinkyscape-006", "stinkyscape-074", "stinkyscape-086", "stinkyscape-109"];
+    view.you.units = MYTHICS.map((defId) => unit("p1", { defId }));
+    holdsBudget("Six moving faces", () => {
+      mountScene(view, view, []);
+      cy.get('[data-art-motion="animated"]', { timeout: 4_000 }).should("have.length", 6);
+      cy.get('[data-art-motion="animated"] [data-art-moving="true"]').should("have.length", 6);
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
   });
 
   it("R2803000 a board with 4 auras holds the phone frame budget", () => {

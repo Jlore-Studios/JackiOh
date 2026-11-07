@@ -343,13 +343,13 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     expect(mythicOn?.getAttribute("data-cosmetic-foil")).toBeNull();
   });
 
-  it("R1295000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, and a freed slot passes on", () => {
+  it("R1295000 R3340000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, the newest first, and a freed slot passes on", () => {
     wearOn("core-004", { foil: PICKS.foil });
     const count = COSMETIC_FOIL_ANIMATED_MAX + 2;
-    const hand = (from: number) => (
+    const hand = (to: number) => (
       <>
-        {Array.from({ length: count - from }, (_unused, index) => (
-          <span key={from + index} data-n={from + index}>
+        {Array.from({ length: to }, (_unused, index) => (
+          <span key={index} data-n={index}>
             <CardFace face={face("core-004")} worn />
           </span>
         ))}
@@ -358,16 +358,18 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     const motions = (container: HTMLElement): string[] =>
       [...container.querySelectorAll<HTMLElement>("[data-n] > .cf")].map((element) => element.getAttribute("data-cosmetic-motion") ?? "");
 
-    const { container, rerender } = render(hand(0));
+    const { container, rerender } = render(hand(count));
+    // R3340000: the slots go to the newest faces of a rank, so the oldest two hold still.
     expect(motions(container)).toEqual([
+      "static",
+      "static",
       ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
-      "static",
-      "static",
     ]);
     expect(container.querySelectorAll(`[data-cosmetic-foil="${PICKS.foil}"]`)).toHaveLength(count);
 
-    rerender(hand(1));
-    expect(motions(container)).toEqual([...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"]);
+    // The newest leaves: its slot passes on at once, to the newest face without one.
+    rerender(hand(count - 1));
+    expect(motions(container)).toEqual(["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")]);
   });
 
   it("R1295000 with Animated foil off a worn foil holds still", () => {
@@ -1080,7 +1082,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     );
   });
 
-  it("R1833000 a face wearing a moving finish or border claims a motion slot, and a still one claims none", () => {
+  it("R1833000 R3340000 a face wearing a moving finish or border claims a motion slot, and a still one claims none", () => {
     wearOn("core-004", { finish: "finish-starlit" });
     const once = (): HTMLElement => root(render(<CardFace face={face("core-004")} worn />).container);
     let cf = once();
@@ -1098,7 +1100,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     expect(cf.getAttribute("data-cosmetic-motion")).toBeNull();
     cleanup();
 
-    // The cap is the foils': past COSMETIC_FOIL_ANIMATED_MAX faces a moving border holds still.
+    // The cap is the foils': past COSMETIC_FOIL_ANIMATED_MAX faces a moving border holds still, R3340000: the oldest one's.
     wearOn("core-004", { border: "border-filigree" });
     const { container } = render(
       <>
@@ -1108,7 +1110,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
       </>,
     );
     const motions = [...container.querySelectorAll<HTMLElement>(".cf")].map((element) => element.getAttribute("data-cosmetic-motion"));
-    expect(motions).toEqual([...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"]);
+    expect(motions).toEqual(["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")]);
     cleanup();
 
     writeCardSettings({ animatedFoil: false });
@@ -1236,7 +1238,7 @@ describe("R2720000 every finish on a full-art face", () => {
     }
   });
 
-  it("R2720000 a full-art face wearing Gilded edge, Obsidian or Starlit moves it in a motion slot, and holds it still past the cap and with Animated foil off", () => {
+  it("R2720000 R3340000 a full-art face wearing Gilded edge, Obsidian or Starlit moves it in a motion slot, and holds it still past the cap and with Animated foil off", () => {
     for (const id of ANIMATED) {
       expect(MOVING_FINISHES_AND_BORDERS.has(id), `${id} takes a motion slot`).toBe(true);
       const moving = gatedRules(cosmeticsCss).find(
@@ -1263,8 +1265,8 @@ describe("R2720000 every finish on a full-art face", () => {
     expect(faces).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX + 1);
     for (const element of faces) expect(element.getAttribute("data-full-art"), "a full face is full art").toBe("true");
     expect(faces.map((element) => element.getAttribute("data-cosmetic-motion"))).toEqual([
-      ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
       "static",
+      ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
     ]);
     cleanup();
 

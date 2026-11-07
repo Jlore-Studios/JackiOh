@@ -471,7 +471,7 @@ export default function Card(props: CardProps): ReactElement {
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} />
+        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
       ) : (
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
         // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.

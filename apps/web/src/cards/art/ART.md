@@ -122,7 +122,36 @@ picture, transform and opacity only, behind `prefers-reduced-motion`. Without a 
 byte for byte the still one. Every animated level and the signed one above it wear it (R3015002, as the
 Animated art, the Legendary and the Mythic did, R2715000), a few faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
 version, so delivering a full-art card's file means delivering its motion too, or the card stops
-moving.
+moving. R3340000: the 21 full-art cards' recipes are hand-written and every other Legendary and Mythic has
+one of its own (`RARE_ART_MOTION`, built by `recipe` from the card's type, tags and set, none drawing a gold
+particle: R2725004), so no Legendary or Mythic borrows a motion by id; `motion.test.ts` lists the ones that
+still would and holds the list empty. Every card keeps the motion it borrowed before.
+
+## Art that lives in play (R3340000)
+
+A card on the board moves its art too, and answers the player (`artLive.ts`, `art/artLive.css`).
+
+- **Who moves.** A board face (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) moves its art for an
+  animated or signed level and for every Mythic, in any look, in the one budget of motion slots the hand shares
+  (`motionSlots.ts`, `COSMETIC_FOIL_ANIMATED_MAX`). The slots go to the face under the pointer or focus (and an
+  attacker), then Mythics newest first, Legendaries, then the rest newest first; a freed slot passes on in the same
+  tick; a hidden tab and a face off screen hold still. `animatedFoil`, Reduce motion, the system's setting and Fx
+  intensity (`off` stills all, `low` leaves the first, the Mythics and the Legendaries) still rule. A face that holds
+  no slot draws its still picture.
+- **The layer stack.** A moving board face draws its picture three times, one image each (`CardArt` `live`): the
+  backdrop on `.cf-art` itself (the painter's `part` "backdrop" with a *detached* motion, which draws no particles),
+  the subject over it (`.cf-art-subject`, part "subject") and the motes (`.cf-art-motes`, `particleLayerUri`: the
+  particles alone). So every painter's roles, subject, light and motes, give every card the reactions, and a recipe
+  needs nothing of its own for them. A picture with no parts (a delivered file, a restyle, a Starship's, a Legacy
+  card's, a Battleship's) stays one image and answers as a whole.
+- **The reactions.** Hover or focus: the subject turns and leans toward the pointer (`--art-aim-x`/`-y` from
+  `aimOf`), the motes scatter and settle. Press: the subject flinches (`scale`) and springs back on the overshoot
+  curve. `attackDeclared`: the subject swings on the attack's own `--fx-lunge-x/y` and the motes fire. All in
+  `rotate`, `translate`, `scale` and `opacity`, inside the reduced-motion gate, with `motion.css`'s times and curves.
+- **The marks.** A Unit's art wears cracks for the health it is missing (`wear.ts`: `damageLevel`, one more of
+  `ART_WEAR_LEVELS` steps each time, each crack grown from the card's id so a level's cracks start the next
+  level's), a glow in its card's theme colour when buffed (`--art-glow`) and frost when frozen
+  (`ArtWear.tsx`). They read the view's numbers and keywords only, and are still drawings: reduced motion keeps them.
 
 ## Pictures (R2940001)
 

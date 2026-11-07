@@ -531,7 +531,7 @@ describe("R2715001 the moving art", () => {
     }
   });
 
-  it("R2715001 past COSMETIC_FOIL_ANIMATED_MAX moving faces the rest hold still", () => {
+  it("R2715001 R3340000 past COSMETIC_FOIL_ANIMATED_MAX moving faces the rest hold still", () => {
     writeCardFullArt(VANILLA, idOf(VANILLA, "Animated"));
     const face = faceOf(VANILLA);
     const { container } = render(
@@ -542,7 +542,8 @@ describe("R2715001 the moving art", () => {
       </FullArtOwned>,
     );
     const motions = [...container.querySelectorAll<HTMLElement>(".cf")].map((cf) => cf.getAttribute("data-art-motion"));
-    expect(motions).toEqual([...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"]);
+    // R3340000: the slots go to the newest faces of a rank, so the oldest holds still.
+    expect(motions).toEqual(["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")]);
     expect(container.querySelectorAll('.cf-art[data-art-moving="true"]')).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX);
   });
 
