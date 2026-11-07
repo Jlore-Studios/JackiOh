@@ -367,17 +367,23 @@ function burst(c: Ctx, preset: FxPreset, at: FxAnchor, spread: "point" | "area" 
   return colors === undefined ? cue : { ...cue, colors };
 }
 
-function planFuse(fuse: StarshipFuse, entry: AnimationEntry, view: PlayerView, c: Ctx): SetPiecePlan | null {
+function planFuse(fuse: StarshipFuse, entry: AnimationEntry, view: PlayerView, next: PlayerView | undefined, c: Ctx): SetPiecePlan | null {
   if (fuse.anchor === null || fuse.pieces.length === 0) return null;
   const { i, D } = c;
   const look = rocketLook();
   const to = tid(fuse.anchor);
   const n = fuse.pieces.length;
   const graveyard = tid(animTestid.graveyard(sideOf(view, fuse.player)));
-  // The list the ship holds after the run: the view's pieces, then each fusion's, in order.
+  // The list the ship holds after the run: the pieces it held before the run (`fuse.count - n` of them),
+  // then each fusion's, in order. The entry's view is the board before the whole action, so a second
+  // fuse run of one action (a later death pass's) finds the earlier runs' pieces only on the view after
+  // it (`next`): the earlier pieces are the first of those, as the ship holds them in the order they fused.
   const fusions = entry.events.filter((event): event is Extract<GameEvent, { type: "starshipFused" }> => event.type === "starshipFused");
   const held = starshipUnitOf(view, fuse.shipId)?.unit;
-  const before = (held?.starship.pieces ?? []).map((record) => ({ defId: record.defId, radiant: record.radiant === true }));
+  const prior = Math.max(0, fuse.count - n);
+  const shown = (on: PlayerView | undefined) => (on === undefined ? undefined : starshipUnitOf(on, fuse.shipId)?.unit.starship.pieces);
+  const records = [shown(next), held?.starship.pieces].find((pieces) => pieces !== undefined && pieces.length >= prior) ?? held?.starship.pieces ?? [];
+  const before = records.slice(0, prior).map((record) => ({ defId: record.defId, radiant: record.radiant === true }));
   const list = [...before, ...fusions.map((event) => ({ defId: event.defId, radiant: false }))];
   const ship = starshipArtOf(list, false, undefined, held?.radiant ?? false);
   const mounts = starshipMountPoints(ship);
@@ -708,7 +714,7 @@ function planDoctrine(event: Extract<GameEvent, { type: "cardPlayed" }>, view: P
   };
 }
 
-type StarshipEnv = Pick<FxPlanEnv, "intensity"> & Partial<Pick<FxPlanEnv, "bigMoments" | "compact">>;
+type StarshipEnv = Pick<FxPlanEnv, "intensity"> & Partial<Pick<FxPlanEnv, "bigMoments" | "compact" | "next">>;
 
 /**
  * R2801000, R3334000–R3334003: the Starship's cues for a fuse run, a launch, a launched Starship's
@@ -721,7 +727,7 @@ export function planStarship(entry: AnimationEntry, view: PlayerView, env: Stars
   const D = entry.durationMs;
   if (!(i > 0) || !(D > 0)) return null;
   const c: Ctx = { i, D, share: env.compact === true ? STARSHIP_CINEMATIC.phoneShare : 1 };
-  if (entry.fuse !== undefined) return planFuse(entry.fuse, entry, view, c);
+  if (entry.fuse !== undefined) return planFuse(entry.fuse, entry, view, env.next, c);
   if (entry.launch !== undefined) return planLaunch(entry.launch, entry, view, env, c);
   const first = entry.events[0];
   if (first?.type === "attackDeclared") return planBroadside(first, entry, view, c);

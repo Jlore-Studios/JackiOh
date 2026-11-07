@@ -170,6 +170,32 @@ describe("R3334000 docking", () => {
     }
   });
 
+  it("R3334000 two fuse runs of one action dock on the hardpoints of the list each run leaves", () => {
+    // Pieces B and C die in two death passes of one action, a damage between them: two fuse runs, both
+    // planned on the board before the action (the ship holds [A]), the board after it holding [A, B, C].
+    const held = [BEAM] as const;
+    const fused = [CANNON, FRUIT] as const;
+    const pieces = fused.map((defId, k) => unit("p1", { instanceId: `piece-${String(k)}`, defId, attack: 0 }));
+    const view = dormantBoard(held, pieces);
+    const after = dormantBoard([...held, ...fused]);
+    const [first, second] = [fusions(1, [CANNON], ["piece-0"]), fusions(2, [FRUIT], ["piece-1"])];
+    const events: GameEvent[] = [...(first ?? []), { type: "damage", sourceId: null, targetId: "foe", amount: 1, combat: false }, ...(second ?? [])];
+    const runs = planEntries(events, view, false, createPlayTracker()).filter((e) => e.fuse !== undefined);
+    expect(runs).toHaveLength(2);
+    runs.forEach((entry, k) => {
+      expect(entry.view).toBe(view);
+      const cues = planStarship(entry, entry.view, env({ next: after }))?.cues ?? [];
+      const dock = cues.find((c): c is FxModuleCue => c.kind === "module");
+      const weld = cues.find((c): c is FxWeldCue => c.kind === "weld");
+      // Run k leaves the ship holding A and the first k + 1 fused pieces; its piece docks on the last of them.
+      const list = [...held, ...fused.slice(0, k + 1)];
+      const point = starshipMountPoints(starshipArtOf(list.map((defId) => ({ defId, radiant: false })), false, undefined, false))[list.length - 1];
+      expect(dock?.to, `run ${String(k)}`).toEqual({ kind: "testid", testid: testid.card("ship"), at: { x: (point?.x ?? 0) / 100, y: (point?.y ?? 0) / 100 }, art: "picture" });
+      // The picture agrees with the hum (and the dock's sound): both count the pieces after the run.
+      expect(weld?.hum).toBe(Math.min(1, list.length / STARSHIP_DOCK.humFull));
+    });
+  });
+
   it("R3334000 R202 no defId; hidden ship plans nothing", () => {
     const pieces = [unit("p1", { instanceId: "piece-0", defId: JADE, attack: 0 })];
     const view = dormantBoard([BEAM], pieces);
