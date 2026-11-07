@@ -18230,6 +18230,18 @@
     "3360": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "at": "2026-11-07T05:05:17Z",
+        "built_by": "claude-6",
+        "by": "`claude` (strong)",
+        "sha": "cdc639036ba937c1fe178ed2becf5e760e31ac68"
+      },
       "cross_rounds": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -18246,6 +18258,7 @@
       "issue": 3333,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-07T04:53:05Z",
