@@ -62,7 +62,7 @@ function renderZone(view: PlayerView, highlight?: Parameters<typeof Zone>[0]["hi
 }
 
 describe("R3342000 TileAura component", () => {
-  it("R3342000 the aura is the zone's first child with tier, look, pattern; no defId appears in HTML", () => {
+  it("R3342000 the aura is the zone's first child with tier, look, pattern; no defId leaks into HTML", () => {
     // core-100 is a Mythic unit
     const view = baseView({
       you: emptySide("p1", { units: [unit("p1", { defId: "core-100", instanceId: "u-mythic-1" })] }),
