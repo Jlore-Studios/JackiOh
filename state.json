@@ -18301,24 +18301,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-6",
+        "built_by": "claude-4",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-4",
-            "run": "42340381915",
-            "tier": "strong"
-          }
-        ],
-        "sha": "cdc639036ba937c1fe178ed2becf5e760e31ac68",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "19f8d2543ae077785606358e777409f4758d76ca",
+        "tiers": {}
       }
     },
     "3361": {
