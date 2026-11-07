@@ -30,6 +30,7 @@ import { useRef, type ReactElement } from "react";
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -178,6 +179,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             type={face.type}
             shape={look === null ? "oval" : "full"}
             starship={face.starship}
+            ship={shipArtOf(face.defId, unit)}
             picture={look === null ? "normal" : artPictureOf(look.version, face.set)}
           />
         </span>

@@ -19,6 +19,8 @@
 // picture of its own, seeded apart as Alt art's is, under its treatment; a Starship's art and a Legacy card's keep their
 // one picture under it. Woodcut ("woodcut") and Neon sign ("neon") restyle the window's picture as Pixel does. Each draws
 // the painter's in place of a delivered file.
+// R3336000: a Drone Battleship layer on the board (`ship`, stinkyscape.ts `shipArtOf`) draws the decks of its ship still
+// standing, `data-art-decks`; its printed card draws its own deck large with the other two faint.
 // R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
 // (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
 
@@ -33,7 +35,7 @@ import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
-import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
+import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
 import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
@@ -61,6 +63,8 @@ export type CardArtProps = {
   picture?: ArtPicture;
   /** R2943001: which part of the picture the window draws (pictures.ts `ArtPart`); "whole" by default. */
   part?: ArtPart;
+  /** R3336000: a Drone Battleship layer on the board (`shipArtOf`) draws the decks of its ship still standing; null draws its printed picture. */
+  ship?: ShipArt | null;
 };
 
 /**
@@ -90,6 +94,7 @@ export function CardArt({
   motion = null,
   picture = "normal",
   part = "whole",
+  ship = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -155,7 +160,7 @@ export function CardArt({
     : starship !== null
       ? starshipArtUri(starship.pieces, starship.launched, radiant, restyle)
       : stinky
-        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
+        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split, ship)
         : yard
           ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
           : coreId !== null
@@ -183,6 +188,7 @@ export function CardArt({
       data-art-family={family}
       data-art-picture={ownPicture || restyle !== null ? picture : undefined}
       data-art-part={split === "whole" ? undefined : split}
+      data-art-decks={stinky ? (shipDecksOf(defId, ship) ?? undefined) : undefined}
       data-art-pending={uri === null ? "true" : undefined}
       data-art-moving={uri !== null && starship === null && coreId === null && motion !== null ? "true" : undefined}
       aria-hidden="true"

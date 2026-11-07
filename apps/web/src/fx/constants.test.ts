@@ -303,6 +303,25 @@ const S2 = {
   FX_STARSHIP_BADGE_AT: { x: 0.5, y: 0.36 },
   FX_STARSHIP_TAIL_MS: 400,
   FX_STARSHIP_STILL_MS: 1_600,
+  FX_SHIP_PLATES_MAX: 8,
+  FX_SHIP_DOME_AT: { x: 0.5, y: 0.22 },
+  FX_SHIP_CORE_AT: { x: 0.5, y: 0.62 },
+  FX_SHIP_BAY_AT: { x: 0.5, y: 0.5 },
+  FX_SHIP_RIPPLES: 2,
+  FX_SHIP_RIPPLE_STEP: 0.2,
+  FX_SHIP_LAUNCH_AT: 0.1,
+  FX_SHIP_INTERCEPTOR_FLIGHT: 0.45,
+  FX_SHIP_CORVETTE_FLIGHT: 0.85,
+  FX_SHIP_LIGHTS_AT: 0.5,
+  FX_SHIP_TAIL_MS: 400,
+  FX_SHIP_ARRIVAL_BEATS: 3,
+  FX_SHIP_LOCK_TRAUMA: 0.35,
+  FX_SHIP_DOME_TRAUMA: 0.3,
+  FX_SHIP_HIT_TRAUMA: 0.25,
+  FX_SHIP_CORVETTE_TRAUMA: 0.2,
+  FX_SHIP_TICK_TRAUMA: 0.3,
+  FX_SHIP_BREAK_TRAUMA: 0.45,
+  FX_SHIP_BLAST_TRAUMA: 0.95,
   FX_JADE_SCALE_STEP: 0.15,
   FX_JADE_SCALE_MAX: 2,
   FX_SETTINGS_KEY: "jackioh.fx.v1",
@@ -370,6 +389,12 @@ describe("S2 the effects constants", () => {
       constants.FX_STARSHIP_IGNITE_AT,
       constants.FX_STARSHIP_LIFT_AT,
       constants.FX_STARSHIP_LAND_AT,
+      // R3336000: the Battleship's ripple step, drone launch and flights, and the lights of the deck beneath.
+      constants.FX_SHIP_RIPPLE_STEP,
+      constants.FX_SHIP_LAUNCH_AT,
+      constants.FX_SHIP_INTERCEPTOR_FLIGHT,
+      constants.FX_SHIP_CORVETTE_FLIGHT,
+      constants.FX_SHIP_LIGHTS_AT,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -389,6 +414,13 @@ describe("S2 the effects constants", () => {
     for (let k = 1; k < counts.length; k += 1) expect(counts[k]).toBeGreaterThan(counts[k - 1] ?? 1);
     expect(counts[counts.length - 1]).toBeLessThan(constants.FX_STARSHIP_IGNITE_AT);
     expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    // R3336000: the Battleship's tail stays inside FX_MAX_TAIL_MS (R200), a Corvette flies slower than an Interceptor, and the shake stays a trauma.
+    expect(constants.FX_SHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_SHIP_CORVETTE_FLIGHT).toBeGreaterThan(constants.FX_SHIP_INTERCEPTOR_FLIGHT);
+    for (const trauma of [constants.FX_SHIP_LOCK_TRAUMA, constants.FX_SHIP_DOME_TRAUMA, constants.FX_SHIP_HIT_TRAUMA, constants.FX_SHIP_CORVETTE_TRAUMA, constants.FX_SHIP_TICK_TRAUMA, constants.FX_SHIP_BREAK_TRAUMA]) {
+      expect(trauma).toBeLessThan(constants.FX_SHIP_BLAST_TRAUMA);
+    }
+    expect(constants.FX_SHIP_BLAST_TRAUMA).toBeLessThanOrEqual(1);
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
     // #1446: a Beast's streak leaves at the embers' beat and lands inside its entry.

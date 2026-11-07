@@ -30,6 +30,8 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // R3336000: the Drone Battleship.
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -116,6 +118,12 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
