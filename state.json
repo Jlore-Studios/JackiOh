@@ -17765,7 +17765,7 @@
     "what": "revise #3375 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-07T21:46:39Z",
+    "at": "2026-11-07T21:55:23Z",
     "notes": [
       "#3400 is held for `claude-8` until 16:00 (it refused a call)",
       "#3402 is held for `claude-3` until 17:00 (it refused a call)",
@@ -17774,7 +17774,7 @@
       "#3392 is held for `claude-3` until 17:00 (it refused a call)",
       "#3393 is held for `claude-3` until 17:00 (it refused a call)",
       "#3405 is held for `claude-3` until 17:00 (it refused a call)",
-      "delivered revise #3380 on claude-4 (run 42413312196): approved"
+      "#3418: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18480,7 +18480,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T21:46:39Z",
+  "loop_tick": "2026-11-07T21:55:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
