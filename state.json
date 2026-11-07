@@ -17727,6 +17727,18 @@
       "ci_on_head": true,
       "ci_run_id": 42317848372,
       "ci_sha": "3c007b876ae86c1d9f52f2bab55aa8f26f71441b",
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "at": "2026-11-07T03:43:03Z",
+        "built_by": "claude-6",
+        "by": "`claude` (strong)",
+        "sha": "bbf8cccef2699035c85615c9309661a20e504779"
+      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -17746,6 +17758,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
