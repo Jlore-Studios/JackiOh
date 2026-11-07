@@ -20544,6 +20544,10 @@
         {
           "at": "2026-11-07T09:39:17Z",
           "minutes": 206.9
+        },
+        {
+          "at": "2026-11-07T10:17:48Z",
+          "minutes": 34.7
         }
       ],
       "tokens_spent": [
@@ -20742,17 +20746,24 @@
           "cost": 0.0,
           "input": 2290257,
           "output": 147903
+        },
+        {
+          "at": "2026-11-07T10:17:48Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 401320,
+          "output": 47543
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-07T09:59:56Z",
-          "utilization": 0.67
+          "resets_at": "2026-11-07T14:59:56Z",
+          "utilization": 0.02
         },
-        "observed_at": "2026-11-07T09:39:17Z",
+        "observed_at": "2026-11-07T10:17:48Z",
         "seven_day": {
           "resets_at": "2026-11-13T23:59:56Z",
-          "utilization": 0.48
+          "utilization": 0.5
         },
         "status": "allowed"
       }
@@ -36758,7 +36769,12 @@
       "2026-11-07T09:11:09Z,claude-3,stream,call,42353015557,94,2026-11-07T12:50:00Z,,,allowed_warning,,,",
       "2026-11-07T09:18:39Z,claude-3,stream,call,42353015557,96,2026-11-07T12:50:00Z,,,allowed_warning,,,",
       "2026-11-07T09:18:54Z,claude-3,stream,call,42353015557,97,2026-11-07T12:50:00Z,,,allowed_warning,,,",
-      "2026-11-07T09:24:39Z,claude-3,stream,call,42353015557,99,2026-11-07T12:50:00Z,,,allowed_warning,,,"
+      "2026-11-07T09:24:39Z,claude-3,stream,call,42353015557,99,2026-11-07T12:50:00Z,,,allowed_warning,,,",
+      "2026-11-07T09:41:03Z,agy,usage-command,before,42360742977,67,2026-11-07T09:59:56Z,48,2026-11-13T23:59:56Z,allowed,100,100,",
+      "2026-11-07T09:51:18Z,agy,usage-command,call,42360742977,70,2026-11-07T09:59:56Z,49,2026-11-13T23:59:56Z,allowed,100,100,",
+      "2026-11-07T10:01:20Z,agy,usage-command,call,42360742977,0,2026-11-07T14:59:56Z,49,2026-11-13T23:59:56Z,allowed,100,100,",
+      "2026-11-07T10:07:25Z,agy,usage-command,after,42360742977,1,2026-11-07T14:59:56Z,49,2026-11-13T23:59:56Z,allowed,100,100,",
+      "2026-11-07T10:16:15Z,agy,usage-command,after,42360742977,2,2026-11-07T14:59:56Z,50,2026-11-13T23:59:56Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-07T09:41:11Z,42352979758,claude-3,opus,build,3343,hard,built,,92.2,445,153475,69428753,36.0071,1,99,,,477.2,claude-3,fresh,,1",
