@@ -66,7 +66,7 @@ function CollectionCardTile({
       }}
     >
       <span className="collection-card__face">
-        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} />
+        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} tilt="host" />
       </span>
       {owned ? null : (
         <span className="collection-card__lock" aria-hidden="true">

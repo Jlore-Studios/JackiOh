@@ -485,6 +485,7 @@ export default function Card(props: CardProps): ReactElement {
             ownHand={worn && props.inOwnHand === true}
             onBoard={form === "compact"}
             gemDrain={gemDrain}
+            tilt="host"
           />
         </TermTips>
       )}

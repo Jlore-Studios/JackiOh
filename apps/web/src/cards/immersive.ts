@@ -20,8 +20,8 @@ const SHIFT_DIGITS = 3;
 /** R2944002: how far the near layer shifts, each way, from -1 (left, up) through 0 (its rest) to 1 (right, down). */
 export type ImmersiveShift = { x: number; y: number };
 
-/** `value` held to -1 to 1, and 0 for no number. */
-function unitClamp(value: number): number {
+/** `value` held to -1 to 1, and 0 for no number. R3344001: tilt.ts holds its poses so too. */
+export function unitClamp(value: number): number {
   return Number.isFinite(value) ? Math.min(1, Math.max(-1, value)) : 0;
 }
 
