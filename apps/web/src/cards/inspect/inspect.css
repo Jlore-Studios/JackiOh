@@ -340,6 +340,8 @@
   justify-content: center;
   gap: 12px;
   width: 100%;
+  /* R3221000: the face starts under the ✕ at the top right (DialogClose), as the detail's does. */
+  padding-top: var(--space-10);
 }
 
 /* #3341: PREVIEW_SHEET_HEIGHT_PX and PREVIEW_SHEET_SHARE; the third term keeps the face, 5:7, inside a narrow phone's
@@ -673,11 +675,10 @@
 }
 
 @media (max-height: 500px) and (min-width: 601px) {
-  /* The touch sheet the same way: stacked, the card shrank to 56% of the screen's height to leave
-     Close a row of its own. Here the card takes the sheet's full height, and the glossary and
-     Close stand beside it. */
+  /* The touch sheet the same way: stacked, the card shrank to 56% of the screen's height. Here the
+     card takes the sheet's full height, and the glossary stands beside it. */
   /* The right column holds, top down, whichever the face has of its states (StateNotes.tsx), its
-     printed text, its glossary, its flavour line (R660), its lines of code and Close: each is placed in column 2 and flows
+     printed text, its glossary, its flavour line (R660) and its lines of code: each is placed in column 2 and flows
      into the next free row, the face spans every row, and the last row takes the slack. */
   .inspect-sheet {
     display: grid;
@@ -686,6 +687,8 @@
     justify-content: center;
     align-items: start;
     gap: 12px 16px;
+    /* R3221000: the right column keeps clear of the ✕ at the sheet's top right (DialogClose). */
+    padding-right: max(calc(var(--space-11) + var(--space-7)), env(safe-area-inset-right));
   }
 
   .inspect-grip {
@@ -712,11 +715,6 @@
   .inspect-sheet .inspect-loc {
     grid-column: 2;
     max-width: none;
-  }
-
-  .inspect-sheet .inspect-close {
-    grid-column: 2;
-    justify-self: start;
   }
 }
 
@@ -1106,6 +1104,13 @@
 
 .inspect-list-sheet .inspect-list-title {
   font-size: 17px;
+}
+
+/* R3221000: the header keeps clear of the ✕ at the sheet's top right (DialogClose) and is as tall as it,
+   so the grid starts under it. */
+.inspect-list-sheet .inspect-list-head {
+  min-height: var(--space-11);
+  padding-right: calc(var(--space-11) + var(--space-4));
 }
 
 .inspect-list-grid--sheet {

@@ -10,7 +10,8 @@
 // apart; R2942001: given "pixel" or "comic", as Pixel's or Comic's (`restyledSvg`), cached apart too; R2943001: given
 // a Set showcase restyle, in its set's treatment. R2943001: given a `part` other than "whole" (Out of frame's), the
 // procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop with no subject, or its subject on
-// nothing, cached apart; "whole" is the picture, byte for byte.
+// nothing, cached apart; "whole" is the picture, byte for byte. R3331000: a card with a scene recipe draws its scene,
+// whichever painter its set has, its inked shapes outlined.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -18,12 +19,13 @@ import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
-import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
+import { partDraws, partHolds, restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
+import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
 import { starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
-import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
+import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
 const DATA_PREFIX = "data:image/svg+xml,";
 /** Rays reach past every corner of the box from anywhere inside it. */
@@ -82,7 +84,8 @@ function rayPath(cx: number, cy: number, angle: number, width: number): string {
 
 /**
  * The SVG document, unencoded; R2715001: moving as `motion` says, its particles placed by `defId`. R2943001: `part`
- * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone.
+ * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone. R3344000: a depth
+ * plane draws the layers of its roles (pictures.ts `partDraws`) and what is held in no role (`partHolds`).
  */
 function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: ArtPart = "whole"): string {
   const { sky, glow, emblem } = spec;
@@ -115,13 +118,10 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
   );
   parts.push("</defs>");
   parts.push(motionStyle(motion, spec.composition === "figure" ? FIGURE_SUBJECT_ORIGIN : CENTER_ORIGIN));
-  const subject = part !== "backdrop";
-  const backdrop = part !== "subject";
+  if (partHolds(part, "far")) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
+  if (partDraws(part, "light")) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
 
-  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
-  if (backdrop) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
-
-  if (backdrop && spec.rays.length > 0) {
+  if (partHolds(part, "far") && spec.rays.length > 0) {
     parts.push(`<g fill="${RADIANT_PALETTE.ray}">`);
     for (const ray of spec.rays) {
       parts.push(`<path d="${rayPath(glow.cx, glow.cy, ray.angle, ray.width)}" opacity="${fmt(ray.opacity)}"/>`);
@@ -129,30 +129,34 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
     parts.push("</g>");
   }
 
-  // R2715001: each run of ridges of one role moves as one layer. R2943001: a part draws the runs that are its own.
-  const drawn = (role: ArtRole): boolean => (role === "subject" ? subject : backdrop);
+  // R2715001: each run of ridges of one role moves as one layer. R2943001, R3344000: a part draws the runs that are its own.
   let run: string[] = [];
   let runRole: ArtRole | null = null;
   for (const ridge of spec.ridges) {
     if (ridge.role !== runRole && runRole !== null) {
-      if (drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
+      if (partDraws(part, runRole)) parts.push(moving(runRole, run.join(""), motion));
       run = [];
     }
     runRole = ridge.role;
-    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
+    // R3331000: a scene's inked shape takes its family's outline; every other ridge prints as it always did.
+    const ink =
+      ridge.stroke === undefined
+        ? ""
+        : ` stroke="${ridge.stroke}" stroke-width="${fmt(ridge.strokeWidth ?? 0)}" stroke-linejoin="round"`;
+    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"${ink}/>`);
   }
-  if (runRole !== null && drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
+  if (runRole !== null && partDraws(part, runRole)) parts.push(moving(runRole, run.join(""), motion));
 
   // R503: the motif's glyphs sit over the composition and under the emblem.
-  if (backdrop) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
+  if (partDraws(part, "props")) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
 
-  if (subject) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
-  if (backdrop && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
+  if (partDraws(part, "subject")) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
+  if (partDraws(part, "props") && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
 
-  if (backdrop) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
+  if (partDraws(part, "motes")) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
 
-  if (backdrop) parts.push(particleMarkup(motion, defId));
-  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
+  if (partHolds(part, "nearest")) parts.push(particleMarkup(motion, defId));
+  if (partHolds(part, "far")) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
   parts.push("</svg>");
   return parts.join("");
 }
@@ -248,8 +252,20 @@ export function starshipModuleIconUri(defId: string, radiant: boolean): string {
 }
 
 /**
+ * R3331000: the picture of a card with a scene recipe, drawn by the procedural painter from its scene whichever
+ * set's painter would draw it, so the Stinkyscape and Training Grounds painters hand their recipe cards here;
+ * null for a card with none, which its own painter draws as before.
+ */
+function sceneArtSvg(seedId: string, tags: readonly Tag[], type: CardType, radiant: boolean, motion: ArtMotion | null, part: ArtPart): string | null {
+  const scene = sceneRecipeOf(seedId);
+  if (scene === null) return null;
+  return artSvg(artSpec(seedId, themeFor(tags, type), compositionFor(type), radiant, null, scene), motion, seedId, part);
+}
+
+/**
  * R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. R2949000:
- * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it.
+ * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it. R3331000: a card
+ * with a scene recipe draws its scene.
  */
 export function stinkyscapeArtUri(
   defId: string,
@@ -267,13 +283,16 @@ export function stinkyscapeArtUri(
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
-/** R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is. */
+/**
+ * R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is.
+ * R3331000: a card with a scene recipe draws its scene.
+ */
 export function trainingGroundsArtUri(
   defId: string,
   name: string | undefined,
@@ -289,7 +308,7 @@ export function trainingGroundsArtUri(
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;

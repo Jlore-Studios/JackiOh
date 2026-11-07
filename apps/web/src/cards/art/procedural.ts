@@ -1,9 +1,13 @@
 // Fixed seeds keep artSpec pure and base/radiant geometry identical (Surface A, B1, B2).
 // R503 adds per-card motif, family twist and per-set variety streams without changing Core cards.
+// R3331000: a card with a scene recipe (sceneRecipes.ts) draws its picture as that scene instead
+// (scene.ts `withScene`), keeping its theme, layout, backdrop, sky scheme, emblem glyph and rays; a
+// card with none draws the spec it always drew, byte for byte.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, round2, seededRandom } from "./hash.ts";
 import { MOTIFS, type Motif, type MotifHeadgear, type MotifId } from "./motifs.ts";
+import { sceneRecipeOf, withScene, type SceneRecipe } from "./scene.ts";
 import {
   driftPalette,
   EMBLEM_POOLS,
@@ -62,7 +66,7 @@ export type ArtSpec = {
   sky: { from: string; to: string; angle: number };
   glow: { cx: number; cy: number; r: number; color: string; opacity: number };
   /** R2715001: each with the part of the picture it is, which a moving picture moves on its own beat. */
-  ridges: readonly { d: string; fill: string; opacity: number; role: RidgeRole }[];
+  ridges: readonly { d: string; fill: string; opacity: number; role: RidgeRole; stroke?: string; strokeWidth?: number }[];
   emblem: Glyph;
   /** A second, smaller glyph in the corner furthest from the emblem, or null. */
   accent: Glyph | null;
@@ -86,9 +90,10 @@ export const ART_BOX = 100;
 /**
  * R2715001: what part of the picture a ridge is: behind the subject (the backdrop, a family twist's
  * under layer, a circuits pattern, a figure's hills), the subject itself (the rest of the composition),
- * or over it (a waves pattern, a twist's over layer).
+ * or over it (a waves pattern, a twist's over layer). R3331000: a scene's light and particles are
+ * ridges too, each moving on its own beat (scene.ts `SCENE_LAYER_ROLES`).
  */
-export type RidgeRole = "back" | "subject" | "over";
+export type RidgeRole = "back" | "subject" | "over" | "light" | "motes";
 const RAY_COUNT_MIN = 7;
 const RAY_COUNT_MAX = 11;
 const RADIANT_SALT = 0x9e3779b9;
@@ -1619,6 +1624,7 @@ export function artSpec(
   composition: Composition,
   radiant: boolean,
   motif: MotifId | null = null,
+  scene: SceneRecipe | null = sceneRecipeOf(defId),
 ): ArtSpec {
   const seed = hashId(defId);
   const rng = seededRandom(seed);
@@ -1691,7 +1697,7 @@ export function artSpec(
           stroke: radiant ? mixHex(drawn.stroke, RADIANT_PALETTE.emblem.stroke, RADIANT_MOTIF_MIX) : drawn.stroke,
           opacity: round2(placed.opacity),
         }));
-  return {
+  const spec: ArtSpec = {
     theme,
     composition,
     variant: radiant ? "radiant" : "base",
@@ -1735,4 +1741,5 @@ export function artSpec(
     motifGlyphs,
     subjectRidges: [Math.min(subjectFrom + ground, subjectTo), subjectTo],
   };
+  return scene === null ? spec : withScene(spec, scene, defId, radiant);
 }

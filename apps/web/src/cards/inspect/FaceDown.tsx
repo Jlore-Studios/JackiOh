@@ -2,12 +2,14 @@
 // view gives (a face-down trap, its cost and its Plague Counters, R471) and that only its setter can
 // see it, in the one inspect slot (B23) through `useInspectTrigger`'s `render`. `FaceDownPreview` is
 // click-through and aria-hidden like HoverPreview (the back carries its words as its label);
-// `FaceDownSheet` is a modal dialog like InspectSheet, closed by a swipe down too (R2121000).
+// `FaceDownSheet` is a modal dialog like InspectSheet, closed by its ✕ (R3221000) and by a swipe down
+// too (R2121000).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { DialogClose } from "../../game/Dialog.tsx";
 import { CardBack } from "../CardBack.tsx";
 import { FACE_ASPECT } from "../constants.ts";
 import { FACE_DOWN_HINT, FACE_DOWN_TITLE, PLAGUE_COUNT_WORDS, costPhrase } from "../faceDown.ts";
@@ -109,9 +111,8 @@ export function FaceDownSheet({ cost, plague, onClose }: FaceDownProps & { onClo
           </span>
           <Words cost={cost} plague={plague} />
         </div>
-        <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
-          {t("Close")}
-        </button>
+        {/* R3221000: the one ✕ every dialog closes by, at the top right. */}
+        <DialogClose buttonRef={closeButton} testid={INSPECT_CLOSE} {...modal.dismissProps} />
       </div>
     </div>,
     document.body,

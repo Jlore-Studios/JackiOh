@@ -1,10 +1,11 @@
 // A Stack pile opened as a wheel (#124, §3.2): its top card face up, every card beneath as a back (the
 // view names their number only). The dialog borrows the inspect layer's modal behavior (focus trap,
-// scrim and Escape dismiss, focus restore).
+// scrim and Escape dismiss, focus restore) and closes by the one ✕ at its top right (R3221000).
 
 import { useRef, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
+import { DialogClose } from "../../game/Dialog.tsx";
 import { t } from "../../i18n/i18n.ts";
 import type { FaceModel } from "../model.ts";
 import { INSPECT_CLOSE, INSPECT_SCRIM } from "../inspect/testids.ts";
@@ -75,9 +76,8 @@ export default function StackSheet({ title, top, topName, buried, onClose }: Sta
           </span>
         </header>
         <CardWheel items={items} ariaLabel={title} />
-        <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
-          {t("Close")}
-        </button>
+        {/* R3221000: the one ✕ every dialog closes by, at the top right. */}
+        <DialogClose buttonRef={closeButton} testid={INSPECT_CLOSE} {...modal.dismissProps} />
       </div>
     </div>,
     document.body,
