@@ -17463,15 +17463,8 @@
       "waiting_comment": 6699809636
     },
     "3339": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42328439806",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-07T02:39:01Z",
-        "until": "2026-11-07T03:09:01Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17483,10 +17476,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- read_file: {\"EndLine\": 90, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/apps/web/src/cards/versions.ts\", \"StartLine\": 50}\n- said: \n- read_file: {\"EndLine\": 180, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/apps/web/src/cards/versions.ts\", \"StartLine\": 110}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && grep -n -C 5 \"version-extended-art\" apps/web/src/wire/generated/cosmetics.ts\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-plan.md\"}\n- said: \n- run_command: wc -w -m /home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-plan.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && git log --grep=\"## Goal\" -n 3 --oneline\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && git log --grep=\"Goal\" -n 5 --oneline\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && grep -rn \"Files to touch\" bot/\n- said: \n- read_file: {\"EndLine\": 160, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/bot/go/internal/issueplan/issueplan.go\", \"StartLine\": 110}\n- said: \n- read_file: {\"EndLine\": 110, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/bot/go/internal/issueplan/issueplan.go\", \"StartLine\": 70}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && grep -n \"MinionFace\" apps/web/src/game/Card.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && grep -n \"boardLookOf\" apps/web/src/cards/MinionFace.tsx apps/web/src/cards/CardFace.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && grep -n \"inspect\" apps/web/src/game/Card.tsx\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/apps/web/src/cards/inspect/useInspectTrigger.tsx\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 240, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/apps/web/src/cards/inspect/useInspectTrigger.tsx\", \"StartLine\": 200}\n- said: \n- read_file: {\"EndLine\": 315, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/apps/web/src/game/Card.tsx\", \"StartLine\": 290}\n- said: \n- read_file: {\"EndLine\": 200, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-plan.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 243, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-plan.md\", \"StartLine\": 201}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3339 && git status\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3339/.bot-plan.md\"}\n- said: ## 1. Goal Render cards in play on the board (Unit rows and backrow across both seats) as \"art-first\" whenever wearing full-art-shaped levels or of Legendary or Mythic rarity, displaying edge-to-edge art and vital numbers while omitting names, type lines, and rules words. Render all unit keywords a\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-07T02:16:50Z",
       "owner_why": "it plans it",
@@ -17499,9 +17491,9 @@
       "provider": "agy",
       "queued_at": "2026-11-06T23:49:00Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42328439806",
+      "run_id": "pending:e4d05421-1794019301",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-07T02:16:50Z",
+      "started_at": "2026-11-07T02:42:15Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18111,9 +18103,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T02:41:26Z",
+    "at": "2026-11-07T02:42:15Z",
     "url": "",
-    "what": "review #3353 on claude-6"
+    "what": "build #3339 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T02:24:19Z",
