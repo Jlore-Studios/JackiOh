@@ -17644,7 +17644,7 @@
       "waiting_comment": 6703039274
     },
     "3342": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -17657,32 +17657,24 @@
         "reason": "planned on sonnet",
         "trail": "ommand\": \"cd /home/runner/work/_temp/work/item-3342/e2e/cypress/component; grep -n -i \\\"reduce\\\" fx-layer.cy.tsx keyword-visuals.cy.tsx | head -12; grep -n \\\"reducedMotion\\\\|matchMedia\\\\|forced-co\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; cat >> .bot-plan.md <<'EOF'\\n\\n## Design decisions so far (planner)\\n- DOM approach, not the canvas AuraLayer: a Legendary/Mythic tile aura mus\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; grep -n \\\"vanilla\\\\|slumber\\\\|frozen\\\\|unit?:\\\\|unrevealed\\\\|faceDown\\\" wire/generated/PublicBackrowView.ts | head; grep -n \\\"slum\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; grep -rn \\\"Haptics\\\\b\\\" --include=*.ts --include=*.tsx . | grep -v \\\"^./haptics/\\\" | head; sed -n 1,60p haptics/haptics.test.ts; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 205,290p test/fixtures.ts; grep -n \\\"useFxSettings\\\" -A12 fx/settings.ts | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; python3 - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor id in [\\\"core-004\\\",\\\"core-011\\\",\\\"core-017\\\",\\\"core-034\\\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web; grep -n -i \\\"aura\\\\|haptic\\\" README.md | head -20; wc -l README.md; ls; grep -rn \\\"README\\\" src/*.test.ts | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src/fx; grep -n \\\"AURA_\\\\|R2787000\\\" constants.test.ts hooks.test.ts | head -30; sed -n 225,250p constants.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src/fx; sed -n 1,30p constants.test.ts; sed -n 196,215p constants.test.ts; grep -n \\\"describe(\\\\| it(\\\" constants.test.ts | head -20; s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; python3 - <<'EOF'\\nimport json,collections\\nc=json.load(open('crates/cards/catalog.json'))\\nprint(collections.Counter(k for d in c.values() for\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src/cards; grep -n \\\"printedRarity\\\" frame.ts CardFace.tsx | head; grep -n \\\"export function frameRarity\\\\|export function rarityOf\\\" -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 1,40p cards/art/hash.ts; cat fx/rng.ts | head -30; grep -n \\\"export function flavorOfId\\\" -A12 cards/flavor.ts; sed -n 95,1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src/cards/art; sed -n 1,40p convention.test.ts; grep -n \\\"readdirSync\\\\|\\\\.ts\\\\\\\"\\\" convention.test.ts | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 1,60p palette.test.ts | cut -c1-220; grep -n \\\"fx/\\\" palette.test.ts spacing.test.ts typescale.test.ts surfaces.test.ts | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; grep -n \\\"restricted\\\\|boundar\\\" eslint.config.js | head; grep -n \\\"z-index\\\" apps/web/src/palette.css apps/web/src/spacing.css | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 1,30p surfaces.test.ts | cut -c1-260; sed -n 60,140p surfaces.test.ts | cut -c1-220\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 1,50p spacing.test.ts | cut -c1-240; grep -n \\\"aura\\\" spacing.test.ts palette.test.ts typescale.test.ts | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 140,260p surfaces.test.ts | cut -c1-260\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; grep -o \\\"transparent\\\\|currentcolor\\\" palette.test.ts | head -3; grep -n \\\"NAMED =\\\" -A1 palette.test.ts | grep -o \\\"transparent\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; ls game/__snapshots__ | head; grep -c \\\"data-testid=\\\\\\\"zone-\\\" game/__snapshots__/* | head; grep -n \\\"core-100\\\" game/__snapshots\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; sed -n 1,60p spec/README.md | sed -n 40,60p; grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -70\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; find . -name \\\"__snapshots__\\\" -o -name \\\"*.snap\\\" | head; grep -c \\\"\\\" game/__snapshots__/Board.test.tsx.snap; grep -n \\\"^exports\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; sed -n 56,130p game/SandSurface.test.tsx; sed -n 190,240p game/SandSurface.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; grep -rn \\\"fakeAudioEngine\\\" --include=*.ts --include=*.tsx -l . | head -4; grep -n \\\"export function fakeAudioEngine\\\" -B3 -A25 a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; grep -n \\\"tapAstral\\\\|tapWood\\\" docs/polish/*.md docs/*.md | head -5; grep -n \\\"haptic\\\\|Haptic\\\" docs/polish/*.md | head -8; grep -rn \\\"docs/p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src; grep -n \\\"2-sound\\\" audio/*.test.ts | head -5; grep -n \\\"2-sound.md\\\" -B2 -A12 audio/cues.test.ts | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342/apps/web/src/fx; sed -n 140,236p css.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; ls spec/rulings | grep -E \\\"^R(0200|0202|0438|0669|2787000|2803000|0097)\\\\.md|^R2803000\\\"; ls spec/rulings | grep -E \\\"^R0(200|202|438|669)\\\"; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; sed -n 20,80p eslint.config.js\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3342; cat >> .bot-plan.md <<'EOF'\\n\\n## Status\\nAll reading done; final plan written as the last message (sections Goal..Open questions). Extra findi\u2026\n- said: ## Goal Every face-up Legendary or Mythic permanent on the board gets a tile aura under its card, in the colours of its own picture. Legendary gets a soft edge glow and slow motes. Mythic gets a richer pattern chosen by its set's look: runes, starfield, roots, circuitry or ink. A card's own table `\u2026"
       },
-      "hold": {
-        "ends": "2026-11-07T07:53:16Z",
-        "lifted": "2026-11-07T07:50:06Z",
-        "owner": "claude-3",
-        "since": "2026-11-07T05:53:16Z",
-        "until": "2026-11-07T07:50:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-07T03:13:43Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "agy",
+      "owner_since": "2026-11-07T10:37:18Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-07T03:27:29Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "agy",
       "queued_at": "2026-11-06T23:52:55Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42333024146",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T03:13:43Z",
+      "run_id": "pending:fdb1e0fc-1794047805",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-07T10:37:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6703040026
@@ -19141,9 +19133,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T10:36:30Z",
+    "at": "2026-11-07T10:37:18Z",
     "url": "",
-    "what": "review #3369 on claude-6"
+    "what": "build #3342 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T10:25:25Z",
