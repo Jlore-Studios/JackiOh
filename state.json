@@ -16348,7 +16348,7 @@
       "provider": "claude-2",
       "question": "",
       "queued_at": "2026-11-07T12:48:01Z",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42374241672",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
