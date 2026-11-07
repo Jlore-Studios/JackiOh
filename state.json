@@ -16683,6 +16683,8 @@
       }
     },
     "3382": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T12:51:03Z",
@@ -16696,8 +16698,11 @@
         "trail": "rver_store\\\"; pkill -f \\\"build.*--test server_store\\\"; sleep 3; pgrep -fa \\\"cargo\\\" | grep -v pgrep | head -3; docker ps --format '\u2026\n- tool error: Exit code 144\n- Bash: {\"command\": \"pgrep -fa \\\"cargo \\\" | grep -v pgrep | cut -c1-120 | head -3; docker ps --format '{{.Names}}' | head\", \"description\": \"Check no cargo or container is left running\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nbase='/home/runner/work/_temp/work/item-3335/spec/rulings/'\\nadd={\\n 'R3335000.md':['apps/web/src/cards/loadouts.test.ts','apps/web/src/collection/StarshipLooks.tes\u2026\n- said: Now regenerate the registry and repin the migration after the renames.\n- Bash: {\"command\": \"echo \\\"- renamed 3 British 'colours' cosmetic names to 'colors' (json, 0085, spec); R3348001 now says eleven mats; web tests added to proven_in. Regenerating cosmetics.ts + repin 0085.\\\"\u2026\n- Bash: {\"command\": \"sed -i 's/(\\\"0085_fleet_track.sql\\\", \\\"6755fd62\\\")/(\\\"0085_fleet_track.sql\\\", \\\"da636d87\\\")/' crates/server/tests/store/migrations_pinned.rs && timeout 1500 cargo test --workspace --feat\u2026\n- Bash: {\"command\": \"(timeout 1500 sh crates/server/tests/sql/run.sh > /tmp/sql-suite.log 2>&1; echo \\\"exit $?\\\" >> /tmp/sql-suite.log; timeout 3000 sh crates/server/tests/db/run.sh > /tmp/db-suite.log 2>&1;\u2026\n- Bash: {\"command\": \"/home/runner/work/JackiOh/JackiOh/target/debug/jackioh spec check 2>&1 | tail -8\", \"description\": \"Run the spec check with web proofs listed\", \"timeout\": 600000}\n- Bash: {\"command\": \"git diff --stat apps/web e2e | tail -3; git diff apps/web e2e | grep -n \\\"eslint-disable\\\\|ts-ignore\\\\|ts-expect-error\\\\|\\\\.only(\\\\|\\\\.skip(\\\" | head; git diff apps/web/src/cards/cosmeti\u2026\n- Bash: {\"command\": \"sed -n 600,625p apps/web/src/cards/cosmetics.ts; git diff apps/web/src/collection/StarshipLooks.tsx | head -5; sed -n 1,200p apps/web/src/collection/StarshipLooks.tsx\", \"description\": \"R\u2026\n- Bash: {\"command\": \"timeout 900 pnpm --dir apps/web exec vitest run src/i18n src/cards/cosmetics.test.tsx src/collection src/shop src/cards/starship.test.tsx src/cards/loadouts.test.ts src/routes/collection\u2026\n- Bash: {\"command\": \"tail -2 /tmp/sql-suite.log; tail -2 /tmp/db-suite.log 2>/dev/null | cut -c1-150; free -g | head -2\", \"description\": \"Check suites progress and memory\"}\n- Bash: {\"command\": \"echo \\\"- sql suite re-passed after rename. Rebuilding wasm + running harness web command -> /tmp/web-harness.log\\\" >> .bot-notes.md; (timeout 1800 sh scripts/build-wasm.sh > /tmp/wasm.lo\u2026\n- Bash: {\"command\": \"git diff apps/web/src/cards/loadouts.ts apps/web/src/cards/art/CardArt.tsx apps/web/src/cards/MinionFace.tsx apps/web/src/cards/CardFace.tsx apps/web/src/shop/shop.ts apps/web/src/collec\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/db-suite.log; do sleep 20; done; grep -E \\\"test result|FAILED|panicked|exit\\\" /tmp/db-suite.log | head -20\", \"description\": \"Wait for the Postgres store suit\u2026\n- Bash: {\"command\": \"grep -A 6 \\\"panicked at crates/server/tests/store/contract.rs:9389\\\" /tmp/db-suite.log | head -10; sed -n 9380,9392p crates/server/tests/store/contract.rs\", \"description\": \"Read the Post\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3335/crates/server/tests/store/contract.rs'\\ns=open(p).read()\\nold=''' // R3335001: the Fleet track, its XP today read over all\u2026\n- Bash: {\"command\": \"echo \\\"- db suite: economy_of used i64::MAX (pg timestamp out of range) -> window (0,0). Rerunning db suite on store::contract.\\\" >> .bot-notes.md; tail -3 /tmp/wasm.log; tail -3 /tmp/we\u2026\n- tool error: Exit code 1 \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-ai v0.5.0 (/home/runner/work/_temp/work/item-3335/crates/ai) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-run v0.5.0 (/home/runner/work/_temp/work/item-3335/crates/run)\u2026\n- Bash: {\"command\": \"timeout 3000 sh crates/server/tests/db/run.sh store::contract > /tmp/db-suite2.log 2>&1; echo \\\"exit $?\\\" >> /tmp/db-suite2.log\", \"description\": \"Rerun the Postgres store contract tests\"\u2026\n- Bash: {\"command\": \"sed -n 1,40p e2e/cypress/component/starship-cosmetics.cy.tsx; wc -l e2e/cypress/component/starship-cosmetics.cy.tsx\", \"description\": \"Skim the component spec\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/tmp/pr-draft.md'\\ns=open(p).read()\\nweb='''**Web.**\\n- **Wearing it.** `useStarshipLook(worn)` gives a launched Starship the viewer's own owned picks on their o\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/web-harness.log 2>/dev/null; do sleep 20; done; tail -3 /tmp/wasm.log; grep -E \\\"Test Files|Tests |FAIL\\\" /tmp/web-harness.log | head -20; tail -2 /tmp/web-h\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked|^exit\\\" /tmp/db-suite2.log | head -12\", \"description\": \"Read the Postgres contract rerun result\"}\n- Bash: {\"command\": \"echo \\\"- Postgres store suite: 687 pass (3 shards). Web harness command: 375 files / 7318 tests pass after wasm rebuild.\\\" >> .bot-notes.md; timeout 1500 cargo test --workspace --feature\u2026\n- Bash: {\"command\": \"grep -rn \\\"colours\\\\\\\"\\\" crates/ apps/web/src e2e --include=*.rs --include=*.ts --include=*.tsx --include=*.json | head -5; (timeout 900 pnpm --dir apps/web typecheck > /tmp/tc.log 2>&1;\u2026\n- Bash: {\"command\": \"git status --short | grep \\\"^??\\\"; git status --short | wc -l\", \"description\": \"List untracked files to deliver\"}\n- Bash: {\"command\": \"git diff --stat | tail -1; git diff --name-only | grep -E \\\"^\\\\.github|^\\\\.harness|^\\\\.squishy|^bot/|^\\\\.claude|spec/11-rulings.md|spec/INDEX.md|crates/cards/src|crates/ai/|apps/web/src/\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3335/.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n(Run 4, opus, ~14:25 UTC.) DONE: every plan st\u2026\n- Read: {\"file_path\": \"/tmp/pr-draft.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Fleet track, a Stinkyscape cosmetic track: Starship hull designs, liveries and launch trails earned by playing the set, with a Jlorious Starship gated like the Jlorious card back\"} --> **Needs a person to merge:** migration 0085 adds two tables, eac\u2026"
       },
       "issue": 3335,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T14:54:24Z",
         "from_run": "42374293577",
         "gates": [
           {
@@ -16789,7 +16794,11 @@
         "source": "build",
         "until": "2026-11-07T15:23:07Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-07T14:53:07Z",
+      "run_id": "pending:949d3fe8-1794063230",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16808,6 +16817,9 @@
         "provider": "claude-3",
         "run": "42374293577"
       },
+      "started_at": "2026-11-07T14:54:24Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16821,9 +16833,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T14:38:16Z",
+    "at": "2026-11-07T14:54:24Z",
     "url": "",
-    "what": "review #3375 on claude-6"
+    "what": "review #3382 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-07T14:34:02Z",
