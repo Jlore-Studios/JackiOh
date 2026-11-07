@@ -17592,10 +17592,8 @@
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-07T02:42:15Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-2` (claude, opus) rejected it: `apps/web/src/cards/cards.css:1755`: With Names on the board set to Always, an art-first full-art backrow card keeps a static name plate that the CSS shrinks to "
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 3
     },
