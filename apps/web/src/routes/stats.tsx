@@ -4,10 +4,13 @@
 // names a data source or the gate (R661). Below the per-row floor a row reads "not enough games". The Adjusted
 // win rate leads (R2777000), so the table shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000);
 // with the ranges shown, a tier says how much of the card's range is in it (R3184001). The patch bar
-// (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own. The
-// Cards tab also holds the games panel (R1994000), the Created cards (R2089000, sortable, R3184002) and,
-// behind Show tokens, off by default, the tokens (R2370000). The card drill-down shows the faces (a full-art
-// card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy.
+// (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own; each
+// offered patch is a tab, and the newest, short of games, says its data is still being collected (R3324000).
+// The header names the current patch (R3324001). The Cards tab also holds the games panel (R1994000) and the
+// cards made during a game, the Tokens and the Other created cards, two sortable sections that share no row
+// (R2089000, R2370000, R3184002, R3324002); its on/off controls are the Segmented's pressed buttons (R3324003). The
+// card drill-down shows the faces (a full-art card's still Epic while the Full-art cards setting is on,
+// R3011000), patch history, turn curve and co-played synergy.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -46,13 +49,21 @@ import {
 } from "../stats/config.ts";
 import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
-import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
+import {
+  currentVersion,
+  isCollecting,
+  neighbours,
+  offeredPatches,
+  patchIndex,
+  patchName,
+  patchTarget,
+  type PatchWindow,
+} from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
-import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
 
@@ -230,6 +241,36 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
   };
 }
 
+/**
+ * R3324000: the Cards or Sets tab of a patch still collecting its data: the words in place of its figures, and the
+ * way to the patch before. No count and no progress (R661).
+ */
+function CollectingNote({
+  patch,
+  previous,
+  onPrevious,
+}: {
+  patch: string;
+  previous: PatchWindow | null;
+  onPrevious: (window: PatchWindow) => void;
+}): ReactElement {
+  return (
+    <EmptyState
+      text={t("Data for patch {patch} is still being collected at this time.", { patch })}
+      testId={statsTestid.patchCollecting}
+      action={
+        previous === null
+          ? undefined
+          : {
+              label: t("See patch {patch}", { patch: patchName(previous) }),
+              testId: statsTestid.patchCollectingBack,
+              onPress: () => onPrevious(previous),
+            }
+      }
+    />
+  );
+}
+
 export default function StatsRoute(): ReactElement {
   const locale = useLocale();
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -248,7 +289,6 @@ export default function StatsRoute(): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
-  const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
   // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
   const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
@@ -312,13 +352,12 @@ export default function StatsRoute(): ReactElement {
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
-    if (showTokens) params.set("tokens", "1");
     if (showRanges) params.set("ranges", "1");
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showTokens, showRanges]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showRanges]);
 
   useEffect(() => {
     updateUrl();
@@ -399,10 +438,21 @@ export default function StatsRoute(): ReactElement {
     }
   }, [tab, playerQuery, playerPage, fetchPlayers]);
 
+  // R1973002: the newest patch is asked for with no `?patch=`, so the address stays the plain one.
+  const patchList = cardStatsData?.patches ?? [];
+  const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
+  const pickable = offeredPatches(patchList, shownPatch);
+  const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
+  const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  // R3324000: the newest patch, short of games, shows no figures: its Cards and Sets tabs say it is collecting.
+  const collecting = isCollecting(patchList, shownPatch);
+  const shownPatchName = shownPatch >= 0 ? patchName(patchList[shownPatch]!) : (cardStatsData?.patch ?? "");
+
   // R1966000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
   // patch's for each set's change; a previous patch that fails to load only leaves the change out.
   useEffect(() => {
-    if (tab !== "sets") return;
+    // R3324000: a patch still collecting its data has no sets to read.
+    if (tab !== "sets" || collecting) return;
     setSetsError(false);
     const controller = new AbortController();
     getCardStats({ patch: patch ? patch : undefined, mode: mode ? mode : undefined, signal: controller.signal })
@@ -424,7 +474,7 @@ export default function StatsRoute(): ReactElement {
         setSetsError(true);
       });
     return () => controller.abort();
-  }, [tab, patch, mode, setsAttempt]);
+  }, [tab, patch, mode, setsAttempt, collecting]);
 
   useEffect(() => {
     if (!cardDrillDownId) {
@@ -570,18 +620,14 @@ export default function StatsRoute(): ReactElement {
     return list;
   }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, tiers]);
 
-  // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
+  // R2089000: the Created cards the search box asks for, as it asks for the deck rows; R3324002: the tokens
+  // among them in a section of their own, and every other in its own, so no card is in both.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
   const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
+  const otherCreatedCards = createdCards.filter((card) => CATALOG[card.id]?.token !== true);
 
   const summary = cardStatsData?.summary;
 
-  // R1973002: the newest patch is asked for with no `?patch=`, so the address stays the plain one.
-  const patchList = cardStatsData?.patches ?? [];
-  const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
-  const pickable = offeredPatches(patchList, shownPatch);
-  const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
-  const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
@@ -593,62 +639,75 @@ export default function StatsRoute(): ReactElement {
     <CardDefsProvider defs={CATALOG}>
       <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
         <header>
-          <BackLink title={t("Statistics")} />
+          <BackLink title={t("Statistics")}>
+            {/* R3324001: the patch the game is on now, whichever patch the page shows */}
+            <span className="stats-current-patch" data-testid={statsTestid.currentPatch}>
+              {t("Current patch {patch}", { patch: currentVersion(patchList) })}
+            </span>
+          </BackLink>
         </header>
 
-        {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top */}
-        {cardStatsData && (
-          <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label={t("Statistics summary")}>
-            <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
-              <span className="stats-summary-label">
-                {t("Games on patch {patch}", {
-                  patch: shownPatch >= 0 ? patchName(patchList[shownPatch]!) : cardStatsData.patch,
-                })}
-              </span>
-              <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
-            </div>
-          </section>
-        )}
-
-        {/* R1973002: the patch picker, and the patch before and after the one shown */}
+        {/* R1973002, R3324000: a tab for each offered patch, between the patch before and the patch after */}
         {patchList.length > 0 && (
           <nav className="stats-patch-bar" data-testid={statsTestid.patchBar} aria-label={t("Patches")}>
             <button
               type="button"
-              className="stats-pager-btn"
+              className="stats-patch-step"
               data-testid={statsTestid.patchPrevious}
               disabled={previousWindow === null}
+              aria-label={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
+              title={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
               onClick={() => previousWindow && choosePatch(previousWindow)}
             >
-              {previousWindow ? t("← Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("← Previous patch")}
+              ←
             </button>
-            <select
-              className="stats-select"
-              data-testid={statsTestid.patchSelect}
-              aria-label={t("Patch")}
+            <Segmented
+              label={t("Patch")}
+              className="stats-patch-tabs"
               value={shownPatch >= 0 ? patchTarget(patchList[shownPatch]!) : ""}
-              onChange={(e) => {
-                const chosen = patchList.find((window) => patchTarget(window) === e.target.value);
+              onChange={(target) => {
+                const chosen = patchList.find((window) => patchTarget(window) === target);
                 if (chosen) choosePatch(chosen);
               }}
-            >
-              {shownPatch < 0 && <option value="">{cardStatsData?.patch}</option>}
-              {pickable.map((window) => (
-                <option key={patchTarget(window)} value={patchTarget(window)}>
-                  {t("{patch} · {games} games", { patch: patchName(window), games: formatNumber(window.games) })}
-                </option>
-              ))}
-            </select>
+              options={pickable.map((window) => ({
+                value: patchTarget(window),
+                testId: statsTestid.patchTab,
+                className: "stats-patch-tab",
+                label: (
+                  <>
+                    <span className="stats-patch-tab-name">{patchName(window)}</span>
+                    <span className="stats-patch-tab-games">
+                      {isCollecting(patchList, patchList.indexOf(window))
+                        ? t("Collecting data")
+                        : t("{games} games", { games: formatNumber(window.games) })}
+                    </span>
+                  </>
+                ),
+              }))}
+            />
             <button
               type="button"
-              className="stats-pager-btn"
+              className="stats-patch-step"
               data-testid={statsTestid.patchNext}
               disabled={nextWindow === null}
+              aria-label={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
+              title={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
               onClick={() => nextWindow && choosePatch(nextWindow)}
             >
-              {nextWindow ? t("Next patch ({patch}) →", { patch: patchName(nextWindow) }) : t("Next patch →")}
+              →
             </button>
           </nav>
+        )}
+
+        {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top;
+            a patch still collecting its data shows no count (R3324000) */}
+        {cardStatsData && !collecting && (
+          <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label={t("Statistics summary")}>
+            <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
+              <span className="stats-summary-label">{t("Games on patch {patch}", { patch: shownPatchName })}</span>
+              <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
+            </div>
+          </section>
         )}
 
         {/* Tabs */}
@@ -667,7 +726,10 @@ export default function StatsRoute(): ReactElement {
               label: t("Cards"),
               testId: statsTestid.tabCards,
               panelClassName: "stats-panel one-screen__body",
-              panel: (
+              // R3324000: a patch still collecting its data shows no figures.
+              panel: collecting ? (
+                <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
+              ) : (
                 <>
                   {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
                   <GamesPanel patch={patch} mode={mode} />
@@ -758,6 +820,8 @@ export default function StatsRoute(): ReactElement {
                 </select>
               </div>
 
+              {/* R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button */}
+              <div className="stats-options">
               <div className="stats-sort">
                 <span className="stats-sort-label" id="stats-sort-label">
                   {t("Sort")}
@@ -781,7 +845,7 @@ export default function StatsRoute(): ReactElement {
                 </select>
                 <button
                   type="button"
-                  className="stats-sort-dir link-button"
+                  className="stats-sort-dir"
                   data-testid={statsTestid.sortDir}
                   aria-label={
                     sortDir === "asc"
@@ -795,35 +859,26 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
 
-              <Segmented
-                label={t("View")}
-                className="stats-view-toggle"
-                value={view}
-                onChange={setView}
-                options={[
-                  { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
-                  { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
-                ]}
-              />
-
-              {/* R2370000: the Tokens section, off by default */}
-              <div className="stats-col-toggles">
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    data-testid={statsTestid.tokensToggle}
-                    checked={showTokens}
-                    onChange={(e) => setShowTokens(e.target.checked)}
-                  />
-                  {t("Show tokens")}
-                </label>
+              <div className="stats-view-toggle">
+                <span className="stats-sort-label" aria-hidden="true">
+                  {t("View")}
+                </span>
+                <Segmented
+                  label={t("View")}
+                  value={view}
+                  onChange={setView}
+                  options={[
+                    { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
+                    { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+                  ]}
+                />
               </div>
 
-              {/* R2895000: the 95% ranges, off by default */}
-              <div className="stats-view-toggle">
+              {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
+              <div className="segmented">
                 <button
                   type="button"
-                  className={`stats-view-btn ${showRanges ? "stats-view-btn--active" : ""}`}
+                  className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
                   data-testid={statsTestid.rangesToggle}
                   aria-pressed={showRanges}
                   onClick={() => setShowRanges((shown) => !shown)}
@@ -832,28 +887,35 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
 
-              {/* Column visibility toggles */}
+              {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
               {view === "table" && (
-                <div className="stats-col-toggles">
-                  <span className="stats-col-toggles-label">{t("Columns:")}</span>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.games}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, games: e.target.checked }))}
-                    />
-                    {t("Games")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.playRate}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, playRate: e.target.checked }))}
-                    />
-                    {t("Play rate")}
-                  </label>
+                <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
+                  <span className="stats-sort-label" id="stats-columns-label">
+                    {t("Columns")}
+                  </span>
+                  <div className="segmented">
+                    <button
+                      type="button"
+                      className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
+                      data-testid={statsTestid.columnGames}
+                      aria-pressed={visibleCols.games}
+                      onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
+                    >
+                      {t("Games")}
+                    </button>
+                    <button
+                      type="button"
+                      className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
+                      data-testid={statsTestid.columnPlayRate}
+                      aria-pressed={visibleCols.playRate}
+                      onClick={() => setVisibleCols((c) => ({ ...c, playRate: !c.playRate }))}
+                    >
+                      {t("Play rate")}
+                    </button>
+                  </div>
                 </div>
               )}
+              </div>
             </div>
 
             {/* Table or Grid */}
@@ -1125,14 +1187,13 @@ export default function StatsRoute(): ReactElement {
               </p>
             )}
 
-            {/* R2370000: the tokens alone, each with its win rate */}
-            {showTokens && !cardStatsLoading && !cardStatsError && (
-              <TokensPanel tokens={tokenCards} minSample={minSample} nameOf={shownName} />
-            )}
-
-            {/* R2089000: the Created cards, apart from the deck cards above */}
+            {/* R2089000, R3324002: the cards made during a game, apart from the deck cards above: the tokens, then
+                every other, no card in both */}
             {!cardStatsLoading && !cardStatsError && (
-              <CreatedPanel created={createdCards} minSample={minSample} nameOf={shownName} />
+              <>
+                <CreatedPanel kind="tokens" created={tokenCards} minSample={minSample} nameOf={shownName} />
+                <CreatedPanel kind="other" created={otherCreatedCards} minSample={minSample} nameOf={shownName} />
+              </>
             )}
           </>
         ),
@@ -1142,7 +1203,10 @@ export default function StatsRoute(): ReactElement {
         label: t("Sets"),
         testId: statsTestid.tabSets,
         panelClassName: "stats-panel one-screen__body",
-        panel: (
+        // R3324000: a patch still collecting its data has no sets to show.
+        panel: collecting ? (
+          <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
+        ) : (
           <>
             {setsError ? (
               <div className="stats-error">
@@ -1483,7 +1547,7 @@ export default function StatsRoute(): ReactElement {
                     </div>
                     {drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
-                        <h3>{t("Tokens")}</h3>
+                        <h3>{t("Tokens this card makes")}</h3>
                         <ul className="stats-drilldown-token-list">
                           {drillDownTokens.map((token) => (
                             <li key={token.id} className="stats-drilldown-token">

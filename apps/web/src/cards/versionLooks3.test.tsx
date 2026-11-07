@@ -49,6 +49,7 @@ import {
   isFullBleed,
   offeredOn,
 } from "./versions.ts";
+import { facePicture } from "../test/artPicture.ts";
 import { legacyText } from "../test/faceData.ts";
 
 /** R2942000: #2942's three versions, in the registry's order. */
@@ -80,9 +81,9 @@ function faceIn(id: string, radiant: boolean): HTMLElement {
   return cf;
 }
 
-/** The art window's picture, decoded: what its CSS background draws. */
+/** The picture the face draws in its art window, decoded (R3344000: the planes' together, on a face with depth, test/artPicture.ts). */
 function pictureOf(cf: HTMLElement): string {
-  return decodeURIComponent(cf.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "");
+  return facePicture(cf);
 }
 
 /** Every rule of cards.css whose selector names `version`: its selector and declarations. */

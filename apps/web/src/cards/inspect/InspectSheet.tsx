@@ -52,7 +52,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
         <div className="inspect-sheet-body">
           <RefsInteractive>
             <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>
-              <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
+              <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} tilt="drag" />
               <InspectNote note={note} />
             </div>
             <Extended face={face} ascentLevel={ascentLevel} />

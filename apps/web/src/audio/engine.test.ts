@@ -57,7 +57,7 @@ import {
   type FakeNode,
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
-import type { AudioEngine, PlayedCue, SfxId, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
+import type { AudioEngine, PlayedCue, SfxId, SfxParams, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
 import { must } from "../test/stubServer.ts";
 
 /* Fixtures */
@@ -1876,6 +1876,80 @@ describe("R3348001 a quiet cue", () => {
     before = audio.nodes.length;
     expect(r.engine.playSfx("tapStone", { sandBuild: 2, quiet: true })).toBe(true);
     expect(cueGain(before)).toBeCloseTo(SFX.tapStone.gain * QUIET_SFX_GAIN, 9);
+    expect(audio.violations).toEqual([]);
+  });
+});
+
+describe("R3346000 a play's impact on the effects bus", () => {
+  const gainOf = (audio: FakeAudio, bus: Buses, from: number): number => {
+    const [cue] = audio.nodes.slice(from).filter((n) => n.kind === "gain" && n.connections.includes(bus.sfx));
+    return must(cue, "the cue's gain").param("gain").settled();
+  };
+
+  it("R3346000 a cue's own gain trims the impact: the recipe's gain times it, clamped to 0 to 1, and none leaves the recipe's", () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    const trimmed = (params: SfxParams): number => {
+      tick(r, SFX_RETRIGGER_MS + 1); // the same id inside the retrigger window is refused
+      const before = audio.nodes.length;
+      expect(r.engine.playSfx("playImpact", params, 0)).toBe(true);
+      return gainOf(audio, bus, before);
+    };
+
+    expect(trimmed({ playTier: "heavy", playType: "unit" })).toBeCloseTo(SFX.playImpact.gain, 9);
+    expect(trimmed({ playTier: "heavy", playType: "unit", gain: 0.6 })).toBeCloseTo(SFX.playImpact.gain * 0.6, 9);
+    expect(trimmed({ gain: 7 }), "above 1 is no louder than the recipe").toBeCloseTo(SFX.playImpact.gain, 9);
+    expect(trimmed({ gain: -2 }), "below 0 is silent").toBeCloseTo(0, 9);
+    expect(trimmed({ gain: Number.NaN }), "not a number is no trim").toBeCloseTo(SFX.playImpact.gain, 9);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R3346000 a trim applies to any effect that carries one, as the opponent's trap snap does", () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    const before = audio.nodes.length;
+    expect(r.engine.playSfx("trapSnap", { gain: 0.6 })).toBe(true);
+    expect(gainOf(audio, bus, before)).toBeCloseTo(SFX.trapSnap.gain * 0.6, 9);
+  });
+
+  it("R3346000 the impact sounds through the effects bus and its duck, which a voice line dips to SFX_VOICE_DUCK_GAIN", async () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    audio.currentTime = 3;
+
+    expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+    expect(r.engine.playSfx("playImpact", { playTier: "massive", playType: "unit" })).toBe(true);
+    await settle();
+
+    const heard = audio.startedSources().filter((n) => audio.reaches(n, bus.sfx));
+    expect(heard.length, "the impact's sources sound on the effects bus").toBeGreaterThan(0);
+    expect(bus.sfx.connections).toContain(bus.sfxDuck);
+    expect(bus.sfxDuck.connections).toContain(bus.master);
+    expect(audio.reaches(bus.sfx, bus.voice), "the effects never feed the voice bus").toBe(false);
+    const targets = bus.sfxDuck.param("gain").targets();
+    expect(targets.some((t) => Math.abs(t.value - SFX_VOICE_DUCK_GAIN) < 1e-9)).toBe(true);
+    expect(SFX_VOICE_DUCK_GAIN).toBeLessThan(1);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("R3346000 a Mythic's whoosh, impact, entrance and shimmer all sound at once with its voice, under SFX_MAX_VOICES", async () => {
+    const r = rig();
+    const audio = unlocked(r);
+    expect(r.engine.playSfx("play", {}, 0)).toBe(true);
+    expect(r.engine.playSfx("playImpact", { playTier: "massive", playType: "spell" }, 0)).toBe(true);
+    expect(r.engine.playSfx("entrance", { mythic: true }, 40)).toBe(true);
+    expect(r.engine.playSfx("spell", undefined, 60)).toBe(true);
+    expect(r.engine.playVoice("core-004", "play", 150)).toBe(true);
+    await settle();
+
+    const log = r.engine.log();
+    const sfxIds = log.flatMap((cue) => (cue.kind === "sfx" ? [cue.id] : []));
+    expect(sfxIds).toEqual(["play", "playImpact", "entrance", "spell"]);
+    expect(log.filter((cue) => cue.kind === "voice")).toHaveLength(1);
+    expect(sfxIds.length).toBeLessThan(SFX_MAX_VOICES);
     expect(audio.violations).toEqual([]);
   });
 });

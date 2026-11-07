@@ -189,6 +189,12 @@ impl Registry {
         let now = now_ms();
         let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
         let players = (first.profile_id.clone(), second.profile_id.clone());
+        // R3049000: the win-rate snapshot the game is handed, the cached card stats as it starts: always
+        // one, so no new game reads a version's frozen table.
+        let snapshot = match input.win_rates.clone() {
+            Some(table) => table,
+            None => crate::api::stats::win_rate_snapshot(app).await,
+        };
         let (boards, sampled, derived_mode, bots, picks) = one_tx!(app.db, |t| {
             // R417: each seat's last server-match board, frozen on the match as it starts.
             let boards = (
@@ -259,6 +265,8 @@ impl Registry {
             loadouts: None,
             // R768: written with the result, never at the start.
             final_hash: None,
+            // R3049000: frozen below, as the game kept it.
+            win_rates: None,
         };
         let dealt = dealt_for(derived_mode);
         // R388, R767000: the match is pinned to the catalog its row froze. A version this build
@@ -275,11 +283,20 @@ impl Registry {
         // so a game the engine cannot begin leaves no `live` row nothing but the ceiling could end;
         // an `open` skeleton stays for `matches_discard_open` (R263). The engine's panic is the error.
         let (last_boards, glitch) = last_boards_of(&match_row);
-        let args = engine::create_game_args(&match_row.seed, &match_row.decks, last_boards, glitch, dealt);
+        let args = engine::create_game_args(
+            &match_row.seed,
+            &match_row.decks,
+            last_boards,
+            glitch,
+            dealt,
+            Some(snapshot),
+        );
         let state = std::panic::catch_unwind(AssertUnwindSafe(|| {
             engine::begin_game(pinned, &engine::create_game(pinned, &args)).state
         }))
         .map_err(|payload| ApiError::internal(panic_text(payload)))?;
+        // R3049000: the rows of the snapshot the game kept, which every fold of the row is handed.
+        match_row.win_rates = state.win_rates.clone();
         // R1834002: each seat's loadout, frozen on the row beside its portrait, over the cards its
         // deck dealt (an All Random seat's dealt deck among them).
         let dealt_cards = engine::dealt_cards(&state);
@@ -362,6 +379,7 @@ impl Registry {
             last_boards,
             glitch_boards,
             dealt.clone(),
+            match_row.win_rates.clone(),
         );
         // R1834003: the cards each deck dealt, read off the opening, when a loadout names a card of
         // its own (a match from before 0061 names none, and sends no card's picks).
@@ -378,6 +396,7 @@ impl Registry {
                     last_boards,
                     glitch_boards,
                     dealt.clone(),
+                    match_row.win_rates.clone(),
                 )
             });
         let live = match_row.status == MatchStatus::Live;

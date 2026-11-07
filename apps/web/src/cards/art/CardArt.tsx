@@ -48,7 +48,7 @@ import { compositionOf, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
 
-export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full" | "frame";
+export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full" | "frame" | "plane";
 
 export type CardArtProps = {
   defId: string;
@@ -82,6 +82,21 @@ export type CardArtProps = {
  */
 export function hasArtParts(defId: string, starship: CardArtProps["starship"]): boolean {
   return starship == null && snapshotArtOf(defId) === null;
+}
+
+/**
+ * R3344000: whether a window can draw a card's picture as depth planes (pictures.ts `ArtPlane`): it has parts, no restyle
+ * paints over its layers (a filter over one plane would not be one over the stack), and the painter draws it (Alt art's
+ * picture always; the normal picture where no delivered file stands in for it, a file having no layers).
+ */
+export function hasArtPlanes(
+  defId: string,
+  starship: CardArtProps["starship"],
+  picture: ArtPicture,
+  radiant: boolean,
+  manifest: ArtManifest = ART_MANIFEST,
+): boolean {
+  return hasArtParts(defId, starship) && restyleOf(picture) === null && (picture === "alt" || artUrl(defId, radiant, manifest) === null);
 }
 
 function classes(shape: ArtShape, className: string | undefined): string {

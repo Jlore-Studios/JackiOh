@@ -298,6 +298,7 @@ fn open_folded(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) ->
         last_boards,
         glitch_boards,
         dealt_for(mode),
+        row.win_rates.clone(),
     );
     pinned.run(|| {
         let final_hash = match &row.final_hash {
