@@ -34980,7 +34980,8 @@
       "2026-11-07T16:47:05Z,claude-1,stream,call,42385555619,51,2026-11-07T18:50:00Z,,,allowed,40,,"
     ],
     "runs": [
-      "2026-11-07T16:44:22Z,42388761618,claude-8,opus,revise,3372,hard,approved,,7.1,27,5097,1172360,0.9314,54,63,,,25.8,claude-8,none,,1"
+      "2026-11-07T16:44:22Z,42388761618,claude-8,opus,revise,3372,hard,approved,,7.1,27,5097,1172360,0.9314,54,63,,,25.8,claude-8,none,,1",
+      "2026-11-07T16:47:05Z,42385555619,claude-1,sonnet,review,3383,medium,interrupted,5-hour cap,17.9,83,37272,3407745,1.9009,4,51,,,1.4,,fresh,,5"
     ]
   },
   "version": 1
