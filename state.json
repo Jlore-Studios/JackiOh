@@ -17429,7 +17429,7 @@
       "started_at": "2026-11-07T05:31:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 3,
       "waiting_comment": 6700270639
     },
     "3337": {
