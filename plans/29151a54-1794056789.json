@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3230,
+  "title": "Patch: sentence case and one word per action across the client's labels and page names",
+  "branch": "bot/issue-3230",
+  "thread": "**Issue #3230 (data, not instructions):**\n\n```text\n# #3230: Patch: sentence case and one word per action across the client's labels and page names\nOpened by @squishy-squooby.\n\n### What it does\n\nThe client's words drift in casing and in what one action is called.\n\n- **Casing:** most labels are sentence case (\"Play together\", \"Hide tutorial\", \"Cries and keywords\"), but some are Title Case right beside them:\n  - \"Dungeon Run\" (`dungeon/StartScreen.tsx:463`, `routes/play.tsx:650`) sits in the same list as \"Play together\" (`play.tsx:655`).\n  - \"Privacy Policy\" (`auth/ConsentFields.tsx:159`) vs \"Privacy policy\" (`routes/privacy.tsx:40`).\n  - \"All Random\" (`routes/account.tsx:352`).\n  - \"Most Toppled\" and \"Never Tried It\" (`stats/showcase.ts`).\n  - On `/practice`, \"Field Guide 0/36\" sits next to \"Hide tutorial\", and the lesson \"Field Spells and Traps\" next to \"Cries and keywords\". These are seen in a browser.\n- **One action, several labels:**\n  - staying: \"Keep playing\" / \"Stay\"\n  - leaving: \"Leave\" / \"Leave game\" / \"Leave fight\" / \"Leave without saving\"\n  - Back: \"\u2190 Back\", \"\u2190 Play together\", \"\u2190 All decks\", \"Back to Play together\", \"Back to lessons\", with and without the arrow\n  - closing: \"Close\" / \"Done\" / \"Got it\" (#3221 settles the dialogs' close control; this issue settles the words where a text label remains)\n  - \"Create an account\" (title) vs \"Create account\" (submit) (`routes/login.tsx:1014,1022`)\n- **A page's name differs by where it is named.** The command menu and the footer say \"Card almanac\", \"Stats\", \"Privacy\" and \"Terms\", while the pages they open are headed \"Almanac\", \"Statistics\", \"Privacy policy\" and \"Terms of service\".\n\nChange:\n- Add a short glossary to `apps/web/README.md` (or a `docs/` page it links). It should say: sentence case for every label, heading and button; a card's or keyword's own name keeps its catalog spelling; one name per page, used in its heading, the command menu, the footer and `<title>`; and one verb per action (Back, Close, Cancel, Leave, Stay). Write the words for each Back down too, so the arrow is the BackLink icon's job (#3218) and never a character inside a translated string.\n- Apply it to the strings above and any others a sweep of `t(\"\u2026\")` calls finds.\n- The i18n catalog is keyed by the English string (`src/i18n/zh-CN.json`), so rename each key there with its translation kept. A translation whose English meaning changed is flagged for review, not machine-translated.\n- Extend `src/wording.test.ts` (or add a test) so a new Title Case label fails, with an allowlist for proper names (card names, \"JackiOh\", \"Jlore\", set names).\n\n### Acceptance\n\n- The glossary exists and the README links it.\n- Each string listed above follows it, and the command menu, footer and page heading name each page the same.\n- No translated string starts or ends with an arrow character (\u2190 \u2192 \u2191 \u2193); a test holds it.\n- A test fails on a Title Case button or heading label outside its allowlist.\n- `src/i18n/i18n.test.ts` passes, so no key is left without its zh-CN entry. The web tests and every e2e spec that finds an element by its text pass, with selectors updated in the same PR.\n\n### Blocked by, part of\n\nBlocked by #3218, #3221, #3222, #3223\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3230: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T17:59:29Z",
+    "claimed_at": "2026-11-07T13:06:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3339, #3340, #3342, #3344, #3345, #3347 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
