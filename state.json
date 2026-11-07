@@ -16975,7 +16975,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T18:55:37Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6713003469
     },
     "3392": {
       "action": "plan",
