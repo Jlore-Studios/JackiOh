@@ -8,10 +8,10 @@
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
-import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { accounts, constants, routes, timeouts, viewports, type MenuViewport } from "../../support/config.ts";
+import { visitStatsFigures } from "../../support/stats.ts";
 import {
   CARD_POOL,
   COLLECTION_JLORE,
@@ -200,9 +200,8 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 /stats", () => {
-          cy.visit("/stats");
-          cy.get(ts(statsTestid.summaryTiles), { timeout: timeouts.view }).should("be.visible");
+        it("R1581000 R3218000 R3324000 /stats", () => {
+          visitStatsFigures();
           expectBackLinkBarOrder();
           expectOnScreen(viewport, ONE_SCREEN);
         });
