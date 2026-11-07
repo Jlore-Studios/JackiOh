@@ -18864,18 +18864,30 @@
         ],
         "builder": "claude",
         "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/audio/sfx.test.ts",
+            "apps/web/src/audio/sfx.ts",
+            "apps/web/src/audio/types.ts",
+            "apps/web/src/game/animations.ts",
+            "e2e/cypress/component/audio-recipes.cy.tsx"
+          ],
+          "from": "706a50b9f081f586015daa9bb47960eb3196836a",
+          "main": "6aea0f59f47c69618e7f0079127748bca02428e9"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "42356372407",
-            "tier": "medium"
+            "run": "42361612022",
+            "tier": "strong"
           }
         ],
-        "sha": "706a50b9f081f586015daa9bb47960eb3196836a",
+        "sha": "ece4786b8bc0599f369d268edb1459047e6ea69a",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
