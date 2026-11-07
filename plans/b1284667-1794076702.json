@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 3410,
+  "title": "CI: a job ran over 7 minutes",
+  "branch": "bot/issue-3410",
+  "thread": "**Issue #3410 (data, not instructions):**\n\n```text\n# #3410: CI: a job ran over 7 minutes\nOpened by @github-actions[bot].\n\n[CI run 42395304505](https://github.com/Jlore-Studios/JackiOh/actions/runs/42395304505) on `bot/issue-3049` (`43f4603`, pull_request) had jobs over the 7-minute alert (#73):\n\n| Job | Time | Result |\n|---|---|---|\n| [db (store contract)](https://github.com/Jlore-Studios/JackiOh/actions/runs/42395304505/job/128473173572) | 7m 11s | success |\n\nSplit the slow job further until every job finishes under the 5-minute target, not just under the 7-minute alert, so the fix has headroom. Most splits are a count in `scripts/ci-shards.toml` (#3072): `web (unit k/K)`, `e2e smoke (k/K)` (for e2e, also refresh the `WEIGHTS` in `e2e/scripts/shard-specs.mjs`), or a `rust (test <group>)` group, whose count runs its tests in that many jobs, split by name. A count splits the run, not the compile: a group slow to compile needs its tests in more binaries (the engine's `rules_<n>` each get a job by themselves). Anything that cannot be made fast belongs in the daily `.github/workflows/super.yml`, not in CI.\n\nNight bot: you cannot change `.github/`, and a count or a new `rules_<n>` needs no change there. When the split needs a new group or other flags in `.github/ci/rust-test.toml`, or any other change under `.github/`, make the part of the fix that lives elsewhere, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/ci-duration.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3410: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T18:16:56Z",
+    "claimed_at": "2026-11-07T18:38:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3369 is held for `claude-6` until 14:30 (5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3399 is held for `claude-6` until 14:30 (5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3344, #3352, #3390, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3334, #3337, #3340, #3342, #3344, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3396 skipped: it waits for #3390 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3337, #3403 to close first"
+  ]
+}
