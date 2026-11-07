@@ -16128,11 +16128,6 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-3",
-      "paused": {
-        "at": "2026-11-07T19:53:50Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
