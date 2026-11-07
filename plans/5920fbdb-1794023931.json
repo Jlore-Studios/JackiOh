@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3347,
+  "title": "Patch: cards that move like cards: a flight from hand to tile, a deck that riffles when shuffled, an opening deal, a hand that springs, and a drag that tilts with its speed",
+  "branch": "bot/issue-3347",
+  "thread": "**Issue #3347 (data, not instructions):**\n\n```text\n# #3347: Patch: cards that move like cards: a flight from hand to tile, a deck that riffles when shuffled, an opening deal, a hand that springs, and a drag that tilts with its speed\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. The owner asked that cards moving around feel like real cards: \"there should be shuffles\", and so on.\n\n### Today\n\n- **Dropping a card.** `game/drag/landing.ts` hides it from the fan, `jk-card-played` lifts and fades it at the hand, then `jk-summon-scale` and a silhouette drop at the zone. There is **no continuous flight** from hand to tile.\n- **No shuffle and no deal.** Nothing animates a deck shuffle or the opening deal. `shuffledIn` (one card into a library) and `traded` pulse the library pile (`jk-shuffle-in`). There is no deck-shuffle event, and the opening deal has no motion.\n- **The hand fan** reflows with plain transitions. The drag ghost (`DragLayer.tsx`, `DRAG_THRESHOLD_PX` 8) follows the pointer flat.\n- **Card-back flights** cover draw, bounce and discard (`fx/cues.ts` `ghost` cues).\n\n### What it should be\n\nAll of this is client-side presentation, keyed on public events and the player's own input (CLAUDE.md rule 7). The engine needs no new event.\n\n1. **Hand to tile.** A card played from hand flies on an arc from where it left the hand (or where the drag let go) to its tile, turning to face it and growing to its board size, then lands with the summon row. Its time comes out of the existing play row's time, and the `--anim-squeeze` scaling holds. The opponent's plays fly from their hand's edge, face down until the view shows them.\n2. **The riffle.** The library riffles when it is shuffled:\n   - at the game's start, before the deal;\n   - after a `shuffledIn` or `traded` (one riffle per action, however many cards went in);\n   - on a mulligan, the returned cards fly into the deck and it riffles.\n\n   The riffle is the pile's top cards splitting and interleaving, with a riffle sound (`audio/sfx.ts`).\n3. **The opening deal.** The opening hand is dealt one card at a time from the deck to the hand, with a flick sound each, `DEAL_STAGGER_MS` apart. The opponent's hand is dealt face down. A tap skips it.\n4. **A hand that springs.** The fan reflows on a spring when a card leaves or arrives, instead of a linear transition: a slight overshoot with `--ease-overshoot`. Hovering lifts and spreads the neighbours. Dragging a card over the hand to reorder it (where the client already allows it) parts the cards around the gap.\n5. **A drag with weight.** The drag ghost tilts in the direction it moves, by its speed, up to `DRAG_TILT_MAX_DEG`, and settles flat when still. Over a legal tile, the tile lifts to meet it (#3342's tile feedback). Released over nothing, it springs back to its place in the hand.\n6. **Sounds and buzzes.** Pick-up, drag-over-tile, drop, return-to-hand, draw, deal and riffle each have a soft sound of their own, on the sfx bus at a low level. On a phone, pick-up and drop give a light haptic (`haptics/`, with the Vibration setting and `HAPTIC_MIN_GAP_MS`).\n7. **Settings.** Speed scales it all (R201), reduced motion snaps each move to its end with no flight, and fx intensity off keeps the sounds but drops the flourishes.\n\n## Acceptance\n\n- Tests (`animations.test.ts`, drag tests and new ones):\n  - a hand play flies within its row's time;\n  - the riffle plays once per action at the game's start, after `shuffledIn` or `traded`, and on a mulligan;\n  - the deal is staggered and skippable;\n  - the opponent's cards stay face down until the view shows them.\n- The drag tilt follows speed up to its cap and settles. A released drag returns to its place.\n- Each sound and haptic fires once per event, under its settings.\n- A component spec captures a flight, a riffle, the deal and a tilted drag at desktop size and at 390x844. e2e `16` (drag to play) and `25` (overflow animations) pass.\n- `src/motion.test.ts` and `fx/css.test.ts` pass, and every number is a named constant.\n- The web tests, `typecheck` and `eslint` pass, and the pull request carries a `## Player note`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3347: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T00:00:00Z",
+    "claimed_at": "2026-11-07T03:59:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3230 skipped: it waits for #3221 to close first",
+    "#3334 skipped: it waits for #3333 to close first",
+    "#3335 skipped: it waits for #3333 to close first",
+    "#3340 skipped: it waits for #3339 to close first",
+    "#3345 skipped: it waits for #3344 to close first",
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3331, #3344 to close first",
+    "#3351 skipped: it waits for #3334, #3336, #3337, #3338, #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348 to close first",
+    "#3352 skipped: it waits for #3331 to close first"
+  ]
+}
