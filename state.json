@@ -13952,7 +13952,7 @@
       "started_at": "2026-11-06T23:59:19Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "3223": {
       "action": "build",
