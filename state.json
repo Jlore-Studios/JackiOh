@@ -17789,10 +17789,14 @@
         "approvals": [],
         "builder": "gemini",
         "built_by": "agy",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "1dae6204b972b68a88c9e4a567451ab6c4f514f7",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     }
   },
