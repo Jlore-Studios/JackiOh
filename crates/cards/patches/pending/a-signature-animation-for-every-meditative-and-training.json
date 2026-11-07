@@ -1,0 +1,26 @@
+{
+  "title": "Patch: a signature animation for every Meditative+ and Training Grounds Legendary and Mythic, one concept per card",
+  "sources": "#3400",
+  "notes": "How cards animate and sound; nothing plays differently. Bob's Plan, Bob, Wisconsin's Strongest Soldier, Scratch Pad, Seance, Tutorial Master, Call to Chaos (Training-Grounds Edition), the Training-Grounds Golem and Goetzmann Game Design each play a signature of their own in place of a shared motif (R3400001): a Unit its own entrance, its text's beat and a standing aura on its tile; a Spell its own cast; a Mythic its own takeover with art that Reduce Motion shows still (summit, canvas, napkin); each its own sound. A bespoke entry may wear an aura, a Unit's aura may stand on its tile, and a signature Spell's cast stands in for the shared entrance, its takeover's tail shorter (R3400000). Call to Chaos (Training-Grounds Edition)'s roll panel shows for 0.76 s inside the Legendary Spell's budget.",
+  "player": {
+    "title": "Signature animations for Meditative+ and Training Grounds",
+    "new": [
+      "Every Legendary and Mythic of Meditative+ and Training Grounds now has an animation and a sound of its own.",
+      "Bob's Plan takes over the screen with an ink-wash mountain range and a red brushstroke climbing to the summit.",
+      "Scratch Pad empties the screen to blank paper with a blinking cursor; Goetzmann Game Design sketches a card on a napkin under canteen lamplight.",
+      "Bob, Wisconsin's Strongest Soldier heaves a snowplow and slams it down, and Tutorial Master lands in front of a chalkboard.",
+      "The Training-Grounds Golem is lashed together from training posts, its keywords locking on one by one.",
+      "Seance rings the chosen card in candles as a spirit rises from it, and Call to Chaos (Training-Grounds Edition) rolls two carved wooden dice.",
+      "Bob, Tutorial Master and the Training-Grounds Golem wear a standing aura on their tile: snow, chalk dust and sawdust."
+    ],
+    "balance": [],
+    "changes": [
+      "Reduce motion shows each Mythic's own takeover art still behind its card.",
+      "Call to Chaos (Training-Grounds Edition)'s roll panel now shows for a shorter time."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

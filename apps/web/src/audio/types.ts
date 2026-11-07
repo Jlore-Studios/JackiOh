@@ -34,6 +34,8 @@ export type SfxId =
   | "organ"
   // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
   | "playImpact" | "trapSnap"
+  // R3342000: the tile aura touch bell.
+  | "auraTouch"
   // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
   | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
 
@@ -81,6 +83,8 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /** auraTouch: the aura's hue, 0-360. */
+  hue?: number;
   /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
   quiet?: boolean;
   /** playImpact (R3346000): how heavy the play was, by the mana it cost (game/damageFeel.ts `playTier`). Absent: light. */

@@ -44,6 +44,10 @@ const EXPECTED_IDS = [
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
   "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
+  // R3400001: Meditative+'s and Training Grounds' signatures.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -148,6 +152,16 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   // R3346000: a play's cost impact and a firing trap's snap.
   playImpact: 500,
   trapSnap: 200,
+  // R3342000: the tile aura bell.
+  auraTouch: 200,
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
 };
 
 /** B14 parameter sets used here too. */
@@ -381,6 +395,8 @@ const ROUTINE: readonly Cue[] = [
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
+  // R3400001: the signatures, each a card's own moment at a routine level.
+  ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

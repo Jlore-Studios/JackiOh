@@ -223,7 +223,8 @@ export const FX_FORGE_REACH = 0.2;
 export const FX_FLASH_FREEZE_TRAUMA = 0.35;
 export const FX_DUO_BOND_TRAUMA = 0.3;
 export const FX_STRATOS_SWARM_TRAUMA = 0.3;
-// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land.
+// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land (R3400001: Goetzmann Game Design's
+// signature shakes as its takeover's hold ends).
 export const FX_CELESTIAL_TRAUMA = 0.35;
 export const FX_DINO_STOMP_TRAUMA = 0.55;
 export const FX_GAME_DESIGN_TRAUMA = 0.45;

@@ -19,7 +19,7 @@ import {
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
+import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { entranceCues, entranceLandMs, ownCast, TAKEOVER_TINTS, takeoverLookOf } from "./takeover.ts";
@@ -139,6 +139,8 @@ describe("R2722001 a Mythic takes over the board", () => {
     const cues = entranceCues(mythic, env(), D);
     expect(cues.map((c) => c.kind)).toEqual(["takeover"]);
     expect(takeoverOf(cues)).toMatchObject({ look: "napkin", tint: TAKEOVER_TINTS.napkin, landMs: entranceLandMs(mythic, D), delayMs: 0, durationMs: D + FX_SIGNATURE_TAKEOVER_TAIL_MS });
+    // Centred on the screen, as its recipe draws at the board's centre, whatever card element its play left.
+    expect(takeoverOf(cues)?.at).toEqual({ kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } });
     expect(FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThan(FX_TAKEOVER_TAIL_MS);
     // The Legendary: nothing shared at all; its recipe draws its cast.
     const legend = entry([play("traininggrounds-037")]);

@@ -38,6 +38,8 @@ const UNION_ORDER: SfxId[] = [
   // R3338000: the Terminus set pieces' organ.
   "organ",
   "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
   // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ];
@@ -144,6 +146,8 @@ const DURATION_MS: Record<SfxId, number> = {
   // R3346000.
   playImpact: 500,
   trapSnap: 200,
+  // R3342000.
+  auraTouch: 200,
   // R3400001.
   inkSummit: 1100,
   plowHeave: 1300,

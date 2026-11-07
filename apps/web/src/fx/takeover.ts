@@ -16,8 +16,9 @@
 // R3332000: a Mythic's own look is its table entry's `takeover` (`takeoverLookOf`), and a Field Spell
 // landing face up with an `entrance` of its own draws that in place of the shared rays, burst and ring.
 // R3400000: so does a signature Spell's (or Trap's) cast of its own (`ownCast`): its recipe draws its play,
-// and a Mythic's takeover keeps only its own look, ending FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry,
-// with no shared rings or shake, so the whole cast fits the Mythic Spell's ceiling (R3332000).
+// and a Mythic's takeover keeps only its own look, centred on the screen and ending
+// FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry, with no shared rings or shake, so the whole cast fits the
+// Mythic Spell's ceiling (R3332000).
 
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
 import { CATALOG } from "../wire/cards.ts";
@@ -127,7 +128,8 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   if (!mythic || entrance.yielded === true) return cues;
   const look = takeoverLookOf(entrance.defId, table);
   const tail = own ? FX_SIGNATURE_TAKEOVER_TAIL_MS : FX_TAKEOVER_TAIL_MS;
-  const takeover: FxTakeoverCue = { kind: "takeover", look, tint: TAKEOVER_TINTS[look], at, landMs, delayMs: 0, durationMs: D + tail };
+  // R3400000: a signature Spell's own takeover fills the screen from its middle, as its recipe draws at the board's centre.
+  const takeover: FxTakeoverCue = { kind: "takeover", look, tint: TAKEOVER_TINTS[look], at: own ? CENTER : at, landMs, delayMs: 0, durationMs: D + tail };
   if (own) return [...cues, takeover];
   cues.push(
     takeover,

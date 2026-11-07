@@ -27,6 +27,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
   "playImpact", "trapSnap",
+  "auraTouch",
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ];
 
@@ -901,6 +902,17 @@ const tapAstral: SfxRecipe = (ctx, out, at, params) => {
   fmBell(k, out, hz, 3.5, 180, 0, 0.003, 0.2 + build * 0.02, len);
   tone(k, out, "sine", hz * 2, 0.05, 0.002, 0.06, len);
   tone(k, out, "sine", hz * 3, 0.1, 0.002, 0.04, len);
+  return len;
+};
+
+const AURA_NOTES_HZ = [523.25, 587.33, 659.25, 783.99, 880, 1046.5] as const;
+const auraTouch: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.2;
+  const k = kit(ctx, out, at, len);
+  const hue = (((params.hue ?? 0) % 360) + 360) % 360;
+  const hz = AURA_NOTES_HZ[Math.floor(hue / 60) % AURA_NOTES_HZ.length] ?? 523.25;
+  fmBell(k, out, hz, 3.5, 160, 0, 0.003, 0.16, len);
+  tone(k, out, "sine", hz * 2, 0.04, 0.002, 0.04, len);
   return len;
 };
 
@@ -1923,12 +1935,15 @@ const organ: SfxRecipe = (ctx, out, at, params) => {
 const inkSummit: SfxRecipe = (ctx, out, at) => {
   const len = 1.1;
   const k = kit(ctx, out, at, len);
-  const noise = noiseSource(k);
-  chain(noise, biquad(k, "bandpass", 2600, 0.9), envelope(k, 0, 0.003, 0.32, 0.12), out);
+  // Each noise its own source, started as its envelope opens (a gain is 1 until its envelope sets it).
+  const slap = noiseSource(k);
+  chain(slap, biquad(k, "bandpass", 2600, 0.9), envelope(k, 0, 0.003, 0.32, 0.12), out);
+  run(k, slap, 0, 0.12);
   const drum = tone(k, out, "sine", 64, 0.1, 0.006, 0.5, 0.55);
   glide(k, drum.frequency, 42, 0.45);
-  chain(noise, biquad(k, "lowpass", 160, 0), envelope(k, 0.1, 0.004, 0.35, 0.2), out);
-  run(k, noise, 0, 0.2);
+  const skin = noiseSource(k);
+  chain(skin, biquad(k, "lowpass", 160, 0), envelope(k, 0.1, 0.004, 0.35, 0.2), out);
+  run(k, skin, 0.1, 0.2);
   const muffle = biquad(k, "lowpass", 800, 0.8);
   chain(muffle, out);
   const grunt = oscillator(k, "sawtooth", 150, 0.55);
@@ -1969,12 +1984,12 @@ const plowHeave: SfxRecipe = (ctx, out, at) => {
 const cursorTear: SfxRecipe = (ctx, out, at) => {
   const len = 1.4;
   const k = kit(ctx, out, at, len);
-  clickTrain(k, out, [0], 3200, 6, 0.18, 0.03);
-  clickTrain(k, out, [0.22, 0.27, 0.31, 0.38, 0.42, 0.5, 0.57, 0.67], 1900, 3, 0.26, 0.035);
+  clickTrain(k, out, [0], 3200, 6, 0.4, 0.03);
+  clickTrain(k, out, [0.22, 0.27, 0.31, 0.38, 0.42, 0.5, 0.57, 0.67], 1900, 3, 0.55, 0.035);
   const noise = noiseSource(k);
   const band = biquad(k, "bandpass", 1800, 1.1);
   glide(k, band.frequency, 4200, len);
-  chain(noise, band, tremolo(k, 34, 0.45), heldEnvelope(k, 0.85, 0.03, 0.34, 1.15, 0.2, len), out);
+  chain(noise, band, tremolo(k, 34, 0.45), heldEnvelope(k, 0.85, 0.03, 0.7, 1.15, 0.4, len), out);
   run(k, noise, 0.85, len);
   return len;
 };
@@ -1991,12 +2006,14 @@ const seanceChant: SfxRecipe = (ctx, out, at) => {
     chain(voice, heldEnvelope(k, 0, 0.2, 0.2, 0.8, 0.14, 1), murmur);
     run(k, voice, 0, 1);
   }
-  const noise = noiseSource(k);
-  chain(noise, biquad(k, "bandpass", 900, 2), modulatedGain(k, "square", 13, 0.5, 0.45), envelope(k, 0.1, 0.1, 0.14, 0.9), out);
+  const flame = noiseSource(k);
+  chain(flame, biquad(k, "bandpass", 900, 2), modulatedGain(k, "square", 13, 0.5, 0.45), envelope(k, 0.1, 0.1, 0.14, 0.9), out);
+  run(k, flame, 0.1, 0.9);
+  const exhale = noiseSource(k);
   const breath = biquad(k, "bandpass", 1300, 0.8);
   glide(k, breath.frequency, 380, len);
-  chain(noise, breath, heldEnvelope(k, 0.85, 0.12, 0.3, 1.1, 0.1, len), out);
-  run(k, noise, 0.1, len);
+  chain(exhale, breath, heldEnvelope(k, 0.85, 0.12, 0.3, 1.1, 0.1, len), out);
+  run(k, exhale, 0.85, len);
   return len;
 };
 
@@ -2004,17 +2021,17 @@ const seanceChant: SfxRecipe = (ctx, out, at) => {
 const slateRap: SfxRecipe = (ctx, out, at) => {
   const len = 1.3;
   const k = kit(ctx, out, at, len);
-  clickTrain(k, out, [0, 0.16], 1500, 4, 0.4, 0.06);
+  clickTrain(k, out, [0, 0.16], 1500, 4, 0.56, 0.06);
   const noise = noiseSource(k);
   const band = biquad(k, "bandpass", 650, 0.8);
   glide(k, band.frequency, 380, 0.95);
-  chain(noise, band, heldEnvelope(k, 0.32, 0.18, 0.22, 0.65, 0.08, 0.95), out);
+  chain(noise, band, heldEnvelope(k, 0.32, 0.18, 0.31, 0.65, 0.11, 0.95), out);
   run(k, noise, 0.32, 0.95);
   const sigh = oscillator(k, "sine", 300, 0.32);
   glide(k, sigh.frequency, 170, 0.95);
-  chain(sigh, heldEnvelope(k, 0.32, 0.15, 0.12, 0.65, 0.05, 0.95), out);
+  chain(sigh, heldEnvelope(k, 0.32, 0.15, 0.17, 0.65, 0.07, 0.95), out);
   run(k, sigh, 0.32, 0.95);
-  const squeak = tone(k, out, "triangle", 2300, 1.0, 0.01, 0.12, len);
+  const squeak = tone(k, out, "triangle", 2300, 1.0, 0.01, 0.17, len);
   glide(k, squeak.frequency, 2750, len);
   vibrato(k, squeak.frequency, 28, 60, 1.0, len);
   return len;
@@ -2044,16 +2061,18 @@ const timberLash: SfxRecipe = (ctx, out, at) => {
   vibrato(k, creak.frequency, 7, 9, 0, 0.55);
   chain(creak, heldEnvelope(k, 0, 0.12, 0.4, 0.4, 0.2, 0.55), grain);
   run(k, creak, 0, 0.55);
-  const noise = noiseSource(k);
   for (const start of [0.5, 0.62]) {
-    chain(noise, biquad(k, "highpass", 2400, 0.7), envelope(k, start, 0.002, 0.28, start + 0.05), out);
+    const snap = noiseSource(k);
+    chain(snap, biquad(k, "highpass", 2400, 0.7), envelope(k, start, 0.002, 0.28, start + 0.05), out);
+    run(k, snap, start, start + 0.05);
     const twang = tone(k, out, "triangle", 760, start, 0.002, 0.14, start + 0.12);
     glide(k, twang.frequency, 520, start + 0.12);
   }
   const thump = tone(k, out, "triangle", 150, 0.8, 0.004, 0.42, len);
   glide(k, thump.frequency, 92, len);
-  chain(noise, biquad(k, "bandpass", 320, 1.5), envelope(k, 0.8, 0.003, 0.3, 1), out);
-  run(k, noise, 0.5, 1);
+  const hollow = noiseSource(k);
+  chain(hollow, biquad(k, "bandpass", 320, 1.5), envelope(k, 0.8, 0.003, 0.3, 1), out);
+  run(k, hollow, 0.8, 1);
   return len;
 };
 
@@ -2061,15 +2080,23 @@ const timberLash: SfxRecipe = (ctx, out, at) => {
 const pencilArpeggio: SfxRecipe = (ctx, out, at) => {
   const len = 1.4;
   const k = kit(ctx, out, at, len);
-  const noise = noiseSource(k);
-  chain(noise, biquad(k, "bandpass", 3400, 2.2), tremolo(k, 17, 0.45), heldEnvelope(k, 0, 0.03, 0.2, 0.45, 0.14, 0.55), out);
-  chain(noise, biquad(k, "highpass", 2800, 0.7), envelope(k, 0.55, 0.04, 0.12, 0.75), out);
-  run(k, noise, 0, 0.75);
+  const scratch = noiseSource(k);
+  chain(scratch, biquad(k, "bandpass", 3400, 2.2), tremolo(k, 17, 0.45), heldEnvelope(k, 0, 0.03, 0.3, 0.45, 0.22, 0.55), out);
+  run(k, scratch, 0, 0.55);
+  const rustle = noiseSource(k);
+  chain(rustle, biquad(k, "highpass", 2800, 0.7), envelope(k, 0.55, 0.04, 0.2, 0.75), out);
+  run(k, rustle, 0.55, 0.75);
   const bright = biquad(k, "lowpass", 5200, 0.7);
   chain(bright, out);
-  for (const [n, hz] of [523, 659, 784, 1047].entries()) {
-    const start = 0.7 + n * 0.09;
-    tone(k, bright, "triangle", hz, start, 0.006, 0.2, Math.min(len, start + 0.4));
+  // Each note held until the next, the last ringing out, so the notes barely overlap.
+  const notes = [523, 659, 784, 1047];
+  for (const [n, hz] of notes.entries()) {
+    const start = 0.62 + n * 0.13;
+    const last = n === notes.length - 1;
+    const stop = last ? len : start + 0.16;
+    const note = oscillator(k, "triangle", hz, start);
+    chain(note, heldEnvelope(k, start, 0.008, 0.28, last ? start + 0.3 : start + 0.11, 0.22, stop), bright);
+    run(k, note, start, stop);
   }
   return len;
 };
@@ -2172,15 +2199,17 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   // R3346000: a play's cost impact and a firing trap's snap, level with the thud and the set click.
   playImpact: { recipe: playImpact, durationMs: 500, gain: 0.8 },
   trapSnap: { recipe: trapSnap, durationMs: 200, gain: 0.8 },
-  // R3400001: Meditative+'s and Training Grounds' signatures, each at most 1.6 s and gain 0.8.
-  inkSummit: { recipe: inkSummit, durationMs: 1100, gain: 0.7 },
-  plowHeave: { recipe: plowHeave, durationMs: 1300, gain: 0.7 },
-  cursorTear: { recipe: cursorTear, durationMs: 1400, gain: 0.7 },
-  seanceChant: { recipe: seanceChant, durationMs: 1500, gain: 0.7 },
-  slateRap: { recipe: slateRap, durationMs: 1300, gain: 0.7 },
-  diceGong: { recipe: diceGong, durationMs: 1600, gain: 0.7 },
+  // R3342000: the tile aura bell, pitched by its hue.
+  auraTouch: { recipe: auraTouch, durationMs: 200, gain: 0.4 },
+  // R3400001: Meditative+'s and Training Grounds' signatures, each at most 1.6 s and gain 0.8, at a routine card's level (B57).
+  inkSummit: { recipe: inkSummit, durationMs: 1100, gain: 0.53 },
+  plowHeave: { recipe: plowHeave, durationMs: 1300, gain: 0.48 },
+  cursorTear: { recipe: cursorTear, durationMs: 1400, gain: 0.8 },
+  seanceChant: { recipe: seanceChant, durationMs: 1500, gain: 0.44 },
+  slateRap: { recipe: slateRap, durationMs: 1300, gain: 0.8 },
+  diceGong: { recipe: diceGong, durationMs: 1600, gain: 0.4 },
   timberLash: { recipe: timberLash, durationMs: 1200, gain: 0.7 },
-  pencilArpeggio: { recipe: pencilArpeggio, durationMs: 1400, gain: 0.7 },
+  pencilArpeggio: { recipe: pencilArpeggio, durationMs: 1400, gain: 0.47 },
 };
 
 /** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */
