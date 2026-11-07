@@ -22508,5 +22508,38 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12e",
+    "date": "2026-11-06",
+    "title": "Patch: many more card art variants, so every card has several",
+    "source": "#3017",
+    "notes": "Part 6 of the card variants: six two-level variants on #3015's ladders, each its art in the normal frame then animated, per card and granted to no account (R3017000): Night, Watercolor and Woodcut, Rare then Epic, and Neon sign, Stained-glass window and Tarot card, Epic then a Legendary chase. An offer's sample may start at a from (R3017001), so the six make three pairs, each splitting every non-token card between its two by one seed, the types weighted 60 or 40 in 100 toward the style that suits them: every card, Legacy ones included, is offered at least VARIANT_MIN_PER_CARD (three) variants besides the Default, each reaches every set that ships, and no two variants share their cards. Night, Watercolor, Stained-glass window and Tarot card repaint a new picture of the card's subject under a treatment of their own; Woodcut and Neon sign restyle its own picture (R3017002). A foil, a finish and a border layer on each, an animated level moves its picture and holds still under reduced motion, a Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Six new card variants",
+      "new": [
+        "Night: a new picture of the card under a night sky, with a moon and stars.",
+        "Watercolor: a new picture of the card in soft washes of paint on paper.",
+        "Stained-glass window: a new picture of the card in bright panes of glass, lit from behind and leaded.",
+        "Tarot card: a new picture of the card as a fortune card, under an arch with a sun, a crescent and stars.",
+        "Woodcut: the card's own picture as a three-tone print, its middle tone cut in long strokes.",
+        "Neon sign: the card's own picture as glowing tubes on a dark wall."
+      ],
+      "balance": [],
+      "changes": [
+        "Every card, Legacy cards too, can wear three more: Night or Neon sign, Watercolor or Stained-glass window, and Woodcut or Tarot card. Cards differ in which they get.",
+        "Each new variant has an animated level. Night, Watercolor and Woodcut are Rare, then Epic animated; the other three are Epic, then a Legendary chase animated.",
+        "Foils, finishes and borders work on every new level, and a Radiant card keeps its gold frame and marks. None of the new looks uses Radiant's gold."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "4d9000f9a5838e4668e5fa5483307797c148b8fd"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
