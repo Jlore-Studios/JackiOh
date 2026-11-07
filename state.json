@@ -17727,9 +17727,11 @@
         "by": "`gemini` (medium)",
         "sha": "f36ebdb9d7ffdd6060a6ca40659aadbc9d46ed24"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-06T23:59:19Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-07T00:27:00Z",
         "family": "gemini",
@@ -17739,6 +17741,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && pnpm --dir apps/web test src/tabs/Tabs.test.tsx src/tabs/Segmented.test.tsx src/settings/tabs.test.tsx src/settings/wiring.test.tsx src\u2026\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-578\"}\n- said: \n- schedule: {\"DurationSeconds\": 15, \"Prompt\": \"Check test suite completion\"}\n- said: Waiting for vitest suite to finish.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-578\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && cargo fmt --check && pnpm --dir apps/web typecheck && pnpm exec eslint apps/web\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-589\"}\n- said: \n- schedule: {\"DurationSeconds\": 10, \"Prompt\": \"Check typecheck completion\"}\n- said: Waiting for typecheck and eslint to finish.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-589\"}\n- said: \n- run_command: ps aux | grep eslint\n- said: \n- schedule: {\"DurationSeconds\": 15, \"Prompt\": \"Check task-589\"}\n- said: Waiting for typecheck and eslint to finish.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-589\"}\n- said: \n- run_command: pstree -p 11791\n- said: \n- run_command: ps -f -p 11843\n- said: \n- run_command: cat /proc/11843/cmdline | tr '\\0' ' '\n- said: \n- schedule: {\"DurationSeconds\": 10, \"Prompt\": \"Check eslint finish\"}\n- said: Waiting for eslint to complete.\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"c1d48c04-e0e3-441c-81d6-ea238cdb5c7b/task-613\"}\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3222 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one Tabs and one segmented-toggle component for the menus' tabs and filters\"} --> ### Summary of Changes This patch resolves issue #3222 by unifying tab and segmented filter controls into two reusable components sharing a single design-token stylesheet,\u2026"
       },
+      "interruptions": 0,
       "issue": 3222,
       "kind": "review",
       "live": "reviewing",
