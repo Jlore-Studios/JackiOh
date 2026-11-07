@@ -35549,7 +35549,8 @@
       "2026-11-07T18:43:30Z,42401279145,claude-3,opus,plan,3390,hard,planned,,15.5,135,93073,13620268,6.7577,27,51,,,99.8,,fresh,,1",
       "2026-11-07T18:38:20Z,42401212541,claude-3,opus,plan,3402,hard,planned,,11.1,84,75464,8775170,12.3416,26,44,,,101.2,claude-3,resumed,cap,1",
       "2026-11-07T19:00:41Z,42403042303,claude-1,opus,review,3383,medium,reviewed,,5.5,52,30204,3213155,2.3254,2,6,,,,,none,,1",
-      "2026-11-07T18:54:29Z,42402329917,agy,gemini-3.8-flash-high,plan,3410,medium,planned,,15.2,509033,86177,0,,34,39,83,84,22,,none,,1"
+      "2026-11-07T18:54:29Z,42402329917,agy,gemini-3.8-flash-high,plan,3410,medium,planned,,15.2,509033,86177,0,,34,39,83,84,22,,none,,1",
+      "2026-11-07T18:53:03Z,42398302324,claude-6,opus,revise,3375,hard,interrupted,5-hour cap,0.3,0,0,0,,56,76,,,0.8,claude-6,none,,1"
     ]
   },
   "version": 1
