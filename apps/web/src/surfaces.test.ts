@@ -49,6 +49,8 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/cards.css": 171,
   "cards/cardstate.css": 24,
   "cards/cosmetics.css": 38,
+  // R3344000: the glare's two radial gradients, over a card face's art and its frame, where a gradient means something.
+  "cards/depth.css": 2,
   "cards/dormant.css": 6,
   "cards/glitch.css": 9,
   "cards/inspect/inspect.css": 36,
@@ -89,7 +91,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "routes/lobby.css": 37,
   "routes/replays.css": 1,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 12,
+  "routes/stats.css": 10,
   "routes/top-bar.css": 3,
   "settings/changeEmail.css": 2,
   "settings/settings.css": 20,

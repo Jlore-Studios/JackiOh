@@ -6,10 +6,10 @@
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
-import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { accounts, constants, routes, seedFor, timeouts, viewports } from "../../support/config.ts";
+import { visitStatsFigures } from "../../support/stats.ts";
 import {
   BOARD,
   CARD_POOL,
@@ -325,9 +325,9 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
       expectHitAreas();
     });
 
-    it("R2122000 /stats", () => {
-      cy.visit("/stats");
-      cy.get(ts(statsTestid.summaryTiles), { timeout: timeouts.view }).should("be.visible");
+    it("R2122000 R3324000 /stats", () => {
+      // A newest patch still collecting its data is checked too, then the patch before with its figures.
+      visitStatsFigures(expectHitAreas);
       expectHitAreas();
     });
 

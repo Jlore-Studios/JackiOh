@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { animationRow, SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
 import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
 
@@ -46,6 +46,9 @@ const S2 = {
   FX_SLAM_TRAUMA_PER_STAT: 0.06,
   FX_SLAM_MAX_TRAUMA: 0.5,
   FX_LEGENDARY_TRAUMA: 0.7,
+  // R3346000: the board's shake under a heavy and a massive play.
+  FX_PLAY_HEAVY_TRAUMA: 0.35,
+  FX_PLAY_MASSIVE_TRAUMA: 0.7,
   FX_TAKEOVER_TAIL_MS: 700,
   FX_TAKEOVER_TRAUMA: 0.6,
   FX_TRAP_TRAUMA: 0.4,
@@ -213,6 +216,11 @@ const S2 = {
   FX_FELINOR_STREAK_AT: 0.1,
   FX_FELINOR_STREAK_STEP: 0.08,
   FX_FELINOR_STREAKS_MAX: 5,
+  // Issue #3400: a signature Spell's takeover tail and Call to Chaos (Training-Grounds Edition)'s panel (R3400000, R3400001), and Bob's Plan's shake.
+  FX_SIGNATURE_TAKEOVER_TAIL_MS: 400,
+  FX_CHAOS_DICE_REEL_MS: 500,
+  FX_CHAOS_DICE_PANEL_MS: 760,
+  FX_BOBS_PLAN_TRAUMA: 0.6,
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
   AURA_MOTES_PER_AURA: 24,
@@ -488,6 +496,8 @@ describe("S2 the effects constants", () => {
     for (const trauma of [
       constants.FX_SLAM_MAX_TRAUMA,
       constants.FX_LEGENDARY_TRAUMA,
+      constants.FX_PLAY_HEAVY_TRAUMA,
+      constants.FX_PLAY_MASSIVE_TRAUMA,
       constants.FX_TRAP_TRAUMA,
       constants.FX_RESULT_TRAUMA,
       constants.FX_TAKEOVER_TRAUMA,
@@ -556,6 +566,23 @@ describe("R3332000 the signature budgets", () => {
     for (const [name, look] of Object.entries(AURA_LOOKS)) {
       for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(constants.AURA_SIGNATURE_MAX_INTENSITY);
     }
+  });
+
+  it("R3400000 a signature Mythic Spell's hold, cast and tail, and the chaos panel after a cast, fit their ceilings", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA } = constants;
+    const cast = animationRow("cardPlayed")?.durationMs ?? Infinity;
+    // A Mythic Spell's own takeover lasts its held cast and the shorter tail, inside its ceiling; so does the burst at the hold's end.
+    const mythicSpell = SIGNATURE_MYTHIC_MAX_MS * SIGNATURE_SPELL_SHARE;
+    expect(TAKEOVER_HOLD_MS + cast + constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThanOrEqual(mythicSpell);
+    expect(TAKEOVER_HOLD_MS + constants.FX_MAX_PARTICLE_LIFE_MS).toBeLessThanOrEqual(mythicSpell);
+    expect(constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThan(constants.FX_TAKEOVER_TAIL_MS);
+    expect(constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeGreaterThan(0);
+    // R3400001: Call to Chaos (Training-Grounds Edition)'s panel after its cast, inside the Legendary Spell's ceiling, its reels landing first.
+    const chaos = animationRow("chaosRolled")?.durationMs ?? Infinity;
+    expect(cast + constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(SIGNATURE_LEGENDARY_MAX_MS * SIGNATURE_SPELL_SHARE);
+    expect(constants.FX_CHAOS_DICE_REEL_MS).toBeLessThan(constants.FX_CHAOS_DICE_PANEL_MS);
+    expect(constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(chaos + constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_BOBS_PLAN_TRAUMA).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
   });
 
   it("R3332001 Felinor Fiender's streaks all leave before its slam", () => {

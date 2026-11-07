@@ -101,6 +101,13 @@
   box-shadow: none;
 }
 
+/* R3344000: a depth plane's picture (CardFace): its plane's whole box, which the plane (`.cf-plane`) shapes and clips, so no
+   corners, ring or shade of its own, and no `cf-art--full`, which marks a face that prints full art. */
+.cf-art--plane {
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* Deck-list tile: a wide strip that is opaque on the right and fades out to the left. */
 .cf-art--strip {
   background-position: center 38%;

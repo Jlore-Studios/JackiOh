@@ -23,6 +23,9 @@ import {
   NEXT_REFRESH_MODIFIER_ID,
   OVERKILL_DELAY_MS,
   OVERKILL_MIN_EXCESS,
+  PLAY_IMPACT_DELAY_MS,
+  PLAY_IMPACT_OPPONENT_GAIN,
+  SFX_MAX_VOICES,
   SHEEP_DEF_IDS,
   STING_DELAY_MS,
   VOICE_DELAY_MS,
@@ -34,6 +37,7 @@ import {
   healthBefore,
   isOverkill,
   lanePan,
+  playImpactCue,
   timbreFor,
   type CueCard,
   type CueContext,
@@ -44,7 +48,7 @@ import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
 import { themeFor } from "../cards/art/themes.ts";
-import { armorTookHalf } from "../game/damageFeel.ts";
+import { armorTookHalf, PLAY_TIERS_ASCENDING, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
@@ -707,12 +711,12 @@ describe("R203: audio reveals no more than the screen", () => {
   });
 
   it("R203 (B20) a trapFired with a readable defId gives the sting and its cast line on the controller's seat", () => {
-    expect(shape(trapFired(TRAP))).toEqual([sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
-    expect(shape(trapFired(FIELD_TRAP))).toEqual([sfx("trapSting"), voice(FIELD_TRAP, "cast", VOICE_DELAY_MS)].sort());
+    expect(shape(trapFired(TRAP))).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
+    expect(shape(trapFired(FIELD_TRAP))).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(FIELD_TRAP, "cast", VOICE_DELAY_MS)].sort());
   });
 
-  it("R203 (B20) a trapFired carrying the sentinel gives the sting alone", () => {
-    expect(shape(trapFired(HIDDEN_DEF_ID, "p2"))).toEqual([sfx("trapSting")]);
+  it("R203 (B20) a trapFired carrying the sentinel gives the snap and the sting alone", () => {
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p2"))).toEqual([sfx("trapSnap"), sfx("trapSting")]);
   });
 
   it("R2657001 a Field Trap firing again gives an activation's shimmer, with no sting and no line, on either seat", () => {
@@ -743,7 +747,7 @@ describe("R203: audio reveals no more than the screen", () => {
   it("R2734000 the other seat hears a fired trap's sting and its cast line once its view names it", () => {
     // p1's trap fires; on p2's seat the event names it wherever it lies public, as on p1's.
     const opponentSeat = ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
-    expect(shape(trapFired(TRAP, "p1"), opponentSeat)).toEqual([sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
+    expect(shape(trapFired(TRAP, "p1"), opponentSeat)).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
   });
 });
 
@@ -1176,7 +1180,7 @@ describe("R3332002 a Legendary's or a Mythic's own intro is its sting", () => {
     expect(entranceOf(landedAs(FELINOR_FIENDER))).toBeUndefined();
     expect(entranceOf(landedAs(CEASELESS_VOID))).toBeUndefined();
     expect(entranceOf(played(ZEPHRYS, "p2"))).toBeUndefined();
-    expect(shape(played(ZEPHRYS, "p2"), either())).toEqual([sfx("play"), sfx("spell", 60)].sort());
+    expect(shape(played(ZEPHRYS, "p2"), either())).toEqual([sfx("play"), sfx("playImpact"), sfx("spell", 60)].sort());
     expect(entranceOf(trapFired(EXPERIMENT, "p2"))).toBeUndefined();
     // The thud still carries what the catalog says of the card (#92 is a Human): only the shared sting yields.
     expect(sfxOf(cuesFor(landedAs(FELINOR_FIENDER), either()), "summon")?.params?.timbre).toBe("human");
@@ -1372,7 +1376,7 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
     expect(shape(played(SPELL), fx())).toContain(voice(SPELL, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS));
     expect(shape(played(FIELD_SPELL), fx()).filter((c) => !c.startsWith("sfx:"))).toEqual([effect(FIELD_SPELL, "cast", VOICE_DELAY_MS)]);
     expect(shape(trapFired(TRAP), fx())).toEqual(
-      [sfx("trapSting"), effect(TRAP, "cast", VOICE_DELAY_MS), voice(TRAP, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort(),
+      [sfx("trapSnap"), sfx("trapSting"), effect(TRAP, "cast", VOICE_DELAY_MS), voice(TRAP, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort(),
     );
     const trapCues = cuesFor(trapFired(TRAP), fx()).filter((c) => c.kind === "effect");
     expect(trapCues.map((c) => c.priority)).toEqual([VOICE_PRIORITY.react]);
@@ -1707,12 +1711,12 @@ describe("R2722002 a hidden card makes its entrance as it reveals, never as it i
 
   it("R2722002 a Legendary or Mythic Trap's first firing plays the entrance; the sentinel and a firing again do not", () => {
     // R2734000: the firing names the trap to both seats wherever it lies public, so both make the entrance.
-    for (const viewer of ["p1", "p2"] as const) expect(shape(trapFired("trap-legend"), seat(viewer)), viewer).toEqual([sfx("trapSting"), ENTRANCE].sort());
+    for (const viewer of ["p1", "p2"] as const) expect(shape(trapFired("trap-legend"), seat(viewer)), viewer).toEqual([sfx("trapSnap"), sfx("trapSting"), ENTRANCE].sort());
     const mythic = cuesFor(trapFired("trap-mythic"), seat("p1")).find((c) => c.kind === "sfx" && c.id === "entrance");
     expect(mythic).toMatchObject({ params: { mythic: true } });
     // A lower-rarity Trap keeps the sting every Trap shares (R203).
-    expect(shape(trapFired("trap-rare"), seat("p1"))).toEqual([sfx("trapSting")]);
-    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSting")]);
+    expect(shape(trapFired("trap-rare"), seat("p1"))).toEqual([sfx("trapSnap"), sfx("trapSting")]);
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSnap"), sfx("trapSting")]);
     const again = { ...trapFired("trap-mythic"), again: true } as GameEvent;
     expect(shape(again, seat("p1"))).toEqual([sfx("spell")]);
   });
@@ -1720,15 +1724,15 @@ describe("R2722002 a hidden card makes its entrance as it reveals, never as it i
   it("R2722002 a Cloaked Common's reveal plays its rarity sting, a Cloaked Legendary's the entrance, on both seats", () => {
     // Each seat reads it at the firing (R2734000), once: the activated reveal before it adds nothing.
     for (const viewer of ["p1", "p2"] as const) {
-      expect(shape(trapFired("cloak-common"), seat(viewer)), viewer).toEqual([sfx("trapSting"), sfx("sting", STING_DELAY_MS)].sort());
-      expect(shape(trapFired("cloak-legend"), seat(viewer)), viewer).toEqual([sfx("trapSting"), ENTRANCE].sort());
+      expect(shape(trapFired("cloak-common"), seat(viewer)), viewer).toEqual([sfx("trapSnap"), sfx("trapSting"), sfx("sting", STING_DELAY_MS)].sort());
+      expect(shape(trapFired("cloak-legend"), seat(viewer)), viewer).toEqual([sfx("trapSnap"), sfx("trapSting"), ENTRANCE].sort());
       const epic = cuesFor(trapFired("cloak-epic"), seat(viewer)).find((c) => c.kind === "sfx" && c.id === "sting");
       expect(epic, viewer).toMatchObject({ params: { tier: "epic" } });
       const mythic = cuesFor(trapFired("cloak-mythic"), seat(viewer)).find((c) => c.kind === "sfx" && c.id === "entrance");
       expect(mythic, viewer).toMatchObject({ params: { mythic: true } });
       expect(shape(reveal("cloak-legend"), seat(viewer)), viewer).toEqual([sfx("spell")]);
     }
-    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSting")]);
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSnap"), sfx("trapSting")]);
   });
 
   it("R2722002 a Cloaked set plays trapSet or the plain play whatever its rarity", () => {
@@ -1738,5 +1742,134 @@ describe("R2722002 a hidden card makes its entrance as it reveals, never as it i
     }
     const theirs: GameEvent = { type: "cardPlayed", player: "p1", instanceId: HIDDEN_DEF_ID, defId: HIDDEN_DEF_ID, costPaid: 2 };
     expect(shape(theirs, seat("p2"))).toEqual([sfx("play")]);
+  });
+});
+
+/* R3346000 (#3346): an impact under every readable play, sized by the mana it cost and coloured by its type */
+
+describe("R3346000 a play lands with weight: an impact by cost tier and type", () => {
+  /** A cost inside each tier's range, one at each edge. */
+  const COSTS: Readonly<Record<PlayTier, readonly number[]>> = { light: [0, 2], medium: [3, 5], heavy: [6, 8], massive: [9, 14] };
+  const TYPES: readonly { card: CueCard["type"]; defId: string; type: PlayType }[] = [
+    { card: "Unit", defId: UNIT, type: "unit" },
+    { card: "Spell", defId: SPELL, type: "spell" },
+    { card: "Field Spell", defId: FIELD_SPELL, type: "field" },
+  ];
+  const catalogOf = (type: CueCard["type"], rarity?: CueCard["rarity"]) => (): CueCard => ({ type, tags: [], ...(rarity === undefined ? {} : { rarity }) });
+  const playedFor = (defId: string, costPaid: number, player: PlayerId = "p1", extra: Partial<Extract<GameEvent, { type: "cardPlayed" }>> = {}): GameEvent => ({
+    ...played(defId, player),
+    costPaid,
+    ...extra,
+  } as GameEvent);
+  const impactsOf = (event: GameEvent, context: CueContext): SoundCue[] => cuesFor(event, context).filter((c) => c.kind === "sfx" && c.id === "playImpact");
+
+  it("R3346000 each cost tier of each type is one playImpact, at the whoosh, with its tier and type", () => {
+    for (const tier of PLAY_TIERS_ASCENDING) {
+      for (const cost of COSTS[tier]) {
+        for (const { card, defId, type } of TYPES) {
+          expect(impactsOf(playedFor(defId, cost), ctx({ card: catalogOf(card) })), `${tier} (${String(cost)}) ${card}`).toEqual([
+            { kind: "sfx", id: "playImpact", params: { playTier: tier, playType: type }, delayMs: PLAY_IMPACT_DELAY_MS },
+          ]);
+        }
+      }
+    }
+  });
+
+  it("R3346000 playImpactCue is the cue a play's impact is: no gain for the viewer's own, the opponent's trim for the other seat's", () => {
+    expect(playImpactCue("heavy", "spell", true)).toEqual({ kind: "sfx", id: "playImpact", params: { playTier: "heavy", playType: "spell" }, delayMs: PLAY_IMPACT_DELAY_MS });
+    expect(playImpactCue("light", "field", false)).toEqual({
+      kind: "sfx",
+      id: "playImpact",
+      params: { playTier: "light", playType: "field", gain: PLAY_IMPACT_OPPONENT_GAIN },
+      delayMs: PLAY_IMPACT_DELAY_MS,
+    });
+  });
+
+  it("R3346000 the other seat's play is a step quieter: the same impact with a gain below 1, and the viewer's own has none", () => {
+    expect(PLAY_IMPACT_OPPONENT_GAIN).toBeGreaterThan(0);
+    expect(PLAY_IMPACT_OPPONENT_GAIN).toBeLessThan(1);
+    for (const { card, defId, type } of TYPES) {
+      const own = impactsOf(playedFor(defId, 7), ctx({ card: catalogOf(card) }));
+      const theirs = impactsOf(playedFor(defId, 7, "p2"), ctx({ card: catalogOf(card) }));
+      expect(own, card).toEqual([{ kind: "sfx", id: "playImpact", params: { playTier: "heavy", playType: type }, delayMs: PLAY_IMPACT_DELAY_MS }]);
+      expect(theirs, card).toEqual([
+        { kind: "sfx", id: "playImpact", params: { playTier: "heavy", playType: type, gain: PLAY_IMPACT_OPPONENT_GAIN }, delayMs: PLAY_IMPACT_DELAY_MS },
+      ]);
+    }
+    // Seen from the other seat the roles swap: p2 is the viewer there, so p1's play is the quiet one.
+    const fromP2 = ctx({ card: catalogOf("Unit"), view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
+    expect(impactsOf(playedFor(UNIT, 7, "p2"), fromP2)).toEqual([expect.not.objectContaining({ params: expect.objectContaining({ gain: expect.anything() }) })]);
+    expect(impactsOf(playedFor(UNIT, 7, "p1"), fromP2)).toEqual([expect.objectContaining({ params: expect.objectContaining({ gain: PLAY_IMPACT_OPPONENT_GAIN }) })]);
+  });
+
+  it("R3346000 a Trap, a Field Trap, a card set face-down, a cast on draw and the sentinel give no impact; a Trap gives its click, the sentinel the whoosh", () => {
+    const withCard = (type: CueCard["type"], over: Partial<CueContext> = {}): CueContext => ctx({ card: catalogOf(type), ...over });
+    expect(shape(playedFor(TRAP, 8), withCard("Trap"))).toEqual([sfx("trapSet")]);
+    expect(shape(playedFor(FIELD_TRAP, 8), withCard("Field Trap"))).toEqual([sfx("trapSet")]);
+    // R227: any play that puts a card face-down, whatever it prints, is a set.
+    expect(impactsOf(playedFor(UNIT, 8, "p1", { formerId: "h1" }), withCard("Unit"))).toEqual([]);
+    expect(shape(playedFor(UNIT, 8, "p1", { formerId: "h1" }), withCard("Unit"))).toEqual([sfx("trapSet")]);
+    // R502: a card cast as it is drawn has its own sting.
+    expect(impactsOf(playedFor(SPELL, 8), withCard("Spell", { castOnDraw: () => true }))).toEqual([]);
+    expect(shape(playedFor(SPELL, 8), withCard("Spell", { castOnDraw: () => true }))).toContain(sfx("castOnDraw"));
+    // R203: the sentinel names no card, so the other seat's face-down play is the plain whoosh at every cost.
+    for (const cost of [0, 6, 9]) {
+      expect(shape(playedFor(HIDDEN_DEF_ID, cost, "p2", { instanceId: HIDDEN_DEF_ID }), withCard("Unit")), String(cost)).toEqual([sfx("play")]);
+    }
+  });
+
+  it("R3346000 with no catalog the play is as it was: no impact, for any type or cost", () => {
+    for (const { defId } of TYPES) {
+      for (const cost of [0, 5, 9]) expect(impactsOf(playedFor(defId, cost), ctx()), `${defId} ${String(cost)}`).toEqual([]);
+    }
+    expect(shape(playedFor(UNIT, 9), ctx())).toEqual([sfx("play"), voice(UNIT, "play", VOICE_DELAY_MS)].sort());
+  });
+
+  it("R3346000 a Mythic Spell at 10 mana is heard as voice, sting and impact in turn, and within SFX_MAX_VOICES", () => {
+    const cues = cuesFor(playedFor(SPELL, 10), ctx({ card: catalogOf("Spell", "Mythic") }));
+    const at = (id: SfxId): number => {
+      const cue = sfxOf(cues, id);
+      if (cue === undefined) throw new Error(`no ${id}`);
+      return cue.delayMs;
+    };
+    expect(at("playImpact")).toBe(PLAY_IMPACT_DELAY_MS);
+    expect(at("playImpact")).toBeLessThan(at("entrance"));
+    expect(at("entrance")).toBe(STING_DELAY_MS);
+    expect(at("entrance")).toBeLessThan(VOICE_DELAY_MS);
+    expect(cues.filter((c) => c.kind === "voice")).toHaveLength(1);
+    expect(cues.filter((c) => c.kind === "voice")[0]?.delayMs).toBe(VOICE_DELAY_MS);
+    expect(sfxOf(cues, "playImpact")?.params).toEqual({ playTier: "massive", playType: "spell" });
+    expect(cues.filter((c) => c.kind === "sfx").length).toBeLessThanOrEqual(SFX_MAX_VOICES);
+  });
+
+  it("R3346000 a trap's first firing adds its snap, the other seat's a step quieter; a firing again adds none", () => {
+    const own = cuesFor(trapFired(TRAP, "p1"), ctx());
+    expect(sfxOf(own, "trapSnap")).toEqual({ kind: "sfx", id: "trapSnap", delayMs: 0 });
+    const theirs = cuesFor(trapFired(TRAP, "p2"), ctx());
+    expect(sfxOf(theirs, "trapSnap")).toEqual({ kind: "sfx", id: "trapSnap", params: { gain: PLAY_IMPACT_OPPONENT_GAIN }, delayMs: 0 });
+    // The snap and the sting are two sounds, and the snap names nothing: the sentinel's firing has it too (R203).
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p2"))).toEqual([sfx("trapSnap"), sfx("trapSting")]);
+    const again = { ...trapFired(FIELD_TRAP), again: true } as GameEvent;
+    expect(shape(again)).toEqual([sfx("spell")]);
+  });
+
+  it("R3346000 the thud stays the stats tier and the impact the cost tier: a cheap huge Unit and an expensive tiny one each read right", () => {
+    const stats = (attack: number, health: number): UnitView => ({ attack, health, armor: 0, keywords: [] }) as unknown as UnitView;
+    const card = catalogOf("Unit");
+    const summon: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 2 };
+    // A 1-mana 20/20: a light impact, a massive thud with its giga impact beneath it.
+    expect(impactsOf(playedFor(UNIT, 1), ctx({ card }))).toEqual([expect.objectContaining({ params: { playTier: "light", playType: "unit" } })]);
+    const huge = cuesFor(summon, ctx({ card, unitNow: () => stats(20, 20) }));
+    expect(sfxOf(huge, "summon")?.params).toMatchObject({ slamTier: "massive" });
+    expect(sfxOf(huge, "impact")?.params).toMatchObject({ impactTier: UNIT_SLAM.massive.impact });
+    expect(UNIT_SLAM.massive.impact).toBe("giga");
+    // A 10-mana 1/1: a massive impact, a tiny thud and no slam impact.
+    expect(impactsOf(playedFor(UNIT, 10), ctx({ card }))).toEqual([expect.objectContaining({ params: { playTier: "massive", playType: "unit" } })]);
+    const tiny = cuesFor(summon, ctx({ card, unitNow: () => stats(1, 1) }));
+    expect(sfxOf(tiny, "summon")?.params).toMatchObject({ slamTier: "tiny" });
+    expect(sfxOf(tiny, "impact")).toBeUndefined();
+    // The summon carries no cost impact of its own: that is the play's.
+    expect(sfxOf(huge, "playImpact")).toBeUndefined();
+    expect(sfxOf(tiny, "playImpact")).toBeUndefined();
   });
 });

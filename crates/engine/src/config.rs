@@ -77,10 +77,26 @@ pub const ROLL_HEADS: i32 = 1;
 /// R2652001: the face a coin reports when it lands tails.
 pub const ROLL_TAILS: i32 = 2;
 
-/// MD-D1 (Meditative #50 CN Tech): the games a card needs in the compiled win-rate table before it
+/// MD-D1 (Meditative #50 CN Tech): the games a card needs in the game's win-rate table before it
 /// can lead it. A thinner row never leads, so a new patch's first games cannot crown a card. The
 /// trailer Meditative+ #2 NA Tech reads has the same floor (R1183000).
 pub const CN_TECH_MIN_GAMES: i32 = 20;
+
+/// R3049001: the numerator of the normal quantile the win-rate table's ends are ranked by, a 95%
+/// Wilson bound: `WIN_RATE_BOUND_Z_NUM / WIN_RATE_BOUND_Z_DEN` is 1.96, `STATS_INTERVAL_Z` as a
+/// fraction, so the ranking stays in integers.
+pub const WIN_RATE_BOUND_Z_NUM: u128 = 49;
+
+/// R3049001: the denominator of that quantile (49/25 = 1.96).
+pub const WIN_RATE_BOUND_Z_DEN: u128 = 25;
+
+/// R3049001: the parts of one a Wilson bound is counted in (a millionth), rounded down.
+pub const WIN_RATE_BOUND_SCALE: u128 = 1_000_000;
+
+/// R3049000: the rows a game keeps of the win-rate snapshot it is handed, at each end: the most a
+/// pick can pass over (NA Tech's trailer skips NA Tech and the leader) and one more, so every pick
+/// the game makes reads the same card off what it keeps as off the whole snapshot.
+pub const WIN_RATE_SNAPSHOT_ENDS: usize = 4;
 
 /// R1183004 (Meditative+ #25 KY's Intuition): the most lines a card's code block shows, its script's
 /// first lines of code. `crates/cards/build.rs` reads this line to cut the blocks it compiles in.
