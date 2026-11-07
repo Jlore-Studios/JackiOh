@@ -23025,12 +23025,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-07T07:50:00Z",
+      "refused_until": "2026-11-07T12:50:00Z",
       "spent": [
-        {
-          "at": "2026-10-30T14:13:17Z",
-          "minutes": 54.3
-        },
         {
           "at": "2026-10-30T15:35:35Z",
           "minutes": 115.1
@@ -23826,16 +23822,13 @@
         {
           "at": "2026-11-07T09:51:08Z",
           "minutes": 92.2
+        },
+        {
+          "at": "2026-11-07T10:01:16Z",
+          "minutes": 0.1
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-29T21:16:26Z",
-          "cache": 1776591,
-          "cost": 1.1453,
-          "input": 44,
-          "output": 9838
-        },
         {
           "at": "2026-10-29T21:17:08Z",
           "cache": 3414455,
@@ -25228,15 +25221,23 @@
           "cost": 36.0071,
           "input": 445,
           "output": 153475
+        },
+        {
+          "at": "2026-11-07T10:01:16Z",
+          "cache": 74210,
+          "cost": 0.5071,
+          "input": 2,
+          "output": 406
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-07T12:50:00Z",
-          "utilization": 0.99
+          "utilization": 1.01
         },
-        "observed_at": "2026-11-07T09:51:08Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-07T10:01:16Z",
+        "rejected_resets_at": "2026-11-07T12:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -36777,7 +36778,8 @@
       "2026-11-07T09:12:45Z,claude-3,stream,call,42352979758,96,2026-11-07T12:50:00Z,,,allowed_warning,,,",
       "2026-11-07T09:20:15Z,claude-3,stream,call,42352979758,97,2026-11-07T12:50:00Z,,,allowed_warning,,,",
       "2026-11-07T09:20:30Z,claude-3,stream,call,42352979758,98,2026-11-07T12:50:00Z,,,allowed_warning,,,",
-      "2026-11-07T09:24:54Z,claude-3,stream,call,42352979758,99,2026-11-07T12:50:00Z,,,allowed_warning,,,"
+      "2026-11-07T09:24:54Z,claude-3,stream,call,42352979758,99,2026-11-07T12:50:00Z,,,allowed_warning,,,",
+      "2026-11-07T09:57:47Z,claude-3,refusal,call,42361537327,101,2026-11-07T12:50:00Z,,,rejected,,,2026-11-07T12:50:00Z"
     ],
     "runs": [
       "2026-11-07T09:41:11Z,42352979758,claude-3,opus,build,3343,hard,built,,92.2,445,153475,69428753,36.0071,1,99,,,477.2,claude-3,fresh,,1"
