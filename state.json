@@ -17493,6 +17493,7 @@
     "3410": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-07T19:05:27Z",
         "difficulty": "medium",
@@ -17501,6 +17502,7 @@
         "why": "the planner gave no rating line"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-07T18:54:29Z",
         "family": "gemini",
@@ -17510,6 +17512,7 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && grep -n -B 2 -A 5 \"uses: ./.github/actions/setup\" .github/workflows/ci.yml\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"2f249ce1-8fa8-4191-9a45-9e7afa37afdf/task-137\"}\n- said: \n- run_command: pstree -p 12141\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && grep -rn \"store contract\" docs/ spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && grep -rn \"store contract\" BUILD.md CLAUDE.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && grep -rn \"store contract\" crates/server/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && sed -n '120,135p' .github/workflows/ci.yml\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && git show --stat 43f4603 | grep -E \"crates/engine|crates/cards\"\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && grep -n -A 30 \"rust-build:\" .github/workflows/ci.yml\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && cat -n crates/server/tests/db/run.sh\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"2f249ce1-8fa8-4191-9a45-9e7afa37afdf/task-137\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && target/release/jackioh catalog check && target/release/jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && cargo fmt --check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"2f249ce1-8fa8-4191-9a45-9e7afa37afdf/task-223\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && shellcheck crates/server/tests/db/run.sh\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && sh -n crates/server/tests/db/run.sh\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && git check-ignore .bot-plan.md\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3410/.bot-plan.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3410 && git status\n- said: \n- run_command: wc -w -c /home/agent-agy/actions-runner/_work/_temp/work/item-3410/.bot-plan.md\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"none of the five hard conditions hold: changes only test runner build flags in crates/server/tests/db/run.sh and docs\"} --> # Plan (medium) ## Goal The `db (store contract)` CI job finishes under the 5-minute target (down from 7m 11s in CI run 42395304505 \u2026"
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
