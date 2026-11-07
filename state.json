@@ -18794,6 +18794,8 @@
       }
     },
     "3366": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-07T07:06:27Z",
@@ -18807,8 +18809,11 @@
         "trail": " /tmp/claude-1001/-home-runner-work--temp-work-item-3347/65043623-20b8-4a8c-bb36-fbebf903617f/tasks/bbv8hsq9f.output; tail -1 /tmp/full.log | cut -c1-120; tail -1 /tmp/spec.log | cut \u2026\n- Bash: {\"command\": \"grep -rn \\\"R1320 no text a player can read\\\" src --include=*.test.* -l 2>/dev/null; cd apps/web && grep -rln \\\"R1320 no text a player can read\\\" src | head\"}\n- Bash: {\"command\": \"timeout 110 pnpm exec vitest run src/wording.test.ts 2>&1 | grep -v \\\"^::error\\\" | grep -E \\\"\\u2713|\\u00d7|Test Files|Tests |FAIL|Error|expected\\\" | head\", \"timeout\": 115000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3347/65043623-20b8-4a8c-bb36-fbebf903617f/tasks/bbv8hsq9f.output; grep -c \\\"^ FAIL\\\\|\\u00d7\\\" /tmp/full.log; tail -1 /tmp/spec.log \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3347 && grep -rn \\\"fx-signature\\\" --include=*.md --include=*.json --include=*.yml --include=*.sh . 2>/dev/null | grep -v node_modules | head\"}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3347/65043623-20b8-4a8c-bb36-fbebf903617f/tasks/bbv8hsq9f.output; tail -1 /tmp/full.log | cut -c1-100; tail -1 /tmp/spec.log | cut \u2026\n- Bash: {\"command\": \"ps aux | grep -E \\\"[r]ustc|[v]itest\\\" | wc -l; tail -1 /tmp/spec.log | cut -c1-100\", \"timeout\": 30000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3347/65043623-20b8-4a8c-bb36-fbebf903617f/tasks/bbv8hsq9f.output; tail -1 /tmp/full.log | cut -c1-100; tail -1 /tmp/spec.log | cut \u2026\n- Bash: {\"command\": \"timeout 110 tail -n 0 -f /tmp/spec.log | grep -m1 \\\"^exit \\\" ; tail -2 /tmp/spec.log | cut -c1-200\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/spec.log | grep -m1 \\\"^exit \\\" ; tail -3 /tmp/spec.log | cut -c1-200; tail -1 /tmp/full.log | cut -c1-100\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/spec.log | grep -m1 \\\"^exit \\\" ; tail -3 /tmp/spec.log | cut -c1-200\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/full.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/full.log | grep -E \\\"^ FAIL|Test Files|Tests |^exit\\\" | head -30\", \"timeout\": 118000}\n- Bash: {\"command\": \"ps aux | grep \\\"[v]itest\\\" | wc -l; tail -c 600 /tmp/full.log; grep -v \\\"^::error\\\" /tmp/full.log | grep -E \\\"^ FAIL|\\u00d7\\\" | head\"}\n- Bash: {\"command\": \"grep -n \\\"StrictMode's double-run\\\" -B2 -A25 /tmp/full.log | grep -v \\\"^.*::error\\\" | head -60\"}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/full.log | grep -m1 \\\"^exit \\\" ; tail -c 300 /tmp/full.log\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/full.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/full.log | grep -E \\\"Test Files|Tests |^exit\\\" \", \"timeout\": 118000}\n- Bash: {\"command\": \"pkill -f \\\"vitest\\\" ; sleep 1; ps aux | grep -c \\\"[v]itest\\\"; cd /home/runner/work/_temp/work/item-3347 && (pnpm exec vitest run --project web --changed origin/main --exclude '**/src/car\u2026\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; tail -c 300 /tmp/changed.log\", \"timeout\": 118000}\n- tool error: Exit code 1 tail: cannot open '/tmp/changed.log' for reading: No such file or directory tail: no files remaining tail: cannot open '/tmp/changed.log' for reading: No such file or directory\n- Bash: {\"command\": \"(pnpm exec vitest run --project web --changed origin/main --exclude '**/src/cards/art/convention.test.ts' > /tmp/changed.log 2>&1; echo \\\"exit $?\\\" >> /tmp/changed.log) > /dev/null 2>&1 \u2026\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; tail -c 400 /tmp/changed.log\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/changed.log | grep -E \\\"^ FAIL|\\u00d7|Test Files|Tests |^exit\\\" | head -20\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/changed.log | grep -E \\\"^ FAIL|\\u00d7|Test Files|Tests |^exit\\\" | head -20\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/changed.log | grep -E \\\"^ FAIL|\\u00d7|Test Files|Tests |^exit\\\" | head -20; ps aux | grep \\\"[v\u2026\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/changed.log | grep -E \\\"^ FAIL|\\u00d7|Test Files|Tests |^exit\\\" | head -20\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/changed.log | grep -E \\\"^ FAIL|\\u00d7|Test Files|Tests |^exit\\\" | head -20\", \"timeout\": 118000}\n- Bash: {\"command\": \"timeout 115 tail -n 0 -f /tmp/changed.log | grep -m1 \\\"^exit \\\" ; grep -v \\\"^::error\\\" /tmp/changed.log | grep -E \\\"^ FAIL|\\u00d7|Test Files|Tests |^exit\\\" | head -20; wc -l /tmp/changed\u2026\n- Bash: {\"command\": \"timeout 115 cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"timeout\": 118000}\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -3; timeout 100 cargo jackioh patches check 2>&1 | tail -2; git status --porcelain -- apps/web/src/wire | head -3; git status --short | head -20\", \"timeout\"\u2026\n- Bash: {\"command\": \"timeout 110 pnpm --dir apps/web typecheck 2>&1 | tail -3; (git diff --name-only origin/main; git ls-files --others --exclude-standard) | grep -E \\\"\\\\.(ts|tsx)$\\\" | sort -u > /tmp/lint.tx\u2026\n- said: Clean. Update the notes and finish.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State')\\nj=s.index('## Log')\\ns=s[:i]+'''## State\\n\\nDONE. Everything in the plan is built and verified (run 4): web\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: cards that move like cards: a flight from hand to tile, a deck that riffles when shuffled, an opening deal, a hand that springs, and a drag that tilts with its speed\"} --> Cards in the web client now move like cards: a hand play flies from where the dra\u2026"
       },
       "issue": 3347,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T08:38:53Z",
         "from_run": "42349864901",
         "gates": [
           {
@@ -18900,7 +18905,11 @@
         "source": "build",
         "until": "2026-11-07T09:07:18Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-07T08:37:18Z",
+      "run_id": "pending:3352993d-1794040713",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18919,6 +18928,9 @@
         "provider": "claude-8",
         "run": "42349864901"
       },
+      "started_at": "2026-11-07T08:38:53Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18932,9 +18944,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T08:29:28Z",
+    "at": "2026-11-07T08:38:53Z",
     "url": "",
-    "what": "review #3363 on claude-7"
+    "what": "review #3366 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T08:27:39Z",
