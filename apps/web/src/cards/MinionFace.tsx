@@ -1,4 +1,4 @@
-// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): oval portrait, cost, name plate,
+// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): art up to the frame, cost, name plate,
 // attack, health, keyword chips, Divine Shield bubble, Taunt frame. The board's tests and e2e read
 // `.stats`, `.stat-attack[data-attack]`, `.stat-health[data-health][data-max-health]` (text "health/max",
 // BUILD M5-T1), `.stat-armor[data-armor]`, `.keywords .keyword[data-keyword][data-n][title]`, `.shield-icon`.
@@ -22,7 +22,8 @@
 // R3046000: a full-art unit (fullArt.ts `boardLookOf`: the card, its owner's pick and the setting say so, as they do for
 // a full face) lays its art across the face, `data-full-art`, still, with the name plate a band below the art, the
 // attack and health gems on the art's lower corners and the cost gem, chips, marks and states over it (cards.css).
-// A unit that is not full art keeps its oval window.
+// #3341: a unit that is not full art draws its art up to the frame as well (the panel's top and sides, down to half a gem
+// above its foot), the name plate and the gems laid over its edges, and a rarity ring at its rim, not an oval in a box.
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
 
 import { useRef, type ReactElement } from "react";
@@ -30,6 +31,7 @@ import { useRef, type ReactElement } from "react";
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -148,7 +150,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const stamp = useCardStamp(face, worn);
   const plan = keywordFxPlan(unit);
-  // R3046000, R3339000: the look a full-art unit wears, still (null: the oval window).
+  // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
   const look = boardLookOf(face, cardLook);
   const { artFirst, staticName } = boardNameOf(face, cardLook, settings.boardNames);
@@ -186,8 +188,9 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             radiant={face.radiant}
             tags={face.tags}
             type={face.type}
-            shape={artFirst || look !== null ? "full" : "oval"}
+            shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
+            ship={shipArtOf(face.defId, unit)}
             picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
           />
         </span>

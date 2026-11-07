@@ -334,9 +334,11 @@
   width: 100%;
 }
 
+/* #3341: PREVIEW_SHEET_HEIGHT_PX and PREVIEW_SHEET_SHARE; the third term keeps the face, 5:7, inside a narrow phone's
+   width less 24px each side. */
 .inspect-face--sheet {
-  height: min(380px, 56vh);
-  height: min(380px, 56dvh);
+  height: min(480px, 60vh, calc((100vw - 2 * var(--space-9)) * 7 / 5));
+  height: min(480px, 60dvh, calc((100vw - 2 * var(--space-9)) * 7 / 5));
 }
 
 .inspect-sheet .inspect-glossary,
@@ -688,8 +690,8 @@
   .inspect-face--sheet {
     grid-column: 1;
     grid-row: 2 / -1;
-    height: min(380px, calc(92vh - 44px));
-    height: min(380px, calc(92dvh - 44px));
+    height: min(480px, calc(92vh - 44px));
+    height: min(480px, calc(92dvh - 44px));
   }
 
   .inspect-sheet .inspect-tuned,

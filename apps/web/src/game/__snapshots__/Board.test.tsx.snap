@@ -2517,7 +2517,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--frame"
                   data-art="procedural"
                   data-art-motif="fangs"
                   data-art-theme="unit"
@@ -2638,7 +2638,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--frame"
                   data-art="procedural"
                   data-art-motif="waves"
                   data-art-theme="spell"
@@ -2941,7 +2941,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--frame"
                   data-art="procedural"
                   data-art-motif="echo"
                   data-art-theme="field-spell"
@@ -3060,7 +3060,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--frame"
                   data-art="procedural"
                   data-art-motif="bomb"
                   data-art-theme="spell"
@@ -3548,7 +3548,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--frame"
                   data-art="procedural"
                   data-art-motif="book"
                   data-art-theme="ky"

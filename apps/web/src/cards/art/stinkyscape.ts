@@ -5,7 +5,7 @@
 // own card draws its module (starshipModules.ts) in its bay; R3333000: a Starship in play is drawn from
 // its pieces and its design (starshipHulls.ts, `starshipSvg`); R3333002: a piece's module icon.
 
-import type { CardType, Tag } from "@jackioh/shared";
+import type { CardType, Tag, UnitView } from "@jackioh/shared";
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
@@ -910,6 +910,75 @@ function payload(p: Paint, lower: string, x: number, y: number): string {
   return out.join("");
 }
 
+// R3336000: the Drone Battleship's three layers, bottom to top, and the drones its Propagation layer launches.
+
+/** The Battleship's layers, the bottom of its pile first (R1842000). */
+export const SHIP_LAYERS = ["meltdown", "propagation", "shield"] as const;
+export type ShipLayer = (typeof SHIP_LAYERS)[number];
+/** The layers' token ids, by layer. */
+export const SHIP_LAYER_IDS: Readonly<Record<ShipLayer, string>> = {
+  meltdown: "stinkyscape-t-meltdown-layer",
+  propagation: "stinkyscape-t-propagation-layer",
+  shield: "stinkyscape-t-shield-layer",
+};
+/** The drones its bays launch: Activate 2 shoots an Interceptor out, Activate rolls a Corvette. */
+export const SHIP_DRONE_IDS = { interceptor: "stinkyscape-t-drone-interceptor", corvette: "stinkyscape-t-drone-corvette" } as const;
+
+/** R3336000: the Battleship layer a card is, or null for any other card. */
+export function shipLayerOf(defId: string): ShipLayer | null {
+  return SHIP_LAYERS.find((layer) => SHIP_LAYER_IDS[layer] === defId) ?? null;
+}
+
+/**
+ * R3336000: what a layer on the board knows of its ship: `buried` cards lie beneath it (its decks below), `heat` is how
+ * far the reactor has melted in `SHIP_HEAT_STEPS` steps, `brittle` its Brittle count, `bays` how many of its bays still
+ * hold drones. A printed card (no ship) draws its deck large with the others faint.
+ */
+export type ShipArt = { buried: number; heat?: number; brittle?: number; bays?: number };
+
+/**
+ * Each deck's distance from the next in a stack on the board; a printed card's own deck is large in the middle, and the
+ * decks behind it faint, the nearest `SHIP_BEHIND_NEAR` above or below it and each next one `SHIP_BEHIND_STEP` beyond.
+ */
+const SHIP_DECK_PITCH = 20;
+const SHIP_BEHIND_NEAR = 22;
+const SHIP_BEHIND_STEP = 17;
+const SHIP_FAINT_OPACITY = 0.3;
+const SHIP_BEHIND_SCALE = 0.85;
+const SHIP_OWN_SCALE = 1.3;
+/** The reactor's heat in steps, the cracks its keel can show, and the Brittle count at or under which one more shows. */
+const SHIP_HEAT_STEPS = 6;
+const SHIP_CRACKS_MAX = 6;
+const SHIP_BRITTLE_CRACK_AT = 2;
+/** The hangar's bays; a printed card shows both lit, and the keel its reactor a third melted. */
+export const SHIP_BAYS = 2;
+const SHIP_PRINTED_HEAT = 2;
+
+/** The decks drawn for `layer` on a board, bottom first: its own and what lies beneath it; the count is `n`. */
+function shipDecks(layer: ShipLayer, buried: number): readonly ShipLayer[] {
+  const own = SHIP_LAYERS.indexOf(layer);
+  return SHIP_LAYERS.slice(Math.max(0, own - Math.max(0, buried)), own + 1);
+}
+
+/** R3336000: how many decks `defId`'s picture draws given its ship (a printed card draws all three), or null for any other card. */
+export function shipDecksOf(defId: string, ship: ShipArt | null): number | null {
+  const layer = shipLayerOf(defId);
+  if (layer === null) return null;
+  return ship === null ? SHIP_LAYERS.length : shipDecks(layer, ship.buried).length;
+}
+
+/** R3336000: what a layer unit on the board draws of its ship, quantised so the art caches; null for any other card. */
+export function shipArtOf(defId: string, unit: Pick<UnitView, "buried" | "health" | "maxHealth" | "brittle" | "activations">): ShipArt | null {
+  if (shipLayerOf(defId) === null) return null;
+  const melted = unit.maxHealth > 0 ? Math.round(SHIP_HEAT_STEPS * (1 - unit.health / unit.maxHealth)) : 0;
+  return {
+    buried: unit.buried,
+    heat: Math.min(SHIP_HEAT_STEPS, Math.max(0, melted)),
+    brittle: unit.brittle,
+    bays: unit.activations === undefined ? SHIP_BAYS : unit.activations.filter((activation) => activation.usesLeft !== 0).length,
+  };
+}
+
 // Drones: one sphere with a glowing eye, from the bare core to the battleship.
 
 function droneBody(p: Paint, r: number, fins: number): string {
@@ -933,7 +1002,117 @@ function droneBody(p: Paint, r: number, fins: number): string {
   return out.join("");
 }
 
-function drone(p: Paint, kind: string, tier: number): string {
+// R3336000: the Drone Battleship's three decks, each drawn in a box 74 wide and 18 high around its own center: the
+// reactor keel, the hangar decks and the command superstructure.
+
+/** The keel's cracks, the first `cracks` of them drawn: they spread from its edges in toward the core. */
+const KEEL_CRACKS: readonly string[] = [
+  "M-32 -3L-26 -1L-29 4",
+  "M26 -6L30 -2L35 -3",
+  "M-20 8L-15 5L-18 2",
+  "M15 8L19 4L25 6",
+  "M-9 -9L-6 -6L-10 -4",
+  "M7 -9L11 -6L8 -3",
+];
+
+/** How many of the keel's cracks show at `heat` steps of melting and a Brittle count. */
+function keelCracks(heat: number, brittle: number | undefined): number {
+  const worn = brittle !== undefined && brittle <= SHIP_BRITTLE_CRACK_AT ? 1 : 0;
+  return Math.min(SHIP_CRACKS_MAX, Math.ceil((SHIP_CRACKS_MAX * heat) / SHIP_HEAT_STEPS) + worn);
+}
+
+/** The reactor keel: a hull plate with a row of vents, the core glowing through them hotter with `heat`. */
+function keelDeck(d: Paint, heat: number, cracks: number): string {
+  const warm = heat / SHIP_HEAT_STEPS;
+  const out: string[] = [poly([[-37, -4], [-31, -9], [31, -9], [37, -4], [29, 9], [-29, 9]], "url(#hl)", d.line)];
+  out.push(circle(0, 1, 7 + 6 * warm, d.glow, { opacity: 0.1 + 0.25 * warm }));
+  out.push(circle(0, 1, 4 + 3.5 * warm, d.glow, { opacity: 0.45 + 0.55 * warm, "data-core": heat }));
+  out.push(circle(0, 1, 1.6 + 1.6 * warm, "#ffffff", { opacity: 0.35 + 0.65 * warm }));
+  for (const y of [-4, -1.5, 1, 3.5]) out.push(rect(-14, y, 28, 1.1, d.dark, { opacity: 0.9 }));
+  out.push(rect(-15, -5.5, 30, 11, "none", inked(d)));
+  for (let i = 0; i < 9; i += 1) out.push(rect(-32 + i * 8, 6.4, 2.4, 1.6, d.glow));
+  const drawn = KEEL_CRACKS.slice(0, Math.max(0, cracks));
+  if (drawn.length > 0) out.push(path(drawn.join(""), "none", { stroke: d.glow, "stroke-width": 1, "stroke-linejoin": "round", "stroke-linecap": "round", "data-cracks": drawn.length }));
+  return out.join("");
+}
+
+/** The hangar decks: two bay doors with drones racked inside, and a light above each, lit while it holds drones. */
+function hangarDeck(d: Paint, bays: number): string {
+  const out: string[] = [poly([[-37, -6], [-33, -9], [33, -9], [37, -6], [37, 6], [33, 9], [-33, 9], [-37, 6]], "url(#hl)", d.line)];
+  [-17, 17].forEach((x, bay) => {
+    out.push(rect(x - 12.5, -5.5, 25, 11, d.dark, inked(d)));
+    for (const rack of [-8, 0, 8]) out.push(group(at(x + rack, 0.5), droneBody(d, 3.4, 0)));
+    out.push(rect(x - 12.5, -5.5, 25, 2, d.hull, inked(d)));
+    const lit = bay < bays;
+    if (lit) out.push(circle(x, -7.4, 3.4, d.glow, { opacity: 0.25 }));
+    out.push(rect(x - 3, -8.2, 6, 1.6, lit ? d.glow : d.dark, lit ? { "data-bay": "lit" } : { opacity: 0.6, "data-bay": "dark" }));
+  });
+  out.push(rect(-1.5, -9, 3, 18, d.hull, inked(d)));
+  return out.join("");
+}
+
+/** The command superstructure: a tower on a wide deck, two emitter spires with glowing tips and the shield's dome. */
+function bridgeDeck(d: Paint): string {
+  const out: string[] = [poly([[-37, 9], [-33, 4], [-14, 4], [-11, -3], [11, -3], [14, 4], [33, 4], [37, 9]], "url(#hl)", d.line)];
+  for (let i = 0; i < 5; i += 1) out.push(rect(-8 + i * 4, 0, 2.4, 1.4, d.glow));
+  for (const x of [-27, 27]) {
+    out.push(poly([[x - 2, 4], [x, -9], [x + 2, 4]], "url(#hl)", d.line));
+    out.push(circle(x, -9, 4, d.glow, { opacity: 0.25 }));
+    out.push(circle(x, -9, 1.9, d.glow, inked(d)));
+  }
+  out.push(path("M-13 -3A13 12 0 0 1 13 -3Z", d.glow, { opacity: 0.3, stroke: d.glow, "stroke-width": 0.9 }));
+  out.push(path("M-8 -6A9 8 0 0 1 -2 -12", "none", { stroke: "#ffffff", "stroke-width": 0.8, opacity: 0.6, "stroke-linecap": "round" }));
+  return out.join("");
+}
+
+/**
+ * R3336000: the Battleship, its decks stacked as the pile stands. Each layer draws in its own color (its glow, gilded when
+ * Radiant: R2725004). A printed card draws its own deck large with the other two faint behind it; a layer on the board
+ * (`ship`) draws its own deck and every deck beneath it, centered as a stack, so the top card shows the ship as far as
+ * it stands. The keel's core glows with `ship.heat` and its cracks spread with it and with a low Brittle; the hangar's
+ * lights stay lit for the bays that still hold drones.
+ */
+function battleship(layer: ShipLayer, radiant: boolean, ship: ShipArt | null): string {
+  const paint = (of: ShipLayer): Paint => {
+    const own = { ...FAMILY_PAINTS.drone, glow: KIND_COLORS[of] ?? FAMILY_PAINTS.drone.glow };
+    return radiant ? gild(own) : own;
+  };
+  const deck = (of: ShipLayer): string => {
+    const d = paint(of);
+    switch (of) {
+      case "meltdown": {
+        const heat = ship === null ? SHIP_PRINTED_HEAT : (ship.heat ?? 0);
+        return keelDeck(d, heat, ship === null ? 0 : keelCracks(heat, ship.brittle));
+      }
+      case "propagation":
+        return hangarDeck(d, ship === null ? SHIP_BAYS : (ship.bays ?? SHIP_BAYS));
+      case "shield":
+        return bridgeDeck(d);
+    }
+  };
+  if (ship === null) {
+    // The others, faint above or below it in the stack's order; then its own deck, large, in the middle.
+    const own = SHIP_LAYERS.indexOf(layer);
+    const behind = SHIP_LAYERS.map((other, index) => ({ other, away: index - own }))
+      .filter(({ away }) => away !== 0)
+      .map(({ other, away }) =>
+        group(at(0, -Math.sign(away) * (SHIP_BEHIND_NEAR + SHIP_BEHIND_STEP * (Math.abs(away) - 1)), 0, SHIP_BEHIND_SCALE), deck(other), {
+          "data-deck": other,
+          opacity: SHIP_FAINT_OPACITY,
+        }),
+      );
+    return behind.join("") + group(at(0, 0, 0, SHIP_OWN_SCALE), deck(layer), { "data-deck": layer, "data-own": "true" });
+  }
+  const decks = shipDecks(layer, ship.buried);
+  return decks
+    .map((of, i) => {
+      const y = ((decks.length - 1) / 2 - i) * SHIP_DECK_PITCH;
+      return group(at(0, y), deck(of), of === layer ? { "data-deck": of, "data-own": "true" } : { "data-deck": of });
+    })
+    .join("");
+}
+
+function drone(p: Paint, kind: string, tier: number, radiant: boolean, ship: ShipArt | null): string {
   const out: string[] = [];
   switch (kind) {
     case "core": {
@@ -962,24 +1141,9 @@ function drone(p: Paint, kind: string, tier: number): string {
       out.push(group(at(25, -15, 10, 0.5), droneBody(p, 11, 2)));
       out.push(droneBody(p, 14, 4));
       break;
-    default: {
-      // The battleships: a drone's eye in a wide hull, each layer its own color.
-      if (kind === "shield") out.push(path("M-40 6A40 30 0 0 1 40 6Z", p.glow, { opacity: 0.18, stroke: p.glow, "stroke-width": 1 }));
-      out.push(ellipse(0, 6, 40, 14, "url(#hl)", inked(p)));
-      out.push(ellipse(0, 3, 30, 9, p.light, { opacity: 0.25 }));
-      for (let i = 0; i < 9; i += 1) out.push(rect(-32 + i * 8, 11, 2.4, 1.6, p.glow));
-      for (const x of [-26, 26]) out.push(rect(x - 3, -2, 6, 6, p.dark, inked(p)));
-      out.push(droneBody(p, 12, 0));
-      if (kind === "propagation") {
-        for (const [x, y, r] of [[-30, -10, 2.2], [-20, -20, 1.6], [24, -18, 2], [34, -6, 1.4], [8, -26, 1.8]] as const) {
-          out.push(circle(x, y, r, p.glow, { opacity: 0.85 }));
-        }
-      }
-      if (kind === "meltdown") {
-        out.push(circle(0, 6, 30, p.glow, { opacity: 0.18 }));
-        out.push(path("M-30 4L-22 8L-26 12M18 2L24 7L30 4M-6 14L0 18L6 15", "none", { stroke: p.glow, "stroke-width": 1.2, "stroke-linejoin": "round" }));
-      }
-    }
+    default:
+      // R3336000: the battleship's layers, the decks of one ship (a kind that is no layer draws as the meltdown's).
+      out.push(battleship(SHIP_LAYERS.find((layer) => layer === kind) ?? "meltdown", radiant, ship));
   }
   return out.join("");
 }
@@ -1759,7 +1923,7 @@ function drift(seed: number, family: StinkyFamily, paint: Paint): Paint {
   return paint;
 }
 
-function subjectMarkup(rng: Rng, p: Paint, subject: StinkySubject, lower: string, name: string | undefined): string {
+function subjectMarkup(rng: Rng, p: Paint, subject: StinkySubject, lower: string, name: string | undefined, radiant: boolean, ship: ShipArt | null): string {
   const { family, kind, tier } = subject;
   switch (family) {
     case "fleet":
@@ -1770,7 +1934,7 @@ function subjectMarkup(rng: Rng, p: Paint, subject: StinkySubject, lower: string
     case "jlockeed":
       return kind === "blueprint" ? hull(rng, p, "battleship") : weapon(rng, p, kind, tier, lower);
     case "drone":
-      return drone(p, kind, tier);
+      return drone(p, kind, tier, radiant, ship);
     case "miner":
       return miner(rng, p, kind, tier);
     case "resource":
@@ -1870,6 +2034,7 @@ export function stinkyscapeSvg(
   motion: ArtMotion | null = null,
   seedId: string = defId,
   part: ArtPart = "whole",
+  ship: ShipArt | null = null,
 ): string {
   if (STARSHIP_MODULE_IDS[defId] !== undefined) return pieceCardSvg(starshipModuleOf(defId), radiant, motion, seedId, part);
   const subject = stinkySubject(defId, name, tags, type);
@@ -1885,7 +2050,7 @@ export function stinkyscapeSvg(
   gradients(p, defs);
   const planet = subject.family !== "terminus" && !(subject.family === "space" && subject.kind !== "reticle");
   const sky = backdrop(behind, p, subject.family, planet, defs);
-  const drawn = subjectMarkup(ahead, p, subject, lower, name);
+  const drawn = subjectMarkup(ahead, p, subject, lower, name, radiant, ship);
   const placed = group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn);
   return stinkyDocument(defs, sky, placed, radiant, seed, motion, seedId, part);
 }
