@@ -18084,12 +18084,12 @@
       "kind": "review",
       "live": "reviewing",
       "pending_request": false,
-      "provider": "agy",
+      "provider": "claude-2",
       "queued_at": "2026-11-07T05:29:21Z",
-      "run_id": "42341275628",
-      "runs_on": "night-vm-agy",
+      "run_id": "pending:f46ddc29-1794029385",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "started_at": "2026-11-07T05:06:04Z",
+      "started_at": "2026-11-07T05:30:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18394,9 +18394,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T05:17:38Z",
+    "at": "2026-11-07T05:30:07Z",
     "url": "",
-    "what": "review #3361 on claude-6"
+    "what": "review #3358 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-07T05:15:20Z",
