@@ -1,8 +1,9 @@
 // `/together` — Play together (#936, SPEC S8, B54–B59), Duos co-op included (`duos/CoopPanel.tsx`,
 // which gets the friends list).
 // Behind the gate like `/play` (B54). Every list is the server's answer (`net/social.ts`), read again
-// without a reload: the friends list every `FRIENDS_POLL_MS`, the pace a status changes at, and each
-// list at once after each of this page's own changes. Nothing here is a rule (CLAUDE.md rule 7): which
+// without a reload: the friends list every `FRIENDS_POLL_MS`, the pace a status changes at, when the
+// tab's social socket says it changed (R3214000), and each list at once after each of this page's own
+// changes. Nothing here is a rule (CLAUDE.md rule 7): which
 // friend can be challenged or watched (B56) is what the server says of them (`status`, `watchable`),
 // and every refusal is shown in the server's words.
 // R2119000: Remove asks nothing: the friend leaves the list at once and the unfriend waits behind
@@ -46,7 +47,7 @@ import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
 import { usePolled } from "./session.ts";
-import { noteFriends, reloadSocial, useSocialPoll } from "./socialPoll.ts";
+import { noteFriends, onFriendsPush, reloadSocial, useSocialPoll } from "./socialPoll.ts";
 import { togetherTestid } from "./testids.ts";
 import { MODE_WORDS, Named } from "./words.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
@@ -95,6 +96,9 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
   useEffect(() => {
     if (friends.kind === "ready") noteFriends(friends.value);
   }, [friends]);
+
+  // R3214000: the server said the friends list changed (a request, a friend made or lost, a block).
+  useEffect(() => onFriendsPush(reloadFriends), [reloadFriends]);
 
   // R2119000: a removed friend the list no longer names needs hiding no more, so a friend made again shows.
   useEffect(() => {

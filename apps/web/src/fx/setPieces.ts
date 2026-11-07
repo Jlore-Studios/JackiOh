@@ -20,7 +20,7 @@ import { HIDDEN_ID, SET_PIECE_HOLD_MS, locateInstance, pileTestid, type Animatio
 import { sideOf, testid } from "../game/contract.ts";
 import { pileOf } from "../game/runs.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
-import { ENTRANCE_TRAUMA, type EntranceKey } from "./cards/recipe.ts";
+import { ENTRANCE_TRAUMA } from "./cards/recipe.ts";
 import { FX_CARD_TABLE } from "./cards/tables.ts";
 import {
   FX_HOLD_MAX_MS,
@@ -81,8 +81,8 @@ export type SetPieceMoment = "wipe" | "cast" | readonly GameEventType[];
 
 /**
  * One set piece: its shape, the beat it asks for at speed 1, which way its spiral turns, how hard the
- * board shakes at the swallow, the flavor whose colors it wears (absent: the card's own) and the
- * bespoke entrance its card lands with (R670), for a Unit whose set piece follows its landing.
+ * board shakes at the swallow and the flavor whose colors it wears (absent: the card's own). R3332000:
+ * the entrance a Unit whose set piece follows its landing lands with is its table entry's `entrance`.
  */
 export type SetPieceSpec = {
   shape: SetPieceShape;
@@ -91,7 +91,6 @@ export type SetPieceSpec = {
   spin: 1 | -1;
   trauma: number;
   palette?: Flavor;
-  entrance?: EntranceKey;
 };
 
 /** R2800000: every set piece by key; a missing one fails `typecheck`. */
@@ -101,7 +100,7 @@ export const SET_PIECES: { readonly [K in SetPieceKey]: SetPieceSpec } = {
   nether: { shape: "vortex", moment: "wipe", holdMs: SET_PIECE_HOLD_MS, spin: 1, trauma: 0.7, palette: "Dark" },
   // #100 Ceaseless Void: the board's edges fold into black around it, every other permanent is drawn
   // into its chest in turn, and it stands alone with its 10/10 burning in the dark (R3338000).
-  voidFold: { shape: "fold", moment: "wipe", holdMs: VOID_FOLD_HOLD_MS, spin: 1, trauma: ENTRANCE_TRAUMA.voidCollapse, palette: "Dark", entrance: "voidCollapse" },
+  voidFold: { shape: "fold", moment: "wipe", holdMs: VOID_FOLD_HOLD_MS, spin: 1, trauma: ENTRANCE_TRAUMA.voidCollapse, palette: "Dark" },
   // Every other board clear: the shared vortex, turning the other way, in the card's own colors.
   vortex: { shape: "vortex", moment: "wipe", holdMs: SET_PIECE_HOLD_MS, spin: -1, trauma: 0.8 },
   // R3338000, S #4 Olivian Expanse: the rift opens, the Terminus cards circle in it as stars, one falls to the hand.

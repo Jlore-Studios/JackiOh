@@ -4,6 +4,10 @@
 // (SET_PIECES_PER_ACTION, R2785000). Planned as the board's effects layer plans it: remember, then
 // plan (the gallery's own pipeline in routes/dev/fx.test.tsx). An `aura` play plans no cues: the aura
 // layer draws the standing look, fading in and out by its own constants (R2787000).
+// R3332000: every signature's cues end within its rarity's budget (SIGNATURE_LEGENDARY_MAX_MS,
+// SIGNATURE_MYTHIC_MAX_MS, a takeover's hold included), a Spell's within SIGNATURE_SPELL_SHARE of it;
+// every shake stays within its type's (SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA), and a
+// signature's aura within AURA_SIGNATURE_MAX_INTENSITY. Each is planned over its gallery board (`galleryBoardOf`).
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -15,27 +19,44 @@ import {
   SET_PIECES_PER_ACTION,
   STARSHIP_LAUNCH_HOLD_MS,
   TAKEOVER_HOLD_MS,
+  setPieceEntries,
+  takeoverClaim,
   type AnimationEntry,
   type EntranceResolver,
 } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_CARD_TABLE } from "./tables.ts";
-import { FX_HOLD_MAX_MS, FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS } from "../constants.ts";
+import { FX_CARD_TABLE, isSignature } from "./tables.ts";
+import { AURA_LOOKS } from "../aura/looks.ts";
+import {
+  AURA_SIGNATURE_MAX_INTENSITY,
+  FX_HOLD_MAX_MS,
+  FX_INTENSITY_SCALE,
+  FX_MAX_PARTICLE_LIFE_MS,
+  FX_MAX_TAIL_MS,
+  SIGNATURE_LEGENDARY_MAX_MS,
+  SIGNATURE_MYTHIC_MAX_MS,
+  SIGNATURE_PERMANENT_MAX_TRAUMA,
+  SIGNATURE_SPELL_MAX_TRAUMA,
+  SIGNATURE_SPELL_SHARE,
+} from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
-import { galleryCardEvents, galleryFieldView, galleryPlayOf } from "../motifs/gallery.ts";
-import { hasSetPiece, SET_PIECE_KEYS, SET_PIECES, planSetPiece, signatureRunOf } from "../setPieces.ts";
+import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../motifs/gallery.ts";
+import { hasSetPiece, SET_PIECE_KEYS, SET_PIECES, planSetPiece, signatureRunOf, wipeClaim } from "../setPieces.ts";
 import { planTerminus } from "../terminus/index.ts";
 import { entranceCues } from "../takeover.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
 
-/** A cue's end, as R2800000's own R200 test counts it: bursts burn, shakes ride, the rest run out. */
+/** A cue's end, as R2800000's own R200 test counts it: bursts burn, shots fly then burst, shakes ride, the rest run out. */
 function endOf(cue: FxCue): number {
   switch (cue.kind) {
     case "burst":
       return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
+    case "shot":
+    case "projectile":
+      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
     case "shake":
       return cue.delayMs;
     default:
@@ -47,10 +68,11 @@ function envOf(): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
 }
 
+/** As the board resolves an entrance: the card's type and rarity, a token's the one it prints (B2.5). */
 const resolve: EntranceResolver = (defId) => {
   const def = CATALOG[defId];
   if (def === undefined) return null;
-  return { type: def.type, rarity: def.rarity };
+  return { type: def.type, rarity: def.printedRarity ?? def.rarity };
 };
 
 /** Every cue the layer plans for `planned`: its entrance, its motif and recipes, and the full plan. */
@@ -72,8 +94,10 @@ describe("R2803000 every table entry ends within FX_MAX_TAIL_MS", () => {
       const play = galleryPlayOf(defId, entry);
       // An `aura` play stands its look and plans no cues (R2787000).
       if (play === null || play.kind === "aura") continue;
-      const events = galleryCardEvents(defId, play, view, 1);
-      const fielded = withEvents(galleryFieldView(defId, view), events);
+      // R3332001: over the board its entrance reads, as the gallery plays it.
+      const board = galleryBoardOf(defId, view);
+      const events = galleryCardEvents(defId, play, board, 1);
+      const fielded = withEvents(galleryFieldView(defId, board), events);
       const env = envOf();
       const entered = entranceEntries(planEntries(events, fielded, false, undefined, hasSetPiece), resolve, { seen: new Set() });
       const planned = entered.length > 0 ? entered : planEntries(events, fielded, false, undefined, hasSetPiece);
@@ -117,6 +141,52 @@ describe("R2803000 every table entry ends within FX_MAX_TAIL_MS", () => {
       for (const plannedEntry of entered) {
         env.memory.remember(plannedEntry.events);
         expect(planCardMotif(plannedEntry, plannedEntry.view, env), `${defId} hidden`).toBeNull();
+      }
+    }
+  });
+});
+
+describe("R3332000 every signature keeps its loudness budget", () => {
+  it("R3332000 every signature ends within its rarity's and type's ceiling, shakes within its type's, and its aura within AURA_SIGNATURE_MAX_INTENSITY", () => {
+    const view = fullBoardView();
+    const signatures = [...FX_CARD_TABLE].filter(([, entry]) => isSignature(entry));
+    expect(signatures.length).toBeGreaterThan(0);
+    for (const [defId, entry] of signatures) {
+      const def = CATALOG[defId];
+      const rarity = def?.printedRarity ?? def?.rarity;
+      const spell = def?.type === "Spell";
+      const ceiling = (rarity === "Mythic" ? SIGNATURE_MYTHIC_MAX_MS : SIGNATURE_LEGENDARY_MAX_MS) * (spell ? SIGNATURE_SPELL_SHARE : 1);
+      const maxTrauma = spell ? SIGNATURE_SPELL_MAX_TRAUMA : SIGNATURE_PERMANENT_MAX_TRAUMA;
+      const play = galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId}'s signature has no gallery play`);
+      // Its gallery play over its own board, entered and held as the queue holds it: a Mythic's takeover or
+      // a wipe's set piece, at speed 1 with Big moments full, its loudest.
+      const board = galleryBoardOf(defId, view);
+      const events = galleryCardEvents(defId, play, board, 1);
+      const fielded = withEvents(galleryFieldView(defId, board), events);
+      const entered = entranceEntries(planEntries(events, fielded, false, undefined, hasSetPiece), resolve, { seen: new Set() });
+      const planned = setPieceEntries(entered, (e) => wipeClaim(e) ?? takeoverClaim(e), { reduced: false, bigMoments: "full", speed: 1 });
+      const env = envOf();
+      let offset = 0;
+      let drawn = false;
+      for (const entryPlanned of planned) {
+        env.memory.remember(entryPlanned.events);
+        const cues = cuesOf(entryPlanned, env);
+        if (cues.length > 0) drawn = true;
+        for (const cue of cues) {
+          const where = `${defId} ${cue.kind} at ${String(offset)}`;
+          // A pull and a conceal are the stage's: the board's next view ends them (R200).
+          if (cue.kind === "pull" || cue.kind === "conceal") continue;
+          expect(offset + endOf(cue), where).toBeLessThanOrEqual(ceiling);
+          if (cue.kind === "shake") expect(cue.trauma, where).toBeLessThanOrEqual(maxTrauma);
+        }
+        offset += entryPlanned.durationMs;
+      }
+      expect(drawn, `${defId}'s signature plans`).toBe(true);
+      const aura = entry.kind === "hooks" ? entry.aura : undefined;
+      if (aura !== undefined) {
+        const look = AURA_LOOKS[aura.look];
+        for (const value of [look.alpha, look.tint, look.edge]) expect(value, `${defId} aura ${aura.look}`).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);
       }
     }
   });

@@ -17,6 +17,7 @@ pasted in by a person, and each name then joins `FX_MOTIF_NAMES` (see "Open" at 
 | motif | `{ <hook>: { motif, palette?, row? } }` | a shared motif from `fx/motifs/`, on top of or in place of the event rows | the motif's planner, shared by every card that names it |
 | bespoke | `{ bespoke: "<recipe>" }` | a recipe of the card's own, in `fx/cards/<set>/` | the card's own file |
 | set piece | `{ setPiece: "<key>" }` | a board clear's set piece: its hook's removals as one wipe the queue holds for one capped, skippable beat (R2785000, R2800000); or a Terminus card's, its signature run (R3338000) | `fx/setPieces.ts` (a Terminus card's planner in `fx/terminus/`), its board motion `game/board.css` and its sound bed `audio/setPieceBeds.ts` |
+| signature | `signature: true` beside any of the last three, on a Legendary's or a Mythic's (R3332000) | the card's own animation, as in Hearthstone: its entrance (a Unit's, a Field Spell's) or a cast of its own (any other card's `bespoke` or `setPiece`), then the beat its text plays, and optionally an aura of its own, within its rarity's and type's budget ([Signatures](#signatures)) | the card's own files in `fx/cards/<set>/` |
 
 Every catalog card starts as `"none: pending"` and moves up a tier in its set's pass. A bespoke
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
@@ -287,9 +288,18 @@ Stinkyscape is split so its two set passes merge without conflicts.
   start-of-turn or end-of-turn hook or a Whenever trigger) and `activate` play from the hook's own
   `hookResolving` marker (R2783000), and a Trap's `cast` from its `trapFired` (R2797000, Dispatch).
   A hook no marker reports (an attack's own, a Starship's launch) plays nothing.
-- **entrance** (R2794000): a marquee Unit's entrance (`fx/entrances.ts`, R670) beside its hooks,
-  `{ entrance: "titanBloom", cry: { motif: "flight" } }` (Classic #45 Nature Titan). Only a Unit may
-  name one, and an entrance alone stays `{ bespoke: "<key>" }`.
+- **The frame** (R3332000): any entry but a `none` may carry three fields beside its kind.
+  - **entrance:** the entrance its card lands with in place of its rarity's (`fx/entrances.ts`'s
+    `ENTRANCES`, R670, R2794000), beside any entry of a Unit or a Field Spell, or alone:
+    `{ entrance: "titanBloom", cry: { motif: "flight" } }` (Classic #45 Nature Titan),
+    `{ entrance: "bigBoom" }` (Classic #80), `{ setPiece: "voidFold", entrance: "voidCollapse", takeover: "void" }`
+    (#100). A Field Spell's plays as it lands face up in the backrow, in place of the shared Legendary
+    or Mythic rays. Any other card fails the loader: a Trap's entrance is its firing, its `cast`.
+  - **takeover:** a Mythic's own takeover look (`void`, `pawn`, `genie`, `ai`: `takeoverLookOf`,
+    `fx/takeover.ts`); every other Mythic takes the shared `prismatic`.
+  - **signature:** `true` on a Legendary's or a Mythic's entry (a token's by the rarity it prints) that
+    is its signature, which must name its first beat: a Unit's `entrance`, a Field Spell's `entrance`
+    or its own cast, any other card's own cast (`bespoke` or `setPiece`).
 - **row:** `"replace"` (the default) draws the numbers (the damage splat, an Armor flash) in place of
   the events the motif replaces; `"keep"` plays over the event's own recipe, as a bespoke recipe's
   `keep` does.
@@ -416,7 +426,7 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 | board | a drawn motif on `cast` or `cry` | the card resolves over the motif's fixture through the real board's effects layer |
 | hook | a drawn motif on `death`, `trigger` or `activate` only | the hook's marker under the card's play, then the motif's fixture, through the real board's effects layer (R2797000) |
 | recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' fixtures sit beside their recipes in `fx/cards/classic/`) |
-| entrance | a marquee entrance (`bespoke`, R2794000) | the card lands in the viewer's unit row as it plays, so its entrance plays |
+| entrance | an `entrance` alone (R2794000, R3332000) | the card lands in the viewer's unit row as it plays (a Field Spell face up in the first backrow zone), so its entrance plays, over the board its entrance reads (`galleryBoardOf`: Felinor Fiender's three Felinors) |
 | set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds; a Terminus card's own run (`SET_PIECE_FIXTURES`, R3338000) |
 | aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
 
@@ -425,6 +435,36 @@ aura shows too. A marquee Unit whose entrance stands beside its hooks (`entrance
 same way before its play's motif, so Nature Titan's entrance plays before its Cry. "Play as a
 set piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
+"Signature" lists every card whose entry is its signature, grouped by set in the tables' order
+(`gallerySignatures`, R3332000), so a person can review each one; "Play signature" plays it as "Play
+card" does.
+
+## Signatures
+
+Issue #3330 asks for an animation of its own for every Legendary and Mythic, in place of the shared
+motifs most of them played; #3332 laid the frame (R3332000) and each set's pass writes its cards'.
+
+- **Budgets** (`fx/constants.ts`, `tiers.test.ts`): over its gallery play, held as the queue holds it
+  at speed 1 with Big moments full, every cue of a Legendary's signature ends within
+  `SIGNATURE_LEGENDARY_MAX_MS` (1.6 s) of the play's start, a Mythic's, its takeover's hold included,
+  within `SIGNATURE_MYTHIC_MAX_MS` (2.6 s), and a Spell's, seen only briefly, within
+  `SIGNATURE_SPELL_SHARE` of its rarity's. A Spell's shakes may reach `SIGNATURE_SPELL_MAX_TRAUMA` (1),
+  a permanent's `SIGNATURE_PERMANENT_MAX_TRAUMA` (0.8), and a signature aura's alpha, tint and edge
+  stay within `AURA_SIGNATURE_MAX_INTENSITY`. All of it sits inside R200's tail, one set piece per
+  action and `SET_PIECE_HOLD_CAP_MS`, and a tap, the speed, the intensity, Big moments and Reduce
+  Motion act on it as on every cue.
+- **The ratchet** (`fx/cards/signature.test.ts`): `SIGNATURE_PENDING` lists every Legendary and Mythic,
+  tokens by their printed rarity, whose entry is no signature, in catalog order. The test fails on one
+  missing from it and on a listed card that has its signature; a pass takes its cards off, the list
+  only shrinks, and the last pass empties it.
+- **Felinor Fiender** (#92, R3332001), the first: `{ signature: true, entrance: "felinorAssembly" }`.
+  It has the stats of every Felinor its controller has, so it assembles from them: each Felinor its
+  side shows face up streaks cat light into its zone (`FX_FELINOR_STREAK_AT`, `FX_FELINOR_STREAK_STEP`,
+  at most `FX_FELINOR_STREAKS_MAX`), all landing at the slam in a ring, a gathering burst and a gold
+  crown. A Felinor buried under a Stack is face down and sends nothing (R202).
+- **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
+  dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
+  `entrance` sting plays only for one with no intro.
 
 ## Set pieces
 
