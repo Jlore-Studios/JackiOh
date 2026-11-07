@@ -18310,19 +18310,20 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-07T06:13:21Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42346100214",
+      "run_id": "pending:c964fd11-1794035199",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 125,
-      "started_at": "2026-11-07T06:14:11Z",
+      "started_at": "2026-11-07T07:06:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -18576,9 +18577,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T07:06:27Z",
+    "at": "2026-11-07T07:06:58Z",
     "url": "",
-    "what": "build #3347 on claude-8"
+    "what": "spot-check #3360 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-07T06:58:12Z",
@@ -35621,7 +35622,15 @@
         "n": 125,
         "pr": 3360,
         "queued_at": "2026-11-07T06:39:51Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:c964fd11-1794035199",
         "sha": "f15ce12a7d705fd0ef814cc0f910534dfe4df519",
+        "started_at": "2026-11-07T07:06:58Z",
         "status": "queued",
         "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
         "tries": 0
