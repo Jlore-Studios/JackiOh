@@ -745,5 +745,12 @@
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "winRatesBlob": "1a846c979a3146e2d83bdfc978640c3615e1084e",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12e",
+    "commit": "4d9000f9a5838e4668e5fa5483307797c148b8fd",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "winRatesBlob": "1a846c979a3146e2d83bdfc978640c3615e1084e",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   }
 ]
