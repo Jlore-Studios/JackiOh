@@ -16286,13 +16286,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6707558352,
-      "wip": {
-        "at": "2026-11-07T19:06:21Z",
-        "provider": "claude-6",
-        "sha": "d0d83b1b9cb7f1006b723778a0ae8eb2a6ad3126",
-        "start": "9f120276ffc982663421ce3fd86c5e9c63cad12e"
-      }
+      "waiting_comment": 6707558352
     },
     "3377": {
       "action": "build",
