@@ -17544,6 +17544,14 @@
       "requested_by": "jgoetzmann-bot",
       "spot_check_of": 3383,
       "stop_requested": false
+    },
+    "3413": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-07T19:07:32Z",
+      "issue": 3410,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
