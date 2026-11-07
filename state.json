@@ -16028,21 +16028,14 @@
         "reason": "`claude-6` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-07T15:30:00Z",
         "trail": "string\": \"export const FX_SETTINGS_KEY = \\\"jackioh.fx.v1\\\";\\n\", \"new_string\": \"export const FX\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3369/e2e/cypress/e2e/17-card-showcase-and-hovers.cy.ts\", \"old_string\": \"import { seedFor, timeouts } from \\\"../../support/config\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3369/e2e/cypress/e2e/17-card-showcase-and-hovers.cy.ts\", \"old_string\": \" it(\\\"R247 R831004 Heroic Power prints its Cry until it \u2026\n- Bash: {\"command\": \"grep -n \\\"onBeforeLoad\\\" e2e/support/types.ts e2e/support/commands.ts | head -3; cat e2e/package.json | grep -n typecheck; cargo jackioh spec check 2>&1 | tail -3; pnpm exec eslint e2e/c\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3369/.bot-notes.md\", \"content\": \"## State\\n\\nRevision pass 2 of PR #3369. Finding: e2e spec 17 (17-card-showcase-and-hovers.cy.ts:515) reads Heroic Po\u2026\n- Bash: {\"command\": \"cd e2e && timeout 300 pnpm typecheck 2>&1 | tail -5\", \"timeout\": 320000}\n- Bash: {\"command\": \"timeout 300 pnpm exec tsc -p tsconfig.json 2>&1 | grep -v \\\"apps/web/vite.config.ts\\\" | head; ls ../apps/web/node_modules 2>&1 | head -3\", \"timeout\": 320000}\n- said: The web's `node_modules` is missing in this worktree, so the typecheck can't resolve React. I'll install with the lockfile, as the harness does.\n- Bash: {\"command\": \"cd .. && timeout 500 pnpm install --frozen-lockfile 2>&1 | tail -5\", \"timeout\": 520000}\n- Bash: {\"command\": \"cd e2e && timeout 300 pnpm typecheck 2>&1 | tail -5; cd .. && pnpm exec eslint e2e/cypress/e2e/17-card-showcase-and-hovers.cy.ts e2e/support/config.ts && echo ESLINT_OK\", \"timeout\": 3200\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3369/8188afbd-1759-421c-b1e6-291cd55ad42b/tasks/bnlk2enry.output | tail -5\"}\n- said: Typecheck and eslint pass. Next I'll build the e2e client so I can run spec 17 itself, not just reason about it.\n- Bash: {\"command\": \"grep -n '\\\"build:e2e\\\"\\\\|\\\"build\\\"' apps/web/package.json; which google-chrome chromium chrome 2>/dev/null; ls ~/.cache/Cypress 2>/dev/null\"}\n- Bash: {\"command\": \"sh scripts/build-wasm.sh > /tmp/wasm.log 2>&1 && pnpm --dir apps/web build:e2e > /tmp/builde2e.log 2>&1; echo EXIT $?; tail -3 /tmp/builde2e.log\", \"timeout\": 1800000, \"run_in_background\"\u2026\n- Bash: {\"command\": \"echo \\\"- pass 2: pnpm install (web node_modules were missing); e2e typecheck + eslint OK. Building wasm + build:e2e to run spec 17.\\\" >> .bot-notes.md\"}\n- Bash: {\"command\": \"grep -rn \\\"data-full-art\\\\|data-version\\\\|full-art\\\\|EMPTY_TEXT\\\" e2e/cypress/e2e | head -20\"}\n- Bash: {\"command\": \"tail -4 /tmp/claude-1001/-home-runner-work--temp-work-item-3369/8188afbd-1759-421c-b1e6-291cd55ad42b/tasks/bnlk2enry.output; sed -n 215,245p e2e/cypress/e2e/45-economy-loop.cy.ts; sed -n\u2026\n- said: Spec check passes. Spec 45 also checks full-art faces, so I'm confirming it stays safe: its card filter reads `COSMETIC_OFFERS`, which should now leave the Mythics out.\n- Bash: {\"command\": \"grep -n \\\"COSMETIC_OFFERS\\\" crates/server/tests/export_cosmetics.rs | head -5; python3 - <<'EOF'\\nimport re\\nsrc=open('apps/web/src/wire/generated/cosmetics.ts').read()\\ni=src.find('COSM\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"EXIT\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3369/8188afbd-1759-421c-b1e6-291cd55ad42b/tasks/bo80lk8ef.output; do sleep 5; done; cat /tmp/claude-1001/-home-r\u2026\n- said: The client built. Starting the preview server and running spec 17 in Chrome.\n- Bash: {\"command\": \"cd apps/web && nohup pnpm exec vite preview --port 5173 --strictPort > /tmp/preview.log 2>&1 &\\nsleep 1; until curl -sf http://localhost:5173 >/dev/null; do sleep 1; done; echo UP\", \"tim\u2026\n- tool error: Permission to use Bash with command cd apps/web && nohup pnpm exec vite preview --port 5173 --strictPort > /tmp/preview.log 2>&1 & sleep 1; until curl -sf http://localhost:5173 >/dev/null; do sleep 1\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vite preview --port 5173 --strictPort\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"until curl -sf http://localhost:5173 >/dev/null; do sleep 1; done; echo UP; cd e2e && timeout 900 pnpm exec cypress run --browser chrome --spec cypress/e2e/17-card-showcase-and-hovers.cy\u2026\n- tool error: Permission to use Bash with command until curl -sf http://localhost:5173 ; do sleep 1; done; echo UP; cd e2e && timeout 900 pnpm exec cypress run --browser chrome --spec cypress/e2e/17-card-showcase-\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3369/8188afbd-1759-421c-b1e6-291cd55ad42b/tasks/bl03ki8fi.output\"}\n- Bash: {\"command\": \"cd e2e && timeout 900 pnpm exec cypress run --browser chrome --spec cypress/e2e/17-card-showcase-and-hovers.cy.ts > /tmp/cy17.log 2>&1; echo EXIT $?\", \"timeout\": 1000000}\n- Bash: {\"command\": \"grep -E \\\"\\u2713|\\u2716|passing|failing|pending|Tests:|Passing:|Failing:|All specs\\\" /tmp/cy17.log | head -40\"}\n- said: Spec 17 passes with the fix: 6 of 6. To confirm it was really broken before, I'll run the branch's earlier version of the spec once against the same client.\n- Bash: {\"command\": \"cp cypress/e2e/17-card-showcase-and-hovers.cy.ts /tmp/spec17.fixed.ts && git show HEAD:e2e/cypress/e2e/17-card-showcase-and-hovers.cy.ts > cypress/e2e/17-card-showcase-and-hovers.cy.ts &\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"bl03ki8fi\"}\n- Bash: {\"command\": \"cd .. && git status --porcelain && cat >> .bot-notes.md <<'EOF'\\n- pass 2: build:e2e + vite preview; spec 17 with fix: 6/6 passing. HEAD's spec 17 against the same build: 1 failing at co\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art\"} --> Closes #3343 ## Summary This change makes Mythics full art and Legendaries Extended art by defau\u2026"
       },
-      "hold": {
-        "ends": "2026-11-07T15:17:51Z",
-        "lifted": "2026-11-07T14:34:32Z",
-        "owner": "claude-6",
-        "since": "2026-11-07T13:17:51Z",
-        "until": "2026-11-07T14:30:00Z",
-        "why": "5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "issue": 3343,
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-07T12:04:09Z",
+        "claimed": true,
+        "claimed_at": "2026-11-07T14:37:31Z",
         "from_run": "42365488956",
         "gates": [
           {
@@ -16142,7 +16135,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42370839689",
+      "run_id": "pending:cc52dd75-1794062211",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16163,7 +16156,7 @@
         "run": "42370839689"
       },
       "source": "",
-      "started_at": "2026-11-07T12:04:09Z",
+      "started_at": "2026-11-07T14:37:31Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -16750,9 +16743,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T14:26:50Z",
+    "at": "2026-11-07T14:37:31Z",
     "url": "",
-    "what": "review #3380 on agy"
+    "what": "review #3369 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-07T14:24:17Z",
