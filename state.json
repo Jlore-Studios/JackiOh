@@ -15904,7 +15904,7 @@
       }
     },
     "3369": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -15928,24 +15928,25 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3343,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-2",
       "question": "",
       "queued_at": "2026-11-07T18:12:33Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42413373782",
+      "run_id": "pending:46069966-1794094788",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 140,
-      "started_at": "2026-11-07T20:55:30Z",
+      "started_at": "2026-11-07T23:40:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 4,
@@ -17787,9 +17788,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T23:29:39Z",
+    "at": "2026-11-07T23:40:23Z",
     "url": "",
-    "what": "plan #3393 on claude-3"
+    "what": "spot-check #3369 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-07T23:26:55Z",
@@ -35458,7 +35459,15 @@
         "n": 140,
         "pr": 3369,
         "queued_at": "2026-11-07T23:10:00Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-2",
+          "tier": "strong"
+        },
+        "run_id": "pending:46069966-1794094788",
         "sha": "310f4412060f6d35c981d165267417e220a20e99",
+        "started_at": "2026-11-07T23:40:23Z",
         "status": "queued",
         "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
         "tries": 0
