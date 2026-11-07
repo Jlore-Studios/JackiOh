@@ -17103,15 +17103,8 @@
       "stop_requested": false
     },
     "3332": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42315595308",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-07T00:42:09Z",
-        "until": "2026-11-07T01:12:09Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17123,10 +17116,9 @@
         "reason": "planned on opus",
         "trail": "-n \\\"planEntries(\\\" apps/web/src/game/*.ts apps/web/src/game/*.tsx | grep -v test | head -5\", \"description\": \"Read planEntries doc\u2026\n- Bash: {\"command\": \"sed -n 1740,1765p apps/web/src/game/animations.ts\", \"description\": \"Read queue enqueue view handling\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\.enqueue(\\\" apps/web/src/game/*.tsx apps/web/src/game/*.ts | grep -v test | head -5\", \"description\": \"Find enqueue callers to learn which view\"}\n- Bash: {\"command\": \"grep -n \\\"names\\\" crates/tools/README.md | head -12\", \"description\": \"Check what cargo jackioh names scans\"}\n- Bash: {\"command\": \"grep -rn \\\"TAKEOVER_LOOKS\\\\|ENTRANCES\\\\b\\\\|sfx(\\\\\\\"entrance\\\\\\\")\\\\|entrance sting\\\" apps/web/README.md docs/*.md docs/**/*.md e2e/README.md 2>/dev/null | head; grep -rn \\\"TAKEOVER_LOOKS\\\u2026\n- Bash: {\"command\": \"grep -n \\\"dynamicMusic: false\\\" -B2 -A8 apps/web/src/audio/musicDirector.test.ts | grep -n \\\"it(\\\\|preload\\\\|playIntro\\\" | head -12; grep -n \\\"type MusicDirectorOptions\\\\|sink:\\\" apps/we\u2026\n- Bash: {\"command\": \"sed -n 450,462p apps/web/src/audio/musicDirector.test.ts; grep -n \\\"export type MusicSink\\\" -A 3 apps/web/src/audio/musicDirector.ts\", \"description\": \"Read the dynamic-music-off intro te\u2026\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\" apps/web/src/fx/constants.test.ts | head -12; grep -n \\\"FX_COVERAGE_FLOOR\\\\|FX_PHONE_FRAME_BUDGET_MS\\\" apps/web/src/fx/constants.ts apps/web/src/fx/constants.\u2026\n- Bash: {\"command\": \"sed -n 186,204p apps/web/src/fx/constants.test.ts; sed -n 333,337p apps/web/src/fx/constants.test.ts\", \"description\": \"Read constants test export table\"}\n- Bash: {\"command\": \"grep -rn \\\"exports exactly\\\\|toEqual({ ...constants\\\" apps/web/src/audio/*.test.ts | head -3; grep -n \\\"MUSIC_INTRO_LATE_S\\\\|MUSIC_INTRO_CUT_FADE_S\\\" apps/web/src/audio/*.test.ts | head \u2026\n- Bash: {\"command\": \"grep -rn \\\"tyrantSigil\\\\|bigBoom\\\\|\\\\\\\"genie\\\\\\\"\\\\|\\\\\\\"pawn\\\\\\\"\\\\|voidCollapse\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | grep -v \\\"^apps/web/src/fx/cards/tables.test.ts\\\\\u2026\n- Bash: {\"command\": \"sed -n 158,175p apps/web/src/fx/cards/classic.test.ts\", \"description\": \"Read Classic marquee test\"}\n- Bash: {\"command\": \"grep -n \\\"FxBigMoments =\\\\|bigMoments:\\\" apps/web/src/fx/settings.ts apps/web/src/fx/types.ts apps/web/src/game/animations.ts | head -5; grep -n \\\"export.*DEFAULT\\\" apps/web/src/fx/setti\u2026\n- Bash: {\"command\": \"sed -n 505,546p apps/web/src/game/Game.tsx\", \"description\": \"Read how Game tracks the previous view\"}\n- Bash: {\"command\": \"grep -n \\\"fx/cards\\\\|music-cards\\\\|intro\\\\|takeover\\\" apps/web/README.md | head -8; grep -n \\\"sfxOutput\\\\|musicOutput\\\" -r apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"engine.\u2026\n- Bash: {\"command\": \"sed -n 455,470p apps/web/README.md; grep -n \\\"Card intros\\\\|entrance sting\\\\|R2722000\\\" apps/web/README.md | head -5\", \"description\": \"Read web README gallery and intro sections\"}\n- Bash: {\"command\": \"grep -rn \\\"entranceEvent\\\" apps/web/src e2e | grep -v \\\"^apps/web/src/fx/entrances.ts\\\" | head; grep -rn \\\"AudioEngine = {\\\\|: AudioEngine = \\\\|as AudioEngine\\\\|satisfies AudioEngine\\\" a\u2026\n- Bash: {\"command\": \"node -e 'const c=require(\\\"./crates/cards/catalog.json\\\"); console.log(Array.isArray(c), Object.keys(c).slice(0,3))'; grep -n \\\"CATALOG\\\" apps/web/src/wire/cards.ts | head -5\", \"descript\u2026\n- Bash: {\"command\": \"node -e 'const c=require(\\\"./crates/cards/catalog.json\\\");const ids=Object.keys(c).filter(id=>[\\\"Legendary\\\",\\\"Mythic\\\"].includes(c[id].printedRarity??c[id].rarity)&&id!==\\\"core-092\\\");c\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## More decisions\\n- Keep ENTRANCES in fx/entrances.ts (registry) and EntranceKey = keyof ENTRANCE_TRAUMA; add felinorAssembly to both. BespokeKey/isBespok\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\", \"content\": \"## Goal\\n\\nPresentation only (CLAUDE.md rule 7; no engine, card or replay change). (1) The effects table carries a car\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"echo \\\"draft read\\\" \", \"description\": \"Confirm draft file read\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\", \"content\": \"## Goal\\n\\nPresentation only (CLAUDE.md rule 7; no engine, card or replay change). (1) The effects table carries a car\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\", \"content\": \"## Goal\\n\\nThis change is presentation only (CLAUDE.md rule 7): no engine, card or replay change.\\n\\n- **The frame (1)\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words and characters\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **R202.** Streaks read only the face-up tops and their public tags. The tier te\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\", \"old_string\": \"**Do not touch:**\\n- `crates/`, `.github/`, `.harness/`, `.squishy/`, `bot/`, `.claude/`\\n- `\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount after trimming\"}\n- Bash: {\"command\": \"grep -n \\\"export function paletteLook\\\\|export function sideOf\\\\|zone:\\\" apps/web/src/fx/flavors.ts apps/web/src/game/contract.ts | head -4; grep -n \\\"felinor\\\" apps/web/src/fx/flavors.t\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3332/.bot-plan.md\"}\n- said: ## Goal This change is presentation only (CLAUDE.md rule 7): no engine, card or replay change. - **The frame (1).** The effects table carries `entrance` beside any entry of a Unit or Field Spell, or alone, and `takeover` beside any Mythic's. `TAKEOVER_LOOKS` and the `{ bespoke: <entrance> }` form g\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-07T00:01:06Z",
       "owner_why": "it plans it",
@@ -17139,9 +17131,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-06T23:43:06Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42315595308",
+      "run_id": "pending:7b0b50fd-1794012380",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T00:01:06Z",
+      "started_at": "2026-11-07T00:46:57Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17742,9 +17734,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T00:45:59Z",
+    "at": "2026-11-07T00:46:57Z",
     "url": "",
-    "what": "review #3355 on agy"
+    "what": "build #3332 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-07T00:21:19Z",
