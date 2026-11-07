@@ -930,3 +930,6 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-06T23:00:37Z,42301337034,claude-4,opus,revise,3299,hard,built,,14.4,17,3845,5085274,48.0775,51,62,,,100.7,claude-4,resumed,,1
 2026-11-06T23:19:10Z,42310329129,claude-4,opus,review,3299,hard,approved,,2.2,38,9879,2304572,1.6951,0,3,,,1.2,claude-4,none,,1
 2026-11-06T23:26:28Z,42310469650,claude-1,opus,plan,3220,hard,interrupted,5-hour cap,9.3,0,0,0,,7,40,,,1769.2,,fresh,,1
+2026-11-06T23:29:58Z,42311617385,claude-6,opus,plan,3329,medium,planned,,1.8,31,15060,856759,0.4631,1,2,,,1,,fresh,,1
+2026-11-06T23:50:08Z,42312463460,claude-3,opus,plan,3220,hard,planned,,15.2,150,99048,10270558,5.6623,8,19,,,1786.7,claude-1,fresh,cap,1
+2026-11-06T23:41:20Z,42310549550,agy,gemini-3.8-flash-high,plan,3222,medium,planned,,21,450985,91701,0,,0,7,0,3,1767,,none,,1
