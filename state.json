@@ -21169,10 +21169,6 @@
       "refused_until": "2026-11-05T18:10:00Z",
       "spent": [
         {
-          "at": "2026-10-29T22:09:55Z",
-          "minutes": 4.9
-        },
-        {
           "at": "2026-10-29T22:48:42Z",
           "minutes": 25.2
         },
@@ -21967,16 +21963,13 @@
         {
           "at": "2026-11-06T23:55:52Z",
           "minutes": 15.2
+        },
+        {
+          "at": "2026-11-07T00:11:48Z",
+          "minutes": 35.1
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-29T04:39:31Z",
-          "cache": 270684,
-          "cost": 8.3123,
-          "input": 4,
-          "output": 8017
-        },
         {
           "at": "2026-10-29T04:50:28Z",
           "cache": 19372334,
@@ -23369,14 +23362,21 @@
           "cost": 5.6623,
           "input": 150,
           "output": 99048
+        },
+        {
+          "at": "2026-11-07T00:11:48Z",
+          "cache": 4164250,
+          "cost": 2.8526,
+          "input": 112,
+          "output": 29259
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-07T02:50:00Z",
-          "utilization": 0.19
+          "utilization": 0.26
         },
-        "observed_at": "2026-11-06T23:55:52Z",
+        "observed_at": "2026-11-07T00:11:48Z",
         "status": "allowed"
       }
     },
@@ -34568,6 +34568,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-06T23:01:43Z,claude-3,stream,call,42308686362,4,2026-11-07T02:50:00Z,,,allowed,,,",
+      "2026-11-06T23:02:56Z,claude-3,stream,call,42308686362,5,2026-11-07T02:50:00Z,,,allowed,,,",
+      "2026-11-06T23:04:11Z,claude-3,stream,call,42308686362,6,2026-11-07T02:50:00Z,,,allowed,,,",
+      "2026-11-06T23:23:42Z,claude-3,stream,call,42308686362,7,2026-11-07T02:50:00Z,,,allowed,,,",
+      "2026-11-06T23:35:12Z,claude-3,stream,call,42308686362,8,2026-11-07T02:50:00Z,,,allowed,,,",
+      "2026-11-07T00:08:16Z,claude-3,stream,call,42308686362,26,2026-11-07T02:50:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
