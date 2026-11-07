@@ -16505,18 +16505,28 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/i18n/zh-CN.json",
+            "apps/web/src/routes/stats.test.tsx",
+            "apps/web/src/routes/stats.tsx"
+          ],
+          "from": "c4b49657403db0ed3a86b4e61bb984ddc9577360",
+          "main": "0d4105d91211983632f5ed80d8dd6917957a5480"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "42390180651",
-            "tier": "medium"
+            "run": "42413312196",
+            "tier": "strong"
           }
         ],
-        "sha": "c4b49657403db0ed3a86b4e61bb984ddc9577360",
+        "sha": "59aa868b86623baf79b389e300cf89cb62ef9be0",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
