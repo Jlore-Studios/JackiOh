@@ -18337,6 +18337,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 125,
       "started_at": "2026-11-07T06:14:11Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35611,9 +35612,33 @@
         "title": "Patch: drop the square shadow behind the card face's cost gem",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "19f8d2543ae077785606358e777409f4758d76ca",
+        "issue": 3333,
+        "merged_at": "2026-11-07T06:39:51Z",
+        "n": 125,
+        "pr": 3360,
+        "queued_at": "2026-11-07T06:39:51Z",
+        "sha": "f15ce12a7d705fd0ef814cc0f910534dfe4df519",
+        "status": "queued",
+        "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
+        "tries": 0
       }
     ],
-    "count": 124
+    "count": 125
   },
   "statistics": {
     "at": "2026-11-07T06:35:02Z"
