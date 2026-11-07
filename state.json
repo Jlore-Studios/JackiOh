@@ -17682,7 +17682,7 @@
       "stop_requested": false
     },
     "3353": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -17707,10 +17707,12 @@
       },
       "interruptions": 0,
       "issue": 3214,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T02:41:26Z",
         "from_run": "42323750726",
         "gates": [
           {
@@ -17808,7 +17810,7 @@
       "queued_at": "2026-11-07T02:40:02Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42323750726",
+      "run_id": "pending:a0dd1841-1794019251",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17829,7 +17831,7 @@
         "run": "42323750726"
       },
       "source": "",
-      "started_at": "2026-11-07T01:22:42Z",
+      "started_at": "2026-11-07T02:41:26Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18109,9 +18111,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T02:16:50Z",
+    "at": "2026-11-07T02:41:26Z",
     "url": "",
-    "what": "plan #3339 on agy"
+    "what": "review #3353 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-07T02:24:19Z",
