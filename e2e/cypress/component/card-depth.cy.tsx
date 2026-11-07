@@ -12,10 +12,11 @@ import { CATALOG } from "@jackioh/cards";
 
 import { CardFace, FACE_ASPECT, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { CARD_DEPTH_STEP_CQW, CARD_FRAME_BREAK_PX, CARD_FRAME_BREAK_SCALE, CARD_TILT_MAX_DEG } from "../../../apps/web/src/cards/constants.ts";
-import { resetCosmeticsForTests } from "../../../apps/web/src/cards/cosmetics.ts";
+import { resetCosmeticsForTests, writeCardLevel } from "../../../apps/web/src/cards/cosmetics.ts";
 import { GLARE_BY_FOIL, NO_FOIL_ID } from "../../../apps/web/src/cards/depth.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import { pointerPose, tiltDegrees } from "../../../apps/web/src/cards/tilt.ts";
+import { VERSION_ALT_ART_ID } from "../../../apps/web/src/cards/versions.ts";
 import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/settings/index.ts";
 
 type CardDef = (typeof CATALOG)[string];
@@ -53,6 +54,16 @@ function reset(): void {
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
 }
 
+/**
+ * R3343001: the cards under test in their normal frames. A Legendary's Default draws Extended art, which keeps to one
+ * picture, so the Legendary wears Alt art, the painter's own picture in the normal frame; a Mythic's Default prints full
+ * art while the Full-art cards setting is on, so the setting is off.
+ */
+function dress(): void {
+  writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
+  writeCardLevel("core-052", VERSION_ALT_ART_ID);
+}
+
 /** A hand card of `id`: the face, in a host whose box the tilt reads, as game/Card.tsx draws it in the viewer's hand. */
 function Hand({ id, width, radiant = false }: { id: string; width: number; radiant?: boolean }) {
   return (
@@ -86,6 +97,7 @@ for (const viewport of VIEWPORTS) {
   describe(`R3344000 R3344001 a face with depth at ${viewport.label} size (${String(viewport.width)}x${String(viewport.height)})`, () => {
     beforeEach(() => {
       reset();
+      dress();
       cy.viewport(viewport.width, viewport.height);
     });
 

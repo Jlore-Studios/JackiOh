@@ -39,6 +39,7 @@ import { INSPECT_FACE, INSPECT_SHEET } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
 import { ViewerFullArt, ownedCardCosmetics, readOwnedFullArt, resetOwnedFullArtForTests } from "./ownedFullArt.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
+import { defaultLookOf, isFullBleed } from "./versions.ts";
 
 const ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
 
@@ -206,7 +207,9 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
   it("R1313000 the opponent's copy prints its normal face, even of a full art the viewer owns", () => {
     for (const id of HERO_IDS) {
       const owned = (face: ReactElement) => <FullArtOwned owned={EVERY_HERO}>{face}</FullArtOwned>;
-      expect(printsFullArt(id, false, owned), id).toBe(false);
+      // R3343001: the opponent's copy wears the Default, which on a Mythic draws its default look's Full art while the
+      // Full-art cards setting is on (every copy alike), not the full art the viewer owns.
+      expect(printsFullArt(id, false, owned), id).toBe(isFullBleed(defaultLookOf(id)));
       expect(printsFullArt(id, true, owned), id).toBe(true);
     }
   });

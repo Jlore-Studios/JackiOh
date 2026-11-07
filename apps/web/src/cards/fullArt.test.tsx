@@ -14,6 +14,7 @@ import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { INSPECT_EXTENDED, INSPECT_FACE } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, readCardSettings, writeCardSettings } from "./settings.ts";
+import { defaultLookOf, isFullBleed } from "./versions.ts";
 
 const ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
 
@@ -144,7 +145,12 @@ describe("R1017001 full-art faces", () => {
       const cf = faceOf(def.id, false);
       const model = faceModel({ defId: def.id, def, radiant: false });
       expect(cf.hasAttribute("data-full-art"), def.id).toBe(false);
-      expect(cf.querySelector(".cf-art--full"), def.id).toBeNull();
+      // R3343001: a Mythic's Default keeps its normal face with the setting off; a Legendary's draws Extended art
+      // whatever the setting, its picture past its window and its words kept.
+      const look = defaultLookOf(def.id);
+      const drawn = look !== null && !isFullBleed(look) ? look : null;
+      expect(cf.getAttribute("data-version"), def.id).toBe(drawn);
+      expect(cf.querySelector(".cf-art--full") !== null, def.id).toBe(drawn !== null);
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();
       expect(showsFullArt(model), def.id).toBe(false);
       if (model.text.full !== "") expect(cf.querySelector(".cf-text-base")?.textContent, def.id).toBe(faceText(model).shown.full);
