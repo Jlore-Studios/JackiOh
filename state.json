@@ -17189,6 +17189,11 @@
       "owner": "claude-7",
       "owner_since": "2026-11-07T05:07:41Z",
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-07T07:50:00Z; it can start again only in 2h 42m, more than the 120 minutes an item waits for its owner",
+      "paused": {
+        "at": "2026-11-07T05:16:07Z",
+        "interrupt": "usage",
+        "provider": "claude-7"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T03:08:40Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -17198,7 +17203,7 @@
       "provider": "claude-7",
       "queued_at": "2026-11-06T23:42:46Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42341392080",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T05:07:41Z",
