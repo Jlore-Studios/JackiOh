@@ -11,7 +11,7 @@ import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
-import type { ArtPart } from "./pictures.ts";
+import { partDraws, partHolds, type ArtPart } from "./pictures.ts";
 import {
   escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
   starshipClassOf, type HullPaint, type StarshipArt,
@@ -2005,16 +2005,18 @@ function rays(seed: number): string {
 
 /** The document every Stinkyscape face prints: its sky, its rays when Radiant, its subject, its particles and vignette. */
 function stinkyDocument(defs: Defs, sky: string, subject: string, radiant: boolean, seed: number, motion: ArtMotion | null, seedId: string, part: ArtPart): string {
-  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing.
-  const behindSubject = part !== "subject";
-  const figure = part !== "backdrop";
+  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing. R3344000: a depth
+  // plane draws its own: the sky and rays far, the subject near, the particles nearest, the vignette far, the rest none.
+  const behindSubject = partHolds(part, "far");
+  const figure = partDraws(part, "subject");
   return (
     `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
     `<defs>${defs.join("")}</defs>` +
     motionStyle(motion, CENTER_ORIGIN) +
     (behindSubject ? moving("back", sky, motion) + (radiant ? rays(seed) : "") : "") +
     (figure ? moving("subject", subject, motion) : "") +
-    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
+    (partHolds(part, "nearest") ? particleMarkup(motion, seedId) : "") +
+    (behindSubject ? rect(0, 0, BOX, BOX, "url(#v)") : "") +
     "</svg>"
   );
 }

@@ -203,7 +203,15 @@ export function drawArt(ctx: Ctx2D, spec: ArtSpec, x: number, y: number, w: numb
   for (const ridge of spec.ridges) {
     ctx.globalAlpha = ridge.opacity;
     ctx.fillStyle = ridge.fill;
-    ctx.fill(new Path2D(ridge.d), "evenodd");
+    const path = new Path2D(ridge.d);
+    ctx.fill(path, "evenodd");
+    // R3331000: a scene's inked shape is outlined, as the card's own picture outlines it (svg.ts).
+    if (ridge.stroke !== undefined) {
+      ctx.strokeStyle = ridge.stroke;
+      ctx.lineWidth = ridge.strokeWidth ?? 0;
+      ctx.lineJoin = "round";
+      ctx.stroke(path);
+    }
   }
   ctx.globalAlpha = 1;
 

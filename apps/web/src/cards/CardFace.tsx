@@ -89,19 +89,37 @@
 //
 // R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
 // cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
+//
+// R3344000: a face that is Epic or rarer, or prints full art, draws its picture as depth planes by the painter's roles
+// (`data-depth`, depth.ts `hasDepth`, CardArt's `part` a plane): the base window's picture is the far plane and
+// `.cf-planes` stacks the middle, near and nearest over it, with a glare layer over the art and one over the frame
+// (`.cf-glare`, depth.css). A delivered file, a Starship in play, a Legacy card, a restyled picture, Immersive, Out of
+// frame, Extended art and Glitch draw none; nor does any face under reduced motion, the system's setting or the fx
+// intensity off (`useDepthMotion`), which also hold such a face's foil still. A Legendary or Mythic face in the viewer's
+// own hand or in inspect lets its subject break the window's top edge (`data-frame-break`). R3344001: given `tilt`, the face
+// tilts with the pointer, the device or a drag (tilt.ts `useCardTilt`), one face at a time.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
 import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
-import { hasArtParts } from "./art/CardArt.tsx";
-import { showcaseFamilyOf } from "./art/pictures.ts";
+import { hasArtParts, hasArtPlanes } from "./art/CardArt.tsx";
+import { ART_PLANES, showcaseFamilyOf } from "./art/pictures.ts";
 import { CardStates } from "./CardStates.tsx";
 import { useImmersiveShift } from "./immersive.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
-import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
+import {
+  CARD_DEPTH_STEP_CQW,
+  CARD_FRAME_BREAK_PX,
+  CARD_FRAME_BREAK_SCALE,
+  CARD_GLARE_SIZE_PCT,
+  FIT_FLOOR_PX,
+  PREVIEW_TEXT_LIMIT,
+  TIER_SCALE,
+} from "./constants.ts";
+import { breaksFrame, glareFor, hasDepth, useDepthMotion } from "./depth.ts";
 import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { isGlitch } from "./glitch.ts";
@@ -115,6 +133,7 @@ import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
+import { useCardTilt, type TiltMode } from "./tilt.ts";
 import {
   NORMAL_LOOK,
   VERSION_EXTENDED_ART_ID,
@@ -131,6 +150,7 @@ import { useCardStamp } from "./stamps.ts";
 import "./cards.css";
 import "./setmark.css";
 import "./cosmetics.css";
+import "./depth.css";
 
 export type CardFaceProps = {
   face: FaceModel;
@@ -160,6 +180,12 @@ export type CardFaceProps = {
    * in its owner's own hand whose gem drains; absent or null, the gem is drawn whole.
    */
   gemDrain?: number | null;
+  /**
+   * R3344001: where this face listens for what tilts it, when it has depth (R3344000): its parent ("host": a card in hand,
+   * on the board or in the Collection), the window ("window": the hover preview) or a drag on it ("drag": inspect);
+   * "off" by default, so a face in a list or a picker never tilts.
+   */
+  tilt?: TiltMode;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -170,6 +196,12 @@ const ART_SHAPE: Readonly<Record<CardType, ArtShape>> = {
   Trap: "notched",
   "Field Trap": "notched",
 };
+
+/** R3344000: the planes `.cf-planes` stacks over the base window's far one, nearest last. */
+const OVER_PLANES = ART_PLANES.slice(1);
+
+/** The digits `--cf-depth-step` is written with, in cqw. */
+const DEPTH_STEP_DIGITS = 2;
 
 /** A class list from the parts that are non-empty strings, in order. */
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -296,7 +328,8 @@ export function CardFace({
   lazyArt = false,
   ascentLevel,
   worn = false,
-  ownHand = false, onBoard = false, gemDrain = null, }: CardFaceProps): ReactElement {
+  ownHand = false, onBoard = false, gemDrain = null,
+  tilt = "off", }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -335,9 +368,6 @@ export function CardFace({
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   const rarity = frameRarity(face);
-  // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
-  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
-  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil && !lazyArt);
   const stamp = useCardStamp(face, worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
@@ -373,6 +403,29 @@ export function CardFace({
   // R3015002: one picture per variant at every level, and its own motion at every animated one.
   const picture = artPictureOf(look.version, face.set);
   const motion = artMotion && artMoves ? artMotionOf(face.defId) : null;
+  // R3344000: an Epic or rarer face, or a full-art one, draws its picture as depth planes unless the viewer's motion
+  // settings ask for the flat picture, which also holds its foil still under the fx intensity off.
+  const { flat, fxOff } = useDepthMotion();
+  const wantsDepth = hasDepth({ rarity, fullArt, version: look.version, glitch, planed: hasArtPlanes(face.defId, starship, picture, face.radiant) });
+  const depth = wantsDepth && !flat;
+  const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
+  const breaks = depth && breaksFrame(rarity, ownHand, tilt);
+  useCardTilt(faceRef, depth ? tilt : "off", !flat);
+  // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
+  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
+  const foilMoves = settings.animatedFoil && !(fxOff && wantsDepth);
+  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, foilMoves && !lazyArt);
+  const glare = glareFor(cosmetics["data-cosmetic-foil"], face.radiant);
+  const style = depth
+    ? ({
+        ...scales,
+        "--cf-depth-step": `${Number(CARD_DEPTH_STEP_CQW.toFixed(DEPTH_STEP_DIGITS))}cqw`,
+        "--cf-glare-art": String(glare.art),
+        "--cf-glare-frame": String(glare.frame),
+        "--cf-glare-size": `${CARD_GLARE_SIZE_PCT}%`,
+        ...(breaks ? { "--cf-frame-break": `${CARD_FRAME_BREAK_PX}px`, "--cf-frame-break-scale": String(CARD_FRAME_BREAK_SCALE) } : {}),
+      } as CSSProperties)
+    : scales;
 
   return (
     <span
@@ -384,7 +437,7 @@ export function CardFace({
       data-printed-rarity={face.printedRarity ?? undefined}
       data-name-tier={names}
       data-text-tier={texts}
-      data-foil={foilFor({ ...face, rarity }, settings.animatedFoil, settings.rarityFoil)}
+      data-foil={foilFor({ ...face, rarity }, foilMoves, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-in-play={face.inPlay ? "true" : undefined}
       data-vanilla={face.vanilla ? "true" : undefined}
@@ -400,10 +453,13 @@ export function CardFace({
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
       data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
+      data-depth={depth ? "true" : undefined}
+      data-frame-break={breaks ? "true" : undefined}
       {...cosmetics}
-      style={scales}
+      style={style}
     >
       <span className="cf-scale">
+        {depth && <span className="cf-glare cf-glare--frame" aria-hidden="true" />}
         <span
           className="cost-gem"
           data-cost={face.cost.value}
@@ -440,12 +496,12 @@ export function CardFace({
               tags={face.tags}
               type={face.type}
               name={face.englishName ?? face.name}
-              shape={fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type]}
+              shape={shape}
               lazy={lazyArt}
               starship={starship}
               picture={picture}
               motion={motion}
-              part={outOfFrame || immersive ? "backdrop" : "whole"}
+              part={depth ? "far" : outOfFrame || immersive ? "backdrop" : "whole"}
             />
           )}
           {outOfFrame && (
@@ -481,6 +537,30 @@ export function CardFace({
                 part="subject"
               />
             </span>
+          )}
+          {depth && (
+            <>
+              <span className="cf-planes" aria-hidden="true">
+                {OVER_PLANES.map((plane, index) => (
+                  <span key={plane} className={`cf-plane cf-art--${shape}`} data-plane={plane} style={{ "--cf-plane": String(index + 1) } as CSSProperties}>
+                    <CardArt
+                      defId={face.defId}
+                      radiant={face.radiant}
+                      tags={face.tags}
+                      type={face.type}
+                      name={face.englishName ?? face.name}
+                      shape="plane"
+                      lazy={lazyArt}
+                      starship={starship}
+                      picture={picture}
+                      motion={motion}
+                      part={plane}
+                    />
+                  </span>
+                ))}
+              </span>
+              <span className={`cf-glare cf-glare--art cf-art--${shape}`} aria-hidden="true" />
+            </>
           )}
           {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
         </span>
