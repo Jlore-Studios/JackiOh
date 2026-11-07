@@ -17740,13 +17740,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
-        "sha": "36090590e9f1ea42b9162dc8fa0f4a83a4020839",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "42320217607",
+            "tier": "medium"
+          }
+        ],
+        "sha": "f36ebdb9d7ffdd6060a6ca40659aadbc9d46ed24",
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "3356": {
