@@ -13,7 +13,7 @@ import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import type { CueCard } from "./cues.ts";
 import { retainAppAudio } from "./appAudio.ts";
 import { exposeAudioDebug } from "./debug.ts";
-import { createHaptics, type Haptics } from "../haptics/haptics.ts";
+import { sharedHaptics, type Haptics } from "../haptics/haptics.ts";
 import { createSoundDirector, type SoundDirector } from "./director.ts";
 import { getAudioEngine } from "./engine.ts";
 import { createCrowdDirector, type CrowdDirector } from "./crowd.ts";
@@ -60,7 +60,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
 
   // Haptics (R669) hear each event when the singleton sound director resolves its cues.
   const hapticsRef = useRef<Haptics | null>(null);
-  hapticsRef.current ??= createHaptics();
+  hapticsRef.current ??= sharedHaptics();
   const haptics = hapticsRef.current;
   const directorRef = useRef<SoundDirector | null>(null);
   directorRef.current ??= createSoundDirector(

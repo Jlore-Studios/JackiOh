@@ -483,6 +483,7 @@ export default function Card(props: CardProps): ReactElement {
             ascentLevel={face.ascent}
             worn={worn}
             ownHand={worn && props.inOwnHand === true}
+            onBoard={form === "compact"}
             gemDrain={gemDrain}
           />
         </TermTips>

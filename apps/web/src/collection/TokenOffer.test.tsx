@@ -408,6 +408,11 @@ describe("R2480000 spending a cosmetic token asks first", () => {
     const dialog = screen.getByTestId(T.tokenOfferDialog("foil-galaxy"));
     expect(screen.getByRole("alertdialog", { name: "Unlock Galaxy? This spends 1 Epic token." })).toBe(dialog);
     expect(preview).toContainElement(dialog);
+    // R3221000: Cancel first and the close (no ✕), Confirm last.
+    expect(within(dialog).getAllByRole("button").map((button) => button.dataset.testid)).toEqual([
+      T.tokenOfferCancel("foil-galaxy"),
+      T.tokenOfferConfirm("foil-galaxy"),
+    ]);
     expect(screen.getByTestId(T.cardView)).toBeInTheDocument();
     expect(within(preview).queryByTestId(T.tokenOffer("foil-galaxy"))).toBeNull();
     expect(screen.getByTestId(T.tokenOfferCancel("foil-galaxy"))).toHaveFocus();
@@ -568,6 +573,11 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
 
     const dialog = screen.getByTestId(T.tokenOfferDialog("core-002"));
     expect(screen.getByRole("alertdialog", { name: "Unlock Speciesist? This spends 1 card token." })).toBe(dialog);
+    // R3221000: Cancel first and the close (no ✕), Confirm last.
+    expect(within(dialog).getAllByRole("button").map((button) => button.dataset.testid)).toEqual([
+      T.tokenOfferCancel("core-002"),
+      T.tokenOfferConfirm("core-002"),
+    ]);
     expect(screen.getByTestId(T.tokenOfferCancel("core-002"))).toHaveFocus();
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(0);
 

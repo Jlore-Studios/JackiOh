@@ -22651,5 +22651,56 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12j",
+    "date": "2026-11-07",
+    "title": "Patch: move the menus' remaining dialogs and sheets onto the shared Dialog",
+    "source": "#3221",
+    "notes": "The menus' dialogs and sheets draw through the one Dialog (R3221000): settings, friends and chat are its sheet, every other dialog closes by the ✕ at its top right, a question with a Cancel puts Cancel first, and Escape and Tab go to the top dialog alone. The inspect overlay's card detail (R2529000 counts apps/web/src/cards/ as how cards look) takes the same ✕ in place of its text Close, the dialogs' layer and their scrim's colour. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "One kind of dialog on every screen",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every menu's dialog closes the same way: by the ✕ at its top right, or by Cancel, now first, where it asks a question.",
+        "On a phone, Settings, Friends and a chat rise from the foot of the screen.",
+        "Escape and Back close the dialog on top alone, so a question asked over another dialog closes first."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "765489f9534d437ca5867d2e3a82e527e23ee6d8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12k",
+    "date": "2026-11-07",
+    "title": "Patch: art-first cards in play",
+    "source": "#3339",
+    "notes": "Full-art looks and Legendary/Mythic cards drop names and text on the board to prioritize art; keyword marks and boardNames setting added.",
+    "player": {
+      "title": "Art-first cards in play",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards in play wearing full-art looks and every Legendary and Mythic card drop their name and text to let art stand edge-to-edge, showing their name on hover or a long press.",
+        "Card settings add Names on the board to choose between Art first, Always, or Never."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9bc6d50206e7021506d2ce07298784581c09164f"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

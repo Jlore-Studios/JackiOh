@@ -216,7 +216,6 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/drag/OptionDrag.tsx": 1,
   "game/showcase/CardShowcase.tsx": 1,
   "replay/ReplayPlayer.tsx": 1,
-  "tutorial/TutorialResult.tsx": 1,
 };
 
 function boardSources(dir = SRC): string[] {

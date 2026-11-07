@@ -5,9 +5,12 @@
 
 import { useLayoutEffect, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject, SyntheticEvent } from "react";
-import { useBackLayer } from "../../net/backLayers.ts";
+import { useTopBackLayer } from "../../net/backLayers.ts";
 import { CLICK_SUPPRESS_MS } from "./constants.ts";
 import type { Rect } from "./placement.ts";
+// R3221000: every modal overlay's `.inspect-scrim` takes the dialogs' colour from their sheet, which each
+// overlay, all of them reading this module, loads here.
+import "../../game/dialog.css";
 
 type InspectMode = "hover" | "sheet";
 type ActiveInspect = { readonly key: string; readonly mode: InspectMode; readonly anchor: Rect };
@@ -99,6 +102,13 @@ function restoreFocus(element: HTMLElement | null): void {
 type ModalOverlay = {
   /** Gives focus back, then calls the caller's onClose. */
   close: () => void;
+  /**
+   * Spread on the overlay's `.inspect-layer` root: `OVERLAY_ROOT_PROPS`, and `data-under` while a layer
+   * opened after it is on top. R3221000: the overlay draws at the dialogs' layer, over a menu's dialog it
+   * opens from (the card view's Card text), and comes down under a dialog that opens over it (a result
+   * that ends the game while a card's detail is open), so the dialog that takes the keys is the one seen.
+   */
+  layerProps: typeof OVERLAY_ROOT_PROPS & { "data-under"?: "" };
   dismissProps: {
     onPointerDown: () => void;
     onClick: (event: ReactMouseEvent<HTMLElement>) => void;
@@ -161,14 +171,23 @@ export function useModalOverlay(
     closableRef.current = closable;
   });
 
+  const close = (): void => {
+    if (!closableRef.current) return;
+    restoreFocus(restoreRef.current);
+    onCloseRef.current();
+  };
+  // R3221000: the keys go to the top layer alone, so a dialog opened over this one takes them first.
+  const { isTop, onTop } = useTopBackLayer(close, closable);
+
   useLayoutEffect(() => {
     const previous = document.activeElement;
     restoreRef.current = previous instanceof HTMLElement && previous !== document.body ? previous : null;
     openedAtRef.current = Date.now();
-    // preventScroll: Close sits at the foot of a dialog that scrolls on a short screen, and
-    // focusing it would open the detail scrolled past both faces.
+    // preventScroll: a dialog that scrolls on a short screen opens at its top, whichever of its
+    // controls takes the focus (R3221000 moved every Close to the ✕ at the top right).
     focusRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (!isTop()) return;
       if (event.key === "Tab") {
         const dialog = focusRef.current?.closest('[role="dialog"]');
         if (dialog !== null && dialog !== undefined) trapTab(event, dialog);
@@ -188,17 +207,11 @@ export function useModalOverlay(
       window.removeEventListener("keydown", onKeyDown, true);
       restoreFocus(restoreRef.current);
     };
-  }, [focusRef]);
-
-  const close = (): void => {
-    if (!closableRef.current) return;
-    restoreFocus(restoreRef.current);
-    onCloseRef.current();
-  };
-  useBackLayer(close, closable);
+  }, [focusRef, isTop]);
 
   return {
     close,
+    layerProps: onTop ? OVERLAY_ROOT_PROPS : { ...OVERLAY_ROOT_PROPS, "data-under": "" },
     dismissProps: {
       onPointerDown: () => {
         pressedRef.current = true;

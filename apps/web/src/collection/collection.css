@@ -150,30 +150,12 @@
 /* ---- R1655000: a card in context (CardCosmeticsView) -------------------------------------------
    The Collection's card view: the card large beside a strip of what it may wear. The global wood
    button rule (tavern.css) weighs 0,6,1, so each button here repeats its `:not()` chain to outrank it.
-   Every animation is opacity alone and holds still under reduced motion. */
+   Every animation is opacity alone and holds still under reduced motion. R3221000: the view is a dialog
+   (Dialog.tsx), its scrim, layer and ✕ the dialog's; the detail view `Card text` opens is drawn over it. */
 
-.tavern.app-shell .collection-cardview {
-  position: fixed;
-  inset: 0;
-  /* Under the detail view (--z-inspect-modal), which `Card text` opens over this one. */
-  z-index: calc(var(--z-inspect-modal, 70) - 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-
-.tavern.app-shell .collection-cardview__scrim,
-.tavern.app-shell .collection-preview__scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(4, 6, 10, 0.72);
-}
-
-.tavern.app-shell .collection-cardview__panel {
-  position: relative;
-  display: flex;
-  gap: 20px;
+.tavern.app-shell .dialog.collection-cardview__panel {
+  align-items: stretch;
+  width: auto;
   max-width: min(980px, 100%);
   max-height: 100%;
   overflow-y: auto;
@@ -182,10 +164,17 @@
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(52, 30, 16, 0.98), rgba(22, 13, 7, 0.99));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  text-align: start;
+}
+
+/* The card beside its side column, under the title; stacked on a narrow screen. */
+.tavern.app-shell .collection-cardview__body {
+  display: flex;
+  gap: var(--space-8);
 }
 
 @media (max-width: 760px) {
-  .tavern.app-shell .collection-cardview__panel {
+  .tavern.app-shell .collection-cardview__body {
     flex-direction: column;
     align-items: center;
   }
@@ -229,11 +218,18 @@
   min-width: 0;
 }
 
-.tavern.app-shell .collection-cardview__title,
-.tavern.app-shell .collection-preview__name {
+/* The panel's own title: a question opened inside it (the token's offer) keeps the dialog's. */
+.tavern.app-shell .dialog.collection-cardview__panel > .dialog__title,
+.tavern.app-shell .dialog.collection-preview__panel > .dialog__title {
   margin: 0;
   font-family: var(--tavern-serif);
   color: var(--tavern-gold-pale);
+}
+
+/* A title read from the start keeps clear of the ✕ on its end side alone. */
+.tavern.app-shell .dialog.collection-cardview__panel > .dialog__title,
+.tavern.app-shell .dialog.collection-looks__panel > .dialog__title {
+  padding-inline-start: 0;
 }
 
 .tavern.app-shell .collection-cardview__status,
@@ -782,26 +778,16 @@
   animation-play-state: paused;
 }
 
-/* ---- R2730000: one held or inspected item fullscreen (ItemPreview) ------------------------------ */
+/* ---- R2730000: one held or inspected item fullscreen (ItemPreview) ------------------------------
+   R3221000: a dialog (Dialog.tsx), its scrim, layer and ✕ the dialog's, as wide as its picture; the
+   picture starts under the ✕. */
 
-.tavern.app-shell .collection-preview {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-inspect-modal, 70);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-
-.tavern.app-shell .collection-preview__panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+.tavern.app-shell .dialog.collection-preview__panel {
+  width: auto;
+  max-width: 100%;
   max-height: 100%;
   overflow-y: auto;
+  padding-top: var(--space-11);
 }
 
 .tavern.app-shell .collection-preview__picture .collection-miniboard {
@@ -998,28 +984,10 @@
   gap: var(--space-4);
 }
 
-.tavern.app-shell .collection-looks {
-  position: fixed;
-  inset: 0;
-  /* The fullscreen preview's height (70, `--z-inspect-modal`), the one surfaces.css token there being `--z-toast`:
-     drawn after the preview, it lies over it. */
-  z-index: var(--z-toast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6);
-}
-
-.tavern.app-shell .collection-looks__scrim {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, var(--pal-black) 72%, transparent);
-}
-
-.tavern.app-shell .collection-looks__panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
+/* R3221000: a dialog (Dialog.tsx), its scrim, layer and ✕ the dialog's; drawn after the preview, it lies over it,
+   and Buy's question is a dialog over it in turn. */
+.tavern.app-shell .dialog.collection-looks__panel {
+  align-items: stretch;
   gap: var(--space-6);
   width: min(720px, 100%);
   max-height: 100%;
@@ -1028,9 +996,10 @@
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-lg);
   background: var(--tavern-night);
+  text-align: start;
 }
 
-.tavern.app-shell .collection-looks__title,
+.tavern.app-shell .dialog.collection-looks__panel > .dialog__title,
 .tavern.app-shell .collection-looks__variant {
   margin: 0;
   font-family: var(--font-display);
@@ -1091,24 +1060,10 @@
   gap: var(--space-3);
 }
 
-.tavern.app-shell .collection-looks__question {
-  display: flex;
-  flex: 1 1 100%;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--tavern-brass);
-  border-radius: var(--radius-sm);
-}
-
-.tavern.app-shell .collection-looks__question > p {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.tavern.app-shell :is(.collection-looks__ways, .collection-looks__answers) {
+.tavern.app-shell .collection-looks__ways {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-3);
 }
 
@@ -1116,10 +1071,6 @@
   flex: 1 1 100%;
   margin: 0;
   color: var(--tavern-danger-text);
-}
-
-.tavern.app-shell .collection-looks__close {
-  align-self: center;
 }
 
 .tavern.app-shell .collection-looks__ways > button[aria-pressed="true"] {

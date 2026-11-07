@@ -138,7 +138,7 @@ describe("#1308 the pack-opening scene", () => {
           }
         }
       });
-      cy.get(ts(packTestid.close)).should("have.text", "Done");
+      cy.get(ts(packTestid.close)).should("have.attr", "aria-label", "Close");
     });
   }
 
@@ -208,15 +208,20 @@ describe("#1999 the pack-opening scene on a phone", () => {
       expectNoSidewaysScroll();
     });
 
-    it(`all revealed, the HUD is clear of every card and Done is in reach at ${size}`, () => {
+    it(`all revealed, the HUD is clear of every card and of the ✕, which is in reach at ${size}`, () => {
       cy.viewport(width, height);
       mountScene();
       cy.get(ts(packTestid.skipAll)).click({ scrollBehavior: false });
       cy.get(".pack-slot .cf").should("have.length", 5);
       expectNoSidewaysScroll();
       expectHudClearOfSlots();
-      cy.get(ts(packTestid.close)).should("have.text", "Done");
+      cy.get(ts(packTestid.close)).should("have.attr", "aria-label", "Close");
       expectInReach(ts(packTestid.close));
+      // R3221000: the ✕ steps down under the HUD, which spans a phone's width (packs.css).
+      cy.get(ts(packTestid.close)).should(($close) => {
+        const hud = $close[0]!.ownerDocument.querySelector(ts(packTestid.bars))!.getBoundingClientRect();
+        expect(overlaps(hud, $close[0]!.getBoundingClientRect()), "the HUD covers the ✕").to.equal(false);
+      });
     });
   }
 });

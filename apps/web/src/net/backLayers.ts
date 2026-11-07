@@ -6,7 +6,7 @@
 // (R1754000) or a view transition (R2117000). Nothing reads the window at load: Vite's config loader
 // imports `navigate.ts`, which imports this.
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
 /** The `history.state` key that marks the layers' entry; it holds the address of the entry under it. */
 const BACK_ENTRY = "jackiohBackEntry";
@@ -18,6 +18,8 @@ type Layer = { close: () => void; closable: () => boolean };
 
 /** The open layers, oldest first. */
 const layers: Layer[] = [];
+/** Told whenever a layer opens or closes (`useTopBackLayer`). */
+const watchers = new Set<() => void>();
 let held: { layer: Layer; watcher: Watcher } | null = null;
 /**
  * The layers' entry while current, live or spent: its address and the one under it, the same until a
@@ -161,32 +163,72 @@ function openLayer(layer: Layer): () => void {
   }
   layers.push(layer);
   sync();
+  tell();
   return () => {
     const at = layers.indexOf(layer);
     if (at !== -1) layers.splice(at, 1);
     sync();
+    tell();
+  };
+}
+
+function tell(): void {
+  for (const watcher of [...watchers]) watcher();
+}
+
+function watchLayers(watcher: () => void): () => void {
+  watchers.add(watcher);
+  return () => {
+    watchers.delete(watcher);
   };
 }
 
 /**
  * R2127000: the mounted overlay is the top layer until another opens; Back calls `close`, as its Close
- * button does, so the focus goes back. While `closable` is false Back closes nothing.
+ * button does, so the focus goes back. While `closable` is false Back closes nothing. R3221000: what it
+ * returns says whether this overlay is the top layer now, so a modal's Escape and Tab go to the top one
+ * alone and a dialog opened over another closes first.
  */
-export function useBackLayer(close: () => void, closable = true): void {
+export function useBackLayer(close: () => void, closable = true): () => boolean {
+  return useLayer(close, closable).isTop;
+}
+
+/**
+ * R3221000: `useBackLayer`, and whether its layer is on top kept as state, for an overlay that draws
+ * itself over the dialogs only while it is the top layer (the inspect overlay, portalled after them): a
+ * layer opened after it is drawn over it. It counts as on top from its first render, before its layer
+ * is pushed, so it never opens under the dialog it opens from.
+ */
+export function useTopBackLayer(close: () => void, closable = true): { isTop: () => boolean; onTop: boolean } {
+  const { isTop, mine } = useLayer(close, closable);
+  const onTop = useSyncExternalStore(watchLayers, () => mine.current === null || layers.at(-1) === mine.current);
+  return { isTop, onTop };
+}
+
+function useLayer(close: () => void, closable: boolean): { isTop: () => boolean; mine: { readonly current: Layer | null } } {
   const latest = useRef({ close, closable });
+  const mine = useRef<Layer | null>(null);
   useLayoutEffect(() => {
     latest.current = { close, closable };
   });
-  useEffect(
-    () =>
-      openLayer({
-        close: () => {
-          latest.current.close();
-        },
-        closable: () => latest.current.closable,
-      }),
-    [],
-  );
+  // A layout effect, so the layer is there as soon as the overlay is drawn: an Escape the overlay's own
+  // keys read at once (`useModalOverlay` reads them from its layout effect) finds it on top.
+  useLayoutEffect(() => {
+    const layer: Layer = {
+      close: () => {
+        latest.current.close();
+      },
+      closable: () => latest.current.closable,
+    };
+    mine.current = layer;
+    const shut = openLayer(layer);
+    return () => {
+      mine.current = null;
+      shut();
+    };
+  }, []);
+  const isTop = useCallback(() => mine.current !== null && layers.at(-1) === mine.current, []);
+  return { isTop, mine };
 }
 
 /**

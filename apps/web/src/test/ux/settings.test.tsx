@@ -482,7 +482,7 @@ describe("B23 the settings gears open and close the dialog", () => {
     const dialog = panel();
     expect(dialog).toHaveAttribute("role", "dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-label", "Settings");
+    expect(dialog).toHaveAccessibleName("Settings");
     expect(screen.getByRole("dialog", { name: "Settings" })).toBe(dialog);
     expect(gear).toHaveAttribute("aria-expanded", "true");
     await waitFor(() => expect(document.activeElement).toBe(switchFor("dragToPlay")));

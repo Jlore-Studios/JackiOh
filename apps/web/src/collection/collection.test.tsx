@@ -229,7 +229,7 @@ describe("#2053 card names in the reader's language", () => {
     const locked = screen.getByTestId(T.card("core-002")).getAttribute("aria-label");
     fireEvent.click(screen.getByTestId(T.card("core-002")));
     const view = screen.getByTestId(T.cardView);
-    const title = view.querySelector(".collection-cardview__title")?.textContent ?? "";
+    const title = view.querySelector(".dialog__title")?.textContent ?? "";
     fireEvent.click(screen.getByTestId(T.cardViewText));
     return { tile, locked, view, title, detail: screen.getByTestId(INSPECT_DETAIL).getAttribute("aria-label") };
   }
@@ -249,7 +249,7 @@ describe("#2053 card names in the reader's language", () => {
 
     expect(opened.tile).toBe(defOf("core-001").name);
     expect(opened.locked).toBe(`${defOf("core-002").name}, not owned yet`);
-    expect(opened.view).toHaveAttribute("aria-label", defOf("core-002").name);
+    expect(opened.view).toHaveAccessibleName(defOf("core-002").name);
     expect(opened.title).toBe(defOf("core-002").name);
     expect(opened.detail).toBe(defOf("core-002").name);
   });
@@ -260,7 +260,7 @@ describe("#2053 card names in the reader's language", () => {
 
     expect(opened.tile).toBe(CHINESE["core-001"]!.name);
     expect(opened.locked).toBe(`${CHINESE["core-002"]!.name}，尚未拥有`);
-    expect(opened.view).toHaveAttribute("aria-label", CHINESE["core-002"]!.name);
+    expect(opened.view).toHaveAccessibleName(CHINESE["core-002"]!.name);
     expect(opened.title).toBe(CHINESE["core-002"]!.name);
     expect(opened.detail).toBe(CHINESE["core-002"]!.name);
   });

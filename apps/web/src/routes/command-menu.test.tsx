@@ -322,6 +322,9 @@ describe("R2118000 the command menu", () => {
     render(<CommandMenu path="/" />);
     const input = openMenu();
     expect(input).toHaveFocus();
+    // R3221000: a Dialog named by its title, whose ✕ is the Close beside the field.
+    expect(screen.getByRole("dialog", { name: "Command menu" })).toBe(screen.getByTestId(commandMenuTestid.dialog));
+    expect(screen.getByTestId(commandMenuTestid.close)).toHaveAccessibleName("Close");
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab" });
     expect(screen.getByTestId(commandMenuTestid.close)).toHaveFocus();
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab" });

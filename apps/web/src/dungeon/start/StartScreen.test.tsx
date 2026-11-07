@@ -363,6 +363,12 @@ describe("B19 a run in progress", () => {
     expect(abandon).not.toHaveBeenCalled();
     expect(byId(dungeonTestid.abandonAsk)).toHaveAttribute("role", "alertdialog");
     expect(byId(dungeonTestid.abandonCancel)).toHaveFocus();
+    // R3221000: the safe choice comes first, the act last.
+    const answers = within(byId(dungeonTestid.abandonAsk)).getAllByRole("button");
+    expect(answers.map((answer) => answer.getAttribute("data-testid"))).toEqual([
+      dungeonTestid.abandonCancel,
+      dungeonTestid.abandonConfirm,
+    ]);
 
     fireEvent.click(byId(dungeonTestid.abandonCancel));
     expect(abandon).not.toHaveBeenCalled();

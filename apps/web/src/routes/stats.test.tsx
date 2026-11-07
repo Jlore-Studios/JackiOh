@@ -1240,7 +1240,7 @@ describe("the card drill-down dialog", () => {
     fireEvent.keyDown(row, { key: "Enter" });
     fireEvent.click(screen.getByRole("dialog"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    const scrim = container.querySelector(".stats-modal-scrim");
+    const scrim = container.querySelector(".dialog-scrim");
     if (scrim === null) throw new Error("no scrim");
     fireEvent.click(scrim);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -1285,13 +1285,14 @@ describe("the card drill-down dialog", () => {
       expect(previous).toHaveFocus();
     }
 
+    // R3221000: from the page behind, Tab comes back in on the first stop and Shift+Tab on the last, the ✕.
     const behind = screen.getByTestId(statsTestid.searchInput);
     behind.focus();
     press("Tab");
-    expect(close).toHaveFocus();
+    expect(radiant).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
-    expect(retry).toHaveFocus();
+    expect(close).toHaveFocus();
   });
 
   it("R2127000 Back closes the breakdown, gives the focus back to its row and keeps /stats with its tab and filters, a filter changed while it was open among them; with none open Back leaves", async () => {

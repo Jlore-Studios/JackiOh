@@ -41,13 +41,12 @@ describe("R3223000 one PageTitle per menu", () => {
       const found = code(file, JSX_COMMENT).match(/<h1[\s>]/g)?.length ?? 0;
       if (found > 0) counts[file] = found;
     }
-    // PageTitle's own; then what is not a menu: the shell's logo, the landing's wordmark, the settings dialog, the
-    // boards' hidden headings, and the developer pages.
+    // PageTitle's own; then what is not a menu: the shell's logo, the landing's wordmark, the boards' hidden
+    // headings, and the developer pages. The settings dialog's title is its Dialog's h2 (R3221000).
     expect(counts).toEqual({
       "routes/PageTitle.tsx": 1,
       "main.tsx": 1,
       "routes/landing.tsx": 1,
-      "settings/SettingsPanel.tsx": 1,
       "routes/practice.tsx": 1,
       "dungeon/fight/FightScreen.tsx": 1,
       "duos/DevDuosRoute.tsx": 2,

@@ -7,12 +7,14 @@
 // hides what the server would refuse. A refusal shows the server's words and changes nothing.
 //
 // R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place, Cancel
-// focused. The question is drawn inside the offer, so in the preview, a modal, it lies inside the modal.
+// focused. R3221000: the question is an `alertdialog` drawn through `Dialog.tsx`, over the preview it
+// opens from: Cancel first and its close, Confirm last, and Escape and Back answer Cancel alone.
 
-import { useEffect, useId, useState, type KeyboardEvent, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 
 import { earnedOnly } from "../cards/cosmetics.ts";
 import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
+import { Dialog } from "../game/Dialog.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getTokens, redeemCardToken, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
 import { cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
@@ -142,7 +144,6 @@ export default function TokenOffer({
   const [state, setState] = useState<"ready" | "asking" | "busy" | "redeemed">("ready");
   const [asked, setAsked] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const questionId = useId();
   const id = spend.kind === "cosmetic" ? spend.cosmeticId : spend.cardId;
 
   const ask = (): void => {
@@ -152,12 +153,6 @@ export default function TokenOffer({
   };
   const cancel = (): void => {
     setState("ready");
-  };
-  // Escape answers Cancel and nothing else: the preview closes on an Escape that reaches the window.
-  const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== "Escape") return;
-    event.stopPropagation();
-    cancel();
   };
 
   const redeem = (): void => {
@@ -186,23 +181,15 @@ export default function TokenOffer({
   return (
     <div className="token-offer">
       {state === "asking" ? (
-        <div
-          className="token-offer__question"
+        // R3221000: drawn in the offer's place, a dialog over the preview's; Escape answers it alone.
+        <Dialog
           role="alertdialog"
-          aria-labelledby={questionId}
-          data-testid={T.tokenOfferDialog(id)}
-          onKeyDown={cancelOnEscape}
-        >
-          <p id={questionId}>{questionWords(spend, name)}</p>
-          <div className="token-offer__answers">
-            <button type="button" data-testid={T.tokenOfferConfirm(id)} onClick={redeem}>
-              {t("Confirm")}
-            </button>
-            <button type="button" data-testid={T.tokenOfferCancel(id)} autoFocus onClick={cancel}>
-              {t("Cancel")}
-            </button>
-          </div>
-        </div>
+          testid={T.tokenOfferDialog(id)}
+          title={questionWords(spend, name)}
+          onClose={cancel}
+          cancel={{ label: t("Cancel"), kind: "secondary", testid: T.tokenOfferCancel(id) }}
+          actions={[{ label: t("Confirm"), kind: "primary", onClick: redeem, testid: T.tokenOfferConfirm(id) }]}
+        />
       ) : (
         <button
           type="button"

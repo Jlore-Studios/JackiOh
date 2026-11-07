@@ -793,7 +793,7 @@
   background: rgb(255 210 74 / 0.35);
 }
 
-/* Above every inspect layer (inspect.css: --z-inspect-hover 60, --z-inspect-modal 70), since a
+/* Above every inspect layer (inspect.css: --z-inspect-hover 60, the modal ones at --z-dialog 72), since a
    reference is a control inside the detail view and the sheet. */
 .cf-ref-tooltip {
   z-index: 80;
@@ -1855,6 +1855,22 @@
   gap: 1cqw;
 }
 
+/* R3339000: an art-first compact face (a backrow card drawn with its name hidden, CardFace's `data-art-first`) has
+   edge-to-edge art and no name band: its name is the hover plate below. Under "Always" the face is not drawn art first,
+   so R3046000's band above is the face's. */
+.cf[data-layout="compact"][data-art-first="true"] {
+  --cf-band: 0cqh;
+}
+
+.cf[data-layout="compact"][data-art-first="true"][data-card-type] .cf-art-frame {
+  inset: 0;
+  height: auto;
+}
+
+.cf[data-layout="compact"][data-art-first="true"] .cf-art-frame::after {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 24%, transparent 80%, rgb(0 0 0 / 0.3));
+}
+
 /* ------------------------------------------------------------------------------- minion ----- */
 
 /* The board minion, bottom up: the attack and health gems on the bottom corners, the name plate
@@ -1985,6 +2001,30 @@
   bottom: var(--mf-plate);
 }
 
+/* R3339000: Art-first cards in play drop name bands and text to let art stand edge-to-edge. */
+.cf[data-layout="minion"][data-art-first="true"] .cf-scale {
+  inset: 1.2% 1.7%;
+  border-radius: 10.7% / 8%;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .cf-portrait {
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .cf-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+  pointer-events: none;
+}
+
 /* #3341: a unit that is not full art draws its art up to the frame too, not an oval in a box: the picture runs
    from the panel's top and sides down to half a gem above its foot (`--mf-art-foot`, MINION_ART_FOOT_SHARE; `.cf
    .cf-portrait`, above), so the attack and health gems straddle its lower edge and the name plate lies on it, the way
@@ -2017,6 +2057,113 @@
     inset 0 0 0 1cqmin #2b303b,
     inset 0 0 0 4.4cqmin #c3cad8,
     inset 0 0 0 5.4cqmin #2b303b;
+}
+
+/* R3339000: an art-first face that is not full art has no rim to ring: the art runs edge to edge under the panel's own
+   rarity edge, as a full-art unit's does, so it takes that unit's scrim (above) in place of the ring and scrim just
+   above, and only a Taunt's steel ring, drawn over the art since its shield is hidden, as a full-art unit's is. These come
+   after the rules they override and carry the `:not` they carry, so they outrank them whatever the layout's ring. */
+.cf[data-layout="minion"][data-art-first="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow: none;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+}
+
+.cf[data-layout="minion"][data-art-first="true"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 4.4cqmin #c3cad8,
+    inset 0 0 0 5.4cqmin #2b303b;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .stats {
+  bottom: 0.5cqh;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .shield-icon {
+  bottom: 0;
+}
+
+/* R3339000: a normal Common-to-Epic Unit keeps its name plate, smaller and translucent: its art already runs up to the frame
+   (#3341), under the plate, so the window grows as the plate shrinks. */
+.cf[data-layout="minion"] .card-name.card-name-compact-translucent {
+  height: calc(var(--mf-plate) * 0.82);
+  line-height: calc(var(--mf-plate) * 0.82);
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(4px);
+  box-shadow:
+    0 0.4cqh 0.8cqh rgb(0 0 0 / 0.35),
+    inset 0 0.3cqh 0 rgb(255 255 255 / 0.15);
+}
+
+/* R3339000: the hover plate, the name of a board face that draws none (an art-first face, or any face under "Never"). It
+   is always in the DOM and the accessibility tree, so the name is read as before, and transparent until the card is
+   hovered or holds focus, when it fades in within --motion-fast, a slim plate over the bottom of the art (a Unit's tucked
+   above its gems, as its name plate is). It takes no pointer. The selectors outrank every `.card-name` rule above, the
+   compact face's band and the small face's rules among them, so the plate has its own height and place on each; the
+   rule that shows it outranks the one that hides it. */
+.cf[data-layout][data-card-type] .card-name.card-name-hover {
+  position: absolute;
+  z-index: 5;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: max(11cqh, 10px);
+  padding: 0 4cqw;
+  border-radius: 0;
+  background: rgb(0 0 0 / 0.75);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+  clip-path: none;
+  color: #f0f3fa;
+  font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: max(11cqh, 10px);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+/* A backrow card's plate takes two lines, as its band did, and its name shrinks as the band's did (`--cf-fit`, no pixel
+   floor) before it is clamped: its face is small and a name such as "Pareto Optimality" does not fit one line. */
+.cf[data-layout="compact"][data-card-type] .card-name.card-name-hover {
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  height: max(22cqh, 18px);
+  padding: 0 3cqw;
+  font-size: calc(9cqh * var(--cf-fit, 1));
+  line-height: 1.04;
+  white-space: normal;
+}
+
+/* Two lines, then an ellipsis, if even the floor will not fit. */
+.cf[data-layout="compact"][data-card-type] .card-name.card-name-hover[data-clamped="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cf[data-layout="minion"][data-card-type] .card-name.card-name-hover {
+  bottom: calc(var(--mf-stat) - 0.5cqh);
+  left: 3cqw;
+  right: 3cqw;
+  height: var(--mf-plate);
+  border-radius: 1.2cqh;
+  line-height: var(--mf-plate);
+}
+
+.cf[data-layout][data-card-type]:hover .card-name.card-name-hover,
+.cf[data-layout][data-card-type]:focus-within .card-name.card-name-hover,
+.card:hover .cf[data-layout][data-card-type] .card-name.card-name-hover,
+.card:focus-within .cf[data-layout][data-card-type] .card-name.card-name-hover {
+  opacity: 1;
 }
 
 /* R243's Vanilla marker: a plain paper stamp at the portrait's top right, clear of the cost gem and

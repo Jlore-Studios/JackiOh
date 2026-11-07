@@ -7,7 +7,6 @@ import {
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -15,10 +14,10 @@ import {
 } from "react";
 
 import { useBoardShown } from "../game/boardShown.ts";
+import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate } from "../net/navigate.ts";
 import { Kbd, ShortcutHint, useShortcutHints } from "../shortcuts/Kbd.tsx";
-import { useModalKeys } from "../together/modalKeys.ts";
 import { commandEntries, commandMenuOn, type CommandEntry } from "./commandEntries.ts";
 import "./command-menu.css";
 
@@ -96,7 +95,6 @@ function CommandMenuDialog({ onClose }: { onClose: () => void }): ReactElement {
   useLocale();
   const hints = useShortcutHints();
   const listId = useId();
-  const dialog = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
@@ -105,15 +103,6 @@ function CommandMenuDialog({ onClose }: { onClose: () => void }): ReactElement {
   const current = shown.length === 0 ? -1 : Math.min(selected, shown.length - 1);
   const optionId = (index: number): string => `${listId}-${String(index)}`;
 
-  useLayoutEffect(() => {
-    const opener = document.activeElement;
-    input.current?.focus({ preventScroll: true });
-    return () => {
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
-    };
-  }, []);
-  // Escape closes it and Tab stays inside it.
-  useModalKeys(dialog, onClose);
   useEffect(() => {
     if (current < 0) return;
     document.getElementById(`${listId}-${String(current)}`)?.scrollIntoView?.({ block: "nearest" });
@@ -140,83 +129,78 @@ function CommandMenuDialog({ onClose }: { onClose: () => void }): ReactElement {
     }
   };
 
+  // R3221000: a Dialog (Dialog.tsx), its title for assistive tech alone and its ✕ beside the field. The
+  // field takes the focus on open; Escape, Back and the scrim close it, Tab stays inside it, and the
+  // focus goes back to where it was.
   return (
-    <div
-      className="command-menu-scrim"
-      data-testid={commandMenuTestid.scrim}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Dialog
+      role="dialog"
+      testid={commandMenuTestid.dialog}
+      scrimTestid={commandMenuTestid.scrim}
+      closeTestid={commandMenuTestid.close}
+      className="command-menu"
+      focus={input}
+      title={t("Command menu")}
+      onClose={onClose}
+      actions={[]}
     >
-      <div
-        ref={dialog}
-        className="command-menu"
-        data-testid={commandMenuTestid.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("Command menu")}
-      >
-        <input
-          ref={input}
-          className="command-menu__input"
-          data-testid={commandMenuTestid.input}
-          role="combobox"
-          aria-expanded="true"
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={current === -1 ? undefined : optionId(current)}
-          aria-label={t("Search pages, actions and cards")}
-          placeholder={t("Search pages, actions and cards")}
-          autoComplete="off"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setSelected(0);
-          }}
-          onKeyDown={onInputKeyDown}
-        />
-        <button type="button" className="command-menu__close" data-testid={commandMenuTestid.close} onClick={onClose}>
-          {t("Close")}
-        </button>
-        {shown.length === 0 ? (
-          <p className="command-menu__empty" data-testid={commandMenuTestid.empty}>
-            {t("No matches")}
-          </p>
-        ) : (
-          <ul id={listId} className="command-menu__list" data-testid={commandMenuTestid.list} role="listbox">
-            {shown.map((entry, index) => (
-              <li
-                key={entry.id}
-                id={optionId(index)}
-                className="command-menu__option"
-                role="option"
-                aria-selected={index === current}
-                data-testid={commandEntryTestid(entry.id)}
-                onClick={() => {
-                  run(entry);
-                }}
-              >
-                <span className="command-menu__label">{entry.label}</span>
-                <span className="command-menu__kind">
-                  {index === current ? (
-                    <span className="command-menu__enter" aria-hidden="true">
-                      <Kbd keys={COMMAND_MENU_KEYS.open} />
-                    </span>
-                  ) : null}
-                  {kindLabel(entry.kind)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {hints.shown ? (
-          <p className="command-menu__keys" data-testid={commandMenuTestid.keys}>
-            <ShortcutHint keys={COMMAND_MENU_KEYS.move} words={t("{keys} to move")} />
-            <ShortcutHint keys={[COMMAND_MENU_KEYS.open]} words={t("{keys} to open")} />
-            <ShortcutHint keys={[COMMAND_MENU_KEYS.close]} words={t("{keys} to close")} />
-          </p>
-        ) : null}
-      </div>
-    </div>
+      <input
+        ref={input}
+        className="command-menu__input"
+        data-testid={commandMenuTestid.input}
+        role="combobox"
+        aria-expanded="true"
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={current === -1 ? undefined : optionId(current)}
+        aria-label={t("Search pages, actions and cards")}
+        placeholder={t("Search pages, actions and cards")}
+        autoComplete="off"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setSelected(0);
+        }}
+        onKeyDown={onInputKeyDown}
+      />
+      {shown.length === 0 ? (
+        <p className="command-menu__empty" data-testid={commandMenuTestid.empty}>
+          {t("No matches")}
+        </p>
+      ) : (
+        <ul id={listId} className="command-menu__list" data-testid={commandMenuTestid.list} role="listbox">
+          {shown.map((entry, index) => (
+            <li
+              key={entry.id}
+              id={optionId(index)}
+              className="command-menu__option"
+              role="option"
+              aria-selected={index === current}
+              data-testid={commandEntryTestid(entry.id)}
+              onClick={() => {
+                run(entry);
+              }}
+            >
+              <span className="command-menu__label">{entry.label}</span>
+              <span className="command-menu__kind">
+                {index === current ? (
+                  <span className="command-menu__enter" aria-hidden="true">
+                    <Kbd keys={COMMAND_MENU_KEYS.open} />
+                  </span>
+                ) : null}
+                {kindLabel(entry.kind)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {hints.shown ? (
+        <p className="command-menu__keys" data-testid={commandMenuTestid.keys}>
+          <ShortcutHint keys={COMMAND_MENU_KEYS.move} words={t("{keys} to move")} />
+          <ShortcutHint keys={[COMMAND_MENU_KEYS.open]} words={t("{keys} to open")} />
+          <ShortcutHint keys={[COMMAND_MENU_KEYS.close]} words={t("{keys} to close")} />
+        </p>
+      ) : null}
+    </Dialog>
   );
 }

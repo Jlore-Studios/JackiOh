@@ -1121,6 +1121,12 @@ describe("#1667 the Chase Shard bar", () => {
     fireEvent.click(screen.getByTestId(T.chasePick(AURORA.id)));
 
     const dialog = screen.getByRole("alertdialog", { name: "购买碎冰？这将消耗整个追猎碎片进度条。" });
+    expect(screen.getByTestId(T.chaseAsk(AURORA.id))).toBe(dialog);
+    // R3221000: Cancel first and the close (no ✕), Confirm last.
+    expect(within(dialog).getAllByRole("button").map((button) => button.dataset.testid)).toEqual([
+      T.chaseCancel(AURORA.id),
+      T.chaseConfirm(AURORA.id),
+    ]);
     expect(screen.queryByTestId(T.chasePick(AURORA.id)), "the question takes the Buy's place").toBeNull();
     expect(screen.getByTestId(T.shardChoice)).toContainElement(dialog);
     expect(screen.getByRole("button", { name: "取消" })).toHaveFocus();
