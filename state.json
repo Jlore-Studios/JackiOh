@@ -17105,6 +17105,13 @@
     "3331": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42331717478",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-07T03:08:49Z",
+        "until": "2026-11-07T03:38:49Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
