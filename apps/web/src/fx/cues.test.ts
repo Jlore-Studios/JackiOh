@@ -34,6 +34,8 @@ import {
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
+  FX_PLAY_HEAVY_TRAUMA,
+  FX_PLAY_MASSIVE_TRAUMA,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
   FX_RAYS_TAIL_MS,
@@ -46,7 +48,7 @@ import {
   FX_TRAP_BURST_AT,
 } from "./constants.ts";
 import { FLAVOR_LOOKS, chaosFlavor, type FlavorLook } from "./flavors.ts";
-import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
+import { delayCues, planFx, planHandover, planLethal, planResult, playTrauma, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { entranceEchoMs } from "./takeover.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
@@ -2158,6 +2160,69 @@ describe("B9 projectiles carry the intensity as their density", () => {
     expect(at(FX_INTENSITY_SCALE.low)).toMatchObject({ density: FX_INTENSITY_SCALE.low });
     expect(at(FX_INTENSITY_SCALE.normal)).toMatchObject({ density: 1 });
     expect(at(FX_INTENSITY_SCALE.high)).toMatchObject({ density: FX_INTENSITY_SCALE.high });
+  });
+});
+
+/* R3346000 (#3346): the board answers a heavy play */
+
+describe("R3346000 a heavy play shakes the board by the mana it cost, a massive one hard", () => {
+  const D = ANIMATIONS.cardPlayed.durationMs;
+  const COMMON: Record<string, FxCardFacts> = { "core-002": { rarity: "Common", attack: 1, health: 2, type: "Unit" } };
+  const playedAt = (costPaid: number, extra: Partial<Extract<GameEvent, { type: "cardPlayed" }>> = {}): GameEvent => ({ ...played("p1", HAND), costPaid, ...extra }) as GameEvent;
+  const shakes = (event: GameEvent, intensity: number = FX_INTENSITY_SCALE.normal, facts: Record<string, FxCardFacts> = COMMON, prime?: readonly GameEvent[]): number[] =>
+    shakesOf(plan([event], D, { env: envOf({ intensity, card: catalog(facts) }), ...(prime === undefined ? {} : { prime }) }));
+
+  it("R3346000 a play of cost 0 to 5 shakes nothing, 6 to 8 shakes FX_PLAY_HEAVY_TRAUMA and 9 or more FX_PLAY_MASSIVE_TRAUMA", () => {
+    for (const cost of [0, 2, 3, 5]) expect(shakes(playedAt(cost)), `cost ${String(cost)}`).toEqual([]);
+    for (const cost of [6, 7, 8]) expect(shakes(playedAt(cost)), `cost ${String(cost)}`).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+    for (const cost of [9, 10, 14]) expect(shakes(playedAt(cost)), `cost ${String(cost)}`).toEqual([FX_PLAY_MASSIVE_TRAUMA]);
+    expect(FX_PLAY_MASSIVE_TRAUMA).toBeGreaterThan(FX_PLAY_HEAVY_TRAUMA);
+    expect(FX_PLAY_HEAVY_TRAUMA).toBeGreaterThan(0);
+    expect(FX_PLAY_MASSIVE_TRAUMA).toBeLessThanOrEqual(1);
+  });
+
+  it("R3346000 playTrauma is the trauma of each tier before the setting: none under heavy", () => {
+    expect([playTrauma("light"), playTrauma("medium"), playTrauma("heavy"), playTrauma("massive")]).toEqual([0, 0, FX_PLAY_HEAVY_TRAUMA, FX_PLAY_MASSIVE_TRAUMA]);
+  });
+
+  it("R3346000 the intensity setting scales the shake, capped at 1, and off gives none", () => {
+    const { low, normal, high, off } = FX_INTENSITY_SCALE;
+    expect(shakes(playedAt(7), low)).toEqual([Math.min(1, FX_PLAY_HEAVY_TRAUMA * low)]);
+    expect(shakes(playedAt(7), normal)).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+    expect(shakes(playedAt(7), high)).toEqual([Math.min(1, FX_PLAY_HEAVY_TRAUMA * high)]);
+    expect(shakes(playedAt(10), low)).toEqual([Math.min(1, FX_PLAY_MASSIVE_TRAUMA * low)]);
+    expect(shakes(playedAt(10), high)).toEqual([Math.min(1, FX_PLAY_MASSIVE_TRAUMA * high)]);
+    expect(shakes(playedAt(7), off)).toEqual([]);
+    expect(shakes(playedAt(10), off)).toEqual([]);
+    for (const level of [low, normal, high]) expect(shakes(playedAt(10), level)[0] ?? 0).toBeLessThanOrEqual(1);
+  });
+
+  it("R3346000 a Spell and a Field Spell shake as a Unit does, by the same tiers", () => {
+    for (const type of ["Spell", "Field Spell"] as const) {
+      const facts = { "core-002": { rarity: "Common", type } } satisfies Record<string, FxCardFacts>;
+      expect(shakes(playedAt(5), FX_INTENSITY_SCALE.normal, facts), type).toEqual([]);
+      expect(shakes(playedAt(6), FX_INTENSITY_SCALE.normal, facts), type).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+      expect(shakes(playedAt(9), FX_INTENSITY_SCALE.normal, facts), type).toEqual([FX_PLAY_MASSIVE_TRAUMA]);
+    }
+  });
+
+  it("R3346000 a Trap, a Field Trap, a card set face-down, the sentinel, a cast on draw and an unnamed card shake nothing, at any cost", () => {
+    for (const type of ["Trap", "Field Trap"] as const) {
+      expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, { "core-002": { rarity: "Common", type } }), type).toEqual([]);
+    }
+    expect(shakes(playedAt(10, { formerId: "h1" })), "a set face-down").toEqual([]);
+    expect(shakes(playedAt(10, { defId: "hidden", instanceId: "hidden", player: "p2" }), FX_INTENSITY_SCALE.normal, { hidden: { rarity: "Common", type: "Unit" } }), "the sentinel").toEqual([]);
+    expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, {}), "a card with no catalog row").toEqual([]);
+    expect(shakes(playedAt(10, { type: "cardPlayed" }), FX_INTENSITY_SCALE.normal, { "core-002": { rarity: "Common" } }), "a card with no type").toEqual([]);
+    const drawn: GameEvent = { type: "drawn", player: "p1", instanceId: HAND, defId: "core-002" };
+    // A cast on draw keeps its own shake (cardFx.ts castOnDrawCues): its cost adds none to it.
+    expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, COMMON, [drawn]), "a cast on draw").toEqual(shakes(playedAt(0), FX_INTENSITY_SCALE.normal, COMMON, [drawn]));
+    expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, COMMON, [drawn])).not.toContain(FX_PLAY_MASSIVE_TRAUMA);
+  });
+
+  it("R3346000 the other seat's heavy play shakes the board too", () => {
+    expect(shakes(playedAt(7, { player: "p2" }))).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+    expect(shakes(playedAt(9, { player: "p2" }))).toEqual([FX_PLAY_MASSIVE_TRAUMA]);
   });
 });
 

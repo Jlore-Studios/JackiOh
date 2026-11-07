@@ -160,7 +160,8 @@ describe("R2715001 the full-art cards' art moves", () => {
 
   it("R2715001 the Animated, Legendary and Mythic art windows change between two moments and the still Epic's does not", () => {
     cy.mount(<Faces />);
-    cy.get('[data-art-moving="true"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", MOVING_TIERS.length);
+    // One moving window a face: R3344000's planes over a face with depth move with it and are not counted.
+    cy.get('.cf-art-frame > .cf-art[data-art-moving="true"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", MOVING_TIERS.length);
     cy.document().then((doc) => {
       // The control: each face wears its tier, the Animated art its normal face.
       for (const tier of TIERS) {

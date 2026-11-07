@@ -1673,6 +1673,31 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     expect(pictures.PRISMATIC_SHEEN.slice(0, pictures.PRISMATIC_SPECTRUM.length)).toEqual([...pictures.PRISMATIC_SPECTRUM]);
   });
 
+  it("R3344000 depth's colours keep out of the Radiant gold window", () => {
+    // depth.css, comments stripped: the planes' ground, the glare's two gradients and the frame-break draw no colour but white.
+    const depthCss = sheet("depth.css");
+    const drawn = rules(depthCss).filter((rule) => /cf-glare|cf-plane|cf-planes|data-depth|data-frame-break/.test(rule.selector));
+    expect(drawn.length).toBeGreaterThan(8);
+    expect(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(depthCss), "a raw colour").toBe(false);
+    let named = 0;
+    for (const rule of drawn) {
+      const colors = colorsOf(rule.body);
+      named += colors.length;
+      for (const color of colors) expect(inRadiantGold(color), `${rule.selector}: #${color}`).toBe(false);
+    }
+    // The glare's two gradients, each of white alone, mixed with clear, which takes no hue.
+    expect(named).toBe(2);
+    for (const selector of [".cf-glare--art", ".cf-glare--frame"]) {
+      const body = ruleBody(depthCss, new RegExp(`^${selector.replace(".", "\\.")}\\s*\\{`, "m"));
+      expect(body, selector).toMatch(/color-mix\(in srgb, var\(--pal-white\) calc\(var\(--cf-glare-(art|frame), 0\) \* 100%\), transparent\)/);
+    }
+    // It opens no rule on a foil, a Radiant face's shimmer or the foil's pseudo-elements: those are cards.css's and cosmetics.css's.
+    for (const rule of rules(depthCss)) {
+      expect(rule.selector, "a foil's rule").not.toMatch(/data-foil|data-cosmetic-foil|data-radiant-face/);
+      if (/::after|::before/.test(rule.selector)) expect(rule.body.trim(), `${rule.selector} only turns the planes' own off`).toBe("content: none;");
+    }
+  });
+
   it("R3017002 part 6's colours keep out of the Radiant gold window", () => {
     const hex = (level: number): string => Math.round(Math.min(1, Math.max(0, level)) * 255).toString(16).padStart(2, "0");
     const rgb = (color: string): [number, number, number] => [1, 3, 5].map((at) => parseInt(color.slice(at, at + 2), 16) / 255) as [number, number, number];

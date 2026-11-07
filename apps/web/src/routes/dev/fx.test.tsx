@@ -10,6 +10,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
+import { PLAY_IMPACT_OPPONENT_GAIN } from "../../audio/constants.ts";
+import { setAudioEngineForTests } from "../../audio/engine.ts";
+import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import { planAuras } from "../../fx/aura/plan.ts";
 import { entranceKeyOf, planCardFx, planCardMotif } from "../../fx/cardFx.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
@@ -31,6 +34,7 @@ import {
 import { hasSetPiece, signatureRunOf } from "../../fx/setPieces.ts";
 import type { FxPlanEnv } from "../../fx/types.ts";
 import { BURST_BUDGET_MS, planEntries } from "../../game/animations.ts";
+import { PLAY_TIERS_ASCENDING } from "../../game/damageFeel.ts";
 import { FX_DRAWN_MOTIFS } from "../../fx/motifs/names.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
@@ -358,5 +362,65 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("R3346000 the gallery plays every play impact", () => {
+  const TYPES = ["unit", "spell", "field"] as const;
+  const cellOf = (type: string, tier: string): HTMLElement => {
+    const cell = screen.getAllByTestId(fxGalleryTestid.impact).find((el) => el.dataset.type === type && el.dataset.tier === tier);
+    if (cell === undefined) throw new Error(`no ${tier} ${type} cell`);
+    return cell;
+  };
+  const rigged = (): ReturnType<typeof vi.fn> => {
+    const playSfx = vi.fn(() => true);
+    setAudioEngineForTests(fakeAudioEngine({ playSfx }));
+    return playSfx;
+  };
+  afterEach(() => {
+    setAudioEngineForTests(null);
+  });
+
+  it("R3346000 a cell for every type at every tier, each playing its impact as the viewer's own", () => {
+    const playSfx = rigged();
+    render(<FxGallery />);
+    expect(screen.getAllByTestId(fxGalleryTestid.impact)).toHaveLength(TYPES.length * PLAY_TIERS_ASCENDING.length);
+    for (const type of TYPES) {
+      for (const tier of PLAY_TIERS_ASCENDING) {
+        fireEvent.click(cellOf(type, tier));
+        expect(playSfx, `${tier} ${type}`).toHaveBeenLastCalledWith("playImpact", { playTier: tier, playType: type }, 0);
+      }
+    }
+    // Every press also clicks (the app's uiClick); the impacts are the rest.
+    expect(playSfx.mock.calls.filter(([id]) => id === "playImpact")).toHaveLength(TYPES.length * PLAY_TIERS_ASCENDING.length);
+  });
+
+  it("R3346000 as the opponent every impact carries the opponent's gain, and unticked drops it again", () => {
+    const playSfx = rigged();
+    render(<FxGallery />);
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.impactOpponent));
+    for (const type of TYPES) {
+      for (const tier of PLAY_TIERS_ASCENDING) {
+        fireEvent.click(cellOf(type, tier));
+        expect(playSfx, `${tier} ${type}`).toHaveBeenLastCalledWith("playImpact", { playTier: tier, playType: type, gain: PLAY_IMPACT_OPPONENT_GAIN }, 0);
+      }
+    }
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.impactOpponent));
+    fireEvent.click(cellOf("unit", "massive"));
+    expect(playSfx).toHaveBeenLastCalledWith("playImpact", { playTier: "massive", playType: "unit" }, 0);
+  });
+
+  it("R3346000 the trap's set click and snap play, the snap a step quieter as the opponent's", () => {
+    const playSfx = rigged();
+    render(<FxGallery />);
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.trapSet));
+    expect(playSfx).toHaveBeenLastCalledWith("trapSet", undefined, 0);
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.trapSnap));
+    expect(playSfx).toHaveBeenLastCalledWith("trapSnap", undefined, 0);
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.impactOpponent));
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.trapSnap));
+    expect(playSfx).toHaveBeenLastCalledWith("trapSnap", { gain: PLAY_IMPACT_OPPONENT_GAIN }, 0);
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.trapSet));
+    expect(playSfx).toHaveBeenLastCalledWith("trapSet", undefined, 0);
   });
 });
