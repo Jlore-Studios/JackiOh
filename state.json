@@ -19202,6 +19202,8 @@
       }
     },
     "3372": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T08:59:21Z",
@@ -19215,8 +19217,11 @@
         "trail": "onent/fx-gallery-captures.cy.tsx | head -20\", \"description\": \"Find the gallery spec's loops\"}\n- Bash: {\"command\": \"sed -n 36,60p e2e/cypress/component/fx-gallery-captures.cy.tsx; sed -n 250,290p e2e/cypress/component/fx-gallery-captures.cy.tsx\", \"description\": \"Read the motif loop and the set piece l\u2026\n- Bash: {\"command\": \"grep -c 'wipe' apps/web/src/fx/cards/*.json5 | grep -v ':0' | head; git diff origin/main -- apps/web/src/fx/cards/stinkyscape-2.json5 | grep '^[-+]' | head\", \"description\": \"Check other \u2026\n- Bash: {\"command\": \"timeout 1500 bash -c 'until grep -q \\\"BUILD EXIT\\\" /tmp/tools6-3337.log; do sleep 10; done'; tail -2 /tmp/tools6-3337.log\", \"description\": \"Wait for the tools build\", \"timeout\": 1560000}\n- Bash: {\"command\": \"J=$CARGO_TARGET_DIR/release/jackioh; $J spec check 2>&1 | tail -3; $J patches check 2>&1 | tail -3; $J catalog check 2>&1 | tail -2; $J names --check 2>&1 | tail -2\", \"description\": \"Run\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) audio-recipes 91/91 in chrome. spec check (1803 rulings), patches check, catalog check, names --check: ok. Base build for classify: detached worktree /home/run\u2026\n- Bash: {\"command\": \"git status --short | grep -v '^M \\\\|^A ' | head -20; git status --short --ignored e2e/artifacts | head -3\", \"description\": \"Check for unstaged or stray files\"}\n- Bash: {\"command\": \"git diff -- apps/web/src/fx/aura/AuraLayer.tsx apps/web/src/fx/aura/aura.css apps/web/src/fx/dom.ts apps/web/src/cards/art/svg.ts | head -150\", \"description\": \"Review this run's aura, do\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for old,new in pairs:\\n assert s.count(old)==1, (p, old[:60])\\n s=s.replace(old,new)\\n open(p,'w').write(s)\\nedit('apps/web/sr\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -3; echo \\\"fmt exit $?\\\"; tail -2 /tmp/base-3337.log\", \"description\": \"Check Rust formatting and the base build\"}\n- Bash: {\"command\": \"timeout 2400 bash -c 'until grep -q \\\"BUILD EXIT\\\" /tmp/base-3337.log; do sleep 15; done'; tail -2 /tmp/base-3337.log\", \"description\": \"Wait for the base tools build\", \"timeout\": 2460000}\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) base tools built; running classify --claims\\\" >> .bot-notes.md; timeout 1800 $CARGO_TARGET_DIR/release/jackioh classify --base origin/main --parent-bin /home/r\u2026\n- Bash: {\"command\": \"git worktree remove --force /home/runner/work/_temp/work/jackioh-classify-base && rm -rf /home/runner/work/_temp/work/jackioh-classify-base-target && git worktree prune && git worktree l\u2026\n- Bash: {\"command\": \"timeout 900 $CARGO_TARGET_DIR/release/jackioh golden check 2>&1 | tail -3\", \"description\": \"Run the golden replay check\", \"timeout\": 960000}\n- Bash: {\"command\": \"(cd apps/web && timeout 3000 pnpm exec vitest run --project web > /tmp/web7-3337.log 2>&1; echo \\\"WEB EXIT $?\\\" >> /tmp/web7-3337.log) > /dev/null 2>&1 &\\necho started\", \"description\": \"\u2026\n- Bash: {\"command\": \"timeout 2900 bash -c 'until grep -q \\\"WEB EXIT\\\" /tmp/web7-3337.log; do sleep 15; done'; grep -E 'Test Files|Tests |WEB EXIT' /tmp/web7-3337.log; grep -E '^ FAIL' /tmp/web7-3337.log | so\u2026\n- Bash: {\"command\": \"cat crates/cards/patches/pending/discovering-an-anomaly-is-an-event-the-scan-finds-it-space.json\", \"description\": \"Read the pending patch fragment\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"WEB EXIT\\\" /tmp/web7-3337.log; do sleep 15; done'; grep -E 'Test Files|Tests |WEB EXIT' /tmp/web7-3337.log; grep -E '^ FAIL' /tmp/web7-3337.log | sor\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) full web suite: 563 files, 10353 passed, 80 skipped, exit 0. golden check ok (512357ea). Running fuzz 200 (/tmp/fuzz6-3337.log)\\\" >> .bot-notes.md; (timeout 30\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"FUZZ EXIT\\\" /tmp/fuzz6-3337.log; do sleep 15; done'; tail -4 /tmp/fuzz6-3337.log\", \"description\": \"Wait for the fuzz run\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E 'passed|failed|seeds' /tmp/fuzz6-3337.log | head -5\", \"description\": \"Read the fuzz summary\"}\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) fuzz 200: 200 passed. Running the workspace cargo test (ts) (/tmp/cargo6-3337.log)\\\" >> .bot-notes.md; (timeout 6000 cargo test --workspace --features jackioh-\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('- **Left:** spec/patches check')\\nb=s.index('## Goal')\\nnew='''- **Run 6 checks:** full web suite 563/563 files; typech\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"WIRE CHECKED\\\" /tmp/cargo6-3337.log; do sleep 20; done'; tail -5 /tmp/cargo6-3337.log | cut -c1-200\", \"description\": \"Wait for the cargo tests\", \"tim\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"WIRE CHECKED\\\" /tmp/cargo6-3337.log; do sleep 20; done'; grep -c '^test result' /tmp/cargo6-3337.log; tail -3 /tmp/cargo6-3337.log | cut -c1-200\", \"d\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"WIRE CHECKED\\\" /tmp/cargo6-3337.log; do sleep 20; done'; grep -c '^test result' /tmp/cargo6-3337.log; grep -E 'FAILED|panicked|^failures' /tmp/cargo6\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"WIRE CHECKED\\\" /tmp/cargo6-3337.log; do sleep 20; done'; grep -c '^test result' /tmp/cargo6-3337.log; grep -E 'test result: FAILED|^failures:' /tmp/c\u2026\n- Bash: {\"command\": \"grep -E 'CARGO EXIT|test result: FAILED' /tmp/cargo6-3337.log; grep '^test result' /tmp/cargo6-3337.log | awk '{p+=$4; f+=$6} END {print p\\\" passed, \\\"f\\\" failed\\\"}'; git status --porcel\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- **Left:** workspace cargo test (running, /tmp/cargo6-3337.log); final message.\\\",\\\"- workspace cargo test (ts): ex\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: discovering an Anomaly is an event: the scan finds it, space tears open, your side falls into the rift and the Anomaly's own board arrives under a title card of its own\"} --> ## What changed Every Anomaly lay now says which Anomaly it is, and the client\u2026"
       },
       "issue": 3337,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-07T11:18:46Z",
         "from_run": "42357772242",
         "gates": [
           {
@@ -19308,7 +19313,11 @@
         "source": "build",
         "until": "2026-11-07T11:47:09Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-07T11:17:09Z",
+      "run_id": "pending:ced282a2-1794050280",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -19327,6 +19336,9 @@
         "provider": "claude-1",
         "run": "42357772242"
       },
+      "started_at": "2026-11-07T11:18:46Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -19340,9 +19352,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T11:00:25Z",
+    "at": "2026-11-07T11:18:46Z",
     "url": "",
-    "what": "review #3365 on claude-4"
+    "what": "review #3372 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T10:56:28Z",
