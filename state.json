@@ -17163,6 +17163,13 @@
     "3336": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42316918558",
+        "model": "sonnet",
+        "provider": "claude-3",
+        "since": "2026-11-07T00:39:17Z",
+        "until": "2026-11-07T01:09:17Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
