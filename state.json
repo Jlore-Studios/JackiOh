@@ -17691,6 +17691,7 @@
       "ci_on_head": true,
       "ci_run_id": 42317848372,
       "ci_sha": "3c007b876ae86c1d9f52f2bab55aa8f26f71441b",
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-07T01:22:42Z",
