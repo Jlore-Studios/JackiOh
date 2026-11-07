@@ -18109,15 +18109,21 @@
     "what": "build #3337 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-07T02:24:19Z",
+    "at": "2026-11-07T02:37:37Z",
     "notes": [
       "#3357 is held for `claude-3` until 20:50 (it refused a call)",
       "#3331 is held for `claude-3` until 20:50 (it refused a call)",
       "#3332 is held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
       "#3336 is held for `claude-3` until 20:50 (it refused a call)",
       "#3343 is held for `claude-3` until 20:50 (it refused a call)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-07T02:50:00Z; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T06:00:00Z; it can start a build or a plan again in 2h 34m; `claude-8` is busy; `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-07T03:40:00Z; it can start a build or a plan again in 14m; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T04:10:00Z; it can start a build or a plan again in 44m; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 44h 34m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 2h 34m; waiting for their owners: #3331 held for `claude-3` until 20:50 (it refused a call); #3332 held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)); #3336 held for `claude-3` until 20:50 (it refused a call); #3343 held for `claude-3` until 20:50 (it refused a call); #3357 held for `claude-3` until 20:50 (it refused a call)",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered plan #3339 on agy (run 42328439806): planned",
+      "delivered revise #3353 on claude-6 (run 42323750726): built",
+      "started review #3353 on claude-6 (run 42330483746)",
+      "started build #3339 on agy (run 42330549139)",
+      "started review #3356 on claude-1 (run 42330608725)",
+      "started build #3337 on claude-1 (run 42330673129)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-07T02:50:00Z; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T06:00:00Z; it can start a build or a plan again in 2h 15m; `claude-8` is busy; `claude-1` is busy; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-07T04:10:00Z; it can start a build or a plan again in 25m; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 44h 15m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 2h 15m; waiting for their owners: #3331 held for `claude-3` until 20:50 (it refused a call); #3332 held for `claude-4` until 21:10 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)); #3336 held for `claude-3` until 20:50 (it refused a call); #3343 held for `claude-3` until 20:50 (it refused a call); #3357 held for `claude-3` until 20:50 (it refused a call)",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18823,7 +18829,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-07T02:24:19Z",
+  "loop_tick": "2026-11-07T02:37:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
