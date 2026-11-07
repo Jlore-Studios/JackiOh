@@ -17764,10 +17764,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-07T06:05:45Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
+      "paused": {
+        "at": "2026-11-07T06:29:32Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T05:28:28Z",
       "planned_by": "`claude-2` (claude, `sonnet`, medium)",
@@ -17777,11 +17783,13 @@
       "provider": "claude-8",
       "queued_at": "2026-11-07T00:00:00Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "42345479342",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T06:05:45Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3348": {
       "action": "plan",
