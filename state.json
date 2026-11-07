@@ -17336,9 +17336,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-07T00:13:34Z",
-      "owner_why": "it plans it",
+      "owner": "agy",
+      "owner_since": "2026-11-07T05:31:12Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-07T07:50:00Z; it can start again only in 2h 18m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-07T04:24:10Z",
         "interrupt": "usage",
@@ -17350,13 +17350,13 @@
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "agy",
       "queued_at": "2026-11-06T23:44:54Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "42334373081",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T03:31:11Z",
+      "run_id": "pending:fdca4a3e-1794029452",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-07T05:31:12Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18394,9 +18394,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T05:30:40Z",
+    "at": "2026-11-07T05:31:12Z",
     "url": "",
-    "what": "build #3331 on claude-2"
+    "what": "build #3336 on agy"
   },
   "last_sweep": {
     "at": "2026-11-07T05:15:20Z",
