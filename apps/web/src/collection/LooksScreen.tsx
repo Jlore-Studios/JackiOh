@@ -14,9 +14,11 @@
 // - a level past the next has no Buy and names what it needs first.
 // Hovering a rung, or its button's keyboard focus, shows that level in the three views (LookViews.tsx). It decides
 // nothing (CLAUDE.md rule 7): ownership is the owned-cosmetics read (`useCanEquip`), the held tokens and the bar are
-// the server's answers, and a refusal shows the server's words and changes nothing.
+// the server's answers, and a refusal shows the server's words and changes nothing. R3221000: the screen is a `dialog`
+// drawn through `Dialog.tsx`, over the preview it may open from, and Buy's question an `alertdialog` over the screen,
+// Cancel first and its close, Confirm last: Escape and Back close the top one alone.
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactElement } from "react";
 
 import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
@@ -25,15 +27,14 @@ import { readerName } from "../cards/chinese.ts";
 import { useCanEquip, useCardPicks, writeCardLevel } from "../cards/cosmetics.ts";
 import { faceModel } from "../cards/index.ts";
 import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
+import { Dialog } from "../game/Dialog.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { buyChase, getCosmeticPacks, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarState } from "../net/api.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { Segmented } from "../tabs/index.ts";
 import { messageOf } from "../net/errors.ts";
 import { spendOutNow } from "../net/spending.ts";
 import { REGISTRY, type RegistryCosmetic } from "../shop/shop.ts";
 import { NO_FULL_ART_ID, cardLadders, collectionTestid as T, equippedRung, type Rung } from "./collection.ts";
-import { trapTab } from "./ItemPreview.tsx";
 import { LookHoverPanel, useLookHover, type LookHoverTrigger } from "./LookHover.tsx";
 import { coveringTiers, heldOf, useHeldTokens, type HeldTokens } from "./TokenOffer.tsx";
 import { RungPicture } from "./VariantLadders.tsx";
@@ -114,7 +115,7 @@ function useShardBar(token: string | null): [TokenBarState | null, (bar: TokenBa
 
 type Asking = { id: string; way: PayWay };
 
-/** R3016001: the question Buy asks, in the rung's place: how to pay, then Confirm or Cancel. */
+/** R3016001: the question Buy asks, in the rung's place: how to pay, then Cancel or Confirm. */
 function PayQuestion({
   rung,
   ways,
@@ -134,16 +135,16 @@ function PayQuestion({
   confirm: () => void;
   cancel: () => void;
 }): ReactElement {
-  const questionId = useId();
-  // Escape answers Cancel and nothing else: the screen closes on an Escape that reaches it.
-  const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== "Escape") return;
-    event.stopPropagation();
-    cancel();
-  };
+  // R3221000: a dialog over the screen's, so Escape answers Cancel alone and the screen stays.
   return (
-    <div className="collection-looks__question" role="alertdialog" aria-labelledby={questionId} data-testid={T.looksDialog(rung.id)} onKeyDown={cancelOnEscape}>
-      <p id={questionId}>{questionWords(asking.way, rung.name)}</p>
+    <Dialog
+      role="alertdialog"
+      testid={T.looksDialog(rung.id)}
+      title={questionWords(asking.way, rung.name)}
+      onClose={cancel}
+      cancel={{ label: t("Cancel"), kind: "secondary", testid: T.looksCancel(rung.id) }}
+      actions={[{ label: t("Confirm"), kind: "primary", onClick: confirm, testid: T.looksConfirm(rung.id), disabled: busy }]}
+    >
       {ways.length > 1 ? (
         <Segmented
           label={t("Pay with")}
@@ -157,15 +158,7 @@ function PayQuestion({
           }))}
         />
       ) : null}
-      <div className="collection-looks__answers">
-        <button type="button" data-testid={T.looksConfirm(rung.id)} disabled={busy} onClick={confirm}>
-          {t("Confirm")}
-        </button>
-        <button type="button" data-testid={T.looksCancel(rung.id)} autoFocus onClick={cancel}>
-          {t("Cancel")}
-        </button>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -309,25 +302,23 @@ export default function LooksScreen({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
   const hover = useLookHover();
-  const root = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
+  const root = useRef<HTMLElement>(null);
   const refocus = useRef<string | null>(null);
   const latestRestore = useRef(restoreFocus);
   useLayoutEffect(() => {
     latestRestore.current = restoreFocus;
   });
+  // What opened the screen, read as it is first drawn, before the Dialog moves the focus in.
+  const [opener] = useState(() => document.activeElement);
 
-  // Focus moves in, and goes back to what opened the screen (else `restoreFocus`).
-  useLayoutEffect(() => {
-    const opener = document.activeElement;
-    closeButton.current?.focus({ preventScroll: true });
-    return () => {
-      if (opener instanceof HTMLElement && opener.isConnected && opener !== document.body) opener.focus();
-      else latestRestore.current?.();
-    };
-  }, []);
-  // R2127000: Back closes the screen as Close does.
-  useBackLayer(onClose);
+  // R3221000: the Dialog moves the focus in and gives it back to what opened the screen; where that is gone (a hover
+  // panel's button), it goes to `restoreFocus`.
+  useLayoutEffect(
+    () => () => {
+      if (!(opener instanceof HTMLElement && opener.isConnected && opener !== document.body)) latestRestore.current?.();
+    },
+    [opener],
+  );
   // Cancel, Escape and an answer give the focus back to the rung's Buy, or its Equip once it is owned.
   useEffect(() => {
     const id = refocus.current;
@@ -379,66 +370,52 @@ export default function LooksScreen({
         setBusy(false);
       });
   };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    // Escape closes this screen alone: a preview under it stays open.
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onClose();
-      return;
-    }
-    trapTab(event);
-  };
 
   const hovered = hover.hovered;
+  // Escape, Back (R2127000) and the ✕ close this screen alone: a preview under it stays open.
   return (
-    <div
-      ref={root}
-      className="collection-looks"
-      data-testid={T.looks}
-      data-card={def.id}
+    <Dialog
       role="dialog"
-      aria-modal="true"
-      aria-label={t("Looks for {name}", { name: readerName(def) })}
-      onKeyDown={onKeyDown}
+      testid={T.looks}
+      data={{ "data-card": def.id }}
+      closeTestid={T.looksClose}
+      className="collection-looks__panel"
+      panelRef={root}
+      title={t("Looks for {name}", { name: readerName(def) })}
+      onClose={onClose}
+      actions={[]}
     >
-      <div className="collection-looks__scrim" aria-hidden="true" onClick={onClose} />
-      <div className="collection-looks__panel">
-        <h3 className="collection-looks__title">{t("Looks for {name}", { name: readerName(def) })}</h3>
-        {ladders.map((ladder) => (
-          <section key={ladder.variant} className="collection-looks__ladder" data-variant={ladder.variant} aria-label={ladder.name}>
-            <h4 className="collection-looks__variant">{ladder.name}</h4>
-            <ol className="collection-looks__rungs">
-              {ladder.rungs.map((rung) => (
-                <RungRow
-                  key={rung.id}
-                  def={def}
-                  rung={rung}
-                  equipped={rung.id === equipped}
-                  ways={payWays(rung, cosmeticOf(rung.id), copies, held, shard)}
-                  cosmetic={cosmeticOf(rung.id)}
-                  copies={copies}
-                  asking={asking}
-                  held={held}
-                  busy={busy}
-                  error={error?.id === rung.id ? error.message : null}
-                  hover={hover.trigger(rung.id)}
-                  equip={equip}
-                  ask={ask}
-                  choose={choose}
-                  confirm={confirm}
-                  cancel={cancel}
-                />
-              ))}
-            </ol>
-          </section>
-        ))}
-        <button type="button" ref={closeButton} className="collection-looks__close" data-testid={T.looksClose} onClick={onClose}>
-          {t("Close")}
-        </button>
-      </div>
+      {ladders.map((ladder) => (
+        <section key={ladder.variant} className="collection-looks__ladder" data-variant={ladder.variant} aria-label={ladder.name}>
+          <h4 className="collection-looks__variant">{ladder.name}</h4>
+          <ol className="collection-looks__rungs">
+            {ladder.rungs.map((rung) => (
+              <RungRow
+                key={rung.id}
+                def={def}
+                rung={rung}
+                equipped={rung.id === equipped}
+                ways={payWays(rung, cosmeticOf(rung.id), copies, held, shard)}
+                cosmetic={cosmeticOf(rung.id)}
+                copies={copies}
+                asking={asking}
+                held={held}
+                busy={busy}
+                error={error?.id === rung.id ? error.message : null}
+                hover={hover.trigger(rung.id)}
+                equip={equip}
+                ask={ask}
+                choose={choose}
+                confirm={confirm}
+                cancel={cancel}
+              />
+            ))}
+          </ol>
+        </section>
+      ))}
       {hovered === null || asking !== null ? null : (
         <LookHoverPanel key={hovered.id} def={def} owned={copies > 0} anchor={hovered.anchor} hover={hover} level={hovered.id} />
       )}
-    </div>
+    </Dialog>
   );
 }

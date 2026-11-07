@@ -51,6 +51,7 @@ import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
 import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
+import { Dialog } from "../game/Dialog.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -86,6 +87,8 @@ export const accountTestid = {
   deleteConfirm: "account-delete-confirm",
   deleteCancel: "account-delete-cancel",
   deleteError: "account-delete-error",
+  /** R3221000: the question "Delete my account" opens, an alertdialog on Dialog.tsx. */
+  deleteDialog: "account-delete-dialog",
   /** R1300000: the account secret ID, hidden until "Show account secret ID", and its copy button. */
   secretIdShow: "account-secret-id-show",
   secretId: "account-secret-id",
@@ -541,8 +544,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const confirmed = typed.trim().toUpperCase() === DELETE_CONFIRM_WORD;
 
-  const onConfirm = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const confirmDelete = (): void => {
     if (!confirmed || busy) return;
     setBusy(true);
     setError(null);
@@ -555,74 +557,77 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
         setError(messageOf(cause));
       });
   };
+  const onConfirm = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    confirmDelete();
+  };
+  const cancel = (): void => {
+    setAsking(false);
+    setTyped("");
+    setError(null);
+  };
 
+  // R3221000: the question is an alertdialog on Dialog.tsx, its Cancel first and the deletion last; the
+  // start button stays under it, so the focus goes back to it on close.
   return (
     <div className="account-delete">
+      <div className="account-actions">
+        <button
+          type="button"
+          className="link-button account-delete__start"
+          data-testid={accountTestid.deleteStart}
+          onClick={() => {
+            setAsking(true);
+          }}
+        >
+          {t("Delete my account")}
+        </button>
+      </div>
       {asking ? (
-        <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
-          <p>
-            {t("This deletes your account for good and signs this device out. You can't undo it.")}
-          </p>
-          <label htmlFor="account-delete-input">{t("Type {word} to confirm", { word: DELETE_CONFIRM_WORD })}</label>
-          <input
-            id="account-delete-input"
-            data-testid={accountTestid.deleteInput}
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            autoFocus
-            value={typed}
-            disabled={busy}
-            onChange={(event) => {
-              setTyped(event.target.value);
-            }}
-          />
-          {error !== null ? (
-            <p className="notice" data-testid={accountTestid.deleteError} role="alert">
-              {t(error)}
-            </p>
-          ) : null}
-          <div className="account-actions">
-            <button
-              type="submit"
-              className="account-delete__confirm button-danger"
-              data-testid={accountTestid.deleteConfirm}
-              disabled={!confirmed || busy}
-              aria-busy={busy}
-            >
-              {busy ? t("Deleting…") : t("Delete my account for good")}
-            </button>
-            <button
-              type="button"
-              className="link-button"
-              data-testid={accountTestid.deleteCancel}
+        <Dialog
+          role="alertdialog"
+          testid={accountTestid.deleteDialog}
+          title={t("Delete your account?")}
+          description={t("This deletes your account for good and signs this device out. You can't undo it.")}
+          onClose={() => {
+            if (!busy) cancel();
+          }}
+          cancel={{ label: t("Cancel"), kind: "secondary", testid: accountTestid.deleteCancel, disabled: busy }}
+          actions={[
+            {
+              label: busy ? t("Deleting…") : t("Delete my account for good"),
+              kind: "danger",
+              onClick: confirmDelete,
+              testid: accountTestid.deleteConfirm,
+              disabled: !confirmed || busy,
+              busy,
+            },
+          ]}
+        >
+          <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
+            <label htmlFor="account-delete-input">{t("Type {word} to confirm", { word: DELETE_CONFIRM_WORD })}</label>
+            <input
+              id="account-delete-input"
+              data-testid={accountTestid.deleteInput}
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              value={typed}
               disabled={busy}
-              onClick={() => {
-                setAsking(false);
-                setTyped("");
-                setError(null);
+              onChange={(event) => {
+                setTyped(event.target.value);
               }}
-            >
-              {t("Cancel")}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="account-actions">
-          <button
-            type="button"
-            className="link-button account-delete__start"
-            data-testid={accountTestid.deleteStart}
-            onClick={() => {
-              setAsking(true);
-            }}
-          >
-            {t("Delete my account")}
-          </button>
-        </div>
-      )}
+            />
+            {error !== null ? (
+              <p className="notice" data-testid={accountTestid.deleteError} role="alert">
+                {t(error)}
+              </p>
+            ) : null}
+          </form>
+        </Dialog>
+      ) : null}
     </div>
   );
 }

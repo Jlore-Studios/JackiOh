@@ -2,15 +2,15 @@
 // account's, for a dev account on a computer (no `DEV_PANEL_HIDDEN_QUERY` window). It opens the Dev tools
 // (`DevTools.tsx`) in a dialog over the front screen. The server decides (CLAUDE.md rule 7): the
 // button shows only when `/api/auth/me` says `isDev`, and every tool's route checks
-// `DEV_PROFILE_IDS` again. Escape, Back (R2127000) and the scrim close the dialog, as the friends
-// panel's do, and the focus goes back to the button.
+// `DEV_PROFILE_IDS` again. Escape, Back (R2127000), the scrim and the ✕ close the dialog, drawn
+// through Dialog.tsx (R3221000), and the focus goes back to the button.
 
-import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
+import { useCallback, useId, useRef, useState, useSyncExternalStore, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
+import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { Account } from "../net/gate.ts";
-import { useModalKeys } from "../together/modalKeys.ts";
 import DevTools from "./DevTools.tsx";
 import { DEV_PANEL_HIDDEN_QUERY } from "./devPanel.ts";
 
@@ -53,47 +53,22 @@ export function useOnComputer(): boolean {
   return useSyncExternalStore(subscribe, onComputer, () => false);
 }
 
+/** R3221000: the Dev tools on Dialog.tsx, under a tavern shell that draws no box (dev-panel.css) for their skin. */
 function DevPanel({ id, token, onClose }: { id: string; token: string; onClose: () => void }): ReactElement {
-  const root = useRef<HTMLDivElement>(null);
-  const close = useRef<HTMLButtonElement>(null);
-  const titleId = useId();
-  useModalKeys(root, onClose);
-  useEffect(() => {
-    close.current?.focus({ preventScroll: true });
-  }, []);
   return (
-    <div
-      className="tavern app-shell dev-layer"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={root}
-        id={id}
-        className="dev-panel"
-        data-testid={devButtonTestid.panel}
+    <div className="tavern app-shell dev-layer">
+      <Dialog
         role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
+        id={id}
+        testid={devButtonTestid.panel}
+        closeTestid={devButtonTestid.close}
+        className="dev-panel"
+        title={t("Dev tools")}
+        onClose={onClose}
+        actions={[]}
       >
-        <div className="dev-panel__head">
-          <h2 className="dev-panel__title" id={titleId}>
-            {t("Dev tools")}
-          </h2>
-          <button
-            ref={close}
-            type="button"
-            className="link-button"
-            data-testid={devButtonTestid.close}
-            aria-label={t("Close")}
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
         <DevTools token={token} />
-      </div>
+      </Dialog>
     </div>
   );
 }

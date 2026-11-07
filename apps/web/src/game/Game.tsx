@@ -833,6 +833,7 @@ export default function Game({
           </>
         }
         sandDisabled={interaction.stage !== "idle"}
+        draining={inFlight !== null}
         onClick={handleClick}
         onControl={handleControl}
         emotes={heroEmotes}

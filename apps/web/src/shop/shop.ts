@@ -111,6 +111,10 @@ export const shopTestid = {
   chasePick: (id: string) => `shard-pick-${id}`,
   chaseCards: (id: string) => `shard-cards-${id}`,
   chasePreview: (id: string) => `shard-preview-${id}`,
+  // R3221000: the question a chase's Buy asks before it spends, and its two answers.
+  chaseAsk: (id: string) => `shard-ask-${id}`,
+  chaseConfirm: (id: string) => `shard-confirm-${id}`,
+  chaseCancel: (id: string) => `shard-cancel-${id}`,
 } as const;
 
 /** How long a bought pack's copy takes to fly into its kind's unopened count; `shop.css` reads it as `--shop-fly-ms`. */

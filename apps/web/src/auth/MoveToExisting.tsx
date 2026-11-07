@@ -65,10 +65,8 @@ export default function MoveToExisting({ token }: { token: string }): ReactEleme
               { provider: label },
             )}
           </p>
+          {/* R3221000: the safe choice first, the act last. */}
           <div className="row">
-            <button type="button" data-testid={moveTestid.confirm} disabled={busy} aria-busy={busy} onClick={remove}>
-              {busy ? t("Removing…") : t("Remove this new account")}
-            </button>
             <button
               type="button"
               className="link-button"
@@ -80,6 +78,9 @@ export default function MoveToExisting({ token }: { token: string }): ReactEleme
               }}
             >
               {t("Keep it")}
+            </button>
+            <button type="button" data-testid={moveTestid.confirm} disabled={busy} aria-busy={busy} onClick={remove}>
+              {busy ? t("Removing…") : t("Remove this new account")}
             </button>
           </div>
           {error !== null ? (

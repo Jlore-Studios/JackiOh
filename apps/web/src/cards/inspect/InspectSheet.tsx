@@ -19,7 +19,7 @@ import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes } from "./StateNotes.tsx";
 import { RefsInteractive } from "../refContext.tsx";
-import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
+import { useModalOverlay } from "./store.ts";
 import { SheetGrip, useSheetSwipe } from "./useSheetSwipe.tsx";
 import { INSPECT_CLOSE, INSPECT_FACE, INSPECT_SCRIM, INSPECT_SHEET } from "./testids.ts";
 import "./inspect.css";
@@ -36,7 +36,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   const own = useOwnCopy();
 
   return createPortal(
-    <div className="inspect-layer inspect-layer--sheet" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--sheet" {...modal.layerProps}>
       <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-sheet"

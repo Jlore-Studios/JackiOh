@@ -73,6 +73,8 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
+  quiet?: boolean;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */
