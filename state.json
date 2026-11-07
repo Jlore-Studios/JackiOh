@@ -17390,6 +17390,7 @@
           }
         ],
         "head": "aa7c3dd0592b5ca1bf4daed525feb72f6bda9ac4",
+        "interruptions": 0,
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-8",
