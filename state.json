@@ -16289,10 +16289,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-07T13:15:14Z",
-        "built_by": "claude-2",
+        "at": "2026-11-07T14:51:58Z",
+        "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "sha": "f1097d1c1870a389b6e7a306736bf0d826d053ef"
+        "carried_from": "f1097d1c1870a389b6e7a306736bf0d826d053ef",
+        "resolved_by": "`claude` (strong)",
+        "sha": "03d2231cada887e128af8bd984ac0de402b76624"
       },
       "cross_rounds": 0,
       "died": 0,
