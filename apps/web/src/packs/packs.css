@@ -46,6 +46,17 @@
   gap: 0.5rem;
 }
 
+/* Every card shown and no pack left: the ✕ is the scene's one control, so no empty row is pinned. */
+.pack-actions:empty {
+  display: none;
+}
+
+/* R3221000: the scene's ✕ (Dialog.tsx's DialogClose, at the top right) steps down under the pinned HUD,
+   which spans a phone's width, once the server has answered. */
+.pack-scene[data-hud] > .dialog__close {
+  top: var(--opening-hud-clearance, 10rem);
+}
+
 /* ------------------------------------------------------------------------------ the pack --- */
 
 /* The sealed pack is a button around a PackObject (pack-object.css draws the pack, its press and its

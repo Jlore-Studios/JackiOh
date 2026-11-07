@@ -4,7 +4,6 @@
 
 :root {
   --z-inspect-hover: 60;
-  --z-inspect-modal: 70;
 }
 
 /* ---- Hover preview --------------------------------------------------------------------------- */
@@ -230,16 +229,25 @@
 
 /* ---- Modal layers (sheet and detail) ---------------------------------------------------------- */
 
+/* R3221000: the modal overlays take the dialogs' layer, over a menu's dialog they open from (the card
+   view's Card text), and their scrim takes the dialogs' colour from dialog.css. */
 .inspect-layer {
   position: fixed;
   inset: 0;
-  z-index: var(--z-inspect-modal);
+  z-index: var(--z-dialog);
+}
+
+/* ...while it is the top layer. Under a layer opened after it (a board's result or confirm, which is
+   not portalled, so the overlay at the end of <body> would draw over it at an equal z-index) it comes
+   down under every dialog, where it stood before R3221000, so the dialog that takes the keys is seen
+   (`useModalOverlay`'s `data-under`). */
+.inspect-layer[data-under] {
+  z-index: var(--z-toast);
 }
 
 .inspect-scrim {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 10, 0.68);
   -webkit-tap-highlight-color: transparent;
   animation: inspect-fade 140ms ease-out;
   transition: opacity 200ms ease-out;
@@ -374,11 +382,13 @@
   animation: inspect-fade 160ms ease-out;
 }
 
+/* R3221000: the faces start under the ✕ at the top right (DialogClose). */
 .inspect-detail-body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   gap: 12px;
+  padding-top: var(--space-11);
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;

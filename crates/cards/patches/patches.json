@@ -22598,5 +22598,58 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12h",
+    "date": "2026-11-07",
+    "title": "Patch: bigger, more vivid cards: larger faces on the board, in hand and in inspect, an art window up to the frame",
+    "source": "#3341",
+    "notes": "How cards look only: nothing plays differently. The board's card height budget (BOARD_CARD_BUDGET, game/config.ts) gives more of its height to cards: tighter gaps (the lanes' and your fan's, the room over your fan, and on a phone the rows', the mat's and the sides') raise the card at 1280x720, 1920x1080, 390x844, 360x780 and a phone on its side, each measured in a browser; a card is never smaller at any of them. A hovered or tapped hand card lifts larger (HAND_LIFT_SCALE). A unit that prints no full art draws its art up to the frame, the name plate and the gems over its edges, with a rarity ring at its rim in place of the oval; a hand card's art window grows where its name band and rules box give room, the box taking only the height its text needs (fit.ts measures it). The hover preview (and the phone sheet) is larger, and a taller screen draws it taller still, so its art stays over twice as wide as a board unit's. A small face's art is lifted in saturation and contrast (ART_SMALL_FACE_LIFT), never on a Radiant face's gold (R2725004).",
+    "player": {
+      "title": "Bigger, more vivid cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards on the board and in your hand are larger, on a desktop and on a phone.",
+        "A hand card you hover or tap lifts higher and grows bigger; on a phone it rises clear of your thumb.",
+        "A unit's art fills its card up to the frame, with its name and numbers over the edges; a hand card's art grows as its rules box shrinks to its text.",
+        "The card preview and the phone card sheet are larger, so the art can be studied.",
+        "Art keeps its colours, with more punch on small cards; Radiant's gold is unchanged."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9ce6dbcafa26c2d126b8dc520601727cfb830cf4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12i",
+    "date": "2026-11-07",
+    "title": "Patch: the Drone Battleship as one great ship in three decks",
+    "source": "#3336",
+    "notes": "How cards look and how the Battleship moves; nothing plays differently.",
+    "player": {
+      "title": "The Drone Battleship",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The Drone Battleship's three layers draw as the decks of one ship, with the stack showing as many decks as still stand.",
+        "The arrival drops each deck in turn, a hit redirected onto the Shield beams to its dome, drones launch from its bays, the Meltdown core pulses to a blast, and a broken layer shears its deck off."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "dd0f41602606ec3b1c82bac610a6a8040a5dd774"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

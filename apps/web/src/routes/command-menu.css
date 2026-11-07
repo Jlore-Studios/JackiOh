@@ -1,31 +1,32 @@
 /* R2118000: the command menu's look. No transition or animation: it opens and closes at once. */
 
-.command-menu-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 12vh 16px 16px;
-  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
-}
-
-.command-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* R3221000: a Dialog (Dialog.tsx), its scrim, layer and ✕ the dialog's, held near the top of the screen. */
+.dialog.command-menu {
+  align-items: stretch;
+  gap: var(--space-4);
   width: min(560px, 100%);
   max-height: 70vh;
-  padding: 12px;
-  border: 1px solid var(--line-bright);
-  border-radius: 12px;
-  background: var(--bg-raised);
-  color: var(--text);
+  margin: 12vh auto auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  text-align: start;
 }
 
+/* Its title is for assistive tech alone, clipped as Settings' section titles are. */
+.dialog.command-menu .dialog__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The field keeps clear of the ✕ at the panel's top right. */
 .command-menu__input {
-  width: 100%;
+  margin-inline-end: calc(var(--space-11) + var(--space-3));
 }
 
 .command-menu__list {

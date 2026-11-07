@@ -81,6 +81,8 @@ export type SfxParams = {
    * Absent, or a code this build does not know: the plain whoosh.
    */
   anomaly?: AnomalyCode;
+  /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
+  quiet?: boolean;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */

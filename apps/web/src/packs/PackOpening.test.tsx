@@ -280,7 +280,7 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.getByTestId(T.slot(2))).toHaveTextContent(CATALOG["core-004"]!.name);
     expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-grant", "cosmetic");
     expect(screen.queryByTestId(T.next), "cards are still face down").toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Close");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
   });
 
   it("R1827000 a slot that dropped a portrait shows its name and its art", () => {
@@ -378,13 +378,13 @@ describe("#1308 the pack-opening scene", () => {
   it("skip-all reveals all five at once", () => {
     const given = props({ opened: openedPack() });
     render(<PackScene {...given} />);
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Close");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     fireEvent.click(screen.getByTestId(T.skipAll));
 
     for (let index = 0; index < 5; index += 1) expect(revealed(index), `slot ${String(index)}`).toBe(true);
     expect(screen.queryByTestId(T.pack)).toBeNull();
     expect(screen.queryByTestId(T.skipAll)).toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(engine.playSfx.mock.calls, "one sting for the best card").toEqual([["entrance", { mythic: true }]]);
     expect(given.onTear, "the pack was open already").not.toHaveBeenCalled();
 
@@ -402,7 +402,7 @@ describe("#1308 the pack-opening scene", () => {
     rerender(<PackScene {...given} busy />);
     rerender(<PackScene {...given} opened={openedPack()} />);
     for (let index = 0; index < 5; index += 1) expect(revealed(index)).toBe(true);
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(engine.playSfx.mock.calls).toEqual([["entrance", { mythic: true }]]);
   });
 
@@ -416,7 +416,7 @@ describe("#1308 the pack-opening scene", () => {
       expect(revealed(index)).toBe(true);
       expect(screen.queryByTestId(T.flip(index)), "no flip").toBeNull();
     }
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(engine.playSfx.mock.calls).toEqual([["entrance", { mythic: true }]]);
   });
 
@@ -429,7 +429,7 @@ describe("#1308 the pack-opening scene", () => {
     expect(revealed(3)).toBe(true);
   });
 
-  it("a pack with packs left offers the next, the last offers Done", () => {
+  it("a pack with packs left offers the next, the last only its ✕", () => {
     const more = props({ opened: openedPack(), left: 1 });
     const { unmount } = render(<PackScene {...more} />);
     expect(screen.queryByTestId(T.next), "not before every card shows").toBeNull();
@@ -438,7 +438,7 @@ describe("#1308 the pack-opening scene", () => {
     expect(next).toHaveTextContent("Next pack (1 left)");
     fireEvent.click(next);
     expect(more.onNext).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     fireEvent.click(screen.getByTestId(T.close));
     expect(more.onClose).toHaveBeenCalledTimes(1);
     unmount();
@@ -446,7 +446,7 @@ describe("#1308 the pack-opening scene", () => {
     render(<PackScene {...props({ opened: openedPack(), left: 0 })} />);
     fireEvent.click(screen.getByTestId(T.skipAll));
     expect(screen.queryByTestId(T.next)).toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
   });
 
   it("a failed open shows the server's words and keeps the pack sealed", () => {
@@ -773,7 +773,7 @@ describe("#1308 the card packs panel", () => {
     fireEvent.click(screen.getByTestId(T.skipAll));
     await screen.findByTestId(T.outcome(0));
     expect(screen.queryByTestId(T.next)).toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(server.to("POST", "/api/packs/open-all"), "the second pack was in the first answer").toHaveLength(1);
     expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
 
@@ -1066,7 +1066,7 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
     expect(scene).toHaveFocus();
   });
 
-  it("#1757 Escape closes the scene, but not while an open is out, when Close is disabled too", () => {
+  it("#1757 Escape closes the scene, but not while an open is out, when the ✕ is disabled too", () => {
     const given = props({ busy: true });
     const { rerender } = render(<PackScene {...given} />);
     const scene = screen.getByTestId(T.scene);
@@ -1094,7 +1094,7 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
     expect(given.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("#1757 focus goes back to the Open button that opened the scene, on Escape and on Done", async () => {
+  it("#1757 focus goes back to the Open button that opened the scene, on Escape and on the ✕", async () => {
     packsServer();
     await panel();
     const opener = screen.getByTestId(T.open("Core"));
@@ -1109,7 +1109,7 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
     fireEvent.click(opener);
     fireEvent.click(screen.getByTestId(T.skipAll));
     await screen.findByTestId(T.outcome(0));
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     fireEvent.click(screen.getByTestId(T.close));
     expect(screen.queryByTestId(T.scene)).toBeNull();
     expect(screen.getByTestId(T.open("Core")), "Core still holds a pack, so its row stays").toHaveFocus();

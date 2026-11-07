@@ -39,6 +39,8 @@ const CURVES = [...read("motion.css").matchAll(/^\s*--ease-([\w-]+):\s*(cubic-be
 const KEEP: Record<string, string[]> = {
   "game/activate.css": ["300ms"], // BUILD's `activated` row
   "game/aim/opponentAim.css": ["700ms", "900ms"], // loops
+  // #3348: a tile's ripple (TILE_FEEL.rippleMs, twice: the press-in and the ring), then the corner props' tap, payoff, rare and sequence (CORNER_*_MS in game/arena/config.ts).
+  "game/arena/arena.css": ["520ms", "520ms", "380ms", "900ms", "1600ms", "1400ms"],
   "game/board.css": [
     "90ms", // R434's flip stagger
     ...["420ms", "1600ms", "260ms", "520ms", "2400ms", "700ms"], // the table's tap marks
@@ -92,13 +94,13 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "game/table.css": 27,
   "packs/pack-object.css": 12,
   "packs/packs.css": 4,
-  "practice/practice.css": 45,
+  "practice/practice.css": 42,
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,
   "routes/lobby.css": 14,
   "routes/stats.css": 4,
-  "settings/settings.css": 14,
+  "settings/settings.css": 12,
   "shop/shop.css": 1,
   "skeleton/skeleton.css": 2,
   "tutorial/tutorial.css": 20,

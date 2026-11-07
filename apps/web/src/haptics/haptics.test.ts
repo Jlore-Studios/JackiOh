@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameEvent } from "@jackioh/shared";
 
 import { baseView } from "../test/fixtures.ts";
-import { HAPTIC_MIN_GAP_MS, HAPTIC_PATTERNS, createHaptics, hapticFor } from "./haptics.ts";
+import { HAPTIC_MIN_GAP_MS, HAPTIC_PATTERNS, createHaptics, hapticFor, resetTapHapticsForTests, tapHaptic } from "./haptics.ts";
 import {
   DEFAULT_HAPTICS_SETTINGS,
   HAPTICS_SETTINGS_KEY,
@@ -22,6 +22,7 @@ const turn = (player: "p1" | "p2"): GameEvent => ({ type: "turnStarted", player,
 beforeEach(() => {
   localStorage.clear();
   resetHapticsSettingsForTests();
+  resetTapHapticsForTests();
 });
 
 describe("R669 haptics", () => {
@@ -101,5 +102,72 @@ describe("R669 the vibration switch", () => {
     expect(writeHapticsSettings({ vibration: false }).vibration).toBe(false);
     expect(readHapticsSettings().vibration).toBe(false);
     setItem.mockRestore();
+  });
+});
+
+describe("R3348000 a press's buzz", () => {
+  it("R3348000 each moment buzzes its pattern, a legal tile harder than another, and a rare outcome longest", () => {
+    let t = 0;
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    const haptics = createHaptics({ vibrate, now: () => t, reducedMotion: () => false });
+    for (const moment of ["tile", "tileLegal", "corner", "cornerBig", "cornerRare"] as const) {
+      haptics.buzz(moment);
+      t += HAPTIC_MIN_GAP_MS;
+    }
+    expect(vibrate.mock.calls).toEqual([
+      [[...HAPTIC_PATTERNS.tile]],
+      [[...HAPTIC_PATTERNS.tileLegal]],
+      [[...HAPTIC_PATTERNS.corner]],
+      [[...HAPTIC_PATTERNS.cornerBig]],
+      [[...HAPTIC_PATTERNS.cornerRare]],
+    ]);
+    expect(HAPTIC_PATTERNS.tileLegal[0]).toBeGreaterThan(HAPTIC_PATTERNS.tile[0] ?? 0);
+    const total = (pattern: readonly number[]): number => pattern.reduce((sum, part) => sum + part, 0);
+    expect(total(HAPTIC_PATTERNS.cornerRare)).toBeGreaterThan(total(HAPTIC_PATTERNS.cornerBig));
+  });
+
+  it("R3348000 a buzz follows the switch, reduced motion and a device with no vibrate, and keeps its own gap", () => {
+    let t = 0;
+    let reduced = true;
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    const haptics = createHaptics({ vibrate, now: () => t, reducedMotion: () => reduced });
+    haptics.buzz("tile");
+    reduced = false;
+    writeHapticsSettings({ vibration: false });
+    haptics.buzz("tile");
+    expect(vibrate).not.toHaveBeenCalled();
+    writeHapticsSettings({ vibration: true });
+    haptics.buzz("tile");
+    haptics.buzz("tile");
+    expect(vibrate).toHaveBeenCalledTimes(1);
+    t += HAPTIC_MIN_GAP_MS;
+    haptics.buzz("tile");
+    expect(vibrate).toHaveBeenCalledTimes(2);
+    expect(() => {
+      createHaptics({ vibrate: null }).buzz("corner");
+    }).not.toThrow();
+  });
+
+  it("R3348000 a buzz never holds back the game's own drop, nor a drop a buzz", () => {
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    const haptics = createHaptics({ vibrate, now: () => 1000, reducedMotion: () => false });
+    haptics.buzz("tileLegal");
+    haptics.onEvent(played("p1"), view);
+    expect(vibrate.mock.calls).toEqual([[[...HAPTIC_PATTERNS.tileLegal]], [[...HAPTIC_PATTERNS.drop]]]);
+  });
+
+  it("R3348000 tapHaptic buzzes through the browser's vibrate, and stops with the switch", () => {
+    const vibrate = vi.fn((_pattern: number[]) => true);
+    Object.defineProperty(navigator, "vibrate", { configurable: true, value: vibrate });
+    try {
+      tapHaptic("tile");
+      expect(vibrate).toHaveBeenCalledWith([...HAPTIC_PATTERNS.tile]);
+      resetTapHapticsForTests();
+      writeHapticsSettings({ vibration: false });
+      tapHaptic("tile");
+      expect(vibrate).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(navigator, "vibrate");
+    }
   });
 });
