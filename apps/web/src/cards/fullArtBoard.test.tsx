@@ -479,6 +479,23 @@ describe("R3339000 art-first cards in play", () => {
   /** The static name plate: the one that is always drawn, never the hover plate. */
   const staticName = (cf: HTMLElement): Element | null => cf.querySelector(".card-name:not(.card-name-hover)");
 
+  it("R3339000 an art-first Unit that is not full art takes main's rim rings off its art but keeps a Taunt's steel ring", () => {
+    const NOT_FULL = ':not([data-full-art="true"])';
+    const ring = declsOf(cards, `${ART_FIRST_MINION}${NOT_FULL} .cf-portrait::after`);
+    expect(ring.get("box-shadow")).toBe("none");
+    const taunt = declsOf(cards, `${ART_FIRST_MINION}[data-taunt="true"]${NOT_FULL} .cf-portrait::after`);
+    expect(taunt.get("box-shadow")).toContain("#c3cad8");
+    // They come after the rules they override (the Radiant's, the Mythic's and the Taunt's rings), so they win.
+    const overrides = cards.indexOf(`${ART_FIRST_MINION}${NOT_FULL} .cf-portrait::after`);
+    for (const selector of [
+      '.cf[data-layout="minion"][data-radiant-face="true"]:not([data-full-art="true"]) .cf-portrait::after',
+      '.cf[data-layout="minion"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after',
+    ]) {
+      expect(cards.indexOf(selector), selector).toBeGreaterThanOrEqual(0);
+      expect(cards.indexOf(selector), selector).toBeLessThan(overrides);
+    }
+  });
+
   it("R3339000 art-first faces render no name, type line or rules text in full-art-shaped looks and Legendary/Mythic", () => {
     expect(LEGENDARY_UNIT).toBeDefined();
     expect(MYTHIC_UNIT).toBeDefined();

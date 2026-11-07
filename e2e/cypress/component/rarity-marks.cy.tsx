@@ -117,7 +117,10 @@ describe("R2721000 the rarity marks on a face", () => {
       const board = faceOf(doc, `${MYTHIC}-board`);
       expect(board.getAttribute("data-art-first"), "the board Mythic is art first").to.equal("true");
       expect(board.getAttribute("data-foil"), "the board Mythic wears its foil").to.equal("animated");
-      expect(getComputedStyle(board.querySelector(".cf-portrait") as Element).boxShadow, "no oval ring on edge-to-edge art").to.equal("none");
+      // The ring of #3341 is the portrait's `::after`: an art-first face takes it off (cards.css), so no foil ring shows.
+      const ring = getComputedStyle(board.querySelector(".cf-portrait") as Element, "::after").boxShadow;
+      expect(ring, "no foil ring on edge-to-edge art").to.equal("none");
+      expect(ring, "no Mythic ring colour").to.not.contain("148, 208, 255");
       expect(getComputedStyle(board).backgroundImage, "the board Mythic's rainbow edge").to.contain("conic-gradient");
       // Both Legendary faces are as at the defaults.
       for (const name of [`${LEGENDARY}-hand`, `${LEGENDARY}-board`]) {
