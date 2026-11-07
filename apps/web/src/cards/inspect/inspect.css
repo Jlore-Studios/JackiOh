@@ -4,7 +4,6 @@
 
 :root {
   --z-inspect-hover: 60;
-  --z-inspect-modal: 70;
 }
 
 /* ---- Hover preview --------------------------------------------------------------------------- */
@@ -230,16 +229,17 @@
 
 /* ---- Modal layers (sheet and detail) ---------------------------------------------------------- */
 
+/* R3221000: the modal overlays take the dialogs' layer, over a menu's dialog they open from (the card
+   view's Card text), and their scrim takes the dialogs' colour from dialog.css. */
 .inspect-layer {
   position: fixed;
   inset: 0;
-  z-index: var(--z-inspect-modal);
+  z-index: var(--z-dialog);
 }
 
 .inspect-scrim {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 10, 0.68);
   -webkit-tap-highlight-color: transparent;
   animation: inspect-fade 140ms ease-out;
   transition: opacity 200ms ease-out;
@@ -372,11 +372,13 @@
   animation: inspect-fade 160ms ease-out;
 }
 
+/* R3221000: the faces start under the ✕ at the top right (DialogClose). */
 .inspect-detail-body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   gap: 12px;
+  padding-top: var(--space-11);
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;

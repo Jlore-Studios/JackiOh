@@ -213,11 +213,18 @@ describe("#128 the dialog around the tabs", () => {
     render(<SettingsPanel onClose={noop} slots={slotsWith()} />);
     const dialog = screen.getByTestId("settings-panel");
     const reset = screen.getByTestId("settings-reset");
+    const close = screen.getByTestId("settings-close");
+    const tab = screen.getByTestId("settings-tab-gameplay");
 
+    // R3221000: the Dialog's ✕ is its last stop, and the open tab, the one tab in the order, its first.
     reset.focus();
     expect(fireEvent.keyDown(dialog, { key: "Tab" })).toBe(false);
-    expect(document.activeElement).toBe(screen.getByTestId("settings-close"));
+    expect(document.activeElement).toBe(close);
+    expect(fireEvent.keyDown(dialog, { key: "Tab" })).toBe(false);
+    expect(document.activeElement).toBe(tab);
 
+    expect(fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true })).toBe(false);
+    expect(document.activeElement).toBe(close);
     expect(fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true })).toBe(false);
     expect(document.activeElement).toBe(reset);
   });

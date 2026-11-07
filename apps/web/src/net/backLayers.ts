@@ -6,7 +6,7 @@
 // (R1754000) or a view transition (R2117000). Nothing reads the window at load: Vite's config loader
 // imports `navigate.ts`, which imports this.
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 /** The `history.state` key that marks the layers' entry; it holds the address of the entry under it. */
 const BACK_ENTRY = "jackiohBackEntry";
@@ -170,23 +170,31 @@ function openLayer(layer: Layer): () => void {
 
 /**
  * R2127000: the mounted overlay is the top layer until another opens; Back calls `close`, as its Close
- * button does, so the focus goes back. While `closable` is false Back closes nothing.
+ * button does, so the focus goes back. While `closable` is false Back closes nothing. R3221000: what it
+ * returns says whether this overlay is the top layer now, so a modal's Escape and Tab go to the top one
+ * alone and a dialog opened over another closes first.
  */
-export function useBackLayer(close: () => void, closable = true): void {
+export function useBackLayer(close: () => void, closable = true): () => boolean {
   const latest = useRef({ close, closable });
+  const mine = useRef<Layer | null>(null);
   useLayoutEffect(() => {
     latest.current = { close, closable };
   });
-  useEffect(
-    () =>
-      openLayer({
-        close: () => {
-          latest.current.close();
-        },
-        closable: () => latest.current.closable,
-      }),
-    [],
-  );
+  useEffect(() => {
+    const layer: Layer = {
+      close: () => {
+        latest.current.close();
+      },
+      closable: () => latest.current.closable,
+    };
+    mine.current = layer;
+    const shut = openLayer(layer);
+    return () => {
+      mine.current = null;
+      shut();
+    };
+  }, []);
+  return useCallback(() => mine.current !== null && layers.at(-1) === mine.current, []);
 }
 
 /**

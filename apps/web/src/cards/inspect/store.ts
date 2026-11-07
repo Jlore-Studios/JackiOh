@@ -8,6 +8,9 @@ import type { MouseEvent as ReactMouseEvent, RefObject, SyntheticEvent } from "r
 import { useBackLayer } from "../../net/backLayers.ts";
 import { CLICK_SUPPRESS_MS } from "./constants.ts";
 import type { Rect } from "./placement.ts";
+// R3221000: every modal overlay's `.inspect-scrim` takes the dialogs' colour from their sheet, which each
+// overlay, all of them reading this module, loads here.
+import "../../game/dialog.css";
 
 type InspectMode = "hover" | "sheet";
 type ActiveInspect = { readonly key: string; readonly mode: InspectMode; readonly anchor: Rect };
@@ -161,6 +164,14 @@ export function useModalOverlay(
     closableRef.current = closable;
   });
 
+  const close = (): void => {
+    if (!closableRef.current) return;
+    restoreFocus(restoreRef.current);
+    onCloseRef.current();
+  };
+  // R3221000: the keys go to the top layer alone, so a dialog opened over this one takes them first.
+  const isTop = useBackLayer(close, closable);
+
   useLayoutEffect(() => {
     const previous = document.activeElement;
     restoreRef.current = previous instanceof HTMLElement && previous !== document.body ? previous : null;
@@ -169,6 +180,7 @@ export function useModalOverlay(
     // focusing it would open the detail scrolled past both faces.
     focusRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (!isTop()) return;
       if (event.key === "Tab") {
         const dialog = focusRef.current?.closest('[role="dialog"]');
         if (dialog !== null && dialog !== undefined) trapTab(event, dialog);
@@ -188,14 +200,7 @@ export function useModalOverlay(
       window.removeEventListener("keydown", onKeyDown, true);
       restoreFocus(restoreRef.current);
     };
-  }, [focusRef]);
-
-  const close = (): void => {
-    if (!closableRef.current) return;
-    restoreFocus(restoreRef.current);
-    onCloseRef.current();
-  };
-  useBackLayer(close, closable);
+  }, [focusRef, isTop]);
 
   return {
     close,

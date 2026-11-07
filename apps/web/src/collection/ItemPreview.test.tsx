@@ -224,8 +224,10 @@ describe("R2730000 holding or inspecting an item previews it fullscreen", () => 
     fireEvent.keyDown(preview, { key: "Tab" });
     expect(close).toHaveFocus();
 
-    // The backdrop closes it and gives the focus back.
-    fireEvent.click(within(preview).getByTestId(T.previewScrim));
+    // The backdrop, the panel's parent (R3221000), closes it and gives the focus back.
+    const scrim = screen.getByTestId(T.previewScrim);
+    expect(scrim).toBe(preview.parentElement);
+    fireEvent.click(scrim);
     expect(screen.queryByTestId(T.preview)).toBeNull();
     expect(opener).toHaveFocus();
 

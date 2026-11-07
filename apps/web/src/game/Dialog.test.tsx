@@ -1,12 +1,15 @@
 // R3220000: the one dialog (Dialog.tsx). An alertdialog's Cancel and a dialog's ✕ close it, the row
 // runs from the safe choice to the act, and Escape, Back (R2127000) and the scrim close it while Tab
 // stays inside and the focus goes back to the opener. The board's five confirms draw through it.
+// R3221000: the menus' callers keep their testids and focus, a sheet marks its scrim, and the keys go to
+// the top layer alone.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useRef, useState, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Dialog, dialogTestid, type DialogAction } from "./Dialog.tsx";
+import { Dialog, DialogClose, dialogTestid, type DialogAction } from "./Dialog.tsx";
+import { useModalOverlay } from "../cards/inspect/store.ts";
 import { pressBack } from "../test/history.ts";
 import { readSheet } from "../test/setup.ts";
 import { at } from "../test/stubServer.ts";
@@ -222,5 +225,241 @@ describe("R3220000 the dialog convention", () => {
     }
     expect(readSheet("src/game/notices.css")).not.toMatch(/concede-(?:scrim|dialog)/);
     expect(readSheet("src/practice/practice.css")).not.toMatch(/practice-leave|practice-result-scrim/);
+  });
+});
+
+/** A dialog with a button that opens a second one over it, as the item preview opens its Looks. */
+function Nested({ onOuter = vi.fn(), onInner = vi.fn() }: { onOuter?: () => void; onInner?: () => void }): ReactElement {
+  const [inner, setInner] = useState(false);
+  return (
+    <Dialog role="dialog" testid="outer" title="Outer" onClose={onOuter} actions={[]}>
+      <button type="button" data-testid="open-inner" onClick={() => setInner(true)}>
+        More
+      </button>
+      {inner ? (
+        <Dialog
+          role="alertdialog"
+          testid="inner"
+          title="Inner"
+          onClose={() => {
+            onInner();
+            setInner(false);
+          }}
+          cancel={{ label: "Back", kind: "secondary", testid: "inner-cancel" }}
+          actions={[action("inner-go", "primary")]}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+/** The inspect overlay's hook (CardDetail.tsx), opened over a dialog as the card view's Card text opens it. */
+function Overlay({ onClose }: { onClose: () => void }): ReactElement {
+  const close = useRef<HTMLButtonElement>(null);
+  const modal = useModalOverlay(onClose, close);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Card" data-testid="overlay">
+      <DialogClose buttonRef={close} testid="overlay-close" {...modal.dismissProps} />
+    </div>
+  );
+}
+
+describe("R3221000 the menus' dialogs on the one Dialog", () => {
+  it("R3221000 a caller keeps its testids, id and focus", () => {
+    function Caller(): ReactElement {
+      const input = useRef<HTMLInputElement>(null);
+      return (
+        <Dialog
+          role="dialog"
+          id="panel-id"
+          testid="caller"
+          scrimTestid="caller-scrim"
+          closeTestid="caller-close"
+          closeLabel="Close the caller"
+          focus={input}
+          title={<span data-testid="named">Named</span>}
+          onClose={vi.fn()}
+          actions={[action("go", "primary")]}
+        >
+          <input ref={input} data-testid="caller-input" aria-label="Words" />
+        </Dialog>
+      );
+    }
+    render(<Caller />);
+    const dialog = screen.getByTestId("caller");
+    expect(dialog).toHaveAttribute("id", "panel-id");
+    expect(dialog.parentElement).toBe(screen.getByTestId("caller-scrim"));
+    expect(dialog).toHaveAccessibleName("Named");
+    expect(within(dialog).getByTestId("named").closest("h2")).toHaveClass("dialog__title");
+    const close = screen.getByTestId("caller-close");
+    expect(close).toHaveAccessibleName("Close the caller");
+    expect(close.textContent).toBe("✕");
+    expect(screen.queryByTestId(dialogTestid.close)).toBeNull();
+    expect(screen.getByTestId("caller-input"), "the caller's focus, not the first answer").toHaveFocus();
+  });
+
+  it("R3221000 an answer waits while disabled or busy", () => {
+    const onSend = vi.fn();
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Dialog
+        role="alertdialog"
+        testid="wait"
+        title="Wait"
+        onClose={onClose}
+        cancel={{ label: "Cancel", kind: "secondary", testid: "wait-cancel", disabled: true }}
+        actions={[{ label: "Send", kind: "primary", onClick: onSend, testid: "wait-send", disabled: true, busy: true }]}
+      />,
+    );
+    const send = screen.getByTestId("wait-send");
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("wait-cancel")).toBeDisabled();
+    fireEvent.click(send);
+    fireEvent.click(screen.getByTestId("wait-cancel"));
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    rerender(
+      <Dialog
+        role="alertdialog"
+        testid="wait"
+        title="Wait"
+        onClose={onClose}
+        cancel={{ label: "Cancel", kind: "secondary", testid: "wait-cancel" }}
+        actions={[{ label: "Send", kind: "primary", onClick: onSend, testid: "wait-send" }]}
+      />,
+    );
+    expect(send).toBeEnabled();
+    expect(send).not.toHaveAttribute("aria-busy");
+    fireEvent.click(send);
+    expect(onSend).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3221000 a sheet marks its scrim, which sits at the foot of an upright phone and down a side one's edge", () => {
+    render(<Dialog role="dialog" sheet testid="sheet" title="Sheet" onClose={vi.fn()} actions={[]} />);
+    expect(screen.getByTestId("sheet").parentElement).toHaveAttribute("data-sheet", "");
+    cleanup();
+    render(<Dialog role="dialog" testid="plain" title="Plain" onClose={vi.fn()} actions={[]} />);
+    expect(screen.getByTestId("plain").parentElement).not.toHaveAttribute("data-sheet");
+    const sheet = readSheet("src/game/dialog.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const upright = /@media \(max-width: 600px\) \{([\s\S]*?)\n\}/.exec(sheet)?.[1] ?? "";
+    expect(upright).toMatch(/\.dialog-scrim\[data-sheet\] > \.dialog \{[^}]*margin: auto 0 0;/);
+    const side = /@media \(orientation: landscape\) and \(max-height: 500px\) \{([\s\S]*?)\n\}/.exec(sheet)?.[1] ?? "";
+    expect(side).toMatch(/\.dialog-scrim\[data-sheet\] > \.dialog \{[^}]*height: 100%;[^}]*margin: 0 0 0 auto;/);
+  });
+
+  it("R3221000 Escape and Tab belong to the top dialog, so a dialog over another closes first", async () => {
+    const onOuter = vi.fn();
+    const onInner = vi.fn();
+    render(<Nested onOuter={onOuter} onInner={onInner} />);
+    fireEvent.click(screen.getByTestId("open-inner"));
+    const inner = screen.getByTestId("inner");
+    const cancel = screen.getByTestId("inner-cancel");
+    const go = screen.getByTestId("inner-go");
+    expect(cancel).toHaveFocus();
+    press("Tab");
+    expect(go).toHaveFocus();
+    press("Tab");
+    expect(cancel, "Tab wraps inside the inner dialog").toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(inner.contains(document.activeElement)).toBe(true);
+    act(() => {
+      press("Escape");
+    });
+    expect(onInner).toHaveBeenCalledTimes(1);
+    expect(onOuter).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("inner")).toBeNull();
+    expect(screen.getByTestId("outer")).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    press("Escape");
+    expect(onOuter).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3221000 Back closes the top dialog alone", async () => {
+    at("/collection");
+    const onOuter = vi.fn();
+    render(<Nested onOuter={onOuter} />);
+    fireEvent.click(screen.getByTestId("open-inner"));
+    await pressBack();
+    expect(screen.queryByTestId("inner")).toBeNull();
+    expect(onOuter).not.toHaveBeenCalled();
+    expect(screen.getByTestId("outer")).toBeInTheDocument();
+  });
+
+  it("R3221000 the inspect overlay opened over a dialog takes Escape and Tab first", () => {
+    function Over(): ReactElement {
+      const [overlay, setOverlay] = useState(false);
+      return (
+        <Dialog role="dialog" testid="under" title="Under" onClose={onUnder} actions={[]}>
+          <button type="button" data-testid="card-text" onClick={() => setOverlay(true)}>
+            Card text
+          </button>
+          {overlay ? <Overlay onClose={() => setOverlay(false)} /> : null}
+        </Dialog>
+      );
+    }
+    const onUnder = vi.fn();
+    render(<Over />);
+    const opener = screen.getByTestId("card-text");
+    opener.focus();
+    fireEvent.click(opener);
+    const close = screen.getByTestId("overlay-close");
+    expect(close).toHaveFocus();
+    expect(close).toHaveAccessibleName("Close");
+    press("Tab");
+    expect(close, "Tab stays in the overlay").toHaveFocus();
+    act(() => {
+      press("Escape");
+    });
+    expect(screen.queryByTestId("overlay")).toBeNull();
+    expect(onUnder).not.toHaveBeenCalled();
+    expect(opener, "the focus goes back to Card text").toHaveFocus();
+  });
+
+  it("R3221000 Escape over an open tooltip leaves the dialog open", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog role="dialog" testid="tip" title="Tip" onClose={onClose} actions={[]}>
+        <span data-tip-open="true">Rush</span>
+      </Dialog>,
+    );
+    press("Escape");
+    expect(onClose).not.toHaveBeenCalled();
+    cleanup();
+    render(
+      <Dialog role="dialog" testid="tip" title="Tip" onClose={onClose} actions={[]}>
+        <span data-tip-open="false">Rush</span>
+      </Dialog>,
+    );
+    press("Escape");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3221000 Tab skips a hidden panel and a control out of the order", () => {
+    render(
+      <Dialog role="dialog" testid="tabs" title="Tabs" onClose={vi.fn()} actions={[action("shown", "primary")]}>
+        <button type="button" tabIndex={-1} data-testid="roving">
+          Other tab
+        </button>
+        <div hidden>
+          <button type="button" data-testid="hidden">
+            Hidden
+          </button>
+        </div>
+        <textarea aria-label="Note" data-testid="note" />
+      </Dialog>,
+    );
+    const shown = screen.getByTestId("shown");
+    const note = screen.getByTestId("note");
+    const close = screen.getByTestId(dialogTestid.close);
+    shown.focus();
+    press("Tab", { shiftKey: true });
+    expect(note).toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(close).toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(shown).toHaveFocus();
   });
 });

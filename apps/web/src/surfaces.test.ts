@@ -252,10 +252,10 @@ describe("#2109 the surface scale", () => {
       ...SHADOWS.map((shadow) => `--shadow-${shadow[0]}`),
       ...LAYERS.map((layer) => `--z-${layer[0]}`),
     ]);
-    // Outside board scope, and frozen: the inspect overlay's (src/cards/) own two layers. No sheet gains a
-    // name of its own; one that loses its names empties its entry.
+    // Outside board scope, and frozen: the inspect overlay's (src/cards/) own hover layer; R3221000 put its
+    // modal one on --z-dialog. No sheet gains a name of its own; one that loses its names empties its entry.
     const FOREIGN: Record<string, string[]> = {
-      "cards/inspect/inspect.css": ["--z-inspect-hover", "--z-inspect-modal"],
+      "cards/inspect/inspect.css": ["--z-inspect-hover"],
     };
     for (const sheet of SHEETS) {
       const css = codeOf(sheet);
