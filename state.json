@@ -17472,7 +17472,7 @@
         "provider": "claude-8",
         "round_tier": "strong",
         "rounds_on": 3214,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-07T00:22:51Z",
         "source": "build",
         "until": "2026-11-07T00:38:14Z"
