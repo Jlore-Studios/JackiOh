@@ -17777,6 +17777,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-07T22:10:53Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "42419490474",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
