@@ -36774,7 +36774,8 @@
       "2026-11-07T10:31:41Z,claude-4,stream,call,42362223440,70,2026-11-07T14:50:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-07T10:26:36Z,42363473406,agy,gemini-3.8-flash-high,review,3370,medium,reviewed,,6.7,309217,40642,0,,2,5,50,50,8.8,,none,,1"
+      "2026-11-07T10:26:36Z,42363473406,agy,gemini-3.8-flash-high,review,3370,medium,reviewed,,6.7,309217,40642,0,,2,5,50,50,8.8,,none,,1",
+      "2026-11-07T10:31:42Z,42362223440,claude-4,opus,build,3334,hard,interrupted,5-hour cap,27.5,0,0,0,,1,70,,,618.6,claude-4,fresh,,1"
     ]
   },
   "version": 1
