@@ -17201,15 +17201,8 @@
       "stop_requested": false
     },
     "3336": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42316918558",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-07T00:39:17Z",
-        "until": "2026-11-07T01:09:17Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17221,10 +17214,9 @@
         "reason": "planned on sonnet",
         "trail": "rk/item-3336 && sed -n 1,60p crates/cards/src/scripts/stinkyscape/c036_drone_core_x.rs; grep -n \\\"Drone Core X\\\\|Battleship\\\" docs/stinkyscape-set.md | head \u2026\n- Bash: {\"command\": \"cat spec/rulings/R1842000.md spec/rulings/R1842001.md | head -40\", \"description\": \"Read rulings R1842000 and R1842001\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/game && grep -n \\\"^ summoned: {\\\" -A14 animations.ts; grep -n \\\"^ activated: {\\\" -A12 animations.ts; grep -n \\\"^ hookResolving\\\\|^ \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/e2e && ls cypress/component | head -80; wc -l cypress/component/fx-phone-frame.cy.tsx; sed -n 1,140p cypress/component/fx-phone-frame.cy.tsx\", \"\u2026\n- Bash: {\"command\": \"sed -n 140,214p cypress/component/fx-phone-frame.cy.tsx; wc -l cypress/component/keyword-beats.cy.tsx cypress/component/fx-layer.cy.tsx cypress/component/fx-gallery-captures.cy.tsx\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/fx && grep -n \\\"launch\\\" dom.ts FxLayer.tsx canvasFx.ts director.ts | head -40; grep -n \\\"launch\\\" fx.css | head -30; ls ../fx/*.cs\u2026\n- Bash: {\"command\": \"sed -n 1,120p dom.ts; sed -n 300,420p dom.ts; sed -n 225,270p director.ts\", \"description\": \"Read dom.ts head, launch case and director's launch handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336 && grep -n \\\"Armor\\\" spec/06-keywords.md | head -20; grep -rn \\\"armor\\\" apps/web/src/wire/generated/GameEventType.ts | head; grep -n \\\"Armor\\\" c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src && sed -n 1,80p fx/cards/stinkyscape/magiBoot.ts; grep -n \\\"summoned\\\" game/runs.ts | head -20; grep -n \\\"^export function\\\\|^funct\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/fx && grep -n \\\"FX_MAX_TAIL_MS\\\\|FX_WARP\\\\|FX_PHONE_FRAME\\\\|FX_MAGI\\\\|FX_MOTIF_PHASES\\\\|FX_SET_PASS_FLOOR\\\\|FX_STARSHIP_TAIL\\\" cons\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/cards/art && sed -n 1,60p svg.ts | head -80; grep -n \\\"export function group\\\\|export function at\\\\|export function rect\\\\|export f\u2026\n- Bash: {\"command\": \"sed -n 262,306p stinkyscape.ts; grep -n \\\"^function \\\\(at\\\\|group\\\\|rect\\\\|circle\\\\|ellipse\\\\|poly\\\\|path\\\\|line\\\\|inked\\\\|twinkle\\\\|between\\\\|whole\\\\)\\\\b\\\\|^const \\\\(BOX\\\\|HALF\\\\|SUBJEC\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336 && grep -rn \\\"GameEvent::Redirected\\\" crates/engine/src | head; grep -n \\\"enum RedirectWhat\\\" -B2 -A12 crates/engine/src/wire/events.rs; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/wire/generated && cat ActivationView.ts | head -40; grep -n \\\"Brittle\\\" Keyword.ts | head -3; cd ../../.. && grep -rn \\\"activations\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336 && grep -rn \\\"3332\\\\|#3330\\\" --include=*.md --include=*.json5 --include=*.ts --include=*.rs . 2>/dev/null | grep -v node_modules | grep -v \\\"pat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/fx && sed -n 20,60p motifs/gallery.ts; sed -n 355,470p motifs/gallery.ts; grep -n \\\"RECIPE_FIXTURES\\\" -r . | head\", \"description\": \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/fx/cards && grep -n \\\"CARD_RECIPES\\\\|isBespokeKey\\\\|bespoke\\\" tables.test.ts coverage.test.ts tiers.test.ts stinkyscape-2.test.ts s\u2026\n- Bash: {\"command\": \"sed -n 95,130p stinkyscape-2.test.ts; sed -n 160,200p stinkyscape-2.test.ts\", \"description\": \"Read the pass-floor tests in stinkyscape-2.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/audio && wc -l cues.ts director.ts sfx.ts types.ts setPieceBeds.ts card-audio.json5; sed -n 1,60p cues.ts; grep -n \\\"starship\\\\|Sta\u2026\n- Bash: {\"command\": \"sed -n 180,284p director.ts; sed -n 1,76p setPieceBeds.ts\", \"description\": \"Read the audio director's planning and the set piece beds\"}\n- Bash: {\"command\": \"grep -n \\\"SfxId\\\\b\\\" types.ts | head -5; grep -n \\\"export const SFX_IDS\\\" -B2 -A40 types.ts | head -90; grep -n \\\"^function burn\\\\|^function whoosh\\\\|^const RECIPES\\\\|^export const SFX_R\u2026\n- Bash: {\"command\": \"sed -n 1,125p types.ts; sed -n 480,540p sfx.ts; sed -n 1625,1755p sfx.ts | head -140\", \"description\": \"Read SfxId union, burn recipe, and the SFX table\"}\n- Bash: {\"command\": \"sed -n 560,745p cues.ts\", \"description\": \"Read the end of audio cues.ts: the resolve function\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src && grep -n \\\"export function locateInstance\\\" -A30 game/animations.ts | head -50; grep -n \\\"^export function \\\\(tid\\\\|ringCue\\\\|sha\u2026\n- Bash: {\"command\": \"grep -rn '\\\"launch\\\"' --include=*.ts --include=*.tsx . | grep -v \\\"test\\\\.\\\" | head -20; grep -rn \\\"setPieceBed\\\\|setPieceOf\\\" --include=*.ts --include=*.tsx . | grep -v \\\"test\\\\.\\\" | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336 && grep -ln \\\"R2801000\\\" spec/*.md | head; grep -n \\\"HERO_ID =\\\" apps/web/src/fx/cues.ts; grep -n \\\"R2801000\\\" spec/10-*.md | head -5\", \"descrip\u2026\n- Bash: {\"command\": \"grep -n \\\" AttackDeclared {\\\" -A8 crates/engine/src/wire/events.rs | head -14; grep -n \\\" Activated {\\\" -A12 crates/engine/src/wire/events.rs | head -18; grep -n \\\" Destroyed {\\\" -A12 cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3336/apps/web/src/fx && grep -n \\\"SetPiecePlan\\\" setPieces.ts | head -3; grep -n \\\"export function tintOf\\\" -A8 setPieces.ts; grep -n \\\"export functi\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3336/.bot-plan.md\", \"content\": \"# Plan draft for #3336 (planner's working file)\\n\\nFindings (read, not guessed):\\n- Web-only change (apps/web, e2e, sp\u2026\n- said: # Plan for #3336: the Drone Battleship as one great ship ## Goal The three layer tokens draw as the decks of one battleship, and the board's top card draws the decks still standing (3, 2 or 1). Drone Core X's `battleshipWarp` grows into a three-beat arrival, one beat per `summoned` entry, with a ho\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-07T00:13:34Z",
       "owner_why": "it plans it",
@@ -17237,9 +17229,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-06T23:44:54Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42316918558",
+      "run_id": "pending:618997d7-1794012433",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-07T00:13:34Z",
+      "started_at": "2026-11-07T00:47:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17734,9 +17726,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T00:46:57Z",
+    "at": "2026-11-07T00:47:49Z",
     "url": "",
-    "what": "build #3332 on claude-4"
+    "what": "build #3336 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-07T00:21:19Z",
