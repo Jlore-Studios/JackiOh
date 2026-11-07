@@ -18206,6 +18206,18 @@
       "audit_tier": "",
       "ci_fixed_head": "497a19f86cf11306f016b91f6dca01d286521cd1",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-8",
+          "tier": "medium"
+        },
+        "at": "2026-11-07T10:58:55Z",
+        "built_by": "claude-8",
+        "by": "`claude` (medium)",
+        "sha": "497a19f86cf11306f016b91f6dca01d286521cd1"
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -18226,6 +18238,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
