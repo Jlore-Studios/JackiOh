@@ -36,6 +36,8 @@ const UNION_ORDER: SfxId[] = [
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   // R3338000: the Terminus set pieces' organ.
   "organ",
+  // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */

@@ -7,6 +7,8 @@
 // resolving when it was added (`attributeModifiers`), since its view names no source (R169). An aura
 // begins as it appears and ends as it leaves, and at most AURA_MAX_PER_ZONE cover a zone, nearest scope
 // first and then newest.
+// R3400000: a face-up Unit whose table entry (a hooks or a bespoke one) has a `tile` aura wears it over its
+// own unit zone; a face-down or hidden Unit wears none, and a modifier its play added wears no tile aura.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -26,12 +28,12 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 
 /** One aura as planned: what it covers and how it looks. `defId` is the planner's; it never reaches the page (R202). */
 export type AuraSpec = {
-  /** `field-<instanceId>` for a Field card, `mod-<player>-<modifierId>` for a modifier. */
+  /** `field-<instanceId>` for a Field card, `unit-<instanceId>` for a Unit's tile (R3400000), `mod-<player>-<modifierId>` for a modifier. */
   key: string;
   defId: string;
   instanceId: string;
   side: Side;
-  /** The Field card's backrow lane; null for a modifier, whose `zone` or `lane` scope is its side. */
+  /** The Field card's backrow lane, or a tile's Unit's lane; null for a modifier, whose `zone` or `lane` scope is its side. */
   lane: number | null;
   scope: AuraScope;
   look: AuraLook;
@@ -59,12 +61,13 @@ function specOf(key: string, defId: string, instanceId: string, side: Side, lane
   return { key, defId, instanceId, side, lane, scope, look: aura.look, colors };
 }
 
+/** R3400000: the aura of a hooks entry or a bespoke one. */
 function auraOf(table: ReadonlyMap<string, FxCardEntry>, defId: string): FxAuraSpec | undefined {
   const entry = table.get(defId);
-  return entry?.kind === "hooks" ? entry.aura : undefined;
+  return entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
 }
 
-/** Every aura the view shows, your side first: its standing Field cards, then its attributed modifiers. */
+/** Every aura the view shows, your side first: its standing Field cards, its Units' tiles (R3400000), then its attributed modifiers. */
 export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSource>, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): AuraSpec[] {
   const out: AuraSpec[] = [];
   for (const side of SIDES) {
@@ -75,6 +78,11 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
       const aura = auraOf(table, slot.defId);
       if (aura !== undefined) out.push(specOf(`field-${slot.instanceId}`, slot.defId, slot.instanceId, side, index + 1, aura, view));
     });
+    seat.units.forEach((unit, index) => {
+      if (unit === null || unit.defId === HIDDEN_ID) return;
+      const aura = auraOf(table, unit.defId);
+      if (aura?.scope === "tile") out.push(specOf(`unit-${unit.instanceId}`, unit.defId, unit.instanceId, side, index + 1, aura, view));
+    });
     for (const modifier of seat.modifiers) {
       const source = sources.get(sourceKey(seat.player, modifier.id));
       if (source === undefined) continue;
@@ -82,7 +90,8 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
       const type = (CATALOG[source.defId] ?? view.defs?.[source.defId])?.type;
       if (type !== undefined && isAuraFieldType(type)) continue;
       const aura = auraOf(table, source.defId);
-      if (aura !== undefined) out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, null, aura, view));
+      // R3400000: a tile aura stands with its Unit, not with what its play installs.
+      if (aura !== undefined && aura.scope !== "tile") out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, null, aura, view));
     }
   }
   return out;
@@ -121,6 +130,7 @@ function sideZones(side: Side): string[] {
 export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane">): string[] {
   if (spec.scope === "board") return [...sideZones("you"), ...sideZones("opponent")];
   if (spec.scope === "side" || spec.lane === null) return sideZones(spec.side);
+  if (spec.scope === "tile") return [testid.zone(spec.side, "units", spec.lane)];
   if (spec.scope === "lane") return laneZoneTestids(spec.lane);
   return [testid.zone(spec.side, "backrow", spec.lane)];
 }
@@ -185,7 +195,7 @@ export function settleAuras(track: AuraTrack, now: number): AuraTrack {
 
 /**
  * R2787000: the auras that show, most important first: those still holding before those fading out,
- * then the nearest scope (zone, lane, side, board), then the newest. Each is kept only while every
+ * then the nearest scope (tile, zone, lane, side, board), then the newest. Each is kept only while every
  * zone it covers holds fewer than `max` kept already.
  */
 export function stackAuras(auras: readonly TrackedAura[], max: number = AURA_MAX_PER_ZONE): TrackedAura[] {

@@ -253,6 +253,18 @@ export const AURA_SIGNATURE_MAX_INTENSITY = 0.8;
 export const FX_FELINOR_STREAK_AT = 0.1;
 export const FX_FELINOR_STREAK_STEP = 0.08;
 export const FX_FELINOR_STREAKS_MAX = 5;
+// R3400000: a signature Spell's own cast (takeover.ts `ownCast`) draws its Mythic takeover this long past
+// its entry, not FX_TAKEOVER_TAIL_MS, so the takeover ends inside the Mythic Spell's ceiling
+// (SIGNATURE_MYTHIC_MAX_MS × SIGNATURE_SPELL_SHARE, its hold included).
+export const FX_SIGNATURE_TAKEOVER_TAIL_MS = 400;
+// R3400001: Call to Chaos (Training-Grounds Edition)'s signature shows its roll (R436's panel) inside the
+// Legendary Spell's ceiling: its reels land within FX_CHAOS_DICE_REEL_MS of the roll's entry and the panel
+// lasts FX_CHAOS_DICE_PANEL_MS (chaos.ts's own lasts FX_CHAOS_MS).
+export const FX_CHAOS_DICE_REEL_MS = 500;
+export const FX_CHAOS_DICE_PANEL_MS = 760;
+// R3400001: the signatures' own shakes (each within its type's budget, SIGNATURE_*_MAX_TRAUMA): Bob's Plan's
+// ink as its takeover's hold ends; the Units' entrances shake by ENTRANCE_TRAUMA (fx/cards/recipe.ts).
+export const FX_BOBS_PLAN_TRAUMA = 0.6;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
 // AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
 // all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS
