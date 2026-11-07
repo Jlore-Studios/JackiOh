@@ -16,7 +16,8 @@ use crate::config::{
     PACK_FLOORED_SLOT,
 };
 use crate::cosmetics::{
-    Cosmetic, CosmeticRarity, OwnedCosmetics, cosmetic_pack_cosmetics, implying, levels_below, offered,
+    Cosmetic, CosmeticRarity, OwnedCosmetics, cosmetic_pack_cosmetics, implying, is_default_look,
+    levels_below, offered, registry,
 };
 use crate::economy::roll::PoolCard;
 use crate::economy::tiers::{cosmetic_tier, tier_draw};
@@ -56,13 +57,17 @@ impl CosmeticHoldings {
     }
 
     /// Whether the account owns the per-card cosmetic `id` on `card_id`: a row of it, or of a retired entry that
-    /// owns it there (R2725002, R3015006).
+    /// owns it there (R2725002, R3015006), or (R3343000) the card's default look, which every account owns there.
     fn holds(&self, card_id: &str, id: &str) -> bool {
         let row = |id: &str| {
             self.card_cosmetics
                 .contains(&(card_id.to_string(), id.to_string()))
         };
-        row(id) || implying(id).any(row)
+        row(id)
+            || implying(id).any(row)
+            || registry()
+                .iter()
+                .any(|cosmetic| cosmetic.id == id && is_default_look(cosmetic, card_id))
     }
 }
 
@@ -1037,5 +1042,26 @@ mod tests {
             })
             .find(|placed| named(placed) == Some(ids[3]));
         assert_eq!(placed, Some(grant(ids[3], Mythic, &ids[2..3])));
+    }
+
+    #[test]
+    fn r3343000_a_slot_never_places_a_default_look_and_places_the_level_above_it_in_order() {
+        use crate::cosmetics::{VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, registry};
+        let droppable = cosmetic_pack_cosmetics(registry());
+        let by_id = |id: &str| {
+            droppable
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} drops"))
+        };
+        let nothing = CosmeticHoldings::default();
+        // Ceaseless Void, a Mythic, holds its Full art with no row, and Speciesist, a Common, does not.
+        assert!(nothing.holds("core-100", VERSION_FULL_ART_ID));
+        assert!(!nothing.holds("core-002", VERSION_FULL_ART_ID));
+        let pool = [card("core-100", PrintedRarity::Mythic)];
+        assert!(placements(by_id(VERSION_FULL_ART_ID), &droppable, &pool, &nothing).is_empty());
+        let animated = by_id(VERSION_FULL_ART_ANIMATED_ID);
+        assert_eq!(placements(animated, &droppable, &pool, &nothing), ["core-100"]);
+        assert!(skip_placements(animated, &droppable, &pool, &nothing).is_empty());
     }
 }

@@ -5,7 +5,9 @@
 // still level, animated, then signed), on one Unit and one Spell, base and Radiant, the Unit with a foil: every part
 // keeps clear of every other, only the signed level signs, R3015002 over its animated full art's own picture (R2949000's
 // Signature look and its picture of its own are gone), a Radiant face keeps its gold frame and its art's Radiant paint
-// at every level, and under Reduce motion nothing moves.
+// at every level, and under Reduce motion nothing moves. R3343001 (#3343): the Default's levels draw each card's default
+// look, the Legendary Unit's Extended art and the Mythic Spell's Full art, whose first level is offered nowhere on the
+// Mythic (R3343000), so a pick of it wears the Default.
 // R2940001, R2940002: part 2's ladders, Alt art and the Sketch: Alt art, the Sketch, Alt full art and each full art's
 // animated level (the Unit with a foil under it), and R3015005 an older pick of Alt art with Animated, which wears Alt
 // art's first level, on a Unit and a Spell offered both, base and Radiant: every part shows and none signs, each draws
@@ -13,7 +15,8 @@
 // R2942001, R2942002: part 3's versions, Extended art, Pixel and Comic, each at both its levels (the Unit with a foil
 // under it), on a Unit and a Spell offered all three, base and Radiant: every part shows and none signs, Extended art's
 // picture runs past its window, Pixel's and Comic's are their own (a base Pixel in its palette's levels), and a Radiant
-// face keeps its gold frame.
+// face keeps its gold frame. R3343000: both are Legendaries, offered Extended art's animated level but not its first,
+// their default look, so a pick of it wears the Default, which draws it (R3343001).
 // R2943001, R2943002: part 4's versions, Set showcase and Out of frame, each at both its levels (the first Unit with a
 // foil under it), on two Units offered both and a Spell offered Set showcase, base and Radiant: every part shows and
 // none signs, Set showcase's picture is its set's own, Out of frame's subject rises out of its window inside the face
@@ -21,7 +24,9 @@
 // R2944001, R2944002: part 5's versions, Immersive and Prismatic, each at both its levels (the Unit with a foil under
 // it), on a Unit and a Spell offered both, base and Radiant: every part shows and none signs, Immersive's near layer
 // fills its window and follows the pointer (and rests under Reduce motion), Prismatic's base frame is its rainbow and
-// chrome, each picture is its own, and a Radiant face keeps its gold frame.
+// chrome, each picture is its own, and a Radiant face keeps its gold frame. R3343001: Prismatic is a full art at both
+// its levels, its type line and rules box left to the hover preview, its picture compared with the Mythics' Default,
+// Full art, at that shape.
 // R3017002: part 6's variants, Night, Neon sign, Watercolor, Stained-glass window, Woodcut and Tarot card, each at its
 // art level (Night's and Neon sign's at their animated one too, the first Unit with a foil under it), on two Units and two
 // Spells, each pair of which is offered all six, base and Radiant: every part shows and none signs, each picture is its
@@ -30,12 +35,14 @@
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) shown in a look by `FullArtShown`, as the Collection's preview
 // shows one, so the looks stand side by side with no pick written. No `FullArtOwned` is mounted, so every cosmetic
-// counts as owned where it is offered, as in practice.
+// counts as owned where it is offered, as in practice. Each part's "normal" row is the card's Default, which on a
+// Legendary or a Mythic draws its default look (R3343001); a screenshot compares each version with the normal frame
+// itself, as a lesson board draws it (`FullArtAllowed`, R1108000).
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, FACE_ASPECT, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { resetCosmeticsForTests, writeCardPick } from "../../../apps/web/src/cards/cosmetics.ts";
-import { FullArtShown, OwnCopy } from "../../../apps/web/src/cards/fullArt.ts";
+import { FullArtAllowed, FullArtShown, OwnCopy } from "../../../apps/web/src/cards/fullArt.ts";
 import { IMMERSIVE_SHIFT_PCT } from "../../../apps/web/src/cards/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import {
@@ -63,17 +70,23 @@ import {
   VERSION_WATERCOLOR_ID,
   VERSION_WOODCUT_ID,
   artPictureOf,
+  defaultLookOf,
   isFullBleed,
   levelOfPick,
   lookOfLevel,
   offeredOn,
+  wornLevel,
 } from "../../../apps/web/src/cards/versions.ts";
 import { showcaseFamilyOf } from "../../../apps/web/src/cards/art/pictures.ts";
 import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/settings/index.ts";
 
 type CardDef = (typeof CATALOG)[string];
 
-/** One Unit and one Spell offered every level of the Default and of Full art (R2725001, R3015000). */
+/**
+ * One Unit and one Spell offered every level of the Default and of Full art (R2725001, R3015000), but the Mythic Spell's
+ * Full art first level: R3343000, its default look, which its Default draws (R3343001), so a pick of it wears the
+ * Default. The Legendary Unit's Default draws Extended art.
+ */
 const CARDS = [
   { id: "classicplus-012", why: "a Unit (The Mother Pancake: stats in the bottom corners, a Legendary crest)" },
   { id: "stinkyscape-154", why: "a Spell (Dice of Doom: no stats, a Mythic crest)" },
@@ -113,8 +126,14 @@ const NEW_LOOKS = [
   { name: "alt-full-stack", pick: VERSION_ALT_FULL_ART_ANIMATED_ID, augments: [] },
 ] as const;
 
+/**
+ * R3343001: the normal frame itself, as a lesson board draws it (R1108000), the face each screenshot compares a version
+ * with: a Legendary's Default draws Extended art and a Mythic's Full art, so neither prints it.
+ */
+const PLAIN = { name: "normal", pick: false, augments: [], plain: true } as const;
+
 /** R2940001: the looks the screenshot compares, the Sketch's animated full art too (the Unit's foil under it). */
-const SHOT_LOOKS = NEW_LOOKS.filter((look) => ["normal", "alt", "sketch", "sketch-stack", "alt-full"].includes(look.name));
+const SHOT_LOOKS = [PLAIN, ...NEW_LOOKS.filter((look) => ["alt", "sketch", "sketch-stack", "alt-full"].includes(look.name))];
 /** Small enough that every face of the screenshot lies inside the viewport it captures: three rows of nine. */
 const SHOT_WIDTH = 120;
 
@@ -123,7 +142,10 @@ const SKETCH_BEZEL = "#3f4964";
 /** R2940001: the most a base Sketch's sampled pixels may hold of colour on average (max channel less min, of 255): graphite on paper. */
 const SKETCH_CHROMA_MAX = 48;
 
-/** R2942001: one Unit and one Spell offered both levels of each of part 3's versions. */
+/**
+ * R2942001: one Unit and one Spell offered both levels of each of part 3's versions but Extended art's first: R3343000,
+ * a Legendary's default look, which its Default draws (R3343001), so a pick of it wears the Default.
+ */
 const PART_THREE_CARDS = [
   { id: "classic-056", why: "a Unit (Spell Tyrant: stats in the bottom corners, a Legendary crest)" },
   { id: "meditative-042", why: "a Spell (CN Flea Market: no stats, a Legendary crest)" },
@@ -144,7 +166,7 @@ const PART_THREE_LOOKS = [
 ] as const;
 
 /** R2942001: the looks the screenshot compares, Pixel's animated level too (the Unit's foil under it). */
-const PART_THREE_SHOT_LOOKS = PART_THREE_LOOKS.filter((look) => ["normal", "extended", "pixel", "pixel-stack", "comic"].includes(look.name));
+const PART_THREE_SHOT_LOOKS = [PLAIN, ...PART_THREE_LOOKS.filter((look) => ["extended", "pixel", "pixel-stack", "comic"].includes(look.name))];
 
 /** R2942001: the base bezels of Pixel and Comic, palette.css's `--pal-slate-400` and `--pal-white`. */
 const PART_THREE_BEZEL: Readonly<Record<string, string>> = { [VERSION_PIXEL_ID]: "#9aa1b8", [VERSION_COMIC_ID]: "#ffffff" };
@@ -178,7 +200,7 @@ const PART_FOUR_LOOKS = [
 ] as const;
 
 /** R2943001: the looks the screenshot compares, Out of frame's animated level too (the first Unit's foil under it). */
-const PART_FOUR_SHOT_LOOKS = PART_FOUR_LOOKS.filter((look) => ["normal", "showcase", "out", "out-stack"].includes(look.name));
+const PART_FOUR_SHOT_LOOKS = [PLAIN, ...PART_FOUR_LOOKS.filter((look) => ["showcase", "out", "out-stack"].includes(look.name))];
 
 /** R2944001: a Unit and a Spell offered both levels of both of part 5's versions. */
 const PART_FIVE_CARDS = [
@@ -198,8 +220,15 @@ const PART_FIVE_LOOKS = [
   { name: "prismatic-stack", pick: `${VERSION_PRISMATIC_ID}-animated`, augments: [] },
 ] as const;
 
-/** R2944001: the looks the screenshot compares, Prismatic's animated level too (the Unit's foil under it). */
-const PART_FIVE_SHOT_LOOKS = PART_FIVE_LOOKS.filter((look) => ["normal", "immersive", "prismatic", "prismatic-stack"].includes(look.name));
+/**
+ * R2944001: the looks the screenshot compares, Prismatic's animated level too (the Unit's foil under it). R3343001: the
+ * Mythics' Default, Full art, the normal picture at the full-art shape that Prismatic now draws at both its levels.
+ */
+const PART_FIVE_SHOT_LOOKS = [
+  PLAIN,
+  { name: "default", pick: false, augments: [] },
+  ...PART_FIVE_LOOKS.filter((look) => ["immersive", "prismatic", "prismatic-stack"].includes(look.name)),
+] as const;
 
 /** R2944001: Prismatic's base bezel, palette.css's `--pal-slate-100`, and the first colour of its edge, `--pal-red-400`. */
 const PRISMATIC_BEZEL = "#e8eaf2";
@@ -239,16 +268,30 @@ const PART_SIX_SHOT_WIDTH = 100;
 const SAME_PLACE_PX = 0.5;
 
 type Card = { readonly id: string; readonly why: string };
-type Look = { readonly name: string; readonly pick: false | string; readonly augments: readonly string[] };
+/** `plain`: `PLAIN`'s, the normal frame as a lesson board draws it (R1108000). */
+type Look = { readonly name: string; readonly pick: false | string; readonly augments: readonly string[]; readonly plain?: boolean };
 
 /** R2943001: the looks of `looks` card `id` is offered: the normal face, and each level where it is offered. */
 function offeredLooks(id: string, looks: readonly Look[]): Look[] {
   return looks.filter((look) => look.pick === false || offeredOn(look.pick, id));
 }
 
-/** R3015005: the level `look` names on `id`, an older pick's shape mapped as the server maps it; null for the normal face. */
+/**
+ * R3015005: the level `look` names on `id`, an older pick's shape mapped as the server maps it, worn where it is offered
+ * and else the highest offered level below it (`wornLevel`; every offered level counts as owned here); null for the
+ * normal face. R3343000: a card's default look is offered nowhere there, so a pick of it wears the Default.
+ */
 function levelOfLook(id: string, look: Look): string | null {
-  return levelOfPick(id, look.pick, look.augments);
+  return wornLevel(levelOfPick(id, look.pick, look.augments), (level) => offeredOn(level, id));
+}
+
+/**
+ * R3343001: the version a face wearing `level` on `id` draws while the Full-art cards setting is on: a Default level (the
+ * normal face or its animated level) the card's default look, a Legendary's Extended art and a Mythic's Full art; any
+ * other level its own.
+ */
+function versionOn(id: string, level: string | null): string | null {
+  return lookOfLevel(level).version ?? defaultLookOf(id);
 }
 
 type Point = { x: number; y: number };
@@ -298,9 +341,11 @@ function Faces({ width, cards = CARDS, looks = LOOKS }: { width: number; cards?:
           looks.flatMap((look) =>
             [false, true].map((radiant) => (
               <div key={`${id}-${look.name}-${String(radiant)}`} data-face={`${id}-${look.name}-${radiant ? "radiant" : "base"}`} style={{ width, height: heightFor(width), flex: "none" }}>
-                <FullArtShown defId={id} pick={look.pick} augments={look.augments}>
-                  <CardFace face={faceModel({ defId: id, def: CATALOG[id] as CardDef, radiant })} layout="full" worn />
-                </FullArtShown>
+                <FullArtAllowed allowed={look.plain !== true}>
+                  <FullArtShown defId={id} pick={look.pick} augments={look.augments}>
+                    <CardFace face={faceModel({ defId: id, def: CATALOG[id] as CardDef, radiant })} layout="full" worn />
+                  </FullArtShown>
+                </FullArtAllowed>
               </div>
             )),
           ),
@@ -424,7 +469,8 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
               const level = levelOfLook(id, look);
-              const full = isFullBleed(level);
+              // R3343001: the Mythic's Default levels draw Full art; the Legendary's Extended art, which keeps its words.
+              const full = isFullBleed(versionOn(id, level));
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-full-art"), where).to.eq(full ? "true" : null);
               expect(cf.getAttribute("data-level"), where).to.eq(level);
@@ -540,7 +586,8 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
               const level = levelOfLook(id, look);
-              const version = lookOfLevel(level).version;
+              // R3343001: the normal face of these Legendaries draws Extended art, its words kept.
+              const version = versionOn(id, level);
               const full = isFullBleed(version);
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
@@ -637,7 +684,8 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
               const level = levelOfLook(id, look);
-              const version = lookOfLevel(level).version;
+              // R3343001: the Default, and so a pick of Extended art's first level, draws these Legendaries' Extended art.
+              const version = versionOn(id, level);
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
               expect(cf.getAttribute("data-full-art"), where).to.eq(null);
@@ -767,7 +815,8 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
               const level = levelOfLook(id, look);
-              const version = lookOfLevel(level).version;
+              // R3343001: the normal face of these Legendaries draws Extended art, its words kept.
+              const version = versionOn(id, level);
               const set = CATALOG[id]?.set ?? null;
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
@@ -901,10 +950,12 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
               const cf = faceIn(doc, id, look.name, radiant);
               const face = cf.getBoundingClientRect();
               const level = levelOfLook(id, look);
-              const version = lookOfLevel(level).version;
+              // R3343001: the normal face of these Mythics draws Full art, and Prismatic is a full art at both its levels.
+              const version = versionOn(id, level);
+              const full = isFullBleed(version);
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-version"), where).to.eq(version);
-              expect(cf.getAttribute("data-full-art"), where).to.eq(null);
+              expect(cf.getAttribute("data-full-art"), where).to.eq(full ? "true" : null);
               expect(cf.getAttribute("data-level"), where).to.eq(level);
               if (id === PART_FIVE_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
               const picture = artPictureOf(version);
@@ -912,8 +963,9 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
               expect(art?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
               // R3015000: neither is signed.
               expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
-              // Every version keeps the cost gem, the crest, the name, the type line, the rules box and a Unit's stats.
-              const kept = [".cost-gem", ".cf-crest", ".card-name", ".card-type", ".card-text", ...(unit ? [".cf-atk", ".cf-hp"] : [])];
+              // Every version keeps the cost gem, the crest, the name and a Unit's stats; Immersive the type line and the
+              // rules box too, which a full art (R3343001) leaves to the hover preview.
+              const kept = [".cost-gem", ".cf-crest", ".card-name", ...(full ? [] : [".card-type", ".card-text"]), ...(unit ? [".cf-atk", ".cf-hp"] : [])];
               for (const selector of kept) expect(boxes(cf, selector).length, `${where}: ${selector}`).to.be.greaterThan(0);
               // Immersive's near layer is its window's own box, and takes no ground and no foil.
               const layer = cf.querySelector<HTMLElement>(".cf-art-frame > .cf-immersive");
@@ -972,7 +1024,13 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
             if (at === undefined) throw new Error(`no window for ${id} ${look}`);
             return at;
           };
-          found.set(`${id} ${radiant ? "Radiant" : "base"}`, { normal: box("normal"), immersive: box("immersive"), prismatic: box("prismatic"), stack: box("prismatic-stack") });
+          found.set(`${id} ${radiant ? "Radiant" : "base"}`, {
+            normal: box("normal"),
+            full: box("default"),
+            immersive: box("immersive"),
+            prismatic: box("prismatic"),
+            stack: box("prismatic-stack"),
+          });
         }
       }
       taken.boxes = found;
@@ -980,17 +1038,18 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
     screenshot("card-versions-part-5").then((shot) => {
       const shares: Record<string, number> = {};
       for (const [where, found] of taken.boxes ?? new Map<string, Record<string, DOMRect>>()) {
-        const { normal } = found;
-        if (normal === undefined) throw new Error(`${where}: the normal window is missing`);
+        const { normal, full } = found;
+        if (normal === undefined || full === undefined) throw new Error(`${where}: the normal or the full-art window is missing`);
         for (const box of Object.values(found)) expect(Math.ceil(box.bottom * shot.scale), `${where}: inside the shot`).to.be.at.most(shot.height);
-        const offsets = windowOffsets(normal);
-        expect(offsets.length, `${where}: sampled points`).to.be.greaterThan(20);
-        // Each version's window prints a picture of its own, apart from the normal one, in the same window.
-        for (const look of ["immersive", "prismatic", "stack"] as const) {
+        // Each version's window prints a picture of its own, apart from the normal one, in the same window: Immersive's
+        // the normal face's; R3343001 Prismatic's, a full art's at both its levels, the Default's Full art's.
+        for (const [look, base] of [["immersive", normal], ["prismatic", full], ["stack", full]] as const) {
           const other = found[look];
           if (other === undefined) throw new Error(`${where}: the ${look} window is missing`);
-          expect(Math.round(normal.width), `${where}: the ${look} window matches`).to.eq(Math.round(other.width));
-          const share = differingShare(shot, normal, other, offsets);
+          const offsets = windowOffsets(base);
+          expect(offsets.length, `${where}: sampled points`).to.be.greaterThan(20);
+          expect(Math.round(base.width), `${where}: the ${look} window matches`).to.eq(Math.round(other.width));
+          const share = differingShare(shot, base, other, offsets);
           shares[`${where} ${look}`] = share;
           expect(share, `${where}: ${look} differs`).to.be.at.least(PICTURE_SHARE_MIN);
         }

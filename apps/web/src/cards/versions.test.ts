@@ -57,6 +57,7 @@ import {
   artPictureOf,
   impliedBy,
   isFullBleed,
+  defaultLookOf,
   isNextLevel,
   isOfferedId,
   ladderOf,
@@ -65,6 +66,7 @@ import {
   levelsBelow,
   levelsOn,
   lookOfLevel,
+  lookOn,
   offeredOn,
   variantsOn,
   wornLevel,
@@ -130,9 +132,9 @@ describe("R2725000 a card's look", () => {
     expect(ladderOf("sketch")).toEqual([VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ANIMATED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID]);
     for (const first of [...ONE_ART, ...PART_SIX]) {
       const variant = levelOf(first)?.variant ?? "";
-      // No full-art level and no signed one: art, then animated.
+      // No signed level: art, then animated; no full-art level but (R3343001) Prismatic's, its one art level.
       expect(ladderOf(variant), variant).toEqual([first, `${first}-animated`]);
-      expect(ladderOf(variant).some(isFullBleed), variant).toBe(false);
+      expect(ladderOf(variant).some(isFullBleed), variant).toBe(first === VERSION_PRISMATIC_ID);
     }
     expect(ladderOf("variant-from-a-newer-client")).toEqual([]);
     // Every version entry is a level, and every level a version entry.
@@ -160,22 +162,33 @@ describe("R2725000 a card's look", () => {
           expect(isFullBleed(below), id).toBe(true);
         }
         // Each level is offered on its first level's cards (the Default's every card), a moving one never on a Legacy card.
+        // R3343000: where the first is the card's default look, offered nowhere there, the levels above it share one offer.
         const first = ladder[0] ?? id;
         const moves = look.animated || look.signed;
         for (const def of COLLECTIBLE) {
+          if (variant !== DEFAULT_VARIANT && defaultLookOf(def.id) === first) {
+            expect(offeredOn(first, def.id), `${first} on ${def.id}`).toBe(false);
+            if (index > 0) expect(offeredOn(id, def.id), `${id} on ${def.id}`).toBe(offeredOn(ladder[1] ?? id, def.id));
+            continue;
+          }
           const base = variant === DEFAULT_VARIANT || offeredOn(first, def.id);
           expect(offeredOn(id, def.id), `${id} on ${def.id}`).toBe(base && !(moves && isLegacy(def.id)));
         }
       });
     }
 
-    // Every card has the Default variant (its first level the normal face), and each other whose first level it is offered.
+    // Every card has the Default variant (its first level the normal face), and each other whose first level it is offered
+    // (R3343002: or, where that is its default look, a level above it).
     const legacy = COLLECTIBLE.filter((def) => isLegacy(def.id));
     expect(legacy.length).toBeGreaterThan(0);
     for (const def of COLLECTIBLE) {
       const variants = variantsOn(def.id);
       expect(variants[0], def.id).toBe(DEFAULT_VARIANT);
-      for (const variant of VARIANTS.slice(1)) expect(variants.includes(variant), `${variant} on ${def.id}`).toBe(offeredOn(ladderOf(variant)[0] ?? "", def.id));
+      for (const variant of VARIANTS.slice(1)) {
+        const first = ladderOf(variant)[0] ?? "";
+        const listed = defaultLookOf(def.id) === first ? levelsOn(def.id, variant).length > 0 : offeredOn(first, def.id);
+        expect(variants.includes(variant), `${variant} on ${def.id}`).toBe(listed);
+      }
     }
     // A Legacy card's picture never moves (R2724000): its ladders stop before animated, so its Default has no level past
     // the normal face, and no level of any variant it is offered moves or signs.
@@ -392,8 +405,10 @@ describe("R2725000 a card's look", () => {
       expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(speciesist.includes(id));
     }
     // Full art's levels and the Default's animated one on each of the 21 full-art cards, whose retired full arts map to
-    // them (R3015006).
-    for (const id of [...ladderOf("full-art"), VERSION_ANIMATED_ID]) for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(true);
+    // them (R3015006), but Full art's first on a Mythic one, whose Default draws it (R3343000).
+    for (const id of [...ladderOf("full-art"), VERSION_ANIMATED_ID]) {
+      for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(id !== defaultLookOf(card));
+    }
     // No other id has an offer.
     expect(isOfferedId("foil-galaxy")).toBe(false);
     expect(isOfferedId(retired("Epic"))).toBe(false);
@@ -408,12 +423,15 @@ describe("R2725000 a card's look", () => {
     // looks differ by card.
     expect(fullArt.size).toBeLessThan(animated.size);
     expect([...animated].some((card) => !fullArt.has(card))).toBe(true);
-    // The 21 with retired full arts are always among them.
-    for (const card of FULL_ART_CARDS) expect(fullArt.has(card), card).toBe(true);
-    // Full art's animated and signed levels exactly where Full art is, but on a Legacy card, whose picture never moves.
+    // The 21 with retired full arts are always among them, but a Mythic one, whose Default draws it (R3343000).
+    for (const card of FULL_ART_CARDS) expect(fullArt.has(card) || defaultLookOf(card) === VERSION_FULL_ART_ID, card).toBe(true);
+    // Full art's animated and signed levels exactly where Full art is, but on a Legacy card, whose picture never moves,
+    // and (R3343000) on the Mythics its share takes too, where it is the Default's.
     expect([...fullArt].some(isLegacy)).toBe(true);
-    const moving = [...fullArt].filter((card) => !isLegacy(card)).sort();
-    expect([...on(VERSION_FULL_ART_ANIMATED_ID)].sort()).toEqual(moving);
+    const moving = [...on(VERSION_FULL_ART_ANIMATED_ID)].sort();
+    for (const card of fullArt) expect(moving.includes(card), card).toBe(!isLegacy(card));
+    for (const card of moving.filter((each) => !fullArt.has(each))) expect(defaultLookOf(card), card).toBe(VERSION_FULL_ART_ID);
+    expect(moving.some((card) => !fullArt.has(card))).toBe(true);
     expect([...on(VERSION_FULL_ART_SIGNED_ID)].sort()).toEqual(moving);
   });
 
@@ -497,9 +515,11 @@ describe("R2725000 a card's look", () => {
       const others = new Set(versions.filter((version) => version !== id).flatMap((version) => [...on(version)]));
       expect([...on(id)].some((card) => !others.has(card)), id).toBe(true);
       expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(false);
-      // Each lands on cards of every type its clauses name and on Legendary and Mythic cards of any type.
+      // Each lands on cards of every type its clauses name and on Legendary and Mythic cards of any type, but Extended art
+      // on no Legendary, whose Default draws it (R3343000).
       const rarities = new Set([...on(id)].map((card) => CATALOG[card]?.rarity));
-      expect(rarities.has("Legendary") && rarities.has("Mythic"), id).toBe(true);
+      expect(rarities.has("Mythic"), id).toBe(true);
+      expect(rarities.has("Legendary"), id).toBe(id !== VERSION_EXTENDED_ART_ID);
     }
     // Extended art on Spells of every rarity; Pixel and Comic never on a Common card.
     const commons = (id: string): number => [...on(id)].filter((card) => CATALOG[card]?.rarity === "Common").length;
@@ -640,9 +660,10 @@ describe("R2725000 a card's look", () => {
     expect([VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID].map((version) => artPartOf(version))).toEqual(["whole", "whole"]);
     for (const version of [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID]) {
       const animated = `${version}-animated`;
-      // Neither is a full art (its words stay); R2944002, R3015000: its second level moves it, and no level signs it.
-      expect(isFullBleed(version), version).toBe(false);
-      expect(isFullBleed(animated), animated).toBe(false);
+      // Immersive is no full art (its words stay), and (R3343001) Prismatic is one at both levels; R2944002, R3015000:
+      // its second level moves it, and no level signs it.
+      expect(isFullBleed(version), version).toBe(version === VERSION_PRISMATIC_ID);
+      expect(isFullBleed(animated), animated).toBe(version === VERSION_PRISMATIC_ID);
       expect(lookOfLevel(animated), version).toEqual({ level: animated, version, animated: true, signed: false });
     }
   });
@@ -693,5 +714,95 @@ describe("R2725000 a card's look", () => {
     // Speciesist and Scratch Pad between them are offered all six.
     expect(PART_SIX.filter((first) => offeredOn(first, "core-002"))).toEqual([VERSION_NEON_ID, VERSION_WATERCOLOR_ID, VERSION_WOODCUT_ID]);
     expect(PART_SIX.filter((first) => offeredOn(first, "meditativeplus-026"))).toEqual([VERSION_NIGHT_ID, VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID]);
+  });
+});
+
+/** R3343000: the rarity a card's face prints: a token's printed one, any other card's own. */
+function faceRarityOf(id: string): string | null {
+  const def = CATALOG[id];
+  if (def === undefined) return null;
+  return def.rarity === "Token" ? (def.printedRarity ?? null) : def.rarity;
+}
+
+describe("R3343000 default looks", () => {
+  it("R3343000 a Mythic's Default draws Full art and a Legendary's Extended art, a token by its printed rarity, as the server exports it", () => {
+    const counts = { full: 0, extended: 0, tokens: 0 };
+    for (const id of Object.keys(CATALOG)) {
+      const rarity = faceRarityOf(id);
+      const expected = rarity === "Mythic" ? VERSION_FULL_ART_ID : rarity === "Legendary" ? VERSION_EXTENDED_ART_ID : null;
+      expect(defaultLookOf(id), id).toBe(expected);
+      if (expected === VERSION_FULL_ART_ID) counts.full += 1;
+      if (expected === VERSION_EXTENDED_ART_ID) counts.extended += 1;
+      if (expected !== null && CATALOG[id]?.rarity === "Token") counts.tokens += 1;
+    }
+    expect(counts.full).toBeGreaterThan(0);
+    expect(counts.extended).toBeGreaterThan(0);
+    expect(counts.tokens).toBeGreaterThan(0);
+    expect(defaultLookOf("meditative-049-1")).toBe(VERSION_FULL_ART_ID);
+    expect(defaultLookOf("classicplus-073-1")).toBe(VERSION_EXTENDED_ART_ID);
+    expect(defaultLookOf("core-999")).toBeNull();
+    // The registry marks the two first levels, and nothing else.
+    const marked = Object.entries(COSMETIC_LEVELS).filter(([, level]) => (level.defaultOn ?? []).length > 0);
+    expect(marked).toEqual([
+      [VERSION_FULL_ART_ID, { variant: "full-art", rank: 1, adds: "fullArt", defaultOn: ["Mythic"] }],
+      [VERSION_EXTENDED_ART_ID, { variant: "extended-art", rank: 1, adds: "art", defaultOn: ["Legendary"] }],
+    ]);
+  });
+
+  it("R3343000 a default look is offered nowhere on its cards, and the level above it is next with nothing owned", () => {
+    const nothing = (): boolean => false;
+    for (const def of COLLECTIBLE) {
+      const shown = defaultLookOf(def.id);
+      if (shown === null) continue;
+      expect(offeredOn(shown, def.id), `${shown} on ${def.id}`).toBe(false);
+      const above = ladderOf(levelOf(shown)?.variant ?? "")[1];
+      if (above === undefined) throw new Error(`${shown} has no level above it`);
+      expect(isNextLevel(above, def.id, nothing), `${above} on ${def.id}`).toBe(true);
+      // Its variant is listed wherever a level above it is offered.
+      const variant = levelOf(shown)?.variant ?? "";
+      expect(variantsOn(def.id).includes(variant), `${variant} on ${def.id}`).toBe(levelsOn(def.id, variant).length > 0);
+      expect(levelsOn(def.id, variant).includes(shown), `${variant} on ${def.id}`).toBe(false);
+    }
+    // Ceaseless Void, a Mythic: Full art starts at its animated level; its signed one still needs that.
+    expect(levelsOn("core-100", "full-art")).toEqual([VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID]);
+    expect(isNextLevel(VERSION_FULL_ART_SIGNED_ID, "core-100", nothing)).toBe(false);
+    // Silly Silas, a Legendary: Extended art is its animated level alone.
+    expect(levelsOn("core-052", "extended-art")).toEqual([`${VERSION_EXTENDED_ART_ID}-animated`]);
+    // Below Legendary nothing changes: Full art's animated level still needs its first.
+    expect(isNextLevel(VERSION_FULL_ART_ANIMATED_ID, "core-008", nothing)).toBe(false);
+    // Full art stays offered on a Legendary its share takes, Extended art on a Mythic.
+    expect(offeredOn(VERSION_FULL_ART_ID, "classicplus-012")).toBe(true);
+    expect(offeredOn(VERSION_EXTENDED_ART_ID, "meditativeplus-026")).toBe(true);
+  });
+
+  it("R3343001 lookOn: the Default draws the default look, still and animated, and the setting keeps a Mythic's normal face when off", () => {
+    // Ceaseless Void, a Mythic.
+    expect(lookOn("core-100", null, true)).toEqual({ level: null, version: VERSION_FULL_ART_ID, animated: false, signed: false });
+    expect(lookOn("core-100", VERSION_ANIMATED_ID, true)).toEqual({ level: VERSION_ANIMATED_ID, version: VERSION_FULL_ART_ID, animated: true, signed: false });
+    expect(lookOn("core-100", null, false)).toEqual(NORMAL_LOOK);
+    expect(lookOn("core-100", VERSION_ANIMATED_ID, false)).toEqual(lookOfLevel(VERSION_ANIMATED_ID));
+    // A level of its own wins: Prismatic is Prismatic.
+    expect(lookOn("core-100", VERSION_PRISMATIC_ID, true)).toEqual(lookOfLevel(VERSION_PRISMATIC_ID));
+    // Silly Silas, a Legendary, keeps its Extended art whatever the setting.
+    for (const fullArtCards of [true, false]) {
+      expect(lookOn("core-052", null, fullArtCards)).toEqual({ level: null, version: VERSION_EXTENDED_ART_ID, animated: false, signed: false });
+      expect(lookOn("core-052", VERSION_ANIMATED_ID, fullArtCards)).toEqual({ level: VERSION_ANIMATED_ID, version: VERSION_EXTENDED_ART_ID, animated: true, signed: false });
+    }
+    // Below Legendary the Default is the normal face.
+    for (const def of COLLECTIBLE) {
+      if (defaultLookOf(def.id) !== null) continue;
+      expect(lookOn(def.id, null, true), def.id).toEqual(NORMAL_LOOK);
+      expect(lookOn(def.id, VERSION_ANIMATED_ID, true), def.id).toEqual(lookOfLevel(VERSION_ANIMATED_ID));
+    }
+  });
+
+  it("R3343001 Prismatic is full bleed at both levels", () => {
+    const animated = `${VERSION_PRISMATIC_ID}-animated`;
+    expect(levelOf(VERSION_PRISMATIC_ID)).toEqual({ variant: "prismatic", rank: 1, adds: "fullArt" });
+    expect(isFullBleed(VERSION_PRISMATIC_ID)).toBe(true);
+    expect(isFullBleed(animated)).toBe(true);
+    expect(artPictureOf(VERSION_PRISMATIC_ID)).toBe("prismatic");
+    expect(artPictureOf(animated)).toBe("prismatic");
+    expect(lookOfLevel(animated)).toEqual({ level: animated, version: VERSION_PRISMATIC_ID, animated: true, signed: false });
   });
 });
