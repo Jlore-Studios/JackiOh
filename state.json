@@ -17333,7 +17333,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-06T23:43:37Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:440d9762-1794045709",
+      "run_id": "42362223440",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T10:02:15Z",
       "stop_requested": false,
