@@ -17159,7 +17159,7 @@
       "provider": "claude-2",
       "queued_at": "2026-11-07T17:05:52Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:76b20ff7-1794090211",
+      "run_id": "42420443670",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
