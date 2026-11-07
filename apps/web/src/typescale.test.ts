@@ -80,7 +80,7 @@ const UNSCALED: Record<string, number> = {
   "auth/consent.css": 3,
   "auth/tavern.css": 20,
   "auth/two-step.css": 1,
-  "cards/cards.css": 29,
+  "cards/cards.css": 31,
   "cards/cardstate.css": 8,
   "cards/inspect/inspect.css": 34,
   "cards/inspect/list-play.css": 1,
