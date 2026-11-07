@@ -6,14 +6,24 @@
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { animTestid, planEntries, type AnimationEntry } from "../../../game/animations.ts";
+import { SET_PIECE_HOLD_CAP_MS, animTestid, planEntries, type AnimationEntry } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
 import { frac } from "../../build.ts";
-import { FX_INTENSITY_SCALE, FX_MAGI_BOOTS, FX_MAGI_STAGGER, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_WARP_FROM } from "../../constants.ts";
+import {
+  FX_INTENSITY_SCALE,
+  FX_MAGI_BOOTS,
+  FX_MAGI_STAGGER,
+  FX_MAX_PARTICLE_LIFE_MS,
+  FX_MAX_TAIL_MS,
+  FX_SHIP_ARRIVAL_BEATS,
+  FX_SHIP_DOME_TRAUMA,
+  FX_SHIP_LOCK_TRAUMA,
+  FX_WARP_FROM,
+} from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { createFxMemory } from "../../memory.ts";
-import { timesOf } from "../../motifs/build.ts";
+import { motifScale, timesOf } from "../../motifs/build.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
@@ -68,7 +78,14 @@ const PLAYS: Readonly<Record<string, (player: PlayerId, instanceId: string) => G
     summoned(player, "m3", "stinkyscape-018-3", "backrow", 5),
     resolved(player, id, MAGI),
   ],
-  [WARP]: (player, id) => [played(player, id, WARP), summoned(player, "bs", "stinkyscape-t-shield-layer", "units", 3), resolved(player, id, WARP)],
+  // R3336000: the Battleship's three layers, bottom first, into one zone (R1842000).
+  [WARP]: (player, id) => [
+    played(player, id, WARP),
+    summoned(player, "bs1", "stinkyscape-t-meltdown-layer", "units", 3),
+    summoned(player, "bs2", "stinkyscape-t-propagation-layer", "units", 3),
+    summoned(player, "bs3", "stinkyscape-t-shield-layer", "units", 3),
+    resolved(player, id, WARP),
+  ],
 };
 
 /** The cues of the entries holding `type`. */
@@ -149,22 +166,54 @@ describe("R2797000 Stinkyscape's Flourishes", () => {
     expect(shakes).toEqual([1, 0, 0, 0]);
   });
 
-  it("R2797000 battleshipWarp warps the Battleship in from the board's top edge in starlight, landing in exhaust, once a play", () => {
+  it("R2797000 R3336000 battleshipWarp warps the Battleship in as three beats, one per layer: the keel in starlight, the hangar locking on, the superstructure's dome", () => {
     const view = fullBoardView();
-    const stream = [...(PLAYS[WARP]?.("p1", "ex") ?? []).slice(0, 2), summoned("p1", "di", "stinkyscape-t-drone-interceptor", "units", 4), resolved("p1", "ex", WARP)];
+    const stream = [...(PLAYS[WARP]?.("p1", "ex") ?? []).slice(0, 4), summoned("p1", "di", "stinkyscape-t-drone-interceptor", "units", 4), resolved("p1", "ex", WARP)];
     const results = planAll(stream, view);
-    const [first, second] = cuesOn(results, "summoned");
-    const t = timesOf(results.find(({ entry }) => entry.events.some((event) => event.type === "summoned"))?.entry.durationMs ?? 0);
+    const [keel, hangar, bridge, drone] = cuesOn(results, "summoned");
+    const D = results.find(({ entry }) => entry.events.some((event) => event.type === "summoned"))?.entry.durationMs ?? 0;
+    const t = timesOf(D);
+    // The card's motif scale (its rarity and cost) multiplies each shake, as it does every beat of the warp.
+    const scale = motifScale(WARP, view, FX_INTENSITY_SCALE.normal);
     const zoneId = testid.zone("you", "units", 3);
     const zone = tid(zoneId);
-    const shot = first?.find((cue) => cue.kind === "shot");
+    // Beat 1: today's warp, from the top edge, landing in exhaust.
+    const shot = keel?.find((cue) => cue.kind === "shot");
     expect(shot).toEqual(expect.objectContaining({ shot: { motion: "bolt", trail: "star" }, from: tid(testid.board, FX_WARP_FROM), to: zone, delayMs: t.T, flightMs: t.L - t.T }));
-    const presets = (first ?? []).flatMap((cue) => (cue.kind === "burst" && cue.at.kind === "testid" && cue.at.testid === zoneId ? [`${cue.preset}@${String(cue.delayMs)}`] : []));
+    const presets = (keel ?? []).flatMap((cue) => (cue.kind === "burst" && cue.at.kind === "testid" && cue.at.testid === zoneId ? [`${cue.preset}@${String(cue.delayMs)}`] : []));
     expect(presets).toEqual(expect.arrayContaining([`star@${String(t.G)}`, `exhaust@${String(t.L)}`, `star@${String(t.Li)}`]));
-    expect(first?.some((cue) => cue.kind === "ring" && cue.preset === "star" && cue.delayMs === t.T)).toBe(true);
-    expect(first?.some((cue) => cue.kind === "shake" && cue.delayMs === t.L)).toBe(true);
-    // The second summon of the play keeps its own row alone.
-    expect(second?.some((cue) => cue.kind === "shot")).toBe(false);
+    expect(keel?.some((cue) => cue.kind === "ring" && cue.preset === "star" && cue.delayMs === t.T)).toBe(true);
+    expect(keel?.some((cue) => cue.kind === "shake" && cue.delayMs === t.L)).toBe(true);
+    // Beat 2: two bolts from above the zone's corners lock onto it, with a ring, a spark burst and the lock's shake.
+    const locks = (hangar ?? []).filter((cue) => cue.kind === "shot");
+    expect(locks.map((cue) => (cue.kind === "shot" ? cue.from : null))).toEqual([tid(zoneId, { x: 0.1, y: -0.4 }), tid(zoneId, { x: 0.9, y: -0.4 })]);
+    for (const cue of locks) expect(cue).toEqual(expect.objectContaining({ to: zone, delayMs: t.T, flightMs: t.L - t.T }));
+    expect(hangar?.some((cue) => cue.kind === "ring" && cue.delayMs === t.L)).toBe(true);
+    expect(hangar?.some((cue) => cue.kind === "burst" && cue.preset === "spark" && cue.delayMs === t.L)).toBe(true);
+    expect(hangar?.some((cue) => cue.kind === "shake" && cue.delayMs === t.L && cue.trauma === Math.min(1, FX_SHIP_LOCK_TRAUMA * scale))).toBe(true);
+    expect(hangar?.some((cue) => cue.kind === "burst" && cue.preset === "exhaust")).toBe(false);
+    // Beat 3: the superstructure drops in and its dome flares over the zone.
+    expect(bridge?.some((cue) => cue.kind === "shot" && cue.from.kind === "testid" && cue.from.testid === zoneId && cue.to.kind === "testid" && cue.to.testid === zoneId)).toBe(true);
+    expect(bridge).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "shield", size: "full", at: zone, delayMs: t.L })]));
+    expect(bridge?.some((cue) => cue.kind === "shake" && cue.delayMs === t.L && cue.trauma === Math.min(1, FX_SHIP_DOME_TRAUMA * scale))).toBe(true);
+    // The three beats differ, and a fourth summon of the play keeps its own row alone.
+    expect(new Set([keel, hangar, bridge].map((cues) => JSON.stringify(cues))).size).toBe(FX_SHIP_ARRIVAL_BEATS);
+    expect(drone?.some((cue) => cue.kind === "shot")).toBe(false);
+  });
+
+  it("R3336000 the arrival's three beats, each in its own entry, fit one set piece's hold (SET_PIECE_HOLD_CAP_MS)", () => {
+    const results = planAll(PLAYS[WARP]?.("p1", "ex") ?? [], fullBoardView());
+    const beats = results.filter(({ entry }) => entry.events.some((event) => event.type === "summoned"));
+    expect(beats).toHaveLength(FX_SHIP_ARRIVAL_BEATS);
+    // The beats run one after the next: the last cue of the last ends this long after the first begins.
+    let start = 0;
+    let end = 0;
+    for (const { entry, cues } of beats) {
+      end = Math.max(end, start + Math.max(...cues.map((cue) => endOf(cue))));
+      start += entry.durationMs;
+    }
+    expect(end).toBeGreaterThan(0);
+    expect(end).toBeLessThanOrEqual(SET_PIECE_HOLD_CAP_MS);
   });
 
   it("R200 R2797000 every cue starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for D in [120, 200, 400, 732, 1400]", () => {

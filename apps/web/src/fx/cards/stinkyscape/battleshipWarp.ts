@@ -38,7 +38,7 @@ export const battleshipWarp: CardRecipe = (event, p, play) => {
   if (event.type !== "summoned") return null;
   const own = p.entry.events.filter((candidate) => candidate.type === "summoned");
   // Which of the play's summons this is: `seen` counts this entry's own, the last of them being its tail.
-  const beat = play.seen.summoned - own.length + own.indexOf(event) + 1;
+  const beat = (play.seen.summoned ?? 0) - own.length + own.indexOf(event) + 1;
   if (beat < 1 || beat > FX_SHIP_ARRIVAL_BEATS) return null;
   const zone = targetFor(event, p.view);
   if (zone === null) return null;
