@@ -17093,7 +17093,7 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "round_tier": "strong",
-      "run_id": "pending:e0cb330e-1794075096",
+      "run_id": "42400095693",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
