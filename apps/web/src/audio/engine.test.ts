@@ -13,6 +13,7 @@ import {
   MUSIC_DUCK_GAIN,
   MUSIC_DUCK_SFX,
   PICKUP_MIN_GAP_MS,
+  QUIET_SFX_GAIN,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
   VOICE_DECODED_MAX,
@@ -1854,6 +1855,27 @@ describe("background: the page hides mid-game and comes back", () => {
     await settle();
     const heard = audio.startedSources().filter((n) => audio.reaches(n, bus.sfx));
     expect(heard.length).toBeGreaterThan(0);
+    expect(audio.violations).toEqual([]);
+  });
+});
+
+describe("R3348001 a quiet cue", () => {
+  it("R3348001 a quiet cue's gain is its recipe's times QUIET_SFX_GAIN, and a plain one keeps the recipe's", () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    const cueGain = (from: number): number => {
+      const [cue] = audio.nodes.slice(from).filter((n) => n.kind === "gain" && n.connections.includes(bus.sfx));
+      return must(cue, "the cue's gain").param("gain").settled();
+    };
+
+    let before = audio.nodes.length;
+    expect(r.engine.playSfx("tapStone", { sandBuild: 2 })).toBe(true);
+    expect(cueGain(before)).toBeCloseTo(SFX.tapStone.gain, 9);
+
+    before = audio.nodes.length;
+    expect(r.engine.playSfx("tapStone", { sandBuild: 2, quiet: true })).toBe(true);
+    expect(cueGain(before)).toBeCloseTo(SFX.tapStone.gain * QUIET_SFX_GAIN, 9);
     expect(audio.violations).toEqual([]);
   });
 });

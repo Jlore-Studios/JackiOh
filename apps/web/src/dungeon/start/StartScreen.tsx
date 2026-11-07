@@ -134,12 +134,13 @@ function SavedRun({ dungeon, onEnter }: StartScreenProps): ReactElement {
             onKeyDown={cancelOnEscape}
           >
             <p id={questionId}>{t("Abandon this run? It ends here and cannot be undone.")}</p>
+            {/* R3221000: the safe choice first, holding the focus, and the act last. */}
             <div className="dungeon-actions">
-              <button type="button" data-testid={dungeonTestid.abandonConfirm} onClick={dungeon.abandon}>
-                {t("Confirm")}
-              </button>
               <button type="button" data-testid={dungeonTestid.abandonCancel} autoFocus onClick={cancel}>
                 {t("Cancel")}
+              </button>
+              <button type="button" data-testid={dungeonTestid.abandonConfirm} onClick={dungeon.abandon}>
+                {t("Confirm")}
               </button>
             </div>
           </div>

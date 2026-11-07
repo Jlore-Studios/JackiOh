@@ -279,6 +279,21 @@ export type FxDoctrineCue = { kind: "doctrine"; doctrine: WarDoctrine; text: str
 export type FxWreckCue = { kind: "wreck"; art: string; at: FxAnchor; breakMs: number; turn: number; delayMs: number; durationMs: number };
 /** R3334003: a brief scorch over the zone a Starship fell in. */
 export type FxScorchCue = { kind: "scorch"; at: FxAnchor; delayMs: number; durationMs: number };
+/**
+ * R3336000: a Drone Battleship's layer over it, `at`: its armor plates glowing down as the Shield took a hit
+ * ("plates", `count` of them, the first `lit` bright), or a bay of the Propagation layer opening ("bay": two
+ * doors sliding apart, `count` lights staying on while drones remain). It names no card (R202).
+ */
+export type FxShipCue = {
+  kind: "ship";
+  move: "plates" | "bay";
+  at: FxAnchor;
+  tint: FxTint;
+  count: number;
+  lit: number;
+  delayMs: number;
+  durationMs: number;
+};
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -347,6 +362,7 @@ export type FxDomCue =
   | FxTakeoverCue
   | FxSetPieceCue
   | FxLaunchCue
+  | FxShipCue
   | FxModuleCue
   | FxWeldCue
   | FxCinematicCue

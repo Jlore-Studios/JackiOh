@@ -21,13 +21,11 @@ import {
   PREVIEW_EXTENDED_WIDTH_PX,
   PREVIEW_GLOSSARY_GAP_PX,
   PREVIEW_GLOSSARY_WIDTH_PX,
-  PREVIEW_HEIGHT_PX,
-  PREVIEW_MAX_VIEWPORT_SHARE,
   PREVIEW_REFS_WIDTH_PX,
 } from "./constants.ts";
 import { Extended } from "./Extended.tsx";
 import { Glossary } from "./Glossary.tsx";
-import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
+import { placePreview, previewHeight, type PreviewPrefer, type Rect } from "./placement.ts";
 import { Flavour, showsEasterEgg } from "./Flavour.tsx";
 import { flavourFor } from "../flavour.ts";
 import { InspectNote } from "./InspectNote.tsx";
@@ -50,7 +48,7 @@ function viewportSize(): { width: number; height: number } {
 
 /** The preview's size before it has been laid out, from the same numbers inspect.css uses. */
 function estimatedSize(withGlossary: boolean, withRefs: boolean, withExtended: boolean): { width: number; height: number } {
-  const height = Math.min(PREVIEW_HEIGHT_PX, window.innerHeight * PREVIEW_MAX_VIEWPORT_SHARE);
+  const height = previewHeight(window.innerHeight);
   const cardWidth = height * FACE_ASPECT;
   const glossary = withGlossary ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_GLOSSARY_WIDTH_PX : 0;
   const refs = withRefs ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_REFS_WIDTH_PX : 0;
@@ -87,7 +85,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
   });
 
   const faceBox = (
-    <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
+    <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: previewHeight(window.innerHeight) }}>
       <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
       <InspectNote note={note} />
     </div>

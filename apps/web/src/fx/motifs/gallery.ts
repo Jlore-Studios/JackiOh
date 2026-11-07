@@ -442,9 +442,16 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       row: "backrow" as const,
       lane: GALLERY_MAGI_LANE + k,
     })),
-  battleshipWarp: (_view, _instanceId, player) => [
-    { type: "summoned", player, instanceId: "fx-battleship", defId: "stinkyscape-t-shield-layer", row: "units", lane: GALLERY_WARP_LANE },
-  ],
+  // R3336000: the Drone Battleship's three layers, summoned bottom first into one zone (R1842000).
+  battleshipWarp: (_view, _instanceId, player) =>
+    (["stinkyscape-t-meltdown-layer", "stinkyscape-t-propagation-layer", "stinkyscape-t-shield-layer"] as const).map((defId, k) => ({
+      type: "summoned" as const,
+      player,
+      instanceId: `fx-battleship-${k + 1}`,
+      defId,
+      row: "units" as const,
+      lane: GALLERY_WARP_LANE,
+    })),
   duoBond: (view, _instanceId, player) => {
     const mine = unitsOf(player === view.viewer ? view.you : view.opponent)[0];
     return mine === undefined ? [] : [{ type: "marked", instanceId: mine.instanceId, mark: DUO_MARK, color: DUO_MARK_COLOR, added: true }];

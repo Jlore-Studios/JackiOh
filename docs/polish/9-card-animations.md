@@ -585,6 +585,37 @@ the card wherever the board draws it. A phone (narrower than `FX_MOBILE_WIDTH`) 
 | Stinkyscape T-AI-5 Launch Sequencer | `cast: tithe`, Tech/rocket | "Your Starship launch costs (1)": a glint on the badge and on the Dormant Starship whose launch it prices |
 | the Dormant Starship | signature, entrance `shipyardRollout` | it rolls out of its shipyard: weld sparks over its hull, then a ring, dust and a slam (R3334004) |
 
+## The Drone Battleship
+
+Stinkyscape #36 Drone Core X summons the Drone Battleship as three tokens in one zone, bottom first (R1842000),
+and R3336000 makes them one great ship in three decks: the reactor keel (Meltdown), the hangar decks
+(Propagation) and the command superstructure (Shield). Its art is `cards/art/stinkyscape.ts`'s (a layer on the
+board draws its own deck and every deck beneath it, so the top card shows the ship as far as it stands); its
+arrival is Drone Core X's `battleshipWarp`, one beat per layer summoned; every other beat is
+`fx/battleship.ts`'s (`planBattleship`), keyed on public events and the layers the view draws (R202), and each has
+its sound in `audio/battleshipCues.ts`. The three layers' table entries are `none: Battleship planner`, since the
+Shield's guard, a break and the blast belong to no hook; signature entries wait for #3332.
+
+| Beat | Event | What it draws | Sound |
+|---|---|---|---|
+| Arrival, the keel | Drone Core X's 1st `summoned` | the warp's starlight streak from the board's top edge, exhaust, rings, a shake | `horn` |
+| Arrival, the hangar | its 2nd | two bolts from above the zone's corners lock onto it, a ring, sparks, a shake | `lock` |
+| Arrival, the superstructure | its 3rd | a bolt from above and the dome's full shield, a shake | `armorRing` |
+| The shield takes the hit | `redirected` onto the Shield | a bolt from the protected target to the dome, which flares and ripples; a shake | `domeFlare` |
+| The plates | the `damageAbsorbed` or `damage` the redirect sent | the dome flares again; `ship` cue `plates`: one per point of Armor (at most `FX_SHIP_PLATES_MAX`), as many lit as Armor took | `domeFlare` |
+| An ordinary hit | any other `damage` or `damageAbsorbed` on the Shield | a sheen, a small shield on the dome, a light shake | `armorClank` |
+| A bay opens | `activated` on the Propagation layer | `ship` cue `bay`: two doors slide apart and a light stays on for each bay with a use left | `bayDoor` |
+| A drone launches | a drone `summoned` inside that Activate | an Interceptor shot fast from the bay to its tile; a Corvette rolled out slow in exhaust, landing with a shake | `whoosh`, `summon` large |
+| The core pulses | the Meltdown's `damage` to itself | a fire ring and an ember burst, a shake: all grow with the share of its health gone | `reactorPulse` 1 to 10 |
+| The reactor fires | the Meltdown's `attackDeclared` | a beam from the core to the target | `burn` |
+| The blast | the Meltdown's `destroyed` | two rings, fire, embers, shards, rays and the hardest shake | `reactorPulse` 10 |
+| A layer breaks | a Shield's or Propagation layer's `destroyed` with `buried` above 0 | a crack and a burst of plates, a shake, then a sheen and a ring over the zone as the next deck's lights come up | `deckShear` |
+
+The arrival is three entries of the runner's summon time (about 1.65 s with their tails), tested to end inside
+`SET_PIECE_HOLD_CAP_MS`, and not one held set piece. A Battleship that Call to Chaos (Scape Edition) or Anomaly
+Found! summons gets the layer beats and no arrival. Under Reduce Motion the ship cue draws nothing. `e2e/cypress/component/battleship.cy.tsx` plays every
+beat at 1280x720 and at 390x844, and `fx-phone-frame.cy.tsx` holds the arrival to `FX_PHONE_FRAME_BUDGET_MS`.
+
 ## Examples
 
 Twelve cards across the sets wear the first motifs, as the pattern for the passes:

@@ -2,11 +2,13 @@
 // inspect's sole slot (B23); entries are faces/counts or unopened backs (R312). B5 E11: the board
 // supplies `play` only for `legalActions`; this client only reports it (CLAUDE.md rule 7). R1571000:
 // where "Play" would be, an unplayable face says why, unclickable. R2121000: a swipe down closes it.
+// R3221000: it closes by its ✕ at the top right.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { DialogClose } from "../../game/Dialog.tsx";
 import { CardBack } from "../CardBack.tsx";
 import { CardFace } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
@@ -303,7 +305,7 @@ export function CardListSheet({
   }, [opened]);
 
   return createPortal(
-    <div className="inspect-layer inspect-layer--list" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--list" {...modal.layerProps}>
       <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-list-sheet"
@@ -358,12 +360,13 @@ export function CardListSheet({
           </div>
         )}
 
-        <div className="inspect-list-actions">
-          {openedPlay !== undefined && openedEntry !== undefined ? (
-            <PlayButton entry={openedEntry} play={openedPlay} onClose={onClose} />
-          ) : null}
-          {openedReason === undefined ? null : <PlayReason reason={openedReason} />}
-          {opened !== undefined ? (
+        {/* The row of answers to a face opened large; the grid has none. */}
+        {opened === undefined ? null : (
+          <div className="inspect-list-actions">
+            {openedPlay !== undefined && openedEntry !== undefined ? (
+              <PlayButton entry={openedEntry} play={openedPlay} onClose={onClose} />
+            ) : null}
+            {openedReason === undefined ? null : <PlayReason reason={openedReason} />}
             <button
               ref={backButton}
               type="button"
@@ -376,11 +379,10 @@ export function CardListSheet({
             >
               {t("All cards")}
             </button>
-          ) : null}
-          <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
-            {t("Close")}
-          </button>
-        </div>
+          </div>
+        )}
+        {/* R3221000: the one ✕ every dialog closes by, at the top right. */}
+        <DialogClose buttonRef={closeButton} testid={INSPECT_CLOSE} {...modal.dismissProps} />
       </div>
     </div>,
     document.body,

@@ -24,6 +24,8 @@ const S2 = {
   FX_FUSE_FLIGHT_FRACTION: 0.5,
   FX_SLAM_AT: 0.6,
   FX_HOLD_MAX_MS: 6000,
+  FX_HOLD_TURN_DEG: 12, // #3347
+  FX_HOLD_TURN_PX: 240, // #3347
   FX_CONCEAL_AT: 0.9,
   FX_LUNGE_STANDOFF: 0.55,
   FX_LUNGE_MIN_PX: 26,
@@ -315,6 +317,25 @@ const S2 = {
   FX_STARSHIP_TAIL_MS: 400,
   FX_STARSHIP_STILL_MS: 1_600,
   FX_STARSHIP_RAM_TURN_DEG: 30,
+  FX_SHIP_PLATES_MAX: 8,
+  FX_SHIP_DOME_AT: { x: 0.5, y: 0.22 },
+  FX_SHIP_CORE_AT: { x: 0.5, y: 0.62 },
+  FX_SHIP_BAY_AT: { x: 0.5, y: 0.5 },
+  FX_SHIP_RIPPLES: 2,
+  FX_SHIP_RIPPLE_STEP: 0.2,
+  FX_SHIP_LAUNCH_AT: 0.1,
+  FX_SHIP_INTERCEPTOR_FLIGHT: 0.45,
+  FX_SHIP_CORVETTE_FLIGHT: 0.85,
+  FX_SHIP_LIGHTS_AT: 0.5,
+  FX_SHIP_TAIL_MS: 400,
+  FX_SHIP_ARRIVAL_BEATS: 3,
+  FX_SHIP_LOCK_TRAUMA: 0.35,
+  FX_SHIP_DOME_TRAUMA: 0.3,
+  FX_SHIP_HIT_TRAUMA: 0.25,
+  FX_SHIP_CORVETTE_TRAUMA: 0.2,
+  FX_SHIP_TICK_TRAUMA: 0.3,
+  FX_SHIP_BREAK_TRAUMA: 0.45,
+  FX_SHIP_BLAST_TRAUMA: 0.95,
   FX_TERMINUS_BEATS_FROM: 0.25,
   FX_TERMINUS_BEATS_TO: 0.85,
   FX_TERMINUS_TAIL_MS: 600,
@@ -392,6 +413,12 @@ describe("S2 the effects constants", () => {
       constants.FX_STARSHIP_IGNITE_AT,
       constants.FX_STARSHIP_LIFT_AT,
       constants.FX_STARSHIP_LAND_AT,
+      // R3336000: the Battleship's ripple step, drone launch and flights, and the lights of the deck beneath.
+      constants.FX_SHIP_RIPPLE_STEP,
+      constants.FX_SHIP_LAUNCH_AT,
+      constants.FX_SHIP_INTERCEPTOR_FLIGHT,
+      constants.FX_SHIP_CORVETTE_FLIGHT,
+      constants.FX_SHIP_LIGHTS_AT,
       // R3338000: the Terminus set pieces' beats and Last Word's countdown.
       constants.FX_TERMINUS_BEATS_FROM,
       constants.FX_TERMINUS_BEATS_TO,
@@ -411,6 +438,13 @@ describe("S2 the effects constants", () => {
     }
     // R2801000: the launch's tail stays inside FX_MAX_TAIL_MS (R200).
     expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    // R3336000: the Battleship's tail stays inside FX_MAX_TAIL_MS (R200), a Corvette flies slower than an Interceptor, and the shake stays a trauma.
+    expect(constants.FX_SHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_SHIP_CORVETTE_FLIGHT).toBeGreaterThan(constants.FX_SHIP_INTERCEPTOR_FLIGHT);
+    for (const trauma of [constants.FX_SHIP_LOCK_TRAUMA, constants.FX_SHIP_DOME_TRAUMA, constants.FX_SHIP_HIT_TRAUMA, constants.FX_SHIP_CORVETTE_TRAUMA, constants.FX_SHIP_TICK_TRAUMA, constants.FX_SHIP_BREAK_TRAUMA]) {
+      expect(trauma).toBeLessThan(constants.FX_SHIP_BLAST_TRAUMA);
+    }
+    expect(constants.FX_SHIP_BLAST_TRAUMA).toBeLessThanOrEqual(1);
     // R3338000: a Terminus set piece's beats run in order inside its span, and its tail inside FX_MAX_TAIL_MS.
     expect(constants.FX_TERMINUS_BEATS_FROM).toBeLessThan(constants.FX_TERMINUS_BEATS_TO);
     expect(constants.FX_TERMINUS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);

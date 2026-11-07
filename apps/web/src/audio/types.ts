@@ -24,6 +24,10 @@ export type SfxId =
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
   | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // #3347: cards that move like cards (game/drag/cues.ts, game/Game.tsx's opening, audio/director.ts's riffle).
+  | "pickUp" | "dragOver" | "drop" | "returnToHand" | "deal" | "riffle"
+  // R3336000: the Drone Battleship's horn, dome flare, bay door, reactor pulse and deck shear.
+  | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
   | "organ"
   // R3334000–R3334003: the Starship's moments: a module docking, the launch's ignition and roar, a
@@ -44,8 +48,9 @@ export type SfxParams = {
   /**
    * damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP].
    * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
-   * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1). organ
-   * (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1). starshipDock (R3334000):
+   * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
+   * reactorPulse: how close the Battleship's Meltdown layer is to its blast, 1 (a tick) to 10 (the blast).
+   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1). starshipDock (R3334000):
    * the ship's pieces once the module has docked, its hum a step higher for each, clamped (default 1).
    */
   amount?: number;
@@ -75,6 +80,8 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
+  quiet?: boolean;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */

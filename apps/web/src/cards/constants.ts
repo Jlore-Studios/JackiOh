@@ -35,8 +35,9 @@ export const FIT_FLOOR_PX = 9;
 export const FACE_TEXT_LIMIT = { charsPerLine: 28, lines: 6 } as const;
 
 /**
- * The same for the hover preview's face (271 px wide, PREVIEW_HEIGHT_PX tall). A face in play prints
- * only there, so a Summit's next Ascent line and a fused or Buffed card are held to it.
+ * The same for the hover preview's face (271 px wide, 380 px tall, as it was measured: #3341 draws it larger, which
+ * only gives its lines room). A face in play prints only there, so a Summit's next Ascent line and a fused or Buffed
+ * card are held to it.
  */
 export const PREVIEW_TEXT_LIMIT = { charsPerLine: 45, lines: 10 } as const;
 
@@ -176,3 +177,31 @@ export const SHIPYARD_IDLE_WELD_MS = 900;
 
 /** R3334000: how many welding sparks the shipyard's idle throws, each a share of a flicker behind the last (ShipyardIdle.tsx). */
 export const SHIPYARD_IDLE_SPARKS = 5;
+
+/**
+ * #3341: how much a small face's art (below FACE_TEXT_MIN_HEIGHT_PX, a card as small as the board draws it) is lifted
+ * so a picture holds its colour at that size: `filter: saturate() contrast()`, a factor each, 1 being none. Never on a
+ * Radiant face's gold window (R2725004). Mirrored in cards.css's @container rule.
+ */
+export const ART_SMALL_FACE_LIFT = { saturate: 1.15, contrast: 1.06 } as const;
+
+/**
+ * #3341: how far a normal board unit's art runs down its face, as a share of one gem's height (`--mf-stat`) kept
+ * clear of the foot: the art stops half a gem above the face's bottom edge, so the attack and health gems straddle its
+ * edge and the name plate lies on it. Mirrored in cards.css (`--mf-art-foot`).
+ */
+export const MINION_ART_FOOT_SHARE = 0.5;
+
+/**
+ * #3341: how far a small hand face's art window grows downward (in cqh, percent of the face's height), the name
+ * band and the rest following it down by as much (below FACE_TEXT_MIN_HEIGHT_PX the rules box is hidden, so the
+ * band gives up the room). Mirrored in cards.css's @container rule.
+ */
+export const HAND_ART_GROW_CQH = 4;
+
+/**
+ * #3341: the least a hand face's rules box shrinks to, in cqh (percent of the face's height), however short its text
+ * (fit.ts measures the text and cards.css gives the room it does not need to the art above). Two lines at the
+ * reading floor fit it.
+ */
+export const HAND_TEXT_BOX_MIN_CQH = 12;

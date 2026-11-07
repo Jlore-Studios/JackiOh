@@ -413,6 +413,12 @@ describe("the series screen", () => {
     expect(screen.getByTestId(seriesTestid.forfeitConfirm)).toBeInTheDocument();
     // R604: a ranked series' forfeit is a rated loss, and the confirm says so.
     expect(screen.getByRole("alertdialog")).toHaveTextContent("your rating moves as for a loss");
+    // R3221000: the safe choice comes first, the act last.
+    const answers = screen.getByRole("alertdialog").querySelectorAll("button");
+    expect([...answers].map((answer) => answer.getAttribute("data-testid"))).toEqual([
+      seriesTestid.forfeitCancel,
+      seriesTestid.forfeitConfirm,
+    ]);
     fireEvent.click(screen.getByTestId(seriesTestid.forfeitCancel));
     expect(screen.queryByTestId(seriesTestid.forfeitConfirm)).toBeNull();
     expect(vi.mocked(forfeitSeries)).not.toHaveBeenCalled();

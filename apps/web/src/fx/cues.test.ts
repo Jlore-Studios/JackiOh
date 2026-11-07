@@ -1779,6 +1779,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
   setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
   launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
+  ship: ["kind", "move", "at", "tint", "count", "lit", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
   // R3334000–R3334003: the Starship's moments.
   module: ["kind", "uri", "motion", "from", "to", "share", "landMs", "spin", "delayMs", "durationMs"],
@@ -2168,5 +2169,25 @@ describe("B9 projectiles carry the intensity as their density", () => {
     expect(at(FX_INTENSITY_SCALE.low)).toMatchObject({ density: FX_INTENSITY_SCALE.low });
     expect(at(FX_INTENSITY_SCALE.normal)).toMatchObject({ density: 1 });
     expect(at(FX_INTENSITY_SCALE.high)).toMatchObject({ density: FX_INTENSITY_SCALE.high });
+  });
+});
+
+describe("#3347 a mulligan's returned cards fly into the deck from their hand", () => {
+  const returned: GameEvent = { type: "shuffledIn", player: "p1", instanceId: "cW", defId: "core-070", position: 3 };
+
+  it("#3347 planned against a mulligan view, a shuffledIn's ghost starts at the hand of its seat", () => {
+    const cues = plan([returned], 300, { view: { ...fullBoardView(), phase: "mulligan" } });
+    expect(cues).toContainEqual(ghost(tid("hand-you"), tid("library-you"), 300));
+  });
+
+  it("#3347 the opponent's returned cards fly from their hand, a back", () => {
+    const theirs: GameEvent = { type: "shuffledIn", player: "p2", instanceId: "hidden", defId: "hidden", position: 0 };
+    const cues = plan([theirs], 300, { view: { ...fullBoardView(), phase: "mulligan" } });
+    expect(cues).toContainEqual(ghost(tid("hand-opponent"), tid("library-opponent"), 300));
+  });
+
+  it("#3347 outside the mulligan a shuffledIn still comes from the middle of the screen", () => {
+    const cues = plan([returned], 300, { view: { ...fullBoardView(), phase: "main" } });
+    expect(cues).toContainEqual(ghost(CENTER, tid("library-you"), 300));
   });
 });

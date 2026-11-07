@@ -30,6 +30,10 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // #3347: cards that move like cards.
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
+  // R3336000: the Drone Battleship.
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   // R3338000: the Terminus set pieces' organ.
   "organ",
   // R3334000–R3334003: the Starship's moments.
@@ -121,6 +125,19 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // #3347: cards that move like cards.
+  pickUp: 90,
+  dragOver: 60,
+  drop: 140,
+  returnToHand: 200,
+  deal: 80,
+  riffle: 500,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
   // R3338000.
   organ: 2000,
   // R3334000–R3334003.

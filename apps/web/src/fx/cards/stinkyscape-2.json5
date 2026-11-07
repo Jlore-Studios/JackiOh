@@ -113,9 +113,9 @@
   "stinkyscape-t-dormant-starship": { signature: true, entrance: "shipyardRollout" }, // Dormant Starship
   "stinkyscape-t-drone-interceptor": "none: token", // Drone Interceptor
   "stinkyscape-t-drone-corvette": "none: token", // Drone Corvette
-  "stinkyscape-t-shield-layer": "none: token", // Drone Battleship (Shield Layer)
-  "stinkyscape-t-propagation-layer": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Battleship (Propagation Layer)
-  "stinkyscape-t-meltdown-layer": "none: token", // Drone Battleship (Meltdown Layer)
+  "stinkyscape-t-shield-layer": "none: Battleship planner", // Drone Battleship (Shield Layer)
+  "stinkyscape-t-propagation-layer": "none: Battleship planner", // Drone Battleship (Propagation Layer)
+  "stinkyscape-t-meltdown-layer": "none: Battleship planner", // Drone Battleship (Meltdown Layer)
   "stinkyscape-t-reknite": "none: token", // Reknite
   "stinkyscape-t-korrelite": { cast: { motif: "bolt", palette: "Hustle/ore" } }, // Korrelite
   "stinkyscape-t-gellium": { cast: { motif: "mend", palette: "Hustle/ore" } }, // Gellium

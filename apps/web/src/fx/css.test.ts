@@ -191,6 +191,7 @@ const DOM_KINDS = {
   doctrine: "fx-doctrine-in",
   wreck: "fx-wreck-in",
   scorch: "fx-scorch-in",
+  ship: "fx-ship-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');

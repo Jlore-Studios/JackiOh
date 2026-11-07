@@ -6,15 +6,16 @@
 // CLAUDE.md rule 7: the box keeps a draft to `CHAT_MAX_CHARS` and will not send an empty one, as
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
 // refusal is shown in its own words. A message is drawn as text, never as markup.
+// R3221000: a modal sheet, the one Dialog's: Escape, Back and its ✕ close it, and the focus starts in the box.
 
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { pageWake, pollWhileVisible } from "../game/net.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { navigate } from "../net/navigate.ts";
 import { findRoomLinkInText } from "../net/roomLink.ts";
@@ -61,9 +62,6 @@ type Outgoing = { key: string; body: string } & ({ state: "sending" } | { state:
 
 export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () => void }): ReactElement {
   useLocale();
-  // R2127000: Back closes the conversation as its ✕ does.
-  useBackLayer(onClose);
-  const titleId = useId();
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   /** A read of the newest page has answered: before one has, no messages is no empty conversation (#1898). */
   const [loaded, setLoaded] = useState(false);
@@ -162,10 +160,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     if (box !== null) box.scrollTop = box.scrollHeight;
   }, [newest, newestSend]);
 
-  useEffect(() => {
-    input.current?.focus({ preventScroll: true });
-  }, []);
-
   const loadEarlier = useCallback((): void => {
     if (earlier === null || loadingEarlier) return;
     setLoadingEarlier(true);
@@ -242,29 +236,22 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     readNow.current();
   };
 
+  // R2127000: Back closes the conversation as its ✕ does, and the board's own Escape (a selection, a
+  // prompt) does not reach the board while it is open (Dialog's keys).
   return (
-    <section
-      className="chat-panel"
-      data-testid={chatTestid.panel}
-      data-friend-id={friendId}
+    <Dialog
       role="dialog"
-      aria-labelledby={titleId}
-      onKeyDown={(event) => {
-        if (event.key !== "Escape") return;
-        // The board's own Escape (a selection, a prompt) is not this panel's to close.
-        event.stopPropagation();
-        onClose();
-      }}
+      sheet
+      title={<Named text={t("Chat with {name}")} name={friend.username} />}
+      onClose={onClose}
+      actions={[]}
+      testid={chatTestid.panel}
+      data={{ "data-friend-id": friendId }}
+      closeTestid={chatTestid.close}
+      closeLabel={t("Close the chat")}
+      className="chat-panel"
+      focus={input}
     >
-      <header className="chat-panel__head">
-        <h2 className="chat-panel__title" id={titleId}>
-          <Named text={t("Chat with {name}")} name={friend.username} />
-        </h2>
-        <button type="button" className="link-button" data-testid={chatTestid.close} aria-label={t("Close the chat")} onClick={onClose}>
-          ✕
-        </button>
-      </header>
-
       <ol className="chat-panel__messages" ref={list} aria-live="polite">
         {earlier !== null ? (
           <li className="chat-panel__earlier">
@@ -425,6 +412,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
           {t("Send")}
         </button>
       </form>
-    </section>
+    </Dialog>
   );
 }

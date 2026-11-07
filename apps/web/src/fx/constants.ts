@@ -16,6 +16,8 @@ export const FX_MIND_CONTROL_FLIGHT_FRACTION = 0.7;
 export const FX_FUSE_FLIGHT_FRACTION = 0.5;
 export const FX_SLAM_AT = 0.6;
 export const FX_HOLD_MAX_MS = 6000;           // a stage effect's safety cap; it normally ends when the board shows the next view (R200)
+export const FX_HOLD_TURN_DEG = 12;           // #3347: a stand-in flying in from the side starts turned this far toward its direction, and straightens as it lands
+export const FX_HOLD_TURN_PX = 240;           // #3347: the sideways distance from its zone at which a stand-in is turned the whole FX_HOLD_TURN_DEG
 export const FX_CONCEAL_AT = 0.9;             // an "after" conceal is set at 0.9 D, while the card's own motion still runs
 export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's center (< 1: they overlap)
 export const FX_LUNGE_MIN_PX = 26;            // = animations.css --lunge-distance (BUILD: at least 20 px)
@@ -377,6 +379,34 @@ export const FX_STARSHIP_STILL_MS = 1_600;
 // R3334002: a launched Starship with no weapons rams prow first, its lunge turned this many degrees
 // toward its target (jk-lunge's `--fx-lunge-turn`).
 export const FX_STARSHIP_RAM_TURN_DEG = 30;
+// R3336000: the Drone Battleship (fx/battleship.ts). The Shield's armor plates glow at most this many; where on
+// each layer's card its dome, its reactor core and its bay doors sit (fractions of the card).
+export const FX_SHIP_PLATES_MAX = 8;
+export const FX_SHIP_DOME_AT = { x: 0.5, y: 0.22 } as const;
+export const FX_SHIP_CORE_AT = { x: 0.5, y: 0.62 } as const;
+export const FX_SHIP_BAY_AT = { x: 0.5, y: 0.5 } as const;
+// R3336000: a hit the dome takes ripples this many rings, FX_SHIP_RIPPLE_STEP of the entry apart; a drone leaves
+// its bay at FX_SHIP_LAUNCH_AT of the entry and flies this much of it (an Interceptor fast, a Corvette heavy);
+// the deck beneath a breaking layer lights up at FX_SHIP_LIGHTS_AT.
+export const FX_SHIP_RIPPLES = 2;
+export const FX_SHIP_RIPPLE_STEP = 0.2;
+export const FX_SHIP_LAUNCH_AT = 0.1;
+export const FX_SHIP_INTERCEPTOR_FLIGHT = 0.45;
+export const FX_SHIP_CORVETTE_FLIGHT = 0.85;
+export const FX_SHIP_LIGHTS_AT = 0.5;
+// R3336000: a Battleship cue outlasts its entry by this much (inside FX_MAX_TAIL_MS, R200); the arrival is this
+// many beats, one per layer summoned (Drone Core X's warp, cards/stinkyscape/battleshipWarp.ts).
+export const FX_SHIP_TAIL_MS = 400;
+export const FX_SHIP_ARRIVAL_BEATS = 3;
+// R3336000: the board's shake: the hangar locking on, the dome's flare, an ordinary hit on the dome, a Corvette
+// landing, the reactor's pulse (times how far it has melted, 0 to 1), a deck shearing off and the reactor's blast.
+export const FX_SHIP_LOCK_TRAUMA = 0.35;
+export const FX_SHIP_DOME_TRAUMA = 0.3;
+export const FX_SHIP_HIT_TRAUMA = 0.25;
+export const FX_SHIP_CORVETTE_TRAUMA = 0.2;
+export const FX_SHIP_TICK_TRAUMA = 0.3;
+export const FX_SHIP_BREAK_TRAUMA = 0.45;
+export const FX_SHIP_BLAST_TRAUMA = 0.95;
 // R3338000: the Terminus cards' set pieces (fx/terminus/). A set piece's beats fall evenly from
 // FX_TERMINUS_BEATS_FROM to FX_TERMINUS_BEATS_TO of its span (its hold, or, unheld, its swallow); its cue
 // outlasts its entry by FX_TERMINUS_TAIL_MS (inside FX_MAX_TAIL_MS, R200), and under Reduce Motion its

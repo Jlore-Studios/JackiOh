@@ -138,7 +138,7 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </>
   ),
 
-  // Veil: over the art, clipped to the oval.
+  // Veil: over the art, clipped to its box.
   "Can't attack": () => (
     <Part className="kw-chains" anim>
       <g transform="rotate(38 50 50)">

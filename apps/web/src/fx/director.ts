@@ -19,6 +19,7 @@ import {
   FX_PARTICLE_CAP_MOBILE,
   FX_STARSHIP_RAM_TURN_DEG,
 } from "./constants.ts";
+import { dropPointOfTestid } from "../game/drag/landing.ts";
 import { landingBox, mountDomEffect, mountHold, type DomEffect, type DomEffectBoxes } from "./dom.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
@@ -243,6 +244,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "takeover":
       case "setPiece":
       case "launch":
+      case "ship":
       case "weld":
       case "cinematic":
       case "doctrine":
@@ -305,7 +307,13 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const sourceBox = source !== null ? boxOfElement(source) : null;
         const copied = sourceBox !== null ? source : null;
         // R502: an empty `from` still supplies the stand-in's origin.
-        const from = sourceBox ?? (source === null && cue.from !== null ? measure(cue.from) : null);
+        const measured = sourceBox ?? (source === null && cue.from !== null ? measure(cue.from) : null);
+        // #3347: a card dropped from a drag flies on from where the pointer let go, not from its place in the fan.
+        const dropPoint = cue.from !== null && cue.from.kind === "testid" ? dropPointOfTestid(cue.from.testid) : null;
+        const from =
+          dropPoint !== null && measured !== null
+            ? { x: dropPoint.x - measured.width / 2, y: dropPoint.y - measured.height / 2, width: measured.width, height: measured.height }
+            : measured;
         const parent = copied?.parentElement ?? null;
         const font = parent !== null ? (parent.ownerDocument.defaultView?.getComputedStyle(parent).fontSize ?? null) : null;
         // Track only board movement; translate same-size stand-ins without layout.

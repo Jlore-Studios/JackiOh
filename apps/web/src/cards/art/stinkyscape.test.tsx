@@ -16,8 +16,30 @@ import { SHIPYARD_LAMP, shipyardLampOf, STARSHIP_MODULES_MAX, starshipArtOf, sta
 import { moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf } from "./starshipModules.ts";
 import { points } from "./stinkyDraw.ts";
 import {
-  isStinkyscapeArt, shipyardIdleOf, STARSHIP_PIECES, starshipCenterPoint, starshipEnginePoints, starshipModuleIconSvg, starshipModuleSvg,
-  starshipMountPoints, starshipPicturePoint, starshipProwPoint, starshipSvg, stinkyscapeSvg, stinkySubject, tierOf, type StarshipPoint, type StinkyFamily,
+  isStinkyscapeArt,
+  SHIP_DRONE_IDS,
+  SHIP_LAYER_IDS,
+  SHIP_LAYERS,
+  shipArtOf,
+  shipDecksOf,
+  shipLayerOf,
+  shipyardIdleOf,
+  STARSHIP_PIECES,
+  starshipCenterPoint,
+  starshipEnginePoints,
+  starshipModuleIconSvg,
+  starshipModuleSvg,
+  starshipMountPoints,
+  starshipPicturePoint,
+  starshipProwPoint,
+  starshipSvg,
+  stinkyscapeSvg,
+  stinkySubject,
+  tierOf,
+  type ShipArt,
+  type ShipLayer,
+  type StarshipPoint,
+  type StinkyFamily,
 } from "./stinkyscape.ts";
 import { proceduralArtUri, starshipModuleIconUri, starshipModuleUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
@@ -438,6 +460,154 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
   });
 });
 
+describe("R3336000: the Drone Battleship's three layers are the decks of one ship", () => {
+  const LAYER_CARDS: Readonly<Record<ShipLayer, CardDef>> = {
+    meltdown: byName("Drone Battleship (Meltdown Layer)"),
+    propagation: byName("Drone Battleship (Propagation Layer)"),
+    shield: byName("Drone Battleship (Shield Layer)"),
+  };
+
+  function shipSvg(layer: ShipLayer, radiant: boolean, ship: ShipArt | null): string {
+    const card = LAYER_CARDS[layer];
+    return stinkyscapeSvg(card.id, card.name, card.tags, card.type, radiant, null, card.id, "whole", ship);
+  }
+
+  /** The decks an SVG draws, bottom first as it paints them, and the one marked its own. */
+  function decksOf(svg: string): { drawn: string[]; own: string[] } {
+    return {
+      drawn: [...svg.matchAll(/data-deck="(\w+)"/g)].map((match) => match[1] ?? ""),
+      own: [...svg.matchAll(/data-deck="(\w+)" data-own="true"/g)].map((match) => match[1] ?? ""),
+    };
+  }
+
+  /** The faint decks of a printed card: those drawn at the faint opacity. */
+  function faintOf(svg: string): string[] {
+    return [...svg.matchAll(/data-deck="(\w+)" opacity="0\.3"/g)].map((match) => match[1] ?? "");
+  }
+
+  it("R3336000 the layers are the three tokens, bottom first, and no other card is a layer", () => {
+    expect(SHIP_LAYERS).toEqual(["meltdown", "propagation", "shield"]);
+    for (const layer of SHIP_LAYERS) {
+      expect(shipLayerOf(SHIP_LAYER_IDS[layer])).toBe(layer);
+      expect(LAYER_CARDS[layer].id).toBe(SHIP_LAYER_IDS[layer]);
+    }
+    for (const id of [SHIP_DRONE_IDS.interceptor, SHIP_DRONE_IDS.corvette, "stinkyscape-036", "core-001"]) expect(shipLayerOf(id), id).toBeNull();
+    expect(Object.values(SHIP_DRONE_IDS).every((id) => byName(CATALOG[id]?.name ?? "").id === id)).toBe(true);
+  });
+
+  it("R3336000 a printed layer draws its own deck large, in the middle, with the other two faint", () => {
+    for (const layer of SHIP_LAYERS) {
+      const svg = shipSvg(layer, false, null);
+      const { drawn, own } = decksOf(svg);
+      expect(own, layer).toEqual([layer]);
+      expect([...drawn].sort(), layer).toEqual([...SHIP_LAYERS].sort());
+      expect(drawn[drawn.length - 1], `${layer} is drawn last, over the others`).toBe(layer);
+      expect(faintOf(svg).sort(), layer).toEqual(SHIP_LAYERS.filter((other) => other !== layer).sort());
+      expect(shipDecksOf(SHIP_LAYER_IDS[layer], null), layer).toBe(SHIP_LAYERS.length);
+    }
+    // Each layer's card is its own deck's picture.
+    const pictures = new Set(SHIP_LAYERS.map((layer) => shipSvg(layer, false, null)));
+    expect(pictures.size).toBe(SHIP_LAYERS.length);
+  });
+
+  it("R3336000 the Radiant layer is the same ship gilded inside the Radiant rules: its geometry, its own paint", () => {
+    const shapes = (svg: string): string[] => [...svg.matchAll(/(?:points|d)="([^"]*)"/g)].map((match) => match[1] ?? "");
+    for (const layer of SHIP_LAYERS) {
+      const base = shipSvg(layer, false, null);
+      const radiant = shipSvg(layer, true, null);
+      expect(radiant, layer).not.toBe(base);
+      for (const d of shapes(base)) expect(shapes(radiant), layer).toContain(d);
+      expect(decksOf(radiant).own, layer).toEqual([layer]);
+    }
+  });
+
+  it("R3336000 the top card draws what is left of the ship: three decks, then two, then one", () => {
+    const board: readonly (readonly [ShipLayer, number, readonly ShipLayer[]])[] = [
+      ["shield", 2, ["meltdown", "propagation", "shield"]],
+      ["propagation", 1, ["meltdown", "propagation"]],
+      ["meltdown", 0, ["meltdown"]],
+    ];
+    for (const [layer, buried, decks] of board) {
+      const svg = shipSvg(layer, false, { buried });
+      const { drawn, own } = decksOf(svg);
+      expect(drawn, layer).toEqual(decks);
+      expect(own, layer).toEqual([layer]);
+      expect(faintOf(svg), layer).toEqual([]);
+      expect(shipDecksOf(SHIP_LAYER_IDS[layer], { buried }), layer).toBe(decks.length);
+    }
+    // A pile no deeper than its ship draws no deck that is not one of the three; a Shield with one card beneath draws two.
+    expect(decksOf(shipSvg("shield", false, { buried: 1 })).drawn).toEqual(["propagation", "shield"]);
+    expect(decksOf(shipSvg("shield", false, { buried: 9 })).drawn).toEqual(["meltdown", "propagation", "shield"]);
+    expect(decksOf(shipSvg("propagation", false, { buried: 0 })).drawn).toEqual(["propagation"]);
+    // Other cards have no decks, and a ship changes none of their pictures.
+    const cannon = byName("Cannon v3");
+    expect(shipDecksOf(cannon.id, { buried: 2 })).toBeNull();
+    expect(stinkyscapeSvg(cannon.id, cannon.name, cannon.tags, cannon.type, false, null, cannon.id, "whole", { buried: 2 })).toBe(svgOf(cannon, false));
+  });
+
+  it("R3336000 the hangar's lights stay lit for the bays that still hold drones", () => {
+    const lit = (bays: number): number => (shipSvg("propagation", false, { buried: 0, bays }).match(/data-bay="lit"/g) ?? []).length;
+    const dark = (bays: number): number => (shipSvg("propagation", false, { buried: 0, bays }).match(/data-bay="dark"/g) ?? []).length;
+    expect([lit(2), lit(1), lit(0)]).toEqual([2, 1, 0]);
+    expect([dark(2), dark(1), dark(0)]).toEqual([0, 1, 2]);
+    expect(lit(9)).toBe(2);
+    // No count known (the opponent's view carries no Activates): both lit.
+    expect((shipSvg("propagation", false, { buried: 0 }).match(/data-bay="lit"/g) ?? []).length).toBe(2);
+    expect((shipSvg("propagation", false, null).match(/data-bay="lit"/g) ?? []).length).toBe(2);
+  });
+
+  it("R3336000 the reactor's core glows hotter and its cracks spread as the keel melts and its Brittle runs low", () => {
+    const cracks = (ship: ShipArt): number => Number(shipSvg("meltdown", false, ship).match(/data-cracks="(\d+)"/)?.[1] ?? 0);
+    const core = (heat: number): number => Number(shipSvg("meltdown", false, { buried: 0, heat }).match(/opacity="([\d.]+)" data-core/)?.[1]);
+    expect(cracks({ buried: 0, heat: 0, brittle: 3 })).toBe(0);
+    const grown = [0, 1, 2, 3, 4, 5, 6].map((heat) => cracks({ buried: 0, heat, brittle: 3 }));
+    for (let k = 1; k < grown.length; k += 1) expect(grown[k]).toBeGreaterThanOrEqual(grown[k - 1] ?? 0);
+    expect(grown[grown.length - 1]).toBe(6);
+    expect(cracks({ buried: 0, heat: 0, brittle: 1 })).toBe(1);
+    expect(cracks({ buried: 0, heat: 6, brittle: 1 })).toBe(6);
+    expect(cracks({ buried: 0, heat: 3, brittle: 1 })).toBeGreaterThan(cracks({ buried: 0, heat: 3, brittle: 3 }));
+    const cores = [0, 2, 4, 6].map(core);
+    for (let k = 1; k < cores.length; k += 1) expect(cores[k]).toBeGreaterThan(cores[k - 1] ?? 1);
+    // A printed keel is whole, its core a third melted.
+    expect(shipSvg("meltdown", false, null)).not.toContain("data-cracks");
+  });
+
+  it("R3336000 a layer unit's ship is its pile, its melting, its Brittle and the bays that still hold drones", () => {
+    const unit = { buried: 2, health: 6, maxHealth: 12, brittle: 2, activations: undefined };
+    expect(shipArtOf(SHIP_LAYER_IDS.meltdown, unit)).toEqual({ buried: 2, heat: 3, brittle: 2, bays: 2 });
+    const spent = [
+      { ability: "a", label: "Activate 2", usesLeft: 0, usable: false },
+      { ability: "b", label: "Activate", usesLeft: null, usable: true },
+    ];
+    expect(shipArtOf(SHIP_LAYER_IDS.propagation, { ...unit, activations: spent })?.bays).toBe(1);
+    expect(shipArtOf(SHIP_LAYER_IDS.propagation, { ...unit, health: 12 })?.heat).toBe(0);
+    expect(shipArtOf(SHIP_LAYER_IDS.propagation, { ...unit, health: 0 })?.heat).toBe(6);
+    expect(shipArtOf(SHIP_DRONE_IDS.corvette, unit)).toBeNull();
+    expect(shipArtOf("core-001", unit)).toBeNull();
+  });
+
+  it("R3336000 CardArt reports the decks it draws, and a ship gives the art its own memo", () => {
+    for (const [layer, buried, decks] of [["shield", 2, 3], ["shield", 1, 2], ["propagation", 1, 2], ["meltdown", 0, 1]] as const) {
+      const card = LAYER_CARDS[layer];
+      const { container } = render(<CardArt defId={card.id} radiant={false} tags={card.tags} type={card.type} name={card.name} shape="oval" ship={{ buried }} />);
+      expect(container.querySelector<HTMLElement>(".cf-art")?.dataset.artDecks, `${layer} ${buried}`).toBe(String(decks));
+      cleanup();
+    }
+    const printed = LAYER_CARDS.shield;
+    const { container } = render(<CardArt defId={printed.id} radiant={false} tags={printed.tags} type={printed.type} name={printed.name} shape="portrait" />);
+    const art = container.querySelector<HTMLElement>(".cf-art");
+    expect(art?.dataset.artDecks).toBe("3");
+    expect(art?.style.backgroundImage).toContain(stinkyscapeArtUri(printed.id, printed.name, printed.tags, printed.type, false));
+    expect(stinkyscapeArtUri(printed.id, printed.name, printed.tags, printed.type, false, null, printed.id, null, "whole", { buried: 1 })).not.toBe(
+      stinkyscapeArtUri(printed.id, printed.name, printed.tags, printed.type, false),
+    );
+    const cannon = byName("Cannon v3");
+    cleanup();
+    const other = render(<CardArt defId={cannon.id} radiant={false} tags={cannon.tags} type={cannon.type} name={cannon.name} shape="portrait" ship={{ buried: 2 }} />);
+    expect(other.container.querySelector<HTMLElement>(".cf-art")?.dataset.artDecks).toBeUndefined();
+  });
+});
+
 describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it with", () => {
   // The hash of `stinkyscapeSvg`'s output on each face, recorded as the set shipped (v0.5.0, #1884),
   // as `core-art-v0.1.json` records Core's: a change to the set's art fails here, entry by entry.
@@ -445,6 +615,7 @@ describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it w
   // renamed Starfleet Commander, a Human, it draws from its new name. #3142 recorded S #45 Drone Commander
   // (a Human officer, no longer a hive ship) and S #150.1 Stinkyscape Golem (no longer a fighter hull)
   // again (R3142002, R2529000). #3333 recorded the fifty Starship Pieces again, each its module in its bay (R3333001).
+  // #3336 recorded the three Drone Battleship layers again: each is a deck of one ship now (R3336000).
   // #3338 recorded S #4 Olivian Expanse, its six Terminus cards S #4.1–#4.6 and S #154 Dice of Doom again, each
   // now drawing a picture of its own and no longer the shared black hole or a planet (R3338001).
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;

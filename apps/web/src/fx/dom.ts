@@ -1,10 +1,10 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches
-// and R2800000 set pieces.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
+// R3336000 ships and R2800000 set pieces.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
-import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
+import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { pointIn } from "./anchors.ts";
 import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
@@ -124,6 +124,9 @@ function timedPoint(doc: Document, className: string, point: FxTimedPoint): HTML
   el.style.setProperty("--fx-at", ms(point.atMs));
   return el;
 }
+
+/** R3336000: a Battleship bay's two doors, left to right (fx.css). */
+const SHIP_DOOR_SIDES = ["left", "right"] as const;
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -549,6 +552,39 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       cover(el, at);
       break;
     }
+    case "ship": {
+      // R3336000: a Drone Battleship's layer over it: `count` armor plates, the first `lit` glowing down as the Shield
+      // took the hit ("plates"), or a bay's two doors sliding apart over `count` lights ("bay"). It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-move", cue.move);
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-count", String(cue.count));
+      el.style.setProperty("--fx-lit", String(cue.lit));
+      if (cue.move === "plates") {
+        for (let i = 0; i < cue.count; i += 1) {
+          const plate = doc.createElement("div");
+          plate.className = "fx-ship-plate";
+          plate.style.setProperty("--fx-plate", String(i));
+          if (i < cue.lit) plate.setAttribute("data-lit", "true");
+          el.appendChild(plate);
+        }
+      } else {
+        for (const side of SHIP_DOOR_SIDES) {
+          const door = doc.createElement("div");
+          door.className = "fx-ship-door";
+          door.setAttribute("data-side", side);
+          el.appendChild(door);
+        }
+        for (let i = 0; i < cue.count; i += 1) {
+          const light = doc.createElement("i");
+          light.className = "fx-ship-light";
+          el.appendChild(light);
+        }
+      }
+      break;
+    }
   }
 
   el.className = `fx-${cue.kind}`;
@@ -687,11 +723,15 @@ export function mountHold(
     el.style.setProperty("--fx-dy", px(start.y - landCenter.y));
     el.style.setProperty("--fx-s", (parts.from.height / Math.max(1, parts.land.height)).toFixed(3));
     el.style.setProperty("--fx-o0", "1");
+    // #3347: it leans the way it travels (toward its zone) as it leaves, and straightens in flight.
+    const lean = Math.max(-1, Math.min(1, (start.x - landCenter.x) / FX_HOLD_TURN_PX)) * -FX_HOLD_TURN_DEG;
+    el.style.setProperty("--fx-rot", `${lean.toFixed(2)}deg`);
   } else {
     el.style.setProperty("--fx-dx", px(0));
     el.style.setProperty("--fx-dy", px(DROP_PX));
     el.style.setProperty("--fx-s", String(DROP_SCALE));
     el.style.setProperty("--fx-o0", "0");
+    el.style.setProperty("--fx-rot", "0deg");
   }
 
   if (parts.source !== null) {
