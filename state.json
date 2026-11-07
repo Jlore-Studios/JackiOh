@@ -15936,13 +15936,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "queued_at": "2026-11-07T08:47:50Z",
-      "run_id": "42357056974",
+      "run_id": "pending:b992cdc2-1794057501",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 130,
-      "started_at": "2026-11-07T08:48:44Z",
+      "started_at": "2026-11-07T13:18:49Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16485,9 +16486,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-07T13:18:07Z",
+    "at": "2026-11-07T13:18:49Z",
     "url": "",
-    "what": "revise #3372 on claude-8"
+    "what": "spot-check #3367 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-07T13:03:16Z",
@@ -33768,7 +33769,15 @@
         "n": 130,
         "pr": 3367,
         "queued_at": "2026-11-07T13:01:10Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:b992cdc2-1794057501",
         "sha": "765489f9534d437ca5867d2e3a82e527e23ee6d8",
+        "started_at": "2026-11-07T13:18:49Z",
         "status": "queued",
         "title": "Patch: move the menus' remaining dialogs and sheets onto the shared Dialog",
         "tries": 0
