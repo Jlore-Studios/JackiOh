@@ -17113,7 +17113,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "run_id": "pending:8a55eebf-1794072846",
+      "run_id": "42397023151",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T17:34:52Z",
       "stop_requested": false,
