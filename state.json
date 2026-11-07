@@ -17698,22 +17698,25 @@
     },
     "3418": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-07T23:04:07Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "someone needs to read the log of `web (unit 7/8)` on #3415 (run 42407758136, job 128512330727). The red doesn't happen again on the exact history the promotion ships, so I found no change in the repository that fixes it. Then either press \"Re-run failed jobs\" on that run (once green, #3415 merges itself), or close #3418 by hand. Closing it lets the watch in `.github/workflows/patches-ship.yml` ship again from the newer main (03e0cbaf9d or later) and supersede #3415. If the log names a test that fails on its own merits, reopen this issue with the test's name and its failure message."
+      },
       "asks": [],
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-2",
-      "owner_since": "2026-11-07T22:24:55Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-07T23:03:54Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_by_id": "claude-2",
       "planned_tier": "strong",
       "provider": "claude-2",
+      "question": "someone needs to read the log of `web (unit 7/8)` on #3415 (run 42407758136, job 128512330727). The red doesn't happen again on the exact history the promotion ships, so I found no change in the repository that fixes it. Then either press \"Re-run failed jobs\" on that run (once green, #3415 merges itself), or close #3418 by hand. Closing it lets the watch in `.github/workflows/patches-ship.yml` ship again from the newer main (03e0cbaf9d or later) and supersede #3415. If the log names a test that fails on its own merits, reopen this issue with the test's name and its failure message.",
       "run_id": "42420507196",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-07T22:24:55Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "3419": {
