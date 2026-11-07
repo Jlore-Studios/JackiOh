@@ -16165,26 +16165,17 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-3",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/art/stinkyscape.test.tsx",
-            "apps/web/src/cards/art/svg.ts"
-          ],
-          "from": "633c3110b1c4e912c6f711e185694ee4a2e3e9e2",
-          "main": "14687f5f0d97a0b9de2e5da15240cfed7894dc24"
-        },
+        "built_by": "claude-4",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-3",
-            "run": "42398580181",
+            "provider": "claude-4",
+            "run": "42410475450",
             "tier": "strong"
           }
         ],
-        "sha": "998a497cc47ed35d9d585c9a3fda37ee736807b5",
+        "sha": "01da7b145843f35781cf7d86cb7fd03dacd9a4b8",
         "tiers": {
           "claude": "strong"
         }
