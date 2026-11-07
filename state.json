@@ -36826,7 +36826,8 @@
     "runs": [
       "2026-11-07T10:26:36Z,42363473406,agy,gemini-3.8-flash-high,review,3370,medium,reviewed,,6.7,309217,40642,0,,2,5,50,50,8.8,,none,,1",
       "2026-11-07T10:31:42Z,42362223440,claude-4,opus,build,3334,hard,interrupted,5-hour cap,27.5,0,0,0,,1,70,,,618.6,claude-4,fresh,,1",
-      "2026-11-07T10:43:38Z,42364679539,claude-6,opus,review,3369,hard,reviewed,,4.1,50,22134,3652367,2.4078,0,5,,,34.4,claude-3,none,,1"
+      "2026-11-07T10:43:38Z,42364679539,claude-6,opus,review,3369,hard,reviewed,,4.1,50,22134,3652367,2.4078,0,5,,,34.4,claude-3,none,,1",
+      "2026-11-07T10:36:15Z,42361612022,claude-8,sonnet+opus,revise,3366,medium,approved,,9.1,55,11618,1994820,1.2797,29,33,,,37.5,claude-8,fresh,,2"
     ]
   },
   "version": 1
