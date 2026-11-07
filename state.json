@@ -16337,7 +16337,7 @@
         "kind": "revise",
         "model": "opus",
         "provider": "claude-2",
-        "round_tier": "strong",
+        "round_tier": "",
         "rounds_on": 3372,
         "rounds_used": 0,
         "since": "2026-11-07T12:48:01Z",
