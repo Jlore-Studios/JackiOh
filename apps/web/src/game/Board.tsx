@@ -35,6 +35,7 @@ import Marketplace from "./Marketplace.tsx";
 import MatchMenu from "./MatchMenu.tsx";
 import { usePhoneBar } from "./phoneBar.ts";
 import { offerDrawControlText } from "./DrawOffer.tsx";
+import CornerProps from "./arena/CornerProps.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
@@ -63,6 +64,7 @@ import "./board.css";
 import "./table.css";
 import "./highlights.css";
 import "./inspectable.css";
+import "./arena/arena.css";
 
 /** Top to bottom in every lane column (BUILD M5-T1). */
 const FIELD_ROWS: readonly { side: Side; row: Row }[] = [
@@ -566,6 +568,7 @@ export default function Board({
   market,
   showOfferDraw = true,
   sandDisabled = false,
+  draining = false,
   onClick,
   onControl,
   emotes,
@@ -717,6 +720,9 @@ export default function Board({
         <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
           {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
           <SandSurface field={field} disabled={sandDisabled} table={table} theirTable={theirTable} />
+          {/* R3348001: each half's playmat props, from its seat's raw slot (the default mat has props too). The viewer's own answer taps, quietly while the queue drains; the opponent's are still. */}
+          <CornerProps mat={slots.table} half="yours" draining={draining} />
+          <CornerProps mat={theirSlots.table} half="theirs" />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
               {FIELD_ROWS.map((slot) => (

@@ -338,6 +338,7 @@
   "Your units, lane {lane}": "你的单位区，第{lane}纵列",
   "Enemy units, lane {lane}": "敌方单位区，第{lane}纵列",
   "Reserved zone": "预留的区域",
+  "A decoration on your playmat": "你的牌垫上的装饰",
   "Held for a Reborn unit": "为复生单位保留",
   "Held for {name} to return": "为{name}返回保留",
   "not connected to the match": "未连接到对局",

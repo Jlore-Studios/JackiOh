@@ -65,8 +65,12 @@ const MARKS: readonly { word: string; pattern: RegExp }[] = [
 const BRITISH =
   /colour|behaviour|centre|honour|favour|armour|licence|defence|catalogue|labell(ed|ing)|cancell(ed|ing)|modell(ed|ing)|travell(ed|ing)|(serial|normal|recogn|optim|organ)is[eai]/i;
 
+let cachedTexts: { at: string; text: string }[] | undefined;
+
+/** Parsing every source is the slow part, so the file's tests share one pass. */
 function playerTexts(): { at: string; text: string }[] {
-  return sources(SRC).flatMap(wordsIn).filter(({ text }) => Object.hasOwn(zhCN, text) || Object.hasOwn(zhCN, text.trim()));
+  cachedTexts ??= sources(SRC).flatMap(wordsIn).filter(({ text }) => Object.hasOwn(zhCN, text) || Object.hasOwn(zhCN, text.trim()));
+  return cachedTexts;
 }
 
 function jargonIn(text: string): string[] {
