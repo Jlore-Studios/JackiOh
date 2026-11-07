@@ -17759,6 +17759,7 @@
       "run_id": "42320217607",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "spot_check_n": 121,
       "started_at": "2026-11-07T00:45:59Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -34771,7 +34772,7 @@
         "tries": 0
       }
     ],
-    "count": 120
+    "count": 121
   },
   "statistics": {
     "at": "2026-11-07T02:32:21Z"
