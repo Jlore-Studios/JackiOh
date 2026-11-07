@@ -10,7 +10,8 @@
 // apart; R2942001: given "pixel" or "comic", as Pixel's or Comic's (`restyledSvg`), cached apart too; R2943001: given
 // a Set showcase restyle, in its set's treatment. R2943001: given a `part` other than "whole" (Out of frame's), the
 // procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop with no subject, or its subject on
-// nothing, cached apart; "whole" is the picture, byte for byte.
+// nothing, cached apart; "whole" is the picture, byte for byte. R3331000: a card with a scene recipe draws its scene,
+// whichever painter its set has, its inked shapes outlined.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -20,10 +21,11 @@ import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMark
 import type { MotifId } from "./motifs.ts";
 import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
+import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
 import { starshipModuleIconSvg, starshipModuleSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
-import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
+import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
 const DATA_PREFIX = "data:image/svg+xml,";
 /** Rays reach past every corner of the box from anywhere inside it. */
@@ -139,7 +141,12 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
       run = [];
     }
     runRole = ridge.role;
-    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
+    // R3331000: a scene's inked shape takes its family's outline; every other ridge prints as it always did.
+    const ink =
+      ridge.stroke === undefined
+        ? ""
+        : ` stroke="${ridge.stroke}" stroke-width="${fmt(ridge.strokeWidth ?? 0)}" stroke-linejoin="round"`;
+    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"${ink}/>`);
   }
   if (runRole !== null && drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
 
@@ -259,8 +266,20 @@ export function starshipModuleUri(defId: string, radiant: boolean): string {
 }
 
 /**
+ * R3331000: the picture of a card with a scene recipe, drawn by the procedural painter from its scene whichever
+ * set's painter would draw it, so the Stinkyscape and Training Grounds painters hand their recipe cards here;
+ * null for a card with none, which its own painter draws as before.
+ */
+function sceneArtSvg(seedId: string, tags: readonly Tag[], type: CardType, radiant: boolean, motion: ArtMotion | null, part: ArtPart): string | null {
+  const scene = sceneRecipeOf(seedId);
+  if (scene === null) return null;
+  return artSvg(artSpec(seedId, themeFor(tags, type), compositionFor(type), radiant, null, scene), motion, seedId, part);
+}
+
+/**
  * R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. R2949000:
- * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it.
+ * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it. R3331000: a card
+ * with a scene recipe draws its scene.
  */
 export function stinkyscapeArtUri(
   defId: string,
@@ -278,13 +297,16 @@ export function stinkyscapeArtUri(
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
-/** R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is. */
+/**
+ * R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is.
+ * R3331000: a card with a scene recipe draws its scene.
+ */
 export function trainingGroundsArtUri(
   defId: string,
   name: string | undefined,
@@ -300,7 +322,7 @@ export function trainingGroundsArtUri(
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
