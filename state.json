@@ -33238,7 +33238,7 @@
       ]
     },
     "gpt": {
-      "refused_until": "2026-11-08T10:00:17Z",
+      "refused_until": "2026-11-15T10:07:24Z",
       "spent": [
         {
           "at": "2026-10-25T12:03:21Z",
@@ -33355,6 +33355,10 @@
         {
           "at": "2026-11-08T13:30:59Z",
           "minutes": 5.0
+        },
+        {
+          "at": "2026-11-08T20:23:36Z",
+          "minutes": 0.8
         }
       ],
       "tokens_spent": [
@@ -33556,10 +33560,10 @@
         }
       ],
       "usage": {
-        "observed_at": "2026-11-08T13:30:59Z",
+        "observed_at": "2026-11-08T20:23:36Z",
         "seven_day": {
           "resets_at": "2026-11-15T10:07:24Z",
-          "utilization": 0.98
+          "utilization": 1.0
         },
         "status": "allowed"
       }
@@ -35882,6 +35886,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-08T20:19:53Z,gpt,refusal,call,42519200673,,,100,2026-11-15T10:07:24Z,allowed,100,100,2026-11-15T10:07:24Z"
+    ]
   },
   "version": 1
 }
