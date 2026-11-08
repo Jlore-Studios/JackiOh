@@ -35574,23 +35574,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-08T16:06:34Z,claude-6,ping,before,42498018883,74,2026-11-08T17:00:00Z,,,allowed,70,,",
-      "2026-11-08T16:05:26Z,claude-6,ping,before,42497967225,74,2026-11-08T17:00:00Z,,,allowed,70,,",
-      "2026-11-08T15:07:20Z,claude-8,ping,before,42493015572,22,2026-11-08T18:10:00Z,,,allowed,85,,",
-      "2026-11-08T15:07:53Z,claude-8,stream,call,42493015572,23,2026-11-08T18:10:00Z,,,allowed,85,,",
-      "2026-11-08T15:08:08Z,claude-8,stream,call,42493015572,24,2026-11-08T18:10:00Z,,,allowed,85,,",
-      "2026-11-08T15:15:53Z,claude-8,stream,call,42493015572,26,2026-11-08T18:10:00Z,,,allowed,85,,",
-      "2026-11-08T15:18:53Z,claude-8,stream,call,42493015572,27,2026-11-08T18:10:00Z,,,allowed,85,,",
-      "2026-11-08T15:19:38Z,claude-8,stream,call,42493015572,28,2026-11-08T18:10:00Z,,,allowed,85,,",
-      "2026-11-08T15:31:11Z,claude-8,stream,call,42493015572,28,2026-11-08T18:10:00Z,,,allowed,85,,"
-    ],
-    "runs": [
-      "2026-11-08T16:06:34Z,42498018883,claude-6,opus,revise,3431,hard,interrupted,5-hour cap,0,0,0,0,,74,74,,,103.8,claude-1,none,,0",
-      "2026-11-08T16:05:26Z,42497967225,claude-6,opus,review,3426,hard,interrupted,5-hour cap,0,0,0,0,,74,74,,,47.5,claude-7,none,,0",
-      "2026-11-08T16:16:07Z,42493015572,claude-8,opus,revise,3433,hard,built,,23.6,52,13197,2546360,1.5008,22,28,,,44.6,claude-1,fresh,,1"
-    ]
-  },
   "version": 1
 }
