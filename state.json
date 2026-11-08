@@ -16418,7 +16418,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-08T11:05:50Z",
+      "feedback_since": "2026-11-08T14:11:17Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-08T13:46:03Z",
@@ -16461,7 +16461,7 @@
         "provider": "claude-6",
         "run": "42474226391"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-08T14:11:17Z",
       "stop_requested": false,
       "taken_asks": [],
