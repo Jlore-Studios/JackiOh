@@ -361,14 +361,14 @@ Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sc
 card keeps its Core card's old subject.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
-each kind, 441 parts since the passes of Classic+ (R3390000), Core (R3392000), Classic+'s Alt art (R3396000) and
+each kind, 442 parts since the passes of Classic+ (R3390000), Core (R3392000), Classic+'s Alt art (R3396000) and
 Stinkyscape (R3391000): 38 of terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills,
 asteroids, water, sand, snow, stages, a cavern, a chessboard, a floating island, ship decks, corridors, regolith,
 lava flats, floating platforms...), 81 of architecture (fences, posts, gates, ruins, towers, columns, arches,
 tombstones, windows, doors, houses, domes, a lighthouse, a rotunda, stations, docks, hangars, vaults, server cores,
 cells, consoles, masts, bunks, seats, cockpits, portholes and the open space they look out on, cases, stalls,
 disruptor beacons, reactors...), 23 plants, 42 creatures (a scarab, a gelatin cube, a panther, a dragon, a sheep, a
-loaf, a Rush Token, soldiers, a crowd...), 159 objects and tools, 75 of weather and light (moons, stars, clouds,
+loaf, a Rush Token, soldiers, a crowd...), 160 objects and tools, 75 of weather and light (moons, stars, clouds,
 mist, shafts, halos, rays, sparks, embers, motes, a void, lightning, nebulae, planets, a rim light, waves, a
 rainbow, a cyclone, beams, light streams, light cones, meteors, smoke, comets, star glare, gas giants, shattered
 space, light grids, rifts, frost, missiles, flame, hex shields...), and 23 craft (R3391000: fighters, a scout, a
