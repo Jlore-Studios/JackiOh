@@ -17164,10 +17164,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-7",
+        "built_by": "claude-4",
         "rejections": [],
         "reviews": [],
-        "sha": "05fbc7a2bde48137781175aa3056bbb519481fd9",
+        "sha": "3bbc6e2f4990f53b703789c8f972edf71eca4e58",
         "tiers": {}
       }
     },
