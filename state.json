@@ -16429,7 +16429,8 @@
       "live": "reviewing",
       "merge_owner": "claude-6",
       "own_review": {
-        "claimed_at": "2026-11-08T17:42:51Z",
+        "claimed": true,
+        "claimed_at": "2026-11-08T20:27:34Z",
         "from_run": "42501036540",
         "gates": [
           {
@@ -16530,7 +16531,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42506332495",
+      "run_id": "pending:52455cea-1794169620",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16551,7 +16552,7 @@
         "run": "42506332495"
       },
       "source": "",
-      "started_at": "2026-11-08T17:42:51Z",
+      "started_at": "2026-11-08T20:27:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 4,
@@ -17444,9 +17445,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T20:15:30Z",
+    "at": "2026-11-08T20:27:34Z",
     "url": "",
-    "what": "suggestions on gpt"
+    "what": "review #3426 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-08T20:13:54Z",
