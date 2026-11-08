@@ -498,7 +498,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             </>
           )}
           <button type="button" data-testid="result-back" data-route={paths.play} onClick={() => navigate(paths.play)}>
-            {t("Back to lobby")}
+            {t("Back to the lobby")}
           </button>
           {/* R1483000: the server said the day's Jlore cap held this account's Jlore for the match back. */}
           {view.result !== null && match.jloreCapped ? (

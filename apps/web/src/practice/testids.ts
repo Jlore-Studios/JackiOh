@@ -36,7 +36,7 @@ export const practiceTestid = {
   menu: "practice-menu",
   /** "Leave this game?": the confirmation `newGame` or `menu` opens. */
   leave: "practice-leave",
-  /** In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game" for a lesson). */
+  /** In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave" for a lesson). */
   leaveConfirm: "practice-leave-confirm",
   /** R765: in a free game's confirmation, "Save and leave": keep the game for the practice menu's banner. */
   leaveSave: "practice-leave-save",

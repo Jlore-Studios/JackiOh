@@ -389,10 +389,12 @@ export function CardFace({
   // R3340000: a compact face's look carries the flags, its art moving by them (`artMoves`); only a full face sweeps and signs.
   const moving = full && fullArt && look.animated;
   const signed = full && fullArt && look.signed && !bare;
-  // R2943001: a Starship in play's and a Legacy card's pictures have no parts.
+  // R2943001: a Starship in play's and a Legacy card's pictures have no parts; nor (R3337001) an Anomaly Found! in play
+  // holding a board, which wears that board's picture.
   const starship = face.inPlay ? face.starship : null;
+  const anomaly = face.inPlay ? (face.anomaly ?? null) : null;
   // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
-  const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
+  const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   // R2715001: an Animated look moves its art's own layers while a slot is theirs. R2944002: Immersive's depth moves in
   // the same slot, one per face, Animated or not. R3340000: a card in play moves its art for an animated or signed level and
   // for a Mythic; a hovered or focused one claims a slot to answer in, ranked first (motionSlots.ts).
@@ -413,7 +415,7 @@ export function CardFace({
   // R2943001: Set showcase wears its set's look; Out of frame cuts its subject out over the frame where the picture has
   // parts (a Starship in play's and a Legacy card's have none).
   const showcase = look.version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(face.set) : null;
-  const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
+  const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   // R3015002: one picture per variant at every level, and its own motion at every animated one.
   const picture = artPictureOf(look.version, face.set);
   const motion = artMotion && (artMoves || engaged) ? artMotionOf(face.defId) : null;
@@ -514,6 +516,7 @@ export function CardFace({
               shape={shape}
               lazy={lazyArt}
               starship={starship}
+              anomaly={anomaly}
               picture={picture}
               motion={motion}
               part={depth ? "far" : outOfFrame || immersive ? "backdrop" : "whole"}
@@ -531,6 +534,7 @@ export function CardFace({
               className="cf-art--cutout"
               lazy={lazyArt}
               starship={starship}
+              anomaly={anomaly}
               picture={picture}
               motion={motion}
               part="subject"
@@ -548,6 +552,7 @@ export function CardFace({
                 className="cf-art--near"
                 lazy={lazyArt}
                 starship={starship}
+                anomaly={anomaly}
                 picture="normal"
                 motion={motion}
                 part="subject"

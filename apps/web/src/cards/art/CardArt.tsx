@@ -31,11 +31,14 @@
 // subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it (`data-art-live`), which artLive.css turns toward the
 // pointer, presses and swings; where the picture has no parts (a delivered file, a restyle, a Starship's, a Legacy card's, a
 // Battleship's) it is one image. Given `wear`, its cracks, glow and frost sit over the picture whatever draws it (ArtWear.tsx).
+// R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
+// (`data-art-anomaly`), one picture as a Starship's is; a code that is none of the ten draws the card's own.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import { isAnomalyCode, type AnomalyCode } from "../anomalies.ts";
 import type { StarshipPieceRef } from "../../wire/generated/StarshipPieceRef.ts";
 import { useDefResolver } from "../refContext.tsx";
 import { artSubjectOf } from "./fusedArt.ts";
@@ -47,7 +50,7 @@ import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { starshipArtOf } from "./starshipHulls.ts";
 import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
-import { legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionOf, themeFor, THEME_PALETTES, type ArtThemeId } from "./themes.ts";
 
@@ -72,6 +75,11 @@ export type CardArtProps = {
    * from the pieces it lists, oldest first.
    */
   starship?: { launched: boolean; list: readonly StarshipPieceRef[] } | null;
+  /**
+   * R3337001: the board an Anomaly Found! in play holds (`FaceModel.anomaly`), whose picture it wears; null, or a code
+   * that is none of the ten, draws its own. A Starship's art comes first.
+   */
+  anomaly?: string | null;
   /** R2715001: the card's moving art, which its procedural picture draws in place of the still one; null holds it still. */
   motion?: ArtMotion | null;
   /** R2940001, R2942001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
@@ -91,15 +99,19 @@ export type ArtWearState = { damage: number; buffed: boolean; frozen: boolean };
 
 /**
  * R2943001: whether a window draws a card's picture in parts (`ArtPart`): its painter's own, which a Starship in play
- * and a Legacy card do not have, their painters drawing one picture.
+ * and a Legacy card do not have, their painters drawing one picture; nor (R3337001) an Anomaly Found! holding a board.
  */
-export function hasArtParts(defId: string, starship: CardArtProps["starship"]): boolean {
-  return starship == null && snapshotArtOf(defId) === null;
+export function hasArtParts(defId: string, starship: CardArtProps["starship"], anomaly: CardArtProps["anomaly"] = null): boolean {
+  return starship == null && heldAnomaly(anomaly) === null && snapshotArtOf(defId) === null;
 }
 
 /** R3340000: a buffed unit's glow takes its card's theme colour (themes.ts `glow`), read by artLive.css as `--art-glow`. */
 function wearStyle(wear: ArtWearState | null, theme: ArtThemeId): CSSProperties {
   return wear?.buffed === true ? ({ "--art-glow": THEME_PALETTES[theme].glow } as CSSProperties) : {};
+}
+/** R3337001: the board whose picture a window draws: the held code, if it is one of the ten. */
+function heldAnomaly(anomaly: CardArtProps["anomaly"]): AnomalyCode | null {
+  return isAnomalyCode(anomaly) ? anomaly : null;
 }
 
 /**
@@ -133,6 +145,7 @@ export function CardArt({
   className,
   lazy = false,
   starship = null,
+  anomaly: held = null,
   motion = null,
   picture = "normal",
   part = "whole",
@@ -167,12 +180,15 @@ export function CardArt({
   const variant = radiant ? "radiant" : "base";
   // R2940001: the Sketch pencils the window's picture, whatever draws it; R2942001: Pixel and Comic restyle it so.
   const restyle = restyleOf(picture);
-  // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship and a Legacy card draw it whole.
-  const split = hasArtParts(defId, starship) ? part : "whole";
-  const real = starship === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
-  // R2940001: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture. R3017002: a
-  // repaint's is its own, under its treatment.
-  const ownPicture = picture !== "normal" && (restyle === null || isRepaint(picture)) && starship === null && coreId === null;
+  // R3337001: the board an Anomaly Found! holds, whose picture it wears unless it is a Starship.
+  const anomaly = starship === null ? heldAnomaly(held) : null;
+  // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship, an Anomaly holding a board and a
+  // Legacy card draw it whole.
+  const split = hasArtParts(defId, starship, anomaly) ? part : "whole";
+  const real = starship === null && anomaly === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
+  // R2940001: the seed the painter grows this picture from; a Starship, an Anomaly holding a board and a Legacy card
+  // draw one picture. R3017002: a repaint's is its own, under its treatment.
+  const ownPicture = picture !== "normal" && (restyle === null || isRepaint(picture)) && starship === null && anomaly === null && coreId === null;
   const seedId = ownPicture ? artSeedOf(defId, picture) : defId;
 
   if (real !== null && real.src !== failedSrc) {
@@ -210,15 +226,17 @@ export function CardArt({
   const drawn = (m: ArtMotion | null, p: ArtPart): string =>
     starshipArt !== null
       ? starshipArtUri(starshipArt, restyle)
-      : stinky
-        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p, ship)
-        : yard
-          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
-          : coreId !== null
-            ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-            : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
-  // R3340000: a live face's picture is in layers where it has parts to lay: a painter's own, whole, with a motion and no Battleship.
-  const layered = live && motion !== null && near && starshipArt === null && coreId === null && restyle === null && split === "whole" && ship === null;
+      : anomaly !== null
+        ? anomalyArtUri(anomaly, radiant, restyle)
+        : stinky
+          ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p, ship)
+          : yard
+            ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
+            : coreId !== null
+              ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
+              : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
+  // R3340000: a live face's picture is in layers where it has parts to lay: a painter's own, whole, with a motion, no Battleship and no Anomaly's board (one picture).
+  const layered = live && motion !== null && near && starshipArt === null && anomaly === null && coreId === null && restyle === null && split === "whole" && ship === null;
   const uri = !near ? null : layered ? drawn({ ...motion, detached: true }, "backdrop") : drawn(motion, split);
   const family =
     starship !== null
@@ -243,9 +261,10 @@ export function CardArt({
       data-art-design={starshipArt?.design}
       data-art-picture={ownPicture || restyle !== null ? picture : undefined}
       data-art-part={split === "whole" ? undefined : split}
+      data-art-anomaly={anomaly ?? undefined}
       data-art-decks={stinky ? (shipDecksOf(defId, ship) ?? undefined) : undefined}
       data-art-pending={uri === null ? "true" : undefined}
-      data-art-moving={uri !== null && starship === null && coreId === null && motion !== null ? "true" : undefined}
+      data-art-moving={uri !== null && starship === null && anomaly === null && coreId === null && motion !== null ? "true" : undefined}
       data-art-live={layered ? "true" : undefined}
       data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
       data-art-buffed={wear?.buffed === true ? "true" : undefined}

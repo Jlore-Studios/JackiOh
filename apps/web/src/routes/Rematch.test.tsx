@@ -107,7 +107,7 @@ describe("RematchButtons", () => {
     });
   });
 
-  it("R1372 R924000 an All Random rematch offers the picker, starts it from the lobby's pick and sends leanSet with the offer", async () => {
+  it("R1372 R924000 an All random rematch offers the picker, starts it from the lobby's pick and sends leanSet with the offer", async () => {
     window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
     try {
       vi.mocked(rematchStatus).mockResolvedValue(statusOf({ mode: "random" }));

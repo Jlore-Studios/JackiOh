@@ -15,6 +15,7 @@
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../anomalies.ts";
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, particleStyle, type ArtMotion, type ArtRole } from "./motion.ts";
@@ -23,7 +24,7 @@ import { partDraws, partHolds, restyledSvg, type ArtPart, type ArtRestyle } from
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
-import { starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
+import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -269,6 +270,38 @@ export function starshipModuleIconUri(defId: string, radiant: boolean): string {
   const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleIconSvg(defId, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
+}
+
+/**
+ * R3337001: an Anomaly Found!'s art for the board its code names (stinkyscape.ts `anomalySvg`), cached on its code and
+ * face; a restyle's strokes grow from the board's own seed.
+ */
+export function anomalyArtUri(code: AnomalyCode, radiant: boolean, restyle: ArtRestyle | null = null): string {
+  const key = `anomaly|${code}|${radiant}${restyleKey(restyle)}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(anomalySvg(code, radiant), restyle, radiant, `${ANOMALY_SEED_PREFIX}${code}`))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3337003: where an inlined picture names an id: its `id` attributes and the `url(#…)` paints that point at them. */
+const INLINE_ID = /(?<=\s)id="|url\(#/g;
+
+/**
+ * R3337003: the same picture as SVG markup the effects layer draws in place (the title card's, fx/dom.ts), no image
+ * (B27); its ids are scoped to its board and face so they meet no other drawing's in the page. Cached apart.
+ */
+export function anomalyMarkup(code: AnomalyCode, radiant: boolean): string {
+  const key = `anomaly-markup|${code}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const scope = `${ANOMALY_SEED_PREFIX}${code}-${radiant ? "radiant" : "base"}-`;
+  const markup = anomalySvg(code, radiant).replace(INLINE_ID, (head) => `${head}${scope}`);
+  proceduralCache.set(key, markup);
+  return markup;
 }
 
 /**
