@@ -18045,7 +18045,8 @@
       },
       "started_at": "2026-11-08T04:39:11Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6718519684
     },
     "3424": {
       "action": "review",
