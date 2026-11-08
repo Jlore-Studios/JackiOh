@@ -19,7 +19,7 @@ export type TutorialLesson = {
   number: number;
   title: string;
   summary: string;
-  /** R2205000: the Field Guide entries its moments set up, in the order they come; the path's chips. */
+  /** R2205000: the Field guide entries its moments set up, in the order they come; the path's chips. */
   discoveries: readonly string[];
   seed: string;
   humanSeat: PlayerId;

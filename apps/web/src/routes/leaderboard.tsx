@@ -2,7 +2,7 @@
 // Grape tier. Read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
 // through `rank/RankCrest.tsx` (#1650), and the hidden rating never reaches it. A row is keyed by its
 // profile id and shows the player's username, never the id (R1436).
-// R2778000: a Constructed / All Random switch picks the season's ladder; the address carries All
+// R2778000: a Constructed / All random switch picks the season's ladder; the address carries All
 // Random as `?ladder=random`.
 
 import { useEffect, useState, type ReactElement } from "react";
@@ -33,17 +33,17 @@ export const leaderboardTestid = {
   jlorious: "leaderboard-jlorious",
   tier: "leaderboard-tier",
   raisins: "leaderboard-raisins",
-  /** R2778000: the Constructed / All Random switch. */
+  /** R2778000: the Constructed / All random switch. */
   ladder: "leaderboard-ladder",
 } as const;
 
 /** R2778000: the switch's two ladders, Constructed first, each with its label in English for `t()`. */
 const LADDERS: readonly { ladder: Ladder; label: string }[] = [
   { ladder: "constructed", label: "Constructed" },
-  { ladder: "random", label: "All Random" },
+  { ladder: "random", label: "All random" },
 ];
 
-/** R2778000: the ladder the address asks for: All Random by `?ladder=random`, else Constructed. */
+/** R2778000: the ladder the address asks for: All random by `?ladder=random`, else Constructed. */
 function ladderOfAddress(): Ladder {
   return new URLSearchParams(window.location.search).get("ladder") === "random" ? "random" : "constructed";
 }

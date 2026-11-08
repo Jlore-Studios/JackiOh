@@ -95,7 +95,7 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.get(ts(SITE_FOOTER))
       .find(ts(SITE_FOOTER_ALMANAC))
       .should("have.attr", "href", "/almanac")
-      .and("contain.text", "Card almanac")
+      .and("contain.text", "Almanac")
       .prev()
       .should("have.attr", "data-testid", SITE_FOOTER_PATCH_NOTES);
 

@@ -47,6 +47,7 @@ import { MUSIC_CARDS } from "./musicData.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
+import { ANOMALY_CODES } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { armorTookHalf, PLAY_TIERS_ASCENDING, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
@@ -402,8 +403,6 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "votedOut",
   "fled",
   "held",
-  // R1855000: a board replacement's whoosh, whatever the seat.
-  "boardReplaced",
   // R2652001: a batch of coins or dice spins, whatever it rolled.
   "rolled",
   "countered",
@@ -1742,6 +1741,21 @@ describe("R2722002 a hidden card makes its entrance as it reveals, never as it i
     }
     const theirs: GameEvent = { type: "cardPlayed", player: "p1", instanceId: HIDDEN_DEF_ID, defId: HIDDEN_DEF_ID, costPaid: 2 };
     expect(shape(theirs, seat("p2"))).toEqual([sfx("play")]);
+  });
+});
+
+describe("R3337003 a Stinkyscape Anomaly's lay sounds its own sting", () => {
+  it("R3337003 each Anomaly sounds its sting", () => {
+    // The board laid is public (R3337000), so both seats hear the same sting.
+    for (const code of ANOMALY_CODES) {
+      for (const player of ["p1", "p2"] as const) {
+        const event: GameEvent = { type: "boardReplaced", player, anomaly: code };
+        expect(cuesFor(event, ctx()), `${code} ${player}`).toEqual([{ kind: "sfx", id: "anomaly", params: { anomaly: code }, delayMs: 0 }]);
+      }
+    }
+    // Any other board replacement (R1855000), or a code this build does not know, keeps the whoosh.
+    expect(cuesFor({ type: "boardReplaced", player: "p1" }, ctx())).toEqual([{ kind: "sfx", id: "whoosh", delayMs: 0 }]);
+    expect(shape({ type: "boardReplaced", player: "p2", anomaly: "ZZ" })).toEqual([sfx("whoosh")]);
   });
 });
 

@@ -75,14 +75,14 @@ describe("R1584000 showcaseStats", () => {
       "survivor",
     ]);
     expect(stats.map((stat) => stat.title())).toEqual([
-      "Most Toppled",
-      "Most Coveted",
-      "Pocket Pick",
-      "Old Faithful",
+      "Most toppled",
+      "Most coveted",
+      "Pocket pick",
+      "Old faithful",
       "Arch-Nemesis",
-      "Fallen Hero",
-      "The Record",
-      "Last Laugh",
+      "Fallen hero",
+      "The record",
+      "Last laugh",
       "Springloaded",
       "Survivor",
     ]);
@@ -152,7 +152,7 @@ describe("R1584000 showcaseStats", () => {
 
   it("R1584000 the words are looked up when called, so a language change reaches a stat already made", async () => {
     const [first] = showcaseStats(tally({ "core-001": { defeated: 5 } }), null, seeded(1));
-    expect(first?.title()).toBe("Most Toppled");
+    expect(first?.title()).toBe("Most toppled");
     await setLocale("zh-CN");
     expect(first?.title()).toBe("最常击倒");
     expect(first?.line()).toBe("被击败 5 次");
@@ -327,30 +327,30 @@ describe("R1743000 the new stats", () => {
     const stats = showcaseStats(RICH, PICK, seeded(2));
     expect(stats.map((stat) => stat.key)).toEqual([...SHOWCASE_KEYS]);
     expect(stats.slice(10, 35).map((stat) => stat.title())).toEqual([
-      "Glass Cannon",
+      "Glass cannon",
       "Unbreakable",
-      "Grudge Match",
-      "Never Tried It",
-      "Easy Target",
-      "The Closer",
+      "Grudge match",
+      "Never tried it",
+      "Easy target",
+      "The closer",
       "Hair Trigger",
-      "Ride or Die",
-      "Familiar Face",
-      "One-Hit Wonder",
-      "Second Fiddle",
-      "Bronze Medal",
+      "Ride or die",
+      "Familiar face",
+      "One-hit wonder",
+      "Second fiddle",
+      "Bronze medal",
       "Explorer",
       "Collector",
       "Workhorse",
-      "Heavy Hitter",
+      "Heavy hitter",
       "Overkill",
       "Brawler",
       "Medic",
-      "Card Shark",
-      "Shine On",
-      "Lucky Charm",
+      "Card shark",
+      "Shine on",
+      "Lucky charm",
       "Jinx",
-      "Hot Streak",
+      "Hot streak",
       "Marathon",
     ]);
     expect(stats.slice(10, 35).map((stat) => [stat.animation, stat.side])).toEqual([
@@ -381,34 +381,34 @@ describe("R1743000 the new stats", () => {
       ["entrance", "you"], // Marathon
     ]);
     expect(stats.slice(35).map((stat) => stat.title())).toEqual([
-      "Use It or Lose It",
-      "Just in Time",
-      "Sand Castle",
+      "Use it or lose it",
+      "Just in time",
+      "Sand castle",
       "Outlasted",
       "Good Feng Shui",
       "Bad Feng Shui",
-      "Hot Potato",
-      "Trade-In Value",
-      "Mass Produced",
+      "Hot potato",
+      "Trade-in value",
+      "Mass produced",
       "Executioner",
-      "Giant Slayer",
+      "Giant slayer",
       "Second Wind",
-      "Bubble Wrap",
-      "Iron Wall",
-      "Punching Bag",
-      "Double Tap",
+      "Bubble wrap",
+      "Iron wall",
+      "Punching bag",
+      "Double tap",
       "Vampire",
       "Martyr",
-      "Cold Snap",
+      "Cold snap",
       "Brain Freeze",
-      "Spring Thaw",
+      "Spring thaw",
       "Shatter",
       "Encore",
-      "Bargain Hunter",
+      "Bargain hunter",
       "Denied",
       "Nope",
-      "Burnt Toast",
-      "Frequent Flyer",
+      "Burnt toast",
+      "Frequent flyer",
       "Liftoff",
       "Brick",
     ]);
@@ -678,7 +678,7 @@ describe("R1743000 the new stats", () => {
 
   it("R1743000 the new stats' words are looked up when called, in Chinese too", async () => {
     const found = statOf(RICH, "glassCannon");
-    expect(found?.title()).toBe("Glass Cannon");
+    expect(found?.title()).toBe("Glass cannon");
     await setLocale("zh-CN");
     expect(found?.title()).toBe("玻璃大炮");
     expect(found?.line()).toBe("打出 12 次，被摧毁 8 次");
@@ -733,7 +733,7 @@ describe("R2648000 a stat names the right kind of card", () => {
     expect(SHOWCASE_KEYS).toContain("luckyCharm");
     expect(SHOWCASE_KEYS as readonly string[]).not.toContain("comebackKid");
     const found = statOf(RICH, "luckyCharm");
-    expect([found?.title(), found?.cardId, found?.line()]).toEqual(["Lucky Charm", "core-001", "won 9 of the 12 games you played it in"]);
+    expect([found?.title(), found?.cardId, found?.line()]).toEqual(["Lucky charm", "core-001", "won 9 of the 12 games you played it in"]);
   });
 
   it.each([
@@ -770,33 +770,33 @@ describe("R2649000 the game's own mechanics", () => {
   type Row = readonly [ShowcaseKey, CardCounter, string, number, (n: number) => string, StageAnimation, "you" | "opponent"];
   /** Each stat that names the card with the most of one counter: its title, a count, its line for any count, its animation and its side. */
   const ROWS: readonly Row[] = [
-    ["useItOrLoseIt", "tempExpired", "Use It or Lose It", 4, (n) => `slipped away unplayed ${String(n)}×`, "expire", "you"],
-    ["sandCastle", "crumbled", "Sand Castle", 3, (n) => `crumbled ${String(n)}×`, "crumble", "you"],
+    ["useItOrLoseIt", "tempExpired", "Use it or lose it", 4, (n) => `slipped away unplayed ${String(n)}×`, "expire", "you"],
+    ["sandCastle", "crumbled", "Sand castle", 3, (n) => `crumbled ${String(n)}×`, "crumble", "you"],
     ["outlasted", "crumbledAgainst", "Outlasted", 5, (n) => `waited it out ${String(n)}×`, "crumble", "opponent"],
     ["goodFengShui", "fengShuiGood", "Good Feng Shui", 2, (n) => `blessed by Feng Shui ${String(n)}×`, "radiant", "you"],
     ["badFengShui", "fengShuiBad", "Bad Feng Shui", 2, (n) => `cursed by Feng Shui ${String(n)}×`, "hit", "you"],
-    ["hotPotato", "traded", "Hot Potato", 6, (n) => `traded away ${String(n)}×`, "bounce", "you"],
-    ["tradeInValue", "tradeDrawn", "Trade-In Value", 6, (n) => `pulled from a trade ${String(n)}×`, "entrance", "you"],
-    ["massProduced", "created", "Mass Produced", 8, (n) => `created ${String(n)}×`, "stamp", "you"],
+    ["hotPotato", "traded", "Hot potato", 6, (n) => `traded away ${String(n)}×`, "bounce", "you"],
+    ["tradeInValue", "tradeDrawn", "Trade-in value", 6, (n) => `pulled from a trade ${String(n)}×`, "entrance", "you"],
+    ["massProduced", "created", "Mass produced", 8, (n) => `created ${String(n)}×`, "stamp", "you"],
     ["executioner", "kills", "Executioner", 12, (n) => (n === 1 ? "took down 1 enemy" : `took down ${String(n)} enemies`), "lunge", "you"],
-    ["giantSlayer", "biggestKill", "Giant Slayer", 9, (n) => `felled a ${String(n)}-health giant`, "lunge", "you"],
+    ["giantSlayer", "biggestKill", "Giant slayer", 9, (n) => `felled a ${String(n)}-health giant`, "lunge", "you"],
     ["secondWind", "reborn", "Second Wind", 3, (n) => `rose again ${String(n)}×`, "reborn", "you"],
-    ["bubbleWrap", "shieldsLost", "Bubble Wrap", 7, (n) => `shield popped ${String(n)}×`, "shield", "you"],
-    ["ironWall", "armorAbsorbed", "Iron Wall", 21, (n) => `shrugged off ${String(n)} damage`, "armor", "you"],
-    ["punchingBag", "damageTaken", "Punching Bag", 44, (n) => `took ${String(n)} damage`, "hit", "you"],
-    ["doubleTap", "doubleAttacks", "Double Tap", 5, (n) => `attacked twice in a turn ${String(n)}×`, "windfury", "you"],
+    ["bubbleWrap", "shieldsLost", "Bubble wrap", 7, (n) => `shield popped ${String(n)}×`, "shield", "you"],
+    ["ironWall", "armorAbsorbed", "Iron wall", 21, (n) => `shrugged off ${String(n)} damage`, "armor", "you"],
+    ["punchingBag", "damageTaken", "Punching bag", 44, (n) => `took ${String(n)} damage`, "hit", "you"],
+    ["doubleTap", "doubleAttacks", "Double tap", 5, (n) => `attacked twice in a turn ${String(n)}×`, "windfury", "you"],
     ["vampire", "lifesteal", "Vampire", 17, (n) => `drained ${String(n)} health`, "heal", "you"],
     ["martyr", "sacrificed", "Martyr", 4, (n) => `gave itself up ${String(n)}×`, "doom", "you"],
-    ["coldSnap", "froze", "Cold Snap", 6, (n) => (n === 1 ? "froze 1 enemy" : `froze ${String(n)} enemies`), "lunge", "you"],
+    ["coldSnap", "froze", "Cold snap", 6, (n) => (n === 1 ? "froze 1 enemy" : `froze ${String(n)} enemies`), "lunge", "you"],
     ["brainFreeze", "frozen", "Brain Freeze", 5, (n) => `frozen ${String(n)}×`, "freeze", "you"],
-    ["springThaw", "thawed", "Spring Thaw", 4, (n) => `thawed out ${String(n)}×`, "thaw", "you"],
+    ["springThaw", "thawed", "Spring thaw", 4, (n) => `thawed out ${String(n)}×`, "thaw", "you"],
     ["shatter", "shattered", "Shatter", 3, (n) => (n === 1 ? "shattered 1 frozen enemy" : `shattered ${String(n)} frozen enemies`), "lunge", "you"],
     ["encore", "flashback", "Encore", 2, (n) => `played from the graveyard ${String(n)}×`, "reborn", "you"],
-    ["bargainHunter", "manaSaved", "Bargain Hunter", 15, (n) => `saved ${String(n)} mana`, "radiant", "you"],
+    ["bargainHunter", "manaSaved", "Bargain hunter", 15, (n) => `saved ${String(n)} mana`, "radiant", "you"],
     ["denied", "countered", "Denied", 3, (n) => `countered ${String(n)}×`, "exile", "you"],
     ["nope", "counterspells", "Nope", 4, (n) => (n === 1 ? "stopped 1 play cold" : `stopped ${String(n)} plays cold`), "trap", "you"],
-    ["burntToast", "burned", "Burnt Toast", 2, (n) => `burned from a full hand ${String(n)}×`, "death", "you"],
-    ["frequentFlyer", "bounced", "Frequent Flyer", 5, (n) => `bounced back to hand ${String(n)}×`, "bounce", "you"],
+    ["burntToast", "burned", "Burnt toast", 2, (n) => `burned from a full hand ${String(n)}×`, "death", "you"],
+    ["frequentFlyer", "bounced", "Frequent flyer", 5, (n) => `bounced back to hand ${String(n)}×`, "bounce", "you"],
     ["liftoff", "launched", "Liftoff", 3, (n) => (n === 1 ? "flew in 1 launched Starship" : `flew in ${String(n)} launched Starships`), "launch", "you"],
   ];
 
@@ -824,7 +824,7 @@ describe("R2649000 the game's own mechanics", () => {
     const found = statOf(tally(base), "justInTime");
     expect([found?.cardId, found?.title(), found?.line(), found?.animation, found?.side]).toEqual([
       "core-003",
-      "Just in Time",
+      "Just in time",
       "played 4 of the 5 times it was Temporary",
       "inTime",
       "you",

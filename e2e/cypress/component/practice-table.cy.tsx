@@ -144,7 +144,7 @@ function GameOverPractice(): React.JSX.Element {
           boardNotice={
             <p className="notice practice-unearned" data-testid={practiceTestid.unearned} role="status">
               <span>This game won&apos;t earn anything.</span>
-              <button type="button" aria-label="Dismiss">
+              <button type="button" aria-label="Close">
                 Dismiss
               </button>
             </p>

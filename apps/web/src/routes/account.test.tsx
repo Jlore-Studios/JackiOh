@@ -143,7 +143,7 @@ describe("the account screen", () => {
     render(<AccountRoute token={TOKEN} />);
 
     expect(await screen.findByTestId("account-email")).toHaveTextContent("player1@example.com");
-    expectOnePageTitle("Your account");
+    expectOnePageTitle("Account");
     expect(screen.getAllByRole("heading", { level: 2 }).length, "section headings are h2, under the h1").toBeGreaterThan(0);
   });
 
@@ -177,7 +177,7 @@ describe("the account screen", () => {
     expect(screen.queryByTestId("account-rating")).toBeNull();
   });
 
-  it("R2778000 shows the Constructed ladder's rank and then the All Random one's, each read on its own", async () => {
+  it("R2778000 shows the Constructed ladder's rank and then the All random one's, each read on its own", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
       ladder === "random"
@@ -198,7 +198,7 @@ describe("the account screen", () => {
     expect(screen.getByTestId(accountTestid.randomBadges)).toHaveTextContent(/no season best yet/i);
     expect(screen.getByTestId(accountTestid.seasonRecord)).toHaveTextContent("7–2–1");
     expect(screen.getByRole("heading", { name: "Constructed" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "All Random" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All random" })).toBeInTheDocument();
     expect(vi.mocked(getOwnRank)).toHaveBeenCalledWith(TOKEN, "random");
   });
 

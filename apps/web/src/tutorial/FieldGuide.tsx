@@ -1,4 +1,4 @@
-// The Field Guide (SPEC §9.10, R2205002): every mechanic the lessons let a player find, in lesson
+// The Field guide (SPEC §9.10, R2205002): every mechanic the lessons let a player find, in lesson
 // order, each met one with its rule and each not yet met as "?" under the lesson that sets it up. Its
 // modal dialog gives focus back to the button that opened it.
 
@@ -23,7 +23,7 @@ function FieldGuideDialog({ met, onClose }: { met: readonly string[]; onClose():
       testid={tutorialTestid.fieldGuide}
       closeTestid={tutorialTestid.fieldGuideClose}
       className="field-guide"
-      title={t("Field Guide")}
+      title={t("Field guide")}
       description={t("{found} of {total} found", { found: met.length, total: FIELD_GUIDE.length })}
       onClose={onClose}
       actions={[]}
@@ -64,14 +64,14 @@ function FieldGuideDialog({ met, onClose }: { met: readonly string[]; onClose():
   );
 }
 
-/** The button that opens the Field Guide, and the dialog while it is open. */
+/** The button that opens the Field guide, and the dialog while it is open. */
 export function FieldGuideButton({ testid, compact = false }: { testid: string; compact?: boolean }): ReactElement {
   useLocale();
   const progress = useTutorialProgress();
   const met = fieldGuideOf(progress);
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
-  const label = t("Field Guide {found}/{total}", { found: met.length, total: FIELD_GUIDE.length });
+  const label = t("Field guide {found}/{total}", { found: met.length, total: FIELD_GUIDE.length });
   return (
     <>
       <button

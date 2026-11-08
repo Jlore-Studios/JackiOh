@@ -14,6 +14,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 import { checkImportRoom, trioConflicts, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
 import { TRIO_CODE_VERSION } from "@jackioh/server-config";
+import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { droppedLines } from "./ImportPanel.tsx";
@@ -107,7 +108,8 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
     <section className="ws-editor ws-import" data-testid={TRIO_IMPORT} aria-labelledby={titleId}>
       <div className="ws-editor-head">
         <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onCancel}>
-          {t("← All decks")}
+          <ArrowIcon direction="back" />
+          {t("Back to decks")}
         </button>
         <h2 className="ws-import-title" id={titleId}>
           {t("Import a trio")}

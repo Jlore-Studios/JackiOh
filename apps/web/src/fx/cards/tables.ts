@@ -6,8 +6,6 @@
 // a definition the viewer reads; a hidden play never keys one (R202).
 // R2787000: a hooks entry may also carry, or be only, an `aura: { look, palette?, scope }`, the standing
 // look its card wears while it holds (fx/aura/); a `zone` or `lane` aura stands in a Field card's zone.
-// R3399001: a `{ bespoke }` entry may carry one beside its recipe (`auraOfEntry` reads either), and a
-// Unit's `zone` aura stands in its own unit zone.
 // R2794000: a Unit's hooks entry may also carry `entrance: "<key>"`, its marquee entrance (entrances.ts)
 // beside its hooks. R3332000: every entry but a `none` may carry the frame (`FxCardFrame`) beside its kind:
 // an `entrance` on a Unit's or a Field Spell's (alone, it is a hooks entry of no hook), a `takeover` look
@@ -15,6 +13,14 @@
 // Legendary's or a Mythic's, which must name its first beat: a Unit's entrance, a Field Spell's entrance
 // or cast of its own, any other card's cast of its own (`{ bespoke }` or `{ setPiece }`). A token's
 // rarity here is the one it prints (B2.5), as its entrance's (game/animations.ts `EntranceResolver`).
+// R3400000: a `{ bespoke }` entry may wear an `aura` too, and a Unit's aura may stand on its own `tile`
+// (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
+// R3389000: a signature look (fx/aura/looks.ts) is a signature's alone, and "abyss" is In Too Deep's own
+// takeover look.
+// R3407000: Stinkyscape part two's six Mythics' own takeover looks join them. R3405000: Meditative's Mythics'
+// twelve join them too ("ascent", "workshop", "brush", "mine", "quarry", "pavilion", "virus", "dojo",
+// "studyHall", "caneRack", "warRoom", "fortress"). R3399002: and Classic+'s four Mythics' ("zealot", "portal",
+// "stair", "vineyard"); R3399001: Classic+'s signature permanents wear their own looks, a Unit's on its `tile`.
 
 import JSON5 from "json5";
 
@@ -23,7 +29,7 @@ import type { CardDefs, SetName } from "@jackioh/shared";
 import { messageOf } from "../../net/errors.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isRecord } from "../../wire/json.ts";
-import { isAuraFieldType, isAuraLook, isAuraScope, type AuraLook, type AuraScope } from "../aura/looks.ts";
+import { isAuraFieldType, isAuraLook, isAuraScope, isSignatureAuraLook, type AuraLook, type AuraScope } from "../aura/looks.ts";
 import { isPalette, type FxPalette } from "../flavors.ts";
 import { isCardHook, isMotifName, type FxCardHook, type MotifName } from "../motifs/names.ts";
 import { isSetPieceKey, type SetPieceKey } from "../setPieceKeys.ts";
@@ -72,7 +78,31 @@ export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
   pawn: true,
   genie: true,
   ai: true,
-  // R3399002: Classic+'s Mythics.
+  abyss: true,
+  summit: true,
+  canvas: true,
+  napkin: true,
+  // R3407000: Stinkyscape's six Mythics of part two.
+  freshJack: true,
+  ikwzki: true,
+  shockwave: true,
+  alteran: true,
+  edge: true,
+  redNarcor: true,
+  // R3405000: Meditative's Mythics'.
+  ascent: true,
+  workshop: true,
+  brush: true,
+  mine: true,
+  quarry: true,
+  pavilion: true,
+  virus: true,
+  dojo: true,
+  studyHall: true,
+  caneRack: true,
+  warRoom: true,
+  fortress: true,
+  // R3399002: Classic+'s Mythics'.
   zealot: true,
   portal: true,
   stair: true,
@@ -124,19 +154,24 @@ function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => 
   return spec;
 }
 
-function parseAura(value: unknown, type: string, fail: (problem: string) => never): FxAuraSpec {
+/**
+ * R2787000: an aura's look, palette and scope; a `zone` or `lane` one stands in a Field card's zone, a
+ * `tile` one on a Unit's own unit zone (R3400000). R3389000: a signature look is a signature's alone.
+ */
+function parseAura(value: unknown, type: string, signature: boolean, fail: (problem: string) => never): FxAuraSpec {
   if (!isRecord(value)) fail("aura must be { look, palette?, scope }");
   for (const field of Object.keys(value)) {
     if (!AURA_FIELDS.includes(field)) fail(`unknown field "${field}" in aura`);
   }
   const { look, palette, scope } = value;
   if (typeof look !== "string" || !isAuraLook(look)) fail(`unknown aura look "${String(look)}"`);
+  if (isSignatureAuraLook(look) && !signature) fail(`aura look "${look}" is a signature's own`);
   if (typeof scope !== "string" || !isAuraScope(scope)) fail(`unknown aura scope "${String(scope)}"`);
-  // R3399001: a Unit's aura may stand in its own unit zone, never its lane.
-  if (scope === "lane" && type === "Unit") fail("a lane aura stands in a zone; this card is a Unit, whose aura is zone, side or board");
-  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type) && type !== "Unit") {
+  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type)) {
     fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is side or board`);
   }
+  // R3400000: a tile is a Unit's own unit zone.
+  if (scope === "tile" && type !== "Unit") fail(`a tile aura stands on a Unit's own tile; this card is a ${type}`);
   const spec: FxAuraSpec = { look, scope };
   if (palette !== undefined) {
     if (typeof palette !== "string" || !isPalette(palette)) fail(`unknown palette "${String(palette)}" in aura`);
@@ -188,12 +223,11 @@ function checkSignature(frame: FxCardFrame, kind: "bespoke" | "setPiece" | "hook
   }
 }
 
-/** A `{ bespoke }` entry's fields: its key, the frame and (R3399001) an aura; a `{ setPiece }` entry's its key and the frame, nothing else. */
+/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else (R3400000: a bespoke entry's aura besides). */
 function onlyKeyAndFrame(value: Record<string, unknown>, kind: "bespoke" | "setPiece", fail: (problem: string) => never): void {
-  const extra = kind === "bespoke" ? ["aura"] : [];
   for (const field of Object.keys(value)) {
-    if (field === kind || FRAME_FIELDS.includes(field) || extra.includes(field)) continue;
-    fail(kind === "bespoke" ? "a bespoke entry holds nothing else but its frame and an aura" : `a ${kind} entry holds nothing else but its frame`);
+    if (field === kind || FRAME_FIELDS.includes(field) || (kind === "bespoke" && field === "aura")) continue;
+    fail(kind === "bespoke" ? "a bespoke entry holds nothing else but its frame and its aura" : `a ${kind} entry holds nothing else but its frame`);
   }
 }
 
@@ -208,8 +242,7 @@ function parseEntry(value: unknown, card: CardFacts, fail: (problem: string) => 
     const key = value.bespoke;
     onlyKeyAndFrame(value, "bespoke", fail);
     if (typeof key !== "string" || !isCardRecipeKey(key)) fail(`unknown bespoke "${String(key)}"`);
-    // R3399001: a bespoke entry may wear a standing look beside its recipe, as a hooks entry does.
-    const aura = has(value, "aura") ? parseAura(value.aura, type, fail) : undefined;
+    const aura = has(value, "aura") ? parseAura(value.aura, type, value.signature === true, fail) : undefined;
     const frame = parseFrame(value, card, fail);
     checkSignature(frame, "bespoke", type, fail);
     return { kind: "bespoke", key, ...(aura === undefined ? {} : { aura }), ...frame };
@@ -227,7 +260,7 @@ function parseEntry(value: unknown, card: CardFacts, fail: (problem: string) => 
   for (const [hook, spec] of Object.entries(value)) {
     if (FRAME_FIELDS.includes(hook)) continue;
     if (hook === "aura") {
-      aura = parseAura(spec, type, fail);
+      aura = parseAura(spec, type, value.signature === true, fail);
       continue;
     }
     if (!isCardHook(hook)) fail(`unknown hook "${hook}"`);
@@ -267,8 +300,8 @@ export function parseFxCardTable(file: string, source: string, catalog: Readonly
   return entries;
 }
 
-/** R2787000, R3399001: the standing look `entry` wears: a hooks entry's `aura`, or a bespoke entry's beside its recipe. */
-export function auraOfEntry(entry: FxCardEntry | undefined): FxAuraSpec | undefined {
+/** R2787000, R3400000: the standing look `entry` wears, a hooks entry's or a bespoke one's. */
+export function entryAura(entry: FxCardEntry | undefined): FxAuraSpec | undefined {
   return entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
 }
 

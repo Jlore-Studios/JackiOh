@@ -685,10 +685,10 @@ describe("R639 your table", () => {
     const table = screen.getByTestId(landingTestid.stats);
     // The six stats this tally has, with the words each says.
     const lines: Record<string, string> = {
-      "Old Faithful": "played 9×",
+      "Old faithful": "played 9×",
       Unbreakable: "played 9×, never destroyed",
-      "The Record": "4 games: 4 won, 0 lost (100% won)",
-      "Familiar Face": "in 4 of your 4 games",
+      "The record": "4 games: 4 won, 0 lost (100% won)",
+      "Familiar face": "in 4 of your 4 games",
       Explorer: "1 different card played",
       Collector: `seen 1 of ${String(ROTATION_POOL.length)} cards`,
     };

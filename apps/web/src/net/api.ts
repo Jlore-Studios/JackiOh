@@ -1372,7 +1372,7 @@ export type ModeChoice =
   | { mode: "bo3"; trioId: string }
   | { mode: "random"; leanSet?: LeanPick };
 
-/** `POST /api/queue`. `matchId` for a paired Best-of-1 or All Random game, `seriesId` for Conquest. */
+/** `POST /api/queue`. `matchId` for a paired Best-of-1 or All random game, `seriesId` for Conquest. */
 export type EnqueueResponse = {
   ticketId: string;
   status: "open" | "matched" | "cancelled";
@@ -1520,7 +1520,7 @@ export function getSeriesForMatch(token: string, matchId: string): Promise<{ ser
 export type GrapeTier = "rotten" | "normal" | "large" | "golden" | "mythic";
 
 /**
- * R2778000: the two ranked ladders: Constructed (the Best of 1 and Conquest queues) and All Random, each
+ * R2778000: the two ranked ladders: Constructed (the Best of 1 and Conquest queues) and All random, each
  * with its own rank, record, badges and leaderboard. A read that names none is Constructed's.
  */
 export type Ladder = "constructed" | "random";
@@ -1668,7 +1668,7 @@ export type RematchStatusResponse = {
   mode?: QueueMode;
 };
 
-/** `lean`: as `ModeChoice`'s `leanSet`, for an All Random rematch; a Best-of-1 one replays its decks. */
+/** `lean`: as `ModeChoice`'s `leanSet`, for an All random rematch; a Best-of-1 one replays its decks. */
 export function rematchOffer(
   token: string,
   matchId: string,

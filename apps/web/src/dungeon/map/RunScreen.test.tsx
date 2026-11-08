@@ -227,7 +227,7 @@ function expectHud(coins = "11", tickets = "3"): void {
 describe("R3223000 the run screen's title", () => {
   it("R3223000 the screen has one visible h1, the PageTitle", () => {
     render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
-    expectOnePageTitle("Dungeon Run");
+    expectOnePageTitle("Dungeon run");
   });
 });
 

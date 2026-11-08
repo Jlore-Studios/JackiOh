@@ -214,7 +214,13 @@ radiant?: true, credits: number, } | { "type": "marketSold", player: PlayerId, i
 /**
  * Set when the card sold is Radiant. Only ever `Some(true)`.
  */
-radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, } | { "type": "hookResolving", sourceId: string, defId: string, controller: PlayerId, hook: HookKind, 
+radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, 
+/**
+ * R3337000: the code of the Stinkyscape Anomaly laid (`"WH"`, `"BF"`, …), set by Anomaly
+ * Found! and Call to Chaos (Scape Edition); absent for any other replacement and in older
+ * logs. Public, as the laid board is.
+ */
+anomaly?: string, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, } | { "type": "hookResolving", sourceId: string, defId: string, controller: PlayerId, hook: HookKind, 
 /**
  * R2783000, R177: the seats that could not read the card where it stood as the hook began.
  * Engine bookkeeping: the view uses it and never forwards it.

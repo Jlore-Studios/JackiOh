@@ -4,7 +4,7 @@
 import type { PlayerView } from "@jackioh/shared";
 
 import { tierOf } from "../fx/aura/tile.ts";
-import { FX_CARD_TABLE, auraOfEntry } from "../fx/cards/tables.ts";
+import { entryAura, FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "./fixtures.ts";
 
@@ -17,8 +17,8 @@ export function tileBoardView(): PlayerView {
 
   for (const [id, def] of Object.entries(CATALOG)) {
     if (tierOf(def) === null) continue;
-    // A card whose entry wears an aura (beside hooks or, R3399001, a bespoke recipe) stands that instead.
-    if (auraOfEntry(FX_CARD_TABLE.get(id)) !== undefined) continue;
+    // A card's own aura replaces its tile aura (R3400000: a bespoke entry's too).
+    if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) continue;
 
     if (def.type === "Unit" && eligibleUnits.length < 10) {
       eligibleUnits.push(id);
@@ -28,18 +28,20 @@ export function tileBoardView(): PlayerView {
     }
   }
 
+  // R3342000: most Legendary and Mythic Field Spells wear an aura of their own (R3399001: since Classic+'s pass,
+  // every one), so the backrow permanents left to wear the tile aura (five face-up Traps today) take the
+  // backrow's five zones a side in turn: still one permanent per zone.
+  const fieldsAt = (from: number): string[] =>
+    eligibleFields.length === 0 ? [] : Array.from({ length: 5 }, (_, i) => eligibleFields[(from + i) % eligibleFields.length] ?? "");
+
   return baseView({
     you: emptySide("p1", {
       units: eligibleUnits.slice(0, 5).map((defId, i) => unit("p1", { defId, instanceId: `tile-unit-you-${i + 1}` })),
-      backrow: eligibleFields.slice(0, 5).map((defId, i) =>
-        faceUpBackrow("p1", { defId, instanceId: `tile-back-you-${i + 1}`, type: CATALOG[defId]?.type ?? "Field Spell" }),
-      ),
+      backrow: fieldsAt(0).map((defId, i) => faceUpBackrow("p1", { defId, instanceId: `tile-back-you-${i + 1}`, type: CATALOG[defId]?.type ?? "Field Spell" })),
     }),
     opponent: emptySide("p2", {
       units: eligibleUnits.slice(5, 10).map((defId, i) => unit("p2", { defId, instanceId: `tile-unit-opp-${i + 1}` })),
-      backrow: eligibleFields.slice(5, 10).map((defId, i) =>
-        faceUpBackrow("p2", { defId, instanceId: `tile-back-opp-${i + 1}`, type: CATALOG[defId]?.type ?? "Field Spell" }),
-      ),
+      backrow: fieldsAt(5).map((defId, i) => faceUpBackrow("p2", { defId, instanceId: `tile-back-opp-${i + 1}`, type: CATALOG[defId]?.type ?? "Field Spell" })),
     }),
   });
 }

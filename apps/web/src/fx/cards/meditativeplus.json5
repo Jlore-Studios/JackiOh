@@ -5,13 +5,16 @@
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
-//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "meditativeplus-001": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Bob's Plan
+  "meditativeplus-001": { bespoke: "bobsPlan", takeover: "summit", signature: true }, // Bob's Plan
   "meditativeplus-001-1": { cast: { motif: "deal" } }, // Base Camp
   "meditativeplus-001-2": { cast: { motif: "deal" } }, // Spa Day
   "meditativeplus-001-3": { cast: { motif: "vanish", palette: "Hustle/cash" } }, // Garage Sale
@@ -41,7 +44,7 @@
   "meditativeplus-021": { bespoke: "harmonyWave" }, // Harmony Spirit
   "meditativeplus-022": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // Mountaintop Garden
   "meditativeplus-023": { cast: { motif: "deal" } }, // Enormous Elderberry
-  "meditativeplus-024": { cry: { motif: "deal" } }, // Bob, Wisconsin's Strongest Soldier
+  "meditativeplus-024": { bespoke: "bobSoldier", entrance: "snowplowHeave", aura: { look: "flurry", palette: "Physical/wind", scope: "tile" }, signature: true }, // Bob, Wisconsin's Strongest Soldier
   "meditativeplus-025": { cast: { motif: "deal", palette: "Nerd/pixel" } }, // KY's Intuition
-  "meditativeplus-026": { cast: { motif: "deal", palette: "Nerd/pixel" } }, // Scratch Pad
+  "meditativeplus-026": { bespoke: "scratchPad", takeover: "canvas", signature: true }, // Scratch Pad
 }

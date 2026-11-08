@@ -1,6 +1,6 @@
-// The discovery coach (coach.ts's moments, discoveries.ts's Field Guide), on hand-built views and
+// The discovery coach (coach.ts's moments, discoveries.ts's Field guide), on hand-built views and
 // fixture scripts: R2205000; past its turns a moment retires and the lesson's end names what it set up
-// (R314). Each Field Guide entry is recognized from the human's view alone (R292).
+// (R314). Each Field guide entry is recognized from the human's view alone (R292).
 
 import { describe, expect, it } from "vitest";
 
@@ -169,7 +169,7 @@ describe("R2205000 the discovery coach", () => {
     expect(display.mode === "step" && display.holdAi).toBe(false);
   });
 
-  it("R2205000 every entry is watched, each found once; one the Field Guide holds bubbles only if the lesson lists it", () => {
+  it("R2205000 every entry is watched, each found once; one the Field guide holds bubbles only if the lesson lists it", () => {
     const script = scriptOf({ steps: [], teaches: ["x"] });
     let state = coachObserve(script, coachStart(["x", "y"]), ctx(aiTurn(2), [shieldPopped], [], true));
     expect(state.found, "found, though no moment asked for it").toEqual(["y"]);
@@ -194,7 +194,7 @@ describe("R2205000 the discovery coach", () => {
     }
   });
 
-  it("R2205000 a revisit offers an earlier lesson's mechanic only while the Field Guide lacks it", () => {
+  it("R2205000 a revisit offers an earlier lesson's mechanic only while the Field guide lacks it", () => {
     const revisit = moment({
       id: "again",
       title: "Shields",
@@ -272,7 +272,7 @@ describe("R2205000 the discovery coach", () => {
   });
 });
 
-/** A public definition with only the fields the Field Guide reads. */
+/** A public definition with only the fields the Field guide reads. */
 function defOf(over: Partial<CardDef> & { text?: string; keywords?: string[] }): CardDef {
   const { text = "", keywords = [], ...rest } = over;
   const face = { keywords: keywords.map((kind) => ({ kind })), text };
@@ -284,7 +284,7 @@ function found(view: PlayerView, fresh: GameEvent[], defs: Record<string, CardDe
   return FIELD_GUIDE.filter((entry) => entry.found(context)).map((entry) => entry.id);
 }
 
-describe("R2205000 the Field Guide", () => {
+describe("R2205000 the Field guide", () => {
   it("R2205000 holds unique slugs, each with a name, a rule and one of the five lessons", () => {
     const ids = FIELD_GUIDE.map((entry) => entry.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -295,7 +295,7 @@ describe("R2205000 the Field Guide", () => {
       expect(LESSON_IDS, entry.id).toContain(entry.lesson);
       expect(discoveryById(entry.id)).toBe(entry);
     }
-    // In lesson order, so the Field Guide reads as the path does.
+    // In lesson order, so the Field guide reads as the path does.
     const order = FIELD_GUIDE.map((entry) => LESSON_IDS.indexOf(entry.lesson));
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });

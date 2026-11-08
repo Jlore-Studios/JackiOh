@@ -12,9 +12,9 @@ import { t } from "../../i18n/i18n.ts";
 import { fightTestid } from "./testids.ts";
 
 export type ConfirmLeaveFightProps = {
-  /** "Keep playing", Escape, Back or a click outside the panel. */
+  /** "Stay", Escape, Back or a click outside the panel. */
   onStay(): void;
-  /** "Leave fight": make the held move. */
+  /** "Leave": make the held move. */
   onLeave(): void;
 };
 
@@ -26,8 +26,8 @@ export default function ConfirmLeaveFight({ onStay, onLeave }: ConfirmLeaveFight
       title={t("Leave this fight?")}
       description={t("It ends here and the fight starts over from its first turn.")}
       onClose={onStay}
-      cancel={{ label: t("Keep playing"), kind: "primary", testid: fightTestid.leaveStay }}
-      actions={[{ label: t("Leave fight"), kind: "danger", onClick: onLeave, testid: fightTestid.leaveConfirm }]}
+      cancel={{ label: t("Stay"), kind: "primary", testid: fightTestid.leaveStay }}
+      actions={[{ label: t("Leave"), kind: "danger", onClick: onLeave, testid: fightTestid.leaveConfirm }]}
     />
   );
 }

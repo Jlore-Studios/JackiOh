@@ -5,10 +5,13 @@
 // the gallery shows. R2794000: it also plays a marquee Unit's entrance as the Unit lands, and Classic's
 // Flourishes on their own fixtures. R3332000: an entry's `entrance` plays as its card lands, whatever the
 // entry's kind, a Field Spell's face up in the backrow; R3332001 over the board its entrance reads
-// (`galleryBoardOf`: Felinor Fiender's over three Felinors).
+// (`galleryBoardOf`: Felinor Fiender's over three Felinors; R3334004 Starfleet Commander's over a
+// Dormant Starship).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { DORMANT_STARSHIP_ID } from "../../cards/fused.ts";
+import { ANOMALY_FOUND_ID } from "../../cards/anomalies.ts";
 import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
 import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
@@ -16,9 +19,18 @@ import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
 import { entranceKeyOf } from "../cardFx.ts";
 import type { CardRecipeKey } from "../cards/bespoke.ts";
+import { graveRiseFixture } from "../cards/classic/backFromTheGy.ts";
 import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
+import { taxSeizureFixture } from "../cards/classic/incomeTax.ts";
+import { sceptreLocketFixture } from "../cards/classic/infiniScepter.ts";
+import { shrineDescentFixture } from "../cards/classic/inTooDeep.ts";
+import { webRedirectFixture } from "../cards/classic/joro.ts";
 import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
+import { titanLeafFixture } from "../cards/classic/natureTitan.ts";
+import { palantirGazeFixture } from "../cards/classic/palantir.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
+import { secondGustFixture } from "../cards/classic/secondWind.ts";
+import { tyrantCommandFixture } from "../cards/classic/spellTyrant.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
 import { holoLoomFixture } from "../cards/classicplus/aiSlop.ts";
 import { killNotchFixture } from "../cards/classicplus/botLoser.ts";
@@ -50,8 +62,52 @@ import { stairGlueFixture } from "../cards/classicplus/twiceForward.ts";
 import { waffleGridFixture } from "../cards/classicplus/waffleShell.ts";
 import { drumBeatFixture } from "../cards/classicplus/wardrum.ts";
 import { zealotCycloneFixture } from "../cards/classicplus/zealotism.ts";
+import { brushSealFixture } from "../cards/meditative/aestheticizeTheGame.ts";
+import { aiGirlfriendFixture } from "../cards/meditative/aiGirlfriend.ts";
+import { alternateFateFixture } from "../cards/meditative/alternateFate.ts";
+import { alunethFixture } from "../cards/meditative/aluneth.ts";
+import { jadeDieFixture } from "../cards/meditative/callToChaos.ts";
+import { fleaMarketFixture } from "../cards/meditative/cnFleaMarket.ts";
+import { cnGolemFixture } from "../cards/meditative/cnGolem.ts";
+import { devinBotFixture } from "../cards/meditative/devinBot.ts";
+import { doubleHeaderFixture } from "../cards/meditative/doubleHeader.ts";
+import { everGrowingTreeFixture } from "../cards/meditative/everGrowingTree.ts";
+import { blueprintsFixture } from "../cards/meditative/evilBlueprints.ts";
+import { fengShuiFixture } from "../cards/meditative/fengShui.ts";
+import { introspectionFixture } from "../cards/meditative/introspection.ts";
+import { jadeBeautyFixture } from "../cards/meditative/jadeBeauty.ts";
+import { jlockeedHqFixture } from "../cards/meditative/jlockeedHq.ts";
+import { keenusKeysFixture } from "../cards/meditative/keymasterKeenus.ts";
+import { knowledgeBreakerFixture } from "../cards/meditative/knowledgeBreaker.ts";
+import { breakerPrimeFixture } from "../cards/meditative/knowledgeBreakerPrime.ts";
+import { paretoFixture } from "../cards/meditative/paretoOptimality.ts";
+import { prisonFixture } from "../cards/meditative/prison.ts";
+import { summitAscentFixture } from "../cards/meditative/reachTheSummit.ts";
+import { redJadeFixture } from "../cards/meditative/redJade.ts";
+import { skullJnariFixture } from "../cards/meditative/skullOfJnari.ts";
+import { taotieFixture } from "../cards/meditative/taotie.ts";
+import { tatchesFixture } from "../cards/meditative/tatchesTheTotem.ts";
+import { touchedByKyFixture } from "../cards/meditative/touchedByKy.ts";
+import { trueCraftFixture } from "../cards/meditative/trueCraftACard.ts";
+import { yileGptFixture } from "../cards/meditative/yileGpt.ts";
+import { yilePrimeFixture } from "../cards/meditative/yileGptPrime.ts";
+import { yileVirusFixture } from "../cards/meditative/yilesVirus.ts";
+import { edgeFleeFixture, starscapeJumpFixture } from "../cards/stinkyscape/alteranReach.ts";
+import { stinkCloudFixture, tabletopTiltFixture } from "../cards/stinkyscape/chaosCalls.ts";
+import { freshJackCometFixture } from "../cards/stinkyscape/freshJack.ts";
+import { blobDrumFixture, dataPacketFixture, primeConductFixture } from "../cards/stinkyscape/in33dh3.ts";
+import { jobInterviewFixture, paydayFixture } from "../cards/stinkyscape/jobApplication.ts";
+import { balthasarCradleFixture, casperKissFixture, melchiorTallyFixture } from "../cards/stinkyscape/magi.ts";
+import { giftShopFixture } from "../cards/stinkyscape/megabase.ts";
+import { narcorDustFixture, redNarcorHumFixture } from "../cards/stinkyscape/narcor.ts";
+import { sanctumEchoFixture } from "../cards/stinkyscape/sanctum.ts";
+import { scornSweepFixture } from "../cards/stinkyscape/scornboi.ts";
+import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
+import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
+import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
-import { FX_CARD_TABLE, auraOfEntry, type FxCardEntry } from "../cards/tables.ts";
+import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
+import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
@@ -86,6 +142,9 @@ export function galleryPlayId(n: number): string {
 
 /** R2785000: the key of the gallery's fixture set piece. */
 export const GALLERY_SET_PIECE = "fixture";
+
+/** R3400001: the outcome the gallery's Call to Chaos (Training-Grounds Edition) rolls, as the engine names it. */
+const GALLERY_CHAOS_EFFECT = "Summon a Training-Grounds Golem";
 
 /** #2798: Stinkyscape #68 Stratos, the Unit Stratos Swarm fills a board with. */
 const STRATOS = "stinkyscape-068";
@@ -401,11 +460,17 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * with the player's first unit, Flash Freeze freezes every unit on both sides and Stratos Swarm fills
  * the player's empty zones with Stratos (its first unit zone, a full board having none). #2799:
  * Celestial Caller summons a Sun in lane 2 and a Moon in lane 4, Dino-size sets the viewer's first unit
- * to 10/10 and Goetzmann Game Design adds its card. R2794000: Classic's Flourishes take their own
+ * to 10/10 and Goetzmann Game Design adds its card. R3400001: Bob's Plan adds Reach the Summit and its
+ * Base Camp, Bob freezes every enemy Unit, Scratch Pad adds its crafted card and exiles itself, Seance adds
+ * a copy of the first enemy Unit, Tutorial Master adds three cards and Call to Chaos (Training-Grounds
+ * Edition) rolls its Golem. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
- * into the deck and draws one, and King Wagtoggle swaps the decks.
+ * into the deck and draws one, and King Wagtoggle swaps the decks. R3334004: Preemptive Strike wakes its
+ * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3407000:
+ * Stinkyscape part two's signatures take their modules' own (fx/cards/stinkyscape/), each told the card it
+ * plays (`defId`), so a hook's marker names it.
  */
-export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
+export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
   bloodDrain: (view, instanceId, player) => [...motifFixture("radiance", view, instanceId, player), { type: "healthLost", player, amount: 3 }],
   crushingWalls: (view, instanceId, player) => motifFixture("wipe", view, instanceId, player),
@@ -459,6 +524,9 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
     ]),
+  // R3337002: a find, which the owner's seat reads as Anomaly Found!; R3337003: the call, and the Wormhole it lays.
+  probeScan: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-anomaly-found", defId: ANOMALY_FOUND_ID }],
+  anomalyCall: (_view, _instanceId, player) => [{ type: "boardReplaced", player, anomaly: "WH" }],
   magiBoot: (_view, _instanceId, player) =>
     (["stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3"] as const).map((defId, k) => ({
       type: "summoned" as const,
@@ -484,6 +552,7 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   },
   flashFreeze: (view) =>
     [...unitsOf(view.you), ...unitsOf(view.opponent)].map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  preemptiveStrike: (_view, _instanceId, player) => [{ type: "awakened", player, instanceId: "fx-starship", defId: DORMANT_STARSHIP_ID }],
   stratosSwarm: (view, _instanceId, player) => {
     const side = player === view.viewer ? view.you : view.opponent;
     const open = (row: "units" | "backrow", zones: readonly unknown[]): { row: "units" | "backrow"; lane: number }[] =>
@@ -512,9 +581,92 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
         ];
   },
   gameDesign: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-designed", defId: "core-055" }],
+  // R3400001: the signatures' own fixtures.
+  bobsPlan: (_view, _instanceId, player) => [
+    { type: "addedToHand", player, instanceId: "fx-wincon", defId: "meditative-008" },
+    { type: "addedToHand", player, instanceId: "fx-plan", defId: "meditativeplus-001-1" },
+  ],
+  bobSoldier: (view, _instanceId, player) =>
+    unitsOf(player === view.viewer ? view.opponent : view.you).map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  scratchPad: (_view, instanceId, player) => [
+    { type: "addedToHand", player, instanceId: "fx-crafted", defId: "core-055" },
+    { type: "exiled", instanceId, defId: "meditativeplus-026", owner: player },
+  ],
+  seance: (view, _instanceId, player) => {
+    const foe = unitsOf(player === view.viewer ? view.opponent : view.you)[0];
+    return [{ type: "addedToHand", player, instanceId: "fx-double", defId: foe?.defId ?? "core-003" }];
+  },
+  tutorialMaster: (_view, _instanceId, player) =>
+    ["core-002", "core-003", "core-055"].map((defId, k) => ({ type: "addedToHand", player, instanceId: `fx-lesson-${String(k + 1)}`, defId })),
+  chaosDice: (_view, instanceId, player) => [{ type: "chaosRolled", player, instanceId, defId: "traininggrounds-039", effects: [GALLERY_CHAOS_EFFECT] }],
+  // R3405001: Meditative's signatures' own, each beside its recipe (fx/cards/meditative/).
+  introspection: introspectionFixture,
+  summitAscent: summitAscentFixture,
+  doubleHeader: doubleHeaderFixture,
+  trueCraft: trueCraftFixture,
+  brushSeal: brushSealFixture,
+  alternateFate: alternateFateFixture,
+  redJade: redJadeFixture,
+  jadeBeauty: jadeBeautyFixture,
+  fengShui: fengShuiFixture,
+  fleaMarket: fleaMarketFixture,
+  knowledgeBreaker: knowledgeBreakerFixture,
+  breakerPrime: breakerPrimeFixture,
+  taotie: taotieFixture,
+  yileGpt: yileGptFixture,
+  yilePrime: yilePrimeFixture,
+  yileVirus: yileVirusFixture,
+  aiGirlfriend: aiGirlfriendFixture,
+  devinBot: devinBotFixture,
+  skullJnari: skullJnariFixture,
+  keenusKeys: keenusKeysFixture,
+  pareto: paretoFixture,
+  everGrowingTree: everGrowingTreeFixture,
+  touchedByKy: touchedByKyFixture,
+  aluneth: alunethFixture,
+  tatches: tatchesFixture,
+  jadeDie: jadeDieFixture,
+  cnGolem: cnGolemFixture,
+  blueprints: blueprintsFixture,
+  prison: prisonFixture,
+  jlockeedHq: jlockeedHqFixture,
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
+  // R3389001: Classic's signatures, each on its own fixture (fx/cards/classic/); BOOM! Big Max's Crater
+  // Locks the zone the gallery lands it in.
+  palantirGaze: palantirGazeFixture,
+  sceptreLocket: sceptreLocketFixture,
+  taxSeizure: taxSeizureFixture,
+  secondGust: secondGustFixture,
+  webRedirect: webRedirectFixture,
+  graveRise: graveRiseFixture,
+  titanLeaf: titanLeafFixture,
+  tyrantCommand: tyrantCommandFixture,
+  craterLock: (_view, _instanceId, player) => [{ type: "locked", player, row: "units", lane: GALLERY_ENTRANCE_LANE }],
+  shrineDescent: shrineDescentFixture,
+  // R3407000: Stinkyscape part two's signatures, each on its module's own fixture (fx/cards/stinkyscape/).
+  melchiorTally: melchiorTallyFixture,
+  balthasarCradle: balthasarCradleFixture,
+  casperKiss: casperKissFixture,
+  freshJackComet: freshJackCometFixture,
+  shockwaveLecture: shockwaveLectureFixture,
+  jobInterview: jobInterviewFixture,
+  payday: paydayFixture,
+  scornSweep: scornSweepFixture,
+  giftShop: giftShopFixture,
+  dataPacket: dataPacketFixture,
+  primeConduct: primeConductFixture,
+  blobDrum: blobDrumFixture,
+  starscapeJump: starscapeJumpFixture,
+  edgeFlee: edgeFleeFixture,
+  chaosOrb: chaosOrbFixture,
+  stinkCloud: stinkCloudFixture,
+  tabletopTilt: tabletopTiltFixture,
+  sanctumEcho: sanctumEchoFixture,
+  stimmyDrop: stimmyDropFixture,
+  narcorDust: narcorDustFixture,
+  redNarcorHum: redNarcorHumFixture,
   // R3399000: Classic+'s signatures take their own fixtures (fx/cards/classicplus/), as the engine emits each card's events.
   pancakeFlip: pancakeFlipFixture,
   pancakeMouth: pancakeMouthFixture,
@@ -668,18 +820,31 @@ export const SET_PIECE_FIXTURES: { readonly [K in SetPieceKey]: FixtureOf } = {
 /** R3332000: the backrow lane a Field Spell's gallery entrance lands in, the first, where its aura stands (`galleryFieldView`). */
 const GALLERY_FIELD_ENTRANCE_LANE = 1;
 
-/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors). */
+/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors; R3334004 Starfleet Commander's Dormant Starship). */
 const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = {
   felinorAssembly: felinorBoard,
+  fleetCommand: fleetBoard,
   // R3399000: Felinor Flagbearer's ribbons and Prime's banner shadow reach the Felinors beside them.
   bannerPlant: felinorBoard,
   greatBanner: felinorBoard,
 };
 
-/** R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), else `view` itself. */
-export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {
-  const key = entranceKeyOf(defId);
-  const board = key === undefined ? undefined : ENTRANCE_BOARDS[key];
+/** R3389001: Back from the GY's board: its caster's first unit zone open, so the Unit it raises lands alone there, no Stack. */
+function openFirstZone(view: PlayerView): PlayerView {
+  return { ...view, you: { ...view.you, units: view.you.units.map((unit, k) => (k === 0 ? null : unit)) } };
+}
+
+/** R3389001: the board a recipe reads, for one that reads it. */
+const RECIPE_BOARDS: Partial<Record<CardRecipeKey, (view: PlayerView) => PlayerView>> = { graveRise: openFirstZone };
+
+/**
+ * R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), R3389001
+ * else its recipe's (`RECIPE_BOARDS`), else `view` itself.
+ */
+export function galleryBoardOf(defId: string, view: PlayerView, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): PlayerView {
+  const key = entranceKeyOf(defId, table);
+  const entry = table.get(defId);
+  const board = (key === undefined ? undefined : ENTRANCE_BOARDS[key]) ?? (entry?.kind === "bespoke" ? RECIPE_BOARDS[entry.key] : undefined);
   return board === undefined ? view : board(view);
 }
 
@@ -707,7 +872,7 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
         return play.motif === "snap" ? [fired] : [fired, ...motifFixture(play.motif, view, instanceId, player)];
       }
       case "recipe":
-        return RECIPE_FIXTURES[play.key](view, instanceId, player);
+        return RECIPE_FIXTURES[play.key](view, instanceId, player, defId);
       case "setPiece":
         return SET_PIECE_FIXTURES[play.key](view, instanceId, player, defId);
       case "hook":
@@ -742,17 +907,17 @@ export function galleryHandOf(defId: string, view: PlayerView, n: number): Playe
 
 /**
  * #2793: the view a card plays over: a Field Spell's or a Field Trap's own, face up in the viewer's
- * first backrow zone, so its aura stands there (fx/aura/plan.ts); R3399001 a Unit's whose entry wears an
- * aura, standing in the viewer's unit zone of `GALLERY_ENTRANCE_LANE` under that zone's own id, so its
- * tile aura shows; any other card's the view as it is.
+ * first backrow zone, so its aura stands there (fx/aura/plan.ts); R3400000 a Unit whose entry wears a
+ * `tile` aura, standing in the lane its entrance lands in (`GALLERY_ENTRANCE_LANE`) under its own id, so
+ * its aura stands on its tile; any other card's the view as it is.
  */
-export function galleryFieldView(defId: string, view: PlayerView): PlayerView {
+export function galleryFieldView(defId: string, view: PlayerView, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): PlayerView {
   const type = CATALOG[defId]?.type;
-  if (type === "Unit") {
-    const at = GALLERY_ENTRANCE_LANE - 1;
-    const unit = view.you.units[at];
-    if (auraOfEntry(FX_CARD_TABLE.get(defId)) === undefined || unit === null || unit === undefined) return view;
-    return { ...view, you: { ...view.you, units: view.you.units.map((zone, k) => (k === at ? { ...unit, defId } : zone)) } };
+  const entry = table.get(defId);
+  const aura = entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
+  if (type === "Unit" && aura?.scope === "tile") {
+    const units = view.you.units.map((unit, k) => (unit === null || k !== GALLERY_ENTRANCE_LANE - 1 ? unit : { ...unit, defId }));
+    return { ...view, you: { ...view.you, units } };
   }
   const first = view.you.backrow[0];
   if (type === undefined || !isAuraFieldType(type) || first === null || first === undefined || first.faceDown) return view;

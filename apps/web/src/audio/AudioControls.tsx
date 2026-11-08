@@ -41,7 +41,7 @@ const STATION_LABELS: Record<MusicStation, string> = {
   tavern: "Tavern",
   edm: "EDM",
   lofi: "Lo-fi",
-  epic: "Epic Orchestral",
+  epic: "Epic orchestral",
 };
 
 type MusicFlag = "dynamicMusic" | "duckMusic" | "playMusicInBackground";

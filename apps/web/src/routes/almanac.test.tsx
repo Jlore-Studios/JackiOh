@@ -118,7 +118,7 @@ describe("R630 the /almanac route", SLOW_GRID, () => {
     const footer = screen.getByTestId(siteFooterTestid.root);
     const link = within(footer).getByTestId(siteFooterTestid.almanac);
     expect(link).toHaveAttribute("href", paths.almanac);
-    expect(link).toHaveTextContent("Card almanac");
+    expect(link).toHaveTextContent("Almanac");
     expect(link.previousElementSibling).toBe(within(footer).getByTestId(siteFooterTestid.patchNotes));
     cleanup();
 

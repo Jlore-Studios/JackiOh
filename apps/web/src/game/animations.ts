@@ -21,9 +21,11 @@ import {
   launchAt,
   pileOf,
   pileRunAt,
+  riftAt,
   sweepAt,
   volleyAt,
   wipeAt,
+  type AnomalyRift,
   signatureRunAt,
   type Signature,
   type Pile,
@@ -991,6 +993,8 @@ export type AnimationEntry = {
   fuse?: StarshipFuse;
   /** R2801000: a Starship launched, which the Starship's set piece claims (`starshipClaim`). */
   launch?: StarshipLaunch;
+  /** R3337003: an Anomaly laid, its side's cards going and its board's coming, which its set piece claims (`anomalyClaim`). */
+  rift?: AnomalyRift;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
   /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
@@ -1098,6 +1102,8 @@ export function landingOf(event: GameEvent): LandingEvent | null {
 export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamResolver, reducedMotion: boolean): AnimationEntry[] {
   const left: { hitStopMs: number; shakePx: number; anticipationMs: number } = { ...SLAM_BURST };
   return entries.map((entry) => {
+    // R3337003: an Anomaly's cards land out of its rift, the set piece's own landing, not a slam.
+    if (entry.rift !== undefined) return entry;
     for (const event of entry.events) {
       const landing = landingOf(event);
       const tier = landing === null ? null : slamOf(landing);
@@ -1150,6 +1156,11 @@ export const TAKEOVER_SET_PIECE = "takeover";
 /** R2801000: the key of a Starship's launch, and the beat it asks for at speed 1 (the cap still bounds it). */
 export const STARSHIP_SET_PIECE = "starship";
 export const STARSHIP_LAUNCH_HOLD_MS = 2_400;
+/** R3337003: the key of an Anomaly's rift, and the beat it asks for at speed 1: the tear, the pull, the flare and the title card (under the cap). */
+export const ANOMALY_SET_PIECE = "anomaly";
+export const ANOMALY_RIFT_HOLD_MS = 2_800;
+/** R3337003: a rift entry's own motion after its hold: the new board's cards falling out of the rift onto their zones. */
+export const ANOMALY_LAND_MS = 900;
 
 /**
  * R2785000: an entry's set piece. `holdMs` is its beat as held, inside the entry's `durationMs` and
@@ -1178,7 +1189,7 @@ export type EntryEntrance = {
   anchor: string | null;
   /**
    * R2800000: this Mythic's own wipe in the same action is the action's set piece, so its takeover
-   * yields to it: the entrance claims no hold and draws no takeover.
+   * yields to it: the entrance claims no hold and draws no takeover. R3337003: so is the rift its play lays.
    */
   yielded?: true;
 };
@@ -1214,7 +1225,8 @@ export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed:
  * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing. R2800000: a
  * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing. R3338000: so
  * does one whose own signature is, and an entry whose entrance yielded may still be claimed for another
- * set piece (a Terminus Trap's firing is its own signature's entry).
+ * set piece (a Terminus Trap's firing is its own signature's entry). R3405000: a Mythic takes over once an
+ * action, so a later copy's entrance of one that took over yields too.
  */
 export function setPieceEntries(
   entries: readonly AnimationEntry[],
@@ -1222,16 +1234,21 @@ export function setPieceEntries(
   opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
 ): AnimationEntry[] {
   let held = 0;
-  // R2800000, R3338000: a Mythic whose own wipe or signature in this action is a set piece yields its takeover to it.
+  // R2800000, R3338000: a Mythic whose own wipe or signature in this action is a set piece yields its takeover to it;
+  // R3337003: and so does one whose play lays an Anomaly, to its rift (Anomaly Found! prints Mythic).
   const own = new Set(
     entries.flatMap((entry) => {
-      const sourceId = entry.wipe?.sourceId ?? entry.signature?.sourceId;
-      return sourceId !== undefined && claimOf(entry) !== null ? [sourceId] : [];
+      const sourceId = entry.wipe?.sourceId ?? entry.signature?.sourceId ?? entry.rift?.sourceId ?? null;
+      return sourceId !== null && claimOf(entry) !== null ? [sourceId] : [];
     }),
   );
+  // R3405000: one card takes over once an action: a second copy's entrance (a flood of Yile's Viruses) yields.
+  const tookOver = new Set<string>();
   return entries.map((given) => {
     const entrance = given.entrance;
-    const entry = entrance?.tier === "mythic" && own.has(entrance.instanceId) ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
+    const yields = entrance?.tier === "mythic" && entrance.yielded !== true && (own.has(entrance.instanceId) || tookOver.has(entrance.defId));
+    if (entrance?.tier === "mythic" && !yields && entrance.yielded !== true) tookOver.add(entrance.defId);
+    const entry = yields ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
     if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
     const claim = claimOf(entry);
     const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
@@ -1246,8 +1263,8 @@ const isTrapType = (type: CardType): boolean => type === "Trap" || type === "Fie
 /**
  * R2722002: the card `event` makes its entrance for on the seat it was planned for, or null: a
  * face-up play of a Unit or Spell (never a set, never a Trap's), a Unit put onto the field without a
- * play, or a hidden card's first firing the seat reads. Every one names its card in the seat's own
- * event (R202).
+ * play (R3405000: or a Mythic Field Spell put there face up), or a hidden card's first firing the seat
+ * reads. Every one names its card in the seat's own event (R202).
  */
 function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: string; defId: string; player: PlayerId; reveal: boolean } | null {
   switch (event.type) {
@@ -1256,8 +1273,17 @@ function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: 
       const info = resolve(event.defId);
       return info === null || isTrapType(info.type) ? null : { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
     }
-    case "summoned":
-      return event.row === "units" && event.defId !== HIDDEN_ID ? { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false } : null;
+    case "summoned": {
+      if (event.defId === HIDDEN_ID) return null;
+      const card = { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
+      if (event.row === "units") return card;
+      // R3405000: a Mythic Field Spell put onto the field face up without a play (The Cane, by Pareto
+      // Optimality) enters as it lands; one set face down (its fresh id's `formerId`, R227) never does, and a
+      // played one entered on its `cardPlayed` already (`seen`).
+      if (event.row !== "backrow" || event.formerId !== undefined) return null;
+      const info = resolve(event.defId);
+      return info?.type === "Field Spell" && info.rarity === "Mythic" ? card : null;
+    }
     case "trapFired":
       return firstReveal(event) ? { instanceId: event.instanceId, defId: event.defId, player: event.controller, reveal: true } : null;
     default:
@@ -1287,7 +1313,11 @@ export function entranceEntries(
       opts.seen.add(card.instanceId);
       const tier = rarity === "Mythic" ? "mythic" : "legendary";
       // A played Unit lands in the zone its own summoned names in the same entry: the entrance centres there.
-      const landing = entry.events.find((e) => e.type === "summoned" && e.row === "units" && e.instanceId === card.instanceId);
+      // R3389000: so does a Field Spell landing face up in its backrow zone (R3332000), never one set face down.
+      const field = resolve(card.defId)?.type === "Field Spell";
+      const landing = entry.events.find(
+        (e) => e.type === "summoned" && e.instanceId === card.instanceId && (e.row === "units" || (field && e.row === "backrow" && e.formerId === undefined)),
+      );
       const anchor = targetFor(landing ?? event, entry.view);
       return { ...entry, entrance: { tier, ...card, anchor } };
     }
@@ -1312,6 +1342,7 @@ function pinned(entry: AnimationEntry): boolean {
     entry.zone !== undefined ||
     entry.sweep !== undefined ||
     entry.wipe !== undefined ||
+    entry.rift !== undefined ||
     entry.type === "rolled" ||
     entry.setPiece !== undefined ||
     entry.signature !== undefined
@@ -1468,6 +1499,23 @@ export function planEntries(
       continue;
     }
 
+    // R3337003: an Anomaly's lay, its side's cards going and its board's coming, plays as one pinned
+    // entry its set piece claims. The board's own swap motion yields to it (no frame for the board).
+    const rifted = riftAt(events, i, view, plays.current());
+    if (rifted !== null) {
+      const run = take(i, rifted.length);
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(ANOMALY_LAND_MS),
+        frames: frameMap(run.slice(1).map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        rift: rifted.rift,
+      });
+      i += rifted.length;
+      continue;
+    }
+
     // #1443: one volley's same-source damage flies as one entry that starts together, behind
     // FX_FLAVOR_LIVE (off until part 8). Sweeps still win (checked first).
     if (FX_FLAVOR_LIVE) {
@@ -1620,6 +1668,12 @@ export type RunnerSignal =
    * nothing and waits for nothing; the effects layer draws its still callouts, the one effect that survives it.
    */
   | { kind: "still"; entry: AnimationEntry }
+  /**
+   * R3407002: an entry whose row has no duration either (a hook's `hookResolving` marker, an emote, the
+   * game's end). It draws nothing, but the effects layer remembers its events, so the hook entry a marker
+   * opens (R2797000) is open for the events after it, as it is for every entry that plays.
+   */
+  | { kind: "pass"; entry: AnimationEntry }
   /**
    * drain() ran. `entries` are the ones it cut short, in order: the entry in flight, then every one
    * still waiting. A drained game over never plays its killing blow, so the effects layer replays it.
@@ -1848,7 +1902,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         return;
       }
       if (next.durationMs <= 0) {
-        if ((animationRow(next.type)?.durationMs ?? 0) > 0) signal({ kind: "still", entry: next });
+        signal({ kind: (animationRow(next.type)?.durationMs ?? 0) > 0 ? "still" : "pass", entry: next });
         continue;
       }
       current = next;

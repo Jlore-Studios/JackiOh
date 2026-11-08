@@ -5,9 +5,11 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ANOMALY_CODES } from "../cards/anomalies.ts";
+import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
-import { TAKEOVER_ART } from "./takeoverArt.ts";
+import { TAKEOVER_ART_DRAWINGS, TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 import type { FxBox, FxDomCue, FxHoldCue, TakeoverLook } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
@@ -223,6 +225,70 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(mountDomEffect(root, fold, {})).toBeNull();
   });
 
+  it("R3400000 a takeover with art mounts its parts; prismatic none", () => {
+    const takeover: FxDomCue = { kind: "takeover", look: "napkin", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
+    const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
+    expect(el.getAttribute("data-look")).toBe("napkin");
+    expect(cssVar(el, "--fx-land")).toBe("1240ms");
+    // The art sits over the dark and under the sweep, the rays and the wave, one element a part.
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    const art = el.querySelector(".takeover-art");
+    expect(art?.getAttribute("data-look")).toBe("napkin");
+    expect([...(art?.children ?? [])].map((child) => child.className)).toEqual(TAKEOVER_ART_PARTS.napkin?.map((part) => `takeover-art-${part}`));
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+    // R3405000: and every other look with art, Meditative's Mythics' among them.
+    for (const look of Object.keys(TAKEOVER_ART_PARTS).filter((key): key is TakeoverLook => key !== "napkin")) {
+      const own = expectMounted(mountDomEffect(root, { ...takeover, look }, { at: AT }), { ...takeover, look });
+      expect([...(own.querySelector(".takeover-art")?.children ?? [])].map((child) => child.className), look).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      own.remove();
+    }
+    // A look without art mounts the four layers alone.
+    const shared: FxDomCue = { ...takeover, look: "prismatic" };
+    const plain = expectMounted(mountDomEffect(root, shared, { at: AT }), shared);
+    expect([...plain.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(plain.querySelector(".takeover-art")).toBeNull();
+  });
+
+  it("R3407000 a takeover with its card's picture mounts one image over the dark, under the sweep; without one none", () => {
+    const art = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
+    const takeover: FxDomCue = { kind: "takeover", look: "freshJack", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800, art };
+    const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
+    expect(el.getAttribute("data-look")).toBe("freshJack");
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    const picture = el.querySelectorAll("img.fx-takeover-art");
+    expect(picture.length).toBe(1);
+    expect(picture[0]?.getAttribute("src")).toBe(art);
+    expect(picture[0]?.getAttribute("alt")).toBe("");
+    // A picture, never a card face's text (R202).
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+    const { art: _none, ...bare } = takeover;
+    const plain = expectMounted(mountDomEffect(root, bare, { at: AT }), bare);
+    expect(plain.querySelector(".fx-takeover-art")).toBeNull();
+  });
+
+  it("R3400001 a figure covers its box with its figure, tint, side and size", () => {
+    const figure: FxDomCue = { kind: "figure", figure: "chalkboard", at: anchor, tint: TINT, delayMs: 0, durationMs: 700 };
+    const el = expectMounted(mountDomEffect(root, figure, { at: AT }), figure);
+    expectCovering(el, AT);
+    expect(el.getAttribute("data-figure")).toBe("chalkboard");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expect(cssVar(el, "--fx-tint-core")).toBe(TINT.core);
+    expect(cssVar(el, "--fx-tint-glow")).toBe(TINT.glow);
+    expect(el.hasAttribute("data-side")).toBe(false);
+    expect(el.hasAttribute("data-size")).toBe(false);
+    // A shape alone: no child and no text, so it names no card (R202).
+    expect(el.childElementCount).toBe(0);
+    el.remove();
+    const mirrored: FxDomCue = { ...figure, figure: "die", side: "opponent", size: "small" };
+    const small = expectMounted(mountDomEffect(root, mirrored, { at: AT }), mirrored);
+    expect(small.getAttribute("data-side")).toBe("opponent");
+    expect(small.getAttribute("data-size")).toBe("small");
+    small.remove();
+    expect(mountDomEffect(root, figure, {})).toBeNull();
+  });
+
   it("R2801000 launch mounts its counts, flame and trail; still when asked", () => {
     const launch: FxDomCue = { kind: "launch", at: anchor, tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 1800, delayMs: 0, durationMs: 3400 };
     const el = expectMounted(mountDomEffect(root, launch, { at: AT }), launch);
@@ -244,6 +310,170 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(frame.getAttribute("data-still")).toBe("true");
     expect([...frame.children].map((child) => child.className)).toEqual(["fx-launch-flame", "fx-launch-trail"]);
     expect(mountDomEffect(root, still, {})).toBeNull();
+  });
+
+  it("R3337003 rift mounts its tear and flare at their times, on its side", () => {
+    const rift: FxDomCue = { kind: "rift", at: anchor, side: "opponent", tint: TINT, tearMs: 280, flareMs: 1540, delayMs: 0, durationMs: 4300 };
+    const el = expectMounted(mountDomEffect(root, rift, { at: AT }), rift);
+    expect(el.getAttribute("data-side")).toBe("opponent");
+    expect(cssVar(el, "--fx-tear")).toBe("280ms");
+    expect(cssVar(el, "--fx-flare")).toBe("1540ms");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-rift-tear", "fx-rift-flare"]);
+    expect(textNodeCount(el)).toBe(0);
+    expect(mountDomEffect(root, rift, {})).toBeNull();
+  });
+
+  it("R3337003 anomalyTitle draws its picture in place and its name, never as a text node or an image; still when asked", () => {
+    const markup = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#123456"/></svg>';
+    const title: FxDomCue = { kind: "anomalyTitle", at: anchor, text: "Wormhole", picture: markup, tint: TINT, delayMs: 0, durationMs: 1800 };
+    const el = expectMounted(mountDomEffect(root, title, { at: AT }), title);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-anomalyTitle-picture", "fx-anomalyTitle-name"]);
+    const picture = el.querySelector<HTMLElement>(".fx-anomalyTitle-picture") as HTMLElement;
+    // B27: drawn as the layer's own elements, no image and no url().
+    const svg = picture.firstElementChild;
+    expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(svg?.querySelector("rect")?.getAttribute("fill")).toBe("#123456");
+    expect(picture.getAttribute("style") ?? "").toBe("");
+    expect(el.querySelector("img")).toBeNull();
+    expect(el.querySelector(".fx-anomalyTitle-name")?.getAttribute("data-text")).toBe("Wormhole");
+    expect(el.hasAttribute("data-still")).toBe(false);
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+    const still = expectMounted(mountDomEffect(root, { ...title, still: true }, { at: AT }), { ...title, still: true });
+    expect(still.getAttribute("data-still")).toBe("true");
+    still.remove();
+    const broken = expectMounted(mountDomEffect(root, { ...title, picture: "<svg" }, { at: AT }), { ...title, picture: "<svg" });
+    expect(broken.querySelector(".fx-anomalyTitle-picture")?.childElementCount).toBe(0);
+    broken.remove();
+    // Every board's own picture draws whole, with no text node, its ids scoped to it.
+    for (const code of ANOMALY_CODES) {
+      for (const radiant of [false, true]) {
+        const drawn: FxDomCue = { ...title, picture: anomalyMarkup(code, radiant) };
+        const board = expectMounted(mountDomEffect(root, drawn, { at: AT }), drawn);
+        const svg = board.querySelector(".fx-anomalyTitle-picture > svg");
+        expect(svg, code).not.toBeNull();
+        expect(textNodeCount(board), code).toBe(0);
+        const ids = [...board.querySelectorAll("[id]")].map((node) => node.id);
+        expect(ids.length, code).toBeGreaterThan(0);
+        for (const id of ids) expect(id.startsWith(`anomaly-${code}-${radiant ? "radiant" : "base"}-`), `${code} ${id}`).toBe(true);
+        board.remove();
+      }
+    }
+  });
+
+  it("R3337002 radar mounts one wedge from the caster's hand; a ghost out of a rift may spin", () => {
+    const radar: FxDomCue = { kind: "radar", at: anchor, side: "you", tint: TINT, delayMs: 0, durationMs: 900 };
+    const el = expectMounted(mountDomEffect(root, radar, { at: AT }), radar);
+    expect(el.getAttribute("data-side")).toBe("you");
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-radar-wedge"]);
+    expect(textNodeCount(el)).toBe(0);
+    expect(mountDomEffect(root, radar, {})).toBeNull();
+    el.remove();
+    const ghost: FxDomCue = { kind: "ghost", from: anchor, to: anchor, delayMs: 0, durationMs: 400, spin: true };
+    const spun = expectMounted(mountDomEffect(root, ghost, { from: AT, to: TO }), ghost);
+    expect(spun.getAttribute("data-spin")).toBe("true");
+    spun.remove();
+    const plain: FxDomCue = { kind: "ghost", from: anchor, to: anchor, delayMs: 0, durationMs: 400 };
+    expect(expectMounted(mountDomEffect(root, plain, { from: AT, to: TO }), plain).hasAttribute("data-spin")).toBe(false);
+  });
+
+  it("R3334001 the six cues mount their parts, text only in data-text", () => {
+    const art = "data:image/svg+xml,%3Csvg%3E%3C/svg%3E";
+    const picture = { kind: "testid", testid: "card-ship", at: { x: 0.25, y: 0.5 }, art: "picture" } as const;
+    const mount = (cue: FxDomCue, boxes: Parameters<typeof mountDomEffect>[2]): HTMLElement => {
+      root.replaceChildren();
+      return expectMounted(mountDomEffect(root, cue, boxes), cue);
+    };
+
+    // A module flies from the piece's centre to its point of the ship's picture, drawn a share of it wide.
+    const dock: FxDomCue = { kind: "module", uri: art, motion: "dock", from: anchor, to: picture, share: 0.2, landMs: 240, spin: 0, delayMs: 0, durationMs: 560 };
+    const module = mount(dock, { from: AT, to: TO });
+    expect(module.getAttribute("data-motion")).toBe("dock");
+    expect(cssVar(module, "--fx-x")).toBe("140px");
+    expect(cssVar(module, "--fx-y")).toBe("260px");
+    expect(cssVar(module, "--fx-dx")).toBe(`${700 + 60 * 0.25 - 140}px`);
+    expect(cssVar(module, "--fx-dy")).toBe(`${40 + 60 * 0.5 - 260}px`);
+    expect(cssVar(module, "--fx-size")).toBe(`${60 * 0.2}px`);
+    expect(cssVar(module, "--fx-land")).toBe("240ms");
+    expect(module.querySelector("img.fx-module-img")?.getAttribute("src")).toBe(art);
+    expect(mountDomEffect(root, dock, { from: AT })).toBeNull();
+
+    // A weld: two clamps and a flash, at its point, humming.
+    const weld = mount({ kind: "weld", at: picture, hum: 0.5, delayMs: 0, durationMs: 320 }, { at: TO });
+    expect([...weld.children].map((child) => child.className)).toEqual(["fx-weld-clamp", "fx-weld-clamp", "fx-weld-flash"]);
+    expect(cssVar(weld, "--fx-hum")).toBe("0.500");
+    expect(cssVar(weld, "--fx-x")).toBe(`${700 + 60 * 0.25}px`);
+
+    // The cinematic: the dim, then the climb holding the camera (the picture, its stops and engines) and the name.
+    const cinematic: FxDomCue = {
+      kind: "cinematic",
+      art,
+      name: "The Ninth Life",
+      lettering: { font: "signature", weight: 400, tracking: 0, italic: true },
+      letters: { fill: "#ffeecc", edge: "#332244" },
+      size: "medium",
+      tint: TINT,
+      at: anchor,
+      cameraFrom: { x: 0.2, y: 0.5 },
+      cameraTo: { x: 0.8, y: 0.45 },
+      panAtMs: 144,
+      panEndMs: 1320,
+      zoom: 1.8,
+      stops: [{ x: 0.4, y: 0.4, atMs: 500 }, { x: 0.7, y: 0.45, atMs: 1100 }],
+      engines: [{ x: 0.2, y: 0.5, atMs: 1320 }],
+      sparks: 3,
+      stampMs: 1632,
+      climbMs: 2064,
+      delayMs: 0,
+      durationMs: 2700,
+    };
+    const film = mount(cinematic, { at: AT });
+    expect([...film.children].map((child) => child.className)).toEqual(["fx-cinematic-dim", "fx-cinematic-climb"]);
+    const camera = film.querySelector<HTMLElement>(".fx-cinematic-climb > .fx-cinematic-camera");
+    expect(camera?.querySelector("img.fx-cinematic-art")?.getAttribute("src")).toBe(art);
+    expect(cssVar(camera!, "--fx-zoom")).toBe("1.8");
+    expect(cssVar(camera!, "--fx-cam-x0")).toBe("0.2000");
+    expect(cssVar(camera!, "--fx-cam-x1")).toBe("0.8000");
+    const stops = [...film.querySelectorAll<HTMLElement>(".fx-cinematic-stop")];
+    expect(stops.map((stop) => cssVar(stop, "--fx-at"))).toEqual(["500ms", "1100ms"]);
+    expect(stops.map((stop) => cssVar(stop, "--fx-px"))).toEqual(["40.00%", "70.00%"]);
+    const engines = [...film.querySelectorAll<HTMLElement>(".fx-cinematic-engine")];
+    expect(engines).toHaveLength(1);
+    expect(engines[0]?.querySelectorAll(".fx-cinematic-spark")).toHaveLength(3);
+    expect(cssVar(engines[0]!, "--fx-rest")).toBe(`${2700 - 1320}ms`);
+    const name = film.querySelector<HTMLElement>(".fx-cinematic-climb > .fx-cinematic-name");
+    expect(name?.getAttribute("data-text")).toBe("The Ninth Life");
+    expect(name?.getAttribute("data-font")).toBe("signature");
+    expect(name?.getAttribute("data-italic")).toBe("true");
+    expect(cssVar(name!, "--fx-letter-fill")).toBe("#ffeecc");
+    expect(cssVar(film, "--fx-stamp")).toBe("1632ms");
+    expect(cssVar(film, "--fx-climb")).toBe("2064ms");
+    expect(cssVar(film, "--fx-climb-ms")).toBe(`${2700 - 2064}ms`);
+    expect(cssVar(film, "--fx-pan-ms")).toBe(`${1320 - 144}ms`);
+    expect(cssVar(film, "--fx-pull-ms")).toBe(`${1632 - 1320}ms`);
+    expect(film.hasAttribute("data-still")).toBe(false);
+    expect(mount({ ...cinematic, still: true, sparks: 0 }, { at: AT }).getAttribute("data-still")).toBe("true");
+
+    // A doctrine: its look, its insignia, its name in data-text.
+    const doctrine = mount({ kind: "doctrine", doctrine: "space", text: "Space Doctrine", tint: TINT, at: anchor, delayMs: 0, durationMs: 1100 }, { at: AT });
+    expect(doctrine.getAttribute("data-doctrine")).toBe("space");
+    expect(doctrine.getAttribute("data-text")).toBe("Space Doctrine");
+    expect([...doctrine.children].map((child) => child.className)).toEqual(["fx-doctrine-insignia"]);
+
+    // A wreck: the fore and aft halves of the picture over the art's frame, breaking at its time.
+    const wreck = mount({ kind: "wreck", art, at: anchor, breakMs: 210, turn: 12, delayMs: 0, durationMs: 1150 }, { at: AT });
+    expectCovering(wreck, AT);
+    expect([...wreck.querySelectorAll("img.fx-wreck-half")].map((half) => half.getAttribute("data-half"))).toEqual(["fore", "aft"]);
+    expect(cssVar(wreck, "--fx-break")).toBe("210ms");
+    expect(cssVar(wreck, "--fx-break-ms")).toBe(`${1150 - 210}ms`);
+    expect(cssVar(wreck, "--fx-turn")).toBe("12deg");
+
+    // A scorch covers its zone.
+    expectCovering(mount({ kind: "scorch", at: anchor, delayMs: 0, durationMs: 885 }, { at: AT }), AT);
+    for (const cue of [weld, doctrine, wreck]) expect(cue.textContent).toBe("");
+    root.replaceChildren();
+    expect(mountDomEffect(root, { kind: "scorch", at: anchor, delayMs: 0, durationMs: 885 }, {})).toBeNull();
   });
 
   it("R3336000 a ship cue builds plates with their lit flags, and doors and lights", () => {
@@ -475,39 +705,42 @@ describe("R2789000 — a keyword's callout", () => {
   });
 });
 
-describe("R3399002 — a takeover's own picture", () => {
+describe("R3399002 — a takeover's own drawing", () => {
   const takeover = (look: TakeoverLook): FxDomCue => ({ kind: "takeover", look, tint: TINT, at: anchor, landMs: 1200, delayMs: 0, durationMs: 2400 });
   const classesOf = (el: Element): (string | null)[] => [...el.children].map((child) => child.getAttribute("class"));
 
-  it("R3399002 an own-art takeover draws its picture, and prismatic none", () => {
+  it("R3399002 a drawn look's takeover draws its picture in its art layer, and a look with no art none", () => {
     for (const look of ["zealot", "portal", "stair", "vineyard"] as const) {
-      const art = TAKEOVER_ART[look];
-      if (art === undefined) throw new Error(`no picture for ${look}`);
+      const drawing = TAKEOVER_ART_DRAWINGS[look];
+      if (drawing === undefined) throw new Error(`no drawing for ${look}`);
       const cue = takeover(look);
       const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
       expectCenteredOn(el, AT);
       expect(el.getAttribute("data-look")).toBe(look);
-      expect(el.getAttribute("data-art")).toBe("true");
-      // The picture lies over the dark and under the sweep, the rays and the wave.
-      expect(classesOf(el)).toEqual(["fx-takeover-dark", "fx-takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
-      const svg = el.querySelector(".fx-takeover-art");
+      // The drawing lies in the look's art layer (R3400000), over the dark and under the sweep, the rays and the wave.
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      const layer = el.querySelector(".takeover-art");
+      if (layer === null) throw new Error(`no art layer for ${look}`);
+      expect(layer.getAttribute("data-look")).toBe(look);
+      expect(classesOf(layer)).toEqual(["takeover-art-drawing"]);
+      const svg = layer.querySelector(".takeover-art-drawing");
       expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
-      expect(svg?.getAttribute("viewBox")).toBe(art.viewBox);
+      expect(svg?.getAttribute("viewBox")).toBe(drawing.viewBox);
       expect(svg?.getAttribute("preserveAspectRatio")).toBe("xMidYMid slice");
       expect(svg?.getAttribute("aria-hidden")).toBe("true");
       const paths = [...(svg?.querySelectorAll("path") ?? [])];
       expect(paths.map((path) => ({ d: path.getAttribute("d"), fill: path.getAttribute("fill"), part: path.getAttribute("class") }))).toEqual(
-        art.paths.map((path) => ({ d: path.d, fill: path.fill, part: `fx-takeover-art-${path.part}` })),
+        drawing.paths.map((path) => ({ d: path.d, fill: path.fill, part: `takeover-drawing-${path.part}` })),
       );
       // Keyed by its look alone: nothing in it names a card (R202).
       expect(el.outerHTML).not.toMatch(/classicplus-|data-def/);
       root.innerHTML = "";
     }
 
-    for (const look of ["prismatic", "void", "pawn", "genie", "ai"] as const) {
+    for (const look of ["prismatic", "void", "pawn", "genie"] as const) {
       const cue = takeover(look);
       const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
-      expect(el.hasAttribute("data-art")).toBe(false);
+      expect(el.querySelector(".takeover-art")).toBeNull();
       expect(el.querySelector("svg")).toBeNull();
       expect(classesOf(el)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
       root.innerHTML = "";

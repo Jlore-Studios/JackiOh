@@ -547,8 +547,9 @@ a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/mot
 plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
 card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It also lists every card
 whose entry is its signature by set (R3332000), each played over the board its entrance reads (Felinor Fiender's over
-three Felinors, R3332001), a signature Unit standing in its entrance's zone wearing its tile aura (Classic+'s, R3399001).
-It calls no engine.
+three Felinors, R3332001), a signature Unit standing in its entrance's zone wearing its tile aura (Classic+'s, R3399001);
+Stinkyscape part two's 23 (R3407000) each play on their module's own fixture (`fx/cards/stinkyscape/`), a hook's marker
+naming the card it plays. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -1249,7 +1250,9 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 Every word the client shows a player follows [`WRITING.md`](WRITING.md), the client's voice guide.
 `src/writing.test.ts` holds what a machine can check of it: no word from its list in a sentence the
 client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
-apostrophe there or in a dictionary key, and no straight double quote there.
+apostrophe there or in a dictionary key, and no straight double quote there. Its glossary sets
+sentence case, one name per page, one verb per action, and bans arrow characters in translations,
+held by guards against Title Case labels outside their allowlist.
 
 ## Internationalisation
 

@@ -23,7 +23,7 @@ import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
 import type { FxPlanEnv } from "../types.ts";
 import { CARD_RECIPES, isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./classicplus.md?raw";
-import { FX_CARD_FILES, auraOfEntry, parseFxCardTable, type FxAuraSpec, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxAuraSpec, type FxCardEntry } from "./tables.ts";
 
 /** How many bespoke Flourishes the set may hold (#2795). */
 const BESPOKE_MIN = 3;
@@ -110,7 +110,7 @@ function describeEntry(entry: FxCardEntry): string {
       }
       break;
   }
-  const aura = auraOfEntry(entry);
+  const aura = entryAura(entry);
   if (aura !== undefined) parts.push(describeAura(aura));
   if (entry.takeover !== undefined) parts.push(`takeover ${entry.takeover}`);
   return parts.join("; ");
@@ -173,8 +173,8 @@ describe("R2795000 Classic+'s card animation table", () => {
     expect(fields.filter(([defId]) => !isToken(defId))).toHaveLength(10);
     for (const [defId, entry] of fields) {
       if (isToken(defId) && entry.kind === "none") continue;
-      // R3399001: beside hooks or a bespoke recipe.
-      expect(auraOfEntry(entry), defId).toBeDefined();
+      // R3400000, R3399001: beside hooks or a bespoke recipe.
+      expect(entryAura(entry), defId).toBeDefined();
     }
   });
 
@@ -241,7 +241,7 @@ describe("R2795000 Classic+'s card animation table", () => {
       expect(type, defId).toBe(def?.type);
       expect(first, defId).toBe(own.entrance !== undefined ? `entrance ${own.entrance}` : own.kind === "bespoke" ? `cast ${own.key}` : "");
       expect(text, defId).toBe(own.kind === "bespoke" ? own.key : "—");
-      const aura = auraOfEntry(own);
+      const aura = entryAura(own);
       expect(tile, defId).toBe(aura === undefined ? "—" : `aura ${aura.look}`);
       expect(sound, defId).toBe(CARD_AUDIO.cards[defId]?.[def?.type === "Unit" ? "play" : "cast"]?.effect);
       expect(verdict, defId).toMatch(/^(as concept|moved: \S.*)$/);

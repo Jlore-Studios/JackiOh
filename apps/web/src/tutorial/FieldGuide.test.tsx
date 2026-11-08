@@ -1,4 +1,4 @@
-// The Field Guide and the discovery coach on screen (FieldGuide.tsx, Coach.tsx, tracker.ts): R2205000
+// The Field guide and the discovery coach on screen (FieldGuide.tsx, Coach.tsx, tracker.ts): R2205000
 // and R2205002, on a fixture moment and a fake controller, so nothing here depends on the lessons.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -111,7 +111,7 @@ describe("R2205000 the discovery coach on screen", () => {
     expect(screen.queryByTestId(tutorialTestid.coachHint), "no hint is left to ask for").toBeNull();
   });
 
-  it("R2205000 R2205002 a discovery shows its rule with Got it, and the tracker hands it to the device's Field Guide", async () => {
+  it("R2205000 R2205002 a discovery shows its rule with Got it, and the tracker hands it to the device's Field guide", async () => {
     const source = fakeSource();
     source.push(snap(myTurn()));
     const onFound = vi.fn<(ids: readonly string[]) => void>();
@@ -129,16 +129,16 @@ describe("R2205000 the discovery coach on screen", () => {
   });
 });
 
-describe("R2205002 the Field Guide", () => {
+describe("R2205002 the Field guide", () => {
   it("R2205002 opens as a dialog that takes focus, lists every entry, and closes on Escape with focus back on its button", () => {
     markFound(["mana"]);
     render(<FieldGuideButton testid={tutorialTestid.fieldGuidePath} />);
     const button = screen.getByTestId(tutorialTestid.fieldGuidePath);
-    expect(button).toHaveAccessibleName(`Field Guide 1/${String(FIELD_GUIDE.length)}`);
+    expect(button).toHaveAccessibleName(`Field guide 1/${String(FIELD_GUIDE.length)}`);
     button.focus();
     fireEvent.click(button);
 
-    const dialog = screen.getByRole("dialog", { name: "Field Guide" });
+    const dialog = screen.getByRole("dialog", { name: "Field guide" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(screen.getByTestId(tutorialTestid.fieldGuideClose)).toHaveFocus();
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(FIELD_GUIDE.length);

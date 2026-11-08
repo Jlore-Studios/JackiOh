@@ -10,6 +10,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardArt } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
+import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder, tileCost } from "./filters.ts";
@@ -118,7 +119,8 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
       <div className="ws-trio">
         <div className="ws-editor-head">
           <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
-            {t("← All decks")}
+            <ArrowIcon direction="back" />
+            {t("Back to decks")}
           </button>
           <label className="ws-name" htmlFor={nameId}>
             <span className="ws-field-label">{t("Trio name")}</span>

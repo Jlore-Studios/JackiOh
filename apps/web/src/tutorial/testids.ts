@@ -32,12 +32,12 @@ export const tutorialTestid = {
   coachRing: "coach-ring",
   /** A moment's Hint; absent once the last is shown (R2205000). */
   coachHint: "coach-hint",
-  /** The Field Guide's buttons in the HUD and the path's header (R2205002). */
+  /** The Field guide's buttons in the HUD and the path's header (R2205002). */
   fieldGuideHud: "field-guide-hud",
   fieldGuidePath: "field-guide-path",
   fieldGuide: "field-guide",
   fieldGuideClose: "field-guide-close",
-  /** One entry in the Field Guide; `data-found="true|false"`. */
+  /** One entry in the Field guide; `data-found="true|false"`. */
   fieldGuideEntry: (id: string): string => `field-guide-entry-${id}`,
   /** The end-of-lesson dialog; `data-outcome="win|loss|draw"`, `data-lesson`. */
   result: "tutorial-result",

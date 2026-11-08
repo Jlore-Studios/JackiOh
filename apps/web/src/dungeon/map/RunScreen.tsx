@@ -99,7 +99,7 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
   return (
     <div className="app-shell tavern dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
       {/* R2972000: back to the Play menu; the run stays saved, and the start screen offers Continue. */}
-      <BackLink to={paths.play} title={t("Dungeon Run")} />
+      <BackLink to={paths.play} title={t("Dungeon run")} />
       <RunHud run={run} content={content} startedAt={dungeon.startedAt} />
       {refusal === null ? null : (
         <p className="notice" role="alert" data-testid={dungeonMapTestid.refusal}>

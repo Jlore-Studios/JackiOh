@@ -8,6 +8,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { DECK_CODE_VERSION } from "@jackioh/server-config";
+import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { DECK_CODE_PREFIX, decodeDeckCode, type DroppedCards } from "./deckCode.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
@@ -84,7 +85,8 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
     <section className="ws-editor ws-import" data-testid={DECK_IMPORT} aria-labelledby={titleId}>
       <div className="ws-editor-head">
         <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onCancel}>
-          {t("← All decks")}
+          <ArrowIcon direction="back" />
+          {t("Back to decks")}
         </button>
         <h2 className="ws-import-title" id={titleId}>
           {t("Import a deck")}

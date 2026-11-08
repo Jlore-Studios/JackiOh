@@ -1,6 +1,6 @@
 // Tutorial coach tracks lesson steps and tips without deciding legality (SPEC §9.10, R292;
 // CLAUDE.md rule 7). There is no skip: only ackable `info` steps or tips may hold AI (R314), non-final
-// steps expire, and the HUD always offers exit. R2205000: the coach recognizes each Field Guide entry
+// steps expire, and the HUD always offers exit. R2205000: the coach recognizes each Field guide entry
 // (discoveries.ts) from the view alone and names its rule in a bubble.
 
 import type { ActionBody, CardDef, CombatForecast, GameEvent, PlayerView, Row } from "@jackioh/shared";
@@ -68,13 +68,13 @@ export type CoachStep = {
   final?: boolean;
   /** Retire if its player turn passes before it shows (R82). */
   turnBound?: boolean;
-  /** `moment`: the Field Guide entries it sets up; it is done once each is found in this game. */
+  /** `moment`: the Field guide entries it sets up; it is done once each is found in this game. */
   discovers?: readonly string[];
   /** `moment`: the nudge, then the pointed hint, shown as the player stalls or asks (R2205000). */
   hints?: readonly Text[];
   /** `moment`: what the last hint points at. */
   hintAnchor?: AnchorOf;
-  /** `moment`: re-offers an earlier lesson's mechanic, so it is moot once the Field Guide holds it (R314). */
+  /** `moment`: re-offers an earlier lesson's mechanic, so it is moot once the Field guide holds it (R314). */
   revisit?: boolean;
 };
 
@@ -91,9 +91,9 @@ export type LessonScript = {
   lessonId: string;
   steps: readonly CoachStep[];
   tips: readonly CoachTip[];
-  /** The Field Guide entries this lesson lists; their discovery bubbles always show (R2205000). */
+  /** The Field guide entries this lesson lists; their discovery bubbles always show (R2205000). */
   teaches?: readonly string[];
-  /** The entries the coach watches for: the whole Field Guide in every lesson that lists `teaches`. */
+  /** The entries the coach watches for: the whole Field guide in every lesson that lists `teaches`. */
   guide?: readonly Discovery[];
 };
 
@@ -109,11 +109,11 @@ export type CoachState = {
   tipQueue: readonly string[];
   lastTurn: number | null;
   finished: boolean;
-  /** R2205000: the Field Guide entries found in this game, in the order found. */
+  /** R2205000: the Field guide entries found in this game, in the order found. */
   found: readonly string[];
   /** Discovery bubbles still to show, oldest first. */
   discoveryQueue: readonly string[];
-  /** The entries the Field Guide held when the lesson started (R2205002); a lesson's own input, not the game's. */
+  /** The entries the Field guide held when the lesson started (R2205002); a lesson's own input, not the game's. */
   known: readonly string[];
   /** `turnsOnStep` when the current step showed. */
   shownAt: number;
@@ -143,7 +143,7 @@ export const COACH_START: CoachState = {
   order: [],
 };
 
-/** The coach at a lesson's start, given what the player's Field Guide already holds (R2205002). */
+/** The coach at a lesson's start, given what the player's Field guide already holds (R2205002). */
 export function coachStart(known: readonly string[]): CoachState {
   return known.length === 0 ? COACH_START : { ...COACH_START, known: [...known] };
 }
@@ -212,7 +212,7 @@ function discovered(step: CoachStep, state: CoachState): boolean {
   return step.kind === "moment" && wanted.length > 0 && wanted.every((id) => state.found.includes(id));
 }
 
-/** A revisit offers what the player has not met yet; once the Field Guide holds it, it is moot. */
+/** A revisit offers what the player has not met yet; once the Field guide holds it, it is moot. */
 function alreadyKnown(step: CoachStep, state: CoachState): boolean {
   const wanted = step.discovers ?? [];
   return step.revisit === true && wanted.every((id) => state.known.includes(id) || state.found.includes(id));

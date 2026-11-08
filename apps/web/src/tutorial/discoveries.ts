@@ -1,4 +1,4 @@
-// The Field Guide's entries (SPEC §9.10, R2205000): each mechanic a lesson lets the player find, its
+// The Field guide's entries (SPEC §9.10, R2205000): each mechanic a lesson lets the player find, its
 // one-line rule, and how the coach recognizes it from the human's view and the public catalog alone
 // (R292, §5.1). A predicate decides nothing; it reads what the board already shows (CLAUDE.md rule 7).
 
@@ -8,12 +8,12 @@ import type { CoachCtx } from "./coach.ts";
 import { freshOf, heroTargetId, myHand, unitsOf } from "./steps.ts";
 
 export type Discovery = {
-  /** A stable slug, kept in the device's Field Guide (R2205002). */
+  /** A stable slug, kept in the device's Field guide (R2205002). */
   id: string;
   name: string;
   /** The rule in one line, after "You found {name}:". */
   rule: string;
-  /** The lesson that sets it up; the Field Guide lists an entry not yet found under it. */
+  /** The lesson that sets it up; the Field guide lists an entry not yet found under it. */
   lesson: string;
   found: (ctx: CoachCtx) => boolean;
 };

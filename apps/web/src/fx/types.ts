@@ -2,7 +2,9 @@
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
+import type { FxFigure } from "./figures.ts";
 import type { FxCardHook } from "./motifs/names.ts";
+import type { FxBigMoments } from "./settings.ts";
 
 /** A point in fractions of a box's width and height. */
 export type FxPoint = { x: number; y: number };
@@ -11,9 +13,15 @@ export type FxVec = { x: number; y: number };
 
 export type FxBox = { x: number; y: number; width: number; height: number };
 
+/**
+ * R3334000: which box of a card a testid anchor's `at` is a share of: its art's frame (`.cf-art`), or
+ * `picture`, the square its cover-fit picture fills (a Starship's hardpoints, in its picture's units).
+ */
+export type FxArtBox = "frame" | "picture";
+
 /** Where a cue plays. `handCard` uses a counter, never an event's hidden card (R202). */
 export type FxAnchor =
-  | { kind: "testid"; testid: string; at?: FxPoint }
+  | { kind: "testid"; testid: string; at?: FxPoint; art?: FxArtBox }
   | { kind: "crystal"; side: Side; index: number }
   | { kind: "handCard"; side: Side; pick: number }
   | { kind: "viewport"; at: FxPoint };
@@ -63,7 +71,7 @@ export type FxBurstCue = {
 /** `density` scales the trail and the arrival burst, as `count` does a burst's. */
 export type FxProjectileCue = { kind: "projectile"; preset: FxPreset; from: FxAnchor; to: FxAnchor; delayMs: number; flightMs: number; density: number };
 /** #1442: what a flavor's shot throws; `shots.ts` draws each with paths, never an image (B27). */
-export type FxShotSprite = "arrow" | "boulder" | "book" | "seed" | "goo" | "snack" | "coin" | "bill" | "heart" | "emoji";
+export type FxShotSprite = "arrow" | "boulder" | "book" | "seed" | "goo" | "snack" | "coin" | "bill" | "heart" | "emoji" | "token" | "fruit" | "jade";
 /** #1442: a flavor's projectile: a lobbed `arc` of sprites, a glowing straight `bolt`, an instant `beam` or a claw-slash `swipe`. */
 export type FxShot =
   | {
@@ -98,8 +106,8 @@ export type FxShakeCue = { kind: "shake"; trauma: number; delayMs: number };
 export type FxSplatCue = { kind: "splat"; tone: FxSplatTone; amount: number; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxRaysCue = { kind: "rays"; tone: FxRayTone; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxSheenCue = { kind: "sheen"; at: FxAnchor; delayMs: number; durationMs: number };
-/** A card BACK flying between two anchors. It never carries a card identity (R202). */
-export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs: number; durationMs: number };
+/** A card BACK flying between two anchors. It never carries a card identity (R202). R3337003: `spin` tumbles it as it flies (an asteroid out of a rift). */
+export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs: number; durationMs: number; spin?: true };
 /**
  * R2789000: a combat keyword's icon popping over `at` for `durationMs` (the shared callout of the keyword
  * beats, fx/motifs/callout.ts). `still` draws it as a static icon, for reduced motion.
@@ -153,10 +161,49 @@ export type FxFogCue = {
  * R2722001: a Mythic's takeover, its look a marquee card's own or the shared prismatic one. The board
  * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
- * the effects' tail (R200). R3399002: Classic+'s four Mythics' looks each draw a picture of their own (takeoverArt.ts).
+ * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
+ * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx). R3405000: Meditative's
+ * Mythics' twelve, from "ascent" to "fortress", each with art of its own. R3399002: Classic+'s four Mythics'
+ * looks, "zealot", "portal", "stair" and "vineyard", each draw a picture of their own (takeoverArt.ts).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "zealot" | "portal" | "stair" | "vineyard";
-export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
+export type TakeoverLook =
+  | "prismatic"
+  | "void"
+  | "pawn"
+  | "genie"
+  | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit"
+  | "canvas"
+  | "napkin"
+  | "ascent"
+  | "workshop"
+  | "brush"
+  | "mine"
+  | "quarry"
+  | "pavilion"
+  | "virus"
+  | "dojo"
+  | "studyHall"
+  | "caneRack"
+  | "warRoom"
+  | "fortress"
+  | "zealot"
+  | "portal"
+  | "stair"
+  | "vineyard";
+/**
+ * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
+ * picture's URI: only ever a card the seat's own event names (R202).
+ */
+export type FxTakeoverCue = {
+  kind: "takeover";
+  look: TakeoverLook;
+  tint: FxTint;
+  at: FxAnchor;
+  landMs: number;
+  delayMs: number;
+  durationMs: number;
+  art?: string;
+};
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
  * twisting into a spiral that swallows what the wipe takes) or a `fold` (its edges folding inward into
@@ -201,6 +248,78 @@ export type FxLaunchCue = {
   still?: true;
 };
 /**
+ * R3334000: one Starship module (its picture without its plate, `uri`) flying `from` → `to`: `dock`, a
+ * fused piece's module mounting on its hardpoint; `recoil`, a cannon's kick back where it stands (`from`
+ * = `to`); `blowOff`, a module torn off a wrecked hull, tumbling `spin` turns away. It names no card (R202).
+ */
+export type FxModuleMotion = "dock" | "recoil" | "blowOff";
+export type FxModuleCue = {
+  kind: "module";
+  uri: string;
+  motion: FxModuleMotion;
+  from: FxAnchor;
+  to: FxAnchor;
+  /** How wide it is drawn, as a share of `to`'s box (its ship's picture). */
+  share: number;
+  /** When, ms into the cue, its flight (or its kick) ends: a docked module then holds on its hardpoint. */
+  landMs: number;
+  spin: number;
+  delayMs: number;
+  durationMs: number;
+};
+/** R3334000: a docked module's clamps closing and its weld flash at `at`, its hum `hum` (0–1) of full. */
+export type FxWeldCue = { kind: "weld"; at: FxAnchor; hum: number; delayMs: number; durationMs: number };
+/** R3334001: the lettering a Starship's name stamps across its hull in, its design's own. */
+export type StarshipLettering = {
+  font: "display" | "text" | "mono" | "signature" | "brush" | "copperplate" | "marker";
+  weight: number;
+  tracking: number;
+  italic: boolean;
+};
+/** R3334001: a point of the cinematic's picture (shares of it, 0–1) and when, ms into the cue, it is reached. */
+export type FxTimedPoint = { x: number; y: number; atMs: number };
+/**
+ * R3334001: a Starship's launch as a cinematic over the whole layer: the board dims, the ship's own
+ * picture (`art`) fills the screen and the camera pans `cameraFrom` → `cameraTo` along its hull, past each
+ * module (`stops`), its engines light in turn (`engines`, each throwing `sparks`), its public name stamps
+ * across the hull at `stampMs` in its design's `lettering`, and at `climbMs` it climbs out of frame toward
+ * its tile, `at`. `still` is the title card (the picture and the name, nothing moving), for reduced motion
+ * and Big moments short or off.
+ */
+export type FxCinematicCue = {
+  kind: "cinematic";
+  art: string;
+  name: string;
+  lettering: StarshipLettering;
+  /** The name's fill and edge, the design's livery (its windows and its hull). */
+  letters: { fill: string; edge: string };
+  size: StarshipSize;
+  tint: FxTint;
+  at: FxAnchor;
+  cameraFrom: FxPoint;
+  cameraTo: FxPoint;
+  /** When the camera's pan starts and ends, ms into the cue; it then pulls back to the whole ship by `stampMs`. */
+  panAtMs: number;
+  panEndMs: number;
+  zoom: number;
+  stops: readonly FxTimedPoint[];
+  engines: readonly FxTimedPoint[];
+  sparks: number;
+  stampMs: number;
+  climbMs: number;
+  delayMs: number;
+  durationMs: number;
+  still?: true;
+};
+/** R3334001: Stinkyscape's four War Doctrines (`stinkyscape-137-1` … `-4`). */
+export type WarDoctrine = "land" | "sea" | "air" | "space";
+/** R3334001: a War Doctrine announced over the Starship that cast it (`at`), in its own look; `text` its public card name. */
+export type FxDoctrineCue = { kind: "doctrine"; doctrine: WarDoctrine; text: string; tint: FxTint; at: FxAnchor; delayMs: number; durationMs: number };
+/** R3334003: a wrecked Starship's hull (`art`, its picture) breaking in two at `breakMs`, each half turning `turn` degrees away. */
+export type FxWreckCue = { kind: "wreck"; art: string; at: FxAnchor; breakMs: number; turn: number; delayMs: number; durationMs: number };
+/** R3334003: a brief scorch over the zone a Starship fell in. */
+export type FxScorchCue = { kind: "scorch"; at: FxAnchor; delayMs: number; durationMs: number };
+/**
  * R3336000: a Drone Battleship's layer over it, `at`: its armor plates glowing down as the Shield took a hit
  * ("plates", `count` of them, the first `lit` bright), or a bay of the Propagation layer opening ("bay": two
  * doors sliding apart, `count` lights staying on while drones remain). It names no card (R202).
@@ -215,6 +334,53 @@ export type FxShipCue = {
   delayMs: number;
   durationMs: number;
 };
+/**
+ * R3400001: one of a signature's drawn figures (figures.ts) covering `at`'s box in `tint`: a scroll, a
+ * snowplow, a chalkboard, a die. `side` mirrors it for the other seat's play; `small` draws it at a second
+ * card's size. A figure is a shape, never a card face (R202).
+ */
+export type FxFigureCue = {
+  kind: "figure";
+  figure: FxFigure;
+  at: FxAnchor;
+  tint: FxTint;
+  delayMs: number;
+  durationMs: number;
+  side?: "you" | "opponent";
+  size?: "small";
+};
+/**
+ * R3337003: an Anomaly's rift down the middle of `side`'s half of the field, centred on `at`: it tears
+ * open at `tearMs`, every card it takes is drawn into it (the stage's `pull`), and it flares white at
+ * `flareMs`. It names no card (R202).
+ */
+export type FxRiftCue = {
+  kind: "rift";
+  at: FxAnchor;
+  side: "you" | "opponent";
+  tint: FxTint;
+  tearMs: number;
+  flareMs: number;
+  delayMs: number;
+  durationMs: number;
+};
+/**
+ * R3337003: an Anomaly's title card stamped across the screen at `at`: its name (`text`, the board's own,
+ * which is public) over its picture (`picture`, the SVG markup of `cards/art` `anomalyMarkup`, which the
+ * layer draws in place, no image: B27). `still` draws it without motion, for reduced motion.
+ */
+export type FxAnomalyTitleCue = {
+  kind: "anomalyTitle";
+  at: FxAnchor;
+  text: string;
+  picture: string;
+  tint: FxTint;
+  delayMs: number;
+  durationMs: number;
+  still?: true;
+};
+/** R3337002: a Scanning Probe's radar sweep across the board from `at`, the hand of `side`: one wedge turning. It names no card (R202). */
+export type FxRadarCue = { kind: "radar"; at: FxAnchor; side: "you" | "opponent"; tint: FxTint; delayMs: number; durationMs: number };
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -258,6 +424,8 @@ export type FxLungeCue = {
   still?: true;
   /** R2789000: a Flying attacker's lunge arcs over the lane. */
   arc?: true;
+  /** R3334002: a launched Starship with no weapons rams, turned prow first (`FX_STARSHIP_RAM_TURN_DEG`). */
+  ram?: true;
 };
 
 export type FxCanvasCue = FxBurstCue | FxProjectileCue | FxShotCue | FxCrackCue | FxRingCue;
@@ -281,7 +449,17 @@ export type FxDomCue =
   | FxTakeoverCue
   | FxSetPieceCue
   | FxLaunchCue
-  | FxShipCue;
+  | FxShipCue
+  | FxRiftCue
+  | FxAnomalyTitleCue
+  | FxRadarCue
+  | FxModuleCue
+  | FxWeldCue
+  | FxCinematicCue
+  | FxDoctrineCue
+  | FxWreckCue
+  | FxScorchCue
+  | FxFigureCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 
@@ -359,6 +537,8 @@ export type FxMemory = {
   casterOf(instanceId: string): PlayerId | undefined;
   trapZoneOf(instanceId: string): FxTrapZone | undefined;
   resolving(): FxPlay | undefined;
+  /** R3389000: every play and hook entry still open, outermost first (`resolving()` is the last). */
+  plays(): readonly FxPlay[];
   /** R502: whether this very `cardPlayed` (the object remembered) was a cast on draw. */
   castOnDraw(event: GameEvent): boolean;
   /** R2789000: the last FX_MEMORY_RECENT events, the planned entry's last. */
@@ -382,6 +562,10 @@ export type FxPlanEnv = {
   memory: FxMemory;
   /** Facts no event carries, such as #21 Hinder's refresh loss (R502). */
   next?: PlayerView;
+  /** R3334001: the Big moments setting (absent: "full"); a Starship's cinematic plays only at "full". */
+  bigMoments?: FxBigMoments;
+  /** R3334001: a phone's layer (narrower than `FX_MOBILE_WIDTH`): the Starship's moments throw fewer particles. */
+  compact?: boolean;
 };
 
 export type FxFrameSource = { request(callback: (timestampMs: number) => void): number; cancel(handle: number): void };

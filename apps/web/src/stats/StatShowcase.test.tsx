@@ -91,7 +91,7 @@ describe("R1584000 the cycle", () => {
   it("R1584000 shows a stat's title, card and number", () => {
     expect(FOUR.map((stat) => stat.key)).toEqual(KEYS);
     show(only("toppled"));
-    expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("Most Toppled");
+    expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("Most toppled");
     expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe("taken down 37×");
     expect(card().getAttribute("data-def-id")).toBe("core-004");
     expect(card().childElementCount).toBeGreaterThan(0);

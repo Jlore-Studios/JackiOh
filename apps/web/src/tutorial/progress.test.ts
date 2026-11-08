@@ -367,7 +367,7 @@ describe("R2434002 a conceded lesson is kept as lost on this device until it is 
   });
 });
 
-describe("R2205002 the Field Guide is kept on this device", () => {
+describe("R2205002 the Field guide is kept on this device", () => {
   it("R2205002 found entries are stored beside the lessons, in the guide's order, unknown ones dropped, and read back", () => {
     markFound(["cry", "mana", "no-such-entry"]);
     markFound(["mana"]);

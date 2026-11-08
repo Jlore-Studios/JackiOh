@@ -1,5 +1,5 @@
 // The bar above a lesson's board (SPEC §9.10), with Exit tutorial (nothing the coach draws is ever placed
-// over it) and the Field Guide (R2205002); there is no Skip step (R314). It wears the practice HUD's look
+// over it) and the Field guide (R2205002); there is no Skip step (R314). It wears the practice HUD's look
 // (`practice-hud`), so the board below is laid out exactly as in any practice game.
 
 import { useSyncExternalStore, type CSSProperties, type ReactElement } from "react";

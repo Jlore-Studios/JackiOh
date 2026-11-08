@@ -1,4 +1,4 @@
-// B19 (DR14 part D, #2705): the Dungeon Run page switches between the run's screens. The store is the
+// B19 (DR14 part D, #2705): the Dungeon run page switches between the run's screens. The store is the
 // real one over the fixtures' scripted run bindings; the fight (part E) and the map (part F) screens are
 // stand-ins that show which one the page drew and hand the page's `Dungeon` to the test.
 

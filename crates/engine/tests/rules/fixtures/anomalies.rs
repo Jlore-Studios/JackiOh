@@ -144,9 +144,18 @@ pub static hangar: LazyLock<CardDef> = LazyLock::new(|| card(18608, "hangar", "S
 /// A pile in unit zone 2, the wall at the bottom and the grunt on top, and the grunt alone in unit
 /// zone 4 though it is named as a pile's (R1879002).
 pub static fleet: LazyLock<CardDef> = LazyLock::new(|| card(18609, "fleet", "Spell", None, json!([])));
+/// The grunt in lane 1, laid as the Anomaly [`CHARTED_ANOMALY`] names (R3337000).
+pub static charted: LazyLock<CardDef> = LazyLock::new(|| card(18611, "charted", "Spell", None, json!([])));
+
+/// The Anomaly code the charted card's preset carries (R3337000).
+pub const CHARTED_ANOMALY: &str = "WH";
 
 fn anomaly_script(board: Value) -> CardScripts {
-    let args = json!({ "board": board });
+    preset_script(json!({ "board": board }))
+}
+
+/// A Cry that replaces its caster's board with `args`, a `replaceBoard` argument.
+fn preset_script(args: Value) -> CardScripts {
     both(Script {
         cry: Some(hook(move |_ctx| vec![replace_board(json_as(args.clone()))])),
         ..Script::default()
@@ -396,6 +405,13 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 entry(&aimer, "units", 2, json!({})),
             ])),
         ),
+        (
+            charted.id.clone(),
+            preset_script(json!({
+                "board": [entry(&grunt, "units", 1, json!({}))],
+                "anomaly": CHARTED_ANOMALY,
+            })),
+        ),
     ])
 });
 
@@ -431,6 +447,7 @@ pub static AN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         flier.clone(),
         hangar.clone(),
         fleet.clone(),
+        charted.clone(),
     ]
 });
 

@@ -4,7 +4,7 @@
 // pending account, which that route refuses (403 `account_pending`), is shown from the gate's
 // `/api/auth/me` read, with the way on: an invite code. The username is R1435's and R1436's; the
 // shop lives on `/shop` (#1580, R1580000); this screen links no other menu (R1646000).
-// R2778000: the rank, season record and badges show for Constructed, then All Random, each its own
+// R2778000: the rank, season record and badges show for Constructed, then All random, each its own
 // `GET /api/ranked` read.
 
 import {
@@ -67,7 +67,7 @@ export const accountTestid = {
   /** R2255000: this season's ranked win–loss–draw record, under the rank line; absent at 0 games. */
   seasonRecord: "account-season-record",
   badges: "account-badges",
-  /** R2778000: the All Random ladder's rank line, season record and badges, under the Constructed ones above. */
+  /** R2778000: the All random ladder's rank line, season record and badges, under the Constructed ones above. */
   randomRank: "account-random-rank",
   randomSeasonRecord: "account-random-season-record",
   randomBadges: "account-random-badges",
@@ -250,7 +250,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const leaving = useSigningOut();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
-  // R2778000: the All Random ladder's, read beside it.
+  // R2778000: the All random ladder's, read beside it.
   const [randomRank, setRandomRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -289,7 +289,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
   return (
     <div className="app-shell tavern account-screen one-screen" data-testid={accountTestid.screen}>
-      <BackLink title={t("Your account")} />
+      <BackLink title={t("Account")} />
 
       <section className="panel panel--auth one-screen__frame">
         <Wordmark />
@@ -350,7 +350,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                   />
                   {randomRank !== null ? (
                     <>
-                      <h3 className="account-heading">{t("All Random")}</h3>
+                      <h3 className="account-heading">{t("All random")}</h3>
                       <LadderRank
                         rank={randomRank}
                         testids={{

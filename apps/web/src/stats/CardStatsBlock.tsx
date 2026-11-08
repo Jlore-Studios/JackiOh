@@ -9,6 +9,7 @@ import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { ArrowIcon } from "../routes/ArrowIcon.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE } from "./config.ts";
 import { winPercent } from "./model.ts";
@@ -149,7 +150,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           className="inspect-stats-link"
           onClick={followInApp(paths.statsCard(cardId))}
         >
-          {t("View full stats →")}
+          {t("View full stats")}
+          <ArrowIcon direction="forward" />
         </a>
       </div>
     </div>

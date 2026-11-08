@@ -82,7 +82,7 @@ describe("R631 the audio panel's music controls", () => {
       ["tavern", "Tavern"],
       ["edm", "EDM"],
       ["lofi", "Lo-fi"],
-      ["epic", "Epic Orchestral"],
+      ["epic", "Epic orchestral"],
     ]);
     expect(station.value).toBe("tavern");
     for (const id of ["audio-dynamic-music", "audio-duck-music", "audio-music-background"]) expect(input(id).checked, id).toBe(id !== "audio-music-background");

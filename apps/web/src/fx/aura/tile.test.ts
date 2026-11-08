@@ -13,7 +13,7 @@ import { BACKDROP_PARTICLE_MAX } from "../../game/config.ts";
 import { testid } from "../../game/contract.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, auraOfEntry, parseFxCardTable } from "../cards/tables.ts";
+import { entryAura, FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import {
   TILE_FADE_OUT_MS,
@@ -49,17 +49,15 @@ describe("R3342000 tile aura planner", () => {
         }),
       });
 
-      // A card whose entry wears an aura stands that instead (R3399001: beside hooks or a bespoke recipe, a
-      // Unit's on its own zone), so it marks its tile with its own and plans no default.
-      if (auraOfEntry(FX_CARD_TABLE.get(id)) !== undefined) {
-        if (def.type === "Trap") continue;
-        expect(planTileAura(view, "you", isUnit ? "units" : "backrow", 1), id).toBeNull();
-        expect(planAuras(view, new Map()).some((aura) => aura.defId === id), id).toBe(true);
+      const planned = planTileAura(view, "you", isUnit ? "units" : "backrow", 1);
+      // A card whose table entry wears its own aura (R3400000: a bespoke entry's too) wears that in its place, and
+      // (R3399001) stands it in the aura layer: a Unit's on its own tile, a Field card's from its zone.
+      if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) {
+        expect(planned, id).toBeNull();
+        if (def.type !== "Trap") expect(planAuras(view, new Map()).some((aura) => aura.defId === id), id).toBe(true);
         covered += 1;
         continue;
       }
-
-      const planned = planTileAura(view, "you", isUnit ? "units" : "backrow", 1);
       expect(planned).not.toBeNull();
       expect(planned?.tier).toBe(tier);
       if (tier === "Mythic") {
@@ -297,8 +295,20 @@ describe("R3342000 tile aura planner", () => {
       }),
     });
     expect(planTileAura(pancakeView, "you", "units", 1, new Map())).not.toBeNull();
-    // The Mother Pancake's entry is `{ bespoke, aura, entrance, signature }`: its own syrup aura stands instead.
+    // The Mother Pancake's entry is `{ bespoke, aura, entrance, signature }`: its own syrup stands on its tile instead.
     expect(planTileAura(pancakeView, "you", "units", 1)).toBeNull();
+    expect(planAuras(pancakeView, new Map()).map((aura) => [aura.key, aura.scope, aura.look])).toEqual([["unit-u1", "tile", "syrup"]]);
+  });
+
+  it("R3400000 a signature Unit's own tile aura, on a hooks or a bespoke entry, replaces the default", () => {
+    for (const defId of ["meditativeplus-024", "traininggrounds-038", "traininggrounds-039-1"]) {
+      const view = baseView({ you: emptySide("p1", { units: [unit("p1", { defId, instanceId: "u1" })] }) });
+      expect(planTileAura(view, "you", "units", 1), defId).toBeNull();
+      expect(planTileAura(view, "you", "units", 1, new Map()), defId).not.toBeNull();
+    }
+    const bespoke = parseFxCardTable("test.json5", '{ "meditativeplus-024": { bespoke: "bobSoldier", aura: { look: "flurry", scope: "tile" } } }');
+    const bob = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "meditativeplus-024", instanceId: "u1" })] }) });
+    expect(planTileAura(bob, "you", "units", 1, bespoke)).toBeNull();
   });
 
   it("R3342000 dim for slumber, frozen, frozenForever, and vanilla statuses", () => {

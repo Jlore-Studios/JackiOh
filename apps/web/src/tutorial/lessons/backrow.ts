@@ -9,7 +9,7 @@ import type { TutorialLesson } from "../lessons.ts";
 export const lesson: TutorialLesson = {
   id: "backrow",
   number: 4,
-  title: "Field Spells and Traps",
+  title: "Field spells and traps",
   summary: "Cards that wait face-down in the backrow, and cards that keep working there.",
   discoveries: ["trap", "enemy-backrow", "field-spell", "field-trap"],
   seed: "tg-backrow-25",

@@ -2,7 +2,7 @@
 // it is minutes of play one stray tap from gone. Staying is the default: it has the focus, and Escape,
 // Back (R2127000) or a click outside the panel means stay. R765: a free game's question offers Save and
 // leave; a tutorial lesson is never kept (R668), so its question keeps the one way out. It draws through
-// `Dialog.tsx` (R3220000): Keep playing first, Save and leave between, the way out last.
+// `Dialog.tsx` (R3220000): Stay first, Save and leave between, the way out last.
 
 import type { ReactElement } from "react";
 
@@ -47,7 +47,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
       ? [{ label: t("Save and leave"), kind: "secondary" as const, onClick: onSaveAndLeave, testid: practiceTestid.leaveSave }]
       : []),
     {
-      label: canSave ? t("Leave without saving") : t("Leave game"),
+      label: canSave ? t("Leave without saving") : t("Leave"),
       kind: "danger",
       onClick: onLeave,
       testid: practiceTestid.leaveConfirm,
@@ -62,7 +62,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
       title={t("Leave this game?")}
       description={t(canSave ? saveBody(to) : LEAVE_BODY[to])}
       onClose={onStay}
-      cancel={{ label: t("Keep playing"), kind: "primary", testid: practiceTestid.leaveStay }}
+      cancel={{ label: t("Stay"), kind: "primary", testid: practiceTestid.leaveStay }}
       actions={actions}
     />
   );

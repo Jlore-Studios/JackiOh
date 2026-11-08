@@ -37,6 +37,7 @@ import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
 import { messageOf } from "../net/errors.ts";
 
 import "./replays.css";
@@ -91,7 +92,7 @@ const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = 
 const MODE_WORDS: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
-  random: "All Random",
+  random: "All random",
 };
 
 /** The worker's card data and the games it kept, asked in turn (its answers arrive in order). */
@@ -410,7 +411,8 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
             // #936 B59: the replays friends shared with this account are listed on Play together.
             <p>
               <a href={sharedWithMePath()} data-testid={replaysTestid.sharedWithMe} onClick={followInApp(sharedWithMePath())}>
-                {t("Shared with me →")}
+                {t("Shared with me")}
+                <ArrowIcon direction="forward" />
               </a>
             </p>
           )}

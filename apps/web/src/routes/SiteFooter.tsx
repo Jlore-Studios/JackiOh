@@ -1,9 +1,10 @@
-// The site footer: the privacy policy, the terms, the purchases page (R1665000), the accessibility and
-// copyright pages, how JackiOh uses AI (R2631000), the patch notes (R388), the Card Almanac (R630), the
-// replays (R768000), a way to reach the people who run JackiOh and, on a keyboard device, the command
-// menu's key (R2126000). On the landing page and the sign-in screen, where a visitor decides whether
-// to hand over an email address; kept off the board. The contact is the owner's email address, the one the Terms, the
-// Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
+// The site footer: the privacy policy, the terms of service, the purchases page (R1665000), the
+// accessibility and copyright pages, how JackiOh uses AI (R2631000), the patch notes (R388), the
+// Almanac (R630), the replays (R768000), a way to reach the people who run JackiOh and, on a
+// keyboard device, the command menu's key (R2126000). On the landing page and the sign-in screen,
+// where a visitor decides whether to hand over an email address; kept off the board. The contact is
+// the owner's email address, the one the Terms, the Privacy Policy, the Copyright and Accessibility
+// pages and `security.txt` name too.
 
 import type { ReactElement } from "react";
 
@@ -40,10 +41,10 @@ export function SiteFooter(): ReactElement {
     <footer className="site-footer" data-testid={siteFooterTestid.root}>
       <nav className="site-footer__links" aria-label={t("About JackiOh")}>
         <a href={paths.privacy} data-testid={siteFooterTestid.privacy} onClick={followInApp(paths.privacy)}>
-          {t("Privacy")}
+          {t("Privacy policy")}
         </a>
         <a href={paths.terms} data-testid={siteFooterTestid.terms} onClick={followInApp(paths.terms)}>
-          {t("Terms")}
+          {t("Terms of service")}
         </a>
         <a href={paths.purchases} data-testid={siteFooterTestid.purchases} onClick={followInApp(paths.purchases)}>
           {t("Purchases")}
@@ -56,7 +57,7 @@ export function SiteFooter(): ReactElement {
           {t("Accessibility")}
         </a>
         <a href={paths.ai} data-testid={siteFooterTestid.ai} onClick={followInApp(paths.ai)}>
-          {t("AI use")}
+          {t("How JackiOh uses AI")}
         </a>
         <a href={paths.copyright} data-testid={siteFooterTestid.copyright} onClick={followInApp(paths.copyright)}>
           {t("Copyright")}
@@ -65,10 +66,10 @@ export function SiteFooter(): ReactElement {
           {t("Patch notes")}
         </a>
         <a href={paths.almanac} data-testid={siteFooterTestid.almanac} onClick={followInApp(paths.almanac)}>
-          {t("Card almanac")}
+          {t("Almanac")}
         </a>
         <a href={paths.stats} data-testid={siteFooterTestid.stats} onClick={followInApp(paths.stats)}>
-          {t("Stats")}
+          {t("Statistics")}
         </a>
         <a href={paths.replays} data-testid={siteFooterTestid.replays} onClick={followInApp(paths.replays)}>
           {t("Replays")}

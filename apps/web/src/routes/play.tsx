@@ -60,6 +60,7 @@ import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
 import { Wordmark } from "./Wordmark.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -85,7 +86,7 @@ export const playTestid = {
   status: "play-status",
   error: "play-error",
   practice: "play-practice",
-  /** #2705: the Dungeon Run beside the other ways to play. */
+  /** #2705: the Dungeon run beside the other ways to play. */
   dungeon: "play-dungeon",
   screen: "play-screen",
   online: "play-online",
@@ -149,7 +150,7 @@ export function recentGamesWords(games: number): string {
 export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
-  random: "All Random",
+  random: "All random",
 };
 
 export const PLAY_CHOICE_KEY = "jackioh.play.choice";
@@ -639,12 +640,13 @@ function RankPanel({ rank, ladder }: { rank: OwnRankResponse | null; ladder: Lad
       </h2>
       {rank === null ? null : (
         <p data-testid={playTestid.rank} data-ladder={ladder}>
-          {t(ladder === "random" ? "All Random" : "Constructed")} · <RankCrest rank={rank.rank} size="large" />{" "}
+          {t(ladder === "random" ? "All random" : "Constructed")} · <RankCrest rank={rank.rank} size="large" />{" "}
           {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
         </p>
       )}
       <a href={board} data-testid={playTestid.leaderboard} onClick={followInApp(board)}>
-        {t("Leaderboard →")}
+        {t("Leaderboard")}
+        <ArrowIcon direction="forward" />
       </a>
     </section>
   );
@@ -662,7 +664,7 @@ function waysToPlay(): readonly Way[] {
     {
       href: paths.dungeon,
       testid: playTestid.dungeon,
-      name: t("Dungeon Run"),
+      name: t("Dungeon run"),
     },
     {
       href: paths.together,
@@ -1071,7 +1073,8 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
               data-testid={playTestid.seriesLink}
               onClick={followInApp(paths.series(error.seriesId))}
             >
-              {t("Go to your series →")}
+              {t("Go to your series")}
+              <ArrowIcon direction="forward" />
             </a>
           )}
           {error.duosMatchId === null ? null : (
@@ -1080,7 +1083,8 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
               data-testid={playTestid.duosLink}
               onClick={followInApp(paths.duos(error.duosMatchId))}
             >
-              {t("Go to your co-op game →")}
+              {t("Go to your co-op game")}
+              <ArrowIcon direction="forward" />
             </a>
           )}
         </div>

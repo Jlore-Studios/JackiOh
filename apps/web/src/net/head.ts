@@ -21,15 +21,15 @@ export function screenNameFor(path: string): string | null {
     case paths.decks:
       return "Decks";
     case paths.play:
-      return "Play online";
+      return "Play";
     case paths.account:
       return "Account";
     case paths.practice:
       return "Practice";
     case paths.privacy:
-      return "Privacy";
+      return "Privacy policy";
     case paths.terms:
-      return "Terms";
+      return "Terms of service";
     case paths.accessibility:
       return "Accessibility";
     case paths.ai:
@@ -55,9 +55,9 @@ export function screenNameFor(path: string): string | null {
     case paths.purchases:
       return "Purchases";
     case paths.dungeon:
-      return "Dungeon Run";
+      return "Dungeon run";
     case paths.dungeonStats:
-      return "Dungeon Run stats";
+      return "Dungeon run stats";
     case paths.hotseat:
       // Read here, not at load: Vite's config loader runs this file with no `import.meta.env`.
       return import.meta.env.MODE !== "production" ? "Hotseat" : null;

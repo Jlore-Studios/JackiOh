@@ -125,7 +125,8 @@ builds reads its own game's hold without the state (R2201001).
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random
-  mode; `scan_for_anomaly` rolls the Probes' chance, the misses counted in `PlayerState.anomaly_misses`.
+  mode; its `boardReplaced` names the preset's `anomaly` code when it carries one (R3337000);
+  `scan_for_anomaly` rolls the Probes' chance, the misses counted in `PlayerState.anomaly_misses`.
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).

@@ -5,10 +5,11 @@
 // lists a Starship's Flying and Ranged, Dormant or launched, which the board draws as any Unit's.
 // R3333000: its picture is built from its pieces oldest first, each its module on its hardpoint, in the
 // hull design of the name it launched under, a Dormant one in a shipyard. R3333002: its hull plates and
-// its pieces list show each piece's module icon.
+// its pieces list show each piece's module icon. R3334000: a Dormant one with pieces idles in its shipyard,
+// in one of the moving-art slots.
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { STARSHIP_NAMES } from "@jackioh/engine/config";
@@ -28,17 +29,32 @@ import {
   starshipDesignOf,
   type StarshipArt,
 } from "./art/starshipHulls.ts";
+import { fmt } from "./art/hash.ts";
 import { moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf } from "./art/starshipModules.ts";
-import { STARSHIP_ART_MAX_BYTES, starshipSvg } from "./art/stinkyscape.ts";
+import { shipyardIdleOf, STARSHIP_ART_MAX_BYTES, starshipSvg } from "./art/stinkyscape.ts";
 import { starshipArtUri, starshipModuleIconUri } from "./art/svg.ts";
 import { CardFace } from "./CardFace.tsx";
+import { resetCosmeticsForTests } from "./cosmetics.ts";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { STARSHIP_PIECES_TESTID } from "./StarshipPieces.tsx";
 import { STARSHIP_HULL_PLATES_MAX } from "./StarshipHull.tsx";
 import { renderBoard } from "../test/board.tsx";
-import { RADIANT_GOLD_HUE_MAX_DEG, RADIANT_GOLD_HUE_MIN_DEG, RADIANT_GOLD_LIGHTNESS_MAX, RADIANT_GOLD_LIGHTNESS_MIN, RADIANT_GOLD_SATURATION_MIN } from "./constants.ts";
+import {
+  COSMETIC_FOIL_ANIMATED_MAX,
+  RADIANT_GOLD_HUE_MAX_DEG,
+  RADIANT_GOLD_HUE_MIN_DEG,
+  RADIANT_GOLD_LIGHTNESS_MAX,
+  RADIANT_GOLD_LIGHTNESS_MIN,
+  RADIANT_GOLD_SATURATION_MIN,
+  SHIPYARD_IDLE_SPARKS,
+  SHIPYARD_IDLE_SWEEP_MS,
+  SHIPYARD_IDLE_WELD_MS,
+} from "./constants.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
+import { setReducedMotion } from "../test/setup.ts";
 
 afterEach(cleanup);
 
@@ -404,6 +420,94 @@ describe("R3333002: a Starship's pieces as their module icons", () => {
         cleanup();
       }
     }
+  });
+});
+
+describe("R3334000: a Dormant Starship's shipyard idles", () => {
+  beforeEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  afterEach(() => {
+    cleanup();
+    resetCosmeticsForTests();
+    localStorage.clear();
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    __resetSettingsForTests();
+    setReducedMotion(false);
+  });
+
+  /** A side's unit zones, as the fixtures lay them out. */
+  const LANES = emptySide("p1").units.length;
+
+  /** The board's shipyard idles, with p1's units and p2's. */
+  function idlesOn(mine: readonly (UnitView | null)[], theirs: readonly (UnitView | null)[] = []): SVGSVGElement[] {
+    const lane = (units: readonly (UnitView | null)[]): (UnitView | null)[] => Array.from({ length: LANES }, (_, k) => units[k] ?? null);
+    const container = renderBoard(baseView({ you: emptySide("p1", { units: lane(mine) }), opponent: emptySide("p2", { units: lane(theirs) }) }));
+    return [...container.querySelectorAll<SVGSVGElement>(".cf-shipyard-idle")];
+  }
+
+  it("R3334000 a Dormant ship with pieces idles; not with 0 pieces, launched or reduced", () => {
+    const list = [BEAM, DRILL, "stinkyscape-090"];
+    const docked = (): UnitView => dormantStarship("p1", list, { instanceId: "ship" });
+    const [idle, ...more] = idlesOn([null, null, docked()]);
+    expect(more).toHaveLength(0);
+    if (idle === undefined) throw new Error("the Dormant Starship does not idle");
+    // Over its picture, in its portrait, framed as the picture is.
+    expect(idle.closest('[data-testid="card-ship"] .cf-portrait')).not.toBeNull();
+    expect(idle.previousElementSibling?.classList.contains("cf-art")).toBe(true);
+    expect(idle.getAttribute("data-shipyard-motion")).toBe("animated");
+    expect(idle.getAttribute("viewBox")).toBe("0 0 100 100");
+    expect(idle.getAttribute("preserveAspectRatio")).toBe("xMidYMid slice");
+    expect(idle.getAttribute("aria-hidden")).toBe("true");
+    expect(idle.style.getPropertyValue("--cf-sweep-ms")).toBe(`${String(SHIPYARD_IDLE_SWEEP_MS)}ms`);
+    expect(idle.style.getPropertyValue("--cf-weld-ms")).toBe(`${String(SHIPYARD_IDLE_WELD_MS)}ms`);
+    // The light's cone swings about the lamp, and the sparks fly where the newest piece is welded in.
+    const yard = shipyardIdleOf(starshipArtOf(pieces(list), false, undefined, false));
+    const sweep = idle.querySelector<SVGPolygonElement>("polygon.cf-shipyard-sweep");
+    expect(sweep?.getAttribute("points")).toBe(yard.cone.map((point) => `${fmt(point.x)},${fmt(point.y)}`).join(" "));
+    expect(sweep?.style.transformOrigin).toBe(`${fmt(yard.lamp.x)}px ${fmt(yard.lamp.y)}px`);
+    const sparks = idle.querySelector<SVGGElement>("g.cf-shipyard-sparks");
+    expect(yard.newest).not.toBeNull();
+    expect(sparks?.getAttribute("transform")).toBe(`translate(${fmt(yard.newest?.x ?? NaN)} ${fmt(yard.newest?.y ?? NaN)})`);
+    const thrown = [...(sparks?.querySelectorAll<SVGCircleElement>("circle") ?? [])];
+    expect(thrown.map((spark) => spark.style.getPropertyValue("--cf-spark"))).toEqual(Array.from({ length: SHIPYARD_IDLE_SPARKS }, (_, k) => String(k)));
+    cleanup();
+    // No pieces yet, or launched: no idle.
+    expect(idlesOn([dormantStarship("p1", [], { instanceId: "ship" })])).toHaveLength(0);
+    cleanup();
+    expect(idlesOn([unit("p1", { instanceId: "ship", defId: HULL, starship: { pieces: list.map((defId) => ({ defId })), name: "The Ninth Life", launched: 1 } })])).toHaveLength(0);
+    cleanup();
+    // The Reduce motion setting, the system's reduced motion and Animated foil off each hold it still: none drawn.
+    const stills: [string, () => void][] = [
+      ["the Reduce motion setting", () => writeSettings({ reduceMotion: true })],
+      ["the system's reduced motion", () => setReducedMotion(true)],
+      ["Animated foil off", () => writeCardSettings({ animatedFoil: false })],
+    ];
+    for (const [why, still] of stills) {
+      still();
+      expect(idlesOn([docked()]), why).toHaveLength(0);
+      cleanup();
+      localStorage.clear();
+      __resetSettingsForTests();
+      setReducedMotion(false);
+      writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    }
+    // Back on, it idles again.
+    expect(idlesOn([docked()])).toHaveLength(1);
+  });
+
+  it("R3334000 the idle shares COSMETIC_FOIL_ANIMATED_MAX", () => {
+    const ships = (owner: "p1" | "p2"): UnitView[] =>
+      Array.from({ length: LANES }, (_, k) => dormantStarship(owner, [BEAM, SHIELD], { instanceId: `${owner}-ship-${String(k)}` }));
+    // A Dormant Starship in every unit zone of both seats, more than the cap: only the cap's worth idle.
+    const mine = ships("p1");
+    const theirs = ships("p2");
+    expect(mine.length + theirs.length).toBeGreaterThan(COSMETIC_FOIL_ANIMATED_MAX);
+    expect(idlesOn(mine, theirs)).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX);
+    cleanup();
+    // Their slots freed, one ship idles again.
+    expect(idlesOn([dormantStarship("p1", [BEAM], { instanceId: "ship" })])).toHaveLength(1);
   });
 });
 

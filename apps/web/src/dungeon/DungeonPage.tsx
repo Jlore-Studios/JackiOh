@@ -1,4 +1,4 @@
-// The Dungeon Run (DR14 part D, #2705; B13): the one page at `/dungeon` that switches between the run's
+// The Dungeon run (DR14 part D, #2705; B13): the one page at `/dungeon` that switches between the run's
 // screens by what the run waits on. The start screen shows while no run stands, and for a run kept on
 // the device until the player picks it up (B19): the screen offers Continue and Abandon rather than
 // dropping them into a fight. A fight is the practice board (part E), every other phase, the map and its

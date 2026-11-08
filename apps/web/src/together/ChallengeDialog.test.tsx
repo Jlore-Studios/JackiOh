@@ -1,6 +1,6 @@
 // #1568: the challenge dialog's deck read offers Try again when it fails, and reads again.
 // #1831: it opens on the last mode and pick, and remembers what it sent. R3221000: Cancel holds the focus.
-// R2031000: All Random offers "More cards from" on the device's online pick, sent as `leanSet`.
+// R2031000: All random offers "More cards from" on the device's online pick, sent as `leanSet`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -128,7 +128,7 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
     expect(((await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement).value).toBe("d-control");
   });
 
-  it("#1831 R3221000 All Random, remembered, needs no deck: Send is ready at once, Cancel focused", () => {
+  it("#1831 R3221000 All random, remembered, needs no deck: Send is ready at once, Cancel focused", () => {
     window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "random", deckId: null, trioId: null }));
     serveDecks();
     render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
@@ -167,8 +167,8 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
   });
 });
 
-describe("R2031000 an All Random challenge's more cards from", () => {
-  it("R2031000 the picker is All Random's alone and starts on the device's online pick", async () => {
+describe("R2031000 an All random challenge's more cards from", () => {
+  it("R2031000 the picker is All random's alone and starts on the device's online pick", async () => {
     window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
     serveDecks();
     render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);

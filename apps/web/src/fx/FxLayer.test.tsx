@@ -6,7 +6,7 @@ import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ANIMATIONS, BURST_BUDGET_MS, SET_PIECE_HOLD_MS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
+import { ANIMATIONS, BURST_BUDGET_MS, animTestid, SET_PIECE_HOLD_MS, STARSHIP_SET_PIECE, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
@@ -15,6 +15,7 @@ import { setReducedMotion } from "../test/setup.ts";
 import { FX_CALLOUT_MS, FX_STACK_LAND, FX_STARSHIP_STILL_MS, FX_TEXT } from "./constants.ts";
 import FxLayer, { type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
+import { starshipClaim } from "./starship.ts";
 import type { FxSurface } from "./surface.ts";
 import type { FxAnchor, FxBox, FxFrameSource, FxShakeSink, FxVisibility } from "./types.ts";
 
@@ -113,6 +114,18 @@ function stubSurface(canvas: HTMLCanvasElement): FxSurface {
 }
 
 const BOX: FxBox = { x: 300, y: 200, width: 90, height: 126 };
+
+/** R2801000, R3334001: p1's Dormant Starship of two pieces in lane 3, and its launch. */
+const shipView = (): PlayerView =>
+  baseView({ you: emptySide("p1", { units: [null, null, dormantStarship("p1", ["stinkyscape-140", "stinkyscape-050"], { instanceId: "ship" }), null, null] }) });
+const SHIP_LAUNCH: GameEvent = {
+  type: "starshipLaunched",
+  player: "p1",
+  instanceId: "ship",
+  defId: "stinkyscape-t-dormant-starship",
+  name: "Ember of Departure",
+  pieces: ["stinkyscape-140", "stinkyscape-050"],
+};
 
 function fakeSeams() {
   let t = 50_000;
@@ -422,6 +435,30 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     expect(fx.testids()).not.toContain("hero-opponent");
   });
 
+  it("R3407002 a hook's marker plays nothing but opens its entry: IN33DH3's Death draws its recipe on the shuffle that follows it", () => {
+    // R2797000: the Death's `hookResolving` lasts 0 ms, so only the layer's memory sees it; without it the
+    // shuffle is no hook's and draws its plain row alone. The dissolve leaves his graveyard pile (R3407000).
+    const graveyard = animTestid.graveyard("you");
+    const marker: GameEvent = { type: "hookResolving", sourceId: "gone", defId: "stinkyscape-147", controller: "p1", hook: "death" };
+    const shuffle: GameEvent = { type: "shuffledIn", player: "p1", instanceId: "prime", defId: "stinkyscape-147-1", position: 0 };
+    const view = fullBoardView();
+    const drawn = (events: readonly GameEvent[]): string[] => {
+      const sched = fakeSchedule();
+      const queue = queueWith(sched);
+      const fx = fakeSeams();
+      const m = mountLayer(queue, view, fx);
+      act(() => queue.enqueue(events, view));
+      fx.pump(50);
+      const ids = fx.testids();
+      m.show(view);
+      act(() => sched.flush());
+      cleanup();
+      return ids;
+    };
+    expect(drawn([marker, shuffle])).toContain(graveyard);
+    expect(drawn([shuffle])).not.toContain(graveyard);
+  });
+
   it("B36 drain() forgets what the layer remembered", () => {
     const sched = fakeSchedule();
     const queue = queueWith(sched);
@@ -567,26 +604,75 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     expect(m.layer()?.childElementCount).toBe(0);
   });
 
-  it("R2801000 a still launch entry mounts the still cue", () => {
+  it("R2801000 R3334001 reduced motion mounts the still title card, holds nothing", () => {
     setReducedMotion(true);
-    const view = baseView({ you: emptySide("p1", { units: [null, null, dormantStarship("p1", ["stinkyscape-140"], { instanceId: "ship" }), null, null] }) });
-    const launch: GameEvent = { type: "starshipLaunched", player: "p1", instanceId: "ship", defId: "stinkyscape-t-dormant-starship", name: "Ember of Departure", pieces: ["stinkyscape-140"] };
+    const view = shipView();
     const fx = fakeSeams();
-    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true });
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true, setPieceOf: starshipClaim });
     const m = mountLayer(queue, view, fx);
 
-    act(() => queue.enqueue([launch], view));
+    act(() => queue.enqueue([SHIP_LAUNCH], view));
     fx.pump(50);
-    // The queue held nothing: it drained at once, and the still frame stands on its own.
+    // The queue held nothing: it drained at once, and the title card stands on its own.
     expect(queue.idle()).toBe(true);
-    expect(m.count("launch")).toBe(1);
-    const still = m.game.querySelector<HTMLElement>('[data-fx="launch"]');
+    expect(m.count("cinematic")).toBe(1);
+    const still = m.game.querySelector<HTMLElement>('[data-fx="cinematic"]');
     expect(still?.getAttribute("data-still")).toBe("true");
-    expect(still?.querySelectorAll(".fx-launch-count")).toHaveLength(0);
+    expect(still?.querySelector(".fx-cinematic-name")?.getAttribute("data-text")).toBe("Ember of Departure");
+    expect(still?.querySelector(".fx-cinematic-art")?.getAttribute("src")).toMatch(/^data:image\/svg\+xml/);
+    expect(still?.querySelectorAll(".fx-cinematic-spark")).toHaveLength(0);
+    expect(m.count("launch")).toBe(0);
     expect(m.canvas()).toBeNull();
     expect(fx.shakes).not.toContain("apply");
     fx.pump(FX_STARSHIP_STILL_MS + 100);
-    expect(m.count("launch")).toBe(0);
+    expect(m.count("cinematic")).toBe(0);
+  });
+
+  it("R3334001 Big moments short and off mount it", () => {
+    for (const bigMoments of ["short", "off"] as const) {
+      setFxSettings({ bigMoments });
+      const view = shipView();
+      const fx = fakeSeams();
+      const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: false, setPieceOf: starshipClaim });
+      const m = mountLayer(queue, view, fx);
+      act(() => queue.enqueue([SHIP_LAUNCH], view));
+      fx.pump(50);
+      // "short" still holds the launch, briefly; "off" holds nothing. Either way, the title card stands still.
+      expect(queue.inFlight()?.setPiece !== undefined, bigMoments).toBe(bigMoments === "short");
+      const card = m.game.querySelector<HTMLElement>('[data-fx="cinematic"]');
+      expect(card?.getAttribute("data-still"), bigMoments).toBe("true");
+      expect(card?.querySelectorAll(".fx-cinematic-spark"), bigMoments).toHaveLength(0);
+      cleanup();
+    }
+    // At "full" the held launch is the moving cinematic.
+    setFxSettings({ bigMoments: "full" });
+    const view = shipView();
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: false, setPieceOf: starshipClaim });
+    const m = mountLayer(queue, view, fx);
+    act(() => queue.enqueue([SHIP_LAUNCH], view));
+    fx.pump(50);
+    const cinematic = m.game.querySelector<HTMLElement>('[data-fx="cinematic"]');
+    expect(cinematic?.hasAttribute("data-still")).toBe(false);
+    expect(cinematic?.querySelectorAll(".fx-cinematic-stop").length).toBeGreaterThan(0);
+  });
+
+  it("R3334001 a skip removes the cinematic", () => {
+    const view = shipView();
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: false, setPieceOf: starshipClaim });
+    const m = mountLayer(queue, view, fx);
+    act(() => queue.enqueue([SHIP_LAUNCH], view));
+    expect(queue.inFlight()?.setPiece?.key).toBe(STARSHIP_SET_PIECE);
+    fx.pump(50);
+    expect(m.count("cinematic")).toBe(1);
+    let skipped = false;
+    act(() => {
+      skipped = queue.skip();
+    });
+    expect(skipped).toBe(true);
+    expect(m.count("cinematic")).toBe(0);
+    expect(m.fxDom()?.childElementCount).toBe(0);
   });
 
   it("B37 intensity \"off\" switches the layer off and plans no cue, while the runner still animates", () => {

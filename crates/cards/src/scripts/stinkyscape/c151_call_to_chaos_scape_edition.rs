@@ -15,7 +15,7 @@
 //! old script (R3135001, R767000).
 //!
 //! Subsystem call_to_chaos (Core #95) with CHAOS_SCAPE_EFFECTS: announcement (R436), chain cap across editions (R28) and resolution order (R423).
-//! First entry lays Anomaly board (ALL_BOARDS, S20); nine builders in subsystems/call_to_chaos_scape.rs (C+ #73).
+//! First entry lays Anomaly board (ALL_BOARDS, S20), naming its code (R3337000); nine builders in subsystems/call_to_chaos_scape.rs (C+ #73).
 
 use jackioh_engine::prelude::*;
 
@@ -351,6 +351,14 @@ mod tests {
                     .any(|event| js(event)["defId"] == json!("stinkyscape-t-anomaly-found"))
             );
             laid(&s);
+        }
+
+        #[test]
+        fn r3337000_the_anomaly_entry_names_the_board_it_lays() {
+            let s = chaos("anomaly", side(false, json!([])), json!({ "hand": [VANILLA] }));
+            let replaced = events_of(&s, "boardReplaced");
+            assert_eq!(replaced.len(), 1);
+            assert_eq!(replaced[0]["anomaly"], json!(laid(&s)), "it names the board it laid");
         }
 
         #[test]

@@ -629,7 +629,8 @@ describe("B2 subscribeSignals", () => {
     const seen = listen(queue);
 
     queue.enqueue([GAME_OVER], fullBoardView());
-    expect(kinds(seen)).toEqual(["idle"]);
+    // R3407002: it passes, for the effects layer's memory, and holds nothing.
+    expect(kinds(seen)).toEqual(["pass", "idle"]);
 
     queue.enqueue([MANA, GAME_OVER, TURN_ENDED], fullBoardView());
     clock.flush();
@@ -644,8 +645,9 @@ describe("B2 subscribeSignals", () => {
 
     queue.enqueue(longStream(2), fullBoardView());
 
-    // R2789000: an entry that would have played signals `still` for the effects layer's callouts.
-    expect(kinds(seen).filter((kind) => kind !== "still")).toEqual(["idle"]);
+    // R2789000: an entry that would have played signals `still` for the effects layer's callouts, and
+    // R3407002: one whose row has no duration `pass`es, for its memory; neither holds anything.
+    expect(kinds(seen).filter((kind) => kind !== "still" && kind !== "pass")).toEqual(["idle"]);
   });
 
   it("R2789000 reduced motion emits still per entry with a row duration, in order, and idle after them", () => {
@@ -655,12 +657,29 @@ describe("B2 subscribeSignals", () => {
 
     queue.enqueue([MANA, DAMAGE, GAME_OVER], fullBoardView());
 
-    expect(kinds(seen)).toEqual(["still", "still", "idle"]);
+    // The game's end has no row duration: it passes (R3407002), not still.
+    expect(kinds(seen)).toEqual(["still", "still", "pass", "idle"]);
     expect(seen.flatMap((signal) => (signal.kind === "still" ? [signal.entry.type] : []))).toEqual(["manaChanged", "damage"]);
     expect(seen.flatMap((signal) => (signal.kind === "still" ? [signal.entry.durationMs] : []))).toEqual([0, 0]);
     // Nothing is held: no timer, no entry in flight.
     expect(clock.schedule).not.toHaveBeenCalled();
     expect(queue.inFlight()).toBeNull();
+  });
+
+  it("R3407002 an entry whose row has no duration (a hook's marker) passes, in order, before the next entry starts, at any motion", () => {
+    const marker: GameEvent = { type: "hookResolving", sourceId: "u1", defId: "core-001", controller: "p1", hook: "death" };
+    for (const reducedMotion of [false, true]) {
+      const clock = fakeClock();
+      const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion, settings: at(1) });
+      const seen = listen(queue);
+      queue.enqueue([marker, MANA], fullBoardView());
+      clock.flush();
+      expect(kinds(seen), String(reducedMotion)).toEqual(["pass", reducedMotion ? "still" : "start", "idle"]);
+      const passed = seen[0];
+      expect(passed?.kind === "pass" ? passed.entry.events : null).toEqual([marker]);
+      // It holds nothing: the only timer is the next entry's.
+      expect(clock.scheduled(), String(reducedMotion)).toEqual(reducedMotion ? [] : [150]);
+    }
   });
 
   it("B2 an empty enqueue emits idle and no start", () => {
@@ -910,7 +929,7 @@ describe("B5 the motion reduce setting", () => {
     expect(queue.animating().size).toBe(0);
     expect(queue.idle()).toBe(true);
     expect(onSettled).toHaveBeenCalledTimes(1);
-    expect(kinds(seen).filter((kind) => kind !== "still")).toEqual(["idle"]);
+    expect(kinds(seen).filter((kind) => kind !== "still" && kind !== "pass")).toEqual(["idle"]);
   });
 
   it("B5 reduce ignores the speed setting: nothing is scheduled at any speed", () => {

@@ -63,7 +63,7 @@ describe("the lesson path", () => {
     }
   });
 
-  it("R2205002 a chip reads found once the Field Guide holds its mechanic, and every chip of a lesson won does", () => {
+  it("R2205002 a chip reads found once the Field guide holds its mechanic, and every chip of a lesson won does", () => {
     markFound(["mana"]);
     markLessonComplete(lesson(2).id);
     render(<TutorialPath onStart={vi.fn()} />);

@@ -3,13 +3,14 @@
 // than `none`; every Spell, Field Spell, Trap and Field Trap has a `cast` (or a recipe or set piece
 // of its own, or the one `none` a Starship part may wear; R3332000: a Field Spell's own `entrance`, which
 // draws its play's landing); every Field Spell wears an `aura`; and every frame sits on a card that may
-// carry it, every `entrance` a Unit's or a Field Spell's and every `takeover` a Mythic's.
+// carry it, every `entrance` a Unit's or a Field Spell's and every `takeover` a Mythic's. R3400000,
+// R3389000: a `{ bespoke }` may wear the aura beside its recipe (`entryAura`), as Classic's Field Spells' signatures do.
 
 import { describe, expect, it } from "vitest";
 
 import { entryOf } from "../../test/setPass.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, auraOfEntry } from "./tables.ts";
+import { entryAura, FX_CARD_TABLE } from "./tables.ts";
 import { FX_COVERAGE_FLOOR } from "../constants.ts";
 
 /** The catalog's non-token cards, in catalog order. */
@@ -44,9 +45,34 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      // R3399001: beside hooks or a bespoke recipe.
-      expect(auraOfEntry(entry), id).toBeDefined();
+      // R3400000: a `{ bespoke }` may wear it (R3389000: Classic's Field Spells' signatures; R3405001: Meditative's).
+      expect(entryAura(entry), id).toBeDefined();
     }
+  });
+
+  it("R3389000 every Field Spell whose entry is a recipe wears its aura beside it", () => {
+    const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
+    // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
+    // R3405001: Meditative's eight signature Field Spells with a recipe (The Cane's is its entrance alone).
+    // R3399000: and Classic+'s Claude's Datacenter (its three token Field Spells are no card of the census).
+    expect(recipes).toEqual([
+    "classic-004",
+    "classic-007",
+    "classic-028",
+    "classic-090",
+    "classicplus-078",
+      "meditative-007",
+      "meditative-011",
+      "meditative-026",
+      "meditative-040",
+      "meditative-063",
+      "meditative-071",
+      "meditative-075",
+      "meditative-080",
+      "stinkyscape-112",
+      "stinkyscape-148",
+      "stinkyscape-152",]);
+    for (const id of recipes) expect(entryAura(entryOf(id)), id).toBeDefined();
   });
 
   it("R3332000 every entrance is a Unit's or a Field Spell's, every takeover a Mythic's and every signature a Legendary's or a Mythic's", () => {

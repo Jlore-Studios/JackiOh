@@ -1,7 +1,7 @@
 // R433, a dealt deck lists only the cards its owner has been shown. The engine lists a deck the
-// player did not build (All Random, practice's random deck) in `SideView.ownLibrary` with the cards
+// player did not build (All random, practice's random deck) in `SideView.ownLibrary` with the cards
 // its owner has seen and counts the rest as `unknown`, which the deck pile already draws as backs
-// (R312). These prove the client's half on fixture views. The All Random lobby's half is in
+// (R312). These prove the client's half on fixture views. The All random lobby's half is in
 // routes/play.test.tsx.
 
 import { CATALOG } from "@jackioh/cards";

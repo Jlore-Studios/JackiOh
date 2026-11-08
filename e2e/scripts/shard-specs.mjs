@@ -27,7 +27,7 @@ export const SMOKE = ["01", "06", "10", "13", "19", "46", "47"];
  * Seconds per spec on ubuntu-latest, Chrome and Electron's slower: CI run 36973335249 (main at
  * e762937, the TypeScript server). Specs 01, 06, 19 and 46 are #2181's: the smoke shards run on a
  * 4-core runner against the release jackioh-server, Chrome for Testing 154 (main at 17d45db), each
- * spec's Cypress "Duration"; 19's All Random test alone waits about 50 s for the rating window to
+ * spec's Cypress "Duration"; 19's All random test alone waits about 50 s for the rating window to
  * widen after the rated game before it. Specs 29-36 are estimates (29-32 from the turns
  * they play, spec 03's length per turn; 36 from its play-through of the Meditative set, about six
  * minutes in Chromium on a loaded machine); 47 from a local run, 30 tests in about 30 s; once they

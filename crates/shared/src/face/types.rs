@@ -846,6 +846,11 @@ pub struct FaceModel {
     pub dormant: Option<DormantFace>,
     pub frozen_forever: bool,
     pub starship: Option<StarshipFace>,
+    /// R3337001: the code of the board an Anomaly Found! in play holds (its label, R2247000), whose
+    /// picture its art draws; absent for any other card and for a printed face.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub anomaly: Option<String>,
     pub created: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]

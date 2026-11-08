@@ -590,7 +590,7 @@ describe("R654 public statistics route", () => {
     render(<SiteFooter />);
     const footerLink = screen.getByTestId(siteFooterTestid.stats);
     expect(footerLink).toHaveAttribute("href", "/stats");
-    expect(footerLink).toHaveTextContent("Stats");
+    expect(footerLink).toHaveTextContent("Statistics");
   });
 
   it("R2325000 R661 shows no banner, no reading notes, no source and no live-game count", async () => {
@@ -802,7 +802,7 @@ describe("R377 public statistics match type", () => {
     expect([...select.options].map((option) => option.textContent)).toEqual([
       "All modes",
       "Constructed",
-      "All Random",
+      "All random",
       "Best of 1",
       "Conquest",
     ]);

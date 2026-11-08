@@ -52,6 +52,8 @@ const UNKNOWN_TYPE: CardType = CardType::Unit;
 /// R1382, R1162 (Meditative #87 Tatches the Totem): what the frame prints for a card with every tribal tag
 /// (R1424), in place of the five.
 pub const ALL_TRIBES: &str = "All Tribes";
+/// R3337001: the card whose label names the Anomaly its art draws (Stinkyscape's Anomaly Found!).
+pub const ANOMALY_FOUND_ID: &str = "stinkyscape-t-anomaly-found";
 
 /// What the model looks definitions up in: the match's own, then the catalog.
 pub struct Lookup<'a> {
@@ -293,6 +295,10 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
             list: ship.list.clone().unwrap_or_default(),
             term: super::glossary::entry("Starship"),
         });
+    // R3337001: an Anomaly Found! that holds a board (R2247000) draws that board's picture.
+    let anomaly = in_play
+        .and_then(|play| play.label.clone())
+        .filter(|_| source.def_id == ANOMALY_FOUND_ID);
     let enchantments = in_play
         .and_then(|play| play.enchantments.clone())
         .unwrap_or_default();
@@ -517,6 +523,7 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         dormant,
         frozen_forever,
         starship,
+        anomaly,
         created,
         created_by: in_play.and_then(|play| play.created_by.clone()),
         loc: def.as_ref().and_then(|def| def.loc),

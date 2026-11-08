@@ -1,6 +1,16 @@
-// R3399002: the pictures Classic+'s four Mythics' takeovers draw over the darkened board (fx/dom.ts), and their
-// still under Reduce motion (game/TakeoverStill.tsx). The catalog's card art is procedural and ART_MANIFEST is
-// empty, so each is drawn here by hand as paths on a 160 by 90 frame, after its card's concept:
+// R3400000: the art a Mythic's own takeover look draws over the dark, part by part (fx.css's
+// `.takeover-art[data-look]`): Bob's Plan's ink-wash summit, Scratch Pad's blank canvas and Goetzmann
+// Game Design's napkin. R3405000: and each Meditative Mythic's own: Reach the Summit's ascent, True Craft
+// a Card's workshop, Aestheticize the Game's brush, Red Jade's mine, Jade Beauty's quarry, YileGPT's ai,
+// YileGPT Prime's pavilion, Yile's Virus's virus, AI Girlfriend's dojo, Pareto Optimality's studyHall,
+// The Cane's caneRack, Jlockeed's Evil Blueprints' warRoom and Jlockeed's Headquarters' fortress, each
+// part named for its look. The takeover cue mounts them live (dom.ts), timed to its landing; Reduce
+// Motion's still mounts the same parts at rest (game/TakeoverStill.tsx). Shapes only, never a card face
+// (R202): True Craft's card is a blank card shape.
+// R3399002: Classic+'s four Mythics' looks draw their art as a drawing of their own instead of parts
+// (`TAKEOVER_ART_DRAWINGS`), mounted in the same art layer over the dark, live and still. The catalog's card
+// art is procedural and ART_MANIFEST is empty, so each is drawn here by hand as paths on a 160 by 90 frame,
+// after its card's concept:
 // - "zealot" (Zephrys Zealotism): a robed wind-zealot looming from a lectern of cloud, a finger raised mid-lecture,
 //   an indigo cyclone spinning across the frame;
 // - "portal" (Portal to the Past): a carved stone ring grinding open on a sepia vortex, the frozen ruins of a past
@@ -9,25 +19,50 @@
 // - "vineyard" (Mythic Grape): a luminous violet grape swelling over an ancient vineyard, its terraced hills of vines
 //   spiralling into it.
 // Each is a picture keyed by its look, never a card face, and no string here names a card (R202): the takeover plays
-// only for a Mythic its viewer can read, and the DOM carries the look alone. Prismatic and the older looks draw none.
-// A path's `part` is how fx.css moves it during the takeover, by transform and opacity only (B55): "back" and
-// "subject" hold still, "spin" turns and "drift" swells, each about the centre of its own box (`transform-box:
-// fill-box`), so each moving path is drawn centred on the point it turns or swells from. The colors are the
-// art's own, as TAKEOVER_TINTS (takeover.ts) are the looks'. Data only.
+// only for a Mythic its viewer can read, and the DOM carries the look alone. A path's `part` is how fx.css moves it
+// under the live takeover, by transform and opacity only (B55): "back" and "subject" hold still, "spin" turns and
+// "drift" swells, each about the centre of its own box (`transform-box: fill-box`), so each moving path is drawn
+// centred on the point it turns or swells from. The colors are the drawing's own, as TAKEOVER_TINTS (takeover.ts)
+// are the looks'. Data only.
 
 import type { TakeoverLook } from "./types.ts";
 
-/** R3399002: how fx.css moves a path of a takeover's picture: not at all ("back", "subject"), turning or swelling. */
-export type TakeoverArtPart = "back" | "subject" | "spin" | "drift";
+/** Each look with art, its parts bottom to top; a look not listed draws none (R3399002: but may draw a drawing). */
+export const TAKEOVER_ART_PARTS: Readonly<Partial<Record<TakeoverLook, readonly string[]>>> = {
+  summit: ["wash", "range", "arrow", "flag"],
+  canvas: ["paper", "peaks", "cursor", "rows"],
+  napkin: ["napkin", "lamp", "pencil", "sketch", "spiral"],
+  ascent: ["ascent-stars", "ascent-ledges", "ascent-climber", "ascent-clouds"],
+  workshop: ["workshop-bench", "workshop-maker", "workshop-threads", "workshop-card"],
+  brush: ["brush-scroll", "brush-wash", "brush-bloom", "brush-pen"],
+  mine: ["mine-rock", "mine-seam", "mine-lamp", "mine-shards"],
+  quarry: ["quarry-cliffs", "quarry-boulder", "quarry-veins", "quarry-dust"],
+  ai: ["ai-scroll", "ai-scan", "ai-strokes"],
+  pavilion: ["pavilion-hall", "pavilion-ring", "pavilion-scholar"],
+  virus: ["virus-snow", "virus-face", "virus-eyes"],
+  dojo: ["dojo-floor", "dojo-mat", "dojo-beams"],
+  studyHall: ["hall-scroll", "hall-curve", "hall-students", "hall-cane"],
+  caneRack: ["rack-lacquer", "rack-cane", "rack-hand"],
+  warRoom: ["war-table", "war-villain", "war-blueprint", "war-lamps"],
+  fortress: ["fortress-keep", "fortress-peak", "fortress-racks", "fortress-beacons"],
+};
 
-/** R3399002: a takeover's picture, painted in order over a frame that fills the screen (`xMidYMid slice`). */
-export type TakeoverArt = { viewBox: string; paths: readonly { d: string; fill: string; part: TakeoverArtPart }[] };
+/** The parts `look`'s art draws, none for a look without art. */
+export function takeoverArtParts(look: TakeoverLook): readonly string[] {
+  return TAKEOVER_ART_PARTS[look] ?? [];
+}
 
-/** Every picture's frame: 16 by 9, so a landscape screen crops little and a phone keeps the middle. */
+/** R3399002: how fx.css moves a path of a takeover's drawing: not at all ("back", "subject"), turning or swelling. */
+export type TakeoverDrawingPart = "back" | "subject" | "spin" | "drift";
+
+/** R3399002: a takeover's drawing, painted in order over a frame that fills the screen (`xMidYMid slice`). */
+export type TakeoverDrawing = { viewBox: string; paths: readonly { d: string; fill: string; part: TakeoverDrawingPart }[] };
+
+/** Every drawing's frame: 16 by 9, so a landscape screen crops little and a phone keeps the middle. */
 const VIEW_BOX = "0 0 160 90";
 
-/** R3399002: each look's picture; a look with none draws its takeover without one. */
-export const TAKEOVER_ART: Readonly<Partial<Record<TakeoverLook, TakeoverArt>>> = {
+/** R3399002: each look drawn as a picture of its own; a look not listed draws none (it may have parts). */
+export const TAKEOVER_ART_DRAWINGS: Readonly<Partial<Record<TakeoverLook, TakeoverDrawing>>> = {
   zealot: {
     viewBox: VIEW_BOX,
     paths: [

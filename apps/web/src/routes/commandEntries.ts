@@ -43,7 +43,7 @@ export function commandMenuOn(path: string): boolean {
 }
 
 /**
- * R2118000: the common actions. Practice, Play and (#2705) the Dungeon Run are not repeated as pages and
+ * R2118000: the common actions. Practice, Play and (#2705) the Dungeon run are not repeated as pages and
  * start no game.
  */
 export function commandActions(): CommandEntry[] {
@@ -51,7 +51,7 @@ export function commandActions(): CommandEntry[] {
     { id: "action-new-deck", kind: "action", label: t("New deck"), path: newDeckPath() },
     { id: "action-practice", kind: "action", label: t("Practice"), path: paths.practice },
     { id: "action-play", kind: "action", label: t("Play"), path: paths.play },
-    { id: "action-dungeon", kind: "action", label: t("Dungeon Run"), path: paths.dungeon },
+    { id: "action-dungeon", kind: "action", label: t("Dungeon run"), path: paths.dungeon },
   ];
 }
 
@@ -63,15 +63,15 @@ export function commandPages(): CommandEntry[] {
     { id: "page-collection", kind: "page", label: t("Collection"), path: paths.collection },
     { id: "page-shop", kind: "page", label: t("Shop"), path: paths.shop },
     { id: "page-purchases", kind: "page", label: t("Purchases"), path: paths.purchases },
-    { id: "page-almanac", kind: "page", label: t("Card almanac"), path: paths.almanac },
+    { id: "page-almanac", kind: "page", label: t("Almanac"), path: paths.almanac },
     { id: "page-patch-notes", kind: "page", label: t("Patch notes"), path: paths.patchNotes },
-    { id: "page-stats", kind: "page", label: t("Stats"), path: paths.stats },
+    { id: "page-stats", kind: "page", label: t("Statistics"), path: paths.stats },
     { id: "page-leaderboard", kind: "page", label: t("Leaderboard"), path: paths.leaderboard },
     { id: "page-replays", kind: "page", label: t("Replays"), path: paths.replays },
     { id: "page-together", kind: "page", label: t("Play together"), path: paths.together },
     { id: "page-account", kind: "page", label: t("Account"), path: paths.account },
-    { id: "page-privacy", kind: "page", label: t("Privacy"), path: paths.privacy },
-    { id: "page-terms", kind: "page", label: t("Terms"), path: paths.terms },
+    { id: "page-privacy", kind: "page", label: t("Privacy policy"), path: paths.privacy },
+    { id: "page-terms", kind: "page", label: t("Terms of service"), path: paths.terms },
     { id: "page-accessibility", kind: "page", label: t("Accessibility"), path: paths.accessibility },
     { id: "page-copyright", kind: "page", label: t("Copyright"), path: paths.copyright },
   ];

@@ -3,6 +3,7 @@
 
 import type { VoiceEmoteId } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../cards/anomalies.ts";
 import type { PlayTier, PlayType } from "../game/damageFeel.ts";
 
 import type { CARD_HOOKS } from "./constants.ts";
@@ -32,10 +33,27 @@ export type SfxId =
   | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
   | "organ"
+  // R3337003: a Stinkyscape Anomaly laid, one sting per board (`SfxParams.anomaly`).
+  | "anomaly"
   // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
   | "playImpact" | "trapSnap"
   // R3342000: the tile aura touch bell.
-  | "auraTouch";
+  | "auraTouch"
+  // R3334000–R3334003: the Starship's moments: a module docking, the launch's ignition and roar, a
+  // broadside's weapons by kind, an unarmed ship's ram and its wreck.
+  | "starshipDock" | "starshipIgnite" | "starshipRoar" | "starshipBeam" | "starshipRepeater" | "starshipCannon"
+  | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck"
+  // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
+  // R3407001: Stinkyscape's signature cards, one each (signatureCues.ts).
+  | "ballotBeep" | "lullabySigh" | "compactTut" | "glitchDrop" | "harpGliss" | "markerThunder" | "stampTrill" | "tillRattle"
+  | "gavelSlam" | "dockingChime" | "keyboardPing" | "synthSnap" | "blobDrum" | "warpSparkle" | "tearChoir" | "cackleThunder"
+  | "kazooRatchet" | "thrusterSniff" | "marbleGong" | "sanctumBell" | "cashWhistle" | "whisperClink" | "crystalRise"
+  // R3405001: Meditative's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "bowlBreath" | "peakFlute" | "ticketHorn" | "forgeQuench" | "brushGuzheng" | "wellGush" | "minePick" | "jadeZither"
+  | "windChime" | "marketGong" | "chalkHush" | "porcelainRoar" | "bronzeGulp" | "modemGuqin" | "serverChoir" | "dialupStutter"
+  | "holoBow" | "synthPops" | "skullMutter" | "keyJangle" | "caneCrack" | "caneThunder" | "rootCreak" | "chalkGasp"
+  | "frostPages" | "coinCheer" | "totemDrums" | "templeDie" | "golemStomp" | "klaxonSlam" | "cellSlam" | "hangarRev";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -52,7 +70,8 @@ export type SfxParams = {
    * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
    * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
    * reactorPulse: how close the Battleship's Meltdown layer is to its blast, 1 (a tick) to 10 (the blast).
-   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1).
+   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1). starshipDock (R3334000):
+   * the ship's pieces once the module has docked, its hum a step higher for each, clamped (default 1).
    */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */
@@ -81,6 +100,11 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /**
+   * R3337003: anomaly: the code of the Anomaly laid (`boardReplaced.anomaly`), which picks its sting.
+   * Absent, or a code this build does not know: the plain whoosh.
+   */
+  anomaly?: AnomalyCode;
   /** auraTouch: the aura's hue, 0-360. */
   hue?: number;
   /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */

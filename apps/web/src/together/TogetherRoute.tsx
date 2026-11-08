@@ -115,7 +115,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
     [friends, hiddenFriends],
   );
 
-  // "Shared with me →" on `/replays` opens this page at its list.
+  // "Shared with me" on `/replays` opens this page at its list.
   useEffect(() => {
     if (window.location.hash !== `#${SHARED_ANCHOR}`) return;
     const list = document.getElementById(SHARED_ANCHOR);

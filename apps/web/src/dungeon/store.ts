@@ -1,4 +1,4 @@
-// The Dungeon Run's store (DR14 part D, #2705): the player's progress, the run in progress and the
+// The Dungeon run's store (DR14 part D, #2705): the player's progress, the run in progress and the
 // finished runs, kept on this device (DR1: the Sandbox is offline and its stats stay on the device),
 // as `tutorial/progress.ts` keeps its own: one snapshot, `useSyncExternalStore`, unavailable or
 // malformed storage meaning nothing stored.
@@ -478,7 +478,7 @@ function snapshot(): Core {
 }
 
 /**
- * The Dungeon Run's state and verbs. Each verb answers the run's own refusal, word for word, or null.
+ * The Dungeon run's state and verbs. Each verb answers the run's own refusal, word for word, or null.
  */
 export function useDungeon(): Dungeon {
   const { progress, live } = useSyncExternalStore(subscribe, snapshot, snapshot);

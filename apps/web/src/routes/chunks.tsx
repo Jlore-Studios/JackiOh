@@ -66,7 +66,7 @@ export const routeChunks = {
   match: routeChunk(() => import("./match.tsx")),
   series: routeChunk(() => import("./series.tsx")),
   practice: routeChunk(() => import("./practice.tsx")),
-  // #2705: the Dungeon Run and its stats, played offline on the engine in the browser.
+  // #2705: the Dungeon run and its stats, played offline on the engine in the browser.
   dungeon: routeChunk(() => import("../dungeon/DungeonPage.tsx")),
   dungeonStats: routeChunk(() => import("../dungeon/DungeonStatsPage.tsx")),
   privacy: routeChunk(() => import("./privacy.tsx")),

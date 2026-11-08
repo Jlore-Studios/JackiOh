@@ -469,7 +469,7 @@ export const COACH_ACK = "coach-ack";
 export const COACH_RING = "coach-ring";
 /** R2205000: a moment's Hint button. */
 export const COACH_HINT = "coach-hint";
-/** R2205002: the Field Guide's buttons and its dialog. */
+/** R2205002: the Field guide's buttons and its dialog. */
 export const FIELD_GUIDE_HUD = "field-guide-hud";
 export const FIELD_GUIDE_PATH = "field-guide-path";
 export const FIELD_GUIDE = "field-guide";
@@ -590,7 +590,7 @@ export const PLAY_ERROR = "play-error";
 export const PLAY_DECK_SELECT = "play-deck-select";
 export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
-/** R1372: All Random's “More cards from the newest set” option. */
+/** R1372: All random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
 /** R1578000: the Play hub, its online panel, the other ways to play and their tiles. */
 export const PLAY_SCREEN = "play-screen";

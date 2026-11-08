@@ -1,6 +1,6 @@
 // Rematch offers after an online match (SPEC §9.5, R672).
 // UI sends server intent and renders server status only (CLAUDE.md rule 7).
-// R1372, R924000: All Random offers may carry the player's "More cards from" pick; Best-of-1 offers do not.
+// R1372, R924000: All random offers may carry the player's "More cards from" pick; Best-of-1 offers do not.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 

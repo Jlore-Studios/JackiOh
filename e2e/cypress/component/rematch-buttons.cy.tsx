@@ -119,7 +119,7 @@ describe("#477 the rematch offers in the result panel", () => {
           for (const [name, box] of [
             ["Rematch", offer],
             ["Double or nothing", double],
-            ["Back to lobby", back],
+            ["Back to the lobby", back],
             ["View the board", view],
           ] as const) {
             expect(box.height, `${name} is a touch target`).to.be.at.least(TOUCH_PX - EPSILON);
