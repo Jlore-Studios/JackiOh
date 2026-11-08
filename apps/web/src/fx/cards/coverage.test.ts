@@ -45,14 +45,31 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      // R3400000: a `{ bespoke }` may wear it (R3389000: Classic's Field Spells' signatures).
+      // R3400000: a `{ bespoke }` may wear it (R3389000: Classic's Field Spells' signatures; R3405001: Meditative's).
       expect(entryAura(entry), id).toBeDefined();
     }
   });
 
   it("R3389000 every Field Spell whose entry is a recipe wears its aura beside it", () => {
     const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
-    expect(recipes).toEqual(["classic-004", "classic-007", "classic-028", "classic-090"]);
+    // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
+    // R3405001: Meditative's eight signature Field Spells with a recipe (The Cane's is its entrance alone).
+    expect(recipes).toEqual([
+    "classic-004",
+    "classic-007",
+    "classic-028",
+    "classic-090",
+      "meditative-007",
+      "meditative-011",
+      "meditative-026",
+      "meditative-040",
+      "meditative-063",
+      "meditative-071",
+      "meditative-075",
+      "meditative-080",
+      "stinkyscape-112",
+      "stinkyscape-148",
+      "stinkyscape-152",]);
     for (const id of recipes) expect(entryAura(entryOf(id)), id).toBeDefined();
   });
 

@@ -83,7 +83,10 @@ The Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds
 the same way: a training yard under one subject per family, its dummies, ogres, knives, totems,
 Felinors, runes, posters and Golem each what the card is (R2202000). Its Legacy cards #41–#60
 (`SNAPSHOT_ART`) draw their Core card's subject in the yard, each with a touch of its own
-(`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id.
+(`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id. Since #3393 every
+entry of the set, its Legacy cards included, draws a scene recipe of its own first (R3393000, R3393001,
+"Meditative+ and Training Grounds drawn as scenes" below), so this painter and `legacySvg` are the fallback
+for a card with no recipe.
 
 ## A fused card's art (R3045000)
 
@@ -138,6 +141,7 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+A Classic+ card offered Alt art draws an alt recipe of its own instead (R3396000, below).
 
 ## One picture per variant (R3015002)
 
@@ -276,10 +280,11 @@ Every family climbs the same ladder of rarity, held by the detail floor below:
 - **Light:** from the upper left, with a soft glow behind the subject.
 - **Line:** none: shapes meet edge to edge, flat fills stacked in translucent layers.
 - **Camera:** eye level, the subject standing in the middle half.
-- **By rarity:** a Common is one figure in a field (Speciesist, on guard at dusk); a Rare stands among
-  props, a fence, a cart, a banner; an Epic sets hills behind and grass before it; a Legendary lights its
-  moment with rays and a halo; a Mythic is a set piece no other card shares (Heroic Power's shrine on the
-  heights, Ceaseless Void's giant-shaped hole before the void among a world's ruins).
+- **By rarity:** a Common is one figure in a plain place (Speciesist, flinging a bolt across a whitewashed
+  checkpoint at noon); a Rare stands among props, a fence, a cart, a banner; an Epic sets its background behind
+  and its foreground before it; a Legendary lights its moment with rays and a halo; a Mythic is a set piece no
+  other card shares (Heroic Power's marble rotunda of thirteen glowing doorways round an orb on its crystal
+  pedestal, Ceaseless Void's giant-shaped hole before the void among a world's ruins).
 
 ### Classic and Classic+
 
@@ -339,7 +344,8 @@ Every family climbs the same ladder of rarity, held by the detail floor below:
 A **scene recipe** (`sceneRecipes.ts`, `SCENE_RECIPES`) is data per card: its family, its sky (two palette
 names, top to bottom), the light behind it, where its emblem stands, an optional figure, and seven layers
 back to front, `sky`, `far`, `mid`, `subject`, `near`, `light` and `particles` (`SCENE_LAYERS`), each a list
-of placements. A placement names a part of the kit, where it stands, its scale and facing, how many copies
+of placements, and optional further figures (`extras`, R3390000), each standing in a layer of its own. A
+placement names a part of the kit, where it stands, its scale and facing, how many copies
 (`count`, each but the first offset by up to `spread`, every copy's scale jittered by `SCENE_SCALE_JITTER`)
 and a palette name that repaints the part's main shapes; a placement marked `props` (R3390000) moves on the
 props beat, as a painter's motif glyphs and accent do, and never stands in the subject layer. `composeScene` draws every part from one stream,
@@ -347,21 +353,25 @@ seeded by the card's id (or by a picture's own seed, `core-002#alt`, so Alt art 
 parts apart), and never reads the face: the Radiant face draws the same shapes, each mixed toward its layer's
 gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
 parts, and a recipe's further figures (`extras`, R3390000: a crowd, a companion, a rival) each in front of its
-own layer's parts, after the main figure in the subject layer. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+own layer's parts, after the main figure in the subject layer; a placement, a figure or a further figure may
+`fade` (R3393000), its shapes' opacity scaled, for a ghost, a copy or a recruit flickering into being. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
 from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
 `motes`, and its marked placements `props`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
 Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sceneArtSvg`), and a Legacy
-card keeps its Core card's old subject.
+card draws its own scene wearing its Core card's frozen emblem (`legacySceneSvg`, R3393001), never its Core
+card's scene.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
-each kind: terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills, asteroids),
-architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones), plants, creatures, objects
-and tools, and weather and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a
-void, lightning, nebulae, planets, a rim light). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces
-the painter's one silhouette: three poses, five heads, eight hairs and headgears, nine outfits by tag and
-five held items, put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a
-Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human. The two kits
+each kind, 355 parts since Classic+'s pass (R3390000) and Core's (R3392000): 32 of terrain (fields, furrows,
+grave-mounds, cliffs, floors, rooms, streets, hills, asteroids, water, sand, snow, stages, a cavern, a chessboard,
+a floating island...), 63 of architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones,
+windows, doors, houses, domes, a lighthouse, a rotunda...), 19 plants, 38 creatures (a scarab, a gelatin cube, a
+panther, a dragon, a sheep, a loaf, a Rush Token, soldiers, a crowd...), 143 objects and tools, and 60 of weather
+and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a void, lightning, nebulae,
+planets, a rim light, waves, a rainbow, a cyclone...). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`)
+replaces the painter's one silhouette: 17 poses, 19 heads, 23 hairs and headgears, 35 outfits and 36 held items,
+put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human. The two kits
 hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
 thin band.
 
@@ -369,7 +379,9 @@ Five proof cards drew from recipes first and set the bar each set's pass meets: 
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
-of its own (below, R3390000), and Stinkyscape's later cards theirs (below, R3403000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+of its own (below, R3390000), Core's pass every Core entry but Ceaseless Void, Speciesist's and Heroic
+Power's redrawn from their briefs (Core's scenes, below, R3392000), and the Meditative+ and Training Grounds
+pass every entry of those two sets (below, R3393000), and Stinkyscape's later cards theirs (below, R3403000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
@@ -399,6 +411,102 @@ whose cap fell from 561 to 445; `classicPlusScenes.test.ts` holds the set to all
 `classicplus-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
 sheet, at desktop size and at 390x844.
 
+## Core's scenes (R3392000)
+
+Every Core entry but Ceaseless Void, whose picture #3338 owns, draws a scene recipe of its own, written from its
+brief in #3392's table: `sceneRecipesCore1.ts` holds Core #1 to #37, `sceneRecipesCore2.ts` #38 to #74 with KY's
+Empty Notebook and Spikey Pillow, and `sceneRecipesCore3.ts` #75 to #99 with the other tokens, all spread into
+`SCENE_RECIPES`. Each recipe's doc comment gives its brief in a line and any detail changed to fit the kits; the
+subject, the setting and the card's idea stay, and a part a brief named that the kits lacked joined them. Each
+scene clears its rarity's floor (below) with room, its median detail climbing rarity by rarity: a Common's one
+subject in a simple setting, a Rare's props, an Epic's far, middle and near ground, a Legendary's every layer with
+its light and its moment of action, and a Mythic's set piece with a part no other scene draws (My Pawn's gloved
+hand on its puppet strings, Zephrys's cyclone, Heroic Power's rotunda, Craft a Card's floating island).
+
+A Unit's character comes from the kits, never the painter's silhouette: a figure, its look its tags' look
+(`figureLookFor`) with the head, headgear, outfit and item its brief names, or, when its character does not stand
+like a person (Jewelosco Scarab, Carnivorous Cube, Prem Panther, Straaza, Spikey Pillow, The Rock, the Sheep, Bread
+and Rush Tokens), a creature part drawn for it in its subject layer. A scene's other people are its `extras`
+(R3390000). KY wears one look on every Core card that draws him (`KY_TUTOR_LOOK`: spectacles, a cardigan, a stick of chalk). A
+scene draws no motif glyph or accent, so each full-art Core card whose motion moves its props (R2715001) marks the
+placements that move on that beat `props` (R3390000), its motion unchanged. The parts the briefs named joined the
+kits after the old ones of their kinds, in `sceneKit.ts` and `figureKit.ts`; where Classic+'s pass had already
+taken a name for a part of its own, Core's drawing took another (`sea` beside `water`, `playing-card` beside
+`card`, `pose-stride` beside `pose-run`). Every Core entry is off the short list, whose cap fell from 445 to 337.
+`coreScenes.test.ts` holds the recipes to this, and
+`core-scenes.cy.tsx` draws every Epic, Legendary and Mythic scene at hand size and a contact sheet of the rest, at
+a desktop's size and a phone's.
+
+## Classic+'s Alt art restaged (R3396000)
+
+Each of the 40 Classic+ cards offered Alt art draws an alt recipe of its own, written from #3396's brief for it:
+the same subject and idea in another place, time or story moment. The recipes are two files in id order,
+`classicPlusAltRecipes1.ts` (#2 to #36) and `classicPlusAltRecipes2.ts` (#37 to #78), spread into
+`ALT_SCENE_RECIPES` (sceneRecipes.ts). `sceneRecipeOf` reads one under the card's Alt art seed (`<id>#alt`,
+`SCENE_ALT_PICTURE`) alone: the card's id, a repaint's seed and any other seed keep the normal recipe, and every
+level of Alt art draws the one alt picture (R3015002). Each recipe keeps these rules:
+
+- **Place and palette.** Classic's family, the brief's place, time and palette, a sky sharing no colour with the
+  normal recipe's and a light that suits the hour.
+- **The same subject.** A Unit drawn as a figure keeps one; a figure both pictures draw is the normal one's person
+  (`normalLookOf`: its head and outfit kept, only its cloth, headgear or held item changed); League of Losers keeps
+  its five (`normalExtraLookOf`); the J15 Fighter stays the jet; a subject that is a part stays in the subject layer.
+- **A new camera.** A close-up scales the subject up, a figure to about 1.6 to 1.9 standing below the window; a wide
+  or distant view shrinks it, a figure to about 0.6 or less; a view from above lays ground across the box under small
+  subjects. Either way the subject (its figure, else its subject layer's first part) moves at least 8 units, changes
+  scale by at least a quarter, or a figure comes or goes.
+- **Detail, emblem and props.** The rarity's floor and the byte ceiling (R3331001) on both faces, the emblem small
+  inside the band every face shows, no props in the subject layer, and the props the full-art motions move
+  (League of Losers, Felinor Flagbearer, J-lease J-Jungle EX-plorer) marked outside it.
+
+The briefs' places added six parts: a boat, a tent and a waterfall (`sceneKitPlaces.ts`), and bamboo, a cactus and a
+fox (`sceneKitNature.ts`). `ALT_PICTURE_CHANGE_MIN` (0.6) is the least share of an Alt art window's sampled points
+that differ from the normal window, base and Radiant, sampled on card-versions.cy.tsx's grid and counted with its
+threshold for a point that differs. `classicPlusAltScenes.test.tsx` holds every recipe to the rules and every Alt art
+level's face to its picture and its Radiant marks, and `classicplus-alt-scenes.cy.tsx` measures each window's share
+and screenshots each normal face beside its Alt art face.
+
+## Meditative+ and Training Grounds drawn as scenes (R3393000, R3393001)
+
+Every Meditative+ entry (#1 to #26 and their seven tokens) and every Training Grounds entry (#1 to #60 and the
+Golem token) draws from a recipe of its own, each from its brief (#3393's table), base and Radiant. The recipes
+are in id order in three tables spread into `SCENE_RECIPES` after the proofs: `sceneRecipesMeditativePlus.ts`
+(#1 to #11, spreading `sceneRecipesMeditativePlus2.ts`'s #12 to #26), `sceneRecipesTrainingGrounds.ts` (#1 to
+#40, spreading `sceneRecipesTrainingGrounds2.ts`'s Units from #21 on and #39's Golem token) and
+`sceneRecipesLegacy.ts` (#41 to #60), each set's table split in two files as the Classic+ pass split its own.
+Meditative+ paints in the Meditative family's ink wash: layered `peaks` in mist behind, a high and distant
+camera, and exactly one red `seal` in the near layer, in a lower corner inside the band a face's window
+shows (y 18 to 82 of the box), so every face shows it. Training Grounds paints in carved wood: the yard's
+`palisade` and `sand` wherever its brief is set in the yard, the sun from the upper right but at night. Each
+keeps its brief's subject, setting and idea, its subject within x 30 to 70 and y 25 to 85, and stands its emblem
+small on its subject.
+
+Every Unit is a figure from the figure kit in a look built from its tags' with its brief's own parts, never the
+hooded traveller; a Unit that is a thing is built from figure parts too: the living potions a flask's body with
+eyes (`outfit-flask`, `head-eyes`) on stubby legs, Flame Tongue Totem, Floodgates and the Training Dummy on a
+post (`pose-post`), the Golem of lashed posts with a sack head, the Shredder on treads. A brief's other
+characters are `extras`, and a ghost, a copy or a flicker a `fade`. The parts the briefs named joined the kits,
+in modules of their own beside the first: the mountains' 38 (`sceneKitMountain.ts`), the yard's 35
+(`sceneKitYard.ts`) and the Legacy cards' 14 yard touches and props (`sceneKitTouches.ts`), and the figure kit's
+four new poses, three heads, six hairs and headgears, eight outfits and ten held items (its lab coat and club
+Core's, `outfit-labcoat` and `item-club`, its tree-trunk club `item-trunk-club`). A part named as the kit names
+one already is named for what sets it apart, so a module's spread never replaces it: the mountains' camp tent
+and waterfall are `camp-tent` and `cascade`, apart from the Alt art scenes' `tent` and `waterfall`, and
+`ink-pine`, `mossy-boulder`, `lacquer-pavilion`, `steam-curl`, `wood-ladder`, `yard-sand`, `yard-well`,
+`smithy`, `plank-bench`, `pale-bean`, `bell-pole`, `target-board` and `hypno-bunny` stand apart from Core's
+`pine`, `boulder`, `pavilion`, `steam`, `ladder`, `sand`, `well`, `forge`, `bench`, `jelly-bean`, `bell`,
+`target` and `bunny`.
+
+A Legacy card (R3393001) draws its own brief's scene and places its yard touch (`LEGACY_TOUCHES`) once, as the
+kit part `LEGACY_TOUCH_PARTS` names; its face wears its Core card's frozen emblem, the glyph and paint of the
+picture its Core card drew before any recipe, so the two still read as one card across the sets. It is still
+one picture (no motion, no parts, no seed of its own) and never draws its Core card's scene, which every
+Legacy card's Core card has since Core's pass (R3392000). The yard painter
+(`traininggrounds.ts`) and `legacySvg` now draw only a card with no recipe. Every entry clears its rarity's floor
+and is off the short list, whose cap fell from 337 to 289; `setScenes.test.ts` holds the two sets to all of it,
+and `set-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
+sheet, at desktop size and at 390x844.
+
 ## Stinkyscape's later cards drawn as scenes (R3403000)
 
 Each of the 103 entries of #3403's table, Stinkyscape #91 to #176 and their tokens with the tokens of the early
@@ -415,17 +523,22 @@ and Dice of Doom) have no recipe and draw as before.
 Each humanoid Unit is a figure dressed as who it is, no two alike; fourteen Units are no person and draw a creature
 or a machine of the kit as their subject: the Wasp and the Hornet, Megabase, the Sack, the Stinkyscape Golem, the
 four Asteroids, the Spice Tower, the Drone Interceptor and Corvette, Escort Protocol and Combat Subroutine. Crews,
-crowds and rivals are `extras`. The parts the briefs named joined the kits: the figure kit's pointing pose, its
-space headgear, its flight suit, greatcoat, hoodie, vest, parka, frock coat, cloak and harness, and its shock-axe,
-dart, orb, slate, torch and vial; and four scene-kit modules of space beside #3390's, drawing with `kitDraw.ts`
-and spread into `SCENE_KIT`: `sceneKitSpace.ts` (decks, bulkheads, regolith, craters, ducts, a planet's limb,
-stations, gates, pads, windows and their fittings), `sceneKitCraft.ts` (starships, fighters, freighters, shuttles,
-rockets, probes, drones, robots, mechs, a wasp, a golem, an alien, a crowd), `sceneKitGear.ts` (consoles,
-holograms, ore, wreckage, chips, capsules, sacks, levers, posters, and the beams, blasts, shields and walls of
-energy) and `sceneKitCosmos.ts` (comets, frost and ice, a planet's ring, alarms, streaks, waves, flares, wormholes,
-rifts, galaxies, stink clouds). Every entry clears its rarity's floor and is off the short list, whose cap fell
-from 445 to 417; `stinkyscape91Scenes.test.ts` holds the pass to all of it, and `stinkyscape91-scenes.cy.tsx` shows
-every Epic, Legendary and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
+crowds and rivals are `extras`. The parts the briefs named joined the kits: the figure kit's space headgear (a
+headset, a neural crown, a bubble helmet, silver hair, a top hat), its flight suit, greatcoat, sleeveless vest,
+plated parka, frock coat, cloak and harness, and its shock-axe, dart, orb, slate, torch and vial, after #3393's; and
+four scene-kit modules of space beside #3390's and #3393's, drawing with `kitDraw.ts` and spread into `SCENE_KIT`:
+`sceneKitSpace.ts` (decks, bulkheads, regolith, craters, ducts, a planet's limb, stations, gates, pads, windows and
+their fittings), `sceneKitCraft.ts` (starships, fighters, freighters, shuttles, rockets, probes, drones, robots,
+mechs, a wasp, a golem, an alien, a crew), `sceneKitGear.ts` (consoles, a diagram of light, cables, ore, wreckage,
+credit chips, a roulette table, capsules, a kicking sack, pages, a blueprint, a reset lever, a drill, the chaos egg,
+and the beams, bolts, lasers, walls, plumes and flashes of energy) and `sceneKitCosmos.ts` (comets, frost and ice, a
+planet's ring, alarms, streaks, waves, flares, wormholes, rifts, galaxies, stink clouds). The pointing pose and the
+hoodie are Core's; a part named as the kit names one already is named for what sets it apart (`outfit-sleeveless`,
+`outfit-plated-parka`, `item-shock-axe`, `obs-bench`, `lamp-tent`, `ticker-tape`, `speed-streaks`, `surf-wave`,
+`crew-crowd`, `kicking-sack`), so no module's spread replaces another's. Every entry clears its rarity's floor and is
+off the short list, whose cap fell from 289 to 261; `stinkyscape91Scenes.test.ts` holds the pass to all of it, and
+`stinkyscape91-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
+sheet, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 

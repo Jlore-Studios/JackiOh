@@ -17,6 +17,9 @@
 // (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
 // R3389000: a signature look (fx/aura/looks.ts) is a signature's alone, and "abyss" is In Too Deep's own
 // takeover look.
+// R3407000: Stinkyscape part two's six Mythics' own takeover looks join them. R3405000: Meditative's Mythics'
+// twelve join them too ("ascent", "workshop", "brush", "mine", "quarry", "pavilion", "virus", "dojo",
+// "studyHall", "caneRack", "warRoom", "fortress").
 
 import JSON5 from "json5";
 
@@ -69,7 +72,36 @@ export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope
 export type OwnTakeoverLook = Exclude<TakeoverLook, "prismatic">;
 
 /** R3332000: every look `OwnTakeoverLook` holds; a missing one fails `typecheck`. */
-export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true, abyss: true, summit: true, canvas: true, napkin: true };
+export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
+  void: true,
+  pawn: true,
+  genie: true,
+  ai: true,
+  abyss: true,
+  summit: true,
+  canvas: true,
+  napkin: true,
+  // R3407000: Stinkyscape's six Mythics of part two.
+  freshJack: true,
+  ikwzki: true,
+  shockwave: true,
+  alteran: true,
+  edge: true,
+  redNarcor: true,
+  // R3405000: Meditative's Mythics'.
+  ascent: true,
+  workshop: true,
+  brush: true,
+  mine: true,
+  quarry: true,
+  pavilion: true,
+  virus: true,
+  dojo: true,
+  studyHall: true,
+  caneRack: true,
+  warRoom: true,
+  fortress: true,
+};
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
   return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);

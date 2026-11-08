@@ -9,6 +9,9 @@
 // Meditative+'s and Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial
 // Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
 // R3389001: Classic's eleven signatures' recipes (#3389), King Wagtoggle's crownSwap grown among them.
+// R3407000: Stinkyscape part two's signatures.
+// R3405001: Meditative's Legendaries' and Mythics' signatures (fx/cards/meditative/), every one but The
+// Cane's and Mayor Medinamogger's, whose signatures are their entrances alone.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -23,6 +26,36 @@ import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { mindJudge } from "./meditative/mindJudge.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
+import { brushSeal } from "./meditative/aestheticizeTheGame.ts";
+import { aiGirlfriend } from "./meditative/aiGirlfriend.ts";
+import { alternateFate } from "./meditative/alternateFate.ts";
+import { aluneth } from "./meditative/aluneth.ts";
+import { jadeDie } from "./meditative/callToChaos.ts";
+import { fleaMarket } from "./meditative/cnFleaMarket.ts";
+import { cnGolem } from "./meditative/cnGolem.ts";
+import { devinBot } from "./meditative/devinBot.ts";
+import { doubleHeader } from "./meditative/doubleHeader.ts";
+import { everGrowingTree } from "./meditative/everGrowingTree.ts";
+import { blueprints } from "./meditative/evilBlueprints.ts";
+import { fengShui } from "./meditative/fengShui.ts";
+import { introspection } from "./meditative/introspection.ts";
+import { jadeBeauty } from "./meditative/jadeBeauty.ts";
+import { jlockeedHq } from "./meditative/jlockeedHq.ts";
+import { keenusKeys } from "./meditative/keymasterKeenus.ts";
+import { knowledgeBreaker } from "./meditative/knowledgeBreaker.ts";
+import { breakerPrime } from "./meditative/knowledgeBreakerPrime.ts";
+import { pareto } from "./meditative/paretoOptimality.ts";
+import { prison } from "./meditative/prison.ts";
+import { summitAscent } from "./meditative/reachTheSummit.ts";
+import { redJade } from "./meditative/redJade.ts";
+import { skullJnari } from "./meditative/skullOfJnari.ts";
+import { taotie } from "./meditative/taotie.ts";
+import { tatches } from "./meditative/tatchesTheTotem.ts";
+import { touchedByKy } from "./meditative/touchedByKy.ts";
+import { trueCraft } from "./meditative/trueCraftACard.ts";
+import { yileGpt } from "./meditative/yileGpt.ts";
+import { yilePrime } from "./meditative/yileGptPrime.ts";
+import { yileVirus } from "./meditative/yilesVirus.ts";
 import { bobSoldier } from "./meditativeplus/bobSoldier.ts";
 import { bobsPlan } from "./meditativeplus/bobsPlan.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
@@ -32,7 +65,20 @@ import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
+import { edgeFlee, starscapeJump } from "./stinkyscape/alteranReach.ts";
+import { stinkCloud, tabletopTilt } from "./stinkyscape/chaosCalls.ts";
+import { freshJackComet } from "./stinkyscape/freshJack.ts";
+import { blobDrum, dataPacket, primeConduct } from "./stinkyscape/in33dh3.ts";
+import { jobInterview, payday } from "./stinkyscape/jobApplication.ts";
+import { balthasarCradle, casperKiss, melchiorTally } from "./stinkyscape/magi.ts";
+import { giftShop } from "./stinkyscape/megabase.ts";
+import { narcorDust, redNarcorHum } from "./stinkyscape/narcor.ts";
 import { preemptiveStrike } from "./stinkyscape/preemptiveStrike.ts";
+import { sanctumEcho } from "./stinkyscape/sanctum.ts";
+import { scornSweep } from "./stinkyscape/scornboi.ts";
+import { shockwaveLecture } from "./stinkyscape/shockwave447.ts";
+import { stimmyDrop } from "./stinkyscape/stimmycheck.ts";
+import { chaosOrb } from "./stinkyscape/wildar.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
@@ -68,6 +114,37 @@ export const CARD_RECIPES = {
   jadeCrack,
   mindJudge,
   cnSweep,
+  // R3405001: Meditative's signatures.
+  introspection,
+  summitAscent,
+  doubleHeader,
+  trueCraft,
+  brushSeal,
+  alternateFate,
+  redJade,
+  jadeBeauty,
+  fengShui,
+  fleaMarket,
+  knowledgeBreaker,
+  breakerPrime,
+  taotie,
+  yileGpt,
+  yilePrime,
+  yileVirus,
+  aiGirlfriend,
+  devinBot,
+  skullJnari,
+  keenusKeys,
+  pareto,
+  everGrowingTree,
+  touchedByKy,
+  aluneth,
+  tatches,
+  jadeDie,
+  cnGolem,
+  blueprints,
+  prison,
+  jlockeedHq,
   harmonyWave,
   bobsPlan,
   bobSoldier,
@@ -80,6 +157,28 @@ export const CARD_RECIPES = {
   preemptiveStrike,
   probeScan,
   anomalyCall,
+  // R3407000: Stinkyscape part two's signatures.
+  melchiorTally,
+  balthasarCradle,
+  casperKiss,
+  freshJackComet,
+  shockwaveLecture,
+  jobInterview,
+  payday,
+  scornSweep,
+  giftShop,
+  dataPacket,
+  primeConduct,
+  blobDrum,
+  starscapeJump,
+  edgeFlee,
+  chaosOrb,
+  stinkCloud,
+  tabletopTilt,
+  sanctumEcho,
+  stimmyDrop,
+  narcorDust,
+  redNarcorHum,
   celestialCall,
   dinoStomp,
   gameDesign,

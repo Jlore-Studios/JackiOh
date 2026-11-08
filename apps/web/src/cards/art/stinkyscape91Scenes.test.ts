@@ -26,10 +26,13 @@ import { SCENE_KIT } from "./sceneKit.ts";
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
+import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { SPACE_KIT } from "./sceneKitSpace.ts";
+import { TOUCHES_KIT } from "./sceneKitTouches.ts";
+import { YARD_KIT } from "./sceneKitYard.ts";
 import { STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { STARSHIP_PIECES } from "./stinkyscape.ts";
 import { compositionFor, themeFor } from "./themes.ts";
@@ -62,7 +65,7 @@ const MACHINE_UNITS: Readonly<Record<string, string>> = {
   "stinkyscape-091": "space-wasp",
   "stinkyscape-092": "space-wasp",
   "stinkyscape-116": "space-station",
-  "stinkyscape-135-1": "sack",
+  "stinkyscape-135-1": "kicking-sack",
   "stinkyscape-150-1": "scrap-golem",
   "stinkyscape-169": "asteroid",
   "stinkyscape-170": "asteroid",
@@ -77,7 +80,6 @@ const MACHINE_UNITS: Readonly<Record<string, string>> = {
 
 /** The figure parts #3403 added, each worn or held by at least one of its scenes. */
 const FIGURE_PARTS_ADDED: readonly FigurePartId[] = [
-  "pose-point",
   "headset",
   "neural-crown",
   "space-helmet",
@@ -85,13 +87,12 @@ const FIGURE_PARTS_ADDED: readonly FigurePartId[] = [
   "top-hat",
   "outfit-flightsuit",
   "outfit-greatcoat",
-  "outfit-hoodie",
-  "outfit-vest",
-  "outfit-parka",
+  "outfit-sleeveless",
+  "outfit-plated-parka",
   "outfit-frock",
   "outfit-cloak",
   "outfit-harness",
-  "item-axe",
+  "item-shock-axe",
   "item-dart",
   "item-orb",
   "item-slate",
@@ -301,10 +302,10 @@ describe("R3403000 Stinkyscape's later cards drawn as scenes", () => {
     const added = STINKY_KITS.flatMap((kit) => Object.entries(kit));
     expect(added.length).toBeGreaterThan(0);
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
-    const older = new Set([...Object.keys(PLACES_KIT), ...Object.keys(OBJECTS_KIT), ...Object.keys(NATURE_KIT)]);
+    const older = new Set([PLACES_KIT, OBJECTS_KIT, NATURE_KIT, MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].flatMap((kit) => Object.keys(kit)));
     for (const [id, part] of added) {
       expect(SCENERY, id).toContain(part.category);
-      expect(older.has(id), `${id} is one of #3390's parts`).toBe(false);
+      expect(older.has(id), `${id} is one of #3390's or #3393's parts`).toBe(false);
       expect(Object.hasOwn(FIGURE_KIT, id), `${id} is a figure part`).toBe(false);
       // Each joins the kit as itself, so none takes the place of another part.
       expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);

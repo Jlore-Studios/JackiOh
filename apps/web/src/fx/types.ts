@@ -162,10 +162,43 @@ export type FxFogCue = {
  * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
  * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
- * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx).
+ * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx). R3405000: Meditative's
+ * Mythics' twelve, from "ascent" to "fortress", each with art of its own.
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "abyss" | "summit" | "canvas" | "napkin";
-export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
+export type TakeoverLook =
+  | "prismatic"
+  | "void"
+  | "pawn"
+  | "genie"
+  | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit"
+  | "canvas"
+  | "napkin"
+  | "ascent"
+  | "workshop"
+  | "brush"
+  | "mine"
+  | "quarry"
+  | "pavilion"
+  | "virus"
+  | "dojo"
+  | "studyHall"
+  | "caneRack"
+  | "warRoom"
+  | "fortress";
+/**
+ * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
+ * picture's URI: only ever a card the seat's own event names (R202).
+ */
+export type FxTakeoverCue = {
+  kind: "takeover";
+  look: TakeoverLook;
+  tint: FxTint;
+  at: FxAnchor;
+  landMs: number;
+  delayMs: number;
+  durationMs: number;
+  art?: string;
+};
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
  * twisting into a spiral that swallows what the wipe takes) or a `fold` (its edges folding inward into

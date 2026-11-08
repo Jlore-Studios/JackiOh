@@ -1105,7 +1105,7 @@ export const CRAFT_KIT = {
   "combat-robot": { category: "creatures", draw: combatRobot },
   mech: { category: "creatures", draw: mech },
   spirit: { category: "creatures", draw: spirit },
-  crowd: { category: "creatures", draw: crowd },
+  "crew-crowd": { category: "creatures", draw: crowd },
   alien: { category: "creatures", draw: alien },
   dog: { category: "creatures", draw: dog },
   "jelly-blob": { category: "creatures", draw: jellyBlob },
