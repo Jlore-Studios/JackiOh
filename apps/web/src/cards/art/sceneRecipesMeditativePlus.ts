@@ -24,7 +24,7 @@ const BOBS_PLAN: SceneRecipe = {
     sky: [
       { part: "cloud", x: 30, y: 40, scale: 1.1, count: 3, spread: [24, 4] },
       { part: "stars", x: 50, y: 12, scale: 1.2 },
-      { part: "tent", x: 18, y: 32, scale: 1.1, fade: 0.5 },
+      { part: "camp-tent", x: 18, y: 32, scale: 1.1, fade: 0.5 },
       { part: "star-map", x: 50, y: 24, scale: 0.8, fade: 0.55 },
       { part: "nebula", x: 64, y: 20, scale: 0.7, fade: 0.6 },
       { part: "towels", x: 82, y: 32, scale: 1.1, fade: 0.5 },
@@ -77,8 +77,8 @@ const BASE_CAMP: SceneRecipe = {
     ],
     mid: [{ part: "hills", x: 50, y: 70, paint: "slate-100" }],
     subject: [
-      { part: "tent", x: 34, y: 78, scale: 1.6 },
-      { part: "tent", x: 44, y: 72, scale: 1 },
+      { part: "camp-tent", x: 34, y: 78, scale: 1.6 },
+      { part: "camp-tent", x: 44, y: 72, scale: 1 },
       { part: "vending-machine", x: 64, y: 82, scale: 1.5 },
     ],
     near: [{ part: "seal", x: 12, y: 77 }],

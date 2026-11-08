@@ -6,8 +6,11 @@
 // keeps its subject within x 30 to 70 and y 25 to 85 and reaches its rarity's floor
 // (richness.ts `ART_DETAIL_MIN`) with its placements' counts. R3393000: the Meditative+ and Training Grounds
 // passes keep their recipes in files of their own (sceneRecipesMeditativePlus.ts, sceneRecipesTrainingGrounds.ts and,
-// for the Legacy cards, sceneRecipesLegacy.ts, R3393001), spread in after the proofs.
+// for the Legacy cards, sceneRecipesLegacy.ts, R3393001), spread in after the proofs. R3396000: a Classic+ card
+// offered Alt art draws an alt recipe of its own (`ALT_SCENE_RECIPES`) under its Alt art seed (scene.ts `sceneRecipeOf`).
 
+import { CLASSIC_PLUS_ALT_RECIPES_1 } from "./classicPlusAltRecipes1.ts";
+import { CLASSIC_PLUS_ALT_RECIPES_2 } from "./classicPlusAltRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
 import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
@@ -215,3 +218,17 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_RECIPES_2,
   ...CLASSIC_PLUS_RECIPES_3,
 };
+
+/**
+ * R3396000: the alt recipes, by card id: every Classic+ card offered Alt art (`version-alt-art`) draws its subject
+ * restaged in another place, time or moment from its brief (classicPlusAltRecipes1.ts and classicPlusAltRecipes2.ts),
+ * read under its Alt art seed alone (scene.ts `sceneRecipeOf`), at every Alt art level (R3015002).
+ */
+export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = { ...CLASSIC_PLUS_ALT_RECIPES_1, ...CLASSIC_PLUS_ALT_RECIPES_2 };
+
+/**
+ * R3396000: the least share of an Alt art window's sampled points that differ from the same card's normal face, base
+ * and Radiant: e2e/cypress/component/classicplus-alt-scenes.cy.tsx samples both windows on card-versions.cy.tsx's grid
+ * and counts a point as differing as card-versions.cy.tsx does for `PICTURE_SHARE_MIN`.
+ */
+export const ALT_PICTURE_CHANGE_MIN = 0.6;

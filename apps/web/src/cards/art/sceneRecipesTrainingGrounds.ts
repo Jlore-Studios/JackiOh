@@ -292,7 +292,7 @@ const EXPLOSIVE_RUNES: SceneRecipe = {
   extras: [{ layer: "subject", x: 40, y: 80, scale: 0.5, pose: "pose-run", look: { ...RECRUIT, hair: "hood", cloth: "red-900", item: "item-dagger" } }],
   layers: {
     sky: [{ part: "stars", x: 50, y: 24, scale: 1.2 }],
-    far: [...palisadeAt(58, "wood-900"), { part: "tent", x: 50, y: 60, scale: 1.2 }],
+    far: [...palisadeAt(58, "wood-900"), { part: "camp-tent", x: 50, y: 60, scale: 1.2 }],
     mid: [{ part: "lanes", x: 50, y: 60, paint: "wood-700" }],
     subject: [
       { part: "glyph-mark", x: 52, y: 80, scale: 1.4 },

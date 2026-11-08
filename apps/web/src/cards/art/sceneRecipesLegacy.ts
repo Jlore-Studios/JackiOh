@@ -373,7 +373,7 @@ const LEGACY_PREJUDICED_POSTDOC: SceneRecipe = {
   extras: [{ layer: "subject", x: 52, y: 41, scale: 0.36, pose: "pose-stand", fade: 0.6, look: { ...figureLookFor(["Human"]), hair: null, item: null, skin: "slate-100", cloth: "slate-100" } }],
   layers: {
     far: [
-      { part: "tent", x: 50, y: 66, scale: 2, paint: "slate-100" },
+      { part: "camp-tent", x: 50, y: 66, scale: 2, paint: "slate-100" },
       { part: "palisade", x: 88, y: 64, scale: 1, paint: "wood-700" },
     ],
     mid: [

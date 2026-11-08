@@ -215,7 +215,7 @@ const FLOODGATES: SceneRecipe = {
     ],
     far: [
       { part: "water", x: 50, y: 44, paint: "blue-900" },
-      { part: "waterfall", x: 50, y: 44, scale: 0.6 },
+      { part: "cascade", x: 50, y: 44, scale: 0.6 },
     ],
     mid: [
       { part: "sand", x: 50, y: 70, paint: "wood-700" },

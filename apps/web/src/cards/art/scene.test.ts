@@ -148,23 +148,24 @@ describe("R3331000 the scene kits", () => {
   });
 
   it("R3331000 every part draws clean shapes from any seed", () => {
-    // R3393000: the same checks as ever, each flaw gathered and the list asserted once, since the kits grown by
-    // #3393 draw some 80,000 shapes here and an expect a shape took longer than the test may run.
+    // Each shape's checks are plain tests, gathered per part into one expect that names every fault by its seed
+    // and shape: a vitest expect per check cost ten times the drawing and held this test at its timeout once the
+    // kits passed 230 parts (#3396).
     const palette = new Set<string>(Object.keys(SCENE_PALETTE));
-    const flaws: string[] = [];
     for (const [id, part] of PARTS) {
+      const faults: string[] = [];
       for (let seed = 1; seed <= SEEDS; seed += 1) {
         const flip = seed % 2 === 0 ? 1 : -1;
         const shapes = part.draw({ x: 50, y: 60, s: 0.5 + (seed % 5) * 0.25, flip }, stream(seed));
-        if (shapes.length < 1 || shapes.length > 12) flaws.push(`${id} (seed ${seed}) draws ${shapes.length} shapes`);
-        for (const shape of shapes) {
-          if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) flaws.push(`${id} (seed ${seed}) draws the path ${shape.d}`);
-          if (!palette.has(shape.paint)) flaws.push(`${id} (seed ${seed}) paints ${shape.paint}`);
-          if (!(shape.opacity > 0 && shape.opacity <= 1)) flaws.push(`${id} (seed ${seed}) has the opacity ${shape.opacity}`);
-        }
+        if (shapes.length < 1 || shapes.length > 12) faults.push(`seed ${seed}: ${shapes.length} shapes`);
+        shapes.forEach((shape, k) => {
+          if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) faults.push(`seed ${seed} #${k}: d ${shape.d}`);
+          if (!palette.has(shape.paint)) faults.push(`seed ${seed} #${k}: paint ${shape.paint}`);
+          if (!(shape.opacity > 0 && shape.opacity <= 1)) faults.push(`seed ${seed} #${k}: opacity ${shape.opacity}`);
+        });
       }
+      expect(faults, id).toEqual([]);
     }
-    expect(flaws).toEqual([]);
   });
 
   it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", () => {

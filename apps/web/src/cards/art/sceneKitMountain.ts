@@ -1,8 +1,9 @@
 // R3393000: the scene kit's parts that the Meditative+ scenes (#3393) added, drawn in the Meditative family's ink
 // wash (ART.md's art bible): layered `peaks` in mist across the box and the one red `seal` every Meditative+ scene
 // stamps in its near layer; the mountain places (a round window, a pavilion, an amphitheatre's stands, terraces, a
-// waterfall, a camp tent); its plants (an ink pine, a plum branch, a crimson bloom, a giant pumpkin, a beanstalk,
-// a cart-sized elderberry, a mossy boulder); and the briefs' props (a red-ink brush stroke, an ink whip, a summit
+// tall waterfall `cascade` and a glowing `camp-tent`, apart from #3396's `waterfall` and `tent`); its plants (an
+// ink pine, a plum branch, a crimson bloom, a giant pumpkin, a beanstalk, a cart-sized elderberry, a mossy
+// boulder); and the briefs' props (a red-ink brush stroke, an ink whip, a summit
 // flag, a vending machine, folded towels, a star map, a giant stapler, spice sacks, rising steam, a burst pouch, a
 // mud-caked glove, a stone chime, a ladder, a snowplow, sound ripples, a block of line-work, a cursor of light, a
 // card's ink frame and a floating sheet of paper). sceneKit.ts spreads the table into `SCENE_KIT`. Each part keeps
@@ -182,7 +183,7 @@ function flag(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A camp tent glowing from inside, its door flap tied back, guy lines pegged out and snow banked at its foot, on the anchor; about 12 wide and 9 tall at scale 1. */
-function tent(at: PartPlace, rng: Rng): KitShape[] {
+function campTent(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const w = between(rng, 5.4, 6.6);
   const h = between(rng, 8, 9.4);
@@ -537,7 +538,7 @@ function pouch(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A waterfall pouring from the anchor down about 44 between dark rocks into spray and foam, its curtain widening a little as it falls; about 18 wide at scale 1. */
-function waterfall(at: PartPlace, rng: Rng): KitShape[] {
+function cascade(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const drop = 44;
   let streaks = "";
@@ -895,7 +896,7 @@ export const MOUNTAIN_KIT = {
   "brush-stroke": { category: "objects", draw: brushStroke },
   "ink-whip": { category: "weather", draw: inkWhip },
   flag: { category: "objects", draw: flag },
-  tent: { category: "architecture", draw: tent },
+  "camp-tent": { category: "architecture", draw: campTent },
   "vending-machine": { category: "objects", draw: vendingMachine },
   towels: { category: "objects", draw: towels },
   "star-map": { category: "objects", draw: starMap },
@@ -910,7 +911,7 @@ export const MOUNTAIN_KIT = {
   sacks: { category: "objects", draw: sacks },
   steam: { category: "weather", draw: steam },
   pouch: { category: "objects", draw: pouch },
-  waterfall: { category: "terrain", draw: waterfall },
+  cascade: { category: "terrain", draw: cascade },
   glove: { category: "objects", draw: glove },
   chime: { category: "objects", draw: chime },
   boulder: { category: "terrain", draw: boulder },

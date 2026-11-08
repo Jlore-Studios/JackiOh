@@ -154,7 +154,7 @@ const JAZAKUS: SceneRecipe = {
     sky: [{ part: "cloud", x: 50, y: 30, scale: 0.8, paint: "white" }],
     far: [
       { part: "peaks", x: 50, y: 56, scale: 0.9 },
-      { part: "waterfall", x: 52, y: 16, scale: 1.4 },
+      { part: "cascade", x: 52, y: 16, scale: 1.4 },
     ],
     mid: [
       { part: "cave", x: 52, y: 52, scale: 1.1 },
