@@ -16161,10 +16161,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-8",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "8068af03f967a0319561aaf2d773242ca3f858df",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       },
       "waiting_comment": 6716284547
     },
