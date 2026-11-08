@@ -40,6 +40,12 @@ import {
   type Point,
 } from "./kitDraw.ts";
 import type { KitPart, KitShape, PartPlace, Rng } from "./scene.ts";
+import { INK_BUILDINGS_KIT } from "./sceneKitInkBuildings.ts";
+import { INK_CREATURES_KIT } from "./sceneKitInkCreatures.ts";
+import { INK_MACHINES_KIT } from "./sceneKitInkMachines.ts";
+import { INK_NATURE_KIT } from "./sceneKitInkNature.ts";
+import { INK_OBJECTS_KIT } from "./sceneKitInkObjects.ts";
+import { INK_PLACES_KIT } from "./sceneKitInkPlaces.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
@@ -1025,6 +1031,13 @@ export const SCENE_KIT = {
   ...PLACES_KIT,
   ...OBJECTS_KIT,
   ...NATURE_KIT,
+  // R3401000: the parts the Meditative scenes added.
+  ...INK_PLACES_KIT,
+  ...INK_BUILDINGS_KIT,
+  ...INK_OBJECTS_KIT,
+  ...INK_MACHINES_KIT,
+  ...INK_NATURE_KIT,
+  ...INK_CREATURES_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;
