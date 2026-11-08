@@ -16783,13 +16783,34 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-7",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/cards/CardFace.tsx",
+            "apps/web/src/cards/art/CardArt.tsx",
+            "e2e/cypress/component/fx-phone-frame.cy.tsx"
+          ],
+          "from": "8f48d5183237c36948b48a8441f660e6bc175e82",
+          "main": "6ea0b88fd19299636469a18455402fd90bf504ce"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "8f48d5183237c36948b48a8441f660e6bc175e82",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-7",
+            "run": "42434941480",
+            "tier": "strong"
+          }
+        ],
+        "sha": "fedbeaff6a2628007ebd76c1151de504ffbbcac3",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "3388": {
