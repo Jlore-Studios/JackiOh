@@ -16,7 +16,7 @@ import { FIGURE_DEFAULT_LOOK, type FigureLook } from "./figureKit.ts";
 import { hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf } from "./pictures.ts";
-import { artSpec } from "./procedural.ts";
+import { ART_BOX, artSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import {
   composeScene,
@@ -57,6 +57,11 @@ const TRAINING_GROUNDS = OWN.filter((card) => card.set === "Training Grounds");
 const DEEP: readonly Rarity[] = ["Epic", "Legendary", "Mythic"];
 /** What a face may never print (art.test.ts's checks). */
 const UNCLEAN = /NaN|undefined|Infinity|<text|<title|href|<image/;
+/** The rows of the 100-unit picture a face's window shows, and a Unit's taller portrait (sceneRecipes.ts's header; cards.css `.cf-art-frame`). */
+const FACE_WINDOW = [18, 82] as const;
+const PORTRAIT_WINDOW = [12, 88] as const;
+/** How far in from each side a seal stays, clear of the window's rounded corners. */
+const SEAL_SIDE = 4;
 
 /**
  * R3393000: each proof card's base and Radiant picture as `main` drew it before this pass (`hashId` of its data URI),
@@ -148,6 +153,23 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
       } else {
         expect(scene.family, card.id).toBe("training-grounds");
         expect(seals, card.id).toEqual([]);
+      }
+    }
+    // The seal shows: every point of it lies inside the band of the picture its face's window shows
+    // (sceneRecipes.ts's header), clear of the frame's rounded corners at the sides.
+    for (const card of MEDITATIVE_PLUS) {
+      const [top, bottom] = card.type === "Unit" ? PORTRAIT_WINDOW : FACE_WINDOW;
+      const drawn = composeScene(recipe(card.id), card.id).filter((shape) => shape.part === "seal");
+      expect(drawn.length, card.id).toBeGreaterThan(0);
+      for (const shape of drawn) {
+        expect(shape.d, card.id).toMatch(/^[MLZ\d\s.,-]+$/);
+        const numbers = (shape.d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+        for (let i = 0; i + 1 < numbers.length; i += 2) {
+          expect(numbers[i], `${card.id} seal x`).toBeGreaterThanOrEqual(SEAL_SIDE);
+          expect(numbers[i], `${card.id} seal x`).toBeLessThanOrEqual(ART_BOX - SEAL_SIDE);
+          expect(numbers[i + 1], `${card.id} seal y`).toBeGreaterThanOrEqual(top);
+          expect(numbers[i + 1], `${card.id} seal y`).toBeLessThanOrEqual(bottom);
+        }
       }
     }
     // The seal is the Meditative family's alone.

@@ -31,7 +31,7 @@ const LIVING_ARMOR_POTION: SceneRecipe = {
     ],
     near: [
       { part: "crate", x: 88, y: 98, scale: 1.2 },
-      { part: "seal", x: 90, y: 86, scale: 1 },
+      { part: "seal", x: 90, y: 77, scale: 1 },
     ],
     light: [{ part: "rim-light", x: 44, y: 66, scale: 1, flip: -1, paint: "ember-500" }],
     particles: [{ part: "embers", x: 18, y: 68, scale: 1.2, props: true }],
@@ -60,7 +60,7 @@ const LIVING_HEALTH_POTION: SceneRecipe = {
       { part: "bread", x: 80, y: 79, scale: 0.7 },
     ],
     near: [
-      { part: "seal", x: 10, y: 88, scale: 1 },
+      { part: "seal", x: 10, y: 77, scale: 1 },
       { part: "steam", x: 52, y: 66, scale: 0.6, paint: "red-300" },
     ],
     light: [{ part: "halo", x: 46, y: 68, scale: 1.2, paint: "red-300" }],
@@ -95,7 +95,7 @@ const POTION_POUCH: SceneRecipe = {
     ],
     near: [
       { part: "grass-tuft", x: 18, y: 94, scale: 1.2, count: 2, spread: [8, 2], paint: "green-700" },
-      { part: "seal", x: 88, y: 90, scale: 1 },
+      { part: "seal", x: 88, y: 77, scale: 1 },
     ],
     light: [{ part: "god-rays", x: 80, y: 14, scale: 0.8, paint: "white" }],
     particles: [{ part: "sparks", x: 60, y: 66, scale: 1.2, props: true }],
@@ -133,7 +133,7 @@ const BOOK_OF_POTIONS: SceneRecipe = {
     near: [
       { part: "candle", x: 12, y: 96, scale: 1.2 },
       { part: "scroll", x: 80, y: 98, scale: 1 },
-      { part: "seal", x: 92, y: 88, scale: 1 },
+      { part: "seal", x: 92, y: 77, scale: 1 },
     ],
     light: [
       { part: "light-shaft", x: 50, y: 56, scale: 0.8, paint: "cyan-400" },
@@ -172,7 +172,7 @@ const JAZAKUS: SceneRecipe = {
     near: [
       { part: "flask", x: 86, y: 98, scale: 0.9, paint: "lime-400" },
       { part: "fern", x: 22, y: 98, scale: 1.2, paint: "green-900" },
-      { part: "seal", x: 92, y: 84, scale: 1 },
+      { part: "seal", x: 92, y: 77, scale: 1 },
     ],
     light: [{ part: "halo", x: 60, y: 78, scale: 1.3, paint: "green-400" }],
     particles: [
@@ -198,7 +198,7 @@ const JAZAKUS_PRIME: SceneRecipe = {
     near: [
       { part: "cauldron", x: 52, y: 100, scale: 1.9 },
       { part: "steam", x: 56, y: 76, scale: 1, paint: "violet-300" },
-      { part: "seal", x: 10, y: 90, scale: 1 },
+      { part: "seal", x: 10, y: 77, scale: 1 },
     ],
     particles: [{ part: "embers", x: 70, y: 66, scale: 1.2 }],
   },
@@ -226,7 +226,7 @@ const DOGPILE: SceneRecipe = {
       { part: "crystal", x: 68, y: 70, scale: 0.7, paint: "sky-300" },
       { part: "shockwave", x: 54, y: 66, scale: 0.6, paint: "orange-400" },
     ],
-    near: [{ part: "seal", x: 90, y: 90, scale: 1 }],
+    near: [{ part: "seal", x: 90, y: 77, scale: 1 }],
     light: [{ part: "halo", x: 54, y: 62, scale: 1.2, paint: "orange-400" }],
     particles: [
       { part: "sparks", x: 54, y: 60, scale: 1.6, props: true },
@@ -259,7 +259,7 @@ const COGNITIVE_OFFLOADING: SceneRecipe = {
     ],
     near: [
       { part: "scroll", x: 84, y: 98, scale: 1 },
-      { part: "seal", x: 92, y: 86, scale: 1 },
+      { part: "seal", x: 92, y: 77, scale: 1 },
     ],
     light: [
       { part: "light-shaft", x: 68, y: 46, scale: 0.6, paint: "blue-200" },
@@ -287,7 +287,7 @@ const GRUBBY_GLOVES: SceneRecipe = {
       { part: "glove", x: 44, y: 74, scale: 2.2 },
       { part: "coins", x: 28, y: 84, scale: 1 },
     ],
-    near: [{ part: "seal", x: 88, y: 88, scale: 1 }],
+    near: [{ part: "seal", x: 88, y: 77, scale: 1 }],
     light: [{ part: "halo", x: 50, y: 32, scale: 1, paint: "green-400" }],
   },
 };
@@ -311,7 +311,7 @@ const KYS_COMPETITION: SceneRecipe = {
     ],
     mid: [{ part: "pavilion", x: 50, y: 76, scale: 1.7 }],
     subject: [{ part: "hourglass", x: 62, y: 74, scale: 0.7 }],
-    near: [{ part: "seal", x: 92, y: 84, scale: 1 }],
+    near: [{ part: "seal", x: 92, y: 77, scale: 1 }],
     light: [{ part: "god-rays", x: 50, y: 14, scale: 0.8, paint: "white" }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1, paint: "white", props: true }],
   },
@@ -334,7 +334,7 @@ const LIL_KENNY: SceneRecipe = {
     subject: [{ part: "boulder", x: 46, y: 92, scale: 2.4 }],
     near: [
       { part: "pebbles", x: 66, y: 92, scale: 0.6 },
-      { part: "seal", x: 90, y: 90, scale: 1 },
+      { part: "seal", x: 90, y: 77, scale: 1 },
     ],
   },
 };
@@ -362,7 +362,7 @@ const HARMONY_SPIRIT: SceneRecipe = {
     subject: [{ part: "chime", x: 60, y: 80, scale: 1.2 }],
     near: [
       { part: "plum-branch", x: 2, y: 24, scale: 0.9 },
-      { part: "seal", x: 90, y: 90, scale: 1 },
+      { part: "seal", x: 90, y: 77, scale: 1 },
     ],
     light: [{ part: "ripples", x: 50, y: 66, scale: 1, paint: "jade-400" }],
     particles: [{ part: "motes", x: 50, y: 56, scale: 0.9, paint: "green-200", props: true }],
@@ -393,7 +393,7 @@ const MOUNTAINTOP_GARDEN: SceneRecipe = {
     near: [
       { part: "water", x: 50, y: 94, paint: "sky-400" },
       { part: "fern", x: 10, y: 98, scale: 1.3 },
-      { part: "seal", x: 90, y: 88, scale: 1 },
+      { part: "seal", x: 90, y: 77, scale: 1 },
     ],
     light: [{ part: "god-rays", x: 40, y: 12, scale: 0.9, paint: "green-200" }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1, paint: "green-200", props: true }],
@@ -431,7 +431,7 @@ const ENORMOUS_ELDERBERRY: SceneRecipe = {
     near: [
       { part: "basket", x: 14, y: 98, scale: 1.2 },
       { part: "flowers", x: 80, y: 98, scale: 1.4, count: 2, spread: [6, 1] },
-      { part: "seal", x: 92, y: 86, scale: 1 },
+      { part: "seal", x: 92, y: 77, scale: 1 },
     ],
     light: [{ part: "rim-light", x: 50, y: 50, scale: 1.2, paint: "violet-300" }],
     particles: [{ part: "petals", x: 50, y: 40, scale: 1.2, paint: "red-300", props: true }],
@@ -462,7 +462,7 @@ const BOB_WISCONSINS_STRONGEST: SceneRecipe = {
     subject: [{ part: "snowplow", x: 50, y: 44, scale: 1.6 }],
     near: [
       { part: "shockwave", x: 50, y: 90, scale: 0.5, paint: "blue-200" },
-      { part: "seal", x: 10, y: 90, scale: 1 },
+      { part: "seal", x: 10, y: 77, scale: 1 },
     ],
     light: [
       { part: "halo", x: 84, y: 60, scale: 0.6, paint: "orange-400" },
@@ -496,7 +496,7 @@ const KYS_INTUITION: SceneRecipe = {
     ],
     near: [
       { part: "candle", x: 86, y: 96, scale: 1.2 },
-      { part: "seal", x: 92, y: 84, scale: 1 },
+      { part: "seal", x: 92, y: 77, scale: 1 },
     ],
     light: [{ part: "halo", x: 64, y: 46, scale: 1.1, paint: "cyan-400" }],
     particles: [{ part: "motes", x: 60, y: 50, scale: 0.8, paint: "blue-200", props: true }],
@@ -533,7 +533,7 @@ const SCRATCH_PAD: SceneRecipe = {
     near: [
       { part: "plum-branch", x: 100, y: 16, scale: 0.8, flip: -1 },
       { part: "pine", x: 6, y: 100, scale: 0.9 },
-      { part: "seal", x: 90, y: 90, scale: 1 },
+      { part: "seal", x: 90, y: 77, scale: 1 },
     ],
     light: [{ part: "halo", x: 68, y: 58, scale: 0.9, paint: "cyan-400" }],
     particles: [

@@ -49,7 +49,7 @@ const BOBS_PLAN: SceneRecipe = {
       { part: "cliff", x: 50, y: 90, paint: "slate-800" },
       { part: "plum-branch", x: 0, y: 94, scale: 1.2 },
       { part: "grass-tuft", x: 76, y: 96, count: 2, spread: [6, 1], paint: "slate-700" },
-      { part: "seal", x: 90, y: 92, scale: 1.1 },
+      { part: "seal", x: 90, y: 77, scale: 1.1 },
     ],
     light: [
       { part: "god-rays", x: 50, y: 30, scale: 1.4, paint: "orange-400" },
@@ -81,7 +81,7 @@ const BASE_CAMP: SceneRecipe = {
       { part: "tent", x: 44, y: 72, scale: 1 },
       { part: "vending-machine", x: 64, y: 82, scale: 1.5 },
     ],
-    near: [{ part: "seal", x: 12, y: 92 }],
+    near: [{ part: "seal", x: 12, y: 77 }],
     light: [{ part: "halo", x: 36, y: 74, scale: 1.4, paint: "orange-400" }],
     particles: [{ part: "snow", x: 50, y: 50, scale: 1.4 }],
   },
@@ -103,7 +103,7 @@ const SPA_DAY: SceneRecipe = {
     near: [
       { part: "water", x: 50, y: 74, paint: "jade-400", fade: 0.85 },
       { part: "towels", x: 72, y: 80, scale: 1.5 },
-      { part: "seal", x: 90, y: 93 },
+      { part: "seal", x: 90, y: 77 },
     ],
     light: [{ part: "steam", x: 44, y: 72, scale: 1.4, paint: "jade-400", count: 2, spread: [14, 2] }],
     particles: [{ part: "bubbles", x: 46, y: 78, scale: 1.2 }],
@@ -133,7 +133,7 @@ const GARAGE_SALE: SceneRecipe = {
       { part: "flask", x: 70, y: 66, scale: 1 },
       { part: "scroll", x: 76, y: 72, scale: 1 },
     ],
-    near: [{ part: "seal", x: 90, y: 93 }],
+    near: [{ part: "seal", x: 90, y: 77 }],
     particles: [{ part: "rain", x: 50, y: 50, scale: 1.4, count: 2, spread: [20, 10] }],
   },
 };
@@ -155,7 +155,7 @@ const LEG_DAY: SceneRecipe = {
       { part: "summit", x: 50, y: 50, scale: 0.8 },
     ],
     mid: [{ part: "stairs", x: 50, y: 64, paint: "slate-700" }],
-    near: [{ part: "seal", x: 10, y: 92 }],
+    near: [{ part: "seal", x: 10, y: 77 }],
     particles: [{ part: "dust", x: 50, y: 88, scale: 1.2 }],
   },
 };
@@ -180,7 +180,7 @@ const STAR_CHART: SceneRecipe = {
       { part: "star-map", x: 52, y: 76, scale: 1.7 },
       { part: "astrolabe", x: 24, y: 80, scale: 1.3 },
     ],
-    near: [{ part: "seal", x: 90, y: 93 }],
+    near: [{ part: "seal", x: 90, y: 77 }],
     particles: [{ part: "motes", x: 50, y: 60, scale: 1.2 }],
   },
 };
@@ -213,7 +213,7 @@ const NA_TECH: SceneRecipe = {
     near: [
       { part: "crate", x: 10, y: 98, scale: 2 },
       { part: "gear", x: 24, y: 96, scale: 1.3 },
-      { part: "seal", x: 90, y: 93 },
+      { part: "seal", x: 90, y: 77 },
     ],
     light: [{ part: "halo", x: 52, y: 70, scale: 1.4, paint: "cyan-400" }],
     particles: [{ part: "sparks", x: 52, y: 68, scale: 1.3, count: 2, spread: [8, 4] }],
@@ -241,7 +241,7 @@ const WONDROUS_WAND: SceneRecipe = {
     near: [
       { part: "cliff", x: 50, y: 88, paint: "slate-800" },
       { part: "pine", x: 12, y: 96, scale: 1.6 },
-      { part: "seal", x: 90, y: 93 },
+      { part: "seal", x: 90, y: 77 },
     ],
     light: [{ part: "halo", x: 54, y: 50, scale: 1.2, paint: "cyan-400" }],
     particles: [
@@ -275,7 +275,7 @@ const SUPPLY_DROP: SceneRecipe = {
     ],
     near: [
       { part: "boulder", x: 84, y: 98, scale: 1.6 },
-      { part: "seal", x: 90, y: 92 },
+      { part: "seal", x: 90, y: 77 },
     ],
     particles: [{ part: "dust", x: 50, y: 80, scale: 1.2 }],
   },
@@ -303,7 +303,7 @@ const SPIRIT_LASH: SceneRecipe = {
       { part: "ink-whip", x: 50, y: 50, scale: 1.3 },
       { part: "wisp", x: 34, y: 60, scale: 1.2, count: 2, spread: [20, 4] },
     ],
-    near: [{ part: "seal", x: 90, y: 93 }],
+    near: [{ part: "seal", x: 90, y: 77 }],
     light: [{ part: "halo", x: 50, y: 52, scale: 1.3, paint: "violet-300" }],
   },
 };
@@ -327,7 +327,7 @@ const BLOODBLOOM: SceneRecipe = {
     near: [
       { part: "plum-branch", x: 0, y: 92, scale: 1.4 },
       { part: "plum-branch", x: 100, y: 30, scale: 1.1, flip: -1 },
-      { part: "seal", x: 90, y: 92 },
+      { part: "seal", x: 90, y: 77 },
     ],
     light: [{ part: "halo", x: 50, y: 76, scale: 1.3, paint: "red-600" }],
     particles: [{ part: "snow", x: 50, y: 50, scale: 1.4, count: 2, spread: [20, 10] }],
@@ -353,7 +353,7 @@ const LIFE_MAGE: SceneRecipe = {
     ],
     near: [
       { part: "grass-tuft", x: 80, y: 96, count: 2, spread: [6, 1] },
-      { part: "seal", x: 12, y: 93 },
+      { part: "seal", x: 12, y: 77 },
     ],
   },
 };
@@ -375,7 +375,7 @@ const ARCH_MAGE: SceneRecipe = {
       { part: "lectern", x: 36, y: 86, scale: 2 },
       { part: "sparks", x: 48, y: 47, scale: 1.2, paint: "cyan-400" },
     ],
-    near: [{ part: "seal", x: 90, y: 93 }],
+    near: [{ part: "seal", x: 90, y: 77 }],
   },
 };
 
@@ -398,7 +398,7 @@ const MAGIC_AMPLIFIER: SceneRecipe = {
       { part: "standing-stone", x: 70, y: 82, scale: 1.8, flip: -1 },
       { part: "ripples", x: 50, y: 64, scale: 1.4 },
     ],
-    near: [{ part: "seal", x: 90, y: 93 }],
+    near: [{ part: "seal", x: 90, y: 77 }],
     light: [{ part: "halo", x: 50, y: 66, scale: 1.4, paint: "violet-300" }],
   },
 };
@@ -419,7 +419,7 @@ const MEDINA_GRIFTER: SceneRecipe = {
     ],
     near: [
       { part: "sacks", x: 16, y: 98, scale: 1.4 },
-      { part: "seal", x: 90, y: 93 },
+      { part: "seal", x: 90, y: 77 },
     ],
     particles: [{ part: "dust", x: 50, y: 60, scale: 1.4 }],
   },
@@ -438,7 +438,7 @@ const LIVING_MANA_POTION: SceneRecipe = {
     subject: [{ part: "stars", x: 50, y: 66, scale: 0.4 }],
     near: [
       { part: "cliff", x: 50, y: 88, paint: "slate-800" },
-      { part: "seal", x: 90, y: 93 },
+      { part: "seal", x: 90, y: 77 },
     ],
     light: [{ part: "halo", x: 50, y: 64, scale: 1.4, paint: "cyan-400" }],
     particles: [

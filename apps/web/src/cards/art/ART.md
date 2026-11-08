@@ -412,7 +412,8 @@ are in id order in three tables spread into `SCENE_RECIPES` after the proofs: `s
 #40, spreading `sceneRecipesTrainingGrounds2.ts`'s Units from #21 on and #39's Golem token) and
 `sceneRecipesLegacy.ts` (#41 to #60), each set's table split in two files as the Classic+ pass split its own.
 Meditative+ paints in the Meditative family's ink wash: layered `peaks` in mist behind, a high and distant
-camera, and exactly one red `seal` in the near layer. Training Grounds paints in carved wood: the yard's
+camera, and exactly one red `seal` in the near layer, in a lower corner inside the band a face's window
+shows (y 18 to 82 of the box), so every face shows it. Training Grounds paints in carved wood: the yard's
 `palisade` and `sand` wherever its brief is set in the yard, the sun from the upper right but at night. Each
 keeps its brief's subject, setting and idea, its subject within x 30 to 70 and y 25 to 85, and stands its emblem
 small on its subject.
