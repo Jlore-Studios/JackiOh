@@ -17994,7 +17994,7 @@
       }
     },
     "3421": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "33dcadf86871b84dfc46819e209ecd3aab99d9e1",
       "ci_fixes": 1,
@@ -18018,12 +18018,12 @@
       "interruptions": 0,
       "issue": 3400,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-08T00:44:25Z",
-      "run_id": "42427269618",
+      "run_id": "pending:a409881b-1794098650",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18044,16 +18044,9 @@
         "run": "42427269618"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T23:53:23Z",
+      "started_at": "2026-11-08T00:44:59Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-08T00:44:25Z",
-        "until": "2026-11-08T01:14:25Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -18078,9 +18071,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T00:14:18Z",
+    "at": "2026-11-08T00:44:59Z",
     "url": "",
-    "what": "build #3399 on claude-4"
+    "what": "revise #3421 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T00:29:25Z",
