@@ -291,13 +291,14 @@ describe("R2784000 the per-set effects tables", () => {
     };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
-    // Every entrance the table names is a recipe, and the four marquees' and Felinor Fiender's are all of them.
+    // Every entrance the table names is a recipe, and the four marquees', the signature Units' and (R3334004) the
+    // Dormant Starship's and Starfleet Commander's are all of them.
     const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
       const key = entranceKeyOf(defId);
       return key === undefined ? [] : [key];
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
-    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), ...Object.values(signatureEntrances)]));
+    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), ...Object.values(signatureEntrances), "shipyardRollout", "fleetCommand"]));
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
 

@@ -7,7 +7,8 @@ Stinkyscape's pass over the second half of its animation table, `stinkyscape-2.j
 and the table to the pass's floor. Part one, `001` to `090`, is its own sub-issue of #2782.
 
 - **Entry**: the card's entry in `stinkyscape-2.json5`: `none: <reason>`, `bespoke <recipe>`,
-  `setPiece <key>`, or each hook's `<hook> <motif>[ <palette>]`, then `aura <look> <scope>[ <palette>]`.
+  `setPiece <key>`, or each hook's `<hook> <motif>[ <palette>]`, then `aura <look> <scope>[ <palette>]`,
+  led by `signature` and `entrance <key>` where the entry names them (R3332000).
 - **Scale**: the card's motif scale at intensity 1 (`motifScale`), from its cost and rarity alone; `—`
   for a `none`.
 - **Census**: the "Suggested" cell of `cargo jackioh fx census` (#2788) for the card, run at
@@ -73,7 +74,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-135` | Sacked | Trap | cast tether | 1.08 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; no census family reads held, the Unit stuffed into the Sack, which tether reads then |
 | `stinkyscape-135-1` | Sack | Unit | none: token | — | not in census | a token the census never played; its release is the stuffed Unit's own summon row |
 | `stinkyscape-136` | Magic Module | Unit | none: Starship part | — | none: vanilla | its only hook is When launched, which the Starship part draws (#2782) |
-| `stinkyscape-137` | Starfleet Commander | Unit | none: Starship part | — | none: no motif reads awakened | its Cry launches the Starship, which the Starship part draws (#2782); the Doctrine it casts plays its own entry |
+| `stinkyscape-137` | Starfleet Commander | Unit | signature; entrance fleetCommand | 1.85 | none: no motif reads awakened | signature (R3334004): it lands and orders its side's Dormant Starship up, a rocket bolt to the ship and a ring, a crown of gold and a shake there (its own with no ship); the launch its Cry makes is the Starship part's (#2782), and the Doctrine it casts plays its own entry |
 | `stinkyscape-137-1` | Land Doctrine | Spell | cast nova Tech/rocket | 1.19 | nova | cast: the census agrees (nova): the Starship's hit; Tech/rocket for the ship |
 | `stinkyscape-137-2` | Sea Doctrine | Spell | cast mend Tech/rocket | 1.19 | not in census | cast: a War Doctrine the census never played; its heal is healed, which mend reads; Tech/rocket for the ship |
 | `stinkyscape-137-3` | Air Doctrine | Spell | cast barrage Tech/rocket | 1.19 | barrage | cast: the census agrees (barrage): its split damage; Tech/rocket for the ship |
@@ -120,9 +121,9 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-173` | Abandoned Spice Tower | Unit | death send Snack; activate bolt | 1.28 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Snack for its Spices; activate: the census agrees (bolt): the damage it costs |
 | `stinkyscape-174` | Aerelret | Trap | cast conjure Tech/rocket | 1.65 | nova | cast: a Trap's cast is its firing, which plans nothing until firings open a window; the census's nova is the attack that goes on, while its own effect summons, which conjure reads; Tech/rocket for its ships |
 | `stinkyscape-175` | Frost Module | Unit | none: no motif reads marked | — | none: vanilla | the census agrees: its Activate's freeze is `marked`, whose own row brands the card |
-| `stinkyscape-176` | Preemptive Strike | Spell | none: Starship part | — | bolt | its play launches the Starship, which the Starship part draws (#2782); the Doctrine it casts plays its own entry |
+| `stinkyscape-176` | Preemptive Strike | Spell | bespoke preemptiveStrike | 1.62 | bolt | signature (R3334004): rings of fire and a red spark strike on its player's hero, then a red brand on the Dormant Starship it wakes; the launch is the Starship part's (#2782), and the Doctrine it casts plays its own entry |
 | `stinkyscape-177` | Cloaking Module | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Equip, Cloaked, Immutable) |
-| `stinkyscape-t-dormant-starship` | Dormant Starship | Unit | none: Starship part | — | none: unseen | the Starship itself: its fuse and launch are the Starship part's (#2782) |
+| `stinkyscape-t-dormant-starship` | Dormant Starship | Unit | signature; entrance shipyardRollout | 1.74 | none: unseen | signature (R3334004): it rolls out of its shipyard in weld sparks and settles in a ring and dust at its foot, in Tech/rocket; its fuse and launch are the Starship part's (#2782) |
 | `stinkyscape-t-drone-interceptor` | Drone Interceptor | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
 | `stinkyscape-t-drone-corvette` | Drone Corvette | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
 | `stinkyscape-t-shield-layer` | Drone Battleship (Shield Layer) | Unit | none: Battleship planner | — | not in census | a token the census never saw: its redirect, the dome's flare and plates and its break are `fx/battleship.ts`'s (R3336000), not a hook's |
@@ -149,7 +150,8 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 ## Bespoke
 
 Each built from the motif primitives (`fx/motifs/build.ts`) at the card's motif scale, with no new
-rendering (`fx/cards/stinkyscape/`), drawn over the event rows (`keep`).
+rendering (`fx/cards/stinkyscape/`), drawn over the event rows (`keep`). The signatures' recipes (R3407000)
+are in Signatures, at the end.
 
 | Card | Recipe | Why bespoke | What plays |
 |---|---|---|---|
@@ -163,11 +165,12 @@ R3407000 (#3407) gives the range's Legendaries and Mythics left to it a signatur
 #110 iKwzki, #111 Shockwave447, #148 Alteran Reach, Edge of the Universe and Red Narcor a takeover look of their
 own that draws the card's own picture filling the screen (`takeoverArtOf`), and every one an entrance or a
 cast of its own, its text's beats and, a permanent, its own standing look on its tile or zone (the
-Signatures section at the end). #154 Dice of Doom's yields to its own set piece (R3338000), and the cards #3334,
-#3336, #3337 and #3338 own keep the shared ones until theirs. Anomaly Found!, a token
-printed Mythic, yields its takeover to the rift its play lays, as a Mythic yields to its own wipe
-(R3337003, R2800000), and none of the three cards above is a signature (R3332000): the probes are
-Common and Rare, and the rift's hold is longer than a Mythic Spell's signature budget.
+Signatures section at the end). #154 Dice of Doom's yields to its own set piece (R3338000); the Dormant
+Starship, #137 Starfleet Commander and #176 Preemptive Strike have theirs (R3334004, "The Starship parts"),
+and the cards #3336 owns keep their planner's moments. Anomaly Found!, a token printed Mythic, yields its
+takeover to the rift its play lays, as a Mythic yields to its own wipe (R3337003, R2800000), and none of
+the three cards above is a signature (R3332000): the probes are Common and Rare, and the rift's hold is
+longer than a Mythic Spell's signature budget.
 
 ## The Starship parts
 
@@ -176,31 +179,41 @@ The Starship's own moments are the Starship part's of #2782: the fuse, the launc
 That part (R2801000) gives Launch Sequencer `cast tithe`, the Retrofitting Program `cast send` and the
 Launchers `cry conjure`, all in Tech/rocket. Each other card whose only hook is one of them is
 `none: Starship part` here: the three "When launched" pieces (#106 Warpfield Amplifier, #133 Ultra
-Capacitor, #136 Magic Module), the two launches (#137 Starfleet Commander's Cry, #176 Preemptive Strike) and the
-Dormant Starship. A Starship Piece's other hooks have entries here (#93 Patcher Nanobots' `death`,
+Capacitor, #136 Magic Module). A Starship Piece's other hooks have entries here (#93 Patcher Nanobots' `death`,
 #134 Felinor Containment Chamber's `death`, Salvage Protocol's `death`), and the War Doctrines a
 launch casts (#137.1 to #137.4) each play their own `cast`.
 
+The Starship's three Legendaries have signatures of their own (R3332000, R3334004;
+`fx/cards/stinkyscape/starshipSignatures.ts` and `preemptiveStrike.ts`), their first beat beside the
+Starship's moment, which still draws the launch that follows:
+
+| Card | Entry | What plays |
+|---|---|---|
+| Dormant Starship | `entrance: "shipyardRollout"` | as it lands, weld sparks flash at three points of its hull, then it settles in a ring, dust at its foot and a shake, in Tech/rocket |
+| #137 Starfleet Commander | `entrance: "fleetCommand"` | as it lands, a rocket bolt from its zone to its side's Dormant Starship, and there a ring, a crown of gold and a shake; with no Dormant Starship (its Cry does nothing), the ring, the gold and the shake are its own |
+| #176 Preemptive Strike | `{ bespoke: "preemptiveStrike" }` (`keep`) | at its play, rings of fire on its player's hero and a red spark strike (Tech/laser) with a shake; at the Dormant Starship's awakening that starts its launch, a red brand (the red mark's) on the ship, its player's hero when the board cannot place it, with a ring and a softer shake |
+
 ## Set-piece candidates
 
-Each takes a motif for now; a later part may give it a set piece.
+Each takes a motif or a signature for now; a later part may give it a set piece.
 
-| Card | Why | Its motif now |
+| Card | Why | Its entry now |
 |---|---|---|
 | #113 A Very Dandy Lad | its Aura exiles every permanent that costs (2) or less as it lands | `cry: wipe` |
-| #115 Scornboi | its Aura exiles every Unit but Humans and the Starship's as it lands | `cry: wipe` |
+| #115 Scornboi | its Aura exiles every Unit but Humans and the Starship's as it lands | its signature `scornSweep` (R3407000) |
 | #120 Wild System | every Unit fights every other until one is left | `cast: nova` |
-| #150 Call to Chaos (Stinky Edition) | some of its ten random effects fill or freeze a whole side | `cast: send` |
+| #150 Call to Chaos (Stinky Edition) | some of its ten random effects fill or freeze a whole side | its signature `stinkCloud` (R3407000) |
 
-#117 Core System is #2800's `vortex` already, and #151 Call to Chaos (Scape Edition) and the Anomaly
-Found! token keep `wipe`.
+#117 Core System is #2800's `vortex` already, #151 Call to Chaos (Scape Edition) took its signature
+`tabletopTilt` in place of `wipe` (R3407000), and the Anomaly Found! token's lay is the rift's set piece
+(R3337003).
 
 ## Tokens given entries
 
-Of the file's 32 tokens, 21 have an entry other than `none`: Paycheck, the four War Doctrines,
-IN33DH3 Prime, Wardrum Blob, Korrelite, Gellium, Axnit, Narcor, Red Narcor, Anomaly Found! and the AI
-tokens Escort Protocol, Mining Subroutine, Route Optimizer, Probe Relay, Combat Subroutine, Drone
-Uplink, Honeypot and Salvage Protocol. The rest are keywords only, or show nothing a motif reads; the
+Of the file's 32 tokens, 24 have an entry other than `none`: Paycheck, the four War Doctrines,
+IN33DH3 Prime, Wardrum Blob, Edge of the Universe, the Stinkyscape Golem, Korrelite, Gellium, Axnit,
+Narcor, Red Narcor, Anomaly Found! and the AI tokens Escort Protocol, Mining Subroutine, Route
+Optimizer, Launch Sequencer, Probe Relay, Combat Subroutine, Drone Uplink, Honeypot and Salvage Protocol. The rest are keywords only, or show nothing a motif reads; the
 Drone Battleship's three layers are `none: Battleship planner` (R3336000): their moments are
 `fx/battleship.ts`'s, planned from public events and the layers the view draws, and no hook opens for
 the Shield's guard, a break or the blast.

@@ -6,8 +6,9 @@
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
-//                                           or beside a bespoke recipe (R3400000); a Unit's on its own `tile`;
-//   entrance, takeover, signature           a signature's frame (R3332000): its own entrance, a Mythic's own takeover look.
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -61,7 +62,7 @@
   "stinkyscape-135": { cast: { motif: "tether" } }, // Sacked
   "stinkyscape-135-1": "none: token", // Sack
   "stinkyscape-136": "none: Starship part", // Magic Module
-  "stinkyscape-137": "none: Starship part", // Starfleet Commander
+  "stinkyscape-137": { signature: true, entrance: "fleetCommand" }, // Starfleet Commander
   "stinkyscape-137-1": { cast: { motif: "nova", palette: "Tech/rocket" } }, // Land Doctrine
   "stinkyscape-137-2": { cast: { motif: "mend", palette: "Tech/rocket" } }, // Sea Doctrine
   "stinkyscape-137-3": { cast: { motif: "barrage", palette: "Tech/rocket" } }, // Air Doctrine
@@ -108,9 +109,9 @@
   "stinkyscape-173": { death: { motif: "send", palette: "Snack" }, activate: { motif: "bolt" } }, // Abandoned Spice Tower
   "stinkyscape-174": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Aerelret
   "stinkyscape-175": "none: no motif reads marked", // Frost Module
-  "stinkyscape-176": "none: Starship part", // Preemptive Strike
+  "stinkyscape-176": { bespoke: "preemptiveStrike", signature: true }, // Preemptive Strike
   "stinkyscape-177": "none: vanilla", // Cloaking Module
-  "stinkyscape-t-dormant-starship": "none: Starship part", // Dormant Starship
+  "stinkyscape-t-dormant-starship": { signature: true, entrance: "shipyardRollout" }, // Dormant Starship
   "stinkyscape-t-drone-interceptor": "none: token", // Drone Interceptor
   "stinkyscape-t-drone-corvette": "none: token", // Drone Corvette
   "stinkyscape-t-shield-layer": "none: Battleship planner", // Drone Battleship (Shield Layer)

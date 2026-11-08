@@ -5,10 +5,12 @@
 // the gallery shows. R2794000: it also plays a marquee Unit's entrance as the Unit lands, and Classic's
 // Flourishes on their own fixtures. R3332000: an entry's `entrance` plays as its card lands, whatever the
 // entry's kind, a Field Spell's face up in the backrow; R3332001 over the board its entrance reads
-// (`galleryBoardOf`: Felinor Fiender's over three Felinors).
+// (`galleryBoardOf`: Felinor Fiender's over three Felinors; R3334004 Starfleet Commander's over a
+// Dormant Starship).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { DORMANT_STARSHIP_ID } from "../../cards/fused.ts";
 import { ANOMALY_FOUND_ID } from "../../cards/anomalies.ts";
 import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
@@ -35,6 +37,7 @@ import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
 import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
 import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
+import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
@@ -393,9 +396,10 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * a copy of the first enemy Unit, Tutorial Master adds three cards and Call to Chaos (Training-Grounds
  * Edition) rolls its Golem. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
- * into the deck and draws one, and King Wagtoggle swaps the decks. R3407000: Stinkyscape part two's
- * signatures take their modules' own (fx/cards/stinkyscape/), each told the card it plays (`defId`), so a
- * hook's marker names it.
+ * into the deck and draws one, and King Wagtoggle swaps the decks. R3334004: Preemptive Strike wakes its
+ * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3407000:
+ * Stinkyscape part two's signatures take their modules' own (fx/cards/stinkyscape/), each told the card it
+ * plays (`defId`), so a hook's marker names it.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -479,6 +483,7 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   },
   flashFreeze: (view) =>
     [...unitsOf(view.you), ...unitsOf(view.opponent)].map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  preemptiveStrike: (_view, _instanceId, player) => [{ type: "awakened", player, instanceId: "fx-starship", defId: DORMANT_STARSHIP_ID }],
   stratosSwarm: (view, _instanceId, player) => {
     const side = player === view.viewer ? view.you : view.opponent;
     const open = (row: "units" | "backrow", zones: readonly unknown[]): { row: "units" | "backrow"; lane: number }[] =>
@@ -666,8 +671,8 @@ export const SET_PIECE_FIXTURES: { readonly [K in SetPieceKey]: FixtureOf } = {
 /** R3332000: the backrow lane a Field Spell's gallery entrance lands in, the first, where its aura stands (`galleryFieldView`). */
 const GALLERY_FIELD_ENTRANCE_LANE = 1;
 
-/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors). */
-const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard };
+/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors; R3334004 Starfleet Commander's Dormant Starship). */
+const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard, fleetCommand: fleetBoard };
 
 /** R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), else `view` itself. */
 export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {

@@ -1,13 +1,15 @@
 // R2803000: the audit's phone frame-time spec. At the phone particle cap with a phone viewport,
 // every scene holds its mean frame time within FX_PHONE_FRAME_BUDGET_MS: the cap check, Twisting
 // Nether (scaled back for the budget: fewer pull/implode particles, a softer shake, and a smaller
-// vortex spiral with its mask retuned to the same visible arms), the Starship launch, the Drone
-// Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
-// visible disc), a board with 4 auras, and R3337003's Anomaly cast (its rift, flare, title card and landing).
-// R3332001: Felinor Fiender's signature, the first, over the gallery's board with its three Felinors.
-// R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with one face tilted under a pointer that
-// keeps moving over it, its planes parallaxing under its glare. R3400001: Goetzmann Game Design's and Bob's Plan's
-// signatures, the two heaviest of Meditative+'s and Training Grounds', their takeovers drawing full-screen art.
+// vortex spiral with its mask retuned to the same visible arms), the Starship launch (R3334001: its
+// cinematic), the Drone Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a
+// softer shake, and takeover rays trimmed to the same visible disc), a board with 4 auras, and R3337003's
+// Anomaly cast (its rift, flare, title card and landing). R3332001: Felinor Fiender's signature, the first,
+// over the gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
+// under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
+// R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
+// Grounds', their takeovers drawing full-screen art.
 // R3407000: xxFreshJack's and Alteran Reach's, the two heaviest of Stinkyscape part two's, their takeovers
 // drawing their cards' own pictures full screen.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
@@ -17,9 +19,10 @@ import { CATALOG } from "@jackioh/cards";
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
 import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
-import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS } from "../../../apps/web/src/fx/constants.ts";
+import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS, FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
 import { doomFixture, galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import {
@@ -134,6 +137,12 @@ function removals(view: PlayerView, type: "destroyed" | "exiled"): GameEvent[] {
 }
 
 describe("R2803000 the phone scenes hold the frame budget", () => {
+  // A scene that changes the effects settings (the broadside's speed) has them put back after it, a failed one included.
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
+
   it("R2803000 the phone viewport draws at the phone particle cap", () => {
     expect(capacityFor(PHONE.width)).to.eq(FX_PARTICLE_CAP_MOBILE);
     cy.viewport(PHONE.width, PHONE.height);
@@ -161,7 +170,7 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     cy.get(GAME).should("not.have.attr", "data-set-piece");
   });
 
-  it("R2803000 the Starship launch holds the phone frame budget mid-flight", () => {
+  it("R3334001 the cinematic holds the phone frame budget", () => {
     cy.viewport(PHONE.width, PHONE.height);
     const HULL = "stinkyscape-t-dormant-starship";
     const fused = [HULL, "stinkyscape-140", "stinkyscape-141"];
@@ -186,9 +195,33 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
         { type: "starshipLaunched", player: "p1", instanceId: "fx-ship", defId: HULL, name: "Ember of Departure", pieces: fused },
       ]);
       cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "starship");
-      cy.get(`${FX_DOM} [data-fx="launch"] .fx-launch-count`).should("have.length", 3);
+      cy.get(`${FX_DOM} [data-fx="cinematic"]`).should("exist");
       return sampleFrames();
     });
+  });
+
+  it("R3334002 an 8-gun broadside holds it", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    // At the slowest effects speed the broadside's eight guns stretch over the whole sample.
+    cy.then(() => {
+      setFxSettings({ speed: FX_SPEED_MIN });
+    });
+    const HULL = "stinkyscape-t-dormant-starship";
+    // A Beam, a Repeater, a Cannon, a Flak gun and the four Launchers: every gun fires.
+    const guns = ["stinkyscape-050", "stinkyscape-051", "stinkyscape-052", "stinkyscape-053", "stinkyscape-140", "stinkyscape-141", "stinkyscape-142", "stinkyscape-143"];
+    const view = baseView({
+      you: emptySide("p1", {
+        units: [null, null, unit("p1", { instanceId: "fx-ship", defId: HULL, attack: 3, starship: { pieces: guns.map((defId) => ({ defId })), name: "Ember of Departure", launched: 1 } }), null, null],
+      }),
+      opponent: emptySide("p2", { units: [null, null, unit("p2", { instanceId: "fx-foe" }), null, null] }),
+    });
+    holdsBudget("8-gun broadside", () => {
+      mountScene(view, view, [{ type: "attackDeclared", attackerId: "fx-ship", targetId: "fx-foe", forced: false }]);
+      cy.get('[data-testid="card-fx-ship"]', { timeout: 4_000 }).should("have.attr", "data-animating", "attackDeclared");
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
   });
 
   it("R3336000 the Drone Battleship's arrival holds the phone frame budget mid-flight", () => {

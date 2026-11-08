@@ -377,6 +377,104 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(expectMounted(mountDomEffect(root, plain, { from: AT, to: TO }), plain).hasAttribute("data-spin")).toBe(false);
   });
 
+  it("R3334001 the six cues mount their parts, text only in data-text", () => {
+    const art = "data:image/svg+xml,%3Csvg%3E%3C/svg%3E";
+    const picture = { kind: "testid", testid: "card-ship", at: { x: 0.25, y: 0.5 }, art: "picture" } as const;
+    const mount = (cue: FxDomCue, boxes: Parameters<typeof mountDomEffect>[2]): HTMLElement => {
+      root.replaceChildren();
+      return expectMounted(mountDomEffect(root, cue, boxes), cue);
+    };
+
+    // A module flies from the piece's centre to its point of the ship's picture, drawn a share of it wide.
+    const dock: FxDomCue = { kind: "module", uri: art, motion: "dock", from: anchor, to: picture, share: 0.2, landMs: 240, spin: 0, delayMs: 0, durationMs: 560 };
+    const module = mount(dock, { from: AT, to: TO });
+    expect(module.getAttribute("data-motion")).toBe("dock");
+    expect(cssVar(module, "--fx-x")).toBe("140px");
+    expect(cssVar(module, "--fx-y")).toBe("260px");
+    expect(cssVar(module, "--fx-dx")).toBe(`${700 + 60 * 0.25 - 140}px`);
+    expect(cssVar(module, "--fx-dy")).toBe(`${40 + 60 * 0.5 - 260}px`);
+    expect(cssVar(module, "--fx-size")).toBe(`${60 * 0.2}px`);
+    expect(cssVar(module, "--fx-land")).toBe("240ms");
+    expect(module.querySelector("img.fx-module-img")?.getAttribute("src")).toBe(art);
+    expect(mountDomEffect(root, dock, { from: AT })).toBeNull();
+
+    // A weld: two clamps and a flash, at its point, humming.
+    const weld = mount({ kind: "weld", at: picture, hum: 0.5, delayMs: 0, durationMs: 320 }, { at: TO });
+    expect([...weld.children].map((child) => child.className)).toEqual(["fx-weld-clamp", "fx-weld-clamp", "fx-weld-flash"]);
+    expect(cssVar(weld, "--fx-hum")).toBe("0.500");
+    expect(cssVar(weld, "--fx-x")).toBe(`${700 + 60 * 0.25}px`);
+
+    // The cinematic: the dim, then the climb holding the camera (the picture, its stops and engines) and the name.
+    const cinematic: FxDomCue = {
+      kind: "cinematic",
+      art,
+      name: "The Ninth Life",
+      lettering: { font: "signature", weight: 400, tracking: 0, italic: true },
+      letters: { fill: "#ffeecc", edge: "#332244" },
+      size: "medium",
+      tint: TINT,
+      at: anchor,
+      cameraFrom: { x: 0.2, y: 0.5 },
+      cameraTo: { x: 0.8, y: 0.45 },
+      panAtMs: 144,
+      panEndMs: 1320,
+      zoom: 1.8,
+      stops: [{ x: 0.4, y: 0.4, atMs: 500 }, { x: 0.7, y: 0.45, atMs: 1100 }],
+      engines: [{ x: 0.2, y: 0.5, atMs: 1320 }],
+      sparks: 3,
+      stampMs: 1632,
+      climbMs: 2064,
+      delayMs: 0,
+      durationMs: 2700,
+    };
+    const film = mount(cinematic, { at: AT });
+    expect([...film.children].map((child) => child.className)).toEqual(["fx-cinematic-dim", "fx-cinematic-climb"]);
+    const camera = film.querySelector<HTMLElement>(".fx-cinematic-climb > .fx-cinematic-camera");
+    expect(camera?.querySelector("img.fx-cinematic-art")?.getAttribute("src")).toBe(art);
+    expect(cssVar(camera!, "--fx-zoom")).toBe("1.8");
+    expect(cssVar(camera!, "--fx-cam-x0")).toBe("0.2000");
+    expect(cssVar(camera!, "--fx-cam-x1")).toBe("0.8000");
+    const stops = [...film.querySelectorAll<HTMLElement>(".fx-cinematic-stop")];
+    expect(stops.map((stop) => cssVar(stop, "--fx-at"))).toEqual(["500ms", "1100ms"]);
+    expect(stops.map((stop) => cssVar(stop, "--fx-px"))).toEqual(["40.00%", "70.00%"]);
+    const engines = [...film.querySelectorAll<HTMLElement>(".fx-cinematic-engine")];
+    expect(engines).toHaveLength(1);
+    expect(engines[0]?.querySelectorAll(".fx-cinematic-spark")).toHaveLength(3);
+    expect(cssVar(engines[0]!, "--fx-rest")).toBe(`${2700 - 1320}ms`);
+    const name = film.querySelector<HTMLElement>(".fx-cinematic-climb > .fx-cinematic-name");
+    expect(name?.getAttribute("data-text")).toBe("The Ninth Life");
+    expect(name?.getAttribute("data-font")).toBe("signature");
+    expect(name?.getAttribute("data-italic")).toBe("true");
+    expect(cssVar(name!, "--fx-letter-fill")).toBe("#ffeecc");
+    expect(cssVar(film, "--fx-stamp")).toBe("1632ms");
+    expect(cssVar(film, "--fx-climb")).toBe("2064ms");
+    expect(cssVar(film, "--fx-climb-ms")).toBe(`${2700 - 2064}ms`);
+    expect(cssVar(film, "--fx-pan-ms")).toBe(`${1320 - 144}ms`);
+    expect(cssVar(film, "--fx-pull-ms")).toBe(`${1632 - 1320}ms`);
+    expect(film.hasAttribute("data-still")).toBe(false);
+    expect(mount({ ...cinematic, still: true, sparks: 0 }, { at: AT }).getAttribute("data-still")).toBe("true");
+
+    // A doctrine: its look, its insignia, its name in data-text.
+    const doctrine = mount({ kind: "doctrine", doctrine: "space", text: "Space Doctrine", tint: TINT, at: anchor, delayMs: 0, durationMs: 1100 }, { at: AT });
+    expect(doctrine.getAttribute("data-doctrine")).toBe("space");
+    expect(doctrine.getAttribute("data-text")).toBe("Space Doctrine");
+    expect([...doctrine.children].map((child) => child.className)).toEqual(["fx-doctrine-insignia"]);
+
+    // A wreck: the fore and aft halves of the picture over the art's frame, breaking at its time.
+    const wreck = mount({ kind: "wreck", art, at: anchor, breakMs: 210, turn: 12, delayMs: 0, durationMs: 1150 }, { at: AT });
+    expectCovering(wreck, AT);
+    expect([...wreck.querySelectorAll("img.fx-wreck-half")].map((half) => half.getAttribute("data-half"))).toEqual(["fore", "aft"]);
+    expect(cssVar(wreck, "--fx-break")).toBe("210ms");
+    expect(cssVar(wreck, "--fx-break-ms")).toBe(`${1150 - 210}ms`);
+    expect(cssVar(wreck, "--fx-turn")).toBe("12deg");
+
+    // A scorch covers its zone.
+    expectCovering(mount({ kind: "scorch", at: anchor, delayMs: 0, durationMs: 885 }, { at: AT }), AT);
+    for (const cue of [weld, doctrine, wreck]) expect(cue.textContent).toBe("");
+    root.replaceChildren();
+    expect(mountDomEffect(root, { kind: "scorch", at: anchor, delayMs: 0, durationMs: 885 }, {})).toBeNull();
+  });
+
   it("R3336000 a ship cue builds plates with their lit flags, and doors and lights", () => {
     const plates: FxDomCue = { kind: "ship", move: "plates", at: anchor, tint: TINT, count: 5, lit: 3, delayMs: 0, durationMs: 900 };
     const row = expectMounted(mountDomEffect(root, plates, { at: AT }), plates);

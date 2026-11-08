@@ -592,6 +592,24 @@ describe("B6 SFX limits", () => {
     tick(r, 5_000);
     expect(r.engine.playSfx(extra)).toBe(true);
   });
+
+  it("R3334000 a fuse run's docks sent at once each sound at their own beat; two at one beat do not, nor does another id", () => {
+    const r = rig();
+    unlocked(r);
+    const beat = SFX_RETRIGGER_MS * 5;
+
+    expect(r.engine.playSfx("starshipDock", { amount: 1 }, 0)).toBe(true);
+    expect(r.engine.playSfx("starshipDock", { amount: 2 }, beat)).toBe(true);
+    expect(r.engine.playSfx("starshipDock", { amount: 3 }, beat * 2)).toBe(true);
+    // Two docks at one beat stack as one, and a dock earlier than the last but too close to it is refused.
+    expect(r.engine.playSfx("starshipDock", { amount: 4 }, beat * 2)).toBe(false);
+    expect(r.engine.playSfx("starshipDock", { amount: 4 }, beat * 2 - SFX_RETRIGGER_MS + 1)).toBe(false);
+    // Every other id still reads the time it is sent (B6).
+    expect(r.engine.playSfx("draw", {}, 0)).toBe(true);
+    expect(r.engine.playSfx("draw", {}, beat)).toBe(false);
+
+    expect(r.engine.log().flatMap((c) => (c.kind === "sfx" && c.id === "starshipDock" ? [c.params?.amount] : []))).toEqual([1, 2, 3]);
+  });
 });
 
 /* B7 to B10: voice lines */

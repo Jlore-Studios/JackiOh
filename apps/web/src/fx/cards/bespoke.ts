@@ -5,9 +5,10 @@
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
 // Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798). R3338000: Olivian
 // Expanse's rift is its set piece now (fx/terminus/). R3337002's and R3337003's Scanning Probes' scan and
-// Anomaly Found!'s call (#3337). R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries
-// and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial Master, Call to Chaos (Training-Grounds
-// Edition); Goetzmann Game Design's grows from its flourish). R3407000: Stinkyscape part two's signatures.
+// Anomaly Found!'s call (#3337). R3334004: #176 Preemptive Strike's signature. R3400001: the signatures of
+// Meditative+'s and Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial
+// Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish). R3407000:
+// Stinkyscape part two's signatures.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -39,6 +40,7 @@ import { jobInterview, payday } from "./stinkyscape/jobApplication.ts";
 import { balthasarCradle, casperKiss, melchiorTally } from "./stinkyscape/magi.ts";
 import { giftShop } from "./stinkyscape/megabase.ts";
 import { narcorDust, redNarcorHum } from "./stinkyscape/narcor.ts";
+import { preemptiveStrike } from "./stinkyscape/preemptiveStrike.ts";
 import { sanctumEcho } from "./stinkyscape/sanctum.ts";
 import { scornSweep } from "./stinkyscape/scornboi.ts";
 import { shockwaveLecture } from "./stinkyscape/shockwave447.ts";
@@ -78,6 +80,7 @@ export const CARD_RECIPES = {
   duoBond,
   flashFreeze,
   stratosSwarm,
+  preemptiveStrike,
   probeScan,
   anomalyCall,
   // R3407000: Stinkyscape part two's signatures.
