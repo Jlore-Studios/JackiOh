@@ -16149,16 +16149,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/audio/types.ts"
+          ],
+          "from": "01da7b145843f35781cf7d86cb7fd03dacd9a4b8",
+          "main": "03e0cbaf9d4af6778fde7354ca2901650d8bae44"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "42410475450",
+            "run": "42422672826",
             "tier": "strong"
           }
         ],
-        "sha": "01da7b145843f35781cf7d86cb7fd03dacd9a4b8",
+        "sha": "7a6f318e86e26e5f85fc4d11a8410a03dadb923a",
         "tiers": {
           "claude": "strong"
         }
