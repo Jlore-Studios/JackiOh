@@ -3,7 +3,8 @@
 // shrine), creatures (a rattlesnake, a book worm, a boar-like beast, a cat, a monkey, a bee, a ghost, a
 // bird), food (an apple, a pear, grapes, a papaya, a basket of fruit, a stack of pancakes) and weather and
 // light (a shockwave, a tornado, flames, a fireball, a ribbon of light, a thought bubble, spores, snow,
-// static, bubbles, smoke, rain, dust, a sun, falling petals). sceneKit.ts spreads the table into
+// static, bubbles, smoke, rain, dust, a sun, falling petals). R3396000: the Classic+ Alt art scenes (#3396)
+// added a clump of bamboo, a cactus and a fox. sceneKit.ts spreads the table into
 // `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in its own frame
 // (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's gold window
 // (food's golds are brass, butter is slate), a glow a stack of translucent shapes, and no two sub-paths of
@@ -302,6 +303,72 @@ function giantMushroom(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** R3396000: a clump of three to five jointed bamboo stalks standing on the anchor, swaying together, each with a spray of leaves near its top; about 10 wide and 34 tall at scale 1. */
+function bamboo(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const count = whole(rng, 3, 5);
+  const sway = between(rng, -1.2, 1.2);
+  let stalks = "";
+  let joints = "";
+  let shine = "";
+  const sprays: KitShape[] = [];
+  for (let k = 0; k < count; k += 1) {
+    const x = -4.5 + (9 * k) / (count - 1) + between(rng, -0.2, 0.2);
+    const height = between(rng, 26, 34);
+    const lean = sway + between(rng, -0.2, 0.2);
+    const on = (t: number): Point => [x + lean * t, -height * t];
+    stalks += f.band([on(0), on(1)], 0.9);
+    shine += f.band([[x - 0.22, -0.6], [x + lean - 0.22, -height + 0.6]], 0.2);
+    const nodes = whole(rng, 5, 6);
+    for (let j = 1; j < nodes; j += 1) {
+      const [nx, ny] = on(j / nodes);
+      joints += f.band([[nx - 0.62, ny], [nx + 0.62, ny]], 0.3);
+    }
+    const [sx, sy] = on(between(rng, 0.72, 0.9));
+    const side = k % 2 === 0 ? -1 : 1;
+    let leaves = "";
+    for (const angle of [-32, 6, 44]) {
+      const length = between(rng, 5.6, 7.2);
+      const u: Point = [side * Math.cos(angle * DEGREES), Math.sin(angle * DEGREES)];
+      const n: Point = [-u[1] * 1.05, u[0] * 1.05];
+      const base: Point = [sx + u[0] * 0.6, sy + u[1] * 0.6];
+      const mid: Point = [sx + u[0] * length * 0.5, sy + u[1] * length * 0.5];
+      const tip: Point = [sx + u[0] * length, sy + u[1] * length];
+      leaves += `M${f.p(...base)}Q${f.p(mid[0] + n[0], mid[1] + n[1])} ${f.p(...tip)}Q${f.p(mid[0] - n[0], mid[1] - n[1])} ${f.p(...base)}Z`;
+    }
+    sprays.push(shape(leaves, k % 2 === 0 ? "green-700" : "green-400", 1));
+  }
+  return [shape(stalks, "green-500", 1, MAIN_INKED), shape(shine, "lime-200", 0.35), shape(joints, "green-900", 0.7), ...sprays];
+}
+
+/** R3396000: a ribbed cactus standing on the anchor: a round-topped trunk (main) with one to three arms (main), its ribs, spines, a shine and often a flower; about 9 wide and 18 tall at scale 1. */
+function cactus(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const top = between(rng, -18.6, -16.8);
+  const arm = (side: number, y: number, reach: number): string => {
+    const s = (dx: number, dy: number): string => f.p(side * dx, dy);
+    return (
+      `M${s(2, y + 1.2)}L${s(reach - 1.2, y + 1.2)}Q${s(reach, y + 1.2)} ${s(reach, y)}L${s(reach, y - 4)}` +
+      `Q${s(reach, y - 5.4)} ${s(reach - 1.1, y - 5.4)}Q${s(reach - 2.2, y - 5.4)} ${s(reach - 2.2, y - 4)}L${s(reach - 2.2, y - 1)}L${s(2, y - 1)}Z`
+    );
+  };
+  const arms = whole(rng, 1, 3);
+  const out = [shape(f.ellipse(0, 0.3, 4.2, 0.6), "black", 0.2)];
+  out.push(shape(arm(-1, between(rng, -11, -7), between(rng, 4.8, 5.8)), "green-700", 1, MAIN_INKED));
+  if (arms >= 2) out.push(shape(arm(1, between(rng, -13, -9), between(rng, 4.6, 5.6)), "green-700", 1, MAIN_INKED));
+  if (arms >= 3) out.push(shape(arm(1, between(rng, -6, -4.6), between(rng, 3.8, 4.4)), "green-700", 1, MAIN_INKED));
+  out.push(
+    shape(`M${f.p(-2.2, 0)}L${f.p(-2.2, top + 2.2)}Q${f.p(-2.2, top)} ${f.p(0, top)}Q${f.p(2.2, top)} ${f.p(2.2, top + 2.2)}L${f.p(2.2, 0)}Z`, "green-700", 1, MAIN_INKED),
+    shape(f.band([[-1.1, -0.4], [-1.1, top + 1.4]], 0.26) + f.band([[0, -0.4], [0, top + 0.6]], 0.26) + f.band([[1.1, -0.4], [1.1, top + 1.4]], 0.26), "green-900", 0.5),
+    shape(f.band([[-1.65, -1], [-1.65, top + 2.4]], 0.32), "lime-200", 0.3),
+  );
+  let spines = "";
+  for (let y = -2; y > top + 2; y -= 2.4) spines += f.band([[-2.2, y], [-2.9, y - 0.5]], 0.14) + f.band([[2.2, y - 1.2], [2.9, y - 1.7]], 0.14);
+  out.push(shape(spines, "white", 0.55));
+  if (rng() < 0.5) out.push(shape(f.circle(between(rng, -0.6, 0.6), top - 0.3, 0.9), rng() < 0.5 ? "red-400" : "purple-400", 1, INKED));
+  return out;
+}
+
 // Creatures
 
 /** A coiled rattlesnake on the anchor, its head raised and looking the way it faces, its rattle up behind, blotched with plague sores; about 18 wide and 14 tall at scale 1. */
@@ -561,6 +628,31 @@ function bird(at: PartPlace, rng: Rng): KitShape[] {
     ),
     shape(f.band([[0.2, 0.1], [0.3, 1.8]], 0.3), "slate-400", 0.3),
     shape(f.poly([[-0.25, -2.75], [0, -3.4], [0.25, -2.75]]), "orange-400", 1),
+  ];
+}
+
+/** R3396000: a fox standing on the anchor, nosing the way it faces: a bushy white-tipped tail, dark socks, a pointed snout and ears, a white chest and muzzle; about 15 long and 7.5 tall at scale 1. */
+function fox(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lift = between(rng, -0.8, 0.8);
+  const dip = between(rng, 0, 1.2);
+  const tip: Point = [-7.1, -3.2 + lift];
+  return [
+    shape(f.ellipse(0, 0.2, 5.4, 0.5), "black", 0.2),
+    shape(`M${f.p(-3.4, -4)}Q${f.p(-6.4, -5.8 + lift)} ${f.p(-7.8, -3.4 + lift)}Q${f.p(-7, -1.4 + lift * 0.5)} ${f.p(-4.6, -2)}Q${f.p(-4, -2.6)} ${f.p(-3.4, -3)}Z`, "orange-400", 1, MAIN_INKED),
+    shape(f.circle(tip[0], tip[1], 0.8), "white", 1),
+    shape(f.band([[-2.4, -2.6], [-2.6, 0]], 0.55) + f.band([[-1.2, -2.6], [-1, 0]], 0.55) + f.band([[2.1, -2.6], [1.9, 0]], 0.55) + f.band([[3.2, -2.6], [3.4, 0]], 0.55), "wood-800", 1, INKED),
+    shape(`M${f.p(-3.6, -3.6)}Q${f.p(-3.2, -5.2)} ${f.p(0, -5)}Q${f.p(3, -5.2)} ${f.p(3.8, -3.8)}Q${f.p(3.6, -2.2)} ${f.p(2.4, -2.2)}L${f.p(-2.6, -2.2)}Q${f.p(-3.8, -2.4)} ${f.p(-3.6, -3.6)}Z`, "orange-400", 1, MAIN_INKED),
+    shape(
+      `M${f.p(3.4, -4 + dip * 0.3)}L${f.p(3.6, -6 + dip)}L${f.p(3.9, -7.4 + dip)}L${f.p(4.6, -6.4 + dip)}L${f.p(5.4, -7.4 + dip)}L${f.p(5.6, -6 + dip)}` +
+        `Q${f.p(6.6, -5.4 + dip)} ${f.p(7.6, -4.9 + dip)}Q${f.p(6.4, -4.2 + dip)} ${f.p(4.6, -3.6 + dip * 0.5)}Q${f.p(3.6, -3.4)} ${f.p(3.4, -4 + dip * 0.3)}Z`,
+      "orange-400",
+      1,
+      MAIN_INKED,
+    ),
+    shape(f.poly([[3.95, -6.9 + dip], [4.3, -6.3 + dip], [3.8, -6.2 + dip]]) + f.poly([[5.35, -6.9 + dip], [5.25, -6.2 + dip], [4.9, -6.3 + dip]]), "wood-800", 0.8),
+    shape(f.poly([[5.7, -4.75 + dip], [7.3, -4.9 + dip], [5.9, -4.2 + dip]]) + f.ellipse(3.4, -3.1, 0.7, 0.55), "white", 0.9),
+    shape(f.circle(5.2, -5.7 + dip, 0.22) + f.circle(7.55, -4.9 + dip, 0.26), "black", 0.9),
   ];
 }
 
@@ -1068,6 +1160,10 @@ export const NATURE_KIT = {
   flowers: { category: "plants", draw: flowers },
   "fruit-tree": { category: "plants", draw: fruitTree },
   "giant-mushroom": { category: "plants", draw: giantMushroom },
+  // R3396000: the Alt art scenes' bamboo, cactus and fox.
+  bamboo: { category: "plants", draw: bamboo },
+  cactus: { category: "plants", draw: cactus },
+  fox: { category: "creatures", draw: fox },
   snake: { category: "creatures", draw: snake },
   grub: { category: "creatures", draw: grub },
   boar: { category: "creatures", draw: boar },
