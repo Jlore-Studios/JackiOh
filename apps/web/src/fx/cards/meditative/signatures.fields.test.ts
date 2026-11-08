@@ -9,12 +9,13 @@
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { animTestid } from "../../../game/animations.ts";
+import { animTestid, planEntries } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
 import { faceUpBackrow, fullBoardView } from "../../../test/fixtures.ts";
 import { HOLD, added, beats, envOf, landOf, run, tid } from "../../../test/signatures.ts";
 import { frac } from "../../build.ts";
 import { planCardFx } from "../../cardFx.ts";
+import { planFx } from "../../cues.ts";
 import { FX_INTENSITY_SCALE, FX_SLAM_AT } from "../../constants.ts";
 import { ENTRANCES } from "../../entrances.ts";
 import { galleryEntry } from "../../motifs/gallery.ts";
@@ -114,6 +115,38 @@ describe("R3405001 Meditative's Field Spell signatures", () => {
     // The other seat's Introspection: its gems dim unseen here.
     const [theirs] = run(INTROSPECTION, [{ type: "costChanged", instanceId: "hidden", cost: 0 }], D, "p2", fielded(INTROSPECTION, "p2"), "startOfTurn");
     expect(theirs).toEqual({ cues: [], row: "replace" });
+  });
+
+  it("R3405000 Introspection's start of turn as the board plans it: its mends and thought-darts draw in the sweeps, out of the fog", () => {
+    const view = fielded(INTROSPECTION);
+    const ids = (side: "you" | "opponent"): string[] => view[side].units.flatMap((unit) => (unit === null ? [] : [unit.instanceId]));
+    const mine = ids("you");
+    const foes = ids("opponent");
+    expect(mine.length).toBeGreaterThan(1);
+    expect(foes.length).toBeGreaterThan(1);
+    const heals: GameEvent[] = ["hero-p1", ...mine].map((targetId) => ({ type: "healed", targetId, amount: 1 }));
+    const hits: GameEvent[] = [...foes, "hero-p2"].map((targetId) => ({ type: "damage", sourceId: "ex", targetId, amount: 1, combat: false }));
+    const events: GameEvent[] = [marker(INTROSPECTION, "p1", "startOfTurn"), ...heals, { type: "drawn", player: "p1", instanceId: "fx-draw", defId: "core-002" }, ...hits];
+    const entries = planEntries(events, view, false);
+    // The board makes each run a sweep (game/runs.ts `sweepAt`), as a game does.
+    const sweeps = entries.filter((entry) => entry.sweep !== undefined);
+    expect(sweeps.map((entry) => entry.sweep?.tone)).toEqual(["heal", "damage"]);
+    const env = envOf();
+    const planned = entries.map((entry) => {
+      env.memory.remember(entry.events);
+      return { entry, cues: planFx(entry, entry.view, env) };
+    });
+    const [mend, dart] = planned.filter(({ entry }) => entry.sweep !== undefined).map(({ cues }) => cues);
+    // The breath draws in once, a glow and a number on each it mends, and no fog.
+    expect(mend?.filter((cue) => cue.kind === "figure")).toMatchObject([{ figure: "breathRing", at: OWN }]);
+    expect(mend?.filter((cue) => cue.kind === "splat").map((cue) => cue.at)).toEqual([tid(testid.hero("you")), ...mine.map((id) => tid(testid.card(id)))]);
+    expect(mend?.some((cue) => cue.kind === "fog")).toBe(false);
+    // A dart flies from its card to each enemy it hits, the hero last.
+    expect(dart?.filter((cue) => cue.kind === "projectile")).toMatchObject([...foes.map((id) => ({ from: OWN, to: tid(testid.card(id)) })), { from: OWN, to: tid(testid.hero("opponent")) }]);
+    expect(dart?.some((cue) => cue.kind === "fog")).toBe(false);
+    // A sweep no signature resolves still rolls its fog.
+    const plain = planEntries(hits, view, false).find((entry) => entry.sweep !== undefined);
+    expect(plain === undefined ? [] : planFx(plain, view, envOf()).filter((cue) => cue.kind === "fog")).toHaveLength(1);
   });
 
   it("R3405001 Double Header: floodlights then a torn stub land; the copy peels off the turn's first card as a ticket half, a card back to its owner's hand, its face theirs alone", () => {

@@ -8,7 +8,8 @@
 // entrance a card lands with is its entry's `entrance`, whatever the entry's kind (`entranceKeyOf`): a
 // set piece's (R2800000, setPieces.ts) and a Field Spell's landing face up in the backrow among them.
 // R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS. R3405000: an entrance is
-// passed its entry's lead (`leadMs`), so one that reads it starts after a Mythic's takeover hold.
+// passed its entry's lead (`leadMs`), so one that reads it starts after a Mythic's takeover hold, and a
+// signature's recipe draws its play's or hook's events in a sweep, out of its fog (`planSignatureSweep`).
 // R3389000: a signature's `{ bespoke }` recipe also claims what its card does outside its own play's
 // window, when the play resolving draws nothing of it: first a cast its play makes (Spell Tyrant's, the
 // innermost readable play around the one resolving), then an event that names its card as the source
@@ -167,6 +168,27 @@ export function planSignatureZone(entry: AnimationEntry, view: PlayerView, env: 
   if (entry.zone === undefined || play === undefined || play.instanceId === HIDDEN_ID || first === undefined) return [];
   const key = signatureRecipeOf(play.defId, table);
   return key === undefined ? [] : (CARD_RECIPES[key](first, { entry, view, env, D: entry.durationMs }, play)?.cues ?? []);
+}
+
+/**
+ * R3405000: a signature's recipe over a sweep's one entry (a run of hits or heals reaching every Unit on a
+ * side, which plays the board's fog and no event's row): the readable play or hook resolving now, if its
+ * card's signature is a `{ bespoke }`, is asked about each of the run's events, as its motif would be, and
+ * those it replaces leave the fog (Introspection's mends and thought-darts at its start of turn).
+ */
+export function planSignatureSweep(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult {
+  const play = env.memory.resolving();
+  const key = entry.sweep === undefined || play === undefined || play.instanceId === HIDDEN_ID ? undefined : signatureRecipeOf(play.defId, table);
+  const cues: FxCue[] = [];
+  const replaces = new Set<GameEvent>();
+  if (play === undefined || key === undefined) return { cues, replaces };
+  for (const event of entry.events) {
+    const result = CARD_RECIPES[key](event, { entry, view, env, D: entry.durationMs }, play);
+    if (result === null) continue;
+    cues.push(...result.cues);
+    if (result.row === "replace") replaces.add(event);
+  }
+  return { cues, replaces };
 }
 
 export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {

@@ -5,7 +5,7 @@
 // and each mend glows on the hero or Unit it heals; the card it draws flies home as a card back; the hand
 // pile wears a sheen as the gems dim, on its owner's seat alone (the costs are theirs to read); and a
 // thought-dart snaps out from its zone at each enemy it hits. A run that heals or hits every Unit on a
-// side plays as the board's sweep, which no recipe draws. It keys on its play or hook and what that has
+// side, the board's sweep, draws them all the same, out of its fog (R3405000). It keys on its play or hook and what that has
 // seen (`seen`), never on a card's definition, and draws card backs alone (R202). Its beats key on the
 // event, not on the hook (the gallery plays them under its play, a game under its hook's marker).
 
