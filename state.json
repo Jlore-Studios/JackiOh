@@ -15814,11 +15814,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-08T16:48:10Z",
       "owner_why": "it took it up; released from its hold: `claude-6` has no runner free where it runs",
-      "paused": {
-        "at": "2026-11-08T17:30:20Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_at": "2026-11-07T17:17:51Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
