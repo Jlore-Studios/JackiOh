@@ -24,18 +24,19 @@ export function tileBoardView(): PlayerView {
     }
   }
 
+  // R3342000: most Legendary and Mythic Field Spells wear an aura of their own, so the few left to wear the
+  // tile aura (two today) take the backrow's five zones a side in turn: still one permanent per zone.
+  const fieldsAt = (from: number): string[] =>
+    eligibleFields.length === 0 ? [] : Array.from({ length: 5 }, (_, i) => eligibleFields[(from + i) % eligibleFields.length] ?? "");
+
   return baseView({
     you: emptySide("p1", {
       units: eligibleUnits.slice(0, 5).map((defId, i) => unit("p1", { defId, instanceId: `tile-unit-you-${i + 1}` })),
-      backrow: eligibleFields.slice(0, 5).map((defId, i) =>
-        faceUpBackrow("p1", { defId, instanceId: `tile-back-you-${i + 1}`, type: "Field Spell" }),
-      ),
+      backrow: fieldsAt(0).map((defId, i) => faceUpBackrow("p1", { defId, instanceId: `tile-back-you-${i + 1}`, type: "Field Spell" })),
     }),
     opponent: emptySide("p2", {
       units: eligibleUnits.slice(5, 10).map((defId, i) => unit("p2", { defId, instanceId: `tile-unit-opp-${i + 1}` })),
-      backrow: eligibleFields.slice(5, 10).map((defId, i) =>
-        faceUpBackrow("p2", { defId, instanceId: `tile-back-opp-${i + 1}`, type: "Field Spell" }),
-      ),
+      backrow: fieldsAt(5).map((defId, i) => faceUpBackrow("p2", { defId, instanceId: `tile-back-opp-${i + 1}`, type: "Field Spell" })),
     }),
   });
 }

@@ -13,7 +13,7 @@ import { ALLURE_MARK, ALLURE_MARK_COLOR } from "../../../cards/marks.ts";
 import { animTestid } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
-import { HOLD, beats, run, tid } from "../../../test/signatures.ts";
+import { HOLD, added, beats, run, tid } from "../../../test/signatures.ts";
 import { frac } from "../../build.ts";
 import { FX_INTENSITY_SCALE, FX_SLAM_AT } from "../../constants.ts";
 import { ENTRANCES } from "../../entrances.ts";
@@ -283,5 +283,66 @@ describe("R3405001 Meditative's Unit signatures, second batch", () => {
       { cues: entrance("dojoBoot", GIRLFRIEND, D).cues, row: "replace" },
       { cues: entrance("virusBoot", VIRUS, D, 0, "p2").cues, row: "replace" },
     ]);
+  });
+
+  it("R3405001 Yile's Virus: after its takeover's hold pixel snow falls and its face tumbles in, booting at the slam; its start of turn zaps each Unit it hits with the hit's number, its Activate pops it, and as it dies a hand card tears away at its controller's hand pile", () => {
+    const { cues, tgt, slam } = entrance("virusBoot", VIRUS, MYTHIC_D, HOLD);
+    expectFrame(cues, "virusBoot", slam, HOLD);
+    expect(beats(cues)).toEqual([`burst${at(HOLD)}`, `figure:virusFace${at(HOLD)}`, `ring${at(slam)}`, `burst${at(slam)}`, `shake${at(slam)}`]);
+    expect(cues[1]).toMatchObject({ at: tid(tgt), side: "you" });
+    // Its start of turn, standing as "ex": a zap and the hit's number on each Unit it hits; a hit from another source is not its.
+    const view = standing();
+    const foe = unitAt(view, "opponent", 0).instanceId;
+    const zap = (sourceId: string): GameEvent => ({ type: "damage", sourceId, targetId: foe, amount: 2, combat: false });
+    const [hit, other] = run(VIRUS, [zap("ex"), zap("fx-other")], D, "p1", view, "startOfTurn");
+    const struck = tid(testid.card(foe));
+    expect(hit?.row).toBe("replace");
+    expect(shapes(hit?.cues)).toEqual(["virusZap", "burst", "splat"]);
+    expect(hit?.cues[2]).toMatchObject({ kind: "splat", tone: "damage", amount: 2, at: struck, delayMs: 0 });
+    expect(other).toEqual({ cues: [], row: undefined });
+    // Its Activate pops it where it stands; its Death's discard zaps its controller's hand pile and flies a card back to the Graveyard.
+    const card = view.you.units[LANE - 1];
+    if (card === undefined || card === null) throw new Error("no Virus on the board");
+    const popped: GameEvent = { type: "destroyed", instanceId: "ex", defId: VIRUS, owner: "p1", controller: "p1", attack: card.attack, maxHealth: card.maxHealth, killerId: null };
+    const [pop] = run(VIRUS, [popped], D, "p1", view, "activate");
+    expect(pop).toMatchObject({ cues: [{ kind: "burst", spread: "area", at: tid(testid.card("ex")) }, { kind: "ring" }], row: "replace" });
+    const torn = (owner: PlayerId): GameEvent => ({ type: "discarded", instanceId: "hidden", defId: "hidden", owner });
+    const [mine, theirs] = run(VIRUS, [torn("p1"), torn("p2")], D, "p1", view, "death");
+    const hand = tid(animTestid.hand("you"));
+    expect(mine?.cues).toMatchObject([
+      { kind: "figure", figure: "virusZap", size: "small", at: hand },
+      { kind: "burst", at: hand },
+      { kind: "ghost", from: hand, to: tid(animTestid.graveyard("you")), delayMs: 0, durationMs: D },
+    ]);
+    // R202: the pile, never the card; a discard from the other seat's hand is not its.
+    expect(JSON.stringify(mine)).not.toContain("hidden");
+    expect(theirs).toEqual({ cues: [], row: undefined });
+  });
+
+  it("R3405001 AI Girlfriend: after her takeover's hold a wireframe dojo boots up and she bows into her zone at the slam; each blow she parries flashes a hex shield at her palm and dims its attacker", () => {
+    const { cues, tgt, slam } = entrance("dojoBoot", GIRLFRIEND, MYTHIC_D, HOLD);
+    expectFrame(cues, "dojoBoot", slam, HOLD);
+    expect(beats(cues)).toEqual([`figure:wireDojo${at(HOLD)}`, `burst${at(HOLD)}`, `ring${at(slam)}`, `burst${at(slam)}`, `shake${at(slam)}`]);
+    expect(cues[0]).toMatchObject({ at: tid(tgt), side: "you" });
+    expect(cues[3]).toMatchObject({ spread: "ring", at: tid(tgt, FOOT) });
+    // A parried blow, she standing as "ex": the shield at her palm, the attacker dimming.
+    const view = standing();
+    const attacker = unitAt(view, "opponent", 0);
+    const dim = (instanceId: string, defId: string): GameEvent => ({ type: "degraded", instanceId, defId, change: NERF });
+    const [parry] = run(GIRLFRIEND, [dim(attacker.instanceId, attacker.defId)], D, "p1", view);
+    const palm = tid(testid.card("ex"));
+    expect(parry).toMatchObject({
+      cues: [
+        { kind: "figure", figure: "hexShield", size: "small", at: palm, delayMs: 0 },
+        { kind: "burst", spread: "point", at: palm },
+        { kind: "burst", preset: "smoke", at: tid(testid.card(attacker.instanceId)) },
+      ],
+      row: "replace",
+    });
+    // Off the board, the shield flashes on the attacker; a card neither she nor the view places draws nothing.
+    expect(run(GIRLFRIEND, [dim(attacker.instanceId, attacker.defId)], D, "p1", fullBoardView())[0]?.cues[0]).toMatchObject({ figure: "hexShield", at: tid(testid.card(attacker.instanceId)) });
+    expect(run(GIRLFRIEND, [dim("hidden", "hidden")], D, "p1", fullBoardView())).toEqual([{ cues: [], row: undefined }]);
+    // Any other event is not hers.
+    expect(run(GIRLFRIEND, [added("p1", "fx-card", "core-006")], D, "p1", view)).toEqual([{ cues: [], row: undefined }]);
   });
 });

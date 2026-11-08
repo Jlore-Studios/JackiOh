@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
-import { beats, run, tid } from "../../../test/signatures.ts";
+import { HOLD, beats, run, tid } from "../../../test/signatures.ts";
 import { frac } from "../../build.ts";
 import { FX_INTENSITY_SCALE, FX_SLAM_AT } from "../../constants.ts";
 import { ENTRANCES } from "../../entrances.ts";
