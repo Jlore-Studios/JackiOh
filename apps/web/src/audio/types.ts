@@ -49,6 +49,11 @@ export type SfxId =
   | "ballotBeep" | "lullabySigh" | "compactTut" | "glitchDrop" | "harpGliss" | "markerThunder" | "stampTrill" | "tillRattle"
   | "gavelSlam" | "dockingChime" | "keyboardPing" | "synthSnap" | "blobDrum" | "warpSparkle" | "tearChoir" | "cackleThunder"
   | "kazooRatchet" | "thrusterSniff" | "marbleGong" | "sanctumBell" | "cashWhistle" | "whisperClink" | "crystalRise"
+  // R3405001: Meditative's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "bowlBreath" | "peakFlute" | "ticketHorn" | "forgeQuench" | "brushGuzheng" | "wellGush" | "minePick" | "jadeZither"
+  | "windChime" | "marketGong" | "chalkHush" | "porcelainRoar" | "bronzeGulp" | "modemGuqin" | "serverChoir" | "dialupStutter"
+  | "holoBow" | "synthPops" | "skullMutter" | "keyJangle" | "caneCrack" | "caneThunder" | "rootCreak" | "chalkGasp"
+  | "frostPages" | "coinCheer" | "totemDrums" | "templeDie" | "golemStomp" | "klaxonSlam" | "cellSlam" | "hangarRev"
   // R3395000: Stinkyscape 001 to 090's signature Legendaries and Mythics, one each (signatureCues.ts).
   | "vaultHiss" | "safeChirp" | "stoneChime" | "magiChord" | "lectureRumble" | "pressStamp" | "corvetteRoar" | "popGasp"
   | "geigerHum" | "wireRatchet" | "beamWhine" | "rattleSteam" | "breechBoom" | "flakWind" | "crunchJackpot" | "choirHulls"

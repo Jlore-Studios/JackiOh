@@ -36,7 +36,7 @@ const TIMING = { streamFlight: 0.5 } as const;
 export const heistDrop: Entrance = (plan) => {
   const look = lookOf(CASH);
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   const i = plan.intensity;
   const rope = motifShot({ look, scale: i, row: "replace" }, "bolt", tid(plan.tgt, ROPE_FROM), at, 0, slam);
   return [

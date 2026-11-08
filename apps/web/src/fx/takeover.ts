@@ -39,9 +39,10 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
  * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
- * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3395001 Stinkyscape #6 Tylannt's "vault", #16 Rod of
- * Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's "whiteDwarf", #86 Prototype-X2's "forge"),
- * else the shared "prismatic".
+ * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3405000 Meditative's other Mythics' twelve, from
+ * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"; R3395001 Stinkyscape #6
+ * Tylannt's "vault", #16 Rod of Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's
+ * "whiteDwarf", #86 Prototype-X2's "forge"), else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -68,6 +69,22 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   alteran: { rim: "#8b5cf6", core: "#ede9fe", glow: "#a78bfa" },
   edge: { rim: "#f8fafc", core: "#ffffff", glow: "#e2e8f0" },
   redNarcor: { rim: "#dc2626", core: "#fee2e2", glow: "#f87171" },
+  // R3405000: Meditative's Mythics': the summit's starlit ink, the workshop's pixel blue, the brush's vermilion
+  // on paper, the mine's red seam, the quarry's jade mist, the pavilion's ink and light, the virus's error red,
+  // the dojo's hologram cyan, the study hall's white curve, the cane's red cord on lacquer, the war room's
+  // blueprint under red lamps and the fortress's gunmetal and beacons.
+  ascent: { rim: "#e0e7ff", core: "#f8fafc", glow: "#64748b" },
+  workshop: { rim: "#38bdf8", core: "#e0f2fe", glow: "#1e3a8a" },
+  brush: { rim: "#dc2626", core: "#fafaf9", glow: "#44403c" },
+  mine: { rim: "#dc2626", core: "#fecaca", glow: "#7f1d1d" },
+  quarry: { rim: "#34d399", core: "#ecfdf5", glow: "#f9a8d4" },
+  pavilion: { rim: "#22d3ee", core: "#f5f5f4", glow: "#ef4444" },
+  virus: { rim: "#ef4444", core: "#fde68a", glow: "#a3e635" },
+  dojo: { rim: "#22d3ee", core: "#ecfeff", glow: "#a78bfa" },
+  studyHall: { rim: "#f5f5f4", core: "#fafaf9", glow: "#78716c" },
+  caneRack: { rim: "#b91c1c", core: "#fef3c7", glow: "#f5f5f4" },
+  warRoom: { rim: "#22d3ee", core: "#e0f2fe", glow: "#dc2626" },
+  fortress: { rim: "#ef4444", core: "#e5e7eb", glow: "#475569" },
   // R3395001: Tylannt's steel vault and its green gap, Rod of Ages' pale bands in an indigo gulf, the paperclip's silver wire
   // and blue cores, Paragon-X's white dwarf, Prototype-X2's molten forge.
   vault: { rim: "#94a3b8", core: "#e2e8f0", glow: "#22c55e" },

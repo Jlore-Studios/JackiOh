@@ -29,7 +29,7 @@ const TIMING = { flight: 0.3 } as const;
 
 export const flagshipDescent: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("flagship", HULL, plan),
     { ...tunedBurst(plan.intensity, "exhaust", tid(plan.tgt, FOOT), "area", slam, TUNING.exhaust), colors: lookOf(HULL).colors },

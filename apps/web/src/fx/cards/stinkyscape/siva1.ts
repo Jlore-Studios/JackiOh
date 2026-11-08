@@ -27,7 +27,7 @@ const TIMING = { leash: 0.35 } as const;
 
 export const redCarpet: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("carpet", LILAC, plan, true),
     { ...tunedBurst(plan.intensity, "sparkle", tid(plan.tgt, FOOT), "area", slam, TUNING.flashes), colors: lookOf(LILAC).colors },

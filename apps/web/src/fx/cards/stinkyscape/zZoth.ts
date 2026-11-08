@@ -25,7 +25,7 @@ const TIMING = { solid: 0.7 } as const;
 
 export const wraithGather: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("wraith", SHADOW, plan),
     { ...tunedBurst(plan.intensity, "smoke", tid(plan.tgt, FOOT), "area", slam, TUNING.debris), colors: lookOf(SHADOW).colors },

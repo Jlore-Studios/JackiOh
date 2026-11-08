@@ -31,7 +31,7 @@ const TIMING = { step: 0.12, flight: 0.25 } as const;
 
 export const barrelSpin: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("barrels", STEEL, plan),
     { ...tunedBurst(plan.intensity, "shard", tid(plan.tgt, FOOT), "area", slam, TUNING.casings), colors: lookOf(STEEL).colors },

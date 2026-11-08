@@ -30,7 +30,7 @@ const TIMING = { land: 0.6 } as const;
 
 export const heraldHorn: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("horn", CRIMSON, plan),
     { ...tunedBurst(plan.intensity, "ember", tid(plan.tgt, FOOT), "area", slam, TUNING.blast), colors: lookOf(CRIMSON).colors },

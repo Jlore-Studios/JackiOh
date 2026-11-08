@@ -7,6 +7,7 @@
 // R3389000: In Too Deep's is "abyss", and Classic's Spell's and Trap's signature casts draw no shared rays.
 // R3395001: Stinkyscape's five Mythics' own looks, each with art of its own.
 // R3407000: Stinkyscape part two's six Mythics take looks of their own, each drawing its card's own picture.
+// R3405000: each Meditative Mythic wears a look of its own with art.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -30,8 +31,8 @@ import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
-import { takeoverArtParts } from "./takeoverArt.ts";
 import { entranceCues, entranceLandMs, ownCast, TAKEOVER_ART_LOOKS, TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "./takeover.ts";
+import { takeoverArtParts } from "./takeoverArt.ts";
 import type { FxCue, FxPlanEnv, FxTakeoverCue } from "./types.ts";
 
 const CARDS: Record<string, { type: CardType; rarity: string }> = {
@@ -40,6 +41,7 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "core-097": { type: "Spell", rarity: "Mythic" },
   "meditative-049": { type: "Unit", rarity: "Mythic" },
   "meditative-008": { type: "Spell", rarity: "Mythic" },
+  "classicplus-029": { type: "Spell", rarity: "Mythic" },
   "core-052": { type: "Unit", rarity: "Legendary" },
   "core-083": { type: "Spell", rarity: "Legendary" },
   "core-085": { type: "Trap", rarity: "Legendary" },
@@ -113,31 +115,31 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(planFx(entry([fired("core-096")]), p1, env()))?.look).toBe("pawn");
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
     expect(takeoverOf(planFx(entry([play("meditative-049"), summon("meditative-049")]), p1, env()))?.look).toBe("ai");
-    expect(takeoverOf(planFx(entry([play("meditative-008")]), p1, env()))?.look).toBe("prismatic");
+    expect(takeoverOf(planFx(entry([play("classicplus-029")]), p1, env()))?.look).toBe("prismatic");
     // R3332000: the four marquee Mythics name a look of their own in the effects table; R3400000: and three
-    // signatures; R3389000: and Classic's In Too Deep, its signature's.
+    // signatures; R3389000: and Classic's In Too Deep, its signature's; R3405000: and Meditative's Mythics.
     const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
+    const meditative = ["008", "017", "020", "039-4", "039-5", "049", "049-1", "049-2", "049-3", "071", "071-1", "097", "097-9"].map((n) => `meditative-${n}`);
     // R3395001: and Stinkyscape's five Mythics; R3407000: and Stinkyscape part two's six.
     expect(own).toEqual([
-    "core-096",
-    "core-097",
-    "core-100",
-    "classic-090",
-    "meditative-049",
-    "meditativeplus-001",
-    "meditativeplus-026",
-      "stinkyscape-006",
-      "stinkyscape-016",
-      "stinkyscape-044",
-      "stinkyscape-074",
-      "stinkyscape-086",
-      "stinkyscape-109",
-      "stinkyscape-110",
-      "stinkyscape-111",
-      "stinkyscape-148",
-      "stinkyscape-148-1",
-      "stinkyscape-t-red-narcor",
-    "traininggrounds-040",
+  "core-096",
+  "core-097",
+  "core-100",
+  "classic-090", ...meditative,
+  "meditativeplus-001",
+  "meditativeplus-026",
+    "stinkyscape-006",
+    "stinkyscape-016",
+    "stinkyscape-044",
+    "stinkyscape-074",
+    "stinkyscape-086",
+  "stinkyscape-109",
+  "stinkyscape-110",
+  "stinkyscape-111",
+  "stinkyscape-148",
+  "stinkyscape-148-1",
+  "stinkyscape-t-red-narcor",
+  "traininggrounds-040",
   ]);
     for (const defId of own) expect(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity, defId).toBe("Mythic");
     for (const events of [[play("core-052"), summon("core-052")], [play("core-083")], [fired("core-085")]]) {
@@ -156,14 +158,14 @@ describe("R2722001 a Mythic takes over the board", () => {
 
   it("R3332000 takeoverLookOf reads the table, prismatic by default", () => {
     expect(takeoverLookOf("core-100")).toBe("void");
-    expect(takeoverLookOf("meditative-008")).toBe("prismatic");
+    expect(takeoverLookOf("classicplus-029")).toBe("prismatic");
     expect(takeoverLookOf("core-052")).toBe("prismatic");
     expect(takeoverLookOf("not-a-card")).toBe("prismatic");
     // A table that gives a Mythic another look: its takeover wears it.
-    const table = parseFxCardTable("test.json5", `{ "meditative-008": { cast: { motif: "vanish" }, takeover: "genie" }, "core-100": "none: pending" }`);
-    expect(takeoverLookOf("meditative-008", table)).toBe("genie");
+    const table = parseFxCardTable("test.json5", `{ "classicplus-029": { cast: { motif: "vanish" }, takeover: "genie" }, "core-100": "none: pending" }`);
+    expect(takeoverLookOf("classicplus-029", table)).toBe("genie");
     expect(takeoverLookOf("core-100", table)).toBe("prismatic");
-    const e = entry([play("meditative-008")]);
+    const e = entry([play("classicplus-029")]);
     expect(takeoverOf(entranceCues(e, env(), e.durationMs, table))?.look).toBe("genie");
     expect(takeoverOf(entranceCues(e, env(), e.durationMs))?.look).toBe("prismatic");
   });
@@ -272,6 +274,24 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(entranceCues(e, env(), e.durationMs))).toMatchObject({ look: "alteran", at: { kind: "testid", testid: testid.zone("you", "backrow", 3) } });
   });
 
+  it("R3405000 every Meditative Mythic wears its own look with art and tints of its own", () => {
+    const mythics = [...FX_CARD_TABLE].flatMap(([defId, card]) =>
+      defId.startsWith("meditative-") && (CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity) === "Mythic" ? [[defId, card] as const] : [],
+    );
+    expect(mythics).toHaveLength(13);
+    const looks = mythics.map(([defId, card]) => {
+      const look = card.kind === "none" ? undefined : card.takeover;
+      if (look === undefined) throw new Error(`${defId} has no look of its own`);
+      expect(takeoverLookOf(defId), defId).toBe(look);
+      expect(takeoverArtParts(look).length, `${defId}'s ${look} art`).toBeGreaterThanOrEqual(3);
+      return look;
+    });
+    // One look a card, each with tints no other look wears.
+    expect(new Set(looks).size).toBe(looks.length);
+    const tints = new Set(Object.values(TAKEOVER_TINTS).map((tint) => JSON.stringify(tint)));
+    expect(tints.size).toBe(Object.keys(TAKEOVER_TINTS).length);
+  });
+
   it("R2722001 intensity 0 plans none", () => {
   const e = entry([play("core-097")]);
   expect(entranceCues(e, env(FX_INTENSITY_SCALE.off), e.durationMs)).toEqual([]);
@@ -285,8 +305,8 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     const rays = legend.find((c) => c.kind === "rays");
     expect(rays).toMatchObject({ tone: "legendary", at: { kind: "testid", testid: "zone-you-backrow-3" } });
     // The other seat reads a Cloaked card's reveal at its firing too (R2734000), centred where it flips.
-    const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c61", defId: "meditative-008", ability: "reveal" };
-    const entered = entranceEntries(planEntries([reveal, fired("meditative-008")], p2, false), resolve, { seen: new Set() });
+    const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c61", defId: "classicplus-029", ability: "reveal" };
+    const entered = entranceEntries(planEntries([reveal, fired("classicplus-029")], p2, false), resolve, { seen: new Set() });
     const theirs = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
     const at = theirs.find((e) => e.entrance !== undefined);
     if (at === undefined) throw new Error("no entry");

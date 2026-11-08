@@ -32,7 +32,7 @@ const TIMING = { dropFlight: 0.6 } as const;
 
 export const lecternRise: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("lectern", STARLIGHT, plan),
     { ...tunedBurst(plan.intensity, "star", tid(plan.tgt, FOOT), "area", slam, TUNING.stars), colors: lookOf(STARLIGHT).colors },

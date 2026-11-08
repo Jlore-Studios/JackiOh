@@ -10,6 +10,8 @@
 // Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
 // R3389001: Classic's eleven signatures' recipes (#3389), King Wagtoggle's crownSwap grown among them.
 // R3407000: Stinkyscape part two's signatures.
+// R3405001: Meditative's Legendaries' and Mythics' signatures (fx/cards/meditative/), every one but The
+// Cane's and Mayor Medinamogger's, whose signatures are their entrances alone.
 // R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics (fx/cards/stinkyscape/;
 // Imitated Instrumentality's magiBoot grows from its flourish).
 
@@ -26,6 +28,36 @@ import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { mindJudge } from "./meditative/mindJudge.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
+import { brushSeal } from "./meditative/aestheticizeTheGame.ts";
+import { aiGirlfriend } from "./meditative/aiGirlfriend.ts";
+import { alternateFate } from "./meditative/alternateFate.ts";
+import { aluneth } from "./meditative/aluneth.ts";
+import { jadeDie } from "./meditative/callToChaos.ts";
+import { fleaMarket } from "./meditative/cnFleaMarket.ts";
+import { cnGolem } from "./meditative/cnGolem.ts";
+import { devinBot } from "./meditative/devinBot.ts";
+import { doubleHeader } from "./meditative/doubleHeader.ts";
+import { everGrowingTree } from "./meditative/everGrowingTree.ts";
+import { blueprints } from "./meditative/evilBlueprints.ts";
+import { fengShui } from "./meditative/fengShui.ts";
+import { introspection } from "./meditative/introspection.ts";
+import { jadeBeauty } from "./meditative/jadeBeauty.ts";
+import { jlockeedHq } from "./meditative/jlockeedHq.ts";
+import { keenusKeys } from "./meditative/keymasterKeenus.ts";
+import { knowledgeBreaker } from "./meditative/knowledgeBreaker.ts";
+import { breakerPrime } from "./meditative/knowledgeBreakerPrime.ts";
+import { pareto } from "./meditative/paretoOptimality.ts";
+import { prison } from "./meditative/prison.ts";
+import { summitAscent } from "./meditative/reachTheSummit.ts";
+import { redJade } from "./meditative/redJade.ts";
+import { skullJnari } from "./meditative/skullOfJnari.ts";
+import { taotie } from "./meditative/taotie.ts";
+import { tatches } from "./meditative/tatchesTheTotem.ts";
+import { touchedByKy } from "./meditative/touchedByKy.ts";
+import { trueCraft } from "./meditative/trueCraftACard.ts";
+import { yileGpt } from "./meditative/yileGpt.ts";
+import { yilePrime } from "./meditative/yileGptPrime.ts";
+import { yileVirus } from "./meditative/yilesVirus.ts";
 import { bobSoldier } from "./meditativeplus/bobSoldier.ts";
 import { bobsPlan } from "./meditativeplus/bobsPlan.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
@@ -105,6 +137,37 @@ export const CARD_RECIPES = {
   jadeCrack,
   mindJudge,
   cnSweep,
+  // R3405001: Meditative's signatures.
+  introspection,
+  summitAscent,
+  doubleHeader,
+  trueCraft,
+  brushSeal,
+  alternateFate,
+  redJade,
+  jadeBeauty,
+  fengShui,
+  fleaMarket,
+  knowledgeBreaker,
+  breakerPrime,
+  taotie,
+  yileGpt,
+  yilePrime,
+  yileVirus,
+  aiGirlfriend,
+  devinBot,
+  skullJnari,
+  keenusKeys,
+  pareto,
+  everGrowingTree,
+  touchedByKy,
+  aluneth,
+  tatches,
+  jadeDie,
+  cnGolem,
+  blueprints,
+  prison,
+  jlockeedHq,
   harmonyWave,
   bobsPlan,
   bobSoldier,

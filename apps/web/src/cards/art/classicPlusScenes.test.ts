@@ -24,9 +24,12 @@ import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
+import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { TOUCHES_KIT } from "./sceneKitTouches.ts";
+import { YARD_KIT } from "./sceneKitYard.ts";
 import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
@@ -239,7 +242,9 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
     for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of the first kit's parts.
-    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + added.length);
+    // None takes the place of one of the first kit's parts; the modules #3393 added beside them hold their own
+    // (R3393000, setScenes.test.ts).
+    const later = [MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].flatMap((kit) => Object.keys(kit));
+    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + added.length + later.length);
   });
 });

@@ -31,7 +31,7 @@ const TUNING = {
 
 export const forgeBurst: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("forgeShell", FORGE, plan),
     { ...tunedBurst(plan.intensity, "fire", at, "area", slam, TUNING.molten), colors: lookOf(FORGE).colors },

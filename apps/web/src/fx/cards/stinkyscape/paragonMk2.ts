@@ -11,7 +11,7 @@ import { ringCue, tid, tunedBurst } from "../../build.ts";
 import { motifShot } from "../../motifs/build.ts";
 import type { FxCue } from "../../types.ts";
 import { FOOT, type Entrance } from "../recipe.ts";
-import { entranceFigure, landingSide, lookOf, slamAt, slamShake } from "./signatureKit.ts";
+import { entranceFigure, landingSide, leadOf, lookOf, slamAt, slamShake } from "./signatureKit.ts";
 
 /** Its cyan hull and shield. */
 const HULL = "Tech/hologram";
@@ -27,9 +27,9 @@ const TUNING = {
 export const paragonStreak: Entrance = (plan) => {
   const look = lookOf(HULL);
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   const cues: FxCue[] = [
-    motifShot({ look, scale: plan.intensity, row: "replace" }, "bolt", tid(testid.board, FROM[landingSide(plan) ?? "you"]), at, 0, slam),
+    motifShot({ look, scale: plan.intensity, row: "replace" }, "bolt", tid(testid.board, FROM[landingSide(plan) ?? "you"]), at, leadOf(plan), slam - leadOf(plan)),
     entranceFigure("fighter", HULL, plan, true),
     { kind: "shield", size: "small", at, delayMs: slam, durationMs: plan.D - slam },
     { ...tunedBurst(plan.intensity, "exhaust", tid(plan.tgt, FOOT), "area", slam, TUNING.engines), colors: look.colors },

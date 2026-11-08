@@ -4,8 +4,9 @@
 // no beat names a hidden card or flies more than a card back (R202); with the effects off nothing draws. The
 // beats that read the board (Siva 2's drips to the Humans, Flak v5's first wave, Beam v5's first hit, the
 // Prototype-X2's welds) keep to what the view shows. R3395001: a signature's own beat replaces the event's
-// system moment too (Tylannt's dial in place of the shared quest moment), and draws on a sweep in place of
-// the fog (Flak v5's waves over every enemy Unit).
+// system moment too (Tylannt's dial in place of the shared quest moment), and (R3405000's sweep) draws on a
+// sweep in place of the fog (Flak v5's waves over every enemy Unit). R3405000: a Mythic's entrance starts
+// after its takeover's hold.
 // R3407000: Stinkyscape part two's signature pass as a whole (#3407): every card of it is a signature of its
 // type's shape (a Unit's entrance and its look on its own tile, a Field Spell's entrance and its look on its
 // zone, a Spell's cast of its own, a Mythic's own takeover look), each signature look one card's own, each
@@ -18,7 +19,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { ALLURE_MARK, ALLURE_MARK_COLOR } from "../../../cards/marks.ts";
-import { animTestid, entranceEntries, planEntries, type EntranceResolver } from "../../../game/animations.ts";
+import { ANIMATIONS, animTestid, entranceEntries, planEntries, type EntranceResolver } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { faceUpBackrow, fullBoardView, withEvents } from "../../../test/fixtures.ts";
 import { asTheirsAll, CARD_ID, cuesOfRun, planWithOffsets } from "../../../test/signaturePass.ts";
@@ -175,6 +176,24 @@ describe("R3395000 Stinkyscape 001 to 090's signatures", () => {
       expect(cues.filter((cue) => cue.kind === "shake"), defId).toEqual([{ kind: "shake", trauma: ENTRANCE_TRAUMA[key], delayMs: Math.round(FX_SLAM_AT * D) }]);
       // Its own figure, never the rarity's gold.
       expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area"), defId).toBe(false);
+    }
+  });
+
+  it("R3395000 R3405000 a Mythic's entrance starts after its takeover's hold, its one shake at its landing after it", () => {
+    const hold = 1000;
+    const D = hold + ANIMATIONS.summoned.durationMs;
+    const mythics = Object.entries(SIGNATURES).filter(([, want]) => want.entrance !== undefined && want.takeover !== undefined);
+    expect(mythics.map(([defId]) => defId)).toEqual(["stinkyscape-006", "stinkyscape-016", "stinkyscape-074", "stinkyscape-086"]);
+    for (const [defId, want] of mythics) {
+      const key = want.entrance as keyof typeof ENTRANCES;
+      const field = CATALOG[defId]?.type === "Field Spell";
+      const landing: Extract<GameEvent, { type: "summoned" }> = { type: "summoned", player: "p1", instanceId: "m1", defId, row: field ? "backrow" : "units", lane: field ? 1 : 3 };
+      const tgt = testid.zone("you", landing.row, landing.lane);
+      const cues = ENTRANCES[key]({ D, tgt, intensity: FX_INTENSITY_SCALE.normal, view: fullBoardView(), landing, leadMs: hold });
+      expect(cues.length, defId).toBeGreaterThan(3);
+      // Nothing under the takeover, where it would play unseen.
+      for (const cue of cues) expect(cue.delayMs, `${defId} ${cue.kind}`).toBeGreaterThanOrEqual(hold);
+      expect(cues.filter((cue) => cue.kind === "shake"), defId).toEqual([{ kind: "shake", trauma: ENTRANCE_TRAUMA[key], delayMs: hold + Math.round(FX_SLAM_AT * (D - hold)) }]);
     }
   });
 

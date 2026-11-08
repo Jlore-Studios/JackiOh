@@ -26,7 +26,7 @@ const IMPACT_TRAUMA = 0.6;
 
 export const breechLock: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("cannon", GUNMETAL, plan),
     { ...tunedBurst(plan.intensity, "spark", at, "area", slam, TUNING.clang), colors: lookOf(GUNMETAL).colors },

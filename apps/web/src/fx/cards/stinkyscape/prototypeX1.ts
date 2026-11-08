@@ -26,7 +26,7 @@ const TUNING = {
 
 export const testLurch: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("telemetry", HOLOGRAM, plan),
     { ...tunedBurst(plan.intensity, "spark", tid(plan.tgt, FOOT), "area", slam, TUNING.sparks), colors: lookOf(HOLOGRAM).colors },

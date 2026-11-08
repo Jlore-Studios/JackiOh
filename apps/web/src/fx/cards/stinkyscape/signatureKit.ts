@@ -1,8 +1,9 @@
 // R3395000: what Stinkyscape 001 to 090's signatures (this folder) share: a palette's look, a figure's
 // tint and side, where a card stands in the view, a card back's flight to a hand pile and the slam every
-// entrance lands on. Each card's own file composes its beats from these and keys on its own play and how
-// many events of a kind that play has seen; nothing here reads a card's definition, so no cue names a
-// card (R202).
+// entrance lands on, after its entry's lead (R3405000: a Mythic's takeover hold, before which it starts
+// nothing). Each card's own file composes its beats from these and keys on its own play and how many
+// events of a kind that play has seen; nothing here reads a card's definition, so no cue names a card
+// (R202).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -28,20 +29,27 @@ export function landingSide(plan: Pick<EntrancePlan, "view" | "landing">): Side 
   return plan.view === undefined || plan.landing === undefined ? undefined : sideOf(plan.view, plan.landing.player);
 }
 
-/** An entrance's figure over its zone, outliving its entry by ENTRANCE_FIGURE_TAIL_MS, mirrored for the other seat when `mirror`. */
-export function entranceFigure(figure: FxFigure, palette: FxPalette, plan: EntrancePlan, mirror = false): FxFigureCue {
-  const side = mirror ? landingSide(plan) : undefined;
-  return figureCue(figure, tid(plan.tgt), figureTint(lookOf(palette)), 0, plan.D + ENTRANCE_FIGURE_TAIL_MS, side === undefined ? {} : { side });
+/** R3405000: where in its entry an entrance's motion starts: after the entry's lead (a Mythic's takeover hold), else at once. */
+export function leadOf(plan: Pick<EntrancePlan, "leadMs">): number {
+  return plan.leadMs ?? 0;
 }
 
-/** Where in its entry an entrance lands: at FX_SLAM_AT, as every marquee entrance does. */
-export function slamAt(D: number): number {
-  return frac(FX_SLAM_AT, D);
+/** An entrance's figure over its zone from its lead, outliving its entry by ENTRANCE_FIGURE_TAIL_MS, mirrored for the other seat when `mirror`. */
+export function entranceFigure(figure: FxFigure, palette: FxPalette, plan: EntrancePlan, mirror = false): FxFigureCue {
+  const side = mirror ? landingSide(plan) : undefined;
+  const lead = leadOf(plan);
+  return figureCue(figure, tid(plan.tgt), figureTint(lookOf(palette)), lead, plan.D - lead + ENTRANCE_FIGURE_TAIL_MS, side === undefined ? {} : { side });
+}
+
+/** Where in its entry an entrance lands: at FX_SLAM_AT of the motion after its lead (R3405000), as every marquee entrance does. */
+export function slamAt(plan: Pick<EntrancePlan, "D" | "leadMs">): number {
+  const lead = leadOf(plan);
+  return lead + frac(FX_SLAM_AT, plan.D - lead);
 }
 
 /** An entrance's one shake, at its slam, by its ENTRANCE_TRAUMA. */
 export function slamShake(plan: EntrancePlan, key: EntranceKey): FxCue[] {
-  return shakeCues(plan.intensity, ENTRANCE_TRAUMA[key], slamAt(plan.D));
+  return shakeCues(plan.intensity, ENTRANCE_TRAUMA[key], slamAt(plan));
 }
 
 /** The testid of the card `instanceId` where the view shows it face up on the field or in the viewer's hand, else null. */

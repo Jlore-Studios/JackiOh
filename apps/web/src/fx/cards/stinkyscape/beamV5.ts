@@ -29,7 +29,7 @@ const TIMING = { fire: 0.4, flight: 0.2, cool: 0.6 } as const;
 
 export const emitterBloom: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("mirrorBloom", LASER, plan),
     { ...tunedBurst(plan.intensity, "sparkle", at, "area", slam, TUNING.bloom), colors: lookOf(LASER).colors },

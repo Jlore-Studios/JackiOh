@@ -11,7 +11,7 @@ import { testid } from "../../../game/contract.ts";
 import { ringCue, tid, tunedBurst } from "../../build.ts";
 import { motifShot } from "../../motifs/build.ts";
 import { type Entrance } from "../recipe.ts";
-import { entranceFigure, landingSide, lookOf, slamAt, slamShake } from "./signatureKit.ts";
+import { entranceFigure, landingSide, leadOf, lookOf, slamAt, slamShake } from "./signatureKit.ts";
 
 /** Its white light. */
 const WHITE = "Spirit";
@@ -30,8 +30,8 @@ const TIMING = { dive: 0.2 } as const;
 export const paragonDive: Entrance = (plan) => {
   const look = lookOf(WHITE);
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
-  const dive = Math.round(TIMING.dive * plan.D);
+  const slam = slamAt(plan);
+  const dive = leadOf(plan) + Math.round(TIMING.dive * (plan.D - leadOf(plan)));
   return [
     motifShot({ look, scale: plan.intensity, row: "replace" }, "bolt", tid(testid.board, FROM[landingSide(plan) ?? "you"]), at, dive, slam - dive),
     entranceFigure("blade", WHITE, plan, true),

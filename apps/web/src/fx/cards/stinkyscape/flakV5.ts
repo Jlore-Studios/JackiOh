@@ -27,7 +27,7 @@ const TUNING = {
 
 export const turretScan: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("turret", FLAK, plan),
     tunedBurst(plan.intensity, "dust", tid(plan.tgt, FOOT), "area", slam, TUNING.dust),

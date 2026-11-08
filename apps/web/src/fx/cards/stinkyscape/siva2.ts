@@ -15,7 +15,7 @@ import { CATALOG } from "../../../wire/cards.ts";
 import { ringCue, tid, tunedBurst } from "../../build.ts";
 import type { FxCue, FxShotCue } from "../../types.ts";
 import { FOOT, type CardRecipe, type Entrance } from "../recipe.ts";
-import { cardBack, entranceFigure, handOf, heroAt, lookOf, replace, slamAt, slamShake } from "./signatureKit.ts";
+import { cardBack, entranceFigure, handOf, heroAt, leadOf, lookOf, replace, slamAt, slamShake } from "./signatureKit.ts";
 
 /** Her venom: the curse's green. */
 const VENOM = "Dark/curse";
@@ -49,10 +49,10 @@ export function humanZones(view: PlayerView, landing: Summoned): string[] {
 export const venomStep: Entrance = (plan) => {
   const look = lookOf(VENOM);
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   const humans = plan.view === undefined || plan.landing === undefined ? [] : humanZones(plan.view, plan.landing).slice(0, DRIPS_MAX);
   const drips = humans.map((zone, n): FxShotCue => {
-    const delayMs = Math.min(slam, Math.round((TIMING.dripAt + n * TIMING.dripStep) * plan.D));
+    const delayMs = Math.min(slam, leadOf(plan) + Math.round((TIMING.dripAt + n * TIMING.dripStep) * (plan.D - leadOf(plan))));
     return { kind: "shot", shot: { motion: "bolt", trail: "poison" }, colors: look.colors, preset: "poison", from: at, to: tid(zone), delayMs, flightMs: slam - delayMs, density: plan.intensity };
   });
   const cues: FxCue[] = [

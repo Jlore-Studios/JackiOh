@@ -26,7 +26,7 @@ const TIMING = { popAt: 0.3 } as const;
 
 export const intakeMaw: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("maw", ORE, plan),
     { ...tunedBurst(plan.intensity, "dust", tid(plan.tgt, FOOT), "area", slam, TUNING.grit), colors: lookOf(ORE).colors },

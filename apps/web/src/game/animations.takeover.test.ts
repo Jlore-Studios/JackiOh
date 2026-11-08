@@ -1,6 +1,7 @@
 // R2722001, R2722002: a Legendary's or a Mythic's entrance in the animation queue, and the one capped
 // hold a readable Mythic's takeover takes per action (`entranceEntries`, `TAKEOVER_HOLD_MS`), held as
-// its set piece since R2785000 (`takeoverClaim`, `setPieceEntries`).
+// its set piece since R2785000 (`takeoverClaim`, `setPieceEntries`). R3405000: a Mythic Field Spell put onto
+// the field face up without a play enters too, and one Mythic takes over once an action.
 
 import type { CardType, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -27,9 +28,11 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "unit-epic": { type: "Unit", rarity: "Epic" },
   "spell-mythic": { type: "Spell", rarity: "Mythic" },
   "field-mythic": { type: "Field Spell", rarity: "Mythic" },
+  "field-legend": { type: "Field Spell", rarity: "Legendary" },
   "trap-mythic": { type: "Trap", rarity: "Mythic" },
   "trap-legend": { type: "Field Trap", rarity: "Legendary" },
   "token-mythic": { type: "Unit", rarity: "Mythic" },
+  "token-mythic-2": { type: "Unit", rarity: "Mythic" },
 };
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
 
@@ -151,5 +154,48 @@ describe("R2722002 a hidden card's entrance at its reveal", () => {
         expect(entries[1]?.setPiece?.holdMs ?? 0, `${defId} for ${view.viewer}`).toBe(TAKEOVER_HOLD_MS);
       }
     }
+  });
+});
+
+describe("R3405000 a Mythic Field Spell's landing, and one takeover per Mythic per action", () => {
+  const landed = (defId: string, instanceId: string, extra: Partial<Extract<GameEvent, { type: "summoned" }>> = {}): GameEvent => ({
+    type: "summoned",
+    player: "p1",
+    instanceId,
+    defId,
+    row: "backrow",
+    lane: 1,
+    ...extra,
+  });
+
+  it("R3405000 a Mythic Field Spell landing face up without a play enters; set face down or Legendary it does not", () => {
+    // The Cane, put onto the field by Pareto Optimality: no play, its own summoned in the backrow.
+    const [cane] = plan([landed("field-mythic", "cane")]);
+    expect(cane?.entrance).toMatchObject({ tier: "mythic", defId: "field-mythic", reveal: false, anchor: "zone-you-backrow-1" });
+    expect(cane?.setPiece?.holdMs ?? 0).toBe(TAKEOVER_HOLD_MS);
+    // Its play entered it already: its landing in the same action adds no second entrance.
+    const played = plan([play("field-mythic", "f"), landed("field-mythic", "f")]);
+    expect(played.filter((entry) => entry.entrance !== undefined)).toHaveLength(1);
+    // Set face down (its fresh id's `formerId`, R227), hidden from this seat, or a Legendary: no entrance.
+    expect(plan([landed("field-mythic", "c2", { formerId: "c1" })])[0]?.entrance).toBeUndefined();
+    expect(plan([landed("hidden", "hidden")], p2)[0]?.entrance).toBeUndefined();
+    expect(plan([landed("field-legend", "l1")])[0]?.entrance).toBeUndefined();
+    // A Trap's card in the backrow is no Field Spell either.
+    expect(plan([landed("trap-mythic", "t1")])[0]?.entrance).toBeUndefined();
+  });
+
+  it("R3405000 a second copy of one Mythic in an action yields its takeover; another Mythic still takes its own", () => {
+    // A flood of Yile's Viruses: the first takes over, the copies after it yield.
+    const flood = plan([summon("token-mythic", "v1"), summon("token-mythic", "v2"), summon("token-mythic", "v3")]);
+    expect(flood.map((entry) => entry.entrance?.yielded === true)).toEqual([false, true, true]);
+    expect(holds(flood)).toEqual([TAKEOVER_HOLD_MS, 0, 0]);
+    // Another Mythic in the same action keeps its own takeover (it holds nothing: one set piece an action).
+    const mixed = plan([summon("token-mythic", "v1"), summon("token-mythic-2", "g1")]);
+    expect(mixed.map((entry) => entry.entrance?.yielded === true)).toEqual([false, false]);
+    expect(holds(mixed)).toEqual([TAKEOVER_HOLD_MS, 0]);
+    // The next action's copy takes over again.
+    expect(plan([summon("token-mythic", "v4")])[0]?.entrance?.yielded).toBeUndefined();
+    // Under reduced motion the copies yield too, so one still shows.
+    expect(plan([summon("token-mythic", "v1"), summon("token-mythic", "v2")], p1, { reduced: true }).map((entry) => entry.entrance?.yielded === true)).toEqual([false, true]);
   });
 });

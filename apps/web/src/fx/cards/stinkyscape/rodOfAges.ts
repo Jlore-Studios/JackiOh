@@ -23,7 +23,7 @@ const TUNING = {
 
 export const rodRise: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   const i = plan.intensity;
   return [
     entranceFigure("rod", SILVER, plan),

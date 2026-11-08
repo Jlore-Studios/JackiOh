@@ -13,7 +13,7 @@ import { ringCue, tid, tunedBurst } from "../../build.ts";
 import { otherSide } from "../../motifs/build.ts";
 import type { FxCue, FxShotCue } from "../../types.ts";
 import { FOOT, type CardRecipe, type Entrance } from "../recipe.ts";
-import { cardAt, entranceFigure, lookOf, placeOf, replace, slamAt, slamShake } from "./signatureKit.ts";
+import { cardAt, entranceFigure, leadOf, lookOf, placeOf, replace, slamAt, slamShake } from "./signatureKit.ts";
 
 /** Her pink: Clout's hearts and confetti. */
 const PINK = "Clout";
@@ -30,7 +30,7 @@ const TIMING = { kiss: 0.3, ribbon: 0.3 } as const;
 export const spotlightKiss: Entrance = (plan) => {
   const look = lookOf(PINK);
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   const cues: FxCue[] = [
     entranceFigure("spotlight", PINK, plan, true),
     { ...tunedBurst(plan.intensity, "confetti", tid(plan.tgt, FOOT), "area", slam, TUNING.stage), colors: look.colors },
@@ -47,7 +47,7 @@ export const spotlightKiss: Entrance = (plan) => {
       from: at,
       to: tid(enemy),
       delayMs: slam,
-      flightMs: Math.round(TIMING.kiss * plan.D),
+      flightMs: Math.round(TIMING.kiss * (plan.D - leadOf(plan))),
       density: plan.intensity,
     };
     cues.push(kiss);

@@ -29,7 +29,7 @@ const TUNING = {
 
 export const labVault: Entrance = (plan) => {
   const at = tid(plan.tgt);
-  const slam = slamAt(plan.D);
+  const slam = slamAt(plan);
   return [
     entranceFigure("labCases", LAB, plan),
     { ...tunedBurst(plan.intensity, "poison", tid(plan.tgt, FOOT), "area", slam, TUNING.gas), colors: lookOf(LAB).colors },

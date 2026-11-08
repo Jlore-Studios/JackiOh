@@ -9,6 +9,7 @@
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
 // R3389001: Classic's eleven. R3395000: Stinkyscape 001 to 090's 24.
 // R3407000: Stinkyscape part two's 23, each Unit's look on its tile and each Field Spell's on its zone.
+// R3405001: Meditative's 32, each aura standing where its card stands.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -72,9 +73,11 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`; R3334004: the Dormant
     // Starship's, Starfleet Commander's and Preemptive Strike's signatures, which were `none`. R3400001: the
     // Training-Grounds Golem's signature, which was `none`. R3407000: xxFreshJack's, Megabase's, Edge of the
-    // Universe's and the Stinkyscape Golem's signatures, which were `none`. R3395000: Tylannt's, Paragon Mk2's and
-    // Siva 2's signatures, which were `none` (Stinkyscape 001 to 090's 97).
-    expect(cards).toHaveLength(658);
+    // Universe's and the Stinkyscape Golem's signatures, which were `none`. R3405001: Meditative's six
+    // signatures that were `none` (Jade Beauty, AI Girlfriend, Keymaster Keenus, Mayor Medinamogger, Prison,
+    // Jlockeed's Headquarters). R3395000: Tylannt's, Paragon Mk2's and Siva 2's signatures, which were `none`
+    // (Stinkyscape 001 to 090's 97).
+    expect(cards).toHaveLength(664);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -366,17 +369,66 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 52);
   });
 
+  it("R3405001 the gallery lists Meditative's 32 signatures and stands each aura", () => {
+    const signatures = gallerySignatures();
+    const meditative = signatures.find((group) => group.set === "Meditative")?.cards.map((card) => card.defId) ?? [];
+    expect(meditative).toEqual([
+      "meditative-007", "meditative-008", "meditative-011", "meditative-017", "meditative-020", "meditative-026", "meditative-039-4",
+      "meditative-039-5", "meditative-040", "meditative-042", "meditative-045", "meditative-045-1", "meditative-047", "meditative-049",
+      "meditative-049-1", "meditative-049-2", "meditative-049-3", "meditative-051", "meditative-063", "meditative-065", "meditative-071",
+      "meditative-071-1", "meditative-075", "meditative-079", "meditative-080", "meditative-086", "meditative-087", "meditative-095",
+      "meditative-095-1", "meditative-097", "meditative-097-8", "meditative-097-9",
+    ]);
+    const base = fullBoardView();
+    let auras = 0;
+    for (const defId of meditative) {
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      // The Cane's and the Mayor's signatures are their entrances alone; every other its own recipe.
+      expect(play.kind, defId).toBe(defId === "meditative-071-1" || defId === "meditative-086" ? "entrance" : "recipe");
+      // Its play draws, every beat a shape or a card back, naming no card (R202).
+      const board = galleryBoardOf(defId, base);
+      const events = galleryCardEvents(defId, play, board, 1);
+      const env: FxPlanEnv = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+      const cues = planEntries(events, withEvents(galleryFieldView(defId, board), events), false).flatMap((planned) => {
+        env.memory.remember(planned.events);
+        return planFx(planned, planned.view, env);
+      });
+      expect(cues.length, defId).toBeGreaterThan(0);
+      expect(JSON.stringify(cues), defId).not.toContain(defId);
+      // Its aura stands where the gallery lays it: a Unit's on its own tile, a Field Spell's from its backrow zone.
+      const aura = entryAura(entry);
+      if (aura === undefined) continue;
+      auras += 1;
+      const stood = planAuras(galleryFieldView(defId, board), new Map()).filter((spec) => spec.defId === defId);
+      expect(stood.map((spec) => [spec.scope, spec.look]), defId).toEqual([[aura.scope, aura.look]]);
+    }
+    // Every permanent wears one: the 16 Units and 9 Field Spells, and none of the 7 Spells.
+    expect(auras).toBe(25);
+
+    // The rendered gallery offers them under their set, and plays YileGPT Prime's.
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    expect([...select.querySelectorAll("optgroup")].map((group) => group.getAttribute("label"))).toContain("Meditative");
+    fireEvent.change(select, { target: { value: "meditative-049-1" } });
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+    expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
+  });
+
   it("R2784000 #2796 the gallery plays every Meditative and Meditative+ entry", () => {
     const view = fullBoardView();
     const intensity = FX_INTENSITY_SCALE.normal;
     const sets = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("meditative") && entry.kind !== "none");
-    expect(sets).toHaveLength(116 + 29);
+    // R3405001: six of Meditative's signatures were `none`.
+    expect(sets).toHaveLength(122 + 29);
     expect(galleryCards().filter((card) => card.defId.startsWith("meditative")).map((card) => card.defId)).toEqual(sets.map(([defId]) => defId));
     for (const [defId, entry] of sets) {
       const play = galleryPlayOf(defId, entry);
       if (play === null) throw new Error(`${defId} has no gallery play`);
-      // A Field card's aura stands in the first backrow zone while it plays.
-      if (entry.kind === "hooks" && entry.aura !== undefined) {
+      // A Field card's aura stands in the first backrow zone while it plays (R3400000: a bespoke entry's too,
+      // and a Unit's tile aura on its own unit zone).
+      if (entryAura(entry) !== undefined) {
         expect(planAuras(galleryFieldView(defId, view), new Map()).map((aura) => aura.defId), defId).toContain(defId);
       }
       if (play.kind === "aura") continue;
@@ -388,7 +440,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
         env.memory.remember(planned.events);
         // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
         if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
-        if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
+        // R3405001: a recipe, and an entrance alone as its card lands (The Cane's, Mayor Medinamogger's).
+        if ((play.kind === "recipe" || play.kind === "entrance") && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
     }
