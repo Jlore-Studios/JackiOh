@@ -16821,6 +16821,7 @@
           "claude": "strong"
         }
       },
+      "waiting_comment": 6717133241,
       "wip": {
         "at": "2026-11-08T04:15:21Z",
         "provider": "claude-1",
