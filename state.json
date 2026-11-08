@@ -17733,21 +17733,14 @@
         "reason": "`claude-8` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -40; sed -n 60,170p apps/web/src/fx/takeover.ts\"}\n- Bash: {\"command\": \"git status --short | head; grep -n \\\"takeover\\\" apps/web/src/fx/dom.ts | head -30; grep -n \\\"FxTakeoverCue\\\\|FxTakeoverCard\\\" -A12 apps/web/src/fx/types.ts | head -50; grep -n \\\"setPiece\u2026\n- Bash: {\"command\": \"sed -n 1200,1250p apps/web/src/game/animations.ts; sed -n 312,420p apps/web/src/fx/dom.ts; grep -n \\\"takeover\\\" apps/web/src/fx/fx.css | head -60\"}\n- Bash: {\"command\": \"grep -n \\\"TAKEOVER_PARTS\\\" -B2 -A4 apps/web/src/fx/dom.ts | head -30; grep -rn \\\"kind: \\\\\\\"takeover\\\\\\\"\\\" apps/web/src --include=*.ts --include=*.tsx | head; git diff 310f4412060f6d35c98\u2026\n- Bash: {\"command\": \"cd apps/web/src/fx && python3 - <<'EOF'\\nsrc=open('dom.ts').read()\\na=src.index(\\\" const card = cue.card();\\\\n\\\")\\nb=src.index(\\\" stage.appendChild(signature);\\\\n\\\")+len(\\\" stage.appendC\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419 && python3 - <<'EOF'\\np='apps/web/src/fx/dom.ts'\\ns=open(p).read()\\ns=s.replace(\\\"FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint,\\\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/fx/takeover.test.ts'\\ns=open(p).read()\\nmarker=' it(\\\"R3345000 a hidden play shows no takeover set piece (R202)\\\"'\\nnew=''' it(\\\"R3345000 a Mythic entr\u2026\n- Bash: {\"command\": \"cargo run --release -p jackioh-tools -- spec check 2>&1 | tail -3; cat >> .bot-notes.md <<'EOF'\\n- Pass 3: added `stage: boolean` to FxTakeoverCue (= entry.setPiece !== undefined); dom.t\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Mythic takes the whole screen: its own full art fills the window as it is played, the camera flies through its layers, and a press-and-hold opens it full screen anywhere\"} --> ## Summary Closes #3345. This patch gives every Mythic-tier card a full-art\u2026"
       },
-      "hold": {
-        "ends": "2026-11-08T04:40:17Z",
-        "lifted": "2026-11-08T03:13:09Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T02:40:17Z",
-        "until": "2026-11-08T03:10:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 3345,
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-07T23:54:14Z",
+        "claimed": true,
+        "claimed_at": "2026-11-08T03:14:25Z",
         "from_run": "42420384464",
         "gates": [
           {
@@ -17847,7 +17840,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42427328495",
+      "run_id": "pending:4898fcca-1794107631",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17868,7 +17861,7 @@
         "run": "42427328495"
       },
       "source": "",
-      "started_at": "2026-11-07T23:54:14Z",
+      "started_at": "2026-11-08T03:14:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -18100,9 +18093,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T03:02:46Z",
+    "at": "2026-11-08T03:14:25Z",
     "url": "",
-    "what": "build #3407 on claude-1"
+    "what": "review #3419 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T03:01:32Z",
