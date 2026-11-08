@@ -35363,7 +35363,8 @@
       "2026-11-08T11:24:29Z,42475585520,gpt,gpt-5.6-sol,revise,3386,medium,built,,0,0,0,0,,,,,,1.5,gpt,none,,0",
       "2026-11-08T11:44:51Z,42476772112,gpt,gpt-5.6-sol,review,3386,medium,reviewed,,4.3,2680112,12221,0,,,,50,50,4.8,gpt,none,,1",
       "2026-11-08T11:45:29Z,42475733290,claude-4,opus,build,3401,hard,interrupted,5-hour cap,17.3,0,0,0,,1,71,,,1096.6,claude-4,fresh,,1",
-      "2026-11-08T11:45:35Z,42475655709,claude-4,opus,build,3405,hard,interrupted,5-hour cap,18,0,0,0,,0,72,,,1100.4,claude-4,fresh,,1"
+      "2026-11-08T11:45:35Z,42475655709,claude-4,opus,build,3405,hard,interrupted,5-hour cap,18,0,0,0,,0,72,,,1100.4,claude-4,fresh,,1",
+      "2026-11-08T11:40:00Z,42470692633,claude-1,opus,revise,3431,hard,built,,35.4,4,1976,155402,3.0235,10,18,,,4.6,claude-1,fresh,,1"
     ]
   },
   "version": 1
