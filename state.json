@@ -16809,19 +16809,12 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-08T13:10:00Z",
         "trail": " \"Read ruling n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; grep -n \\\"^const MANA\\\\|^const DAMAGE\\\\|function at(\\\\|^import\\\" game/animations.fx.test.ts | head -20; grep -n \\\"reduced\\\\|still\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; sed -n 512,530p game/animations.fx.test.ts; sed -n 636,680p game/animations.fx.test.ts\", \"description\": \"Read gameOver and reduced\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; python3 - <<'EOF'\\np='game/animations.fx.test.ts'\\ns=open(p).read()\\na=''' expect(kinds(seen)).toEqual([\\\"still\\\", \\\"still\\\", \\\"id\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; sed -i 's/toEqual(\\\\[reducedMotion ? \\\"still\\\" : \\\"start\\\", \\\"idle\\\"\\\\].toSpliced(0, 0, \\\"pass\\\"));/toEqual([\\\"pass\\\", reducedMoti\u2026\n- said: Now the FxLayer live-path test.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; python3 - <<'EOF'\\np='fx/FxLayer.test.tsx'\\ns=open(p).read()\\nanchor=''' it(\\\"B36 drain() forgets what the layer remembered\\\", () \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; pnpm --dir apps/web exec vitest run src/fx/FxLayer.test.tsx src/game/animations.fx.test.ts 2>&1 | grep -E \\\"Tests|FAIL|\\u2717|\\u00d7|Error\\\" | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; sed -n 622,650p game/animations.fx.test.ts; sed -n 915,935p game/animations.fx.test.ts; grep -n \\\"function longStream\\\" -A12 game/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432/apps/web/src; python3 - <<'EOF'\\np='game/animations.fx.test.ts'\\ns=open(p).read()\\na=''' queue.enqueue([GAME_OVER], fullBoardView());\\n expect(k\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; echo \\\"- pass 2: game+FxLayer tests 2303 pass; checking new FxLayer test fails without fix\\\" >> .bot-notes.md; cp apps/web/src/fx/FxLayer.tsx /\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; grep -rn \\\"marker\\\" apps/web/src/fx/cards/stinkyscape-2.md spec/rulings/R3407000.md docs/polish/9-card-animations.md | grep -i \\\"in33dh3\\\\|blob\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; python3 - <<'EOF'\\nimport re\\nfor p in ['apps/web/src/fx/cards/stinkyscape-2.md','spec/rulings/R3407000.md']:\\n s=open(p).read()\\n s=s.replace(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; head -8 spec/rulings/R2789000.md; head -8 spec/rulings/R2797000.md; grep -n \\\"Adding a ruling\\\" -A25 spec/README.md | head -40\", \"description\":\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; cat > spec/rulings/R3407002.md <<'EOF'\\n---\\nid: R3407002\\ntitle: \\\"A hook's marker plays nothing but opens its entry on the live board: the ru\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; sed -i \\\"s/it(\\\\\\\"R3407000 IN33DH3's Death: its marker draws nothing/it(\\\\\\\"R3407000 R3407002 IN33DH3's Death: its marker draws nothing/; s/it(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; grep -rn \\\"R2789000\\\" docs/polish/*.md apps/web/README.md spec/10-engine-guide.md | grep -i \\\"still\\\\|signal\\\" | head -5; grep -rn \\\"\\\\\\\"still\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; grep -n \\\"subscribeSignals\\\\|signals\\\\b\\\\|\\\\`start\\\\`\\\" docs/polish/1-animations.md apps/web/README.md docs/architecture.md | head -10\", \"descr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; python3 - <<'EOF'\\np='docs/polish/1-animations.md'\\ns=open(p).read()\\na=\\\"A zero-duration entry emits no `start`. *Observed:* listener spy plus\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; echo \\\"- pass 2: R3407002 note+pending, docs; running typecheck, eslint, full web vitest\\\" >> .bot-notes.md; pnpm --dir apps/web typecheck 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; pnpm --dir apps/web exec vitest run > /tmp/vitest-full.log 2>&1; tail -15 /tmp/vitest-full.log | grep -v \\\"^::\\\"\", \"description\": \"Run the whol\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; cargo jackioh classify --base origin/main --claims 2>&1 | tail -3; cargo fmt --check && echo fmt-ok\", \"description\": \"Run classify claims and r\u2026\n- said: The fix is in and the targeted tests pass; the whole web suite is running now. While it runs, I'm updating the notes.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3432; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n- Pass 2 (opus, 2026-11-08): review finding h\u2026\n- Bash: {\"command\": \"sleep 1; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3432/fa58dedd-e7af-40da-905f-9f037c999874/tasks/bvofv9j6o.output | tail -5\", \"description\": \"Check the background test run\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"command\": \"until grep -qE \\\"Test Files|Error:|ELIFECYCLE\\\" /tmp/vitest-full.log 2>/dev/null; do sleep 10; done; grep -E \\\"Test Files|Tests \\\" /tmp/vitest-full.log\", \"description\": \"whole web vitest\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -qE \"Test Files|Error:|ELIFECYCLE\" /tmp/vitest-full.log, grep -E \"Test Files|Tests \" /tmp/vitest-full.log\n- Bash: {\"command\": \"wc -l /tmp/vitest-full.log; grep -cE \\\"\\u2713|\\u00d7\\\" /tmp/vitest-full.log; grep -E \\\" FAIL \\\" /tmp/vitest-full.log | head\", \"description\": \"Check full-suite progress\"}\n- said: The whole suite is still running. I'll wait for its notification before writing the report.\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -q \\\"Test Files\\\" /tmp/vitest-full.log; do sleep 15; done'; grep -E \\\"Test Files|Tests |FAIL\\\" /tmp/vitest-full.log | head -20\", \"description\": \"Wait fo\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -q \\\"Test Files\\\" /tmp/vitest-full.log; do sleep 15; done'; grep -E \\\"Test Files|Tests |FAIL\\\" /tmp/vitest-full.log | head -20\", \"description\": \"Keep wa\u2026\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-08T12:55:04Z",
-        "lifted": "2026-11-08T12:10:30Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T10:55:04Z",
-        "until": "2026-11-08T12:10:00Z",
-        "why": "5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "issue": 3407,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-08T10:15:01Z",
+        "claimed": true,
+        "claimed_at": "2026-11-08T12:12:30Z",
         "from_run": "42462276695",
         "gates": [
           {
@@ -16917,7 +16910,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-08T10:13:30Z",
-      "run_id": "42470622283",
+      "run_id": "pending:64822a9d-1794139910",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16937,7 +16930,7 @@
         "provider": "claude-8",
         "run": "42470622283"
       },
-      "started_at": "2026-11-08T10:15:01Z",
+      "started_at": "2026-11-08T12:12:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17085,9 +17078,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:57:09Z",
+    "at": "2026-11-08T12:12:30Z",
     "url": "",
-    "what": "revise #3386 on gpt"
+    "what": "review #3432 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T11:47:53Z",
