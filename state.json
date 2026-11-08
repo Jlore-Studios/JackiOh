@@ -26557,13 +26557,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-04T04:10:00Z",
-          "utilization": 0.23
+          "resets_at": "2026-11-09T04:00:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-04T02:24:43Z",
+        "observed_at": "2026-11-08T23:12:38Z",
         "seven_day": {
           "resets_at": "2026-11-09T09:00:00Z",
-          "utilization": 0.6
+          "utilization": 0.86
         },
         "status": "allowed_warning"
       }
@@ -35897,7 +35897,8 @@
       "2026-11-08T22:48:55Z,claude-1,stream,call,42531391974,21,2026-11-09T01:00:00Z,,,allowed,40,,",
       "2026-11-08T22:52:55Z,claude-1,stream,call,42531391974,22,2026-11-09T01:00:00Z,,,allowed,40,,",
       "2026-11-08T22:53:10Z,claude-1,stream,call,42531391974,24,2026-11-09T01:00:00Z,,,allowed,40,,",
-      "2026-11-08T22:56:40Z,claude-1,stream,call,42531391974,45,2026-11-09T01:00:00Z,,,allowed,40,,"
+      "2026-11-08T22:56:40Z,claude-1,stream,call,42531391974,45,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T23:07:47Z,claude-5,ping,before,42533336499,0,2026-11-09T04:00:00Z,86,2026-11-09T09:00:00Z,allowed_warning,80,90,"
     ],
     "runs": [
       "2026-11-08T22:42:15Z,42531327611,claude-8,opus,build,3397,hard,interrupted,5-hour cap,0,0,0,0,,96,96,,,1773,claude-8,none,,0",
