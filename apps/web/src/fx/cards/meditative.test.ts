@@ -18,7 +18,7 @@ import { galleryPlayOf, motifFixture, RECIPE_FIXTURES, type GalleryCardPlay } fr
 import { FX_CARD_HOOKS } from "../motifs/names.ts";
 import type { FxPlanEnv } from "../types.ts";
 import rawTable from "./meditative.md?raw";
-import { FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
 const FILES = ["meditative.json5", "meditativeplus.json5"] as const;
 
@@ -117,7 +117,8 @@ describe("R2784000 #2796 Meditative's and Meditative+'s card animations", () => 
     expect(fields.filter(([id]) => !isToken(id))).toHaveLength(20 + 2);
     const looks = new Map<string, string>();
     for (const [id, entry] of fields) {
-      const aura = entry.kind === "hooks" ? entry.aura : undefined;
+      // R3400000: a bespoke entry's aura too (R3405001: Meditative's signature Field Spells).
+      const aura = entryAura(entry);
       expect(aura, id).toBeDefined();
       if (aura === undefined) continue;
       const key = `${aura.look} ${aura.scope} ${aura.palette ?? CATALOG[id]?.flavor ?? ""}`;

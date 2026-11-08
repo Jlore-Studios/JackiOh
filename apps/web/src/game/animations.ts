@@ -1225,7 +1225,8 @@ export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed:
  * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing. R2800000: a
  * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing. R3338000: so
  * does one whose own signature is, and an entry whose entrance yielded may still be claimed for another
- * set piece (a Terminus Trap's firing is its own signature's entry).
+ * set piece (a Terminus Trap's firing is its own signature's entry). R3405000: a Mythic takes over once an
+ * action, so a later copy's entrance of one that took over yields too.
  */
 export function setPieceEntries(
   entries: readonly AnimationEntry[],
@@ -1241,9 +1242,13 @@ export function setPieceEntries(
       return sourceId !== null && claimOf(entry) !== null ? [sourceId] : [];
     }),
   );
+  // R3405000: one card takes over once an action: a second copy's entrance (a flood of Yile's Viruses) yields.
+  const tookOver = new Set<string>();
   return entries.map((given) => {
     const entrance = given.entrance;
-    const entry = entrance?.tier === "mythic" && own.has(entrance.instanceId) ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
+    const yields = entrance?.tier === "mythic" && entrance.yielded !== true && (own.has(entrance.instanceId) || tookOver.has(entrance.defId));
+    if (entrance?.tier === "mythic" && !yields && entrance.yielded !== true) tookOver.add(entrance.defId);
+    const entry = yields ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
     if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
     const claim = claimOf(entry);
     const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
@@ -1258,8 +1263,8 @@ const isTrapType = (type: CardType): boolean => type === "Trap" || type === "Fie
 /**
  * R2722002: the card `event` makes its entrance for on the seat it was planned for, or null: a
  * face-up play of a Unit or Spell (never a set, never a Trap's), a Unit put onto the field without a
- * play, or a hidden card's first firing the seat reads. Every one names its card in the seat's own
- * event (R202).
+ * play (R3405000: or a Mythic Field Spell put there face up), or a hidden card's first firing the seat
+ * reads. Every one names its card in the seat's own event (R202).
  */
 function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: string; defId: string; player: PlayerId; reveal: boolean } | null {
   switch (event.type) {
@@ -1268,8 +1273,17 @@ function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: 
       const info = resolve(event.defId);
       return info === null || isTrapType(info.type) ? null : { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
     }
-    case "summoned":
-      return event.row === "units" && event.defId !== HIDDEN_ID ? { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false } : null;
+    case "summoned": {
+      if (event.defId === HIDDEN_ID) return null;
+      const card = { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
+      if (event.row === "units") return card;
+      // R3405000: a Mythic Field Spell put onto the field face up without a play (The Cane, by Pareto
+      // Optimality) enters as it lands; one set face down (its fresh id's `formerId`, R227) never does, and a
+      // played one entered on its `cardPlayed` already (`seen`).
+      if (event.row !== "backrow" || event.formerId !== undefined) return null;
+      const info = resolve(event.defId);
+      return info?.type === "Field Spell" && info.rarity === "Mythic" ? card : null;
+    }
     case "trapFired":
       return firstReveal(event) ? { instanceId: event.instanceId, defId: event.defId, player: event.controller, reveal: true } : null;
     default:

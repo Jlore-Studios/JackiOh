@@ -26,6 +26,7 @@ pub mod economy_turns;
 pub mod env_deployed_commit;
 pub mod env_github_issues;
 pub mod es256_test_only;
+pub mod fleet;
 pub mod friends;
 pub mod game_records;
 pub mod health;

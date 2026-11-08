@@ -52,6 +52,11 @@ const UNION_ORDER: SfxId[] = [
   "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
   "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
   "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
+  // R3405001: the signatures of Meditative's Legendaries and Mythics.
+  "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+  "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+  "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+  "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -204,6 +209,39 @@ const DURATION_MS: Record<SfxId, number> = {
   cashWhistle: 1600,
   whisperClink: 1200,
   crystalRise: 1600,
+  // R3405001.
+  bowlBreath: 1500,
+  peakFlute: 1500,
+  ticketHorn: 1300,
+  forgeQuench: 1500,
+  brushGuzheng: 1500,
+  wellGush: 1400,
+  minePick: 1500,
+  jadeZither: 1500,
+  windChime: 1600,
+  marketGong: 1500,
+  chalkHush: 1500,
+  porcelainRoar: 1600,
+  bronzeGulp: 1500,
+  modemGuqin: 1400,
+  serverChoir: 1600,
+  dialupStutter: 1200,
+  holoBow: 1300,
+  synthPops: 1200,
+  skullMutter: 1400,
+  keyJangle: 1400,
+  caneCrack: 1100,
+  caneThunder: 1600,
+  rootCreak: 1500,
+  chalkGasp: 1300,
+  frostPages: 1500,
+  coinCheer: 1400,
+  totemDrums: 1400,
+  templeDie: 1400,
+  golemStomp: 1500,
+  klaxonSlam: 1600,
+  cellSlam: 1500,
+  hangarRev: 1600,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

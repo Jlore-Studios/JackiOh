@@ -5,6 +5,8 @@
 // (fx/cards/tiers.test.ts); what only a browser can say is that the scene draws, captured here.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each played as the gallery plays it, at
 // both sizes: a Mythic's own takeover draws its art, the rest their figures or their canvas.
+// R3405001: Meditative's 32 signatures the same way, at both sizes: each Mythic's own takeover draws its
+// own art, every other card its figure.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-signature.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -31,6 +33,41 @@ const SIGNATURES: readonly { defId: string; name: string; look?: string }[] = [
   { defId: "traininggrounds-039", name: "Call to Chaos (Training-Grounds Edition)" },
   { defId: "traininggrounds-039-1", name: "Training-Grounds Golem" },
   { defId: "traininggrounds-040", name: "Goetzmann Game Design", look: "napkin" },
+];
+/** R3405001: Meditative's 32 signatures, each with its Mythic's own takeover look. */
+const MEDITATIVE: readonly { defId: string; name: string; look?: string }[] = [
+  { defId: "meditative-007", name: "Introspection" },
+  { defId: "meditative-008", name: "Reach the Summit", look: "ascent" },
+  { defId: "meditative-011", name: "Double Header" },
+  { defId: "meditative-017", name: "True Craft a Card", look: "workshop" },
+  { defId: "meditative-020", name: "Aestheticize the Game", look: "brush" },
+  { defId: "meditative-026", name: "Alternate Fate" },
+  { defId: "meditative-039-4", name: "Red Jade", look: "mine" },
+  { defId: "meditative-039-5", name: "Jade Beauty", look: "quarry" },
+  { defId: "meditative-040", name: "Feng Shui" },
+  { defId: "meditative-042", name: "CN Flea Market" },
+  { defId: "meditative-045", name: "Knowledge Breaker" },
+  { defId: "meditative-045-1", name: "Knowledge Breaker Prime" },
+  { defId: "meditative-047", name: "Taotie" },
+  { defId: "meditative-049", name: "YileGPT", look: "ai" },
+  { defId: "meditative-049-1", name: "YileGPT Prime", look: "pavilion" },
+  { defId: "meditative-049-2", name: "Yile's Virus", look: "virus" },
+  { defId: "meditative-049-3", name: "AI Girlfriend", look: "dojo" },
+  { defId: "meditative-051", name: "Devin Bot" },
+  { defId: "meditative-063", name: "Skull of J'Nari" },
+  { defId: "meditative-065", name: "Keymaster Keenus" },
+  { defId: "meditative-071", name: "Pareto Optimality", look: "studyHall" },
+  { defId: "meditative-071-1", name: "The Cane", look: "caneRack" },
+  { defId: "meditative-075", name: "Ever Growing Tree" },
+  { defId: "meditative-079", name: "Touched by KY" },
+  { defId: "meditative-080", name: "Aluneth" },
+  { defId: "meditative-086", name: "Mayor Medinamogger" },
+  { defId: "meditative-087", name: "Tatches the Totem" },
+  { defId: "meditative-095", name: "Call to Chaos (Meditative Edition)" },
+  { defId: "meditative-095-1", name: "CN Golem" },
+  { defId: "meditative-097", name: "Jlockeed's Evil Blueprints", look: "warRoom" },
+  { defId: "meditative-097-8", name: "Prison" },
+  { defId: "meditative-097-9", name: "Jlockeed's Headquarters", look: "fortress" },
 ];
 const FX_DOM = '[data-testid="fx-dom"]';
 const LAYER = '[data-testid="fx-layer"]';
@@ -163,6 +200,46 @@ describe("R3400001 Meditative+'s and Training Grounds' signatures in a real brow
           cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
         } else {
           // Its own figure: a snowplow, candles, a chalkboard, the dice, the Golem's plank.
+          cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
+        }
+        cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
+      });
+    }
+  }
+});
+
+describe("R3405001 Meditative's signatures in a real browser", () => {
+  before(() => {
+    Cypress.config("defaultCommandTimeout", 20_000);
+  });
+  after(() => {
+    Cypress.config("defaultCommandTimeout", 4_000);
+  });
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
+
+  for (const { defId, name, look } of MEDITATIVE) {
+    for (const { width: w, height: h } of VIEWPORTS) {
+      it(`R3405001 ${name}'s signature at ${String(w)}x${String(h)}`, () => {
+        cy.viewport(w, h);
+        // At the slowest effects speed the signature outlasts the command queue, so the capture is mid-flight.
+        cy.then(() => {
+          setFxSettings({ speed: FX_SPEED_MIN });
+        });
+        const entry = FX_CARD_TABLE.get(defId);
+        const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+        if (play === null) throw new Error(`${defId} has no gallery play`);
+        const board = galleryBoardOf(defId, fullBoardView());
+        mountShown(board, withEvents(galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1)));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        if (look !== undefined) {
+          // A Mythic's own takeover, its own art drawn over the dark.
+          cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", look);
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        } else {
+          // Its own figure: a still pool, floodlights, a compass, a porcelain mask, a key ring, a jade die.
           cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
         }
         cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
