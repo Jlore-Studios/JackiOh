@@ -33,9 +33,12 @@ import { INK_MACHINES_KIT } from "./sceneKitInkMachines.ts";
 import { INK_NATURE_KIT } from "./sceneKitInkNature.ts";
 import { INK_OBJECTS_KIT } from "./sceneKitInkObjects.ts";
 import { INK_PLACES_KIT } from "./sceneKitInkPlaces.ts";
+import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { TOUCHES_KIT } from "./sceneKitTouches.ts";
+import { YARD_KIT } from "./sceneKitYard.ts";
 import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
@@ -72,7 +75,7 @@ const CHARACTER_UNITS: Readonly<Record<string, string>> = {
   "meditative-097-8": "sea-prison",
   "meditative-097-9": "peak-fortress",
 };
-/** The kit modules #3401 added, which sceneKit.ts spreads into `SCENE_KIT` after Classic+'s. */
+/** The kit modules #3401 added, which sceneKit.ts spreads into `SCENE_KIT` after Classic+'s and #3393's. */
 const INK_MODULES = [INK_PLACES_KIT, INK_BUILDINGS_KIT, INK_OBJECTS_KIT, INK_CURIOS_KIT, INK_MACHINES_KIT, INK_NATURE_KIT, INK_CREATURES_KIT, INK_CHARACTERS_KIT];
 /** The parts sceneKit.ts draws itself: the first kit's (#3331) and the 199 Core's scenes added after them (R3392000). */
 const FIRST_KIT_PARTS = 56 + 199;
@@ -275,12 +278,13 @@ describe("R3401000 Meditative drawn as scenes", () => {
     const added = INK_MODULES.map((kit) => Object.entries(kit));
     for (const entries of added) expect(entries.length).toBeGreaterThan(0);
     const ink = added.flat();
-    const classicPlus = [PLACES_KIT, OBJECTS_KIT, NATURE_KIT].flatMap((kit) => Object.keys(kit));
-    const ids = [...classicPlus, ...ink.map(([id]) => id)];
+    // Classic+'s modules (R3390000), then Meditative+'s, Training Grounds' and Legacy's (R3393000), then these.
+    const before = [PLACES_KIT, OBJECTS_KIT, NATURE_KIT, MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].flatMap((kit) => Object.keys(kit));
+    const ids = [...before, ...ink.map(([id]) => id)];
     expect(new Set(ids).size, "no id in two modules").toBe(ids.length);
     for (const [id, part] of ink) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of the first kit's parts or of Classic+'s.
+    // None takes the place of one of the first kit's parts or of an earlier module's.
     expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + ids.length);
-    expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS + classicPlus.length)).toEqual(ink.map(([id]) => id));
+    expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS + before.length)).toEqual(ink.map(([id]) => id));
   });
 });

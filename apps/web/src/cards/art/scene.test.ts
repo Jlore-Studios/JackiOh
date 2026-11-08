@@ -2,7 +2,8 @@
 // (figureKit.ts), by the recipes of sceneRecipes.ts: the kits are whole and clean and keep out of
 // Radiant's gold window, the five proof cards draw their scenes on both faces with one geometry and
 // clear their floors, and every card with no recipe draws the spec it drew before. The pixels are
-// e2e/cypress/component/scene-proofs.cy.tsx's.
+// e2e/cypress/component/scene-proofs.cy.tsx's. R3393000: the recipes are the proofs' and every Meditative+
+// and Training Grounds entry's (setScenes.test.ts holds those), and none of them paints in the gold window.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -45,7 +46,7 @@ import {
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
-import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
 
@@ -237,10 +238,12 @@ describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
-    // classicPlusScenes.test.ts checks) and every Meditative entry (R3401000, which meditativeScenes.test.ts checks).
+    // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
+    // (setScenes.test.ts); R3401000: and every Meditative entry (meditativeScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
+    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
     const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id)).sort()).toEqual([...new Set<string>([...PROOFS, ...core])].sort());
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id)).sort()).toEqual([...new Set<string>([...PROOFS, ...core, ...passes])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);
@@ -337,9 +340,18 @@ describe("R3331000 the five proof cards", () => {
     expect(sceneRecipeOf("core-002#tarot")).toBe(recipe("core-002"));
   });
 
-  it("R3331000 a Legacy card keeps its Core card's old subject", () => {
+  it("R3331000 R3393001 a Legacy card never draws its Core card's scene", () => {
+    // R3393001: Legacy: Speciesist draws a scene of its own; its Core card's scene is Speciesist's, never on its face.
     const legacy = def("traininggrounds-041");
     const core = def("core-002");
+    const own = composeScene(recipe(legacy.id), legacy.id);
+    expect(own.length).toBeGreaterThan(0);
+    for (const radiant of [false, true]) {
+      const svg = svgOf(legacyArtUri(legacy.id, core.id, core.name, legacy.tags, legacy.type, radiant));
+      for (const shape of own) expect(svg).toContain(`d="${shape.d}"`);
+      for (const shape of composeScene(recipe(core.id), core.id)) expect(svg).not.toContain(`d="${shape.d}"`);
+    }
+    // The old picture, its Core card's frozen subject in the yard, is the fallback for a Legacy card with no recipe.
     const theme = themeFor(core.tags, core.type);
     for (const radiant of [false, true]) {
       const svg = legacySvg(legacy.id, core.id, core.name, core.tags, core.type, radiant);

@@ -239,8 +239,8 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
     for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of the first kit's parts: they follow its 56 in order (R3401000's modules follow
-    // them, and meditativeScenes.test.ts counts the whole kit).
+    // None takes the place of one of the first kit's parts: they follow its own in order (the modules #3393 and #3401
+    // added follow them, and meditativeScenes.test.ts counts the whole kit).
     expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS, FIRST_KIT_PARTS + added.length)).toEqual(added.map(([id]) => id));
   });
 });
