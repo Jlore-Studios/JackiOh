@@ -280,7 +280,7 @@ const FIVE_PEK_CONTROLLER_ALT: SceneRecipe = {
     ],
     subject: [
       { part: "rug", x: 50, y: 58, scale: 2.6 },
-      { part: "controller", x: 46, y: 52, scale: 1 },
+      { part: "controller", x: 50, y: 48, scale: 1.6 },
       { part: "soldier", x: 34, y: 70, scale: 1.2, count: 2, spread: [8, 2] },
       { part: "soldier", x: 66, y: 68, scale: 1.2, count: 2, spread: [8, 2], flip: -1 },
     ],
@@ -288,7 +288,7 @@ const FIVE_PEK_CONTROLLER_ALT: SceneRecipe = {
       { part: "soldier-fallen", x: 76, y: 88, scale: 1.3 },
       { part: "die", x: 30, y: 90, scale: 2.2 },
     ],
-    light: [{ part: "halo", x: 46, y: 52, scale: 1.8, paint: "orange-400" }],
+    light: [{ part: "halo", x: 50, y: 48, scale: 1.8, paint: "orange-400" }],
     particles: [
       { part: "motes", x: 50, y: 50, scale: 1.4, paint: "white" },
       { part: "gust", x: 50, y: 70, scale: 1 },
@@ -354,7 +354,7 @@ const K_POP_FANATIC_ALT: SceneRecipe = {
     ],
     subject: [{ part: "lantern", x: 56, y: 56, scale: 1.2 }],
     near: [
-      { part: "sleeping-bag", x: 49, y: 80, scale: 1.1 },
+      { part: "sleeping-bag", x: 43, y: 81, scale: 1.1 },
       { part: "streaks", x: 64, y: 54, scale: 0.8, paint: "white" },
       { part: "bin", x: 88, y: 98, scale: 1.2 },
     ],

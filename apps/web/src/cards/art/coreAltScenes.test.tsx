@@ -396,7 +396,9 @@ describe("R3398000 Core Alt art restaged", () => {
       const card = def(id);
       const seed = artSeedOf(id, "alt");
       const shapes = composeScene(alt(id), seed);
-      const marked = legacyText(faceModel({ defId: id, def: card, radiant: true }).text).marks.length > 0;
+      // R277's marks in the words the rules box prints: a long text's short form (Heroic Power's) can end before its first.
+      const radiantFace = faceModel({ defId: id, def: card, radiant: true });
+      const marked = legacyText(radiantFace.short ?? radiantFace.text).marks.length > 0;
       const [first] = ladderOf("alt-art");
       for (const level of ladderOf("alt-art")) {
         writeCardLevel(id, level);

@@ -339,24 +339,41 @@ const POCKET_CHAOS_ALT: SceneRecipe = {
   light: { x: 50, y: 30, r: 40, paint: "orange-400", opacity: 0.4 },
   emblem: { x: 82, y: 30, size: 5, rotate: 0 },
   layers: {
-    sky: [{ part: "bulbs", x: 50, y: 10, scale: 1.6 }],
+    sky: [
+      { part: "bulbs", x: 50, y: 10, scale: 1.6 },
+      { part: "bunting", x: 50, y: 20, scale: 1.4, paint: "white" },
+    ],
     far: [
       { part: "window", x: 20, y: 46, scale: 1.4 },
       { part: "window", x: 80, y: 46, scale: 1.4 },
+      { part: "flowers", x: 20, y: 54, scale: 0.8, count: 2, spread: [8, 0], paint: "red-300" },
+      { part: "flowers", x: 80, y: 54, scale: 0.8, count: 2, spread: [8, 0], paint: "red-300" },
+      { part: "shelf", x: 50, y: 40, scale: 0.9 },
     ],
     mid: [
       { part: "checker-floor", x: 50, y: 48, paint: "red-300" },
       { part: "chair", x: 22, y: 74, scale: 1.6 },
       { part: "chair", x: 78, y: 74, scale: 1.6 },
       { part: "wide-table", x: 50, y: 78, scale: 1.3 },
+      { part: "cup", x: 34, y: 62, scale: 0.9 },
     ],
     subject: [
       { part: "pocket", x: 46, y: 60, scale: 1.4 },
       { part: "die", x: 60, y: 60, scale: 1.2 },
+      { part: "streaks", x: 60, y: 58, scale: 0.6, paint: "white" },
     ],
-    near: [{ part: "playing-card", x: 70, y: 94, scale: 1.2, count: 2, spread: [8, 2], paint: "white" }],
-    light: [{ part: "halo", x: 46, y: 58, scale: 1.4, paint: "white" }],
-    particles: [{ part: "motes", x: 50, y: 50, scale: 1.4, paint: "white" }],
+    near: [
+      { part: "playing-card", x: 70, y: 94, scale: 1.2, count: 2, spread: [8, 2], paint: "white" },
+      { part: "die", x: 18, y: 94, scale: 1, count: 2, spread: [8, 2] },
+    ],
+    light: [
+      { part: "halo", x: 46, y: 58, scale: 1.4, paint: "white" },
+      { part: "echo-rings", x: 60, y: 62, scale: 0.6, paint: "white" },
+    ],
+    particles: [
+      { part: "motes", x: 50, y: 50, scale: 1.4, paint: "white" },
+      { part: "sparks", x: 60, y: 56, scale: 0.8, count: 2, spread: [10, 4], paint: "white" },
+    ],
   },
 };
 
@@ -430,10 +447,12 @@ const FELINOR_FIENDER_ALT: SceneRecipe = {
     mid: [{ part: "field", x: 50, y: 68, paint: "green-400" }],
     subject: [{ part: "bench", x: 50, y: 77, scale: 1.5 }],
     near: [
-      { part: "house-cat", x: 44, y: 70, scale: 1, paint: "orange-400" },
-      { part: "house-cat", x: 54, y: 68, scale: 1, flip: -1, paint: "stone-500" },
-      { part: "house-cat", x: 50, y: 62, scale: 0.9, paint: "white" },
-      { part: "house-cat", x: 60, y: 74, scale: 0.9, paint: "wood-600" },
+      { part: "house-cat", x: 44, y: 74, scale: 1.6, paint: "orange-400" },
+      { part: "house-cat", x: 56, y: 72, scale: 1.6, flip: -1, paint: "stone-500" },
+      { part: "house-cat", x: 50, y: 64, scale: 1.4, paint: "white" },
+      { part: "house-cat", x: 64, y: 77, scale: 1.4, paint: "wood-600" },
+      { part: "house-cat", x: 36, y: 77, scale: 1.4, flip: -1, paint: "slate-700" },
+      { part: "house-cat", x: 46, y: 57, scale: 1.2, paint: "orange-400" },
     ],
     light: [{ part: "halo", x: 50, y: 60, scale: 1.4, paint: "white" }],
     particles: [{ part: "petals", x: 50, y: 40, scale: 1.2, paint: "white" }],
@@ -497,26 +516,44 @@ const MY_PAWN_ALT: SceneRecipe = {
   light: { x: 76, y: 30, r: 36, paint: "orange-400", opacity: 0.4 },
   emblem: { x: 18, y: 30, size: 5, rotate: 0 },
   layers: {
-    sky: [{ part: "light-shaft", x: 72, y: 0, paint: "orange-400" }],
+    sky: [
+      { part: "light-shaft", x: 72, y: 0, paint: "orange-400" },
+      { part: "chandelier", x: 34, y: 6, scale: 0.8 },
+    ],
     far: [
+      { part: "room-wall", x: 50, y: 70, paint: "green-900" },
       { part: "bookcase", x: 14, y: 70, scale: 1.6 },
       { part: "bookcase", x: 86, y: 70, scale: 1.6 },
       { part: "window", x: 60, y: 44, scale: 1.2 },
+      { part: "globe", x: 34, y: 62, scale: 0.9 },
+      { part: "clock-face", x: 40, y: 30, scale: 0.6 },
     ],
     mid: [
+      { part: "rug", x: 50, y: 92, scale: 1.6, paint: "green-700" },
       { part: "wide-table", x: 50, y: 98, scale: 2.4 },
       { part: "chessboard", x: 50, y: 74, scale: 0.6 },
+      { part: "closed-tome", x: 26, y: 76, scale: 1, count: 2, spread: [4, 3] },
+      { part: "hourglass", x: 72, y: 74, scale: 0.9 },
+      { part: "quill", x: 80, y: 76, scale: 0.9 },
     ],
     subject: [
       { part: "chess-piece", x: 50, y: 82, scale: 3.4, paint: "white" },
-      { part: "puppet-hand", x: 50, y: 22, scale: 1.4 },
+      { part: "puppet-hand", x: 50, y: 27, scale: 1.4 },
     ],
     near: [
       { part: "chess-piece", x: 20, y: 94, scale: 2 },
+      { part: "chess-piece", x: 10, y: 98, scale: 1.8, paint: "white" },
       { part: "taper", x: 84, y: 84, scale: 2 },
+      { part: "scroll", x: 70, y: 96, scale: 1.2 },
     ],
-    light: [{ part: "rim-light", x: 50, y: 60, scale: 1.2, paint: "orange-400" }],
-    particles: [{ part: "motes", x: 64, y: 40, scale: 1.4, paint: "orange-400" }],
+    light: [
+      { part: "rim-light", x: 50, y: 60, scale: 1.2, paint: "orange-400" },
+      { part: "halo", x: 84, y: 70, scale: 0.7, paint: "orange-400" },
+    ],
+    particles: [
+      { part: "motes", x: 64, y: 40, scale: 1.4, paint: "orange-400" },
+      { part: "dust", x: 70, y: 30, scale: 1.2, count: 2, spread: [14, 16], paint: "orange-400" },
+    ],
   },
 };
 
@@ -529,24 +566,42 @@ const ZEPHRYS_ALT: SceneRecipe = {
   figure: { x: 46, y: 112, scale: 1.7, pose: "pose-perch", look: normalCoreLookOf("core-097") },
   layers: {
     sky: [
-      { part: "cloud", x: 24, y: 22, scale: 1.2, count: 2, spread: [20, 4], paint: "orange-400" },
+      { part: "cloud", x: 24, y: 22, scale: 1.2, count: 3, spread: [24, 6], paint: "orange-400" },
+      { part: "cloud", x: 80, y: 14, scale: 0.9, count: 2, spread: [14, 4], paint: "red-600" },
       { part: "sun-disc", x: 76, y: 62, scale: 1 },
+      { part: "crow", x: 30, y: 36, scale: 0.6, count: 3, spread: [16, 6], paint: "red-900" },
     ],
     far: [
+      { part: "mountains", x: 50, y: 66, paint: "red-600" },
       { part: "mesa", x: 16, y: 72, scale: 1.4, paint: "red-600" },
       { part: "mesa", x: 86, y: 68, scale: 1.2, flip: -1, paint: "red-900" },
+      { part: "mesa", x: 64, y: 70, scale: 0.8, paint: "ember-500" },
     ],
     mid: [
       { part: "sand", x: 50, y: 76, paint: "red-900" },
+      { part: "cactus", x: 14, y: 84, scale: 0.9, paint: "green-900" },
+      { part: "standing-stone", x: 88, y: 86, scale: 0.6, paint: "ember-500" },
+      { part: "dead-tree", x: 78, y: 82, scale: 0.7, paint: "red-900" },
       { part: "mesa", x: 46, y: 112, scale: 1.4, paint: "red-600" },
     ],
     subject: [
       { part: "playing-card", x: 76, y: 40, scale: 1.2, paint: "white" },
       { part: "gust", x: 72, y: 44, scale: 1, paint: "white" },
     ],
-    near: [{ part: "dust-cloud", x: 82, y: 92, scale: 1.4 }],
-    light: [{ part: "rim-light", x: 46, y: 50, scale: 1.6, paint: "orange-400" }],
-    particles: [{ part: "dust", x: 50, y: 60, scale: 1.4, paint: "orange-400" }],
+    near: [
+      { part: "dust-cloud", x: 82, y: 92, scale: 1.4 },
+      { part: "pebbles", x: 18, y: 96, scale: 1.6, paint: "red-600" },
+      { part: "tall-grass", x: 8, y: 98, scale: 1.2, paint: "brass-600" },
+    ],
+    light: [
+      { part: "rim-light", x: 46, y: 50, scale: 1.6, paint: "orange-400" },
+      { part: "god-rays", x: 76, y: 62, scale: 1.2, paint: "orange-400" },
+    ],
+    particles: [
+      { part: "dust", x: 50, y: 60, scale: 1.4, paint: "orange-400" },
+      { part: "streaks", x: 70, y: 30, scale: 1, count: 2, spread: [16, 12], paint: "white" },
+      { part: "leaves", x: 84, y: 48, scale: 0.8, paint: "red-300" },
+    ],
   },
 };
 
@@ -558,21 +613,30 @@ const HEROIC_POWER_ALT: SceneRecipe = {
   emblem: { x: 82, y: 72, size: 5, rotate: 0 },
   figure: { x: 50, y: 84, scale: 0.4, pose: "pose-stand", look: normalCoreLookOf("core-098") },
   layers: {
-    sky: [{ part: "cloud", x: 30, y: 14, scale: 1.2, count: 2, spread: [40, 4], paint: "slate-400" }],
+    sky: [
+      { part: "cloud", x: 30, y: 14, scale: 1.2, count: 2, spread: [40, 4], paint: "slate-400" },
+      { part: "crow", x: 74, y: 12, scale: 0.5, count: 3, spread: [12, 4], paint: "slate-900" },
+    ],
     far: [
       { part: "cliff", x: 24, y: 36, scale: 1.6, paint: "green-900" },
       { part: "cliff", x: 76, y: 36, scale: 1.6, flip: -1, paint: "slate-700" },
+      { part: "pine", x: 12, y: 40, scale: 0.7, count: 2, spread: [8, 3], paint: "green-900" },
+      { part: "pine", x: 88, y: 40, scale: 0.7, count: 2, spread: [8, 3], paint: "green-900" },
       { part: "door", x: 38, y: 32, scale: 0.6 },
       { part: "doorway", x: 50, y: 28, scale: 0.6 },
       { part: "door", x: 62, y: 32, scale: 0.6 },
     ],
     mid: [
       { part: "stairs", x: 50, y: 40, paint: "slate-400" },
+      { part: "lantern", x: 34, y: 62, scale: 0.6 },
+      { part: "lantern", x: 66, y: 62, scale: 0.6 },
+      { part: "grass-tuft", x: 50, y: 70, count: 3, spread: [34, 10], paint: "green-700" },
       { part: "mist", x: 50, y: 60, scale: 1.4, paint: "white" },
     ],
     near: [
       { part: "fern", x: 10, y: 98, scale: 2, paint: "green-700" },
       { part: "fern", x: 90, y: 98, scale: 2, paint: "green-700" },
+      { part: "standing-stone", x: 22, y: 98, scale: 0.8, paint: "slate-700" },
     ],
     light: [
       { part: "halo", x: 38, y: 28, scale: 0.6, paint: "orange-400" },
@@ -591,19 +655,41 @@ const CRAFT_A_CARD_ALT: SceneRecipe = {
   emblem: { x: 18, y: 30, size: 5, rotate: 0 },
   figure: { x: 34, y: 110, scale: 1.6, pose: "pose-sit", look: normalCoreLookOf("core-099") },
   layers: {
+    sky: [
+      { part: "light-shaft", x: 60, y: 30, scale: 1.2, paint: "violet-300" },
+      { part: "stars", x: 60, y: 40, scale: 0.6, paint: "white" },
+    ],
     far: [
+      { part: "room-wall", x: 50, y: 78, paint: "violet-700" },
       { part: "window", x: 60, y: 44, scale: 1.2 },
       { part: "shelf", x: 84, y: 44, scale: 1 },
+      { part: "shelf", x: 84, y: 62, scale: 1 },
+      { part: "cog", x: 12, y: 30, scale: 1.2, count: 2, spread: [8, 8], paint: "slate-400" },
+      { part: "lantern", x: 40, y: 20, scale: 0.8 },
     ],
-    mid: [{ part: "boards", x: 50, y: 78, paint: "wood-800" }],
+    mid: [
+      { part: "boards", x: 50, y: 78, paint: "wood-800" },
+      { part: "crate", x: 88, y: 84, scale: 1, count: 2, spread: [6, 6] },
+      { part: "anvil", x: 12, y: 84, scale: 0.8 },
+    ],
     near: [
       { part: "wide-table", x: 72, y: 100, scale: 1.8 },
       { part: "jar", x: 66, y: 80, scale: 1.4 },
       { part: "playing-card", x: 72, y: 80, scale: 1.4, paint: "white" },
       { part: "taper", x: 56, y: 80, scale: 1.6 },
+      { part: "hammer", x: 84, y: 82, scale: 1 },
+      { part: "card", x: 90, y: 84, scale: 0.9, count: 2, spread: [6, 2] },
+      { part: "quill", x: 78, y: 80, scale: 1 },
     ],
-    light: [{ part: "halo", x: 56, y: 72, scale: 0.8, paint: "orange-400" }],
-    particles: [{ part: "motes", x: 50, y: 50, scale: 1.4, paint: "white" }],
+    light: [
+      { part: "halo", x: 56, y: 72, scale: 0.8, paint: "orange-400" },
+      { part: "rim-light", x: 34, y: 80, scale: 1.4, paint: "violet-300" },
+    ],
+    particles: [
+      { part: "motes", x: 50, y: 50, scale: 1.4, paint: "white" },
+      { part: "dust", x: 62, y: 44, scale: 1.2, count: 2, spread: [10, 14], paint: "violet-300" },
+      { part: "sparks", x: 72, y: 76, scale: 0.8, paint: "orange-400" },
+    ],
   },
 };
 
@@ -614,19 +700,43 @@ const CEASELESS_VOID_ALT: SceneRecipe = {
   light: { x: 30, y: 20, r: 44, paint: "white", opacity: 0.55 },
   emblem: { x: 82, y: 30, size: 5, rotate: 0 },
   layers: {
-    sky: [{ part: "god-rays", x: 30, y: 0, scale: 2, paint: "white" }],
-    far: [{ part: "water", x: 50, y: 36, paint: "cyan-400" }],
+    sky: [
+      { part: "god-rays", x: 30, y: 0, scale: 2, paint: "white" },
+      { part: "sun", x: 22, y: 10, scale: 0.6 },
+    ],
+    far: [
+      { part: "water", x: 50, y: 36, paint: "cyan-400" },
+      { part: "mesa", x: 8, y: 42, scale: 0.6, paint: "stone-500" },
+      { part: "mesa", x: 92, y: 44, scale: 0.6, flip: -1, paint: "stone-500" },
+      { part: "reed", x: 30, y: 48, scale: 1, count: 3, spread: [10, 4], paint: "green-700" },
+    ],
     mid: [
       { part: "fern-sprig", x: 14, y: 72, scale: 2.4, paint: "orange-400" },
+      { part: "fern-sprig", x: 74, y: 44, scale: 1.4, paint: "red-300" },
       { part: "bush", x: 86, y: 74, scale: 1.6, paint: "red-300" },
+      { part: "bush", x: 24, y: 46, scale: 1, paint: "orange-400" },
+      { part: "pebbles", x: 64, y: 78, scale: 1.4, paint: "jade-400" },
+      { part: "echo-rings", x: 50, y: 56, scale: 1.4, paint: "cyan-400" },
     ],
     subject: [
       { part: "void-swirl", x: 50, y: 56, scale: 1.1, paint: "jade-400" },
       { part: "orb", x: 50, y: 56, scale: 0.5, paint: "black" },
     ],
-    near: [{ part: "pebbles", x: 20, y: 94, scale: 2, paint: "red-300" }],
-    light: [{ part: "rim-light", x: 50, y: 56, scale: 1, paint: "white" }],
-    particles: [{ part: "bubbles", x: 62, y: 40, scale: 1.2, count: 3, spread: [20, 10] }],
+    near: [
+      { part: "pebbles", x: 20, y: 94, scale: 2, paint: "red-300" },
+      { part: "pebbles", x: 86, y: 96, scale: 2.2, paint: "stone-500" },
+      { part: "bush", x: 8, y: 98, scale: 1.4, paint: "red-300" },
+      { part: "reed", x: 70, y: 98, scale: 1.4, count: 2, spread: [6, 2], paint: "jade-400" },
+    ],
+    light: [
+      { part: "rim-light", x: 50, y: 56, scale: 1, paint: "white" },
+      { part: "light-shaft", x: 34, y: 0, scale: 1.2, paint: "white" },
+    ],
+    particles: [
+      { part: "bubbles", x: 62, y: 40, scale: 1.2, count: 3, spread: [20, 10] },
+      { part: "sparks", x: 40, y: 30, scale: 1, count: 3, spread: [30, 10], paint: "white" },
+      { part: "motes", x: 50, y: 60, scale: 1.2, paint: "white" },
+    ],
   },
 };
 
