@@ -18285,13 +18285,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-7",
       "queued_at": "2026-11-08T05:40:55Z",
-      "run_id": "42451819925",
+      "run_id": "pending:706d1d7f-1794120862",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 145,
-      "started_at": "2026-11-08T05:42:26Z",
+      "started_at": "2026-11-08T06:54:49Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18366,9 +18367,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T06:36:58Z",
+    "at": "2026-11-08T06:54:49Z",
     "url": "",
-    "what": "revise #3382 on claude-1"
+    "what": "spot-check #3427 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T06:43:44Z",
@@ -36169,7 +36170,15 @@
         "n": 145,
         "pr": 3427,
         "queued_at": "2026-11-08T06:26:39Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:706d1d7f-1794120862",
         "sha": "b01bbd555cba846961161b376ac5bbe08c769e58",
+        "started_at": "2026-11-08T06:54:49Z",
         "status": "queued",
         "title": "Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer",
         "tries": 0
