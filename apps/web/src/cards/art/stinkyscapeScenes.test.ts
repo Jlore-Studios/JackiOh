@@ -22,7 +22,7 @@ import { seededRandom } from "./hash.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
-import { composeScene, SCENE_LAYERS, SCENE_PALETTE, sceneRecipeOf, sceneUse, type PaletteName, type SceneLayer, type ScenePlacement, type SceneRecipe } from "./scene.ts";
+import { composeScene, SCENE_LAYERS, SCENE_PALETTE, sceneRecipeOf, sceneUse, type KitCategory, type PaletteName, type SceneLayer, type ScenePlacement, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
 import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES } from "./stinkyscape.ts";
@@ -54,6 +54,8 @@ const MYTHIC_PARTS: Readonly<Record<string, SceneryPartId>> = {
 /** The parts that turn with their placement's `rotate`. */
 const POINTING: readonly SceneryPartId[] = ["beam", "light-stream", "light-cone", "meteor", "smoke-trail", "comet"];
 const PATH = /^M[-\d. MLQCAZ]+$/;
+/** The seven kinds of scenery (scene.ts's `KitCategory` but the figure's five). */
+const SCENERY_KINDS: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather", "craft"];
 /** The seeds every part is drawn from (scene.test.ts's). */
 const SEEDS = 40;
 /** Each card's parts its brief names, the scenery and the figure's (the pass's plan, #3391). */
@@ -333,33 +335,40 @@ describe("R3391000 Stinkyscape's scenes", () => {
     expect(turned).toEqual([]);
   });
 
-  it("R3391000 every part draws clean shapes at any turn; the pointing parts turn, the rest ignore it", () => {
-    // Problems are gathered and checked once: an expect per shape over every part, seed and turn outruns the test's time.
-    const palette = new Set<string>(Object.keys(SCENE_PALETTE));
-    const problems: string[] = [];
-    for (const [id, part] of Object.entries(SCENE_KIT) as [SceneryPartId, (typeof SCENE_KIT)[SceneryPartId]][]) {
-      const pointing = POINTING.includes(id);
-      for (let seed = 1; seed <= SEEDS; seed += 1) {
-        const flip = seed % 2 === 0 ? 1 : -1;
-        const s = 0.5 + (seed % 5) * 0.25;
-        const still = JSON.stringify(part.draw({ x: 50, y: 60, s, flip }, seededRandom(seed)));
-        for (const rotate of [0, 45, 90, 180, 270]) {
-          const shapes = part.draw({ x: 50, y: 60, s, flip, rotate }, seededRandom(seed));
-          const where = `${id} seed ${seed} at ${rotate}`;
-          if (shapes.length < 1 || shapes.length > 12) problems.push(`${where}: ${shapes.length} shapes`);
-          for (const shape of shapes) {
-            if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) problems.push(`${where}: path ${shape.d.slice(0, 40)}`);
-            if (!palette.has(shape.paint)) problems.push(`${where}: paint ${shape.paint}`);
-            if (!(shape.opacity > 0 && shape.opacity <= 1)) problems.push(`${where}: opacity ${shape.opacity}`);
+  // One test per kind of scenery: the same parts, seeds, turns and checks as one sweep of the kit, each a seventh of its time.
+  for (const category of SCENERY_KINDS) {
+    it(`R3391000 every ${category} part draws clean shapes at any turn; the pointing parts turn, the rest ignore it`, () => {
+      // Problems are gathered and checked once: an expect per shape over every part, seed and turn outruns the test's time.
+      const palette = new Set<string>(Object.keys(SCENE_PALETTE));
+      const problems: string[] = [];
+      for (const [id, part] of Object.entries(SCENE_KIT) as [SceneryPartId, (typeof SCENE_KIT)[SceneryPartId]][]) {
+        if (part.category !== category) continue;
+        const pointing = POINTING.includes(id);
+        for (let seed = 1; seed <= SEEDS; seed += 1) {
+          const flip = seed % 2 === 0 ? 1 : -1;
+          const s = 0.5 + (seed % 5) * 0.25;
+          const still = JSON.stringify(part.draw({ x: 50, y: 60, s, flip }, seededRandom(seed)));
+          for (const rotate of [0, 45, 90, 180, 270]) {
+            const shapes = part.draw({ x: 50, y: 60, s, flip, rotate }, seededRandom(seed));
+            const where = `${id} seed ${seed} at ${rotate}`;
+            if (shapes.length < 1 || shapes.length > 12) problems.push(`${where}: ${shapes.length} shapes`);
+            for (const shape of shapes) {
+              if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) problems.push(`${where}: path ${shape.d.slice(0, 40)}`);
+              if (!palette.has(shape.paint)) problems.push(`${where}: paint ${shape.paint}`);
+              if (!(shape.opacity > 0 && shape.opacity <= 1)) problems.push(`${where}: opacity ${shape.opacity}`);
+            }
+            const same = JSON.stringify(shapes) === still;
+            if (rotate === 0 || !pointing ? !same : same) problems.push(`${where}: ${pointing ? "did not turn" : "turned"}`);
           }
-          const same = JSON.stringify(shapes) === still;
-          if (rotate === 0 || !pointing ? !same : same) problems.push(`${where}: ${pointing ? "did not turn" : "turned"}`);
         }
       }
-    }
-    expect(problems).toEqual([]);
+      expect(problems).toEqual([]);
+    });
+  }
+
+  it("R3391000 the sweeps above cover every part of the kit, the pointing parts among them, and craft are a kind of their own", () => {
+    for (const part of Object.values(SCENE_KIT)) expect(SCENERY_KINDS).toContain(part.category);
     for (const id of POINTING) expect(SCENE_KIT[id], id).toBeDefined();
-    // Craft are a kind of their own.
     expect(Object.values(SCENE_KIT).filter((part) => part.category === "craft").length).toBeGreaterThanOrEqual(6);
   });
 });
