@@ -18288,14 +18288,6 @@
         "reason": "`claude-6` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-08T12:00:00Z",
         "trail": "ypechecks clean. Running the fx, audio, routes and game test suites now.\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) wasm built, typecheck clean; running vitest fx/audio/routes/test/game\\\" >> .bot-notes.md; cd apps/web && timeout 1700 pnpm exec vitest run src/fx src/audio src\u2026\n- Bash: {\"command\": \"grep -B3 -A30 \\\"FAIL |web| src/fx/cardFx.test.ts > R502\\\" /tmp/vt.log | sed -n 1,60p\", \"description\": \"Show cardFx failure detail\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3426; git diff 197311a554 -- apps/web/src/fx/cardFx.test.ts apps/web/src/fx/entrances.test.ts apps/web/src/fx/cards/coverage.test.ts\", \"description\":\u2026\n- Bash: {\"command\": \"ls crates/cards/catalog.json 2>/dev/null || find . -name catalog.json -path \\\"*cards*\\\" -not -path \\\"*/node_modules/*\\\" | head -3; python3 - <<'EOF'\\nimport json,re\\ncat=json.load(open(\\\u2026\n- Bash: {\"command\": \"sed -n 326,380p apps/web/src/fx/cardFx.test.ts; grep -n '\\\"meditative-040\\\"\\\\|\\\"classicplus-013\\\"\\\\|\\\"classicplus-012\\\"' apps/web/src/fx/cards/*.json5\", \"description\": \"View the cardFx F\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np=\\\"apps/web/src/fx/cardFx.test.ts\\\"\\ns=open(p).read()\\na=\\\"\\\"\\\" // Classic #4 Palantir, a Legendary Field Spell, given an entrance of its own beside its hooks and aur\u2026\n- Bash: {\"command\": \"sed -n 50,58p apps/web/src/fx/cards/coverage.test.ts\", \"description\": \"View coverage recipe-field test\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np=\\\"apps/web/src/fx/cards/coverage.test.ts\\\"\\ns=open(p).read()\\na=\\\"\\\"\\\" expect(recipes).toEqual([\\\"classic-004\\\", \\\"classic-007\\\", \\\"classic-028\\\", \\\"classic-090\\\"]);\u2026\n- Bash: {\"command\": \"sed -n 112,130p apps/web/src/fx/takeover.test.ts; sed -n 195,260p apps/web/src/fx/takeover.test.ts; grep -A30 \\\"FAIL |web| src/fx/takeover.test.ts > R2722002 a hidden card's entrance cen\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json,re\\ncards=json.load(open(\\\"crates/cards/catalog.json\\\"))\\ncards=cards.get(\\\"cards\\\",cards) if isinstance(cards,dict) else cards\\nsrc=open(\\\"apps/web/src/fx\u2026\n- Bash: {\"command\": \"sed -n 33,100p apps/web/src/fx/takeover.test.ts; grep -n \\\"^export function planFx\\\" -A3 apps/web/src/fx/cues.ts; grep -n \\\"^export function entranceCues\\\\|^export function ownCast\\\" -A3\u2026\n- Bash: {\"command\": \"git show 197311a554:apps/web/src/fx/takeover.test.ts | grep -n \\\"classic-044\\\\|classic-009\\\\|core-083\\\\|core-085\\\"; git show HEAD:apps/web/src/fx/takeover.test.ts | grep -n \\\"classic-044\u2026\n- Bash: {\"command\": \"git show b01bbd555c:apps/web/src/fx/cards/classic.json5 | grep -n \\\"classic-009\\\\|classic-044\\\"; grep -n \\\"classicplus-035\\\" apps/web/src/fx/cards/classicplus.json5; sed -n 262,290p apps\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np=\\\"apps/web/src/fx/takeover.test.ts\\\"\\ns=open(p).read()\\nrep=[\\n# fixtures\\n(''' \\\"classic-044\\\": { type: \\\"Spell\\\", rarity: \\\"Legendary\\\" },\\n''',''' \\\"classic-044\\\"\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/fx/takeover.test.ts src/fx/cardFx.test.ts src/fx/entrances.test.ts src/fx/cards/coverage.test.ts src/fx/aura 2>&1 | grep -E \\\"Test Fil\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3426; grep -n \\\"claims\\\" -B5 -A25 .github/workflows/ci.yml | grep -n \\\"classify\\\\|PARENT\\\\|parent-bin\\\\|claims\\\\|run:\\\" | head -30\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20; grep -n \\\"merge-base\\\\|merge_base\\\\|fn changed\\\\|git diff\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check classi\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"--head\\\\\\\"\\\\|head_rev\\\\|worktree\\\\|working tree\\\\|merge_base\\\\|merge-base\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check classify's default head\"}\n- Bash: {\"command\": \"grep -n \\\"fn changed_paths\\\\|fn git_diff\\\\|\\\\\\\"diff\\\\\\\"\\\" -A12 crates/tools/src/classify.rs | head -50\", \"description\": \"Find classify's git diff invocation\"}\n- Bash: {\"command\": \"sed -n 1115,1140p crates/tools/src/classify.rs\", \"description\": \"Read classify head resolution\"}\n- Bash: {\"command\": \"git add -u && git status --short | grep -v \\\"^[MADR] \\\" | head; git diff --name-only --diff-filter=U | head; T=$(git write-tree) && C=$(GIT_AUTHOR_NAME=probe GIT_AUTHOR_EMAIL=probe@x GIT\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) vitest failures fixed (each side's 'plain' example cards now signatures: swapped to classicplus-035 / PLAIN_TRAP table, meditative-040, classicplus-013); runni\u2026\n- Bash: {\"command\": \"timeout 600 target/release/jackioh classify --base b01bbd555c --head 4ed70f5699 --claims --json 2>&1 | tail -1 | cut -c1-400 || timeout 600 /home/runner/work/JackiOh/JackiOh/target/relea\u2026\n- Bash: {\"command\": \"timeout 600 /home/runner/work/JackiOh/JackiOh/target/release/jackioh classify --base b01bbd555c --head 4ed70f5699 --claims --json 2>&1 | tail -1 | cut -c1-500\", \"description\": \"Confirm t\u2026\n- said: The old head reproduces CI's `rust (classify)` failure, and the merged state now classifies as `kind:app` with no problems. Running the remaining checks.\n- Bash: {\"command\": \"J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; cargo jackioh spec check 2>&1 | tail -1; $J patches check 2>&1 | tail -1; $J catalog check 2>&1 | tail -1 | cut -c1-80; cargo \u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) classify --claims ok (kind:app, no problems); spec/patches/catalog/fmt/component typecheck/eslint ok. Re-running vitest fx/audio/routes/test/game\\\" >> .bot-not\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3426 && timeout 1750 pnpm exec vitest run --project web --changed 197311a554 --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/c\u2026\n- said: Meanwhile I'll update the notes' State section.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3426 && python3 - <<'EOF'\\np=\\\".bot-notes.md\\\"\\ns=open(p).read()\\ni=s.index(\\\"## Log\\\")\\nstate=\\\"\\\"\\\"## State\\n\\n(CI fix pass, 2026-11-08, opus, resu\u2026\n- Bash: {\"command\": \"head -30 .bot-notes.md; grep -n \\\"^## \\\" .bot-notes.md\", \"description\": \"Inspect notes file structure\"}"
       },
-      "hold": {
-        "ends": "2026-11-08T11:59:43Z",
-        "lifted": "2026-11-08T11:02:39Z",
-        "owner": "claude-6",
-        "since": "2026-11-08T09:59:43Z",
-        "until": "2026-11-08T11:00:00Z",
-        "why": "5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 1,
       "issue": 3402,
       "kind": "revise",
@@ -18313,7 +18305,7 @@
       "queued_at": "2026-11-08T08:48:09Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42466147786",
+      "run_id": "pending:9b31d377-1794135901",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18334,7 +18326,7 @@
         "run": "42466147786"
       },
       "source": "ci",
-      "started_at": "2026-11-08T09:11:46Z",
+      "started_at": "2026-11-08T11:05:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -18687,9 +18679,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T10:28:37Z",
+    "at": "2026-11-08T11:05:50Z",
     "url": "",
-    "what": "build #3401 on claude-4"
+    "what": "revise #3426 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-08T10:50:55Z",
