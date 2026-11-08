@@ -36343,7 +36343,8 @@
     "runs": [
       "2026-11-08T03:43:02Z,42438501202,claude-4,opus,review,3424,hard,blocked,,35.9,269,91638,18137972,17.7514,9,45,,,1.8,,fresh,,4",
       "2026-11-08T03:48:21Z,42434070619,claude-6,opus,revise,3375,hard,approved,,66.3,151,43684,6578775,8.1048,47,36,,,0.5,claude-4,fresh,,4",
-      "2026-11-08T03:52:52Z,42443180082,claude-2,opus,plan,3405,hard,planned,,18.1,161,113325,16168693,7.9093,3,77,30,36,628.3,claude-3,fresh,cap,1"
+      "2026-11-08T03:52:52Z,42443180082,claude-2,opus,plan,3405,hard,planned,,18.1,161,113325,16168693,7.9093,3,77,30,36,628.3,claude-3,fresh,cap,1",
+      "2026-11-08T03:55:47Z,42443131285,claude-2,opus,plan,3393,hard,interrupted,5-hour cap,21.5,0,0,0,,0,90,30,37,644.7,claude-3,fresh,cap,1"
     ]
   },
   "version": 1
