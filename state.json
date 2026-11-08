@@ -16813,32 +16813,13 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "built_by": "claude-1",
-        "carried": {
-          "by": "`claude` (medium)",
-          "conflicts": [
-            "e2e/cypress/component/fx-phone-frame.cy.tsx"
-          ],
-          "from": "fedbeaff6a2628007ebd76c1151de504ffbbcac3",
-          "main": "1fbbecc15e2bf83b6a25c550f9dbec5c977a5ae4"
-        },
+        "approvals": [],
+        "builder": "gpt",
+        "built_by": "gpt",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-1",
-            "run": "42448802653",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c3624b4e40e043a63cee7aaadc2a67e4c2f0bc39",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "2b9e189e5395848f05ada8381b8d5b6e0ed419a2",
+        "tiers": {}
       },
       "waiting_comment": 6717133241
     },
