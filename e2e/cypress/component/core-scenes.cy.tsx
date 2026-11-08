@@ -3,7 +3,8 @@
 // ceiling, colours and geometry (cards/art/coreScenes.test.ts); here every Epic, Legendary and Mythic Core scene is
 // drawn at hand size and every other Core scene on a contact sheet at board size, base and Radiant, each picture
 // paints, each Radiant face's differs from its base face's, and the screenshots are what the scenes were tuned
-// against by eye. The faces draw flat (Reduce motion), as scene-proofs.cy.tsx's do.
+// against by eye. Each set of faces is shown a page at a time, each page fitting the viewport (as
+// classicplus-scenes.cy.tsx's are), and the faces draw flat (Reduce motion), as scene-proofs.cy.tsx's do.
 // Run: E2E_COMPONENT_PORT=5291 pnpm --dir e2e test:component --spec cypress/component/core-scenes.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -27,11 +28,14 @@ const VIEWPORTS = [
   { label: "desktop", width: 1280, height: 720, face: 220 },
   { label: "phone", width: 390, height: 844, face: 150 },
 ] as const;
+type Viewport = (typeof VIEWPORTS)[number];
 
 /** A board minion's box (card-cosmetics.cy.tsx's). */
 const MINION_BOX = { width: 81, height: 113 } as const;
 /** A face-up backrow card's box on the board. */
 const BACKROW_BOX = { width: 71, height: 100 } as const;
+/** The space round a page and between its faces. */
+const GAP_PX = 8;
 
 /** How long the faces may take to settle before their art must be painted. */
 const SETTLE_TIMEOUT_MS = 30_000;
@@ -48,11 +52,21 @@ function nameOf(id: string, radiant: boolean): string {
   return `${id}-${radiant ? "radiant" : "base"}`;
 }
 
-/** Every Epic, Legendary and Mythic scene at hand size, each card's base face beside its Radiant one. */
-function Hand({ width }: { width: number }) {
+/** The ids of each page: as many base and Radiant pairs as fit the viewport, each face `width` by `height`. */
+function pagesOf(ids: readonly string[], viewport: Viewport, width: number, height: number): string[][] {
+  const pairsPerRow = Math.max(1, Math.floor((viewport.width - GAP_PX) / (2 * (width + GAP_PX))));
+  const rows = Math.max(1, Math.floor((viewport.height - GAP_PX) / (height + GAP_PX)));
+  const perPage = pairsPerRow * rows;
+  const pages: string[][] = [];
+  for (let at = 0; at < ids.length; at += perPage) pages.push(ids.slice(at, at + perPage));
+  return pages;
+}
+
+/** A page of Epic, Legendary and Mythic scenes at hand size, each card's base face beside its Radiant one. */
+function Hand({ ids, width }: { ids: readonly string[]; width: number }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#1b1f2b" }}>
-      {DEEP.flatMap((id) =>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: GAP_PX, padding: GAP_PX / 2, background: "#1b1f2b" }}>
+      {ids.flatMap((id) =>
         [false, true].map((radiant) => (
           <div key={nameOf(id, radiant)} data-face={nameOf(id, radiant)} style={{ width, height: Math.round(width / FACE_ASPECT), flex: "none", position: "relative" }}>
             <CardFace face={faceModel({ defId: id, def: CATALOG[id], radiant })} layout="full" />
@@ -63,11 +77,11 @@ function Hand({ width }: { width: number }) {
   );
 }
 
-/** Every other Core scene at board size, as scene-proofs.cy.tsx draws its board row. */
-function Sheet() {
+/** A page of the other Core scenes at board size, as scene-proofs.cy.tsx draws its board row. */
+function Sheet({ ids }: { ids: readonly string[] }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 8, background: "#1b1f2b" }}>
-      {REST.flatMap((id) =>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: GAP_PX, padding: GAP_PX / 2, background: "#1b1f2b" }}>
+      {ids.flatMap((id) =>
         [false, true].map((radiant) => {
           const face = faceModel({ defId: id, def: CATALOG[id], radiant });
           const minion = CATALOG[id]?.type === "Unit";
@@ -124,8 +138,8 @@ function changedShare(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
   return pixels === 0 ? 0 : changed / pixels;
 }
 
-/** Waits for every face of `ids` to have a window that paints, each Radiant picture another than its base one. */
-function settle(ids: readonly string[], where: string): void {
+/** Waits for every face of `ids` to have a window that paints inside the viewport, each Radiant picture another than its base one. */
+function settle(ids: readonly string[], where: string, viewport: Viewport): void {
   cy.get("[data-face] .cf-art", { timeout: SETTLE_TIMEOUT_MS }).should("have.length", ids.length * FACES.length);
   cy.get("[data-face] .cf-art[data-art-pending]", { timeout: SETTLE_TIMEOUT_MS }).should("not.exist");
   cy.document().its("fonts.status").should("eq", "loaded");
@@ -135,6 +149,7 @@ function settle(ids: readonly string[], where: string): void {
         const name = `${id}-${face}`;
         const box = doc.querySelector(`[data-face="${name}"] .cf-art`)?.getBoundingClientRect();
         expect(box?.width ?? 0, `${name} at ${where} has a window`).to.be.greaterThan(0);
+        expect(box?.bottom ?? Infinity, `${name} at ${where} fits the ${viewport.label} screen`).to.be.at.most(viewport.height);
         expect(pictureOf(doc, name), `${name} at ${where} paints`).not.to.equal("");
       }
       expect(pictureOf(doc, nameOf(id, true)), `${id}'s two faces at ${where}`).not.to.equal(pictureOf(doc, nameOf(id, false)));
@@ -171,18 +186,23 @@ for (const viewport of VIEWPORTS) {
 
     it("R3392000 every Epic, Legendary and Mythic scene at hand size, base and Radiant", () => {
       expect(DEEP).to.have.length(27);
-      cy.mount(<Hand width={viewport.face} />);
-      settle(DEEP, `${viewport.label} hand size`);
-      radiantDiffers(DEEP);
-      cy.screenshot(`core-scenes-${viewport.label}-deep`, { capture: "fullPage", overwrite: true });
+      const height = Math.round(viewport.face / FACE_ASPECT);
+      pagesOf(DEEP, viewport, viewport.face, height).forEach((page, n) => {
+        cy.mount(<Hand ids={page} width={viewport.face} />);
+        settle(page, `${viewport.label} hand size`, viewport);
+        radiantDiffers(page);
+        cy.screenshot(`core-scenes-${viewport.label}-deep-${String(n + 1)}`, { capture: "viewport", overwrite: true });
+      });
     });
 
     it("R3392000 a contact sheet of every other Core scene, base and Radiant", () => {
       expect(REST).to.have.length(83);
-      cy.mount(<Sheet />);
-      settle(REST, `${viewport.label} board size`);
-      radiantDiffers(REST);
-      cy.screenshot(`core-scenes-${viewport.label}-sheet`, { capture: "fullPage", overwrite: true });
+      pagesOf(REST, viewport, MINION_BOX.width, MINION_BOX.height).forEach((page, n) => {
+        cy.mount(<Sheet ids={page} />);
+        settle(page, `${viewport.label} board size`, viewport);
+        radiantDiffers(page);
+        cy.screenshot(`core-scenes-${viewport.label}-sheet-${String(n + 1)}`, { capture: "viewport", overwrite: true });
+      });
     });
   });
 }

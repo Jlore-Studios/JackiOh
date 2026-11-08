@@ -892,7 +892,7 @@ const MISS_MROW: SceneRecipe = {
     mid: [{ part: "chain-length", x: 40, y: 54, scale: 1.2, paint: "slate-100" }],
     subject: [{ part: "chair", x: 90, y: 82, scale: 1.2 }],
     near: [
-      { part: "cup", x: 52, y: 92, scale: 2.4, count: 3, spread: [30, 2] },
+      { part: "cup", x: 52, y: 92, scale: 2.4, count: 3, spread: [30, 2], props: true },
       { part: "spray", x: 60, y: 86, scale: 1, paint: "white" },
     ],
     light: [{ part: "halo", x: 34, y: 54, scale: 1.1, paint: "white" }],

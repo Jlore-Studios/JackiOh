@@ -419,11 +419,12 @@ A Unit's character comes from the kits, never the painter's silhouette: a figure
 like a person (Jewelosco Scarab, Carnivorous Cube, Prem Panther, Straaza, Spikey Pillow, The Rock, the Sheep, Bread
 and Rush Tokens), a creature part drawn for it in its subject layer. A scene's other people are its `extras`
 (R3390000). KY wears one look on every Core card that draws him (`KY_TUTOR_LOOK`: spectacles, a cardigan, a stick of chalk). A
-scene draws no motif glyph or accent, so the full-art Core cards that moved their props (R2715001) move their
-scene's near layer on the same beat (`FULL_ART_MOTION`). The parts the briefs named joined the kits after the old ones of
-their kinds, in `sceneKit.ts` and `figureKit.ts`; where Classic+'s pass had already taken a name for a part of
-its own, Core's drawing took another (`sea` beside `water`, `playing-card` beside `card`, `pose-stride` beside
-`pose-run`). `coreScenes.test.ts` holds the recipes to this, and
+scene draws no motif glyph or accent, so each full-art Core card whose motion moves its props (R2715001) marks the
+placements that move on that beat `props` (R3390000), its motion unchanged. The parts the briefs named joined the
+kits after the old ones of their kinds, in `sceneKit.ts` and `figureKit.ts`; where Classic+'s pass had already
+taken a name for a part of its own, Core's drawing took another (`sea` beside `water`, `playing-card` beside
+`card`, `pose-stride` beside `pose-run`). Every Core entry is off the short list, whose cap fell from 445 to 337.
+`coreScenes.test.ts` holds the recipes to this, and
 `core-scenes.cy.tsx` draws every Epic, Legendary and Mythic scene at hand size and a contact sheet of the rest, at
 a desktop's size and a phone's.
 

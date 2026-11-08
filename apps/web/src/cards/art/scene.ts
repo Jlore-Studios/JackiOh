@@ -167,9 +167,9 @@ export type SceneRecipe = {
   /** R3390000: the scene's other figures, each in its own layer. */
   readonly extras?: readonly ExtraFigure[];
   /**
- * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
- * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
- */
+   * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
+   * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
+   */
   readonly ownSubject?: boolean;
   readonly layers: Partial<Record<SceneLayer, readonly ScenePlacement[]>>;
 };

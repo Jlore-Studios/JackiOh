@@ -27,8 +27,10 @@ const BIG_D_FENDER: SceneRecipe = {
       { part: "lighthouse", x: 82, y: 68, scale: 1.1 },
       { part: "boards", x: 50, y: 72 },
     ],
-    subject: [{ part: "gull", x: 50, y: 28, scale: 1.3, count: 2, spread: [4, 1] }],
-    near: [{ part: "fence-post", x: 10, y: 96 }],
+    near: [
+      { part: "fence-post", x: 10, y: 96 },
+      { part: "gull", x: 50, y: 28, scale: 1.3, count: 2, spread: [4, 1], props: true },
+    ],
   },
 };
 
@@ -114,7 +116,7 @@ const GARY_THE_GAMBLER: SceneRecipe = {
       { part: "wide-table", x: 70, y: 84, scale: 1.4 },
       { part: "card-fan", x: 70, y: 70, scale: 1.1 },
     ],
-    near: [{ part: "coin", x: 44, y: 36, scale: 1.4, count: 3, spread: [8, 8] }],
+    near: [{ part: "coin", x: 44, y: 36, scale: 1.4, count: 3, spread: [8, 8], props: true }],
     light: [{ part: "rim-light", x: 36, y: 56, scale: 1.2, paint: "orange-400" }],
   },
 };
@@ -212,7 +214,7 @@ const MR_VANILLA: SceneRecipe = {
       { part: "window", x: 82, y: 56, scale: 1.4 },
     ],
     mid: [{ part: "pedestal", x: 18, y: 84, scale: 1.4 }, { part: "bench", x: 80, y: 84, scale: 1.2 }],
-    near: [{ part: "light-shaft", x: 20, y: 0, scale: 1.4 }],
+    near: [{ part: "light-shaft", x: 20, y: 0, scale: 1.4, props: true }],
     light: [{ part: "halo", x: 50, y: 56, scale: 1.2, paint: "white" }],
     particles: [{ part: "motes", x: 50, y: 52, scale: 1.8, paint: "white" }],
   },
@@ -299,7 +301,7 @@ const TEMPO_TIMMY: SceneRecipe = {
       { part: "bunting", x: 50, y: 40, scale: 1 },
       { part: "crowd", x: 78, y: 68, scale: 0.9 },
     ],
-    near: [{ part: "dust-cloud", x: 44, y: 86, scale: 1.5, count: 2, spread: [8, 2] }],
+    near: [{ part: "dust-cloud", x: 44, y: 86, scale: 1.5, count: 2, spread: [8, 2], props: true }],
     light: [{ part: "rim-light", x: 56, y: 56, scale: 1.1, paint: "white" }],
   },
 };
@@ -341,7 +343,7 @@ const DUPLICATING_FELINORS: SceneRecipe = {
     sky: [{ part: "room-wall", x: 50, y: 82 }],
     far: [{ part: "bulbs", x: 50, y: 20, scale: 1.8 }],
     mid: [{ part: "mirror", x: 78, y: 82, scale: 2.4 }],
-    near: [{ part: "sparks", x: 39, y: 46, scale: 1.4, count: 2, spread: [3, 3], paint: "white" }],
+    near: [{ part: "sparks", x: 39, y: 46, scale: 1.4, count: 2, spread: [3, 3], paint: "white", props: true }],
     light: [{ part: "halo", x: 39, y: 46, scale: 0.7, paint: "white" }],
   },
 };
@@ -495,8 +497,8 @@ const BREAD_AND_BUTTER: SceneRecipe = {
     ],
     mid: [
       { part: "wide-table", x: 50, y: 92, scale: 2.2 },
-      { part: "crate", x: 80, y: 76, scale: 2.6, paint: "brass-500" },
-      { part: "motes", x: 62, y: 72, scale: 1.2, paint: "brass-500" },
+      { part: "crate", x: 80, y: 76, scale: 2.6, paint: "brass-500", props: true },
+      { part: "motes", x: 62, y: 72, scale: 1.2, paint: "brass-500", props: true },
     ],
     subject: [{ part: "loaf", x: 48, y: 50, scale: 2 }],
     near: [{ part: "toaster", x: 36, y: 76, scale: 1.9 }],

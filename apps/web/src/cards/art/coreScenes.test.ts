@@ -1,8 +1,9 @@
 // R3392000: Core's scenes (sceneRecipesCore1.ts to sceneRecipesCore3.ts, ART.md "Core's scenes"). Every Core
 // entry but Ceaseless Void draws a scene recipe of its own in Core's family, on both faces with one geometry, at
 // or above its rarity's floor (R3331001) and under the ceiling; a Unit's character is a figure or a creature part;
-// a scene's extra figures (R3390000's `extras`) stand in their own layers; each Mythic draws a part no other scene does; and the scenes this pass
-// does not own draw as #3331 left them. The pixels are e2e/cypress/component/core-scenes.cy.tsx's.
+// a scene's extra figures (R3390000's `extras`) stand in their own layers, and a full-art card's props are placements
+// marked `props`; each Mythic draws a part no other scene does; and the scenes this pass does not own draw as #3331
+// left them. The pixels are e2e/cypress/component/core-scenes.cy.tsx's.
 
 import { describe, expect, it } from "vitest";
 
@@ -10,9 +11,10 @@ import { CATALOG } from "@jackioh/cards";
 import type { CardDef, Rarity } from "@jackioh/shared";
 
 import { proceduralCardArtUri } from "../../patches/cardArt.ts";
-import { FIGURE_DEFAULT_LOOK, KY_TUTOR_LOOK } from "./figureKit.ts";
+import { FIGURE_KIT, KY_TUTOR_LOOK } from "./figureKit.ts";
 import { hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
+import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, sceneRecipeOf, sceneUse, SCENE_LAYERS, type SceneLayer, type SceneRecipe } from "./scene.ts";
@@ -21,6 +23,7 @@ import { SCENE_RECIPES } from "./sceneRecipes.ts";
 import { CORE_SCENES_1 } from "./sceneRecipesCore1.ts";
 import { CORE_SCENES_2 } from "./sceneRecipesCore2.ts";
 import { CORE_SCENES_3 } from "./sceneRecipesCore3.ts";
+import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
 const SVG_PREFIX = "data:image/svg+xml,";
@@ -128,41 +131,31 @@ describe("R3392000 Core's scenes", () => {
     }
   });
 
-  it("R3392000 a Core scene's extra figures stand in their layers, in front of those layers' parts", () => {
-    const base: SceneRecipe = {
-      family: "core",
-      sky: ["blue-800", "sky-300"],
-      light: { x: 50, y: 40, r: 30, paint: "white", opacity: 0.3 },
-      layers: { mid: [{ part: "crate", x: 30, y: 80 }], subject: [{ part: "crate", x: 60, y: 80 }] },
-    };
-    const withExtra: SceneRecipe = { ...base, extras: [{ x: 40, y: 86, scale: 0.6, pose: "pose-stand", look: FIGURE_DEFAULT_LOOK, layer: "mid" }] };
-    const without = composeScene(base, "core-extras-test");
-    const shapes = composeScene(withExtra, "core-extras-test");
-    const mid = shapes.filter((shape) => shape.layer === "mid");
-    const crate = without.filter((shape) => shape.layer === "mid");
-    // The mid crate first, as it is drawn with no extra figure, then the figure's shapes, tagged mid.
-    expect(mid.slice(0, crate.length)).toEqual(crate);
-    const figure = mid.slice(crate.length);
-    expect(figure.length).toBeGreaterThan(0);
-    expect(figure.every((shape) => shape.part !== "crate")).toBe(true);
-    expect(new Set(figure.map((shape) => shape.part))).toContain("pose-stand");
-    // Then the subject layer's crate, after every mid shape.
-    const lastMid = shapes.map((shape) => shape.layer).lastIndexOf("mid");
-    const firstSubject = shapes.findIndex((shape) => shape.layer === "subject");
-    expect(firstSubject).toBeGreaterThan(lastMid);
-    expect(shapes[firstSubject]?.part).toBe("crate");
-    // Every Core extra figure draws its pose in its own layer.
+  it("R3392000 a Core scene's extra figures stand in their layers, and the full-art Core cards still move their props", () => {
     let extras = 0;
     for (const card of CORE) {
       const scene = recipe(card.id);
+      for (const layer of SCENE_LAYERS) {
+        for (const placed of scene.layers[layer] ?? []) if (placed.props === true) expect(layer, `${card.id} ${placed.part}`).not.toBe("subject");
+      }
       const drawn = composeScene(scene, card.id);
       for (const extra of scene.extras ?? []) {
-        expect(SCENE_LAYERS, card.id).toContain(extra.layer);
-        expect(drawn.some((shape) => shape.layer === extra.layer && shape.part === extra.pose), `${card.id} ${extra.pose} in ${extra.layer}`).toBe(true);
+        expect(drawn.some((shape) => shape.layer === extra.layer && Object.hasOwn(FIGURE_KIT, shape.part) && shape.part === extra.pose), `${card.id} ${extra.pose} in ${extra.layer}`).toBe(true);
         extras += 1;
       }
     }
     expect(extras).toBeGreaterThan(0);
+    // A full-art Core card moves every layer its motion names (R2715001), its props among them: a scene draws no
+    // motif glyph or accent, so its props are placements marked `props` (R3390000), never in the subject layer.
+    const fullArt = CORE.filter((card) => FULL_ART_MOTION[card.id] !== undefined);
+    expect(fullArt.map((card) => card.id).sort()).toEqual(["core-001", "core-004", "core-008", "core-011", "core-012", "core-013", "core-018", "core-086"]);
+    for (const card of fullArt) {
+      const motion = FULL_ART_MOTION[card.id] ?? null;
+      const theme = themeFor(card.tags, card.type);
+      const svg = svgOf(proceduralArtUri(card.id, theme, compositionOf(card.id, card.type), false, motifFor(card.name, theme), motion));
+      for (const role of ART_ROLES) if (motion?.[role] !== undefined) expect(svg, `${card.id}: ${role}`).toContain(`class="art-m-${role}"`);
+      expect(specOf(card, false).ridges.some((ridge) => ridge.role === "props"), card.id).toBe(motion?.props !== undefined);
+    }
   });
 
   it("R3392000 each Mythic's scene holds a part no other scene uses", () => {
