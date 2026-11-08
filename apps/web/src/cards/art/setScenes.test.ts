@@ -62,15 +62,17 @@ const FACE_WINDOW = [18, 82] as const;
 const PORTRAIT_WINDOW = [12, 88] as const;
 /** How far in from each side a seal stays, clear of the window's rounded corners. */
 const SEAL_SIDE = 4;
+/** SCENE_KIT's own entries in sceneKit.ts, beside the modules it spreads (classicPlusScenes.test.ts's `FIRST_KIT_PARTS`). */
+const SCENE_KIT_OWN_PARTS = 56 + 199;
 
 /**
- * R3393000: each proof card's base and Radiant picture as `main` drew it before this pass (`hashId` of its data URI),
- * so a fade leaves every recipe that uses none as it was.
+ * R3393000: each proof card's base and Radiant picture as `main` drew it before this pass (`hashId` of its data URI;
+ * Speciesist's and Heroic Power's their Core scenes, R3392000), so a fade leaves every recipe that uses none as it was.
  */
 const PROOF_PINS: Readonly<Record<string, readonly [number, number]>> = {
   "classic-074": [1210823500, 2735167760],
-  "core-002": [3382649194, 3484642400],
-  "core-098": [344479599, 1087118204],
+  "core-002": [3309088827, 297634420],
+  "core-098": [1479159710, 1492068351],
   "core-100": [894252645, 4246782103],
   "stinkyscape-015": [4157590552, 724339904],
 };
@@ -245,6 +247,9 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
       // None takes the place of a part the kit held before.
       expect(before, id).not.toContain(id);
     }
+    // Nor of one of sceneKit.ts's own entries, #3392's among them (`sand`, `pine`, `well`, …), which the modules'
+    // spreads would replace without a word: SCENE_KIT holds every one of them beside every module's part.
+    expect(Object.keys(SCENE_KIT)).toHaveLength(SCENE_KIT_OWN_PARTS + before.length + added.length);
   });
 
   it("R3393000 a fade scales a placement's, a figure's and an extra figure's opacity, keeping every shape, and the proofs draw what they drew before", () => {
@@ -314,7 +319,7 @@ describe("R3393001 a Legacy card draws a scene of its own", () => {
         expect(uri, card.id).toBe(proceduralCardArtUri(card, radiant));
       }
     }
-    // Speciesist's Legacy card is the one whose Core card draws a scene of its own (R3331000).
-    expect(LEGACY.filter((card) => sceneRecipeOf(coreOf(card).coreId) !== null).map((card) => card.id)).toEqual(["traininggrounds-041"]);
+    // Every Legacy card's Core card draws a scene of its own since Core's pass (R3392000), so each is held to it.
+    expect(LEGACY.filter((card) => sceneRecipeOf(coreOf(card).coreId) !== null).map((card) => card.id)).toEqual(LEGACY.map((card) => card.id));
   });
 });

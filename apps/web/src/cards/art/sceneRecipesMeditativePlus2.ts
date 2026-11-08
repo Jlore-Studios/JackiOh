@@ -56,12 +56,12 @@ const LIVING_HEALTH_POTION: SceneRecipe = {
     subject: [
       { part: "table", x: 72, y: 90, scale: 1.3 },
       { part: "cauldron", x: 66, y: 79, scale: 0.4 },
-      { part: "steam", x: 66, y: 74, scale: 0.7, paint: "red-300" },
+      { part: "steam-curl", x: 66, y: 74, scale: 0.7, paint: "red-300" },
       { part: "bread", x: 80, y: 79, scale: 0.7 },
     ],
     near: [
       { part: "seal", x: 10, y: 77, scale: 1 },
-      { part: "steam", x: 52, y: 66, scale: 0.6, paint: "red-300" },
+      { part: "steam-curl", x: 52, y: 66, scale: 0.6, paint: "red-300" },
     ],
     light: [{ part: "halo", x: 46, y: 68, scale: 1.2, paint: "red-300" }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1, props: true }],
@@ -82,8 +82,8 @@ const POTION_POUCH: SceneRecipe = {
     far: [{ part: "peaks", x: 50, y: 58, scale: 1 }],
     mid: [
       { part: "rock-floor", x: 50, y: 70, paint: "stone-500" },
-      { part: "pine", x: 86, y: 70, scale: 0.8, flip: -1 },
-      { part: "pine", x: 14, y: 72, scale: 0.6 },
+      { part: "ink-pine", x: 86, y: 70, scale: 0.8, flip: -1 },
+      { part: "ink-pine", x: 14, y: 72, scale: 0.6 },
     ],
     subject: [
       { part: "pouch", x: 40, y: 74, scale: 2 },
@@ -197,7 +197,7 @@ const JAZAKUS_PRIME: SceneRecipe = {
     ],
     near: [
       { part: "cauldron", x: 52, y: 100, scale: 1.9 },
-      { part: "steam", x: 56, y: 76, scale: 1, paint: "violet-300" },
+      { part: "steam-curl", x: 56, y: 76, scale: 1, paint: "violet-300" },
       { part: "seal", x: 10, y: 77, scale: 1 },
     ],
     particles: [{ part: "embers", x: 70, y: 66, scale: 1.2 }],
@@ -309,7 +309,7 @@ const KYS_COMPETITION: SceneRecipe = {
       { part: "peaks", x: 50, y: 56, scale: 0.9 },
       { part: "mist", x: 50, y: 60, scale: 0.8, paint: "white" },
     ],
-    mid: [{ part: "pavilion", x: 50, y: 76, scale: 1.7 }],
+    mid: [{ part: "lacquer-pavilion", x: 50, y: 76, scale: 1.7 }],
     subject: [{ part: "hourglass", x: 62, y: 74, scale: 0.7 }],
     near: [{ part: "seal", x: 92, y: 77, scale: 1 }],
     light: [{ part: "god-rays", x: 50, y: 14, scale: 0.8, paint: "white" }],
@@ -329,9 +329,9 @@ const LIL_KENNY: SceneRecipe = {
     far: [{ part: "peaks", x: 50, y: 56, scale: 0.9 }],
     mid: [
       { part: "water", x: 50, y: 76, paint: "blue-600" },
-      { part: "pine", x: 14, y: 76, scale: 0.7 },
+      { part: "ink-pine", x: 14, y: 76, scale: 0.7 },
     ],
-    subject: [{ part: "boulder", x: 46, y: 92, scale: 2.4 }],
+    subject: [{ part: "mossy-boulder", x: 46, y: 92, scale: 2.4 }],
     near: [
       { part: "pebbles", x: 66, y: 92, scale: 0.6 },
       { part: "seal", x: 90, y: 77, scale: 1 },
@@ -353,7 +353,7 @@ const HARMONY_SPIRIT: SceneRecipe = {
   layers: {
     far: [
       { part: "peaks", x: 50, y: 54, scale: 0.9 },
-      { part: "pavilion", x: 50, y: 66, scale: 1.1, paint: "green-900" },
+      { part: "lacquer-pavilion", x: 50, y: 66, scale: 1.1, paint: "green-900" },
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 70, paint: "stone-500" },
@@ -424,8 +424,8 @@ const ENORMOUS_ELDERBERRY: SceneRecipe = {
       { part: "dead-tree", x: 50, y: 86, scale: 2.6 },
     ],
     subject: [
-      { part: "ladder", x: 26, y: 92, scale: 1.1 },
-      { part: "ladder", x: 74, y: 92, scale: 1.1, flip: -1 },
+      { part: "wood-ladder", x: 26, y: 92, scale: 1.1 },
+      { part: "wood-ladder", x: 74, y: 92, scale: 1.1, flip: -1 },
       { part: "berry", x: 50, y: 58, scale: 1.8 },
     ],
     near: [
@@ -451,7 +451,7 @@ const BOB_WISCONSINS_STRONGEST: SceneRecipe = {
       { part: "peaks", x: 50, y: 58, scale: 0.9 },
       { part: "water", x: 50, y: 64, paint: "slate-400" },
       { part: "house", x: 84, y: 66, scale: 0.4 },
-      { part: "pine", x: 26, y: 66, scale: 0.5, count: 2, spread: [8, 1], paint: "slate-700" },
+      { part: "ink-pine", x: 26, y: 66, scale: 0.5, count: 2, spread: [8, 1], paint: "slate-700" },
       { part: "mist", x: 50, y: 66, scale: 1, paint: "white" },
     ],
     mid: [
@@ -522,7 +522,7 @@ const SCRATCH_PAD: SceneRecipe = {
       { part: "mist", x: 50, y: 82, scale: 1.1, paint: "white" },
     ],
     mid: [
-      { part: "pine", x: 86, y: 82, scale: 0.6, fade: 0.6 },
+      { part: "ink-pine", x: 86, y: 82, scale: 0.6, fade: 0.6 },
       { part: "mist", x: 40, y: 88, scale: 1, paint: "white" },
     ],
     subject: [
@@ -532,7 +532,7 @@ const SCRATCH_PAD: SceneRecipe = {
     ],
     near: [
       { part: "plum-branch", x: 100, y: 16, scale: 0.8, flip: -1 },
-      { part: "pine", x: 6, y: 100, scale: 0.9 },
+      { part: "ink-pine", x: 6, y: 100, scale: 0.9 },
       { part: "seal", x: 90, y: 77, scale: 1 },
     ],
     light: [{ part: "halo", x: 68, y: 58, scale: 0.9, paint: "cyan-400" }],

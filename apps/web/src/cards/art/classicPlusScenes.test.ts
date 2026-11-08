@@ -46,8 +46,8 @@ const CREATURE_UNITS: Readonly<Record<string, string>> = {
   "classicplus-051": "jet",
   "classicplus-064": "boar",
 };
-/** The first kit's parts (#3331), which sceneKit.ts draws itself. */
-const FIRST_KIT_PARTS = 56;
+/** The parts sceneKit.ts draws itself: the first kit's 56 (#3331) and the 199 Core's scenes added beside them (R3392000). */
+const FIRST_KIT_PARTS = 56 + 199;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 

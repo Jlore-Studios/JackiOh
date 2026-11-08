@@ -37,8 +37,8 @@ const BOBS_PLAN: SceneRecipe = {
     ],
     mid: [
       { part: "mist", x: 50, y: 68, scale: 2.2, count: 2, spread: [20, 3] },
-      { part: "pine", x: 12, y: 74, scale: 1.1 },
-      { part: "pine", x: 88, y: 72, scale: 0.9, flip: -1 },
+      { part: "ink-pine", x: 12, y: 74, scale: 1.1 },
+      { part: "ink-pine", x: 88, y: 72, scale: 0.9, flip: -1 },
     ],
     subject: [
       { part: "table", x: 58, y: 83, scale: 2.4 },
@@ -97,15 +97,15 @@ const SPA_DAY: SceneRecipe = {
   layers: {
     far: [{ part: "peaks", x: 50, y: 62 }],
     mid: [
-      { part: "boulder", x: 18, y: 80, scale: 1.3 },
-      { part: "boulder", x: 84, y: 78, scale: 1.1, flip: -1 },
+      { part: "mossy-boulder", x: 18, y: 80, scale: 1.3 },
+      { part: "mossy-boulder", x: 84, y: 78, scale: 1.1, flip: -1 },
     ],
     near: [
       { part: "water", x: 50, y: 74, paint: "jade-400", fade: 0.85 },
       { part: "towels", x: 72, y: 80, scale: 1.5 },
       { part: "seal", x: 90, y: 77 },
     ],
-    light: [{ part: "steam", x: 44, y: 72, scale: 1.4, paint: "jade-400", count: 2, spread: [14, 2] }],
+    light: [{ part: "steam-curl", x: 44, y: 72, scale: 1.4, paint: "jade-400", count: 2, spread: [14, 2] }],
     particles: [{ part: "bubbles", x: 46, y: 78, scale: 1.2 }],
   },
 };
@@ -232,7 +232,7 @@ const WONDROUS_WAND: SceneRecipe = {
     far: [{ part: "peaks", x: 50, y: 64 }],
     mid: [
       { part: "mist", x: 60, y: 74, scale: 2.4, count: 2, spread: [16, 3] },
-      { part: "pine", x: 84, y: 72, scale: 1, flip: -1 },
+      { part: "ink-pine", x: 84, y: 72, scale: 1, flip: -1 },
     ],
     subject: [
       { part: "card", x: 62, y: 66, scale: 1, count: 4, spread: [8, 14] },
@@ -240,7 +240,7 @@ const WONDROUS_WAND: SceneRecipe = {
     ],
     near: [
       { part: "cliff", x: 50, y: 88, paint: "slate-800" },
-      { part: "pine", x: 12, y: 96, scale: 1.6 },
+      { part: "ink-pine", x: 12, y: 96, scale: 1.6 },
       { part: "seal", x: 90, y: 77 },
     ],
     light: [{ part: "halo", x: 54, y: 50, scale: 1.2, paint: "cyan-400" }],
@@ -274,7 +274,7 @@ const SUPPLY_DROP: SceneRecipe = {
       { part: "weapon-rack", x: 52, y: 56, scale: 0.6 },
     ],
     near: [
-      { part: "boulder", x: 84, y: 98, scale: 1.6 },
+      { part: "mossy-boulder", x: 84, y: 98, scale: 1.6 },
       { part: "seal", x: 90, y: 77 },
     ],
     particles: [{ part: "dust", x: 50, y: 80, scale: 1.2 }],
@@ -320,7 +320,7 @@ const BLOODBLOOM: SceneRecipe = {
     far: [{ part: "peaks", x: 50, y: 62 }],
     mid: [
       { part: "hills", x: 50, y: 72, paint: "white" },
-      { part: "pavilion", x: 72, y: 74, scale: 0.9 },
+      { part: "lacquer-pavilion", x: 72, y: 74, scale: 0.9 },
       { part: "orb", x: 35, y: 52, scale: 0.5 },
     ],
     subject: [{ part: "bloom", x: 50, y: 80, scale: 2.4 }],

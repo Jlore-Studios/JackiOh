@@ -33,7 +33,7 @@ const SPIKEY_STEVEN: SceneRecipe = {
       { part: "cloud", x: 24, y: 26, scale: 0.8, paint: "white" },
     ],
     far: [{ part: "hills", x: 50, y: 60, paint: "green-700" }],
-    mid: [...palisadeAt(76, "wood-700", 1.7), { part: "sand", x: 50, y: 76 }],
+    mid: [...palisadeAt(76, "wood-700", 1.7), { part: "yard-sand", x: 50, y: 76 }],
     near: [
       { part: "weapon-rack", x: 86, y: 96, scale: 1.3 },
       { part: "grass-tuft", x: 12, y: 96, count: 2, spread: [5, 1], paint: "wood-600" },
@@ -54,11 +54,11 @@ const PERSONAL_TRAINER: SceneRecipe = {
     sky: [{ part: "sun", x: 84, y: 24, scale: 0.7 }],
     far: palisadeAt(66, "wood-800"),
     mid: [
-      { part: "sand", x: 50, y: 66 },
+      { part: "yard-sand", x: 50, y: 66 },
       { part: "weights", x: 84, y: 74, scale: 1.2 },
     ],
     subject: [
-      { part: "bench", x: 36, y: 86, scale: 1.6 },
+      { part: "plank-bench", x: 36, y: 86, scale: 1.6 },
       { part: "log", x: 36, y: 45, scale: 1.1 },
     ],
     near: [{ part: "barrel", x: 10, y: 98, scale: 1.3 }],
@@ -82,7 +82,7 @@ const GROUP_LEADER: SceneRecipe = {
     sky: [{ part: "sun", x: 84, y: 40, scale: 0.8 }],
     far: palisadeAt(66, "wood-800"),
     mid: [
-      { part: "sand", x: 50, y: 66 },
+      { part: "yard-sand", x: 50, y: 66 },
       { part: "dust", x: 24, y: 78, scale: 1.3, paint: "brass-600" },
     ],
     near: [{ part: "fence-post", x: 90, y: 98, scale: 1.3, flip: -1 }],
@@ -104,11 +104,11 @@ const BOULDER_FIST_OGRE: SceneRecipe = {
     ],
     far: palisadeAt(70, "wood-900", 1.4),
     mid: [
-      { part: "sand", x: 50, y: 74, paint: "wood-600" },
+      { part: "yard-sand", x: 50, y: 74, paint: "wood-600" },
       { part: "yard-gate", x: 50, y: 74, scale: 1.5 },
     ],
     near: [
-      { part: "boulder", x: 41, y: 61, scale: 0.55 },
+      { part: "mossy-boulder", x: 41, y: 61, scale: 0.55 },
       { part: "splinters", x: 22, y: 90, scale: 1.4 },
     ],
     particles: [{ part: "splinters", x: 62, y: 46, scale: 1.6 }],
@@ -146,7 +146,7 @@ const CHOSEN_BY_THE_SUN: SceneRecipe = {
       { part: "banner", x: 18, y: 66, scale: 0.9 },
       { part: "banner", x: 82, y: 66, scale: 0.9, flip: -1 },
     ],
-    mid: [{ part: "sand", x: 50, y: 66 }],
+    mid: [{ part: "yard-sand", x: 50, y: 66 }],
     subject: [{ part: "shield-bubble", x: 50, y: 86, scale: 1.75 }],
     near: [{ part: "grass-tuft", x: 86, y: 96, count: 2, spread: [5, 1], paint: "wood-600" }],
     light: [{ part: "light-shaft", x: 50, y: 88, scale: 2 }],
@@ -168,8 +168,8 @@ const CHOSEN_BY_THE_MOON: SceneRecipe = {
     ],
     far: palisadeAt(66, "wood-900"),
     mid: [
-      { part: "sand", x: 50, y: 66, paint: "slate-700" },
-      { part: "well", x: 74, y: 82, scale: 1.7 },
+      { part: "yard-sand", x: 50, y: 66, paint: "slate-700" },
+      { part: "yard-well", x: 74, y: 82, scale: 1.7 },
     ],
     near: [{ part: "lantern", x: 12, y: 92, scale: 1.3 }],
     light: [{ part: "rim-light", x: 44, y: 60, scale: 1.2, paint: "blue-200" }],
@@ -182,12 +182,12 @@ const CLOBBERER: SceneRecipe = {
   sky: ["red-900", "red-500"],
   light: { x: 62, y: 50, r: 30, paint: "red-500", opacity: 0.35 },
   emblem: { x: 40, y: 64, size: 6, rotate: 0 },
-  figure: { x: 40, y: 88, scale: 0.92, pose: "pose-strike", look: { ...figureLookFor(["Human"]), hair: null, outfit: "outfit-muscle", item: "item-club", cloth: "wood-800" } },
+  figure: { x: 40, y: 88, scale: 0.92, pose: "pose-strike", look: { ...figureLookFor(["Human"]), hair: null, outfit: "outfit-muscle", item: "item-trunk-club", cloth: "wood-800" } },
   layers: {
     sky: [{ part: "sun", x: 84, y: 24, scale: 0.7 }],
     far: palisadeAt(64, "wood-900"),
     mid: [
-      { part: "sand", x: 50, y: 64, paint: "wood-600" },
+      { part: "yard-sand", x: 50, y: 64, paint: "wood-600" },
       { part: "fence-post", x: 82, y: 80, scale: 2.4, flip: -1 },
       { part: "poster", x: 81, y: 70, scale: 0.8 },
     ],
@@ -208,7 +208,7 @@ const RAVAGER: SceneRecipe = {
     sky: [{ part: "sun", x: 86, y: 58, scale: 1 }],
     far: palisadeAt(64, "wood-900"),
     mid: [
-      { part: "sand", x: 50, y: 66, paint: "wood-600" },
+      { part: "yard-sand", x: 50, y: 66, paint: "wood-600" },
       { part: "crate", x: 82, y: 78, scale: 1.4 },
     ],
     subject: [
@@ -231,9 +231,9 @@ const FAN_OF_KNIVES: SceneRecipe = {
     sky: [{ part: "sun", x: 82, y: 25, scale: 0.7 }],
     far: palisadeAt(60, "wood-800"),
     mid: [
-      { part: "sand", x: 50, y: 60 },
-      { part: "target", x: 14, y: 70, scale: 0.9 },
-      { part: "target", x: 86, y: 70, scale: 0.9, flip: -1 },
+      { part: "yard-sand", x: 50, y: 60 },
+      { part: "target-board", x: 14, y: 70, scale: 0.9 },
+      { part: "target-board", x: 86, y: 70, scale: 0.9, flip: -1 },
     ],
     subject: [
       { part: "light-ribbon", x: 50, y: 50, scale: 0.45, paint: "slate-100" },
@@ -256,7 +256,7 @@ const THWOMP: SceneRecipe = {
   extras: [{ layer: "subject", x: 50, y: 86, scale: 0.42, pose: "pose-spread", look: RECRUIT }],
   layers: {
     far: [{ part: "barracks", x: 50, y: 66, scale: 1.9, paint: "wood-800" }],
-    mid: [{ part: "sand", x: 50, y: 66, paint: "wood-600" }],
+    mid: [{ part: "yard-sand", x: 50, y: 66, paint: "wood-600" }],
     subject: [{ part: "oak-block", x: 50, y: 50, scale: 1.4 }],
     near: [{ part: "crate", x: 10, y: 98, scale: 1.3 }],
     particles: [{ part: "dust", x: 50, y: 86, scale: 1.4, paint: "stone-500" }],
@@ -313,7 +313,7 @@ const EXPLOSIVE_TRAP: SceneRecipe = {
   extras: [{ layer: "subject", x: 30, y: 84, scale: 0.6, pose: "pose-run", look: { ...RECRUIT, cloth: "green-700" } }],
   layers: {
     far: [{ part: "barracks", x: 46, y: 74, scale: 2.4 }],
-    mid: [{ part: "sand", x: 50, y: 74, paint: "wood-700" }],
+    mid: [{ part: "yard-sand", x: 50, y: 74, paint: "wood-700" }],
     subject: [{ part: "fuse-mat", x: 52, y: 82, scale: 2 }],
     near: [
       { part: "fence-post", x: 84, y: 98, scale: 1.4, flip: -1 },
@@ -336,7 +336,7 @@ const IN_A_HURRY: SceneRecipe = {
     ],
     far: [{ part: "barracks", x: 30, y: 62, scale: 1.3, paint: "wood-800" }],
     mid: [
-      { part: "sand", x: 50, y: 62 },
+      { part: "yard-sand", x: 50, y: 62 },
       { part: "dust", x: 30, y: 72, scale: 1.2, paint: "stone-500" },
     ],
     subject: [
@@ -367,7 +367,7 @@ const CELESTIAL_CALLER: SceneRecipe = {
       { part: "sun", x: 80, y: 30, scale: 1.2 },
     ],
     far: palisadeAt(72, "wood-900"),
-    mid: [{ part: "sand", x: 50, y: 74 }],
+    mid: [{ part: "yard-sand", x: 50, y: 74 }],
     subject: [{ part: "carved-pole", x: 50, y: 95, scale: 1.02 }],
     near: [
       { part: "banner", x: 8, y: 98, scale: 1.2 },
@@ -392,8 +392,8 @@ const FLAMING_FELINOR: SceneRecipe = {
     sky: [{ part: "smoke", x: 24, y: 28, scale: 1.4, paint: "slate-700" }],
     far: palisadeAt(66, "wood-900"),
     mid: [
-      { part: "sand", x: 50, y: 66, paint: "wood-600" },
-      { part: "forge", x: 80, y: 80, scale: 2 },
+      { part: "yard-sand", x: 50, y: 66, paint: "wood-600" },
+      { part: "smithy", x: 80, y: 80, scale: 2 },
     ],
     subject: [
       { part: "shockwave", x: 48, y: 87, scale: 1.4, paint: "wood-900" },
@@ -423,7 +423,7 @@ const KNIFE_JUGGLER: SceneRecipe = {
       { part: "banner", x: 14, y: 64, scale: 0.9 },
       { part: "banner", x: 86, y: 64, scale: 0.9, flip: -1 },
     ],
-    mid: [{ part: "sand", x: 50, y: 64 }],
+    mid: [{ part: "yard-sand", x: 50, y: 64 }],
     subject: [
       { part: "barrel", x: 40, y: 88, scale: 1 },
       { part: "straw-dummy", x: 66, y: 86, scale: 1.3, flip: -1 },
@@ -460,7 +460,7 @@ const EXTRA_RATIONS: SceneRecipe = {
     ],
     subject: [
       { part: "cauldron", x: 46, y: 82, scale: 1.1 },
-      { part: "steam", x: 46, y: 72, scale: 0.9 },
+      { part: "steam-curl", x: 46, y: 72, scale: 0.9 },
     ],
     near: [
       { part: "table", x: 50, y: 102, scale: 1.8 },
@@ -485,14 +485,14 @@ const RECRUITMENT_POSTERS: SceneRecipe = {
       { part: "cloud", x: 26, y: 24, scale: 0.8, count: 2, spread: [12, 3], paint: "white" },
     ],
     far: [{ part: "hills", x: 50, y: 56 }],
-    mid: [...palisadeAt(72, "wood-700", 1.5), { part: "sand", x: 50, y: 72 }],
+    mid: [...palisadeAt(72, "wood-700", 1.5), { part: "yard-sand", x: 50, y: 72 }],
     subject: [
       { part: "poster", x: 38, y: 64, scale: 1.3 },
       { part: "poster", x: 50, y: 60, scale: 1.4 },
       { part: "poster", x: 62, y: 64, scale: 1.3 },
       { part: "poster", x: 44, y: 70, scale: 1 },
       { part: "poster", x: 58, y: 69, scale: 1 },
-      { part: "bench", x: 72, y: 86, scale: 0.9 },
+      { part: "plank-bench", x: 72, y: 86, scale: 0.9 },
       { part: "bread", x: 70, y: 81.4, scale: 0.8 },
       { part: "apple", x: 75, y: 81.6, scale: 0.8 },
     ],
@@ -514,7 +514,7 @@ const GOLIATH_SITUATION: SceneRecipe = {
   layers: {
     sky: [{ part: "cloud", x: 70, y: 26, scale: 0.9, paint: "slate-700" }],
     far: palisadeAt(66, "wood-900"),
-    mid: [{ part: "sand", x: 50, y: 82 }],
+    mid: [{ part: "yard-sand", x: 50, y: 82 }],
     subject: [
       { part: "walkway", x: 46, y: 86, scale: 2 },
       { part: "pebbles", x: 80, y: 88.6, scale: 0.5 },
@@ -566,10 +566,10 @@ const HOPEFUL_JELLY_BEAN: SceneRecipe = {
       { part: "cloud", x: 26, y: 26, scale: 0.8, paint: "white" },
     ],
     far: palisadeAt(66, "wood-800"),
-    mid: [{ part: "sand", x: 50, y: 68 }],
+    mid: [{ part: "yard-sand", x: 50, y: 68 }],
     subject: [
       { part: "siege-tower", x: 50, y: 84, scale: 1.4, paint: "slate-100" },
-      { part: "jelly-bean", x: 62, y: 34, scale: 1.8 },
+      { part: "pale-bean", x: 62, y: 34, scale: 1.8 },
     ],
     near: [{ part: "grass-tuft", x: 86, y: 97, count: 2, spread: [6, 1], paint: "green-700" }],
     light: [
@@ -604,10 +604,10 @@ const LEVEL_UP: SceneRecipe = {
       { part: "banner", x: 90, y: 50, scale: 0.6, flip: -1 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 62 },
+      { part: "yard-sand", x: 50, y: 62 },
       { part: "rune-circle", x: 46, y: 80, scale: 1.4, paint: "white" },
     ],
-    subject: [{ part: "bell", x: 58, y: 84, scale: 1.3 }],
+    subject: [{ part: "bell-pole", x: 58, y: 84, scale: 1.3 }],
     near: [
       { part: "pebbles", x: 20, y: 96 },
       { part: "weapon-rack", x: 88, y: 99, scale: 0.8 },
@@ -637,7 +637,7 @@ const DINO_SIZE: SceneRecipe = {
     ],
     far: palisadeAt(62, "wood-800"),
     mid: [
-      { part: "sand", x: 50, y: 64 },
+      { part: "yard-sand", x: 50, y: 64 },
       { part: "fence", x: 22, y: 76, scale: 0.6 },
       { part: "fence", x: 80, y: 76, scale: 0.6 },
     ],
@@ -664,7 +664,7 @@ const CORPSE_RECYCLER: SceneRecipe = {
       { part: "barracks", x: 16, y: 62, scale: 0.9, paint: "stone-500" },
       { part: "palisade", x: 80, y: 62, scale: 0.9, paint: "wood-900" },
     ],
-    mid: [{ part: "sand", x: 50, y: 64, paint: "wood-700" }],
+    mid: [{ part: "yard-sand", x: 50, y: 64, paint: "wood-700" }],
     subject: [
       { part: "mill", x: 58, y: 82, scale: 1.3 },
       { part: "straw-dummy", x: 39, y: 81, scale: 0.42 },
@@ -749,7 +749,7 @@ const CALL_TO_CHAOS: SceneRecipe = {
     ],
     far: palisadeAt(60, "slate-800"),
     mid: [
-      { part: "sand", x: 50, y: 62 },
+      { part: "yard-sand", x: 50, y: 62 },
       { part: "rune-circle", x: 50, y: 78, scale: 1.4, paint: "cyan-400" },
     ],
     subject: [
@@ -794,7 +794,7 @@ const GOETZMANN_GAME_DESIGN: SceneRecipe = {
       { part: "barracks", x: 18, y: 62, scale: 0.8, paint: "wood-800" },
     ],
     mid: [
-      { part: "sand", x: 50, y: 62, paint: "wood-700" },
+      { part: "yard-sand", x: 50, y: 62, paint: "wood-700" },
       { part: "straw-dummy", x: 72, y: 74, scale: 0.6 },
     ],
     subject: [

@@ -31,7 +31,7 @@ const FLAME_TONGUE_TOTEM: SceneRecipe = {
     sky: [{ part: "sun", x: 84, y: 40, scale: 0.6, paint: "red-300" }],
     far: palisadeAt(62, "wood-800"),
     mid: [
-      { part: "sand", x: 50, y: 64 },
+      { part: "yard-sand", x: 50, y: 64 },
       { part: "pell-post", x: 18, y: 86, scale: 1.3 },
       { part: "pell-post", x: 82, y: 86, scale: 1.3, flip: -1 },
       { part: "flames", x: 36, y: 62, scale: 1.1 },
@@ -64,7 +64,7 @@ const RIGHT_HAND_FELINOR: SceneRecipe = {
       { part: "banner", x: 88, y: 56, scale: 0.6, flip: -1, paint: "red-600" },
     ],
     mid: [
-      { part: "sand", x: 50, y: 64 },
+      { part: "yard-sand", x: 50, y: 64 },
       { part: "fence", x: 50, y: 78, scale: 0.9, paint: "wood-600" },
     ],
     near: [
@@ -94,7 +94,7 @@ const QUADRUPLING_FELINORS: SceneRecipe = {
     ],
     far: [...palisadeAt(62, "wood-800"), { part: "barracks", x: 50, y: 64, scale: 0.9, paint: "wood-700" }],
     mid: [
-      { part: "sand", x: 50, y: 66 },
+      { part: "yard-sand", x: 50, y: 66 },
       { part: "banner", x: 18, y: 84, scale: 1.4, paint: "green-700" },
     ],
     subject: [{ part: "light-ribbon", x: 54, y: 84, scale: 0.4, paint: "white" }],
@@ -120,7 +120,7 @@ const TRIGOR: SceneRecipe = {
     sky: [{ part: "moon", x: 82, y: 22, scale: 0.5 }],
     far: [{ part: "barracks", x: 50, y: 62, scale: 1.6, paint: "wood-800" }],
     mid: [
-      { part: "sand", x: 50, y: 64, paint: "wood-700" },
+      { part: "yard-sand", x: 50, y: 64, paint: "wood-700" },
       { part: "rune-circle", x: 50, y: 84, scale: 1.5, paint: "white" },
     ],
     near: [{ part: "crate", x: 88, y: 99, scale: 1.1 }],
@@ -179,7 +179,7 @@ const EASTERNER: SceneRecipe = {
       { part: "plum-branch", x: 96, y: 40, scale: 0.9, flip: -1 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 70 },
+      { part: "yard-sand", x: 50, y: 70 },
       { part: "moon-gate", x: 50, y: 84, scale: 1.5 },
       { part: "fence-post", x: 16, y: 80, scale: 0.7 },
       { part: "fence-post", x: 24, y: 72, scale: 0.5, flip: -1, fade: 0.8 },
@@ -218,7 +218,7 @@ const FLOODGATES: SceneRecipe = {
       { part: "cascade", x: 50, y: 44, scale: 0.6 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 70, paint: "wood-700" },
+      { part: "yard-sand", x: 50, y: 70, paint: "wood-700" },
       { part: "palisade", x: 14, y: 76, scale: 0.8, paint: "wood-800" },
       { part: "palisade", x: 86, y: 76, scale: 0.8, flip: -1, paint: "wood-800" },
     ],
@@ -249,7 +249,7 @@ const SELFLESS_PROTECTOR: SceneRecipe = {
     ],
     far: [{ part: "barracks", x: 50, y: 60, scale: 1.4, paint: "wood-700" }, ...palisadeAt(60, "wood-800")],
     mid: [
-      { part: "sand", x: 50, y: 64 },
+      { part: "yard-sand", x: 50, y: 64 },
       { part: "shield-dome", x: 28, y: 77, scale: 2 },
       { part: "shield-dome", x: 72, y: 77, scale: 2 },
     ],
@@ -280,11 +280,11 @@ const GUERILLA_FELINOR: SceneRecipe = {
     sky: [{ part: "sun", x: 84, y: 20, scale: 0.5, paint: "white" }],
     far: [
       ...palisadeAt(60, "wood-800", 1.2),
-      { part: "ladder", x: 14, y: 62, scale: 0.8 },
+      { part: "wood-ladder", x: 14, y: 62, scale: 0.8 },
       { part: "tree", x: 90, y: 60, scale: 1.1 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 66, paint: "wood-600" },
+      { part: "yard-sand", x: 50, y: 66, paint: "wood-600" },
       { part: "cargo-net", x: 50, y: 86, scale: 1.8 },
     ],
     subject: [
@@ -356,7 +356,7 @@ const TUTORIAL_MASTER: SceneRecipe = {
       { part: "barracks", x: 74, y: 62, scale: 0.9, paint: "wood-700" },
     ],
     mid: [
-      { part: "sand", x: 50, y: 64 },
+      { part: "yard-sand", x: 50, y: 64 },
       { part: "weapon-rack", x: 86, y: 74, scale: 0.7 },
     ],
     subject: [
@@ -364,8 +364,8 @@ const TUTORIAL_MASTER: SceneRecipe = {
       { part: "card", x: 69, y: 68, scale: 0.5 },
     ],
     near: [
-      { part: "bench", x: 14, y: 100, scale: 1.4 },
-      { part: "bench", x: 86, y: 100, scale: 1.4 },
+      { part: "plank-bench", x: 14, y: 100, scale: 1.4 },
+      { part: "plank-bench", x: 86, y: 100, scale: 1.4 },
     ],
     light: [
       { part: "light-shaft", x: 80, y: 10, scale: 1.2, paint: "white" },

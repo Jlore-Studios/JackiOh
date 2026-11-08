@@ -17,7 +17,7 @@ export const LEGACY_TOUCH_PARTS: Readonly<Record<LegacyTouch, SceneryPartId>> = 
   "sword-in-sand": "practice-sword",
   "paw-prints": "paw-prints",
   "weapon-rack": "weapon-rack",
-  "arrow-target": "target",
+  "arrow-target": "target-board",
   "range-flags": "range-flags",
   "straw-heap": "straw-heap",
   hammock: "hammock",
@@ -54,8 +54,8 @@ const LEGACY_SPECIESIST: SceneRecipe = {
       { part: "walkway", x: 24, y: 66, scale: 1.1 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 66 },
-      { part: "bench", x: 20, y: 74, scale: 1 },
+      { part: "yard-sand", x: 50, y: 66 },
+      { part: "plank-bench", x: 20, y: 74, scale: 1 },
     ],
     near: [
       { part: "rope-cordon", x: 50, y: 90, scale: 1.45 },
@@ -108,7 +108,7 @@ const LEGACY_MR_VANILLA: SceneRecipe = {
       { part: "cloud", x: 30, y: 24, scale: 0.7, paint: "white" },
     ],
     far: [{ part: "palisade", x: 50, y: 62, scale: 2 }],
-    mid: [{ part: "sand", x: 50, y: 64 }],
+    mid: [{ part: "yard-sand", x: 50, y: 64 }],
     subject: [{ part: "practice-sword", x: 63, y: 86, scale: 1.4 }],
     near: [
       { part: "pebbles", x: 26, y: 92 },
@@ -135,7 +135,7 @@ const LEGACY_DUPLICATING_FELINORS: SceneRecipe = {
     ],
     far: [{ part: "palisade", x: 50, y: 62, scale: 2.1, paint: "wood-700" }],
     mid: [
-      { part: "sand", x: 50, y: 68 },
+      { part: "yard-sand", x: 50, y: 68 },
       { part: "barracks", x: 50, y: 71, scale: 1.4 },
       { part: "paw-prints", x: 48, y: 77, scale: 1.1 },
     ],
@@ -159,7 +159,7 @@ const LEGACY_JLOCKEEDS_WEAPONS: SceneRecipe = {
     sky: [{ part: "sun", x: 84, y: 16, scale: 0.6 }],
     far: [{ part: "palisade", x: 50, y: 62, scale: 2, paint: "slate-700" }],
     mid: [
-      { part: "sand", x: 50, y: 64, paint: "stone-500" },
+      { part: "yard-sand", x: 50, y: 64, paint: "stone-500" },
       { part: "awning", x: 52, y: 80, scale: 1.7, paint: "blue-800" },
     ],
     subject: [
@@ -182,9 +182,9 @@ const LEGACY_HIT_JOB: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 40, y: 18, scale: 1 }],
     far: [{ part: "palisade", x: 50, y: 62, scale: 2, paint: "wood-800" }],
-    mid: [{ part: "sand", x: 50, y: 64, paint: "stone-500" }],
+    mid: [{ part: "yard-sand", x: 50, y: 64, paint: "stone-500" }],
     subject: [
-      { part: "target", x: 66, y: 82, scale: 1.7 },
+      { part: "target-board", x: 66, y: 82, scale: 1.7 },
       { part: "straw-dummy", x: 52, y: 88, scale: 1.3, paint: "slate-400" },
       { part: "arrow", x: 44, y: 66, scale: 0.6 },
     ],
@@ -237,7 +237,7 @@ const LEGACY_JLOCKEED_SHREDDER: SceneRecipe = {
       { part: "house", x: 18, y: 64, scale: 1.3, paint: "red-900" },
       { part: "palisade", x: 76, y: 64, scale: 1.2, paint: "wood-800" },
     ],
-    mid: [{ part: "sand", x: 50, y: 66, paint: "wood-600" }],
+    mid: [{ part: "yard-sand", x: 50, y: 66, paint: "wood-600" }],
     subject: [{ part: "straw-dummy", x: 70, y: 82, scale: 1, flip: -1 }],
     near: [{ part: "straw-heap", x: 18, y: 96, scale: 1.4 }],
     particles: [
@@ -291,7 +291,7 @@ const LEGACY_GLOWY_JELLY_BEAN: SceneRecipe = {
     ],
     subject: [{ part: "lantern", x: 74, y: 22, scale: 1.6 }],
     near: [
-      { part: "jelly-bean", x: 60, y: 50, scale: 1.3, props: true },
+      { part: "pale-bean", x: 60, y: 50, scale: 1.3, props: true },
       { part: "card", x: 32, y: 54, scale: 0.7, props: true },
     ],
     light: [
@@ -351,7 +351,7 @@ const LEGACY_SNOM_BUNNY_MIND_CONTROL: SceneRecipe = {
       { part: "sprout", x: 84, y: 74, count: 2, spread: [8, 3] },
     ],
     subject: [
-      { part: "bunny", x: 38, y: 84, scale: 2.5 },
+      { part: "hypno-bunny", x: 38, y: 84, scale: 2.5 },
       { part: "void-swirl", x: 42, y: 66, scale: 0.45, paint: "violet-500" },
       { part: "void-swirl", x: 60, y: 38, scale: 0.35, paint: "violet-300" },
     ],
@@ -369,7 +369,7 @@ const LEGACY_PREJUDICED_POSTDOC: SceneRecipe = {
   sky: ["slate-400", "white"],
   light: { x: 54, y: 40, r: 34, paint: "white", opacity: 0.45 },
   emblem: { x: 42, y: 62, size: 6, rotate: 0 },
-  figure: { x: 42, y: 84, scale: 0.85, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "glasses", outfit: "outfit-labcoat", item: null, cloth: "white" } },
+  figure: { x: 42, y: 84, scale: 0.85, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "glasses", outfit: "outfit-labcoat", item: null, cloth: "sky-300" } },
   extras: [{ layer: "subject", x: 52, y: 41, scale: 0.36, pose: "pose-stand", fade: 0.6, look: { ...figureLookFor(["Human"]), hair: null, item: null, skin: "slate-100", cloth: "slate-100" } }],
   layers: {
     far: [
@@ -377,7 +377,7 @@ const LEGACY_PREJUDICED_POSTDOC: SceneRecipe = {
       { part: "palisade", x: 88, y: 64, scale: 1, paint: "wood-700" },
     ],
     mid: [
-      { part: "sand", x: 50, y: 68, paint: "stone-500" },
+      { part: "yard-sand", x: 50, y: 68, paint: "stone-500" },
       { part: "cot", x: 80, y: 78, scale: 0.9 },
     ],
     subject: [{ part: "flask", x: 28, y: 86, scale: 0.9 }],
@@ -404,9 +404,9 @@ const LEGACY_THE_ROCK: SceneRecipe = {
     sky: [{ part: "cloud", x: 30, y: 22, scale: 0.9, count: 2, spread: [24, 3], paint: "slate-100" }],
     far: [{ part: "palisade", x: 50, y: 62, scale: 2, paint: "wood-700" }],
     mid: [
-      { part: "sand", x: 50, y: 66 },
+      { part: "yard-sand", x: 50, y: 66 },
       { part: "weights", x: 18, y: 78, scale: 1 },
-      { part: "bench", x: 82, y: 78, scale: 0.9 },
+      { part: "plank-bench", x: 82, y: 78, scale: 0.9 },
     ],
     near: [
       { part: "lifting-stone", x: 48, y: 31, scale: 1.7 },
@@ -429,7 +429,7 @@ const LEGACY_REMINISCE: SceneRecipe = {
       { part: "tombstone", x: 82, y: 66, scale: 0.6 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 66, paint: "stone-500" },
+      { part: "yard-sand", x: 50, y: 66, paint: "stone-500" },
       { part: "grave-mound", x: 62, y: 80, scale: 0.8 },
     ],
     subject: [
@@ -470,7 +470,7 @@ const LEGACY_CORPSE_EATER: SceneRecipe = {
       { part: "dead-tree", x: 12, y: 62, scale: 1 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 64, paint: "stone-500" },
+      { part: "yard-sand", x: 50, y: 64, paint: "stone-500" },
       { part: "grave-mound", x: 24, y: 74, scale: 0.7 },
       { part: "grave-mound", x: 74, y: 76, scale: 0.8 },
       { part: "tombstone", x: 86, y: 74, scale: 0.6 },
@@ -512,7 +512,7 @@ const LEGACY_RECYCLING_INITIATIVE: SceneRecipe = {
       { part: "tree", x: 90, y: 58, scale: 0.9 },
     ],
     mid: [
-      { part: "sand", x: 50, y: 62 },
+      { part: "yard-sand", x: 50, y: 62 },
       { part: "fence", x: 74, y: 72, scale: 0.5, paint: "wood-600" },
       { part: "card", x: 74, y: 67, scale: 0.5, count: 4, spread: [10, 0.5] },
     ],

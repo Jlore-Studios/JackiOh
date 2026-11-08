@@ -30,9 +30,18 @@ function sources(dir: string): string[] {
   });
 }
 
+/** Each file's strings, parsed once for every guard below: the guards each read the whole client. */
+const WORDS = new Map<string, { at: string; text: string }[]>();
+
 function wordsIn(path: string): { at: string; text: string }[] {
+  const known = WORDS.get(path);
+  if (known) return known;
   const text = readFileSync(path, "utf8");
-  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  // Neither doc comments (no guard reads a comment) nor parent pointers (the walk goes down only, and
+  // `getStart` is handed the file): the same strings, parsed in less time.
+  const options = { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone };
+  const file = ts.createSourceFile(path, text, options, false, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const name = relative(SRC, path);
   const out: { at: string; text: string }[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
@@ -45,11 +54,12 @@ function wordsIn(path: string): { at: string; text: string }[] {
       ts.isJsxText(node)
     ) {
       const line = file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
-      out.push({ at: `${relative(SRC, path)}:${String(line)}`, text: node.text });
+      out.push({ at: `${name}:${String(line)}`, text: node.text });
     }
     ts.forEachChild(node, visit);
   };
   visit(file);
+  WORDS.set(path, out);
   return out;
 }
 

@@ -318,7 +318,7 @@ function bunny(at: PartPlace, rng: Rng): KitShape[] {
 
 /** R3393000, R3393001: the yard's props and the Legacy cards' touches, by id, each with its kind. */
 export const TOUCHES_KIT = {
-  target: { category: "objects", draw: target },
+  "target-board": { category: "objects", draw: target },
   "rope-cordon": { category: "objects", draw: ropeCordon },
   "practice-sword": { category: "objects", draw: practiceSword },
   "paw-prints": { category: "objects", draw: pawPrints },
@@ -331,5 +331,5 @@ export const TOUCHES_KIT = {
   barrel: { category: "objects", draw: barrel },
   "pell-post": { category: "objects", draw: pellPost },
   scarecrow: { category: "objects", draw: scarecrow },
-  bunny: { category: "creatures", draw: bunny },
+  "hypno-bunny": { category: "creatures", draw: bunny },
 } as const satisfies Readonly<Record<string, KitPart>>;

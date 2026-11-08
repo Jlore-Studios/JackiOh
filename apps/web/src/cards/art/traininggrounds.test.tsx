@@ -318,10 +318,11 @@ describe("R2724000: no other card's picture moves", () => {
   });
 
   it("R3331002 R3393000 the cards with a scene recipe no longer draw the picture art-before-2724 records", () => {
-    // R3393000: the three Core proofs, and every Training Grounds card of the set's own, the Golem token's included.
+    // R3392000: every Core card the record keeps draws a scene; R3393000: so does every Training Grounds card of
+    // the set's own, the Golem token's included.
     const own = Object.values(CATALOG).filter((card) => isTrainingGroundsArt(card.id)).map((card) => card.id);
     expect(own).toHaveLength(41);
-    expect(SCENES.map((card) => card.id).sort()).toEqual(["core-002", "core-098", "core-100", ...own].sort());
+    expect(SCENES.map((card) => card.id).sort()).toEqual([...KEPT.filter((card) => card.set === "Core").map((card) => card.id), ...own].sort());
     for (const card of SCENES) {
       const pair = recorded[card.id] ?? (() => { throw new Error(`no fixture for ${card.id}`); })();
       expect(hashId(pictureOf(card, false)), card.id).not.toBe(pair[0]);
