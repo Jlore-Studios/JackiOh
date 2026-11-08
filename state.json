@@ -17122,6 +17122,7 @@
     "3399": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-07T18:13:49Z",
         "family": "claude",
@@ -17146,7 +17147,9 @@
       "planned_by_id": "claude-6",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3424,
       "provider": "claude-4",
+      "question": "",
       "round_tier": "strong",
       "run_id": "42428835048",
       "runs_on": "ubuntu-latest",
