@@ -186,6 +186,9 @@ const DOM_KINDS = {
   takeover: "fx-takeover-in",
   setPiece: "fx-set-piece-in",
   launch: "fx-launch-in",
+  rift: "fx-rift-in",
+  anomalyTitle: "fx-anomaly-title-in",
+  radar: "fx-radar-in",
   ship: "fx-ship-in",
 } as const;
 

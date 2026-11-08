@@ -1,0 +1,25 @@
+{
+  "title": "Patch: discovering an Anomaly is an event: the scan finds it, space tears open, your side falls into the rift and the Anomaly's own board arrives under a title card of its own",
+  "sources": "#3337",
+  "notes": "boardReplaced names the Anomaly laid (R3337000); each Anomaly Found! draws its own board's picture; the probes' scan, the cast's rift set piece, a standing backdrop and a sting per Anomaly (R3337001-R3337003).",
+  "player": {
+    "title": "Discovering an Anomaly",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "An Anomaly Found! in your hand now shows a picture of the board it holds: each of the ten Anomalies has its own.",
+      "When a Scanning Probe finds an Anomaly, a radar sweep crosses the board, pings, and the card flies into your hand, with a flash for a Radiant one. Your opponent sees only the sweep.",
+      "Casting an Anomaly tears a rift down your side: your cards fall in, it flares, its title card stamps across the screen and its board falls out onto your zones.",
+      "Big moments Short and Off, and Reduce Motion, play the Anomaly's moment in shorter forms.",
+      "While an Anomaly's board stands, your half of the field wears a faint backdrop of it, and each Anomaly has a sound of its own."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscape-151",
+    "stinkyscape-t-anomaly-found"
+  ],
+  "visual": true
+}

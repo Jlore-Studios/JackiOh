@@ -9,6 +9,7 @@
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { ANOMALY_FOUND_ID } from "../../cards/anomalies.ts";
 import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
 import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
@@ -429,6 +430,9 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
     ]),
+  // R3337002: a find, which the owner's seat reads as Anomaly Found!; R3337003: the call, and the Wormhole it lays.
+  probeScan: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-anomaly-found", defId: ANOMALY_FOUND_ID }],
+  anomalyCall: (_view, _instanceId, player) => [{ type: "boardReplaced", player, anomaly: "WH" }],
   magiBoot: (_view, _instanceId, player) =>
     (["stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3"] as const).map((defId, k) => ({
       type: "summoned" as const,

@@ -3,9 +3,10 @@
 // Nether (scaled back for the budget: fewer pull/implode particles, a softer shake, and a smaller
 // vortex spiral with its mask retuned to the same visible arms), the Starship launch, the Drone
 // Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
-// visible disc), and a board with 4 auras. R3332001: Felinor Fiender's signature, the first, over the
-// gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with
-// one face tilted under a pointer that keeps moving over it, its planes parallaxing under its glare.
+// visible disc), a board with 4 auras, and R3337003's Anomaly cast (its rift, flare, title card and landing).
+// R3332001: Felinor Fiender's signature, the first, over the gallery's board with its three Felinors.
+// R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with one face tilted under a pointer that
+// keeps moving over it, its planes parallaxing under its glare.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -223,6 +224,28 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       ]);
       cy.get(GAME).should("have.attr", "data-takeover", "mythic");
       cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+  });
+
+  it("R3337003 an Anomaly's cast holds the phone frame budget mid-flight", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = fullBoardView();
+    const me = view.viewer;
+    const mine = view.you.units.flatMap((u): GameEvent[] => (u === null ? [] : [{ type: "exiled", instanceId: u.instanceId, defId: u.defId, owner: u.owner }]));
+    const rocks: GameEvent[] = [1, 2, 3, 4, 5].map((lane) => ({ type: "summoned", player: me, instanceId: `fx-rock-${String(lane)}`, defId: "stinkyscape-169", row: "units", lane }));
+    holdsBudget("Anomaly cast", () => {
+      mountScene(view, view, [
+        { type: "cardPlayed", player: me, instanceId: "fx-anomaly", defId: "stinkyscape-t-anomaly-found", costPaid: 4 },
+        { type: "boardReplaced", player: me, anomaly: "AT" },
+        ...mine,
+        ...rocks,
+        { type: "cardResolved", player: me, instanceId: "fx-anomaly", defId: "stinkyscape-t-anomaly-found", permanent: false, costPaid: 4 },
+      ]);
+      cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "anomaly");
+      cy.get(`${FX_DOM} [data-fx="rift"]`).should("exist");
       cy.get(CANVAS).should("exist");
       return sampleFrames();
     });

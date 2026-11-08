@@ -242,7 +242,10 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "takeover":
       case "setPiece":
       case "launch":
-      case "ship": {
+      case "ship":
+      case "rift":
+      case "anomalyTitle":
+      case "radar": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };
