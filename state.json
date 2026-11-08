@@ -16173,7 +16173,7 @@
     "3419": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "medium",
       "ci_early": false,
       "ci_fixes": 1,
       "ci_on_head": true,
@@ -16191,7 +16191,7 @@
         "by": "`claude` (medium)",
         "sha": "ae0ec818145e44eb0a6714e6fc8d3c01b97466a9"
       },
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16199,14 +16199,27 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3345,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The takeover cue now holds the card's identity behind a closure (`card: () => FxTakeoverCard`), which hides the defId from the repo's JSON-based R202 tests, and the cue-shape table in `cues.test.ts` was not updated.",
+          "evidence": "The new doc comment says the closure exists so that the cue's own data names no card, which is what `B21 every cue has exactly the fields of its S1 type, and none names a card` (cues.test.ts ~1921) checks with `JSON.stringify(cue)`. That test's `CUE_KEYS.takeover` (cues.test.ts:1788) is still `[kind, look, tint, at, landMs, delayMs, durationMs]`, so a takeover cue with `card` and `stage` fails `checkCue` as an undeclared key. Today no sample plans a takeover, so the test never reaches it. A function inside an otherwise plain-data cue also breaks the `toEqual` determinism checks, such as `expect(plan(events,300)).toEqual(bare)`, for any takeover plan, because two closures are never equal. takeover.ts's header still says 'Everything here is cue data'. The change makes the invariant unobservable instead of keeping it.",
+          "severity": "blocking",
+          "where": "apps/web/src/fx/types.ts:175"
+        },
+        {
+          "claim": "Tap-to-pause/resume cannot be reached from any way of opening the view in the app, because every opener passes the held pointer id, and releasing that pointer closes the view at once.",
+          "evidence": "`useFullScreenTrigger`, the Collection tile, `PoolGrid` and `Card.tsx` all call `openFullScreenArt({..., heldPointerId: pointerId})`. The `pointerup` listener at FullScreenArt.tsx:52-60 then calls `onClose()` on release. So the view always closes on release, and the `handleClick` pause toggle is unreachable. `data-paused` is only exercised by tests that mount `<FullScreenArt>` directly without a `heldPointerId` (fullscreen.test.tsx, card-fullscreen.cy.tsx). The issue says 'a tap pauses and resumes it, and releasing or a second tap closes it', and the acceptance list says 'Tap pauses and resumes'. The wiring needs a path that keeps the view open after release, for example a tap-opened mode where a tap pauses and a second tap closes, while the held mode still closes on release. A test should cover that path through the real trigger, not through a direct mount.",
+          "severity": "blocking",
+          "where": "apps/web/src/cards/FullScreenArt.tsx:52"
+        }
+      ],
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-08T12:25:36Z",
+      "queued_at": "2026-11-08T12:38:34Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -16231,7 +16244,7 @@
         "provider": "claude-8",
         "run": "42458313905"
       },
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-08T12:29:18Z",
       "stop_requested": false,
       "taken_asks": [],
