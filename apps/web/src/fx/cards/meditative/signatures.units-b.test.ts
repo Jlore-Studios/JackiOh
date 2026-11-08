@@ -61,6 +61,13 @@ function unitAt(view: PlayerView, side: "you" | "opponent", k: number): UnitView
   return unit;
 }
 
+/** The viewer's first hand card. */
+function handCard(view: PlayerView): { instanceId: string; defId: string } {
+  const card = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+  if (card === undefined) throw new Error("no hand card");
+  return card;
+}
+
 /** The board with your Unit in lane LANE standing as "ex", the instance `run` plays: the card itself on the board. */
 function standing(): PlayerView {
   const view = fullBoardView();
@@ -113,8 +120,7 @@ describe("R3405001 Meditative's Unit signatures, second batch", () => {
     // His Cry: an enemy Unit and the viewer's own hand card, each lashed where it stands.
     const view = fullBoardView();
     const foe = unitAt(view, "opponent", 0);
-    const own = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
-    if (own === undefined) throw new Error("no hand card");
+    const own = handCard(view);
     const nerf = (instanceId: string, defId: string, hiddenFrom?: PlayerId[]): GameEvent => ({ type: "degraded", instanceId, defId, change: NERF, ...(hiddenFrom === undefined ? {} : { hiddenFrom }) });
     const [unit, hand, unread, theirs] = run(BREAKER, [nerf(foe.instanceId, foe.defId), nerf(own.instanceId, own.defId), nerf(own.instanceId, own.defId, ["p1"]), nerf("hidden", "hidden")], D, "p1", view);
     for (const [entry, card] of [
@@ -177,5 +183,105 @@ describe("R3405001 Meditative's Unit signatures, second batch", () => {
     expect(shapes(run(PRIME, [{ type: "exiled", instanceId: foe.instanceId, defId: foe.defId, owner: "p2" }], D, "p1", view)[0]?.cues)).toEqual(["chalkWave", "ring", "burst", "crack"]);
     // The opponent's own set is none of his: its row plays.
     expect(run(PRIME, [{ ...set, player: "p2" }], D, "p1", view)).toEqual([{ cues: [], row: undefined }]);
+  });
+
+  it("R3405001 饕餮: a bronze cauldron slams down in steam and the taotie's face rises from it, eyes kindling; at its end of turn its maw yawns and a vortex drags the Unit it eats into it as a spinning card back", () => {
+    const { cues, tgt, slam } = entrance("bronzeCauldron", TAOTIE, D);
+    expectFrame(cues, "bronzeCauldron", slam);
+    const eyes = cues[5]?.delayMs ?? 0;
+    expect(beats(cues)).toEqual(["figure:cauldron@0", `ring${at(slam)}`, `burst${at(slam)}`, `shake${at(slam)}`, `figure:taotieMaw${at(slam)}`, `burst${at(eyes)}`]);
+    expect(eyes).toBeGreaterThan(slam);
+    expect(eyes).toBeLessThan(D);
+    expect(cues[0]).toMatchObject({ at: tid(tgt), side: "you" });
+    expect(cues[2]).toMatchObject({ preset: "smoke", spread: "area", at: tid(tgt, FOOT) });
+    expect(cues[4]).toMatchObject({ at: tid(tgt), side: "you" });
+    // Its end of turn, standing as "ex": it eats the first enemy Unit, keeping its own instance (R77).
+    const view = standing();
+    const foe = unitAt(view, "opponent", 0);
+    const fused = (eaten: string, kept = "ex"): GameEvent => ({ type: "fused", instanceIds: [kept, eaten], resultInstanceId: kept, defId: TAOTIE });
+    const [meal, course, other] = run(TAOTIE, [fused(foe.instanceId), fused("hidden"), fused(foe.instanceId, "fx-other")], D, "p1", view, "endOfTurn");
+    const maw = tid(testid.card("ex"));
+    const prey = tid(testid.card(foe.instanceId));
+    expect(meal?.row).toBe("replace");
+    expect(shapes(meal?.cues)).toEqual(["taotieMaw", "ring", "burst", "ghost", "ring", "burst"]);
+    expect(meal?.cues.slice(0, 3)).toMatchObject([{ at: maw, delayMs: 0, side: "you" }, { at: prey, delayMs: 0 }, { spread: "ring", at: prey, delayMs: 0 }]);
+    const [drag, gulp, swell] = meal?.cues.slice(3) ?? [];
+    expect(drag).toMatchObject({ kind: "ghost", from: prey, to: maw, spin: true });
+    if (drag?.kind !== "ghost") throw new Error("no card back");
+    expect(drag.delayMs).toBeGreaterThan(0);
+    expect(drag.delayMs + drag.durationMs).toBeLessThan(D);
+    // Its face swells as the card back reaches it.
+    for (const cue of [gulp, swell]) expect(cue).toMatchObject({ at: maw, delayMs: drag.delayMs + drag.durationMs });
+    // R202: the Radiant face's second course, a card the board does not show, is dragged from the opponent's deck pile.
+    expect(course?.cues[3]).toMatchObject({ kind: "ghost", from: tid(animTestid.library("opponent")), to: maw });
+    // A fusion it is not in is no meal of its: its row plays.
+    expect(other).toEqual({ cues: [], row: undefined });
+  });
+
+  it("R3405001 YileGPT: after its takeover's hold the ink scholar steps out brush first and folds into its zone at the slam, an ink drop skittering across its lane to where its Virus boots up with its own entrance; at its Death its light folds into a card back flying to its Deck pile", () => {
+    const { cues, tgt, slam } = entrance("scrollScholar", YILE, MYTHIC_D, HOLD);
+    expectFrame(cues, "scrollScholar", slam, HOLD);
+    expect(beats(cues)).toEqual([`figure:inkScholar${at(HOLD)}`, `burst${at(HOLD)}`, `ring${at(slam)}`, `burst${at(slam)}`, `shot${at(slam)}`, `figure:inkDrop${at(slam)}`, `shake${at(slam)}`]);
+    const across = tid(testid.zone("opponent", "units", LANE));
+    expect(cues[0]).toMatchObject({ at: tid(tgt), side: "you" });
+    expect(cues[1]).toMatchObject({ spread: "area", at: tid(tgt, FOOT) });
+    expect(cues[4]).toMatchObject({ preset: "circuit", from: tid(tgt), to: across, flightMs: MYTHIC_D - slam });
+    expect(cues[5]).toMatchObject({ at: across, side: "you" });
+    // Its Cry's one event, the Virus summoned for the opponent across from it, plays the Virus's own entrance.
+    const virus: GameEvent = { type: "summoned", player: "p2", instanceId: "fx-virus", defId: VIRUS, row: "units", lane: LANE };
+    expect(run(YILE, [virus], D)).toEqual([{ cues: entrance("virusBoot", VIRUS, D, 0, "p2").cues, row: "replace" }]);
+    // Its Death, standing as "ex": its light flares on its card, whose card back flies to its Deck pile within the entry.
+    const shuffled = (player: PlayerId): GameEvent => ({ type: "shuffledIn", player, instanceId: "hidden", defId: "hidden", position: 0 });
+    const [death] = run(YILE, [shuffled("p1")], D, "p1", standing(), "death");
+    const card = tid(testid.card("ex"));
+    expect(death?.row).toBe("replace");
+    expect(death?.cues).toMatchObject([
+      { kind: "burst", spread: "area", at: card, delayMs: 0 },
+      { kind: "ghost", from: card, to: tid(animTestid.library("you")) },
+    ]);
+    const back = death?.cues[1];
+    if (back?.kind !== "ghost") throw new Error("no card back");
+    expect(back.delayMs).toBeGreaterThan(0);
+    expect(back.delayMs + back.durationMs).toBe(D);
+    // Gone from the board, it leaves from its Graveyard pile, on either seat.
+    expect(run(YILE, [shuffled("p1")], D, "p1", fullBoardView(), "death")[0]?.cues[1]).toMatchObject({ from: tid(animTestid.graveyard("you")), to: tid(animTestid.library("you")) });
+    expect(run(YILE, [shuffled("p2")], D, "p2", fullBoardView(), "death")[0]?.cues[1]).toMatchObject({ from: tid(animTestid.graveyard("opponent")), to: tid(animTestid.library("opponent")) });
+    // A shuffle into the other seat's deck is none of its: its row plays.
+    expect(run(YILE, [shuffled("p2")], D, "p1", fullBoardView(), "death")).toEqual([{ cues: [], row: undefined }]);
+  });
+
+  it("R3405001 YileGPT Prime: after its takeover's hold the colossal scholar unfurls in ink, its brush ring spinning, and lands under mythic rays; its Cry's ring stops on each Datacenter it raises, each enemy card it dims and each card it adds, a card back to the hand pile with a sheen on its owner's seat alone", () => {
+    const { cues, tgt, slam } = entrance("pavilionUnfurl", YILE_PRIME, MYTHIC_D, HOLD);
+    expectFrame(cues, "pavilionUnfurl", slam, HOLD);
+    expect(beats(cues)).toEqual([`figure:brushRing${at(HOLD)}`, `burst${at(HOLD)}`, `rays${at(slam)}`, `ring${at(slam)}`, `burst${at(slam)}`, `shake${at(slam)}`]);
+    expect(cues.slice(0, 3)).toMatchObject([{ at: tid(tgt), side: "you" }, { spread: "area", at: tid(tgt, FOOT) }, { tone: "mythic", at: tid(tgt) }]);
+    // Its Cry, standing as "ex": a Datacenter into its backrow, an enemy Unit dimmed, a card added to its hand.
+    const view = standing();
+    const foe = tid(testid.card(unitAt(view, "opponent", 0).instanceId));
+    const datacenter: GameEvent = { type: "summoned", player: "p1", instanceId: "fx-datacenter", defId: "classicplus-078", row: "backrow", lane: 2 };
+    const dim = (card: { instanceId: string; defId: string }): GameEvent => ({ type: "degraded", instanceId: card.instanceId, defId: card.defId, change: NERF });
+    const [raised, dimmed, gift, unseen] = run(YILE_PRIME, [datacenter, dim(unitAt(view, "opponent", 0)), added("p1", "fx-glitch", "classic-018"), dim({ instanceId: "hidden", defId: "hidden" })], D, "p1", view);
+    const zone = tid(testid.zone("you", "backrow", 2));
+    const card = tid(testid.card("ex"));
+    const hand = tid(animTestid.hand("you"));
+    expect(raised).toMatchObject({ cues: [{ kind: "figure", figure: "brushRing", size: "small", at: zone, delayMs: 0 }, { kind: "burst", spread: "area", at: zone }], row: "replace" });
+    expect(dimmed).toMatchObject({ cues: [{ figure: "brushRing", size: "small", at: foe }, { kind: "burst", preset: "smoke", at: foe }], row: "replace" });
+    expect(gift).toMatchObject({ cues: [{ figure: "brushRing", at: card }, { kind: "ghost", from: card, to: hand }, { kind: "sheen", at: hand, delayMs: 0, durationMs: D }], row: "replace" });
+    // R202: a card dimmed in a Deck or a hand this seat cannot read has no anchor: its row plays.
+    expect(unseen).toEqual({ cues: [], row: undefined });
+    // The opponent's Prime, off this board: the viewer's own hand card dims where it is, with no stop of the
+    // ring, and its gift flies from its hero to its hand pile with no sheen here.
+    const own = handCard(view);
+    const [mine, theirs] = run(YILE_PRIME, [dim(own), added("p2", "hidden", "hidden")], D, "p2", fullBoardView());
+    expect(mine).toEqual({ cues: [expect.objectContaining({ kind: "burst", preset: "smoke", at: tid(testid.handCard(own.instanceId)) })], row: "replace" });
+    expect(shapes(theirs?.cues)).toEqual(["brushRing", "ghost"]);
+    expect(theirs?.cues[1]).toMatchObject({ from: tid(testid.hero("opponent")), to: tid(animTestid.hand("opponent")) });
+    // Its AI Girlfriend and the Viruses it floods the far side with enter by their own entrances.
+    const girlfriend: GameEvent = { type: "summoned", player: "p1", instanceId: "fx-girlfriend", defId: GIRLFRIEND, row: "units", lane: LANE };
+    const virus: GameEvent = { type: "summoned", player: "p2", instanceId: "fx-virus", defId: VIRUS, row: "units", lane: LANE };
+    expect(run(YILE_PRIME, [girlfriend, virus], D)).toEqual([
+      { cues: entrance("dojoBoot", GIRLFRIEND, D).cues, row: "replace" },
+      { cues: entrance("virusBoot", VIRUS, D, 0, "p2").cues, row: "replace" },
+    ]);
   });
 });
