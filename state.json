@@ -16118,7 +16118,8 @@
       "live": "reviewing",
       "merge_owner": "claude-8",
       "own_review": {
-        "claimed_at": "2026-11-08T15:04:12Z",
+        "claimed": true,
+        "claimed_at": "2026-11-08T17:15:43Z",
         "from_run": "42484133010",
         "gates": [
           {
@@ -16219,7 +16220,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42492907300",
+      "run_id": "pending:c0013011-1794158121",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16240,7 +16241,7 @@
         "run": "42492907300"
       },
       "source": "",
-      "started_at": "2026-11-08T15:04:12Z",
+      "started_at": "2026-11-08T17:15:43Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17088,9 +17089,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T17:06:34Z",
+    "at": "2026-11-08T17:15:43Z",
     "url": "",
-    "what": "revise #3432 on claude-6"
+    "what": "review #3419 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T17:04:30Z",
