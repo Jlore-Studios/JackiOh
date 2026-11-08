@@ -318,13 +318,13 @@ const S2 = {
   FX_STARSHIP_FUSE_STAGGER_MS: 250,
   FX_STARSHIP_FUSE_LAND_AT: 0.6,
   FX_STARSHIP_FUSE_TRAUMA: 0.25,
-  FX_STARSHIP_COUNT_AT: [0, 0.25, 0.5],
   FX_STARSHIP_IGNITE_AT: 0.75,
   FX_STARSHIP_LIFT_AT: 0.45,
   FX_STARSHIP_LAND_AT: 0.8,
   FX_STARSHIP_BADGE_AT: { x: 0.5, y: 0.36 },
   FX_STARSHIP_TAIL_MS: 400,
   FX_STARSHIP_STILL_MS: 1_600,
+  FX_STARSHIP_RAM_TURN_DEG: 30,
   FX_SHIP_PLATES_MAX: 8,
   FX_SHIP_DOME_AT: { x: 0.5, y: 0.22 },
   FX_SHIP_CORE_AT: { x: 0.5, y: 0.62 },
@@ -444,12 +444,7 @@ describe("S2 the effects constants", () => {
       expect(phases[k]).toBeGreaterThan(phases[k - 1] ?? 1);
       expect(phases[k]).toBeLessThanOrEqual(1);
     }
-    // R2801000: the countdown runs in order from the hold's start, every count before the ignition, and
-    // the launch's tail stays inside FX_MAX_TAIL_MS (R200).
-    const counts = constants.FX_STARSHIP_COUNT_AT;
-    expect(counts[0]).toBe(0);
-    for (let k = 1; k < counts.length; k += 1) expect(counts[k]).toBeGreaterThan(counts[k - 1] ?? 1);
-    expect(counts[counts.length - 1]).toBeLessThan(constants.FX_STARSHIP_IGNITE_AT);
+    // R2801000: the launch's tail stays inside FX_MAX_TAIL_MS (R200).
     expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     // R3336000: the Battleship's tail stays inside FX_MAX_TAIL_MS (R200), a Corvette flies slower than an Interceptor, and the shake stays a trauma.
     expect(constants.FX_SHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
