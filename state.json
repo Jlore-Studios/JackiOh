@@ -15215,10 +15215,16 @@
       },
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-2",
       "owner_since": "2026-11-08T08:43:06Z",
       "owner_why": "it took it up",
+      "paused": {
+        "at": "2026-11-08T09:08:22Z",
+        "interrupt": "usage",
+        "provider": "claude-2"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T18:22:23Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -15228,13 +15234,15 @@
       "question": "none. One plan, one pull request, no split (see Open questions).",
       "queued_at": "2026-11-07T19:38:59Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "strong",
       "run_id": "42464113166",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T08:43:06Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6712090776"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "3353": {
       "action": "review",
