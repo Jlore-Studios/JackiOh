@@ -147,20 +147,23 @@ describe("R3331000 the scene kits", () => {
   });
 
   it("R3331000 every part draws clean shapes from any seed", () => {
+    // Each shape's checks are plain tests, gathered per part into one expect that names every fault by its seed
+    // and shape: a vitest expect per check cost ten times the drawing and held this test at its timeout once the
+    // kits passed 230 parts (#3396).
+    const palette = new Set<string>(Object.keys(SCENE_PALETTE));
     for (const [id, part] of PARTS) {
+      const faults: string[] = [];
       for (let seed = 1; seed <= SEEDS; seed += 1) {
         const flip = seed % 2 === 0 ? 1 : -1;
         const shapes = part.draw({ x: 50, y: 60, s: 0.5 + (seed % 5) * 0.25, flip }, stream(seed));
-        expect(shapes.length, id).toBeGreaterThanOrEqual(1);
-        expect(shapes.length, id).toBeLessThanOrEqual(12);
-        for (const shape of shapes) {
-          expect(shape.d, id).toMatch(PATH);
-          expect(shape.d, id).not.toMatch(/NaN|Infinity|undefined/);
-          expect(Object.keys(SCENE_PALETTE), id).toContain(shape.paint);
-          expect(shape.opacity, id).toBeGreaterThan(0);
-          expect(shape.opacity, id).toBeLessThanOrEqual(1);
-        }
+        if (shapes.length < 1 || shapes.length > 12) faults.push(`seed ${seed}: ${shapes.length} shapes`);
+        shapes.forEach((shape, k) => {
+          if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) faults.push(`seed ${seed} #${k}: d ${shape.d}`);
+          if (!palette.has(shape.paint)) faults.push(`seed ${seed} #${k}: paint ${shape.paint}`);
+          if (!(shape.opacity > 0 && shape.opacity <= 1)) faults.push(`seed ${seed} #${k}: opacity ${shape.opacity}`);
+        });
       }
+      expect(faults, id).toEqual([]);
     }
   });
 
@@ -196,8 +199,8 @@ describe("R3331000 the scene kits", () => {
       }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
-    // And what each proof card's base face prints: every fill and stroke, its sky and its glow.
-    for (const id of PROOFS) {
+    // And what each recipe card's base face prints: every fill and stroke, its sky and its glow.
+    for (const id of Object.keys(SCENE_RECIPES)) {
       const spec = specOf(def(id), false);
       const colors = [spec.sky.from, spec.sky.to, spec.glow.color, ...spec.ridges.flatMap((ridge) => [ridge.fill, ...(ridge.stroke === undefined ? [] : [ridge.stroke])])];
       for (const hex of colors) expect(inRadiantGold(hex), `${id}: ${hex}`).toBe(false);
@@ -233,8 +236,10 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    // The proofs and every Classic+ entry (R3390000, classicPlusScenes.test.ts).
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...PROOFS].sort());
+    // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
+    // classicPlusScenes.test.ts checks).
+    const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...new Set<string>([...PROOFS, ...core])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

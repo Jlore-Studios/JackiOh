@@ -97,11 +97,12 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
       expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
       expect(typeof ENTRANCES[key]).toBe("function");
     }
-    // Each entrance is its own: no two cards share one. R3389001: every other is a Legendary or Mythic Field Spell's.
+    // Each entrance is its own: no two cards share one. R3389001: every other is a Legendary or Mythic Field Spell's
+    // (R3407000: a token's by the rarity it prints, the MAGI's).
     expect(new Set(ENTERING.map(([, key]) => key)).size).toBe(ENTERING.length);
     for (const [defId] of ENTERING.filter(([id]) => CATALOG[id]?.type !== "Unit")) {
       expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
-      expect(["Legendary", "Mythic"], defId).toContain(CATALOG[defId]?.rarity);
+      expect(["Legendary", "Mythic"], defId).toContain(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity);
     }
   });
 

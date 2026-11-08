@@ -19,6 +19,7 @@ import {
   FX_SHIP_LOCK_TRAUMA,
   FX_WARP_FROM,
 } from "../../constants.ts";
+import { planCardFx } from "../../cardFx.ts";
 import { planFx } from "../../cues.ts";
 import { createFxMemory } from "../../memory.ts";
 import { motifScale, timesOf } from "../../motifs/build.ts";
@@ -120,8 +121,22 @@ describe("R2797000 Stinkyscape's Flourishes", () => {
     const boots = results.filter(({ entry }) => entry.events.some((event) => event.type === "summoned"));
     expect(boots).toHaveLength(3);
     const tints = new Set<string>();
-    boots.forEach(({ entry, cues }, k) => {
+    boots.forEach(({ entry, cues: drawn }, k) => {
       const zone = tid(testid.zone("you", "backrow", 3 + k));
+      // R3407000: each MAGI's own entrance draws beside the boot (its card's entry alone plans it), so the boot is the rest.
+      const landing = entry.events.find((event) => event.type === "summoned");
+      const magi = landing?.type === "summoned" ? FX_CARD_TABLE.get(landing.defId) : undefined;
+      if (landing?.type !== "summoned" || magi === undefined) throw new Error(`boot ${String(k)} has no MAGI`);
+      const entrance = (planCardFx(landing, { entry, view: entry.view, env: envOf(), D: entry.durationMs }, new Map([[landing.defId, magi]]))?.cues ?? []).map((cue) => JSON.stringify(cue));
+      expect(entrance.length, `${landing.defId}'s own entrance`).toBeGreaterThan(0);
+      for (const cue of entrance) expect(drawn.map((own) => JSON.stringify(own)), landing.defId).toContain(cue);
+      // Each of the entrance's cues once: the boot's own sheen may match one of the entrance's.
+      const left = [...entrance];
+      const cues = drawn.filter((cue) => {
+        const at = left.indexOf(JSON.stringify(cue));
+        if (at >= 0) left.splice(at, 1);
+        return at < 0;
+      });
       // Its own hue's brand and a sheen, a ring for the first two, the first's shake; no particles after the cast.
       const brand = cues.find((cue) => cue.kind === "brand");
       expect(brand).toMatchObject({ at: zone, delayMs: 0, durationMs: entry.durationMs });

@@ -9,6 +9,9 @@
 // every shake stays within its type's (SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA), and a
 // signature's aura within AURA_SIGNATURE_MAX_INTENSITY. Each is planned over its gallery board (`galleryBoardOf`).
 // R3389000: a signature bespoke's aura is held to it too (`entryAura`), its own look's numbers (`auraLookSpec`).
+// R3395001: a signature's ceiling counts its own beats: another signature's own entrance its play summons
+// (the MAGI's under Imitated Instrumentality, R3407000) is that card's, held to its own ceiling in its own
+// gallery play, and still to R200 by the test above.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -147,6 +150,32 @@ describe("R2803000 every table entry ends within FX_MAX_TAIL_MS", () => {
   });
 });
 
+/**
+ * R3395001: the cues in `planned` of another signature's own entrance, a card `defId`'s play summons (each
+ * MAGI landing under Imitated Instrumentality's boots, R3407000): that card's own beats, planned by its entry
+ * alone and held to its own ceiling in its own gallery play, so not counted against `defId`'s.
+ */
+function othersEntrances(defId: string, planned: AnimationEntry, env: FxPlanEnv): ReadonlySet<string> {
+  const theirs = new Set<string>();
+  for (const event of planned.events) {
+    if (event.type !== "summoned" || event.defId === defId) continue;
+    const own = FX_CARD_TABLE.get(event.defId);
+    if (own === undefined || own.kind === "none" || own.entrance === undefined || !isSignature(own)) continue;
+    const p = { entry: planned, view: planned.view, env, D: planned.durationMs };
+    const entrance = (planCardFx(event, p, new Map([[event.defId, own]]))?.cues ?? []).map((cue) => JSON.stringify(cue));
+    // What the play's own recipe draws beside it: everything the full plan draws but each entrance cue once.
+    const rest = [...entrance];
+    const mine = new Set((planCardFx(event, p)?.cues ?? []).map((cue) => JSON.stringify(cue)).filter((cue) => {
+      const at = rest.indexOf(cue);
+      if (at >= 0) rest.splice(at, 1);
+      return at < 0;
+    }));
+    // A cue the recipe draws too stays counted: only the other card's alone is skipped.
+    for (const cue of entrance) if (!mine.has(cue)) theirs.add(cue);
+  }
+  return theirs;
+}
+
 describe("R3332000 every signature keeps its loudness budget", () => {
   it("R3332000 every signature ends within its rarity's and type's ceiling, shakes within its type's, and its aura within AURA_SIGNATURE_MAX_INTENSITY", () => {
     const view = fullBoardView();
@@ -174,10 +203,13 @@ describe("R3332000 every signature keeps its loudness budget", () => {
         env.memory.remember(entryPlanned.events);
         const cues = cuesOf(entryPlanned, env);
         if (cues.length > 0) drawn = true;
+        const others = othersEntrances(defId, entryPlanned, env);
         for (const cue of cues) {
           const where = `${defId} ${cue.kind} at ${String(offset)}`;
           // A pull and a conceal are the stage's: the board's next view ends them (R200).
           if (cue.kind === "pull" || cue.kind === "conceal") continue;
+          // R3395001: another signature's own entrance is held to its own ceiling.
+          if (others.has(JSON.stringify(cue))) continue;
           expect(offset + endOf(cue), where).toBeLessThanOrEqual(ceiling);
           if (cue.kind === "shake") expect(cue.trauma, where).toBeLessThanOrEqual(maxTrauma);
         }

@@ -17,6 +17,7 @@
 // (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
 // R3389000: a signature look (fx/aura/looks.ts) is a signature's alone, and "abyss" is In Too Deep's own
 // takeover look.
+// R3407000: Stinkyscape part two's six Mythics' own takeover looks join them.
 // R3395001: Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge" join the Mythics' own takeover looks.
 
 import JSON5 from "json5";
@@ -74,16 +75,24 @@ export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
   void: true,
   pawn: true,
   genie: true,
-  ai: true, abyss: true,
+  ai: true,
+  abyss: true,
   summit: true,
   canvas: true,
   napkin: true,
+  // R3407000: Stinkyscape's six Mythics of part two.
+  freshJack: true,
+  ikwzki: true,
+  shockwave: true,
+  alteran: true,
+  edge: true,
+  redNarcor: true,
+  // R3395001: Stinkyscape 001 to 090's five Mythics.
   vault: true,
   rod: true,
   wire: true,
   whiteDwarf: true,
-  forge: true,
-};
+  forge: true, };
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
   return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);

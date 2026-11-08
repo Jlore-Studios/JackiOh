@@ -52,8 +52,9 @@ describe("R2803000 the audit's coverage", () => {
 
   it("R3389000 every Field Spell whose entry is a recipe wears its aura beside it", () => {
     const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
+    // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
     // R3395000: and Stinkyscape's three, The Greatest Heist, Rod of Ages and The Narcor Project.
-    expect(recipes).toEqual(["classic-004", "classic-007", "classic-028", "classic-090", "stinkyscape-007", "stinkyscape-016", "stinkyscape-039"]);
+    expect(recipes).toEqual(["classic-004", "classic-007", "classic-028", "classic-090", "stinkyscape-007", "stinkyscape-016", "stinkyscape-039", "stinkyscape-112", "stinkyscape-148", "stinkyscape-152"]);
     for (const id of recipes) expect(entryAura(entryOf(id)), id).toBeDefined();
   });
 

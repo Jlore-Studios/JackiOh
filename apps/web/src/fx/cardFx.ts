@@ -15,6 +15,8 @@
 // or in a readable event remembered (`signaturePlayOf`). Neither reads a hidden card (R202). It draws
 // beside a whole pile's one wave too (`planSignatureZone`). R3395001: a signature's beat that replaces its
 // event's row replaces that event's system moment too (`planCardFxClaim`, cues.ts).
+// R3407000: an entrance and the readable play's own recipe both draw on the `summoned` they both claim (a
+// MAGI's own entrance inside Imitated Instrumentality's boots); the fallback above never joins an entrance.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -176,13 +178,20 @@ export function planSignatureZone(entry: AnimationEntry, view: PlayerView, env: 
  */
 export function planCardFxClaim(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): { result: CardFxResult | null; signature: boolean } {
   const entrance = planEntrance(event, p, table);
-  if (entrance !== null) return { result: entrance, signature: false };
   const play = p.env.memory.resolving();
   const key = play === undefined || play.defId === HIDDEN_ID ? undefined : bespokeOf(play.defId, table);
   const own = play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
-  if (own !== null) return { result: own, signature: play !== undefined && isSignature(table.get(play.defId)) };
-  const claimed = signatureFallback(event, p, table);
-  return { result: claimed, signature: claimed !== null };
+  const signature = play !== undefined && isSignature(table.get(play.defId));
+  if (entrance === null) {
+    if (own !== null) return { result: own, signature };
+    const claimed = signatureFallback(event, p, table);
+    return { result: claimed, signature: claimed !== null };
+  }
+  if (own === null) return { result: entrance, signature: false };
+  // R3407000: an entrance inside a recipe that claims the same summon draws both (a MAGI's own entrance
+  // under Imitated Instrumentality's boots, Sanctum's echoes as it rises). The fallback (R3389000) never
+  // joins an entrance: a summon with one draws it, as before.
+  return { result: { cues: [...entrance.cues, ...own.cues], row: "replace" }, signature };
 }
 
 export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
