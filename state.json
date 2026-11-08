@@ -16525,11 +16525,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-1",
       "merge_owner_gave_up": {
-        "at": "2026-11-07T22:48:35Z",
-        "provider": "claude-7",
-        "sha": "a929e686f20cc2c49a1238850ff0c64979045f8b"
+        "at": "2026-11-08T03:13:28Z",
+        "provider": "claude-1",
+        "sha": "b4c938699ceef415369fd203dafce88030db6eb7"
       },
       "pending_request": false,
       "provider": "claude-1",
