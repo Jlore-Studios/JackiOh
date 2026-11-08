@@ -14,7 +14,8 @@
 // eight guns, at the slowest effects speed. R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the
 // two heaviest of Meditative+'s and Training Grounds', their takeovers drawing full-screen art.
 // R3407000: xxFreshJack's and Alteran Reach's, the two heaviest of Stinkyscape part two's, their takeovers
-// drawing their cards' own pictures full screen.
+// drawing their cards' own pictures full screen. R3405001: Keymaster Keenus's and Jlockeed's Headquarters',
+// the two heaviest of Meditative's, the second over its own takeover's art.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -320,8 +321,36 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       const board = galleryBoardOf(defId, fullBoardView());
       holdsBudget(`${name}'s signature`, () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
-        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
-        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        if (look === undefined) cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
+        else {
+          cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        }
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
+  // R3405001: Meditative's two heaviest, the signatures whose gallery play plans the most cues: Keymaster
+  // Keenus's keys turning in their locks, and Jlockeed's Headquarters' convoy after its takeover's full-screen art.
+  for (const { defId, name, look } of [
+    { defId: "meditative-065", name: "Keymaster Keenus", look: undefined },
+    { defId: "meditative-097-9", name: "Jlockeed's Headquarters", look: "fortress" },
+  ] as const) {
+    it(`R3405001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        if (look === undefined) cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
+        else {
+          cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        }
         return sampleFrames();
       });
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");

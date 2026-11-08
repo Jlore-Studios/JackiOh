@@ -4,6 +4,7 @@
 // TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
 // the Anomaly's rift and its still title card. R3389000: the still wears its card's own takeover look.
 // R3402000: a Mythic whose takeover has art of its own shows it at rest there.
+// R3405000: and each Meditative Mythic's still draws its own art.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -18,10 +19,8 @@ import { ANOMALY_SET_PIECE, TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./anima
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import TakeoverStill, { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
-import { TAKEOVER_TINTS, takeoverLookOf } from "../fx/takeover.ts";
-import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX } from "../fx/takeoverArt.ts";
-import { takeoverArtOf } from "../fx/takeover.ts";
-import { TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
+import { TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "../fx/takeover.ts";
+import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_PARTS, TAKEOVER_ART_VIEWBOX } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
@@ -30,9 +29,9 @@ const lookup = lookupFromDefs(CATALOG);
 const boardCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "board.css"), "utf8");
 /** #97 Zephrys, a Mythic Spell; #52 Silly Silas, a Legendary Unit. */
 const ZEPHRYS = "core-097";
-/** R3402000: #98 Heroic Power, a Mythic whose takeover has its own art; Meditative #8 Reach the Summit, a Mythic on the shared look. */
+/** R3402000: #98 Heroic Power, a Mythic whose takeover has its own art; Classic+ #29 Portal to the Past, a Mythic on the shared look. */
 const HEROIC_POWER = "core-098";
-const PRISMATIC_MYTHIC = "meditative-008";
+const PRISMATIC_MYTHIC = "classicplus-029";
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 const cast = (defId: string): GameEvent => ({ type: "cardPlayed", player: "p1", instanceId: `i-${defId}`, defId, costPaid: 3 });
 
@@ -132,6 +131,25 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
   });
 
+  it("R3405000 under reduced motion each Meditative Mythic shows its own art still", () => {
+    writeSettings({ reduceMotion: true });
+    const mythics = Object.values(CATALOG).filter((card) => card.id.startsWith("meditative-") && (card.printedRarity ?? card.rarity) === "Mythic");
+    expect(mythics).toHaveLength(13);
+    for (const card of mythics) {
+      const look = takeoverLookOf(card.id);
+      // A Unit or a Field Spell enters as it lands face up; a Spell at its play.
+      const row = card.type === "Unit" ? "units" : card.type === "Field Spell" ? "backrow" : undefined;
+      playOut(card.id, row === undefined ? [] : [{ type: "summoned", player: "p1", instanceId: `i-${card.id}`, defId: card.id, row, lane: 2 }]);
+      const art = screen.getByTestId("takeover-still").querySelector(".takeover-art");
+      expect(art, card.id).not.toBeNull();
+      expect(art).toHaveAttribute("data-look", look);
+      expect(art).toHaveAttribute("data-still", "true");
+      expect([...(art?.children ?? [])].map((part) => part.className), card.id).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      expect(art?.textContent, card.id).toBe("");
+      cleanup();
+    }
+  });
+
   it("R3407000 under reduced motion each Stinkyscape Mythic Spell shows its own picture still, behind the rays", () => {
     writeSettings({ reduceMotion: true });
     for (const defId of ["stinkyscape-148-1", "stinkyscape-t-red-narcor"]) {
@@ -154,11 +172,11 @@ describe("R2722001 a Mythic's takeover on the board", () => {
   });
 
   it("R2722001 a Legendary takes neither the hold nor the still", () => {
-    writeSettings({ reduceMotion: true });
-    playOut("core-083");
-    expect(screen.queryByTestId("takeover-still")).toBeNull();
-    expect(screen.getByTestId("game")).not.toHaveAttribute("data-takeover");
-  });
+  writeSettings({ reduceMotion: true });
+  playOut("core-083");
+  expect(screen.queryByTestId("takeover-still")).toBeNull();
+  expect(screen.getByTestId("game")).not.toHaveAttribute("data-takeover");
+});
 
   it("R3402000 reduced motion shows the Mythic's takeover art still", () => {
     const stand = (defId: string): HTMLElement => {

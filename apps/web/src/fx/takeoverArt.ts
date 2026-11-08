@@ -1,7 +1,12 @@
 // R3400000: the art a Mythic's own takeover look draws over the dark, part by part (fx.css's
 // `.takeover-art[data-look]`): Bob's Plan's ink-wash summit, Scratch Pad's blank canvas and Goetzmann
-// Game Design's napkin. The takeover cue mounts them live (dom.ts), timed to its landing; Reduce Motion's
-// still mounts the same parts at rest (game/TakeoverStill.tsx). Shapes only, never a card face (R202).
+// Game Design's napkin. R3405000: and each Meditative Mythic's own: Reach the Summit's ascent, True Craft
+// a Card's workshop, Aestheticize the Game's brush, Red Jade's mine, Jade Beauty's quarry, YileGPT's ai,
+// YileGPT Prime's pavilion, Yile's Virus's virus, AI Girlfriend's dojo, Pareto Optimality's studyHall,
+// The Cane's caneRack, Jlockeed's Evil Blueprints' warRoom and Jlockeed's Headquarters' fortress, each
+// part named for its look. The takeover cue mounts them live (dom.ts), timed to its landing; Reduce
+// Motion's still mounts the same parts at rest (game/TakeoverStill.tsx). Shapes only, never a card face
+// (R202): True Craft's card is a blank card shape.
 //
 // R3402000: each Core Mythic's takeover draws its own full-screen art (issue #3402) as a scene of SVG
 // shapes (`TAKEOVER_ART`, `buildTakeoverArt`) in place of those parts, over the board's dark and under the
@@ -313,6 +318,19 @@ export const TAKEOVER_ART_PARTS: Readonly<Partial<Record<TakeoverLook, readonly 
   summit: ["wash", "range", "arrow", "flag"],
   canvas: ["paper", "peaks", "cursor", "rows"],
   napkin: ["napkin", "lamp", "pencil", "sketch", "spiral"],
+  ascent: ["ascent-stars", "ascent-ledges", "ascent-climber", "ascent-clouds"],
+  workshop: ["workshop-bench", "workshop-maker", "workshop-threads", "workshop-card"],
+  brush: ["brush-scroll", "brush-wash", "brush-bloom", "brush-pen"],
+  mine: ["mine-rock", "mine-seam", "mine-lamp", "mine-shards"],
+  quarry: ["quarry-cliffs", "quarry-boulder", "quarry-veins", "quarry-dust"],
+  ai: ["ai-scroll", "ai-scan", "ai-strokes"],
+  pavilion: ["pavilion-hall", "pavilion-ring", "pavilion-scholar"],
+  virus: ["virus-snow", "virus-face", "virus-eyes"],
+  dojo: ["dojo-floor", "dojo-mat", "dojo-beams"],
+  studyHall: ["hall-scroll", "hall-curve", "hall-students", "hall-cane"],
+  caneRack: ["rack-lacquer", "rack-cane", "rack-hand"],
+  warRoom: ["war-table", "war-villain", "war-blueprint", "war-lamps"],
+  fortress: ["fortress-keep", "fortress-peak", "fortress-racks", "fortress-beacons"],
 };
 
 /** The parts `look`'s art draws, none for a look without art. */

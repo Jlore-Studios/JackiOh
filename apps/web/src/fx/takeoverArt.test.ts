@@ -20,8 +20,8 @@ const OWN: ReadonlyArray<readonly [string, TakeoverLook]> = [
   ["core-098", "rotunda"],
   ["core-099", "forge"],
 ];
-/** The looks that keep their takeover as it was: #100 Ceaseless Void's, YileGPT's and the shared one. */
-const NONE: readonly TakeoverLook[] = ["void", "ai", "prismatic"];
+/** The looks that keep their takeover as it was: #100 Ceaseless Void's and the shared one (R3405000: YileGPT's `ai` draws its parts now). */
+const NONE: readonly TakeoverLook[] = ["void", "prismatic"];
 
 afterEach(() => {
   document.body.innerHTML = "";
