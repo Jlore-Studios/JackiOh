@@ -16746,7 +16746,7 @@
       }
     },
     "3386": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "ci_early": true,
@@ -16819,7 +16819,7 @@
           "where": "apps/web/src/writing.test.ts:17"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "gpt",
@@ -16829,11 +16829,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42474374230",
+      "run_id": "pending:f5043dbf-1794136999",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-08T11:07:48Z",
+      "started_at": "2026-11-08T11:24:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -18710,9 +18710,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:07:48Z",
+    "at": "2026-11-08T11:24:04Z",
     "url": "",
-    "what": "review #3386 on gpt"
+    "what": "revise #3386 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-08T11:02:07Z",
