@@ -19417,7 +19417,10 @@
   ],
   "needs_decision_synced": "d4c5f9 A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it",
   "older_questions_labelled": "2026-11-04T06:29:37Z",
-  "planning": null,
+  "planning": {
+    "at": "2026-11-08T01:21:40Z",
+    "owner": "loop 42415816286"
+  },
   "providers": {
     "agy": {
       "refused_until": "2026-11-07T05:02:20Z",
