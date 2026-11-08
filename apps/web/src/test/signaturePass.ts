@@ -3,7 +3,7 @@
 // moments full, remembered, then planned), each entry's cues at its offset from the run's start, a cue's
 // end as R200 counts it, each card's signature ceiling, and R200 held over every entry.
 
-import type { GameEvent, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { expect } from "vitest";
 
 import { entranceEntries, planEntries, setPieceEntries, takeoverClaim, type AnimationEntry, type EntranceResolver } from "../game/animations.ts";
@@ -15,10 +15,12 @@ import {
   SIGNATURE_MYTHIC_MAX_MS,
   SIGNATURE_SPELL_SHARE,
 } from "../fx/constants.ts";
+import { planCardFx } from "../fx/cardFx.ts";
+import type { CardFxResult } from "../fx/cards/recipe.ts";
 import { FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { planFx } from "../fx/cues.ts";
 import { createFxMemory } from "../fx/memory.ts";
-import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../fx/motifs/gallery.ts";
+import { galleryBoardOf, galleryCardEvents, galleryEntry, galleryFieldView, galleryPlayOf } from "../fx/motifs/gallery.ts";
 import { hasSetPiece, wipeClaim } from "../fx/setPieces.ts";
 import type { FxCue, FxPlanEnv } from "../fx/types.ts";
 import { CATALOG } from "../wire/cards.ts";
@@ -126,4 +128,71 @@ export function describeRun(run: readonly PlannedEntry[]): string {
   return run
     .map(({ entry, offset, cues }) => `@${String(offset)} D${String(entry.durationMs)} [${entry.events.map((e) => e.type).join(",")}] ${cues.map((c) => `${c.kind}@${String(c.delayMs)}~${String(endOf(c))}`).join(" ")}`)
     .join("\n");
+}
+
+/** R202: a card id of any set; no cue may carry one. */
+export const CARD_ID = /(core|classic|meditative|stinkyscape|traininggrounds)[a-z]*-\d/;
+
+/** R202: no cue of `cues` names a card or reaches into a hand but through its pile. */
+export function expectNoCard(cues: readonly FxCue[], where: string): void {
+  for (const cue of cues) {
+    const json = JSON.stringify(cue);
+    expect(json, `${where} ${cue.kind}`).not.toMatch(CARD_ID);
+    expect(json, `${where} ${cue.kind}`).not.toContain('"handCard"');
+  }
+}
+
+/**
+ * R3407000: each of `events` as its own entry lasting D, `before` remembered first (the play's
+ * `cardPlayed` or its hook's marker): what the card's recipe answers for it, null where it draws nothing.
+ */
+export function beatsOf(events: readonly GameEvent[], view: PlayerView, D: number, before: readonly GameEvent[] = [], env: FxPlanEnv = envOf()): (CardFxResult | null)[] {
+  env.memory.remember(before);
+  return events.map((event) => {
+    env.memory.remember([event]);
+    const entry = { ...galleryEntry([event], view), durationMs: D };
+    return planCardFx(event, { entry, view, env, D });
+  });
+}
+
+/** R200: every cue of an entry lasting D starts inside it and ends within FX_MAX_TAIL_MS of its end; each shake within `maxTrauma`. */
+export function expectCuesR200(cues: readonly FxCue[], D: number, where: string, maxTrauma = Infinity): void {
+  for (const cue of cues) {
+    const label = `${where} ${cue.kind} at D=${String(D)}`;
+    expect(cue.delayMs, label).toBeGreaterThanOrEqual(0);
+    expect(cue.delayMs, label).toBeLessThanOrEqual(D);
+    if (cue.kind === "pull" || cue.kind === "conceal") continue;
+    expect(endOf(cue), label).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
+    if (cue.kind === "shake") expect(cue.trauma, label).toBeLessThanOrEqual(maxTrauma);
+  }
+}
+
+const SEATS: Readonly<Record<PlayerId, PlayerId>> = { p1: "p2", p2: "p1" };
+const SEAT_KEYS = ["player", "controller", "owner", "creator"] as const;
+
+/**
+ * R202: `event` as the other seat's: its seat fields swapped, and as the server sends it to the viewer
+ * (`view_for.rs` `redact_event`): an added, drawn or shuffled card's ids hidden; a prompt is never sent
+ * to the other seat (`undefined`).
+ */
+export function asTheirs(event: GameEvent): GameEvent | undefined {
+  if (event.type === "promptOpened") return undefined;
+  const swapped: Record<string, unknown> = { ...event };
+  for (const key of SEAT_KEYS) {
+    const seat = swapped[key];
+    if (seat === "p1" || seat === "p2") swapped[key] = SEATS[seat];
+  }
+  if (event.type === "addedToHand" || event.type === "drawn" || event.type === "shuffledIn") {
+    swapped.instanceId = "hidden";
+    swapped.defId = "hidden";
+  }
+  return swapped as GameEvent;
+}
+
+/** R202: `events` as the other seat receives them, each `asTheirs`. */
+export function asTheirsAll(events: readonly GameEvent[]): GameEvent[] {
+  return events.flatMap((event) => {
+    const sent = asTheirs(event);
+    return sent === undefined ? [] : [sent];
+  });
 }

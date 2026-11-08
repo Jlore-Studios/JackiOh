@@ -6,11 +6,10 @@
 // `redact_event`: an added, drawn or shuffled card's ids hidden, a prompt never sent), the beat still draws,
 // no cue names a card and none reaches into a hand but through its pile.
 
-import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { faceUpBackrow, fullBoardView } from "../../../test/fixtures.ts";
-import { cuesOfRun, planWithOffsets } from "../../../test/signaturePass.ts";
+import { asTheirsAll, CARD_ID, cuesOfRun, planWithOffsets } from "../../../test/signaturePass.ts";
 import { CATALOG } from "../../../wire/cards.ts";
 import { AURA_SIGNATURE_LOOK_NAMES } from "../../aura/looks.ts";
 import { auraZones, planAuras } from "../../aura/plan.ts";
@@ -21,9 +20,6 @@ import { FX_CARD_TABLE, isSignature } from "../tables.ts";
 import { STINKYSCAPE_TWO_SIGNATURES } from "./signature.ts";
 
 const HIDDEN = "hidden";
-
-/** The set's other signatures' ids and every set's, as R202 forbids a cue to carry them. */
-const CARD_ID = /(core|classic|meditative|stinkyscape|traininggrounds)[a-z]*-\d/;
 
 /** The cards whose signature plays a Discover, a hand or a deck: the R202 pass plays each from the other seat. */
 const SECRET_KEEPERS = [
@@ -45,27 +41,6 @@ const SECRET_KEEPERS = [
 
 const typeOf = (defId: string): string | undefined => CATALOG[defId]?.type;
 const rarityOf = (defId: string): string | undefined => CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity;
-
-const SEATS: Readonly<Record<PlayerId, PlayerId>> = { p1: "p2", p2: "p1" };
-const SEAT_KEYS = ["player", "controller", "owner", "creator"] as const;
-
-/**
- * `event` as the other seat's: its seat fields swapped, and as the server sends it to the viewer (R202): an
- * added, drawn or shuffled card's ids hidden. A prompt is never sent to the other seat (`undefined`).
- */
-function asTheirs(event: GameEvent): GameEvent | undefined {
-  if (event.type === "promptOpened") return undefined;
-  const swapped: Record<string, unknown> = { ...event };
-  for (const key of SEAT_KEYS) {
-    const seat = swapped[key];
-    if (seat === "p1" || seat === "p2") swapped[key] = SEATS[seat];
-  }
-  if (event.type === "addedToHand" || event.type === "drawn" || event.type === "shuffledIn") {
-    swapped.instanceId = HIDDEN;
-    swapped.defId = HIDDEN;
-  }
-  return swapped as GameEvent;
-}
 
 describe("R3407000 Stinkyscape part two's signatures", () => {
   it("R3407000 every card of the pass is a signature of its type's shape, a Mythic with its own takeover look", () => {
@@ -128,10 +103,7 @@ describe("R3407000 Stinkyscape part two's signatures", () => {
       // Its gallery play as the opponent's: they play it, the viewer (p1) reads what the server sends.
       const view = fullBoardView();
       const mine = galleryCardEvents(defId, play, galleryBoardOf(defId, view), 1);
-      const theirs = mine.flatMap((event) => {
-        const sent = asTheirs(event);
-        return sent === undefined ? [] : [sent];
-      });
+      const theirs = asTheirsAll(mine);
       expect(theirs.some((event) => event.type === "cardPlayed" && event.player === "p2"), defId).toBe(true);
       const cues = cuesOfRun(planWithOffsets(theirs, view));
       expect(cues.length, `${defId} still draws`).toBeGreaterThan(0);
