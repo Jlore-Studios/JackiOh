@@ -15,7 +15,8 @@ export function tileBoardView(): PlayerView {
   for (const [id, def] of Object.entries(CATALOG)) {
     if (tierOf(def) === null) continue;
     const tableEntry = FX_CARD_TABLE.get(id);
-    if (tableEntry?.kind === "hooks" && tableEntry.aura !== undefined) continue;
+    // R3407000: a bespoke entry's own aura replaces the tile aura too (fx/aura/tile.ts), as on the MAGI.
+    if ((tableEntry?.kind === "hooks" || tableEntry?.kind === "bespoke") && tableEntry.aura !== undefined) continue;
 
     if (def.type === "Unit" && eligibleUnits.length < 10) {
       eligibleUnits.push(id);

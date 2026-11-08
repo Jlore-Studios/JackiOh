@@ -2218,8 +2218,8 @@
   object-fit: cover;
   pointer-events: none;
   animation:
-    fx-takeover-art-in var(--fx-land) ease-in both,
-    fx-takeover-art-out calc(var(--fx-ms) - var(--fx-land)) ease-out var(--fx-land) forwards;
+    fx-takeover-art-in var(--fx-land) var(--ease-in) both,
+    fx-takeover-art-out calc(var(--fx-ms) - var(--fx-land)) var(--ease-out) var(--fx-land) forwards;
 }
 
 @keyframes fx-takeover-art-in {

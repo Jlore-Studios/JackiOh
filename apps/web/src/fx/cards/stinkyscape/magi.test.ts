@@ -51,7 +51,7 @@ const landing = (player: PlayerId, instanceId: string, defId: string, lane = 2):
 /** A MAGI standing in the viewer's second backrow zone, face up, under `instanceId`. */
 function standingView(defId: string, instanceId = "magi"): PlayerView {
   const view = fullBoardView();
-  const backrow = view.you.backrow.map((slot, k) => (k === 1 ? { ...faceUpBackrow("p1", { defId, type: "Field Spell" }), instanceId } : slot));
+  const backrow = view.you.backrow.map((slot, k) => (k === 1 ? faceUpBackrow("p1", { defId, type: "Field Spell", instanceId }) : slot));
   return { ...view, you: { ...view.you, backrow } };
 }
 

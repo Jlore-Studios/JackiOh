@@ -153,7 +153,7 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     const graveyard = tid(animTestid.graveyard("you"));
     const deck = tid(animTestid.library("you"));
     // In combat: his `destroyed` comes before the hook opens, inside no play, and draws its own row only.
-    const [destroyed, marker, packet] = planEach([{ type: "destroyed", instanceId: "in", defId: IN33DH3, owner: "p1" }, death("p1", "in"), shuffled("p1")], D, [], view);
+    const [destroyed, marker, packet] = planEach([{ type: "destroyed", instanceId: "in", defId: IN33DH3, owner: "p1", controller: "p1", attack: 2, maxHealth: 2, killerId: null }, death("p1", "in"), shuffled("p1")], D, [], view);
     expect(destroyed).toEqual({ cues: [], row: undefined });
     expect(marker?.row).toBe("keep");
     expect(marker?.cues).toEqual([expect.objectContaining({ kind: "burst", preset: "circuit", spread: "area", at: graveyard, delayMs: 0, colors: HOLOGRAM })]);

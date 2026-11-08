@@ -17,6 +17,7 @@ import {
   type AnimationEntry,
   type EntranceResolver,
 } from "../game/animations.ts";
+import { testid } from "../game/contract.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
@@ -218,6 +219,13 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(entranceCues(e, env(), e.durationMs))).not.toHaveProperty("art");
     const plain = parseFxCardTable("test.json5", `{ "stinkyscape-109": { bespoke: "freshJackComet", entrance: "freshJackVault" } }`);
     expect(takeoverArtOf("stinkyscape-109", plain)).toBeUndefined();
+  });
+
+  it("R3407000 a Mythic Field Spell landing with its own entrance sweeps its takeover into the zone it lands in, not the hand card it left", () => {
+    const reach = "stinkyscape-148";
+    const landed: GameEvent = { type: "summoned", player: "p1", instanceId: `i-${reach}`, defId: reach, row: "backrow", lane: 3 };
+    const e = entry([play(reach), landed]);
+    expect(takeoverOf(entranceCues(e, env(), e.durationMs))).toMatchObject({ look: "alteran", at: { kind: "testid", testid: testid.zone("you", "backrow", 3) } });
   });
 
   it("R2722001 intensity 0 plans none", () => {

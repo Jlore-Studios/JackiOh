@@ -33,7 +33,7 @@ const DS = [120, 200, 400, 732, 1400] as const;
 const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
 const kinds = (cues: readonly FxCue[] | undefined): string[] => (cues ?? []).map((cue) => cue.kind);
 const CENTRE = tid(testid.board, FX_CENTER);
-const played = (player: PlayerId): GameEvent => ({ type: "cardPlayed", player, instanceId: "fj", defId: FRESH_JACK, costPaid: 4 });
+const played = (player: PlayerId): Extract<GameEvent, { type: "cardPlayed" }> => ({ type: "cardPlayed", player, instanceId: "fj", defId: FRESH_JACK, costPaid: 4 });
 const landing = (player: PlayerId, lane = 3): Extract<GameEvent, { type: "summoned" }> => ({ type: "summoned", player, instanceId: "fj", defId: FRESH_JACK, row: "units", lane });
 const prompt: GameEvent = { type: "promptOpened", player: "p1", choiceId: "fx-discover", kind: "discover" };
 

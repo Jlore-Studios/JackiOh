@@ -518,6 +518,19 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   - **TG #40 Goetzmann Game Design** (`gameDesign`, takeover `napkin`): a napkin under lamplight, a pencil
     sketching, card silhouettes spiralling up; pixels at the hold's end; the sketch dealt as a card back
     in place of the hand's row. Sound `pencilArpeggio`.
+- **Stinkyscape part two** (#3407, R3407000, R3407001): its 23 Legendaries and Mythics, tokens by their
+  printed rarity (the three MAGI, #109 to #116, IN33DH3 and his two tokens, Alteran Reach and Edge of the
+  Universe, Wildar, both Calls to Chaos and their Golem, Sanctum, Stimmycheck and the two Narcors), one
+  module a card or a line of cards in `fx/cards/stinkyscape/`, each with its test; `stinkyscape-2.md`'s
+  Signatures table says what each plays and what moved. Its six Mythics (`freshJack`, `ikwzki`,
+  `shockwave`, `alteran`, `edge`, `redNarcor`) take takeover looks of `TAKEOVER_ART_LOOKS`, which draw the
+  card's own picture filling the screen (`takeoverArtOf`, an `<img>` under the sweep) and stand still
+  behind Reduce Motion's card; fifteen aura looks join, each one card's own; a summon both a card's own
+  entrance and the readable play's recipe claim draws both (the MAGI under Imitated Instrumentality); a
+  Mythic Field Spell's own takeover sweeps into the zone it lands in; and a Field Spell's sound plays as it
+  lands face up in the backrow. Beats a gallery play cannot hold within
+  its ceiling (a Call's outcome, Edge of the Universe's fleeing, Paycheck's mana and Credits) are proven
+  within it from their own entries.
 - **The frame they need** (R3400000): a bespoke entry may wear an aura; a Unit's may stand on its `tile`;
   `summit`, `canvas` and `napkin` are takeover looks with art (`fx/takeoverArt.ts`), the same parts
   standing still behind Reduce Motion's card; and a signature Spell's own cast (`ownCast`) draws no

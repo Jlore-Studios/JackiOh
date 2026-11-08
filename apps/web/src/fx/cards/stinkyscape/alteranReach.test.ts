@@ -46,7 +46,7 @@ const fled = (player: PlayerId): GameEvent => ({ type: "fled", player, opponent:
 /** Alteran Reach standing face up in the viewer's second backrow zone, under "reach". */
 function standingView(): PlayerView {
   const view = fullBoardView();
-  const backrow = view.you.backrow.map((slot, k) => (k === 1 ? { ...faceUpBackrow("p1", { defId: REACH, type: "Field Spell" }), instanceId: "reach" } : slot));
+  const backrow = view.you.backrow.map((slot, k) => (k === 1 ? faceUpBackrow("p1", { defId: REACH, type: "Field Spell", instanceId: "reach" }) : slot));
   return { ...view, you: { ...view.you, backrow } };
 }
 

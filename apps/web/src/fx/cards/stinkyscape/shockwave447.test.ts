@@ -36,7 +36,7 @@ const DS = [120, 200, 400, 732, 1400] as const;
 
 const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
 const kinds = (cues: readonly FxCue[] | undefined): string[] => (cues ?? []).map((cue) => cue.kind);
-const played = (player: PlayerId): GameEvent => ({ type: "cardPlayed", player, instanceId: "sw", defId: SHOCKWAVE, costPaid: 7 });
+const played = (player: PlayerId): Extract<GameEvent, { type: "cardPlayed" }> => ({ type: "cardPlayed", player, instanceId: "sw", defId: SHOCKWAVE, costPaid: 7 });
 const resolved = (player: PlayerId): GameEvent => ({ type: "cardResolved", player, instanceId: "sw", defId: SHOCKWAVE, permanent: true, costPaid: 7 });
 const binned = (owner: PlayerId, id: string): GameEvent => ({ type: "enteredGraveyard", instanceId: id, defId: "core-002", owner });
 const added = (player: PlayerId, id: string): GameEvent => ({ type: "addedToHand", player, instanceId: id, defId: "core-003" });

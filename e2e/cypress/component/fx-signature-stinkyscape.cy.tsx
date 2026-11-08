@@ -1,6 +1,7 @@
 // R3407000: Stinkyscape part two's 23 signatures (apps/web/src/fx/cards/stinkyscape/, #3407) through the real
 // board's effects layer, each played as the /dev/fx gallery plays it, at desktop size and on a phone: a
-// Mythic's own takeover draws its card's own picture over the dark, the rest draw on the canvas. apps/web's
+// Mythic's own takeover draws its card's own picture over the dark, the rest draw on the canvas or as the
+// effects layer's DOM cues. apps/web's
 // vitest suite proves the cues, their budgets and R202 (fx/cards/stinkyscape/*.test.ts, fx/cards/tiers.test.ts);
 // what only a browser can say is that each scene draws, captured here.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-signature-stinkyscape.cy.tsx
@@ -28,8 +29,11 @@ const VIEWPORTS = [
   { width: 390, height: 844 },
 ] as const;
 
-/** Mounts the board, then plays the scene over it, as fx-gallery-captures.cy.tsx does. */
-function mountShown(initial: PlayerView, shown: PlayerView): void {
+/**
+ * Mounts the board, then plays the scene over it, as fx-gallery-captures.cy.tsx does; `onShown` runs as the
+ * scene is handed to the board, before its first frame.
+ */
+function mountShown(initial: PlayerView, shown: PlayerView, onShown: () => void = () => undefined): void {
   const lookup = lookupFromDefs(CATALOG);
   const noop = (): void => undefined;
   const board = (view: PlayerView) => (
@@ -41,7 +45,10 @@ function mountShown(initial: PlayerView, shown: PlayerView): void {
   );
   cy.mount(board(initial)).then(({ rerender }) => {
     cy.get(LAYER).should("have.attr", "data-fx", "on");
-    cy.then(() => rerender(board(shown)));
+    cy.then(() => {
+      onShown();
+      rerender(board(shown));
+    });
   });
 }
 
@@ -58,23 +65,29 @@ function canvasLit(win: Window): boolean {
   return false;
 }
 
-/** Samples frames until the canvas has drawn anything (fx-gallery-captures.cy.tsx's). */
-function waitLit(): Cypress.Chainable<boolean> {
-  return cy.window({ timeout: 20_000 }).then(
-    (win) =>
-      new Cypress.Promise<boolean>((resolve) => {
-        const start = win.performance.now();
-        const tick = (): void => {
-          if (canvasLit(win)) {
-            resolve(true);
-            return;
-          }
-          if (win.performance.now() - start > 15_000) resolve(false);
-          else win.requestAnimationFrame(tick);
-        };
-        win.requestAnimationFrame(tick);
-      }),
-  );
+/** How often the canvas is sampled, and for how long at most. */
+const LIT_POLL_MS = 50;
+const LIT_WAIT_MS = 15_000;
+
+/**
+ * Samples the effects layer from now on until it has drawn anything, on its canvas or as one of its DOM
+ * cues (a figure, a sheen, a ghost), within LIT_WAIT_MS. Armed as the scene is handed to the board: a
+ * signature whose canvas beats are brief and late (Paycheck's chips, the Wardrum Blob's drums) was not
+ * always caught on the canvas in a run of many scenes, while its DOM beats were there.
+ */
+function watchLit(win: Window): PromiseLike<boolean> {
+  return new Cypress.Promise<boolean>((resolve) => {
+    const start = win.performance.now();
+    const tick = (): void => {
+      if (canvasLit(win) || win.document.querySelector(`${FX_DOM} [data-fx]`) !== null) {
+        resolve(true);
+        return;
+      }
+      if (win.performance.now() - start > LIT_WAIT_MS) resolve(false);
+      else win.setTimeout(tick, LIT_POLL_MS);
+    };
+    tick();
+  });
 }
 
 describe("R3407000 Stinkyscape part two's signatures in a real browser", () => {
@@ -105,15 +118,20 @@ describe("R3407000 Stinkyscape part two's signatures in a real browser", () => {
         const play = entry === undefined ? null : galleryPlayOf(defId, entry);
         if (play === null) throw new Error(`${defId} has no gallery play`);
         const board = galleryBoardOf(defId, fullBoardView());
-        mountShown(board, withEvents(galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1)));
+        let lit: PromiseLike<boolean> = Promise.resolve(false);
+        cy.window().then((win) => {
+          mountShown(board, withEvents(galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1)), () => {
+            lit = watchLit(win);
+          });
+        });
         cy.get(GAME).find("[data-animating]").should("exist");
         if (TAKEOVER_ART_LOOKS.has(look)) {
           // A Mythic's own takeover, its card's own picture over the dark.
           cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", look);
           cy.get(`${FX_DOM} [data-fx="takeover"] img.fx-takeover-art`).should("have.attr", "src").and("match", /^data:image\/svg\+xml/);
         } else {
-          waitLit().then((lit) => {
-            expect(lit, `${name}'s signature draws on the canvas`).to.eq(true);
+          cy.then({ timeout: 20_000 }, () => lit).then((drawn) => {
+            expect(drawn, `${name}'s signature draws`).to.eq(true);
           });
         }
         cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });

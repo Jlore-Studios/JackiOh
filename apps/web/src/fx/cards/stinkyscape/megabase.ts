@@ -69,7 +69,7 @@ function standing(p: CardFxPlan, play: FxPlay): FxAnchor {
 
 /** Whether `event` is the first Credits of this hook's run (each `marketCreditsChanged` is its own entry, `seen` counting it). */
 function firstCredits(event: GameEvent, p: CardFxPlan, play: FxPlay): boolean {
-  const own = p.entry.events.filter((candidate) => candidate.type === "marketCreditsChanged");
+  const own: readonly GameEvent[] = p.entry.events.filter((candidate) => candidate.type === "marketCreditsChanged");
   return (play.seen.marketCreditsChanged ?? 0) - own.length + own.indexOf(event) === 0;
 }
 

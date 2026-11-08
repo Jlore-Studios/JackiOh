@@ -42,7 +42,7 @@ import { sideOf, testid } from "../../../game/contract.ts";
 import { frac, raysCue, ringCue, shakeCues, tid } from "../../build.ts";
 import { figureCue, figureTint } from "../../figures.ts";
 import { motifBurst, motifRing, motifShot } from "../../motifs/build.ts";
-import type { FxAnchor, FxCue, FxPlay, FxPoint } from "../../types.ts";
+import type { FxAnchor, FxPlay, FxPoint } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT, heroOf, type CardFxPlan, type CardRecipe, type Entrance } from "../recipe.ts";
 import { backTo, entranceSpec, entranceTimes, lookOf, pileOf, sigSpec } from "./signature.ts";
 

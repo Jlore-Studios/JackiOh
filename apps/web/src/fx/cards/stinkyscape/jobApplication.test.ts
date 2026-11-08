@@ -40,7 +40,7 @@ const DS = [120, 200, 400, 732, 1400] as const;
 const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
 const kinds = (cues: readonly FxCue[] | undefined): string[] => (cues ?? []).map((cue) => cue.kind);
 const hook = (player: PlayerId, kind: "activate" | "startOfTurn"): GameEvent => ({ type: "hookResolving", sourceId: "job", defId: JOB, controller: player, hook: kind });
-const progressed = (player: PlayerId): GameEvent => ({ type: "questProgressed", player, instanceId: "job", quest: "interview", progress: 1, goal: 3 });
+const progressed = (player: PlayerId): Extract<GameEvent, { type: "questProgressed" }> => ({ type: "questProgressed", player, instanceId: "job", quest: "interview", progress: 1, goal: 3 });
 const completed = (player: PlayerId): GameEvent => ({ type: "questCompleted", player, instanceId: "job", quest: "interview" });
 const added = (player: PlayerId): GameEvent => ({ type: "addedToHand", player, instanceId: "fx-paycheck", defId: PAYCHECK });
 const cashed = (player: PlayerId): GameEvent => ({ type: "cardPlayed", player, instanceId: "pay", defId: PAYCHECK, costPaid: 0 });
@@ -57,7 +57,7 @@ const payday = (player: PlayerId): GameEvent[] => [
 /** Job Application standing face up in the viewer's second backrow zone, under "job". */
 function standingView(): PlayerView {
   const view = fullBoardView();
-  const backrow = view.you.backrow.map((slot, k) => (k === 1 ? { ...faceUpBackrow("p1", { defId: JOB, type: "Field Spell" }), instanceId: "job" } : slot));
+  const backrow = view.you.backrow.map((slot, k) => (k === 1 ? faceUpBackrow("p1", { defId: JOB, type: "Field Spell", instanceId: "job" }) : slot));
   return { ...view, you: { ...view.you, backrow } };
 }
 

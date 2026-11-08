@@ -25,6 +25,7 @@
 import { isStinkyscapeArt } from "../cards/art/stinkyscape.ts";
 import { stinkyscapeArtUri } from "../cards/art/svg.ts";
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
+import { sideOf, testid } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import { entranceKeyOf } from "./cardFx.ts";
@@ -104,15 +105,19 @@ export function entranceLandMs(entry: Pick<AnimationEntry, "slam" | "setPiece">,
 }
 
 /**
- * R3332000: whether `entry` lands its entrance's Field Spell face up with an entrance of its own
- * (cardFx.ts plans it on the `summoned`), which stands in for the shared rays, burst and ring.
+ * R3332000: the zone `entry`'s entrance lands its Field Spell in face up with an entrance of its own
+ * (cardFx.ts plans it on the `summoned`), which stands in for the shared rays, burst and ring; else null.
  */
-function ownFieldLanding(entry: AnimationEntry, table: ReadonlyMap<string, FxCardEntry>): boolean {
+function ownFieldLanding(entry: AnimationEntry, table: ReadonlyMap<string, FxCardEntry>): FxAnchor | null {
   const entrance = entry.entrance;
-  if (entrance === undefined || entrance.reveal || entranceKeyOf(entrance.defId, table) === undefined) return false;
+  if (entrance === undefined || entrance.reveal || entranceKeyOf(entrance.defId, table) === undefined) return null;
   const type = (CATALOG[entrance.defId] ?? entry.view.defs?.[entrance.defId])?.type;
-  if (type !== "Field Spell") return false;
-  return entry.events.some((e) => entranceEvent(e, HIDDEN_ID, type)?.instanceId === entrance.instanceId);
+  if (type !== "Field Spell") return null;
+  for (const e of entry.events) {
+    const landing = entranceEvent(e, HIDDEN_ID, type);
+    if (landing?.instanceId === entrance.instanceId) return tid(testid.zone(sideOf(entry.view, landing.player), landing.row, landing.lane));
+  }
+  return null;
 }
 
 /**
@@ -137,7 +142,10 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   const summoned = !entrance.reveal && entry.events.some((e) => e.type === "summoned" && e.row === "units" && e.instanceId === entrance.instanceId);
   // R3400000: a signature Spell's cast of its own draws its play itself.
   const own = ownCast(entrance.defId, (CATALOG[entrance.defId] ?? entry.view.defs?.[entrance.defId])?.type, table);
-  if (!summoned && !own && !ownFieldLanding(entry, table)) {
+  // R3407000: such a Field Spell's Mythic takeover sweeps into the zone it lands in, not the hand card it left,
+  // which the board no longer shows (and the other seat never did).
+  const field = ownFieldLanding(entry, table);
+  if (!summoned && !own && field === null) {
     // R2803000: the Legendary lands in the same two-wave language as the Mythic's takeover below,
     // one volume down: its gold echo follows its ring a wave behind, with no takeover and no second shake.
     const echoMs = entranceEchoMs(D, landMs);
@@ -159,7 +167,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
     kind: "takeover",
     look,
     tint: TAKEOVER_TINTS[look],
-    at: own ? CENTER : at,
+    at: own ? CENTER : (field ?? at),
     landMs,
     delayMs: 0,
     durationMs: D + tail,

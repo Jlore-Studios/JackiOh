@@ -61,9 +61,9 @@ const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === 
 const CENTRE = tid(testid.board, FX_CENTER);
 const kinds = (cues: readonly FxCue[]): string[] => cues.map((cue) => cue.kind);
 
-const played = (player: PlayerId, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId: ID, defId, costPaid: 4 });
+const played = (player: PlayerId, defId: string): Extract<GameEvent, { type: "cardPlayed" }> => ({ type: "cardPlayed", player, instanceId: ID, defId, costPaid: 4 });
 const resolved = (player: PlayerId, defId: string): GameEvent => ({ type: "cardResolved", player, instanceId: ID, defId, permanent: false, costPaid: 4 });
-const rolled = (player: PlayerId, defId: string, effects: string[]): GameEvent => ({ type: "chaosRolled", player, instanceId: ID, defId, effects });
+const rolled = (player: PlayerId, defId: string, effects: string[]): Extract<GameEvent, { type: "chaosRolled" }> => ({ type: "chaosRolled", player, instanceId: ID, defId, effects });
 const added = (player: PlayerId): GameEvent => ({ type: "addedToHand", player, instanceId: "fx-added", defId: "core-003" });
 const summoned = (player: PlayerId, instanceId: string, defId: string, row: "units" | "backrow", lane: number): GameEvent => ({ type: "summoned", player, instanceId, defId, row, lane });
 const marked = (instanceId: string, mark: string, color: string, isAdded = true): GameEvent => ({ type: "marked", instanceId, mark, color, added: isAdded });
