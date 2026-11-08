@@ -13851,9 +13851,10 @@
       "started_at": "2026-11-07T21:19:12Z",
       "stop_requested": false,
       "strike_log": [
-        "`claude-8` (claude, opus) rejected it: `apps/web/src/game/Card.tsx:302`: The board-card guard 'never while the animation queue is draining' reads isHeld() once during render and does not subscribe to "
+        "`claude-8` (claude, opus) rejected it: `apps/web/src/game/Card.tsx:302`: The board-card guard 'never while the animation queue is draining' reads isHeld() once during render and does not subscribe to ",
+        "`claude-8` (claude, opus) rejected it: `apps/web/src/fx/types.ts:175`: The takeover cue now holds the card's identity behind a closure (`card: () => FxTakeoverCard`), which hides the defId from the re"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 0
     },
