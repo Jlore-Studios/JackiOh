@@ -16838,6 +16838,13 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-08T13:10:00Z",
         "trail": ""
       },
+      "hold": {
+        "ends": "2026-11-08T14:59:09Z",
+        "owner": "claude-8",
+        "since": "2026-11-08T12:59:09Z",
+        "until": "2026-11-08T13:10:00Z",
+        "why": "5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%)"
+      },
       "issue": 3407,
       "kind": "review",
       "live": "reviewing",
