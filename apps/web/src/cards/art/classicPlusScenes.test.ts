@@ -45,7 +45,7 @@ const CREATURE_UNITS: Readonly<Record<string, string>> = {
 /** The first kit's parts (#3331), which sceneKit.ts draws itself. */
 const FIRST_KIT_PARTS = 56;
 /** The parts Stinkyscape's pass (#3391, R3391000) added to sceneKit.ts itself, after the first kit's. */
-const STINKYSCAPE_KIT_PARTS = 81;
+const STINKYSCAPE_KIT_PARTS = 82;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 

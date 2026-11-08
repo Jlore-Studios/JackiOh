@@ -1708,6 +1708,25 @@ function porthole(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A round pane of open space, centred on its anchor: a dark disc (MAIN), a faint nebula and a scatter of stars; radius 8, a porthole's glass at the same place and scale, which frames it as a view out of a wall. */
+function spaceWindow(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const count = whole(rng, 5, 8);
+  const dots: string[] = [];
+  for (let k = 0; k < count; k += 1) {
+    const angle = rng() * FULL_TURN * DEGREES;
+    const reach = 6.5 * Math.sqrt(rng());
+    dots.push(f.circle(reach * Math.cos(angle), reach * Math.sin(angle), between(rng, 0.2, 0.45)));
+  }
+  const tilt = between(rng, -3, 3);
+  return [
+    shape(f.circle(0, 0, 8), "black", 1, MAIN),
+    shape(f.ellipse(tilt, -tilt * 0.5, 5.5, 2.6), "violet-700", 0.3),
+    shape(dots.join(""), "white", 0.8),
+    shape(sparkle(f, -tilt * 0.8, tilt * 0.6 + 1, 1.6), "white", 0.9),
+  ];
+}
+
 /** A glass display case on a plinth, standing on its anchor: a translucent case, its frame, lid and highlight; 12 wide, 19.5 tall. */
 function glassCase(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
@@ -2844,6 +2863,7 @@ export const SCENE_KIT = {
   "pilot-seat": { category: "architecture", draw: pilotSeat },
   "cockpit-frame": { category: "architecture", draw: cockpitFrame },
   porthole: { category: "architecture", draw: porthole },
+  "space-window": { category: "architecture", draw: spaceWindow },
   "glass-case": { category: "architecture", draw: glassCase },
   "market-stall": { category: "architecture", draw: marketStall },
   "disruptor-beacon": { category: "architecture", draw: disruptorBeacon },

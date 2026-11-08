@@ -361,7 +361,7 @@ The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCEN
 each kind: terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills, asteroids; ship decks,
 corridors, regolith, lava flats, floating platforms), architecture (fences, posts, gates, ruins, towers, columns,
 arches, tombstones; stations, docks, hangars, vaults, server cores, cells, consoles, masts, bunks, seats,
-cockpits, portholes, cases, stalls, disruptor beacons, conveyors, reactors), plants, creatures, objects
+cockpits, portholes and the open space they look out on, cases, stalls, disruptor beacons, conveyors, reactors), plants, creatures, objects
 and tools, weather and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a
 void, lightning, nebulae, planets, a rim light; beams, light streams, spotlights, meteors, smoke, comets, shockwaves,
 star glare, gas giants, shattered space, light grids, rifts, frost, missiles, flame, hex shields), and craft

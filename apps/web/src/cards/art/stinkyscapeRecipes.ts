@@ -181,10 +181,14 @@ const THE_GREATEST_HEIST: SceneRecipe = {
   layers: {
     sky: [
       { part: "stars", x: 44, y: 10, scale: 1.2 },
-      { part: "comet", x: 8, y: 6, scale: 0.7, rotate: 12 },
     ],
     far: [
       { part: "room-wall", x: 50, y: 66, paint: "slate-800" },
+      // The breached skylight the rope hangs from, the comet's tail crossing the open space beyond it, inside
+      // the y 18 to 82 a face's window shows.
+      { part: "space-window", x: 60, y: 30 },
+      { part: "comet", x: 53.5, y: 34.5, scale: 0.4, rotate: -20 },
+      { part: "porthole", x: 60, y: 30 },
       { part: "vault-door", x: 22, y: 44, scale: 1.2 },
       { part: "light-grid", x: 70, y: 40, scale: 0.6, paint: "green-400" },
     ],
@@ -199,7 +203,7 @@ const THE_GREATEST_HEIST: SceneRecipe = {
       { part: "crystal", x: 50, y: 70, scale: 1.4, paint: "cyan-400" },
     ],
     near: [
-      { part: "rope", x: 38, y: 0, scale: 1.1 },
+      { part: "rope", x: 60, y: 20, scale: 1 },
       { part: "credit-chips", x: 26, y: 86, count: 2, spread: [8, 3] },
     ],
     light: [
@@ -336,9 +340,10 @@ const OTHERWORLDLY_NIGHTMARE: SceneRecipe = {
   light: { x: 50, y: 34, r: 30, paint: "purple-400", opacity: 0.4 },
   emblem: { x: 50, y: 30, size: 5, rotate: 0 },
   layers: {
-    sky: [{ part: "stars", x: 50, y: 20, scale: 1.2 }],
     far: [
       { part: "room-wall", x: 50, y: 78, paint: "slate-800" },
+      // The porthole's strange stars: open space behind its glass.
+      { part: "space-window", x: 80, y: 28 },
       { part: "porthole", x: 80, y: 28, scale: 1 },
     ],
     mid: [
@@ -483,7 +488,7 @@ const IMITATED_INSTRUMENTALITY: SceneRecipe = {
     ],
     near: [{ part: "console", x: 18, y: 96, scale: 1.2 }],
     light: [
-      { part: "beam", x: 26, y: 44, scale: 0.6, rotate: 0, paint: "cyan-400" },
+      { part: "beam", x: 26, y: 44, scale: 1.2, rotate: 0, paint: "cyan-400" },
       { part: "beam", x: 26, y: 44, scale: 0.7, rotate: -36, paint: "cyan-400" },
       { part: "beam", x: 74, y: 44, scale: 0.7, rotate: 216, paint: "red-400" },
       { part: "halo", x: 50, y: 34, scale: 1.6, paint: "blue-200" },
@@ -1513,10 +1518,18 @@ const OZARK: SceneRecipe = {
       { part: "asteroid", x: 14, y: 80, scale: 2.4, paint: "wood-700" },
       { part: "miner-craft", x: 80, y: 30, scale: 0.7 },
     ],
-    subject: [{ part: "barge", x: 50, y: 54, scale: 1.6 }],
+    subject: [
+      { part: "barge", x: 50, y: 54, scale: 1.6 },
+      // Working miner pods in four of its five bays (the barge's bays centre at x 34, 42.6, 51.3 and 59.9).
+      { part: "miner-craft", x: 33.6, y: 53, scale: 0.35 },
+      { part: "miner-craft", x: 42.2, y: 53, scale: 0.35, flip: -1 },
+      { part: "miner-craft", x: 50.9, y: 53, scale: 0.35 },
+      { part: "miner-craft", x: 59.5, y: 53, scale: 0.35, flip: -1 },
+    ],
     near: [
-      { part: "miner-craft", x: 26, y: 76, scale: 1.2 },
-      { part: "credit-chips", x: 36, y: 70, scale: 0.8 },
+      // The tiny pod paying its rent: hovering off the bow, its claws at the lit slot (x 70 to 75, y 49 to 51).
+      { part: "miner-craft", x: 81, y: 49, scale: 0.6, flip: -1 },
+      { part: "credit-chips", x: 76, y: 46, scale: 0.4 },
     ],
     light: [{ part: "rim-light", x: 50, y: 54, scale: 1.6, paint: "orange-400" }],
     particles: [{ part: "embers", x: 50, y: 60, count: 2, spread: [24, 8], paint: "orange-400" }],
