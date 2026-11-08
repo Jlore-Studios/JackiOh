@@ -213,108 +213,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6591282056": {
-      "at": "2026-11-02T23:38:14Z",
-      "lines": [
-        "/harness review try again"
-      ]
-    },
-    "c:6591288136": {
-      "at": "2026-11-02T23:38:37Z",
-      "lines": [
-        "/harness review try again"
-      ]
-    },
-    "c:6591295038": {
-      "at": "2026-11-02T23:39:22Z",
-      "lines": [
-        "/harness review try again"
-      ]
-    },
-    "c:6594889785": {
-      "at": "2026-11-03T03:44:50Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6594892316": {
-      "at": "2026-11-03T03:45:10Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6594903126": {
-      "at": "2026-11-03T03:45:21Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6594905440": {
-      "at": "2026-11-03T03:45:46Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6594909309": {
-      "at": "2026-11-03T03:45:46Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:6605478329": {
-      "at": "2026-11-03T13:47:03Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605490871": {
-      "at": "2026-11-03T13:47:29Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605504973": {
-      "at": "2026-11-03T13:47:56Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605515907": {
-      "at": "2026-11-03T13:48:26Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605527393": {
-      "at": "2026-11-03T13:48:53Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605537455": {
-      "at": "2026-11-03T13:49:20Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605556206": {
-      "at": "2026-11-03T13:50:07Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605588846": {
-      "at": "2026-11-03T13:51:36Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6605595402": {
-      "at": "2026-11-03T13:51:52Z",
-      "lines": [
-        "Approve"
-      ]
-    },
     "c:6620448536": {
       "at": "2026-11-04T01:57:25Z",
       "lines": [
@@ -529,6 +427,12 @@
       "at": "2026-11-07T19:38:54Z",
       "lines": [
         "/harness build"
+      ]
+    },
+    "c:6728330727": {
+      "at": "2026-11-08T22:59:15Z",
+      "lines": [
+        "@jgoetzmann-bot I read the logs the hand-off asked for. Both promotions failed on a test timing out, and a different test each time. Make both robust, then plan and build the fix."
       ]
     }
   },
