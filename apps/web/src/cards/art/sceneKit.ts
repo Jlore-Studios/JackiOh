@@ -2210,6 +2210,21 @@ function cracker(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A zero-g coffee bulb drifting, centred, 6 wide and 9 tall: a round pouch, its sipping straw and a curl of steam (MAIN, the pouch, wood-600). */
+function coffeeBulb(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -16, 16);
+  const T = (dx: number, dy: number): Point => turned([dx, dy], tilt);
+  const curl = between(rng, -0.6, 0.6);
+  return [
+    shape(f.band([T(0.4, -2.2), T(0.9, -5), T(2.2, -6)], 0.5), "slate-100", 1, INKED),
+    shape(f.circle(...T(0, 0), 3), "wood-600", 1, MAIN_INKED),
+    shape(f.band([T(-2.6, 0.2), T(2.6, 0.2)], 1.2), "slate-100", 0.85),
+    shape(f.circle(...T(-1, -1), 0.9), "white", 0.35),
+    shape(f.band([[2.6, -6.6], [3.4 + curl, -7.8], [2.8, -9], [3.6 - curl, -10.2]], 0.35), "white", 0.4),
+  ];
+}
+
 /** A small war drum standing on its anchor, 8 wide and 7 tall, a stick resting on it (MAIN, the shell, red-600). */
 function warDrum(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
@@ -3066,6 +3081,7 @@ export const SCENE_KIT = {
   duffel: { category: "objects", draw: duffel },
   cracker: { category: "objects", draw: cracker },
   "war-drum": { category: "objects", draw: warDrum },
+  "coffee-bulb": { category: "objects", draw: coffeeBulb },
   "ice-block": { category: "objects", draw: iceBlock },
   "boot-clamp": { category: "objects", draw: bootClamp },
   "cracked-mask": { category: "objects", draw: crackedMask },

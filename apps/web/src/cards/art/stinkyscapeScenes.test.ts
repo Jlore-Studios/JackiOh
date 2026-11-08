@@ -99,7 +99,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-042": ["console", "deck-floor", "drone-core", "goggles", "outfit-labcoat"],
   "stinkyscape-044": ["porthole", "drone-core", "wire-coil"],
   "stinkyscape-045": ["drone", "hangar-wall", "deck-floor", "item-core"],
-  "stinkyscape-046": ["drone", "station", "console", "pilot-seat", "cockpit-frame", "robot-arm", "pose-sit"],
+  "stinkyscape-046": ["drone", "station", "console", "pilot-seat", "cockpit-frame", "robot-arm", "coffee-bulb", "pose-sit"],
   "stinkyscape-047": ["drone-corvette", "console", "pilot-seat", "porthole", "robot-arm", "sleeper"],
   "stinkyscape-068": ["fighter", "dock-gantry", "deck-floor"],
   "stinkyscape-069": ["needle-fighter", "hangar-wall", "deck-floor"],

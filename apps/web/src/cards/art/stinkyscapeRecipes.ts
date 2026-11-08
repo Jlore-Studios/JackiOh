@@ -850,6 +850,7 @@ const DRONE_CORE_VII: SceneRecipe = {
     near: [
       { part: "deck-floor", x: 30, y: 86, paint: "slate-700" },
       { part: "debris", x: 84, y: 86, scale: 1 },
+      { part: "sparks", x: 30, y: 70, scale: 0.8, paint: "orange-400" },
     ],
     light: [{ part: "rim-light", x: 56, y: 52, scale: 1.2, paint: "orange-400" }],
     particles: [{ part: "motes", x: 50, y: 60, paint: "orange-400" }],
@@ -1155,7 +1156,7 @@ const DRONE_COMMANDER: SceneRecipe = {
   },
 };
 
-/** Circadian Halfcycler (Stinkyscape #46, Epic): a pilot dozes in her cockpit seat as an autopilot arm works the controls. */
+/** Circadian Halfcycler (Stinkyscape #46, Epic): a pilot dozes in her cockpit seat, a coffee bulb floating by, as an autopilot arm works the controls. */
 const CIRCADIAN_HALFCYCLER: SceneRecipe = {
   family: "stinkyscape",
   sky: ["slate-900", "orange-400"],
@@ -1174,7 +1175,7 @@ const CIRCADIAN_HALFCYCLER: SceneRecipe = {
       { part: "robot-arm", x: 86, y: 76, scale: 0.9, flip: -1 },
     ],
     subject: [{ part: "pilot-seat", x: 38, y: 84, scale: 1 }],
-    near: [{ part: "drone-core", x: 54, y: 46, scale: 0.4, paint: "orange-400" }],
+    near: [{ part: "coffee-bulb", x: 54, y: 48, scale: 0.7 }],
     light: [
       { part: "halo", x: 72, y: 66, scale: 1.2, paint: "cyan-400" },
       { part: "rim-light", x: 40, y: 60, paint: "orange-400" },
@@ -1486,6 +1487,7 @@ const YUMA: SceneRecipe = {
       { part: "station", x: 22, y: 30, scale: 1.4 },
       { part: "fighter", x: 40, y: 20, scale: 0.4 },
       { part: "fighter", x: 8, y: 44, scale: 0.4, flip: -1 },
+      { part: "fighter", x: 36, y: 40, scale: 0.3 },
     ],
     mid: [{ part: "planet", x: 84, y: 70, scale: 1.4, paint: "orange-400" }],
     subject: [{ part: "trader", x: 56, y: 46, scale: 1.7 }],
