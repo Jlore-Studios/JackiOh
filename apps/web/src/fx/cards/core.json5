@@ -2,11 +2,11 @@
 // One line per catalog card, tokens included, in catalog order, its name in a comment after it
 // (tables.test.ts holds the file to the catalog). An entry is one of:
 //   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
-//   { bespoke: "<recipe>", aura? }          its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/, and a standing look (R3402000);
+//   { bespoke: "<recipe>", aura? }          its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/, and a standing look (R3400000);
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000);
-//                                           a Field card's `zone` or `lane`, a Unit's own `zone` (R3402000), any card's `side` or `board`.
+//                                           a Field card's `zone` or `lane`, a Unit's own `tile` (R3400000), any card's `side` or `board`.
 //   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
 //   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
@@ -66,7 +66,7 @@
   "core-050": "none: no motif reads marked, its Allure; the mark's own row plays", // K-Pop Fanatic
   "core-051": { cast: { motif: "send", palette: "Nerd/chalk" } }, // KY's Private Tutor
   "core-051-1": { cast: { motif: "send", palette: "Nerd/ink" } }, // KY's Empty Notebook
-  "core-052": { bespoke: "mirrorballShuffle", entrance: "silasSpotlight", aura: { look: "mirrorball", palette: "Tech/hologram", scope: "zone" }, signature: true }, // Silly Silas
+  "core-052": { bespoke: "mirrorballShuffle", entrance: "silasSpotlight", aura: { look: "mirrorball", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Silly Silas
   "core-053": { cry: { motif: "mend" } }, // Reno
   "core-054": { cry: { motif: "send" } }, // Straaza
   "core-055": { cry: { motif: "offering" } }, // Lava Golem
