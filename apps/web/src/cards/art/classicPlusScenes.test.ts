@@ -24,9 +24,13 @@ import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
+import { COSMOS_KIT } from "./sceneKitCosmos.ts";
+import { CRAFT_KIT } from "./sceneKitCraft.ts";
+import { GEAR_KIT } from "./sceneKitGear.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { SPACE_KIT } from "./sceneKitSpace.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
@@ -234,7 +238,8 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
     for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of the first kit's parts.
-    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + added.length);
+    // None takes the place of one of the first kit's parts, nor of the Stinkyscape modules' (R3403000).
+    const stinky = [SPACE_KIT, CRAFT_KIT, GEAR_KIT, COSMOS_KIT].flatMap((kit) => Object.keys(kit));
+    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + added.length + stinky.length);
   });
 });

@@ -11,6 +11,9 @@ import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
+import { STINKYSCAPE_91_RECIPES_1 } from "./stinkyscape91Recipes1.ts";
+import { STINKYSCAPE_91_RECIPES_2 } from "./stinkyscape91Recipes2.ts";
+import { STINKYSCAPE_91_RECIPES_3 } from "./stinkyscape91Recipes3.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
 const CORPSE_PLANTATION: SceneRecipe = {
@@ -196,7 +199,14 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the five proof cards, and R3390000 every Classic+ entry. */
+/** R3403000: every entry of #3403's table (Stinkyscape #91 to #176 and their tokens, and the early cards' tokens it names), by id. */
+export const STINKYSCAPE_91_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  ...STINKYSCAPE_91_RECIPES_1,
+  ...STINKYSCAPE_91_RECIPES_2,
+  ...STINKYSCAPE_91_RECIPES_3,
+};
+
+/** R3331000: the cards that draw from a scene, by id: the five proof cards, R3390000 every Classic+ entry and R3403000 #3403's Stinkyscape entries. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
@@ -206,4 +216,5 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_RECIPES_1,
   ...CLASSIC_PLUS_RECIPES_2,
   ...CLASSIC_PLUS_RECIPES_3,
+  ...STINKYSCAPE_91_RECIPES,
 };

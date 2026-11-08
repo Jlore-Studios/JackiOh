@@ -44,7 +44,7 @@ import {
   type SceneRecipe,
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
@@ -233,8 +233,8 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    // The proofs and every Classic+ entry (R3390000, classicPlusScenes.test.ts).
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...PROOFS].sort());
+    // The proofs, every Classic+ entry (R3390000, classicPlusScenes.test.ts) and #3403's Stinkyscape entries (R3403000, stinkyscape91Scenes.test.ts).
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-") && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual([...PROOFS].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

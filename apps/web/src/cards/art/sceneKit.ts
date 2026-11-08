@@ -40,9 +40,13 @@ import {
   type Point,
 } from "./kitDraw.ts";
 import type { KitPart, KitShape, PartPlace, Rng } from "./scene.ts";
+import { COSMOS_KIT } from "./sceneKitCosmos.ts";
+import { CRAFT_KIT } from "./sceneKitCraft.ts";
+import { GEAR_KIT } from "./sceneKitGear.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { SPACE_KIT } from "./sceneKitSpace.ts";
 
 // The helpers every kit module draws with, where the figure kit and scene.ts have always found them.
 export { bandPath, circlePath, ellipsePath, local, polygonPath, pt, rectPath, SCENE_BOX, type Local };
@@ -1025,6 +1029,11 @@ export const SCENE_KIT = {
   ...PLACES_KIT,
   ...OBJECTS_KIT,
   ...NATURE_KIT,
+  // R3403000: the parts the Stinkyscape scenes added.
+  ...SPACE_KIT,
+  ...CRAFT_KIT,
+  ...GEAR_KIT,
+  ...COSMOS_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

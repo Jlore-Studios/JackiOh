@@ -53,7 +53,9 @@ cards have a look of their own (R3142002): a Human Unit whose name holds "drone"
 the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
 a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
 and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's. A card with a scene
-recipe draws its scene instead (R3331000, below): Arg Arg Defender is the first.
+recipe draws its scene instead (R3331000, below): Arg Arg Defender is the first, and #3403's 103 entries, Stinkyscape
+#91 to #176 with their tokens, draw theirs (R3403000, below); the cards other issues draw (the Starship Pieces, the
+Drone Battleship's layers, Anomaly Found!, the Terminus tokens and Dice of Doom) keep their pictures.
 
 The Drone Battleship's three layers (`stinkyscape-t-meltdown-layer`, `-propagation-layer`, `-shield-layer`) are the
 decks of one ship (R3336000): the reactor keel with its core glowing through the vents, the hangar decks with their
@@ -367,7 +369,7 @@ Five proof cards drew from recipes first and set the bar each set's pass meets: 
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
-of its own (below, R3390000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+of its own (below, R3390000), and Stinkyscape's later cards theirs (below, R3403000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
@@ -396,6 +398,34 @@ with the first kit's helpers (`kitDraw.ts`). Every entry clears its rarity's flo
 whose cap fell from 561 to 445; `classicPlusScenes.test.ts` holds the set to all of it, and
 `classicplus-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
 sheet, at desktop size and at 390x844.
+
+## Stinkyscape's later cards drawn as scenes (R3403000)
+
+Each of the 103 entries of #3403's table, Stinkyscape #91 to #176 and their tokens with the tokens of the early
+cards it names (#8's, #10's, #11's, #12's, #18's and #84's), draws from a recipe of its own, from its brief, in
+Stinkyscape's deep-space look, base and Radiant. The recipes are three files in id order, spread into
+`SCENE_RECIPES` as `STINKYSCAPE_91_RECIPES` after Classic+'s: `stinkyscape91Recipes1.ts` (the early tokens and #91
+to #119), `stinkyscape91Recipes2.ts` (#120 to #159 with #135's, #137's, #147's, #148's and #150's tokens) and
+`stinkyscape91Recipes3.ts` (#160 to #176, the drones, the resources and T-AI-1 to 9). Each keeps its brief's
+subject, setting and idea, its subject within x 30 to 70 and y 25 to 85, and its emblem small inside the band every
+face shows. The cards the table leaves to other issues (every Starship Piece and the three Jlockeed weapons that
+are Pieces when Embiggened, the Dormant Starship, the Drone Battleship's layers, Anomaly Found!, the Terminus tokens
+and Dice of Doom) have no recipe and draw as before.
+
+Each humanoid Unit is a figure dressed as who it is, no two alike; fourteen Units are no person and draw a creature
+or a machine of the kit as their subject: the Wasp and the Hornet, Megabase, the Sack, the Stinkyscape Golem, the
+four Asteroids, the Spice Tower, the Drone Interceptor and Corvette, Escort Protocol and Combat Subroutine. Crews,
+crowds and rivals are `extras`. The parts the briefs named joined the kits: the figure kit's pointing pose, its
+space headgear, its flight suit, greatcoat, hoodie, vest, parka, frock coat, cloak and harness, and its shock-axe,
+dart, orb, slate, torch and vial; and four scene-kit modules of space beside #3390's, drawing with `kitDraw.ts`
+and spread into `SCENE_KIT`: `sceneKitSpace.ts` (decks, bulkheads, regolith, craters, ducts, a planet's limb,
+stations, gates, pads, windows and their fittings), `sceneKitCraft.ts` (starships, fighters, freighters, shuttles,
+rockets, probes, drones, robots, mechs, a wasp, a golem, an alien, a crowd), `sceneKitGear.ts` (consoles,
+holograms, ore, wreckage, chips, capsules, sacks, levers, posters, and the beams, blasts, shields and walls of
+energy) and `sceneKitCosmos.ts` (comets, frost and ice, a planet's ring, alarms, streaks, waves, flares, wormholes,
+rifts, galaxies, stink clouds). Every entry clears its rarity's floor and is off the short list, whose cap fell
+from 445 to 417; `stinkyscape91Scenes.test.ts` holds the pass to all of it, and `stinkyscape91-scenes.cy.tsx` shows
+every Epic, Legendary and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 
