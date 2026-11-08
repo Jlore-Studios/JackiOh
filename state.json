@@ -17525,6 +17525,11 @@
       "owner": "claude-4",
       "owner_since": "2026-11-08T10:27:39Z",
       "owner_why": "it took it up; released from its hold: `claude-1` has no runner free where it runs",
+      "paused": {
+        "at": "2026-11-08T10:43:43Z",
+        "interrupt": "usage",
+        "provider": "claude-4"
+      },
       "pending_at": "2026-11-07T17:17:51Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
@@ -17536,7 +17541,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-07T17:04:36Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42471518605",
       "runs_on": "ubuntu-latest",
       "session": {
