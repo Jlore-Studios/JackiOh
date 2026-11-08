@@ -36026,7 +36026,8 @@
       "2026-11-08T19:41:32Z,claude-3,stream,call,42513875962,25,2026-11-09T00:10:00Z,,,allowed,,,"
     ],
     "runs": [
-      "2026-11-08T20:19:53Z,42519200673,gpt,gpt-5.6-sol,suggest,,,interrupted,refusal,0.8,0,0,0,,,,100,100,,,none,,1"
+      "2026-11-08T20:19:53Z,42519200673,gpt,gpt-5.6-sol,suggest,,,interrupted,refusal,0.8,0,0,0,,,,100,100,,,none,,1",
+      "2026-11-08T20:18:19Z,42513875962,claude-3,opus,build,3398,hard,built,,27.5,188,54263,13911777,5.3471,1,25,,,1565.5,claude-6,fresh,cap,1"
     ]
   },
   "version": 1
