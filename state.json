@@ -33574,7 +33574,7 @@
           "resets_at": "2026-11-08T08:10:00Z",
           "utilization": 0.41
         },
-        "observed_at": "2026-11-08T04:03:05Z",
+        "observed_at": "2026-11-08T04:14:20Z",
         "status": "allowed"
       }
     },
@@ -36110,6 +36110,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-08T04:06:49Z,claude-8,ping,before,42445307137,41,2026-11-08T08:10:00Z,,,allowed,85,,"
+    ]
   },
   "version": 1
 }
