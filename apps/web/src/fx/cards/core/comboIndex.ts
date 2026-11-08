@@ -1,12 +1,14 @@
 // R3402001: #93 Combo-Index (`core-093`), a Legendary Field Spell's signature (R3332000): entrance
 // "comboStadium", recipe "gradeRings" and a `stadium` aura on its zone. It lands as a glass stadium of
 // stacked rings rising out of its zone, a spotlight of radiant rays snapping onto it and a whirl of card
-// confetti spiralling up. Its trigger runs a beat of its own (a later action than its play): on each
-// `questProgressed` the next ring lights in storm blue and fires its grade, and the grade's own events
-// show it, each kind at most FX_SIGNATURE_BURSTS_MAX times an entry: a card back into the hand pile
-// (`addedToHand`), tags dropping in gold at the pile (`costChanged`), an enemy hand card burning at their
-// pile (`exiled`), a spark (`radiantSet`) and a Lifesteal beam (`damage`). It anchors on its zone, the
-// piles and readable targets alone, so a hidden card it adds, discounts or burns shows only its pile (R202).
+// confetti spiralling up. Its trigger runs a beat of its own (a later action than its play): as its end
+// of turn raises the grade (the engine's own `counterChanged` of its `grade`, combo_index.rs; the grade E
+// its play writes is no trigger's and lights nothing) the next ring lights in storm blue and fires its
+// grade, and the grade's own events show it, each kind at most FX_SIGNATURE_BURSTS_MAX times an entry: a
+// card back into the hand pile (`addedToHand`), tags dropping in gold at the pile (`costChanged`), an enemy
+// hand card burning at their pile (`exiled`), a spark (`radiantSet`) and a Lifesteal beam (`damage`). It
+// anchors on its zone, the piles and readable targets alone, so a hidden card it adds, discounts or burns
+// shows only its pile (R202).
 
 import type { PlayerId } from "@jackioh/shared";
 
@@ -66,7 +68,8 @@ export const gradeRings: CardRecipe = (event, p, play) => {
   const t = timesOf(p.D);
   const look = paletteLook(STADIUM_PALETTE) ?? FLAVOR_LOOKS.Nerd;
   const stadium = stadiumOf(p, play);
-  if (event.type === "questProgressed") {
+  if (event.type === "counterChanged") {
+    if (event.counter !== "grade" || event.instanceId !== play.instanceId) return null;
     return {
       cues: [
         ringCue(p.D, "frost", stadium, t.G),

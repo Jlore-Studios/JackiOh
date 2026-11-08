@@ -227,8 +227,9 @@ describe("R3402001 Core's signatures", () => {
     expect(anchored(landing, tid(testid.zone("you", "backrow", 1))).find((cue) => cue.kind === "rays")).toMatchObject({ tone: "radiant" });
     expect(landing.filter((cue) => cue.kind === "ring" && cue.preset === "frost")).toHaveLength(3);
     expect(shakes(landing)).toContain(Math.min(1, ENTRANCE_TRAUMA.comboStadium * I));
-    // Its trigger is an action of its own: the next ring lights in storm blue, and its grade's card flies into the hand pile.
-    const grade = at(planned, "questProgressed");
+    // Its trigger is an action of its own: as the grade rises (the engine's `counterChanged` of it,
+    // combo_index.rs) the next ring lights in storm blue, and its grade's card flies into the hand pile.
+    const grade = at(planned, "counterChanged");
     // Its rows still play beside it (`row: "keep"`).
     expect(anchored(grade, stadium).map((cue) => (cue.kind === "ring" || cue.kind === "burst" ? `${cue.kind} ${cue.preset}` : cue.kind))).toEqual(expect.arrayContaining(["ring frost", "burst sparkle"]));
     expect(shakes(grade)).toContain(Math.min(1, FX_GRADE_TRAUMA * I));
@@ -249,6 +250,15 @@ describe("R3402001 Core's signatures", () => {
     expect(anchored(rest, tid(animTestid.hand("opponent"))).some((cue) => cue.kind === "burst" && cue.preset === "fire")).toBe(true);
     expect(anchored(rest, tid(testid.card(id))).some((cue) => cue.kind === "burst" && cue.preset === "spark")).toBe(true);
     expect(rest.find((cue) => cue.kind === "shot")).toMatchObject({ shot: { motion: "beam" }, from: tid(testid.card(id)), to: tid(testid.card(foe)) });
+    // Only its own grade's rise lights a ring: not another card's grade in its trigger, nor another counter
+    // of its own, nor the grade E its play writes as it arrives, which is no trigger's.
+    const marker: GameEvent = { type: "hookResolving", sourceId: id, defId: "core-093", controller: "p1", hook: "endOfTurn" };
+    const ringsOf = (events: GameEvent[]): FxCue[] =>
+      anchored(all(planOut(events, withEvents(view, events))), tid(testid.card(id))).filter((cue) => cue.kind === "ring" && cue.preset === "frost");
+    expect(ringsOf([marker, { type: "counterChanged", instanceId: id, counter: "grade", value: 3 }])).toHaveLength(1);
+    expect(ringsOf([marker, { type: "counterChanged", instanceId: foe, counter: "grade", value: 3 }])).toEqual([]);
+    expect(ringsOf([marker, { type: "counterChanged", instanceId: id, counter: "plague", value: 1 }])).toEqual([]);
+    expect(ringsOf([{ type: "cardPlayed", player: "p1", instanceId: id, defId: "core-093", costPaid: 3 }, { type: "counterChanged", instanceId: id, counter: "grade", value: 1 }])).toEqual([]);
   });
 
   it("R3402001 Call to Chaos spins its reels and slams them to the roll", () => {

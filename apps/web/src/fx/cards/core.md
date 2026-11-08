@@ -115,7 +115,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-090-1` | Super-Virus | Spell | cast bolt | 0.97 | bolt | cast: the census agrees (bolt) |
 | `core-091` | Fed Fauci | Unit | trigger mana | 1.28 | none: vanilla | trigger: the census leaves out the events on the card itself; its start-of-turn mana (manaChanged), its one trigger's payoff, mana reads |
 | `core-092` | Felinor Fiender | Unit | signature; entrance felinorAssembly | 1.62 | none: vanilla | signature (R3332001): it assembles from every Felinor it counts |
-| `core-093` | Combo-Index | Field Spell | bespoke gradeRings; aura stadium zone Tech/starfield | 1.74 | bolt | signature (R3402001): a stadium of rings rises in its zone; each trigger's `questProgressed` lights a ring and its grade's events show; stadium motes stand on its zone |
+| `core-093` | Combo-Index | Field Spell | bespoke gradeRings; aura stadium zone Tech/starfield | 1.74 | bolt | signature (R3402001): a stadium of rings rises in its zone; each trigger's grade rise (`counterChanged` grade) lights a ring and its grade's events show; stadium motes stand on its zone |
 | `core-093-1` | Combo-Fodder | Spell | cast bolt | 0.90 | lance | cast: the census's lance counted its Lifesteal heal as a second target; it deals damage to one, a bolt |
 | `core-094` | Genn's Greed | Spell | cast vanish Hustle/cash | 1.65 | vanish | cast: the census agrees (vanish) |
 | `core-095` | Call to Chaos (Core Edition) | Spell | bespoke chaosReels | 1.85 | vanish | signature (R3402001): a slot-wheel drops in rays and three reels blur in sparks; its `chaosRolled` reveal stands with a jackpot ring, and the effect's rows play |

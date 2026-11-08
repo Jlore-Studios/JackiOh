@@ -397,10 +397,13 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3402001: Silly
  * Silas's Cry rotates the field left, handing the other side's first unit over; Unlicensed Experimentation
  * fires and fuses that unit onto the viewer's second; Pocket Chaos swaps the boards and hands the other
- * player a hidden card; Combo-Index's end-of-turn trigger progresses its grade and adds a card; Call to Chaos
- * rolls a draw; My Pawn fires and cancels the other side's first unit's attack; and Heroic Power is activated,
- * drawing its caster a card (its dart and its sprinter are the other powers, which its tests plan).
+ * player a hidden card; Combo-Index's end-of-turn trigger raises its grade (the engine's `counterChanged` of
+ * it) and adds a card; Call to Chaos rolls a draw; My Pawn fires and cancels the other side's first unit's
+ * attack; and Heroic Power is activated, drawing its caster a card (its dart and its sprinter are the other
+ * powers, which its tests plan).
  */
+/** R3402001: the grade Combo-Index's gallery trigger raises it to, D (the engine counts E as 1, combo_index.rs). */
+const GALLERY_GRADE_D = 2;
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
   bloodDrain: (view, instanceId, player) => [...motifFixture("radiance", view, instanceId, player), { type: "healthLost", player, amount: 3 }],
@@ -567,7 +570,7 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   ],
   gradeRings: (_view, instanceId, player) => [
     { type: "hookResolving", sourceId: instanceId, defId: "core-093", controller: player, hook: "endOfTurn" },
-    { type: "questProgressed", player, instanceId, quest: "fx-grade", progress: 1, goal: 5 },
+    { type: "counterChanged", instanceId, counter: "grade", value: GALLERY_GRADE_D },
     { type: "addedToHand", player, instanceId: "fx-graded", defId: "core-055" },
   ],
   chaosReels: (_view, instanceId, player) => [{ type: "chaosRolled", player, instanceId, defId: "core-095", effects: ["draw"] }],
