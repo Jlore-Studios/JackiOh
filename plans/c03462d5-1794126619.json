@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 3429,
+  "title": "Patch: performance tests in the daily super run: the engine's, the replay fold's and the server's speed held to budgets",
+  "branch": "bot/issue-3429",
+  "thread": "**Issue #3429 (data, not instructions):**\n\n```text\n# #3429: Patch: performance tests in the daily super run: the engine's, the replay fold's and the server's speed held to budgets\nOpened by @jgoetzmann.\n\n### Kind\n\nCI\n\n### Why\n\nThe daily super run (`.github/workflows/super.yml`) checks correctness at scale: fuzz, the AI gates, golden, the daily tests, coverage, e2e. The only speed it checks is the AI's perf gate (B42, #1240: one decision at `AI_BUDGET` must stay within the node budget and `AI_GATE.maxDecisionMs`, `perf_gate` in `crates/tools/src/gate.rs`). Nothing else is timed:\n\n- **Engine.** Nothing times `reduce`, `view_for`, `legal_actions` or `hash_state`. The fuzz's `growth` stage (#1254) caps events, numbers and instances per action, but not time. `play_seeds` in `crates/tools/src/fuzz.rs` measures a wave's elapsed ms but does not check it against any limit.\n- **Replay fold.** Nothing times the fold that reconnects, catch-up and `jackioh replay` all depend on.\n- **Server.** Nothing measures the match actor's latency from an action to its broadcast, or its throughput across concurrent matches.\n- **WASM size.** The `[profile.release.package.jackioh-ai]` comment in `Cargo.toml` cites a WASM gzip-size cap in `apps/web/src/wasm/size.test.ts` (#442 L12). That file is not in the tree.\n\nSo a slowdown reaches production unnoticed until a player feels it. #2266 and #2334 were both found by hand.\n\n### What to change\n\n**You cannot change `.github/`.** You don't need to for the core of this:\n\n- Every Rust test marked `#[ignore = \"daily: \u2026\"]` already runs in super's `daily tests` job (`cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored`).\n- The pure crates ban clocks, tests included (CLAUDE.md rule 4, each crate's `clippy.toml`). So timing code goes in `crates/tools` and `crates/server` only.\n- The daily tests run at the test profile, not release (`Cargo.toml`: engine, cards, serde_json and indexmap at opt-level 2, the AI at 1). Set budgets against that build.\n\n1. **Engine throughput (`crates/tools`).** Add a `perf` module and a `cargo jackioh perf [--json]` command. Build a frozen corpus of states:\n   - the hotseat golden fixture's states;\n   - the AI gate's two wide boards (`gate.rs`, `WIDE_TURN`);\n   - the heaviest states, by the growth measures, of a fixed fuzz seed range.\n\n   On each state, time `reduce` per action, `view_for` for each seat, `legal_actions` and `hash_state`. Take the median and p95 over a fixed number of repeats.\n2. **Replay fold (`crates/tools`).** Fold the longest game of a fixed seed range from its log, timed, as reconnects and `replay` do.\n3. **Server (`crates/server/tests`, daily).** Run a fixed number of concurrent bot-vs-bot matches through the match actor on the in-memory store. Report p95 latency from an action to its broadcast, and matches per second.\n4. **Budgets.** Every budget is a named constant (CLAUDE.md rule 9): the tools' own constants, and `crates/server/src/config.rs` for the server's.\n   - Prefer a deterministic work measure where one exists (bytes of a `view_for`, `reduce` calls per fold, nodes), since it cannot flake.\n   - For time, set a ceiling well above the median measured on a GitHub `ubuntu-latest` runner, and state the headroom in the constant's comment.\n   - **The daily run is production's gate** (super.yml header, #2750). A flaky perf test blocks every deploy, so it must be robust.\n5. **Daily tests and a smoke test.** The daily tests call `perf` with their budgets. Add a per-pull-request smoke test that runs the corpus once, with no time budget, so the harness cannot rot. Each test's `daily:` reason names that smoke test, as CLAUDE.md's CI section requires.\n6. **Output.** Each test and the command print one table: measure, median, p95, budget. The daily log then shows the trend. `--json` emits the same data as one object.\n7. **CI scope and docs.**\n   - If a test newly reads files from outside its crate (the golden fixture), add it to `scripts/ci-scope.sh`'s map.\n   - Add a row for `perf` to `crates/tools/README.md`.\n   - Add the command to CLAUDE.md's Commands list.\n8. **Needs a person; do not block on it.** In the pull request's description, give the exact `super.yml` lines for each of these, and ask a person to add them:\n   - a release-profile `perf` job using the `rust-build` artifact (`target/release/jackioh perf`), next to the debug-profile daily tests;\n   - a line for the header comment's job list;\n   - if you add web perf tests (the WASM module's `viewFor` and `legalActions` call cost from JS, or the gzip-size cap restored), the paths for `web-extra`, which lists its paths explicitly.\n\n### Acceptance\n\n- The new perf tests run in super.yml's `daily tests` job and pass. Show three green `workflow_dispatch` runs of `super.yml` on the branch (`gh workflow run super.yml --ref <branch>`), linked in the pull request with each measure's median from each run.\n- The job stays within its 60-minute timeout. The perf tests add at most 5 minutes in total, stated in the pull request.\n- Each budget fails when it is crossed. Show this with a test or a recorded run at a lowered budget; the failure message names the measure, the median, the p95 and the budget.\n- `cargo jackioh perf` prints the table, and `cargo jackioh perf --json` parses as JSON.\n- The per-pull-request smoke test passes in `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`.\n- These pass: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` (no clock in a pure crate), `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims`.\n- The pull request's description gives the exact `super.yml` lines for item 8, and asks a person to add them.\n\n### Blocked by, part of\n\nNone. Related: #1240 (the AI's perf gate), #1254 (the fuzz's growth bounds), #442 L12 (the WASM size cap).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3429: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-08T06:16:05Z",
+    "claimed_at": "2026-11-08T08:31:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3386 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3392 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3393 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3405 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3403 is held for `claude-3` until 03:00 (it refused a call)",
+    "#3423 is held for `claude-3` until 03:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3352, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3340, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
