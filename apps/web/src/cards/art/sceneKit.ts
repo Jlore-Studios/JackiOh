@@ -41,7 +41,9 @@ import {
 } from "./kitDraw.ts";
 import type { KitPart, KitShape, PartPlace, Rng } from "./scene.ts";
 import { INK_BUILDINGS_KIT } from "./sceneKitInkBuildings.ts";
+import { INK_CHARACTERS_KIT } from "./sceneKitInkCharacters.ts";
 import { INK_CREATURES_KIT } from "./sceneKitInkCreatures.ts";
+import { INK_CURIOS_KIT } from "./sceneKitInkCurios.ts";
 import { INK_MACHINES_KIT } from "./sceneKitInkMachines.ts";
 import { INK_NATURE_KIT } from "./sceneKitInkNature.ts";
 import { INK_OBJECTS_KIT } from "./sceneKitInkObjects.ts";
@@ -1035,9 +1037,11 @@ export const SCENE_KIT = {
   ...INK_PLACES_KIT,
   ...INK_BUILDINGS_KIT,
   ...INK_OBJECTS_KIT,
+  ...INK_CURIOS_KIT,
   ...INK_MACHINES_KIT,
   ...INK_NATURE_KIT,
   ...INK_CREATURES_KIT,
+  ...INK_CHARACTERS_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

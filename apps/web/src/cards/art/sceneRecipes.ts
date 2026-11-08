@@ -1,8 +1,9 @@
 // R3331000: the scene recipes, data per card (ART.md, "Scene recipes and kits"): the five proof cards
 // that set the bar each set's picture pass meets (#3331). A card listed here draws its picture from its
 // recipe, on every face, in every painter that hands it one (scene.ts `sceneRecipeOf`); a card not
-// listed keeps its picture byte for byte until its set's pass lists it. Each recipe is placed in the
-// 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each
+// listed keeps its picture byte for byte until its set's pass lists it: Classic+'s pass (R3390000) lists every
+// Classic+ entry and Meditative's (R3401000) every Meditative entry, each set's recipes in files of their own. Each
+// recipe is placed in the 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each
 // keeps its subject within x 30 to 70 and y 25 to 85 and reaches its rarity's floor
 // (richness.ts `ART_DETAIL_MIN`) with its placements' counts. R3396000: a Classic+ card offered Alt art draws an
 // alt recipe of its own (`ALT_SCENE_RECIPES`) under its Alt art seed (scene.ts `sceneRecipeOf`).
@@ -13,6 +14,11 @@ import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
 import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
 import { figureLookFor } from "./figureKit.ts";
+import { MEDITATIVE_RECIPES_1 } from "./meditativeRecipes1.ts";
+import { MEDITATIVE_RECIPES_2 } from "./meditativeRecipes2.ts";
+import { MEDITATIVE_RECIPES_3 } from "./meditativeRecipes3.ts";
+import { MEDITATIVE_RECIPES_4 } from "./meditativeRecipes4.ts";
+import { MEDITATIVE_RECIPES_5 } from "./meditativeRecipes5.ts";
 import type { SceneRecipe } from "./scene.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
@@ -199,7 +205,7 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the five proof cards, and R3390000 every Classic+ entry. */
+/** R3331000: the cards that draw from a scene, by id: the five proof cards, R3390000 every Classic+ entry and R3401000 every Meditative entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
@@ -209,6 +215,11 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_RECIPES_1,
   ...CLASSIC_PLUS_RECIPES_2,
   ...CLASSIC_PLUS_RECIPES_3,
+  ...MEDITATIVE_RECIPES_1,
+  ...MEDITATIVE_RECIPES_2,
+  ...MEDITATIVE_RECIPES_3,
+  ...MEDITATIVE_RECIPES_4,
+  ...MEDITATIVE_RECIPES_5,
 };
 
 /**

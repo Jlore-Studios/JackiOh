@@ -368,7 +368,7 @@ Five proof cards drew from recipes first and set the bar each set's pass meets: 
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
-of its own (below, R3390000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+of its own (below, R3390000), and Meditative's every Meditative entry (below, R3401000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
@@ -426,6 +426,38 @@ that differ from the normal window, base and Radiant, sampled on card-versions.c
 threshold for a point that differs. `classicPlusAltScenes.test.tsx` holds every recipe to the rules and every Alt art
 level's face to its picture and its Radiant marks, and `classicplus-alt-scenes.cy.tsx` measures each window's share
 and screenshots each normal face beside its Alt art face.
+
+## Meditative drawn as scenes (R3401000)
+
+Meditative's pass draws every Meditative entry from a recipe of its own: its 102 cards and 30 tokens, each from its
+brief (#3401's table), in the art bible's ink-wash look, base and Radiant. The recipes are five files in id order,
+spread into `SCENE_RECIPES` after Classic+'s: `meditativeRecipes1.ts` (#1 to #14), `meditativeRecipes2.ts` (#15 to
+#30 with #19's, #22's, #28's and #30's tokens), `meditativeRecipes3.ts` (#31 to #49 with #39's, #45's and #49's),
+`meditativeRecipes4.ts` (#50 to #79 with #70's and #71's) and `meditativeRecipes5.ts` (#80 to #102 with #91's, #93's,
+#95's, #96's and #97's). Each keeps its brief's subject, setting and idea and Classic+'s rules (its subject within x 30
+to 70 and y 25 to 85, its foreground near, its middle in the mid and subject layers, its background far, its emblem
+small on its subject inside the band every face shows), and the family's: pale paper and mist skies or the brief's
+hour in soft washes, ink-wash peaks and cloud behind, a high and distant camera that sees a small subject in a large
+space, and **one red seal** (`seal`, a red chop of abstract strokes with no glyph) in the near layer of every
+picture, unrepainted, where a painter would stamp a scroll.
+
+Each of the 43 Units that are a person is a figure whose look starts from its tag's people and is dressed as who it is,
+no two alike; the 21 that are no person draw their part of the scene kit as their subject, with no figure: the
+rhino, the clockwork sentry, the pea vine, the Shade-iris, the taotie, Yile's Virus, Devin Bot, the Sentient Cat
+Ears, the Montaña Giant, Volatility's jar, Tatches the Totem, the True Sheep and the nine buildings of Jlockeed's
+Evil Blueprints. The people round a subject are small brush figures (`ink-person`), a rival or companion who matters
+an extra figure, and a foreground hand a hand of the kit (`hand-open`, `hand-hold`). API Key Fishing and Tatches the
+Totem, whose full-art motions move their props (R2715001), mark the near-layer placements that move with them
+(`props`). The parts the briefs named joined the kits: the figure kit's new poses, a mask, headgear, outfits and held
+items, and eight scenery modules beside Classic+'s, drawing with the same helpers (`kitDraw.ts`): ink-world terrain
+and architecture (`sceneKitInkPlaces.ts`: peaks, terraces, still water, pagodas, pavilions, gates, wells),
+buildings (`sceneKitInkBuildings.ts`), objects (`sceneKitInkObjects.ts`: the seal, paper lanterns, brushes, an
+abacus, a go board), curios (`sceneKitInkCurios.ts`: jade, a bottle, a horned skull, a melon), machines
+(`sceneKitInkMachines.ts`), plants and weather (`sceneKitInkNature.ts`: pines, lotus, plum blossom, ink cloud, wind),
+creatures, people and hands (`sceneKitInkCreatures.ts`) and the Units' characters (`sceneKitInkCharacters.ts`). Every
+entry clears its rarity's floor and is off the short list, whose cap fell from 445 to 313; `meditativeScenes.test.ts`
+holds the set to all of it, and `meditative-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size
+and the rest as a contact sheet, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 
