@@ -576,7 +576,8 @@ export const SHIPYARD_LIGHT_MIN = 0.25;
 export const SHIPYARD_LIGHT_MAX = 0.9;
 /** The count of pieces at which the dock light is at its brightest. */
 export const SHIPYARD_LIGHT_FULL = 8;
-const SHIPYARD_LAMP = "#e8f4ff";
+/** The dock lamp's light; R3334000: the shipyard's idle sweeps it too (ShipyardIdle.tsx). */
+export const SHIPYARD_LAMP = "#e8f4ff";
 const SPARK = "#ffffff";
 const GANTRY_REACH = 7;
 const GANTRY_TOP = 15;
@@ -592,6 +593,18 @@ function gantry(x: number, top: number, foot: number, p: HullPaint): string {
   }
   out.push(path(d, "none", { stroke: p.dark, "stroke-width": 0.3, opacity: 0.85 }));
   return out.join("");
+}
+
+/**
+ * R3334000: a hull of `cls`'s shipyard lamp, atop its aft gantry, and the cone its light throws down to the yard's
+ * floor, the lamp its apex, in hull space: where `shipyardMarkup` draws them and the idle sweeps the cone.
+ */
+export function shipyardLampOf(cls: StarshipClass): { lamp: { x: number; y: number }; cone: readonly (readonly [number, number])[] } {
+  const L = cls.length;
+  const top = -cls.height - GANTRY_TOP;
+  const foot = cls.height + GANTRY_FOOT;
+  const aft = -L - GANTRY_REACH;
+  return { lamp: { x: aft, y: top + 1 }, cone: [[aft, top + 1], [aft + L * 0.9, foot], [aft + L * 0.2, foot]] };
 }
 
 /**
@@ -621,8 +634,9 @@ export function shipyardMarkup(cls: StarshipClass, newest: { x: number; y: numbe
     for (const [dx, dy] of [[2.4, -1.6], [-2, -2.2], [1.4, 2], [3.2, 0.6], [-2.8, 1]] as const) out.push(circle(newest.x + dx, newest.y + dy, 0.3, p.accent));
   }
   const light = SHIPYARD_LIGHT_MIN + ((SHIPYARD_LIGHT_MAX - SHIPYARD_LIGHT_MIN) * Math.max(0, Math.min(count, SHIPYARD_LIGHT_FULL))) / SHIPYARD_LIGHT_FULL;
-  out.push(poly([[aft, top + 1], [aft + L * 0.9, foot], [aft + L * 0.2, foot]], SHIPYARD_LAMP, "none", { opacity: light * 0.25 }));
-  out.push(circle(aft, top + 1, 1.4, SHIPYARD_LAMP, { ...inked(p), opacity: light }));
+  const { lamp, cone } = shipyardLampOf(cls);
+  out.push(poly(cone, SHIPYARD_LAMP, "none", { opacity: light * 0.25 }));
+  out.push(circle(lamp.x, lamp.y, 1.4, SHIPYARD_LAMP, { ...inked(p), opacity: light }));
   return out.join("");
 }
 

@@ -2276,6 +2276,853 @@
   }
 }
 
+/* ----------------------------------------------------------------- signature figures --- */
+
+/* R3400001: a signature's figure (figures.ts) covers its anchor's box: a prop of the card's moment drawn
+   in its tint with ::before and ::after, a shape and never a card face (R202). `data-side="opponent"`
+   mirrors it for the other seat's play and `data-size="small"` draws it at a second card's size. The whole
+   cue fades out by --fx-ms, inside the effects' tail (R200). Transform and opacity only (B55). */
+.fx-figure {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  --fx-fig: min(var(--fx-w), var(--fx-h), 34vmin);
+  animation: fx-figure-in var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-side="opponent"] {
+  scale: 1 -1;
+}
+
+.fx-figure[data-size="small"] {
+  scale: 0.6;
+}
+
+.fx-figure[data-side="opponent"][data-size="small"] {
+  scale: 0.6 -0.6;
+}
+
+.fx-figure::before,
+.fx-figure::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+}
+
+@keyframes fx-figure-in {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Bob's Plan: a scroll at the board's centre rolls up from the foot toward its rod. */
+.fx-figure[data-figure="scroll"]::before {
+  width: calc(var(--fx-fig) * 0.55);
+  aspect-ratio: 3 / 4;
+  transform-origin: 50% 0;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--fx-tint-glow) 0 11%,
+    color-mix(in srgb, var(--fx-tint-rim) 70%, var(--fx-tint-glow)) 11% 12.5%
+  );
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fx-tint-glow) 55%, transparent);
+  animation: fx-figure-roll var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="scroll"]::after {
+  width: calc(var(--fx-fig) * 0.64);
+  height: calc(var(--fx-fig) * 0.06);
+  top: calc(50% - var(--fx-fig) * 0.37);
+  border-radius: var(--radius-pill);
+  background: var(--fx-tint-rim);
+}
+
+@keyframes fx-figure-roll {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.06);
+  }
+}
+
+/* Bob: a snowplow's outline heaved overhead, then slammed down at the slam. */
+.fx-figure[data-figure="plow"]::before {
+  width: calc(var(--fx-fig) * 1.2);
+  height: calc(var(--fx-fig) * 0.42);
+  clip-path: polygon(0 100%, 6% 30%, 22% 8%, 50% 0, 78% 8%, 94% 30%, 100% 100%, 88% 100%, 82% 40%, 50% 26%, 18% 40%, 12% 100%);
+  background: var(--fx-tint-glow);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--fx-tint-rim) 80%, transparent);
+  animation: fx-figure-heave var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-figure[data-figure="plow"]::after {
+  width: calc(var(--fx-fig) * 1.4);
+  height: calc(var(--fx-fig) * 0.08);
+  top: 100%;
+  background: repeating-linear-gradient(90deg, var(--fx-tint-glow) 0 4%, transparent 4% 9%);
+  opacity: 0;
+  animation: fx-figure-crack var(--fx-ms) linear both;
+}
+
+@keyframes fx-figure-heave {
+  0% {
+    transform: translateY(40%) scale(0.7);
+  }
+  35% {
+    transform: translateY(-90%) scale(1.05);
+  }
+  45% {
+    transform: translateY(-95%) scale(1.05);
+  }
+  55% {
+    transform: translateY(10%) scale(1);
+  }
+  100% {
+    transform: translateY(10%) scale(1);
+  }
+}
+
+@keyframes fx-figure-crack {
+  0%,
+  52% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1.3);
+    opacity: 0;
+  }
+}
+
+/* Bob: a big mitten comes down on the Unit and plucks it up. */
+.fx-figure[data-figure="mitten"]::before {
+  width: calc(var(--fx-fig) * 0.7);
+  aspect-ratio: 4 / 5;
+  clip-path: polygon(18% 100%, 14% 52%, 2% 36%, 6% 26%, 22% 34%, 22% 14%, 36% 0, 70% 0, 86% 14%, 88% 60%, 82% 100%);
+  background: repeating-linear-gradient(180deg, var(--fx-tint-rim) 0 18%, var(--fx-tint-glow) 18% 24%);
+  animation: fx-figure-pluck var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-pluck {
+  0% {
+    transform: translateY(-120%);
+  }
+  35% {
+    transform: translateY(-10%);
+  }
+  55% {
+    transform: translateY(-10%) scale(0.92);
+  }
+  100% {
+    transform: translateY(-140%) scale(0.92);
+  }
+}
+
+/* Scratch Pad: ink rows lay a card's scaffold, which folds into a card back. */
+.fx-figure[data-figure="scaffold"]::before {
+  width: calc(var(--fx-fig) * 0.5);
+  aspect-ratio: 5 / 7;
+  border: 2px solid var(--fx-tint-rim);
+  border-radius: var(--radius-sm);
+  transform-origin: 50% 0;
+  background: repeating-linear-gradient(180deg, transparent 0 9%, color-mix(in srgb, var(--fx-tint-core) 80%, transparent) 9% 11%);
+  animation: fx-figure-scaffold var(--fx-ms) steps(8, end) both;
+}
+
+@keyframes fx-figure-scaffold {
+  0% {
+    transform: scaleY(0);
+  }
+  70% {
+    transform: scaleY(1) scaleX(1);
+  }
+  100% {
+    transform: scaleY(1) scaleX(0.1);
+  }
+}
+
+/* Scratch Pad: the paper tears away, its two halves parting. */
+.fx-figure[data-figure="tear"]::before,
+.fx-figure[data-figure="tear"]::after {
+  width: calc(var(--fx-fig) * 0.4);
+  height: calc(var(--fx-fig) * 0.9);
+  background: color-mix(in srgb, var(--pal-white) 92%, var(--pal-stone-500));
+}
+
+.fx-figure[data-figure="tear"]::before {
+  translate: -100% -50%;
+  clip-path: polygon(0 0, 100% 0, 90% 14%, 100% 28%, 88% 42%, 100% 58%, 90% 72%, 100% 86%, 92% 100%, 0 100%);
+  animation: fx-figure-tear-left var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="tear"]::after {
+  translate: 0 -50%;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 2% 100%, 10% 86%, 0 72%, 10% 58%, 0 42%, 12% 28%, 0 14%);
+  animation: fx-figure-tear-right var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-tear-left {
+  0% {
+    transform: none;
+  }
+  100% {
+    transform: translate(-60%, 30%) rotate(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-figure-tear-right {
+  0% {
+    transform: none;
+  }
+  100% {
+    transform: translate(60%, 30%) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+/* Seance: candle flames ring the chosen tile and lean inward at once. */
+.fx-figure[data-figure="candles"]::before {
+  width: calc(var(--fx-fig) * 1.5);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 0deg, var(--fx-tint-glow) 0 5deg, transparent 5deg 30deg);
+  mask-image: radial-gradient(circle, transparent 0 58%, var(--pal-black) 60% 70%, transparent 72%);
+  animation: fx-figure-candles var(--fx-ms) steps(6, end) both;
+}
+
+.fx-figure[data-figure="candles"]::after {
+  width: calc(var(--fx-fig) * 1.1);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--fx-tint-rim) 60%, transparent);
+  animation: fx-figure-candles var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-candles {
+  0% {
+    transform: scale(1.1) rotate(0deg);
+  }
+  50% {
+    transform: scale(0.94) rotate(6deg);
+  }
+  100% {
+    transform: scale(0.8) rotate(12deg);
+  }
+}
+
+/* Seance: a pale spirit rises from the tile. */
+.fx-figure[data-figure="spirit"]::before {
+  width: calc(var(--fx-fig) * 0.5);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 83% 88%, 66% 100%, 50% 88%, 33% 100%, 16% 88%, 0 100%);
+  background: color-mix(in srgb, var(--pal-cyan-400) 55%, var(--pal-white));
+  box-shadow: 0 0 26px color-mix(in srgb, var(--pal-cyan-400) 70%, transparent);
+  animation: fx-figure-rise var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-rise {
+  0% {
+    transform: translateY(30%) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-110%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Seance: the board dims to plum. */
+.fx-figure[data-figure="dusk"]::before {
+  inset: 0;
+  translate: 0 0;
+  background: color-mix(in srgb, var(--pal-violet-700) 55%, color-mix(in srgb, var(--pal-black) 40%, transparent));
+}
+
+/* Tutorial Master: a chalkboard swings down behind his zone, his pointer rapping it twice. */
+.fx-figure[data-figure="chalkboard"]::before {
+  width: 130%;
+  height: 115%;
+  transform-origin: 50% 0;
+  border: 4px solid var(--pal-wood-700);
+  border-radius: var(--radius-xs);
+  background: repeating-linear-gradient(
+    170deg,
+    color-mix(in srgb, var(--pal-green-900) 75%, var(--pal-black)) 0 18%,
+    color-mix(in srgb, var(--pal-green-900) 60%, var(--pal-black)) 18% 19%
+  );
+  opacity: 0.85;
+  animation: fx-figure-swing var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="chalkboard"]::after {
+  width: 4px;
+  height: 70%;
+  left: 78%;
+  transform-origin: 50% 100%;
+  border-radius: var(--radius-pill);
+  background: var(--pal-wood-600);
+  animation: fx-figure-rap var(--fx-ms) linear both;
+}
+
+@keyframes fx-figure-swing {
+  0% {
+    transform: rotateX(80deg) scaleY(0.2);
+  }
+  25% {
+    transform: none;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes fx-figure-rap {
+  0%,
+  14% {
+    transform: rotate(10deg);
+  }
+  20% {
+    transform: rotate(-22deg);
+  }
+  26%,
+  29% {
+    transform: rotate(10deg);
+  }
+  35% {
+    transform: rotate(-22deg);
+  }
+  41%,
+  100% {
+    transform: rotate(10deg);
+  }
+}
+
+/* Tutorial Master: a chalk outline of his tile draws itself around him, and erases at his Death. */
+.fx-figure[data-figure="chalkOutline"]::before,
+.fx-figure[data-figure="erase"]::before {
+  inset: -6%;
+  translate: 0 0;
+  border: 3px dashed color-mix(in srgb, var(--fx-tint-glow) 90%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.fx-figure[data-figure="chalkOutline"]::before {
+  animation: fx-figure-draw var(--fx-ms) steps(6, end) both;
+}
+
+.fx-figure[data-figure="erase"]::before {
+  animation: fx-figure-draw var(--fx-ms) steps(6, end) reverse both;
+}
+
+.fx-figure[data-figure="erase"]::after {
+  width: 40%;
+  height: 110%;
+  background: repeating-linear-gradient(120deg, color-mix(in srgb, var(--fx-tint-glow) 45%, transparent) 0 6%, transparent 6% 12%);
+  animation: fx-figure-wipe var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-draw {
+  0% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-wipe {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+/* Tutorial Master: a chalk arrow traced into the caster's hand pile (mirrored for the top seat). */
+.fx-figure[data-figure="chalkArrow"]::before {
+  width: 4px;
+  height: 90%;
+  top: -60%;
+  transform-origin: 50% 0;
+  background: repeating-linear-gradient(180deg, var(--fx-tint-glow) 0 10px, transparent 10px 16px);
+  animation: fx-figure-trace var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="chalkArrow"]::after {
+  width: 22px;
+  height: 16px;
+  top: -12%;
+  clip-path: polygon(0 0, 50% 100%, 100% 0, 50% 30%);
+  background: var(--fx-tint-glow);
+  animation: fx-figure-draw var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-trace {
+  0% {
+    transform: scaleY(0);
+  }
+  60% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Call to Chaos (Training-Grounds Edition): two carved wooden dice tumble in from the caster's side and clatter to a stop. */
+.fx-figure[data-figure="die"]::before,
+.fx-figure[data-figure="die"]::after {
+  width: calc(var(--fx-fig) * 0.28);
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  background:
+    repeating-radial-gradient(circle at 28% 28%, var(--pal-wood-950) 0 8%, transparent 8% 300%),
+    repeating-radial-gradient(circle at 50% 50%, var(--pal-wood-950) 0 8%, transparent 8% 300%),
+    repeating-radial-gradient(circle at 72% 72%, var(--pal-wood-950) 0 8%, transparent 8% 300%),
+    var(--pal-wood-600);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--fx-tint-rim) 75%, transparent);
+}
+
+.fx-figure[data-figure="die"]::before {
+  translate: -120% -50%;
+  animation: fx-figure-tumble var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="die"]::after {
+  translate: 20% -40%;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--fx-tint-core) 75%, transparent);
+  animation: fx-figure-tumble var(--fx-ms) var(--ease-overshoot) both;
+}
+
+@keyframes fx-figure-tumble {
+  0% {
+    transform: translate(-80%, 260%) rotate(-540deg);
+  }
+  45% {
+    transform: translate(10%, -20%) rotate(-40deg);
+  }
+  55% {
+    transform: translate(0, 0) rotate(8deg);
+  }
+  62%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+/* Its roll: the top face lights with the outcome's emblem. */
+.fx-figure[data-figure="dieFace"]::before {
+  width: calc(var(--fx-fig) * 0.34);
+  aspect-ratio: 1;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-wood-600) 85%, transparent);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--fx-tint-rim) 80%, transparent);
+  animation: fx-figure-lock var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="dieFace"]::after {
+  width: calc(var(--fx-fig) * 0.2);
+  aspect-ratio: 1;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background: var(--fx-tint-core);
+  animation: fx-figure-lock var(--fx-ms) var(--ease-overshoot) both;
+}
+
+@keyframes fx-figure-lock {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* The Training-Grounds Golem: plank armor bolts over its chest, a palisade rises, a splinter drives through. */
+.fx-figure[data-figure="plank"]::before {
+  width: 72%;
+  height: 30%;
+  top: 46%;
+  border: 2px solid var(--fx-tint-rim);
+  border-radius: var(--radius-xs);
+  background: repeating-linear-gradient(180deg, var(--pal-wood-600) 0 30%, var(--pal-wood-800) 30% 34%);
+  animation: fx-figure-lock var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="palisade"]::before {
+  width: 110%;
+  height: 34%;
+  top: auto;
+  bottom: -8%;
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  clip-path: polygon(0 100%, 0 25%, 5% 0, 10% 25%, 10% 100%, 15% 100%, 15% 25%, 20% 0, 25% 25%, 25% 100%, 30% 100%, 30% 25%, 35% 0, 40% 25%, 40% 100%, 45% 100%, 45% 25%, 50% 0, 55% 25%, 55% 100%, 60% 100%, 60% 25%, 65% 0, 70% 25%, 70% 100%, 75% 100%, 75% 25%, 80% 0, 85% 25%, 85% 100%, 90% 100%, 90% 25%, 95% 0, 100% 25%, 100% 100%);
+  background: repeating-linear-gradient(90deg, var(--pal-wood-600) 0 12%, var(--pal-wood-800) 12% 15%);
+  animation: fx-figure-raise var(--fx-ms) var(--ease-overshoot) both;
+}
+
+@keyframes fx-figure-raise {
+  0% {
+    transform: scaleY(0);
+  }
+  30% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.fx-figure[data-figure="splinter"]::before {
+  width: 90%;
+  height: 6%;
+  rotate: -28deg;
+  clip-path: polygon(0 50%, 12% 0, 100% 35%, 100% 65%, 12% 100%);
+  background: var(--pal-wood-600);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--fx-tint-glow) 80%, transparent);
+  animation: fx-figure-drive var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-drive {
+  0% {
+    transform: translateX(-90%);
+    opacity: 0;
+  }
+  25% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Goetzmann Game Design: a pencil stub sketches a card in quick strokes, which lifts off the napkin. */
+.fx-figure[data-figure="sketch"]::before {
+  width: calc(var(--fx-fig) * 0.5);
+  aspect-ratio: 5 / 7;
+  border: 2px solid color-mix(in srgb, var(--pal-slate-700) 80%, var(--fx-tint-rim));
+  border-radius: var(--radius-sm);
+  transform-origin: 50% 0;
+  background: repeating-linear-gradient(160deg, transparent 0 12%, color-mix(in srgb, var(--fx-tint-rim) 45%, transparent) 12% 13%);
+  animation: fx-figure-scaffold var(--fx-ms) steps(6, end) both;
+}
+
+.fx-figure[data-figure="sketch"]::after {
+  width: calc(var(--fx-fig) * 0.06);
+  height: calc(var(--fx-fig) * 0.3);
+  rotate: 30deg;
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
+  background: var(--pal-yellow-400);
+  animation: fx-figure-wipe var(--fx-ms) steps(5, end) both;
+}
+
+/* ------------------------------------------------------------- takeover art (R3400000) --- */
+
+/* R3400000: a Mythic's own takeover art, part by part (takeoverArt.ts), over the dark and under the sweep,
+   rays and wave: Bob's Plan's ink-wash summit, Scratch Pad's blank canvas and Goetzmann Game Design's
+   napkin. The same parts stand still behind Reduce Motion's card (game/TakeoverStill.tsx), so their look
+   is here and their motion only under `.fx-takeover`, timed to its landing at --fx-land. Palette colors
+   alone, so the still needs no tint; shapes and never a card face (R202). */
+.takeover-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.takeover-art > * {
+  position: absolute;
+  display: block;
+}
+
+.fx-takeover[data-look="summit"] .fx-takeover-sweep,
+.fx-takeover[data-look="canvas"] .fx-takeover-sweep,
+.fx-takeover[data-look="napkin"] .fx-takeover-sweep {
+  display: none;
+}
+
+/* Bob's Plan: an ink-wash range, one red brushstroke arrow climbing the tallest peak to its summit flag. */
+.takeover-art-wash {
+  inset: 0;
+  background: repeating-linear-gradient(
+    175deg,
+    color-mix(in srgb, var(--pal-parchment) 30%, var(--pal-slate-900)) 0 9%,
+    color-mix(in srgb, var(--pal-parchment) 22%, var(--pal-slate-900)) 9% 16%
+  );
+  opacity: 0.88;
+}
+
+.takeover-art-range {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 62%;
+  clip-path: polygon(0 100%, 0 62%, 12% 40%, 22% 55%, 36% 22%, 50% 0, 61% 30%, 72% 18%, 86% 48%, 100% 34%, 100% 100%);
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pal-slate-700) 85%, var(--pal-black)) 0 12%,
+    color-mix(in srgb, var(--pal-slate-800) 90%, var(--pal-black)) 12% 26%
+  );
+}
+
+.takeover-art-arrow {
+  left: 30%;
+  bottom: 4%;
+  width: 22%;
+  height: 56%;
+  transform-origin: 0 100%;
+  clip-path: polygon(0 100%, 30% 62%, 46% 70%, 74% 22%, 66% 18%, 100% 0, 92% 36%, 84% 30%, 52% 84%, 36% 76%, 8% 100%);
+  background: var(--pal-red-600);
+}
+
+.takeover-art-flag {
+  left: 49.5%;
+  top: 34%;
+  width: 4.5vmin;
+  height: 7vmin;
+  clip-path: polygon(0 0, 100% 22%, 10% 44%, 10% 100%, 0 100%);
+  background: var(--pal-red-500);
+}
+
+.fx-takeover .takeover-art-arrow {
+  animation: fx-art-climb var(--fx-land) var(--ease-in-out) both;
+}
+
+.fx-takeover .takeover-art-flag {
+  animation: fx-art-plant var(--fx-land) var(--ease-overshoot) both;
+}
+
+@keyframes fx-art-climb {
+  0%,
+  20% {
+    transform: scale(0);
+  }
+  90%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fx-art-plant {
+  0%,
+  85% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Scratch Pad: blank paper over faint ink peaks, a cyan cursor blinking at its centre, ink rows laying a card's scaffold. */
+.takeover-art-paper {
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-white) 90%, var(--pal-stone-500));
+  opacity: 0.94;
+}
+
+.takeover-art-peaks {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40%;
+  clip-path: polygon(0 100%, 0 70%, 18% 40%, 30% 62%, 48% 18%, 62% 50%, 78% 30%, 100% 64%, 100% 100%);
+  background: var(--pal-slate-400);
+  opacity: 0.16;
+}
+
+.takeover-art-cursor {
+  left: 50%;
+  top: 45%;
+  width: 0.8vmin;
+  height: 6vmin;
+  translate: -50% -50%;
+  background: var(--pal-cyan-400);
+}
+
+.takeover-art-rows {
+  left: 50%;
+  top: 45%;
+  width: min(36vmin, 280px);
+  aspect-ratio: 5 / 7;
+  translate: -50% -50%;
+  transform-origin: 50% 0;
+  border: 2px solid color-mix(in srgb, var(--pal-slate-800) 70%, transparent);
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(180deg, transparent 0 7%, color-mix(in srgb, var(--pal-slate-800) 55%, transparent) 7% 8%);
+}
+
+.fx-takeover .takeover-art-cursor {
+  animation: fx-art-blink var(--fx-land) steps(6, end) both;
+}
+
+.fx-takeover .takeover-art-rows {
+  animation: fx-art-rows var(--fx-land) steps(10, end) both;
+}
+
+@keyframes fx-art-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fx-art-rows {
+  0%,
+  25% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Goetzmann Game Design: a paper napkin under canteen lamplight, a pencil stub, its sketch, and silhouettes
+   of cards spiralling up off it (card shapes only). */
+.takeover-art-napkin {
+  left: 50%;
+  top: 50%;
+  width: 84vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  rotate: 8deg;
+  border-radius: var(--radius-xs);
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--pal-white) 94%, var(--pal-stone-500)) 0 3%, color-mix(in srgb, var(--pal-white) 86%, var(--pal-stone-500)) 3% 3.4%);
+  opacity: 0.95;
+}
+
+.takeover-art-lamp {
+  left: 50%;
+  top: 0;
+  width: 90vmin;
+  height: 100%;
+  translate: -50% 0;
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  background: color-mix(in srgb, var(--pal-gold-200) 35%, transparent);
+  mask-image: linear-gradient(180deg, var(--pal-black), transparent 90%);
+}
+
+.takeover-art-sketch {
+  left: 50%;
+  top: 48%;
+  width: min(30vmin, 230px);
+  aspect-ratio: 5 / 7;
+  translate: -50% -50%;
+  rotate: -4deg;
+  border: 2px solid color-mix(in srgb, var(--pal-slate-700) 85%, transparent);
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(160deg, transparent 0 10%, color-mix(in srgb, var(--pal-slate-700) 35%, transparent) 10% 11%);
+}
+
+.takeover-art-pencil {
+  left: 60%;
+  top: 40%;
+  width: 2vmin;
+  height: 14vmin;
+  rotate: 35deg;
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+  background: repeating-linear-gradient(180deg, var(--pal-yellow-400) 0 78%, var(--pal-wood-600) 78% 92%, var(--pal-slate-800) 92% 100%);
+}
+
+.takeover-art-spiral {
+  left: 50%;
+  top: 46%;
+  width: 70vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--pal-violet-300) 55%, transparent) 0 7deg,
+    transparent 7deg 30deg,
+    color-mix(in srgb, var(--pal-cyan-400) 50%, transparent) 30deg 37deg,
+    transparent 37deg 60deg
+  );
+  mask-image: radial-gradient(circle, transparent 0 40%, var(--pal-black) 42% 62%, transparent 64%);
+  opacity: 0.6;
+}
+
+.fx-takeover .takeover-art-pencil {
+  animation: fx-art-scribble var(--fx-land) steps(8, end) both;
+}
+
+.fx-takeover .takeover-art-sketch {
+  animation: fx-art-rows var(--fx-land) steps(8, end) both;
+}
+
+.fx-takeover .takeover-art-spiral {
+  animation: fx-art-spiral var(--fx-land) var(--ease-out) both;
+}
+
+@keyframes fx-art-scribble {
+  0% {
+    transform: translate(-14vmin, -6vmin);
+  }
+  25% {
+    transform: translate(-2vmin, 4vmin);
+  }
+  50% {
+    transform: translate(-12vmin, 8vmin);
+  }
+  75% {
+    transform: translate(0, 12vmin);
+  }
+  100% {
+    transform: translate(-6vmin, 2vmin);
+  }
+}
+
+@keyframes fx-art-spiral {
+  0%,
+  30% {
+    transform: rotate(0deg) scale(0.4);
+    opacity: 0;
+  }
+  100% {
+    transform: rotate(160deg) scale(1.15);
+    opacity: 1;
+  }
+}
+
 /* --------------------------------------------------------------------------- set piece --- */
 
 /* R2800000: a board clear's set piece, over the whole layer and centred on `--fx-x/--fx-y` (the board,
@@ -3701,6 +4548,615 @@
   }
 }
 
+/* ------------------------------------------- the Starship's moments: dock, launch, broadside, wreck --- */
+
+/* R3334000: a Starship module (fx/starship.ts), its picture without its plate, flying from `--fx-x/y` by
+   `--fx-dx/dy`: `dock` flies onto its hardpoint by `--fx-land` and holds there while it is welded on;
+   `recoil` kicks back where it stands (a cannon firing); `blowOff` is torn off a wrecked hull, tumbling
+   `--fx-spin` turns away. It names no card (R202). */
+
+.fx-module {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-size);
+  height: var(--fx-size);
+  translate: -50% -50%;
+  animation: fx-module-in var(--fx-ms) linear both;
+}
+
+.fx-module-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(1.15);
+}
+
+.fx-module[data-motion="dock"] .fx-module-img {
+  animation: fx-module-dock var(--fx-land) var(--ease-in-out) both;
+}
+
+.fx-module[data-motion="recoil"] .fx-module-img {
+  animation: fx-module-recoil var(--fx-land) var(--ease-out) both;
+}
+
+.fx-module[data-motion="blowOff"] .fx-module-img {
+  animation: fx-module-blow var(--fx-land) var(--ease-out) both;
+}
+
+@keyframes fx-module-in {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-module-dock {
+  0% {
+    transform: translate(0, 0) scale(0.55) rotate(-24deg);
+  }
+  55% {
+    transform: translate(calc(var(--fx-dx) * 0.6), calc(var(--fx-dy) * 0.6 - 24px)) scale(1.3) rotate(-6deg);
+  }
+  88% {
+    transform: translate(var(--fx-dx), var(--fx-dy)) scale(1.12) rotate(0deg);
+  }
+  100% {
+    transform: translate(var(--fx-dx), var(--fx-dy)) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes fx-module-recoil {
+  0% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(-22%) scale(1.06);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes fx-module-blow {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translate(var(--fx-dx), var(--fx-dy)) rotate(calc(var(--fx-spin) * 540deg)) scale(0.7);
+  }
+}
+
+/* R3334000: a docked module's weld: a clamp either side closing on it and the weld's flash between them,
+   growing with the hum (`--fx-hum`, its ship's pieces toward full). */
+
+.fx-weld {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: calc(var(--card-w, 82px) * 0.34);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  scale: calc(0.85 + var(--fx-hum) * 0.4);
+  animation: fx-weld-in var(--fx-ms) linear both;
+}
+
+.fx-weld-clamp {
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  width: 18%;
+  border-radius: var(--radius-xs);
+  background: var(--fx-steel);
+  animation: fx-weld-clamp var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-weld-clamp[data-side="0"] {
+  left: 0;
+  --fx-clamp-dir: -1;
+}
+
+.fx-weld-clamp[data-side="1"] {
+  right: 0;
+  --fx-clamp-dir: 1;
+}
+
+.fx-weld-flash {
+  position: absolute;
+  inset: 26%;
+  border-radius: var(--radius-round);
+  background: var(--fx-gold-pale);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-gold) 85%, transparent);
+  animation: fx-weld-flash var(--fx-ms) steps(5) both;
+}
+
+@keyframes fx-weld-in {
+  0% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-weld-clamp {
+  0% {
+    transform: translateX(calc(var(--fx-clamp-dir) * 140%));
+    opacity: 0;
+  }
+  35% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes fx-weld-flash {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* R3334001: a Starship's launch as a cinematic over the whole layer, through its set piece's hold. The
+   board dims; the ship's own picture fills the screen (a square at least as wide and as tall as it, the
+   camera's points kept where the zoomed picture still covers it, starship.ts `cameraPoint`), the camera
+   (`--fx-zoom` close) panning from its stern (`--fx-cam-x0/y0`) to its bow (`--fx-cam-x1/y1`) from
+   `--fx-pan-at` for `--fx-pan-ms`, each
+   module's mark lighting as it passes (`.fx-cinematic-stop`, at its `--fx-at`); then it pulls back to the
+   whole ship, its engines light one after another, throwing sparks, its public name stamps across the
+   hull at `--fx-stamp` in its design's lettering (`data-font`), and at `--fx-climb` it climbs out of frame
+   as the ship lifts off its tile. Under Reduce Motion, and Big moments short or off, it is `data-still`:
+   the title card, the picture in a centred square with the name under it, nothing moving. */
+
+.fx-cinematic {
+  inset: 0;
+  animation: fx-cinematic-in var(--fx-ms) linear both;
+}
+
+.fx-cinematic-dim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--fx-ink) 84%, transparent);
+}
+
+.fx-cinematic-climb {
+  position: absolute;
+  inset: 0;
+  animation: fx-cinematic-climb var(--fx-climb-ms) var(--ease-in) var(--fx-climb) both;
+}
+
+.fx-cinematic-camera {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, 100vh);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 48px color-mix(in srgb, var(--fx-tint-glow) 45%, transparent);
+  animation:
+    fx-cinematic-pan var(--fx-pan-ms) var(--ease-in-out) var(--fx-pan-at) both,
+    fx-cinematic-pull var(--fx-pull-ms) var(--ease-out) calc(var(--fx-pan-at) + var(--fx-pan-ms)) forwards;
+}
+
+.fx-cinematic-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.fx-cinematic-stop {
+  position: absolute;
+  left: var(--fx-px);
+  top: var(--fx-py);
+  width: 7%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: 2px solid var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--fx-tint-glow) 80%, transparent);
+  opacity: 0;
+  animation: fx-cinematic-stop calc(var(--fx-ms) * 0.16) var(--ease-out) var(--fx-at) both;
+}
+
+.fx-cinematic-engine {
+  position: absolute;
+  left: var(--fx-px);
+  top: var(--fx-py);
+  width: 9%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-core);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--fx-tint-glow) 90%, transparent);
+  opacity: 0;
+  animation: fx-cinematic-engine var(--fx-rest) steps(12) var(--fx-at) both;
+}
+
+.fx-cinematic-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-glow);
+  rotate: calc((var(--fx-spark) / max(1, var(--fx-sparks) - 1) - 0.5) * 70deg);
+  animation: fx-cinematic-spark calc(var(--fx-ms) * 0.09) linear calc(var(--fx-at) + var(--fx-ms) * 0.009 * var(--fx-spark)) infinite;
+}
+
+.fx-cinematic-name {
+  position: absolute;
+  left: 50%;
+  top: 66%;
+  translate: -50% -50%;
+  opacity: 0;
+  animation: fx-cinematic-stamp calc(var(--fx-ms) * 0.08) var(--ease-overshoot) var(--fx-stamp) both;
+}
+
+.fx-cinematic-name::before {
+  content: attr(data-text);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: var(--fx-letter-weight, 800);
+  letter-spacing: var(--fx-letter-tracking, 0);
+  font-size: clamp(var(--type-2xl), 7vmin, var(--type-4xl));
+  line-height: 1;
+  color: var(--fx-letter-fill);
+  -webkit-text-stroke: 2px var(--fx-letter-edge);
+  text-shadow: 0 0 18px var(--fx-tint-rim);
+}
+
+.fx-cinematic-name[data-italic="true"]::before {
+  font-style: italic;
+}
+
+.fx-cinematic-name[data-font="text"]::before {
+  font-family: var(--font-text);
+}
+
+.fx-cinematic-name[data-font="mono"]::before {
+  font-family: var(--font-mono);
+}
+
+.fx-cinematic-name[data-font="signature"]::before {
+  font-family: var(--font-signature);
+}
+
+.fx-cinematic-name[data-font="brush"]::before {
+  font-family: var(--font-signature-brush);
+}
+
+.fx-cinematic-name[data-font="copperplate"]::before {
+  font-family: var(--font-signature-copperplate);
+}
+
+.fx-cinematic-name[data-font="marker"]::before {
+  font-family: var(--font-signature-marker);
+}
+
+@keyframes fx-cinematic-in {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-cinematic-pan {
+  0% {
+    transform: scale(var(--fx-zoom)) translate(calc((0.5 - var(--fx-cam-x0)) * 100%), calc((0.5 - var(--fx-cam-y0)) * 100%));
+  }
+  100% {
+    transform: scale(var(--fx-zoom)) translate(calc((0.5 - var(--fx-cam-x1)) * 100%), calc((0.5 - var(--fx-cam-y1)) * 100%));
+  }
+}
+
+@keyframes fx-cinematic-pull {
+  0% {
+    transform: scale(var(--fx-zoom)) translate(calc((0.5 - var(--fx-cam-x1)) * 100%), calc((0.5 - var(--fx-cam-y1)) * 100%));
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes fx-cinematic-stop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-cinematic-engine {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  8% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-cinematic-spark {
+  0% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-520%) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-cinematic-stamp {
+  0% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.94);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-cinematic-climb {
+  0% {
+    transform: none;
+  }
+  100% {
+    transform: translateY(-115vh) scale(0.55);
+  }
+}
+
+/* R3334001: the title card: the picture in a centred square, the name under it, the board half dimmed. */
+.fx-cinematic[data-still="true"],
+.fx-cinematic[data-still="true"] * {
+  animation: none;
+}
+
+.fx-cinematic[data-still="true"] .fx-cinematic-dim {
+  opacity: 0.7;
+}
+
+.fx-cinematic[data-still="true"] .fx-cinematic-camera {
+  top: 44%;
+  width: min(70vw, 60vh);
+}
+
+.fx-cinematic[data-still="true"] :is(.fx-cinematic-stop, .fx-cinematic-engine) {
+  visibility: hidden;
+}
+
+.fx-cinematic[data-still="true"] .fx-cinematic-name {
+  top: calc(44% + min(35vw, 30vh) + 6vmin);
+  opacity: 1;
+}
+
+/* R3334001: a War Doctrine announced over its Starship: an insignia in its doctrine's shape and tint
+   (`data-doctrine`), stamping in, its card's public name under it. */
+
+.fx-doctrine {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: calc(var(--card-w, 82px) * 1.5);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  animation: fx-doctrine-in var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-doctrine-insignia {
+  position: absolute;
+  inset: 14%;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--fx-tint-glow) 55%, transparent);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--fx-tint-glow) 75%, transparent);
+}
+
+.fx-doctrine[data-doctrine="land"] .fx-doctrine-insignia {
+  border-radius: var(--radius-sm) var(--radius-sm) var(--radius-round) var(--radius-round);
+}
+
+.fx-doctrine[data-doctrine="sea"] .fx-doctrine-insignia {
+  border-radius: var(--radius-round) var(--radius-round) var(--radius-sm) var(--radius-sm);
+}
+
+.fx-doctrine[data-doctrine="air"] .fx-doctrine-insignia {
+  inset: 20%;
+  rotate: 45deg;
+  border-radius: var(--radius-xs);
+}
+
+.fx-doctrine[data-doctrine="space"] .fx-doctrine-insignia {
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.fx-doctrine::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  translate: -50% 0;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--type-lg);
+  color: var(--fx-tint-core);
+  -webkit-text-stroke: 1px var(--fx-ink);
+  text-shadow: 0 0 12px var(--fx-tint-glow);
+}
+
+@keyframes fx-doctrine-in {
+  0% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+}
+
+/* R3334003: a Starship's wreck over its art: at `--fx-break` the hull breaks in two, each half its
+   picture's fore or aft, drifting apart and turning `--fx-turn` away as the card under it is hidden. */
+
+.fx-wreck {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  animation: fx-wreck-in var(--fx-ms) linear both;
+}
+
+.fx-wreck-half {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-round);
+  object-fit: cover;
+  opacity: 0;
+  animation: fx-wreck-break var(--fx-break-ms) var(--ease-in) var(--fx-break) forwards;
+}
+
+.fx-wreck-half[data-half="fore"] {
+  --fx-half-dir: 1;
+  clip-path: polygon(52% 0, 100% 0, 100% 100%, 46% 100%, 51% 62%, 45% 40%);
+}
+
+.fx-wreck-half[data-half="aft"] {
+  --fx-half-dir: -1;
+  clip-path: polygon(0 0, 52% 0, 45% 40%, 51% 62%, 46% 100%, 0 100%);
+}
+
+@keyframes fx-wreck-in {
+  0% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-wreck-break {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--fx-half-dir) * 24%), 16%) rotate(calc(var(--fx-half-dir) * var(--fx-turn)));
+    opacity: 0;
+  }
+}
+
+/* R3334003: the scorch a wreck leaves on its zone, settling and fading. */
+
+.fx-scorch {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  animation: fx-scorch-in var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-scorch::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--fx-ink) 72%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fx-damage) 55%, transparent);
+}
+
+@keyframes fx-scorch-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.04);
+    opacity: 0;
+  }
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer
@@ -3722,11 +5178,12 @@
 
   /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped;
      R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's. R3336000: a ship cue has no still, so the rule above hides it.
-     R3337003: and an Anomaly's still title card. */
+     R3337003: and an Anomaly's still title card; R3334001: and a Starship's title card. */
   .fx-dom > .fx-callout[data-still="true"],
   .fx-dom > .fx-launch[data-still="true"],
   .fx-dom > .fx-setPiece[data-still="true"],
-  .fx-dom > .fx-anomalyTitle[data-still="true"] {
+  .fx-dom > .fx-anomalyTitle[data-still="true"],
+  .fx-dom > .fx-cinematic[data-still="true"] {
     visibility: visible;
   }
 }

@@ -48,6 +48,10 @@ const EXPECTED_IDS = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
+  // R3400001: Meditative+'s and Training Grounds' signatures.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -156,6 +160,26 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   trapSnap: 200,
   // R3342000: the tile aura bell.
   auraTouch: 200,
+  // R3334000–R3334003: the Starship's moments.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
+  // R3400001.
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
 };
 
 /** B14 parameter sets used here too. */
@@ -391,6 +415,8 @@ const ROUTINE: readonly Cue[] = [
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
+  // R3400001: the signatures, each a card's own moment at a routine level.
+  ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

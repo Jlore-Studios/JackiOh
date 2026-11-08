@@ -5,8 +5,9 @@ Training Grounds' pass over its animation table, `traininggrounds.json5` (`docs/
 `traininggrounds.test.ts` holds every row's name, type, entry and scale to the catalog and the table, and
 the table to the pass's floor.
 
-- **Entry**: the card's entry in `traininggrounds.json5`: `none: <reason>`, `bespoke <recipe>`, or each
-  hook's `<hook> <motif>[ <palette>]`, then `aura <look> <scope>[ <palette>]`.
+- **Entry**: the card's entry in `traininggrounds.json5`: `none: <reason>`, `bespoke <recipe>` (R3400000: then
+  `; aura <look> <scope>[ <palette>]`), or `signature`, `entrance <key>` and each hook's
+  `<hook> <motif>[ <palette>]`, then `aura <look> <scope>[ <palette>]`.
 - **Scale**: the card's motif scale at intensity 1 (`motifScale`), from its cost and rarity alone; `—` for
   a `none`.
 - **Census**: the "Suggested" cell of `cargo jackioh fx census` (#2788) for the card, run at `53e62cbe2`
@@ -62,11 +63,11 @@ chalk (the set keeps blade for #18's knives and chalk for #38's teacher).
 | `traininggrounds-034` | Dino-size | Spell | bespoke dinoStomp | 1.55 | none: no motif reads numberChanged | bespoke: no motif reads numberChanged, its one event, and no other card of the set shows one, so no motif joins for it |
 | `traininggrounds-035` | Corpse Recycler | Field Spell | cast conjure; trigger conjure; aura void board | 1.55 | vanish | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census's vanish is other cards' exiles in its window, its own effect the Rush Token's summon (63), which conjure reads |
 | `traininggrounds-036` | Training Dummy | Unit | death send | 1.35 | vanish | death: the census's vanish is other cards' exiles in its window; its own effect adds Radiant cards to the hand (addedToHand), which send reads |
-| `traininggrounds-037` | Seance | Spell | cast send | 1.62 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
-| `traininggrounds-038` | Tutorial Master | Unit | cry send Nerd/chalk; death send Nerd/chalk | 1.85 | bolt | cry and death: no census family reads addedToHand (the death's bolt is fatigue and burns in its window); send reads it, in Nerd's chalk sub-look (a teacher) |
-| `traininggrounds-039` | Call to Chaos (Training-Grounds Edition) | Spell | cast conjure | 1.85 | none: no motif reads keywordGranted | cast: the census's keywordGranted is one of its ten random effects (its many grants); conjure reads the four that summon, as Core's Call to Chaos takes |
-| `traininggrounds-039-1` | Training-Grounds Golem | Unit | none: vanilla | — | not in census | a token the census never played: keywords only, which the keyword beats draw |
-| `traininggrounds-040` | Goetzmann Game Design | Spell | bespoke gameDesign | 1.60 | none: no motif reads addedToHand | bespoke: the set's Mythic, its designer's card: drafted at the board's centre in Mythic rays and dealt into the hand, which send's small flight undersells |
+| `traininggrounds-037` | Seance | Spell | bespoke seance | 1.62 | none: no motif reads addedToHand | signature (R3400001): candle flames ring the chosen permanent's tile and lean in as the board dims to plum, a pale spirit rises from it, and its copy drifts to the caster's hand pile as a card back; a face-down target's candles stand at the board's centre (R202) |
+| `traininggrounds-038` | Tutorial Master | Unit | bespoke tutorialMaster; aura chalk tile Nerd/chalk | 1.85 | bolt | signature (R3400001): a chalkboard swings down behind his zone, his pointer raps it twice and a chalk outline draws itself around him (entrance chalkboardLesson); each card his Cry or Death adds slides to the hand pile as a card back, the first along a chalk arrow, his outline erasing first at his Death; chalk dust drifts off his tile |
+| `traininggrounds-039` | Call to Chaos (Training-Grounds Edition) | Spell | bespoke chaosDice | 1.85 | none: no motif reads keywordGranted | signature (R3400001): two carved wooden dice tumble to the board's centre in magenta and teal sparks; on its roll the top face lights as R436's panel names the clause, its reels and panel shortened to the Legendary Spell's ceiling; the outcome's own rows draw its beat, and a Call it casts rolls smaller dice |
+| `traininggrounds-039-1` | Training-Grounds Golem | Unit | signature; entrance golemLashing; aura timber tile | 1.19 | not in census | signature (R3400001), a token printed Legendary: training posts fly in from the yard's edges and lash together in its zone, then its keywords lock on one by one (plank armor, a shield bubble, a palisade for Taunt, Rush, a Pierce splinter); timber dust sifts from its tile |
+| `traininggrounds-040` | Goetzmann Game Design | Spell | bespoke gameDesign | 1.60 | none: no motif reads addedToHand | signature (R3400001), the set's Mythic, its designer's card: its takeover is a napkin under canteen lamplight with a card sketched on it and card silhouettes spiralling up; pixels spark as the hold ends, and the card it adds lifts off as a sketch and is dealt into the hand pile as a card back |
 | `traininggrounds-041` | Legacy: Speciesist | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
 | `traininggrounds-042` | Legacy: Stockpile | Spell | cast flight | 1.08 | bolt | cast: the census's bolt is the fatigue its draws deal; its own effect is drawn, which flight reads |
 | `traininggrounds-043` | Legacy: Mr. Vanilla | Unit | none: vanilla | — | none: vanilla | the census agrees: no text |

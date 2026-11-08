@@ -220,14 +220,16 @@ or board it covers wears a quiet looping look in the card's palette, a tint, a s
 an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
-  `toxic` and `arcane`, each a mote velocity, size and life range, a mote, tint and edge opacity, a
-  glow spread and a blend. `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
-  own by default, as a motif's.
-- **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
-  both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
-  Trap stands in a zone, so only it may name `zone` or `lane`; the loader fails any other card's.
+  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's) and (R3400000) `flurry` (snow), `chalk`
+  (chalk dust) and `timber` (sawdust), the twelve each a mote velocity, size and life range, a mote, tint
+  and edge opacity, a glow spread and a blend. `palette` is a flavor's look or a sub-look
+  (`"Tech/rocket"`), the card's own by default, as a motif's.
+- **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
+  zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
+  twenty). Only a Field Spell or a Field Trap stands in a zone, so only it may name `zone` or `lane`, and
+  only a Unit may name `tile`; the loader fails any other card's.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
-  Field Trap whose entry has an aura, and every modifier the view lists that a readable play added
+  Field Trap whose entry has an aura, every face-up Unit whose entry has a `tile` aura (R3400000), and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
   side. A face-down card, the viewer's own unrevealed Field Trap and a Unit in a backrow zone wear
   none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
@@ -260,7 +262,9 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
-No modifier example is wired yet, and a bespoke entry (Hinder's rider) cannot take an aura.
+No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
+Bob's and Tutorial Master's signatures do on their tiles; a modifier a Unit's play installs wears no
+tile aura, which stands with the Unit.
 
 ### Tile auras
 
@@ -274,8 +278,8 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
-- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui) uses that
-  standing aura in `AuraLayer` instead.
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or R3400000 a
+  bespoke entry's, Bob's and Tutorial Master's) uses that standing aura in `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -349,7 +353,8 @@ and `stinkyscape-2.md` (#2798), over `stinkyscape-091` to the end with the set's
 Starship's own moments (the fuse, the launch, Launch Sequencer, #130 Jlockeed's Starship Retrofitting
 Program and the Launchers #140 to #143) are #2782's Starship part: a card whose only hook is one of
 them is `"none: Starship part"`, the one `none` a Spell of the pass may wear, and a Starship Piece's
-other hooks take their entries in the pass. Part two adds no motif: every event it shows on three or
+other hooks take their entries in the pass. The Dormant Starship, #137 Starfleet Commander and #176
+Preemptive Strike wear signatures of their own (R3334004). Part two adds no motif: every event it shows on three or
 more of its cards is read already (`send`, `mend`), and the two cards whose `marked` is the moment
 take recipes.
 
@@ -483,6 +488,43 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   side shows face up streaks cat light into its zone (`FX_FELINOR_STREAK_AT`, `FX_FELINOR_STREAK_STEP`,
   at most `FX_FELINOR_STREAKS_MAX`), all landing at the slam in a ring, a gathering burst and a gold
   crown. A Felinor buried under a Stack is face down and sends nothing (R202).
+- **Meditative+ and Training Grounds** (#3400, R3400000, R3400001): every Legendary and Mythic of both,
+  each built from its concept, drawn with figures (`fx/figures.ts`: shapes in a tint over their
+  anchor's box, never a card face) and sounding its own effect (`audio/signatureCues.ts`):
+  - **M+ #1 Bob's Plan** (`bobsPlan`, takeover `summit`): Bob's ink-wash range, a red brushstroke climbing
+    to the summit flag; ink at the hold's end; a scroll and a card back for each card it adds, the
+    plan's smaller. Sound `inkSummit`.
+  - **M+ #24 Bob, Wisconsin's Strongest Soldier** (entrance `snowplowHeave`, `bobSoldier`, `flurry` on his
+    tile): a snowplow heaved and slammed, frost into the enemy's zone of his lane; frost over every enemy
+    Unit at the first freeze, a mitten for a stolen Unit, Coins from his hero, a Discovered card's sheen
+    for its owner alone, a copied card's backs fanning in. Sound `plowHeave`.
+  - **M+ #26 Scratch Pad** (`scratchPad`, takeover `canvas`): blank paper, faint peaks, a cyan cursor and
+    ink rows; pixels at the hold's end; the scaffold folding into a card back; the paper tearing as it
+    exiles itself. Sound `cursorTear`.
+  - **TG #37 Seance** (`seance`): candles ring the announced tile (the centre for a face-down card) as the
+    board dims to plum, a spirit rises; its copy drifts from there as a card back. Sound `seanceChant`.
+  - **TG #38 Tutorial Master** (entrance `chalkboardLesson`, `tutorialMaster`, `chalk` on his tile): a
+    chalkboard swings down, two raps, a chalk outline; each card his Cry or Death adds slides in as a
+    card back, the first along a chalk arrow, his outline erasing first at his Death. Sound `slateRap`.
+  - **TG #39 Call to Chaos (Training-Grounds Edition)** (`chaosDice`): two dice tumble in and stop in
+    sparks; at its roll a face lights while R436's panel names the clause, capped at
+    `FX_CHAOS_DICE_PANEL_MS`; a Call it casts rolls smaller dice. Sound `diceGong`.
+  - **TG #39.1 Training-Grounds Golem** (entrance `golemLashing`, `timber` on its tile): posts fly in from
+    the yard's four edges and lash together at the slam, then its keywords lock on (plank, shield,
+    palisade, Rush, splinter). Sound `timberLash`.
+  - **TG #40 Goetzmann Game Design** (`gameDesign`, takeover `napkin`): a napkin under lamplight, a pencil
+    sketching, card silhouettes spiralling up; pixels at the hold's end; the sketch dealt as a card back
+    in place of the hand's row. Sound `pencilArpeggio`.
+- **The frame they need** (R3400000): a bespoke entry may wear an aura; a Unit's may stand on its `tile`;
+  `summit`, `canvas` and `napkin` are takeover looks with art (`fx/takeoverArt.ts`), the same parts
+  standing still behind Reduce Motion's card; and a signature Spell's own cast (`ownCast`) draws no
+  shared rays, burst, rings or shake, its Mythic takeover ending `FX_SIGNATURE_TAKEOVER_TAIL_MS` after its
+  entry.
+- **Budget rules the recipes keep:** a Mythic Spell bursts only in its cast's entry, at most at its hold's
+  end (its 1000 ms hold, then its 400 ms cast: a burst there ends at 1900 ms, inside 1950); a Legendary
+  Spell bursts only in its cast's entry, at most 300 ms in; a Unit bursts in its entrance and at the start
+  of its first text beat; every later entry draws only figures, card backs and sheens, each ending with
+  its entry; every beat replaces its event's row; a Spell shakes at most 1, a Unit at most 0.8.
 - **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
   dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
   `entrance` sting plays only for one with no intro.
@@ -539,36 +581,71 @@ back flying to its hand (R202).
 
 ## The Starship
 
-Stinkyscape's signature system (R1852000, R1852003) has two moments of its own (R2801000), drawn by
-`fx/starship.ts` and keyed on nothing but the public Starship.
+Stinkyscape's signature system (R1852000, R1852003) has moments of its own (R2801000, R3334000 to
+R3334004), drawn by `fx/starship.ts` from the ship's own picture (`cards/art/stinkyscape.ts`,
+R3333000) and keyed on nothing but the public Starship: `starshipFused`, `starshipLaunched`,
+`attackDeclared`, `destroyed` and a readable War Doctrine's `cardPlayed`. A point on the picture is an
+anchor's `art: "picture"` (`fx/anchors.ts` `artBoxOf`), so a module, an engine or the prow is found on
+the card wherever the board draws it. A phone (narrower than `FX_MOBILE_WIDTH`) throws
+`STARSHIP_CINEMATIC.phoneShare` of every particle, with the same beats.
 
 - **The fuse (a Signature, no hold).** Pieces fusing one after another into one Starship, each
   `fused` with the `starshipFused` after it, are one entry (`game/runs.ts` `fuseRunAt`) of
   `starshipFuseMs(n)`: `STARSHIP_FUSE_MS` and `FX_STARSHIP_FUSE_STAGGER_MS` for each later piece, up
-  to `STARSHIP_FUSE_STAGGERED_MAX`. Each dead piece's card back flies from where it stood (else its
-  graveyard) to the Starship, a stagger apart, and bolts on with a spark, a clank ring and a short
-  shake. Unpinned, the burst budget may squeeze it; every beat keeps its share. A Dormant Starship's
-  face bolts on a hull plate a piece (`cards/StarshipHull.tsx`, up to `STARSHIP_HULL_PLATES_MAX`),
-  read from the view. R2791000's Equip beat stays off it: a piece's copy comes from the graveyard,
-  never the hand.
+  to `STARSHIP_FUSE_STAGGERED_MAX`. Each dead piece's module (R3333001) flies from where it stood
+  (else its graveyard) to its own hardpoint on the ship (`starshipMountPoints` of the list the ship
+  holds after the run), a stagger apart, and docks (R3334000): two clamps close on it, a weld flashes
+  and it hums higher for each piece the ship then holds (`STARSHIP_DOCK`), with a spark, a clank ring
+  and a short shake. Each docking sounds `starshipDock`, its pitch rising with the count
+  (`audio/starshipSounds.ts`; the engine's retrigger guard reads a dock when it sounds,
+  `SCHEDULED_SFX`). Unpinned, the burst budget may squeeze it; every beat keeps its share. A Dormant
+  Starship's face bolts on a hull plate a piece (`cards/StarshipHull.tsx`, up to
+  `STARSHIP_HULL_PLATES_MAX`), read from the view. R2791000's Equip beat stays off it: a piece's copy
+  comes from the graveyard, never the hand.
+- **The shipyard idle.** A Dormant Starship holding pieces idles on its tile (`cards/ShipyardIdle.tsx`,
+  R3334000): its dock light sweeps slowly across the hull and welding sparks flicker where its newest
+  piece went in (`SHIPYARD_IDLE_*` in `cards/constants.ts`). It takes one of the board's moving-art
+  slots (`useArtMotion`, `COSMETIC_FOIL_ANIMATED_MAX`) and holds still under Reduce Motion or with
+  Animated foil off.
 - **The launch (a set piece, held).** `starshipLaunched` is claimed as the `starship` set piece
   (`starshipClaim`, `STARSHIP_LAUNCH_HOLD_MS` at speed 1), held, capped, scaled, shortened and
-  skipped as R2785000 holds every set piece. Through the hold a 3-2-1 countdown pops over the ship
-  (`FX_STARSHIP_COUNT_AT`), the board shaking harder at each count, and its engines ignite in Tech's
-  rocket exhaust (`FX_STARSHIP_IGNITE_AT`); as the hold ends it lifts off (`jk-starship-launch`) with
-  a contrail, its Dormant badge burning away, and lands as its launched self. Its exhaust, contrail
-  and shake are `STARSHIP_TUNING`'s step for its pieces (small from 0, medium from 3, large from 6).
-  Its bed (`STARSHIP_LAUNCH_BED`) beeps each count, higher each time, burns at the ignition and
-  thuds at the landing; its own row's roar sounds at the lift-off. Under Big moments' "off" it plays
-  unheld, with no countdown; under Reduce Motion it is one still frame of the launch, which holds
-  nothing, as a Mythic's still card does.
+  skipped as R2785000 holds every set piece. At Big moments "full" the hold is a cinematic
+  (R3334001, `STARSHIP_CINEMATIC`): the board dims and the ship's picture fills the screen, the camera
+  moves along the hull from stern to bow past a stop at each module, the engines light one after
+  another, the name it launched under stamps across the hull in its design's lettering
+  (`STARSHIP_LETTERING`), and it climbs out of frame. As the hold ends it lifts off its tile
+  (`jk-starship-launch`) with a contrail, its Dormant badge burning away, and lands as its launched
+  self. Its zoom, sparks, exhaust, contrail and shake are `STARSHIP_TUNING`'s step for its pieces
+  (small from 0, medium from 3, large from 6). Its bed (`STARSHIP_LAUNCH_BED`) ignites as the engines
+  light, roars as it climbs and thuds at the landing; its own row's sting sounds at the lift-off.
+  Big moments "short" and "off", an unheld launch and Reduce Motion show a still title card instead,
+  the ship's picture and its name; under Reduce Motion it holds nothing, as a Mythic's still card
+  does.
+- **The War Doctrines.** A War Doctrine cast (Stinkyscape #137.1 to #137.4, which #137 Starfleet
+  Commander and #176 Preemptive Strike cast after their launch) is announced over its caster's
+  launched Starship, else the board's middle, in its own look for Land, Sea, Air or Space
+  (`WAR_DOCTRINE_LOOKS`), with a burst, a ring and a shake (R3334001).
+- **The broadside.** A launched Starship's attack fires its mounted weapons where the picture mounts
+  them, one after another inside the attack's row, every shot landing as it ends (R3334002,
+  `STARSHIP_BROADSIDE`, `BROADSIDE_WEAPONS`): beams sweep, repeaters stutter, cannons kick back, flak
+  bursts in clouds, launchers lob what they carry (a token, fruit, jade, a book; the Missile Pod
+  arrows). A ship with no weapons rams prow first, its lunge turned `FX_STARSHIP_RAM_TURN_DEG`
+  toward its target (`stage.ts`). Each kind it fires sounds once, as its first gun fires; a ram sounds
+  at the contact; the swing's own sound is dropped for them, so under Reduce Motion, which plays no
+  broadside, it swings with the swing's sound.
+- **The wreck.** A Starship's `destroyed`, outside a wipe (R3334003, `STARSHIP_WRECK`): its newest
+  modules blow off one by one, the hull breaks in two as its card is hidden, debris drifts across its
+  backrow and a scorch settles on its tile. It groans as its hull breaks, in the death sting's place;
+  under Reduce Motion or inside a wipe, where no groan plays, the sting stays.
 
 | Card | Entry | Ties to the ship |
 |---|---|---|
 | Stinkyscape #130 Jlockeed's Starship Retrofitting Program | `cast: send`, Tech/rocket | the Jlockeed card it adds, a Starship Piece from then on, flies to the hand in the rocket's exhaust |
+| Stinkyscape #137 Starfleet Commander | signature, entrance `fleetCommand` | it lands and orders the Dormant Starship up: a rocket bolt to the ship, a ring, a crown of gold and a shake (R3334004) |
 | Stinkyscape #140 to #143, the Launchers | `cry: conjure`, Tech/rocket | each lands in a ring of exhaust, the Activate a launched Starship takes from it |
+| Stinkyscape #176 Preemptive Strike | signature, bespoke `preemptiveStrike` | an alarm of fire rings on its hero and a red strike; the Dormant Starship it wakes branded red (R3334004) |
 | Stinkyscape T-AI-5 Launch Sequencer | `cast: tithe`, Tech/rocket | "Your Starship launch costs (1)": a glint on the badge and on the Dormant Starship whose launch it prices |
-| the Dormant Starship | `none` | its fuse and launch are the Starship's own |
+| the Dormant Starship | signature, entrance `shipyardRollout` | it rolls out of its shipyard: weld sparks over its hull, then a ring, dust and a slam (R3334004) |
 
 ## The Drone Battleship
 
@@ -635,14 +712,14 @@ names.
 
 Issue #2803's audit (R2803000) closes the work above and holds it:
 
-- **Coverage:** 551 of the catalog's 634 non-token cards wear an entry other than `none`, past the
+- **Coverage:** 554 of the catalog's 634 non-token cards wear an entry other than `none`, past the
   audit's floor of half (`FX_COVERAGE_FLOOR`, `fx/cards/coverage.test.ts`). By set: Core 87/100,
-  Classic 79/90, Classic+ 74/78, Meditative 94/102, Meditative+ 24/26, Stinkyscape 142/178,
-  Training Grounds 51/60. By type: Unit 195/277, Spell 235/236, Field Spell 87/87, Trap 24/24,
-  Field Trap 10/10. By rarity: Common 138/181, Rare 181/198, Epic 132/144, Legendary 72/81,
-  Mythic 28/30. Every Spell, Field Spell, Trap and Field Trap wears a `cast`, a recipe, a set piece
-  or the one `none` a Starship part may wear (Stinkyscape #176 Preemptive Strike, "Starship part"),
-  and every Field Spell an `aura`.
+  Classic 79/90, Classic+ 74/78, Meditative 94/102, Meditative+ 24/26, Stinkyscape 145/178,
+  Training Grounds 51/60. By type: Unit 197/277, Spell 236/236, Field Spell 87/87, Trap 24/24,
+  Field Trap 10/10. By rarity: Common 138/181, Rare 181/198, Epic 132/144, Legendary 75/81,
+  Mythic 28/30. Every Spell, Field Spell, Trap and Field Trap wears a `cast`, a recipe or a set
+  piece; the one `none` a Starship part may wear is worn by no Spell since #176 Preemptive Strike
+  took its signature (R3334004). Every Field Spell wears an `aura`.
 - **Tiers:** every table entry's gallery play is planned through the board's effects layer, and every
   cue it plans ends within its entry plus `FX_MAX_TAIL_MS` (`fx/cards/tiers.test.ts`); every set
   piece's hold stays within `SET_PIECE_HOLD_CAP_MS`, one hold per action.

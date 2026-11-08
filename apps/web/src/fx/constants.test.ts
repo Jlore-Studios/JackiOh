@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { animationRow, SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
 import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
 
@@ -216,6 +216,11 @@ const S2 = {
   FX_FELINOR_STREAK_AT: 0.1,
   FX_FELINOR_STREAK_STEP: 0.08,
   FX_FELINOR_STREAKS_MAX: 5,
+  // Issue #3400: a signature Spell's takeover tail and Call to Chaos (Training-Grounds Edition)'s panel (R3400000, R3400001), and Bob's Plan's shake.
+  FX_SIGNATURE_TAKEOVER_TAIL_MS: 400,
+  FX_CHAOS_DICE_REEL_MS: 500,
+  FX_CHAOS_DICE_PANEL_MS: 760,
+  FX_BOBS_PLAN_TRAUMA: 0.6,
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
   AURA_MOTES_PER_AURA: 24,
@@ -313,13 +318,13 @@ const S2 = {
   FX_STARSHIP_FUSE_STAGGER_MS: 250,
   FX_STARSHIP_FUSE_LAND_AT: 0.6,
   FX_STARSHIP_FUSE_TRAUMA: 0.25,
-  FX_STARSHIP_COUNT_AT: [0, 0.25, 0.5],
   FX_STARSHIP_IGNITE_AT: 0.75,
   FX_STARSHIP_LIFT_AT: 0.45,
   FX_STARSHIP_LAND_AT: 0.8,
   FX_STARSHIP_BADGE_AT: { x: 0.5, y: 0.36 },
   FX_STARSHIP_TAIL_MS: 400,
   FX_STARSHIP_STILL_MS: 1_600,
+  FX_STARSHIP_RAM_TURN_DEG: 30,
   FX_SHIP_PLATES_MAX: 8,
   FX_SHIP_DOME_AT: { x: 0.5, y: 0.22 },
   FX_SHIP_CORE_AT: { x: 0.5, y: 0.62 },
@@ -439,12 +444,7 @@ describe("S2 the effects constants", () => {
       expect(phases[k]).toBeGreaterThan(phases[k - 1] ?? 1);
       expect(phases[k]).toBeLessThanOrEqual(1);
     }
-    // R2801000: the countdown runs in order from the hold's start, every count before the ignition, and
-    // the launch's tail stays inside FX_MAX_TAIL_MS (R200).
-    const counts = constants.FX_STARSHIP_COUNT_AT;
-    expect(counts[0]).toBe(0);
-    for (let k = 1; k < counts.length; k += 1) expect(counts[k]).toBeGreaterThan(counts[k - 1] ?? 1);
-    expect(counts[counts.length - 1]).toBeLessThan(constants.FX_STARSHIP_IGNITE_AT);
+    // R2801000: the launch's tail stays inside FX_MAX_TAIL_MS (R200).
     expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     // R3336000: the Battleship's tail stays inside FX_MAX_TAIL_MS (R200), a Corvette flies slower than an Interceptor, and the shake stays a trauma.
     expect(constants.FX_SHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
@@ -561,6 +561,23 @@ describe("R3332000 the signature budgets", () => {
     for (const [name, look] of Object.entries(AURA_LOOKS)) {
       for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(constants.AURA_SIGNATURE_MAX_INTENSITY);
     }
+  });
+
+  it("R3400000 a signature Mythic Spell's hold, cast and tail, and the chaos panel after a cast, fit their ceilings", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA } = constants;
+    const cast = animationRow("cardPlayed")?.durationMs ?? Infinity;
+    // A Mythic Spell's own takeover lasts its held cast and the shorter tail, inside its ceiling; so does the burst at the hold's end.
+    const mythicSpell = SIGNATURE_MYTHIC_MAX_MS * SIGNATURE_SPELL_SHARE;
+    expect(TAKEOVER_HOLD_MS + cast + constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThanOrEqual(mythicSpell);
+    expect(TAKEOVER_HOLD_MS + constants.FX_MAX_PARTICLE_LIFE_MS).toBeLessThanOrEqual(mythicSpell);
+    expect(constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThan(constants.FX_TAKEOVER_TAIL_MS);
+    expect(constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeGreaterThan(0);
+    // R3400001: Call to Chaos (Training-Grounds Edition)'s panel after its cast, inside the Legendary Spell's ceiling, its reels landing first.
+    const chaos = animationRow("chaosRolled")?.durationMs ?? Infinity;
+    expect(cast + constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(SIGNATURE_LEGENDARY_MAX_MS * SIGNATURE_SPELL_SHARE);
+    expect(constants.FX_CHAOS_DICE_REEL_MS).toBeLessThan(constants.FX_CHAOS_DICE_PANEL_MS);
+    expect(constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(chaos + constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_BOBS_PLAN_TRAUMA).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
   });
 
   it("R3332001 Felinor Fiender's streaks all leave before its slam", () => {

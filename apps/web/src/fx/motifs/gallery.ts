@@ -5,10 +5,12 @@
 // the gallery shows. R2794000: it also plays a marquee Unit's entrance as the Unit lands, and Classic's
 // Flourishes on their own fixtures. R3332000: an entry's `entrance` plays as its card lands, whatever the
 // entry's kind, a Field Spell's face up in the backrow; R3332001 over the board its entrance reads
-// (`galleryBoardOf`: Felinor Fiender's over three Felinors).
+// (`galleryBoardOf`: Felinor Fiender's over three Felinors; R3334004 Starfleet Commander's over a
+// Dormant Starship).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { DORMANT_STARSHIP_ID } from "../../cards/fused.ts";
 import { ANOMALY_FOUND_ID } from "../../cards/anomalies.ts";
 import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
@@ -22,7 +24,8 @@ import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
-import type { FxCardEntry } from "../cards/tables.ts";
+import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
+import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
@@ -57,6 +60,9 @@ export function galleryPlayId(n: number): string {
 
 /** R2785000: the key of the gallery's fixture set piece. */
 export const GALLERY_SET_PIECE = "fixture";
+
+/** R3400001: the outcome the gallery's Call to Chaos (Training-Grounds Edition) rolls, as the engine names it. */
+const GALLERY_CHAOS_EFFECT = "Summon a Training-Grounds Golem";
 
 /** #2798: Stinkyscape #68 Stratos, the Unit Stratos Swarm fills a board with. */
 const STRATOS = "stinkyscape-068";
@@ -372,9 +378,13 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * with the player's first unit, Flash Freeze freezes every unit on both sides and Stratos Swarm fills
  * the player's empty zones with Stratos (its first unit zone, a full board having none). #2799:
  * Celestial Caller summons a Sun in lane 2 and a Moon in lane 4, Dino-size sets the viewer's first unit
- * to 10/10 and Goetzmann Game Design adds its card. R2794000: Classic's Flourishes take their own
+ * to 10/10 and Goetzmann Game Design adds its card. R3400001: Bob's Plan adds Reach the Summit and its
+ * Base Camp, Bob freezes every enemy Unit, Scratch Pad adds its crafted card and exiles itself, Seance adds
+ * a copy of the first enemy Unit, Tutorial Master adds three cards and Call to Chaos (Training-Grounds
+ * Edition) rolls its Golem. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
- * into the deck and draws one, and King Wagtoggle swaps the decks.
+ * into the deck and draws one, and King Wagtoggle swaps the decks. R3334004: Preemptive Strike wakes its
+ * player's Dormant Starship, which the board does not show, so its brand falls on the hero.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -458,6 +468,7 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   },
   flashFreeze: (view) =>
     [...unitsOf(view.you), ...unitsOf(view.opponent)].map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  preemptiveStrike: (_view, _instanceId, player) => [{ type: "awakened", player, instanceId: "fx-starship", defId: DORMANT_STARSHIP_ID }],
   stratosSwarm: (view, _instanceId, player) => {
     const side = player === view.viewer ? view.you : view.opponent;
     const open = (row: "units" | "backrow", zones: readonly unknown[]): { row: "units" | "backrow"; lane: number }[] =>
@@ -486,6 +497,24 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
         ];
   },
   gameDesign: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-designed", defId: "core-055" }],
+  // R3400001: the signatures' own fixtures.
+  bobsPlan: (_view, _instanceId, player) => [
+    { type: "addedToHand", player, instanceId: "fx-wincon", defId: "meditative-008" },
+    { type: "addedToHand", player, instanceId: "fx-plan", defId: "meditativeplus-001-1" },
+  ],
+  bobSoldier: (view, _instanceId, player) =>
+    unitsOf(player === view.viewer ? view.opponent : view.you).map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  scratchPad: (_view, instanceId, player) => [
+    { type: "addedToHand", player, instanceId: "fx-crafted", defId: "core-055" },
+    { type: "exiled", instanceId, defId: "meditativeplus-026", owner: player },
+  ],
+  seance: (view, _instanceId, player) => {
+    const foe = unitsOf(player === view.viewer ? view.opponent : view.you)[0];
+    return [{ type: "addedToHand", player, instanceId: "fx-double", defId: foe?.defId ?? "core-003" }];
+  },
+  tutorialMaster: (_view, _instanceId, player) =>
+    ["core-002", "core-003", "core-055"].map((defId, k) => ({ type: "addedToHand", player, instanceId: `fx-lesson-${String(k + 1)}`, defId })),
+  chaosDice: (_view, instanceId, player) => [{ type: "chaosRolled", player, instanceId, defId: "traininggrounds-039", effects: [GALLERY_CHAOS_EFFECT] }],
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
@@ -605,8 +634,8 @@ export const SET_PIECE_FIXTURES: { readonly [K in SetPieceKey]: FixtureOf } = {
 /** R3332000: the backrow lane a Field Spell's gallery entrance lands in, the first, where its aura stands (`galleryFieldView`). */
 const GALLERY_FIELD_ENTRANCE_LANE = 1;
 
-/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors). */
-const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard };
+/** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors; R3334004 Starfleet Commander's Dormant Starship). */
+const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard, fleetCommand: fleetBoard };
 
 /** R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), else `view` itself. */
 export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {
@@ -662,10 +691,18 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
 
 /**
  * #2793: the view a card plays over: a Field Spell's or a Field Trap's own, face up in the viewer's
- * first backrow zone, so its aura stands there (fx/aura/plan.ts); any other card's the view as it is.
+ * first backrow zone, so its aura stands there (fx/aura/plan.ts); R3400000 a Unit whose entry wears a
+ * `tile` aura, standing in the lane its entrance lands in (`GALLERY_ENTRANCE_LANE`) under its own id, so
+ * its aura stands on its tile; any other card's the view as it is.
  */
-export function galleryFieldView(defId: string, view: PlayerView): PlayerView {
+export function galleryFieldView(defId: string, view: PlayerView, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): PlayerView {
   const type = CATALOG[defId]?.type;
+  const entry = table.get(defId);
+  const aura = entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
+  if (type === "Unit" && aura?.scope === "tile") {
+    const units = view.you.units.map((unit, k) => (unit === null || k !== GALLERY_ENTRANCE_LANE - 1 ? unit : { ...unit, defId }));
+    return { ...view, you: { ...view.you, units } };
+  }
   const first = view.you.backrow[0];
   if (type === undefined || !isAuraFieldType(type) || first === null || first === undefined || first.faceDown) return view;
   return { ...view, you: { ...view.you, backrow: [{ ...first, defId, type }, ...view.you.backrow.slice(1)] } };

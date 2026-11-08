@@ -223,7 +223,8 @@ export const FX_FORGE_REACH = 0.2;
 export const FX_FLASH_FREEZE_TRAUMA = 0.35;
 export const FX_DUO_BOND_TRAUMA = 0.3;
 export const FX_STRATOS_SWARM_TRAUMA = 0.3;
-// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land.
+// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land (R3400001: Goetzmann Game Design's
+// signature shakes as its takeover's hold ends).
 export const FX_CELESTIAL_TRAUMA = 0.35;
 export const FX_DINO_STOMP_TRAUMA = 0.55;
 export const FX_GAME_DESIGN_TRAUMA = 0.45;
@@ -259,6 +260,18 @@ export const AURA_SIGNATURE_MAX_INTENSITY = 0.8;
 export const FX_FELINOR_STREAK_AT = 0.1;
 export const FX_FELINOR_STREAK_STEP = 0.08;
 export const FX_FELINOR_STREAKS_MAX = 5;
+// R3400000: a signature Spell's own cast (takeover.ts `ownCast`) draws its Mythic takeover this long past
+// its entry, not FX_TAKEOVER_TAIL_MS, so the takeover ends inside the Mythic Spell's ceiling
+// (SIGNATURE_MYTHIC_MAX_MS × SIGNATURE_SPELL_SHARE, its hold included).
+export const FX_SIGNATURE_TAKEOVER_TAIL_MS = 400;
+// R3400001: Call to Chaos (Training-Grounds Edition)'s signature shows its roll (R436's panel) inside the
+// Legendary Spell's ceiling: its reels land within FX_CHAOS_DICE_REEL_MS of the roll's entry and the panel
+// lasts FX_CHAOS_DICE_PANEL_MS (chaos.ts's own lasts FX_CHAOS_MS).
+export const FX_CHAOS_DICE_REEL_MS = 500;
+export const FX_CHAOS_DICE_PANEL_MS = 760;
+// R3400001: the signatures' own shakes (each within its type's budget, SIGNATURE_*_MAX_TRAUMA): Bob's Plan's
+// ink as its takeover's hold ends; the Units' entrances shake by ENTRANCE_TRAUMA (fx/cards/recipe.ts).
+export const FX_BOBS_PLAN_TRAUMA = 0.6;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
 // AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
 // all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS
@@ -370,9 +383,8 @@ export const FX_SYSTEM_TRAUMA = 0.3;
 export const FX_STARSHIP_FUSE_STAGGER_MS = 250;
 export const FX_STARSHIP_FUSE_LAND_AT = 0.6;
 export const FX_STARSHIP_FUSE_TRAUMA = 0.25;
-// R2801000: the launch's countdown, as fractions of its hold, the count shown being the counts left
-// (3, 2, 1); its engines ignite at FX_STARSHIP_IGNITE_AT of the hold.
-export const FX_STARSHIP_COUNT_AT = [0, 0.25, 0.5] as const;
+// R2801000, R3334001: the launch's tile cues ignite its engines at FX_STARSHIP_IGNITE_AT of the hold
+// (R3334001 took out the countdown that ran before it).
 export const FX_STARSHIP_IGNITE_AT = 0.75;
 // R2801000: after the hold, as fractions of the launch's own motion: the contrail's flight up, and the landing.
 export const FX_STARSHIP_LIFT_AT = 0.45;
@@ -383,6 +395,9 @@ export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
 // Motion its still frame stands this long and holds nothing.
 export const FX_STARSHIP_TAIL_MS = 400;
 export const FX_STARSHIP_STILL_MS = 1_600;
+// R3334002: a launched Starship with no weapons rams prow first, its lunge turned this many degrees
+// toward its target (jk-lunge's `--fx-lunge-turn`).
+export const FX_STARSHIP_RAM_TURN_DEG = 30;
 // R3336000: the Drone Battleship (fx/battleship.ts). The Shield's armor plates glow at most this many; where on
 // each layer's card its dome, its reactor core and its bay doors sit (fractions of the card).
 export const FX_SHIP_PLATES_MAX = 8;
