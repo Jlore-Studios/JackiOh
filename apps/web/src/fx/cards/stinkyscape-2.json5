@@ -98,8 +98,8 @@
   "stinkyscape-163": { cast: { motif: "vanish" } }, // Swear Loyalities
   "stinkyscape-164": { cast: { motif: "conjure", palette: "Hustle/cash" }, trigger: { motif: "vanish", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "side" } }, // The Syndicate
   "stinkyscape-165": { cast: { motif: "conjure", palette: "Hustle/cash" }, aura: { look: "bloom", palette: "Hustle/cash", scope: "side" } }, // The Trade Union
-  "stinkyscape-166": { cast: { motif: "send", palette: "Tech/starfield" } }, // Scanning Probe Mk1
-  "stinkyscape-167": { cast: { motif: "send", palette: "Tech/starfield" } }, // Scanning Probe Mk2
+  "stinkyscape-166": { bespoke: "probeScan" }, // Scanning Probe Mk1
+  "stinkyscape-167": { bespoke: "probeScan" }, // Scanning Probe Mk2
   "stinkyscape-168": { cast: { motif: "conjure", palette: "Tech/rocket" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", palette: "Tech/rocket", scope: "zone" } }, // Drone Hanger
   "stinkyscape-169": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Tiny Asteroid
   "stinkyscape-170": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Medium Asteroid
@@ -122,7 +122,7 @@
   "stinkyscape-t-axnit": { cast: { motif: "nova", palette: "Hustle/ore" } }, // Axnit
   "stinkyscape-t-narcor": { cast: { motif: "send", palette: "Hustle/ore" } }, // Narcor
   "stinkyscape-t-red-narcor": { cast: { motif: "mana", palette: "Hustle/ore" } }, // Red Narcor
-  "stinkyscape-t-anomaly-found": { cast: { motif: "wipe" } }, // Anomaly Found!
+  "stinkyscape-t-anomaly-found": { bespoke: "anomalyCall" }, // Anomaly Found!
   "stinkyscape-t-ai-01": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // Escort Protocol
   "stinkyscape-t-ai-02": { cast: { motif: "send", palette: "Hustle/ore" } }, // Mining Subroutine
   "stinkyscape-t-ai-03": { cast: { motif: "send", palette: "Tech/hologram" } }, // Route Optimizer

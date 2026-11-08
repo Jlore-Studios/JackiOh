@@ -1744,12 +1744,17 @@ describe("B20 turn banners", () => {
 
 /* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's or a launch's `still` (R2789000, R2801000). */
+/**
+ * Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, a callout's, a launch's or an Anomaly's
+ * title card's `still` (R2789000, R2801000, R3337003), and a ghost's `spin` (R3337003).
+ */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
   callout: ["still"],
   launch: ["still"],
   cinematic: ["still"],
+  anomalyTitle: ["still"],
+  ghost: ["spin"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1783,6 +1788,9 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
   ship: ["kind", "move", "at", "tint", "count", "lit", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
+  rift: ["kind", "at", "side", "tint", "tearMs", "flareMs", "delayMs", "durationMs"],
+  anomalyTitle: ["kind", "at", "text", "picture", "tint", "delayMs", "durationMs"],
+  radar: ["kind", "at", "side", "tint", "delayMs", "durationMs"],
   // R3334000–R3334003: the Starship's moments.
   module: ["kind", "uri", "motion", "from", "to", "share", "landMs", "spin", "delayMs", "durationMs"],
   weld: ["kind", "at", "hum", "delayMs", "durationMs"],

@@ -192,6 +192,9 @@ const DOM_KINDS = {
   doctrine: "fx-doctrine-in",
   wreck: "fx-wreck-in",
   scorch: "fx-scorch-in",
+  rift: "fx-rift-in",
+  anomalyTitle: "fx-anomaly-title-in",
+  radar: "fx-radar-in",
   ship: "fx-ship-in",
 } as const;
 

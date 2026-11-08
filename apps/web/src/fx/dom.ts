@@ -1,7 +1,7 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
-// R3336000 ships and R2800000 set pieces.
+// R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
@@ -127,6 +127,9 @@ function timedPoint(doc: Document, className: string, point: FxTimedPoint): HTML
 
 /** R3336000: a Battleship bay's two doors, left to right (fx.css). */
 const SHIP_DOOR_SIDES = ["left", "right"] as const;
+
+/** R3337003: an Anomaly's rift's layers, bottom to top (fx.css). */
+const RIFT_PARTS = ["tear", "flare"] as const;
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -262,6 +265,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       el.style.setProperty("--fx-y", px(start.y));
       el.style.setProperty("--fx-dx", px(end.x - start.x));
       el.style.setProperty("--fx-dy", px(end.y - start.y));
+      if (cue.spin === true) el.setAttribute("data-spin", "true");
       break;
     }
     case "arrows": {
@@ -585,6 +589,52 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       }
       break;
     }
+    case "rift": {
+      // R3337003: an Anomaly's rift down the middle of the caster's half, tearing open at `--fx-tear` and
+      // flaring white at `--fx-flare`; the cards it takes are the stage's (`pull`). It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-side", cue.side);
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-tear", `${Math.max(0, cue.tearMs)}ms`);
+      el.style.setProperty("--fx-flare", `${Math.max(0, cue.flareMs)}ms`);
+      for (const part of RIFT_PARTS) {
+        const child = doc.createElement("div");
+        child.className = `fx-rift-${part}`;
+        el.appendChild(child);
+      }
+      break;
+    }
+    case "anomalyTitle": {
+      // R3337003: the Anomaly's title card, its public name (`data-text`, no text node) over its picture.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      if (cue.still === true) el.setAttribute("data-still", "true");
+      tintVars(el, cue.tint);
+      const picture = doc.createElement("div");
+      picture.className = "fx-anomalyTitle-picture";
+      const drawn = drawnSvg(doc, cue.picture);
+      if (drawn !== null) picture.appendChild(drawn);
+      const name = doc.createElement("div");
+      name.className = "fx-anomalyTitle-name";
+      name.setAttribute("data-text", t(cue.text));
+      el.append(picture, name);
+      break;
+    }
+    case "radar": {
+      // R3337002: a Scanning Probe's sweep, one wedge turning from `at`. It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-side", cue.side);
+      tintVars(el, cue.tint);
+      const wedge = doc.createElement("div");
+      wedge.className = "fx-radar-wedge";
+      el.appendChild(wedge);
+      break;
+    }
   }
 
   el.className = `fx-${cue.kind}`;
@@ -620,6 +670,20 @@ function strippable(name: string): boolean {
     name.startsWith("aria-") ||
     name.startsWith("on")
   );
+}
+
+/**
+ * R3337003: SVG markup the art painter drew (cards/art `anomalyMarkup`) as elements of `doc`, drawn in place as the
+ * layer's own icons are, never loaded as an image (B27); markup that is no well-formed SVG draws nothing.
+ */
+function drawnSvg(doc: Document, markup: string): Element | null {
+  const Parser = doc.defaultView?.DOMParser;
+  if (Parser === undefined) return null;
+  const drawn = new Parser().parseFromString(markup, "image/svg+xml").documentElement;
+  if (drawn.namespaceURI !== SVG_NS || drawn.localName !== "svg" || drawn.getElementsByTagName("parsererror").length > 0) return null;
+  const svg = doc.importNode(drawn, true);
+  svg.setAttribute("aria-hidden", "true");
+  return svg;
 }
 
 export function standInCopy(source: Element): HTMLElement {

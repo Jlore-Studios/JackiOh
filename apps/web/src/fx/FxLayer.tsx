@@ -26,6 +26,7 @@ import { boardShakeSink, resolveAnchor } from "./anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
 import { planStillCallouts } from "./motifs/beats.ts";
+import { planAnomalyStill } from "./anomaly.ts";
 import { planStarshipStill } from "./starship.ts";
 import { planTerminusStill } from "./terminus/index.ts";
 import { planStage } from "./stage.ts";
@@ -251,7 +252,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         }
         case "still": {
           // R2789000: an entry of no duration (reduced motion): its keyword callouts, held still;
-          // R2801000: and a Starship's launch, one still frame of it; R3338000: and a Terminus set piece's.
+          // R2801000: and a Starship's launch, one still frame of it; R3338000: and a Terminus set piece's;
+          // R3337003: and an Anomaly's still title card.
           const target = director.current;
           if (!live.current.still || target === null) return;
           const env = planEnv();
@@ -260,6 +262,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
             ...planStillCallouts(signal.entry, signal.entry.view, env),
             ...planStarshipStill(signal.entry, signal.entry.view, env),
             ...planTerminusStill(signal.entry, signal.entry.view, env),
+            ...planAnomalyStill(signal.entry, signal.entry.view, env),
           ]);
           return;
         }

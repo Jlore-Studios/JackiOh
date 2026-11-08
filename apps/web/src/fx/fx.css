@@ -3415,6 +3415,292 @@
   }
 }
 
+/* --------------------------------------------------------- rift: an Anomaly tears space --- */
+
+/* R3337003: an Anomaly's set piece (fx/anomaly.ts), down the middle of its caster's half of the field,
+   centred on that side's middle unit zone and reaching over its backrow. From `--fx-tear` a jagged slit
+   tears open, every card it takes is drawn into it (board.css, the stage's `pull`), and at `--fx-flare`
+   it flares white; it stays open while the new board's cards fall out of it, and closes with the entry.
+   The slit's outline is a fixed clip-path its three layers share (its rim, its glow, its dark throat),
+   and only its scale and opacity move. Its layers, flare and title name their radius, layer and shadow
+   from surfaces.css and draw no gradient (#2109). It names no card (R202). */
+
+.fx-rift {
+  left: var(--fx-x);
+  top: calc(var(--fx-y) + var(--fx-h, 110px) * 0.5);
+  width: calc(var(--fx-w, 82px) * 1.6);
+  height: calc(var(--fx-h, 110px) * 2.4);
+  translate: -50% -50%;
+  z-index: var(--z-overlay);
+  animation: fx-rift-in var(--fx-ms) linear both;
+}
+
+.fx-rift[data-side="opponent"] {
+  top: calc(var(--fx-y) - var(--fx-h, 110px) * 0.5);
+}
+
+@keyframes fx-rift-in {
+  0% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-rift-tear {
+  position: absolute;
+  inset: 0 25%;
+  clip-path: polygon(50% 0%, 62% 12%, 54% 24%, 70% 38%, 58% 52%, 72% 66%, 56% 80%, 64% 92%, 50% 100%, 38% 90%, 46% 76%, 28% 62%, 42% 48%, 30% 34%, 46% 22%, 36% 10%);
+  background: var(--fx-tint-rim);
+  opacity: 0;
+  transform-origin: 50% 50%;
+  animation: fx-rift-tear calc(var(--fx-flare) - var(--fx-tear)) var(--ease-standard) var(--fx-tear) forwards;
+}
+
+.fx-rift-tear::before,
+.fx-rift-tear::after {
+  content: "";
+  position: absolute;
+  clip-path: inherit;
+}
+
+.fx-rift-tear::before {
+  inset: 4% 16%;
+  background: var(--fx-tint-glow);
+}
+
+.fx-rift-tear::after {
+  inset: 10% 32%;
+  background: var(--fx-ink);
+}
+
+@keyframes fx-rift-tear {
+  0% {
+    transform: scale(0.05, 0.15);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(0.35, 1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+}
+
+.fx-rift-flare {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 90%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
+  box-shadow:
+    0 0 24px 16px color-mix(in srgb, var(--pal-white) 85%, transparent),
+    0 0 72px 56px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  opacity: 0;
+  animation: fx-rift-flare var(--motion-slow) var(--ease-out) var(--fx-flare) both;
+}
+
+@keyframes fx-rift-flare {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ----------------------------------------------- anomalyTitle: the Anomaly's title card --- */
+
+/* R3337003: the Anomaly's title card, stamped across the middle of the screen: its picture (cards/art's
+   SVG, drawn in place) framed in its palette, its name in the display face across its foot (`data-text`, no
+   text node). It stamps in from 1.6 times its size and holds through `--fx-ms`. Under reduced motion it
+   is `data-still`: the same card, nothing moving. The name is the board's own, which is public (R202). */
+
+.fx-anomalyTitle {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: min(86vw, 560px);
+  aspect-ratio: 16 / 9;
+  translate: -50% -50%;
+  z-index: var(--z-popover);
+  border: 2px solid var(--fx-tint-rim);
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--fx-ink);
+  overflow: hidden;
+  box-shadow: 0 0 32px 6px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  animation:
+    fx-anomaly-title-in var(--fx-ms) linear both,
+    fx-anomaly-title-stamp var(--motion-fast) var(--ease-overshoot) both;
+}
+
+@keyframes fx-anomaly-title-in {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-anomaly-title-stamp {
+  0% {
+    transform: scale(1.6);
+    filter: brightness(1.8);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.fx-anomalyTitle-picture {
+  position: absolute;
+  inset: 0;
+}
+
+/* The painter's own SVG, drawn in place (no image, B27); its `slice` covers the card as a cover background would. */
+.fx-anomalyTitle-picture > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fx-anomalyTitle-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.6em 0.8em 0.5em;
+  text-align: center;
+  background: color-mix(in srgb, var(--fx-ink) 72%, transparent);
+}
+
+.fx-anomalyTitle-name::before {
+  content: attr(data-text);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(var(--type-xl), 5vmin, var(--type-3xl));
+  line-height: 1.1;
+  color: var(--fx-white);
+  -webkit-text-stroke: 1px var(--fx-ink);
+  text-shadow: 0 0 16px var(--fx-tint-glow);
+}
+
+.fx-anomalyTitle[data-still="true"],
+.fx-anomalyTitle[data-still="true"] * {
+  animation: none;
+}
+
+/* ---------------------------------------------------- radar: a Scanning Probe's sweep --- */
+
+/* R3337002: a Scanning Probe's scan (fx/cards/stinkyscape/probeScan.ts): from its caster's hand a radar
+   wedge sweeps 120° across the board and fades: a faint trail, a brighter half nearer its edge and its
+   bright edge, three sectors of one circle cut by clip-path rather than a gradient (#2109). The canvas
+   draws a find's ping. It names no card (R202). */
+
+.fx-radar {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: min(170vmin, 1600px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  z-index: var(--z-raised);
+  border-radius: var(--radius-round);
+  overflow: hidden;
+  animation: fx-radar-in var(--fx-ms) linear both;
+}
+
+.fx-radar[data-side="opponent"] {
+  rotate: 180deg;
+}
+
+@keyframes fx-radar-in {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The sectors run clockwise from the top: the trail 0° to 40°, its brighter half 20° to 40°, the edge 39.5°
+   to 40°, each a triangle from the centre out past the circle's rim (80% of the box), which `.fx-radar` rounds. */
+.fx-radar-wedge {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 50%, 50% -30%, 101.42% -11.28%);
+  background: color-mix(in srgb, var(--fx-tint-glow) 14%, transparent);
+  animation: fx-radar-sweep var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-radar-wedge::before,
+.fx-radar-wedge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.fx-radar-wedge::before {
+  clip-path: polygon(50% 50%, 77.36% -25.18%, 101.42% -11.28%);
+  background: color-mix(in srgb, var(--fx-tint-glow) 34%, transparent);
+}
+
+.fx-radar-wedge::after {
+  clip-path: polygon(50% 50%, 100.89% -11.73%, 101.42% -11.28%);
+  background: var(--fx-tint-core);
+}
+
+@keyframes fx-radar-sweep {
+  0% {
+    transform: rotate(-80deg);
+  }
+  100% {
+    transform: rotate(40deg);
+  }
+}
+
+/* R3337003: a ghost out of an Anomaly's rift tumbles as it flies (an asteroid); `rotate` composes with the flight's
+   transform, and the spin takes the flight's own duration, curve and fill (`.fx-ghost`'s), which repeat for it. */
+.fx-ghost[data-spin="true"] {
+  animation-name: fx-ghost-fly, fx-ghost-spin;
+}
+
+@keyframes fx-ghost-spin {
+  0% {
+    rotate: 0deg;
+  }
+  100% {
+    rotate: 540deg;
+  }
+}
+
 /* ------------------------------------------- the Starship's moments: dock, launch, broadside, wreck --- */
 
 /* R3334000: a Starship module (fx/starship.ts), its picture without its plate, flying from `--fx-x/y` by
@@ -4044,11 +4330,12 @@
   }
 
   /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped;
-     R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's; R3334001: and a
-     Starship's title card. R3336000: a ship cue has no still, so the rule above hides it. */
+     R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's. R3336000: a ship cue has no still, so the rule above hides it.
+     R3337003: and an Anomaly's still title card; R3334001: and a Starship's title card. */
   .fx-dom > .fx-callout[data-still="true"],
   .fx-dom > .fx-launch[data-still="true"],
   .fx-dom > .fx-setPiece[data-still="true"],
+  .fx-dom > .fx-anomalyTitle[data-still="true"],
   .fx-dom > .fx-cinematic[data-still="true"] {
     visibility: visible;
   }
