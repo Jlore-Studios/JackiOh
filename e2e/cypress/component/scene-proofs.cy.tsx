@@ -2,11 +2,13 @@
 // size and at board size, base and Radiant, in a real browser. apps/web's vitest suite proves each scene's
 // shapes, floors and colours (cards/art/scene.test.ts, artRichness.test.ts); here every proof's picture paints,
 // each Radiant face's differs from its base face's pixel by pixel, and the two screenshots are the bar each
-// set's picture pass is tuned against by eye.
+// set's picture pass is tuned against by eye. R3392000: the faces draw flat (Reduce motion), since an Epic or rarer
+// face draws its picture as depth planes too (R3344000), which would multiply the windows counted here.
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
+import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/settings/index.ts";
 import { unit } from "../../../apps/web/src/test/fixtures.ts";
 
 /** The proof cards, the order of each row. */
@@ -124,11 +126,14 @@ function settle(size: Size): void {
 
 describe("R3331000 the proof cards' scenes", () => {
   beforeEach(() => {
+    __resetSettingsForTests();
+    writeSettings({ reduceMotion: true });
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, animatedFoil: false });
     cy.viewport(900, 520);
   });
 
   after(() => {
+    __resetSettingsForTests();
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
   });
 

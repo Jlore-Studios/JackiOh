@@ -124,25 +124,26 @@ const particles = (kind: ParticleKind, move: ArtMove, seconds: number): ArtMotio
  * R2715001: each full-art card's moving art, by card id (the cosmetics registry's full-art cards,
  * R2655001; a token listed under one takes its parent's, R2655002). Each moves two of its picture's
  * elements or more on beats of their own, and no two are alike; `motion.test.ts` holds every full-art
- * card of the registry to an entry.
+ * card of the registry to an entry. R3392000: a Core card's scene draws no motif glyph or accent, so the
+ * full-art Core cards that moved their props move their scene's near layer (`over`) on the same beat.
  */
 export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = {
-  // Big D-fender: a shield wall that breathes behind its sparks.
-  "core-001": { subject: beat("breathe", 4), back: beat("swell", 7), props: beat("float", 3), particles: particles("spark", "glint", 2.4) },
-  // Gary the Gambler: coins rain while his lucky glyph spins.
-  "core-004": { subject: beat("sway", 5), light: beat("pulse", 3.5), props: beat("spin", 6), particles: particles("coin", "fall", 3) },
-  // Mr. Vanilla: a plain bob under twinkling stars.
+  // Big D-fender: planted on his jetty, breathing, the gulls before him riding the swell.
+  "core-001": { subject: beat("breathe", 4), back: beat("swell", 7), over: beat("float", 3), particles: particles("spark", "glint", 2.4) },
+  // Gary the Gambler: coins rain while the ones he flipped wheel overhead under the lamplight.
+  "core-004": { subject: beat("sway", 5), light: beat("pulse", 3.5), over: beat("spin", 6), particles: particles("coin", "fall", 3) },
+  // Mr. Vanilla: a plain bob in his gallery, the bench before him floating, the motes twinkling.
   "core-008": {
     subject: beat("bob", 4.5),
     light: beat("pulse", 3),
-    props: beat("float", 5),
+    over: beat("float", 5),
     motes: beat("twinkle", 2.5),
     particles: particles("star", "glint", 3.2),
   },
-  // Tempo Timmy: hops in time with a ticking clock.
-  "core-011": { subject: beat("hop", 2), back: beat("drift", 8), props: beat("tick", 4), particles: particles("spark", "rise", 2.6) },
-  // Duplicating Felinors: purring, hearts rising.
-  "core-012": { subject: beat("breathe", 3.5), light: beat("flare", 4), props: beat("spin", 9), particles: particles("heart", "rise", 3.4) },
+  // Tempo Timmy: hops over the line as the dust he kicks up churns on the stopwatch's tick.
+  "core-011": { subject: beat("hop", 2), back: beat("drift", 8), over: beat("tick", 4), particles: particles("spark", "rise", 2.6) },
+  // Duplicating Felinors: purring, hearts rising, the sparkles of their high-five wheeling.
+  "core-012": { subject: beat("breathe", 3.5), light: beat("flare", 4), over: beat("spin", 9), particles: particles("heart", "rise", 3.4) },
   // Jlockeed Shredder-10: shaking, embers flying.
   "core-013": { subject: beat("sway", 3), back: beat("drift", 6), particles: particles("ember", "rise", 2.2) },
   // League of Losers: a slow sway under falling confetti.
@@ -153,12 +154,12 @@ export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = {
     props: beat("twinkle", 2.2),
     particles: particles("confetti", "fall", 3.6),
   },
-  // Bread and Butter: crumbs falling off a warm loaf.
-  "core-018": { subject: beat("breathe", 5), back: beat("drift", 8), props: beat("float", 4), particles: particles("crumb", "fall", 3.2) },
+  // Bread and Butter: crumbs falling off a warm loaf, the butter dish before it floating.
+  "core-018": { subject: beat("breathe", 5), back: beat("drift", 8), over: beat("float", 4), particles: particles("crumb", "fall", 3.2) },
   // The Mother Pancake: syrup swelling over the stack.
   "classicplus-012": { subject: beat("bob", 4), back: beat("swell", 6), over: beat("swell", 5), particles: particles("drop", "fall", 2.8) },
-  // "Miss" Mrow: a cat's slow sway, hearts rising.
-  "core-086": { subject: beat("sway", 3.5), back: beat("drift", 10), props: beat("twinkle", 2), particles: particles("heart", "rise", 3) },
+  // "Miss" Mrow: a cat's slow sway, hearts rising, the teacups toppling before her twinkling.
+  "core-086": { subject: beat("sway", 3.5), back: beat("drift", 10), over: beat("twinkle", 2), particles: particles("heart", "rise", 3) },
   // API Key Fishing: a line swaying, bubbles rising.
   "meditative-021": { subject: beat("sway", 7), light: beat("pulse", 4), props: beat("float", 3), particles: particles("bubble", "rise", 3.5) },
   // Felinor Flagbearer: the flag flutters, stars glint.

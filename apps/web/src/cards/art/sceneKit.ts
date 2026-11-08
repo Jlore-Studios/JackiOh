@@ -349,6 +349,9 @@ function asteroid(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// <<A terrain>>
+// <</A terrain>>
+
 // Architecture
 
 function fence(at: PartPlace, rng: Rng): KitShape[] {
@@ -508,6 +511,9 @@ function tombstone(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// <<B architecture>>
+// <</B architecture>>
+
 // Plants
 
 function sprout(at: PartPlace, rng: Rng): KitShape[] {
@@ -625,6 +631,9 @@ function wheat(at: PartPlace, rng: Rng): KitShape[] {
   }
   return out;
 }
+
+// <<A plants>>
+// <</A plants>>
 
 // Creatures
 
@@ -754,6 +763,9 @@ function moth(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.band([[-0.15, -1], [-1, -2.6]], 0.15) + f.band([[0.15, -1], [1, -2.6]], 0.15), "slate-700", 1),
   ];
 }
+
+// <<C creatures>>
+// <</C creatures>>
 
 // Objects
 
@@ -898,6 +910,15 @@ function crystal(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.band([T(0, w * 0.3), T(0, -h * 0.95)], 0.25), "white", 0.5),
   ];
 }
+
+// <<C objects>>
+// <</C objects>>
+
+// <<D objects>>
+// <</D objects>>
+
+// <<E objects>>
+// <</E objects>>
 
 // Weather and light
 
@@ -1103,6 +1124,18 @@ function rimLight(at: PartPlace, rng: Rng): KitShape[] {
   return [shape(crescent(f, r, 0.45), "white", 0.06, MAIN), shape(crescent(f, r * 0.98, 0.68), "white", 0.06, MAIN), shape(crescent(f, r * 0.96, 0.86), "white", 0.07, MAIN)];
 }
 
+// <<A weather>>
+// <</A weather>>
+
+// <<R1 extra>>
+// <</R1 extra>>
+
+// <<R2 extra>>
+// <</R2 extra>>
+
+// <<R3 extra>>
+// <</R3 extra>>
+
 /** R3331000: the scenery parts, by id, each with its kind. */
 export const SCENE_KIT = {
   field: { category: "terrain", draw: field },
@@ -1115,6 +1148,8 @@ export const SCENE_KIT = {
   street: { category: "terrain", draw: street },
   hills: { category: "terrain", draw: hills },
   asteroid: { category: "terrain", draw: asteroid },
+  // <<A terrain kit>>
+  // <</A terrain kit>>
   fence: { category: "architecture", draw: fence },
   "fence-post": { category: "architecture", draw: fencePost },
   gate: { category: "architecture", draw: gate },
@@ -1123,6 +1158,8 @@ export const SCENE_KIT = {
   column: { category: "architecture", draw: column },
   arch: { category: "architecture", draw: arch },
   tombstone: { category: "architecture", draw: tombstone },
+  // <<B architecture kit>>
+  // <</B architecture kit>>
   sprout: { category: "plants", draw: sprout },
   "grass-tuft": { category: "plants", draw: grassTuft },
   "dead-tree": { category: "plants", draw: deadTree },
@@ -1131,6 +1168,8 @@ export const SCENE_KIT = {
   bush: { category: "plants", draw: bush },
   mushroom: { category: "plants", draw: mushroom },
   wheat: { category: "plants", draw: wheat },
+  // <<A plants kit>>
+  // <</A plants kit>>
   crow: { category: "creatures", draw: crow },
   bat: { category: "creatures", draw: bat },
   "pale-hand": { category: "creatures", draw: paleHand },
@@ -1138,6 +1177,8 @@ export const SCENE_KIT = {
   wisp: { category: "creatures", draw: wisp },
   worm: { category: "creatures", draw: worm },
   moth: { category: "creatures", draw: moth },
+  // <<C creatures kit>>
+  // <</C creatures kit>>
   lantern: { category: "objects", draw: lantern },
   "bone-scarecrow": { category: "objects", draw: boneScarecrow },
   pitchfork: { category: "objects", draw: pitchfork },
@@ -1146,6 +1187,12 @@ export const SCENE_KIT = {
   banner: { category: "objects", draw: banner },
   orb: { category: "objects", draw: orb },
   crystal: { category: "objects", draw: crystal },
+  // <<C objects kit>>
+  // <</C objects kit>>
+  // <<D objects kit>>
+  // <</D objects kit>>
+  // <<E objects kit>>
+  // <</E objects kit>>
   moon: { category: "weather", draw: moon },
   stars: { category: "weather", draw: stars },
   cloud: { category: "weather", draw: cloud },
@@ -1161,6 +1208,14 @@ export const SCENE_KIT = {
   nebula: { category: "weather", draw: nebula },
   planet: { category: "weather", draw: planet },
   "rim-light": { category: "weather", draw: rimLight },
+  // <<A weather kit>>
+  // <</A weather kit>>
+  // <<R1 extra kit>>
+  // <</R1 extra kit>>
+  // <<R2 extra kit>>
+  // <</R2 extra kit>>
+  // <<R3 extra kit>>
+  // <</R3 extra kit>>
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

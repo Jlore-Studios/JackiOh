@@ -274,10 +274,11 @@ Every family climbs the same ladder of rarity, held by the detail floor below:
 - **Light:** from the upper left, with a soft glow behind the subject.
 - **Line:** none: shapes meet edge to edge, flat fills stacked in translucent layers.
 - **Camera:** eye level, the subject standing in the middle half.
-- **By rarity:** a Common is one figure in a field (Speciesist, on guard at dusk); a Rare stands among
-  props, a fence, a cart, a banner; an Epic sets hills behind and grass before it; a Legendary lights its
-  moment with rays and a halo; a Mythic is a set piece no other card shares (Heroic Power's shrine on the
-  heights, Ceaseless Void's giant-shaped hole before the void among a world's ruins).
+- **By rarity:** a Common is one figure in a plain place (Speciesist, flinging a bolt across a whitewashed
+  checkpoint at noon); a Rare stands among props, a fence, a cart, a banner; an Epic sets its background behind
+  and its foreground before it; a Legendary lights its moment with rays and a halo; a Mythic is a set piece no
+  other card shares (Heroic Power's marble rotunda of thirteen glowing doorways round an orb on its crystal
+  pedestal, Ceaseless Void's giant-shaped hole before the void among a world's ruins).
 
 ### Classic and Classic+
 
@@ -337,13 +338,15 @@ Every family climbs the same ladder of rarity, held by the detail floor below:
 A **scene recipe** (`sceneRecipes.ts`, `SCENE_RECIPES`) is data per card: its family, its sky (two palette
 names, top to bottom), the light behind it, where its emblem stands, an optional figure, and seven layers
 back to front, `sky`, `far`, `mid`, `subject`, `near`, `light` and `particles` (`SCENE_LAYERS`), each a list
-of placements. A placement names a part of the kit, where it stands, its scale and facing, how many copies
+of placements, and an optional cast of more figures (`cast`, R3392000), each standing in a layer of its own. A
+placement names a part of the kit, where it stands, its scale and facing, how many copies
 (`count`, each but the first offset by up to `spread`, every copy's scale jittered by `SCENE_SCALE_JITTER`)
 and a palette name that repaints the part's main shapes. `composeScene` draws every part from one stream,
 seeded by the card's id (or by a picture's own seed, `core-002#alt`, so Alt art and the repaints grow the same
 parts apart), and never reads the face: the Radiant face draws the same shapes, each mixed toward its layer's
 gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
-parts. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+parts, and each figure of the cast in front of its own layer's parts (in the subject layer, after the figure); a
+recipe with no cast draws its stream as before. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
 from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
 `motes`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
@@ -361,15 +364,38 @@ Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people
 hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
 thin band.
 
-Five proof cards draw from recipes today and set the bar each set's pass meets: Corpse Plantation (Classic
-#74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
-(Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
+Five proof cards set the bar each set's pass meets: Corpse Plantation (Classic #74), Speciesist (Core #2),
+Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender (Stinkyscape #15); Core's pass
+(R3392000) has since given every Core entry a recipe of its own, Speciesist's and Heroic Power's redrawn from
+their briefs (Core's scenes, below). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Every other card draws its picture byte for byte as
 before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
 hand size and at board size.
+
+## Core's scenes (R3392000)
+
+Every Core entry but Ceaseless Void, whose picture #3338 owns, draws a scene recipe of its own, written from its
+brief in #3392's table: `sceneRecipesCore1.ts` holds Core #1 to #37, `sceneRecipesCore2.ts` #38 to #74 with KY's
+Empty Notebook and Spikey Pillow, and `sceneRecipesCore3.ts` #75 to #99 with the other tokens, all spread into
+`SCENE_RECIPES`. Each recipe's doc comment gives its brief in a line and any detail changed to fit the kits; the
+subject, the setting and the card's idea stay, and a part a brief named that the kits lacked joined them. Each
+scene clears its rarity's floor (below) with room, its median detail climbing rarity by rarity: a Common's one
+subject in a simple setting, a Rare's props, an Epic's far, middle and near ground, a Legendary's every layer with
+its light and its moment of action, and a Mythic's set piece with a part no other scene draws (My Pawn's gloved
+hand on its puppet strings, Zephrys's cyclone, Heroic Power's rotunda, Craft a Card's floating island).
+
+A Unit's character comes from the kits, never the painter's silhouette: a figure, its look its tags' look
+(`figureLookFor`) with the head, headgear, outfit and item its brief names, or, when its character does not stand
+like a person (Jewelosco Scarab, Carnivorous Cube, Prem Panther, Straaza, Spikey Pillow, The Rock, the Sheep, Bread
+and Rush Tokens), a creature part drawn for it in its subject layer. A scene's other people stand in its `cast`. KY
+wears one look on every Core card that draws him (`KY_TUTOR_LOOK`: spectacles, a cardigan, a stick of chalk). A
+scene draws no motif glyph or accent, so the full-art Core cards that moved their props (R2715001) move their
+scene's near layer on the same beat (`FULL_ART_MOTION`). `coreScenes.test.ts` holds the recipes to this, and
+`core-scenes.cy.tsx` draws every Epic, Legendary and Mythic scene at hand size and a contact sheet of the rest, at
+a desktop's size and a phone's.
 
 ## The detail floor (R3331001)
 

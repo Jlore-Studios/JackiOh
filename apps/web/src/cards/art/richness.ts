@@ -44,8 +44,11 @@ export const ART_DETAIL_MAX_BYTES = 48 * 1024;
 /** The cards under their floor today, by id, sorted: a set's pass takes its cards off. */
 export const ART_DETAIL_SHORT: ReadonlySet<string> = new Set<string>(SHORT);
 
-/** The most `ART_DETAIL_SHORT` may name: its length as #3331 left it, so it can only shrink. */
-export const ART_DETAIL_SHORT_MAX = 561;
+/**
+ * The most `ART_DETAIL_SHORT` may name: its length as the last pass left it, so it can only shrink (561 after
+ * #3331; 453 after #3392, R3392000, which took Core's 108 off).
+ */
+export const ART_DETAIL_SHORT_MAX = 453;
 
 /** The shapes a picture draws: its paths, circles, rects, ellipses, polygons, polylines and lines, after its `<defs>`. */
 export function artElements(svg: string): number {

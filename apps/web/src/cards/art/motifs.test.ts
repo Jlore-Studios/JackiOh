@@ -448,12 +448,14 @@ describe("R503 R3331002 Core's v0.1 pictures, a record", () => {
       expect(hashId(artDataUri(faceSpec(card, true))), id).toBe(radiant);
       unchanged += 1;
     }
-    expect(unchanged).toBeGreaterThan(0);
+    // R3392000 gave every Core entry a scene, so the v0.1 record holds none of them byte for byte now.
+    expect(unchanged).toBe(0);
   });
 
   it("R3331002 a Core card with a scene recipe draws a picture v0.1 did not, on both faces", () => {
     const scenes = Object.keys(recorded).filter((id) => sceneRecipeOf(id) !== null).sort();
-    expect(scenes).toEqual(["core-002", "core-098", "core-100"]);
+    // R3392000: every Core entry.
+    expect(scenes).toEqual(Object.keys(recorded).sort());
     for (const id of scenes) {
       const [, , base, radiant] = recorded[id] ?? [];
       expect(hashId(artDataUri(faceSpec(def(id), false))), id).not.toBe(base);

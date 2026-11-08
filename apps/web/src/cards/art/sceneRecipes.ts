@@ -1,13 +1,18 @@
-// R3331000: the scene recipes, data per card (ART.md, "Scene recipes and kits"): the five proof cards
-// that set the bar each set's picture pass meets (#3331). A card listed here draws its picture from its
-// recipe, on every face, in every painter that hands it one (scene.ts `sceneRecipeOf`); a card not
-// listed keeps its picture byte for byte until its set's pass lists it. Each recipe is placed in the
-// 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each
-// keeps its subject within x 30 to 70 and y 25 to 85 and reaches its rarity's floor
-// (richness.ts `ART_DETAIL_MIN`) with its placements' counts.
+// R3331000: the scene recipes, data per card (ART.md, "Scene recipes and kits"): the proof cards that set
+// the bar each set's picture pass meets (#3331), and R3392000's Core scenes, every Core entry but Ceaseless
+// Void in three files of its own (sceneRecipesCore1.ts to sceneRecipesCore3.ts; Speciesist's and Heroic
+// Power's proof scenes are redrawn there from their briefs). A card listed here draws its picture from its
+// recipe, on every face, in every painter that hands it one (scene.ts `sceneRecipeOf`); a card not listed
+// keeps its picture byte for byte until its set's pass lists it. Each recipe is placed in the 100-unit box:
+// a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each keeps its subject
+// within x 30 to 70 and y 25 to 85 and reaches its rarity's floor (richness.ts `ART_DETAIL_MIN`) with its
+// placements' counts.
 
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
+import { CORE_SCENES_1 } from "./sceneRecipesCore1.ts";
+import { CORE_SCENES_2 } from "./sceneRecipesCore2.ts";
+import { CORE_SCENES_3 } from "./sceneRecipesCore3.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
 const CORPSE_PLANTATION: SceneRecipe = {
@@ -57,74 +62,6 @@ const CORPSE_PLANTATION: SceneRecipe = {
       { part: "rim-light", x: 50, y: 52, scale: 1.2, paint: "blue-200" },
     ],
     particles: [{ part: "motes", x: 50, y: 74, scale: 1.4, paint: "green-200" }],
-  },
-};
-
-/** Speciesist (Core #2, Common): a Human on guard, shield raised, in a field at dusk. */
-const SPECIESIST: SceneRecipe = {
-  family: "core",
-  sky: ["blue-800", "orange-400"],
-  light: { x: 50, y: 50, r: 36, paint: "blue-200", opacity: 0.35 },
-  emblem: { x: 60.2, y: 52.8, size: 8, rotate: 0 },
-  figure: { x: 50, y: 86, scale: 1.05, pose: "pose-guard", look: { ...figureLookFor(["Human"]), item: "item-shield" } },
-  layers: {
-    sky: [{ part: "cloud", x: 24, y: 24, scale: 0.8, count: 2, spread: [30, 6] }],
-    mid: [
-      { part: "hills", x: 50, y: 70 },
-      { part: "field", x: 50, y: 80 },
-      { part: "grass-tuft", x: 30, y: 88, count: 6, spread: [24, 6] },
-    ],
-    particles: [{ part: "motes", x: 50, y: 40, scale: 1.4 }],
-  },
-};
-
-/** Heroic Power (Core #98, Mythic): a shrine on the heights, its orb ringed by crystals, under the rays. */
-const HEROIC_POWER: SceneRecipe = {
-  family: "core",
-  sky: ["blue-900", "sky-400"],
-  light: { x: 50, y: 46, r: 40, paint: "cyan-400", opacity: 0.55 },
-  emblem: { x: 50, y: 46, size: 8, rotate: 0 },
-  layers: {
-    sky: [{ part: "cloud", x: 20, y: 24, scale: 0.7, count: 3, spread: [34, 8] }],
-    far: [
-      { part: "cliff", x: 24, y: 54, scale: 0.8 },
-      { part: "cliff", x: 76, y: 56, scale: 0.8, flip: -1 },
-      { part: "tower", x: 12, y: 52, scale: 0.7 },
-      { part: "tower", x: 88, y: 54, scale: 0.6 },
-      { part: "banner", x: 20, y: 54, scale: 0.6, count: 3, spread: [6, 1] },
-    ],
-    mid: [
-      { part: "tile-floor", x: 50, y: 64 },
-      { part: "column", x: 30, y: 72, scale: 0.9 },
-      { part: "column", x: 70, y: 72, scale: 0.9 },
-      { part: "column", x: 20, y: 76, scale: 1 },
-      { part: "column", x: 80, y: 76, scale: 1 },
-      { part: "arch", x: 50, y: 72, scale: 1.15 },
-    ],
-    subject: [
-      { part: "crystal", x: 50, y: 31, scale: 0.9 },
-      { part: "crystal", x: 37, y: 35, scale: 0.8, flip: -1 },
-      { part: "crystal", x: 63, y: 35, scale: 0.8 },
-      { part: "crystal", x: 32, y: 49, scale: 0.75, flip: -1 },
-      { part: "crystal", x: 68, y: 49, scale: 0.75 },
-      { part: "crystal", x: 38, y: 63, scale: 1, flip: -1 },
-      { part: "crystal", x: 62, y: 63, scale: 1 },
-      { part: "crystal", x: 50, y: 67, scale: 1.2 },
-      { part: "orb", x: 50, y: 46, scale: 1.7 },
-    ],
-    near: [
-      { part: "rock-floor", x: 50, y: 80 },
-      { part: "banner", x: 88, y: 96, scale: 1.1, flip: -1 },
-    ],
-    light: [
-      { part: "god-rays", x: 50, y: -4 },
-      { part: "halo", x: 50, y: 46, scale: 2.2, paint: "sky-300" },
-      { part: "light-shaft", x: 50, y: 0, count: 3, spread: [20, 0] },
-    ],
-    particles: [
-      { part: "sparks", x: 50, y: 46, scale: 1.2, count: 4, spread: [18, 16] },
-      { part: "embers", x: 50, y: 62, scale: 1.6, count: 5, spread: [22, 12] },
-    ],
   },
 };
 
@@ -193,11 +130,12 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the five proof cards. */
+/** R3331000: the cards that draw from a scene, by id: the proof cards and (R3392000) every Core entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
-  "core-002": SPECIESIST,
-  "core-098": HEROIC_POWER,
   "core-100": CEASELESS_VOID,
   "stinkyscape-015": ARG_ARG_DEFENDER,
+  ...CORE_SCENES_1,
+  ...CORE_SCENES_2,
+  ...CORE_SCENES_3,
 };

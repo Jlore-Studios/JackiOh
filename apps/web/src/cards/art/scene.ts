@@ -150,6 +150,9 @@ export type FigureRecipe = {
   readonly look: FigureLook;
 };
 
+/** R3392000: one more figure in a scene, standing in front of its layer's own parts (after `figure` in the subject layer). */
+export type CastFigure = FigureRecipe & { readonly layer: SceneLayer };
+
 export type SceneRecipe = {
   readonly family: ShowcaseFamily;
   /** The sky's gradient, top to bottom. */
@@ -159,6 +162,8 @@ export type SceneRecipe = {
   /** Where the card's emblem stands in the scene; with none, where the painter's composition put it. */
   readonly emblem?: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
   readonly figure?: FigureRecipe;
+  /** R3392000: the scene's other figures, each in its own layer. */
+  readonly cast?: readonly CastFigure[];
   /**
    * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
    * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
@@ -239,6 +244,8 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
     if (layer === "subject" && recipe.figure !== undefined) {
       for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
     }
+    // R3392000: each of the cast stands in front of its own layer's parts, after the figure; with none, the stream is as before.
+    for (const extra of recipe.cast ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
   }
   return out;
 }
