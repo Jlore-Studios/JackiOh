@@ -48,6 +48,9 @@ pub const DECK_SLOT_KINDS: [CosmeticKind; 3] =
 /// The kinds a card wears (R1295000), in the registry's order.
 pub const CARD_SLOT_KINDS: [CosmeticKind; 3] =
     [CosmeticKind::Foil, CosmeticKind::Finish, CosmeticKind::Border];
+/// R3335000: the kinds that dress the Starships a seat launches, picked on the account alone, in the registry's
+/// order.
+pub const STARSHIP_SLOT_KINDS: [CosmeticKind; 4] = CosmeticKind::STARSHIP;
 
 /// The key a kind's pick has in the `cosmetics` settings group: the kind's own camel-case name. A version is
 /// picked as a card's `fullArt` and an augment in its `augments` (R2725000).
@@ -63,6 +66,10 @@ pub fn setting_key(kind: CosmeticKind) -> &'static str {
         CosmeticKind::Portrait => "portrait",
         CosmeticKind::Version => FULL_ART_SETTING,
         CosmeticKind::Augment => AUGMENTS_KEY,
+        CosmeticKind::StarshipHull => "starshipHull",
+        CosmeticKind::StarshipLivery => "starshipLivery",
+        CosmeticKind::StarshipTrail => "starshipTrail",
+        CosmeticKind::StarshipPieceSkin => "starshipPieceSkin",
     }
 }
 
@@ -154,7 +161,9 @@ pub struct CardStamp {
 
 /// R1834002: what a seat wears on its side and on every card that has no pick of its own, each a
 /// registry id of its kind: the `loadouts` frame's half for one seat. Its foil, finish and border
-/// are their kinds' defaults (R1953001), kept so the frame keeps its shape.
+/// are their kinds' defaults (R1953001), kept so the frame keeps its shape. R3335000: and what dresses the
+/// Starships it launches, the account's four Starship picks; a loadout frozen before #3335 has none, and reads
+/// each kind's default.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -169,6 +178,28 @@ pub struct SeatLoadout {
     pub foil: String,
     pub finish: String,
     pub border: String,
+    #[serde(default = "default_starship_hull")]
+    pub starship_hull: String,
+    #[serde(default = "default_starship_livery")]
+    pub starship_livery: String,
+    #[serde(default = "default_starship_trail")]
+    pub starship_trail: String,
+    #[serde(default = "default_starship_piece_skin")]
+    pub starship_piece_skin: String,
+}
+
+// R3335000: what a seat frozen before #3335 wears on its Starships, each kind's default in the shipped registry.
+fn default_starship_hull() -> String {
+    default_of(registry(), CosmeticKind::StarshipHull).to_string()
+}
+fn default_starship_livery() -> String {
+    default_of(registry(), CosmeticKind::StarshipLivery).to_string()
+}
+fn default_starship_trail() -> String {
+    default_of(registry(), CosmeticKind::StarshipTrail).to_string()
+}
+fn default_starship_piece_skin() -> String {
+    default_of(registry(), CosmeticKind::StarshipPieceSkin).to_string()
 }
 
 impl SeatLoadout {
@@ -190,6 +221,10 @@ impl SeatLoadout {
             foil: default_of(registry, CosmeticKind::Foil).to_string(),
             finish: default_of(registry, CosmeticKind::Finish).to_string(),
             border: default_of(registry, CosmeticKind::Border).to_string(),
+            starship_hull: default_of(registry, CosmeticKind::StarshipHull).to_string(),
+            starship_livery: default_of(registry, CosmeticKind::StarshipLivery).to_string(),
+            starship_trail: default_of(registry, CosmeticKind::StarshipTrail).to_string(),
+            starship_piece_skin: default_of(registry, CosmeticKind::StarshipPieceSkin).to_string(),
         }
     }
 
@@ -202,6 +237,10 @@ impl SeatLoadout {
             CosmeticKind::Foil => &self.foil,
             CosmeticKind::Finish => &self.finish,
             CosmeticKind::Border => &self.border,
+            CosmeticKind::StarshipHull => &self.starship_hull,
+            CosmeticKind::StarshipLivery => &self.starship_livery,
+            CosmeticKind::StarshipTrail => &self.starship_trail,
+            CosmeticKind::StarshipPieceSkin => &self.starship_piece_skin,
             CosmeticKind::FullArt
             | CosmeticKind::Portrait
             | CosmeticKind::Version
@@ -218,6 +257,10 @@ impl SeatLoadout {
             CosmeticKind::Foil => self.foil = id,
             CosmeticKind::Finish => self.finish = id,
             CosmeticKind::Border => self.border = id,
+            CosmeticKind::StarshipHull => self.starship_hull = id,
+            CosmeticKind::StarshipLivery => self.starship_livery = id,
+            CosmeticKind::StarshipTrail => self.starship_trail = id,
+            CosmeticKind::StarshipPieceSkin => self.starship_piece_skin = id,
             CosmeticKind::FullArt
             | CosmeticKind::Portrait
             | CosmeticKind::Version
@@ -336,7 +379,11 @@ impl AccountPicks {
             return AccountPicks::default();
         };
         let mut picks = BTreeMap::new();
-        for kind in CARD_SLOT_KINDS.into_iter().chain(DECK_SLOT_KINDS) {
+        for kind in CARD_SLOT_KINDS
+            .into_iter()
+            .chain(DECK_SLOT_KINDS)
+            .chain(STARSHIP_SLOT_KINDS)
+        {
             if let Some(id) = settings.cosmetics.get(setting_key(kind)) {
                 picks.insert(setting_key(kind).to_string(), id.clone());
             }
@@ -429,6 +476,7 @@ impl SeatPicks {
 ///  - a deck slot wears the deck's pick when there is one and it is owned (the deck's word is final);
 ///    with no pick, the account's if owned;
 ///  - a card slot wears its kind's default, never the account's foil, finish or border;
+///  - R3335000: a Starship slot wears the account's pick if owned (no deck carries one);
 ///  - each card of the deck wears its own pick of a kind when owned on the card (R1655000, R1953001);
 ///  - R3015005: it wears one level, frozen by its id with no augments: the level its own pick names, an older
 ///    shape mapped as [`level_of_pick`] maps it (a retired full art's id, `true`, a version with augments),
@@ -461,6 +509,10 @@ pub fn freeze_loadout(
             Some(picked) => owned_pick(kind, Some(picked), None),
             None => owned_pick(kind, account.get(kind), None),
         };
+        seat.set(kind, worn.unwrap_or_else(|| default(kind)));
+    }
+    for kind in STARSHIP_SLOT_KINDS {
+        let worn = owned_pick(kind, account.get(kind), None);
         seat.set(kind, worn.unwrap_or_else(|| default(kind)));
     }
 

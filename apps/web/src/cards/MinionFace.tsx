@@ -25,6 +25,7 @@
 // #3341: a unit that is not full art draws its art up to the frame as well (the panel's top and sides, down to half a gem
 // above its foot), the name plate and the gems laid over its edges, and a rarity ring at its rim, not an oval in a box.
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
+// R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
 
 import { useRef, type ReactElement } from "react";
@@ -36,7 +37,7 @@ import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useCosmeticAttributes } from "./cosmetics.ts";
+import { useCosmeticAttributes, useStarshipLook } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
 import { boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
@@ -151,6 +152,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   const settings = useCardSettings();
   const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const stamp = useCardStamp(face, worn);
+  // R3335000: a launched Starship wears the viewer's own Starship picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   const plan = keywordFxPlan(unit);
   // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
@@ -192,6 +195,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             type={face.type}
             shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
+            look={starshipLook}
             ship={shipArtOf(face.defId, unit)}
             picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
           />

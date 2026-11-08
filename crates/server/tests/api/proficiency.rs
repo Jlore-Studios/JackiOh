@@ -110,6 +110,7 @@ fn game(mode: GameMode, profile_id: &str, player: PlayerId, plays: Vec<String>) 
         bot: false,
         tally: GameTally::default(),
         proficiency: plays,
+        fleet: Default::default(),
     }
 }
 
